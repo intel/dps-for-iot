@@ -1,0 +1,54 @@
+#ifndef _CBOR_H
+#define _CBOR_H
+
+#include <stdint.h>
+#include <stddef.h>
+#include <dps.h>
+
+DPS_Status CBOR_EncodeUint(DPS_Buffer* buffer, uint64_t n);
+
+DPS_Status CBOR_EncodeInt(DPS_Buffer* buffer, int64_t i);
+
+DPS_Status CBOR_EncodeBytes(DPS_Buffer* buffer, const uint8_t* data, size_t len);
+
+DPS_Status CBOR_EncodeString(DPS_Buffer* buffer, const char* str);
+
+DPS_Status CBOR_DecodeUint(DPS_Buffer* buffer, uint64_t* n);
+
+DPS_Status CBOR_DecodeInt(DPS_Buffer* buffer, int64_t* i);
+
+DPS_Status CBOR_ReserveBytes(DPS_Buffer* buffer, size_t len, uint8_t** ptr);
+
+/**
+ *
+ * @param buffer  Buffer to decode from
+ * @param data    Returns pointer into buffer storage to the decoded bytes 
+ * @param size    Returns length of the decoded bytes
+ *
+ * @return - DPS_OK if the bytes were decoded
+ *         - DPS_ERR_EOD if there was insufficient data in the buffer
+ *
+ */
+DPS_Status CBOR_DecodeBytes(DPS_Buffer* buffer, uint8_t** data, size_t* size);
+
+/**
+ *
+ * @param buffer  Buffer to decode from
+ * @param data    Returns pointer into buffer storage to the decoded string 
+ * @param size    Returns length of the decoded string
+ *
+ * @return - DPS_OK if the string was decoded
+ *         - DPS_ERR_EOD if there was insufficient data in the buffer
+ *
+ */
+DPS_Status CBOR_DecodeString(DPS_Buffer* buffer, char** data, size_t* size);
+
+/**
+ * Fix up the length of a byte string after the byte string has been appended
+ * to the buffer.  CBOR_EncodeBytes() should have been called immediately
+ * before with NULL passed as the data arg. The new length must be less than or
+ * equal to the length passed in the call to CBOR_EncodeBytes().
+ */
+DPS_Status CBOR_FixupLength(DPS_Buffer* buffer, size_t origSize, size_t newSizcons);
+
+#endif

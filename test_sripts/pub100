@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# Include common functions
+dir="${BASH_SOURCE%/*}"
+if [[ ! -d "$dir" ]]; then dir="$PWD"; fi
+. "$dir/common.sh"
+
+sub 1.1.*
+sub 1.1.*
+sub 1.1.*
+
+sleep 1
+
+for ((i=0; i<100; ++i))
+do
+    pub 1.1.$i
+done
+
+sleep 2
+
+cleanup
