@@ -84,7 +84,15 @@ DPS_BitVector* DPS_BitVectorWhiten(DPS_BitVector* bv);
 float DPS_BitVectorLoadFactor(const DPS_BitVector* bv);
 
 /**
+ * Returns the popultation count (number of bits set) of the bit vector.
+ *
+ * @param bv   An intialized bit vector
+ */
+size_t DPS_BitVectorPopCount(const DPS_BitVector* bv);
+
+/**
  * Check if one bit vector includes all bit of another. The two bit vectors must be the same size.
+ * Returns 0 is bv1 has no bits set.
  *
  * @param bv1   An initialized bit vector
  * @param bv2   The bit vector to test for inclusion

@@ -26,10 +26,11 @@ static const char* pubFormats[NUM_PUB_FORMATS] = {
 };
 
 #define MAX_SUB_TOPICS        4  /* Max topics per subscription */
-#define NUM_SUB_FORMATS       8
-#define FIRST_INFIX_WILDCARD  6  /* First format string with infix wild card */
+#define NUM_SUB_FORMATS       9
+#define FIRST_INFIX_WILDCARD  7  /* First format string with infix wild card */
 
 static const char* subFormats[NUM_SUB_FORMATS] = {
+    "%d",
     "%d/%d",
     "%d/%d/%d",
     "%d/%d/%d/%d",
@@ -113,7 +114,7 @@ typedef struct {
     char* strings[MAX_SUB_TOPICS];
     size_t count;
     int expect;
-    int falsePositives;
+    int pubForwards;
 } TopicList;
 
 
@@ -125,7 +126,7 @@ static void RunSimulation(int runs, int numSubs, int pubIters)
     int r;
     int s;
     int i;
-    int numPubs = 0;
+    int pubForwards = 0;
     int numMatches = 0;
     int falseNegatives = 0;
     DPS_BitVector* pub;
@@ -134,7 +135,7 @@ static void RunSimulation(int runs, int numSubs, int pubIters)
     topics = malloc(numSubs * sizeof(TopicList));
     for (s = 0; s < numSubs; ++s) {
         topics[s].interests = DPS_BitVectorAlloc();
-        topics[s].falsePositives = 0;
+        topics[s].pubForwards = 0;
     }
     pub = DPS_BitVectorAlloc();
 
@@ -181,6 +182,7 @@ static void RunSimulation(int runs, int numSubs, int pubIters)
              */
             for (s = numSubs - 1; s >= 0; --s) {
                 DPS_BitVector* provides;
+                int match;
 
                 ret = DPS_BitVectorIntersection(pub, pub, topics[s].interests);
                 assert(ret == DPS_OK);
@@ -188,35 +190,35 @@ static void RunSimulation(int runs, int numSubs, int pubIters)
                 /*
                  * The match check
                  */
-                if (!DPS_BitVectorIsClear(provides) && DPS_BitVectorIncludes(provides, topics[s].needs)) {
+                match = DPS_BitVectorIncludes(provides, topics[s].needs);
+                DPS_BitVectorDump(topics[s].needs, 1);
+                DPS_BitVectorDump(provides, 1);
+                DPS_BitVectorFree(provides);
+                if (match) {
+                    ++topics[s].pubForwards;
                     if (topics[s].expect) {
                         ++numMatches;
-                    } else {
-                        if (verbose) {
-                            DPS_PRINT("False positive (level=%d)\n", s);
-                            PrintTopics("pub", pubTopics, numPubTopics);
-                            for (i = s; i >= 0; --i) {
-                                PrintTopics("sub", topics[i].strings, topics[i].count);
-                            }
-                        }
-                        ++topics[s].falsePositives;
+                        continue;
                     }
-                } else {
-                    if (topics[s].expect) {
-                        DPS_PRINT("False negative\n");
+                    if (verbose) {
+                        DPS_PRINT("False positive (level=%d)\n", s);
                         PrintTopics("pub", pubTopics, numPubTopics);
                         for (i = s; i >= 0; --i) {
                             PrintTopics("sub", topics[i].strings, topics[i].count);
                         }
-                        DPS_BitVectorDump(topics[s].interests, 1);
-                        DPS_BitVectorDump(pub, 1);
-                        DPS_BitVectorDump(topics[s].needs, 1);
-                        DPS_BitVectorDump(provides, 1);
-                        ++falseNegatives;
                     }
+                } else {
+                    if (!topics[s].expect) {
+                        break;
+                    }
+                    DPS_PRINT("False negative\n");
+                    PrintTopics("pub", pubTopics, numPubTopics);
+                    for (i = s; i >= 0; --i) {
+                        PrintTopics("sub", topics[i].strings, topics[i].count);
+                    }
+                    ++falseNegatives;
                 }
-                DPS_BitVectorFree(provides);
-                ++numPubs;
+                ++pubForwards;
             }
             FreeTopics(pubTopics, numPubTopics);
         }
@@ -229,13 +231,13 @@ static void RunSimulation(int runs, int numSubs, int pubIters)
         }
     }
 
-    DPS_PRINT("Total pubs = %d, matches=%d\n", numPubs, numMatches);
+    DPS_PRINT("Total pub forwards = %d, matches=%d\n", pubForwards, numMatches);
     if (falseNegatives) {
         DPS_PRINT("ERROR!!!! %s false negatives\n");
     }
-    DPS_PRINT("False positives %2.2f%%\n", (float)(100 * topics[numSubs - 1].falsePositives) / (float)numPubs);
+    //DPS_PRINT("False positives %2.2f%%\n", (float)(100 * topics[numSubs - 1].falsePositives) / (float)numPubs);
     for (s = numSubs - 1; s >= 0; --s) {
-        DPS_PRINT("%d ", topics[s].falsePositives);
+        DPS_PRINT("%d ", topics[s].pubForwards);
         DPS_BitVectorFree(topics[s].interests);
     }
     DPS_PRINT("\n");
@@ -327,7 +329,7 @@ int main(int argc, char** argv)
     }
     DPS_PRINT("Bit length=%d (%d bytes) whitened length=%d\n", bitLen, bitLen / 8, bitLen / 128);
 
-    RunSimulation(runs, subLevels, 1000);
+    RunSimulation(runs, subLevels, 100);
     return 0;
 
 Usage:

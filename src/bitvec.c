@@ -204,7 +204,7 @@ int DPS_BitVectorIsClear(DPS_BitVector* bv)
     return DPS_TRUE;
 }
 
-static size_t PopCount(const DPS_BitVector* bv)
+size_t DPS_BitVectorPopCount(const DPS_BitVector* bv)
 {
     size_t popCount = 0;
     size_t i;
@@ -253,7 +253,7 @@ int DPS_BitVectorBloomTest(const DPS_BitVector* bv, const uint8_t* data, size_t 
 
 float DPS_BitVectorLoadFactor(const DPS_BitVector* bv)
 {
-    return (100.0 * PopCount(bv) + 1.0) / bv->len;
+    return (100.0 * DPS_BitVectorPopCount(bv) + 1.0) / bv->len;
 }
 
 int DPS_BitVectorEquals(const DPS_BitVector* bv1, const DPS_BitVector* bv2)
@@ -271,18 +271,22 @@ int DPS_BitVectorEquals(const DPS_BitVector* bv1, const DPS_BitVector* bv2)
 int DPS_BitVectorIncludes(const DPS_BitVector* bv1, const DPS_BitVector* bv2)
 {
     size_t i;
-    const chunk_t* b1 = bv1->bits;
-    const chunk_t* b2 = bv2->bits;
+    const chunk_t* b1;
+    const chunk_t* b2;
+    chunk_t b1un = 0;
 
     if (!bv1 || !bv2) {
         return DPS_ERR_NULL;
     }
-    for (i = 0; i < NUM_CHUNKS(bv1); ++i) {
-        if ((bv1->bits[i] & bv2->bits[i]) != bv2->bits[i]) {
+    b1 = bv1->bits;
+    b2 = bv2->bits;
+    for (i = 0; i < NUM_CHUNKS(bv1); ++i, ++b1, ++b2) {
+        if ((*b1 & *b2) != *b2) {
             return 0;
         }
+        b1un |= *b1;
     }
-    return 1;
+    return b1un != 0;
 }
 
 /*
@@ -777,7 +781,7 @@ void DPS_BitVectorDump(const DPS_BitVector* bv, int dumpBits)
 {
     if (DPS_DEBUG_ENABLED()) {
         DPS_PRINT("Bit len = %d, ", bv->len);
-        DPS_PRINT("Pop = %d, ", PopCount((DPS_BitVector*)bv));
+        DPS_PRINT("Pop = %d, ", DPS_BitVectorPopCount((DPS_BitVector*)bv));
         DPS_PRINT("RLE bits = %d, ", RLE_Size(bv));
         DPS_PRINT("Loading = %.2f%%\n", DPS_BitVectorLoadFactor((DPS_BitVector*)bv));
 #ifdef DPS_DEBUG
