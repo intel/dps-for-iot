@@ -8,12 +8,6 @@
 
 static char lineBuf[200];
 
-static void OnAlloc(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf)
-{
-    buf->base = lineBuf;
-    buf->len = sizeof(lineBuf);
-}
-
 #define MAX_TOPICS   100
 #define MAX_FORMATS    5
 

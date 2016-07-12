@@ -128,8 +128,8 @@ DPS_Status DPS_Configure(size_t bitLen, size_t numHashes, size_t scaleFactor, si
         DPS_ERRPRINT("Number of hashes must be in the range 1..16\n");
         return DPS_ERR_ARGS;
     }
-    if (bitLen % scaleFactor) {
-        DPS_ERRPRINT("Scale factor must divide evenly into the the bit length\n");
+    if ((bitLen % scaleFactor) || ((bitLen / scaleFactor) % 64)) {
+        DPS_ERRPRINT("Bit length divided by scaleFactor must be a multiple of 64\n");
         return DPS_ERR_ARGS;
     }
     if (bitExpansion > 100) {
@@ -780,8 +780,10 @@ void DPS_BitVectorDump(const DPS_BitVector* bv, int dumpBits)
         DPS_PRINT("Pop = %d, ", PopCount((DPS_BitVector*)bv));
         DPS_PRINT("RLE bits = %d, ", RLE_Size(bv));
         DPS_PRINT("Loading = %.2f%%\n", DPS_BitVectorLoadFactor((DPS_BitVector*)bv));
+#ifdef DPS_DEBUG
         if (dumpBits) {
             BitDump(bv->bits, bv->len);
         }
+#endif
     }
 }
