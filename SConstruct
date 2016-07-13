@@ -6,7 +6,7 @@ cflags = ['-ggdb', '-DDPS_DEBUG']
 objs = Object(Glob('src/*.c'), CPPPATH=['./inc'], CFLAGS=cflags)
 
 # Unit tests
-Program('bin/rand_pubsub', Object('test/rand_pubsub.c', CFLAGS=cflags, CPPPATH=['./inc']) + objs, LIBS=['uv'])
+Program('bin/subtree_sim', Object('test/subtree_sim.c', CFLAGS=cflags, CPPPATH=['./inc']) + objs, LIBS=['uv'])
 Program('bin/whiten_unit', Object('test/whiten_unit.c', CFLAGS=cflags, CPPPATH=['./inc']) + objs, LIBS=['uv'])
 Program('bin/tree_sim', Object('test/tree_sim.c', CFLAGS=cflags))
 Program('bin/rle_compression', Object('test/rle_compression.c', CFLAGS=cflags, CPPPATH=['./inc']) + objs, LIBS=['uv'])
