@@ -62,6 +62,8 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 #define CHUNK_SIZE 32
 #endif
 
+#define POPCOUNT64(n)  __builtin_popcountll((chunk_t)n)
+
 #if CHUNK_SIZE == 32
 
 typedef uint32_t chunk_t;
@@ -309,6 +311,28 @@ static DPS_BitVector* Scale(DPS_BitVector* bv)
     return fold;
 }
 
+size_t DPS_BitVectorSquash(DPS_BitVector* bv, uint64_t* squashed)
+{
+    size_t i;
+    size_t pop = 0;
+    uint64_t s = 0;
+
+#if CHUNK_SIZE == 64
+    for (i = 0; i < NUM_CHUNKS(bv); ++i) {
+        s |= bv->bits[i];
+        pop += POPCOUNT(bv->bits[i]);
+    }
+#else
+    for (i = 0; i < NUM_CHUNKS(bv); i += 2) {
+        s |= (uint64_t)bv->bits[i] | (((uint64_t)bv->bits[i + 1]) << 32);
+        pop += POPCOUNT(bv->bits[i]);
+        pop += POPCOUNT(bv->bits[i + 1]);
+    }
+#endif
+    *squashed = s;
+    return pop;
+}
+
 /*
  * For unit testing only
  */
@@ -346,7 +370,7 @@ DPS_BitVector* DPS_BitVectorWhiten(DPS_BitVector* bv)
 {
     size_t i;
     size_t len = config.bitLen / config.scaleFactor;
-    size_t expansion = len * config.bitExpansion / 100;
+    size_t expansion = len * (50 + config.bitExpansion) / 100;
     DPS_BitVector* scaled;
     DPS_BitVector* whitened = Alloc(len);
 

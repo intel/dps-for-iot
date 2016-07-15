@@ -17,6 +17,9 @@ static char lineBuf[200];
 #define MAX_PUB_TOPICS     8
 #define NUM_PUB_FORMATS    5
 
+
+size_t DPS_BitVectorSquash(DPS_BitVector* bv, uint64_t* squashed);
+
 static const char* pubFormats[NUM_PUB_FORMATS] = {
     "%d",
     "%d/%d",
@@ -72,9 +75,9 @@ static size_t InitRandomSub(DPS_BitVector* bv, char* topics[])
     while (i < numSubs) {
         int fmt = random() % NUM_SUB_FORMATS;
         if (fmt < FIRST_INFIX_WILDCARD || infixWildcards) {
-            int a = random() % 4;
-            int b = random() % 4;
-            int c = random() % 4;
+            int a = random() % 8;
+            int b = random() % 6;
+            int c = random() % 5;
             int d = random() % 4;
             topics[i] = malloc(32);
             sprintf(topics[i], subFormats[fmt], a, b, c, d);
@@ -96,14 +99,14 @@ static size_t InitRandomPub(DPS_BitVector* bv, char* topics[])
 
     for (i = 0; i < numPubs; ++i) {
         /*
-         * Build a random topic
+         * Build a random node
          */
         int fmt = random() % NUM_PUB_FORMATS;
-        int a = random() % 4;
-        int b = random() % 4;
-        int c = random() % 4;
+        int a = random() % 8;
+        int b = random() % 6;
+        int c = random() % 5;
         int d = random() % 4;
-        int e = random() % 4;
+        int e = random() % 50;
         topics[i] = malloc(32);
         sprintf(topics[i], pubFormats[fmt], a, b, c, d, e);
         ret = DPS_AddTopic(bv, topics[i], "/.", DPS_Pub);
@@ -118,12 +121,13 @@ static size_t InitRandomPub(DPS_BitVector* bv, char* topics[])
 
 typedef struct _SubNode {
     DPS_BitVector* interests;
-    DPS_BitVector* needs;
+    uint64_t needs;
+    size_t pop;
     char* strings[MAX_SUB_TOPICS];
     size_t count;
     int expect;
-    int falseMatches;
-    int trueMatches;
+    int falsePositives;
+    int numMatches;
     int totalSubs;
     size_t numLeafs;
     struct _SubNode* leaf[1];
@@ -131,9 +135,9 @@ typedef struct _SubNode {
 
 #define MAX_TREE_DEPTH 8
 
-static size_t trueTrace[MAX_TREE_DEPTH];
-static size_t falseTrace[MAX_TREE_DEPTH];
-static size_t numNodes[MAX_TREE_DEPTH];
+static size_t trueTrace[MAX_TREE_DEPTH + 1];
+static size_t falseTrace[MAX_TREE_DEPTH + 1];
+static size_t numNodes[MAX_TREE_DEPTH + 1];
 static size_t totalMsgs;
 
 static SubNode* BuildTree(int depth)
@@ -192,10 +196,12 @@ static void ReplaceSubscription(SubNode* node, const char* topicString)
          * Need to rebuild the bit vector
          */
         DPS_BitVectorClear(node->interests);
-        node->needs = DPS_BitVectorWhiten(NULL);
+        node->needs = ~0ull;
+        node->pop = UINT32_MAX;
         for (i = 0; i < node->numLeafs; ++i) {
             DPS_BitVectorUnion(node->interests, node->leaf[i]->interests);
-            DPS_BitVectorIntersection(node->needs, node->needs, node->leaf[i]->needs);
+            node->needs &= node->leaf[i]->needs;
+            node->pop = MIN(node->pop, node->leaf[i]->pop);
         }
     } else {
         DPS_BitVectorClear(node->interests);
@@ -203,7 +209,7 @@ static void ReplaceSubscription(SubNode* node, const char* topicString)
         node->strings[0] = strdup(topicString);
         node->count = 1;
         DPS_AddTopic(node->interests, node->strings[0], "/.", DPS_Sub);
-        node->needs = DPS_BitVectorWhiten(node->interests);
+        node->pop = DPS_BitVectorSquash(node->interests, &node->needs);
     }
 }
 
@@ -220,16 +226,19 @@ static void PopulateTree(SubNode* node)
 {
     if (node->numLeafs == 0) {
         node->count = InitRandomSub(node->interests, node->strings);
-        node->needs = DPS_BitVectorWhiten(node->interests);
+        node->pop = DPS_BitVectorSquash(node->interests, &node->needs);
         node->totalSubs += node->count;
     } else {
         size_t i;
         DPS_BitVectorClear(node->interests);
-        node->needs = DPS_BitVectorWhiten(NULL);
+        node->needs = ~0ull;
+        node->pop = UINT32_MAX;
         for (i = 0; i < node->numLeafs; ++i) {
             PopulateTree(node->leaf[i]);
             DPS_BitVectorUnion(node->interests, node->leaf[i]->interests);
-            DPS_BitVectorIntersection(node->needs, node->needs, node->leaf[i]->needs);
+            node->needs &= node->leaf[i]->needs;
+            node->pop = MIN(node->pop, node->leaf[i]->pop);
+            assert(node->pop);
         }
     }
 }
@@ -251,14 +260,13 @@ static int SetExpects(SubNode* node, char** pubs, size_t numPubs)
 static void PropagatePub(SubNode* node, DPS_BitVector* pub, int depth)
 {
     DPS_Status ret;
-    int match;
 
     if (node->numLeafs == 0) {
         if (DPS_BitVectorIncludes(pub, node->interests)) {
             if (node->expect) {
-                ++node->trueMatches;
+                ++node->numMatches;
             } else {
-                ++node->falseMatches;
+                ++node->falsePositives;
             }
         } else {
             if (node->expect) {
@@ -270,19 +278,19 @@ static void PropagatePub(SubNode* node, DPS_BitVector* pub, int depth)
         DPS_BitVector* tmp = DPS_BitVectorAlloc();
         for (i = 0; i < node->numLeafs; ++i) {
             SubNode* leaf = node->leaf[i];
-            DPS_BitVector* provides;
+            uint64_t provides;
+            size_t pop;
             /*
              * Duplicates match logic from dps.c
              */
             ret = DPS_BitVectorIntersection(tmp, pub, leaf->interests);
             assert(ret == DPS_OK);
-            provides = DPS_BitVectorWhiten(tmp);
-            match = DPS_BitVectorIncludes(provides, leaf->needs);
-            if (match) {
+            pop = DPS_BitVectorSquash(tmp, &provides);
+            if ((pop >= leaf->pop) && ((provides & leaf->needs) == leaf->needs)) {
                 if (leaf->expect) {
-                    ++trueTrace[depth];
+                    ++trueTrace[depth + 1];
                 } else {
-                    ++falseTrace[depth];
+                    ++falseTrace[depth + 1];
                 }
                 ++totalMsgs;
                 PropagatePub(leaf, tmp, depth + 1);
@@ -291,15 +299,14 @@ static void PropagatePub(SubNode* node, DPS_BitVector* pub, int depth)
                     DPS_PRINT("False negative\n");
                 }
             }
-            DPS_BitVectorFree(provides);
         }
         DPS_BitVectorFree(tmp);
     }
 }
 
 typedef struct {
-    int trueMatches;
-    int falseMatches;
+    int numMatches;
+    int falsePositives;
     int totalSubs;
     int numNodes;
 } Stats;
@@ -309,13 +316,15 @@ static void Analyze(SubNode* node, Stats* stats)
     size_t i;
 
     ++stats->numNodes;
-    stats->trueMatches += node->trueMatches;
-    stats->falseMatches += node->falseMatches;
+    stats->numMatches += node->numMatches;
+    stats->falsePositives += node->falsePositives;
     stats->totalSubs += node->totalSubs;
     for (i = 0; i < node->numLeafs; ++i) {
         Analyze(node->leaf[i], stats);
     }
 }
+
+#define NUM_REPLACEMENTS 1
 
 static void RunSimulation(int runs, int treeDepth, int pubIters)
 {
@@ -353,7 +362,7 @@ static void RunSimulation(int runs, int treeDepth, int pubIters)
             maxLoad = lf;
         }
         totalLoad += lf;
-        //DPS_PRINT("Sub: "); DPS_BitVectorDump(subscriptions->interests, 0);
+
         /*
          * Tests random publications against the subscriptions
          */
@@ -382,7 +391,7 @@ static void RunSimulation(int runs, int treeDepth, int pubIters)
             pubTopics[0] = strdup(UniquePubTopic);
             DPS_BitVectorClear(pub);
             DPS_AddTopic(pub, pubTopics[0], "/.", DPS_Pub);
-            for (n = 0; n < 20; ++n) {
+            for (n = 0; n < NUM_REPLACEMENTS; ++n) {
                 ReplaceSubscription(subscriptions, UniqueSubTopic);
             }
             /*
@@ -411,7 +420,7 @@ static void RunSimulation(int runs, int treeDepth, int pubIters)
 
     DPS_PRINT("Nodes=%d, pubs=%d, actual msgs=%d, min msgs=%d\n", stats.numNodes, numPubs, totalMsgs, minMsgs);
     DPS_PRINT("Max load=%2.3f%%, Avg load=%2.3f%%\n", maxLoad, totalLoad / runs);
-    DPS_PRINT("Subs=%d, Matches=%d, false matches=%d\n", stats.totalSubs, stats.trueMatches, stats.falseMatches);
+    DPS_PRINT("Subs=%d, Matches=%d, false positives=%d\n", stats.totalSubs, stats.numMatches, stats.falsePositives);
     DPS_PRINT("Redundant message ratio=%2.2f%%\n", (float)((totalMsgs - minMsgs) * 100) / (float)(totalMsgs));
 
     DPS_PRINT("Node count:           ");
@@ -445,7 +454,7 @@ static int IntArg(char* opt, char*** argp, int* argcp, int* val, uint32_t min, u
     if (!--argc) {
         return 0;
     }
-    *val = strtol(*arg++, &p, 10); 
+    *val = strtol(*arg++, &p, 10);
     if (*p) {
         return 0;
     }
@@ -505,7 +514,10 @@ int main(int argc, char** argv)
         if (IntArg("-b", &arg, &argc, &bitLen, 64, 8 * 1024 * 1024)) {
             continue;
         }
-        if (IntArg("-w", &arg, &argc, &whitening, 1, 60)) {
+        if (IntArg("-s", &arg, &argc, &seed, 0, UINT32_MAX)) {
+            continue;
+        }
+        if (IntArg("-p", &arg, &argc, &pubs, 0, UINT32_MAX)) {
             continue;
         }
         if (IntArg("-s", &arg, &argc, &seed, 0, UINT32_MAX)) {
