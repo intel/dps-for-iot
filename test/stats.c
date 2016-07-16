@@ -16,7 +16,7 @@ int main(int argc, char** argv)
     size_t numKeys = (argc > 2) ? atoi(argv[2]) : 0;
     size_t numHashes = (argc > 3) ? atoi(argv[3]) : 4;
 
-    if (DPS_Configure(filterBits, numHashes, 1, 20) != DPS_OK) {
+    if (DPS_Configure(filterBits, numHashes) != DPS_OK) {
         printf("Usage %s: <filter-bits> <num-keys> [<num-hashes>]\n", argv[0]);
         exit(0);
     }

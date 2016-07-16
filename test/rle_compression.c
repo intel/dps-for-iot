@@ -56,7 +56,7 @@ int main(int argc, char** argv)
         goto Usage;
     }
 
-    ret = DPS_Configure(filterBits, numHashes, 1, 20);
+    ret = DPS_Configure(filterBits, numHashes);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Invalid configuration parameters\n");
         goto Usage;

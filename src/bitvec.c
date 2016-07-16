@@ -37,14 +37,6 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 #error "Default DPS_CONFIG_HASHES must be in range 1..16"
 #endif
 
-#ifndef DPS_CONFIG_SCALE_FACTOR
-#define DPS_CONFIG_SCALE_FACTOR DPS_CONFIG_BIT_LEN / 256
-#endif
-
-#ifndef DPS_CONFIG_BIT_EXPANSION
-#define DPS_CONFIG_BIT_EXPANSION 10
-#endif
-
 /*
  * Flag that indicates if serialized bit vector was rle encode or sent raw
  */
@@ -59,10 +51,10 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
  * Process bit vector in 32 or 64 bit chunks
  */
 #ifndef CHUNK_SIZE
-#define CHUNK_SIZE 32
+#define CHUNK_SIZE 64
 #endif
 
-#define POPCOUNT64(n)  __builtin_popcountll((chunk_t)n)
+#define POPCOUNT64(n)  __builtin_popcountll((uint64_t)n)
 
 #if CHUNK_SIZE == 32
 
@@ -75,8 +67,8 @@ typedef uint32_t chunk_t;
 #elif CHUNK_SIZE == 64
 
 typedef uint64_t chunk_t;
-#define SET_BIT(a, b)   (a)[(b) >> 6] |= (1 << ((b) & 0x3F))
-#define TEST_BIT(a, b) ((a)[(b) >> 6] & (1 << ((b) & 0x3F)))
+#define SET_BIT(a, b)   (a)[(b) >> 6] |= (1ull << ((b) & 0x3F))
+#define TEST_BIT(a, b) ((a)[(b) >> 6] & (1ull << ((b) & 0x3F)))
 #define POPCOUNT(n)  __builtin_popcountll((chunk_t)n)
 #define COUNT_TZ(n)  __builtin_ctzll((chunk_t)n)
 
@@ -99,7 +91,7 @@ typedef struct {
 /*
  * Compile time defaults for the configuration parameters
  */
-static Configuration config = { DPS_CONFIG_BIT_LEN, DPS_CONFIG_HASHES, DPS_CONFIG_SCALE_FACTOR, DPS_CONFIG_BIT_EXPANSION };
+static Configuration config = { DPS_CONFIG_BIT_LEN, DPS_CONFIG_HASHES };
 
 #define NUM_CHUNKS(bv)  ((bv)->len / CHUNK_SIZE)
 
@@ -120,7 +112,7 @@ static void BitDump(const chunk_t* data, size_t bits)
 #define MIN_HASHES    1
 #define MAX_HASHES   16
 
-DPS_Status DPS_Configure(size_t bitLen, size_t numHashes, size_t scaleFactor, size_t bitExpansion)
+DPS_Status DPS_Configure(size_t bitLen, size_t numHashes)
 {
     if (bitLen & 63) {
         DPS_ERRPRINT("Bit length must be a multiple of 64\n");
@@ -130,18 +122,8 @@ DPS_Status DPS_Configure(size_t bitLen, size_t numHashes, size_t scaleFactor, si
         DPS_ERRPRINT("Number of hashes must be in the range 1..16\n");
         return DPS_ERR_ARGS;
     }
-    if ((bitLen % scaleFactor) || ((bitLen / scaleFactor) % 64)) {
-        DPS_ERRPRINT("Bit length divided by scaleFactor must be a multiple of 64\n");
-        return DPS_ERR_ARGS;
-    }
-    if (bitExpansion > 100) {
-        DPS_ERRPRINT("Bit bitExpansion for densification must be a percentage (0..100)\n");
-        return DPS_ERR_ARGS;
-    }
     config.bitLen = bitLen;
     config.numHashes = numHashes;
-    config.scaleFactor = scaleFactor;
-    config.bitExpansion = bitExpansion;
     return DPS_ERR_OK;
 }
 
@@ -291,25 +273,7 @@ int DPS_BitVectorIncludes(const DPS_BitVector* bv1, const DPS_BitVector* bv2)
     return b1un != 0;
 }
 
-/*
- * Reduce filter size by folding. 
- */
-static DPS_BitVector* Scale(DPS_BitVector* bv)
-{
-    size_t len = bv->len / config.scaleFactor;
-    size_t stride = NUM_CHUNKS(bv) / config.scaleFactor;
-    DPS_BitVector* fold = Alloc(len);
-    if (fold) {
-        size_t f;
-        for (f = 0; f < NUM_CHUNKS(fold); ++f) {
-            size_t i;
-            for (i = 0; i < NUM_CHUNKS(bv); i += stride) {
-                fold->bits[f] |= bv->bits[i + f];
-            }
-        }
-    }
-    return fold;
-}
+#define ROTL64(n, r)  (((n) << r) | ((n) >> (64 - r)))
 
 size_t DPS_BitVectorSquash(DPS_BitVector* bv, uint64_t* squashed)
 {
@@ -319,86 +283,23 @@ size_t DPS_BitVectorSquash(DPS_BitVector* bv, uint64_t* squashed)
 
 #if CHUNK_SIZE == 64
     for (i = 0; i < NUM_CHUNKS(bv); ++i) {
-        s |= bv->bits[i];
-        pop += POPCOUNT(bv->bits[i]);
+        uint64_t n = bv->bits[i];
+        pop += POPCOUNT64(n);
+        s |= n;
     }
 #else
     for (i = 0; i < NUM_CHUNKS(bv); i += 2) {
-        s |= (uint64_t)bv->bits[i] | (((uint64_t)bv->bits[i + 1]) << 32);
-        pop += POPCOUNT(bv->bits[i]);
-        pop += POPCOUNT(bv->bits[i + 1]);
+        uint64_t n = (uint64_t)bv->bits[i + 1] | (((uint64_t)bv->bits[i]) << 32);
+        pop += POPCOUNT64(n);
+        s |= n;
     }
 #endif
+    s |= ROTL64(s, 13);
+    s |= ROTL64(s, 29);
+    s |= ROTL64(s, 37);
+    s |= ROTL64(s, 51);
     *squashed = s;
     return pop;
-}
-
-/*
- * For unit testing only
- */
-DPS_BitVector* DPS_BitVectorScale_Test(DPS_BitVector* bv, size_t scaleFactor)
-{
-    size_t r = config.scaleFactor;
-    DPS_BitVector* scaled;
-    config.scaleFactor = scaleFactor;
-    scaled = Scale(bv);
-    config.scaleFactor = r;
-    return scaled;
-}
-
-/*
- * Very simple linear congruational generator based PRNG (Lehmer/Park-Miller generator) 
- */
-#define LEPRNG(n)  (uint32_t)(((uint64_t)(n) * 279470273ull) % 4294967291ul)
-
-/*
- * A randomly chosen 32 bit prime
- */
-#define OFFSET 3973950899
-
-static void DistributeBits(DPS_BitVector* bv, size_t expansion, size_t bit)
-{
-    size_t len = bv->len;
-    uint32_t rnd = bit + OFFSET;
-    while (expansion--) {
-        rnd = LEPRNG(rnd);
-        SET_BIT(bv->bits, rnd % len);
-    }
-}
-
-DPS_BitVector* DPS_BitVectorWhiten(DPS_BitVector* bv)
-{
-    size_t i;
-    size_t len = config.bitLen / config.scaleFactor;
-    size_t expansion = len * (50 + config.bitExpansion) / 100;
-    DPS_BitVector* scaled;
-    DPS_BitVector* whitened = Alloc(len);
-
-    if (!whitened) {
-        return NULL;
-    }
-    if (!bv) {
-        return whitened;
-    }
-    assert(bv->len == config.bitLen);
-    scaled = Scale(bv);
-    if (!scaled) {
-        DPS_BitVectorFree(whitened);
-        return NULL;
-    }
-    for (i = 0; i < NUM_CHUNKS(scaled); ++i) {
-        size_t bit = 0;
-        chunk_t chunk = scaled->bits[i];
-        while (chunk) {
-            if (chunk & 1) {
-                DistributeBits(whitened, expansion, bit);
-            }
-            chunk >>= 1;
-            ++bit;
-        }
-    }
-    DPS_BitVectorFree(scaled);
-    return whitened;
 }
 
 DPS_Status DPS_BitVectorUnion(DPS_BitVector* bvOut, DPS_BitVector* bv)

@@ -18,8 +18,6 @@ static char lineBuf[200];
 #define NUM_PUB_FORMATS    5
 
 
-size_t DPS_BitVectorSquash(DPS_BitVector* bv, uint64_t* squashed);
-
 static const char* pubFormats[NUM_PUB_FORMATS] = {
     "%d",
     "%d/%d",
@@ -135,9 +133,13 @@ typedef struct _SubNode {
 
 #define MAX_TREE_DEPTH 8
 
+#define MIN(x, y)  ((x) < (y) ? (x) : (y))
+
 static size_t trueTrace[MAX_TREE_DEPTH + 1];
 static size_t falseTrace[MAX_TREE_DEPTH + 1];
 static size_t numNodes[MAX_TREE_DEPTH + 1];
+static size_t rejectByNeeds[MAX_TREE_DEPTH + 1];
+static size_t rejectByPop[MAX_TREE_DEPTH + 1];
 static size_t totalMsgs;
 
 static SubNode* BuildTree(int depth)
@@ -295,6 +297,11 @@ static void PropagatePub(SubNode* node, DPS_BitVector* pub, int depth)
                 ++totalMsgs;
                 PropagatePub(leaf, tmp, depth + 1);
             } else {
+                if (pop < leaf->pop) {
+                    ++rejectByPop[depth + 1];
+                } else {
+                    ++rejectByNeeds[depth + 1];
+                }
                 if (leaf->expect) {
                     DPS_PRINT("False negative\n");
                 }
@@ -440,6 +447,18 @@ static void RunSimulation(int runs, int treeDepth, int pubIters)
         DPS_PRINT(" %7d ", falseTrace[i]);
     }
     DPS_PRINT("\n");
+
+    DPS_PRINT("Reject by needs check:");
+    for (i = 0; i <= treeDepth; ++i) {
+        DPS_PRINT(" %7d ", rejectByNeeds[i]);
+    }
+    DPS_PRINT("\n");
+
+    DPS_PRINT("Reject by pop count:  ");
+    for (i = 0; i <= treeDepth; ++i) {
+        DPS_PRINT(" %7d ", rejectByPop[i]);
+    }
+    DPS_PRINT("\n");
 }
 
 static int IntArg(char* opt, char*** argp, int* argcp, int* val, uint32_t min, uint32_t max)
@@ -471,10 +490,8 @@ int main(int argc, char** argv)
 {
     int bitLen = 1024 * 16;
     int runs = 100;
-    int whitening = 10;
     int treeDepth = 4;
     int hashes = 4;
-    int scaling = 32;
     int seed = 0;
     int pubs = 100;
     DPS_Status ret;
@@ -537,7 +554,7 @@ int main(int argc, char** argv)
         srandom(t.tv_nsec);
     }
 
-    if (DPS_Configure(bitLen, hashes, scaling, whitening) != DPS_OK) {
+    if (DPS_Configure(bitLen, hashes) != DPS_OK) {
         DPS_PRINT("Invalid configuration parameters\n");
         return 1;
     }

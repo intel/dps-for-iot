@@ -23,10 +23,14 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
 static const char DPS_SubscriptionURI[] = "dps";
 
+typedef struct {
+    size_t popCount;
+    uint64_t magic; 
+} Needs;
 
 typedef struct _SubList {
     DPS_NodeAddress nodeAddr;
-    DPS_BitVector* needs;           /* Subscription needs based on whitening */
+    Needs needs;                    /* Subscription needs */
     DPS_BitVector* interests;       /* The bit vector for the interests of a set of remote subscribers */
     struct _SubList* next;
 } SubList;
@@ -43,7 +47,7 @@ typedef struct _PubList {
  * get a match. We compute the filter so we can forward to downstream subscribers.
  */
 typedef struct _DPS_Subscription {
-    DPS_BitVector* needs;           /* Subscription needs based on whitening */
+    Needs needs;                    /* Subscription needs */
     DPS_BitVector* bf;              /* The Bloom filter bit vector for the topics for this subscription */
     DPS_MatchHandler handler;       /* Calaback unction to be called for a matching publication */
     DPS_Subscription* next;
@@ -73,7 +77,7 @@ typedef struct _DPS_Node {
     SubList* remoteSubs;                  /* Linked list of remote subscribers */
 
     DPS_BitVector* interests;             /* Rolled up subscription interests for this node */
-    DPS_BitVector* needs;                 /* Rolled up subscription needs based on whitening */
+    Needs needs;                          /* Rolled up subscription needs */
 
     DPS_Publication* localPubs;           /* Linked list of local publications */
     DPS_Subscription* localSubs;          /* Linked list of local subscriptions */
@@ -184,7 +188,7 @@ static int SameAddr(DPS_NodeAddress* a, DPS_NodeAddress* b)
 /*
  *
  */
-static DPS_Status RefreshSubscriptionInterests(DPS_Node* node, DPS_NodeAddress* addr, DPS_BitVector* interests, DPS_BitVector* needs, int* noChange)
+static DPS_Status RefreshSubscriptionInterests(DPS_Node* node, DPS_NodeAddress* addr, DPS_BitVector* interests, Needs* needs, int* noChange)
 {
     DPS_BitVector* newInterests;
     DPS_Subscription* localSub;
@@ -205,9 +209,8 @@ static DPS_Status RefreshSubscriptionInterests(DPS_Node* node, DPS_NodeAddress* 
         }
         if (sub) {
             DPS_BitVectorFree(sub->interests);
-            DPS_BitVectorFree(sub->needs);
             sub->interests = interests;
-            sub->needs = needs;
+            sub->needs = *needs;
         } else {
             sub = malloc(sizeof(SubList));
             if (!sub) {
@@ -216,7 +219,7 @@ static DPS_Status RefreshSubscriptionInterests(DPS_Node* node, DPS_NodeAddress* 
             DPS_DBGPRINT("Adding new remote subscriber %s\n", DPS_NodeAddressText(addr));
             sub->nodeAddr = *addr;
             sub->interests = interests;
-            sub->needs = needs;
+            sub->needs = *needs;
             /*
              * Link in new subscriber
              */
@@ -235,18 +238,21 @@ static DPS_Status RefreshSubscriptionInterests(DPS_Node* node, DPS_NodeAddress* 
      *
      * TODO - do we need to check the needs for changes too?
      */
-    DPS_BitVectorFill(node->needs);
+    node->needs.magic = ~0ull;
+    node->needs.popCount = UINT32_MAX;
     /*
      * Compute the union of the remote and local subscription filters this represents the interests 
      * of this set of subscriptions.
      */
     for (sub = node->remoteSubs; sub != NULL; sub = sub->next) {
         DPS_BitVectorUnion(newInterests, sub->interests);
-        DPS_BitVectorIntersection(node->needs, node->needs, sub->needs);
+        node->needs.magic &= sub->needs.magic;
+        node->needs.popCount = _MIN_(node->needs.popCount, sub->needs.popCount);
     }
     for (localSub = node->localSubs; localSub != NULL; localSub = localSub->next) {
         DPS_BitVectorUnion(newInterests, localSub->bf);
-        DPS_BitVectorIntersection(node->needs, node->needs, localSub->needs);
+        node->needs.magic &= localSub->needs.magic;
+        node->needs.popCount = _MIN_(node->needs.popCount, localSub->needs.popCount);
     }
     if (node->interests) {
         if (DPS_BitVectorEquals(node->interests, newInterests)) {
@@ -277,7 +283,6 @@ static void DeleteRemoteSubscriber(DPS_Node* node, DPS_NodeAddress* addr)
                 node->remoteSubs = sub->next;
             }
             DPS_BitVectorFree(sub->interests);
-            DPS_BitVectorFree(sub->needs);
             free(sub);
             break;
         }
@@ -470,23 +475,27 @@ static DPS_Status ForwardPubToSubs(DPS_Node* node, DPS_Publication* pub, DPS_Nod
         return DPS_ERR_RESOURCES;
     }
     for (sub = node->remoteSubs; sub != NULL; sub = sub->next) {
-        DPS_BitVector* provides;
+        uint64_t magic;
+        size_t popCount;
         /*
-         * Filter the pub against the subscription and the subscription needs
+         * Filter the pub against the subscription
          */
         DPS_BitVectorIntersection(tmpPub.bf, pub->bf, sub->interests);
-        provides = DPS_BitVectorWhiten(tmpPub.bf);
-        if (!provides) {
-            ret = DPS_ERR_RESOURCES;
-            break;
-        }
-        if (DPS_BitVectorIncludes(provides, sub->needs)) {
+        popCount = DPS_BitVectorSquash(tmpPub.bf, &magic);
+        /*
+         * There are two components to the match criteria 
+         * 
+         * 1) population count - there must be enough remainig bits set in the publication after the intersection to
+         *    satisfy the needs of the subscriptions
+         * 2) magic - this is the intersection of the compacted bit vectors from the upstream subscriptions. All the
+         *    subscriptions requires these bits to be set in equivalent compaction of the publication.
+         */
+        if (popCount >= sub->needs.popCount && ((sub->needs.magic & magic) == sub->needs.magic)) {
             DPS_DBGPRINT("Forwarded pub to %s\n", DPS_NodeAddressText(&sub->nodeAddr));
             PushPublication(node, &tmpPub, pubAddr, &sub->nodeAddr);
         } else {
             DPS_DBGPRINT("Blocked pub to %s\n", DPS_NodeAddressText(&sub->nodeAddr));
         }
-        DPS_BitVectorFree(provides);
     }
     DPS_BitVectorFree(tmpPub.bf);
     return DPS_OK;
@@ -598,10 +607,10 @@ static DPS_Status ComposeSubscriptionRequest(DPS_Node* node, int protocol, uv_bu
     CBOR_EncodeUint(&payload, port);
     CBOR_ReserveBytes(&payload, 16, ip6address);
 
-    ret = DPS_BitVectorSerialize(node->needs, &payload);
-    if (ret == DPS_OK) {
-        ret = DPS_BitVectorSerialize(node->interests, &payload);
-    }
+    CBOR_EncodeUint(&payload, node->needs.popCount);
+    CBOR_EncodeUint(&payload, node->needs.magic);
+
+    ret = DPS_BitVectorSerialize(node->interests, &payload);
     if (ret == DPS_OK) {
         ret = CoAP_Compose(protocol, bufs, numBufs, COAP_CODE(COAP_REQUEST, COAP_GET), opts, A_SIZEOF(opts), &payload);
     }
@@ -685,7 +694,8 @@ static DPS_Status DecodeSubscriptionRequest(DPS_Node* node, DPS_Buffer* buffer)
 {
     DPS_Status ret;
     DPS_BitVector* interests;
-    DPS_BitVector* needs;
+    Needs needs;
+    uint64_t n;
     DPS_NodeAddress addr;
     int noChange;
 
@@ -695,30 +705,28 @@ static DPS_Status DecodeSubscriptionRequest(DPS_Node* node, DPS_Buffer* buffer)
     if (!interests) {
         return DPS_ERR_RESOURCES;
     }
-    needs = DPS_BitVectorWhiten(NULL);
-    if (!needs) {
-        DPS_BitVectorFree(interests);
-        return DPS_ERR_RESOURCES;
-    }
     ret = DecodeAddr(buffer, &addr);
     if (ret != DPS_OK) {
         return ret;
     }
-    ret = DPS_BitVectorDeserialize(needs, buffer);
+    ret = CBOR_DecodeUint(buffer, &n);
+    if (ret != DPS_OK) {
+        return ret;
+    }
+    needs.popCount = (size_t)n;
+    ret = CBOR_DecodeUint(buffer, &needs.magic);
     if (ret != DPS_OK) {
         return ret;
     }
     ret = DPS_BitVectorDeserialize(interests, buffer);
     if (ret != DPS_OK) {
-        DPS_BitVectorFree(needs);
         return ret;
     }
     /*
-     * Recompute the subscription filter and decide if it needs to be forwarded to the publishers
+     * Recompute the subscription filter and decide if it should to be forwarded to the publishers
      */
-    ret = RefreshSubscriptionInterests(node, &addr, interests, needs, &noChange);
+    ret = RefreshSubscriptionInterests(node, &addr, interests, &needs, &noChange);
     if (ret != DPS_OK) {
-        DPS_BitVectorFree(needs);
         DPS_BitVectorFree(interests);
     } else if (!noChange) {
         DPS_Publication* pub;
@@ -871,12 +879,8 @@ DPS_Node* DPS_InitNode(int mcastListen, int tcpPort, const char* separators)
     /*
      * Initialize the needs with all bits set
      */
-    node->needs = DPS_BitVectorWhiten(NULL);
-    if (!node->needs) {
-        free(node);
-        return NULL;
-    }
-    DPS_BitVectorFill(node->needs);
+    node->needs.popCount = UINT32_MAX;
+    node->needs.magic = ~0ull;
 
     if (mcastListen) {
         node->mcastReceiver = DPS_MulticastStartReceive(node, OnMulticastReceive);
@@ -1097,7 +1101,7 @@ DPS_Status DPS_Subscribe(DPS_Node* node, char* const* topics, size_t numTopics, 
     } else {
         int noChange;
 
-        sub->needs = DPS_BitVectorWhiten(sub->bf);
+        sub->needs.popCount = DPS_BitVectorSquash(sub->bf, &sub->needs.magic);
         sub->next = node->localSubs;
         node->localSubs = sub;
         *subscription = sub;

@@ -13,13 +13,11 @@ typedef struct _DPS_BitVector DPS_BitVector;
  *
  * @param  bitLen        The size of the bit vectors in bits.  The size must be a multiple of 64.
  * @param  numHashes     The number of hashes for Bloom filter operations - must be in the range 1..16.
- * @param  scaleFactor   The scaling down factor to use when doing whitening.
- * @param  bitExpansion  Expressed as a percentage, the entropy expansion when doing whitening
  *
  * @return   DPS_OK if the parameters are ok.
  *           DPS_ERR_ARGS if the setting values are not permitted.
  */
-DPS_Status DPS_Configure(size_t bitLen, size_t numHashes, size_t scaleFactor, size_t bitExpansion);
+DPS_Status DPS_Configure(size_t bitLen, size_t numHashes);
 
 /**
  * Bloom Filter insertion operation.
@@ -65,17 +63,6 @@ DPS_BitVector* DPS_BitVectorClone(DPS_BitVector* bv);
 void DPS_BitVectorFree(DPS_BitVector* bv);
 
 /**
- * Whiten the bit vector vector through a combination of scaling and entropy expansion that sets multiple bits (pseudo
- * randomly) for each bit set in the resultant bit vector.  If the input parameter is NULL the output is a cleared bit
- * vector of the correct scaled size.
- *
- * @param bv     An intialized bit vector or NULL
- *
- * @param   A whitened bit vector
- */
-DPS_BitVector* DPS_BitVectorWhiten(DPS_BitVector* bv);
-
-/**
  * Returns the load factor of the bit vector. The value returned is in the range 0.0..100.0 and is the percentage of
  * bits set in the filter
  *
@@ -84,11 +71,21 @@ DPS_BitVector* DPS_BitVectorWhiten(DPS_BitVector* bv);
 float DPS_BitVectorLoadFactor(const DPS_BitVector* bv);
 
 /**
- * Returns the popultation count (number of bits set) of the bit vector.
+ * Returns the population count (number of bits set) of the bit vector.
  *
  * @param bv   An intialized bit vector
  */
 size_t DPS_BitVectorPopCount(const DPS_BitVector* bv);
+
+/**
+ * Compacts a bit vector into 64 bits. Also return the population count.
+ *
+ * @param bv        An intialized bit vector
+ * @param squashed  Returns the squashed bit vector
+ *
+ * @return  The population count (number of bits set) of the bit vector.
+ */
+size_t DPS_BitVectorSquash(DPS_BitVector* bv, uint64_t* squashed);
 
 /**
  * Check if one bit vector includes all bit of another. The two bit vectors must be the same size.

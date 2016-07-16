@@ -14,7 +14,7 @@ static void AddTopic(DPS_BitVector* filter, const char* topic)
 {
     printf("AddTopic %s\n", topic);
     DPS_AddTopic(filter, topic, "/.", DPS_Pub);
-    //DPS_BitVectorDump(filter, DPS_TRUE);
+    DPS_BitVectorDump(filter, DPS_TRUE);
 }
 
 #define NOT_EXPECT            0
@@ -82,7 +82,7 @@ int main(int argc, char** argv)
         goto Usage;
     }
 
-    ret = DPS_Configure(filterBits, numHashes, 1, 15);
+    ret = DPS_Configure(filterBits, numHashes);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Invalid configuration parameters\n");
         goto Usage;
