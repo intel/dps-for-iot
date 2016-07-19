@@ -41,7 +41,7 @@ static const char* subFormats[NUM_SUB_FORMATS] = {
     "%d/*",
     /* infix wildcards last so can be optionally excluded */
     "%d/%d/*/%d",
-    "%d/*/%d/%d",
+    "%d/*/%d/*/%d",
     "%d/*/%d"
 };
 
@@ -143,8 +143,6 @@ static size_t numNodes[MAX_TREE_DEPTH + 1];
 static size_t rejectByNeeds[MAX_TREE_DEPTH + 1];
 static size_t rejectByPop[MAX_TREE_DEPTH + 1];
 static size_t totalMsgs;
-static size_t totaMsgBytes;
-static size_t totalPubBytes;
 
 static SubNode* BuildTree(int depth)
 {
@@ -302,9 +300,9 @@ static void PropagatePub(SubNode* node, DPS_BitVector* pub, int depth)
                 PropagatePub(leaf, tmp, depth + 1);
             } else {
                 if (pop < leaf->pop) {
-                    ++rejectByPop[depth + 1];
+                    ++rejectByPop[depth];
                 } else {
-                    ++rejectByNeeds[depth + 1];
+                    ++rejectByNeeds[depth];
                 }
                 if (leaf->expect) {
                     DPS_PRINT("FAILURE!!! False negative\n");
@@ -387,6 +385,7 @@ static void RunSimulation(int runs, int treeDepth, int pubIters)
             /*
              * Propagate the publication up the tree
              */
+            DPS_BitVectorDump(pub, 0);
             PropagatePub(&fakeRoot, pub, -1);
             FreeTopics(pubTopics, numPubTopics);
             ++numPubs;
@@ -429,9 +428,9 @@ static void RunSimulation(int runs, int treeDepth, int pubIters)
         minMsgs += trueTrace[i];
     }
 
-    DPS_PRINT("Efficiency=%2.2f%%\n", (float)(minMsgs * 100) / (float)(totalMsgs));
+    DPS_PRINT("Message efficiency=%2.2f%%\n", (float)(minMsgs * 100) / (float)(totalMsgs));
     DPS_PRINT("Nodes=%d, pubs=%d, actual msgs=%d, min msgs=%d\n", stats.numNodes, numPubs, totalMsgs, minMsgs);
-    DPS_PRINT("Max load=%2.3f%%, Avg load=%2.3f%%\n", maxLoad, totalLoad / runs);
+    DPS_PRINT("Max load at root=%2.3f%%, Avg load at root=%2.3f%%\n", maxLoad, totalLoad / runs);
     DPS_PRINT("Subs=%d, Matches=%d, false positives=%d\n", stats.totalSubs, stats.numMatches, stats.falsePositives);
 
     DPS_PRINT("Node count:           ");
@@ -490,8 +489,6 @@ static int IntArg(char* opt, char*** argp, int* argcp, int* val, uint32_t min, u
     return 1;
 }
 
-extern int TopicStrategy;
-
 int main(int argc, char** argv)
 {
     int bitLen = 1024 * 32;
@@ -515,9 +512,6 @@ int main(int argc, char** argv)
         if (strcmp(*arg, "-v") == 0) {
             ++arg;
             verbose = 1;
-            continue;
-        }
-        if (IntArg("-y", &arg, &argc, &TopicStrategy, 1, 15)) {
             continue;
         }
         if (strcmp(*arg, "-i") == 0) {

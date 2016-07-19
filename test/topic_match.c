@@ -10,8 +10,6 @@
  */
 DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
-extern int TopicStrategy;
-
 #define MAX_TOPICS  32
 
 int main(int argc, char** argv)
@@ -28,11 +26,6 @@ int main(int argc, char** argv)
     while (--argc) {
         if (numPubs == MAX_TOPICS || numSubs == MAX_TOPICS) {
             goto Usage;
-        }
-        if (strcmp(*arg, "-2") == 0) {
-            ++arg;
-            TopicStrategy = 2;
-            continue;
         }
         if (strcmp(*arg, "-p") == 0) {
             ++arg;
