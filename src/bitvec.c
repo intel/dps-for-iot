@@ -214,20 +214,20 @@ void DPS_BitVectorFree(DPS_BitVector* bv)
     }
 }
 
-void DPS_BitVectorBloomInsert(DPS_BitVector* bv, const uint8_t* data, size_t len)
+void DPS_BitVectorBloomInsertExtra(DPS_BitVector* bv, const uint8_t* data, size_t len, uint8_t extra)
 {
-    size_t h;
-    for (h = 0; h < config.numHashes; ++h) {
-        uint32_t index = Hash(data, len, h) % bv->len;
+    int h = config.numHashes + extra;
+    while (h) {
+        uint32_t index = Hash(data, len, --h) % bv->len;
         SET_BIT(bv->bits, index);
     }
 }
 
 int DPS_BitVectorBloomTest(const DPS_BitVector* bv, const uint8_t* data, size_t len)
 {
-    size_t h;
-    for (h = 0; h < config.numHashes; ++h) {
-        size_t index = Hash(data, len, h) % bv->len;
+    int h = config.numHashes;
+    while (h) {
+        size_t index = Hash(data, len, --h) % bv->len;
         if (!TEST_BIT(bv->bits, index)) {
             return 0;
         }

@@ -15,20 +15,22 @@ static int infixWildcards = 0;
 static char lineBuf[200];
 
 #define MAX_PUB_TOPICS     8
-#define NUM_PUB_FORMATS    5
+#define NUM_PUB_FORMATS    7
 
 
 static const char* pubFormats[NUM_PUB_FORMATS] = {
     "%d",
     "%d/%d",
     "%d/%d/%d",
+    "%d/%d/%d",
+    "%d/%d/%d/%d",
     "%d/%d/%d/%d",
     "%d/%d/%d/%d/%d"
 };
 
 #define MAX_SUB_TOPICS        8  /* Max topics per subscription */
 #define NUM_SUB_FORMATS       9
-#define FIRST_INFIX_WILDCARD  7  /* First format string with infix wild card */
+#define FIRST_INFIX_WILDCARD  6  /* First format string with infix wild card */
 
 static const char* subFormats[NUM_SUB_FORMATS] = {
     "%d",
@@ -37,8 +39,8 @@ static const char* subFormats[NUM_SUB_FORMATS] = {
     "%d/%d/%d/%d",
     "%d/%d/%d/*",
     "%d/*",
-    "*/%d",
     /* infix wildcards last so can be optionally excluded */
+    "%d/%d/*/%d",
     "%d/*/%d/%d",
     "%d/*/%d"
 };
@@ -141,6 +143,8 @@ static size_t numNodes[MAX_TREE_DEPTH + 1];
 static size_t rejectByNeeds[MAX_TREE_DEPTH + 1];
 static size_t rejectByPop[MAX_TREE_DEPTH + 1];
 static size_t totalMsgs;
+static size_t totaMsgBytes;
+static size_t totalPubBytes;
 
 static SubNode* BuildTree(int depth)
 {
@@ -272,7 +276,7 @@ static void PropagatePub(SubNode* node, DPS_BitVector* pub, int depth)
             }
         } else {
             if (node->expect) {
-                DPS_PRINT("False negative at leaf\n");
+                DPS_PRINT("FAILURE!!! False negative at leaf\n");
             }
         }
     } else {
@@ -303,7 +307,7 @@ static void PropagatePub(SubNode* node, DPS_BitVector* pub, int depth)
                     ++rejectByNeeds[depth + 1];
                 }
                 if (leaf->expect) {
-                    DPS_PRINT("False negative\n");
+                    DPS_PRINT("FAILURE!!! False negative\n");
                 }
             }
         }
@@ -425,10 +429,10 @@ static void RunSimulation(int runs, int treeDepth, int pubIters)
         minMsgs += trueTrace[i];
     }
 
+    DPS_PRINT("Efficiency=%2.2f%%\n", (float)(minMsgs * 100) / (float)(totalMsgs));
     DPS_PRINT("Nodes=%d, pubs=%d, actual msgs=%d, min msgs=%d\n", stats.numNodes, numPubs, totalMsgs, minMsgs);
     DPS_PRINT("Max load=%2.3f%%, Avg load=%2.3f%%\n", maxLoad, totalLoad / runs);
     DPS_PRINT("Subs=%d, Matches=%d, false positives=%d\n", stats.totalSubs, stats.numMatches, stats.falsePositives);
-    DPS_PRINT("Redundant message ratio=%2.2f%%\n", (float)((totalMsgs - minMsgs) * 100) / (float)(totalMsgs));
 
     DPS_PRINT("Node count:           ");
     for (i = treeDepth; i >= 0; --i) {
@@ -486,16 +490,19 @@ static int IntArg(char* opt, char*** argp, int* argcp, int* val, uint32_t min, u
     return 1;
 }
 
+extern int TopicStrategy;
+
 int main(int argc, char** argv)
 {
-    int bitLen = 1024 * 16;
+    int bitLen = 1024 * 32;
     int runs = 100;
     int treeDepth = 4;
     int hashes = 4;
     int seed = 0;
     int pubs = 100;
     DPS_Status ret;
-    char** arg = ++argv;
+    int numArgs = argc;
+    char** arg = argv + 1;
 
     DPS_Debug = 0;
 
@@ -508,6 +515,9 @@ int main(int argc, char** argv)
         if (strcmp(*arg, "-v") == 0) {
             ++arg;
             verbose = 1;
+            continue;
+        }
+        if (IntArg("-y", &arg, &argc, &TopicStrategy, 1, 15)) {
             continue;
         }
         if (strcmp(*arg, "-i") == 0) {
@@ -558,6 +568,13 @@ int main(int argc, char** argv)
         DPS_PRINT("Invalid configuration parameters\n");
         return 1;
     }
+
+    while (numArgs--) {
+        DPS_PRINT("%s ", *argv);
+        ++argv;
+    }
+    DPS_PRINT("\n\n");
+
     DPS_PRINT("Bit length=%d (%d bytes)\n", bitLen, bitLen / 8);
 
     RunSimulation(runs, treeDepth, pubs);
