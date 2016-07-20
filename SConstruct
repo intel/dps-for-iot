@@ -1,5 +1,4 @@
 
-#cflags = ['-O3']
 cflags = ['-ggdb', '-DDPS_DEBUG']
 
 cppdefines = []
@@ -7,6 +6,8 @@ cppdefines = []
 for key, val in ARGLIST:
     if key.lower() == 'define':
         cppdefines.append(val)
+    if (key == 'optimize' and val == 'true'):
+        cflags = ['-O3']
 
 env = Environment(CPPDEFINES=cppdefines, CFLAGS=cflags, CPPPATH=['./inc'], LIBS=['uv'])
 

@@ -6,11 +6,14 @@
 #include <dps.h>
 #include <bitvec.h>
 #include <topics.h>
+#include <search.h>
 #include <uv.h>
 
 
 static int verbose = 0;
 static int infixWildcards = 0;
+
+static size_t uniqueSubscriptionTopics;
 
 static char lineBuf[200];
 
@@ -78,6 +81,8 @@ static size_t InitRandomSub(DPS_BitVector* bv, char* topics[])
     DPS_Status ret;
     size_t i = 0;
     size_t numSubs = 1 + (random() % (MAX_SUB_TOPICS - 1));
+    ENTRY addEntry;
+    ENTRY* foundEntry;
 
     DPS_BitVectorClear(bv);
 
@@ -92,6 +97,17 @@ static size_t InitRandomSub(DPS_BitVector* bv, char* topics[])
             sprintf(topics[i], subFormats[fmt], a, b, c, d);
             ret = DPS_AddTopic(bv, topics[i], "/.", DPS_Sub);
             assert(ret == DPS_OK);
+            /*
+             * Use hash table to track unique subscription topics
+             */
+            addEntry.key = topics[i];
+            addEntry.data = topics[i];
+            foundEntry = hsearch(addEntry, ENTER);
+            assert(foundEntry);
+            if (foundEntry->data == topics[i]) {
+                ++uniqueSubscriptionTopics;
+            }
+            foundEntry->data = NULL;
             ++i;
         }
     }
@@ -372,9 +388,18 @@ static void RunSimulation(int runs, int treeDepth, int pubIters)
         float lf;
         int p;
         /*
+         * Hash table for subscription topic counting
+         */
+        hcreate(numNodes[0] * MAX_SUB_TOPICS);
+        /*
          * Build a tree of random subscriptions.
          */
         PopulateTree(subscriptions);
+        /*
+         * Done with the hash table
+         */
+        hdestroy();
+
         lf = DPS_BitVectorLoadFactor(subscriptions->interests);
         if (lf > maxLoad) {
             maxLoad = lf;
@@ -440,7 +465,8 @@ static void RunSimulation(int runs, int treeDepth, int pubIters)
     DPS_PRINT("Message efficiency=%2.2f%%\n", (float)(minMsgs * 100) / (float)(totalMsgs));
     DPS_PRINT("Nodes=%d, pubs=%d, actual msgs=%d, min msgs=%d\n", stats.numNodes, numPubs, totalMsgs, minMsgs);
     DPS_PRINT("Max load at root=%2.3f%%, Avg load at root=%2.3f%%\n", maxLoad, totalLoad / runs);
-    DPS_PRINT("Subs=%d, Matches=%d, false positives=%d\n", stats.totalSubs, stats.numMatches, stats.falsePositives);
+    DPS_PRINT("Matched publications=%d, false positives=%d\n", stats.numMatches, stats.falsePositives);
+    DPS_PRINT("Unique subscription topic strings=%d (out of %d total)\n", uniqueSubscriptionTopics, stats.totalSubs);
 
     DPS_PRINT("Node count:           ");
     for (i = treeDepth; i >= 0; --i) {
@@ -470,7 +496,7 @@ static void RunSimulation(int runs, int treeDepth, int pubIters)
     for (i = 0; i <= treeDepth; ++i) {
         DPS_PRINT(" %7d ", rejectByPop[i]);
     }
-    DPS_PRINT("\n");
+    DPS_PRINT("\n\n");
 }
 
 static int IntArg(char* opt, char*** argp, int* argcp, int* val, uint32_t min, uint32_t max)
