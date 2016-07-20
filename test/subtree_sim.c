@@ -37,12 +37,21 @@ static const char* subFormats[NUM_SUB_FORMATS] = {
     "%d/%d",
     "%d/%d/%d",
     "%d/%d/%d/%d",
+#ifdef DPS_MQTT_LIKE
+    "%d/%d/%d/#",
+    "%d/#",
+    /* infix wildcards last so can be optionally excluded */
+    "%d/%d/+/%d",
+    "%d/+/%d/+/%d",
+    "%d/+/%d"
+#else
     "%d/%d/%d/*",
     "%d/*",
     /* infix wildcards last so can be optionally excluded */
     "%d/%d/*/%d",
     "%d/*/%d/*/%d",
     "%d/*/%d"
+#endif
 };
 
 static void PrintTopics(const char* label, char* topics[], size_t num)
@@ -75,10 +84,10 @@ static size_t InitRandomSub(DPS_BitVector* bv, char* topics[])
     while (i < numSubs) {
         int fmt = random() % NUM_SUB_FORMATS;
         if (fmt < FIRST_INFIX_WILDCARD || infixWildcards) {
-            int a = random() % 8;
-            int b = random() % 6;
-            int c = random() % 5;
-            int d = random() % 4;
+            int a = random() % 10;
+            int b = random() % 10;
+            int c = random() % 10;
+            int d = random() % 10;
             topics[i] = malloc(32);
             sprintf(topics[i], subFormats[fmt], a, b, c, d);
             ret = DPS_AddTopic(bv, topics[i], "/.", DPS_Sub);
@@ -569,7 +578,12 @@ int main(int argc, char** argv)
     }
     DPS_PRINT("\n\n");
 
+#ifdef DPS_MQTT_LIKE
+    DPS_PRINT("Bit length=%d (%d bytes) MQTT pattern matching\n", bitLen, bitLen / 8);
+#else
     DPS_PRINT("Bit length=%d (%d bytes)\n", bitLen, bitLen / 8);
+#endif
+
 
     RunSimulation(runs, treeDepth, pubs);
     return 0;

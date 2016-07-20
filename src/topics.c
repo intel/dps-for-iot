@@ -12,52 +12,67 @@
  */
 DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
+#ifdef DPS_MQTT_LIKE
+#define FINAL_WILDC    '#'
+#define INFIX_WILDC    '+'
+#define WILDCARDS     "+#"
+#else
+#define FINAL_WILDC    '*'
+#define INFIX_WILDC    '*'
+#define WILDCARDS      "*"
+#endif
 
-#define WILDCARD  '*'
-
-static DPS_Status CheckWildcarding(const char* topic, const char* separators, DPS_Role role, char** wcPos)
+static DPS_Status CheckWildcarding(const char* topic, const char* separators, DPS_Role role, const char** wcPos)
 {
-    char* wc = strchr(topic, WILDCARD);
+    const char* wc = topic + strcspn(topic, WILDCARDS);
 
-    /*
-     * The wildcard cannot appear in the separators list
-     */
-    if (strchr(separators, WILDCARD)) {
-        return DPS_ERR_INVALID;
-    }
-    if (wc) {
+    *wcPos = NULL;
+    if (wc[0]) {
         /*
          * Wildcards are only allowed in subscriptions
          */
-        if (role == DPS_Pub) {
+        if (role != DPS_Sub) {
             return DPS_ERR_INVALID;
         }
-        if (wc[1]) {
-            if (wc == topic) {
-                /*
-                 * Leading wildchard must be followed by a separator
-                 */
-                if (!strchr(separators, wc[1])) {
-                    return DPS_ERR_INVALID;
-                }
-            } else {
-                /*
-                 * Infix wildcard must have a separator on each side
-                 */
-                if (!strchr(separators, wc[1]) || !strchr(separators, wc[-1])) {
-                    return DPS_ERR_INVALID;
-                }
-            }
-        } else {
+        /*
+         * Leading wilcards not allowed
+         */
+        if (wc == topic) {
+            return DPS_ERR_INVALID;
+        }
+        /*
+         * Return position of first wildcard
+         */
+        *wcPos = wc;
+        do {
             /*
-             * Trailing wildcard must be preceded by a separator
+             * Wildcards must be preceded by a separator
              */
             if (!strchr(separators, wc[-1])) {
                 return DPS_ERR_INVALID;
             }
-        }
+            if (!wc[1]) {
+                return wc[0] == FINAL_WILDC ? DPS_OK : DPS_ERR_INVALID;
+            }
+            if (wc[0] != INFIX_WILDC) {
+                return DPS_ERR_INVALID;
+            }
+            /*
+             * Infix  wildcard must be followed by a separator
+             */
+            if (!strchr(separators, wc[1])) {
+                return DPS_ERR_INVALID;
+            }
+            wc += 2;
+            wc += strcspn(wc, WILDCARDS);
+        } while (*wc);
     }
-    *wcPos = wc;
+    /*
+     * Topic cannot end in a separator
+     */
+    if (strchr(separators, wc[-1])) {
+        return DPS_ERR_INVALID;
+    }
     return DPS_OK;
 }
 
@@ -79,7 +94,7 @@ DPS_Status DPS_AddTopic(DPS_BitVector* bf, const char* topic, const char* separa
     char* segment;
     size_t prefix = 0;
     const char* tp;
-    char* wc;
+    const char* wc;
     size_t tlen;
 
     if (!bf || !topic || !separators) {
@@ -97,7 +112,7 @@ DPS_Status DPS_AddTopic(DPS_BitVector* bf, const char* topic, const char* separa
     }
     tp = topic + strcspn(topic, separators);
     if (!wc) {
-        DPS_BitVectorBloomInsertExtra(bf, topic, tlen, 2);
+        DPS_BitVectorBloomInsert(bf, topic, tlen);
         if (role == DPS_Sub) {
             return DPS_OK;
         }
@@ -115,13 +130,19 @@ DPS_Status DPS_AddTopic(DPS_BitVector* bf, const char* topic, const char* separa
             DPS_BitVectorBloomInsert(bf, topic, tp - topic);
         }
         len = strcspn(tp, separators);
-        if ((tp > wc) && !memchr(tp, WILDCARD, len)) {
+        if ((tp > wc) && (*tp != INFIX_WILDC)) {
             memcpy(segment + prefix, tp, len);
             segment[prefix + len] = tp[len];
             DPS_BitVectorBloomInsert(bf, segment, prefix + len + 1);
         }
         tp += len;
     }
+#ifdef DPS_MQTT_LIKE
+    if (role == DPS_Pub) {
+        segment[prefix++] = FINAL_WILDC;
+        DPS_BitVectorBloomInsert(bf, segment, prefix);
+    }
+#endif
     free(segment);
     return DPS_OK;
 }
@@ -143,7 +164,7 @@ int DPS_MatchTopic(DPS_BitVector* bf, const char* topic, const char* separators)
 DPS_Status DPS_MatchTopicString(const char* pubTopic, const char* subTopic, const char* separators, int* match)
 {
     DPS_Status ret;
-    char* wc;
+    const char* wc;
 
     if (!pubTopic || !subTopic || !separators || !match) {
         return DPS_ERR_NULL;
@@ -163,15 +184,15 @@ DPS_Status DPS_MatchTopicString(const char* pubTopic, const char* subTopic, cons
     }
     *match = DPS_TRUE;
     while (*pubTopic && *subTopic) {
-        if (*subTopic == '*') {
+        if ((subTopic[0] == INFIX_WILDC) || (subTopic[0] == FINAL_WILDC)) {
             int len = strcspn(pubTopic, separators);
-            ++subTopic;
             if (len) {
                 pubTopic += len;
-                if (!*subTopic) {
+                if (subTopic[0] == FINAL_WILDC && subTopic[1] == 0) {
                     return DPS_OK;
                 }
             }
+            ++subTopic;
         }
         if (*pubTopic++ != *subTopic++) {
             *match = DPS_FALSE;

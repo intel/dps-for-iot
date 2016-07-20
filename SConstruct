@@ -1,25 +1,34 @@
 
-
 #cflags = ['-O3']
 cflags = ['-ggdb', '-DDPS_DEBUG']
 
-objs = Object(Glob('src/*.c'), CPPPATH=['./inc'], CFLAGS=cflags)
+cppdefines = []
+
+for key, val in ARGLIST:
+    if key.lower() == 'define':
+        cppdefines.append(val)
+
+env = Environment(CPPDEFINES=cppdefines, CFLAGS=cflags, CPPPATH=['./inc'], LIBS=['uv'])
+
+print env['CPPDEFINES']
+
+objs = env.Object(Glob('src/*.c'))
 
 # Unit tests
-Program('bin/subtree_sim', Object('test/subtree_sim.c', CFLAGS=cflags, CPPPATH=['./inc']) + objs, LIBS=['uv'])
-Program('bin/tree_sim', Object('test/tree_sim.c', CFLAGS=cflags))
-Program('bin/rle_compression', Object('test/rle_compression.c', CFLAGS=cflags, CPPPATH=['./inc']) + objs, LIBS=['uv'])
-Program('bin/topic_match', Object('test/topic_match.c', CFLAGS=cflags, CPPPATH=['./inc']) + objs, LIBS=['uv'])
-Program('bin/rand_sub', Object('test/rand_sub.c', CFLAGS=cflags, CPPPATH=['./inc']) + objs, LIBS=['uv'])
-Program('bin/rand_pub', Object('test/rand_pub.c', CFLAGS=cflags, CPPPATH=['./inc']) + objs, LIBS=['uv'])
-Program('bin/hashtest', Object('test/hashtest.c', CFLAGS=cflags, CPPPATH=['./inc']) + objs, LIBS=['uv'])
-Program('bin/stats', Object('test/stats.c', CFLAGS=cflags, CPPPATH=['./inc']) + objs, LIBS=['uv'])
-Program('bin/pubsub', Object('test/pubsub.c', CFLAGS=cflags, CPPPATH=['./inc']) + objs, LIBS=['uv'])
-Program('bin/coap_mcast_test', Object('test/coap_mcast_test.c', CFLAGS=cflags, CPPPATH=['./inc']) + objs, LIBS=['uv'])
-Program('bin/packtest', Object('test/packtest.c', CFLAGS=cflags, CPPPATH=['./inc']) + objs, LIBS=['uv'])
-Program('bin/nettest', Object('test/nettest.c', CFLAGS=cflags, CPPPATH=['./inc']) + objs, LIBS=['uv'])
-Program('bin/cbortest', Object('test/cbortest.c', CFLAGS=cflags, CPPPATH=['./inc']) + objs, LIBS=['uv'])
+env.Program('bin/subtree_sim', env.Object('test/subtree_sim.c') + objs)
+env.Program('bin/tree_sim', env.Object('test/tree_sim.c') + objs)
+env.Program('bin/rle_compression', env.Object('test/rle_compression.c') + objs)
+env.Program('bin/topic_match', env.Object('test/topic_match.c') + objs)
+env.Program('bin/rand_sub', env.Object('test/rand_sub.c') + objs)
+env.Program('bin/rand_pub', env.Object('test/rand_pub.c') + objs)
+env.Program('bin/hashtest', env.Object('test/hashtest.c') + objs)
+env.Program('bin/stats', env.Object('test/stats.c') + objs)
+env.Program('bin/pubsub', env.Object('test/pubsub.c') + objs)
+env.Program('bin/coap_mcast_test', env.Object('test/coap_mcast_test.c') + objs)
+env.Program('bin/packtest', env.Object('test/packtest.c') + objs)
+env.Program('bin/nettest', env.Object('test/nettest.c') + objs)
+env.Program('bin/cbortest', env.Object('test/cbortest.c') + objs)
 
 # Examples
-Program('bin/publisher', Object('examples/publisher.c', CFLAGS=cflags, CPPPATH=['./inc']) + objs, LIBS=['uv'])
-Program('bin/subscriber', Object('examples/subscriber.c', CFLAGS=cflags, CPPPATH=['./inc']) + objs, LIBS=['uv'])
+env.Program('bin/publisher', env.Object('examples/publisher.c') + objs)
+env.Program('bin/subscriber', env.Object('examples/subscriber.c') + objs)

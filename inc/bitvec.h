@@ -25,18 +25,8 @@ DPS_Status DPS_Configure(size_t bitLen, size_t numHashes);
  * @param bv        An intialized bit vector
  * @param data      Data for the item to add
  * @param len       Length of the data to add
- * @param extra     Extra hashes to add to the configured has count
  */
-void DPS_BitVectorBloomInsertExtra(DPS_BitVector* bv, const uint8_t* data, size_t len, uint8_t extra);
-
-/**
- * Bloom Filter insertion operation.
- *
- * @param bv        An intialized bit vector
- * @param data      Data for the item to add
- * @param len       Length of the data to add
- */
-#define DPS_BitVectorBloomInsert(bv, data, len) DPS_BitVectorBloomInsertExtra(bv, data, len, 0)
+void DPS_BitVectorBloomInsert(DPS_BitVector* bv, const uint8_t* data, size_t len);
 
 /**
  * Bloom Filter existence check operation.

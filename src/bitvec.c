@@ -214,9 +214,9 @@ void DPS_BitVectorFree(DPS_BitVector* bv)
     }
 }
 
-void DPS_BitVectorBloomInsertExtra(DPS_BitVector* bv, const uint8_t* data, size_t len, uint8_t extra)
+void DPS_BitVectorBloomInsert(DPS_BitVector* bv, const uint8_t* data, size_t len)
 {
-    int h = config.numHashes + extra;
+    int h = config.numHashes;
     while (h) {
         uint32_t index = Hash(data, len, --h) % bv->len;
         SET_BIT(bv->bits, index);
@@ -295,9 +295,9 @@ size_t DPS_BitVectorSquash(DPS_BitVector* bv, uint64_t* squashed)
     }
 #endif
     s |= ROTL64(s, 13);
-    s |= ROTL64(s, 29);
-    s |= ROTL64(s, 37);
-    s |= ROTL64(s, 51);
+    s |= ROTL64(s, 17);
+    s |= ROTL64(s, 19);
+    s |= ROTL64(s, 23);
     *squashed = s;
     return pop;
 }
