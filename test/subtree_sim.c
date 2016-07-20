@@ -40,21 +40,12 @@ static const char* subFormats[NUM_SUB_FORMATS] = {
     "%d/%d",
     "%d/%d/%d",
     "%d/%d/%d/%d",
-#ifdef DPS_MQTT_LIKE
     "%d/%d/%d/#",
     "%d/#",
     /* infix wildcards last so can be optionally excluded */
     "%d/%d/+/%d",
     "%d/+/%d/+/%d",
     "%d/+/%d"
-#else
-    "%d/%d/%d/*",
-    "%d/*",
-    /* infix wildcards last so can be optionally excluded */
-    "%d/%d/*/%d",
-    "%d/*/%d/*/%d",
-    "%d/*/%d"
-#endif
 };
 
 static void PrintTopics(const char* label, char* topics[], size_t num)
@@ -602,14 +593,8 @@ int main(int argc, char** argv)
         DPS_PRINT("%s ", *argv);
         ++argv;
     }
-    DPS_PRINT("\n\n");
 
-#ifdef DPS_MQTT_LIKE
-    DPS_PRINT("Bit length=%d (%d bytes) MQTT pattern matching\n", bitLen, bitLen / 8);
-#else
-    DPS_PRINT("Bit length=%d (%d bytes)\n", bitLen, bitLen / 8);
-#endif
-
+    DPS_PRINT("\n\nBit length=%d (%d bytes)\n", bitLen, bitLen / 8);
 
     RunSimulation(runs, treeDepth, pubs);
     return 0;

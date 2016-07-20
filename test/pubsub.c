@@ -89,7 +89,6 @@ int main(int argc, char** argv)
     }
 
     pubFilter = DPS_BitVectorAlloc();
-
     AddTopic(pubFilter, "red");
     AddTopic(pubFilter, "blue");
     AddTopic(pubFilter, "foo");
@@ -114,34 +113,35 @@ int main(int argc, char** argv)
 
 
     //DPS_BitVectorDump(pubFilter, 1);
-
-    SubscriptionCheck(pubFilter, "*/baz", EXPECT);
-    SubscriptionCheck(pubFilter, "*/gorn", EXPECT);
-    SubscriptionCheck(pubFilter, "*/baz/gorn", EXPECT);
-    SubscriptionCheck(pubFilter, "*/gorn.x", EXPECT);
+    SubscriptionCheck(pubFilter, "foo/+/+.#", EXPECT);
+    SubscriptionCheck(pubFilter, "foo/+/+/+/#", NOT_EXPECT);
+    SubscriptionCheck(pubFilter, "+/baz", EXPECT);
+    SubscriptionCheck(pubFilter, "+/+/gorn", EXPECT);
+    SubscriptionCheck(pubFilter, "+/baz/gorn", EXPECT);
+    SubscriptionCheck(pubFilter, "+/+/gorn.x", EXPECT);
     SubscriptionCheck(pubFilter, "red", EXPECT);
     SubscriptionCheck(pubFilter, "foo", EXPECT);
     SubscriptionCheck(pubFilter, "foo/bar", EXPECT);
     SubscriptionCheck(pubFilter, "foo/bar/*", NOT_EXPECT);
-    SubscriptionCheck(pubFilter, "*.z", EXPECT);
-    SubscriptionCheck(pubFilter, "*", EXPECT);
-    SubscriptionCheck(pubFilter, "*/gorn.blah", NOT_EXPECT);
+    SubscriptionCheck(pubFilter, "+/+/+.z", EXPECT);
+    SubscriptionCheck(pubFilter, "foo/#", EXPECT);
+    SubscriptionCheck(pubFilter, "+/gorn.blah", NOT_EXPECT);
     SubscriptionCheck(pubFilter, "goo/baz", NOT_EXPECT);
-    SubscriptionCheck(pubFilter, "foo/*/gorn", EXPECT);
-    SubscriptionCheck(pubFilter, "foo/*.x", EXPECT);
-    SubscriptionCheck(pubFilter, "goo/*/gorn", EXPECT_FALSE_POSITIVE);
-    SubscriptionCheck(pubFilter, "goo/*.x", EXPECT_FALSE_POSITIVE);
-    SubscriptionCheck(pubFilter, "1.*", EXPECT);
-    SubscriptionCheck(pubFilter, "2.*", EXPECT);
-    SubscriptionCheck(pubFilter, "*.0", EXPECT);
-    SubscriptionCheck(pubFilter, "*.1", EXPECT);
-    SubscriptionCheck(pubFilter, "*.2", EXPECT);
+    SubscriptionCheck(pubFilter, "foo/+/gorn", EXPECT);
+    SubscriptionCheck(pubFilter, "foo/+/+.x", EXPECT);
+    SubscriptionCheck(pubFilter, "goo/+/gorn", EXPECT_FALSE_POSITIVE);
+    SubscriptionCheck(pubFilter, "goo/+/+.x", EXPECT_FALSE_POSITIVE);
+    SubscriptionCheck(pubFilter, "1.#", EXPECT);
+    SubscriptionCheck(pubFilter, "2.#", EXPECT);
+    SubscriptionCheck(pubFilter, "+.0", EXPECT);
+    SubscriptionCheck(pubFilter, "+.1", EXPECT);
+    SubscriptionCheck(pubFilter, "+.2", EXPECT);
     SubscriptionCheck(pubFilter, "2.1", NOT_EXPECT);
     SubscriptionCheck(pubFilter, "2.2", NOT_EXPECT);
     SubscriptionCheck(pubFilter, "x.y.c.1", NOT_EXPECT);
     SubscriptionCheck(pubFilter, "a.b.c.4", NOT_EXPECT);
-    SubscriptionCheck(pubFilter, "x/b/*", !EXPECT);
-    SubscriptionCheck(pubFilter, "*.c.5", !EXPECT);
+    SubscriptionCheck(pubFilter, "x/b/#", NOT_EXPECT);
+    SubscriptionCheck(pubFilter, "+.+.c.5", NOT_EXPECT);
 
     return 0;
 

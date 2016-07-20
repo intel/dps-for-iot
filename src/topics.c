@@ -12,15 +12,9 @@
  */
 DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
-#ifdef DPS_MQTT_LIKE
 #define FINAL_WILDC    '#'
 #define INFIX_WILDC    '+'
 #define WILDCARDS     "+#"
-#else
-#define FINAL_WILDC    '*'
-#define INFIX_WILDC    '*'
-#define WILDCARDS      "*"
-#endif
 
 static DPS_Status CheckWildcarding(const char* topic, const char* separators, DPS_Role role, const char** wcPos)
 {
@@ -35,9 +29,9 @@ static DPS_Status CheckWildcarding(const char* topic, const char* separators, DP
             return DPS_ERR_INVALID;
         }
         /*
-         * Leading wilcards not allowed
+         * A topic cannot start with a final wildcard
          */
-        if (wc == topic) {
+        if (wc == topic && wc[0] == FINAL_WILDC) {
             return DPS_ERR_INVALID;
         }
         /*
@@ -48,7 +42,7 @@ static DPS_Status CheckWildcarding(const char* topic, const char* separators, DP
             /*
              * Wildcards must be preceded by a separator
              */
-            if (!strchr(separators, wc[-1])) {
+            if (wc != topic && !strchr(separators, wc[-1])) {
                 return DPS_ERR_INVALID;
             }
             if (!wc[1]) {
@@ -107,7 +101,7 @@ DPS_Status DPS_AddTopic(DPS_BitVector* bf, const char* topic, const char* separa
     }
     ret = CheckWildcarding(topic, separators, role, &wc);
     if (ret != DPS_OK) {
-        DPS_ERRPRINT("Invalid use of wildcard in topic string\n");
+        DPS_ERRPRINT("Invalid use of wildcard in topic string \"%s\"\n");
         return ret;
     }
     tp = topic + strcspn(topic, separators);
@@ -116,7 +110,7 @@ DPS_Status DPS_AddTopic(DPS_BitVector* bf, const char* topic, const char* separa
         if (role == DPS_Sub) {
             return DPS_OK;
         }
-    } else {
+    } else if (wc != topic) {
         DPS_BitVectorBloomInsert(bf, topic, wc - topic);
     }
     segment = malloc(tlen + 1);
@@ -133,16 +127,14 @@ DPS_Status DPS_AddTopic(DPS_BitVector* bf, const char* topic, const char* separa
         if ((tp > wc) && (*tp != INFIX_WILDC)) {
             memcpy(segment + prefix, tp, len);
             segment[prefix + len] = tp[len];
-            DPS_BitVectorBloomInsert(bf, segment, prefix + len + 1);
+            DPS_BitVectorBloomInsert(bf, segment, prefix + len);
         }
         tp += len;
     }
-#ifdef DPS_MQTT_LIKE
     if (role == DPS_Pub) {
         segment[prefix++] = FINAL_WILDC;
         DPS_BitVectorBloomInsert(bf, segment, prefix);
     }
-#endif
     free(segment);
     return DPS_OK;
 }
