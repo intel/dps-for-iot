@@ -9,6 +9,9 @@
 #include <search.h>
 #include <uv.h>
 
+DPS_Status DPS_BitVectorPermute(DPS_BitVector* perm, DPS_BitVector* bv);
+
+
 
 static int verbose = 0;
 static int infixWildcards = 0;
@@ -137,8 +140,7 @@ static size_t InitRandomPub(DPS_BitVector* bv, char* topics[])
 
 typedef struct _SubNode {
     DPS_BitVector* interests;
-    uint64_t needs;
-    size_t pop;
+    DPS_BitVector* needs;
     char* strings[MAX_SUB_TOPICS];
     size_t count;
     int expect;
@@ -177,6 +179,7 @@ static SubNode* BuildTree(int depth)
     }
     ++numNodes[depth];
     node->interests = DPS_BitVectorAlloc();
+    node->needs = DPS_BitVectorAlloc();
     return node;
 }
 
@@ -187,6 +190,7 @@ static void FreeTree(SubNode* node)
         FreeTree(node->leaf[i]);
     }
     DPS_BitVectorFree(node->interests);
+    DPS_BitVectorFree(node->needs);
     free(node);
 }
 
@@ -216,12 +220,10 @@ static void ReplaceSubscription(SubNode* node, const char* topicString)
          * Need to rebuild the bit vector
          */
         DPS_BitVectorClear(node->interests);
-        node->needs = ~0ull;
-        node->pop = UINT32_MAX;
+        DPS_BitVectorFill(node->needs);
         for (i = 0; i < node->numLeafs; ++i) {
             DPS_BitVectorUnion(node->interests, node->leaf[i]->interests);
-            node->needs &= node->leaf[i]->needs;
-            node->pop = MIN(node->pop, node->leaf[i]->pop);
+            DPS_BitVectorIntersection(node->needs, node->needs, node->leaf[i]->needs);
         }
     } else {
         DPS_BitVectorClear(node->interests);
@@ -229,7 +231,7 @@ static void ReplaceSubscription(SubNode* node, const char* topicString)
         node->strings[0] = strdup(topicString);
         node->count = 1;
         DPS_AddTopic(node->interests, node->strings[0], "/.", DPS_Sub);
-        node->pop = DPS_BitVectorSquash(node->interests, &node->needs);
+        DPS_BitVectorPermute(node->needs, node->interests);
     }
 }
 
@@ -246,19 +248,16 @@ static void PopulateTree(SubNode* node)
 {
     if (node->numLeafs == 0) {
         node->count = InitRandomSub(node->interests, node->strings);
-        node->pop = DPS_BitVectorSquash(node->interests, &node->needs);
+        DPS_BitVectorPermute(node->needs, node->interests);
         node->totalSubs += node->count;
     } else {
         size_t i;
         DPS_BitVectorClear(node->interests);
-        node->needs = ~0ull;
-        node->pop = UINT32_MAX;
+        DPS_BitVectorFill(node->needs);
         for (i = 0; i < node->numLeafs; ++i) {
             PopulateTree(node->leaf[i]);
             DPS_BitVectorUnion(node->interests, node->leaf[i]->interests);
-            node->needs &= node->leaf[i]->needs;
-            node->pop = MIN(node->pop, node->leaf[i]->pop);
-            assert(node->pop);
+            DPS_BitVectorIntersection(node->needs, node->needs, node->leaf[i]->needs);
         }
     }
 }
@@ -295,18 +294,18 @@ static void PropagatePub(SubNode* node, DPS_BitVector* pub, int depth)
         }
     } else {
         size_t i;
+        DPS_BitVector* provides = DPS_BitVectorAlloc();
         DPS_BitVector* tmp = DPS_BitVectorAlloc();
         for (i = 0; i < node->numLeafs; ++i) {
             SubNode* leaf = node->leaf[i];
-            uint64_t provides;
-            size_t pop;
             /*
              * Duplicates match logic from dps.c
              */
             ret = DPS_BitVectorIntersection(tmp, pub, leaf->interests);
             assert(ret == DPS_OK);
-            pop = DPS_BitVectorSquash(tmp, &provides);
-            if ((pop >= leaf->pop) && ((provides & leaf->needs) == leaf->needs)) {
+            ret = DPS_BitVectorPermute(provides, tmp);
+            assert(ret == DPS_OK);
+            if (DPS_BitVectorIncludes(provides, leaf->needs)) {
                 if (leaf->expect) {
                     ++trueTrace[depth + 1];
                 } else {
@@ -315,11 +314,7 @@ static void PropagatePub(SubNode* node, DPS_BitVector* pub, int depth)
                 ++totalMsgs;
                 PropagatePub(leaf, tmp, depth + 1);
             } else {
-                if (pop < leaf->pop) {
-                    ++rejectByPop[depth];
-                } else {
-                    ++rejectByNeeds[depth];
-                }
+                ++rejectByNeeds[depth];
                 if (leaf->expect) {
                     DPS_PRINT("FAILURE!!! False negative\n");
                 }
@@ -480,12 +475,6 @@ static void RunSimulation(int runs, int treeDepth, int pubIters)
     DPS_PRINT("Reject by needs check:");
     for (i = 0; i <= treeDepth; ++i) {
         DPS_PRINT(" %7d ", rejectByNeeds[i]);
-    }
-    DPS_PRINT("\n");
-
-    DPS_PRINT("Reject by pop count:  ");
-    for (i = 0; i <= treeDepth; ++i) {
-        DPS_PRINT(" %7d ", rejectByPop[i]);
     }
     DPS_PRINT("\n\n");
 }

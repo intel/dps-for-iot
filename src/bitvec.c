@@ -48,33 +48,17 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 #define FLAG_RLE_COMPLEMENT  0x40
 
 /*
- * Process bit vector in 32 or 64 bit chunks
+ * Process bit vector in 64 bit chunks
  */
-#ifndef CHUNK_SIZE
-#define CHUNK_SIZE 64
-#endif
-
-#define POPCOUNT64(n)  __builtin_popcountll((uint64_t)n)
-
-#if CHUNK_SIZE == 32
-
-typedef uint32_t chunk_t;
-#define SET_BIT(a, b)   (a)[(b) >> 5] |= (1 << ((b) & 0x1F))
-#define TEST_BIT(a, b) ((a)[(b) >> 5] & (1 << ((b) & 0x1F)))
-#define POPCOUNT(n)  __builtin_popcountl((chunk_t)n)
-#define COUNT_TZ(n)  __builtin_ctzl((chunk_t)n)
-
-#elif CHUNK_SIZE == 64
-
 typedef uint64_t chunk_t;
-#define SET_BIT(a, b)   (a)[(b) >> 6] |= (1ull << ((b) & 0x3F))
-#define TEST_BIT(a, b) ((a)[(b) >> 6] & (1ull << ((b) & 0x3F)))
-#define POPCOUNT(n)  __builtin_popcountll((chunk_t)n)
-#define COUNT_TZ(n)  __builtin_ctzll((chunk_t)n)
 
-#else
-#error "CHUNK_SIZE must be 32 or 64 bits"
-#endif
+#define SET_BIT(a, b)  (a)[(b) >> 6] |= (1ull << ((b) & 0x3F))
+#define TEST_BIT(a, b) ((a)[(b) >> 6] & (1ull << ((b) & 0x3F)))
+#define POPCOUNT(n)    __builtin_popcountll((chunk_t)n)
+#define ROTL64(n, r)  (((n) << r) | ((n) >> (64 - r)))
+#define COUNT_TZ(n)    __builtin_ctzll((chunk_t)n)
+
+#define CHUNK_SIZE (8 * sizeof(chunk_t))
 
 struct _DPS_BitVector {
     size_t len;
@@ -273,7 +257,52 @@ int DPS_BitVectorIncludes(const DPS_BitVector* bv1, const DPS_BitVector* bv2)
     return b1un != 0;
 }
 
-#define ROTL64(n, r)  (((n) << r) | ((n) >> (64 - r)))
+DPS_Status DPS_BitVectorPermute(DPS_BitVector* perm, DPS_BitVector* bv)
+{
+    size_t i;
+    size_t pop = 0;
+    chunk_t s = 0;
+    chunk_t p;
+
+    if (!perm || !bv) {
+        return DPS_ERR_NULL;
+    }
+    assert(perm->len >= 4 * CHUNK_SIZE);
+    perm->len = 4 * CHUNK_SIZE;
+    /*
+     * Squash the bit vector into 64 bits
+     */
+    for (i = 0; i < NUM_CHUNKS(bv); ++i) {
+        chunk_t n = bv->bits[i];
+        pop += POPCOUNT(n);
+        s |= n;
+    }
+    if (pop == 0) {
+        DPS_BitVectorClear(perm);
+        return DPS_OK;
+    }
+    p = s;
+    p |= ROTL64(p, 7);
+    p |= ROTL64(p, 31);
+    perm->bits[0] = p;
+    p = s;
+    p |= ROTL64(p, 11);
+    p |= ROTL64(p, 29);
+    p |= ROTL64(p, 37);
+    perm->bits[1] = p;
+    p = s;
+    p |= ROTL64(p, 13);
+    p |= ROTL64(p, 17);
+    p |= ROTL64(p, 19);
+    p |= ROTL64(p, 41);
+    perm->bits[2] = p;
+    if (pop > 62) {
+        perm->bits[3] = ~0ull;
+    } else {
+        perm->bits[3] = (2ull << pop) - 1;
+    }
+    return DPS_OK;
+}
 
 size_t DPS_BitVectorSquash(DPS_BitVector* bv, uint64_t* squashed)
 {
@@ -281,19 +310,11 @@ size_t DPS_BitVectorSquash(DPS_BitVector* bv, uint64_t* squashed)
     size_t pop = 0;
     uint64_t s = 0;
 
-#if CHUNK_SIZE == 64
     for (i = 0; i < NUM_CHUNKS(bv); ++i) {
         uint64_t n = bv->bits[i];
-        pop += POPCOUNT64(n);
+        pop += POPCOUNT(n);
         s |= n;
     }
-#else
-    for (i = 0; i < NUM_CHUNKS(bv); i += 2) {
-        uint64_t n = (uint64_t)bv->bits[i + 1] | (((uint64_t)bv->bits[i]) << 32);
-        pop += POPCOUNT64(n);
-        s |= n;
-    }
-#endif
     s |= ROTL64(s, 13);
     s |= ROTL64(s, 17);
     s |= ROTL64(s, 19);

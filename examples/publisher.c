@@ -67,43 +67,53 @@ static void OnData(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf)
 
 #define STDIN 1
 
+static int IntArg(char* opt, char*** argp, int* argcp, int* val, uint32_t min, uint32_t max)
+{
+    char* p;
+    char** arg = *argp;
+    int argc = *argcp;
+
+    if (strcmp(*arg++, opt) != 0) {
+        return 0;
+    }
+    if (!--argc) {
+        return 0;
+    }
+    *val = strtol(*arg++, &p, 10);
+    if (*p) {
+        return 0;
+    }
+    if (*val < min || *val > max) {
+        DPS_PRINT("Value for option %s must be in range %d..%d\n", opt, min, max);
+        return 0;
+    }
+    *argp = arg;
+    *argcp = argc;
+    return 1;
+}
+
 int main(int argc, char** argv)
 {
     int r;
     DPS_Status ret;
     DPS_Node* node;
+    DPS_NodeAddress addr;
     char** arg = argv + 1;
     uv_loop_t* loop;
     uv_tty_t tty;
-    int portNum = 0;
-    size_t filterBits = 0;
-    size_t numHashes = 4;
+    const char* host = NULL;
+    const char* connectPort = NULL;
+    int bitLen = 16 * 1024;
+    int numHashes = 4;
     char* msg = NULL;
 
     DPS_Debug = 0;
 
     while (--argc) {
-        char* p;
-        if (strcmp(*arg, "-b") == 0) {
-            ++arg;
-            if (!--argc) {
-                goto Usage;
-            }
-            filterBits = strtol(*arg++, &p, 10);
-            if (*p) {
-                goto Usage;
-            }
+        if (IntArg("-h", &arg, &argc, &numHashes, 2, 16)) {
             continue;
         }
-        if (strcmp(*arg, "-n") == 0) {
-            ++arg;
-            if (!--argc) {
-                goto Usage;
-            }
-            numHashes = strtol(*arg++, &p, 10);
-            if (*p) {
-                goto Usage;
-            }
+        if (IntArg("-b", &arg, &argc, &bitLen, 64, 8 * 1024 * 1024)) {
             continue;
         }
         if (strcmp(*arg, "-p") == 0) {
@@ -111,11 +121,15 @@ int main(int argc, char** argv)
             if (!--argc) {
                 goto Usage;
             }
-            portNum = strtol(*arg++, &p, 10); 
-            if (*p) {
-                DPS_PRINT("Port number (-p) option requires a decimal number\n");
+            connectPort = *arg++;
+            continue;
+        }
+        if (strcmp(*arg, "-a") == 0) {
+            ++arg;
+            if (!--argc) {
                 goto Usage;
             }
+            host = *arg++;
             continue;
         }
         if (strcmp(*arg, "-m") == 0) {
@@ -144,18 +158,24 @@ int main(int argc, char** argv)
         DPS_PRINT("Need a least one topic to publish\n");
         return 1;
     }
-
-    if (filterBits) {
-        ret = DPS_Configure(filterBits, numHashes);
-        if (ret != DPS_OK) {
-            DPS_ERRPRINT("Invalid configuration parameters\n");
-            goto Usage;
-        }
+    ret = DPS_Configure(bitLen, numHashes);
+    if (ret != DPS_OK) {
+        DPS_ERRPRINT("Invalid configuration parameters\n");
+        goto Usage;
     }
 
-    node = DPS_InitNode(DPS_FALSE, portNum, "/.");
+    node = DPS_InitNode(DPS_FALSE, 0, "/.");
     assert(node);
     loop = DPS_GetLoop(node);
+
+    if (host || connectPort) {
+        ret = DPS_ResolveAddress(node, host, connectPort, &addr);
+        if (ret != DPS_OK) {
+            DPS_ERRPRINT("Failed to resolve %s/%s\n", host ? host : "<localhost>", connectPort);
+            return 1;
+        }
+        ret = DPS_Join(node, &addr);
+    }
 
     ret = DPS_Publish(node, topics, numTopics, &currentPub, msg, msg ? strlen(msg) + 1 : 0);
     if (ret != DPS_OK) {
@@ -173,7 +193,7 @@ int main(int argc, char** argv)
     return uv_run(loop, UV_RUN_DEFAULT);
 
 Usage:
-    DPS_PRINT("Usage %s [-p <portnum>] [-d] [-m <message>] topic1 topic2 ... topicN\n", *argv);
+    DPS_PRINT("Usage %s [-p <portnum>] [-a <hostname>] [-d] [-m <message>] topic1 topic2 ... topicN\n", *argv);
     return 1;
 }
 

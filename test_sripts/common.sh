@@ -27,7 +27,8 @@ function pub {
     sleep 0.1
     echo -e "=============================\npub$s $debug $@" | tee $f
     echo "==============================" >> $f
-    ../bin/publisher $debug $@ 2>> $f &
+    msg=$(echo "Published topics: " $@)
+    ../bin/publisher $debug $@ -m "$msg" 2>> $f &
 }
 
 function cleanup {

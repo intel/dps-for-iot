@@ -11,7 +11,7 @@ if [[ ! -d "$dir" ]]; then dir="$PWD"; fi
 sub -p 35003 -l 35000     1.1
 sub -p 35000 -l 35001      2.1
 sub -p 35001 -l 35002  -m  3.1
-sub -p 35002 -l 35003      *.1
+sub -p 35002 -l 35003      #.1
 
 sleep 1
 

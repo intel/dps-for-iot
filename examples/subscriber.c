@@ -32,6 +32,31 @@ static void OnIdle(uv_idle_t* handle)
     uv_idle_stop(handle);
 }
 
+static int IntArg(char* opt, char*** argp, int* argcp, int* val, uint32_t min, uint32_t max)
+{
+    char* p;
+    char** arg = *argp;
+    int argc = *argcp;
+
+    if (strcmp(*arg++, opt) != 0) {
+        return 0;
+    }
+    if (!--argc) {
+        return 0;
+    }
+    *val = strtol(*arg++, &p, 10);
+    if (*p) {
+        return 0;
+    }
+    if (*val < min || *val > max) {
+        DPS_PRINT("Value for option %s must be in range %d..%d\n", opt, min, max);
+        return 0;
+    }
+    *argp = arg;
+    *argcp = argc;
+    return 1;
+}
+
 int main(int argc, char** argv)
 {
     DPS_Status ret;
@@ -47,33 +72,19 @@ int main(int argc, char** argv)
     const char* host = NULL;
     int listenPort = 0;
     const char* connectPort = NULL;
-    size_t filterBits = 0;
-    size_t numHashes = 4;
+    int bitLen = 16 * 1024;
+    int numHashes = 4;
 
     DPS_Debug = 0;
 
     while (--argc) {
-        char* p;
-        if (strcmp(*arg, "-b") == 0) {
-            ++arg;
-            if (!--argc) {
-                goto Usage;
-            }
-            filterBits = strtol(*arg++, &p, 10);
-            if (*p) {
-                goto Usage;
-            }
+        if (IntArg("-h", &arg, &argc, &numHashes, 2, 16)) {
             continue;
         }
-        if (strcmp(*arg, "-n") == 0) {
-            ++arg;
-            if (!--argc) {
-                goto Usage;
-            }
-            numHashes = strtol(*arg++, &p, 10);
-            if (*p) {
-                goto Usage;
-            }
+        if (IntArg("-b", &arg, &argc, &bitLen, 64, 8 * 1024 * 1024)) {
+            continue;
+        }
+        if (IntArg("-l", &arg, &argc, &listenPort, 1, UINT16_MAX)) {
             continue;
         }
         if (strcmp(*arg, "-p") == 0) {
@@ -82,18 +93,6 @@ int main(int argc, char** argv)
                 goto Usage;
             }
             connectPort = *arg++;
-            continue;
-        }
-        if (strcmp(*arg, "-l") == 0) {
-            ++arg;
-            if (!--argc) {
-                goto Usage;
-            }
-            listenPort = strtol(*arg++, &p, 10);
-            if (*p) {
-                DPS_PRINT("Listen port option (-l) requires a decimal number\n");
-                goto Usage;
-            }
             continue;
         }
         if (strcmp(*arg, "-a") == 0) {
@@ -128,12 +127,10 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    if (filterBits) {
-        ret = DPS_Configure(filterBits, numHashes);
-        if (ret != DPS_OK) {
-            DPS_ERRPRINT("Invalid configuration parameters\n");
-            goto Usage;
-        }
+    ret = DPS_Configure(bitLen, numHashes);
+    if (ret != DPS_OK) {
+        DPS_ERRPRINT("Invalid configuration parameters\n");
+        goto Usage;
     }
 
     mcastListen |= (host == NULL) && (connectPort == NULL);

@@ -78,14 +78,14 @@ float DPS_BitVectorLoadFactor(const DPS_BitVector* bv);
 size_t DPS_BitVectorPopCount(const DPS_BitVector* bv);
 
 /**
- * Compacts a bit vector into 64 bits. Also return the population count.
+ * Compacts and permutes a bit vector.
  *
- * @param bv        An intialized bit vector
- * @param squashed  Returns the squashed bit vector
+ * @param perm  Returns the permuted bit vector
+ * @param bv    An intialized bit vector
  *
  * @return  The population count (number of bits set) of the bit vector.
  */
-size_t DPS_BitVectorSquash(DPS_BitVector* bv, uint64_t* squashed);
+DPS_Status DPS_BitVectorPermute(DPS_BitVector* perm, DPS_BitVector* bv);
 
 /**
  * Check if one bit vector includes all bit of another. The two bit vectors must be the same size.
