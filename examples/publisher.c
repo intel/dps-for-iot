@@ -21,7 +21,7 @@ static void OnAlloc(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf)
 
 static DPS_Publication* currentPub = NULL;
 
-static void AddTopics(const char* topicList)
+static char* AddTopics(char* topicList)
 {
     size_t i;
 
@@ -34,6 +34,12 @@ static void AddTopics(const char* topicList)
         if (!len) {
             len = strlen(topicList);
         }
+        /*
+         * If we have a "-m" the rest of the line is a message
+         */
+        if (strncmp(topicList, "-m", len) == 0) {
+            return topicList + 1 + len;
+        }
         topics[i] = malloc(len + 1);
         memcpy(topics[i], topicList, len);
         topics[i][len] = 0;
@@ -43,6 +49,7 @@ static void AddTopics(const char* topicList)
         }
         topicList += len + 1;
     }
+    return NULL;
 }
 
 static void OnData(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf)
@@ -50,6 +57,7 @@ static void OnData(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf)
     void* data;
 
     if (lineBuf[nread - 1] == '\n') {
+        char* msg;
         DPS_Status ret;
         DPS_Node* node = (DPS_Node*)stream->data;
 
@@ -57,8 +65,8 @@ static void OnData(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf)
         DPS_PRINT("Pub: %s\n", lineBuf);
 
         DPS_PublishCancel(node, currentPub, &data);
-        AddTopics(lineBuf);
-        ret = DPS_Publish(node, topics, numTopics, &currentPub, NULL, 0);
+        msg = AddTopics(lineBuf);
+        ret = DPS_Publish(node, topics, numTopics, &currentPub, msg, msg ? strlen(msg) : 0);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("Failed to publish %s error=%s\n", lineBuf, DPS_ErrTxt(ret));
         }
@@ -124,7 +132,7 @@ int main(int argc, char** argv)
             connectPort = *arg++;
             continue;
         }
-        if (strcmp(*arg, "-a") == 0) {
+        if (strcmp(*arg, "-h") == 0) {
             ++arg;
             if (!--argc) {
                 goto Usage;
@@ -154,10 +162,6 @@ int main(int argc, char** argv)
         }
         topics[numTopics++] = *arg++;
     }
-    if (numTopics == 0) {
-        DPS_PRINT("Need a least one topic to publish\n");
-        return 1;
-    }
     ret = DPS_Configure(bitLen, numHashes);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Invalid configuration parameters\n");
@@ -177,23 +181,24 @@ int main(int argc, char** argv)
         ret = DPS_Join(node, &addr);
     }
 
-    ret = DPS_Publish(node, topics, numTopics, &currentPub, msg, msg ? strlen(msg) + 1 : 0);
-    if (ret != DPS_OK) {
-        DPS_ERRPRINT("Failed to publish topics - error=%d\n", ret);
+    if (numTopics) {
+        ret = DPS_Publish(node, topics, numTopics, &currentPub, msg, msg ? strlen(msg) + 1 : 0);
+        if (ret != DPS_OK) {
+            DPS_ERRPRINT("Failed to publish topics - error=%d\n", ret);
+        }
+        DPS_TerminateNode(node);
+        return uv_run(loop, UV_RUN_DEFAULT);
+    } else {
+        DPS_PRINT("Running in interactive mode\n");
+        r = uv_tty_init(loop, &tty, STDIN, 1);
+        assert(r == 0);
+        tty.data = node;
+        uv_read_start((uv_stream_t*)&tty, OnAlloc, OnData);
     }
-    /*
-     *  We don't want to try to free the argv strings
-     */
-    numTopics = 0;
-
-    r = uv_tty_init(loop, &tty, STDIN, 1);
-    assert(r == 0);
-    tty.data = node;
-    uv_read_start((uv_stream_t*)&tty, OnAlloc, OnData);
     return uv_run(loop, UV_RUN_DEFAULT);
 
 Usage:
-    DPS_PRINT("Usage %s [-p <portnum>] [-a <hostname>] [-d] [-m <message>] topic1 topic2 ... topicN\n", *argv);
+    DPS_PRINT("Usage %s [-p <portnum>] [-h <hostname>] [-d] [-m <message>] [topic1 topic2 ... topicN]\n", *argv);
     return 1;
 }
 

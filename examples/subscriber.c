@@ -95,7 +95,7 @@ int main(int argc, char** argv)
             connectPort = *arg++;
             continue;
         }
-        if (strcmp(*arg, "-a") == 0) {
+        if (strcmp(*arg, "-h") == 0) {
             ++arg;
             if (!--argc) {
                 goto Usage;
@@ -166,6 +166,6 @@ int main(int argc, char** argv)
     return uv_run(loop, UV_RUN_DEFAULT);
 
 Usage:
-    DPS_PRINT("Usage %s [-p <portnum>] [-a <hostname>] [-l <listen port] [-m] [-d] topic1 topic2 ... topicN\n", *argv);
+    DPS_PRINT("Usage %s [-p <portnum>] [-h <hostname>] [-l <listen port] [-m] [-d] topic1 topic2 ... topicN\n", *argv);
     return 1;
 }

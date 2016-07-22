@@ -61,8 +61,6 @@ typedef struct _DPS_Publication {
     uint64_t revision;              /* Revision number for this publication */
     DPS_BitVector* bf;              /* The Bloom filter bit vector for the topics for this publication */
     DPS_Publication* next;
-    size_t numTopics;               /* Number of publication topics */
-    char* topics[1];                /* Published topics */
 } DPS_Publication;
 
 typedef struct _DPS_Node {
@@ -70,6 +68,7 @@ typedef struct _DPS_Node {
     char separators[13];                  /* List of separator characters */
 
     uv_loop_t* loop;                      /* uv lib event loop */
+    uv_idle_t idler;                      /* for doing background work */
 
     uint64_t revision;                    /* Revision number for this node */
 
@@ -277,6 +276,7 @@ static void DeleteRemoteSubscriber(DPS_Node* node, DPS_NodeAddress* addr)
                 node->remoteSubs = sub->next;
             }
             DPS_BitVectorFree(sub->interests);
+            DPS_BitVectorFree(sub->needs);
             free(sub);
             break;
         }
@@ -868,6 +868,12 @@ DPS_Node* DPS_InitNode(int mcastListen, int tcpPort, const char* separators)
     node->loop->data = node;
     node->revision = (uv_hrtime() / 1000000) & 0xFFFFFFFF;
 
+    /*
+     * Initialize an idler to do background work
+     */
+    node->idler.data = node;
+    uv_idle_init(node->loop, &node->idler);
+
     node->interests = DPS_BitVectorAlloc();
     if (!node->interests) {
         free(node);
@@ -903,11 +909,66 @@ uint16_t DPS_GetPortNumber(DPS_Node* node)
     }
 }
 
+static DPS_Subscription* FreeSubscription(DPS_Subscription* sub)
+{
+    DPS_Subscription* next = sub->next;
+    DPS_BitVectorFree(sub->bf);
+    DPS_BitVectorFree(sub->needs);
+    while (sub->numTopics) {
+        free(sub->topics[--sub->numTopics]);
+    }
+    free(sub);
+    return next;
+}
+
+static SubList* FreeRemoteSub(SubList* sub)
+{
+    SubList* next = sub->next;
+    DPS_BitVectorFree(sub->interests);
+    DPS_BitVectorFree(sub->needs);
+    free(sub);
+    return next;
+}
+
+static PubList* FreeRemotePub(PubList* pub)
+{
+    PubList* next = pub->next;
+    free(pub);
+    return next;
+}
+
+static DPS_Publication* FreePublication(DPS_Publication* pub)
+{
+    DPS_Publication* next = pub->next;
+    free(pub);
+    return next;
+}
+
+static void TerminateOnIdle(uv_idle_t* handle)
+{
+    DPS_Node* node = (DPS_Node*)handle->data;
+
+    DPS_BitVectorFree(node->interests);
+    DPS_BitVectorFree(node->needs);
+
+    while (node->localPubs) {
+        node->localPubs = FreePublication(node->localPubs);
+    }
+    while (node->localSubs) {
+        node->localSubs = FreeSubscription(node->localSubs);
+    }
+    while (node->remoteSubs) {
+        node->remoteSubs = FreeRemoteSub(node->remoteSubs);
+    }
+    while (node->remotePubs) {
+        node->remotePubs = FreeRemotePub(node->remotePubs);
+    }
+    free(node);
+    uv_idle_stop(handle);
+}
+
 void DPS_TerminateNode(DPS_Node* node)
 {
-    /*
-     * TODO - free node resources
-     */
     if (node->mcastReceiver) {
         DPS_MulticastStopReceive(node->mcastReceiver);
     }
@@ -917,7 +978,7 @@ void DPS_TerminateNode(DPS_Node* node)
     if (node->netListener) {
         DPS_NetStopListening(node->netListener);
     }
-    free(node);
+    uv_idle_start(&node->idler, TerminateOnIdle);
 }
 
 DPS_Status DPS_Publish(DPS_Node* node, char* const* topics, size_t numTopics, DPS_Publication** publication, void* data, size_t len)
@@ -937,9 +998,9 @@ DPS_Status DPS_Publish(DPS_Node* node, char* const* topics, size_t numTopics, DP
         return DPS_ERR_ARGS;
     }
     /*
-     * Create the subscription
+     * Create the publication
      */
-    pub = malloc(sizeof(DPS_Publication) + sizeof(char*) * (numTopics - 1));
+    pub = malloc(sizeof(DPS_Publication));
     if (!pub) {
         return DPS_ERR_RESOURCES;
     }
@@ -967,8 +1028,7 @@ DPS_Status DPS_Publish(DPS_Node* node, char* const* topics, size_t numTopics, DP
         node->localPubs = pub;
         *publication = pub;
     } else {
-        DPS_BitVectorFree(pub->bf);
-        free(pub);
+        FreePublication(pub);
     }
     return ret;
 }
@@ -995,20 +1055,10 @@ DPS_Status DPS_PublishCancel(DPS_Node* node, DPS_Publication* pub, void** data)
         node->localPubs = pub->next;
     }
     *data = pub->data;
-    DPS_BitVectorFree(pub->bf);
-    free(pub);
+    FreePublication(pub);
     return DPS_ERR_OK;
 }
 
-static void FreeSubscription(DPS_Subscription* sub)
-{
-    DPS_BitVectorFree(sub->bf);
-    DPS_BitVectorFree(sub->needs);
-    while (sub->numTopics) {
-        free(sub->topics[--sub->numTopics]);
-    }
-    free(sub);
-}
 
 DPS_Status DPS_Join(DPS_Node* node, DPS_NodeAddress* addr)
 {
@@ -1092,12 +1142,13 @@ DPS_Status DPS_Subscribe(DPS_Node* node, char* const* topics, size_t numTopics, 
             break;
         }
     }
-    DPS_DBGPRINT("Subscribing to %d topics\n", numTopics);
-    DumpSubscription(sub);
     if (ret != DPS_OK) {
         FreeSubscription(sub);
     } else {
         int noChange;
+
+        DPS_DBGPRINT("Subscribing to %d topics\n", numTopics);
+        DumpSubscription(sub);
 
         DPS_BitVectorPermute(sub->needs, sub->bf);
         sub->next = node->localSubs;
