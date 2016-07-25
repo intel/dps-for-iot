@@ -16,6 +16,15 @@ DPS_Status DPS_BitVectorPermute(DPS_BitVector* perm, DPS_BitVector* bv);
 static int verbose = 0;
 static int infixWildcards = 0;
 
+struct {
+    int numMatches;
+    int falsePositives;
+    int totalSubs;
+    int numNodes;
+    int numPubs;
+    int numMsgs;
+} totals;
+
 static size_t uniqueSubscriptionTopics;
 
 static char lineBuf[200];
@@ -54,8 +63,12 @@ static const char* subFormats[NUM_SUB_FORMATS] = {
 static void PrintTopics(const char* label, char* topics[], size_t num)
 {
     DPS_PRINT("%s: ", label);
-    while (num--) {
-        DPS_PRINT("%s%s", *topics++, num ? " & " : "\n");
+    if (num) {
+        while (num--) {
+            DPS_PRINT("%s%s", *topics++, num ? " & " : "\n");
+        }
+    } else {
+        DPS_PRINT("\n");
     }
 }
 
@@ -68,18 +81,28 @@ static void FreeTopics(char* topics[], size_t num)
 
 static const char* UniqueSubTopic = "foo/bar/hello/world";
 static const char* UniquePubTopic = "foo/bar/hello/world";
+static int uniqueSub = 0;
 
 
 static size_t InitRandomSub(DPS_BitVector* bv, char* topics[])
 {
     DPS_Status ret;
     size_t i = 0;
-    size_t numSubs = 1 + (random() % (MAX_SUB_TOPICS - 1));
+    size_t numSubs;
     ENTRY addEntry;
     ENTRY* foundEntry;
 
     DPS_BitVectorClear(bv);
 
+    if (uniqueSub) {
+        uniqueSub = 0;
+        topics[0] = strdup(UniqueSubTopic);
+        ret = DPS_AddTopic(bv, topics[0], "/.", DPS_Sub);
+        assert(ret == DPS_OK);
+        return 1;
+    }
+
+    numSubs = 1 + (random() % (MAX_SUB_TOPICS - 1));
     while (i < numSubs) {
         int fmt = random() % NUM_SUB_FORMATS;
         if (fmt < FIRST_INFIX_WILDCARD || infixWildcards) {
@@ -136,19 +159,20 @@ static size_t InitRandomPub(DPS_BitVector* bv, char* topics[])
 
 #define MIN(x, y)  ((x) < (y) ? (x) : (y))
 
-#define MAX_LEAFS 10
+#define MAX_CHILDREN 10
 
 typedef struct _SubNode {
     DPS_BitVector* interests;
     DPS_BitVector* needs;
     char* strings[MAX_SUB_TOPICS];
     size_t count;
+    uint32_t revision;
     int expect;
     int falsePositives;
     int numMatches;
     int totalSubs;
-    size_t numLeafs;
-    struct _SubNode* leaf[1];
+    size_t numChildren;
+    struct _SubNode* child[1];
 } SubNode;
 
 #define MAX_TREE_DEPTH 8
@@ -160,7 +184,85 @@ static size_t falseTrace[MAX_TREE_DEPTH + 1];
 static size_t numNodes[MAX_TREE_DEPTH + 1];
 static size_t rejectByNeeds[MAX_TREE_DEPTH + 1];
 static size_t rejectByPop[MAX_TREE_DEPTH + 1];
-static size_t totalMsgs;
+static size_t staleMessages[MAX_TREE_DEPTH + 1];
+static size_t totalMessages[MAX_TREE_DEPTH + 1];
+
+#define MESH_LAYERS   7
+
+static size_t MaxLayerSizes[MESH_LAYERS] = { 50, 100, 500, 100, 50, 10, 500 };
+
+SubNode* AllocNode(size_t numChildren)
+{
+    SubNode* node = calloc(1, sizeof(SubNode) + numChildren * sizeof(SubNode*));
+
+    node->numChildren = numChildren;
+    node->interests = DPS_BitVectorAlloc();
+    node->needs = DPS_BitVectorAllocPerm();
+    return node;
+}
+
+static SubNode* BuildMesh()
+{
+    SubNode* root;
+    SubNode** layers[MESH_LAYERS];
+    size_t layerSize[MESH_LAYERS];
+    int i;
+    int l;
+    int c;
+
+    /*
+     * Size and allocate the layers
+     */
+    for (i = 0; i < MESH_LAYERS; ++i) {
+        SubNode** layer;
+        layerSize[i] = 1 + random() % MaxLayerSizes[i];
+        DPS_PRINT("Build layer %d - size=%d\n", i, layerSize[i]);
+        layer = calloc(1, layerSize[i] * sizeof(SubNode*));
+        layers[i] = layer;
+    }
+    root = AllocNode(layerSize[0]);
+    for (c = 0; c < layerSize[0]; ++c) {
+        SubNode* node = AllocNode(1 + random() % (1 + layerSize[0] / 10));
+        root->child[c] = layers[0][c] = node;
+    }
+    /*
+     * Link nodes at each layer to a set of nodes from the layer above
+     */
+    for (i = 0; i < (MESH_LAYERS - 1); ++i) {
+        SubNode** layer = layers[i];
+        SubNode** upper = layers[i + 1];
+        size_t upperSize = layerSize[i + 1];
+        for (l = 0; l < layerSize[i]; ++l) {
+            SubNode* node = layer[l];
+            if (!node) {
+                continue;
+            }
+            for (c = 0; c < node->numChildren; ++c) {
+                int n = random() % upperSize;
+                if (!upper[n]) {
+                    if (i == (MESH_LAYERS - 2)) {
+                        upper[n] = AllocNode(0);
+                    } else {
+                        upper[n] = AllocNode(1 + random() % (1 + layerSize[i + 2] / 10));
+                    }
+                }
+                node->child[c] = upper[n];
+            }
+        }
+    }
+    for (i = 0; i < MESH_LAYERS; ++i) {
+        SubNode** layer = layers[i];
+        numNodes[i] = 0;
+        for (l = 0; l < layerSize[i]; ++l) {
+            if (layer[l]) {
+                ++numNodes[i];
+                ++totals.numNodes;
+            }
+        }
+        DPS_PRINT("Layer %d - actual nodes=%d\n", i, numNodes[i]);
+    }
+    return root;
+}
 
 static SubNode* BuildTree(int depth)
 {
@@ -168,219 +270,241 @@ static SubNode* BuildTree(int depth)
     SubNode* node;
 
     if (depth > 0) {
-        int numLeafs = 1 + random() % MAX_LEAFS;
-        node = calloc(1, sizeof(SubNode) + sizeof(struct _SubNode*) * (numLeafs - 1));
-        for (i = 0; i < numLeafs; ++i) {
-            node->leaf[i] = BuildTree(depth - 1);
+        int numChildren = 1 + random() % MAX_CHILDREN;
+        node = calloc(1, sizeof(SubNode) + sizeof(struct _SubNode*) * (numChildren - 1));
+        for (i = 0; i < numChildren; ++i) {
+            node->child[i] = BuildTree(depth - 1);
         }
-        node->numLeafs = numLeafs;
+        node->numChildren = numChildren;
     } else {
         node = calloc(1, sizeof(SubNode));
     }
     ++numNodes[depth];
+    ++totals.numNodes;
     node->interests = DPS_BitVectorAlloc();
-    node->needs = DPS_BitVectorAlloc();
+    node->needs = DPS_BitVectorAllocPerm();
     return node;
 }
 
 static void FreeTree(SubNode* node)
 {
-    size_t i;
-    for (i = 0; i < node->numLeafs; ++i) {
-        FreeTree(node->leaf[i]);
+    size_t c = node->numChildren;
+    node->numChildren = 0;
+    while (c--) {
+        FreeTree(node->child[c]);
     }
     DPS_BitVectorFree(node->interests);
     DPS_BitVectorFree(node->needs);
     free(node);
 }
 
-static void ShowTree(SubNode* node, int depth)
+static void ShowTree(SubNode* node, int depth, int topics)
 {
     char in[64];
 
     memset(in, node->expect ? '+' : '-', depth * 2);
     in[depth * 2] = 0;
-    if (node->numLeafs > 0) {
+    if (node->numChildren > 0) {
         size_t i;
-        DPS_PRINT("%s%d\n", in, node->numLeafs);
-        for (i = 0; i < node->numLeafs; ++i) {
-            ShowTree(node->leaf[i], depth + 1);
+        DPS_PRINT("%s%d  (%p)\n", in, node->numChildren, node);
+        for (i = 0; i < node->numChildren; ++i) {
+            ShowTree(node->child[i], depth + 1, topics);
         }
     } else {
-        PrintTopics(in, node->strings, node->count);
+        if (topics) {
+            PrintTopics(in, node->strings, node->count);
+        }
     }
 }
 
-static void ReplaceSubscription(SubNode* node, const char* topicString)
+static void ClearExpects(SubNode* node)
 {
-    if (node->numLeafs) {
-        size_t i = random() % node->numLeafs;
-        ReplaceSubscription(node->leaf[i], topicString);
-        /*
-         * Need to rebuild the bit vector
-         */
-        DPS_BitVectorClear(node->interests);
-        DPS_BitVectorFill(node->needs);
-        for (i = 0; i < node->numLeafs; ++i) {
-            DPS_BitVectorUnion(node->interests, node->leaf[i]->interests);
-            DPS_BitVectorIntersection(node->needs, node->needs, node->leaf[i]->needs);
+    if (node->expect) {
+        size_t i;
+        node->expect = 0;
+        for (i = 0; i < node->numChildren; ++i) {
+            ClearExpects(node->child[i]);
         }
-    } else {
-        DPS_BitVectorClear(node->interests);
-        FreeTopics(node->strings, node->count);
-        node->strings[0] = strdup(topicString);
-        node->count = 1;
-        DPS_AddTopic(node->interests, node->strings[0], "/.", DPS_Sub);
-        DPS_BitVectorPermute(node->needs, node->interests);
     }
 }
 
 static void CleanTree(SubNode* node)
 {
     size_t i;
-    for (i = 0; i < node->numLeafs; ++i) {
-        CleanTree(node->leaf[i]);
+    for (i = 0; i < node->numChildren; ++i) {
+        CleanTree(node->child[i]);
     }
-    FreeTopics(node->strings, node->count);
+    if (node->count) {
+        FreeTopics(node->strings, node->count);
+        node->count = 0;
+    }
 }
+
+DPS_BitVector* permChecker;
 
 static void PopulateTree(SubNode* node)
 {
-    if (node->numLeafs == 0) {
-        node->count = InitRandomSub(node->interests, node->strings);
-        DPS_BitVectorPermute(node->needs, node->interests);
-        node->totalSubs += node->count;
+    if (node->numChildren == 0) {
+        if (!node->count) {
+            node->count = InitRandomSub(node->interests, node->strings);
+            DPS_BitVectorPermute(node->needs, node->interests);
+            DPS_BitVectorIntersection(permChecker, permChecker, node->needs);
+            DPS_BitVectorDump(node->needs, 1);
+            DPS_BitVectorDump(permChecker, 1);
+            node->totalSubs += node->count;
+            totals.totalSubs += node->count;
+        }
     } else {
         size_t i;
         DPS_BitVectorClear(node->interests);
         DPS_BitVectorFill(node->needs);
-        for (i = 0; i < node->numLeafs; ++i) {
-            PopulateTree(node->leaf[i]);
-            DPS_BitVectorUnion(node->interests, node->leaf[i]->interests);
-            DPS_BitVectorIntersection(node->needs, node->needs, node->leaf[i]->needs);
+        for (i = 0; i < node->numChildren; ++i) {
+            PopulateTree(node->child[i]);
+            DPS_BitVectorUnion(node->interests, node->child[i]->interests);
+            DPS_BitVectorIntersection(node->needs, node->needs, node->child[i]->needs);
         }
     }
 }
 
 static int SetExpects(SubNode* node, char** pubs, size_t numPubs)
 {
-    if (node->numLeafs == 0) {
+    if (node->expect) {
+        return 0;
+    }
+    if (node->numChildren == 0) {
         DPS_MatchTopicList(pubs, numPubs, node->strings, node->count, "/.", &node->expect);
     } else {
         size_t i;
-        node->expect = 0;
-        for (i = 0; i < node->numLeafs; ++i) {
-            node->expect |= SetExpects(node->leaf[i], pubs, numPubs);
+        for (i = 0; i < node->numChildren; ++i) {
+            node->expect += SetExpects(node->child[i], pubs, numPubs);
         }
     }
     return node->expect;
 }
 
-static void PropagatePub(SubNode* node, DPS_BitVector* pub, int depth)
+static int PropagatePub(SubNode* node, DPS_BitVector* pub, uint32_t revision, int depth)
 {
+    int numMatches = 0;
     DPS_Status ret;
 
-    if (node->numLeafs == 0) {
+    ++totalMessages[depth];
+    /*
+     * Ignore if we have already seen this publication. This is equivalent to the check in dps.c
+     */
+    if (revision <= node->revision) {
+        ++staleMessages[depth];
+        return 0;
+    }
+    node->revision = revision;
+
+    if (node->numChildren == 0) {
         if (DPS_BitVectorIncludes(pub, node->interests)) {
             if (node->expect) {
                 ++node->numMatches;
+                ++totals.numMatches;
+                numMatches = 1;
             } else {
                 ++node->falsePositives;
+                ++totals.falsePositives;
             }
         } else {
             if (node->expect) {
-                DPS_PRINT("FAILURE!!! False negative at leaf\n");
+                DPS_PRINT("FAILURE!!! False negative at child\n");
             }
         }
     } else {
         size_t i;
-        DPS_BitVector* provides = DPS_BitVectorAlloc();
+        DPS_BitVector* provides = DPS_BitVectorAllocPerm();
         DPS_BitVector* tmp = DPS_BitVectorAlloc();
-        for (i = 0; i < node->numLeafs; ++i) {
-            SubNode* leaf = node->leaf[i];
+        for (i = 0; i < node->numChildren; ++i) {
+            int match;
+            SubNode* child = node->child[i];
             /*
              * Duplicates match logic from dps.c
              */
-            ret = DPS_BitVectorIntersection(tmp, pub, leaf->interests);
+            ret = DPS_BitVectorIntersection(tmp, pub, child->interests);
             assert(ret == DPS_OK);
-            ret = DPS_BitVectorPermute(provides, tmp);
-            assert(ret == DPS_OK);
-            if (DPS_BitVectorIncludes(provides, leaf->needs)) {
-                if (leaf->expect) {
+            if (child->numChildren == 0) {
+                match = DPS_BitVectorEquals(tmp, child->interests);
+            } else {
+                ret = DPS_BitVectorPermute(provides, tmp);
+                assert(ret == DPS_OK);
+                match = DPS_BitVectorIncludes(provides, child->needs);
+            }
+            if (match) {
+                if (child->expect) {
                     ++trueTrace[depth + 1];
                 } else {
                     ++falseTrace[depth + 1];
                 }
-                ++totalMsgs;
-                PropagatePub(leaf, tmp, depth + 1);
+                ++totals.numMsgs;
+                numMatches += PropagatePub(child, tmp, revision, depth + 1);
             } else {
                 ++rejectByNeeds[depth];
-                if (leaf->expect) {
+                if (child->expect) {
                     DPS_PRINT("FAILURE!!! False negative\n");
                 }
             }
         }
         DPS_BitVectorFree(tmp);
     }
-}
-
-typedef struct {
-    int numMatches;
-    int falsePositives;
-    int totalSubs;
-    int numNodes;
-} Stats;
-
-static void Analyze(SubNode* node, Stats* stats)
-{
-    size_t i;
-
-    ++stats->numNodes;
-    stats->numMatches += node->numMatches;
-    stats->falsePositives += node->falsePositives;
-    stats->totalSubs += node->totalSubs;
-    for (i = 0; i < node->numLeafs; ++i) {
-        Analyze(node->leaf[i], stats);
-    }
+    return numMatches;
 }
 
 #define NUM_REPLACEMENTS 1
 
-static void RunSimulation(int runs, int treeDepth, int pubIters)
+static void RunSimulation(int runs, int depth, int pubIters)
 {
     DPS_Status ret;
+    int mesh = (depth == 0);
     int i;
     int r;
     DPS_BitVector* pub = DPS_BitVectorAlloc();
     SubNode fakeRoot;
     SubNode* subscriptions;
-    int numPubs = 0;
     int minMsgs = 0;
-    Stats stats;
     float maxLoad = 0.0;
     float totalLoad = 0.0;
+    uint32_t revision = 0;
 
-    subscriptions = BuildTree(treeDepth);
+    if (mesh) {
+        subscriptions = BuildMesh();
+        depth = MESH_LAYERS;
+    } else {
+        subscriptions = BuildTree(depth);
+    }
 
-    fakeRoot.numLeafs = 1;
-    fakeRoot.leaf[0] = subscriptions;
+    memset(&fakeRoot, 0, sizeof(fakeRoot));
+    fakeRoot.numChildren = 1;
+    fakeRoot.child[0] = subscriptions;
 
 #if 0
+    hcreate(totals.numNodes * MAX_SUB_TOPICS);
     PopulateTree(subscriptions);
+    hdestroy();
     ShowTree(subscriptions, 0);
 #endif
 
+    permChecker = DPS_BitVectorAllocPerm();
     for (r = 0; r < runs; ++r) {
+        char* pubTopics[MAX_PUB_TOPICS];
+        int expects;
+        int actuals;
         float lf;
         int p;
         /*
          * Hash table for subscription topic counting
          */
-        hcreate(numNodes[0] * MAX_SUB_TOPICS);
+        hcreate(totals.numNodes * MAX_SUB_TOPICS);
         /*
          * Build a tree of random subscriptions.
          */
+        if (pubIters == 0) {
+            uniqueSub = 1;
+        }
+        DPS_BitVectorFill(permChecker);
         PopulateTree(subscriptions);
+        DPS_BitVectorDump(permChecker, 1);
         /*
          * Done with the hash table
          */
@@ -391,46 +515,48 @@ static void RunSimulation(int runs, int treeDepth, int pubIters)
             maxLoad = lf;
         }
         totalLoad += lf;
-
         /*
          * Tests random publications against the subscriptions
          */
         for (p = 0; p < pubIters; ++p) {
-            char* pubTopics[MAX_PUB_TOPICS];
             size_t numPubTopics = InitRandomPub(pub, pubTopics);
             /*
              * Identify expected matches
              */
-            SetExpects(subscriptions, pubTopics, numPubTopics);
+            ClearExpects(subscriptions);
+            expects = SetExpects(subscriptions, pubTopics, numPubTopics);
+            //ShowTree(subscriptions, 0, 0);
             /*
              * Propagate the publication up the tree
              */
-            DPS_BitVectorDump(pub, 0);
-            PropagatePub(&fakeRoot, pub, -1);
+            actuals = PropagatePub(&fakeRoot, pub, ++revision, -1);
+            if (actuals != expects) {
+                DPS_ERRPRINT("Expects=%d actuals=%d\n", expects, actuals);
+
+            }
             FreeTopics(pubTopics, numPubTopics);
-            ++numPubs;
+            ++totals.numPubs;
         }
         /*
          * Sends a single publication
          */
         if (pubIters == 0) {
-            size_t n;
-            char* pubTopics[MAX_PUB_TOPICS];
             size_t numPubTopics = 1;
 
             pubTopics[0] = strdup(UniquePubTopic);
             DPS_BitVectorClear(pub);
             DPS_AddTopic(pub, pubTopics[0], "/.", DPS_Pub);
-            for (n = 0; n < NUM_REPLACEMENTS; ++n) {
-                ReplaceSubscription(subscriptions, UniqueSubTopic);
+
+            ClearExpects(subscriptions);
+            expects = SetExpects(subscriptions, pubTopics, numPubTopics);
+            ShowTree(subscriptions, 0, 0);
+
+            actuals = PropagatePub(&fakeRoot, pub, ++revision, -1);
+            if (actuals != expects) {
+                DPS_ERRPRINT("Expects=%d actuals=%d\n", expects, actuals);
             }
-            /*
-             * Identify expected matches
-             */
-            SetExpects(subscriptions, pubTopics, numPubTopics);
             FreeTopics(pubTopics, numPubTopics);
-            PropagatePub(&fakeRoot, pub, -1);
-            ++numPubs;
+            ++totals.numPubs;
         }
         /*
          * Done with these subscriptions
@@ -438,43 +564,59 @@ static void RunSimulation(int runs, int treeDepth, int pubIters)
         CleanTree(subscriptions);
     }
     DPS_BitVectorFree(pub);
-
-    memset(&stats, 0, sizeof(stats));
-    Analyze(subscriptions, &stats);
-    FreeTree(subscriptions);
+    //FreeTree(subscriptions);
 
     minMsgs = 0;
-    for (i = 0; i <= treeDepth; ++i) {
+    for (i = 0; i <= depth; ++i) {
         minMsgs += trueTrace[i];
     }
 
-    DPS_PRINT("Message efficiency=%2.2f%%\n", (float)(minMsgs * 100) / (float)(totalMsgs));
-    DPS_PRINT("Nodes=%d, pubs=%d, actual msgs=%d, min msgs=%d\n", stats.numNodes, numPubs, totalMsgs, minMsgs);
+    DPS_PRINT("Message efficiency=%2.2f%%\n", (float)(minMsgs * 100) / (float)(totals.numMsgs));
+    DPS_PRINT("Nodes=%d, pubs=%d, actual msgs=%d, min msgs=%d\n", totals.numNodes, totals.numPubs, totals.numMsgs, minMsgs);
     DPS_PRINT("Max load at root=%2.3f%%, Avg load at root=%2.3f%%\n", maxLoad, totalLoad / runs);
-    DPS_PRINT("Matched publications=%d, false positives=%d\n", stats.numMatches, stats.falsePositives);
-    DPS_PRINT("Unique subscription topic strings=%d (out of %d total)\n", uniqueSubscriptionTopics, stats.totalSubs);
+    DPS_PRINT("Matched publications=%d, false positives=%d\n", totals.numMatches, totals.falsePositives);
+    DPS_PRINT("Unique subscription topic strings=%d (out of %d total)\n", uniqueSubscriptionTopics, totals.totalSubs);
 
-    DPS_PRINT("Node count:           ");
-    for (i = treeDepth; i >= 0; --i) {
-        DPS_PRINT(" %7d ", numNodes[i]);
+    DPS_PRINT("Node count:            ");
+    if (mesh) {
+        DPS_PRINT(" %7d ", 1);
+        for (i = 0; i < depth; ++i) {
+            DPS_PRINT(" %7d ", numNodes[i]);
+        }
+    } else {
+        for (i = depth; i >= 0; --i) {
+            DPS_PRINT(" %7d ", numNodes[i]);
+        }
     }
     DPS_PRINT("\n");
 
-    DPS_PRINT("True propagations:    ");
-    for (i = 0; i <= treeDepth; ++i) {
+    DPS_PRINT("Total messages:        ");
+    for (i = 0; i <= depth; ++i) {
+        DPS_PRINT(" %7d ", totalMessages[i]);
+    }
+    DPS_PRINT("\n");
+
+    DPS_PRINT("True propagations:     ");
+    for (i = 0; i <= depth; ++i) {
         DPS_PRINT(" %7d ", trueTrace[i]);
     }
     DPS_PRINT("\n");
 
-    DPS_PRINT("False propagations:   ");
-    for (i = 0; i <= treeDepth; ++i) {
+    DPS_PRINT("False propagations:    ");
+    for (i = 0; i <= depth; ++i) {
         DPS_PRINT(" %7d ", falseTrace[i]);
     }
     DPS_PRINT("\n");
 
-    DPS_PRINT("Reject by needs check:");
-    for (i = 0; i <= treeDepth; ++i) {
+    DPS_PRINT("Reject by needs check: ");
+    for (i = 0; i <= depth; ++i) {
         DPS_PRINT(" %7d ", rejectByNeeds[i]);
+    }
+    DPS_PRINT("\n");
+
+    DPS_PRINT("Blocked stale messages:");
+    for (i = 0; i <= depth; ++i) {
+        DPS_PRINT(" %7d ", staleMessages[i]);
     }
     DPS_PRINT("\n\n");
 }
@@ -508,7 +650,7 @@ int main(int argc, char** argv)
 {
     int bitLen = 1024 * 32;
     int runs = 100;
-    int treeDepth = 4;
+    int depth = 4;
     int hashes = 4;
     int seed = 0;
     int pubs = 100;
@@ -534,7 +676,7 @@ int main(int argc, char** argv)
             infixWildcards = 1;
             continue;
         }
-        if (IntArg("-t", &arg, &argc, &treeDepth, 1, MAX_TREE_DEPTH)) {
+        if (IntArg("-t", &arg, &argc, &depth, 0, MAX_TREE_DEPTH)) {
             continue;
         }
         if (IntArg("-r", &arg, &argc, &runs, 1, 100000)) {
@@ -585,7 +727,7 @@ int main(int argc, char** argv)
 
     DPS_PRINT("\n\nBit length=%d (%d bytes)\n", bitLen, bitLen / 8);
 
-    RunSimulation(runs, treeDepth, pubs);
+    RunSimulation(runs, depth, pubs);
     return 0;
 
 Usage:

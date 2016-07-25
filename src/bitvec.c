@@ -79,6 +79,8 @@ static Configuration config = { DPS_CONFIG_BIT_LEN, DPS_CONFIG_HASHES };
 
 #define NUM_CHUNKS(bv)  ((bv)->len / CHUNK_SIZE)
 
+#define PERM_BITVECTOR_LEN  (4 * CHUNK_SIZE)
+
 #ifdef DPS_DEBUG
 static void BitDump(const chunk_t* data, size_t bits)
 {
@@ -159,6 +161,11 @@ static DPS_BitVector* Alloc(size_t sz)
 DPS_BitVector* DPS_BitVectorAlloc()
 {
     return Alloc(config.bitLen);
+}
+
+DPS_BitVector* DPS_BitVectorAllocPerm()
+{
+    return Alloc(PERM_BITVECTOR_LEN);
 }
 
 int DPS_BitVectorIsClear(DPS_BitVector* bv)
@@ -246,6 +253,7 @@ int DPS_BitVectorIncludes(const DPS_BitVector* bv1, const DPS_BitVector* bv2)
     if (!bv1 || !bv2) {
         return DPS_ERR_NULL;
     }
+    assert(bv1->len == bv2->len);
     b1 = bv1->bits;
     b2 = bv2->bits;
     for (i = 0; i < NUM_CHUNKS(bv1); ++i, ++b1, ++b2) {
@@ -267,8 +275,7 @@ DPS_Status DPS_BitVectorPermute(DPS_BitVector* perm, DPS_BitVector* bv)
     if (!perm || !bv) {
         return DPS_ERR_NULL;
     }
-    assert(perm->len >= 4 * CHUNK_SIZE);
-    perm->len = 4 * CHUNK_SIZE;
+    assert(perm->len == PERM_BITVECTOR_LEN);
     /*
      * Squash the bit vector into 64 bits
      */
@@ -304,31 +311,13 @@ DPS_Status DPS_BitVectorPermute(DPS_BitVector* perm, DPS_BitVector* bv)
     return DPS_OK;
 }
 
-size_t DPS_BitVectorSquash(DPS_BitVector* bv, uint64_t* squashed)
-{
-    size_t i;
-    size_t pop = 0;
-    uint64_t s = 0;
-
-    for (i = 0; i < NUM_CHUNKS(bv); ++i) {
-        uint64_t n = bv->bits[i];
-        pop += POPCOUNT(n);
-        s |= n;
-    }
-    s |= ROTL64(s, 13);
-    s |= ROTL64(s, 17);
-    s |= ROTL64(s, 19);
-    s |= ROTL64(s, 23);
-    *squashed = s;
-    return pop;
-}
-
 DPS_Status DPS_BitVectorUnion(DPS_BitVector* bvOut, DPS_BitVector* bv)
 {
     size_t i;
     if (!bvOut || !bv) {
         return DPS_ERR_NULL;
     }
+    assert(bvOut->len == bv->len);
     for (i = 0; i < NUM_CHUNKS(bv); ++i) {
         bvOut->bits[i] |= bv->bits[i];
     }
@@ -339,8 +328,9 @@ DPS_Status DPS_BitVectorIntersection(DPS_BitVector* bvOut, DPS_BitVector* bv1, D
 {
     size_t i;
     if (!bvOut || !bv1 || !bv2) {
-        return DPS_ERR_NULL; 
+        return DPS_ERR_NULL;
     }
+    assert(bvOut->len == bv1->len && bvOut->len == bv2->len);
     for (i = 0; i < NUM_CHUNKS(bv1); ++i) {
         bvOut->bits[i] = bv1->bits[i] & bv2->bits[i];
     }
@@ -366,7 +356,7 @@ DPS_Status DPS_BitVectorIntersection(DPS_BitVector* bvOut, DPS_BitVector* bv1, D
 
   prefix        count width    range encoded
   --------------------------------------------
-  01               1 bit           1 ..    2 
+  01               1 bit           1 ..    2
   001              2 bit           3 ..    6
   0001             3 bit           7 ..   14
   00001            4 bit          15 ..   30

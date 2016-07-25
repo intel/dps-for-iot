@@ -466,7 +466,7 @@ static DPS_Status ForwardPubToSubs(DPS_Node* node, DPS_Publication* pub, DPS_Nod
     }
 
     tmpPub.bf = DPS_BitVectorAlloc();
-    provides = DPS_BitVectorAlloc();
+    provides = DPS_BitVectorAllocPerm();
     if (!tmpPub.bf || !provides) {
         ret = DPS_ERR_RESOURCES;
         goto Exit;
@@ -696,7 +696,7 @@ static DPS_Status DecodeSubscriptionRequest(DPS_Node* node, DPS_Buffer* buffer)
     if (!interests) {
         return DPS_ERR_RESOURCES;
     }
-    needs = DPS_BitVectorAlloc();
+    needs = DPS_BitVectorAllocPerm();
     if (!needs) {
         DPS_BitVectorFree(interests);
         return DPS_ERR_RESOURCES;
@@ -879,7 +879,7 @@ DPS_Node* DPS_InitNode(int mcastListen, int tcpPort, const char* separators)
         free(node);
         return NULL;
     }
-    node->needs = DPS_BitVectorAlloc();
+    node->needs = DPS_BitVectorAllocPerm();
     if (!node->needs) {
         free(node->interests);
         free(node);
@@ -1120,7 +1120,7 @@ DPS_Status DPS_Subscribe(DPS_Node* node, char* const* topics, size_t numTopics, 
     sub->numTopics = 0;
     sub->handler = handler;
     sub->bf = DPS_BitVectorAlloc();
-    sub->needs = DPS_BitVectorAlloc();
+    sub->needs = DPS_BitVectorAllocPerm();
     if (!sub->bf || !sub->needs) {
         FreeSubscription(sub);
         return DPS_ERR_RESOURCES;

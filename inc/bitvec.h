@@ -42,9 +42,16 @@ int DPS_BitVectorBloomTest(const DPS_BitVector* bv, const uint8_t* data, size_t 
 /**
  * Allocates a bit vector using the default values set by DPS_Configure()
  *
- * @return  An initialized bloome filter or NULL if the allocation failed.
+ * @return  An initialized bit vector filter or NULL if the allocation failed.
  */
 DPS_BitVector* DPS_BitVectorAlloc();
+
+/**
+ * Allocates a permutation bit vector
+ *
+ * @return  An initialized bit vector or NULL if the allocation failed.
+ */
+DPS_BitVector* DPS_BitVectorAllocPerm();
 
 /**
  * Clone a bit vector
@@ -159,14 +166,14 @@ size_t DPS_BitVectorSerializeMaxSize(const DPS_BitVector* bv);
 DPS_Status DPS_BitVectorDeserialize(DPS_BitVector* bv, DPS_Buffer* buffer);
 
 /**
- * Clear all bits in an existing bit vector. 
+ * Clear all bits in an existing bit vector.
  *
  * @param bv  The filter to clear.
  */
 void DPS_BitVectorClear(DPS_BitVector* bv);
 
 /**
- * Set all bits in an existing bit vector. 
+ * Set all bits in an existing bit vector.
  *
  * @param bv  The filter to set.
  */
