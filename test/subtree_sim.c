@@ -549,7 +549,7 @@ static void RunSimulation(int runs, int depth, int pubIters)
 
             ClearExpects(subscriptions);
             expects = SetExpects(subscriptions, pubTopics, numPubTopics);
-            ShowTree(subscriptions, 0, 0);
+            //ShowTree(subscriptions, 0, 0);
 
             actuals = PropagatePub(&fakeRoot, pub, ++revision, -1);
             if (actuals != expects) {

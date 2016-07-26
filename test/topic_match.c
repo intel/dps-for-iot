@@ -12,6 +12,24 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
 #define MAX_TOPICS  32
 
+const char separators[] = "/.";
+
+static int BloomMatch(char** pubs, size_t numPubs, char** subs, size_t numSubs)
+{
+    DPS_BitVector* pubBf = DPS_BitVectorAlloc();
+    DPS_BitVector* subBf = DPS_BitVectorAlloc();
+
+    DPS_PRINT("Pubs\n");
+    while (numPubs--) {
+        DPS_AddTopic(pubBf, *pubs++, separators, DPS_Pub);
+    }
+    DPS_PRINT("Subs\n");
+    while (numSubs--) {
+        DPS_AddTopic(subBf, *subs++, separators, DPS_Sub);
+    }
+    return DPS_BitVectorIncludes(pubBf, subBf);
+}
+
 int main(int argc, char** argv)
 {
     char* pubs[MAX_TOPICS + 1];
@@ -64,7 +82,7 @@ int main(int argc, char** argv)
     if (!numPubs || !numPubs) {
         goto Usage;
     }
-    ret = DPS_MatchTopicList(pubs, numPubs, subs, numSubs, "/.", &match);
+    ret = DPS_MatchTopicList(pubs, numPubs, subs, numSubs, separators, &match);
     if (ret != DPS_OK) {
         DPS_PRINT("Error: %s\n", DPS_ErrTxt(ret));
         return 1;
@@ -73,6 +91,9 @@ int main(int argc, char** argv)
         DPS_PRINT("Match\n");
     } else {
         DPS_PRINT("No match\n");
+    }
+    if (BloomMatch(pubs, numPubs, subs, numSubs) != match) {
+        DPS_PRINT("FAILURE: Different bloom filter match\n");
     }
     return 0;
 

@@ -208,6 +208,7 @@ void DPS_BitVectorFree(DPS_BitVector* bv)
 void DPS_BitVectorBloomInsert(DPS_BitVector* bv, const uint8_t* data, size_t len)
 {
     int h = config.numHashes;
+    //DPS_PRINT("%.*s   (%d)\n", len, data, len);
     while (h) {
         uint32_t index = Hash(data, len, --h) % bv->len;
         SET_BIT(bv->bits, index);

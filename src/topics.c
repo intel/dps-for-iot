@@ -16,6 +16,8 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 #define INFIX_WILDC    '+'
 #define WILDCARDS     "+#"
 
+#define ANY_WILDC(c)  ((c) == FINAL_WILDC || (c) == INFIX_WILDC)
+
 static DPS_Status CheckWildcarding(const char* topic, const char* separators, DPS_Role role, const char** wcPos)
 {
     const char* wc = topic + strcspn(topic, WILDCARDS);
@@ -46,13 +48,13 @@ static DPS_Status CheckWildcarding(const char* topic, const char* separators, DP
                 return DPS_ERR_INVALID;
             }
             if (!wc[1]) {
-                return wc[0] == FINAL_WILDC ? DPS_OK : DPS_ERR_INVALID;
+                return ANY_WILDC(wc[0]) ? DPS_OK : DPS_ERR_INVALID;
             }
             if (wc[0] != INFIX_WILDC) {
                 return DPS_ERR_INVALID;
             }
             /*
-             * Infix  wildcard must be followed by a separator
+             * Infix wildcard must be followed by a separator or NUL
              */
             if (!strchr(separators, wc[1])) {
                 return DPS_ERR_INVALID;
@@ -72,15 +74,23 @@ static DPS_Status CheckWildcarding(const char* topic, const char* separators, DP
 
 /**
  * A topic has the form "A<sep>B<sep>C" where <sep> is any of a specified set of separators and A, B, C are arbitrary
- * strings or a standalone wild-card character "*". Wildcards are only meaningful in subscriptions and there can only be
- * on wildcard in a topic string.
+ * strings or the wild-card characters '+' or '#'. The '#' wild card if present can only appear as the last character.
+ * Wildcards are only meaningful in subscriptions. The '+' wild card can appear anywhere including at the end of a
+ * topic. These are all valid topic strings:
+ *
+ *    A/B/C/D
+ *    A/+/C/D
+ *    A/+/C/+
+ *    A/#
+ *    A/+/C
+ *    +/+/+/+
  *
  * Note that when there are multiple topics in one publication, infix wildcard subscriptions are more prone to false
- * positives.  For example, if a single publication includes two topic strings "a.b.1" and "c.d.2" the subscriptions
- * "a.*.2" or "c.*.1" will return false positive matches.
+ * positives.  For example, if a single publication includes two topic strings A/B/1" and "C/D/2" the subscriptions
+ * "A/+/2" or "C/+/1" will return false positive matches.
  *
- * This is because the bits representing prefixes "a.", "c." and the suffixes ".2", ".1" are both present in the publication 
- * Bloom filter. 
+ * This is because the bits representing prefixes "A/", "C/" and the suffixes "//2", "//1" are both present in the
+ * publication Bloom filter. 
  */
 DPS_Status DPS_AddTopic(DPS_BitVector* bf, const char* topic, const char* separators, DPS_Role role)
 {
@@ -124,7 +134,7 @@ DPS_Status DPS_AddTopic(DPS_BitVector* bf, const char* topic, const char* separa
             DPS_BitVectorBloomInsert(bf, topic, tp - topic);
         }
         len = strcspn(tp, separators);
-        if ((tp > wc) && (*tp != INFIX_WILDC)) {
+        if ((tp > wc) && (tp[0] != INFIX_WILDC || !tp[1])) {
             memcpy(segment + prefix, tp, len);
             segment[prefix + len] = tp[len];
             DPS_BitVectorBloomInsert(bf, segment, prefix + len);
@@ -132,8 +142,15 @@ DPS_Status DPS_AddTopic(DPS_BitVector* bf, const char* topic, const char* separa
         tp += len;
     }
     if (role == DPS_Pub) {
-        segment[prefix++] = FINAL_WILDC;
-        DPS_BitVectorBloomInsert(bf, segment, prefix);
+        if (prefix > 1) {
+            segment[prefix] = INFIX_WILDC;
+            DPS_BitVectorBloomInsert(bf, segment, prefix + 1);
+        }
+        while (prefix) {
+            segment[prefix] = FINAL_WILDC;
+            DPS_BitVectorBloomInsert(bf, segment, prefix + 1);
+            --prefix;
+        }
     }
     free(segment);
     return DPS_OK;
@@ -176,12 +193,17 @@ DPS_Status DPS_MatchTopicString(const char* pubTopic, const char* subTopic, cons
     }
     *match = DPS_TRUE;
     while (*pubTopic && *subTopic) {
-        if ((subTopic[0] == INFIX_WILDC) || (subTopic[0] == FINAL_WILDC)) {
+        if (ANY_WILDC(subTopic[0])) {
             int len = strcspn(pubTopic, separators);
             if (len) {
                 pubTopic += len;
-                if (subTopic[0] == FINAL_WILDC && subTopic[1] == 0) {
-                    return DPS_OK;
+                if (subTopic[1] == 0) {
+                    if (subTopic[0] == FINAL_WILDC) {
+                        return DPS_OK;
+                    }
+                    if (subTopic[0] == INFIX_WILDC && pubTopic[0] == 0) {
+                        return DPS_OK;
+                    }
                 }
             }
             ++subTopic;
