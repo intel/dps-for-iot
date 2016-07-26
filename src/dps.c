@@ -88,19 +88,24 @@ typedef struct _DPS_Node {
 
 } DPS_Node;
 
-
-static void DumpSubscription(DPS_Subscription* sub)
+#ifdef NDEBUG
+#define DumpTopics(tm n)
+#else
+static void DumpTopics(char* const* topics, size_t numTopics)
 {
-    size_t i;
-    DPS_PRINT("     ");
-    for (i = 0; i < sub->numTopics; ++i) {
-        if (i) {
-            DPS_PRINT(" & ");
+    if (DPS_Debug) {
+        size_t i;
+        DPS_PRINT("     ");
+        for (i = 0; i < numTopics; ++i) {
+            if (i) {
+                DPS_PRINT(" & ");
+            }
+            DPS_PRINT("%s", topics[i]);
         }
-        DPS_PRINT("%s", sub->topics[i]);
+        DPS_PRINT("\n");
     }
-    DPS_PRINT("\n");
 }
+#endif
 
 static struct sockaddr* ToSockaddr(const DPS_NodeAddress* addr, struct sockaddr_in6* ip6)
 {
@@ -865,7 +870,6 @@ DPS_Node* DPS_InitNode(int mcastListen, int tcpPort, const char* separators)
     memset(node, 0, sizeof(*node));
     strncpy(node->separators, separators, sizeof(node->separators));
     node->loop = uv_default_loop();
-    node->loop->data = node;
     node->revision = (uv_hrtime() / 1000000) & 0xFFFFFFFF;
 
     /*
@@ -963,8 +967,8 @@ static void TerminateOnIdle(uv_idle_t* handle)
     while (node->remotePubs) {
         node->remotePubs = FreeRemotePub(node->remotePubs);
     }
-    free(node);
     uv_idle_stop(handle);
+    free(node);
 }
 
 void DPS_TerminateNode(DPS_Node* node)
@@ -997,6 +1001,8 @@ DPS_Status DPS_Publish(DPS_Node* node, char* const* topics, size_t numTopics, DP
     if (numTopics == 0) {
         return DPS_ERR_ARGS;
     }
+    DPS_DBGPRINT("Publishing %d topics\n", numTopics);
+    DumpTopics(topics, numTopics);
     /*
      * Create the publication
      */
@@ -1058,7 +1064,6 @@ DPS_Status DPS_PublishCancel(DPS_Node* node, DPS_Publication* pub, void** data)
     FreePublication(pub);
     return DPS_ERR_OK;
 }
-
 
 DPS_Status DPS_Join(DPS_Node* node, DPS_NodeAddress* addr)
 {
@@ -1148,7 +1153,7 @@ DPS_Status DPS_Subscribe(DPS_Node* node, char* const* topics, size_t numTopics, 
         int noChange;
 
         DPS_DBGPRINT("Subscribing to %d topics\n", numTopics);
-        DumpSubscription(sub);
+        DumpTopics(sub->topics, sub->numTopics);
 
         DPS_BitVectorPermute(sub->needs, sub->bf);
         sub->next = node->localSubs;
@@ -1192,7 +1197,7 @@ DPS_Status DPS_SubscribeCancel(DPS_Node* node, DPS_Subscription* subscription)
         node->localSubs = sub->next;
     }
     DPS_DBGPRINT("Unsubscribing from %d topics\n", sub->numTopics);
-    DumpSubscription(sub);
+    DumpTopics(sub->topics, sub->numTopics);
     FreeSubscription(sub);
     ret = RefreshSubscriptionInterests(node, NULL, NULL, NULL, &noChange);
     if (ret == DPS_OK && !noChange) {
@@ -1240,6 +1245,6 @@ void DPS_DumpSubscriptions(DPS_Node* node)
 
     DPS_DBGPRINT("Current subscriptions:\n");
     for (sub = node->localSubs; sub != NULL; sub = sub->next) {
-        DumpSubscription(sub);
+        DumpTopics(sub->topics, sub->numTopics);
     }
 }

@@ -157,10 +157,10 @@ DPS_Status DPS_Subscribe(DPS_Node* node, char* const* topics, size_t numTopics, 
 DPS_Status DPS_SubscribeCancel(DPS_Node* node, DPS_Subscription* sub);
 
 /**
- * Join a publisher. Subscriptions are pushed to the new publisher.
+ * Join the local node to a remote publisher.
  *
  * @param node         The local node to use
- * @param addr         The address of a publisher to join
+ * @param addr         The address of the publisher to join
  */
 DPS_Status DPS_Join(DPS_Node* node, DPS_NodeAddress* addr);
 

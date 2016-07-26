@@ -16,6 +16,7 @@ print env['CPPDEFINES']
 objs = env.Object(Glob('src/*.c'))
 
 # Unit tests
+env.Program('bin/unified', env.Object('test/unified.c') + objs)
 env.Program('bin/subtree_sim', env.Object('test/subtree_sim.c') + objs)
 env.Program('bin/tree_sim', env.Object('test/tree_sim.c') + objs)
 env.Program('bin/rle_compression', env.Object('test/rle_compression.c') + objs)
