@@ -89,7 +89,7 @@ typedef struct _DPS_Node {
 } DPS_Node;
 
 #ifdef NDEBUG
-#define DumpTopics(tm n)
+#define DumpTopics(t, n)
 #else
 static void DumpTopics(char* const* topics, size_t numTopics)
 {
