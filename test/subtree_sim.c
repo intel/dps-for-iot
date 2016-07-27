@@ -9,9 +9,6 @@
 #include <search.h>
 #include <uv.h>
 
-DPS_Status DPS_BitVectorPermute(DPS_BitVector* perm, DPS_BitVector* bv);
-
-
 
 static int verbose = 0;
 static int infixWildcards = 0;
@@ -197,7 +194,7 @@ SubNode* AllocNode(size_t numChildren)
 
     node->numChildren = numChildren;
     node->interests = DPS_BitVectorAlloc();
-    node->needs = DPS_BitVectorAllocPerm();
+    node->needs = DPS_BitVectorAllocFH();
     return node;
 }
 
@@ -282,7 +279,7 @@ static SubNode* BuildTree(int depth)
     ++numNodes[depth];
     ++totals.numNodes;
     node->interests = DPS_BitVectorAlloc();
-    node->needs = DPS_BitVectorAllocPerm();
+    node->needs = DPS_BitVectorAllocFH();
     return node;
 }
 
@@ -340,17 +337,13 @@ static void CleanTree(SubNode* node)
     }
 }
 
-DPS_BitVector* permChecker;
-
 static void PopulateTree(SubNode* node)
 {
     if (node->numChildren == 0) {
         if (!node->count) {
             node->count = InitRandomSub(node->interests, node->strings);
-            DPS_BitVectorPermute(node->needs, node->interests);
-            DPS_BitVectorIntersection(permChecker, permChecker, node->needs);
+            DPS_BitVectorFuzzyHash(node->needs, node->interests);
             DPS_BitVectorDump(node->needs, 1);
-            DPS_BitVectorDump(permChecker, 1);
             node->totalSubs += node->count;
             totals.totalSubs += node->count;
         }
@@ -414,7 +407,7 @@ static int PropagatePub(SubNode* node, DPS_BitVector* pub, uint32_t revision, in
         }
     } else {
         size_t i;
-        DPS_BitVector* provides = DPS_BitVectorAllocPerm();
+        DPS_BitVector* provides = DPS_BitVectorAllocFH();
         DPS_BitVector* tmp = DPS_BitVectorAlloc();
         for (i = 0; i < node->numChildren; ++i) {
             int match;
@@ -427,7 +420,7 @@ static int PropagatePub(SubNode* node, DPS_BitVector* pub, uint32_t revision, in
             if (child->numChildren == 0) {
                 match = DPS_BitVectorEquals(tmp, child->interests);
             } else {
-                ret = DPS_BitVectorPermute(provides, tmp);
+                ret = DPS_BitVectorFuzzyHash(provides, tmp);
                 assert(ret == DPS_OK);
                 match = DPS_BitVectorIncludes(provides, child->needs);
             }
@@ -485,7 +478,6 @@ static void RunSimulation(int runs, int depth, int pubIters)
     ShowTree(subscriptions, 0);
 #endif
 
-    permChecker = DPS_BitVectorAllocPerm();
     for (r = 0; r < runs; ++r) {
         char* pubTopics[MAX_PUB_TOPICS];
         int expects;
@@ -502,9 +494,7 @@ static void RunSimulation(int runs, int depth, int pubIters)
         if (pubIters == 0) {
             uniqueSub = 1;
         }
-        DPS_BitVectorFill(permChecker);
         PopulateTree(subscriptions);
-        DPS_BitVectorDump(permChecker, 1);
         /*
          * Done with the hash table
          */

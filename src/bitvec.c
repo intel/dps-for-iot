@@ -79,7 +79,7 @@ static Configuration config = { DPS_CONFIG_BIT_LEN, DPS_CONFIG_HASHES };
 
 #define NUM_CHUNKS(bv)  ((bv)->len / CHUNK_SIZE)
 
-#define PERM_BITVECTOR_LEN  (4 * CHUNK_SIZE)
+#define FH_BITVECTOR_LEN  (4 * CHUNK_SIZE)
 
 #ifdef DPS_DEBUG
 static void BitDump(const chunk_t* data, size_t bits)
@@ -163,9 +163,9 @@ DPS_BitVector* DPS_BitVectorAlloc()
     return Alloc(config.bitLen);
 }
 
-DPS_BitVector* DPS_BitVectorAllocPerm()
+DPS_BitVector* DPS_BitVectorAllocFH()
 {
-    return Alloc(PERM_BITVECTOR_LEN);
+    return Alloc(FH_BITVECTOR_LEN);
 }
 
 int DPS_BitVectorIsClear(DPS_BitVector* bv)
@@ -266,17 +266,17 @@ int DPS_BitVectorIncludes(const DPS_BitVector* bv1, const DPS_BitVector* bv2)
     return b1un != 0;
 }
 
-DPS_Status DPS_BitVectorPermute(DPS_BitVector* perm, DPS_BitVector* bv)
+DPS_Status DPS_BitVectorFuzzyHash(DPS_BitVector* hash, DPS_BitVector* bv)
 {
     size_t i;
     size_t pop = 0;
     chunk_t s = 0;
     chunk_t p;
 
-    if (!perm || !bv) {
+    if (!hash || !bv) {
         return DPS_ERR_NULL;
     }
-    assert(perm->len == PERM_BITVECTOR_LEN);
+    assert(hash->len == FH_BITVECTOR_LEN);
     /*
      * Squash the bit vector into 64 bits
      */
@@ -286,28 +286,28 @@ DPS_Status DPS_BitVectorPermute(DPS_BitVector* perm, DPS_BitVector* bv)
         s |= n;
     }
     if (pop == 0) {
-        DPS_BitVectorClear(perm);
+        DPS_BitVectorClear(hash);
         return DPS_OK;
     }
     p = s;
     p |= ROTL64(p, 7);
     p |= ROTL64(p, 31);
-    perm->bits[0] = p;
+    hash->bits[0] = p;
     p = s;
     p |= ROTL64(p, 11);
     p |= ROTL64(p, 29);
     p |= ROTL64(p, 37);
-    perm->bits[1] = p;
+    hash->bits[1] = p;
     p = s;
     p |= ROTL64(p, 13);
     p |= ROTL64(p, 17);
     p |= ROTL64(p, 19);
     p |= ROTL64(p, 41);
-    perm->bits[2] = p;
+    hash->bits[2] = p;
     if (pop > 62) {
-        perm->bits[3] = ~0ull;
+        hash->bits[3] = ~0ull;
     } else {
-        perm->bits[3] = (2ull << pop) - 1;
+        hash->bits[3] = (1ull << pop) - 1;
     }
     return DPS_OK;
 }

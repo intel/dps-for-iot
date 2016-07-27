@@ -47,11 +47,11 @@ int DPS_BitVectorBloomTest(const DPS_BitVector* bv, const uint8_t* data, size_t 
 DPS_BitVector* DPS_BitVectorAlloc();
 
 /**
- * Allocates a permutation bit vector
+ * Allocates a bit vector sized for use as a fuzzy hash.
  *
  * @return  An initialized bit vector or NULL if the allocation failed.
  */
-DPS_BitVector* DPS_BitVectorAllocPerm();
+DPS_BitVector* DPS_BitVectorAllocFH();
 
 /**
  * Clone a bit vector
@@ -85,14 +85,17 @@ float DPS_BitVectorLoadFactor(const DPS_BitVector* bv);
 size_t DPS_BitVectorPopCount(const DPS_BitVector* bv);
 
 /**
- * Compacts and permutes a bit vector.
+ * Generate a "fuzzy hash" (also called a "similarity preserving hash") of a bit vector. The hash has the additional
+ * strong property that given two bit vectors A and B where A is a superset of B, FH(A) will be a superset of FH(B).
  *
- * @param perm  Returns the permuted bit vector
+ * To have the correct size the hash bit vector must has been allocated by calling DPS_BitVecotrAllocFH().
+ *
+ * @param hash  Returns the fuzzy hash of the input bit vector
  * @param bv    An intialized bit vector
  *
  * @return  The population count (number of bits set) of the bit vector.
  */
-DPS_Status DPS_BitVectorPermute(DPS_BitVector* perm, DPS_BitVector* bv);
+DPS_Status DPS_BitVectorFuzzyHash(DPS_BitVector* hash, DPS_BitVector* bv);
 
 /**
  * Check if one bit vector includes all bit of another. The two bit vectors must be the same size.

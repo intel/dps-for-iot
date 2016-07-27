@@ -471,7 +471,7 @@ static DPS_Status ForwardPubToSubs(DPS_Node* node, DPS_Publication* pub, DPS_Nod
     }
 
     tmpPub.bf = DPS_BitVectorAlloc();
-    provides = DPS_BitVectorAllocPerm();
+    provides = DPS_BitVectorAllocFH();
     if (!tmpPub.bf || !provides) {
         ret = DPS_ERR_RESOURCES;
         goto Exit;
@@ -483,7 +483,7 @@ static DPS_Status ForwardPubToSubs(DPS_Node* node, DPS_Publication* pub, DPS_Nod
          * Filter the pub against the subscription
          */
         DPS_BitVectorIntersection(tmpPub.bf, pub->bf, sub->interests);
-        DPS_BitVectorPermute(provides, tmpPub.bf);
+        DPS_BitVectorFuzzyHash(provides, tmpPub.bf);
         if (DPS_BitVectorIncludes(provides, sub->needs)) {
             DPS_DBGPRINT("Forwarded pub to %s\n", DPS_NodeAddressText(&sub->nodeAddr));
             PushPublication(node, &tmpPub, pubAddr, &sub->nodeAddr);
@@ -701,7 +701,7 @@ static DPS_Status DecodeSubscriptionRequest(DPS_Node* node, DPS_Buffer* buffer)
     if (!interests) {
         return DPS_ERR_RESOURCES;
     }
-    needs = DPS_BitVectorAllocPerm();
+    needs = DPS_BitVectorAllocFH();
     if (!needs) {
         DPS_BitVectorFree(interests);
         return DPS_ERR_RESOURCES;
@@ -883,7 +883,7 @@ DPS_Node* DPS_InitNode(int mcastListen, int tcpPort, const char* separators)
         free(node);
         return NULL;
     }
-    node->needs = DPS_BitVectorAllocPerm();
+    node->needs = DPS_BitVectorAllocFH();
     if (!node->needs) {
         free(node->interests);
         free(node);
@@ -1125,7 +1125,7 @@ DPS_Status DPS_Subscribe(DPS_Node* node, char* const* topics, size_t numTopics, 
     sub->numTopics = 0;
     sub->handler = handler;
     sub->bf = DPS_BitVectorAlloc();
-    sub->needs = DPS_BitVectorAllocPerm();
+    sub->needs = DPS_BitVectorAllocFH();
     if (!sub->bf || !sub->needs) {
         FreeSubscription(sub);
         return DPS_ERR_RESOURCES;
@@ -1155,7 +1155,7 @@ DPS_Status DPS_Subscribe(DPS_Node* node, char* const* topics, size_t numTopics, 
         DPS_DBGPRINT("Subscribing to %d topics\n", numTopics);
         DumpTopics(sub->topics, sub->numTopics);
 
-        DPS_BitVectorPermute(sub->needs, sub->bf);
+        DPS_BitVectorFuzzyHash(sub->needs, sub->bf);
         sub->next = node->localSubs;
         node->localSubs = sub;
         *subscription = sub;
