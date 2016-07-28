@@ -97,17 +97,28 @@ DPS_Node* DPS_InitNode(int mcastListen, int tcpPort, const char* separators);
 uv_loop_t* DPS_GetLoop(DPS_Node* node);
 
 /**
- * Publish a set of topics along with an optional payload. The topics will be published immediately and then
- * re-published whenever an updated subscription is received.
+ * Indicates that the publication should be retained by the next-hop recipient
+ */
+#define DPS_PUB_FLAG_PERSIST     0x01
+
+/**
+ * Indicates that there a no flags set for this publication
+ */
+#define DPS_PUB_FLAGS_NONE        0x00
+
+/**
+ * Publish a set of topics along with an optional payload. The topics will be published immediately to matching
+ * subscribers and then re-published whenever a new matching subscription is received.
  *
  * @param node        The local node to use
  * @param topics      The topic strings to publish
  * @param numTopics   The number of topic strings to publish
- * @param publication Returns an opaque handle that can be used to cancel the publication later
- * @param data        Optional data - this must remain valid until the publication is canceled
+ * @param pub         Returns an opaque handle that can be used to cancel the publication later
+ * @param data        Optional data - this must remain valid until the publication is canceled or republished
  * @param len         Length of the optional data
+ * @param flags       Additional information about the publication.
  */
-DPS_Status DPS_Publish(DPS_Node* node, char* const* topics, size_t numTopics, DPS_Publication** pub, void* data, size_t len);
+DPS_Status DPS_Publish(DPS_Node* node, char* const* topics, size_t numTopics, DPS_Publication** pub, void* data, size_t len, uint8_t flags);
 
 /**
  * Cancel publishing a topic.

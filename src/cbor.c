@@ -126,6 +126,11 @@ static DPS_Status DecodeUint(DPS_Buffer* buffer, uint64_t* n, uint8_t* maj)
     return DPS_OK;
 }
 
+DPS_Status CBOR_EncodeUint8(DPS_Buffer* buffer, uint8_t n)
+{
+    return EncodeUint(buffer, n, CBOR_UINT);
+}
+
 DPS_Status CBOR_EncodeUint(DPS_Buffer* buffer, uint64_t n)
 {
     return EncodeUint(buffer, n, CBOR_UINT);
@@ -235,6 +240,20 @@ DPS_Status CBOR_DecodeUint(DPS_Buffer* buffer, uint64_t* n)
     if ((ret == DPS_OK) && (maj != CBOR_UINT)) {
         ret = DPS_ERR_INVALID;
     }
+    return ret;
+}
+
+DPS_Status CBOR_DecodeUint8(DPS_Buffer* buffer, uint8_t* n)
+{
+    uint64_t n64;
+    uint8_t maj;
+    DPS_Status ret;
+
+    ret = DecodeUint(buffer, &n64, &maj);
+    if ((ret == DPS_OK) && ((maj != CBOR_UINT) || (n64 > UINT8_MAX))) {
+        ret = DPS_ERR_INVALID;
+    }
+    *n = (uint8_t)n64;
     return ret;
 }
 

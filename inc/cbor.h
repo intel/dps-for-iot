@@ -5,6 +5,8 @@
 #include <stddef.h>
 #include <dps.h>
 
+DPS_Status CBOR_EncodeUint8(DPS_Buffer* buffer, uint8_t n);
+
 DPS_Status CBOR_EncodeUint(DPS_Buffer* buffer, uint64_t n);
 
 DPS_Status CBOR_EncodeInt(DPS_Buffer* buffer, int64_t i);
@@ -12,6 +14,8 @@ DPS_Status CBOR_EncodeInt(DPS_Buffer* buffer, int64_t i);
 DPS_Status CBOR_EncodeBytes(DPS_Buffer* buffer, const uint8_t* data, size_t len);
 
 DPS_Status CBOR_EncodeString(DPS_Buffer* buffer, const char* str);
+
+DPS_Status CBOR_DecodeUint8(DPS_Buffer* buffer, uint8_t* n);
 
 DPS_Status CBOR_DecodeUint(DPS_Buffer* buffer, uint64_t* n);
 

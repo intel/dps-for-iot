@@ -23,11 +23,6 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
 static const char DPS_SubscriptionURI[] = "dps";
 
-typedef struct {
-    size_t popCount;
-    uint64_t magic; 
-} Needs;
-
 typedef struct _SubList {
     DPS_NodeAddress nodeAddr;
     DPS_BitVector* needs;           /* Subscription needs */
@@ -49,7 +44,7 @@ typedef struct _PubList {
 typedef struct _DPS_Subscription {
     DPS_BitVector* needs;           /* Subscription needs */
     DPS_BitVector* bf;              /* The Bloom filter bit vector for the topics for this subscription */
-    DPS_MatchHandler handler;       /* Calaback unction to be called for a matching publication */
+    DPS_MatchHandler handler;       /* Callback function to be called for a matching publication */
     DPS_Subscription* next;
     size_t numTopics;               /* Number of subscription topics */
     char* topics[1];                /* Subscription topics */
@@ -58,6 +53,7 @@ typedef struct _DPS_Subscription {
 typedef struct _DPS_Publication {
     uint8_t* data;
     size_t len;
+    uint8_t flags;                  /* Additional information about the publication */
     uint64_t revision;              /* Revision number for this publication */
     DPS_BitVector* bf;              /* The Bloom filter bit vector for the topics for this publication */
     DPS_Publication* next;
@@ -75,8 +71,8 @@ typedef struct _DPS_Node {
     PubList* remotePubs;                  /* Linked list of remote publishers */
     SubList* remoteSubs;                  /* Linked list of remote subscribers */
 
-    DPS_BitVector* interests;             /* Rolled up union of subscription interests for this node */
-    DPS_BitVector* needs;                 /* Rolled up intersection of subscription needs */
+    DPS_BitVector* interests;             /* Rolled-up union of subscription interests for this node */
+    DPS_BitVector* needs;                 /* Rolled-up intersection of subscription needs */
 
     DPS_Publication* localPubs;           /* Linked list of local publications */
     DPS_Subscription* localSubs;          /* Linked list of local subscriptions */
@@ -189,10 +185,45 @@ static int SameAddr(DPS_NodeAddress* a, DPS_NodeAddress* b)
     return a->port == b->port && memcmp(a->addr, b->addr, 16) == 0;
 }
 
+static DPS_Subscription* FreeSubscription(DPS_Subscription* sub)
+{
+    DPS_Subscription* next = sub->next;
+    DPS_BitVectorFree(sub->bf);
+    DPS_BitVectorFree(sub->needs);
+    while (sub->numTopics) {
+        free(sub->topics[--sub->numTopics]);
+    }
+    free(sub);
+    return next;
+}
+
+static SubList* FreeRemoteSub(SubList* sub)
+{
+    SubList* next = sub->next;
+    DPS_BitVectorFree(sub->interests);
+    DPS_BitVectorFree(sub->needs);
+    free(sub);
+    return next;
+}
+
+static PubList* FreeRemotePub(PubList* pub)
+{
+    PubList* next = pub->next;
+    free(pub);
+    return next;
+}
+
+static DPS_Publication* FreePublication(DPS_Publication* pub)
+{
+    DPS_Publication* next = pub->next;
+    free(pub);
+    return next;
+}
+
 /*
  *
  */
-static DPS_Status RefreshSubscriptionInterests(DPS_Node* node, DPS_NodeAddress* addr, DPS_BitVector* interests, DPS_BitVector* needs, int* noChange)
+static DPS_Status RefreshSubscriptionInterests(DPS_Node* node, DPS_NodeAddress* addr, DPS_BitVector* interests, DPS_BitVector* needs, SubList** newSub, int* noChange)
 {
     DPS_BitVector* newInterests;
     DPS_Subscription* localSub;
@@ -216,6 +247,7 @@ static DPS_Status RefreshSubscriptionInterests(DPS_Node* node, DPS_NodeAddress* 
             DPS_BitVectorFree(sub->needs);
             sub->interests = interests;
             sub->needs = needs;
+            *newSub = NULL;
         } else {
             sub = malloc(sizeof(SubList));
             if (!sub) {
@@ -230,9 +262,10 @@ static DPS_Status RefreshSubscriptionInterests(DPS_Node* node, DPS_NodeAddress* 
              */
             sub->next = node->remoteSubs;
             node->remoteSubs = sub;
+            *newSub = sub;
         }
     } else {
-        assert(!interests && !needs);
+        assert(!interests && !needs && !newSub);
     }
     newInterests = DPS_BitVectorAlloc();
     if (!newInterests) {
@@ -275,14 +308,12 @@ static void DeleteRemoteSubscriber(DPS_Node* node, DPS_NodeAddress* addr)
     DPS_DBGTRACE();
     for (sub = node->remoteSubs; sub != NULL; prev = sub, sub = sub->next) {
         if (SameAddr(&sub->nodeAddr, addr)) {
+            SubList* next = FreeRemoteSub(sub);
             if (prev) {
-                prev->next = sub->next;
+                prev->next = next;
             } else {
-                node->remoteSubs = sub->next;
+                node->remoteSubs = next;
             }
-            DPS_BitVectorFree(sub->interests);
-            DPS_BitVectorFree(sub->needs);
-            free(sub);
             break;
         }
     }
@@ -338,6 +369,35 @@ static void DeleteRemotePublisher(DPS_Node* node, PubList* pub)
     free(pub);
 }
 
+static DPS_Status PersistPublication(DPS_Node* node, DPS_Publication* tmpPub)
+{
+    DPS_Status ret = DPS_OK;
+    DPS_Publication* pub;
+
+    DPS_DBGTRACE();
+
+    pub = malloc(sizeof(DPS_Publication));
+    if (!pub) {
+        return DPS_ERR_RESOURCES;
+    }
+    pub->next = NULL;
+    pub->flags = tmpPub->flags & ~DPS_PUB_FLAG_PERSIST;
+    pub->revision = tmpPub->revision;
+    pub->bf = tmpPub->bf;
+    pub->len = tmpPub->len;
+    if (pub->len) {
+        pub->data = malloc(pub->len);
+        if (!pub->data) {
+            free(pub);
+            return DPS_ERR_RESOURCES;
+        }
+        memcpy(pub->data, tmpPub->data, pub->len);
+    }
+    pub->next = node->localPubs;
+    node->localPubs = pub;
+    return DPS_OK;
+}
+
 static void FreeBufs(uv_buf_t* bufs, size_t numBufs)
 {
     size_t i;
@@ -383,7 +443,7 @@ static void OnSendToSubComplete(DPS_Node* node, const struct sockaddr* addr, uv_
  *      Contributor count
  *      Serialized bloom filter
  */
-static void PushPublication(DPS_Node* node, DPS_Publication* pub, DPS_NodeAddress* pubAddr, DPS_NodeAddress* destAddr)
+static DPS_Status PushPublication(DPS_Node* node, DPS_Publication* pub, DPS_NodeAddress* pubAddr, DPS_NodeAddress* destAddr)
 {
     DPS_Status ret;
     DPS_Buffer payload;
@@ -399,7 +459,7 @@ static void PushPublication(DPS_Node* node, DPS_Publication* pub, DPS_NodeAddres
      */
     if (DPS_BitVectorIsClear(pub->bf)) {
         DPS_DBGPRINT("PushPublication nothing to publish\n");
-        return;
+        return DPS_OK;
     }
     if (destAddr) {
         DPS_DBGPRINT("PushPublication to %s\n", DPS_NodeAddressText(destAddr));
@@ -410,7 +470,7 @@ static void PushPublication(DPS_Node* node, DPS_Publication* pub, DPS_NodeAddres
     }
     ret = DPS_BufferInit(&payload, NULL, 32 + DPS_BitVectorSerializeMaxSize(pub->bf) + pub->len);
     if (ret != DPS_OK) {
-        return;
+        return DPS_OK;
     }
     opts[0].id = COAP_OPT_URI_PATH;
     opts[0].val = DPS_SubscriptionURI;
@@ -429,6 +489,7 @@ static void PushPublication(DPS_Node* node, DPS_Publication* pub, DPS_NodeAddres
         CBOR_EncodeUint(&payload, DPS_NetGetListenerPort(node->netListener));
         CBOR_ReserveBytes(&payload, 16, &addrPtr);
     }
+    CBOR_EncodeUint8(&payload, pub->flags);
     CBOR_EncodeUint(&payload, pub->revision);
     ret = DPS_BitVectorSerialize(pub->bf, &payload);
     if (ret == DPS_OK) {
@@ -454,10 +515,10 @@ static void PushPublication(DPS_Node* node, DPS_Publication* pub, DPS_NodeAddres
 /*
  * Forward a publication to matching subscribers
  */
-static DPS_Status ForwardPubToSubs(DPS_Node* node, DPS_Publication* pub, DPS_NodeAddress* pubAddr)
+static DPS_Status ForwardPubToSubs(DPS_Node* node, DPS_Publication* pub, DPS_NodeAddress* pubAddr, SubList* newSub)
 {
     DPS_Status ret = DPS_OK;
-    SubList* sub;
+    SubList* sub = node->remoteSubs;
     DPS_Publication tmpPub = *pub;
     DPS_BitVector* provides;
 
@@ -476,21 +537,32 @@ static DPS_Status ForwardPubToSubs(DPS_Node* node, DPS_Publication* pub, DPS_Nod
         ret = DPS_ERR_RESOURCES;
         goto Exit;
     }
-    for (sub = node->remoteSubs; sub != NULL; sub = sub->next) {
-        uint64_t magic;
-        size_t popCount;
+    while (sub) {
+        if (newSub && sub != newSub) {
+            sub = sub->next;
+            continue;
+        }
         /*
          * Filter the pub against the subscription
          */
         DPS_BitVectorIntersection(tmpPub.bf, pub->bf, sub->interests);
         DPS_BitVectorFuzzyHash(provides, tmpPub.bf);
         if (DPS_BitVectorIncludes(provides, sub->needs)) {
-            DPS_DBGPRINT("Forwarded pub to %s\n", DPS_NodeAddressText(&sub->nodeAddr));
-            PushPublication(node, &tmpPub, pubAddr, &sub->nodeAddr);
+            DPS_DBGPRINT("Forwarded pub %d to %s\n", pub->revision, DPS_NodeAddressText(&sub->nodeAddr));
+            ret = PushPublication(node, &tmpPub, pubAddr, &sub->nodeAddr);
         } else {
-            DPS_DBGPRINT("Blocked pub to %s\n", DPS_NodeAddressText(&sub->nodeAddr));
+            DPS_DBGPRINT("Rejected pub %d for %s\n", pub->revision, DPS_NodeAddressText(&sub->nodeAddr));
+        }
+        if (ret != DPS_OK) {
+            if (sub == node->remoteSubs) {
+                node->remoteSubs = sub->next;
+            }
+            sub = FreeRemoteSub(sub);
+        } else {
+            sub = sub->next;
         }
     }
+
 Exit:
 
     DPS_BitVectorFree(provides);
@@ -503,6 +575,7 @@ static DPS_Status DecodePublicationRequest(DPS_Node* node, DPS_Buffer* buffer)
     DPS_Status ret;
     PubList* publisher;
     uint64_t revision;
+    uint8_t flags;
     int noChange = DPS_FALSE;
     DPS_NodeAddress addr;
     DPS_Publication pub;
@@ -511,6 +584,10 @@ static DPS_Status DecodePublicationRequest(DPS_Node* node, DPS_Buffer* buffer)
     DPS_DBGTRACE();
 
     ret = DecodeAddr(buffer, &addr);
+    if (ret != DPS_OK) {
+        return ret;
+    }
+    ret = CBOR_DecodeUint8(buffer, &flags);
     if (ret != DPS_OK) {
         return ret;
     }
@@ -532,6 +609,7 @@ static DPS_Status DecodePublicationRequest(DPS_Node* node, DPS_Buffer* buffer)
     }
     publisher->revision = revision;
     pub.revision = revision;
+    pub.flags = DPS_PUB_FLAGS_NONE;
     pub.bf = DPS_BitVectorAlloc();
     if (!pub.bf) {
         return DPS_ERR_RESOURCES;
@@ -559,8 +637,18 @@ static DPS_Status DecodePublicationRequest(DPS_Node* node, DPS_Buffer* buffer)
         /*
          * Forward the publication to matching remote subscribers
          */
-        ret = ForwardPubToSubs(node, &pub, &addr);
-        DPS_BitVectorFree(pub.bf);
+        ret = ForwardPubToSubs(node, &pub, &addr, NULL);
+        /*
+         * Check if the publication should persist
+         */
+        if (flags & DPS_PUB_FLAG_PERSIST) {
+            ret = PersistPublication(node, &pub);
+            if (ret != DPS_OK) {
+                DPS_BitVectorFree(pub.bf);
+            }
+        } else {
+            DPS_BitVectorFree(pub.bf);
+        }
     } else {
         DeleteRemotePublisher(node, publisher);
     }
@@ -693,6 +781,7 @@ static DPS_Status DecodeSubscriptionRequest(DPS_Node* node, DPS_Buffer* buffer)
     DPS_BitVector* interests;
     DPS_BitVector* needs;
     DPS_NodeAddress addr;
+    SubList* newSub;
     int noChange;
 
     DPS_DBGTRACE();
@@ -721,26 +810,28 @@ static DPS_Status DecodeSubscriptionRequest(DPS_Node* node, DPS_Buffer* buffer)
     /*
      * Recompute the subscription filter and decide if it should to be forwarded to the publishers
      */
-    ret = RefreshSubscriptionInterests(node, &addr, interests, needs, &noChange);
+    ret = RefreshSubscriptionInterests(node, &addr, interests, needs, &newSub, &noChange);
     if (ret != DPS_OK) {
         DPS_BitVectorFree(interests);
         DPS_BitVectorFree(needs);
-    } else if (!noChange) {
+    } else {
         DPS_Publication* pub;
-        /*
-         * The interests changed so forward the update to the downstream publishers
-         */
-        ret = FloodSubscriptions(node);
-        if (ret != DPS_OK) {
-            DPS_ERRPRINT("FloodSubscriptions failed %s\n", DPS_ErrTxt(ret));
+        if (!noChange) {
+            /*
+             * The interests changed so forward the update to the downstream publishers
+             */
+            ret = FloodSubscriptions(node);
+            if (ret != DPS_OK) {
+                DPS_ERRPRINT("FloodSubscriptions failed %s\n", DPS_ErrTxt(ret));
+            }
         }
         /*
-         * Check if any local publication need to be forwarded to new subscribers based on tbe updated interests
+         * Check if any local publication need to be forwarded to subscribers based on tbe updated interests
          *
          * TODO - only do this for subscribers that changed - we don't currently track this
          */
         for (pub = node->localPubs; pub != NULL; pub = pub->next) {
-            ret = ForwardPubToSubs(node, pub, NULL);
+            ret = ForwardPubToSubs(node, pub, NULL, newSub);
             if (ret != DPS_OK) {
                 DPS_ERRPRINT("ForwardPubToSubsfailed %s\n", DPS_ErrTxt(ret));
             }
@@ -913,41 +1004,6 @@ uint16_t DPS_GetPortNumber(DPS_Node* node)
     }
 }
 
-static DPS_Subscription* FreeSubscription(DPS_Subscription* sub)
-{
-    DPS_Subscription* next = sub->next;
-    DPS_BitVectorFree(sub->bf);
-    DPS_BitVectorFree(sub->needs);
-    while (sub->numTopics) {
-        free(sub->topics[--sub->numTopics]);
-    }
-    free(sub);
-    return next;
-}
-
-static SubList* FreeRemoteSub(SubList* sub)
-{
-    SubList* next = sub->next;
-    DPS_BitVectorFree(sub->interests);
-    DPS_BitVectorFree(sub->needs);
-    free(sub);
-    return next;
-}
-
-static PubList* FreeRemotePub(PubList* pub)
-{
-    PubList* next = pub->next;
-    free(pub);
-    return next;
-}
-
-static DPS_Publication* FreePublication(DPS_Publication* pub)
-{
-    DPS_Publication* next = pub->next;
-    free(pub);
-    return next;
-}
-
 static void TerminateOnIdle(uv_idle_t* handle)
 {
     DPS_Node* node = (DPS_Node*)handle->data;
@@ -985,7 +1041,7 @@ void DPS_TerminateNode(DPS_Node* node)
     uv_idle_start(&node->idler, TerminateOnIdle);
 }
 
-DPS_Status DPS_Publish(DPS_Node* node, char* const* topics, size_t numTopics, DPS_Publication** publication, void* data, size_t len)
+DPS_Status DPS_Publish(DPS_Node* node, char* const* topics, size_t numTopics, DPS_Publication** publication, void* data, size_t len, uint8_t flags)
 {
     size_t i;
     DPS_Publication* pub;
@@ -1011,6 +1067,7 @@ DPS_Status DPS_Publish(DPS_Node* node, char* const* topics, size_t numTopics, DP
         return DPS_ERR_RESOURCES;
     }
     pub->next = NULL;
+    pub->flags = flags;
     pub->revision = ++node->revision;
     pub->data = data;
     pub->len = len;
@@ -1026,8 +1083,8 @@ DPS_Status DPS_Publish(DPS_Node* node, char* const* topics, size_t numTopics, DP
         }
     }
     if (ret == DPS_OK) {
-        PushPublication(node, pub, NULL, NULL);
-        ret = ForwardPubToSubs(node, pub, NULL);
+        ret = PushPublication(node, pub, NULL, NULL);
+        ret = ForwardPubToSubs(node, pub, NULL, NULL);
     }
     if (ret == DPS_OK) {
         pub->next = node->localPubs;
@@ -1162,7 +1219,7 @@ DPS_Status DPS_Subscribe(DPS_Node* node, char* const* topics, size_t numTopics, 
         /*
          * Need to recompute the subscription union and see if anything changed
          */
-        ret = RefreshSubscriptionInterests(node, NULL, NULL, NULL, &noChange);
+        ret = RefreshSubscriptionInterests(node, NULL, NULL, NULL, NULL, &noChange);
         if (ret == DPS_OK && !noChange) {
             ret = FloodSubscriptions(node);
         }
@@ -1199,7 +1256,7 @@ DPS_Status DPS_SubscribeCancel(DPS_Node* node, DPS_Subscription* subscription)
     DPS_DBGPRINT("Unsubscribing from %d topics\n", sub->numTopics);
     DumpTopics(sub->topics, sub->numTopics);
     FreeSubscription(sub);
-    ret = RefreshSubscriptionInterests(node, NULL, NULL, NULL, &noChange);
+    ret = RefreshSubscriptionInterests(node, NULL, NULL, NULL, NULL, &noChange);
     if (ret == DPS_OK && !noChange) {
         ret = FloodSubscriptions(node);
     }

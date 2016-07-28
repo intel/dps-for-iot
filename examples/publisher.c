@@ -66,7 +66,7 @@ static void OnData(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf)
 
         DPS_PublishCancel(node, currentPub, &data);
         msg = AddTopics(lineBuf);
-        ret = DPS_Publish(node, topics, numTopics, &currentPub, msg, msg ? strlen(msg) : 0);
+        ret = DPS_Publish(node, topics, numTopics, &currentPub, msg, msg ? strlen(msg) : 0, DPS_PUB_FLAGS_NONE);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("Failed to publish %s error=%s\n", lineBuf, DPS_ErrTxt(ret));
         }
@@ -113,6 +113,7 @@ int main(int argc, char** argv)
     const char* connectPort = NULL;
     int bitLen = 16 * 1024;
     int numHashes = 4;
+    int retain = DPS_FALSE;
     char* msg = NULL;
 
     DPS_Debug = 0;
@@ -146,6 +147,11 @@ int main(int argc, char** argv)
                 goto Usage;
             }
             msg = *arg++;
+            continue;
+        }
+        if (strcmp(*arg, "-r") == 0) {
+            ++arg;
+            retain = DPS_TRUE;
             continue;
         }
         if (strcmp(*arg, "-d") == 0) {
@@ -182,7 +188,7 @@ int main(int argc, char** argv)
     }
 
     if (numTopics) {
-        ret = DPS_Publish(node, topics, numTopics, &currentPub, msg, msg ? strlen(msg) + 1 : 0);
+        ret = DPS_Publish(node, topics, numTopics, &currentPub, msg, msg ? strlen(msg) + 1 : 0, retain ? DPS_PUB_FLAG_PERSIST : DPS_PUB_FLAGS_NONE);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("Failed to publish topics - error=%d\n", ret);
         }

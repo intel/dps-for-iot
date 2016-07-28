@@ -85,7 +85,7 @@ static void OnTimer(uv_timer_t* handle)
         msg = malloc(32);
         sprintf(msg, "publication #%d", ++pubcount);
 
-        ret = DPS_Publish(pubNode[p], pubTopics, 1, &publications[p], msg, strlen(msg));
+        ret = DPS_Publish(pubNode[p], pubTopics, 1, &publications[p], msg, strlen(msg), DPS_PUB_FLAGS_NONE);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("Failed to publish topics - error=%d\n", ret);
         }

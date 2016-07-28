@@ -64,7 +64,7 @@ static void OnTimer(uv_timer_t* handle)
         void* data;
         ret = DPS_PublishCancel(node, currentPub, &data);
     }
-    ret = DPS_Publish(node, topics, numTopics, &currentPub, NULL, 0);
+    ret = DPS_Publish(node, topics, numTopics, &currentPub, NULL, 0, DPS_PUB_FLAGS_NONE);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to publish topics - error=%s\n", DPS_ErrTxt(ret));
     }
