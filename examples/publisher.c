@@ -64,9 +64,14 @@ static void OnData(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf)
         lineBuf[nread - 1] = 0;
         DPS_PRINT("Pub: %s\n", lineBuf);
 
-        DPS_PublishCancel(node, currentPub, &data);
+        DPS_DestroyPublication(node, currentPub, &data);
         msg = AddTopics(lineBuf);
-        ret = DPS_Publish(node, topics, numTopics, &currentPub, msg, msg ? strlen(msg) : 0, DPS_PUB_FLAGS_NONE);
+        ret = DPS_CreatePublication(node, topics, numTopics, &currentPub);
+        if (ret != DPS_OK) {
+            DPS_ERRPRINT("Failed to create publication - error=%d\n", ret);
+            return;
+        }
+        ret = DPS_Publish(node, currentPub, msg, msg ? strlen(msg) : 0, 0, NULL);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("Failed to publish %s error=%s\n", lineBuf, DPS_ErrTxt(ret));
         }
@@ -113,13 +118,13 @@ int main(int argc, char** argv)
     const char* connectPort = NULL;
     int bitLen = 16 * 1024;
     int numHashes = 4;
-    int retain = DPS_FALSE;
+    int ttl = 0;
     char* msg = NULL;
 
     DPS_Debug = 0;
 
     while (--argc) {
-        if (IntArg("-h", &arg, &argc, &numHashes, 2, 16)) {
+        if (IntArg("-n", &arg, &argc, &numHashes, 2, 16)) {
             continue;
         }
         if (IntArg("-b", &arg, &argc, &bitLen, 64, 8 * 1024 * 1024)) {
@@ -149,9 +154,7 @@ int main(int argc, char** argv)
             msg = *arg++;
             continue;
         }
-        if (strcmp(*arg, "-r") == 0) {
-            ++arg;
-            retain = DPS_TRUE;
+        if (IntArg("-t", &arg, &argc, &ttl, 0, 2000)) {
             continue;
         }
         if (strcmp(*arg, "-d") == 0) {
@@ -188,7 +191,12 @@ int main(int argc, char** argv)
     }
 
     if (numTopics) {
-        ret = DPS_Publish(node, topics, numTopics, &currentPub, msg, msg ? strlen(msg) + 1 : 0, retain ? DPS_PUB_FLAG_PERSIST : DPS_PUB_FLAGS_NONE);
+        ret = DPS_CreatePublication(node, topics, numTopics, &currentPub);
+        if (ret != DPS_OK) {
+            DPS_ERRPRINT("Failed to create publication - error=%d\n", ret);
+            return 1;
+        }
+        ret = DPS_Publish(node, currentPub, msg, msg ? strlen(msg) + 1 : 0, ttl, NULL);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("Failed to publish topics - error=%d\n", ret);
         }

@@ -97,16 +97,6 @@ DPS_Node* DPS_InitNode(int mcastListen, int tcpPort, const char* separators);
 uv_loop_t* DPS_GetLoop(DPS_Node* node);
 
 /**
- * Indicates that the publication should be retained by the next-hop recipient
- */
-#define DPS_PUB_FLAG_PERSIST     0x01
-
-/**
- * Indicates that there a no flags set for this publication
- */
-#define DPS_PUB_FLAGS_NONE        0x00
-
-/**
  * Publish a set of topics along with an optional payload. The topics will be published immediately to matching
  * subscribers and then re-published whenever a new matching subscription is received.
  *
@@ -114,20 +104,33 @@ uv_loop_t* DPS_GetLoop(DPS_Node* node);
  * @param topics      The topic strings to publish
  * @param numTopics   The number of topic strings to publish
  * @param pub         Returns an opaque handle that can be used to cancel the publication later
- * @param data        Optional data - this must remain valid until the publication is canceled or republished
- * @param len         Length of the optional data
- * @param flags       Additional information about the publication.
  */
-DPS_Status DPS_Publish(DPS_Node* node, char* const* topics, size_t numTopics, DPS_Publication** pub, void* data, size_t len, uint8_t flags);
+DPS_Status DPS_CreatePublication(DPS_Node* node, char* const* topics, size_t numTopics, DPS_Publication** pub);
 
 /**
- * Cancel publishing a topic.
+ * Publish a set of topics along with an optional payload. The topics will be published immediately to matching
+ * subscribers and then re-published whenever a new matching subscription is received.
+ *
+ * If the previous publication had a non-zero TTL this publication will cause and retained publications to expire.
  *
  * @param node         The local node to use
- * @param publication  The publication to cancel
- * @param data         Address passed in when DPS_Pubish() was called
+ * @param publication  The publication to send
+ * @param payload      Optional payload 
+ * @param len          Length of the payload
+ * @param ttl          Time to live in seconds - maximum TTL is about 9 hours
+ * @param oldPayload   Returns pointer to payload passed to previous call to DPS_Pubish() 
  */
-DPS_Status DPS_PublishCancel(DPS_Node* node, DPS_Publication* pub, void** data);
+DPS_Status DPS_Publish(DPS_Node* node, DPS_Publication* pub, void* payload, size_t len, int16_t ttl, void** oldPayload);
+
+/**
+ * Delete a local publication and frees any resources allocated. This does not cancel retained publications that have an
+ * unexpired TTL. To expire a retained publication call DPS_Publish() with a zero TTL.
+ *
+ * @param node         The local node to use
+ * @param publication  The publication to destroy
+ * @param payload      Returns pointer to last payload passed to DPS_Pubish()
+ */
+DPS_Status DPS_DestroyPublication(DPS_Node* node, DPS_Publication* pub, void** payload);
 
 /**
  * Function prototype for a subscription match callback

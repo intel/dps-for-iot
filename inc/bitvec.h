@@ -1,5 +1,5 @@
-#ifndef _BLOOM_H
-#define _BLOOM_H
+#ifndef _BITVEC_H
+#define _BITVEC_H
 
 #include <stdint.h>
 #include <stddef.h>

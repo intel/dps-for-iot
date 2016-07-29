@@ -5,8 +5,6 @@
 #include <stddef.h>
 #include <dps.h>
 
-DPS_Status CBOR_EncodeUint8(DPS_Buffer* buffer, uint8_t n);
-
 DPS_Status CBOR_EncodeUint(DPS_Buffer* buffer, uint64_t n);
 
 DPS_Status CBOR_EncodeInt(DPS_Buffer* buffer, int64_t i);
@@ -17,11 +15,51 @@ DPS_Status CBOR_EncodeString(DPS_Buffer* buffer, const char* str);
 
 DPS_Status CBOR_DecodeUint8(DPS_Buffer* buffer, uint8_t* n);
 
+DPS_Status CBOR_DecodeUint16(DPS_Buffer* buffer, uint16_t* n);
+
+DPS_Status CBOR_DecodeUint32(DPS_Buffer* buffer, uint32_t* n);
+
 DPS_Status CBOR_DecodeUint(DPS_Buffer* buffer, uint64_t* n);
 
 DPS_Status CBOR_DecodeInt(DPS_Buffer* buffer, int64_t* i);
 
+DPS_Status CBOR_DecodeInt8(DPS_Buffer* buffer, int8_t* n);
+
+DPS_Status CBOR_DecodeInt16(DPS_Buffer* buffer, int16_t* n);
+
+DPS_Status CBOR_DecodeInt32(DPS_Buffer* buffer, int32_t* n);
+
 DPS_Status CBOR_ReserveBytes(DPS_Buffer* buffer, size_t len, uint8_t** ptr);
+
+/*
+ * For symmetry with CBOR_DecodeInt8()
+ */
+#define CBOR_EncodeInt8(buffer, n) CBOR_EncodeInt(buffer, (int64_t)n)
+
+/*
+ * For symmetry with CBOR_DecodeInt16()
+ */
+#define CBOR_EncodeInt16(buffer, n) CBOR_EncodeInt(buffer, (int64_t)n)
+
+/*
+ * For symmetry with CBOR_DecodeInt32()
+ */
+#define CBOR_EncodeInt32(buffer, n) CBOR_EncodeInt(buffer, (int64_t)n)
+
+/*
+ * For symmetry with CBOR_DecodeUint8()
+ */
+#define CBOR_EncodeUint8(buffer, n) CBOR_EncodeUint(buffer, (uint64_t)n)
+
+/*
+ * For symmetry with CBOR_DecodeUint16()
+ */
+#define CBOR_EncodeUint16(buffer, n) CBOR_EncodeUint(buffer, (uint64_t)n)
+
+/*
+ * For symmetry with CBOR_DecodeUint32()
+ */
+#define CBOR_EncodeUint32(buffer, n) CBOR_EncodeUint(buffer, (uint64_t)n)
 
 /**
  *

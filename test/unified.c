@@ -79,13 +79,18 @@ static void OnTimer(uv_timer_t* handle)
 
         if (publications[p]) {
             void* data;
-            DPS_PublishCancel(pubNode[p], publications[p], &data);
+            DPS_DestroyPublication(pubNode[p], publications[p], &data);
             free(data);
         }
         msg = malloc(32);
         sprintf(msg, "publication #%d", ++pubcount);
 
-        ret = DPS_Publish(pubNode[p], pubTopics, 1, &publications[p], msg, strlen(msg), DPS_PUB_FLAGS_NONE);
+        ret = DPS_CreatePublication(pubNode[p], pubTopics, 1, &publications[p]);
+        if (ret != DPS_OK) {
+            DPS_ERRPRINT("Failed to create publication - error=%d\n", ret);
+            return;
+        }
+        ret = DPS_Publish(pubNode[p], publications[p], msg, strlen(msg), 0, NULL);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("Failed to publish topics - error=%d\n", ret);
         }
