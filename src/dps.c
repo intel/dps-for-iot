@@ -12,7 +12,7 @@
 #include <coap.h>
 #include <cbor.h>
 #include <network.h>
-#include <uuid.h>
+#include "dps_history.h"
 
 /*
  * Debug control for this module
@@ -34,7 +34,6 @@ typedef struct _SubList {
 
 typedef struct _PubList {
     uint8_t match;                  /* Match flag for use in loops */
-    uint64_t revision;              /* Revision number for this publisher */
     DPS_NodeAddress nodeAddr;       /* Address for the remote node */
     struct _PubList* next;
 } PubList;
@@ -54,14 +53,11 @@ typedef struct _DPS_Subscription {
 
 
 #define PUB_FLAG_PUBLISH  (0x01)
-#define PUB_FLAG_RETAINED (0x02 | PUB_FLAG_PUBLISH)
+#define PUB_FLAG_RETAINED (0x02)
 #define PUB_FLAG_EXPIRED  (0x04)
-
 
 /*
  * Notes on the use of the DPS_Publication fields:
- *
- * The revision number is used to prevent duplicate transmision of publications received via multiple paths.
  *
  * The pubId identifies a publication that replaces an earlier retained instance of the same publication.
  *
@@ -72,7 +68,7 @@ typedef struct _DPS_Subscription {
 typedef struct _DPS_Publication {
     uint8_t flags;
     int16_t ttl;                    /* Remaining time-to-live in seconds */
-    uint64_t revision;              /* Revision number for this publication */
+    uint32_t serialNumber;          /* Serial number for this publication */
     uint8_t* payload;
     size_t len;
     DPS_UUID pubId;                 /* Publication identifier */
@@ -88,7 +84,6 @@ typedef struct _DPS_Node {
     uv_idle_t idler;                      /* for doing background work */
 
     uint64_t ttlBasis;                    /* basis time for expiring retained messages */
-    uint64_t revision;                    /* Revision number for this node */
 
     PubList* remotePubs;                  /* Linked list of remote publishers */
     SubList* remoteSubs;                  /* Linked list of remote subscribers */
@@ -96,6 +91,8 @@ typedef struct _DPS_Node {
     DPS_BitVector* interests;             /* Rolled-up union of subscription interests for this node */
     DPS_BitVector* needs;                 /* Rolled-up intersection of subscription needs */
 
+    DPS_History history;                  /* History of recently sent publications */
+   
     DPS_Publication* localPubs;           /* Linked list of local publications */
     DPS_Subscription* localSubs;          /* Linked list of local subscriptions */
 
@@ -258,7 +255,9 @@ static DPS_Publication* FreePublication(DPS_Node* node, DPS_Publication* pub)
         }
         prev->next = next;
     }
-    DPS_BitVectorFree(pub->bf);
+    if (pub->bf) {
+        DPS_BitVectorFree(pub->bf);
+    }
     free(pub);
     return next;
 }
@@ -444,6 +443,7 @@ static void LazyCheckTTLs(DPS_Node* node)
          * When a ttl expires retained publications are freed, local publications are disabled
          */
         if (pub->flags & PUB_FLAG_RETAINED) {
+            DPS_DBGPRINT("Expiring pub %s\n", DPS_UUIDToString(&pub->pubId));
             FreePublication(node, pub);
         } else {
             pub->flags &= ~PUB_FLAG_PUBLISH;
@@ -480,17 +480,37 @@ static DPS_Status RetainPublication(DPS_Node* node, DPS_Publication* tmpPub)
     }
     if (pub) {
         /*
+         * The bit vector of a retained publication cannot change
+         */
+        if (!DPS_BitVectorEquals(tmpPub->bf, pub->bf)) {
+            DPS_ERRPRINT("Inconsisten bit vector in retained pub");
+            return DPS_ERR_INVALID;
+        }
+        /*
+         *
+         */
+        if (tmpPub->serialNumber <= pub->serialNumber) {
+            DPS_ERRPRINT("Publication is stale");
+            return DPS_ERR_INVALID;
+        }
+        /*
          * Existing payload if present must be freed
          */
         if (pub->payload) {
             free(pub->payload);
             pub->payload = NULL;
         }
+        /*
+         * The bit vector will be replace below
+         */
+        DPS_BitVectorFree(pub->bf);
+        pub->bf = NULL;
     } else {
         if (tmpPub->ttl < 0) {
             /*
              * Unexpected but harmless
              */
+            DPS_BitVectorFree(tmpPub->bf);
             return DPS_OK;
         }
         pub = calloc(1, sizeof(DPS_Publication));
@@ -502,13 +522,16 @@ static DPS_Status RetainPublication(DPS_Node* node, DPS_Publication* tmpPub)
      * Negative TTL means delete the retained publication
      */
     if (tmpPub->ttl < 0) {
+        DPS_DBGPRINT("Explictly expiringin pub %s\n", DPS_UUIDToString(&tmpPub->pubId));
         FreePublication(node, pub);
+        DPS_BitVectorFree(tmpPub->bf);
         return DPS_OK;
     }
+    DPS_DBGPRINT("Retaining pub %s\n", DPS_UUIDToString(&tmpPub->pubId));
     pub->ttl = tmpPub->ttl;
-    pub->flags |= PUB_FLAG_RETAINED;
+    pub->flags = (PUB_FLAG_RETAINED | PUB_FLAG_PUBLISH);
     pub->pubId = tmpPub->pubId;
-    pub->revision = tmpPub->revision;
+    pub->serialNumber = tmpPub->serialNumber;
     pub->bf = tmpPub->bf;
     pub->len = tmpPub->len;
     if (pub->len) {
@@ -638,7 +661,7 @@ static DPS_Status PushPublication(DPS_Node* node, DPS_Publication* pub, DPS_Node
         }
     }
     CBOR_EncodeBytes(&payload, (uint8_t*)&pub->pubId, sizeof(pub->pubId));
-    CBOR_EncodeUint(&payload, pub->revision);
+    CBOR_EncodeUint(&payload, pub->serialNumber);
     ret = DPS_BitVectorSerialize(pub->bf, &payload);
     if (ret == DPS_OK) {
         CBOR_EncodeBytes(&payload, pub->payload, pub->len);
@@ -703,10 +726,10 @@ static DPS_Status ForwardPubToSubs(DPS_Node* node, DPS_Publication* pub, DPS_Nod
         DPS_BitVectorIntersection(tmpPub.bf, pub->bf, sub->interests);
         DPS_BitVectorFuzzyHash(provides, tmpPub.bf);
         if (DPS_BitVectorIncludes(provides, sub->needs)) {
-            DPS_DBGPRINT("Forwarded pub %d to %s\n", pub->revision, DPS_NodeAddressText(&sub->nodeAddr));
+            DPS_DBGPRINT("Forwarded pub %d to %s\n", pub->serialNumber, DPS_NodeAddressText(&sub->nodeAddr));
             ret = PushPublication(node, &tmpPub, pubAddr, &sub->nodeAddr);
         } else {
-            DPS_DBGPRINT("Rejected pub %d for %s\n", pub->revision, DPS_NodeAddressText(&sub->nodeAddr));
+            DPS_DBGPRINT("Rejected pub %d for %s\n", pub->serialNumber, DPS_NodeAddressText(&sub->nodeAddr));
         }
         if (ret != DPS_OK) {
             sub = FreeRemoteSub(node, sub);
@@ -732,8 +755,6 @@ static DPS_Status DecodePublicationRequest(DPS_Node* node, DPS_Buffer* buffer)
 {
     DPS_Status ret;
     PubList* publisher;
-    uint64_t revision;
-    uint16_t ttl;
     int noChange = DPS_FALSE;
     DPS_NodeAddress addr;
     DPS_Publication pub;
@@ -746,7 +767,7 @@ static DPS_Status DecodePublicationRequest(DPS_Node* node, DPS_Buffer* buffer)
     if (ret != DPS_OK) {
         return ret;
     }
-    ret = CBOR_DecodeInt16(buffer, &ttl);
+    ret = CBOR_DecodeInt16(buffer, &pub.ttl);
     if (ret != DPS_OK) {
         return ret;
     }
@@ -757,26 +778,30 @@ static DPS_Status DecodePublicationRequest(DPS_Node* node, DPS_Buffer* buffer)
     if (len != sizeof(DPS_UUID)) {
         return DPS_ERR_INVALID;
     }
-    ret = CBOR_DecodeUint(buffer, &revision);
+    pub.pubId = *pubId;
+    ret = CBOR_DecodeUint32(buffer, &pub.serialNumber);
     if (ret != DPS_OK) {
         return ret;
     }
+    if (DPS_PublicationIsStale(&node->history, &pub.pubId, pub.serialNumber)) {
+        DPS_DBGPRINT("Publication is stale\n");
+        return DPS_OK;
+    }
+    /*
+     * TODO - we can get the addr from the socket - we just need to listening port
+     *
+     * No need to assoicate publications with an addr - it doesn't matter anyway 
+     * because there might be mutiple paths and the pubId is more reliable for
+     * detecting duplicates.
+     */
     ret = AddRemotePublisher(node, &addr, &publisher);
     if (ret == DPS_ERR_EXISTS) {
-        if (revision <= publisher->revision) {
-            DPS_DBGPRINT("Publication is stale\n");
-            return DPS_OK;
-        }
         DPS_DBGPRINT("Updating existing publisher\n");
         ret = DPS_OK;
     }
     if (ret != DPS_OK) {
         return ret;
     }
-    publisher->revision = revision;
-    pub.revision = revision;
-    pub.ttl = ttl;
-    pub.pubId = *pubId;
     pub.bf = DPS_BitVectorAlloc();
     if (!pub.bf) {
         return DPS_ERR_RESOURCES;
@@ -806,9 +831,9 @@ static DPS_Status DecodePublicationRequest(DPS_Node* node, DPS_Buffer* buffer)
          */
         ret = ForwardPubToSubs(node, &pub, &addr, NULL);
         /*
-         * Check if the publication should persist
+         * Publications with a non-zero TTL will be retained until the TTL expires.
          */
-        if (ttl) {
+        if (pub.ttl) {
             ret = RetainPublication(node, &pub);
             if (ret != DPS_OK) {
                 DPS_BitVectorFree(pub.bf);
@@ -819,6 +844,7 @@ static DPS_Status DecodePublicationRequest(DPS_Node* node, DPS_Buffer* buffer)
     } else {
         DeleteRemotePublisher(node, publisher);
     }
+    DPS_FreshenHistory(&node->history);
     return ret;
 }
 
@@ -1134,8 +1160,6 @@ DPS_Node* DPS_InitNode(int mcastListen, int tcpPort, const char* separators)
 
     strncpy(node->separators, separators, sizeof(node->separators));
     node->loop = uv_default_loop();
-    node->revision = (uv_hrtime() >> 20) & 0xFFFFFFFF;
-
     /*
      * Initialize an idler to do background work
      */
@@ -1183,6 +1207,7 @@ static void TerminateOnIdle(uv_idle_t* handle)
 
     DPS_BitVectorFree(node->interests);
     DPS_BitVectorFree(node->needs);
+    DPS_HistoryFree(&node->history);
 
     while (node->localPubs) {
         FreePublication(node, node->localPubs);
@@ -1281,10 +1306,7 @@ DPS_Status DPS_Publish(DPS_Node* node, DPS_Publication* pub, void* payload, size
     pub->payload = payload;
     pub->len = len;
     pub->flags = PUB_FLAG_PUBLISH;
-    /*
-     * Revision is updated for each publication sent
-     */
-    pub->revision = ++node->revision;
+    ++pub->serialNumber;
 
     if (pub->ttl && !ttl) {
         pub->flags |= PUB_FLAG_EXPIRED;
