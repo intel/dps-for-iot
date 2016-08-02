@@ -240,43 +240,43 @@ DPS_Status CBOR_DecodeUint(DPS_Buffer* buffer, uint64_t* n)
 
 DPS_Status CBOR_DecodeUint8(DPS_Buffer* buffer, uint8_t* n)
 {
-    uint64_t n64;
+    uint64_t u64;
     uint8_t maj;
     DPS_Status ret;
 
-    ret = DecodeUint(buffer, &n64, &maj);
-    if ((ret == DPS_OK) && ((maj != CBOR_UINT) || (n64 > UINT8_MAX))) {
+    ret = DecodeUint(buffer, &u64, &maj);
+    if ((ret == DPS_OK) && ((maj != CBOR_UINT) || (u64 > UINT8_MAX))) {
         ret = DPS_ERR_INVALID;
     }
-    *n = (uint8_t)n64;
+    *n = (uint8_t)u64;
     return ret;
 }
 
 DPS_Status CBOR_DecodeUint16(DPS_Buffer* buffer, uint16_t* n)
 {
-    uint64_t n64;
+    uint64_t u64;
     uint8_t maj;
     DPS_Status ret;
 
-    ret = DecodeUint(buffer, &n64, &maj);
-    if ((ret == DPS_OK) && ((maj != CBOR_UINT) || (n64 > UINT16_MAX))) {
+    ret = DecodeUint(buffer, &u64, &maj);
+    if ((ret == DPS_OK) && ((maj != CBOR_UINT) || (u64 > UINT16_MAX))) {
         ret = DPS_ERR_INVALID;
     }
-    *n = (uint8_t)n64;
+    *n = (uint16_t)u64;
     return ret;
 }
 
 DPS_Status CBOR_DecodeUint32(DPS_Buffer* buffer, uint32_t* n)
 {
-    uint64_t n64;
+    uint64_t u64;
     uint8_t maj;
     DPS_Status ret;
 
-    ret = DecodeUint(buffer, &n64, &maj);
-    if ((ret == DPS_OK) && ((maj != CBOR_UINT) || (n64 > UINT32_MAX))) {
+    ret = DecodeUint(buffer, &u64, &maj);
+    if ((ret == DPS_OK) && ((maj != CBOR_UINT) || (u64 > UINT32_MAX))) {
         ret = DPS_ERR_INVALID;
     }
-    *n = (uint32_t)n64;
+    *n = (uint32_t)u64;
     return ret;
 }
 
@@ -307,34 +307,34 @@ DPS_Status CBOR_DecodeInt(DPS_Buffer* buffer, int64_t* i)
 
 DPS_Status CBOR_DecodeInt8(DPS_Buffer* buffer, int8_t* n)
 {
-    int64_t n64;
-    DPS_Status ret = CBOR_DecodeInt(buffer, &n64);
-    if ((ret == DPS_OK) && ((n64 < INT8_MIN) || (n64 > INT8_MAX))) {
+    int64_t i64;
+    DPS_Status ret = CBOR_DecodeInt(buffer, &i64);
+    if ((ret == DPS_OK) && ((i64 < INT8_MIN) || (i64 > INT8_MAX))) {
         ret = DPS_ERR_INVALID;
     }
-    *n = (int8_t)n64;
+    *n = (int8_t)i64;
     return ret;
 }
 
 DPS_Status CBOR_DecodeInt16(DPS_Buffer* buffer, int16_t* n)
 {
-    int64_t n64;
-    DPS_Status ret = CBOR_DecodeInt(buffer, &n64);
-    if ((ret == DPS_OK) && ((n64 < INT16_MIN) || (n64 > INT16_MAX))) {
+    int64_t i64;
+    DPS_Status ret = CBOR_DecodeInt(buffer, &i64);
+    if ((ret == DPS_OK) && ((i64 < INT16_MIN) || (i64 > INT16_MAX))) {
         ret = DPS_ERR_INVALID;
     }
-    *n = (int16_t)n64;
+    *n = (int16_t)i64;
     return ret;
 }
 
 DPS_Status CBOR_DecodeInt32(DPS_Buffer* buffer, int32_t* n)
 {
-    int64_t n64;
-    DPS_Status ret = CBOR_DecodeInt(buffer, &n64);
-    if ((ret == DPS_OK) && ((n64 < INT32_MIN) || (n64 > INT32_MAX))) {
+    int64_t i64;
+    DPS_Status ret = CBOR_DecodeInt(buffer, &i64);
+    if ((ret == DPS_OK) && ((i64 < INT32_MIN) || (i64 > INT32_MAX))) {
         ret = DPS_ERR_INVALID;
     }
-    *n = (int32_t)n64;
+    *n = (int32_t)i64;
     return ret;
 }
 

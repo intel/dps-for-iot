@@ -62,7 +62,7 @@ int DPS_PublicationIsStale(DPS_History* history, DPS_UUID* pubId, uint32_t seria
 {
     DPS_PubHistory* ph = history->oldest;
     /*
-     * TODO - replace the linear search with a faster lookup 
+     * TODO - for scalabililty nees to replace the linear search with a faster lookup 
      */
     while (ph) {
         if (ph->pub.sn != serialNumber) {
@@ -71,6 +71,7 @@ int DPS_PublicationIsStale(DPS_History* history, DPS_UUID* pubId, uint32_t seria
         if (memcmp(&ph->pub.id, pubId, sizeof(pubId->val)) == 0) {
             return DPS_TRUE;
         }
+        ph = ph->next;
     }
     return DPS_FALSE;
 }

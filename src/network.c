@@ -104,12 +104,11 @@ static void OnIncomingConnection(uv_stream_t* stream, int status)
         DPS_ERRPRINT("OnIncomingConnection %s\n", uv_strerror(status));
         return;
     }
-    reader = malloc(sizeof(*reader));
+    reader = calloc(1, sizeof(*reader));
     if (!reader) {
         DPS_ERRPRINT("OnIncomingConnection malloc failed\n");
         return;
     }
-    memset(reader, 0, sizeof(*reader));
     ret = uv_tcp_init(stream->loop, &reader->socket);
     assert(ret == 0);
 
@@ -136,11 +135,10 @@ DPS_NetListener* DPS_NetStartListening(DPS_Node* node, int port, DPS_OnReceive c
     DPS_NetListener* listener;
     struct sockaddr_in6 addr;
 
-    listener = malloc(sizeof(*listener));
+    listener = calloc(1, sizeof(*listener));
     if (!listener) {
         return NULL;
     }
-    memset(listener, 0, sizeof(*listener));
     uv_tcp_init(DPS_GetLoop(node), &listener->socket);
 
     listener->node = node;
@@ -257,11 +255,10 @@ DPS_Status DPS_NetSend(DPS_Node* node, uv_buf_t* bufs, size_t numBufs, const str
     }
     DPS_DBGPRINT("DPS_NetSend total %d bytes to %s/%d\n", len, DPS_NetAddrText(addr), ntohs(((const struct sockaddr_in6*)(addr))->sin6_port));
 
-    writer = malloc(sizeof(*writer));
+    writer = calloc(1, sizeof(*writer));
     if (!writer) {
         return DPS_ERR_RESOURCES;
     }
-    memset(writer, 0, sizeof(*writer));
     writer->node = node;
     memcpy(writer->bufs, bufs, numBufs * sizeof(uv_buf_t));
     writer->numBufs = numBufs;
@@ -284,8 +281,8 @@ DPS_Status DPS_NetSend(DPS_Node* node, uv_buf_t* bufs, size_t numBufs, const str
 const char* DPS_NetAddrText(const struct sockaddr* addr)
 {
     if (addr) {
+        static char txt[INET6_ADDRSTRLEN + 8];
         int ret;
-        static char txt[INET6_ADDRSTRLEN];
         if (addr->sa_family == AF_INET6) {
             ret = uv_ip6_name((const struct sockaddr_in6*)addr, txt, sizeof(txt));
         } else {
