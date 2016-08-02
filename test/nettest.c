@@ -66,7 +66,7 @@ static void Listener(DPS_Node* node)
     printf("Listening on port %d\n", DPS_NetGetListenerPort(listener));
 }
 
-static void OnSendComplete(DPS_Node* node, const struct sockaddr* addr, uv_buf_t* bufs, size_t numBufs, DPS_Status status)
+static void OnSendComplete(DPS_Node* node, struct sockaddr* addr, uv_buf_t* bufs, size_t numBufs, DPS_Status status)
 {
     printf("OnSendComplete: status = %d\n", status);
     DPS_TerminateNode(node);
@@ -81,7 +81,6 @@ static void Sender(DPS_Node* node, int port)
     uv_buf_t bufs[3];
     struct sockaddr_in6 addr;
     CoAP_Option opts[2];
-    uint8_t* addrPtr;
     
     uv_ip6_addr("::", port, &addr);
 
@@ -90,13 +89,12 @@ static void Sender(DPS_Node* node, int port)
     opts[0].len = 1 + strlen(opts[0].val);
 
     DPS_BufferInit(&payload, NULL, sizeof(testData) + 64);
-    CBOR_ReserveBytes(&payload, 16, &addrPtr);
     CBOR_EncodeString(&payload, testData);
 
     ret = CoAP_Compose(COAP_OVER_TCP, bufs, 3, COAP_CODE(COAP_REQUEST, COAP_GET), opts, 1, &payload);
     assert(ret == DPS_OK);
 
-    ret = DPS_NetSend(node, bufs, 3, addrPtr, (const struct sockaddr*)&addr, OnSendComplete);
+    ret = DPS_NetSend(node, bufs, 3, (const struct sockaddr*)&addr, OnSendComplete);
     assert(ret == DPS_OK);
 }
 

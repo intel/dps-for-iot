@@ -195,7 +195,6 @@ typedef struct {
     };
     uv_buf_t bufs[MAX_BUFS];
     size_t numBufs;
-    uint8_t* addrPtr;          /* Pointer into location where address needs to be stuffed */
     DPS_NetSendComplete onSendComplete;
 } NetWriter;
 
@@ -221,17 +220,6 @@ static void OnOutgoingConnection(uv_connect_t *req, int status)
     NetWriter* writer = (NetWriter*)req->data;
 
     if (status == 0) {
-        struct sockaddr_in6 ourAddr;
-        int sz = sizeof(ourAddr);
-        ret = uv_tcp_getsockname(&writer->socket, (struct sockaddr*)&ourAddr, &sz);
-        assert(ret == 0);
-        assert(ourAddr.sin6_family == AF_INET6);
-        /*
-         * Copy our address into the stored address location
-         */
-        if (writer->addrPtr) {
-            memcpy(writer->addrPtr, &ourAddr.sin6_addr, sizeof(ourAddr.sin6_addr));
-        }
         /*
          * We need pointers to the writer struct
          */
@@ -251,7 +239,7 @@ static void OnOutgoingConnection(uv_connect_t *req, int status)
     }
 }
 
-DPS_Status DPS_NetSend(DPS_Node* node, uv_buf_t* bufs, size_t numBufs, uint8_t* addrPtr, const struct sockaddr* addr, DPS_NetSendComplete sendCompleteCB)
+DPS_Status DPS_NetSend(DPS_Node* node, uv_buf_t* bufs, size_t numBufs, const struct sockaddr* addr, DPS_NetSendComplete sendCompleteCB)
 {
     int ret;
     NetWriter* writer;
@@ -280,7 +268,6 @@ DPS_Status DPS_NetSend(DPS_Node* node, uv_buf_t* bufs, size_t numBufs, uint8_t* 
     writer->onSendComplete = sendCompleteCB;
     writer->connectReq.data = writer;
     writer->socket.data = writer;
-    writer->addrPtr = addrPtr;
     memcpy(&writer->addr, addr, sizeof(writer->addr));
 
     ret = uv_tcp_init(DPS_GetLoop(node), &writer->socket);

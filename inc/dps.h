@@ -26,14 +26,12 @@ typedef struct _DPS_Node DPS_Node;
  * Type for an address
  */
 typedef struct _DPS_NodeAddress {
-    uint16_t port;     /* Port number in host order */
-    uint8_t addr[16];  /* IPv6 address */
+    struct sockaddr_in6 ip6;
 } DPS_NodeAddress;
-
 /**
  * Returns static string for a node address
  */
-const char* DPS_NodeAddressText(const DPS_NodeAddress* addr);
+#define DPS_NodeAddressText(a) DPS_NetAddrText((struct sockaddr*)a)
 
 /**
  * Opaque type for an active subscription
@@ -139,7 +137,6 @@ DPS_Status DPS_DestroyPublication(DPS_Node* node, DPS_Publication* pub, void** p
  * @param subscription  Opaque handle for the subscription
  * @param topics        The topics that were matched 
  * @param numTopics     The number of topics
- * @param addr          The address of the node that reported the match
  * @param data          Payload from the publication if any
  * @param len           Length of the payload
  */
@@ -147,7 +144,6 @@ typedef void (*DPS_MatchHandler)(DPS_Node* node,
                                  DPS_Subscription* sub,
                                  const char** topics,
                                  size_t numTopics,
-                                 const DPS_NodeAddress* addr,
                                  uint8_t* data,
                                  size_t len);
 

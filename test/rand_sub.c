@@ -7,11 +7,11 @@
 #include <dps.h>
 #include <uv.h>
 
-static void OnMatch(DPS_Node* node, DPS_Subscription* subscription, const char** topics, size_t numTopics, const DPS_NodeAddress* addr, uint8_t* data, size_t len)
+static void OnMatch(DPS_Node* node, DPS_Subscription* subscription, const char** topics, size_t numTopics, uint8_t* data, size_t len)
 {
     size_t i;
 
-    DPS_PRINT("Got match from %s for:\n    ", DPS_NodeAddressText(addr));
+    DPS_PRINT("Got match for:\n    ");
     for (i = 0; i < numTopics; ++i) {
         if (i) {
             DPS_PRINT(" & ");

@@ -58,7 +58,6 @@ static void DataSender(uv_idle_t* handle)
     uv_buf_t bufs[3];
     size_t len;
     CoAP_Option opts[2];
-    uint8_t* addrPtr;
 
     usleep(1000 * 1000 * 3);
 
@@ -67,13 +66,12 @@ static void DataSender(uv_idle_t* handle)
     opts[0].len = 1 + strlen(opts[0].val);
 
     DPS_BufferInit(&payload, buffer, sizeof(buffer));
-    CBOR_ReserveBytes(&payload, 16, &addrPtr);
 
     ret = CoAP_Compose(protocol, bufs, 3, COAP_CODE(COAP_REQUEST, COAP_GET), opts, 1, &payload);
     if (ret != DPS_OK) {
         printf("ComposeCoAP failed ret=%d\n", ret);
     } else {
-        ret = DPS_MulticastSend(sender, bufs, 3, addrPtr);
+        ret = DPS_MulticastSend(sender, bufs, 3);
         if (ret != DPS_OK) {
             fprintf(stderr, "DPS_MulticastSend failed ret=%d\n", ret);
         }

@@ -60,7 +60,7 @@ void DPS_MulticastStopSend(DPS_MulticastSender* sender);
  * @param          The length of the bufs array
  * @param status   Indicates if the send was successful or not
  */
-typedef void (*DPS_NetSendComplete)(DPS_Node* node, const struct sockaddr* addr, uv_buf_t* bufs, size_t numBufs, DPS_Status status);
+typedef void (*DPS_NetSendComplete)(DPS_Node* node, struct sockaddr* addr, uv_buf_t* bufs, size_t numBufs, DPS_Status status);
 
 /*
  * Multicast some data immediately
@@ -68,10 +68,8 @@ typedef void (*DPS_NetSendComplete)(DPS_Node* node, const struct sockaddr* addr,
  * @param node     Opaque pointer to the DPS node 
  * @param bufs     Data buffers to send
  * @param numBufs  Number of buffers to send
- * @param addrPtr  Pointer to reserved space where the source address is to be written before
- *                 the data is sent. The data may be sent on multiple interfaces.
  */
-DPS_Status DPS_MulticastSend(DPS_MulticastSender* sender, uv_buf_t* bufs, size_t numBufs, uint8_t* addrPtr);
+DPS_Status DPS_MulticastSend(DPS_MulticastSender* sender, uv_buf_t* bufs, size_t numBufs);
 
 /*
  * Opaque data structure for a TCP listener
@@ -110,12 +108,10 @@ void DPS_NetStopListening(DPS_NetListener* listener);
  * @param node            Opaque pointer to the DPS node 
  * @param bufs            Data buffers to send, the data in the buffers must be live until the send completes.
  * @param numBufs         Number of buffers to send
- * @param addrPtr         Pointer to reserved space where the source address is to be written before
- *                        the data is sent. The data may be sent on multiple interfaces.
  * @param addr            Destination address
  * @param sendCompleteCB  Function called when the send is completeso the content of the data buffers can be freed.
  */
-DPS_Status DPS_NetSend(DPS_Node* node, uv_buf_t* bufs, size_t numBufs, uint8_t* addrPtr, const struct sockaddr* addr, DPS_NetSendComplete sendCompleteCB);
+DPS_Status DPS_NetSend(DPS_Node* node, uv_buf_t* bufs, size_t numBufs, const struct sockaddr* addr, DPS_NetSendComplete sendCompleteCB);
 
 /*
  * Generates text for an address

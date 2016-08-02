@@ -310,7 +310,7 @@ void DPS_MulticastStopSend(DPS_MulticastSender* sender)
     }
 }
 
-DPS_Status DPS_MulticastSend(DPS_MulticastSender* sender, uv_buf_t* bufs, size_t numBufs, uint8_t* addrPtr)
+DPS_Status DPS_MulticastSend(DPS_MulticastSender* sender, uv_buf_t* bufs, size_t numBufs)
 {
     size_t sent = 0;
     int i;
@@ -318,9 +318,6 @@ DPS_Status DPS_MulticastSend(DPS_MulticastSender* sender, uv_buf_t* bufs, size_t
     struct sockaddr_in6 addr6;
     struct sockaddr_in addr4;
 
-    if (!addrPtr) {
-        return DPS_ERR_NULL;
-    }
     ret = uv_ip6_addr(COAP_MCAST_ALL_NODES_LINK_LOCAL_6, COAP_UDP_PORT, &addr6);
     assert(ret == 0);
 
@@ -332,10 +329,6 @@ DPS_Status DPS_MulticastSend(DPS_MulticastSender* sender, uv_buf_t* bufs, size_t
      */
     for (i = 0; i < sender->numTx; ++i) {
         struct sockaddr* addr = (sender->udpTx[i].family == AF_INET6) ? (struct sockaddr*)&addr6 : (struct sockaddr*)&addr4;
-        /*
-         * Write the IPv6 address for this interface into the packet payload
-         */
-        memcpy(addrPtr, sender->udpTx[i].addr6, 16);
         /*
          * Synchronous send
          */

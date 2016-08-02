@@ -8,11 +8,11 @@
 #include <bitvec.h>
 #include <uv.h>
 
-static void OnMatch(DPS_Node* node, DPS_Subscription* subscription, const char** topics, size_t numTopics, const DPS_NodeAddress* addr, uint8_t* data, size_t len)
+static void OnMatch(DPS_Node* node, DPS_Subscription* subscription, const char** topics, size_t numTopics, uint8_t* data, size_t len)
 {
     size_t i;
 
-    DPS_PRINT("Got match from %s for:\n    ", DPS_NodeAddressText(addr));
+    DPS_PRINT("Got match for:\n    ");
     for (i = 0; i < numTopics; ++i) {
         if (i) {
             DPS_PRINT(" & ");
@@ -122,10 +122,6 @@ int main(int argc, char** argv)
         }
         topics[numTopics++] = *arg++;
     }
-    if (numTopics == 0) {
-        DPS_PRINT("%s: Need a least one topic to subscribe to\n", *argv);
-        return 1;
-    }
 
     ret = DPS_Configure(bitLen, numHashes);
     if (ret != DPS_OK) {
@@ -141,10 +137,12 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    ret = DPS_Subscribe(node, topics, numTopics, OnMatch, &subscription);
-    if (ret != DPS_OK) {
-        DPS_ERRPRINT("Failed to susbscribe topics - error=%s\n", DPS_ErrTxt(ret));
-        return 1;
+    if (numTopics > 0) {
+        ret = DPS_Subscribe(node, topics, numTopics, OnMatch, &subscription);
+        if (ret != DPS_OK) {
+            DPS_ERRPRINT("Failed to susbscribe topics - error=%s\n", DPS_ErrTxt(ret));
+            return 1;
+        }
     }
 
     assert(node);
