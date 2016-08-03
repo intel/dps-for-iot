@@ -94,7 +94,7 @@ int main(int argc, char** argv)
     uv_loop_t* loop;
     uv_idle_t idler;
     uv_timer_t timer;
-    int mcastListen = DPS_FALSE;
+    int mcastPub = DPS_MCAST_PUB_DISABLED;
     const char* host = NULL;
     int listenPort = 0;
     const char* connectPort = NULL;
@@ -134,7 +134,7 @@ int main(int argc, char** argv)
         }
         if (strcmp(*arg, "-m") == 0) {
             ++arg;
-            mcastListen = DPS_TRUE;
+            mcastPub = DPS_MCAST_PUB_ENABLE_RECV;
             continue;
         }
         if (strcmp(*arg, "-d") == 0) {
@@ -145,9 +145,11 @@ int main(int argc, char** argv)
         goto Usage;
     }
 
-    mcastListen |= (host == NULL) && (connectPort == NULL);
+    if ((host == NULL) && (connectPort == NULL)) {
+        mcastPub = DPS_MCAST_PUB_ENABLE_RECV;
+    }
 
-    node = DPS_InitNode(mcastListen, listenPort, "/.");
+    node = DPS_InitNode(mcastPub, listenPort, "/.");
     if (!node) {
         DPS_ERRPRINT("Failed to initialize node: %s\n", DPS_ErrTxt(ret));
         return 1;

@@ -26,6 +26,7 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 static const char DPS_SubscriptionURI[] = "dps";
 
 typedef struct _RemoteNode {
+    uint8_t subReceiver;            /* Does this node receive subscription updates */
     struct sockaddr_storage addr;
     DPS_BitVector* needs;           /* Subscription needs */
     DPS_BitVector* interests;       /* The bit vector for the interests of a set of remote subscribers */
@@ -76,7 +77,7 @@ typedef struct _DPS_Node {
     char separators[13];                  /* List of separator characters */
 
     uv_loop_t* loop;                      /* uv lib event loop */
-    uv_idle_t idler;                      /* for doing background work */
+    uv_timer_t shutdownTimer;             /* for graceful shut down */
 
     uint64_t ttlBasis;                    /* basis time for expiring retained messages */
 
@@ -470,10 +471,28 @@ static DPS_Status RetainPublication(DPS_Node* node, DPS_Publication* tmpPub)
 
 static void FreeBufs(uv_buf_t* bufs, size_t numBufs)
 {
-    size_t i;
-    for (i = 0; i < numBufs; ++i) {
-        free(bufs[i].base);
+    while (numBufs--) {
+        if (bufs->base) {
+            free(bufs->base);
+        }
+        ++bufs;
     }
+}
+
+static DPS_Status CloneBufs(uv_buf_t* dest, uv_buf_t* src, size_t numBufs)
+{
+    size_t i;
+
+    for (i = 0; i < numBufs; ++i, ++src) {
+        dest[i].base = malloc(src->len);
+        if (!dest[i].base) {
+            FreeBufs(dest, i - 1);
+            return DPS_ERR_RESOURCES;
+        }
+        memcpy(dest[i].base, src->base, src->len);
+        dest[i].len = src->len;
+    }
+    return DPS_ERR_OK;
 }
 
 static void OnSendToComplete(DPS_Node* node, struct sockaddr* addr, uv_buf_t* bufs, size_t numBufs, DPS_Status status)
@@ -658,7 +677,7 @@ static DPS_Status DecodePublicationRequest(DPS_Node* node, DPS_Buffer* buffer, c
     RemoteNode* pubNode;
     int noChange = DPS_FALSE;
     uint16_t port;
-    struct sockaddr_storage bigAddr;
+    struct sockaddr_storage senderAddr;
     DPS_Publication pub;
     DPS_UUID* pubId;
     size_t len;
@@ -689,7 +708,7 @@ static DPS_Status DecodePublicationRequest(DPS_Node* node, DPS_Buffer* buffer, c
         DPS_DBGPRINT("Publication is stale\n");
         return DPS_OK;
     }
-    ret = AddRemoteNode(node, AddrSetPort(&bigAddr, addr, port), &pubNode);
+    ret = AddRemoteNode(node, AddrSetPort(&senderAddr, addr, port), &pubNode);
     if (ret == DPS_ERR_EXISTS) {
         DPS_DBGPRINT("Updating existing node\n");
         ret = DPS_OK;
@@ -792,26 +811,6 @@ static DPS_Status ComposeSubscriptionRequest(DPS_Node* node, int protocol, uv_bu
     return ret;
 }
 
-static DPS_Status SendSubscription(DPS_Node* node, RemoteNode* remote)
-{
-    DPS_Status ret;
-    uv_buf_t bufs[3];
-
-    /*
-     * Send subscriptions to a specific remote node
-     */
-    ret = ComposeSubscriptionRequest(node, COAP_OVER_TCP, bufs, A_SIZEOF(bufs));
-    if (ret != DPS_OK) {
-        return ret;
-    }
-    ret = DPS_NetSend(node, bufs, A_SIZEOF(bufs), (struct sockaddr*)&remote->addr, OnSendToComplete);
-    if (ret != DPS_OK) {
-        DPS_ERRPRINT("Failed to send subscription request: ret=%d\n", ret);
-        OnSendToComplete(node, (struct sockaddr*)&remote->addr, bufs, A_SIZEOF(bufs), ret);
-    }
-    return ret;
-}
-
 static DPS_Status SendSubscriptions(DPS_Node* node, RemoteNode* remote)
 {
     uv_buf_t bufs[3];
@@ -828,45 +827,58 @@ static DPS_Status SendSubscriptions(DPS_Node* node, RemoteNode* remote)
     return ret;
 }
 
+
 static DPS_Status FloodSubscriptions(DPS_Node* node)
 {
-    DPS_Status ret;
     uv_buf_t bufs[3];
-    RemoteNode* remote;
-    int successes = 0;
+    RemoteNode* remote = node->remoteNodes;
+    DPS_Status ret;
 
     DPS_DBGTRACE();
 
-    if (!node->remoteNodes) {
+    if (!remote) {
         return DPS_OK;
     }
-    /*
-     * TODO - serialize the subscription once and memcpy for each remote
-     */
-    for (remote = node->remoteNodes; remote != NULL; remote = remote->next) {
-        /*
-         * Send subscription to all the downstream publishers we know about
-         */
-        ret = ComposeSubscriptionRequest(node, COAP_OVER_TCP, bufs, A_SIZEOF(bufs));
-        if (ret != DPS_OK) {
-            break;
-        }
-        ret = DPS_NetSend(node, bufs, A_SIZEOF(bufs), (struct sockaddr*)&remote->addr, OnSendToComplete);
-        if (ret == DPS_OK) {
-            ++successes;
-        } else {
-            DPS_ERRPRINT("Failed to send subscription request: ret=%d\n", ret);
-            OnSendToComplete(node, (struct sockaddr*)&remote->addr, bufs, A_SIZEOF(bufs), ret);
-            ret = DPS_OK;
-        }
+    ret = ComposeSubscriptionRequest(node, COAP_OVER_TCP, bufs, A_SIZEOF(bufs));
+    if (ret != DPS_OK) {
+        return ret;
     }
     /*
-     * Only return an error if no requests were succesful
+     * Send subscription to all the downstream publishers we know about
      */
-    if (successes == 0) {
-        ret = DPS_ERR_NETWORK;
-    } else {
-        ret = DPS_OK;
+    while (remote) {
+        uv_buf_t tmpBufs[A_SIZEOF(bufs)];
+        RemoteNode* next = remote->next;
+
+        if (!remote->subReceiver) {
+            remote = next;
+            continue;
+        }
+        /*
+         * Do we need to clone the buffer?
+         */
+        while (next && !next->subReceiver) {
+            next = next->next;
+        }
+        if (next) {
+            ret = CloneBufs(tmpBufs, bufs, A_SIZEOF(bufs));
+            if (ret != DPS_OK) {
+                break;
+            }
+        }
+        ret = DPS_NetSend(node, bufs, A_SIZEOF(bufs), (struct sockaddr*)&remote->addr, OnSendToComplete);
+        if (ret != DPS_OK) {
+            DPS_ERRPRINT("Failed to send subscription request: ret=%d\n", ret);
+            OnSendToComplete(node, (struct sockaddr*)&remote->addr, bufs, A_SIZEOF(bufs), ret);
+            /*
+             * Keep trying the other nodes
+             */
+            ret = DPS_OK;
+        }
+        if (next) {
+            memcpy(bufs, tmpBufs, sizeof(tmpBufs));
+        }
+        remote = next;
     }
     return ret;
 }
@@ -921,7 +933,7 @@ static DPS_Status DecodeSubscriptionRequest(DPS_Node* node, DPS_Buffer* buffer, 
     DPS_Status ret;
     DPS_BitVector* interests;
     DPS_BitVector* needs;
-    struct sockaddr_storage bigAddr;
+    struct sockaddr_storage senderAddr;
     uint16_t port;
     RemoteNode* newNode;
 
@@ -948,7 +960,7 @@ static DPS_Status DecodeSubscriptionRequest(DPS_Node* node, DPS_Buffer* buffer, 
     if (ret != DPS_OK) {
         return ret;
     }
-    ret = UpdateRemoteSub(node, AddrSetPort(&bigAddr, addr, port), interests, needs, &newNode);
+    ret = UpdateRemoteSub(node, AddrSetPort(&senderAddr, addr, port), interests, needs, &newNode);
     if (ret != DPS_OK) {
         DPS_BitVectorFree(interests);
         DPS_BitVectorFree(needs);
@@ -958,20 +970,22 @@ static DPS_Status DecodeSubscriptionRequest(DPS_Node* node, DPS_Buffer* buffer, 
         DPS_Publication* pub;
         DPS_Publication* next;
         /*
+         * Update new node before recomputing the subscription needs
+         */
+        if (newNode) {
+            ret = SendSubscriptions(node, newNode);
+            if (ret != DPS_OK) {
+                return ret;
+            }
+        }
+        /*
          * Recompute the subscription filter and decide if it should to be forwarded to the publishers
          */
         ret = RefreshSubscriptionInterests(node, &noChange);
         if (ret != DPS_OK) {
             return ret;
         }
-        if (noChange) {
-            /*
-             * No change for existing nodes but there is a new node 
-             */
-            if (newNode) {
-                ret = SendSubscriptions(node, newNode);
-            }
-        } else {
+        if (!noChange) {
             /*
              * The interests changed so forward the update to the other nodes
              */
@@ -1113,7 +1127,7 @@ static ssize_t OnNetReceive(DPS_Node* node, const struct sockaddr* addr, const u
     return 0;
 }
 
-DPS_Node* DPS_InitNode(int mcastListen, int tcpPort, const char* separators)
+DPS_Node* DPS_InitNode(int mcast, int tcpPort, const char* separators)
 {
     DPS_Status ret;
     DPS_Node* node = calloc(1, sizeof(DPS_Node));
@@ -1125,10 +1139,10 @@ DPS_Node* DPS_InitNode(int mcastListen, int tcpPort, const char* separators)
     strncpy(node->separators, separators, sizeof(node->separators));
     node->loop = uv_default_loop();
     /*
-     * Initialize an idler to do background work
+     * Initialize the shutdown timer
      */
-    node->idler.data = node;
-    uv_idle_init(node->loop, &node->idler);
+    node->shutdownTimer.data = node;
+    uv_timer_init(node->loop, &node->shutdownTimer);
 
     node->interests = DPS_BitVectorAlloc();
     if (!node->interests) {
@@ -1142,10 +1156,13 @@ DPS_Node* DPS_InitNode(int mcastListen, int tcpPort, const char* separators)
         return NULL;
     }
 
-    if (mcastListen) {
+    if (mcast & DPS_MCAST_PUB_ENABLE_RECV) {
         node->mcastReceiver = DPS_MulticastStartReceive(node, OnMulticastReceive);
     }
-    node->mcastSender = DPS_MulticastStartSend(node);
+    if (mcast & DPS_MCAST_PUB_ENABLE_SEND) {
+        node->mcastSender = DPS_MulticastStartSend(node);
+    }
+
     node->netListener = DPS_NetStartListening(node, tcpPort, OnNetReceive);
 
     return node;
@@ -1169,9 +1186,23 @@ uint16_t DPS_GetPortNumber(DPS_Node* node)
 
 }
 
-static void TerminateOnIdle(uv_idle_t* handle)
+#define SHUTDOWN_TIMEOUT1  200
+#define SHUTDOWN_TIMEOUT2   50
+
+static void TerminateOnTimeout(uv_timer_t* handle)
 {
     DPS_Node* node = (DPS_Node*)handle->data;
+
+    if (node->netListener) {
+        DPS_NetStopListening(node->netListener);
+        node->netListener = NULL;
+    }
+    uv_timer_stop(handle);
+
+    if (uv_loop_alive(handle->loop)) {
+        uv_timer_start(&node->shutdownTimer, TerminateOnTimeout, SHUTDOWN_TIMEOUT2, 0);
+        return;
+    }
 
     DPS_BitVectorFree(node->interests);
     DPS_BitVectorFree(node->needs);
@@ -1183,7 +1214,6 @@ static void TerminateOnIdle(uv_idle_t* handle)
     while (node->subscriptions) {
         node->subscriptions = FreeSubscription(node->subscriptions);
     }
-    uv_idle_stop(handle);
     free(node);
 }
 
@@ -1195,10 +1225,7 @@ void DPS_TerminateNode(DPS_Node* node)
     if (node->mcastSender) {
         DPS_MulticastStopSend(node->mcastSender);
     }
-    if (node->netListener) {
-        DPS_NetStopListening(node->netListener);
-    }
-    uv_idle_start(&node->idler, TerminateOnIdle);
+    uv_timer_start(&node->shutdownTimer, TerminateOnTimeout, SHUTDOWN_TIMEOUT1, 0);
 }
 
 DPS_Status DPS_CreatePublication(DPS_Node* node, char* const* topics, size_t numTopics, DPS_Publication** publication)
@@ -1277,9 +1304,11 @@ DPS_Status DPS_Publish(DPS_Node* node, DPS_Publication* pub, void* payload, size
     if (ttl && !node->ttlBasis) {
         UpdateTTLBasis(node);
     }
-    ret = PushPublication(node, pub, NULL);
-    if (ret != DPS_OK) {
-        DPS_ERRPRINT("PushPublication returned %s\n", DPS_ErrTxt(ret));
+    if (node->mcastSender) {
+        ret = PushPublication(node, pub, NULL);
+        if (ret != DPS_OK) {
+            DPS_ERRPRINT("PushPublication (multicast) returned %s\n", DPS_ErrTxt(ret));
+        }
     }
     ret = ForwardPubToSubs(node, pub, NULL, NULL);
 
@@ -1307,6 +1336,26 @@ DPS_Status DPS_DestroyPublication(DPS_Node* node, DPS_Publication* pub, void** p
     return DPS_ERR_OK;
 }
 
+static DPS_Status SendSubscription(DPS_Node* node, RemoteNode* remote)
+{
+    DPS_Status ret;
+    uv_buf_t bufs[3];
+
+    /*
+     * Send subscriptions to a specific remote node
+     */
+    ret = ComposeSubscriptionRequest(node, COAP_OVER_TCP, bufs, A_SIZEOF(bufs));
+    if (ret != DPS_OK) {
+        return ret;
+    }
+    ret = DPS_NetSend(node, bufs, A_SIZEOF(bufs), (struct sockaddr*)&remote->addr, OnSendToComplete);
+    if (ret != DPS_OK) {
+        DPS_ERRPRINT("Failed to send subscription request: ret=%d\n", ret);
+        OnSendToComplete(node, (struct sockaddr*)&remote->addr, bufs, A_SIZEOF(bufs), ret);
+    }
+    return ret;
+}
+
 DPS_Status DPS_Join(DPS_Node* node, DPS_NodeAddress* addr)
 {
     DPS_Status ret = DPS_OK;
@@ -1322,6 +1371,7 @@ DPS_Status DPS_Join(DPS_Node* node, DPS_NodeAddress* addr)
             ret = DPS_OK;
         }
     } else {
+        remote->subReceiver = DPS_TRUE;
         ret = SendSubscription(node, remote);
         if (ret != DPS_OK) {
             DeleteRemoteNode(node, remote);

@@ -78,14 +78,19 @@ DPS_Status DPS_BufferInit(DPS_Buffer* buffer, uint8_t* storage, size_t size);
  */
 #define DPS_BufferUsed(b)  ((b)->pos - (b)->base)
 
+
+#define DPS_MCAST_PUB_DISABLED       0
+#define DPS_MCAST_PUB_ENABLE_SEND    1
+#define DPS_MCAST_PUB_ENABLE_RECV    2
+
 /**
  * Initialize a local node
  *
- * @param mcastListen  If non-zero initializes the node for multicast reception
+ * @param mcastPub     Indicates if this node sends or listens for multicast publications
  * @param tcpPort      If non-zero identifies specific port to listen on
  * @param separators   The separator characters to use for topic matching, typically '/' and/or '.'
  */
-DPS_Node* DPS_InitNode(int mcastListen, int tcpPort, const char* separators);
+DPS_Node* DPS_InitNode(int mcastPub, int tcpPort, const char* separators);
 
 /**
  * Get the uv event loop for this node

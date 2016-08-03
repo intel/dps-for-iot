@@ -52,7 +52,7 @@ static char* AddTopics(char* topicList)
     return NULL;
 }
 
-static void OnData(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf)
+static void OnInput(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf)
 {
     void* data;
 
@@ -120,6 +120,7 @@ int main(int argc, char** argv)
     int numHashes = 4;
     int ttl = 0;
     char* msg = NULL;
+    int mcast = DPS_MCAST_PUB_ENABLE_SEND;
 
     DPS_Debug = 0;
 
@@ -177,7 +178,14 @@ int main(int argc, char** argv)
         goto Usage;
     }
 
-    node = DPS_InitNode(DPS_FALSE, 0, "/.");
+    /*
+     * Disable multicast publications if we have an explicit destination
+     */
+    if (host || connectPort) {
+        mcast = DPS_MCAST_PUB_DISABLED;
+    }
+
+    node = DPS_InitNode(mcast, 0, "/.");
     assert(node);
     loop = DPS_GetLoop(node);
 
@@ -207,7 +215,7 @@ int main(int argc, char** argv)
         r = uv_tty_init(loop, &tty, STDIN, 1);
         assert(r == 0);
         tty.data = node;
-        uv_read_start((uv_stream_t*)&tty, OnAlloc, OnData);
+        uv_read_start((uv_stream_t*)&tty, OnAlloc, OnInput);
     }
     return uv_run(loop, UV_RUN_DEFAULT);
 

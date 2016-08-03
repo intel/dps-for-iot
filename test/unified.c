@@ -147,11 +147,11 @@ int main(int argc, char** argv)
     loop = uv_default_loop();
 
     for (s = 0; s < numSubs; ++s) {
-        subNode[s] = DPS_InitNode(DPS_FALSE, 0, "/.");
+        subNode[s] = DPS_InitNode(DPS_MCAST_PUB_DISABLED, 0, "/.");
         assert(subNode[s]);
     }
     for (p = 0; p < numPubs; ++p) {
-        pubNode[p] = DPS_InitNode(DPS_FALSE, BASE_PORT_NUM + p, "/.");
+        pubNode[p] = DPS_InitNode(DPS_MCAST_PUB_DISABLED, BASE_PORT_NUM + p, "/.");
         assert(pubNode[p]);
     }
 

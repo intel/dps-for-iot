@@ -108,7 +108,7 @@ int main(int argc, char** argv)
         goto Usage;
     }
 
-    node = DPS_InitNode(DPS_FALSE, portNum, "/.");
+    node = DPS_InitNode(DPS_MCAST_PUB_ENABLE_SEND, portNum, "/.");
     assert(node);
     loop = DPS_GetLoop(node);
 

@@ -100,7 +100,7 @@ static void Sender(DPS_Node* node, int port)
 
 int main(int argc, char** argv)
 {
-    DPS_Node* node = DPS_InitNode(DPS_FALSE, 0, "/");
+    DPS_Node* node = DPS_InitNode(DPS_MCAST_PUB_DISABLED, 0, "/");
     int listener = 0;
     int port = 0;
 
