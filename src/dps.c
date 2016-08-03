@@ -240,52 +240,16 @@ static DPS_Publication* FreePublication(DPS_Node* node, DPS_Publication* pub)
 /*
  *
  */
-static DPS_Status RefreshSubscriptionInterests(DPS_Node* node, struct sockaddr* addr, DPS_BitVector* interests, DPS_BitVector* needs, RemoteNode** subNode, int* noChange)
+static DPS_Status RefreshSubscriptionInterests(DPS_Node* node, int* noChange)
 {
     DPS_BitVector* newInterests;
-    DPS_Subscription* localSub;
-    RemoteNode* remote = NULL;
+    RemoteNode* remote;
+    DPS_Subscription* subscription;
 
     DPS_DBGTRACE();
 
     *noChange = DPS_FALSE;
-    /*
-     * Is this an update from a known subscriber?
-     */
-    if (addr) {
-        assert(interests);
-        for (remote = node->remoteNodes; remote != NULL; remote = remote->next) {
-            if (SameAddr(&remote->addr, addr)) {
-                break;
-            }
-        }
-        if (remote) {
-            if (remote->interests) {
-                DPS_BitVectorFree(remote->interests);
-                DPS_BitVectorFree(remote->needs);
-            }
-            remote->interests = interests;
-            remote->needs = needs;
-            *subNode = NULL;
-        } else {
-            remote = malloc(sizeof(RemoteNode));
-            if (!remote) {
-                return DPS_ERR_RESOURCES;
-            }
-            DPS_DBGPRINT("Adding new remote subscriber %s\n", DPS_NetAddrText(addr));
-            CopySockaddr(&remote->addr, addr);
-            remote->interests = interests;
-            remote->needs = needs;
-            /*
-             * Link in new subscriber
-             */
-            remote->next = node->remoteNodes;
-            node->remoteNodes = remote;
-            *subNode = remote;
-        }
-    } else {
-        assert(!interests && !needs && !subNode);
-    }
+
     newInterests = DPS_BitVectorAlloc();
     if (!newInterests) {
         return DPS_ERR_RESOURCES;
@@ -306,9 +270,9 @@ static DPS_Status RefreshSubscriptionInterests(DPS_Node* node, struct sockaddr* 
             DPS_BitVectorIntersection(node->needs, node->needs, remote->needs);
         }
     }
-    for (localSub = node->subscriptions; localSub != NULL; localSub = localSub->next) {
-        DPS_BitVectorUnion(newInterests, localSub->bf);
-        DPS_BitVectorIntersection(node->needs, node->needs, localSub->needs);
+    for (subscription = node->subscriptions; subscription != NULL; subscription = subscription->next) {
+        DPS_BitVectorUnion(newInterests, subscription->bf);
+        DPS_BitVectorIntersection(node->needs, node->needs, subscription->needs);
     }
     if (DPS_BitVectorEquals(node->interests, newInterests)) {
         DPS_BitVectorFree(newInterests);
@@ -602,7 +566,7 @@ static DPS_Status PushPublication(DPS_Node* node, DPS_Publication* pub, struct s
 }
 
 /*
- * Forward a publication to matching subscribers
+ * Forward a publication to a specic subscriber or all matching subscribers
  */
 static DPS_Status ForwardPubToSubs(DPS_Node* node, DPS_Publication* pub, RemoteNode* subNode, RemoteNode* pubNode)
 {
@@ -908,6 +872,48 @@ static DPS_Status FloodSubscriptions(DPS_Node* node)
 }
 
 /*
+ * Update the interests for an existing node or add a new node
+ */
+static DPS_Status UpdateRemoteSub(DPS_Node* node, struct sockaddr* addr, DPS_BitVector* interests, DPS_BitVector* needs, RemoteNode** newNode)
+{
+    RemoteNode* remote;
+
+    /*
+     * Is this an update from a known subscriber?
+     */
+    for (remote = node->remoteNodes; remote != NULL; remote = remote->next) {
+        if (SameAddr(&remote->addr, addr)) {
+            break;
+        }
+    }
+    if (remote) {
+        if (remote->interests) {
+            DPS_BitVectorFree(remote->interests);
+            DPS_BitVectorFree(remote->needs);
+        }
+        remote->interests = interests;
+        remote->needs = needs;
+        *newNode = NULL;
+    } else {
+        remote = malloc(sizeof(RemoteNode));
+        if (!remote) {
+            return DPS_ERR_RESOURCES;
+        }
+        DPS_DBGPRINT("Adding new remote subscriber %s\n", DPS_NetAddrText(addr));
+        CopySockaddr(&remote->addr, addr);
+        remote->interests = interests;
+        remote->needs = needs;
+        /*
+         * Link in new subscriber
+         */
+        remote->next = node->remoteNodes;
+        node->remoteNodes = remote;
+        *newNode = remote;
+    }
+    return DPS_OK;
+}
+
+/*
  * A subscription filter
  */
 static DPS_Status DecodeSubscriptionRequest(DPS_Node* node, DPS_Buffer* buffer, const struct sockaddr* addr)
@@ -917,8 +923,7 @@ static DPS_Status DecodeSubscriptionRequest(DPS_Node* node, DPS_Buffer* buffer, 
     DPS_BitVector* needs;
     struct sockaddr_storage bigAddr;
     uint16_t port;
-    RemoteNode* subNode;
-    int noChange;
+    RemoteNode* newNode;
 
     DPS_DBGTRACE();
 
@@ -943,23 +948,28 @@ static DPS_Status DecodeSubscriptionRequest(DPS_Node* node, DPS_Buffer* buffer, 
     if (ret != DPS_OK) {
         return ret;
     }
-    /*
-     * Recompute the subscription filter and decide if it should to be forwarded to the publishers
-     */
-    ret = RefreshSubscriptionInterests(node, AddrSetPort(&bigAddr, addr, port), interests, needs, &subNode, &noChange);
+    ret = UpdateRemoteSub(node, AddrSetPort(&bigAddr, addr, port), interests, needs, &newNode);
     if (ret != DPS_OK) {
         DPS_BitVectorFree(interests);
         DPS_BitVectorFree(needs);
     } else {
+        int noChange;
+        uint32_t elapsed;
         DPS_Publication* pub;
         DPS_Publication* next;
-        uint32_t elapsed;
+        /*
+         * Recompute the subscription filter and decide if it should to be forwarded to the publishers
+         */
+        ret = RefreshSubscriptionInterests(node, &noChange);
+        if (ret != DPS_OK) {
+            return ret;
+        }
         if (noChange) {
             /*
              * No change for existing nodes but there is a new node 
              */
-            if (subNode) {
-                ret = SendSubscriptions(node, subNode);
+            if (newNode) {
+                ret = SendSubscriptions(node, newNode);
             }
         } else {
             /*
@@ -981,7 +991,7 @@ static DPS_Status DecodeSubscriptionRequest(DPS_Node* node, DPS_Buffer* buffer, 
              * Save next in case pub is expired
              */
             next = pub->next;
-            ret = ForwardPubToSubs(node, pub, subNode, NULL);
+            ret = ForwardPubToSubs(node, pub, newNode, NULL);
             if (ret != DPS_OK) {
                 DPS_ERRPRINT("ForwardPubToSubs failed %s\n", DPS_ErrTxt(ret));
             }
@@ -1394,7 +1404,7 @@ DPS_Status DPS_Subscribe(DPS_Node* node, char* const* topics, size_t numTopics, 
         /*
          * Need to recompute the subscription union and see if anything changed
          */
-        ret = RefreshSubscriptionInterests(node, NULL, NULL, NULL, NULL, &noChange);
+        ret = RefreshSubscriptionInterests(node, &noChange);
         if (ret == DPS_OK && !noChange) {
             ret = FloodSubscriptions(node);
         }
@@ -1431,7 +1441,7 @@ DPS_Status DPS_SubscribeCancel(DPS_Node* node, DPS_Subscription* subscription)
     DPS_DBGPRINT("Unsubscribing from %d topics\n", sub->numTopics);
     DumpTopics(sub->topics, sub->numTopics);
     FreeSubscription(sub);
-    ret = RefreshSubscriptionInterests(node, NULL, NULL, NULL, NULL, &noChange);
+    ret = RefreshSubscriptionInterests(node, &noChange);
     if (ret == DPS_OK && !noChange) {
         ret = FloodSubscriptions(node);
     }
