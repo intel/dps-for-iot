@@ -196,6 +196,10 @@ int main(int argc, char** argv)
             return 1;
         }
         ret = DPS_Join(node, &addr);
+        if (ret != DPS_OK) {
+            DPS_ERRPRINT("DPS_Join failed: %s\n", DPS_ErrTxt(ret));
+            return 1;
+        }
     }
 
     if (numTopics) {

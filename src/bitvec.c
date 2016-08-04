@@ -48,9 +48,24 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 #define FLAG_RLE_COMPLEMENT  0x40
 
 /*
- * Process bit vector in 64 bit chunks
+ * Process bit vectors in 64 bit chunks
  */
 typedef uint64_t chunk_t;
+
+#define CHUNK_SIZE (8 * sizeof(chunk_t))
+
+/*
+ * CountVectors are entirely internal so can be sized according to scalability requirements
+ */
+#ifdef DPS_BIG_COUNTER
+typedef uint16_t count_t;
+#define CV_MAX UINT16_MAX
+#else
+typedef uint16_t count_t;
+#define CV_MAX UINT8_MAX
+#endif
+
+typedef count_t counter_t[CHUNK_SIZE];
 
 #define SET_BIT(a, b)  (a)[(b) >> 6] |= (1ull << ((b) & 0x3F))
 #define TEST_BIT(a, b) ((a)[(b) >> 6] & (1ull << ((b) & 0x3F)))
@@ -58,18 +73,20 @@ typedef uint64_t chunk_t;
 #define ROTL64(n, r)  (((n) << r) | ((n) >> (64 - r)))
 #define COUNT_TZ(n)    __builtin_ctzll((chunk_t)n)
 
-#define CHUNK_SIZE (8 * sizeof(chunk_t))
-
 struct _DPS_BitVector {
     size_t len;
     chunk_t bits[1];
 };
 
+struct _DPS_CountVector {
+    size_t entries;
+    size_t len;
+    counter_t counts[1];
+};
+
 typedef struct {
     size_t bitLen;
     size_t numHashes;
-    size_t scaleFactor;
-    size_t bitExpansion;
 } Configuration;
 
 /*
@@ -143,29 +160,26 @@ static uint32_t Hash(const uint8_t* data, size_t len, uint8_t hashNum)
 }
 
 
-static DPS_BitVector* Alloc(size_t sz)
+static DPS_BitVector* AllocBV(size_t sz)
 {
-    DPS_BitVector* bv = NULL;
+    DPS_BitVector* bv;
 
-    if (sz % 64) {
-        return NULL;
-    }
-    bv = malloc(sizeof(DPS_BitVector) - sizeof(chunk_t) + (sz / 8));
+    assert((sz % 64) == 0);
+    bv = calloc(1, sizeof(DPS_BitVector) + ((sz / CHUNK_SIZE) - 1) * sizeof(chunk_t));
     if (bv) {
         bv->len = sz;
-        DPS_BitVectorClear(bv);
     }
     return bv;
 }
 
 DPS_BitVector* DPS_BitVectorAlloc()
 {
-    return Alloc(config.bitLen);
+    return AllocBV(config.bitLen);
 }
 
 DPS_BitVector* DPS_BitVectorAllocFH()
 {
-    return Alloc(FH_BITVECTOR_LEN);
+    return AllocBV(FH_BITVECTOR_LEN);
 }
 
 int DPS_BitVectorIsClear(DPS_BitVector* bv)
@@ -191,7 +205,7 @@ size_t DPS_BitVectorPopCount(const DPS_BitVector* bv)
 
 DPS_BitVector* DPS_BitVectorClone(DPS_BitVector* bv)
 {
-    DPS_BitVector* clone = Alloc(bv->len);
+    DPS_BitVector* clone = AllocBV(bv->len);
     if (clone) {
         memcpy(clone->bits, bv->bits, bv->len / 8);
     }
@@ -726,5 +740,142 @@ void DPS_BitVectorDump(const DPS_BitVector* bv, int dumpBits)
             BitDump(bv->bits, bv->len);
         }
 #endif
+    }
+}
+
+static DPS_CountVector* AllocCV(size_t sz)
+{
+    DPS_CountVector* cv;
+
+    assert((sz % 64) == 0);
+    cv = calloc(1, sizeof(DPS_CountVector) + ((sz / CHUNK_SIZE) - 1) * sizeof(counter_t));
+    if (cv) {
+        cv->len = sz;
+    }
+    return cv;
+}
+
+DPS_CountVector* DPS_CountVectorAlloc()
+{
+    return AllocCV(config.bitLen);
+}
+
+DPS_CountVector* DPS_CountVectorAllocFH()
+{
+    return AllocCV(FH_BITVECTOR_LEN);
+}
+
+void DPS_CountVectorFree(DPS_CountVector* cv)
+{
+    if (cv) {
+        free(cv);
+    }
+}
+
+DPS_Status DPS_CountVectorAdd(DPS_CountVector* cv, DPS_BitVector* bv)
+{
+    size_t i;
+
+    if (!cv || !bv) {
+        return DPS_ERR_NULL;
+    }
+    if (cv->entries == CV_MAX) {
+        return DPS_ERR_RESOURCES;
+    }
+    for (i = 0; i < NUM_CHUNKS(bv); ++i) {
+        count_t* count = cv->counts[i];
+        chunk_t chunk = bv->bits[i];
+        while (chunk) {
+            if (chunk & 1) {
+                (*count)++;
+            }
+            chunk >>= 1;
+            ++count;
+        }
+    }
+    ++cv->entries;
+    return DPS_OK;
+}
+
+DPS_Status DPS_CountVectorDel(DPS_CountVector* cv, DPS_BitVector* bv)
+{
+    size_t i;
+
+    if (!cv || !bv) {
+        return DPS_ERR_NULL;
+    }
+    if (cv->entries == 0) {
+        return DPS_ERR_ARGS;
+    }
+    for (i = 0; i < NUM_CHUNKS(bv); ++i) {
+        count_t* count = cv->counts[i];
+        chunk_t chunk = bv->bits[i];
+        while (chunk) {
+            if (chunk & 1) {
+                if (!(*count)--) {
+                    DPS_ERRPRINT("CountVector is zero\n");
+                    return DPS_ERR_INVALID;
+                }
+            }
+            chunk >>= 1;
+            ++count;
+        }
+    }
+    --cv->entries;
+    return DPS_OK;
+}
+
+DPS_BitVector* DPS_CountVectorToUnion(DPS_CountVector* cv)
+{
+    DPS_BitVector* bv = AllocBV(cv->len);
+    if (bv) {
+        size_t i;
+        for (i = 0; i < NUM_CHUNKS(bv); ++i) {
+            chunk_t b = 1;
+            count_t* count = cv->counts[i];
+            chunk_t chunk = 0;
+            while (b) {
+                if (*count++) {
+                    chunk |= b;
+                }
+                b <<= 1;
+            }
+            bv->bits[i] = chunk;
+        }
+    }
+    return bv;
+}
+
+DPS_BitVector* DPS_CountVectorToIntersection(DPS_CountVector* cv)
+{
+    DPS_BitVector* bv = AllocBV(cv->len);
+    if (bv) {
+        size_t i;
+        for (i = 0; i < NUM_CHUNKS(bv); ++i) {
+            chunk_t b = 1;
+            count_t* count = cv->counts[i];
+            chunk_t chunk = 0;
+            while (b) {
+                if (*count++ == cv->entries) {
+                    chunk |= b;
+                }
+                b <<= 1;
+            }
+            bv->bits[i] = chunk;
+        }
+    }
+    return bv;
+}
+
+void DPS_CountVectorDump(DPS_CountVector* cv)
+{
+    size_t i;
+    DPS_PRINT("Entries %d\n", cv->entries);
+    for (i = 0; i < NUM_CHUNKS(cv); ++i) {
+        size_t j;
+        for (j = 0; j < CHUNK_SIZE; ++j) {
+            DPS_PRINT("%d ", cv->counts[i][j]);
+        }
+        DPS_PRINT("\n");
     }
 }

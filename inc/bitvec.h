@@ -5,7 +5,15 @@
 #include <stddef.h>
 #include <dps.h>
 
+/**
+ * Opaque type for bit vector and Bloom Filter operations
+ */
 typedef struct _DPS_BitVector DPS_BitVector;
+
+/**
+ * Opaque type for supporting add/remove operations on bit vectors
+ */
+typedef struct _DPS_CountVector DPS_CountVector;
 
 /**
  * Global configuration for this module. Overrides the default value for various global parameters. These are system
@@ -212,5 +220,68 @@ DPS_Status DPS_BitVectorSet(DPS_BitVector* bv, uint8_t* data, size_t len);
  * @param bits  If non-zero dump out the bit array
  */
 void DPS_BitVectorDump(const DPS_BitVector* bv, int bits);
+
+/**
+ * Allocates a count vector using the default values set by DPS_Configure()
+ *
+ * @return  An initialized count vector filter or NULL if the allocation failed.
+ */
+DPS_CountVector* DPS_CountVectorAlloc();
+
+/**
+ * Allocates a count vector sized for use as a fuzzy hash.
+ *
+ * @return  An initialized count vector or NULL if the allocation failed.
+ */
+DPS_CountVector* DPS_CountVectorAllocFH();
+
+/**
+ * Free resources for a count vector
+ *
+ * @param cv   An intialized count vector
+ */
+void DPS_CountVectorFree(DPS_CountVector* cv);
+
+/**
+ * Adds a bit vector to a count vector.
+ *
+ * @param cv An intialized count vector
+ * @param bv An intialized bit vector
+ *
+ * @return - DPS_OK
+ *         - DPS_ERR_OVERFLOW if the counter vector is full
+ */
+DPS_Status DPS_CountVectorAdd(DPS_CountVector* cv, DPS_BitVector* bv);
+
+/**
+ * Deletes a bit vector from a count vector. The bit vector should be the
+ * same as one that was previously added or the results are unpredicable.
+ *
+ * @param cv An intialized count vector
+ * @param bv An intialized bit vector
+ */
+DPS_Status DPS_CountVectorDel(DPS_CountVector* cv, DPS_BitVector* bv);
+
+/**
+ * Allocates and returns a bit vector that represents the union of the
+ * bit vectors added to the count vector.
+ *
+ * @param cv An intialized count vector
+ *
+ * @return  A bit vector or NULL if the resource could not be allocated
+ */
+DPS_BitVector* DPS_CountVectorToUnion(DPS_CountVector* cv);
+
+/**
+ * Allocates and returns a bit vector that represents the intersection of the
+ * bit vectors added to the count vector.
+ *
+ * @param cv An intialized count vector
+ *
+ * @return  A bit vector or NULL if the resource could not be allocated
+ */
+DPS_BitVector* DPS_CountVectorToIntersection(DPS_CountVector* cv);
+
+void DPS_CountVectorDump(DPS_CountVector* cv);
 
 #endif

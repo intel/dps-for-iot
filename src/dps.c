@@ -26,16 +26,22 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 static const char DPS_SubscriptionURI[] = "dps";
 
 typedef struct _RemoteNode {
-    uint8_t subReceiver;            /* Does this node receive subscription updates */
+    uint8_t changes;                   /* Indicates there have been changes to the interests */
     struct sockaddr_storage addr;
-    DPS_BitVector* needs;           /* Subscription needs */
-    DPS_BitVector* interests;       /* The bit vector for the interests of a set of remote subscribers */
+    struct {
+        DPS_BitVector* needs;          /* Bit vector of needs received from  this remote node */
+        DPS_BitVector* interests;      /* Bit vector of interests received from  this remote node */
+    } inbound;
+    struct {
+        DPS_BitVector* needs;          /* Needs bit vector sent outbound to this remote node */
+        DPS_BitVector* interests;      /* Interests bit vector sent outbound to this remote node */
+    } outbound;
     struct _RemoteNode* next;
 } RemoteNode;
 
 /*
  * Struct to hold the state of a local subscription. We hold the topics so we can provide return the topic list when we
- * get a match. We compute the filter so we can forward to downstream subscribers.
+ * get a match. We compute the filter so we can forward to outbound subscribers.
  */
 typedef struct _DPS_Subscription {
     DPS_BitVector* needs;           /* Subscription needs */
@@ -83,8 +89,8 @@ typedef struct _DPS_Node {
 
     RemoteNode* remoteNodes;              /* Linked list of remote nodes */
 
-    DPS_BitVector* interests;             /* Rolled-up union of subscription interests for this node */
-    DPS_BitVector* needs;                 /* Rolled-up intersection of subscription needs */
+    DPS_CountVector* interests;           /* Tracks all interests for this node */
+    DPS_CountVector* needs;               /* Tracks all needs for this node */
 
     DPS_History history;                  /* History of recently sent publications */
    
@@ -197,7 +203,16 @@ static DPS_Subscription* FreeSubscription(DPS_Subscription* sub)
 
 static RemoteNode* DeleteRemoteNode(DPS_Node* node, RemoteNode* remote)
 {
-    RemoteNode* next = remote->next;
+    DPS_Status ret;
+    RemoteNode* next;
+
+    DPS_DBGTRACE();
+
+    assert(node->remoteNodes);
+    assert(remote);
+
+    next = remote->next;
+
     if (node->remoteNodes == remote) {
         node->remoteNodes = next;
     } else {
@@ -208,12 +223,18 @@ static RemoteNode* DeleteRemoteNode(DPS_Node* node, RemoteNode* remote)
         }
         prev->next = next;
     }
-    if (remote->interests) {
-        DPS_BitVectorFree(remote->interests);
+    if (remote->inbound.interests) {
+        ret = DPS_CountVectorDel(node->interests, remote->inbound.interests);
+        assert(ret == DPS_OK);
+        DPS_BitVectorFree(remote->inbound.interests);
     }
-    if (remote->interests) {
-        DPS_BitVectorFree(remote->needs);
+    if (remote->inbound.needs) {
+        ret = DPS_CountVectorDel(node->needs, remote->inbound.needs);
+        assert(ret == DPS_OK);
+        DPS_BitVectorFree(remote->inbound.needs);
     }
+    DPS_BitVectorFree(remote->outbound.interests);
+    DPS_BitVectorFree(remote->outbound.needs);
     free(remote);
     return next;
 }
@@ -238,52 +259,64 @@ static DPS_Publication* FreePublication(DPS_Node* node, DPS_Publication* pub)
     return next;
 }
 
-/*
- *
- */
-static DPS_Status RefreshSubscriptionInterests(DPS_Node* node, int* noChange)
+static DPS_Status UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode)
 {
-    DPS_BitVector* newInterests;
-    RemoteNode* remote;
-    DPS_Subscription* subscription;
+    DPS_Status ret;
+    DPS_BitVector* newInterests = NULL;
+    DPS_BitVector* newNeeds = NULL;
 
     DPS_DBGTRACE();
 
-    *noChange = DPS_FALSE;
-
-    newInterests = DPS_BitVectorAlloc();
+    /*
+     * TODO- check if this could be optimized to avoid the Del/Add
+     */
+    ret = DPS_CountVectorDel(node->interests, destNode->inbound.interests);
+    if (ret != DPS_OK) {
+        goto ErrExit;
+    }
+    newInterests = DPS_CountVectorToUnion(node->interests);
+    ret = DPS_CountVectorAdd(node->interests, destNode->inbound.interests);
+    if (ret != DPS_OK) {
+        goto ErrExit;
+    }
     if (!newInterests) {
-        return DPS_ERR_RESOURCES;
+        ret = DPS_ERR_RESOURCES;
+        goto ErrExit;
     }
     /*
-     * Prepare needs for rebuilding intersection
-     *
-     * TODO - do we need to check the needs for changes too?
+     * TODO- check if this could be optimized to avoid the Del/Add
      */
-    DPS_BitVectorFill(node->needs);
-    /*
-     * Compute the union of the remote and local subscription filters this represents the interests 
-     * of this set of subscriptions.
-     */
-    for (remote = node->remoteNodes; remote != NULL; remote = remote->next) {
-        if (remote->interests) {
-            DPS_BitVectorUnion(newInterests, remote->interests);
-            DPS_BitVectorIntersection(node->needs, node->needs, remote->needs);
+    ret = DPS_CountVectorDel(node->needs, destNode->inbound.needs);
+    if (ret != DPS_OK) {
+        goto ErrExit;
+    }
+    newNeeds = DPS_CountVectorToIntersection(node->needs);
+    ret = DPS_CountVectorAdd(node->needs, destNode->inbound.needs);
+    if (ret != DPS_OK) {
+        goto ErrExit;
+    }
+    if (!newNeeds) {
+        ret = DPS_ERR_RESOURCES;
+        goto ErrExit;
+    }
+    if (destNode->outbound.interests) {
+        if (DPS_BitVectorEquals(destNode->outbound.interests, newInterests) && DPS_BitVectorEquals(destNode->outbound.needs, newNeeds)) {
+            destNode->changes = DPS_FALSE;
         }
+        DPS_BitVectorFree(destNode->outbound.interests);
+        DPS_BitVectorFree(destNode->outbound.needs);
     }
-    for (subscription = node->subscriptions; subscription != NULL; subscription = subscription->next) {
-        DPS_BitVectorUnion(newInterests, subscription->bf);
-        DPS_BitVectorIntersection(node->needs, node->needs, subscription->needs);
-    }
-    if (DPS_BitVectorEquals(node->interests, newInterests)) {
-        DPS_BitVectorFree(newInterests);
-        *noChange = DPS_TRUE;
-    } else {
-        DPS_BitVectorFree(node->interests);
-        node->interests  = newInterests;
-    }
-    DPS_DBGPRINT("RefreshSubscriptionInterests: %s\n", *noChange ? "No Change" : "Changes");
+    destNode->outbound.interests = newInterests;
+    destNode->outbound.needs = newNeeds;
+
+    DPS_DBGPRINT("UpdateOutboundInterests: %s\n", destNode->changes ? "Change" : "No Changes");
     return DPS_OK;
+
+ErrExit:
+    DPS_ERRPRINT("UpdateOutboundInterests: %s\n", DPS_ErrTxt(ret));
+    DPS_BitVectorFree(newInterests);
+    DPS_BitVectorFree(newNeeds);
+    return ret;
 }
 
 static RemoteNode* LookupRemoteNode(DPS_Node* node, const struct sockaddr* addr)
@@ -625,9 +658,9 @@ static DPS_Status ForwardPubToSubs(DPS_Node* node, DPS_Publication* pub, RemoteN
             continue;
         }
         /*
-         * Nothing to forward to a node with no interests
+         * Ignore nodes that are not currently subscribers
          */
-        if (!remote->interests) {
+        if (!remote->inbound.interests) {
             remote = remote->next;
             continue;
         }
@@ -642,9 +675,9 @@ static DPS_Status ForwardPubToSubs(DPS_Node* node, DPS_Publication* pub, RemoteN
         /*
          * Filter the pub against the subscription
          */
-        DPS_BitVectorIntersection(tmpPub.bf, pub->bf, remote->interests);
+        DPS_BitVectorIntersection(tmpPub.bf, pub->bf, remote->inbound.interests);
         DPS_BitVectorFuzzyHash(provides, tmpPub.bf);
-        if (DPS_BitVectorIncludes(provides, remote->needs)) {
+        if (DPS_BitVectorIncludes(provides, remote->inbound.needs)) {
             DPS_DBGPRINT("Forwarded pub %d to %s\n", pub->serialNumber, DPS_NetAddrText(dest));
             ret = PushPublication(node, &tmpPub, dest);
         } else {
@@ -683,6 +716,8 @@ static DPS_Status DecodePublicationRequest(DPS_Node* node, DPS_Buffer* buffer, c
     size_t len;
 
     DPS_DBGTRACE();
+
+    memset(&pub, 0, sizeof(pub));
 
     ret = CBOR_DecodeUint16(buffer, &port);
     if (ret != DPS_OK) {
@@ -773,13 +808,13 @@ static DPS_Status DecodePublicationRequest(DPS_Node* node, DPS_Buffer* buffer, c
  *      Our IPv6 address (filled in later)
  *      Serialized bloom filter
  */
-static DPS_Status ComposeSubscriptionRequest(DPS_Node* node, int protocol, uv_buf_t* bufs, size_t numBufs)
+static DPS_Status ComposeSubscriptionRequest(DPS_Node* node, RemoteNode* remote, int protocol, uv_buf_t* bufs, size_t numBufs)
 {
     DPS_Status ret;
     CoAP_Option opts[1];
     uint16_t port;
     DPS_Buffer payload;
-    size_t allocSize = DPS_BitVectorSerializeMaxSize(node->needs) + DPS_BitVectorSerializeMaxSize(node->interests) + 32;
+    size_t allocSize = DPS_BitVectorSerializeMaxSize(remote->outbound.needs) + DPS_BitVectorSerializeMaxSize(remote->outbound.interests) + 32;
 
     if (!node->netListener) {
         return DPS_ERR_NETWORK;
@@ -798,9 +833,9 @@ static DPS_Status ComposeSubscriptionRequest(DPS_Node* node, int protocol, uv_bu
      * Write listening port
      */
     CBOR_EncodeUint16(&payload, port);
-    ret = DPS_BitVectorSerialize(node->needs, &payload);
+    ret = DPS_BitVectorSerialize(remote->outbound.needs, &payload);
     if (ret == DPS_OK) {
-        ret = DPS_BitVectorSerialize(node->interests, &payload);
+        ret = DPS_BitVectorSerialize(remote->outbound.interests, &payload);
     }
     if (ret == DPS_OK) {
         ret = CoAP_Compose(protocol, bufs, numBufs, COAP_CODE(COAP_REQUEST, COAP_GET), opts, A_SIZEOF(opts), &payload);
@@ -816,7 +851,7 @@ static DPS_Status SendSubscriptions(DPS_Node* node, RemoteNode* remote)
     uv_buf_t bufs[3];
     DPS_Status ret;
 
-    ret = ComposeSubscriptionRequest(node, COAP_OVER_TCP, bufs, A_SIZEOF(bufs));
+    ret = ComposeSubscriptionRequest(node, remote, COAP_OVER_TCP, bufs, A_SIZEOF(bufs));
     if (ret == DPS_OK) {
         ret = DPS_NetSend(node, bufs, A_SIZEOF(bufs), (struct sockaddr*)&remote->addr, OnSendToComplete);
     }
@@ -828,9 +863,8 @@ static DPS_Status SendSubscriptions(DPS_Node* node, RemoteNode* remote)
 }
 
 
-static DPS_Status FloodSubscriptions(DPS_Node* node)
+static DPS_Status FloodSubscriptions(DPS_Node* node, RemoteNode* newNode)
 {
-    uv_buf_t bufs[3];
     RemoteNode* remote = node->remoteNodes;
     DPS_Status ret;
 
@@ -839,32 +873,33 @@ static DPS_Status FloodSubscriptions(DPS_Node* node)
     if (!remote) {
         return DPS_OK;
     }
-    ret = ComposeSubscriptionRequest(node, COAP_OVER_TCP, bufs, A_SIZEOF(bufs));
-    if (ret != DPS_OK) {
-        return ret;
-    }
     /*
-     * Send subscription to all the downstream publishers we know about
+     * Forward subscription to all remote nodes witn interestss
      */
     while (remote) {
-        uv_buf_t tmpBufs[A_SIZEOF(bufs)];
-        RemoteNode* next = remote->next;
+        uv_buf_t bufs[3];
 
-        if (!remote->subReceiver) {
-            remote = next;
+        if (!remote->inbound.interests) {
+            remote = remote->next;
             continue;
         }
         /*
-         * Do we need to clone the buffer?
+         * New nodes always need to receive updates, otherwise we only
+         * send a subscription if there are changes from last time.
          */
-        while (next && !next->subReceiver) {
-            next = next->next;
+        remote->changes = (remote == newNode);
+
+        ret = UpdateOutboundInterests(node, remote);
+        if (ret != DPS_OK) {
+            break;
         }
-        if (next) {
-            ret = CloneBufs(tmpBufs, bufs, A_SIZEOF(bufs));
-            if (ret != DPS_OK) {
-                break;
-            }
+        if (!remote->changes) {
+            remote = remote->next;
+            continue;
+        }
+        ret = ComposeSubscriptionRequest(node, remote, COAP_OVER_TCP, bufs, A_SIZEOF(bufs));
+        if (ret != DPS_OK) {
+            return ret;
         }
         ret = DPS_NetSend(node, bufs, A_SIZEOF(bufs), (struct sockaddr*)&remote->addr, OnSendToComplete);
         if (ret != DPS_OK) {
@@ -875,10 +910,6 @@ static DPS_Status FloodSubscriptions(DPS_Node* node)
              */
             ret = DPS_OK;
         }
-        if (next) {
-            memcpy(bufs, tmpBufs, sizeof(tmpBufs));
-        }
-        remote = next;
     }
     return ret;
 }
@@ -899,29 +930,25 @@ static DPS_Status UpdateRemoteSub(DPS_Node* node, struct sockaddr* addr, DPS_Bit
         }
     }
     if (remote) {
-        if (remote->interests) {
-            DPS_BitVectorFree(remote->interests);
-            DPS_BitVectorFree(remote->needs);
-        }
-        remote->interests = interests;
-        remote->needs = needs;
+        DPS_CountVectorDel(node->interests, remote->inbound.interests);
+        DPS_CountVectorDel(node->needs, remote->inbound.needs);
+        DPS_BitVectorFree(remote->inbound.interests);
+        DPS_BitVectorFree(remote->inbound.needs);
+        remote->inbound.interests = interests;
+        remote->inbound.needs = needs;
         *newNode = NULL;
     } else {
-        remote = malloc(sizeof(RemoteNode));
-        if (!remote) {
-            return DPS_ERR_RESOURCES;
+        DPS_Status ret = AddRemoteNode(node, addr, &remote);
+        if (ret != DPS_OK) {
+            return ret;
         }
         DPS_DBGPRINT("Adding new remote subscriber %s\n", DPS_NetAddrText(addr));
-        CopySockaddr(&remote->addr, addr);
-        remote->interests = interests;
-        remote->needs = needs;
-        /*
-         * Link in new subscriber
-         */
-        remote->next = node->remoteNodes;
-        node->remoteNodes = remote;
+        remote->inbound.interests = interests;
+        remote->inbound.needs = needs;
         *newNode = remote;
     }
+    DPS_CountVectorAdd(node->interests, remote->inbound.interests);
+    DPS_CountVectorAdd(node->needs, remote->inbound.needs);
     return DPS_OK;
 }
 
@@ -965,40 +992,19 @@ static DPS_Status DecodeSubscriptionRequest(DPS_Node* node, DPS_Buffer* buffer, 
         DPS_BitVectorFree(interests);
         DPS_BitVectorFree(needs);
     } else {
-        int noChange;
         uint32_t elapsed;
         DPS_Publication* pub;
         DPS_Publication* next;
         /*
-         * Update new node before recomputing the subscription needs
+         * Determine what if anything has changed
          */
-        if (newNode) {
-            ret = SendSubscriptions(node, newNode);
-            if (ret != DPS_OK) {
-                return ret;
-            }
-        }
-        /*
-         * Recompute the subscription filter and decide if it should to be forwarded to the publishers
-         */
-        ret = RefreshSubscriptionInterests(node, &noChange);
+        ret = FloodSubscriptions(node, newNode);
         if (ret != DPS_OK) {
-            return ret;
-        }
-        if (!noChange) {
-            /*
-             * The interests changed so forward the update to the other nodes
-             */
-            ret = FloodSubscriptions(node);
-            if (ret != DPS_OK) {
-                DPS_ERRPRINT("FloodSubscriptions failed %s\n", DPS_ErrTxt(ret));
-            }
+            DPS_ERRPRINT("FloodSubscriptions failed %s\n", DPS_ErrTxt(ret));
         }
         LazyCheckTTLs(node);
         /*
-         * Check if any local publication need to be forwarded to subscribers based on tbe updated interests
-         *
-         * TODO - only do this for subscribers that changed - we don't currently track this
+         * Check if any local publication need to be forwarded to the new subscriber
          */
         for (pub = node->publications; pub != NULL; pub = pub->next) {
             /*
@@ -1144,12 +1150,12 @@ DPS_Node* DPS_InitNode(int mcast, int tcpPort, const char* separators)
     node->shutdownTimer.data = node;
     uv_timer_init(node->loop, &node->shutdownTimer);
 
-    node->interests = DPS_BitVectorAlloc();
+    node->interests = DPS_CountVectorAlloc();
     if (!node->interests) {
         free(node);
         return NULL;
     }
-    node->needs = DPS_BitVectorAllocFH();
+    node->needs = DPS_CountVectorAllocFH();
     if (!node->needs) {
         free(node->interests);
         free(node);
@@ -1186,12 +1192,14 @@ uint16_t DPS_GetPortNumber(DPS_Node* node)
 
 }
 
-#define SHUTDOWN_TIMEOUT1  200
+#define SHUTDOWN_TIMEOUT1  500
 #define SHUTDOWN_TIMEOUT2   50
 
 static void TerminateOnTimeout(uv_timer_t* handle)
 {
     DPS_Node* node = (DPS_Node*)handle->data;
+
+    assert(&node->shutdownTimer == handle);
 
     if (node->netListener) {
         DPS_NetStopListening(node->netListener);
@@ -1204,16 +1212,20 @@ static void TerminateOnTimeout(uv_timer_t* handle)
         return;
     }
 
-    DPS_BitVectorFree(node->interests);
-    DPS_BitVectorFree(node->needs);
-    DPS_HistoryFree(&node->history);
-
     while (node->remoteNodes) {
         DeleteRemoteNode(node, node->remoteNodes);
     }
     while (node->subscriptions) {
         node->subscriptions = FreeSubscription(node->subscriptions);
     }
+    while (node->publications) {
+        node->publications = FreePublication(node, node->publications);
+    }
+
+    DPS_CountVectorFree(node->interests);
+    DPS_CountVectorFree(node->needs);
+    DPS_HistoryFree(&node->history);
+
     free(node);
 }
 
@@ -1312,6 +1324,9 @@ DPS_Status DPS_Publish(DPS_Node* node, DPS_Publication* pub, void* payload, size
     }
     ret = ForwardPubToSubs(node, pub, NULL, NULL);
 
+    if (ret != DPS_OK) {
+        DPS_ERRPRINT("ForwardPubToSubs returned %s\n", DPS_ErrTxt(ret));
+    }
     return ret;
 }
 
@@ -1336,15 +1351,29 @@ DPS_Status DPS_DestroyPublication(DPS_Node* node, DPS_Publication* pub, void** p
     return DPS_ERR_OK;
 }
 
-static DPS_Status SendSubscription(DPS_Node* node, RemoteNode* remote)
+static DPS_Status SendInitialSubscription(DPS_Node* node, RemoteNode* remote)
 {
     DPS_Status ret;
     uv_buf_t bufs[3];
+    int change;
 
+    assert(!remote->outbound.interests);
+    assert(!remote->outbound.needs);
+
+    remote->outbound.interests = DPS_BitVectorAlloc();
+    if (!remote->outbound.interests) {
+        return DPS_ERR_RESOURCES;
+    }
+    remote->outbound.needs = DPS_BitVectorAllocFH();
+    if (!remote->outbound.needs) {
+        DPS_BitVectorFree(remote->outbound.interests);
+        remote->outbound.interests = NULL;
+        return DPS_ERR_RESOURCES;
+    }
     /*
      * Send subscriptions to a specific remote node
      */
-    ret = ComposeSubscriptionRequest(node, COAP_OVER_TCP, bufs, A_SIZEOF(bufs));
+    ret = ComposeSubscriptionRequest(node, remote, COAP_OVER_TCP, bufs, A_SIZEOF(bufs));
     if (ret != DPS_OK) {
         return ret;
     }
@@ -1371,8 +1400,9 @@ DPS_Status DPS_Join(DPS_Node* node, DPS_NodeAddress* addr)
             ret = DPS_OK;
         }
     } else {
-        remote->subReceiver = DPS_TRUE;
-        ret = SendSubscription(node, remote);
+        if (ret == DPS_OK) {
+            ret = SendInitialSubscription(node, remote);
+        }
         if (ret != DPS_OK) {
             DeleteRemoteNode(node, remote);
         }
@@ -1442,8 +1472,6 @@ DPS_Status DPS_Subscribe(DPS_Node* node, char* const* topics, size_t numTopics, 
     if (ret != DPS_OK) {
         FreeSubscription(sub);
     } else {
-        int noChange;
-
         DPS_DBGPRINT("Subscribing to %d topics\n", numTopics);
         DumpTopics(sub->topics, sub->numTopics);
 
@@ -1452,11 +1480,14 @@ DPS_Status DPS_Subscribe(DPS_Node* node, char* const* topics, size_t numTopics, 
         node->subscriptions = sub;
         *subscription = sub;
         /*
-         * Need to recompute the subscription union and see if anything changed
+         * TODO - optimization - check for no changes
          */
-        ret = RefreshSubscriptionInterests(node, &noChange);
-        if (ret == DPS_OK && !noChange) {
-            ret = FloodSubscriptions(node);
+        ret = DPS_CountVectorAdd(node->interests, sub->bf);
+        if (ret == DPS_OK) {
+            ret = DPS_CountVectorAdd(node->needs, sub->needs);
+        }
+        if (ret == DPS_OK) {
+            ret = FloodSubscriptions(node, NULL);
         }
     }
     return ret;
@@ -1467,7 +1498,6 @@ DPS_Status DPS_SubscribeCancel(DPS_Node* node, DPS_Subscription* subscription)
     DPS_Status ret;
     DPS_Subscription* sub;
     DPS_Subscription* prev = NULL;
-    int noChange;
 
     if (!node || !subscription) {
         return DPS_ERR_NULL;
@@ -1490,17 +1520,23 @@ DPS_Status DPS_SubscribeCancel(DPS_Node* node, DPS_Subscription* subscription)
     }
     DPS_DBGPRINT("Unsubscribing from %d topics\n", sub->numTopics);
     DumpTopics(sub->topics, sub->numTopics);
-    FreeSubscription(sub);
-    ret = RefreshSubscriptionInterests(node, &noChange);
-    if (ret == DPS_OK && !noChange) {
-        ret = FloodSubscriptions(node);
+    /*
+     * TODO - optimization - check for no changes
+     */
+    ret = DPS_CountVectorDel(node->interests, sub->bf);
+    if (ret == DPS_OK) {
+        ret = DPS_CountVectorDel(node->needs, sub->needs);
     }
+    if (ret == DPS_OK) {
+        ret = FloodSubscriptions(node, NULL);
+    }
+    FreeSubscription(sub);
     return ret;
 }
 
 DPS_Status DPS_ResolveAddress(DPS_Node* node, const char* host, const char* service, DPS_NodeAddress* addr)
 {
-    DPS_Status dpsRet;
+    DPS_Status dpsRet = DPS_OK;
     int ret;
     uv_getaddrinfo_t info;
     struct addrinfo hints;
