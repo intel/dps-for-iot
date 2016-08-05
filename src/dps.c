@@ -268,38 +268,47 @@ static DPS_Status UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode)
     DPS_DBGTRACE();
 
     /*
-     * TODO- check if this could be optimized to avoid the Del/Add
+     * Inbound interests from the node we are updating are excluded from the outbound interests
      */
-    ret = DPS_CountVectorDel(node->interests, destNode->inbound.interests);
-    if (ret != DPS_OK) {
-        goto ErrExit;
+    if (destNode->inbound.interests) {
+        /*
+         * TODO- check if this could be optimized to avoid the Del/Add
+         */
+        ret = DPS_CountVectorDel(node->interests, destNode->inbound.interests);
+        if (ret != DPS_OK) {
+            goto ErrExit;
+        }
+        newInterests = DPS_CountVectorToUnion(node->interests);
+        ret = DPS_CountVectorAdd(node->interests, destNode->inbound.interests);
+        if (ret != DPS_OK) {
+            goto ErrExit;
+        }
+        /*
+         * TODO- check if this could be optimized to avoid the Del/Add
+         */
+        ret = DPS_CountVectorDel(node->needs, destNode->inbound.needs);
+        if (ret != DPS_OK) {
+            goto ErrExit;
+        }
+        newNeeds = DPS_CountVectorToIntersection(node->needs);
+        ret = DPS_CountVectorAdd(node->needs, destNode->inbound.needs);
+        if (ret != DPS_OK) {
+            goto ErrExit;
+        }
+    } else {
+        assert(!destNode->inbound.needs);
+        newInterests = DPS_CountVectorToUnion(node->interests);
+        newNeeds = DPS_CountVectorToIntersection(node->needs);
     }
-    newInterests = DPS_CountVectorToUnion(node->interests);
-    ret = DPS_CountVectorAdd(node->interests, destNode->inbound.interests);
-    if (ret != DPS_OK) {
-        goto ErrExit;
-    }
-    if (!newInterests) {
+    if (!newNeeds || !newInterests) {
         ret = DPS_ERR_RESOURCES;
         goto ErrExit;
     }
     /*
-     * TODO- check if this could be optimized to avoid the Del/Add
+     * See if anything changed
      */
-    ret = DPS_CountVectorDel(node->needs, destNode->inbound.needs);
-    if (ret != DPS_OK) {
-        goto ErrExit;
-    }
-    newNeeds = DPS_CountVectorToIntersection(node->needs);
-    ret = DPS_CountVectorAdd(node->needs, destNode->inbound.needs);
-    if (ret != DPS_OK) {
-        goto ErrExit;
-    }
-    if (!newNeeds) {
-        ret = DPS_ERR_RESOURCES;
-        goto ErrExit;
-    }
     if (destNode->outbound.interests) {
+        assert(destNode->outbound.needs);
         if (DPS_BitVectorEquals(destNode->outbound.interests, newInterests) && DPS_BitVectorEquals(destNode->outbound.needs, newNeeds)) {
             destNode->changes = DPS_FALSE;
         }
@@ -779,6 +788,7 @@ static DPS_Status DecodePublicationRequest(DPS_Node* node, DPS_Buffer* buffer, c
         /*
          * Forward the publication to matching remote subscribers
          */
+        pub.flags = PUB_FLAG_PUBLISH;
         ret = ForwardPubToSubs(node, &pub, NULL, pubNode);
         /*
          * Publications with a non-zero TTL will be retained until the TTL expires.
@@ -1355,20 +1365,15 @@ static DPS_Status SendInitialSubscription(DPS_Node* node, RemoteNode* remote)
 {
     DPS_Status ret;
     uv_buf_t bufs[3];
-    int change;
+
+    DPS_DBGTRACE();
 
     assert(!remote->outbound.interests);
     assert(!remote->outbound.needs);
 
-    remote->outbound.interests = DPS_BitVectorAlloc();
-    if (!remote->outbound.interests) {
-        return DPS_ERR_RESOURCES;
-    }
-    remote->outbound.needs = DPS_BitVectorAllocFH();
-    if (!remote->outbound.needs) {
-        DPS_BitVectorFree(remote->outbound.interests);
-        remote->outbound.interests = NULL;
-        return DPS_ERR_RESOURCES;
+    ret = UpdateOutboundInterests(node, remote);
+    if (ret != DPS_OK) {
+        return ret;
     }
     /*
      * Send subscriptions to a specific remote node
