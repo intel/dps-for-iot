@@ -627,7 +627,7 @@ static DPS_Status PushPublication(DPS_Node* node, DPS_Publication* pub, struct s
 }
 
 /*
- * Forward a publication to a specic subscriber or all matching subscribers
+ * Forward a publication to a specific subscriber or all matching subscribers
  */
 static DPS_Status ForwardPubToSubs(DPS_Node* node, DPS_Publication* pub, RemoteNode* subNode, RemoteNode* pubNode)
 {
@@ -918,39 +918,20 @@ static DPS_Status FloodSubscriptions(DPS_Node* node, RemoteNode* newNode)
 }
 
 /*
- * Update the interests for an existing node or add a new node
+ * Update the interests for a remote node
  */
-static DPS_Status UpdateRemoteSub(DPS_Node* node, struct sockaddr* addr, DPS_BitVector* interests, DPS_BitVector* needs, RemoteNode** newNode)
+static DPS_Status UpdateInboundInterests(DPS_Node* node, RemoteNode* remote, DPS_BitVector* interests, DPS_BitVector* needs)
 {
-    RemoteNode* remote;
-    /*
-     * Is this an update from a known subscriber?
-     */
-    for (remote = node->remoteNodes; remote != NULL; remote = remote->next) {
-        if (SameAddr(&remote->addr, addr)) {
-            break;
-        }
-    }
-    if (remote) {
+    if (remote->inbound.interests) {
         DPS_CountVectorDel(node->interests, remote->inbound.interests);
         DPS_CountVectorDel(node->needs, remote->inbound.needs);
         DPS_BitVectorFree(remote->inbound.interests);
         DPS_BitVectorFree(remote->inbound.needs);
-        remote->inbound.interests = interests;
-        remote->inbound.needs = needs;
-        *newNode = NULL;
-    } else {
-        DPS_Status ret = AddRemoteNode(node, addr, &remote);
-        if (ret != DPS_OK) {
-            return ret;
-        }
-        DPS_DBGPRINT("Adding new remote subscriber %s\n", DPS_NetAddrText(addr));
-        remote->inbound.interests = interests;
-        remote->inbound.needs = needs;
-        *newNode = remote;
     }
-    DPS_CountVectorAdd(node->interests, remote->inbound.interests);
-    DPS_CountVectorAdd(node->needs, remote->inbound.needs);
+    DPS_CountVectorAdd(node->interests, interests);
+    DPS_CountVectorAdd(node->needs, needs);
+    remote->inbound.interests = interests;
+    remote->inbound.needs = needs;
     return DPS_OK;
 }
 
@@ -964,7 +945,8 @@ static DPS_Status DecodeSubscriptionRequest(DPS_Node* node, DPS_Buffer* buffer, 
     DPS_BitVector* needs;
     struct sockaddr_storage senderAddr;
     uint16_t port;
-    RemoteNode* newNode;
+    RemoteNode* remote;
+    int isNew;
 
     DPS_DBGTRACE();
 
@@ -989,31 +971,39 @@ static DPS_Status DecodeSubscriptionRequest(DPS_Node* node, DPS_Buffer* buffer, 
     if (ret != DPS_OK) {
         return ret;
     }
-    ret = UpdateRemoteSub(node, AddrSetPort(&senderAddr, addr, port), interests, needs, &newNode);
+    ret = AddRemoteNode(node, AddrSetPort(&senderAddr, addr, port), &remote);
     if (ret != DPS_OK) {
-        DPS_BitVectorFree(interests);
-        DPS_BitVectorFree(needs);
+        if (ret != DPS_ERR_EXISTS) {
+            DPS_BitVectorFree(interests);
+            DPS_BitVectorFree(needs);
+            return ret;
+        }
+        isNew = DPS_FALSE;
     } else {
+        isNew = DPS_TRUE;
+    }
+    ret = UpdateInboundInterests(node, remote, interests, needs);
+    if (ret == DPS_OK) {
         uint32_t elapsed;
         DPS_Publication* pub;
         DPS_Publication* next;
         /*
          * Determine what if anything has changed
          */
-        ret = FloodSubscriptions(node, newNode);
+        ret = FloodSubscriptions(node, isNew ? remote : NULL);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("FloodSubscriptions failed %s\n", DPS_ErrTxt(ret));
         }
         LazyCheckTTLs(node);
         /*
-         * Check if any local publication need to be forwarded to the new subscriber
+         * Check if any local or retained publications need to be forwarded to this subscriber
          */
         for (pub = node->publications; pub != NULL; pub = pub->next) {
             /*
              * Save next in case pub is expired
              */
             next = pub->next;
-            ret = ForwardPubToSubs(node, pub, newNode, NULL);
+            ret = ForwardPubToSubs(node, pub, isNew ? remote : NULL, NULL);
             if (ret != DPS_OK) {
                 DPS_ERRPRINT("ForwardPubToSubs failed %s\n", DPS_ErrTxt(ret));
             }
@@ -1022,6 +1012,13 @@ static DPS_Status DecodeSubscriptionRequest(DPS_Node* node, DPS_Buffer* buffer, 
              */
             ret = DPS_OK;
         }
+    }
+    /*
+     * We don't need to keep a remote node that has no inbound interests
+     */
+    if (DPS_BitVectorIsClear(remote->inbound.interests)) {
+        DPS_DBGPRINT("Remote node has no interests - deleting\n", RemoteNodeAddrText(remote));
+        DeleteRemoteNode(node, remote);
     }
     return ret;
 }
