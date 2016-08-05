@@ -26,7 +26,6 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 static const char DPS_SubscriptionURI[] = "dps";
 
 typedef struct _RemoteNode {
-    uint8_t changes;                   /* Indicates there have been changes to the interests */
     struct sockaddr_storage addr;
     struct {
         DPS_BitVector* needs;          /* Bit vector of needs received from  this remote node */
@@ -123,6 +122,8 @@ static void DumpTopics(char* const* topics, size_t numTopics)
 }
 #endif
 
+#define RemoteNodeAddrText(n)  DPS_NetAddrText((struct sockaddr*)(&(n)->addr))
+
 static void CopySockaddr(struct sockaddr_storage* dest, struct sockaddr* addr)
 {
     if (addr->sa_family == AF_INET6) {
@@ -145,14 +146,15 @@ static uint16_t GetPortNumber(struct sockaddr* addr)
 
 static struct sockaddr* AddrSetPort(struct sockaddr_storage* dest, const struct sockaddr* addr, uint16_t port)
 {
-    DPS_DBGPRINT("AddrSetPort %d\n", port);
     port = htons(port);
     if (addr->sa_family == AF_INET6) {
-        memcpy(dest, addr, sizeof(struct sockaddr_in6));
-        ((struct sockaddr_in6*)dest)->sin6_port = port;
+        struct sockaddr_in6* ip6 = (struct sockaddr_in6*)dest;
+        memcpy(ip6, addr, sizeof(*ip6));
+        ip6->sin6_port = port;
     } else {
-        memcpy(dest, addr, sizeof(struct sockaddr_in));
-        ((struct sockaddr_in*)dest)->sin_port = port;
+        struct sockaddr_in* ip4 = (struct sockaddr_in*)dest;
+        memcpy(ip4, addr, sizeof(*ip4));
+        ip4->sin_port = port;
     }
     return (struct sockaddr*)dest;
 }
@@ -259,7 +261,7 @@ static DPS_Publication* FreePublication(DPS_Node* node, DPS_Publication* pub)
     return next;
 }
 
-static DPS_Status UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode)
+static DPS_Status UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, int* updates)
 {
     DPS_Status ret;
     DPS_BitVector* newInterests = NULL;
@@ -267,6 +269,7 @@ static DPS_Status UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode)
 
     DPS_DBGTRACE();
 
+    *updates = DPS_TRUE;
     /*
      * Inbound interests from the node we are updating are excluded from the outbound interests
      */
@@ -304,13 +307,10 @@ static DPS_Status UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode)
         ret = DPS_ERR_RESOURCES;
         goto ErrExit;
     }
-    /*
-     * See if anything changed
-     */
     if (destNode->outbound.interests) {
         assert(destNode->outbound.needs);
         if (DPS_BitVectorEquals(destNode->outbound.interests, newInterests) && DPS_BitVectorEquals(destNode->outbound.needs, newNeeds)) {
-            destNode->changes = DPS_FALSE;
+            *updates = DPS_FALSE;
         }
         DPS_BitVectorFree(destNode->outbound.interests);
         DPS_BitVectorFree(destNode->outbound.needs);
@@ -318,7 +318,7 @@ static DPS_Status UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode)
     destNode->outbound.interests = newInterests;
     destNode->outbound.needs = newNeeds;
 
-    DPS_DBGPRINT("UpdateOutboundInterests: %s\n", destNode->changes ? "Change" : "No Changes");
+    DPS_DBGPRINT("UpdateOutboundInterests: %s %s\n", RemoteNodeAddrText(destNode), *updates ? "Updates" : "No Change");
     return DPS_OK;
 
 ErrExit:
@@ -875,41 +875,34 @@ static DPS_Status SendSubscriptions(DPS_Node* node, RemoteNode* remote)
 
 static DPS_Status FloodSubscriptions(DPS_Node* node, RemoteNode* newNode)
 {
-    RemoteNode* remote = node->remoteNodes;
+    RemoteNode* remote;
     DPS_Status ret;
 
     DPS_DBGTRACE();
 
-    if (!remote) {
-        return DPS_OK;
-    }
     /*
      * Forward subscription to all remote nodes witn interestss
      */
-    while (remote) {
+    for (remote = node->remoteNodes; remote != NULL; remote = remote->next) {
+        int updates;
         uv_buf_t bufs[3];
 
         if (!remote->inbound.interests) {
-            remote = remote->next;
             continue;
         }
-        /*
-         * New nodes always need to receive updates, otherwise we only
-         * send a subscription if there are changes from last time.
-         */
-        remote->changes = (remote == newNode);
-
-        ret = UpdateOutboundInterests(node, remote);
+        ret = UpdateOutboundInterests(node, remote, &updates);
         if (ret != DPS_OK) {
             break;
         }
-        if (!remote->changes) {
-            remote = remote->next;
+        /*
+         * New nodes always receive current interests, existing nodes only get updates
+         */
+        if ((remote != newNode) && !updates) {
             continue;
         }
         ret = ComposeSubscriptionRequest(node, remote, COAP_OVER_TCP, bufs, A_SIZEOF(bufs));
         if (ret != DPS_OK) {
-            return ret;
+            break;
         }
         ret = DPS_NetSend(node, bufs, A_SIZEOF(bufs), (struct sockaddr*)&remote->addr, OnSendToComplete);
         if (ret != DPS_OK) {
@@ -930,7 +923,6 @@ static DPS_Status FloodSubscriptions(DPS_Node* node, RemoteNode* newNode)
 static DPS_Status UpdateRemoteSub(DPS_Node* node, struct sockaddr* addr, DPS_BitVector* interests, DPS_BitVector* needs, RemoteNode** newNode)
 {
     RemoteNode* remote;
-
     /*
      * Is this an update from a known subscriber?
      */
@@ -1365,13 +1357,14 @@ static DPS_Status SendInitialSubscription(DPS_Node* node, RemoteNode* remote)
 {
     DPS_Status ret;
     uv_buf_t bufs[3];
+    int updates;
 
     DPS_DBGTRACE();
 
     assert(!remote->outbound.interests);
     assert(!remote->outbound.needs);
 
-    ret = UpdateOutboundInterests(node, remote);
+    ret = UpdateOutboundInterests(node, remote, &updates);
     if (ret != DPS_OK) {
         return ret;
     }
