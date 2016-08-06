@@ -1,0 +1,23 @@
+#
+#    a/b/c ----\                             /---- 1/2/3
+#               \                           /
+#    e/f/g ------> A/A ----> B/B <---- C/C <------ 4/5/6
+#               /                           \
+#    h/i/j ----/                             \---- 5/6/7
+#
+
+bin/subscriber -l 20000 B/B &
+sleep 1
+bin/subscriber -l 30000 -p 20000 A/A &
+sleep 1
+bin/subscriber -l 50000 -p 20000 C/C &
+sleep 1
+
+bin/subscriber -l 40000 -p 30000 a/b/c &
+bin/subscriber -l 40001 -p 30000 d/e/f &
+bin/subscriber -l 40002 -p 30000 g/h/i &
+
+bin/subscriber -l 60000 -p 50000 1/2/3 &
+bin/subscriber -l 60001 -p 50000 4/5/6 &
+bin/subscriber -l 60002 -p 50000 7/8/9 &
+

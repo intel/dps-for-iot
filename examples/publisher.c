@@ -21,35 +21,57 @@ static void OnAlloc(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf)
 
 static DPS_Publication* currentPub = NULL;
 
-static char* AddTopics(char* topicList)
+static int AddTopics(char* topicList, char** msg, int* keep, int* ttl)
 {
     size_t i;
 
     for (i = 0; i < numTopics; ++i) {
         free(topics[i]);
     }
+    *msg = NULL;
+    *keep = 0;
+    *ttl = 0;
     numTopics = 0;
-    for (i = 0; i < MAX_TOPICS; ++i) {
+    while (numTopics < MAX_TOPICS) {
         size_t len = strcspn(topicList, " ");
         if (!len) {
             len = strlen(topicList);
         }
-        /*
-         * If we have a "-m" the rest of the line is a message
-         */
-        if (strncmp(topicList, "-m", len) == 0) {
-            return topicList + 1 + len;
-        }
-        topics[i] = malloc(len + 1);
-        memcpy(topics[i], topicList, len);
-        topics[i][len] = 0;
-        ++numTopics;
-        if (!topicList[len]) {
-            break;
+        if (topicList[0] == '-') {
+            switch(topicList[1]) {
+            case 't':
+                if (!sscanf(topicList, "-t %d", ttl)) {
+                    return 0;
+                }
+                topicList += 3;
+                break;
+            case 'm':
+                /*
+                 * After "-m" the rest of the line is a message
+                 */
+                *msg = topicList + 1 + len;
+                return 1;
+            case 'k':
+                *keep = 1;
+                break;
+
+            }
+            len = strcspn(topicList, " ");
+            if (!len) {
+                return 0;
+            }
+        } else {
+            topics[numTopics] = malloc(len + 1);
+            memcpy(topics[numTopics], topicList, len);
+            topics[numTopics][len] = 0;
+            ++numTopics;
+            if (!topicList[len]) {
+                break;
+            }
         }
         topicList += len + 1;
     }
-    return NULL;
+    return 1;
 }
 
 static void OnInput(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf)
@@ -57,6 +79,8 @@ static void OnInput(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf)
     void* data;
 
     if (lineBuf[nread - 1] == '\n') {
+        int ttl;
+        int keep;
         char* msg;
         DPS_Status ret;
         DPS_Node* node = (DPS_Node*)stream->data;
@@ -64,14 +88,22 @@ static void OnInput(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf)
         lineBuf[nread - 1] = 0;
         DPS_PRINT("Pub: %s\n", lineBuf);
 
-        DPS_DestroyPublication(node, currentPub, &data);
-        msg = AddTopics(lineBuf);
-        ret = DPS_CreatePublication(node, topics, numTopics, &currentPub);
-        if (ret != DPS_OK) {
-            DPS_ERRPRINT("Failed to create publication - error=%d\n", ret);
+        if (!AddTopics(lineBuf, &msg, &keep, &ttl)) {
+            DPS_PRINT("Invalid\n");
             return;
         }
-        ret = DPS_Publish(node, currentPub, msg, msg ? strlen(msg) : 0, 0, NULL);
+        if (!currentPub) {
+            keep = 0;
+        }
+        if (!keep) {
+            DPS_DestroyPublication(node, currentPub, &data);
+            ret = DPS_CreatePublication(node, topics, numTopics, &currentPub);
+            if (ret != DPS_OK) {
+                DPS_ERRPRINT("Failed to create publication - error=%d\n", ret);
+                return;
+            }
+        }
+        ret = DPS_Publish(node, currentPub, msg, msg ? strlen(msg) : 0, ttl, NULL);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("Failed to publish %s error=%s\n", lineBuf, DPS_ErrTxt(ret));
         }
@@ -118,6 +150,7 @@ int main(int argc, char** argv)
     const char* connectPort = NULL;
     int bitLen = 16 * 1024;
     int numHashes = 4;
+    int wait = DPS_FALSE;
     int ttl = 0;
     char* msg = NULL;
     int mcast = DPS_MCAST_PUB_ENABLE_SEND;
@@ -156,6 +189,11 @@ int main(int argc, char** argv)
             continue;
         }
         if (IntArg("-t", &arg, &argc, &ttl, 0, 2000)) {
+            continue;
+        }
+        if (strcmp(*arg, "-w") == 0) {
+            ++arg;
+            wait = DPS_TRUE;
             continue;
         }
         if (strcmp(*arg, "-d") == 0) {
@@ -212,7 +250,9 @@ int main(int argc, char** argv)
         if (ret != DPS_OK) {
             DPS_ERRPRINT("Failed to publish topics - error=%d\n", ret);
         }
-        DPS_TerminateNode(node);
+        if (!wait) {
+            DPS_TerminateNode(node);
+        }
         return uv_run(loop, UV_RUN_DEFAULT);
     } else {
         DPS_PRINT("Running in interactive mode\n");

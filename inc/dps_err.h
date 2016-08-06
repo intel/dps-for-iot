@@ -21,7 +21,8 @@ typedef int DPS_Status;
 #define DPS_ERR_INVALID   11 /**< A value was invalid */
 #define DPS_ERR_BUSY      12 /**< Operation cannot be performed right now */
 #define DPS_ERR_EXISTS    13 /**< Something not expected was present */
-#define DPS_ERR_MISSING   14 /**< Soethiing expected was missting */
+#define DPS_ERR_MISSING   14 /**< So,ething expected was missting */
+#define DPS_ERR_STALE     15 /**< A publication was stale */
 
 const char* DPS_ErrTxt(DPS_Status s);
 

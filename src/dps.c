@@ -52,9 +52,10 @@ typedef struct _DPS_Subscription {
 } DPS_Subscription;
 
 
-#define PUB_FLAG_PUBLISH  (0x01)
-#define PUB_FLAG_RETAINED (0x02)
-#define PUB_FLAG_EXPIRED  (0x04)
+#define PUB_FLAG_NONE     (0x00)
+#define PUB_FLAG_PUBLISH  (0x01) /* Set if publication has not not yet been published */
+#define PUB_FLAG_RETAINED (0x02) /* Set if the publication is a retained publication */
+#define PUB_FLAG_EXPIRED  (0x04) /* Set if the publication has been explicitly expired */
 
 /*
  * Notes on the use of the DPS_Publication fields:
@@ -87,6 +88,11 @@ typedef struct _DPS_Node {
     uint64_t ttlBasis;                    /* basis time for expiring retained messages */
 
     RemoteNode* remoteNodes;              /* Linked list of remote nodes */
+
+    struct {
+        DPS_BitVector* fh;                /* Preallocated bit vector */
+        DPS_BitVector* bf;                /* Preallocated bit vector */
+    } scratch;
 
     DPS_CountVector* interests;           /* Tracks all interests for this node */
     DPS_CountVector* needs;               /* Tracks all needs for this node */
@@ -398,7 +404,8 @@ static void LazyCheckTTLs(DPS_Node* node)
             continue;
         }
         /*
-         * When a ttl expires retained publications are freed, local publications are disabled
+         * When a ttl expires retained publications are freed, local publications
+         * that have not been published are simply disabled
          */
         if (pub->flags & PUB_FLAG_RETAINED) {
             DPS_DBGPRINT("Expiring pub %s\n", DPS_UUIDToString(&pub->pubId));
@@ -415,11 +422,49 @@ static void LazyCheckTTLs(DPS_Node* node)
     }
 }
 
-static DPS_Status RetainPublication(DPS_Node* node, DPS_Publication* tmpPub)
+static DPS_Status LookupRetainedPub(DPS_Node* node, DPS_Publication* tmpPub, DPS_Publication** retained)
+{
+    DPS_Publication* pub;
+
+    for (pub = node->publications; pub != NULL; pub = pub->next) {
+        if ((pub->flags & PUB_FLAG_RETAINED) && (memcmp(&pub->pubId, &tmpPub->pubId, sizeof(DPS_UUID)) == 0)) {
+            break;
+        }
+    }
+    *retained = pub;
+    if (!pub) {
+        return DPS_OK;
+    }
+    /*
+     * The bit vector of a retained publication cannot change
+     */
+    if (!DPS_BitVectorEquals(tmpPub->bf, pub->bf)) {
+        DPS_ERRPRINT("Inconsistent bit vector in retained pub");
+        return DPS_ERR_INVALID;
+    }
+    if (tmpPub->serialNumber <= pub->serialNumber) {
+        DPS_ERRPRINT("Publication is stale");
+        return DPS_ERR_STALE;
+    }
+    return DPS_ERR_OK;
+}
+
+
+static DPS_Status ExpirePublication(DPS_Node* node, DPS_Publication* pub)
+{
+    DPS_Publication* retained;
+    DPS_Status ret = LookupRetainedPub(node, pub, &retained);
+    if ((ret == DPS_OK) && retained) {
+        DPS_DBGPRINT("Expiring pub %s\n", DPS_UUIDToString(&pub->pubId));
+        FreePublication(node, retained);
+    }
+    return ret;
+}
+
+static DPS_Status RetainPublication(DPS_Node* node, DPS_Publication* pub)
 {
     DPS_Status ret = DPS_OK;
-    DPS_Publication* prev = NULL;
-    DPS_Publication* pub;
+    DPS_Publication* retained;
 
     DPS_DBGTRACE();
 
@@ -427,81 +472,46 @@ static DPS_Status RetainPublication(DPS_Node* node, DPS_Publication* tmpPub)
      * Removed any stale retained pubs
      */
     LazyCheckTTLs(node);
-    /*
-     * Check if this is an update to an existing retained publication
-     */
-    for (pub = node->publications; pub; pub = pub->next) {
-        if ((pub->flags & PUB_FLAG_RETAINED) && (memcmp(&pub->pubId, &tmpPub->pubId, sizeof(DPS_UUID) == 0))) {
-            break;
-        }
-        prev = pub;
+
+    ret = LookupRetainedPub(node, pub, &retained);
+    if (ret != DPS_OK) {
+        return ret;
     }
-    if (pub) {
-        /*
-         * The bit vector of a retained publication cannot change
-         */
-        if (!DPS_BitVectorEquals(tmpPub->bf, pub->bf)) {
-            DPS_ERRPRINT("Inconsisten bit vector in retained pub");
-            return DPS_ERR_INVALID;
-        }
-        /*
-         *
-         */
-        if (tmpPub->serialNumber <= pub->serialNumber) {
-            DPS_ERRPRINT("Publication is stale");
-            return DPS_ERR_INVALID;
-        }
-        /*
-         * Existing payload if present must be freed
-         */
-        if (pub->payload) {
-            free(pub->payload);
-            pub->payload = NULL;
-        }
+    if (retained) {
         /*
          * The bit vector will be replace below
          */
-        DPS_BitVectorFree(pub->bf);
-        pub->bf = NULL;
+        DPS_BitVectorFree(retained->bf);
+        retained->bf = NULL;
+        if (retained->payload) {
+            free(retained->payload);
+            retained->payload = NULL;
+            retained->len = 0;
+        }
+        DPS_DBGPRINT("Updating retained pub %s\n", DPS_UUIDToString(&pub->pubId));
     } else {
-        if (tmpPub->ttl < 0) {
-            /*
-             * Unexpected but harmless
-             */
-            DPS_BitVectorFree(tmpPub->bf);
-            return DPS_OK;
-        }
-        pub = calloc(1, sizeof(DPS_Publication));
-        if (!pub) {
+        retained = calloc(1, sizeof(DPS_Publication));
+        if (!retained) {
             return DPS_ERR_RESOURCES;
         }
+        retained->next = node->publications;
+        node->publications = retained;
+        DPS_DBGPRINT("Retaining pub %s\n", DPS_UUIDToString(&pub->pubId));
     }
-    /*
-     * Negative TTL means delete the retained publication
-     */
-    if (tmpPub->ttl < 0) {
-        DPS_DBGPRINT("Explictly expiringin pub %s\n", DPS_UUIDToString(&tmpPub->pubId));
-        FreePublication(node, pub);
-        DPS_BitVectorFree(tmpPub->bf);
-        return DPS_OK;
-    }
-    DPS_DBGPRINT("Retaining pub %s\n", DPS_UUIDToString(&tmpPub->pubId));
-    pub->ttl = tmpPub->ttl;
-    pub->flags = (PUB_FLAG_RETAINED | PUB_FLAG_PUBLISH);
-    pub->pubId = tmpPub->pubId;
-    pub->serialNumber = tmpPub->serialNumber;
-    pub->bf = tmpPub->bf;
-    pub->len = tmpPub->len;
+    *retained = *pub;
     if (pub->len) {
-        pub->payload = malloc(pub->len);
-        if (!pub->payload) {
-            free(pub);
+        retained->payload = malloc(pub->len);
+        if (!retained->payload) {
+            FreePublication(node, retained);
             return DPS_ERR_RESOURCES;
         }
-        memcpy(pub->payload, tmpPub->payload, pub->len);
+        memcpy(retained->payload, pub->payload, pub->len);
     }
-    pub->next = node->publications;
-    node->publications = pub;
+    retained->flags = (PUB_FLAG_RETAINED | PUB_FLAG_PUBLISH);
+    /*
+     * We have taken ownership of the Bloom filter
+     */
+    pub->bf = NULL;
     /*
      * If there are no other retained messages the checkTTL flag will not be set
      */
@@ -562,7 +572,7 @@ static void OnSendToComplete(DPS_Node* node, struct sockaddr* addr, uv_buf_t* bu
  *      Contributor count
  *      Serialized bloom filter
  */
-static DPS_Status PushPublication(DPS_Node* node, DPS_Publication* pub, struct sockaddr* destAddr)
+static DPS_Status PushPublication(DPS_Node* node, DPS_Publication* pub, DPS_BitVector* bf, struct sockaddr* destAddr)
 {
     DPS_Status ret;
     DPS_Buffer payload;
@@ -573,13 +583,13 @@ static DPS_Status PushPublication(DPS_Node* node, DPS_Publication* pub, struct s
     DPS_DBGTRACE();
 
     if (destAddr) {
-        DPS_DBGPRINT("PushPublication to %s\n", DPS_NetAddrText(destAddr));
+        DPS_DBGPRINT("PushPublication (ttl=%d) to %s\n", pub->ttl, DPS_NetAddrText(destAddr));
         protocol = COAP_OVER_TCP;
     } else {
-        DPS_DBGPRINT("PushPublication as multicast\n");
+        DPS_DBGPRINT("PushPublication (ttl=%d) as multicast\n", pub->ttl);
         protocol = COAP_OVER_UDP;
     }
-    ret = DPS_BufferInit(&payload, NULL, 32 + DPS_BitVectorSerializeMaxSize(pub->bf) + pub->len);
+    ret = DPS_BufferInit(&payload, NULL, 32 + DPS_BitVectorSerializeMaxSize(bf) + pub->len);
     if (ret != DPS_OK) {
         return DPS_OK;
     }
@@ -591,21 +601,22 @@ static DPS_Status PushPublication(DPS_Node* node, DPS_Publication* pub, struct s
      */
     CBOR_EncodeUint16(&payload, DPS_GetPortNumber(node));
     /*
-     * Messages are only retained at the first hop.
+     * Messages are only retained at the first hop so send a 0 TTL
      */
     if (pub->flags & PUB_FLAG_RETAINED) {
         CBOR_EncodeInt16(&payload, 0);
     } else if (pub->flags & PUB_FLAG_EXPIRED) {
         /*
-         * Negative TTL indicates to subscriber that a previously retained publication has expired
+         * Negative TTL expires a retained publication
          */
         CBOR_EncodeInt16(&payload, -1);
     } else {
+        assert(pub->ttl >= 0);
         CBOR_EncodeInt16(&payload, pub->ttl);
     }
     CBOR_EncodeBytes(&payload, (uint8_t*)&pub->pubId, sizeof(pub->pubId));
     CBOR_EncodeUint(&payload, pub->serialNumber);
-    ret = DPS_BitVectorSerialize(pub->bf, &payload);
+    ret = DPS_BitVectorSerialize(bf, &payload);
     if (ret == DPS_OK) {
         CBOR_EncodeBytes(&payload, pub->payload, pub->len);
     }
@@ -623,49 +634,58 @@ static DPS_Status PushPublication(DPS_Node* node, DPS_Publication* pub, struct s
             FreeBufs(bufs, A_SIZEOF(bufs));
         }
     }
+    /*
+     * Clear the PUBLISH flag if the publication was sucessfully sent
+     */
+    if (ret == DPS_OK) {
+        pub->flags &= ~PUB_FLAG_PUBLISH;
+    }
     return ret;
+}
+
+static DPS_BitVector* PubSubMatch(DPS_Node* node, DPS_Publication* pub, RemoteNode* sub)
+{
+    DPS_BitVectorIntersection(node->scratch.bf, pub->bf, sub->inbound.interests);
+    DPS_BitVectorFuzzyHash(node->scratch.fh, node->scratch.bf);
+    if (DPS_BitVectorIncludes(node->scratch.fh, sub->inbound.needs)) {
+        /*
+         * If the publication will be retained we send the full publication Bloom
+         * filter otherwise we only send the intersection with the subscription interests.
+         * The reason for sending the full publication is that we don't know what the 
+         * interests will be over the lifetime of the publication.
+         */
+        return (pub->flags & PUB_FLAG_RETAINED) ? pub->bf : node->scratch.bf;
+    } else {
+        return NULL;
+    }
+}
+
+static DPS_Status ForwardPubToOneSub(DPS_Node* node, DPS_Publication* pub, RemoteNode* sub)
+{
+    DPS_BitVector* pubBV = PubSubMatch(node, pub, sub);
+    if (pubBV) {
+        DPS_DBGPRINT("Forwarded pub %d to %s\n", pub->serialNumber, RemoteNodeAddrText(sub));
+        return PushPublication(node, pub, pubBV, (struct sockaddr*)&sub->addr);
+    } else {
+        DPS_DBGPRINT("Rejected pub %d for %s\n", pub->serialNumber, RemoteNodeAddrText(sub));
+        return DPS_OK;
+    }
 }
 
 /*
  * Forward a publication to a specific subscriber or all matching subscribers
  */
-static DPS_Status ForwardPubToSubs(DPS_Node* node, DPS_Publication* pub, RemoteNode* subNode, RemoteNode* pubNode)
+static DPS_Status ForwardPubToSubs(DPS_Node* node, DPS_Publication* pub, RemoteNode* pubNode)
 {
     DPS_Status ret = DPS_OK;
     RemoteNode* remote = node->remoteNodes;
-    DPS_Publication tmpPub = *pub;
-    DPS_BitVector* provides;
 
     DPS_DBGTRACE();
 
-    /*
-     * Ignore entries that have not yet been published
-     */
     if (!pub->flags & PUB_FLAG_PUBLISH) {
         return DPS_OK;
     }
-    /*
-     * Short circuit if there is nothing to publish
-     */
-    if (DPS_BitVectorIsClear(pub->bf)) {
-        return DPS_OK;
-    }
-
-    tmpPub.bf = DPS_BitVectorAlloc();
-    provides = DPS_BitVectorAllocFH();
-    if (!tmpPub.bf || !provides) {
-        ret = DPS_ERR_RESOURCES;
-        goto Exit;
-    }
     while (remote) {
-        struct sockaddr* dest = (struct sockaddr*)&remote->addr;
-        /*
-         * May only be forwarding to one specific subscriber
-         */
-        if (subNode && remote != subNode) {
-            remote = remote->next;
-            continue;
-        }
         /*
          * Ignore nodes that are not currently subscribers
          */
@@ -674,24 +694,14 @@ static DPS_Status ForwardPubToSubs(DPS_Node* node, DPS_Publication* pub, RemoteN
             continue;
         }
         /*
-         * Don't send publication back to the publisher
+         * Don't send a publication back to its publisher
          */
-        if (pubNode && SameAddr(&pubNode->addr, dest)) {
+        if (pubNode && SameAddr(&pubNode->addr, (struct sockaddr*)&remote->addr)) {
             DPS_DBGPRINT("ForwardPubToSubs don't send pub back to publisher\n");
             remote = remote->next;
             continue;
         }
-        /*
-         * Filter the pub against the subscription
-         */
-        DPS_BitVectorIntersection(tmpPub.bf, pub->bf, remote->inbound.interests);
-        DPS_BitVectorFuzzyHash(provides, tmpPub.bf);
-        if (DPS_BitVectorIncludes(provides, remote->inbound.needs)) {
-            DPS_DBGPRINT("Forwarded pub %d to %s\n", pub->serialNumber, DPS_NetAddrText(dest));
-            ret = PushPublication(node, &tmpPub, dest);
-        } else {
-            DPS_DBGPRINT("Rejected pub %d for %s\n", pub->serialNumber, DPS_NetAddrText(dest));
-        }
+        ret = ForwardPubToOneSub(node, pub, remote);
         if (ret != DPS_OK) {
             remote = DeleteRemoteNode(node, remote);
         } else {
@@ -699,17 +709,14 @@ static DPS_Status ForwardPubToSubs(DPS_Node* node, DPS_Publication* pub, RemoteN
         }
     }
     /*
-     * We only need to expire a retained publication once.
+     * TODO - is this the correct semantics for retained publications?
+     * An alternative approach would hold the publication until the TTL
+     * expires and send to any new subscribers. The problem with doing this
+     * is there is no mechanism for indicating there is a new subscriber if
+     * the new subscription doesn't cause a change to interests.
      */
-    if (pub->flags & PUB_FLAG_EXPIRED) {
-        pub->flags = 0;
-        pub->ttl = 0;
-    }
+    pub->flags &= ~PUB_FLAG_PUBLISH;
 
-Exit:
-
-    DPS_BitVectorFree(provides);
-    DPS_BitVectorFree(tmpPub.bf);
     return ret;
 }
 
@@ -752,6 +759,8 @@ static DPS_Status DecodePublicationRequest(DPS_Node* node, DPS_Buffer* buffer, c
         DPS_DBGPRINT("Publication is stale\n");
         return DPS_OK;
     }
+    DPS_AppendPubHistory(&node->history, &pub.pubId, pub.serialNumber);
+
     ret = AddRemoteNode(node, AddrSetPort(&senderAddr, addr, port), &pubNode);
     if (ret == DPS_ERR_EXISTS) {
         DPS_DBGPRINT("Updating existing node\n");
@@ -765,8 +774,19 @@ static DPS_Status DecodePublicationRequest(DPS_Node* node, DPS_Buffer* buffer, c
         return DPS_ERR_RESOURCES;
     }
     ret = DPS_BitVectorDeserialize(pub.bf, buffer);
-    if (ret == DPS_OK) {
-        ret = CBOR_DecodeBytes(buffer, &pub.payload, &pub.len);
+    if (ret != DPS_OK) {
+        goto Exit;
+    }
+    /*
+     * Note: pub.payload is a pointer into the buffer so must be copied 
+     */
+    ret = CBOR_DecodeBytes(buffer, &pub.payload, &pub.len);
+    if (ret != DPS_OK) {
+        goto Exit;
+    }
+    if (pub.ttl < 0) {
+        ret = ExpirePublication(node, &pub);
+        goto Exit;
     }
     if (ret == DPS_OK) {
         DPS_Subscription* sub;
@@ -784,26 +804,30 @@ static DPS_Status DecodePublicationRequest(DPS_Node* node, DPS_Buffer* buffer, c
                 sub->handler(node, sub, (const char**)sub->topics, sub->numTopics, pub.payload, pub.len);
             }
         }
-        DPS_AppendPubHistory(&node->history, &pub.pubId, pub.serialNumber);
+        pub.flags = PUB_FLAG_PUBLISH;
+        if (pub.ttl > 0) {
+            pub.flags |= PUB_FLAG_RETAINED;
+        }
         /*
          * Forward the publication to matching remote subscribers
          */
-        pub.flags = PUB_FLAG_PUBLISH;
-        ret = ForwardPubToSubs(node, &pub, NULL, pubNode);
+        ret = ForwardPubToSubs(node, &pub, pubNode);
         /*
          * Publications with a non-zero TTL will be retained until the TTL expires.
          */
-        if (pub.ttl) {
+        if (pub.flags & PUB_FLAG_RETAINED) {
             ret = RetainPublication(node, &pub);
-            if (ret != DPS_OK) {
-                DPS_BitVectorFree(pub.bf);
-            }
-        } else {
-            DPS_BitVectorFree(pub.bf);
         }
-    } else {
+    }
+
+Exit:
+    /*
+     * Delete the publisher node if it is sending bad data
+     */
+    if (ret == DPS_ERR_INVALID) {
         DeleteRemoteNode(node, pubNode);
     }
+    DPS_BitVectorFree(pub.bf);
     DPS_FreshenHistory(&node->history);
     return ret;
 }
@@ -866,7 +890,7 @@ static DPS_Status SendSubscriptions(DPS_Node* node, RemoteNode* remote)
         ret = DPS_NetSend(node, bufs, A_SIZEOF(bufs), (struct sockaddr*)&remote->addr, OnSendToComplete);
     }
     if (ret != DPS_OK) {
-        DPS_ERRPRINT("Failed to send subscription request: ret=%d\n", ret);
+        DPS_ERRPRINT("Failed to send subscription request %s\n", DPS_ErrTxt(ret));
         OnSendToComplete(node, (struct sockaddr*)&remote->addr, bufs, A_SIZEOF(bufs), ret);
     }
     return ret;
@@ -881,9 +905,10 @@ static DPS_Status FloodSubscriptions(DPS_Node* node, RemoteNode* newNode)
     DPS_DBGTRACE();
 
     /*
-     * Forward subscription to all remote nodes witn interestss
+     * Forward subscription to all remote nodes with interestss
      */
     for (remote = node->remoteNodes; remote != NULL; remote = remote->next) {
+        DPS_Status sendRet;
         int updates;
         uv_buf_t bufs[3];
 
@@ -904,14 +929,10 @@ static DPS_Status FloodSubscriptions(DPS_Node* node, RemoteNode* newNode)
         if (ret != DPS_OK) {
             break;
         }
-        ret = DPS_NetSend(node, bufs, A_SIZEOF(bufs), (struct sockaddr*)&remote->addr, OnSendToComplete);
-        if (ret != DPS_OK) {
-            DPS_ERRPRINT("Failed to send subscription request: ret=%d\n", ret);
-            OnSendToComplete(node, (struct sockaddr*)&remote->addr, bufs, A_SIZEOF(bufs), ret);
-            /*
-             * Keep trying the other nodes
-             */
-            ret = DPS_OK;
+        sendRet = DPS_NetSend(node, bufs, A_SIZEOF(bufs), (struct sockaddr*)&remote->addr, OnSendToComplete);
+        if (sendRet != DPS_OK) {
+            DPS_ERRPRINT("Failed to send subscription request %s\n", DPS_ErrTxt(sendRet));
+            OnSendToComplete(node, (struct sockaddr*)&remote->addr, bufs, A_SIZEOF(bufs), sendRet);
         }
     }
     return ret;
@@ -922,6 +943,7 @@ static DPS_Status FloodSubscriptions(DPS_Node* node, RemoteNode* newNode)
  */
 static DPS_Status UpdateInboundInterests(DPS_Node* node, RemoteNode* remote, DPS_BitVector* interests, DPS_BitVector* needs)
 {
+    DPS_DBGTRACE();
     if (remote->inbound.interests) {
         DPS_CountVectorDel(node->interests, remote->inbound.interests);
         DPS_CountVectorDel(node->needs, remote->inbound.needs);
@@ -936,7 +958,7 @@ static DPS_Status UpdateInboundInterests(DPS_Node* node, RemoteNode* remote, DPS
 }
 
 /*
- * A subscription filter
+ *
  */
 static DPS_Status DecodeSubscriptionRequest(DPS_Node* node, DPS_Buffer* buffer, const struct sockaddr* addr)
 {
@@ -984,41 +1006,46 @@ static DPS_Status DecodeSubscriptionRequest(DPS_Node* node, DPS_Buffer* buffer, 
     }
     ret = UpdateInboundInterests(node, remote, interests, needs);
     if (ret == DPS_OK) {
-        uint32_t elapsed;
-        DPS_Publication* pub;
-        DPS_Publication* next;
-        /*
-         * Determine what if anything has changed
-         */
         ret = FloodSubscriptions(node, isNew ? remote : NULL);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("FloodSubscriptions failed %s\n", DPS_ErrTxt(ret));
-        }
-        LazyCheckTTLs(node);
-        /*
-         * Check if any local or retained publications need to be forwarded to this subscriber
-         */
-        for (pub = node->publications; pub != NULL; pub = pub->next) {
-            /*
-             * Save next in case pub is expired
-             */
-            next = pub->next;
-            ret = ForwardPubToSubs(node, pub, isNew ? remote : NULL, NULL);
-            if (ret != DPS_OK) {
-                DPS_ERRPRINT("ForwardPubToSubs failed %s\n", DPS_ErrTxt(ret));
-            }
-            /*
-             * Could be a network send error
-             */
-            ret = DPS_OK;
+            return ret;
         }
     }
+    /*
+     * Expire any stale retained publications
+     */
+    LazyCheckTTLs(node);
     /*
      * We don't need to keep a remote node that has no inbound interests
      */
     if (DPS_BitVectorIsClear(remote->inbound.interests)) {
         DPS_DBGPRINT("Remote node has no interests - deleting\n", RemoteNodeAddrText(remote));
         DeleteRemoteNode(node, remote);
+        return DPS_OK;
+    }
+    /*
+     * TODO - avoid sending duplicate publications
+     *
+     * If the remote already exists and the new interests are
+     * not a subset of the existing interests:
+     *
+     * 1) Determine which publications matched the old interests.
+     *
+     * 2) For each publication that did not match the old interests
+     *    check if the publication matches the new interests
+     */
+    if (ret == DPS_OK) {
+        DPS_Publication* pub;
+        /*
+         * Check if any local or retained publications need to be forwarded to this subscriber
+         */
+        for (pub = node->publications; pub != NULL; pub = pub->next) {
+            DPS_Status pubRet = ForwardPubToOneSub(node, pub, remote);
+            if (pubRet != DPS_OK) {
+                DPS_ERRPRINT("ForwardPubToOneSub failed %s\n", DPS_ErrTxt(pubRet));
+            }
+        }
     }
     return ret;
 }
@@ -1132,6 +1159,25 @@ static ssize_t OnNetReceive(DPS_Node* node, const struct sockaddr* addr, const u
     return 0;
 }
 
+static void FreeNode(DPS_Node* node)
+{
+    while (node->remoteNodes) {
+        DeleteRemoteNode(node, node->remoteNodes);
+    }
+    while (node->subscriptions) {
+        node->subscriptions = FreeSubscription(node->subscriptions);
+    }
+    while (node->publications) {
+        node->publications = FreePublication(node, node->publications);
+    }
+    DPS_CountVectorFree(node->interests);
+    DPS_CountVectorFree(node->needs);
+    DPS_BitVectorFree(node->scratch.bf);
+    DPS_BitVectorFree(node->scratch.fh);
+    DPS_HistoryFree(&node->history);
+    free(node);
+}
+
 DPS_Node* DPS_InitNode(int mcast, int tcpPort, const char* separators)
 {
     DPS_Status ret;
@@ -1140,7 +1186,6 @@ DPS_Node* DPS_InitNode(int mcast, int tcpPort, const char* separators)
     if (!node) {
         return NULL;
     }
-
     strncpy(node->separators, separators, sizeof(node->separators));
     node->loop = uv_default_loop();
     /*
@@ -1150,26 +1195,21 @@ DPS_Node* DPS_InitNode(int mcast, int tcpPort, const char* separators)
     uv_timer_init(node->loop, &node->shutdownTimer);
 
     node->interests = DPS_CountVectorAlloc();
-    if (!node->interests) {
-        free(node);
-        return NULL;
-    }
     node->needs = DPS_CountVectorAllocFH();
-    if (!node->needs) {
-        free(node->interests);
-        free(node);
+    node->scratch.bf = DPS_BitVectorAlloc();
+    node->scratch.fh = DPS_BitVectorAllocFH();
+
+    if (!node->interests || !node->needs || !node->scratch.bf || !node->scratch.fh) {
+        FreeNode(node);
         return NULL;
     }
-
     if (mcast & DPS_MCAST_PUB_ENABLE_RECV) {
         node->mcastReceiver = DPS_MulticastStartReceive(node, OnMulticastReceive);
     }
     if (mcast & DPS_MCAST_PUB_ENABLE_SEND) {
         node->mcastSender = DPS_MulticastStartSend(node);
     }
-
     node->netListener = DPS_NetStartListening(node, tcpPort, OnNetReceive);
-
     return node;
 }
 
@@ -1208,24 +1248,9 @@ static void TerminateOnTimeout(uv_timer_t* handle)
 
     if (uv_loop_alive(handle->loop)) {
         uv_timer_start(&node->shutdownTimer, TerminateOnTimeout, SHUTDOWN_TIMEOUT2, 0);
-        return;
+    } else {
+        FreeNode(node);
     }
-
-    while (node->remoteNodes) {
-        DeleteRemoteNode(node, node->remoteNodes);
-    }
-    while (node->subscriptions) {
-        node->subscriptions = FreeSubscription(node->subscriptions);
-    }
-    while (node->publications) {
-        node->publications = FreePublication(node, node->publications);
-    }
-
-    DPS_CountVectorFree(node->interests);
-    DPS_CountVectorFree(node->needs);
-    DPS_HistoryFree(&node->history);
-
-    free(node);
 }
 
 void DPS_TerminateNode(DPS_Node* node)
@@ -1308,20 +1333,22 @@ DPS_Status DPS_Publish(DPS_Node* node, DPS_Publication* pub, void* payload, size
     pub->flags = PUB_FLAG_PUBLISH;
     ++pub->serialNumber;
 
-    if (pub->ttl && !ttl) {
+    if (ttl > 0) {
+        pub->ttl = ttl;
+    } else if (pub->ttl && (ttl <= 0)) {
         pub->flags |= PUB_FLAG_EXPIRED;
+        pub->ttl = 0;
     }
-    pub->ttl = ttl;
-    if (ttl && !node->ttlBasis) {
+    if (pub->ttl && !node->ttlBasis) {
         UpdateTTLBasis(node);
     }
     if (node->mcastSender) {
-        ret = PushPublication(node, pub, NULL);
+        ret = PushPublication(node, pub, pub->bf, NULL);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("PushPublication (multicast) returned %s\n", DPS_ErrTxt(ret));
         }
     }
-    ret = ForwardPubToSubs(node, pub, NULL, NULL);
+    ret = ForwardPubToSubs(node, pub, NULL);
 
     if (ret != DPS_OK) {
         DPS_ERRPRINT("ForwardPubToSubs returned %s\n", DPS_ErrTxt(ret));

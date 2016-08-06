@@ -114,14 +114,14 @@ DPS_Status DPS_CreatePublication(DPS_Node* node, char* const* topics, size_t num
  * Publish a set of topics along with an optional payload. The topics will be published immediately to matching
  * subscribers and then re-published whenever a new matching subscription is received.
  *
- * If the previous publication had a non-zero TTL this publication will cause and retained publications to expire.
- *
  * @param node         The local node to use
  * @param publication  The publication to send
  * @param payload      Optional payload 
  * @param len          Length of the payload
  * @param ttl          Time to live in seconds - maximum TTL is about 9 hours
  * @param oldPayload   Returns pointer to payload passed to previous call to DPS_Pubish() 
+ *
+ * @return - DPS_OK if the topics were succesfully published
  */
 DPS_Status DPS_Publish(DPS_Node* node, DPS_Publication* pub, void* payload, size_t len, int16_t ttl, void** oldPayload);
 
