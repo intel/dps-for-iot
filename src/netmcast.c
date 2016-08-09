@@ -105,18 +105,22 @@ static DPS_Status MulticastRxInit(DPS_MulticastReceiver* receiver)
     uv_interface_addresses(&ifsAddrs, &numIfs);
     for (i = 0; i < numIfs; ++i) {
         uv_interface_address_t* ifn = &ifsAddrs[i];
-        const char* addr;
+        char addr[INET6_ADDRSTRLEN];
         /*
          * Filter out interfaces we are not interested in
          */
         if (!UseInterface(receiver->ipVersions, ifn)) {
             continue;
         }
-        addr = DPS_NetAddrText((struct sockaddr*)&ifn->address);
-        DPS_DBGPRINT("Joining interface %s [%s]\n", ifn->name, addr);
         if (ifn->address.address4.sin_family == AF_INET6) {
+            ret = uv_ip6_name((struct sockaddr_in6*)&ifn->address, addr, sizeof(addr));
+            assert(ret == 0);
+            DPS_DBGPRINT("Joining IPv6 interface %s [%s]\n", ifn->name, addr);
             ret = uv_udp_set_membership(&receiver->udpRx, COAP_MCAST_ALL_NODES_LINK_LOCAL_6, addr, UV_JOIN_GROUP); 
         } else {
+            ret = uv_ip4_name((struct sockaddr_in*)&ifn->address, addr, sizeof(addr));
+            assert(ret == 0);
+            DPS_DBGPRINT("Joining IPv4 interface %s [%s]\n", ifn->name, addr);
             ret = uv_udp_set_membership(&receiver->udpRx, COAP_MCAST_ALL_NODES_LINK_LOCAL_4, addr, UV_JOIN_GROUP); 
         }
         if (ret) {
