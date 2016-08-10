@@ -7,18 +7,22 @@
 #include <dps.h>
 #include <uv.h>
 
-static void OnMatch(DPS_Node* node, DPS_Subscription* subscription, const char** topics, size_t numTopics, uint8_t* data, size_t len)
+static void OnPubMatch(DPS_Node* node, DPS_Subscription* sub, DPS_Publication* pub, uint8_t* data, size_t len)
 {
     size_t i;
+    size_t numTopics = DPS_SubscriptionGetNumTopics(node, sub);
 
     DPS_PRINT("Got match for:\n    ");
     for (i = 0; i < numTopics; ++i) {
         if (i) {
             DPS_PRINT(" & ");
         }
-        DPS_PRINT("%s", topics[i]);
+        DPS_PRINT("%s", DPS_SubscriptionGetTopic(node, sub, i));
     }
     DPS_PRINT("\n");
+    if (data) {
+        DPS_PRINT("%.*s\n", len, data);
+    }
 }
 
 #define MAX_SUB      4
@@ -68,7 +72,7 @@ static void OnTimer(uv_timer_t* handle)
         sprintf(topics[i], fmt, a, b, c, d);
     }
 
-    ret = DPS_Subscribe(node, topics, numTopics, OnMatch, &subscriptions[sub]);
+    ret = DPS_Subscribe(node, topics, numTopics, OnPubMatch, &subscriptions[sub]);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to susbscribe topics - error=%s\n", DPS_ErrTxt(ret));
     }

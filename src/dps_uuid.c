@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <dps_dbg.h>
+#include <sha1.h>
 #include <dps_uuid.h>
 
 /*
@@ -11,7 +12,7 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 /*
  * Linux specific implementation
  */
-static const char* uuidPath = "/proc/sys/kernel/random/uuid";
+static const char* randPath = "/dev/urandom";
 
 static inline uint8_t BIN(char c)
 {
@@ -36,28 +37,47 @@ const char* DPS_UUIDToString(DPS_UUID* uuid)
     return str;
 }
 
-DPS_Status DPS_GenerateUUID(DPS_UUID* uuid)
+static struct {
+    uint64_t nonce[2];
+    uint32_t seeds[4];
+} entropy; 
+
+DPS_Status DPS_InitUUID()
 {
-    size_t sz;
-    char uuidStr[40];
-    char* p = uuidStr;
-    FILE* f = fopen(uuidPath, "r");
-    if (!f) {
-        DPS_ERRPRINT("fopen(\"%s\", \"r\") failed\n", uuidPath);
-        return DPS_ERR_READ;
-    }
-    sz = fread(uuidStr, 1, sizeof(uuidStr), f);
-    fclose(f);
-    uuidStr[sz] = 0;
-    for (sz = 0; sz < sizeof(uuid->val); ++sz) {
-        if (!*p) {
-            return DPS_ERR_INVALID;
+    while (!entropy.nonce[0]) {
+        size_t sz;
+        FILE* f = fopen(randPath, "r");
+        if (!f) {
+            DPS_ERRPRINT("fopen(\"%s\", \"r\") failed\n", randPath);
+            return DPS_ERR_READ;
         }
-        uuid->val[sz] = BIN(*p++) << 4 | BIN(*p++);
-        if (*p == '-') {
-            ++p;
+        sz = fread(&entropy, 1, sizeof(entropy), f);
+        fclose(f);
+        if (sz != sizeof(entropy)) {
+            return DPS_ERR_READ;
         }
     }
     return DPS_OK;
+}
+
+/*
+ * Very simple linear congruational generator based PRNG (Lehmer/Park-Miller generator) 
+ */
+#define LEPRNG(n)  (uint32_t)(((uint64_t)(n) * 279470273ull) % 4294967291ul)
+
+/*
+ * This is fast - not secure
+ */
+void DPS_GenerateUUID(DPS_UUID* uuid)
+{
+    uint64_t* u = (uint64_t*)uuid;
+    uint64_t* s = (uint64_t*)entropy.seeds;
+    uint32_t s0 = entropy.seeds[0];
+    entropy.seeds[0] = LEPRNG(entropy.seeds[1]);
+    entropy.seeds[1] = LEPRNG(entropy.seeds[2]);
+    entropy.seeds[2] = LEPRNG(entropy.seeds[3]);
+    entropy.seeds[3] = LEPRNG(s0);
+    u[0] = s[0] ^ entropy.nonce[0];
+    u[1] = s[1] ^ entropy.nonce[1];
 }
 

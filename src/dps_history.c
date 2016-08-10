@@ -34,7 +34,7 @@ void DPS_FreshenHistory(DPS_History* history)
     }
 }
 
-DPS_Status DPS_AppendPubHistory(DPS_History* history, DPS_UUID* pubId, uint32_t serialNumber)
+DPS_Status DPS_AppendPubHistory(DPS_History* history, DPS_UUID* pubId, uint32_t serialNumber, DPS_NodeAddress* addr)
 {
     uint64_t now = uv_hrtime();
     DPS_PubHistory* ph = malloc(sizeof(DPS_PubHistory));
@@ -44,6 +44,7 @@ DPS_Status DPS_AppendPubHistory(DPS_History* history, DPS_UUID* pubId, uint32_t 
     }
     ph->pub.id = *pubId;
     ph->pub.sn = serialNumber;
+    ph->pub.addr = *addr;
     ph->next = NULL;
     ph->expiration = now + PUB_HISTORY_LIFETIME;
     if (history->newest) {
@@ -62,7 +63,7 @@ int DPS_PublicationIsStale(DPS_History* history, DPS_UUID* pubId, uint32_t seria
 {
     DPS_PubHistory* ph = history->oldest;
     /*
-     * TODO - for scalabililty nees to replace the linear search with a faster lookup 
+     * TODO - for scalabililty nees to replace the linear search with a more efficient lookup 
      */
     while (ph) {
         if ((ph->pub.sn == serialNumber) && (memcmp(&ph->pub.id, pubId, sizeof(pubId->val)) == 0)) {
@@ -85,3 +86,20 @@ void DPS_HistoryFree(DPS_History* history)
     history->newest = NULL;
     history->count = 0;
 }
+
+DPS_Status DPS_LookupPublisher(DPS_History* history, DPS_UUID* pubId, uint32_t serialNumber, DPS_NodeAddress** addr)
+{
+    DPS_PubHistory* ph = history->oldest;
+    /*
+     * TODO - for scalabililty nees to replace the linear search with a more efficient lookup 
+     */
+    while (ph) {
+        if ((ph->pub.sn == serialNumber) && (memcmp(&ph->pub.id, pubId, sizeof(pubId->val)) == 0)) {
+            *addr = &ph->pub.addr;
+            return DPS_OK;
+        }
+        ph = ph->next;
+    }
+    return DPS_ERR_MISSING;
+}
+

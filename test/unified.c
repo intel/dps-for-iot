@@ -41,16 +41,17 @@ static int IntArg(char* opt, char*** argp, int* argcp, int* val, uint32_t min, u
     return 1;
 }
 
-static void OnMatch(DPS_Node* node, DPS_Subscription* subscription, const char** topics, size_t numTopics, uint8_t* data, size_t len)
+static void OnPubMatch(DPS_Node* node, DPS_Subscription* sub, DPS_Publication* pub, uint8_t* data, size_t len)
 {
     size_t i;
+    size_t numTopics = DPS_SubscriptionGetNumTopics(node, sub);
 
     DPS_PRINT("Got match for:\n    ");
     for (i = 0; i < numTopics; ++i) {
         if (i) {
             DPS_PRINT(" & ");
         }
-        DPS_PRINT("%s", topics[i]);
+        DPS_PRINT("%s", DPS_SubscriptionGetTopic(node, sub, i));
     }
     DPS_PRINT("\n");
     if (data) {
@@ -179,7 +180,7 @@ int main(int argc, char** argv)
      */
     for (s = 0; s < numSubs; ++s) {
         DPS_Subscription* subscription;
-        ret = DPS_Subscribe(subNode[s], subTopics, 1, OnMatch, &subscription);
+        ret = DPS_Subscribe(subNode[s], subTopics, 1, OnPubMatch, &subscription);
         if (ret != DPS_OK)  {
             DPS_ERRPRINT("Failed to susbscribe to topics - error=%s\n", DPS_ErrTxt(ret));
         }

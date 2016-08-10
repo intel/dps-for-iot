@@ -12,9 +12,14 @@ typedef struct {
 } DPS_UUID;
 
 /**
- * Generate a UUID
+ * One time initialization
  */
-DPS_Status DPS_GenerateUUID(DPS_UUID* uuid);
+DPS_Status DPS_InitUUID();
+
+/**
+ *  Non secure generation of a random UUID.
+ */
+void DPS_GenerateUUID(DPS_UUID* uuid);
 
 /**
  * Return a string representation of a UUID. Not this function uses a static string and is non-reentrant.

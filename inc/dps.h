@@ -5,6 +5,7 @@
 #include <stddef.h>
 #include <uv.h>
 #include <dps_err.h>
+#include <dps_uuid.h>
 
 #define A_SIZEOF(a)  (sizeof(a) / sizeof((a)[0]))
 
@@ -26,8 +27,9 @@ typedef struct _DPS_Node DPS_Node;
  * Type for an address
  */
 typedef struct _DPS_NodeAddress {
-    struct sockaddr_in6 ip6;
+    struct sockaddr_storage inaddr;
 } DPS_NodeAddress;
+
 /**
  * Returns static string for a node address
  */
@@ -39,9 +41,29 @@ typedef struct _DPS_NodeAddress {
 typedef struct _DPS_Subscription DPS_Subscription;
 
 /**
+ * Get a topic for an active subscription
+ */
+const char* DPS_SubscriptionGetTopic(DPS_Node* node, DPS_Subscription* subscription, size_t index);
+
+/**
+ * Get the number of topics registered with an active subscription
+ */
+size_t DPS_SubscriptionGetNumTopics(DPS_Node* node, DPS_Subscription* subscription);
+
+/**
  * Opaque type for an active publication
  */
 typedef struct _DPS_Publication DPS_Publication;
+
+/**
+ * Get the UUID for a publication
+ */
+const DPS_UUID* DPS_PublicationGetUUID(DPS_Node* node, DPS_Publication* publication);
+
+/**
+ * Get the serial number for a publication
+ */
+uint32_t DPS_PublicationGetSerialNumber(DPS_Node* node, DPS_Publication* publication);
 
 /**
  * For passing buffers around
@@ -136,21 +158,30 @@ DPS_Status DPS_Publish(DPS_Node* node, DPS_Publication* pub, void* payload, size
 DPS_Status DPS_DestroyPublication(DPS_Node* node, DPS_Publication* pub, void** payload);
 
 /**
- * Function prototype for a subscription match callback
+ * Function prototype for a publication handler called when a publication is received that
+ * matches a subscription. Note that there is a possibilitly of false-positive matches.
+ *
+ * The publication UUID and serial number can be access using the 
  *
  * @param node          The local node used in the subscribe call
- * @param subscription  Opaque handle for the subscription
- * @param topics        The topics that were matched 
- * @param numTopics     The number of topics
+ * @param subscription  Opaque handle for the subscription that was matched
+ * @param publication   Opaque handle for the publication that was received
  * @param data          Payload from the publication if any
  * @param len           Length of the payload
  */
-typedef void (*DPS_MatchHandler)(DPS_Node* node,
-                                 DPS_Subscription* sub,
-                                 const char** topics,
-                                 size_t numTopics,
-                                 uint8_t* data,
-                                 size_t len);
+typedef void (*DPS_PublicationHandler)(DPS_Node* node, DPS_Subscription* sub, DPS_Publication* pub, uint8_t* data, size_t len);
+
+/**
+ * Aknowledge a publication. Ideally a publication should be acknowledged from within the publication
+ * handler callback function.
+ *
+ * @param node          The local node that received the publication
+ * @param pubId         The UUID of the publication to acknowledge
+ * @param serialNumber  The serial number of the publication to acknowledge
+ * @param data          Optional payload to accompany the aknowledgment
+ * @param len           The length of the payload
+ */
+DPS_Status DPS_AcknowledgePublication(DPS_Node* node, DPS_UUID* pubId, uint32_t serialNumber, uint8_t* data, size_t len);
 
 /**
  * Susbscribe to one or more topics. All topics must match
@@ -161,7 +192,7 @@ typedef void (*DPS_MatchHandler)(DPS_Node* node,
  * @param handler      Callback function to be called with matching topics
  * @param subscription Returns an opaque handle that can be used to cancel the subscription
  */
-DPS_Status DPS_Subscribe(DPS_Node* node, char* const* topics, size_t numTopics, DPS_MatchHandler handler, DPS_Subscription** sub);
+DPS_Status DPS_Subscribe(DPS_Node* node, char* const* topics, size_t numTopics, DPS_PublicationHandler handler, DPS_Subscription** sub);
 
 /**
  * Cancel subscription to a topic
@@ -172,23 +203,23 @@ DPS_Status DPS_Subscribe(DPS_Node* node, char* const* topics, size_t numTopics, 
 DPS_Status DPS_SubscribeCancel(DPS_Node* node, DPS_Subscription* sub);
 
 /**
- * Join the local node to a remote publisher.
+ * Join the local node to a remote node
  *
  * @param node         The local node to use
- * @param addr         The address of the publisher to join
+ * @param addr         The address of the remote node to join
  */
 DPS_Status DPS_Join(DPS_Node* node, DPS_NodeAddress* addr);
 
 /**
- * Remove a publisher.
+ * Remove a remote node.
  *
  * @param node         The local node to use
- * @param addr         The address of a publisher to leave
+ * @param addr         The address of a remote node
  */
 DPS_Status DPS_Leave(DPS_Node* node, DPS_NodeAddress* addr);
 
 /**
- * Terminate a node and free any associated resources.
+ * Terminate a local node and free any associated resources.
  */
 void DPS_TerminateNode(DPS_Node* node);
 

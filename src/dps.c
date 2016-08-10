@@ -23,11 +23,15 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 #define _MIN_(x, y)  (((x) < (y)) ? (x) : (y))
 
 
-static const char DPS_SubscriptionURI[] = "dps";
+static const char DPS_SubscriptionURI[] = "dps/sub";
+static const char DPS_PublicationURI[] = "dps/pub";
+static const char DPS_AcknowledgmentURI[] = "dps/ack";
+
+typedef enum { NO_REQ, SUB_REQ, PUB_REQ, ACK_REQ } RequestType;
 
 typedef struct _RemoteNode {
     uint8_t joined;                    /* True if this is a node that was explicitly joined */
-    struct sockaddr_storage addr;
+    DPS_NodeAddress addr;
     struct {
         DPS_BitVector* needs;          /* Bit vector of needs received from  this remote node */
         DPS_BitVector* interests;      /* Bit vector of interests received from  this remote node */
@@ -46,7 +50,7 @@ typedef struct _RemoteNode {
 typedef struct _DPS_Subscription {
     DPS_BitVector* needs;           /* Subscription needs */
     DPS_BitVector* bf;              /* The Bloom filter bit vector for the topics for this subscription */
-    DPS_MatchHandler handler;       /* Callback function to be called for a matching publication */
+    DPS_PublicationHandler handler; /* Callback function to be called for a matching publication */
     DPS_Subscription* next;
     size_t numTopics;               /* Number of subscription topics */
     char* topics[1];                /* Subscription topics */
@@ -106,6 +110,8 @@ typedef struct _DPS_Node {
 
     DPS_NetListener* netListener;         /* TCP listener */
 
+    DPS_Publication* currentPub;          /* Publication currently be passed to callback handler */
+
 } DPS_Node;
 
 #ifdef NDEBUG
@@ -129,12 +135,12 @@ static void DumpTopics(char* const* topics, size_t numTopics)
 
 #define RemoteNodeAddrText(n)  DPS_NetAddrText((struct sockaddr*)(&(n)->addr))
 
-static void CopySockaddr(struct sockaddr_storage* dest, struct sockaddr* addr)
+static void CopySockaddr(DPS_NodeAddress* dest, struct sockaddr* addr)
 {
     if (addr->sa_family == AF_INET6) {
-        memcpy(dest, addr, sizeof(struct sockaddr_in6));
+        memcpy(&dest->inaddr, addr, sizeof(struct sockaddr_in6));
     } else {
-        memcpy(dest, addr, sizeof(struct sockaddr_in));
+        memcpy(&dest->inaddr, addr, sizeof(struct sockaddr_in));
     }
 }
 
@@ -149,24 +155,24 @@ static uint16_t GetPortNumber(struct sockaddr* addr)
     return ntohs(port);
 }
 
-static struct sockaddr* AddrSetPort(struct sockaddr_storage* dest, const struct sockaddr* addr, uint16_t port)
+static struct sockaddr* AddrSetPort(DPS_NodeAddress* dest, const struct sockaddr* addr, uint16_t port)
 {
     port = htons(port);
     if (addr->sa_family == AF_INET6) {
-        struct sockaddr_in6* ip6 = (struct sockaddr_in6*)dest;
+        struct sockaddr_in6* ip6 = (struct sockaddr_in6*)&dest->inaddr;
         memcpy(ip6, addr, sizeof(*ip6));
         ip6->sin6_port = port;
     } else {
-        struct sockaddr_in* ip4 = (struct sockaddr_in*)dest;
+        struct sockaddr_in* ip4 = (struct sockaddr_in*)&dest->inaddr;
         memcpy(ip4, addr, sizeof(*ip4));
         ip4->sin_port = port;
     }
-    return (struct sockaddr*)dest;
+    return (struct sockaddr*)&dest->inaddr;
 }
 
-static int SameAddr(struct sockaddr_storage* addr, const struct sockaddr* b)
+static int SameAddr(DPS_NodeAddress* addr, const struct sockaddr* b)
 {
-    struct sockaddr* a = (struct sockaddr*)addr;
+    struct sockaddr* a = (struct sockaddr*)&addr->inaddr;
 
     if (a->sa_family != b->sa_family) {
         return 0;
@@ -594,8 +600,8 @@ static DPS_Status PushPublication(DPS_Node* node, DPS_Publication* pub, DPS_BitV
         return DPS_OK;
     }
     opts[0].id = COAP_OPT_URI_PATH;
-    opts[0].val = DPS_SubscriptionURI;
-    opts[0].len = sizeof(DPS_SubscriptionURI);
+    opts[0].val = DPS_PublicationURI;
+    opts[0].len = sizeof(DPS_PublicationURI);
     /*
      * Write the listening port, ttl, pubId, and serial number
      */
@@ -657,12 +663,14 @@ static DPS_Status ForwardPubToOneSub(DPS_Node* node, DPS_Publication* pub, Remot
 /*
  * Forward a publication to a specific subscriber or all matching subscribers
  */
-static DPS_Status ForwardPubToSubs(DPS_Node* node, DPS_Publication* pub, RemoteNode* pubNode)
+static DPS_Status ForwardPubToSubs(DPS_Node* node, DPS_Publication* pub, RemoteNode* pubNode, int* sendCount)
 {
     DPS_Status ret = DPS_OK;
     RemoteNode* remote = node->remoteNodes;
 
     DPS_DBGTRACE();
+
+    *sendCount = 0;
 
     if (!pub->flags & PUB_FLAG_PUBLISH) {
         return DPS_OK;
@@ -687,19 +695,43 @@ static DPS_Status ForwardPubToSubs(DPS_Node* node, DPS_Publication* pub, RemoteN
         if (ret != DPS_OK) {
             remote = DeleteRemoteNode(node, remote);
         } else {
+            (*sendCount)++;
             remote = remote->next;
         }
     }
     return ret;
 }
 
-static DPS_Status DecodePublicationRequest(DPS_Node* node, DPS_Buffer* buffer, const struct sockaddr* addr)
+static DPS_Status DecodeAcknowledgment(DPS_Node* node, DPS_Buffer* buffer, const struct sockaddr* addr)
+{
+    DPS_Status ret;
+    DPS_Publication pub;
+    uint32_t serialNumber;
+    DPS_UUID* pubId;
+    size_t len;
+
+    DPS_DBGTRACE();
+
+    ret = CBOR_DecodeBytes(buffer, (uint8_t**)&pubId, &len);
+    if (ret != DPS_OK) {
+        return ret;
+    }
+    if (len != sizeof(DPS_UUID)) {
+        return DPS_ERR_INVALID;
+    }
+    ret = CBOR_DecodeUint32(buffer, &serialNumber);
+    if (ret != DPS_OK) {
+        return ret;
+    }
+    return ret;
+}
+
+static DPS_Status DecodePublication(DPS_Node* node, DPS_Buffer* buffer, const struct sockaddr* addr)
 {
     DPS_Status ret;
     RemoteNode* pubNode;
-    int noChange = DPS_FALSE;
     uint16_t port;
-    struct sockaddr_storage senderAddr;
+    DPS_NodeAddress senderAddr;
     DPS_Publication pub;
     DPS_UUID* pubId;
     size_t len;
@@ -732,8 +764,6 @@ static DPS_Status DecodePublicationRequest(DPS_Node* node, DPS_Buffer* buffer, c
         DPS_DBGPRINT("Publication is stale\n");
         return DPS_OK;
     }
-    DPS_AppendPubHistory(&node->history, &pub.pubId, pub.serialNumber);
-
     ret = AddRemoteNode(node, AddrSetPort(&senderAddr, addr, port), &pubNode);
     if (ret == DPS_ERR_EXISTS) {
         DPS_DBGPRINT("Updating existing node\n");
@@ -758,6 +788,7 @@ static DPS_Status DecodePublicationRequest(DPS_Node* node, DPS_Buffer* buffer, c
         goto Exit;
     }
     if (ret == DPS_OK) {
+        int sendCount;
         DPS_Subscription* sub;
         DPS_Subscription* next;
         /*
@@ -772,7 +803,9 @@ static DPS_Status DecodePublicationRequest(DPS_Node* node, DPS_Buffer* buffer, c
                 next = sub->next;
                 if (DPS_BitVectorIncludes(pub.bf, sub->bf)) {
                     DPS_DBGPRINT("Matched subscription\n");
-                    sub->handler(node, sub, (const char**)sub->topics, sub->numTopics, pub.payload, pub.len);
+                    node->currentPub = &pub;
+                    sub->handler(node, sub, &pub, pub.payload, pub.len);
+                    node->currentPub = NULL;
                 }
             }
         }
@@ -780,7 +813,13 @@ static DPS_Status DecodePublicationRequest(DPS_Node* node, DPS_Buffer* buffer, c
         /*
          * Forward the publication to matching remote subscribers
          */
-        ret = ForwardPubToSubs(node, &pub, pubNode);
+        ret = ForwardPubToSubs(node, &pub, pubNode, &sendCount);
+        /*
+         * Record history for this publication if it was forwarded to at least one subscriber
+         */
+        if (sendCount > 0) {
+            DPS_AppendPubHistory(&node->history, &pub.pubId, pub.serialNumber, &pubNode->addr);
+        }
         /*
          * Check if the publication should be retained or expired
          */
@@ -789,6 +828,7 @@ static DPS_Status DecodePublicationRequest(DPS_Node* node, DPS_Buffer* buffer, c
         } else {
             ret = RetainPublication(node, &pub);
         }
+
     }
 
 Exit:
@@ -803,8 +843,47 @@ Exit:
     return ret;
 }
 
+
+static DPS_Status ComposeAknowledgment(DPS_Node* node, RemoteNode* remote, int protocol, uv_buf_t* bufs, size_t numBufs)
+{
+    DPS_Status ret;
+    CoAP_Option opts[1];
+    uint16_t port;
+    DPS_Buffer payload;
+    size_t allocSize = DPS_BitVectorSerializeMaxSize(remote->outbound.needs) + DPS_BitVectorSerializeMaxSize(remote->outbound.interests) + 32;
+
+    if (!node->netListener) {
+        return DPS_ERR_NETWORK;
+    }
+    port = DPS_GetPortNumber(node);
+
+    opts[0].id = COAP_OPT_URI_PATH;
+    opts[0].val = DPS_AcknowledgmentURI;
+    opts[0].len = sizeof(DPS_AcknowledgmentURI);
+
+    ret = DPS_BufferInit(&payload, NULL, allocSize);
+    if (ret != DPS_OK) {
+        return ret;
+    }
+    /*
+     * Write listening port
+     */
+    CBOR_EncodeUint16(&payload, port);
+    ret = DPS_BitVectorSerialize(remote->outbound.needs, &payload);
+    if (ret == DPS_OK) {
+        ret = DPS_BitVectorSerialize(remote->outbound.interests, &payload);
+    }
+    if (ret == DPS_OK) {
+        ret = CoAP_Compose(protocol, bufs, numBufs, COAP_CODE(COAP_REQUEST, COAP_GET), opts, A_SIZEOF(opts), &payload);
+    }
+    if (ret != DPS_OK) {
+        free(payload.base);
+    }
+    return ret;
+}
+
 /*
- * Subscription request:
+ * Send a subscription request:
  *
  * COAP header
  * COAP URI PATH
@@ -813,8 +892,9 @@ Exit:
  *      Our IPv6 address (filled in later)
  *      Serialized bloom filter
  */
-static DPS_Status ComposeSubscriptionRequest(DPS_Node* node, RemoteNode* remote, int protocol, uv_buf_t* bufs, size_t numBufs)
+static DPS_Status SendSubscription(DPS_Node* node, RemoteNode* remote)
 {
+    uv_buf_t bufs[3];
     DPS_Status ret;
     CoAP_Option opts[1];
     uint16_t port;
@@ -843,23 +923,13 @@ static DPS_Status ComposeSubscriptionRequest(DPS_Node* node, RemoteNode* remote,
         ret = DPS_BitVectorSerialize(remote->outbound.interests, &payload);
     }
     if (ret == DPS_OK) {
-        ret = CoAP_Compose(protocol, bufs, numBufs, COAP_CODE(COAP_REQUEST, COAP_GET), opts, A_SIZEOF(opts), &payload);
+        ret = CoAP_Compose(COAP_OVER_TCP, bufs, A_SIZEOF(bufs), COAP_CODE(COAP_REQUEST, COAP_GET), opts, A_SIZEOF(opts), &payload);
     }
     if (ret != DPS_OK) {
         free(payload.base);
+        return ret;
     }
-    return ret;
-}
-
-static DPS_Status SendSubscriptions(DPS_Node* node, RemoteNode* remote)
-{
-    uv_buf_t bufs[3];
-    DPS_Status ret;
-
-    ret = ComposeSubscriptionRequest(node, remote, COAP_OVER_TCP, bufs, A_SIZEOF(bufs));
-    if (ret == DPS_OK) {
-        ret = DPS_NetSend(node, bufs, A_SIZEOF(bufs), (struct sockaddr*)&remote->addr, OnSendToComplete);
-    }
+    ret = DPS_NetSend(node, bufs, A_SIZEOF(bufs), (struct sockaddr*)&remote->addr, OnSendToComplete);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to send subscription request %s\n", DPS_ErrTxt(ret));
         OnSendToComplete(node, (struct sockaddr*)&remote->addr, bufs, A_SIZEOF(bufs), ret);
@@ -896,14 +966,9 @@ static DPS_Status FloodSubscriptions(DPS_Node* node, RemoteNode* newNode)
         if ((remote != newNode) && !updates) {
             continue;
         }
-        ret = ComposeSubscriptionRequest(node, remote, COAP_OVER_TCP, bufs, A_SIZEOF(bufs));
-        if (ret != DPS_OK) {
-            break;
-        }
-        sendRet = DPS_NetSend(node, bufs, A_SIZEOF(bufs), (struct sockaddr*)&remote->addr, OnSendToComplete);
+        sendRet = SendSubscription(node, remote);
         if (sendRet != DPS_OK) {
             DPS_ERRPRINT("Failed to send subscription request %s\n", DPS_ErrTxt(sendRet));
-            OnSendToComplete(node, (struct sockaddr*)&remote->addr, bufs, A_SIZEOF(bufs), sendRet);
         }
     }
     return ret;
@@ -931,12 +996,12 @@ static DPS_Status UpdateInboundInterests(DPS_Node* node, RemoteNode* remote, DPS
 /*
  *
  */
-static DPS_Status DecodeSubscriptionRequest(DPS_Node* node, DPS_Buffer* buffer, const struct sockaddr* addr)
+static DPS_Status DecodeSubscription(DPS_Node* node, DPS_Buffer* buffer, const struct sockaddr* addr)
 {
     DPS_Status ret;
     DPS_BitVector* interests;
     DPS_BitVector* needs;
-    struct sockaddr_storage senderAddr;
+    DPS_NodeAddress senderAddr;
     uint16_t port;
     RemoteNode* remote;
     int isNew;
@@ -1025,40 +1090,62 @@ static DPS_Status DecodeSubscriptionRequest(DPS_Node* node, DPS_Buffer* buffer, 
 static void DecodeRequest(DPS_Node* node, CoAP_Parsed* coap, DPS_Buffer* payload, const struct sockaddr* sender)
 {
     DPS_Status ret;
-    int gotURI = 0;
+    RequestType req = 0;
     size_t i;
 
     for (i = 0; i < coap->numOpts; ++i) {
         if (coap->opts[i].id == COAP_OPT_URI_PATH) {
             if (strncmp(coap->opts[i].val, DPS_SubscriptionURI, coap->opts[i].len) == 0) {
-                gotURI = 1;
+                req = SUB_REQ;
+                break;
+            }
+            if (strncmp(coap->opts[i].val, DPS_PublicationURI, coap->opts[i].len) == 0) {
+                req = PUB_REQ;
+                break;
+            }
+            if (strncmp(coap->opts[i].val, DPS_AcknowledgmentURI, coap->opts[i].len) == 0) {
+                req = ACK_REQ;
                 break;
             }
         }
     }
-    if (!gotURI) {
+    if (!req) {
         DPS_DBGPRINT("CoAP packet is not for us\n");
         return;
     }
-    if (coap->code == COAP_CODE(COAP_REQUEST, COAP_GET)) {
-        /*
-         * This should be a subscription request
-         */
-        ret = DecodeSubscriptionRequest(node, payload, sender);
-        if (ret != DPS_OK) {
-            DPS_DBGPRINT("DecodeSubscriptionRequest returned %s\n", DPS_ErrTxt(ret));
+    switch (req) {
+    case SUB_REQ:
+        if (coap->code != COAP_CODE(COAP_REQUEST, COAP_GET)) {
+            DPS_ERRPRINT("Expected a GET request\n");
+            return;
         }
-    } else if (coap->code == COAP_CODE(COAP_REQUEST, COAP_PUT)) {
-        /*
-         * This should be a publication
-         */
+        ret = DecodeSubscription(node, payload, sender);
+        if (ret != DPS_OK) {
+            DPS_DBGPRINT("DecodeSubscription returned %s\n", DPS_ErrTxt(ret));
+        }
+        break;
+    case PUB_REQ:
+        if (coap->code != COAP_CODE(COAP_REQUEST, COAP_PUT)) {
+            DPS_ERRPRINT("Expected a PUT request\n");
+            return;
+        }
         DPS_DBGPRINT("Received publication via %s\n", DPS_NetAddrText(sender));
-        ret = DecodePublicationRequest(node, payload, sender);
+        ret = DecodePublication(node, payload, sender);
         if (ret != DPS_OK) {
-            DPS_DBGPRINT("DecodePublicationRequest returned %s\n", DPS_ErrTxt(ret));
+            DPS_DBGPRINT("DecodePublication returned %s\n", DPS_ErrTxt(ret));
         }
-    } else {
-        DPS_ERRPRINT("Ignoring unexpected CoAP packet: code= %d\n", coap->code);
+        break;
+    case ACK_REQ:
+        if (coap->code != COAP_CODE(COAP_REQUEST, COAP_PUT)) {
+            DPS_ERRPRINT("Expected a PUT request\n");
+            return;
+        }
+        DPS_DBGPRINT("Received acknowledgment via %s\n", DPS_NetAddrText(sender));
+        ret = DecodeAcknowledgment(node, payload, sender);
+        if (ret != DPS_OK) {
+            DPS_DBGPRINT("DecodeAcknowledgment returned %s\n", DPS_ErrTxt(ret));
+        }
+        break;
     }
 }
 
@@ -1175,6 +1262,11 @@ DPS_Node* DPS_InitNode(int mcast, int tcpPort, const char* separators)
         FreeNode(node);
         return NULL;
     }
+    ret = DPS_InitUUID();
+    if (ret != DPS_OK) {
+        FreeNode(node);
+        return NULL;
+    }
     if (mcast & DPS_MCAST_PUB_ENABLE_RECV) {
         node->mcastReceiver = DPS_MulticastStartReceive(node, OnMulticastReceive);
     }
@@ -1286,7 +1378,7 @@ DPS_Status DPS_CreatePublication(DPS_Node* node, char* const* topics, size_t num
 
 DPS_Status DPS_Publish(DPS_Node* node, DPS_Publication* pub, void* payload, size_t len, int16_t ttl, void** oldPayload)
 {
-    size_t i;
+    int sendCount = 0;
     DPS_Status ret = DPS_OK;
 
     DPS_DBGTRACE();
@@ -1315,7 +1407,7 @@ DPS_Status DPS_Publish(DPS_Node* node, DPS_Publication* pub, void* payload, size
             DPS_ERRPRINT("PushPublication (multicast) returned %s\n", DPS_ErrTxt(ret));
         }
     }
-    ret = ForwardPubToSubs(node, pub, NULL);
+    ret = ForwardPubToSubs(node, pub, NULL, &sendCount);
 
     if (ret != DPS_OK) {
         DPS_ERRPRINT("ForwardPubToSubs returned %s\n", DPS_ErrTxt(ret));
@@ -1347,7 +1439,6 @@ DPS_Status DPS_DestroyPublication(DPS_Node* node, DPS_Publication* pub, void** p
 static DPS_Status SendInitialSubscription(DPS_Node* node, RemoteNode* remote)
 {
     DPS_Status ret;
-    uv_buf_t bufs[3];
     int updates;
 
     DPS_DBGTRACE();
@@ -1362,14 +1453,9 @@ static DPS_Status SendInitialSubscription(DPS_Node* node, RemoteNode* remote)
     /*
      * Send subscriptions to a specific remote node
      */
-    ret = ComposeSubscriptionRequest(node, remote, COAP_OVER_TCP, bufs, A_SIZEOF(bufs));
-    if (ret != DPS_OK) {
-        return ret;
-    }
-    ret = DPS_NetSend(node, bufs, A_SIZEOF(bufs), (struct sockaddr*)&remote->addr, OnSendToComplete);
+    ret = SendSubscription(node, remote);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to send subscription request: ret=%d\n", ret);
-        OnSendToComplete(node, (struct sockaddr*)&remote->addr, bufs, A_SIZEOF(bufs), ret);
     }
     return ret;
 }
@@ -1382,7 +1468,7 @@ DPS_Status DPS_Join(DPS_Node* node, DPS_NodeAddress* addr)
     if (!addr || !node) {
         return DPS_ERR_NULL;
     }
-    ret = AddRemoteNode(node, (struct sockaddr*)&addr->ip6, &remote);
+    ret = AddRemoteNode(node, (struct sockaddr*)&addr->inaddr, &remote);
     if (remote) {
         remote->joined = DPS_TRUE;
     }
@@ -1404,7 +1490,7 @@ DPS_Status DPS_Join(DPS_Node* node, DPS_NodeAddress* addr)
 
 DPS_Status DPS_Leave(DPS_Node* node, DPS_NodeAddress* addr)
 {
-    RemoteNode* remote = LookupRemoteNode(node, (struct sockaddr*)&addr->ip6);
+    RemoteNode* remote = LookupRemoteNode(node, (struct sockaddr*)&addr->inaddr);
     if (remote) {
         DeleteRemoteNode(node, remote);
         return DPS_OK;
@@ -1413,7 +1499,23 @@ DPS_Status DPS_Leave(DPS_Node* node, DPS_NodeAddress* addr)
     }
 }
 
-DPS_Status DPS_Subscribe(DPS_Node* node, char* const* topics, size_t numTopics, DPS_MatchHandler handler, DPS_Subscription** subscription)
+DPS_Status DPS_AcknowledgePublication(DPS_Node* node, DPS_UUID* pubId, uint32_t serialNumber, uint8_t* data, size_t len)
+{
+    DPS_Status ret = DPS_OK;
+    DPS_NodeAddress* addr;
+
+    if (!node || !pubId) {
+        return DPS_ERR_NULL;
+    }
+    ret = DPS_LookupPublisher(&node->history, pubId, serialNumber, &addr);
+    if (ret != DPS_OK) {
+        return ret;
+    }
+    return ret;
+}
+
+
+DPS_Status DPS_Subscribe(DPS_Node* node, char* const* topics, size_t numTopics, DPS_PublicationHandler handler, DPS_Subscription** subscription)
 {
     size_t i;
     DPS_Subscription* sub;
@@ -1549,13 +1651,67 @@ DPS_Status DPS_ResolveAddress(DPS_Node* node, const char* host, const char* serv
     } else {
         struct sockaddr_in6* ip6 = (struct sockaddr_in6*)info.addrinfo->ai_addr;
         if (ip6->sin6_family == AF_INET6) {
-            addr->ip6 = *ip6;
+            memcpy(&addr->inaddr, ip6, sizeof(*ip6));
             freeaddrinfo(info.addrinfo);
         } else {
             dpsRet = DPS_ERR_NETWORK;
         }
     }
     return dpsRet;
+}
+
+size_t DPS_SubscriptionGetNumTopics(DPS_Node* node, DPS_Subscription* subscription)
+{
+    DPS_Subscription* sub;
+
+    for (sub = node->subscriptions; sub != NULL; sub = sub->next) {
+        if (sub == subscription) {
+            return sub->numTopics;
+        }
+    }
+    return 0;
+}
+
+const char* DPS_SubscriptionGetTopic(DPS_Node* node, DPS_Subscription* subscription, size_t index)
+{
+    DPS_Subscription* sub;
+
+    for (sub = node->subscriptions; sub != NULL; sub = sub->next) {
+        if (sub == subscription) {
+            if (sub->numTopics > index) {
+                return sub->topics[index];
+            } else {
+                return NULL;
+            }
+        }
+    }
+    return NULL;
+}
+
+const DPS_UUID* DPS_PublicationGetUUID(DPS_Node* node, DPS_Publication* publication)
+{
+    DPS_Publication* pub = publication;
+    if (pub != node->currentPub) {
+        for (pub = node->publications; pub != NULL; pub = pub->next) {
+            if (pub == publication) {
+                break;
+            }
+        }
+    }
+    return pub ? &pub->pubId : NULL;
+}
+
+uint32_t DPS_PublicationGetSerialNumber(DPS_Node* node, DPS_Publication* publication)
+{
+    DPS_Publication* pub = publication;
+    if (pub != node->currentPub) {
+        for (pub = node->publications; pub != NULL; pub = pub->next) {
+            if (pub == publication) {
+                break;
+            }
+        }
+    }
+    return pub ? pub->serialNumber : 0;
 }
 
 void DPS_DumpSubscriptions(DPS_Node* node)
