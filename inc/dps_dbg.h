@@ -31,6 +31,6 @@ extern int DPS_Debug;
 /*
  * Used at the top of a file to turn debugging on or off for that file
  */
-#define DPS_DEBUG_CONTROL(dbg) static int __DPS_DebugControl = dbg
+#define DPS_DEBUG_CONTROL(dbg) __attribute__((__unused__))static int __DPS_DebugControl = dbg
 
 #endif

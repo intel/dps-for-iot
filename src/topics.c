@@ -111,17 +111,17 @@ DPS_Status DPS_AddTopic(DPS_BitVector* bf, const char* topic, const char* separa
     }
     ret = CheckWildcarding(topic, separators, role, &wc);
     if (ret != DPS_OK) {
-        DPS_ERRPRINT("Invalid use of wildcard in topic string \"%s\"\n");
+        DPS_ERRPRINT("Invalid use of wildcard in topic string \"%s\"\n", topic);
         return ret;
     }
     tp = topic + strcspn(topic, separators);
     if (!wc) {
-        DPS_BitVectorBloomInsert(bf, topic, tlen);
+        DPS_BitVectorBloomInsert(bf, (const uint8_t*)topic, tlen);
         if (role == DPS_Sub) {
             return DPS_OK;
         }
     } else if (wc != topic) {
-        DPS_BitVectorBloomInsert(bf, topic, wc - topic);
+        DPS_BitVectorBloomInsert(bf, (const uint8_t*)topic, wc - topic);
     }
     segment = malloc(tlen + 1);
     if (!segment) {
@@ -131,24 +131,24 @@ DPS_Status DPS_AddTopic(DPS_BitVector* bf, const char* topic, const char* separa
         int len;
         segment[prefix++] = *tp++;
         if (role == DPS_Pub) {
-            DPS_BitVectorBloomInsert(bf, topic, tp - topic);
+            DPS_BitVectorBloomInsert(bf, (const uint8_t*)topic, tp - topic);
         }
         len = strcspn(tp, separators);
         if ((tp > wc) && (tp[0] != INFIX_WILDC || !tp[1])) {
             memcpy(segment + prefix, tp, len);
             segment[prefix + len] = tp[len];
-            DPS_BitVectorBloomInsert(bf, segment, prefix + len);
+            DPS_BitVectorBloomInsert(bf, (uint8_t*)segment, prefix + len);
         }
         tp += len;
     }
     if (role == DPS_Pub) {
         if (prefix > 1) {
             segment[prefix] = INFIX_WILDC;
-            DPS_BitVectorBloomInsert(bf, segment, prefix + 1);
+            DPS_BitVectorBloomInsert(bf, (uint8_t*)segment, prefix + 1);
         }
         while (prefix) {
             segment[prefix] = FINAL_WILDC;
-            DPS_BitVectorBloomInsert(bf, segment, prefix + 1);
+            DPS_BitVectorBloomInsert(bf, (uint8_t*)segment, prefix + 1);
             --prefix;
         }
     }

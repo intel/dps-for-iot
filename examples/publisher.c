@@ -97,7 +97,7 @@ static void OnInput(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf)
         }
         if (!keep) {
             DPS_DestroyPublication(node, currentPub, &data);
-            ret = DPS_CreatePublication(node, topics, numTopics, &currentPub);
+            ret = DPS_CreatePublication(node, topics, numTopics, NULL, &currentPub);
             if (ret != DPS_OK) {
                 DPS_ERRPRINT("Failed to create publication - error=%d\n", ret);
                 return;
@@ -241,7 +241,7 @@ int main(int argc, char** argv)
     }
 
     if (numTopics) {
-        ret = DPS_CreatePublication(node, topics, numTopics, &currentPub);
+        ret = DPS_CreatePublication(node, topics, numTopics, NULL, &currentPub);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("Failed to create publication - error=%d\n", ret);
             return 1;

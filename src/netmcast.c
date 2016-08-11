@@ -70,9 +70,9 @@ static void OnMcastRx(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf, cons
         return;
     }
     if (addr) {
-        DPS_DBGPRINT("Received buffer of size %d from %s\n", nread, DPS_NetAddrText(addr));
+        DPS_DBGPRINT("Received buffer of size %ld from %s\n", nread, DPS_NetAddrText(addr));
     }
-    receiver->cb(receiver->node, addr, buf->base, nread);
+    receiver->cb(receiver->node, addr, (uint8_t*)buf->base, nread);
     free(buf->base);
 }
 

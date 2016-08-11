@@ -731,9 +731,9 @@ DPS_Status DPS_BitVectorSet(DPS_BitVector* bv, uint8_t* data, size_t len)
 void DPS_BitVectorDump(const DPS_BitVector* bv, int dumpBits)
 {
     if (DPS_DEBUG_ENABLED()) {
-        DPS_PRINT("Bit len = %d, ", bv->len);
-        DPS_PRINT("Pop = %d, ", DPS_BitVectorPopCount((DPS_BitVector*)bv));
-        DPS_PRINT("RLE bits = %d, ", RLE_Size(bv));
+        DPS_PRINT("Bit len = %lu, ", bv->len);
+        DPS_PRINT("Pop = %lu, ", DPS_BitVectorPopCount((DPS_BitVector*)bv));
+        DPS_PRINT("RLE bits = %lu, ", RLE_Size(bv));
         DPS_PRINT("Loading = %.2f%%\n", DPS_BitVectorLoadFactor((DPS_BitVector*)bv));
 #ifdef DPS_DEBUG
         if (dumpBits) {
@@ -870,7 +870,7 @@ DPS_BitVector* DPS_CountVectorToIntersection(DPS_CountVector* cv)
 void DPS_CountVectorDump(DPS_CountVector* cv)
 {
     size_t i;
-    DPS_PRINT("Entries %d\n", cv->entries);
+    DPS_PRINT("Entries %lu\n", cv->entries);
     for (i = 0; i < NUM_CHUNKS(cv); ++i) {
         size_t j;
         for (j = 0; j < CHUNK_SIZE; ++j) {

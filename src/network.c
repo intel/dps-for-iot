@@ -30,7 +30,7 @@ typedef struct {
     uv_tcp_t socket;
     uint16_t readLen;
     DPS_OnReceive receiveCB;
-    uint8_t buffer[MAX_READ_LEN];
+    char buffer[MAX_READ_LEN];
     uv_shutdown_t shutdownReq;
 } NetReader;
 
@@ -44,13 +44,13 @@ static void AllocBuffer(uv_handle_t* handle, size_t suggestedSize, uv_buf_t* buf
 
 static void HandleClosed(uv_handle_t* handle)
 {
-    DPS_DBGPRINT("Closed handle %d\n", handle);
+    DPS_DBGPRINT("Closed handle %p\n", handle);
     free(handle->data);
 }
 
 static void OnShutdownComplete(uv_shutdown_t* req, int status)
 {
-    DPS_DBGPRINT("Shutdown complete handle %d\n", req->handle);
+    DPS_DBGPRINT("Shutdown complete handle %p\n", req->handle);
     if (!uv_is_closing((uv_handle_t*)req->handle)) {
         uv_close((uv_handle_t*)req->handle, HandleClosed);
     }
@@ -58,7 +58,6 @@ static void OnShutdownComplete(uv_shutdown_t* req, int status)
 
 static void OnData(uv_stream_t* socket, ssize_t nread, const uv_buf_t* buf)
 {
-    ssize_t toRead;
     NetReader* reader = (NetReader*)socket->data;
     struct sockaddr_storage sender;
     int sz = sizeof(sender);
@@ -72,7 +71,7 @@ static void OnData(uv_stream_t* socket, ssize_t nread, const uv_buf_t* buf)
     uv_tcp_getpeername((uv_tcp_t*)socket, (struct sockaddr*)&sender, &sz);
     reader->readLen += nread;
     while (1) {
-        ssize_t toRead = reader->receiveCB(reader->node, (struct sockaddr*)&sender, reader->buffer, reader->readLen);
+        ssize_t toRead = reader->receiveCB(reader->node, (struct sockaddr*)&sender, (uint8_t*)reader->buffer, reader->readLen);
         if (toRead > 0) {
             break;
         }
@@ -131,7 +130,6 @@ static void OnIncomingConnection(uv_stream_t* stream, int status)
 DPS_NetListener* DPS_NetStartListening(DPS_Node* node, int port, DPS_OnReceive cb)
 {
     int ret;
-    int len;
     DPS_NetListener* listener;
     struct sockaddr_in6 addr;
 
@@ -214,7 +212,6 @@ static void OnWriteComplete(uv_write_t* req, int status)
 
 static void OnOutgoingConnection(uv_connect_t *req, int status)
 {
-    int ret;
     NetWriter* writer = (NetWriter*)req->data;
 
     if (status == 0) {
@@ -253,7 +250,7 @@ DPS_Status DPS_NetSend(DPS_Node* node, uv_buf_t* bufs, size_t numBufs, const str
     if (len > MAX_WRITE_LEN) {
         return DPS_ERR_OVERFLOW;
     }
-    DPS_DBGPRINT("DPS_NetSend total %d bytes to %s\n", len, DPS_NetAddrText(addr));
+    DPS_DBGPRINT("DPS_NetSend total %lu bytes to %s\n", len, DPS_NetAddrText(addr));
 
     writer = calloc(1, sizeof(*writer));
     if (!writer) {

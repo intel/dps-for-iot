@@ -38,7 +38,8 @@ void DPS_HistoryFree(DPS_History* history);
  * @param history       The history from a local node
  * @param pubId         The UUID for the publication
  * @param serialNumber  The serial number for the publication
- * @param addr          The address of the node that sent or forwarded this publication
+ * @param addr          Optional address of the node that sent or forwarded this publication. This should
+ *                      only be set for publications that are requesting an acknowledgment.
  */
 DPS_Status DPS_AppendPubHistory(DPS_History* history, DPS_UUID* pubId, uint32_t serialNumber, DPS_NodeAddress* addr);
 
@@ -60,7 +61,8 @@ int DPS_PublicationIsStale(DPS_History* history, DPS_UUID* pubId, uint32_t seria
  * @param history       The history from a local node
  * @param pubId         The UUID for the publication
  * @param serialNumber  The serial number for the publication
- * @param addr          Returns the address of the publisher if there was a match
+ * @param addr          Returns the address of the publisher if there was a match - might be NULL even if
+ *                      there is a match.
  *
  * @return DPS_OK if the sender was found in the history record
  *         DPS_ERR_MISSING if no sender was found in the history record

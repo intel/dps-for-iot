@@ -23,6 +23,8 @@ const char* DPS_ErrTxt(DPS_Status s)
         ERR_CASE(DPS_ERR_BUSY);
         ERR_CASE(DPS_ERR_EXISTS);
         ERR_CASE(DPS_ERR_MISSING);
+        ERR_CASE(DPS_ERR_STALE);
+        ERR_CASE(DPS_ERR_NO_ROUTE);
     default:
         snprintf(buf, sizeof(buf), "ERR%d", s);
         return buf;

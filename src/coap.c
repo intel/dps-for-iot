@@ -31,7 +31,7 @@ static int ParseOpt(const uint8_t* buf, size_t bufLen, int prevOpt, CoAP_Option*
         buf += 1;
         bufLen -= 1;
     } else {
-        opt->id = 269 + prevOpt + buf[0] << 8 + buf[1];
+        opt->id = 269 + prevOpt + (buf[0] << 8) + buf[1];
         buf += 2;
         bufLen -= 2;
     }
@@ -45,7 +45,7 @@ static int ParseOpt(const uint8_t* buf, size_t bufLen, int prevOpt, CoAP_Option*
         buf += 1;
         bufLen -= 1;
     } else {
-        opt->len = 269 + buf[0] << 8 + buf[1];
+        opt->len = 269 + (buf[0] << 8) + buf[1];
         if (bufLen < 2) {
             return -1;
         }

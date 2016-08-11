@@ -9,12 +9,14 @@ for key, val in ARGLIST:
     if (key == 'optimize' and val == 'true'):
         cflags = ['-O3', '-DNDEBUG']
 
+# Additional warning for the core object files
+wflags = ['-Wall', '-Wno-format-extra-args']
 
 env = Environment(CPPDEFINES=cppdefines, CFLAGS=cflags, CPPPATH=['./inc'], LIBS=['uv'])
 
 print env['CPPDEFINES']
 
-objs = env.Object(Glob('src/*.c'))
+objs = env.Object(Glob('src/*.c'), CFLAGS=cflags + wflags)
 
 # Unit tests
 env.Program('bin/countvec', env.Object('test/countvec.c') + objs)
