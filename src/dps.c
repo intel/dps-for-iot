@@ -135,6 +135,21 @@ static void DumpTopics(char* const* topics, size_t numTopics)
 }
 #endif
 
+#ifdef NDEBUG
+#define DumpPubs(node)
+#else
+static void DumpPubs(DPS_Node* node)
+{
+    if (DPS_Debug) {
+        DPS_Publication* pub;
+        DPS_PRINT("Node %d:\n", DPS_GetPortNumber(node));
+        for (pub = node->publications; pub != NULL; pub = pub->next) {
+            DPS_PRINT("  %s(%d) %s ttl=%d\n", DPS_UUIDToString(&pub->pubId), pub->serialNumber, pub->flags & PUB_FLAG_RETAINED ? "RETAINED" : "", pub->ttl);
+        }
+    }
+}
+#endif
+
 #define NodeAddressText(a)        DPS_NetAddrText((struct sockaddr*)(&(a)->inaddr))
 #define RemoteNodeAddressText(n)  NodeAddressText(&(n)->addr)
 
@@ -436,6 +451,9 @@ static void LazyCheckTTLs(DPS_Node* node)
         return;
     }
     for (pub = node->publications; pub != NULL; pub = next) {
+        /*
+         * In case this publication is freed below
+         */
         next = pub->next;
         if (pub->ttl <= 0) {
             continue;
@@ -532,15 +550,24 @@ static DPS_Status RetainPublication(DPS_Node* node, DPS_Publication* pub)
         }
         DPS_DBGPRINT("Updating retained pub %s\n", DPS_UUIDToString(&pub->pubId));
     } else {
+        DPS_DBGPRINT("Retaining pub %s\n", DPS_UUIDToString(&pub->pubId));
         retained = calloc(1, sizeof(DPS_Publication));
         if (!retained) {
             return DPS_ERR_RESOURCES;
         }
         retained->next = node->publications;
         node->publications = retained;
-        DPS_DBGPRINT("Retaining pub %s\n", DPS_UUIDToString(&pub->pubId));
+        retained->pubId = pub->pubId;
+        retained->flags = (PUB_FLAG_RETAINED | PUB_FLAG_PUBLISH);
     }
-    *retained = *pub;
+    assert(retained->flags & PUB_FLAG_RETAINED && retained->flags & PUB_FLAG_PUBLISH);
+
+    retained->bf = pub->bf;
+    pub->bf = NULL;
+    retained->ttl = pub->ttl;
+    retained->serialNumber = pub->serialNumber;
+    retained->ackRequested = pub->ackRequested;
+
     if (pub->len) {
         retained->payload = malloc(pub->len);
         if (!retained->payload) {
@@ -548,18 +575,15 @@ static DPS_Status RetainPublication(DPS_Node* node, DPS_Publication* pub)
             return DPS_ERR_RESOURCES;
         }
         memcpy(retained->payload, pub->payload, pub->len);
+        retained->len = pub->len;
     }
-    retained->flags = (PUB_FLAG_RETAINED | PUB_FLAG_PUBLISH);
     /*
-     * We have taken ownership of the Bloom filter
-     */
-    pub->bf = NULL;
-    /*
-     * If there are no other retained messages the checkTTL flag will not be set
+     * If there are no other retained messages the ttlBasis time will not be set
      */
     if (!node->ttlBasis) {
         UpdateTTLBasis(node);
     }
+    DumpPubs(node);
     return DPS_OK;
 }
 
@@ -784,6 +808,9 @@ static DPS_Status DecodeAcknowledgment(DPS_Node* node, DPS_Buffer* buffer)
     ret = CBOR_DecodeUint32(buffer, &serialNumber);
     if (ret != DPS_OK) {
         return ret;
+    }
+    if (serialNumber == 0) {
+        return DPS_ERR_INVALID;
     }
     ret = CBOR_DecodeBytes(buffer, &payload, &len);
     if (ret != DPS_OK) {
@@ -1123,17 +1150,6 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_Buffer* buffer, const s
         DeleteRemoteNode(node, remote);
         return DPS_OK;
     }
-    /*
-     * TODO - avoid sending duplicate publications
-     *
-     * If the remote already exists and the new interests are
-     * not a subset of the existing interests:
-     *
-     * 1) Determine which publications matched the old interests.
-     *
-     * 2) For each publication that did not match the old interests
-     *    check if the publication matches the new interests
-     */
     if (ret == DPS_OK) {
         DPS_Publication* pub;
         /*

@@ -19,7 +19,7 @@ static inline uint8_t BIN(char c)
     return c <= '9' ? c - '0' : 10 + c - 'a';
 }
 
-const char* DPS_UUIDToString(DPS_UUID* uuid)
+const char* DPS_UUIDToString(const DPS_UUID* uuid)
 {
     static const char* hex = "0123456789abcdef";
     static char str[38];

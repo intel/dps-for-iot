@@ -104,7 +104,9 @@ static void OnInput(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf)
             }
         }
         ret = DPS_Publish(node, currentPub, msg, msg ? strlen(msg) : 0, ttl, NULL);
-        if (ret != DPS_OK) {
+        if (ret == DPS_OK) {
+            DPS_PRINT("Pub UUID %s\n", DPS_UUIDToString(DPS_PublicationGetUUID(node, currentPub)));
+        } else {
             DPS_ERRPRINT("Failed to publish %s error=%s\n", lineBuf, DPS_ErrTxt(ret));
         }
     }
@@ -247,7 +249,9 @@ int main(int argc, char** argv)
             return 1;
         }
         ret = DPS_Publish(node, currentPub, msg, msg ? strlen(msg) + 1 : 0, ttl, NULL);
-        if (ret != DPS_OK) {
+        if (ret == DPS_OK) {
+            DPS_PRINT("Pub UUID %s\n", DPS_UUIDToString(DPS_PublicationGetUUID(node, currentPub)));
+        } else {
             DPS_ERRPRINT("Failed to publish topics - error=%d\n", ret);
         }
         if (!wait) {

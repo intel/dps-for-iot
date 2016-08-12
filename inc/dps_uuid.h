@@ -24,6 +24,6 @@ void DPS_GenerateUUID(DPS_UUID* uuid);
 /**
  * Return a string representation of a UUID. Not this function uses a static string and is non-reentrant.
  */
-const char* DPS_UUIDToString(DPS_UUID* uuid);
+const char* DPS_UUIDToString(const DPS_UUID* uuid);
 
 #endif
