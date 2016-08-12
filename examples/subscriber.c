@@ -8,12 +8,18 @@
 #include <bitvec.h>
 #include <uv.h>
 
-static void OnPubMatch(DPS_Node* node, DPS_Subscription* sub, DPS_Publication* pub, uint8_t* data, size_t len)
+static int sendAck = DPS_FALSE;
+
+static uint8_t AckMsg[] = "This is an ACK";
+
+static void OnPubMatch(DPS_Node* node, DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* data, size_t len)
 {
+    const DPS_UUID* pubId = DPS_PublicationGetUUID(node, pub);
+    uint32_t serialNumber = DPS_PublicationGetSerialNumber(node, pub);
     size_t i;
     size_t numTopics = DPS_SubscriptionGetNumTopics(node, sub);
 
-    DPS_PRINT("Got match for:\n    ");
+    DPS_PRINT("Pub %s(%d) matches:\n    ", DPS_UUIDToString(pubId), serialNumber);
     for (i = 0; i < numTopics; ++i) {
         if (i) {
             DPS_PRINT(" & ");
@@ -23,6 +29,12 @@ static void OnPubMatch(DPS_Node* node, DPS_Subscription* sub, DPS_Publication* p
     DPS_PRINT("\n");
     if (data) {
         DPS_PRINT("%.*s\n", len, data);
+    }
+    if (sendAck) {
+        DPS_Status ret = DPS_AcknowledgePublication(node, pubId, serialNumber, AckMsg, sizeof(AckMsg));
+        if (ret != DPS_OK) {
+            DPS_PRINT("Failed to ack pub %s\n", DPS_ErrTxt(ret));
+        }
     }
 }
 
@@ -102,6 +114,11 @@ int main(int argc, char** argv)
                 goto Usage;
             }
             host = *arg++;
+            continue;
+        }
+        if (strcmp(*arg, "-a") == 0) {
+            ++arg;
+            sendAck = DPS_TRUE;
             continue;
         }
         if (strcmp(*arg, "-m") == 0) {

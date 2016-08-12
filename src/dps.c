@@ -150,10 +150,12 @@ static void DumpPubs(DPS_Node* node)
 }
 #endif
 
+#define SameUUID(u1, u2)  (memcmp((u1), (u2), sizeof(DPS_UUID)) == 0)
+
 #define NodeAddressText(a)        DPS_NetAddrText((struct sockaddr*)(&(a)->inaddr))
 #define RemoteNodeAddressText(n)  NodeAddressText(&(n)->addr)
 
-size_t DPS_SubscriptionGetNumTopics(DPS_Node* node, DPS_Subscription* subscription)
+size_t DPS_SubscriptionGetNumTopics(DPS_Node* node, const DPS_Subscription* subscription)
 {
     DPS_Subscription* sub;
 
@@ -165,7 +167,7 @@ size_t DPS_SubscriptionGetNumTopics(DPS_Node* node, DPS_Subscription* subscripti
     return 0;
 }
 
-const char* DPS_SubscriptionGetTopic(DPS_Node* node, DPS_Subscription* subscription, size_t index)
+const char* DPS_SubscriptionGetTopic(DPS_Node* node, const DPS_Subscription* subscription, size_t index)
 {
     DPS_Subscription* sub;
 
@@ -181,9 +183,9 @@ const char* DPS_SubscriptionGetTopic(DPS_Node* node, DPS_Subscription* subscript
     return NULL;
 }
 
-const DPS_UUID* DPS_PublicationGetUUID(DPS_Node* node, DPS_Publication* publication)
+const DPS_UUID* DPS_PublicationGetUUID(DPS_Node* node, const DPS_Publication* publication)
 {
-    DPS_Publication* pub = publication;
+    const DPS_Publication* pub = publication;
     if (pub != node->currentPub) {
         for (pub = node->publications; pub != NULL; pub = pub->next) {
             if (pub == publication) {
@@ -194,9 +196,9 @@ const DPS_UUID* DPS_PublicationGetUUID(DPS_Node* node, DPS_Publication* publicat
     return pub ? &pub->pubId : NULL;
 }
 
-uint32_t DPS_PublicationGetSerialNumber(DPS_Node* node, DPS_Publication* publication)
+uint32_t DPS_PublicationGetSerialNumber(DPS_Node* node, const DPS_Publication* publication)
 {
-    DPS_Publication* pub = publication;
+    const DPS_Publication* pub = publication;
     if (pub != node->currentPub) {
         for (pub = node->publications; pub != NULL; pub = pub->next) {
             if (pub == publication) {
@@ -487,7 +489,7 @@ static DPS_Status LookupRetainedPub(DPS_Node* node, DPS_Publication* tmpPub, DPS
     DPS_Publication* pub;
 
     for (pub = node->publications; pub != NULL; pub = pub->next) {
-        if ((pub->flags & PUB_FLAG_RETAINED) && (memcmp(&pub->pubId, &tmpPub->pubId, sizeof(DPS_UUID)) == 0)) {
+        if ((pub->flags & PUB_FLAG_RETAINED) && SameUUID(&pub->pubId, &tmpPub->pubId)) {
             break;
         }
     }
@@ -708,15 +710,14 @@ static DPS_Status ForwardPubToOneSub(DPS_Node* node, DPS_Publication* pub, Remot
 /*
  * Forward a publication to a specific subscriber or all matching subscribers
  */
-static DPS_Status ForwardPubToSubs(DPS_Node* node, DPS_Publication* pub, RemoteNode* pubNode, int* sendCount)
+static DPS_Status ForwardPubToSubs(DPS_Node* node, DPS_Publication* pub, RemoteNode* pubNode, int* fwdCount)
 {
     DPS_Status ret = DPS_OK;
     RemoteNode* remote = node->remoteNodes;
 
     DPS_DBGTRACE();
 
-    *sendCount = 0;
-
+    *fwdCount = 0;
     if (!pub->flags & PUB_FLAG_PUBLISH) {
         return DPS_OK;
     }
@@ -740,14 +741,14 @@ static DPS_Status ForwardPubToSubs(DPS_Node* node, DPS_Publication* pub, RemoteN
         if (ret != DPS_OK) {
             remote = DeleteRemoteNode(node, remote);
         } else {
-            (*sendCount)++;
+            (*fwdCount)++;
             remote = remote->next;
         }
     }
     return ret;
 }
 
-static DPS_Status SendAcknowledgement(DPS_Node* node, DPS_UUID* pubId, uint32_t serialNumber, uint8_t* data, size_t len, DPS_NodeAddress* destAddr)
+static DPS_Status SendAcknowledgement(DPS_Node* node, const DPS_UUID* pubId, uint32_t serialNumber, uint8_t* data, size_t len, DPS_NodeAddress* destAddr)
 {
     uv_buf_t bufs[3];
     DPS_Status ret;
@@ -756,6 +757,8 @@ static DPS_Status SendAcknowledgement(DPS_Node* node, DPS_UUID* pubId, uint32_t 
     size_t allocSize = 8 + sizeof(DPS_UUID) + sizeof(uint32_t) + len;
 
     DPS_DBGTRACE();
+
+    assert(serialNumber != 0);
 
     if (!node->netListener) {
         return DPS_ERR_NETWORK;
@@ -769,11 +772,11 @@ static DPS_Status SendAcknowledgement(DPS_Node* node, DPS_UUID* pubId, uint32_t 
     if (ret != DPS_OK) {
         return ret;
     }
-    CBOR_EncodeUint32(&payload, serialNumber);
     CBOR_EncodeBytes(&payload, (uint8_t*)pubId, sizeof(DPS_UUID));
+    CBOR_EncodeUint32(&payload, serialNumber);
     if (ret == DPS_OK) {
         CBOR_EncodeBytes(&payload, data, len);
-        ret = CoAP_Compose(COAP_OVER_TCP, bufs, A_SIZEOF(bufs), COAP_CODE(COAP_REQUEST, COAP_GET), opts, A_SIZEOF(opts), &payload);
+        ret = CoAP_Compose(COAP_OVER_TCP, bufs, A_SIZEOF(bufs), COAP_CODE(COAP_REQUEST, COAP_PUT), opts, A_SIZEOF(opts), &payload);
     }
     if (ret == DPS_OK) {
         ret = DPS_NetSend(node, bufs, A_SIZEOF(bufs), (struct sockaddr*)&destAddr->inaddr, OnSendToComplete);
@@ -820,15 +823,14 @@ static DPS_Status DecodeAcknowledgment(DPS_Node* node, DPS_Buffer* buffer)
      * See if this is an ACK for a local publication
      */
     for (pub = node->publications; pub != NULL; pub = pub->next) {
-        if (pub->handler && (pub->serialNumber == serialNumber) && (memcmp(&pub->pubId, pubId, sizeof(DPS_UUID)) == 0)) {
+        if (pub->handler && (pub->serialNumber == serialNumber) && SameUUID(&pub->pubId, pubId)) {
             break;
         }
     }
-    /*
-     * If there is a local handler call it and we are done
-     */
-    if (pub->handler) {
-        pub->handler(node, pub, payload, len);
+    if (pub) {
+        if (pub->handler) {
+            pub->handler(node, pub, payload, len);
+        }
         return DPS_OK;
     }
     /*
@@ -916,7 +918,8 @@ static DPS_Status DecodePublication(DPS_Node* node, DPS_Buffer* buffer, const st
         goto Exit;
     }
     if (ret == DPS_OK) {
-        int sendCount;
+        int fwdCount = 0;
+        int addedHistory = DPS_FALSE;
         DPS_Subscription* sub;
         DPS_Subscription* next;
         /*
@@ -931,6 +934,10 @@ static DPS_Status DecodePublication(DPS_Node* node, DPS_Buffer* buffer, const st
                 next = sub->next;
                 if (DPS_BitVectorIncludes(pub.bf, sub->bf)) {
                     DPS_DBGPRINT("Matched subscription\n");
+                    if (!addedHistory) {
+                        DPS_AppendPubHistory(&node->history, &pub.pubId, pub.serialNumber, ackRequested ? &senderAddr : NULL);
+                        addedHistory = DPS_TRUE;
+                    }
                     node->currentPub = &pub;
                     sub->handler(node, sub, &pub, pub.payload, pub.len);
                     node->currentPub = NULL;
@@ -941,11 +948,11 @@ static DPS_Status DecodePublication(DPS_Node* node, DPS_Buffer* buffer, const st
         /*
          * Forward the publication to matching remote subscribers
          */
-        ret = ForwardPubToSubs(node, &pub, pubNode, &sendCount);
+        ret = ForwardPubToSubs(node, &pub, pubNode, &fwdCount);
         /*
-         * Record history for this publication if it was forwarded to at least one subscriber
+         * Record history for this publication if it was handled locally or forwarded to at least one subscriber
          */
-        if (sendCount > 0) {
+        if (!addedHistory && fwdCount > 0) {
             DPS_AppendPubHistory(&node->history, &pub.pubId, pub.serialNumber, ackRequested ? &senderAddr : NULL);
         }
         /*
@@ -1458,7 +1465,7 @@ DPS_Status DPS_CreatePublication(DPS_Node* node, char* const* topics, size_t num
 
 DPS_Status DPS_Publish(DPS_Node* node, DPS_Publication* pub, void* payload, size_t len, int16_t ttl, void** oldPayload)
 {
-    int sendCount = 0;
+    int fwdCount = 0;
     DPS_Status ret = DPS_OK;
 
     DPS_DBGTRACE();
@@ -1487,7 +1494,7 @@ DPS_Status DPS_Publish(DPS_Node* node, DPS_Publication* pub, void* payload, size
             DPS_ERRPRINT("SendPublication (multicast) returned %s\n", DPS_ErrTxt(ret));
         }
     }
-    ret = ForwardPubToSubs(node, pub, NULL, &sendCount);
+    ret = ForwardPubToSubs(node, pub, NULL, &fwdCount);
 
     if (ret != DPS_OK) {
         DPS_ERRPRINT("ForwardPubToSubs returned %s\n", DPS_ErrTxt(ret));
@@ -1579,10 +1586,10 @@ DPS_Status DPS_Leave(DPS_Node* node, DPS_NodeAddress* addr)
     }
 }
 
-DPS_Status DPS_AcknowledgePublication(DPS_Node* node, DPS_UUID* pubId, uint32_t serialNumber, uint8_t* data, size_t len)
+DPS_Status DPS_AcknowledgePublication(DPS_Node* node, const DPS_UUID* pubId, uint32_t serialNumber, void* payload, size_t len)
 {
     DPS_Status ret = DPS_OK;
-    DPS_NodeAddress* addr;
+    DPS_NodeAddress* addr = NULL;
 
     if (!node || !pubId) {
         return DPS_ERR_NULL;
@@ -1595,9 +1602,8 @@ DPS_Status DPS_AcknowledgePublication(DPS_Node* node, DPS_UUID* pubId, uint32_t 
         return DPS_ERR_NO_ROUTE;
     }
     DPS_DBGPRINT("Sending acknowledgement for %s/%d to %s\n", DPS_UUIDToString(pubId), serialNumber, NodeAddressText(addr));
-    return SendAcknowledgement(node, pubId, serialNumber, data, len, addr);
+    return SendAcknowledgement(node, pubId, serialNumber, payload, len, addr);
 }
-
 
 DPS_Status DPS_Subscribe(DPS_Node* node, char* const* topics, size_t numTopics, DPS_PublicationHandler handler, DPS_Subscription** subscription)
 {

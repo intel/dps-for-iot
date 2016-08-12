@@ -43,12 +43,12 @@ typedef struct _DPS_Subscription DPS_Subscription;
 /**
  * Get a topic for an active subscription
  */
-const char* DPS_SubscriptionGetTopic(DPS_Node* node, DPS_Subscription* sub, size_t index);
+const char* DPS_SubscriptionGetTopic(DPS_Node* node, const DPS_Subscription* sub, size_t index);
 
 /**
  * Get the number of topics registered with an active subscription
  */
-size_t DPS_SubscriptionGetNumTopics(DPS_Node* node, DPS_Subscription* sub);
+size_t DPS_SubscriptionGetNumTopics(DPS_Node* node, const DPS_Subscription* sub);
 
 /**
  * Opaque type for an active publication
@@ -58,7 +58,7 @@ typedef struct _DPS_Publication DPS_Publication;
 /**
  * Get the UUID for a publication
  */
-const DPS_UUID* DPS_PublicationGetUUID(DPS_Node* node, DPS_Publication* pub);
+const DPS_UUID* DPS_PublicationGetUUID(DPS_Node* node, const DPS_Publication* pub);
 
 /**
  * Get the serial number for a publication. Serial numbers are always > 0.
@@ -68,7 +68,7 @@ const DPS_UUID* DPS_PublicationGetUUID(DPS_Node* node, DPS_Publication* pub);
  *
  * @return The serial number or zero if the publication is invalid.
  */
-uint32_t DPS_PublicationGetSerialNumber(DPS_Node* node, DPS_Publication* pub);
+uint32_t DPS_PublicationGetSerialNumber(DPS_Node* node, const DPS_Publication* pub);
 
 /**
  * For passing buffers around
@@ -132,12 +132,12 @@ uv_loop_t* DPS_GetLoop(DPS_Node* node);
  * subscriber that generates an acknowledgement so may be called numerous times for same
  * publication.
  *
- * @param node  The local node used in the publish call
- * @param pub   Opaque handle for the publication that was received
- * @param data  Payload accompanying the acknowledgement if any
+ * @param node     The local node used in the publish call
+ * @param pub      Opaque handle for the publication that was received
+ * @param payload  Payload accompanying the acknowledgement if any
  * @param len   Length of the payload
  */
-typedef void (*DPS_AcknowledgementHandler)(DPS_Node* node, DPS_Publication* pub, uint8_t* data, size_t len);
+typedef void (*DPS_AcknowledgementHandler)(DPS_Node* node, const DPS_Publication* pub, uint8_t* payload, size_t len);
 
 /**
  * Create a new publication from a set of topics. Each publication has a UUID and a serial number. The
@@ -199,13 +199,13 @@ DPS_Status DPS_DestroyPublication(DPS_Node* node, DPS_Publication* pub, void** p
  * return information about the subscription that was matched.
  *
  *
- * @param node   The local node used in the subscribe call
- * @param sub    Opaque handle for the subscription that was matched
- * @param pub    Opaque handle for the publication that was received
- * @param data   Payload from the publication if any
- * @param len    Length of the payload
+ * @param node     The local node used in the subscribe call
+ * @param sub      Opaque handle for the subscription that was matched
+ * @param pub      Opaque handle for the publication that was received
+ * @param payload  Payload from the publication if any
+ * @param len      Length of the payload
  */
-typedef void (*DPS_PublicationHandler)(DPS_Node* node, DPS_Subscription* sub, DPS_Publication* pub, uint8_t* data, size_t len);
+typedef void (*DPS_PublicationHandler)(DPS_Node* node, DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* payload, size_t len);
 
 /**
  * Aknowledge a publication. A publication should be acknowledged as soon as possible after receipt ideally from within the publication
@@ -214,10 +214,10 @@ typedef void (*DPS_PublicationHandler)(DPS_Node* node, DPS_Subscription* sub, DP
  * @param node          The local node that received the publication
  * @param pubId         The UUID of the publication to acknowledge
  * @param serialNumber  The serial number of the publication to acknowledge
- * @param data          Optional payload to accompany the aknowledgment
+ * @param payload       Optional payload to accompany the aknowledgment
  * @param len           The length of the payload
  */
-DPS_Status DPS_AcknowledgePublication(DPS_Node* node, DPS_UUID* pubId, uint32_t serialNumber, uint8_t* data, size_t len);
+DPS_Status DPS_AcknowledgePublication(DPS_Node* node, const DPS_UUID* pubId, uint32_t serialNumber, void* payload, size_t len);
 
 /**
  * Susbscribe to one or more topics. All topics must match

@@ -41,7 +41,7 @@ static int IntArg(char* opt, char*** argp, int* argcp, int* val, uint32_t min, u
     return 1;
 }
 
-static void OnPubMatch(DPS_Node* node, DPS_Subscription* sub, DPS_Publication* pub, uint8_t* data, size_t len)
+static void OnPubMatch(DPS_Node* node, DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* data, size_t len)
 {
     size_t i;
     size_t numTopics = DPS_SubscriptionGetNumTopics(node, sub);

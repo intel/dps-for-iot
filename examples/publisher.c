@@ -13,6 +13,8 @@ static char lineBuf[200];
 static char* topics[MAX_TOPICS];
 static size_t numTopics = 0;
 
+static int requestAck = DPS_FALSE;
+
 static void OnAlloc(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf)
 {
     buf->base = lineBuf;
@@ -74,6 +76,14 @@ static int AddTopics(char* topicList, char** msg, int* keep, int* ttl)
     return 1;
 }
 
+static void OnAck(DPS_Node* node, const DPS_Publication* pub, uint8_t* data, size_t len)
+{
+    DPS_PRINT("Ack for pub UUID %s(%d)\n", DPS_UUIDToString(DPS_PublicationGetUUID(node, pub)), DPS_PublicationGetSerialNumber(node, pub));
+    if (len) {
+        DPS_PRINT("    %.*s\n", len, data);
+    }
+}
+
 static void OnInput(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf)
 {
     void* data;
@@ -97,7 +107,7 @@ static void OnInput(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf)
         }
         if (!keep) {
             DPS_DestroyPublication(node, currentPub, &data);
-            ret = DPS_CreatePublication(node, topics, numTopics, NULL, &currentPub);
+            ret = DPS_CreatePublication(node, topics, numTopics, requestAck ? OnAck : NULL, &currentPub);
             if (ret != DPS_OK) {
                 DPS_ERRPRINT("Failed to create publication - error=%d\n", ret);
                 return;
@@ -105,7 +115,7 @@ static void OnInput(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf)
         }
         ret = DPS_Publish(node, currentPub, msg, msg ? strlen(msg) : 0, ttl, NULL);
         if (ret == DPS_OK) {
-            DPS_PRINT("Pub UUID %s\n", DPS_UUIDToString(DPS_PublicationGetUUID(node, currentPub)));
+            DPS_PRINT("Pub UUID %s(%d)\n", DPS_UUIDToString(DPS_PublicationGetUUID(node, currentPub)), DPS_PublicationGetSerialNumber(node, currentPub));
         } else {
             DPS_ERRPRINT("Failed to publish %s error=%s\n", lineBuf, DPS_ErrTxt(ret));
         }
@@ -196,6 +206,11 @@ int main(int argc, char** argv)
         if (strcmp(*arg, "-w") == 0) {
             ++arg;
             wait = DPS_TRUE;
+            continue;
+        }
+        if (strcmp(*arg, "-a") == 0) {
+            ++arg;
+            requestAck = DPS_TRUE;
             continue;
         }
         if (strcmp(*arg, "-d") == 0) {

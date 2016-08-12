@@ -67,6 +67,6 @@ int DPS_PublicationIsStale(DPS_History* history, DPS_UUID* pubId, uint32_t seria
  * @return DPS_OK if the sender was found in the history record
  *         DPS_ERR_MISSING if no sender was found in the history record
  */
-DPS_Status DPS_LookupPublisher(DPS_History* history, DPS_UUID* pubId, uint32_t serialNumber, DPS_NodeAddress** addr);
+DPS_Status DPS_LookupPublisher(DPS_History* history, const DPS_UUID* pubId, uint32_t serialNumber, DPS_NodeAddress** addr);
 
 #endif

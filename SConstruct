@@ -10,7 +10,7 @@ for key, val in ARGLIST:
         cflags = ['-O3', '-DNDEBUG']
 
 # Additional warning for the core object files
-wflags = ['-Wall', '-Wno-format-extra-args']
+wflags = ['-Wall', '-Werror', '-Wno-format-extra-args']
 
 env = Environment(CPPDEFINES=cppdefines, CFLAGS=cflags, CPPPATH=['./inc'], LIBS=['uv'])
 

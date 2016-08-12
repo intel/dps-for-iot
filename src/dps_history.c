@@ -88,7 +88,7 @@ void DPS_HistoryFree(DPS_History* history)
     history->count = 0;
 }
 
-DPS_Status DPS_LookupPublisher(DPS_History* history, DPS_UUID* pubId, uint32_t serialNumber, DPS_NodeAddress** addr)
+DPS_Status DPS_LookupPublisher(DPS_History* history, const DPS_UUID* pubId, uint32_t serialNumber, DPS_NodeAddress** addr)
 {
     DPS_PubHistory* ph = history->oldest;
     /*
