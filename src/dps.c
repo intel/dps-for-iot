@@ -30,6 +30,7 @@ static const char DPS_AcknowledgmentURI[] = "dps/ack";
 typedef enum { NO_REQ, SUB_REQ, PUB_REQ, ACK_REQ } RequestType;
 
 typedef struct _RemoteNode {
+    uint8_t syncInterests;             /* Indicates interests need to be resynched */
     uint8_t joined;                    /* True if this is a node that was explicitly joined */
     DPS_NodeAddress addr;
     struct {
@@ -995,7 +996,7 @@ static DPS_Status SendSubscription(DPS_Node* node, RemoteNode* remote)
     CoAP_Option opts[1];
     uint16_t port;
     DPS_Buffer payload;
-    size_t allocSize = DPS_BitVectorSerializeMaxSize(remote->outbound.needs) + DPS_BitVectorSerializeMaxSize(remote->outbound.interests) + 32;
+    size_t allocSize = DPS_BitVectorSerializeMaxSize(remote->outbound.needs) + DPS_BitVectorSerializeMaxSize(remote->outbound.interests) + 40;
 
     if (!node->netListener) {
         return DPS_ERR_NETWORK;
@@ -1014,6 +1015,7 @@ static DPS_Status SendSubscription(DPS_Node* node, RemoteNode* remote)
      * Write listening port
      */
     CBOR_EncodeUint16(&payload, port);
+    CBOR_EncodeBoolean(&payload, remote->syncInterests);
     ret = DPS_BitVectorSerialize(remote->outbound.needs, &payload);
     if (ret == DPS_OK) {
         ret = DPS_BitVectorSerialize(remote->outbound.interests, &payload);
@@ -1026,7 +1028,9 @@ static DPS_Status SendSubscription(DPS_Node* node, RemoteNode* remote)
         return ret;
     }
     ret = DPS_NetSend(node, bufs, A_SIZEOF(bufs), (struct sockaddr*)&remote->addr.inaddr, OnSendToComplete);
-    if (ret != DPS_OK) {
+    if (ret == DPS_OK) {
+        remote->syncInterests = DPS_FALSE;
+    } else {
         DPS_ERRPRINT("Failed to send subscription request %s\n", DPS_ErrTxt(ret));
         OnSendToComplete(node, (struct sockaddr*)&remote->addr, bufs, A_SIZEOF(bufs), ret);
     }
@@ -1034,7 +1038,7 @@ static DPS_Status SendSubscription(DPS_Node* node, RemoteNode* remote)
 }
 
 
-static DPS_Status FloodSubscriptions(DPS_Node* node, RemoteNode* newNode)
+static DPS_Status FloodSubscriptions(DPS_Node* node)
 {
     RemoteNode* remote;
     DPS_Status ret;
@@ -1056,14 +1060,17 @@ static DPS_Status FloodSubscriptions(DPS_Node* node, RemoteNode* newNode)
             break;
         }
         /*
-         * New nodes always receive current interests, existing nodes only get updates
+         * Only send subscriptions if there are updates or an explicit sync
          */
-        if ((remote != newNode) && !updates) {
-            continue;
-        }
-        sendRet = SendSubscription(node, remote);
-        if (sendRet != DPS_OK) {
-            DPS_ERRPRINT("Failed to send subscription request %s\n", DPS_ErrTxt(sendRet));
+        if (updates || remote->syncInterests) {
+            /*
+             * We don't want to request a sync from the remote
+             */
+            remote->syncInterests = DPS_FALSE;
+            sendRet = SendSubscription(node, remote);
+            if (sendRet != DPS_OK) {
+                DPS_ERRPRINT("Failed to send subscription request %s\n", DPS_ErrTxt(sendRet));
+            }
         }
     }
     return ret;
@@ -1099,7 +1106,7 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_Buffer* buffer, const s
     DPS_NodeAddress senderAddr;
     uint16_t port;
     RemoteNode* remote;
-    int isNew;
+    int syncInterests;
 
     DPS_DBGTRACE();
 
@@ -1116,6 +1123,10 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_Buffer* buffer, const s
     if (ret != DPS_OK) {
         return ret;
     }
+    ret = CBOR_DecodeBoolean(buffer, &syncInterests);
+    if (ret != DPS_OK) {
+        return ret;
+    }
     ret = DPS_BitVectorDeserialize(needs, buffer);
     if (ret != DPS_OK) {
         return ret;
@@ -1126,19 +1137,25 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_Buffer* buffer, const s
     }
     AddrSetPort(&senderAddr, addr, port);
     ret = AddRemoteNode(node, &senderAddr, &remote);
-    if (ret != DPS_OK) {
+    if (ret == DPS_OK) {
+        /*
+         * Always need to sync interests with new nodes
+         */
+        remote->syncInterests = DPS_TRUE;
+    } else {
         if (ret != DPS_ERR_EXISTS) {
             DPS_BitVectorFree(interests);
             DPS_BitVectorFree(needs);
             return ret;
         }
-        isNew = DPS_FALSE;
-    } else {
-        isNew = DPS_TRUE;
+        /*
+         * Only sync interests if the remote requested
+         */
+        remote->syncInterests = syncInterests;
     }
     ret = UpdateInboundInterests(node, remote, interests, needs);
     if (ret == DPS_OK) {
-        ret = FloodSubscriptions(node, isNew ? remote : NULL);
+        ret = FloodSubscriptions(node);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("FloodSubscriptions failed %s\n", DPS_ErrTxt(ret));
             return ret;
@@ -1357,6 +1374,11 @@ DPS_Node* DPS_InitNode(int mcast, int tcpPort, const char* separators)
         node->mcastSender = DPS_MulticastStartSend(node);
     }
     node->netListener = DPS_NetStartListening(node, tcpPort, OnNetReceive);
+    if (!node->netListener) {
+        DPS_ERRPRINT("Failed to initialize listener on TCP port %d\n", tcpPort);
+        FreeNode(node);
+        return NULL;
+    }
     return node;
 }
 
@@ -1540,9 +1562,11 @@ static DPS_Status SendInitialSubscription(DPS_Node* node, RemoteNode* remote)
     /*
      * Send subscriptions to a specific remote node
      */
+    remote->syncInterests = DPS_TRUE;
     ret = SendSubscription(node, remote);
+    assert(!remote->syncInterests);
     if (ret != DPS_OK) {
-        DPS_ERRPRINT("Failed to send subscription request: ret=%d\n", ret);
+        DPS_ERRPRINT("Failed to send subscription request: ret=%s\n", DPS_ErrTxt(ret));
     }
     return ret;
 }
@@ -1663,15 +1687,12 @@ DPS_Status DPS_Subscribe(DPS_Node* node, char* const* topics, size_t numTopics, 
         sub->next = node->subscriptions;
         node->subscriptions = sub;
         *subscription = sub;
-        /*
-         * TODO - optimization - check for no changes
-         */
         ret = DPS_CountVectorAdd(node->interests, sub->bf);
         if (ret == DPS_OK) {
             ret = DPS_CountVectorAdd(node->needs, sub->needs);
         }
         if (ret == DPS_OK) {
-            ret = FloodSubscriptions(node, NULL);
+            ret = FloodSubscriptions(node);
         }
     }
     return ret;
@@ -1712,7 +1733,7 @@ DPS_Status DPS_SubscribeCancel(DPS_Node* node, DPS_Subscription* subscription)
         ret = DPS_CountVectorDel(node->needs, sub->needs);
     }
     if (ret == DPS_OK) {
-        ret = FloodSubscriptions(node, NULL);
+        ret = FloodSubscriptions(node);
     }
     FreeSubscription(sub);
     return ret;

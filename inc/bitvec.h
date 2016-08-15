@@ -50,7 +50,7 @@ int DPS_BitVectorBloomTest(const DPS_BitVector* bv, const uint8_t* data, size_t 
 /**
  * Allocates a bit vector using the default values set by DPS_Configure()
  *
- * @return  An initialized bit vector filter or NULL if the allocation failed.
+ * @return  An initialized bit vector bit vector or NULL if the allocation failed.
  */
 DPS_BitVector* DPS_BitVectorAlloc();
 
@@ -79,7 +79,7 @@ void DPS_BitVectorFree(DPS_BitVector* bv);
 
 /**
  * Returns the load factor of the bit vector. The value returned is in the range 0.0..100.0 and is the percentage of
- * bits set in the filter
+ * bits set in the bit vector
  *
  * @param bv   An intialized bit vector
  */
@@ -133,16 +133,27 @@ int DPS_BitVectorEquals(const DPS_BitVector* bv1, const DPS_BitVector* bv2);
 /**
  * Returns the intersection of two bit vectors. The bit vectors must be the same size.
  *
- * @param bvOut   The filter to form an intersection with (can be same as bv1 or bv2)
+ * @param bvOut   The result of the intersection (can be same as bv1 or bv2)
  * @param bv1     A bit vector
  * @param bv2     A bit vector
  */
 DPS_Status DPS_BitVectorIntersection(DPS_BitVector* bvOut, DPS_BitVector* bv1, DPS_BitVector* bv2);
 
 /**
+ * Returns the xor of two bit vectors. The bit vectors must be the same size.
+ *
+ * @param bvOut   The bit vector to receive the difference (can be same as bv1 or bv2)
+ * @param bv1     A bit vector
+ * @param bv2     A bit vector
+ * @param equal   Returns non-zero if the two bit input vectors are identical in which case
+ *                the output vector will be cleared. Can be NULL.
+ */
+DPS_Status DPS_BitVectorXor(DPS_BitVector* bvOut, DPS_BitVector* bv1, DPS_BitVector* bv2, int* equal);
+
+/**
  * Forms the union of two bit vectors.
  *
- * @param bvOut  The filter to form a union with
+ * @param bvOut  The bit vector to form a union with
  * @param bv     A bit vector
  */
 DPS_Status DPS_BitVectorUnion(DPS_BitVector* bvOut, DPS_BitVector* bv);
@@ -150,17 +161,17 @@ DPS_Status DPS_BitVectorUnion(DPS_BitVector* bvOut, DPS_BitVector* bv);
 /**
  * Compress and serialize a bit vector into a buffer
  *
- * @param bv  The filter to serialize
- * @param buffer  The buffer to serialize the filter into
+ * @param bv  The bit vector to serialize
+ * @param buffer  The buffer to serialize the bit vector into
  *
  * @return  The success or failure of the operation
  */
 DPS_Status DPS_BitVectorSerialize(const DPS_BitVector* bv, DPS_Buffer* buffer);
 
 /**
- * Maximum buffer space needed to serialize a filter.
+ * Maximum buffer space needed to serialize a bit vector.
  *
- * @param bv  The filter to check
+ * @param bv  The bit vector to check
  *
  * @return  The maximum space needed to serialize a bit vector.
  */
@@ -179,21 +190,21 @@ DPS_Status DPS_BitVectorDeserialize(DPS_BitVector* bv, DPS_Buffer* buffer);
 /**
  * Clear all bits in an existing bit vector.
  *
- * @param bv  The filter to clear.
+ * @param bv  The bit vector to clear.
  */
 void DPS_BitVectorClear(DPS_BitVector* bv);
 
 /**
  * Set all bits in an existing bit vector.
  *
- * @param bv  The filter to set.
+ * @param bv  The bit vector to set.
  */
 void DPS_BitVectorFill(DPS_BitVector* bv);
 
 /**
  * Returns 1 if the bit vector has no bits set, otherwise returns 0.
  *
- * @param bv  The filter to test.
+ * @param bv  The bit vector to test.
  */
 int DPS_BitVectorIsClear(DPS_BitVector* bv);
 
@@ -207,16 +218,16 @@ void DPS_BitVectorComplement(DPS_BitVector* bv);
 /**
  * Set the bits in a bit vector. This is primarily for unit testing.
  *
- * @param bv      The filter to set
- * @param data    The data to set in the filter
- * @param len     The length of the data to set. This must match the bit size of the filter.
+ * @param bv      The bit vector to set
+ * @param data    The data to set in the bit vector
+ * @param len     The length of the data to set. This must match the bit size of the bit vector.
  */
 DPS_Status DPS_BitVectorSet(DPS_BitVector* bv, uint8_t* data, size_t len);
 
 /**
  * Dump information about a bit vector
  *
- * @param bv    The filter to dump
+ * @param bv    The bit vector to dump
  * @param bits  If non-zero dump out the bit array
  */
 void DPS_BitVectorDump(const DPS_BitVector* bv, int bits);
@@ -224,7 +235,7 @@ void DPS_BitVectorDump(const DPS_BitVector* bv, int bits);
 /**
  * Allocates a count vector using the default values set by DPS_Configure()
  *
- * @return  An initialized count vector filter or NULL if the allocation failed.
+ * @return  An initialized count vector bit vector or NULL if the allocation failed.
  */
 DPS_CountVector* DPS_CountVectorAlloc();
 

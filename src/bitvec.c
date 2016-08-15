@@ -352,6 +352,25 @@ DPS_Status DPS_BitVectorIntersection(DPS_BitVector* bvOut, DPS_BitVector* bv1, D
     return DPS_OK;
 }
 
+DPS_Status DPS_BitVectorXor(DPS_BitVector* bvOut, DPS_BitVector* bv1, DPS_BitVector* bv2, int* equal)
+{
+    size_t i;
+    int diff = 0;
+    if (!bvOut || !bv1 || !bv2) {
+        return DPS_ERR_NULL;
+    }
+    assert(bvOut->len == bv1->len && bvOut->len == bv2->len);
+    for (i = 0; i < NUM_CHUNKS(bv1); ++i) {
+        if ((bvOut->bits[i] = bv1->bits[i] ^ bv2->bits[i]) != 0) {
+            diff = 1;
+        }
+    }
+    if (equal) {
+        *equal = !diff;
+    }
+    return DPS_OK;
+}
+
 #define SET_BIT8(a, b)   (a)[(b) >> 3] |= (1 << ((b) & 0x7))
 #define TEST_BIT8(a, b) ((a)[(b) >> 3] &  (1 << ((b) & 0x7)))
 
