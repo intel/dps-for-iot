@@ -251,6 +251,7 @@ DPS_Status DPS_NetSend(DPS_Node* node, uv_buf_t* bufs, size_t numBufs, const str
         return DPS_ERR_OVERFLOW;
     }
     DPS_DBGPRINT("DPS_NetSend total %lu bytes to %s\n", len, DPS_NetAddrText(addr));
+    DPS_PRINT("DPS_NetSend from %d total %lu bytes to %s\n", DPS_GetPortNumber(node), len, DPS_NetAddrText(addr));
 
     writer = calloc(1, sizeof(*writer));
     if (!writer) {

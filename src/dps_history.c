@@ -92,7 +92,7 @@ DPS_Status DPS_LookupPublisher(DPS_History* history, const DPS_UUID* pubId, uint
 {
     DPS_PubHistory* ph = history->oldest;
     /*
-     * TODO - for scalabililty nees to replace the linear search with a more efficient lookup 
+     * TODO - for scalabililty need to replace the linear search with a more efficient lookup 
      */
     *addr = NULL;
     while (ph) {

@@ -79,6 +79,7 @@ typedef struct _DPS_Publication {
     size_t len;
     DPS_AcknowledgementHandler handler;
     DPS_UUID pubId;                 /* Publication identifier */
+    DPS_NodeAddress sender;         /* for retained messages - the sender address */
     DPS_BitVector* bf;              /* The Bloom filter bit vector for the topics for this publication */
     DPS_Publication* next;
 } DPS_Publication;
@@ -96,8 +97,8 @@ typedef struct _DPS_Node {
     RemoteNode* remoteNodes;              /* Linked list of remote nodes */
 
     struct {
-        DPS_BitVector* fh;                /* Preallocated bit vector */
-        DPS_BitVector* bf;                /* Preallocated bit vector */
+        DPS_BitVector* needs;             /* Preallocated needs bit vector */
+        DPS_BitVector* interests;         /* Preallocated interests bit vector */
     } scratch;
 
     DPS_CountVector* interests;           /* Tracks all interests for this node */
@@ -372,9 +373,24 @@ static DPS_Status UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, 
         ret = DPS_ERR_RESOURCES;
         goto ErrExit;
     }
+    /*
+     * Ignore current outbound interests if we are doing a full sync
+     */
+    if (destNode->syncInterests) {
+        DPS_BitVectorFree(destNode->outbound.interests);
+        destNode->outbound.interests = NULL;
+        DPS_BitVectorFree(destNode->outbound.needs);
+        destNode->outbound.needs = NULL;
+    }
     if (destNode->outbound.interests) {
+        int sameI;
+        int sameN;
+
         assert(destNode->outbound.needs);
-        if (DPS_BitVectorEquals(destNode->outbound.interests, newInterests) && DPS_BitVectorEquals(destNode->outbound.needs, newNeeds)) {
+
+        DPS_BitVectorXor(node->scratch.interests, destNode->outbound.interests, newInterests, &sameI);
+        DPS_BitVectorXor(node->scratch.needs, destNode->outbound.needs, newNeeds, &sameN);
+        if (sameI && sameN) {
             *updates = DPS_FALSE;
         }
         DPS_BitVectorFree(destNode->outbound.interests);
@@ -524,7 +540,7 @@ static DPS_Status ExpirePublication(DPS_Node* node, DPS_Publication* pub)
     return ret;
 }
 
-static DPS_Status RetainPublication(DPS_Node* node, DPS_Publication* pub)
+static DPS_Status RetainPublication(DPS_Node* node, DPS_Publication* pub, DPS_NodeAddress* senderAddr)
 {
     DPS_Status ret = DPS_OK;
     DPS_Publication* retained;
@@ -570,6 +586,7 @@ static DPS_Status RetainPublication(DPS_Node* node, DPS_Publication* pub)
     retained->ttl = pub->ttl;
     retained->serialNumber = pub->serialNumber;
     retained->ackRequested = pub->ackRequested;
+    retained->sender = *senderAddr;
 
     if (pub->len) {
         retained->payload = malloc(pub->len);
@@ -681,16 +698,16 @@ static DPS_Status SendPublication(DPS_Node* node, DPS_Publication* pub, DPS_BitV
 
 static DPS_BitVector* PubSubMatch(DPS_Node* node, DPS_Publication* pub, RemoteNode* sub)
 {
-    DPS_BitVectorIntersection(node->scratch.bf, pub->bf, sub->inbound.interests);
-    DPS_BitVectorFuzzyHash(node->scratch.fh, node->scratch.bf);
-    if (DPS_BitVectorIncludes(node->scratch.fh, sub->inbound.needs)) {
+    DPS_BitVectorIntersection(node->scratch.interests, pub->bf, sub->inbound.interests);
+    DPS_BitVectorFuzzyHash(node->scratch.needs, node->scratch.interests);
+    if (DPS_BitVectorIncludes(node->scratch.needs, sub->inbound.needs)) {
         /*
          * If the publication will be retained we send the full publication Bloom
          * filter otherwise we only send the intersection with the subscription interests.
          * The reason for sending the full publication is that we don't know what the
          * interests will be over the lifetime of the publication.
          */
-        return (pub->flags & PUB_FLAG_RETAINED) ? pub->bf : node->scratch.bf;
+        return (pub->flags & PUB_FLAG_RETAINED) ? pub->bf : node->scratch.interests;
     } else {
         return NULL;
     }
@@ -962,7 +979,7 @@ static DPS_Status DecodePublication(DPS_Node* node, DPS_Buffer* buffer, const st
         if (pub.ttl <= 0) {
             ret = ExpirePublication(node, &pub);
         } else {
-            ret = RetainPublication(node, &pub);
+            ret = RetainPublication(node, &pub, &senderAddr);
         }
 
     }
@@ -989,14 +1006,17 @@ Exit:
  *      Our IPv6 address (filled in later)
  *      Serialized bloom filter
  */
-static DPS_Status SendSubscription(DPS_Node* node, RemoteNode* remote)
+static DPS_Status SendSubscription(DPS_Node* node, RemoteNode* remote, int fullSync)
 {
     uv_buf_t bufs[3];
     DPS_Status ret;
     CoAP_Option opts[1];
     uint16_t port;
     DPS_Buffer payload;
-    size_t allocSize = DPS_BitVectorSerializeMaxSize(remote->outbound.needs) + DPS_BitVectorSerializeMaxSize(remote->outbound.interests) + 40;
+    DPS_BitVector* interests = fullSync ? remote->outbound.interests : node->scratch.interests;
+    DPS_BitVector* needs = fullSync ? remote->outbound.needs : node->scratch.needs;
+
+    size_t allocSize = DPS_BitVectorSerializeMaxSize(needs) + DPS_BitVectorSerializeMaxSize(interests) + 40;
 
     if (!node->netListener) {
         return DPS_ERR_NETWORK;
@@ -1016,9 +1036,9 @@ static DPS_Status SendSubscription(DPS_Node* node, RemoteNode* remote)
      */
     CBOR_EncodeUint16(&payload, port);
     CBOR_EncodeBoolean(&payload, remote->syncInterests);
-    ret = DPS_BitVectorSerialize(remote->outbound.needs, &payload);
+    ret = DPS_BitVectorSerialize(needs, &payload);
     if (ret == DPS_OK) {
-        ret = DPS_BitVectorSerialize(remote->outbound.interests, &payload);
+        ret = DPS_BitVectorSerialize(interests, &payload);
     }
     if (ret == DPS_OK) {
         ret = CoAP_Compose(COAP_OVER_TCP, bufs, A_SIZEOF(bufs), COAP_CODE(COAP_REQUEST, COAP_GET), opts, A_SIZEOF(opts), &payload);
@@ -1060,14 +1080,15 @@ static DPS_Status FloodSubscriptions(DPS_Node* node)
             break;
         }
         /*
-         * Only send subscriptions if there are updates or an explicit sync
+         * Only send subscriptions if there are updates or an explicit sync request
          */
         if (updates || remote->syncInterests) {
+            int sync = remote->syncInterests;
             /*
-             * We don't want to request a sync from the remote
+             * We don't want to request a sync from the remote when flooding
              */
             remote->syncInterests = DPS_FALSE;
-            sendRet = SendSubscription(node, remote);
+            sendRet = SendSubscription(node, remote, sync);
             if (sendRet != DPS_OK) {
                 DPS_ERRPRINT("Failed to send subscription request %s\n", DPS_ErrTxt(sendRet));
             }
@@ -1085,9 +1106,15 @@ static DPS_Status UpdateInboundInterests(DPS_Node* node, RemoteNode* remote, DPS
     if (remote->inbound.interests) {
         DPS_CountVectorDel(node->interests, remote->inbound.interests);
         DPS_CountVectorDel(node->needs, remote->inbound.needs);
+        /*
+         * The interests and needs are diffs
+         */
+        DPS_BitVectorXor(interests, interests, remote->inbound.interests, NULL);
+        DPS_BitVectorXor(needs, needs, remote->inbound.needs, NULL);
         DPS_BitVectorFree(remote->inbound.interests);
         DPS_BitVectorFree(remote->inbound.needs);
     }
+
     DPS_CountVectorAdd(node->interests, interests);
     DPS_CountVectorAdd(node->needs, needs);
     remote->inbound.interests = interests;
@@ -1138,6 +1165,9 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_Buffer* buffer, const s
     AddrSetPort(&senderAddr, addr, port);
     ret = AddRemoteNode(node, &senderAddr, &remote);
     if (ret == DPS_OK) {
+        if (!syncInterests) {
+            DPS_ERRPRINT("Expected new remote node to request sync\n");
+        }
         /*
          * Always need to sync interests with new nodes
          */
@@ -1180,9 +1210,14 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_Buffer* buffer, const s
          * Check if any local or retained publications need to be forwarded to this subscriber
          */
         for (pub = node->publications; pub != NULL; pub = pub->next) {
-            DPS_Status pubRet = ForwardPubToOneSub(node, pub, remote);
-            if (pubRet != DPS_OK) {
-                DPS_ERRPRINT("ForwardPubToOneSub failed %s\n", DPS_ErrTxt(pubRet));
+            /*
+             * We don't send a retained publication back to the node that sent it
+             */
+            if (!SameAddr(&pub->sender, (struct sockaddr*)&senderAddr.inaddr)) {
+                DPS_Status pubRet = ForwardPubToOneSub(node, pub, remote);
+                if (pubRet != DPS_OK) {
+                    DPS_ERRPRINT("ForwardPubToOneSub failed %s\n", DPS_ErrTxt(pubRet));
+                }
             }
         }
     }
@@ -1331,8 +1366,8 @@ static void FreeNode(DPS_Node* node)
     }
     DPS_CountVectorFree(node->interests);
     DPS_CountVectorFree(node->needs);
-    DPS_BitVectorFree(node->scratch.bf);
-    DPS_BitVectorFree(node->scratch.fh);
+    DPS_BitVectorFree(node->scratch.interests);
+    DPS_BitVectorFree(node->scratch.needs);
     DPS_HistoryFree(&node->history);
     free(node);
 }
@@ -1355,10 +1390,10 @@ DPS_Node* DPS_InitNode(int mcast, int tcpPort, const char* separators)
 
     node->interests = DPS_CountVectorAlloc();
     node->needs = DPS_CountVectorAllocFH();
-    node->scratch.bf = DPS_BitVectorAlloc();
-    node->scratch.fh = DPS_BitVectorAllocFH();
+    node->scratch.interests = DPS_BitVectorAlloc();
+    node->scratch.needs = DPS_BitVectorAllocFH();
 
-    if (!node->interests || !node->needs || !node->scratch.bf || !node->scratch.fh) {
+    if (!node->interests || !node->needs || !node->scratch.interests || !node->scratch.needs) {
         FreeNode(node);
         return NULL;
     }
@@ -1560,10 +1595,10 @@ static DPS_Status SendInitialSubscription(DPS_Node* node, RemoteNode* remote)
         return ret;
     }
     /*
-     * Send subscriptions to a specific remote node
+     * Need to get in sync with the remote node
      */
     remote->syncInterests = DPS_TRUE;
-    ret = SendSubscription(node, remote);
+    ret = SendSubscription(node, remote, DPS_TRUE);
     assert(!remote->syncInterests);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to send subscription request: ret=%s\n", DPS_ErrTxt(ret));
