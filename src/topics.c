@@ -135,9 +135,13 @@ DPS_Status DPS_AddTopic(DPS_BitVector* bf, const char* topic, const char* separa
         }
         len = strcspn(tp, separators);
         if ((tp > wc) && (tp[0] != INFIX_WILDC || !tp[1])) {
+            size_t sz = prefix + len;
             memcpy(segment + prefix, tp, len);
-            segment[prefix + len] = tp[len];
-            DPS_BitVectorBloomInsert(bf, (uint8_t*)segment, prefix + len);
+            segment[sz] = tp[len];
+            if (tp[len]) {
+                ++sz;
+            }
+            DPS_BitVectorBloomInsert(bf, (uint8_t*)segment, sz);
         }
         tp += len;
     }
