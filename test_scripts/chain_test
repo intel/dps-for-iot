@@ -5,7 +5,7 @@ dir="${BASH_SOURCE%/*}"
 if [[ ! -d "$dir" ]]; then dir="$PWD"; fi
 . "$dir/common.sh"
 
-sub -l 35000 1.1
+sub -m -l 35000 1.1
 sleep 1
 sub -p 35000 -l 35001 2.1
 sleep 1

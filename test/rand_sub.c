@@ -9,19 +9,32 @@
 
 static void OnPubMatch(DPS_Node* node, DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* data, size_t len)
 {
-    size_t i;
-    size_t numTopics = DPS_SubscriptionGetNumTopics(node, sub);
+    static DPS_Subscription* prev;
+    static int count;
 
-    DPS_PRINT("Got match for:\n    ");
-    for (i = 0; i < numTopics; ++i) {
-        if (i) {
-            DPS_PRINT(" & ");
+    if (sub == prev) {
+        ++count;
+    } else {
+        size_t i;
+        size_t numTopics = DPS_SubscriptionGetNumTopics(node, sub);
+
+        if (count > 1) {
+            DPS_PRINT("and another %d matches\n", count);
         }
-        DPS_PRINT("%s", DPS_SubscriptionGetTopic(node, sub, i));
-    }
-    DPS_PRINT("\n");
-    if (data) {
-        DPS_PRINT("%.*s\n", len, data);
+        count = 0;
+        prev = sub;
+
+        DPS_PRINT("Got match for:\n    ");
+        for (i = 0; i < numTopics; ++i) {
+            if (i) {
+                DPS_PRINT(" & ");
+            }
+            DPS_PRINT("%s", DPS_SubscriptionGetTopic(node, sub, i));
+        }
+        DPS_PRINT("\n");
+        if (data) {
+            DPS_PRINT("%.*s\n", len, data);
+        }
     }
 }
 
@@ -33,10 +46,10 @@ static const char* formats[MAX_FORMATS] = {
     "%d/%d",
     "%d/%d/%d",
     "%d/%d/%d/%d",
-    "%d/*/%d/%d",
-    "%d/*",
-    "*/%d",
-    "%d/*/%d"
+    "%d/+/%d/%d",
+    "%d/#",
+    "+/%d",
+    "%d/+/%d"
 };
 
 static void OnTimer(uv_timer_t* handle)
