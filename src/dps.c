@@ -29,8 +29,11 @@ static const char DPS_AcknowledgmentURI[] = "dps/ack";
 
 typedef enum { NO_REQ, SUB_REQ, PUB_REQ, ACK_REQ } RequestType;
 
+#define REQUIRE_BASELINE_INTERESTS      0x01  /* Baseline interests are needed from this remote */
+#define SENDING_BASELINE_INTERESTS      0x02  /* Baseline interests must be sent to this remote */
+
 typedef struct _RemoteNode {
-    uint8_t syncInterests;             /* Indicates interests need to be resynched */
+    uint8_t flags;                     /* bitwise OR of the flags above */
     uint8_t joined;                    /* True if this is a node that was explicitly joined */
     DPS_NodeAddress addr;
     struct {
@@ -327,7 +330,7 @@ static DPS_Publication* FreePublication(DPS_Node* node, DPS_Publication* pub)
     return next;
 }
 
-static DPS_Status UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, int* updates)
+static DPS_Status UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, DPS_BitVector** outInterests)
 {
     DPS_Status ret;
     DPS_BitVector* newInterests = NULL;
@@ -335,7 +338,6 @@ static DPS_Status UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, 
 
     DPS_DBGTRACE();
 
-    *updates = DPS_TRUE;
     /*
      * Inbound interests from the node we are updating are excluded from the outbound interests
      */
@@ -374,32 +376,33 @@ static DPS_Status UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, 
         goto ErrExit;
     }
     /*
-     * Ignore current outbound interests if we are doing a full sync
+     * Don't compute the delta if baseline interests are being sent
      */
-    if (destNode->syncInterests) {
+    if (destNode->flags & SENDING_BASELINE_INTERESTS) {
         DPS_BitVectorFree(destNode->outbound.interests);
         destNode->outbound.interests = NULL;
-        DPS_BitVectorFree(destNode->outbound.needs);
-        destNode->outbound.needs = NULL;
     }
     if (destNode->outbound.interests) {
-        int sameI;
-        int sameN;
-
-        assert(destNode->outbound.needs);
-
-        DPS_BitVectorXor(node->scratch.interests, destNode->outbound.interests, newInterests, &sameI);
-        DPS_BitVectorXor(node->scratch.needs, destNode->outbound.needs, newNeeds, &sameN);
-        if (sameI && sameN) {
-            *updates = DPS_FALSE;
+        int same;
+        DPS_BitVectorXor(node->scratch.interests, destNode->outbound.interests, newInterests, &same);
+        if (same && DPS_BitVectorEquals(destNode->outbound.needs, newNeeds)) {
+            *outInterests = NULL;
+        } else {
+            *outInterests = node->scratch.interests;
         }
         DPS_BitVectorFree(destNode->outbound.interests);
         DPS_BitVectorFree(destNode->outbound.needs);
+    } else {
+        /*
+         * This will ensure the receiver knows this is not a delta
+         */
+        destNode->flags |= SENDING_BASELINE_INTERESTS;
+        *outInterests = newInterests;
     }
     destNode->outbound.interests = newInterests;
     destNode->outbound.needs = newNeeds;
 
-    DPS_DBGPRINT("UpdateOutboundInterests: %s %s\n", RemoteNodeAddressText(destNode), *updates ? "Updates" : "No Change");
+    DPS_DBGPRINT("UpdateOutboundInterests: %s %s\n", RemoteNodeAddressText(destNode), *outInterests ? "Changes" : "No Change");
     return DPS_OK;
 
 ErrExit:
@@ -1006,15 +1009,14 @@ Exit:
  *      Our IPv6 address (filled in later)
  *      Serialized bloom filter
  */
-static DPS_Status SendSubscription(DPS_Node* node, RemoteNode* remote, int fullSync)
+static DPS_Status SendSubscription(DPS_Node* node, RemoteNode* remote, DPS_BitVector* interests)
 {
     uv_buf_t bufs[3];
     DPS_Status ret;
     CoAP_Option opts[1];
     uint16_t port;
     DPS_Buffer payload;
-    DPS_BitVector* interests = fullSync ? remote->outbound.interests : node->scratch.interests;
-    DPS_BitVector* needs = fullSync ? remote->outbound.needs : node->scratch.needs;
+    DPS_BitVector* needs = remote->outbound.needs;
 
     size_t allocSize = DPS_BitVectorSerializeMaxSize(needs) + DPS_BitVectorSerializeMaxSize(interests) + 40;
 
@@ -1035,7 +1037,8 @@ static DPS_Status SendSubscription(DPS_Node* node, RemoteNode* remote, int fullS
      * Write listening port
      */
     CBOR_EncodeUint16(&payload, port);
-    CBOR_EncodeBoolean(&payload, remote->syncInterests);
+    CBOR_EncodeBoolean(&payload, remote->flags & REQUIRE_BASELINE_INTERESTS);
+    CBOR_EncodeBoolean(&payload, remote->flags & SENDING_BASELINE_INTERESTS);
     ret = DPS_BitVectorSerialize(needs, &payload);
     if (ret == DPS_OK) {
         ret = DPS_BitVectorSerialize(interests, &payload);
@@ -1048,12 +1051,14 @@ static DPS_Status SendSubscription(DPS_Node* node, RemoteNode* remote, int fullS
         return ret;
     }
     ret = DPS_NetSend(node, bufs, A_SIZEOF(bufs), (struct sockaddr*)&remote->addr.inaddr, OnSendToComplete);
-    if (ret == DPS_OK) {
-        remote->syncInterests = DPS_FALSE;
-    } else {
+    if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to send subscription request %s\n", DPS_ErrTxt(ret));
         OnSendToComplete(node, (struct sockaddr*)&remote->addr, bufs, A_SIZEOF(bufs), ret);
     }
+    /*
+     * Done with these flags
+     */
+    remote->flags &= ~(REQUIRE_BASELINE_INTERESTS | SENDING_BASELINE_INTERESTS);
     return ret;
 }
 
@@ -1069,26 +1074,16 @@ static DPS_Status FloodSubscriptions(DPS_Node* node)
      * Forward subscription to all remote nodes with interestss
      */
     for (remote = node->remoteNodes; remote != NULL; remote = remote->next) {
-        DPS_Status sendRet;
-        int updates;
-
+        DPS_BitVector* newInterests;
         if (!remote->inbound.interests) {
             continue;
         }
-        ret = UpdateOutboundInterests(node, remote, &updates);
+        ret = UpdateOutboundInterests(node, remote, &newInterests);
         if (ret != DPS_OK) {
             break;
         }
-        /*
-         * Only send subscriptions if there are updates or an explicit sync request
-         */
-        if (updates || remote->syncInterests) {
-            int sync = remote->syncInterests;
-            /*
-             * We don't want to request a sync from the remote when flooding
-             */
-            remote->syncInterests = DPS_FALSE;
-            sendRet = SendSubscription(node, remote, sync);
+        if (newInterests) {
+            DPS_Status sendRet = SendSubscription(node, remote, newInterests);
             if (sendRet != DPS_OK) {
                 DPS_ERRPRINT("Failed to send subscription request %s\n", DPS_ErrTxt(sendRet));
             }
@@ -1103,18 +1098,16 @@ static DPS_Status FloodSubscriptions(DPS_Node* node)
 static DPS_Status UpdateInboundInterests(DPS_Node* node, RemoteNode* remote, DPS_BitVector* interests, DPS_BitVector* needs)
 {
     DPS_DBGTRACE();
+
     if (remote->inbound.interests) {
+        DPS_DBGPRINT("Received interests delta\n");
         DPS_CountVectorDel(node->interests, remote->inbound.interests);
-        DPS_CountVectorDel(node->needs, remote->inbound.needs);
-        /*
-         * The interests and needs are diffs
-         */
         DPS_BitVectorXor(interests, interests, remote->inbound.interests, NULL);
-        DPS_BitVectorXor(needs, needs, remote->inbound.needs, NULL);
         DPS_BitVectorFree(remote->inbound.interests);
+
+        DPS_CountVectorDel(node->needs, remote->inbound.needs);
         DPS_BitVectorFree(remote->inbound.needs);
     }
-
     DPS_CountVectorAdd(node->interests, interests);
     DPS_CountVectorAdd(node->needs, needs);
     remote->inbound.interests = interests;
@@ -1133,7 +1126,8 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_Buffer* buffer, const s
     DPS_NodeAddress senderAddr;
     uint16_t port;
     RemoteNode* remote;
-    int syncInterests;
+    int reqBaseline;
+    int isBaseline;
 
     DPS_DBGTRACE();
 
@@ -1150,7 +1144,11 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_Buffer* buffer, const s
     if (ret != DPS_OK) {
         return ret;
     }
-    ret = CBOR_DecodeBoolean(buffer, &syncInterests);
+    ret = CBOR_DecodeBoolean(buffer, &reqBaseline);
+    if (ret != DPS_OK) {
+        return ret;
+    }
+    ret = CBOR_DecodeBoolean(buffer, &isBaseline);
     if (ret != DPS_OK) {
         return ret;
     }
@@ -1164,24 +1162,27 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_Buffer* buffer, const s
     }
     AddrSetPort(&senderAddr, addr, port);
     ret = AddRemoteNode(node, &senderAddr, &remote);
-    if (ret == DPS_OK) {
-        if (!syncInterests) {
-            DPS_ERRPRINT("Expected new remote node to request sync\n");
-        }
-        /*
-         * Always need to sync interests with new nodes
-         */
-        remote->syncInterests = DPS_TRUE;
-    } else {
+    if (ret != DPS_OK) {
         if (ret != DPS_ERR_EXISTS) {
             DPS_BitVectorFree(interests);
             DPS_BitVectorFree(needs);
             return ret;
         }
+        if (reqBaseline) {
+            remote->flags |= REQUIRE_BASELINE_INTERESTS;
+        }
+    } else {
         /*
-         * Only sync interests if the remote requested
+         * Unknown nodes always require baseline interests
          */
-        remote->syncInterests = syncInterests;
+        remote->flags |= REQUIRE_BASELINE_INTERESTS;
+    }
+    /*
+     * If the interests are baseline (not deltas) we don't need the old interests
+     */
+    if (isBaseline) {
+        DPS_BitVectorFree(remote->inbound.interests);
+        remote->inbound.interests = NULL;
     }
     ret = UpdateInboundInterests(node, remote, interests, needs);
     if (ret == DPS_OK) {
@@ -1221,6 +1222,10 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_Buffer* buffer, const s
             }
         }
     }
+    /*
+     * Done with these flags
+     */
+    remote->flags &= ~(REQUIRE_BASELINE_INTERESTS | SENDING_BASELINE_INTERESTS);
     return ret;
 }
 
@@ -1583,23 +1588,21 @@ DPS_Status DPS_DestroyPublication(DPS_Node* node, DPS_Publication* pub, void** p
 static DPS_Status SendInitialSubscription(DPS_Node* node, RemoteNode* remote)
 {
     DPS_Status ret;
-    int updates;
+    DPS_BitVector* interests;
 
     DPS_DBGTRACE();
 
     assert(!remote->outbound.interests);
     assert(!remote->outbound.needs);
 
-    ret = UpdateOutboundInterests(node, remote, &updates);
+    remote->flags |= (REQUIRE_BASELINE_INTERESTS | SENDING_BASELINE_INTERESTS);
+
+    ret = UpdateOutboundInterests(node, remote, &interests);
     if (ret != DPS_OK) {
         return ret;
     }
-    /*
-     * Need to get in sync with the remote node
-     */
-    remote->syncInterests = DPS_TRUE;
-    ret = SendSubscription(node, remote, DPS_TRUE);
-    assert(!remote->syncInterests);
+    assert(interests);
+    ret = SendSubscription(node, remote, interests);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to send subscription request: ret=%s\n", DPS_ErrTxt(ret));
     }

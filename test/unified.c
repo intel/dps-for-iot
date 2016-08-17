@@ -170,6 +170,7 @@ int main(int argc, char** argv)
             assert(ret == DPS_OK);
             ret = DPS_Join(subNode[s], &addr);
             assert(ret == DPS_OK);
+            DPS_PRINT("***** Subscriber %d joined publisher %d\n", DPS_GetPortNumber(subNode[s]), BASE_PORT_NUM + p);
         }
     }
 
