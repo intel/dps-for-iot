@@ -543,7 +543,7 @@ static DPS_Status ExpirePublication(DPS_Node* node, DPS_Publication* pub)
     return ret;
 }
 
-static DPS_Status RetainPublication(DPS_Node* node, DPS_Publication* pub, DPS_NodeAddress* senderAddr)
+static DPS_Status RetainPublication(DPS_Node* node, DPS_Publication* pub)
 {
     DPS_Status ret = DPS_OK;
     DPS_Publication* retained;
@@ -589,7 +589,7 @@ static DPS_Status RetainPublication(DPS_Node* node, DPS_Publication* pub, DPS_No
     retained->ttl = pub->ttl;
     retained->serialNumber = pub->serialNumber;
     retained->ackRequested = pub->ackRequested;
-    retained->sender = *senderAddr;
+    retained->sender = pub->sender;
 
     if (pub->len) {
         retained->payload = malloc(pub->len);
@@ -870,7 +870,6 @@ static DPS_Status DecodePublication(DPS_Node* node, DPS_Buffer* buffer, const st
     DPS_Status ret;
     RemoteNode* pubNode = NULL;
     uint16_t port;
-    DPS_NodeAddress senderAddr;
     DPS_Publication pub;
     DPS_UUID* pubId;
     int ackRequested;
@@ -909,12 +908,12 @@ static DPS_Status DecodePublication(DPS_Node* node, DPS_Buffer* buffer, const st
         DPS_DBGPRINT("Publication is stale\n");
         return DPS_OK;
     }
-    AddrSetPort(&senderAddr, addr, port);
+    AddrSetPort(&pub.sender, addr, port);
     /*
      * We have no reason to hold onto a node for multicast publishers
      */
     if (!multicast) {
-        ret = AddRemoteNode(node, &senderAddr, &pubNode);
+        ret = AddRemoteNode(node, &pub.sender, &pubNode);
         if (ret == DPS_ERR_EXISTS) {
             DPS_DBGPRINT("Updating existing node\n");
             ret = DPS_OK;
@@ -956,7 +955,7 @@ static DPS_Status DecodePublication(DPS_Node* node, DPS_Buffer* buffer, const st
                 if (DPS_BitVectorIncludes(pub.bf, sub->bf)) {
                     DPS_DBGPRINT("Matched subscription\n");
                     if (!addedHistory) {
-                        DPS_AppendPubHistory(&node->history, &pub.pubId, pub.serialNumber, ackRequested ? &senderAddr : NULL);
+                        DPS_AppendPubHistory(&node->history, &pub.pubId, pub.serialNumber, ackRequested ? &pub.sender : NULL);
                         addedHistory = DPS_TRUE;
                     }
                     node->currentPub = &pub;
@@ -974,7 +973,7 @@ static DPS_Status DecodePublication(DPS_Node* node, DPS_Buffer* buffer, const st
          * Record history for this publication if it was handled locally or forwarded to at least one subscriber
          */
         if (!addedHistory && fwdCount > 0) {
-            DPS_AppendPubHistory(&node->history, &pub.pubId, pub.serialNumber, ackRequested ? &senderAddr : NULL);
+            DPS_AppendPubHistory(&node->history, &pub.pubId, pub.serialNumber, ackRequested ? &pub.sender : NULL);
         }
         /*
          * Check if the publication should be retained or expired
@@ -982,7 +981,7 @@ static DPS_Status DecodePublication(DPS_Node* node, DPS_Buffer* buffer, const st
         if (pub.ttl <= 0) {
             ret = ExpirePublication(node, &pub);
         } else {
-            ret = RetainPublication(node, &pub, &senderAddr);
+            ret = RetainPublication(node, &pub);
         }
 
     }
