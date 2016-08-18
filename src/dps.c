@@ -160,58 +160,54 @@ static void DumpPubs(DPS_Node* node)
 #define NodeAddressText(a)        DPS_NetAddrText((struct sockaddr*)(&(a)->inaddr))
 #define RemoteNodeAddressText(n)  NodeAddressText(&(n)->addr)
 
-size_t DPS_SubscriptionGetNumTopics(DPS_Node* node, const DPS_Subscription* subscription)
+static int IsValidSub(DPS_Node* node, const DPS_Subscription* subscription)
 {
     DPS_Subscription* sub;
-
     for (sub = node->subscriptions; sub != NULL; sub = sub->next) {
         if (sub == subscription) {
-            return sub->numTopics;
+            return DPS_TRUE;
         }
     }
-    return 0;
+    return DPS_FALSE;
 }
 
-const char* DPS_SubscriptionGetTopic(DPS_Node* node, const DPS_Subscription* subscription, size_t index)
+static int IsValidPub(DPS_Node* node, const DPS_Publication* publication)
 {
-    DPS_Subscription* sub;
-
-    for (sub = node->subscriptions; sub != NULL; sub = sub->next) {
-        if (sub == subscription) {
-            if (sub->numTopics > index) {
-                return sub->topics[index];
-            } else {
-                return NULL;
-            }
-        }
-    }
-    return NULL;
-}
-
-const DPS_UUID* DPS_PublicationGetUUID(DPS_Node* node, const DPS_Publication* publication)
-{
-    const DPS_Publication* pub = publication;
-    if (pub != node->currentPub) {
+    if (publication == node->currentPub) {
+        return publication != NULL;
+    } else {
+        DPS_Publication* pub;
         for (pub = node->publications; pub != NULL; pub = pub->next) {
             if (pub == publication) {
-                break;
+                return DPS_TRUE;
             }
         }
     }
-    return pub ? &pub->pubId : NULL;
+    return DPS_FALSE;
 }
 
-uint32_t DPS_PublicationGetSerialNumber(DPS_Node* node, const DPS_Publication* publication)
+size_t DPS_SubscriptionGetNumTopics(DPS_Node* node, const DPS_Subscription* sub)
 {
-    const DPS_Publication* pub = publication;
-    if (pub != node->currentPub) {
-        for (pub = node->publications; pub != NULL; pub = pub->next) {
-            if (pub == publication) {
-                break;
-            }
-        }
+    return IsValidSub(node, sub) ? sub->numTopics : 0;
+}
+
+const char* DPS_SubscriptionGetTopic(DPS_Node* node, const DPS_Subscription* sub, size_t index)
+{
+    if (IsValidSub(node, sub) && (sub->numTopics > index)) {
+        return sub->topics[index];
+    } else {
+        return NULL;
     }
-    return pub ? pub->serialNumber : 0;
+}
+
+const DPS_UUID* DPS_PublicationGetUUID(DPS_Node* node, const DPS_Publication* pub)
+{
+    return IsValidPub(node, pub) ? &pub->pubId : NULL;
+}
+
+uint32_t DPS_PublicationGetSerialNumber(DPS_Node* node, const DPS_Publication* pub)
+{
+    return IsValidPub(node, pub) ? pub->serialNumber : 0;
 }
 
 static void AddrSetPort(DPS_NodeAddress* dest, const struct sockaddr* addr, uint16_t port)
@@ -1807,6 +1803,7 @@ DPS_Status DPS_ResolveAddress(DPS_Node* node, const char* host, const char* serv
     }
     return dpsRet;
 }
+
 void DPS_DumpSubscriptions(DPS_Node* node)
 {
     DPS_Subscription* sub;
