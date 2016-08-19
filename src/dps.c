@@ -89,13 +89,35 @@ typedef struct _DPS_Publication {
     DPS_Publication* next;
 } DPS_Publication;
 
+
+typedef enum {
+    FLOOD_SUBSCRIPTIONS_TASK,
+    FORWARD_PUB_TO_SUBS_TASK
+} IdlerTaskTypes;
+
+typedef struct _IdlerTask {
+    IdlerTaskTypes type;
+    struct _IdlerTask* next;
+    union {
+        struct {
+            DPS_Publication* pub;
+        } pub2subs;
+        struct {
+            void* dummy;
+        } flood;
+    } context;
+} IdlerTask;
+
 typedef struct _DPS_Node {
 
     uint16_t port;
     char separators[13];                  /* List of separator characters */
 
     uv_loop_t* loop;                      /* uv lib event loop */
-    uv_timer_t shutdownTimer;             /* for graceful shut down */
+    uv_timer_t shutdownTimer;             /* For graceful shut down */
+    uv_idle_t idler;                      /* For running background tasks */
+    IdlerTask* taskList;                /* List of background tasks to be run */
+    uv_mutex_t nodeLock;                  /* Mutex to protect this node */
 
     uint64_t ttlBasis;                    /* basis time for expiring retained messages */
 
@@ -120,6 +142,8 @@ typedef struct _DPS_Node {
     DPS_NetListener* netListener;         /* TCP listener */
 
 } DPS_Node;
+
+static void RunTask(uv_idle_t* handle);
 
 #ifdef NDEBUG
 #define DumpTopics(t, n)
@@ -159,6 +183,23 @@ static void DumpPubs(DPS_Node* node)
 
 #define NodeAddressText(a)        DPS_NetAddrText((struct sockaddr*)(&(a)->inaddr))
 #define RemoteNodeAddressText(n)  NodeAddressText(&(n)->addr)
+
+
+static void AppendTask(DPS_Node* node, IdlerTask* task)
+{
+    uv_mutex_lock(&node->nodeLock);
+    if (!node->taskList) {
+        node->taskList = task;
+        uv_idle_start(&node->idler, RunTask);
+    } else {
+        IdlerTask* t = node->taskList;
+        while (t->next) {
+            t = t->next;
+        }
+        t->next = task;
+    }
+    uv_mutex_unlock(&node->nodeLock);
+}
 
 static int IsValidSub(DPS_Node* node, const DPS_Subscription* subscription)
 {
@@ -628,14 +669,18 @@ static DPS_BitVector* PubSubMatch(DPS_Node* node, DPS_Publication* pub, RemoteNo
 
 static DPS_Status ForwardPubToOneSub(DPS_Node* node, DPS_Publication* pub, RemoteNode* sub)
 {
-    DPS_BitVector* pubBV = PubSubMatch(node, pub, sub);
-    if (pubBV) {
-        DPS_DBGPRINT("Forwarded pub %d to %s\n", pub->serialNumber, RemoteNodeAddressText(sub));
-        return SendPublication(node, pub, pubBV, sub);
-    } else {
+    /*
+     * We don't send publications back to the remote node than sent them
+     */
+    if (!SameAddr(&pub->sender, (struct sockaddr*)&sub->addr)) {
+        DPS_BitVector* pubBV = PubSubMatch(node, pub, sub);
+        if (pubBV) {
+            DPS_DBGPRINT("Forwarded pub %d to %s\n", pub->serialNumber, RemoteNodeAddressText(sub));
+            return SendPublication(node, pub, pubBV, sub);
+        }
         DPS_DBGPRINT("Rejected pub %d for %s\n", pub->serialNumber, RemoteNodeAddressText(sub));
-        return DPS_OK;
     }
+    return DPS_OK;
 }
 
 /*
@@ -656,14 +701,6 @@ static DPS_Status ForwardPubToSubs(DPS_Node* node, DPS_Publication* pub)
          * Ignore nodes that are not currently subscribers
          */
         if (!remote->inbound.interests) {
-            remote = remote->next;
-            continue;
-        }
-        /*
-         * Don't send a publication back to its publisher
-         */
-        if (SameAddr(&pub->sender, (struct sockaddr*)&remote->addr)) {
-            DPS_DBGPRINT("ForwardPubToSubs don't send pub back to publisher\n");
             remote = remote->next;
             continue;
         }
@@ -1025,20 +1062,20 @@ static DPS_Status SendSubscription(DPS_Node* node, RemoteNode* remote, DPS_BitVe
     return ret;
 }
 
-
-static DPS_Status FloodSubscriptions(DPS_Node* node)
+static DPS_Status FloodSubscriptionsTask(DPS_Node* node)
 {
-    RemoteNode* remote;
-    DPS_Status ret;
+    DPS_Status ret = DPS_OK;
+    RemoteNode* remote = node->remoteNodes;
 
     DPS_DBGTRACE();
 
     /*
      * Forward subscription to all remote nodes with interestss
      */
-    for (remote = node->remoteNodes; remote != NULL; remote = remote->next) {
+    while (remote) {
         DPS_BitVector* newInterests;
         if (!remote->inbound.interests) {
+            remote = remote->next;
             continue;
         }
         ret = UpdateOutboundInterests(node, remote, &newInterests);
@@ -1051,8 +1088,38 @@ static DPS_Status FloodSubscriptions(DPS_Node* node)
                 DPS_ERRPRINT("Failed to send subscription request %s\n", DPS_ErrTxt(sendRet));
             }
         }
+        /*
+         * Now that we have update the remote node if it has no inbound intersts and we didn't
+         * explicitly join it there is no reason to keep it around.
+         */
+        if (!remote->joined && DPS_BitVectorIsClear(remote->inbound.interests)) {
+            DPS_DBGPRINT("Remote node has no interests - deleting\n", RemoteNodeAddressText(remote));
+            remote = DeleteRemoteNode(node, remote);
+        } else {
+            /*
+             * Clear the directive flags
+             */
+            remote->flags &= ~(REQUIRE_BASELINE_INTERESTS | SENDING_BASELINE_INTERESTS);
+            remote = remote->next;
+        }
     }
-    return ret;
+    if (ret != DPS_OK) {
+        DPS_ERRPRINT("FloodSubscriptionsTask failed %s\n", DPS_ErrTxt(ret));
+    }
+    return DPS_OK;
+}
+
+static DPS_Status FloodSubscriptions(DPS_Node* node)
+{
+    if (node->remoteNodes) {
+        IdlerTask* task = calloc(1, sizeof(IdlerTask));
+        if (!task) {
+            return DPS_ERR_RESOURCES;
+        }
+        task->type = FLOOD_SUBSCRIPTIONS_TASK;
+        AppendTask(node, task);
+    }
+    return DPS_OK;
 }
 
 /*
@@ -1148,47 +1215,25 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_Buffer* buffer, const s
         remote->inbound.interests = NULL;
     }
     ret = UpdateInboundInterests(node, remote, interests, needs);
-    if (ret == DPS_OK) {
-        ret = FloodSubscriptions(node);
-        if (ret != DPS_OK) {
-            DPS_ERRPRINT("FloodSubscriptions failed %s\n", DPS_ErrTxt(ret));
-            return ret;
-        }
-    }
     /*
      * Expire any stale retained publications
      */
     LazyCheckTTLs(node);
-    /*
-     * If this is not a remote node we explicitly joined and it has no inbound
-     * interests there is no reason to keep this remote node.
-     */
-    if (!remote->joined && DPS_BitVectorIsClear(remote->inbound.interests)) {
-        DPS_DBGPRINT("Remote node has no interests - deleting\n", RemoteNodeAddressText(remote));
-        DeleteRemoteNode(node, remote);
-        return DPS_OK;
-    }
     if (ret == DPS_OK) {
         DPS_Publication* pub;
         /*
          * Check if any local or retained publications need to be forwarded to this subscriber
          */
         for (pub = node->publications; pub != NULL; pub = pub->next) {
-            /*
-             * We don't send a retained publication back to the node that sent it
-             */
-            if (!SameAddr(&pub->sender, (struct sockaddr*)&senderAddr.inaddr)) {
-                DPS_Status pubRet = ForwardPubToOneSub(node, pub, remote);
-                if (pubRet != DPS_OK) {
-                    DPS_ERRPRINT("ForwardPubToOneSub failed %s\n", DPS_ErrTxt(pubRet));
-                }
+            DPS_Status pubRet = ForwardPubToOneSub(node, pub, remote);
+            if (pubRet != DPS_OK) {
+                DPS_ERRPRINT("ForwardPubToOneSub failed %s\n", DPS_ErrTxt(pubRet));
             }
         }
     }
-    /*
-     * Done with these flags
-     */
-    remote->flags &= ~(REQUIRE_BASELINE_INTERESTS | SENDING_BASELINE_INTERESTS);
+    if (ret == DPS_OK) {
+        ret = FloodSubscriptions(node);
+    }
     return ret;
 }
 
@@ -1355,6 +1400,15 @@ DPS_Node* DPS_InitNode(int mcast, int tcpPort, const char* separators)
      */
     node->shutdownTimer.data = node;
     uv_timer_init(node->loop, &node->shutdownTimer);
+    /*
+     * Idler for background tasks
+     */
+    node->idler.data = node;
+    uv_idle_init(node->loop, &node->idler);
+    /*
+     * Mutex for protecting the public API
+     */
+    uv_mutex_init(&node->nodeLock);
 
     node->interests = DPS_CountVectorAlloc();
     node->needs = DPS_CountVectorAllocFH();
@@ -1687,6 +1741,11 @@ DPS_Status DPS_Subscribe(DPS_Node* node, char* const* topics, size_t numTopics, 
         DumpTopics(sub->topics, sub->numTopics);
 
         DPS_BitVectorFuzzyHash(sub->needs, sub->bf);
+
+        /*
+         * Protect the node while we update it
+         */
+        uv_mutex_lock(&node->nodeLock);
         sub->next = node->subscriptions;
         node->subscriptions = sub;
         *subscription = sub;
@@ -1694,6 +1753,8 @@ DPS_Status DPS_Subscribe(DPS_Node* node, char* const* topics, size_t numTopics, 
         if (ret == DPS_OK) {
             ret = DPS_CountVectorAdd(node->needs, sub->needs);
         }
+        uv_mutex_unlock(&node->nodeLock);
+
         if (ret == DPS_OK) {
             ret = FloodSubscriptions(node);
         }
@@ -1701,45 +1762,75 @@ DPS_Status DPS_Subscribe(DPS_Node* node, char* const* topics, size_t numTopics, 
     return ret;
 }
 
-DPS_Status DPS_SubscribeCancel(DPS_Node* node, DPS_Subscription* subscription)
+DPS_Status DPS_SubscribeCancel(DPS_Node* node, DPS_Subscription* sub)
 {
     DPS_Status ret;
-    DPS_Subscription* sub;
-    DPS_Subscription* prev = NULL;
 
-    if (!node || !subscription) {
+    if (!node || !sub) {
         return DPS_ERR_NULL;
     }
-    sub = node->subscriptions;
-    while (sub) {
-        if (sub == subscription) {
-            break;
-        }
-        prev = sub;
-        sub = sub->next;
-    }
-    if (!sub) {
+    /*
+     * Protect the node while we update it
+     */
+    uv_mutex_lock(&node->nodeLock);
+    if (!IsValidSub(node, sub)) {
+        uv_mutex_unlock(&node->nodeLock);
         return DPS_ERR_MISSING;
     }
-    if (prev) {
-        prev->next = sub->next;
-    } else {
-        node->subscriptions = sub->next;
-    }
-    DPS_DBGPRINT("Unsubscribing from %lu topics\n", sub->numTopics);
-    DumpTopics(sub->topics, sub->numTopics);
     /*
-     * TODO - optimization - check for no changes
+     * Unlink the subscription
+     */ 
+    if (node->subscriptions == sub) {
+        node->subscriptions = sub->next;
+    } else {
+        DPS_Subscription* prev = node->subscriptions;
+        while (prev->next != sub) {
+            prev = prev->next;
+        }
+        prev->next = sub->next;
+    }
+    /*
+     * This remove this subscriptions contributions to the interests and needs
      */
     ret = DPS_CountVectorDel(node->interests, sub->bf);
-    if (ret == DPS_OK) {
-        ret = DPS_CountVectorDel(node->needs, sub->needs);
-    }
+    assert(ret == DPS_OK);
+    ret = DPS_CountVectorDel(node->needs, sub->needs);
+    assert(ret == DPS_OK);
+    uv_mutex_unlock(&node->nodeLock);
+
+    DPS_DBGPRINT("Unsubscribing from %lu topics\n", sub->numTopics);
+    DumpTopics(sub->topics, sub->numTopics);
+    FreeSubscription(sub);
+
     if (ret == DPS_OK) {
         ret = FloodSubscriptions(node);
     }
-    FreeSubscription(sub);
     return ret;
+}
+
+static void RunTask(uv_idle_t* handle)
+{
+    DPS_Node* node = (DPS_Node*)handle->data;
+    IdlerTask* task = node->taskList;
+
+    DPS_DBGTRACE();
+
+    switch (task->type) {
+    case FLOOD_SUBSCRIPTIONS_TASK:
+        FloodSubscriptionsTask(node);
+        break;
+    case FORWARD_PUB_TO_SUBS_TASK:
+        break;
+    default:
+        break;
+    }
+    uv_mutex_lock(&node->nodeLock);
+    node->taskList = task->next;
+    if (!node->taskList) {
+        uv_idle_stop(&node->idler);
+    }
+    uv_mutex_unlock(&node->nodeLock);
+    free(task);
 }
 
 DPS_Status DPS_ResolveAddress(DPS_Node* node, const char* host, const char* service, DPS_NodeAddress* addr)
