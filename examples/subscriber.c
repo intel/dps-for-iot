@@ -162,6 +162,7 @@ int main(int argc, char** argv)
         DPS_ERRPRINT("Failed to create node: %s\n", DPS_ErrTxt(ret));
         return 1;
     }
+    DPS_PRINT("Subscriber is listening on port %d\n", DPS_GetPortNumber(node));
 
     if (numTopics > 0) {
         ret = DPS_Subscribe(node, topics, numTopics, OnPubMatch, &subscription);

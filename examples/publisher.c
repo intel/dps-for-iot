@@ -271,6 +271,9 @@ int main(int argc, char** argv)
         } else {
             DPS_ERRPRINT("Failed to publish topics - error=%d\n", ret);
         }
+        if (!wait) {
+            DPS_StopNode(node);
+        }
         DPS_DestroyNode(node);
     } else {
         DPS_PRINT("Running in interactive mode\n");

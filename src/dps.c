@@ -29,11 +29,9 @@ static const char DPS_AcknowledgmentURI[] = "dps/ack";
 
 typedef enum { NO_REQ, SUB_REQ, PUB_REQ, ACK_REQ } RequestType;
 
-#define REQUIRE_BASELINE_INTERESTS      0x01  /* Baseline interests are needed from this remote */
-#define SENDING_BASELINE_INTERESTS      0x02  /* Baseline interests must be sent to this remote */
-
 typedef struct _RemoteNode {
-    uint8_t flags;                     /* bitwise OR of the flags above */
+    uint8_t getBaselineInterests;      /* Baseline interests are required from this remote */
+    uint8_t putBaselineInterests;      /* Baseline interests must be sent to this remote */
     uint8_t joined;                    /* True if this is a node that was explicitly joined */
     DPS_NodeAddress addr;
     struct {
@@ -104,6 +102,7 @@ typedef struct _DPS_Node {
 
     uv_thread_t thread;                   /* Thread for the event loop */
     uv_loop_t* loop;                      /* uv lib event loop */
+    uv_timer_t shutdownTimer;             /* for graceful shut down */
     uv_async_t asyncHandler;
     uv_mutex_t nodeLock;                  /* Mutex to protect this node */
 
@@ -395,9 +394,9 @@ static DPS_Status UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, 
         goto ErrExit;
     }
     /*
-     * Don't compute the delta if baseline interests are being sent
+     * Don't compute the delta if we are putting baseline interests
      */
-    if (destNode->flags & SENDING_BASELINE_INTERESTS) {
+    if (destNode->putBaselineInterests) {
         DPS_BitVectorFree(destNode->outbound.interests);
         destNode->outbound.interests = NULL;
     }
@@ -413,9 +412,9 @@ static DPS_Status UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, 
         DPS_BitVectorFree(destNode->outbound.needs);
     } else {
         /*
-         * This will ensure the receiver knows this is not a delta
+         * Inform receiver this is the baseline interests not a delta
          */
-        destNode->flags |= SENDING_BASELINE_INTERESTS;
+        destNode->putBaselineInterests = DPS_TRUE;
         *outInterests = newInterests;
     }
     destNode->outbound.interests = newInterests;
@@ -474,7 +473,7 @@ static uint32_t UpdateTTLBasis(DPS_Node* node)
     return elapsedSeconds;
 }
 
-static void LazyCheckTTLs(DPS_Node* node)
+static void CheckTTLs(DPS_Node* node)
 {
     DPS_Publication* pub;
     DPS_Publication* next;
@@ -507,7 +506,7 @@ static void LazyCheckTTLs(DPS_Node* node)
          */
         if (pub->flags & PUB_FLAG_LOCAL) {
             pub->flags &= ~PUB_FLAG_PUBLISH;
-        } else {
+        } else if (pub->flags & PUB_FLAG_RETAINED) {
             DPS_DBGPRINT("Expiring retained pub %s\n", DPS_UUIDToString(&pub->pubId));
             FreePublication(node, pub);
         }
@@ -776,7 +775,7 @@ static void SendPubsTask(DPS_Node* node)
     /*
      * Removed any stale retained pubs
      */
-    LazyCheckTTLs(node);
+    CheckTTLs(node);
     /*
      * Check if any local or retained publications need to be forwarded to this subscriber
      */
@@ -816,8 +815,9 @@ static void SendPubsTask(DPS_Node* node)
         if (pub->ttl <= 0) {
             if (pub->flags & PUB_FLAG_LOCAL) {
                 pub->flags &= ~PUB_FLAG_PUBLISH;
+                DPS_DBGPRINT("Disabling local pub %s\n", DPS_UUIDToString(&pub->pubId));
             } else {
-                DPS_DBGPRINT("Expiring pub %s\n", DPS_UUIDToString(&pub->pubId));
+                DPS_DBGPRINT("Deleting pub %s\n", DPS_UUIDToString(&pub->pubId));
                 FreePublication(node, pub);
             }
         }
@@ -1062,8 +1062,8 @@ static DPS_Status SendSubscription(DPS_Node* node, RemoteNode* remote, DPS_BitVe
      * Write listening port
      */
     CBOR_EncodeUint16(&payload, port);
-    CBOR_EncodeBoolean(&payload, remote->flags & REQUIRE_BASELINE_INTERESTS);
-    CBOR_EncodeBoolean(&payload, remote->flags & SENDING_BASELINE_INTERESTS);
+    CBOR_EncodeBoolean(&payload, remote->getBaselineInterests);
+    CBOR_EncodeBoolean(&payload, remote->putBaselineInterests);
     ret = DPS_BitVectorSerialize(needs, &payload);
     if (ret == DPS_OK) {
         ret = DPS_BitVectorSerialize(interests, &payload);
@@ -1083,7 +1083,8 @@ static DPS_Status SendSubscription(DPS_Node* node, RemoteNode* remote, DPS_BitVe
     /*
      * Done with these flags
      */
-    remote->flags &= ~(REQUIRE_BASELINE_INTERESTS | SENDING_BASELINE_INTERESTS);
+    remote->getBaselineInterests = DPS_FALSE;
+    remote->putBaselineInterests = DPS_FALSE;
     return ret;
 }
 
@@ -1122,6 +1123,7 @@ static void SendSubsTask(DPS_Node* node)
                 DPS_ERRPRINT("Failed to send subscription request %s\n", DPS_ErrTxt(ret));
                 continue;
             }
+        } else {
         }
         /*
          * Now that we have updated the remote node if it has no inbound intersts and we didn't
@@ -1130,11 +1132,6 @@ static void SendSubsTask(DPS_Node* node)
         if (!remote->joined && DPS_BitVectorIsClear(remote->inbound.interests)) {
             DPS_DBGPRINT("Remote node has no interests - deleting\n", RemoteNodeAddressText(remote));
             DeleteRemoteNode(node, remote);
-        } else {
-            /*
-             * Clear the directive flags
-             */
-            remote->flags &= ~(REQUIRE_BASELINE_INTERESTS | SENDING_BASELINE_INTERESTS);
         }
     }
     if (ret != DPS_OK) {
@@ -1197,7 +1194,7 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_Buffer* buffer, const s
     DPS_NodeAddress senderAddr;
     uint16_t port;
     RemoteNode* remote;
-    int reqBaseline;
+    int getBaseline;
     int isBaseline;
 
     DPS_DBGTRACE();
@@ -1215,7 +1212,7 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_Buffer* buffer, const s
     if (ret != DPS_OK) {
         return ret;
     }
-    ret = CBOR_DecodeBoolean(buffer, &reqBaseline);
+    ret = CBOR_DecodeBoolean(buffer, &getBaseline);
     if (ret != DPS_OK) {
         return ret;
     }
@@ -1239,14 +1236,14 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_Buffer* buffer, const s
             DPS_BitVectorFree(needs);
             return ret;
         }
-        if (reqBaseline) {
-            remote->flags |= REQUIRE_BASELINE_INTERESTS;
+        if (getBaseline) {
+            remote->putBaselineInterests = DPS_TRUE;
         }
     } else {
         /*
          * Unknown nodes always require baseline interests
          */
-        remote->flags |= REQUIRE_BASELINE_INTERESTS;
+        remote->putBaselineInterests = DPS_TRUE;
     }
     /*
      * If the interests are baseline (not deltas) we don't need the old interests
@@ -1446,6 +1443,11 @@ DPS_Status DPS_CreateNode(DPS_Node** nodeOut, int mcast, int tcpPort, const char
     }
     strncpy(node->separators, separators, sizeof(node->separators));
     /*
+     * Timer for clean shutdown
+     */
+    node->shutdownTimer.data = node;
+    uv_timer_init(node->loop, &node->shutdownTimer);
+    /*
      * For triggering background tasks
      */
     node->asyncHandler.data = node;
@@ -1471,9 +1473,11 @@ DPS_Status DPS_CreateNode(DPS_Node** nodeOut, int mcast, int tcpPort, const char
     }
     if (mcast & DPS_MCAST_PUB_ENABLE_RECV) {
         node->mcastReceiver = DPS_MulticastStartReceive(node, OnMulticastReceive);
+        uv_run(node->loop, UV_RUN_NOWAIT);
     }
     if (mcast & DPS_MCAST_PUB_ENABLE_SEND) {
         node->mcastSender = DPS_MulticastStartSend(node);
+        uv_run(node->loop, UV_RUN_NOWAIT);
     }
     node->netListener = DPS_NetStartListening(node, tcpPort, OnNetReceive);
     if (!node->netListener) {
@@ -1481,6 +1485,15 @@ DPS_Status DPS_CreateNode(DPS_Node** nodeOut, int mcast, int tcpPort, const char
         FreeNode(node);
         return DPS_ERR_NETWORK;
     }
+    /*
+     * Make sure know the listenting port before we return
+     */
+    while (!DPS_GetPortNumber(node)) {
+        uv_run(node->loop, UV_RUN_NOWAIT);
+    }
+    /*
+     *  The node loop gets its own thread to run on
+     */
     r = uv_thread_create(&node->thread, NodeRun, node);
     if (r) {
         DPS_ERRPRINT("Failed to create node thread\n");
@@ -1509,8 +1522,14 @@ uint16_t DPS_GetPortNumber(DPS_Node* node)
 
 }
 
-void DPS_StopNode(DPS_Node* node)
+#define STOP_TIMEOUT 200
+
+static void StopOnTimeout(uv_timer_t* handle)
 {
+    DPS_Node* node = (DPS_Node*)handle->data;
+
+    DPS_DBGTRACE();
+
     if (node->mcastReceiver) {
         node->mcastReceiver = NULL;
         DPS_MulticastStopReceive(node->mcastReceiver);
@@ -1523,11 +1542,20 @@ void DPS_StopNode(DPS_Node* node)
         DPS_NetStopListening(node->netListener);
         node->netListener = NULL;
     }
+    uv_close((uv_handle_t*)&node->asyncHandler, NULL);
+    uv_timer_stop(handle);
+}
+
+void DPS_StopNode(DPS_Node* node)
+{
+    DPS_DBGTRACE();
+    uv_timer_start(&node->shutdownTimer, StopOnTimeout, STOP_TIMEOUT, 0);
 }
 
 void DPS_DestroyNode(DPS_Node* node)
 {
     if (uv_thread_join(&node->thread) == 0) {
+        uv_mutex_destroy(&node->nodeLock);
         FreeNode(node);
     }
 }
@@ -1658,7 +1686,11 @@ DPS_Status DPS_Join(DPS_Node* node, DPS_NodeAddress* addr)
         }
         uv_mutex_unlock(&node->nodeLock);
     } else {
-        remote->flags |= (REQUIRE_BASELINE_INTERESTS | SENDING_BASELINE_INTERESTS);
+        /*
+         * Send and get baseline interests to synchronize with new remote node
+         */
+        remote->putBaselineInterests = DPS_TRUE;
+        remote->getBaselineInterests = DPS_TRUE;
         uv_mutex_unlock(&node->nodeLock);
         SendSubs(node, remote);
     }
@@ -1860,7 +1892,10 @@ DPS_Status DPS_ResolveAddress(DPS_Node* node, const char* host, const char* serv
     if (!host) {
         host = "localhost";
     }
-    ret = uv_getaddrinfo(node->loop, &info, NULL, host, service, &hints);
+    /*
+     * TODO !!!!!!  - needs to run asyncronously on node thread 
+    */
+    ret = uv_getaddrinfo(uv_default_loop(), &info, NULL, host, service, &hints);
     if (ret) {
         DPS_ERRPRINT("uv_getaddrinfo call error %s\n", uv_err_name(ret));
         dpsRet = DPS_ERR_NETWORK;
