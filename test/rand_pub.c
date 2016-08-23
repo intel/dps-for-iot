@@ -108,15 +108,16 @@ int main(int argc, char** argv)
         goto Usage;
     }
 
-    node = DPS_InitNode(DPS_MCAST_PUB_ENABLE_SEND, portNum, "/.");
+    DPS_CreateNode(&node, DPS_MCAST_PUB_ENABLE_SEND, portNum, "/.");
     assert(node);
-    loop = DPS_GetLoop(node);
 
+    loop = DPS_GetLoop(node);
     uv_timer_init(loop, &timer);
     timer.data = node;
     uv_timer_start(&timer, OnTimer, 1000, 10);
 
-    return uv_run(loop, UV_RUN_DEFAULT);
+    DPS_DestroyNode(node);
+    return 0;
 
 Usage:
     DPS_PRINT("Usage %s [-p <portnum>] [-d]\n", *argv);

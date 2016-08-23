@@ -145,15 +145,16 @@ int main(int argc, char** argv)
     pubNode = malloc(numPubs * sizeof(DPS_Node*));
     publications = calloc(1, numPubs * sizeof(DPS_Publication*));
 
-    loop = uv_default_loop();
-
     for (s = 0; s < numSubs; ++s) {
-        subNode[s] = DPS_InitNode(DPS_MCAST_PUB_DISABLED, 0, "/.");
-        assert(subNode[s]);
+        ret = DPS_CreateNode(&subNode[s], DPS_MCAST_PUB_DISABLED, 0, "/.");
+        assert(ret == DPS_OK);
     }
     for (p = 0; p < numPubs; ++p) {
-        pubNode[p] = DPS_InitNode(DPS_MCAST_PUB_DISABLED, BASE_PORT_NUM + p, "/.");
-        assert(pubNode[p]);
+        ret = DPS_CreateNode(&pubNode[p], DPS_MCAST_PUB_DISABLED, BASE_PORT_NUM + p, "/.");
+        assert(ret == DPS_OK);
+        loop = DPS_GetLoop(pubNode[p]);
+        uv_timer_init(loop, &timer);
+        uv_timer_start(&timer, OnTimer, 1000, 2000);
     }
 
     DPS_PRINT("***** Join subscribers to publishers\n");
@@ -187,15 +188,7 @@ int main(int argc, char** argv)
         }
     }
 
-    uv_timer_init(loop, &timer);
-    uv_timer_start(&timer, OnTimer, 1000, 2000);
-
-
     DPS_PRINT("***** Up and running\n");
-
-    uv_run(loop, UV_RUN_DEFAULT);
-
-    return 0;
 
 Usage:
     DPS_PRINT("Usage %s [-d]\n", *argv);

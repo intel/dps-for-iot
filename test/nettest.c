@@ -69,7 +69,7 @@ static void Listener(DPS_Node* node)
 static void OnSendComplete(DPS_Node* node, struct sockaddr* addr, uv_buf_t* bufs, size_t numBufs, DPS_Status status)
 {
     printf("OnSendComplete: status = %d\n", status);
-    DPS_TerminateNode(node);
+    DPS_StopNode(node);
 }
 
 static const char testData[] = "This is a payload";
@@ -100,10 +100,11 @@ static void Sender(DPS_Node* node, int port)
 
 int main(int argc, char** argv)
 {
-    DPS_Node* node = DPS_InitNode(DPS_MCAST_PUB_DISABLED, 0, "/");
+    DPS_Node* node;
     int listener = 0;
     int port = 0;
 
+    DPS_CreateNode(&node, DPS_MCAST_PUB_DISABLED, 0, "/");
     if (argc > 1) {
         if (strcmp(argv[1], "-l") == 0) {
             listener = 1;
@@ -120,6 +121,7 @@ int main(int argc, char** argv)
         }
         Sender(node, port);
     }
-    return uv_run(DPS_GetLoop(node), UV_RUN_DEFAULT);
+    DPS_DestroyNode(node);
+    return 0;
 }
 

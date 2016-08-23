@@ -38,12 +38,18 @@ static void OnPubMatch(DPS_Node* node, DPS_Subscription* sub, const DPS_Publicat
     }
 }
 
-static void OnIdle(uv_idle_t* handle)
+#if 0
+static void ReadStdin()
 {
-    DPS_Node* node = (DPS_Node*)handle->data;
-    DPS_PRINT("Listening on port %d\n", DPS_GetPortNumber(node));
-    uv_idle_stop(handle);
+    char lineBuf[200];
+
+    while (fgets(lineBuf, sizeof(lineBuf), stdin) != NULL) {
+        if (lineBuf[0] == 'q') {
+            exit(0);
+        }
+    }
 }
+#endif
 
 static int IntArg(char* opt, char*** argp, int* argcp, int* val, uint32_t min, uint32_t max)
 {
@@ -151,9 +157,9 @@ int main(int argc, char** argv)
         mcastPub = DPS_MCAST_PUB_ENABLE_RECV;
     }
 
-    node = DPS_InitNode(mcastPub, listenPort, "/.");
+    ret = DPS_CreateNode(&node, mcastPub, listenPort, "/.");
     if (!node) {
-        DPS_ERRPRINT("Failed to initialize node: %s\n", DPS_ErrTxt(ret));
+        DPS_ERRPRINT("Failed to create node: %s\n", DPS_ErrTxt(ret));
         return 1;
     }
 
@@ -164,10 +170,6 @@ int main(int argc, char** argv)
             return 1;
         }
     }
-
-    assert(node);
-    loop = DPS_GetLoop(node);
-
     if (host || connectPort) {
         ret = DPS_ResolveAddress(node, host, connectPort, &addr);
         if (ret != DPS_OK) {
@@ -176,12 +178,8 @@ int main(int argc, char** argv)
         }
         ret = DPS_Join(node, &addr);
     }
-
-    uv_idle_init(loop, &idler);
-    idler.data = node;
-    uv_idle_start(&idler, OnIdle);
-
-    return uv_run(loop, UV_RUN_DEFAULT);
+    DPS_DestroyNode(node);
+    return 0;
 
 Usage:
     DPS_PRINT("Usage %s [-p <portnum>] [-h <hostname>] [-l <listen port] [-m] [-d] topic1 topic2 ... topicN\n", *argv);

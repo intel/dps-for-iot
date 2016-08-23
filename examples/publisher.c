@@ -1,6 +1,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <ctype.h>
 #include <assert.h>
 #include <dps_dbg.h>
 #include <bitvec.h>
@@ -9,17 +10,10 @@
 
 #define MAX_TOPICS 64
 
-static char lineBuf[200];
 static char* topics[MAX_TOPICS];
 static size_t numTopics = 0;
 
 static int requestAck = DPS_FALSE;
-
-static void OnAlloc(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf)
-{
-    buf->base = lineBuf;
-    buf->len = sizeof(lineBuf);
-}
 
 static DPS_Publication* currentPub = NULL;
 
@@ -84,18 +78,26 @@ static void OnAck(DPS_Node* node, const DPS_Publication* pub, uint8_t* data, siz
     }
 }
 
-static void OnInput(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf)
+static void ReadStdin(DPS_Node* node)
 {
     void* data;
+    char lineBuf[200];
 
-    if (lineBuf[nread - 1] == '\n') {
+    while (fgets(lineBuf, sizeof(lineBuf), stdin) != NULL) {
+        size_t len = strlen(lineBuf);
         int ttl;
         int keep;
         char* msg;
         DPS_Status ret;
-        DPS_Node* node = (DPS_Node*)stream->data;
 
-        lineBuf[nread - 1] = 0;
+        while (len && isspace(lineBuf[len - 1])) {
+            --len;
+        }
+        if (!len) {
+            continue;
+        }
+        lineBuf[len] = 0;
+
         DPS_PRINT("Pub: %s\n", lineBuf);
 
         if (!AddTopics(lineBuf, &msg, &keep, &ttl)) {
@@ -121,8 +123,6 @@ static void OnInput(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf)
         }
     }
 }
-
-#define STDIN 1
 
 static int IntArg(char* opt, char*** argp, int* argcp, int* val, uint32_t min, uint32_t max)
 {
@@ -240,9 +240,11 @@ int main(int argc, char** argv)
         mcast = DPS_MCAST_PUB_DISABLED;
     }
 
-    node = DPS_InitNode(mcast, 0, "/.");
-    assert(node);
-    loop = DPS_GetLoop(node);
+    ret = DPS_CreateNode(&node, mcast, 0, "/.");
+    if (ret != DPS_OK) {
+        DPS_ERRPRINT("DPS_CreateNode failed: %s\n", DPS_ErrTxt(ret));
+        return 1;
+    }
 
     if (host || connectPort) {
         ret = DPS_ResolveAddress(node, host, connectPort, &addr);
@@ -269,18 +271,12 @@ int main(int argc, char** argv)
         } else {
             DPS_ERRPRINT("Failed to publish topics - error=%d\n", ret);
         }
-        if (!wait) {
-            DPS_TerminateNode(node);
-        }
-        return uv_run(loop, UV_RUN_DEFAULT);
+        DPS_DestroyNode(node);
     } else {
         DPS_PRINT("Running in interactive mode\n");
-        r = uv_tty_init(loop, &tty, STDIN, 1);
-        assert(r == 0);
-        tty.data = node;
-        uv_read_start((uv_stream_t*)&tty, OnAlloc, OnInput);
+        ReadStdin(node);
     }
-    return uv_run(loop, UV_RUN_DEFAULT);
+    return 0;
 
 Usage:
     DPS_PRINT("Usage %s [-p <portnum>] [-h <hostname>] [-d] [-m <message>] [topic1 topic2 ... topicN]\n", *argv);

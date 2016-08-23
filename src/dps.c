@@ -37,10 +37,12 @@ typedef struct _RemoteNode {
     uint8_t joined;                    /* True if this is a node that was explicitly joined */
     DPS_NodeAddress addr;
     struct {
+        uint8_t updates;               /* TRUE if updates have been received but not acted on */
         DPS_BitVector* needs;          /* Bit vector of needs received from  this remote node */
         DPS_BitVector* interests;      /* Bit vector of interests received from  this remote node */
     } inbound;
     struct {
+        uint8_t checkForUpdates;       /* TRUE if there may be updated interests to send to this remote */
         DPS_BitVector* needs;          /* Needs bit vector sent outbound to this remote node */
         DPS_BitVector* interests;      /* Interests bit vector sent outbound to this remote node */
     } outbound;
@@ -77,6 +79,7 @@ typedef struct _DPS_Subscription {
  */
 typedef struct _DPS_Publication {
     uint8_t flags;                  /* Internal state flags */
+    uint8_t checkToSend;            /* TRUE if this publication should be checked to send */
     uint8_t ackRequested;           /* TRUE if an ack was requested by the publisher */
     int16_t ttl;                    /* Remaining time-to-live in seconds */
     uint32_t serialNumber;          /* Serial number for this publication */
@@ -90,33 +93,18 @@ typedef struct _DPS_Publication {
 } DPS_Publication;
 
 
-typedef enum {
-    FLOOD_SUBSCRIPTIONS_TASK,
-    FORWARD_PUB_TO_SUBS_TASK
-} IdlerTaskTypes;
-
-typedef struct _IdlerTask {
-    IdlerTaskTypes type;
-    struct _IdlerTask* next;
-    union {
-        struct {
-            DPS_Publication* pub;
-        } pub2subs;
-        struct {
-            void* dummy;
-        } flood;
-    } context;
-} IdlerTask;
+#define SEND_SUBSCRIPTIONS_TASK 0x01
+#define SEND_PUBLICATIONS_TASK  0x02
 
 typedef struct _DPS_Node {
 
+    uint8_t tasks;                        /* Background tasks that have been scheduled */
     uint16_t port;
     char separators[13];                  /* List of separator characters */
 
+    uv_thread_t thread;                   /* Thread for the event loop */
     uv_loop_t* loop;                      /* uv lib event loop */
-    uv_timer_t shutdownTimer;             /* For graceful shut down */
-    uv_idle_t idler;                      /* For running background tasks */
-    IdlerTask* taskList;                /* List of background tasks to be run */
+    uv_async_t asyncHandler;
     uv_mutex_t nodeLock;                  /* Mutex to protect this node */
 
     uint64_t ttlBasis;                    /* basis time for expiring retained messages */
@@ -143,7 +131,17 @@ typedef struct _DPS_Node {
 
 } DPS_Node;
 
-static void RunTask(uv_idle_t* handle);
+/*
+ * Forward declaration
+ */
+static void RunAsync(uv_async_t* handle);
+
+static void ScheduleTask(DPS_Node* node, uint8_t task)
+{
+    DPS_DBGTRACE();
+    node->tasks |= task;
+    uv_async_send(&node->asyncHandler);
+}
 
 #ifdef NDEBUG
 #define DumpTopics(t, n)
@@ -185,42 +183,30 @@ static void DumpPubs(DPS_Node* node)
 #define RemoteNodeAddressText(n)  NodeAddressText(&(n)->addr)
 
 
-static void AppendTask(DPS_Node* node, IdlerTask* task)
-{
-    uv_mutex_lock(&node->nodeLock);
-    if (!node->taskList) {
-        node->taskList = task;
-        uv_idle_start(&node->idler, RunTask);
-    } else {
-        IdlerTask* t = node->taskList;
-        while (t->next) {
-            t = t->next;
-        }
-        t->next = task;
-    }
-    uv_mutex_unlock(&node->nodeLock);
-}
-
 static int IsValidSub(DPS_Node* node, const DPS_Subscription* subscription)
 {
     DPS_Subscription* sub;
+    uv_mutex_lock(&node->nodeLock);
     for (sub = node->subscriptions; sub != NULL; sub = sub->next) {
         if (sub == subscription) {
-            return DPS_TRUE;
+            break;
         }
     }
-    return DPS_FALSE;
+    uv_mutex_unlock(&node->nodeLock);
+    return sub != NULL;
 }
 
 static int IsValidPub(DPS_Node* node, const DPS_Publication* publication)
 {
     DPS_Publication* pub;
+    uv_mutex_lock(&node->nodeLock);
     for (pub = node->publications; pub != NULL; pub = pub->next) {
         if (pub == publication) {
-            return DPS_TRUE;
+            break;
         }
     }
-    return DPS_FALSE;
+    uv_mutex_unlock(&node->nodeLock);
+    return pub != NULL;
 }
 
 size_t DPS_SubscriptionGetNumTopics(DPS_Node* node, const DPS_Subscription* sub)
@@ -667,7 +653,7 @@ static DPS_BitVector* PubSubMatch(DPS_Node* node, DPS_Publication* pub, RemoteNo
     }
 }
 
-static DPS_Status ForwardPubToOneSub(DPS_Node* node, DPS_Publication* pub, RemoteNode* sub)
+static DPS_Status SendMatchingPubToSub(DPS_Node* node, DPS_Publication* pub, RemoteNode* sub)
 {
     /*
      * We don't send publications back to the remote node than sent them
@@ -675,67 +661,12 @@ static DPS_Status ForwardPubToOneSub(DPS_Node* node, DPS_Publication* pub, Remot
     if (!SameAddr(&pub->sender, (struct sockaddr*)&sub->addr)) {
         DPS_BitVector* pubBV = PubSubMatch(node, pub, sub);
         if (pubBV) {
-            DPS_DBGPRINT("Forwarded pub %d to %s\n", pub->serialNumber, RemoteNodeAddressText(sub));
+            DPS_DBGPRINT("Sending pub %d to %s\n", pub->serialNumber, RemoteNodeAddressText(sub));
             return SendPublication(node, pub, pubBV, sub);
         }
         DPS_DBGPRINT("Rejected pub %d for %s\n", pub->serialNumber, RemoteNodeAddressText(sub));
     }
     return DPS_OK;
-}
-
-/*
- * Forward a publication to matching subscribers
- */
-static DPS_Status ForwardPubToSubs(DPS_Node* node, DPS_Publication* pub)
-{
-    DPS_Status ret = DPS_OK;
-    RemoteNode* remote = node->remoteNodes;
-
-    DPS_DBGTRACE();
-
-    if (!pub->flags & PUB_FLAG_PUBLISH) {
-        return DPS_OK;
-    }
-    while (remote) {
-        /*
-         * Ignore nodes that are not currently subscribers
-         */
-        if (!remote->inbound.interests) {
-            remote = remote->next;
-            continue;
-        }
-        ret = ForwardPubToOneSub(node, pub, remote);
-        if (ret != DPS_OK) {
-            remote = DeleteRemoteNode(node, remote);
-        } else {
-            remote = remote->next;
-        }
-    }
-    /*
-     * Check if this publication should be retained or expired
-     */
-    if (pub->ttl <= 0) {
-        if (pub->flags & PUB_FLAG_LOCAL) {
-            pub->flags &= ~PUB_FLAG_PUBLISH;
-        } else {
-            DPS_DBGPRINT("Expiring pub %s\n", DPS_UUIDToString(&pub->pubId));
-            FreePublication(node, pub);
-        }
-    } else {
-        DPS_DBGPRINT("Retaining pub %s for %d seconds\n", DPS_UUIDToString(&pub->pubId), pub->ttl);
-        /*
-         * Removed any stale retained pubs
-         */
-        LazyCheckTTLs(node);
-        /*
-         * If there are no other retained messages the ttlBasis time will not be set
-         */
-        if (!node->ttlBasis) {
-            UpdateTTLBasis(node);
-        }
-    }
-    DumpPubs(node);
-    return ret;
 }
 
 static DPS_Status SendAcknowledgement(DPS_Node* node, const DPS_UUID* pubId, uint32_t serialNumber, uint8_t* data, size_t len, DPS_NodeAddress* destAddr)
@@ -834,6 +765,97 @@ static DPS_Status DecodeAcknowledgment(DPS_Node* node, DPS_Buffer* buffer)
     return ret;
 }
 
+static void SendPubsTask(DPS_Node* node)
+{
+    DPS_Status ret;
+    DPS_Publication* pub;
+    DPS_Publication* nextPub;
+
+    DPS_DBGTRACE();
+
+    /*
+     * Removed any stale retained pubs
+     */
+    LazyCheckTTLs(node);
+    /*
+     * Check if any local or retained publications need to be forwarded to this subscriber
+     */
+    for (pub = node->publications; pub != NULL; pub = nextPub) {
+        RemoteNode* remote;
+        RemoteNode* nextRemote;
+
+        nextPub = pub->next;
+        /*
+         * If the node is a multicast sender local publications are always multicast
+         */
+        if (node->mcastSender && (pub->flags & (PUB_FLAG_LOCAL | PUB_FLAG_PUBLISH))) {
+            DPS_Status ret = SendPublication(node, pub, pub->bf, NULL);
+            if (ret != DPS_OK) {
+                DPS_ERRPRINT("SendPublication (multicast) returned %s\n", DPS_ErrTxt(ret));
+            }
+        }
+        /*
+         * Only check publications that are flagged to be checked
+         */
+        if (pub->checkToSend) {
+            pub->checkToSend = DPS_FALSE;
+            for (remote = node->remoteNodes; remote != NULL; remote = nextRemote) {
+                nextRemote = remote->next;
+                if (remote->inbound.interests) {
+                    ret = SendMatchingPubToSub(node, pub, remote);
+                    if (ret != DPS_OK) {
+                        DeleteRemoteNode(node, remote);
+                        DPS_ERRPRINT("SendMatchingPubToSub failed %s\n", DPS_ErrTxt(ret));
+                    }
+                }
+            }
+        }
+        /*
+         * Check if the publication has expired
+         */
+        if (pub->ttl <= 0) {
+            if (pub->flags & PUB_FLAG_LOCAL) {
+                pub->flags &= ~PUB_FLAG_PUBLISH;
+            } else {
+                DPS_DBGPRINT("Expiring pub %s\n", DPS_UUIDToString(&pub->pubId));
+                FreePublication(node, pub);
+            }
+        }
+    }
+    /*
+     * If there are no other retained messages the ttlBasis time will not be set
+     */
+    if (!node->ttlBasis) {
+        UpdateTTLBasis(node);
+    }
+    DumpPubs(node);
+}
+
+/*
+ * Run checks of one or more publications against the current subscriptions
+ */
+static void SendPubs(DPS_Node* node, DPS_Publication* pub)
+{
+    uv_mutex_lock(&node->nodeLock);
+    /*
+     * Need something to send and somwhere to send it
+     */
+    if (node->publications && (node->remoteNodes || node->mcastSender)) {
+        if (pub) {
+            pub->checkToSend = DPS_TRUE;
+        } else {
+            /*
+             * Check all publications
+             */
+            for (pub = node->publications; pub != NULL; pub = pub->next) {
+                pub->checkToSend = DPS_TRUE;
+            }
+        }
+        ScheduleTask(node, SEND_PUBLICATIONS_TASK);
+    }
+    uv_mutex_unlock(&node->nodeLock);
+}
+
 /*
  * Check if there is a local subscription for this publication
  * Note that we don't deliver expired publications to the handler.
@@ -842,6 +864,9 @@ static void CallPubHandlers(DPS_Node* node, DPS_Publication* pub)
 {
     DPS_Subscription* sub;
     DPS_Subscription* next;
+
+    DPS_DBGTRACE();
+
     for (sub = node->subscriptions; sub != NULL; sub = next) {
         /*
          * Ths current subscription might get freed by the handler so need to hold the next pointer here.
@@ -983,16 +1008,16 @@ static DPS_Status DecodePublication(DPS_Node* node, DPS_Buffer* buffer, const st
          */
         CallPubHandlers(node, pub);
     }
-    /*
-     * Forward the publication to matching remote subscribers
-     */
-    return ForwardPubToSubs(node, pub);
+    SendPubs(node, pub);
+    return DPS_OK;
 
 Exit:
+
     /*
      * Delete the publisher node if it is sending bad data
      */
     if (ret == DPS_ERR_INVALID) {
+        DPS_ERRPRINT("Deleteing bad publisher\n");
         DeleteRemoteNode(node, pubNode);
     }
     FreePublication(node, pub);
@@ -1062,64 +1087,79 @@ static DPS_Status SendSubscription(DPS_Node* node, RemoteNode* remote, DPS_BitVe
     return ret;
 }
 
-static DPS_Status FloodSubscriptionsTask(DPS_Node* node)
+static void SendSubsTask(DPS_Node* node)
 {
-    DPS_Status ret = DPS_OK;
-    RemoteNode* remote = node->remoteNodes;
+    DPS_Status ret;
+    RemoteNode* remote;
+    RemoteNode* remoteNext;
 
     DPS_DBGTRACE();
 
     /*
+     * TODO - process one remote at a time to allow for interleaved I/O
+     */
+    /*
      * Forward subscription to all remote nodes with interestss
      */
-    while (remote) {
+    for (remote = node->remoteNodes; remote != NULL; remote = remoteNext) {
         DPS_BitVector* newInterests;
-        if (!remote->inbound.interests) {
-            remote = remote->next;
+        
+        remoteNext = remote->next;
+
+        if (!remote->outbound.checkForUpdates) {
             continue;
         }
+        remote->outbound.checkForUpdates = DPS_FALSE;
+
         ret = UpdateOutboundInterests(node, remote, &newInterests);
         if (ret != DPS_OK) {
             break;
         }
         if (newInterests) {
-            DPS_Status sendRet = SendSubscription(node, remote, newInterests);
-            if (sendRet != DPS_OK) {
-                DPS_ERRPRINT("Failed to send subscription request %s\n", DPS_ErrTxt(sendRet));
+            ret = SendSubscription(node, remote, newInterests);
+            if (ret != DPS_OK) {
+                DeleteRemoteNode(node, remote);
+                DPS_ERRPRINT("Failed to send subscription request %s\n", DPS_ErrTxt(ret));
+                continue;
             }
         }
         /*
-         * Now that we have update the remote node if it has no inbound intersts and we didn't
+         * Now that we have updated the remote node if it has no inbound intersts and we didn't
          * explicitly join it there is no reason to keep it around.
          */
         if (!remote->joined && DPS_BitVectorIsClear(remote->inbound.interests)) {
             DPS_DBGPRINT("Remote node has no interests - deleting\n", RemoteNodeAddressText(remote));
-            remote = DeleteRemoteNode(node, remote);
+            DeleteRemoteNode(node, remote);
         } else {
             /*
              * Clear the directive flags
              */
             remote->flags &= ~(REQUIRE_BASELINE_INTERESTS | SENDING_BASELINE_INTERESTS);
-            remote = remote->next;
         }
     }
     if (ret != DPS_OK) {
-        DPS_ERRPRINT("FloodSubscriptionsTask failed %s\n", DPS_ErrTxt(ret));
+        DPS_ERRPRINT("SendSubsTask failed %s\n", DPS_ErrTxt(ret));
     }
-    return DPS_OK;
 }
 
-static DPS_Status FloodSubscriptions(DPS_Node* node)
+static void SendSubs(DPS_Node* node, RemoteNode* remote)
 {
+    DPS_DBGTRACE();
+    uv_mutex_lock(&node->nodeLock);
     if (node->remoteNodes) {
-        IdlerTask* task = calloc(1, sizeof(IdlerTask));
-        if (!task) {
-            return DPS_ERR_RESOURCES;
+        if (remote) {
+            remote->outbound.checkForUpdates = DPS_TRUE;
+        } else {
+            /*
+             * Check all remotes that have inbound interests
+             */
+            for (remote = node->remoteNodes; remote != NULL; remote = remote->next) {
+                remote->outbound.checkForUpdates = remote->inbound.interests != NULL;
+            }
         }
-        task->type = FLOOD_SUBSCRIPTIONS_TASK;
-        AppendTask(node, task);
+        ScheduleTask(node, SEND_SUBSCRIPTIONS_TASK);
     }
-    return DPS_OK;
+    uv_mutex_unlock(&node->nodeLock);
 }
 
 /*
@@ -1142,6 +1182,7 @@ static DPS_Status UpdateInboundInterests(DPS_Node* node, RemoteNode* remote, DPS
     DPS_CountVectorAdd(node->needs, needs);
     remote->inbound.interests = interests;
     remote->inbound.needs = needs;
+    remote->inbound.updates = DPS_TRUE;
     return DPS_OK;
 }
 
@@ -1216,23 +1257,11 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_Buffer* buffer, const s
     }
     ret = UpdateInboundInterests(node, remote, interests, needs);
     /*
-     * Expire any stale retained publications
+     * Schedule background tasks
      */
-    LazyCheckTTLs(node);
     if (ret == DPS_OK) {
-        DPS_Publication* pub;
-        /*
-         * Check if any local or retained publications need to be forwarded to this subscriber
-         */
-        for (pub = node->publications; pub != NULL; pub = pub->next) {
-            DPS_Status pubRet = ForwardPubToOneSub(node, pub, remote);
-            if (pubRet != DPS_OK) {
-                DPS_ERRPRINT("ForwardPubToOneSub failed %s\n", DPS_ErrTxt(pubRet));
-            }
-        }
-    }
-    if (ret == DPS_OK) {
-        ret = FloodSubscriptions(node);
+        SendPubs(node, NULL);
+        SendSubs(node, NULL);
     }
     return ret;
 }
@@ -1385,26 +1414,42 @@ static void FreeNode(DPS_Node* node)
     free(node);
 }
 
-DPS_Node* DPS_InitNode(int mcast, int tcpPort, const char* separators)
+static void NodeRun(void* arg)
 {
-    DPS_Status ret;
-    DPS_Node* node = calloc(1, sizeof(DPS_Node));
+    DPS_Node* node = (DPS_Node*)arg;
 
+    uv_run(node->loop, UV_RUN_DEFAULT);
+}
+
+
+DPS_Status DPS_CreateNode(DPS_Node** nodeOut, int mcast, int tcpPort, const char* separators)
+{
+    int r;
+    DPS_Status ret;
+    DPS_Node* node;
+
+    if (!nodeOut || !separators)  {
+        return DPS_ERR_NULL;
+    }
+    node = calloc(1, sizeof(DPS_Node));
     if (!node) {
-        return NULL;
+        return DPS_ERR_RESOURCES;
+    }
+    node->loop = calloc(1, sizeof(uv_loop_t));
+    if (!node->loop) {
+        free(node);
+        return DPS_ERR_RESOURCES;
+    }
+    r = uv_loop_init(node->loop);
+    if (r) {
+        return DPS_ERR_FAILURE;
     }
     strncpy(node->separators, separators, sizeof(node->separators));
-    node->loop = uv_default_loop();
     /*
-     * Initialize the shutdown timer
+     * For triggering background tasks
      */
-    node->shutdownTimer.data = node;
-    uv_timer_init(node->loop, &node->shutdownTimer);
-    /*
-     * Idler for background tasks
-     */
-    node->idler.data = node;
-    uv_idle_init(node->loop, &node->idler);
+    node->asyncHandler.data = node;
+    uv_async_init(node->loop, &node->asyncHandler, RunAsync);
     /*
      * Mutex for protecting the public API
      */
@@ -1417,12 +1462,12 @@ DPS_Node* DPS_InitNode(int mcast, int tcpPort, const char* separators)
 
     if (!node->interests || !node->needs || !node->scratch.interests || !node->scratch.needs) {
         FreeNode(node);
-        return NULL;
+        return DPS_ERR_RESOURCES;
     }
     ret = DPS_InitUUID();
     if (ret != DPS_OK) {
         FreeNode(node);
-        return NULL;
+        return ret;
     }
     if (mcast & DPS_MCAST_PUB_ENABLE_RECV) {
         node->mcastReceiver = DPS_MulticastStartReceive(node, OnMulticastReceive);
@@ -1434,9 +1479,16 @@ DPS_Node* DPS_InitNode(int mcast, int tcpPort, const char* separators)
     if (!node->netListener) {
         DPS_ERRPRINT("Failed to initialize listener on TCP port %d\n", tcpPort);
         FreeNode(node);
-        return NULL;
+        return DPS_ERR_NETWORK;
     }
-    return node;
+    r = uv_thread_create(&node->thread, NodeRun, node);
+    if (r) {
+        DPS_ERRPRINT("Failed to create node thread\n");
+        FreeNode(node);
+        return DPS_ERR_FAILURE;
+    }
+    *nodeOut = node;
+    return DPS_OK;
 }
 
 uv_loop_t* DPS_GetLoop(DPS_Node* node)
@@ -1457,37 +1509,27 @@ uint16_t DPS_GetPortNumber(DPS_Node* node)
 
 }
 
-#define SHUTDOWN_TIMEOUT1  500
-#define SHUTDOWN_TIMEOUT2   50
-
-static void TerminateOnTimeout(uv_timer_t* handle)
-{
-    DPS_Node* node = (DPS_Node*)handle->data;
-
-    assert(&node->shutdownTimer == handle);
-
-    if (node->netListener) {
-        DPS_NetStopListening(node->netListener);
-        node->netListener = NULL;
-    }
-    uv_timer_stop(handle);
-
-    if (uv_loop_alive(handle->loop)) {
-        uv_timer_start(&node->shutdownTimer, TerminateOnTimeout, SHUTDOWN_TIMEOUT2, 0);
-    } else {
-        FreeNode(node);
-    }
-}
-
-void DPS_TerminateNode(DPS_Node* node)
+void DPS_StopNode(DPS_Node* node)
 {
     if (node->mcastReceiver) {
+        node->mcastReceiver = NULL;
         DPS_MulticastStopReceive(node->mcastReceiver);
     }
     if (node->mcastSender) {
         DPS_MulticastStopSend(node->mcastSender);
+        node->mcastSender = NULL;
     }
-    uv_timer_start(&node->shutdownTimer, TerminateOnTimeout, SHUTDOWN_TIMEOUT1, 0);
+    if (node->netListener) {
+        DPS_NetStopListening(node->netListener);
+        node->netListener = NULL;
+    }
+}
+
+void DPS_DestroyNode(DPS_Node* node)
+{
+    if (uv_thread_join(&node->thread) == 0) {
+        FreeNode(node);
+    }
 }
 
 DPS_Status DPS_CreatePublication(DPS_Node* node, char* const* topics, size_t numTopics, DPS_AcknowledgementHandler handler, DPS_Publication** publication)
@@ -1526,8 +1568,6 @@ DPS_Status DPS_CreatePublication(DPS_Node* node, char* const* topics, size_t num
         pub->ackRequested = DPS_TRUE;
     }
     pub->flags = PUB_FLAG_LOCAL;
-    pub->next = node->publications;
-    node->publications = pub;
 
     for (i = 0; i < numTopics; ++i) {
         ret = DPS_AddTopic(pub->bf, topics[i], node->separators, DPS_Pub);
@@ -1535,18 +1575,20 @@ DPS_Status DPS_CreatePublication(DPS_Node* node, char* const* topics, size_t num
             break;
         }
     }
+    uv_mutex_lock(&node->nodeLock);
+    pub->next = node->publications;
+    node->publications = pub;
     if (ret == DPS_OK) {
         *publication = pub;
     } else {
         FreePublication(node, pub);
     }
+    uv_mutex_unlock(&node->nodeLock);
     return ret;
 }
 
 DPS_Status DPS_Publish(DPS_Node* node, DPS_Publication* pub, void* payload, size_t len, int16_t ttl, void** oldPayload)
 {
-    DPS_Status ret = DPS_OK;
-
     DPS_DBGTRACE();
 
     if (!node || !pub) {
@@ -1573,17 +1615,8 @@ DPS_Status DPS_Publish(DPS_Node* node, DPS_Publication* pub, void* payload, size
     if ((pub->ttl > 0) && !node->ttlBasis) {
         UpdateTTLBasis(node);
     }
-    if (node->mcastSender) {
-        ret = SendPublication(node, pub, pub->bf, NULL);
-        if (ret != DPS_OK) {
-            DPS_ERRPRINT("SendPublication (multicast) returned %s\n", DPS_ErrTxt(ret));
-        }
-    }
-    ret = ForwardPubToSubs(node, pub);
-    if (ret != DPS_OK) {
-        DPS_ERRPRINT("ForwardPubToSubs returned %s\n", DPS_ErrTxt(ret));
-    }
-    return ret;
+    SendPubs(node, pub);
+    return DPS_OK;
 }
 
 DPS_Status DPS_DestroyPublication(DPS_Node* node, DPS_Publication* pub, void** payload)
@@ -1604,38 +1637,16 @@ DPS_Status DPS_DestroyPublication(DPS_Node* node, DPS_Publication* pub, void** p
     return DPS_ERR_OK;
 }
 
-static DPS_Status SendInitialSubscription(DPS_Node* node, RemoteNode* remote)
-{
-    DPS_Status ret;
-    DPS_BitVector* interests;
-
-    DPS_DBGTRACE();
-
-    assert(!remote->outbound.interests);
-    assert(!remote->outbound.needs);
-
-    remote->flags |= (REQUIRE_BASELINE_INTERESTS | SENDING_BASELINE_INTERESTS);
-
-    ret = UpdateOutboundInterests(node, remote, &interests);
-    if (ret != DPS_OK) {
-        return ret;
-    }
-    assert(interests);
-    ret = SendSubscription(node, remote, interests);
-    if (ret != DPS_OK) {
-        DPS_ERRPRINT("Failed to send subscription request: ret=%s\n", DPS_ErrTxt(ret));
-    }
-    return ret;
-}
-
 DPS_Status DPS_Join(DPS_Node* node, DPS_NodeAddress* addr)
 {
     DPS_Status ret = DPS_OK;
     RemoteNode* remote;
 
+    DPS_DBGTRACE();
     if (!addr || !node) {
         return DPS_ERR_NULL;
     }
+    uv_mutex_lock(&node->nodeLock);
     ret = AddRemoteNode(node, addr, &remote);
     if (remote) {
         remote->joined = DPS_TRUE;
@@ -1645,26 +1656,30 @@ DPS_Status DPS_Join(DPS_Node* node, DPS_NodeAddress* addr)
             DPS_ERRPRINT("Node at %s already joined\n", DPS_NodeAddressText(addr));
             ret = DPS_OK;
         }
+        uv_mutex_unlock(&node->nodeLock);
     } else {
-        if (ret == DPS_OK) {
-            ret = SendInitialSubscription(node, remote);
-        }
-        if (ret != DPS_OK) {
-            DeleteRemoteNode(node, remote);
-        }
+        remote->flags |= (REQUIRE_BASELINE_INTERESTS | SENDING_BASELINE_INTERESTS);
+        uv_mutex_unlock(&node->nodeLock);
+        SendSubs(node, remote);
     }
     return ret;
 }
 
 DPS_Status DPS_Leave(DPS_Node* node, DPS_NodeAddress* addr)
 {
-    RemoteNode* remote = LookupRemoteNode(node, (struct sockaddr*)&addr->inaddr);
+    DPS_Status status;
+    RemoteNode* remote;
+
+    uv_mutex_lock(&node->nodeLock);
+    remote = LookupRemoteNode(node, (struct sockaddr*)&addr->inaddr);
     if (remote) {
         DeleteRemoteNode(node, remote);
-        return DPS_OK;
+        status = DPS_OK;
     } else {
-        return DPS_ERR_MISSING;
+        status = DPS_ERR_MISSING;
     }
+    uv_mutex_unlock(&node->nodeLock);
+    return status;
 }
 
 DPS_Status DPS_AcknowledgePublication(DPS_Node* node, const DPS_UUID* pubId, uint32_t serialNumber, void* payload, size_t len)
@@ -1756,7 +1771,7 @@ DPS_Status DPS_Subscribe(DPS_Node* node, char* const* topics, size_t numTopics, 
         uv_mutex_unlock(&node->nodeLock);
 
         if (ret == DPS_OK) {
-            ret = FloodSubscriptions(node);
+            SendSubs(node, NULL);
         }
     }
     return ret;
@@ -1802,35 +1817,31 @@ DPS_Status DPS_SubscribeCancel(DPS_Node* node, DPS_Subscription* sub)
     DumpTopics(sub->topics, sub->numTopics);
     FreeSubscription(sub);
 
-    if (ret == DPS_OK) {
-        ret = FloodSubscriptions(node);
-    }
-    return ret;
+    SendSubs(node, NULL);
+
+    return DPS_OK;
 }
 
-static void RunTask(uv_idle_t* handle)
+static void RunAsync(uv_async_t* handle)
 {
     DPS_Node* node = (DPS_Node*)handle->data;
-    IdlerTask* task = node->taskList;
 
     DPS_DBGTRACE();
 
-    switch (task->type) {
-    case FLOOD_SUBSCRIPTIONS_TASK:
-        FloodSubscriptionsTask(node);
-        break;
-    case FORWARD_PUB_TO_SUBS_TASK:
-        break;
-    default:
-        break;
-    }
     uv_mutex_lock(&node->nodeLock);
-    node->taskList = task->next;
-    if (!node->taskList) {
-        uv_idle_stop(&node->idler);
+    while (node->tasks) {
+        if (node->tasks & SEND_SUBSCRIPTIONS_TASK) {
+            node->tasks &= ~SEND_SUBSCRIPTIONS_TASK;
+            SendSubsTask(node);
+            continue;
+        }
+        if (node->tasks & SEND_PUBLICATIONS_TASK) {
+            node->tasks &= ~SEND_PUBLICATIONS_TASK;
+            SendPubsTask(node);
+            continue;
+        }
     }
     uv_mutex_unlock(&node->nodeLock);
-    free(task);
 }
 
 DPS_Status DPS_ResolveAddress(DPS_Node* node, const char* host, const char* service, DPS_NodeAddress* addr)

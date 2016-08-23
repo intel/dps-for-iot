@@ -94,14 +94,6 @@ static void OnTimer(uv_timer_t* handle)
     }
 }
 
-
-static void OnIdle(uv_idle_t* handle)
-{
-    DPS_Node* node = (DPS_Node*)handle->data;
-    DPS_PRINT("Listening on port %d\n", DPS_GetPortNumber(node));
-    uv_idle_stop(handle);
-}
-
 int main(int argc, char** argv)
 {
     DPS_Status ret;
@@ -166,14 +158,11 @@ int main(int argc, char** argv)
         mcastPub = DPS_MCAST_PUB_ENABLE_RECV;
     }
 
-    node = DPS_InitNode(mcastPub, listenPort, "/.");
-    if (!node) {
+    ret = DPS_CreateNode(&node, mcastPub, listenPort, "/.");
+    if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to initialize node: %s\n", DPS_ErrTxt(ret));
         return 1;
     }
-
-    assert(node);
-    loop = DPS_GetLoop(node);
 
     if (host || connectPort) {
         ret = DPS_ResolveAddress(node, host, connectPort, &addr);
@@ -184,15 +173,13 @@ int main(int argc, char** argv)
         ret = DPS_Join(node, &addr);
     }
 
-    uv_idle_init(loop, &idler);
-    idler.data = node;
-    uv_idle_start(&idler, OnIdle);
-
+    loop = DPS_GetLoop(node);
     uv_timer_init(loop, &timer);
     timer.data = node;
     uv_timer_start(&timer, OnTimer, 1000, 10000);
 
-    return uv_run(loop, UV_RUN_DEFAULT);
+    DPS_DestroyNode(node);
+    return 0;
 
 Usage:
     DPS_PRINT("Usage %s [-p <portnum>] [-a <hostname>] [-l <listen port] [-m] [-d]\n", *argv);

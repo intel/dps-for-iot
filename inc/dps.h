@@ -111,13 +111,29 @@ DPS_Status DPS_BufferInit(DPS_Buffer* buffer, uint8_t* storage, size_t size);
 #define DPS_MCAST_PUB_ENABLE_RECV    2
 
 /**
- * Initialize a local node
+ * Create and initialize a local node
  *
  * @param mcastPub     Indicates if this node sends or listens for multicast publications
  * @param tcpPort      If non-zero identifies specific port to listen on
  * @param separators   The separator characters to use for topic matching, typically '/' and/or '.'
  */
-DPS_Node* DPS_InitNode(int mcastPub, int tcpPort, const char* separators);
+DPS_Status DPS_CreateNode(DPS_Node** node, int mcastPub, int tcpPort, const char* separators);
+
+/**
+ * Stop a local node
+ *
+ * @param node   The node to stop
+ */
+void DPS_StopNode(DPS_Node* node);
+
+/**
+ * Waits for the node to stop and destroys node and free any resources.
+ *
+ * Note: if not waiting for the node to stop call DPS_StopNode() first.
+ *
+ * @param node   The node to destroy
+ */
+void DPS_DestroyNode(DPS_Node* node);
 
 /**
  * Get the uv event loop for this node
@@ -253,13 +269,6 @@ DPS_Status DPS_Join(DPS_Node* node, DPS_NodeAddress* addr);
  * @param addr   The address of a remote node
  */
 DPS_Status DPS_Leave(DPS_Node* node, DPS_NodeAddress* addr);
-
-/**
- * Terminate a local node and free any associated resources.
- *
- * @param node   The node to terminate
- */
-void DPS_TerminateNode(DPS_Node* node);
 
 /**
  * Get the port number this node is listening for connections on

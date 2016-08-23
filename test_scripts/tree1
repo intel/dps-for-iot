@@ -32,7 +32,7 @@ bin/subscriber -l 60002 -p 50000 7/8/9 &
 
 sleep 1
 
-bin/publisher -p 20000 a/b/c 5/6/7 -m "published a/b/c 5/6/7"
+bin/publisher -p 20000 a/b/c 4/5/6 -m "published a/b/c 4/5/6"
 bin/publisher -p 30000 d/e/f -m "published d/e/f"
 bin/publisher -p 40000 1/2/3 -m "published 1/2/3"
 bin/publisher -p 50000 g/h/i -m "published g/h/i"
