@@ -13,7 +13,6 @@
 DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
 
-#define DPS_PORT     3040
 
 #define MAX_READ_LEN   4096
 #define MAX_WRITE_LEN  4096
@@ -226,7 +225,7 @@ static void OnOutgoingConnection(uv_connect_t *req, int status)
             DPS_ERRPRINT("OnOutgoingConnection - write failed: %s\n", uv_err_name(status));
         }
     } else {
-        DPS_ERRPRINT("OnOutgoingConnection - connect failed: %s\n", uv_err_name(status));
+        DPS_ERRPRINT("OnOutgoingConnection - connect %s failed: %s\n", DPS_NetAddrText((struct sockaddr*)&writer->addr), uv_err_name(status));
     }
     if (status != 0) {
         writer->onSendComplete(writer->node, (struct sockaddr*)&writer->addr, writer->bufs, writer->numBufs, DPS_ERR_NETWORK);

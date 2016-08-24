@@ -17,6 +17,7 @@ typedef struct _DPS_PubHistory {
 } DPS_PubHistory;
 
 typedef struct {
+   uv_mutex_t lock;         /* mutex to protect the history struct */
    DPS_PubHistory* oldest;  /* Oldest publication */
    DPS_PubHistory* newest;  /* Newest publication */
    uint32_t count;        
