@@ -1,7 +1,6 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <dps_dbg.h>
-#include <sha1.h>
 #include <dps_uuid.h>
 
 /*
