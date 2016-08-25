@@ -18,7 +18,7 @@ function sub {
     sleep 0.1
     echo -e "=============================\nsub$s $debug $@" | tee $f
     echo "==============================" >> $f
-    ../bin/subscriber $debug $@ 2>> $f &
+    ../build/bin/subscriber $debug $@ 2>> $f &
 }
 
 function pub {
@@ -28,7 +28,7 @@ function pub {
     echo -e "=============================\npub$s $debug $@" | tee $f
     echo "==============================" >> $f
     msg=$(echo "Published topics: " $@)
-    ../bin/publisher $debug $@ -m "$msg" 2>> $f &
+    ../build/bin/publisher $debug $@ -m "$msg" 2>> $f &
 }
 
 function cleanup {

@@ -8,7 +8,7 @@ for key, val in ARGLIST:
     if (key == 'optimize' and val == 'true'):
         cflags = ['-O3', '-DNDEBUG']
 
-env = Environment(CPPDEFINES=cppdefines, CFLAGS=cflags, CPPPATH=['./inc'], LIBS=['uv', 'dps'], LIBPATH=['./build/lib'])
+env = Environment(CPPDEFINES=cppdefines, CFLAGS=cflags, CPPPATH=['./inc'], LIBS=['uv'])
 
 print env['CPPDEFINES']
 

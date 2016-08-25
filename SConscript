@@ -4,8 +4,11 @@ Import('env')
 
 cflags = env['CFLAGS'] + ['-Wall', '-Werror', '-Wno-format-extra-args']
 
-env.StaticLibrary('lib/dps', Glob('src/*.c'), LIBS=[], CFLAGS=cflags)
+staticlib = env.StaticLibrary('lib/dps', Glob('src/*.c'), LIBS=[], CFLAGS=cflags)
 env.SharedLibrary('lib/dps', Glob('src/*.c'), LIBS=[], CFLAGS=cflags)
+
+# Force test and examples to link with the static library
+env['LIBS'] = env['LIBS'] + staticlib
 
 # Unit tests
 env.Program('bin/countvec', env.Object('test/countvec.c'))
