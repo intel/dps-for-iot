@@ -190,6 +190,10 @@ int main(int argc, char** argv)
 
     DPS_PRINT("***** Up and running\n");
 
+    for (s = 0; s < numSubs; ++s) {
+        DPS_DestroyNode(subNode[s]);
+    }
+
 Usage:
     DPS_PRINT("Usage %s [-d]\n", *argv);
     return 1;

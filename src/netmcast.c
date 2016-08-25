@@ -21,7 +21,6 @@ struct _DPS_MulticastReceiver {
     uint8_t ipVersions;
     uv_udp_t udpRx;
     DPS_Node* node;
-    void* context;
     DPS_OnReceive cb;
 };
 
@@ -145,12 +144,11 @@ static DPS_Status MulticastRxInit(DPS_MulticastReceiver* receiver)
 DPS_MulticastReceiver* DPS_MulticastStartReceive(DPS_Node* node, DPS_OnReceive cb)
 {
     DPS_Status ret;
-    DPS_MulticastReceiver* receiver = malloc(sizeof(DPS_MulticastReceiver));
+    DPS_MulticastReceiver* receiver = calloc(1, sizeof(DPS_MulticastReceiver));
 
     if (!receiver) {
         return NULL;
     }
-    memset(receiver, 0, sizeof(*receiver));
     receiver->ipVersions = USE_IPV6 | USE_IPV4;
     receiver->cb = cb;
     receiver->node = node;
@@ -217,7 +215,7 @@ static DPS_Status MulticastTxInit(DPS_MulticastSender* sender)
             ++sender->numTx;
         }
     }
-    sender->udpTx = sock = malloc(sizeof(TxSocket) * sender->numTx);
+    sender->udpTx = sock = calloc(1, sizeof(TxSocket) * sender->numTx);
     /*
      * Initialize a socket per interface
      */
@@ -273,23 +271,26 @@ static DPS_Status MulticastTxInit(DPS_MulticastSender* sender)
         }
         ++sock;
     }
+    uv_free_interface_addresses(ifsAddrs, numIfs);
     return DPS_OK;
 }
 
 DPS_MulticastSender* DPS_MulticastStartSend(DPS_Node* node)
 {
     DPS_Status ret;
-    DPS_MulticastSender* sender = malloc(sizeof(DPS_MulticastSender));
+    DPS_MulticastSender* sender = calloc(1, sizeof(DPS_MulticastSender));
 
     if (!sender) {
         return NULL;
     }
-    memset(sender, 0, sizeof(*sender));
     sender->ipVersions = USE_IPV6 | USE_IPV4;
     sender->node = node;
 
     ret = MulticastTxInit(sender);
     if (ret != DPS_OK) {
+        if (sender->udpTx) {
+            free(sender->udpTx);
+        }
         free(sender);
         return NULL;
     }
@@ -300,6 +301,7 @@ static void TxCloseCB(uv_handle_t* handle)
 {
     DPS_MulticastSender* sender = (DPS_MulticastSender*)handle->data;
     if (--sender->numTx == 0) {
+        free(sender->udpTx);
         free(sender);
     }
 }

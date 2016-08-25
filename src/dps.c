@@ -1524,6 +1524,10 @@ static void FreeNode(DPS_Node* node)
     uv_mutex_destroy(&node->nodeLock);
     uv_mutex_destroy(&node->history.lock);
 
+    assert(!uv_loop_alive(node->loop));
+
+    uv_loop_close(node->loop);
+    free(node->loop);
     free(node);
 }
 
@@ -1650,8 +1654,8 @@ static void StopOnTimeout(uv_timer_t* handle)
     DPS_DBGTRACE();
 
     if (node->mcastReceiver) {
-        node->mcastReceiver = NULL;
         DPS_MulticastStopReceive(node->mcastReceiver);
+        node->mcastReceiver = NULL;
     }
     if (node->mcastSender) {
         DPS_MulticastStopSend(node->mcastSender);
@@ -1663,6 +1667,7 @@ static void StopOnTimeout(uv_timer_t* handle)
     }
     uv_close((uv_handle_t*)&node->bgHandler, NULL);
     uv_timer_stop(handle);
+    uv_stop(node->loop);
 }
 
 static void StopNodeTask(DPS_Node* node)
