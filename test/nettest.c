@@ -104,7 +104,8 @@ int main(int argc, char** argv)
     int listener = 0;
     int port = 0;
 
-    DPS_CreateNode(&node, DPS_MCAST_PUB_DISABLED, 0, "/");
+    node = DPS_CreateNode(NULL);
+    DPS_StartNode(node, DPS_MCAST_PUB_DISABLED, 0);
     if (argc > 1) {
         if (strcmp(argv[1], "-l") == 0) {
             listener = 1;

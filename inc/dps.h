@@ -12,11 +12,13 @@
 #define DPS_TRUE  1
 #define DPS_FALSE 0
 
-
 /**
- * Enumeration for Pub and Sub roles
+ * 
  */
-typedef enum { DPS_Sub, DPS_Pub } DPS_Role;
+#define DPS_MCAST_PUB_DISABLED       0
+#define DPS_MCAST_PUB_ENABLE_SEND    1
+#define DPS_MCAST_PUB_ENABLE_RECV    2
+
 
 /**
  * Opaque type for a node
@@ -24,103 +26,71 @@ typedef enum { DPS_Sub, DPS_Pub } DPS_Role;
 typedef struct _DPS_Node DPS_Node;
 
 /**
- * Type for an address
+ * Opaque type for an address
  */
-typedef struct _DPS_NodeAddress {
-    struct sockaddr_storage inaddr;
-} DPS_NodeAddress;
+typedef struct _DPS_NodeAddress DPS_NodeAddress;
 
 /**
- * Returns static string for a node address
- */
-#define DPS_NodeAddressText(a) DPS_NetAddrText((struct sockaddr*)a)
-
-/**
- * Opaque type for an active subscription
+ * Opaque type for a subscription
  */
 typedef struct _DPS_Subscription DPS_Subscription;
 
 /**
  * Get a topic for an active subscription
  */
-const char* DPS_SubscriptionGetTopic(DPS_Node* node, const DPS_Subscription* sub, size_t index);
+const char* DPS_SubscriptionGetTopic(const DPS_Subscription* sub, size_t index);
 
 /**
  * Get the number of topics registered with an active subscription
  */
-size_t DPS_SubscriptionGetNumTopics(DPS_Node* node, const DPS_Subscription* sub);
+size_t DPS_SubscriptionGetNumTopics(const DPS_Subscription* sub);
 
 /**
- * Opaque type for an active publication
+ * Opaque type for a publication
  */
 typedef struct _DPS_Publication DPS_Publication;
 
 /**
+ * Opaque type for a publication acknowledgement
+ */
+typedef struct _DPS_PublicationAck DPS_PublicationAck;
+
+/**
  * Get the UUID for a publication
  */
-const DPS_UUID* DPS_PublicationGetUUID(DPS_Node* node, const DPS_Publication* pub);
+const DPS_UUID* DPS_PublicationGetUUID(const DPS_Publication* pub);
 
 /**
  * Get the serial number for a publication. Serial numbers are always > 0.
  *
- * @param node         The local node for this publication
  * @param pub
  *
  * @return The serial number or zero if the publication is invalid.
  */
-uint32_t DPS_PublicationGetSerialNumber(DPS_Node* node, const DPS_Publication* pub);
+uint32_t DPS_PublicationGetSerialNumber(const DPS_Publication* pub);
 
 /**
- * For passing buffers around
- */
-typedef struct {
-    uint8_t* base; /**< base address for buffer */
-    uint8_t* eod;  /**< end of buffer or data */
-    uint8_t* pos;  /**< current read/write location in buffer */
-} DPS_Buffer;
-
-/**
- * Initialize a buffer struct
+ * Allocates space for a local DPS node.
  *
- * @param buffer    Buffer to initialized
- * @param storage   The storage for the buffer. If the storage is NULL storage is allocated.
- * @param size      Current size of the buffer
+ * @param separators   The separator characters to use for topic matching, if NULL defaults to "/"
  *
- * @return   DPS_OK or DP_ERR_RESOURCES if storage is needed and could not be allocated.
+ * @return A pointer to the uninitialized node or NULL if there were no resources for the node.
  */
-DPS_Status DPS_BufferInit(DPS_Buffer* buffer, uint8_t* storage, size_t size);
-
-/*
- * Space left in a buffer being written
- */
-#define DPS_BufferSpace(b)  ((b)->eod - (b)->pos)
-
-/*
- * Data available in a buffer being read
- */
-#define DPS_BufferAvail(b)  ((b)->eod - (b)->pos)
-
-/*
- * Space currently used in buffer
- */
-#define DPS_BufferUsed(b)  ((b)->pos - (b)->base)
-
-
-#define DPS_MCAST_PUB_DISABLED       0
-#define DPS_MCAST_PUB_ENABLE_SEND    1
-#define DPS_MCAST_PUB_ENABLE_RECV    2
+DPS_Node* DPS_CreateNode(const char* separators);
 
 /**
- * Create and initialize a local node
+ * Initialized and starts running a local node. Node can only be started once and cannot be restarted after it has been
+ * stopped.
  *
  * @param mcastPub     Indicates if this node sends or listens for multicast publications
  * @param tcpPort      If non-zero identifies specific port to listen on
- * @param separators   The separator characters to use for topic matching, typically '/' and/or '.'
+ *
+ * @return DPS_OK or various error status codes
  */
-DPS_Status DPS_CreateNode(DPS_Node** node, int mcastPub, int tcpPort, const char* separators);
+DPS_Status DPS_StartNode(DPS_Node* node, int mcastPub, int tcpPort);
 
 /**
- * Stop a local node
+ * Stop a local node. This can be called from any thread. The node must be stopped before it can be destroyed.
  *
  * @param node   The node to stop
  */
@@ -136,7 +106,9 @@ void DPS_StopNode(DPS_Node* node);
 void DPS_DestroyNode(DPS_Node* node);
 
 /**
- * Get the uv event loop for this node
+ * Get the uv event loop for this node. The only thing that is safe to do with the node
+ * is to create an async callback. Other libuv APIs can then be called from within the
+ * async callback.
  *
  * @param node     The local node to use
  */
@@ -148,15 +120,40 @@ uv_loop_t* DPS_GetLoop(DPS_Node* node);
  * subscriber that generates an acknowledgement so may be called numerous times for same
  * publication.
  *
- * @param node     The local node used in the publish call
  * @param pub      Opaque handle for the publication that was received
  * @param payload  Payload accompanying the acknowledgement if any
  * @param len   Length of the payload
  */
-typedef void (*DPS_AcknowledgementHandler)(DPS_Node* node, const DPS_Publication* pub, uint8_t* payload, size_t len);
+typedef void (*DPS_AcknowledgementHandler)(DPS_Publication* pub, uint8_t* payload, size_t len);
 
 /**
- * Create a new publication from a set of topics. Each publication has a UUID and a serial number. The
+ * Allocates storage for a publication
+ *
+ * @param node         The local node to use
+ */
+DPS_Publication* DPS_CreatePublication(DPS_Node* node);
+
+/**
+ * Store a pointer to application data in a publication.
+ *
+ * @param pub   The publication
+ * @param data  The data pointer to store
+ *
+ * @return DPS_OK or and error
+ */
+DPS_Status DPS_SetPublicationData(DPS_Publication* pub, void* data);
+
+/**
+ * Get application data pointer previously set by DPS_SetPublicationData()
+ *
+ * @param pub   The publication
+ *
+ * @return  A pointer to the data or NULL if the publication is invalid
+ */
+void* DPS_GetPublicationData(DPS_Publication* pub);
+
+/**
+ * Initializes a newly created publication with a set of topics. Each publication has a UUID and a serial number. The
  * serial number of incremented each time the publication is published. This allows subscriber to
  * determine that publications received form a series. The acknowledgment handler is optional, if
  * present the publication is marked as requesting acknowledgment and that information is provided
@@ -164,13 +161,12 @@ typedef void (*DPS_AcknowledgementHandler)(DPS_Node* node, const DPS_Publication
  *
  * Call the accessor function DPS_PublicationGetUUID() to get the UUID for this publication.
  *
- * @param node        The local node to use
+ * @param pub         The the publication to initialize
  * @param topics      The topic strings to publish
- * @param numTopics   The number of topic strings to publish
+ * @param numTopics   The number of topic strings to publish - must be >= 1
  * @param handler     Optional handler for receiving acknowledgments
- * @param pub         Returns an opaque handle that can be used to cancel the publication later
  */
-DPS_Status DPS_CreatePublication(DPS_Node* node, char* const* topics, size_t numTopics, DPS_AcknowledgementHandler handler, DPS_Publication** pub);
+DPS_Status DPS_InitPublication(DPS_Publication* pub, char* const* topics, size_t numTopics, DPS_AcknowledgementHandler handler);
 
 /**
  * Publish a set of topics along with an optional payload. The topics will be published immediately to matching
@@ -181,7 +177,6 @@ DPS_Status DPS_CreatePublication(DPS_Node* node, char* const* topics, size_t num
  * publication. The serial number is incremented each time DPS_Publish() is called for the same
  * publication.
  *
- * @param node         The local node to use
  * @param pub          The publication to send
  * @param payload      Optional payload 
  * @param len          Length of the payload
@@ -190,17 +185,16 @@ DPS_Status DPS_CreatePublication(DPS_Node* node, char* const* topics, size_t num
  *
  * @return - DPS_OK if the topics were succesfully published
  */
-DPS_Status DPS_Publish(DPS_Node* node, DPS_Publication* pub, void* payload, size_t len, int16_t ttl, void** oldPayload);
+DPS_Status DPS_Publish(DPS_Publication* pub, uint8_t* payload, size_t len, int16_t ttl, uint8_t** oldPayload);
 
 /**
  * Delete a local publication and frees any resources allocated. This does not cancel retained publications that have an
  * unexpired TTL. To expire a retained publication call DPS_Publish() with a zero TTL.
  *
- * @param node     The local node to use
  * @param pub      The publication to destroy
  * @param payload  Returns pointer to last payload passed to DPS_Pubish()
  */
-DPS_Status DPS_DestroyPublication(DPS_Node* node, DPS_Publication* pub, void** payload);
+DPS_Status DPS_DestroyPublication(DPS_Publication* pub, uint8_t** oldPayload);
 
 /**
  * Function prototype for a publication handler called when a publication is received that
@@ -214,45 +208,82 @@ DPS_Status DPS_DestroyPublication(DPS_Node* node, DPS_Publication* pub, void** p
  * The accessor functions DPS_SubscriptionGetNumTopics() and DPS_SubscriptionGetTopic()
  * return information about the subscription that was matched.
  *
- *
- * @param node     The local node used in the subscribe call
  * @param sub      Opaque handle for the subscription that was matched
  * @param pub      Opaque handle for the publication that was received
  * @param payload  Payload from the publication if any
  * @param len      Length of the payload
  */
-typedef void (*DPS_PublicationHandler)(DPS_Node* node, DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* payload, size_t len);
+typedef void (*DPS_PublicationHandler)(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* payload, size_t len);
+
+/**
+ * Create an aknowledgement for a publication. 
+ *
+ * @param pub  The publication that will be acknowledged.
+ */
+DPS_PublicationAck* DPS_CreatePublicationAck(const DPS_Publication* pub);
 
 /**
  * Aknowledge a publication. A publication should be acknowledged as soon as possible after receipt ideally from within the publication
- * handler callback function. 
+ * handler callback function.
  *
- * @param node          The local node that received the publication
- * @param pubId         The UUID of the publication to acknowledge
- * @param serialNumber  The serial number of the publication to acknowledge
+ * @param ack           The acknowledgment 
  * @param payload       Optional payload to accompany the aknowledgment
  * @param len           The length of the payload
  */
-DPS_Status DPS_AcknowledgePublication(DPS_Node* node, const DPS_UUID* pubId, uint32_t serialNumber, void* payload, size_t len);
+DPS_Status DPS_AckPublication(DPS_PublicationAck* ack, uint8_t* payload, size_t len);
 
 /**
- * Susbscribe to one or more topics. All topics must match
+ * Free resources associated with an publication acknowledgement
+ *
+ * @param ack  The acknowledgment to destroy
+ */
+DPS_Status DPS_DestroyPublicationAck(DPS_PublicationAck* ack);
+
+/**
+ * Allocate memory for a subscription and initialize topics
  *
  * @param node         The local node to use
  * @param topics       The topic strings to match
- * @param numTopics    The number of topic strings to match
- * @param handler      Callback function to be called with matching topics
- * @param sub          Returns an opaque handle that can be used to cancel the subscription
+ * @param numTopics    The number of topic strings to match - must be >= 1
+ *
+ * @param return   Returns a pointer to the newly created subscription or NULL if resources
+ *                 could not be allocated or the arguments were invalid
  */
-DPS_Status DPS_Subscribe(DPS_Node* node, char* const* topics, size_t numTopics, DPS_PublicationHandler handler, DPS_Subscription** sub);
+DPS_Subscription* DPS_CreateSubscription(DPS_Node* node, char* const* topics, size_t numTopics);
 
 /**
- * Cancel subscription to a topic
+ * Store a pointer to application data in a subscription.
  *
- * @param node  The local node to use
+ * @param sub   The subscription
+ * @param data  The data pointer to store
+ *
+ * @return DPS_OK or an error
+ */
+DPS_Status DPS_SetSubscriptionData(DPS_Subscription* sub, void* data);
+
+/**
+ * Get application data pointer previously set by DPS_SetSubscriptionData()
+ *
+ * @param sub   The subscription
+ *
+ * @return  A pointer to the data or NULL if the subscription is invalid
+ */
+void* DPS_GetSubscriptionData(DPS_Subscription* sub);
+
+/**
+ * Start subscribing to a set of topics
+ *
+ * @param sub          The subscription to start
+ * @param handler      Callback function to be called with topic matches
+ */
+DPS_Status DPS_Subscribe(DPS_Subscription* sub, DPS_PublicationHandler handler);
+
+/**
+ * Stop subscribing to the subscription topic and free resources allocated for the subscription
+ *
  * @param sub   The subscription to cancel
  */
-DPS_Status DPS_SubscribeCancel(DPS_Node* node, DPS_Subscription* sub);
+DPS_Status DPS_DestroySubscription(DPS_Subscription* sub);
 
 /**
  * Join the local node to a remote node
@@ -283,14 +314,23 @@ uint16_t DPS_GetPortNumber(DPS_Node* node);
  * @param node          The local node to use
  * @param host          The host name or IP address to resolve
  * @param service       The port or service name to resolve
- * @oaran addr          Returns the resolved address
+ *
+ * @return addr  Returns the address or NULL if the address could not be resolved
  */
-DPS_Status DPS_ResolveAddress(DPS_Node* node, const char* host, const char* service, DPS_NodeAddress* addr);
+DPS_NodeAddress* DPS_ResolveAddress(DPS_Node* node, const char* host, const char* service);
 
 /**
- * Print the current subscriptions
+ * Get text representation of an address. This function uses a static string buffer so it not thread safe.
+ *
+ * @param Address to get the text for
+ *
+ * @return  A text string for the address
  */
-void DPS_DumpSubscriptions(DPS_Node* node);
+const char* DPS_GetAddressText(DPS_NodeAddress* addr);
 
+/**
+ * Frees resources associated with an address
+ */
+void DPS_DestroyAddress(DPS_NodeAddress* addr);
 
 #endif

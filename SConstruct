@@ -13,4 +13,3 @@ env = Environment(CPPDEFINES=cppdefines, CFLAGS=cflags, CPPPATH=['./inc'], LIBS=
 print env['CPPDEFINES']
 
 SConscript('SConscript', src_dir='.', variant_dir='build', duplicate=0, exports='env')
-#SConscript('SConscript', exports=['env', 'cflags'])

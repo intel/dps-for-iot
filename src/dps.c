@@ -52,9 +52,11 @@ typedef struct _RemoteNode {
  * get a match. We compute the filter so we can forward to outbound subscribers.
  */
 typedef struct _DPS_Subscription {
+    void* userData;
     DPS_BitVector* needs;           /* Subscription needs */
     DPS_BitVector* bf;              /* The Bloom filter bit vector for the topics for this subscription */
     DPS_PublicationHandler handler; /* Callback function to be called for a matching publication */
+    DPS_Node* node;                 /* Node for this subscription */
     DPS_Subscription* next;
     size_t numTopics;               /* Number of subscription topics */
     char* topics[1];                /* Subscription topics */
@@ -76,6 +78,7 @@ typedef struct _DPS_Subscription {
  * until the ttl expires or it is explicitly expired.
  */
 typedef struct _DPS_Publication {
+    void* userData;
     uint8_t flags;                  /* Internal state flags */
     uint8_t checkToSend;            /* TRUE if this publication should be checked to send */
     uint8_t ackRequested;           /* TRUE if an ack was requested by the publisher */
@@ -87,22 +90,28 @@ typedef struct _DPS_Publication {
     DPS_UUID pubId;                 /* Publication identifier */
     DPS_NodeAddress sender;         /* for retained messages - the sender address */
     DPS_BitVector* bf;              /* The Bloom filter bit vector for the topics for this publication */
+    DPS_Node* node;                 /* Node for this publication */
     DPS_Publication* next;
 } DPS_Publication;
 
 /*
  * Acknowledgment packet queued to be sent on node loop
  */
-typedef struct _PubAck {
+typedef struct _DPS_PublicationAck {
+    uint8_t appOwned;       /* Indicates if the ack is owned by the application */
     uv_buf_t bufs[3];
     DPS_NodeAddress destAddr;
-    struct _PubAck* next;
-} PubAck;
+    uint32_t serialNumber;
+    DPS_UUID pubId;
+    DPS_Node* node;
+    DPS_PublicationAck* next;
+} DPS_PublicationAck;
 
 #define SEND_SUBS_TASK  0x01
 #define SEND_PUBS_TASK  0x02
 #define SEND_ACKS_TASK  0x04
 #define STOP_NODE_TASK  0x08
+#define FIND_ADDR_TASK  0x10
 
 typedef struct _DPS_Node {
 
@@ -123,8 +132,9 @@ typedef struct _DPS_Node {
     uint64_t ttlBasis;                    /* basis time for expiring retained messages */
 
     struct {
-        PubAck* first;
-        PubAck* last;
+        DPS_PublicationAck* first;
+        DPS_PublicationAck* last;
+        DPS_PublicationAck* freeList;     /* Released acks that are still owned by the application */
     } ackQueue;                           /* Queued acknowledgment packets */
 
     RemoteNode* remoteNodes;              /* Linked list of remote nodes */
@@ -244,54 +254,62 @@ static void DumpPubs(DPS_Node* node)
 #define RemoteNodeAddressText(n)  NodeAddressText(&(n)->addr)
 
 
-static int IsValidSub(DPS_Node* node, const DPS_Subscription* subscription)
+static int IsValidSub(const DPS_Subscription* sub)
 {
-    DPS_Subscription* sub;
-    LockNode(node);
-    for (sub = node->subscriptions; sub != NULL; sub = sub->next) {
-        if (sub == subscription) {
+    DPS_Subscription* subList;
+
+    if (!sub || !sub->node || !sub->node->loop) {
+        return DPS_FALSE;
+    }
+    LockNode(sub->node);
+    for (subList = sub->node->subscriptions; subList != NULL; subList = subList->next) {
+        if (sub == subList) {
             break;
         }
     }
-    UnlockNode(node);
-    return sub != NULL;
+    UnlockNode(sub->node);
+    return subList != NULL;
 }
 
-static int IsValidPub(DPS_Node* node, const DPS_Publication* publication)
+static int IsValidPub(const DPS_Publication* pub)
 {
-    DPS_Publication* pub;
-    LockNode(node);
-    for (pub = node->publications; pub != NULL; pub = pub->next) {
-        if (pub == publication) {
+    DPS_Publication* pubList;
+
+    if (!pub|| !pub->node || !pub->node->loop) {
+        return DPS_FALSE;
+    }
+    LockNode(pub->node);
+    for (pubList = pub->node->publications; pubList != NULL; pubList = pubList->next) {
+        if (pub == pubList) {
             break;
         }
     }
-    UnlockNode(node);
-    return pub != NULL;
+    UnlockNode(pub->node);
+    return pubList != NULL;
 }
 
-size_t DPS_SubscriptionGetNumTopics(DPS_Node* node, const DPS_Subscription* sub)
+size_t DPS_SubscriptionGetNumTopics(const DPS_Subscription* sub)
 {
-    return IsValidSub(node, sub) ? sub->numTopics : 0;
+    return IsValidSub(sub) ? sub->numTopics : 0;
 }
 
-const char* DPS_SubscriptionGetTopic(DPS_Node* node, const DPS_Subscription* sub, size_t index)
+const char* DPS_SubscriptionGetTopic(const DPS_Subscription* sub, size_t index)
 {
-    if (IsValidSub(node, sub) && (sub->numTopics > index)) {
+    if (IsValidSub(sub) && (sub->numTopics > index)) {
         return sub->topics[index];
     } else {
         return NULL;
     }
 }
 
-const DPS_UUID* DPS_PublicationGetUUID(DPS_Node* node, const DPS_Publication* pub)
+const DPS_UUID* DPS_PublicationGetUUID(const DPS_Publication* pub)
 {
-    return IsValidPub(node, pub) ? &pub->pubId : NULL;
+    return IsValidPub(pub) ? &pub->pubId : NULL;
 }
 
-uint32_t DPS_PublicationGetSerialNumber(DPS_Node* node, const DPS_Publication* pub)
+uint32_t DPS_PublicationGetSerialNumber(const DPS_Publication* pub)
 {
-    return IsValidPub(node, pub) ? pub->serialNumber : 0;
+    return IsValidPub(pub) ? pub->serialNumber : 0;
 }
 
 static void AddrSetPort(DPS_NodeAddress* dest, const struct sockaddr* addr, uint16_t port)
@@ -730,9 +748,35 @@ static DPS_Status SendMatchingPubToSub(DPS_Node* node, DPS_Publication* pub, Rem
     return DPS_OK;
 }
 
-static DPS_Status QueuePubAck(DPS_Node* node, const DPS_UUID* pubId, uint32_t serialNumber, uint8_t* data, size_t len, DPS_NodeAddress* destAddr)
+static void FreePubAck(DPS_PublicationAck* ack)
 {
-    PubAck* ack;
+    /*
+     * Cannot free an ack that is owned by the application so 
+     * we put it on the free list and the application will free
+     * it when DPS_DestroyPublicationAck() is called.
+     */
+    if (ack->appOwned) {
+        ack->next = ack->node->ackQueue.freeList;
+        ack->node->ackQueue.freeList = ack;
+    } else {
+        free(ack);
+    }
+}
+
+static DPS_PublicationAck* AllocPubAck(DPS_Node* node, const DPS_UUID* pubId, uint32_t serialNumber)
+{
+    DPS_PublicationAck* ack = calloc(1, sizeof(DPS_PublicationAck));
+    if (!ack) {
+        return NULL;
+    }
+    ack->pubId = *pubId;
+    ack->serialNumber = serialNumber;
+    ack->node = node;
+    return ack;
+}
+
+static DPS_Status QueuePublicationAck(DPS_Node* node, DPS_PublicationAck* ack, uint8_t* data, size_t len, DPS_NodeAddress* destAddr)
+{
     DPS_Status ret;
     CoAP_Option opts[1];
     DPS_Buffer payload;
@@ -740,14 +784,10 @@ static DPS_Status QueuePubAck(DPS_Node* node, const DPS_UUID* pubId, uint32_t se
 
     DPS_DBGTRACE();
 
-    assert(serialNumber != 0);
+    assert(ack->serialNumber != 0);
 
     if (!node->netListener) {
         return DPS_ERR_NETWORK;
-    }
-    ack = calloc(1, sizeof(PubAck));
-    if (!ack) {
-        return DPS_ERR_RESOURCES;
     }
 
     opts[0].id = COAP_OPT_URI_PATH;
@@ -756,17 +796,21 @@ static DPS_Status QueuePubAck(DPS_Node* node, const DPS_UUID* pubId, uint32_t se
 
     ret = DPS_BufferInit(&payload, NULL, allocSize);
     if (ret != DPS_OK) {
-        free(ack);
+        LockNode(node);
+        FreePubAck(ack);
+        UnlockNode(node);
         return ret;
     }
-    CBOR_EncodeBytes(&payload, (uint8_t*)pubId, sizeof(DPS_UUID));
-    CBOR_EncodeUint32(&payload, serialNumber);
+    CBOR_EncodeBytes(&payload, (uint8_t*)&ack->pubId, sizeof(DPS_UUID));
+    CBOR_EncodeUint32(&payload, ack->serialNumber);
     if (ret == DPS_OK) {
         CBOR_EncodeBytes(&payload, data, len);
         ret = CoAP_Compose(COAP_OVER_TCP, ack->bufs, A_SIZEOF(ack->bufs), COAP_CODE(COAP_REQUEST, COAP_PUT), opts, A_SIZEOF(opts), &payload);
         if (ret != DPS_OK) {
             free(payload.base);
-            free(ack);
+            LockNode(node);
+            FreePubAck(ack);
+            UnlockNode(node);
         } else {
             LockNode(node);
             ack->destAddr = *destAddr;
@@ -824,7 +868,7 @@ static DPS_Status DecodeAcknowledgment(DPS_Node* node, DPS_Buffer* buffer)
     if (pub) {
         if (pub->handler) {
             UnlockNode(node);
-            pub->handler(node, pub, payload, len);
+            pub->handler(pub, payload, len);
             LockNode(node);
         }
         UnlockNode(node);
@@ -836,15 +880,20 @@ static DPS_Status DecodeAcknowledgment(DPS_Node* node, DPS_Buffer* buffer)
      */
     ret = DPS_LookupPublisher(&node->history, pubId, serialNumber, &addr);
     if ((ret == DPS_OK) && addr) {
-        DPS_DBGPRINT("Forwarding acknowledgement for %s/%d to %s\n", DPS_UUIDToString(pubId), serialNumber, NodeAddressText(addr));
-        ret = QueuePubAck(node, pubId, serialNumber, payload, len, addr);
+        DPS_PublicationAck* ack = AllocPubAck(node, pubId, serialNumber);
+        if (ack) {
+            DPS_DBGPRINT("Forwarding acknowledgement for %s/%d to %s\n", DPS_UUIDToString(pubId), serialNumber, NodeAddressText(addr));
+            ret = QueuePublicationAck(node, ack, payload, len, addr);
+        } else {
+            ret = DPS_ERR_RESOURCES;
+        }
     }
     return ret;
 }
 
 static void SendAcksTask(DPS_Node* node)
 {
-    PubAck* ack;
+    DPS_PublicationAck* ack;
 
     DPS_DBGTRACE();
 
@@ -854,7 +903,7 @@ static void SendAcksTask(DPS_Node* node)
             OnSendToComplete(node, (struct sockaddr*)&ack->destAddr.inaddr, ack->bufs, A_SIZEOF(ack->bufs), ret);
         }
         node->ackQueue.first = ack->next;
-        free(ack);
+        FreePubAck(ack);
     }
     node->ackQueue.last = NULL;
 }
@@ -973,7 +1022,7 @@ static void CallPubHandlers(DPS_Node* node, DPS_Publication* pub)
             /*
              * TODO - consider making callback from a worker thread so uv_loop isn't blocked
              */
-            sub->handler(node, sub, pub, pub->payload, pub->len);
+            sub->handler(sub, pub, pub->payload, pub->len);
         }
     }
 }
@@ -1049,6 +1098,7 @@ static DPS_Status DecodePublication(DPS_Node* node, DPS_Buffer* buffer, const st
          */
         pub->next = node->publications;
         node->publications = pub;
+        pub->node = node;
     }
     pub->ttl = ttl;
     pub->serialNumber = serialNumber;
@@ -1538,19 +1588,33 @@ static void NodeRun(void* arg)
     uv_run(node->loop, UV_RUN_DEFAULT);
 }
 
+DPS_Node* DPS_CreateNode(const char* separators)
+{
+    DPS_Node* node = calloc(1, sizeof(DPS_Node));
 
-DPS_Status DPS_CreateNode(DPS_Node** nodeOut, int mcast, int tcpPort, const char* separators)
+    if (!node) {
+        return NULL;
+    }
+    /*
+     * One time initilization required
+     */
+    if (DPS_InitUUID() != DPS_OK) {
+        free(node);
+        return NULL;
+    }
+    if (!separators) {
+        separators = "/";
+    }
+    strncpy(node->separators, separators, sizeof(node->separators));
+    return node;
+}
+
+DPS_Status DPS_StartNode(DPS_Node* node, int mcast, int tcpPort)
 {
     int r;
-    DPS_Status ret;
-    DPS_Node* node;
 
-    if (!nodeOut || !separators)  {
-        return DPS_ERR_NULL;
-    }
-    node = calloc(1, sizeof(DPS_Node));
     if (!node) {
-        return DPS_ERR_RESOURCES;
+        return DPS_ERR_NULL;
     }
     node->loop = calloc(1, sizeof(uv_loop_t));
     if (!node->loop) {
@@ -1561,7 +1625,6 @@ DPS_Status DPS_CreateNode(DPS_Node** nodeOut, int mcast, int tcpPort, const char
     if (r) {
         return DPS_ERR_FAILURE;
     }
-    strncpy(node->separators, separators, sizeof(node->separators));
     /*
      * Timer for clean shutdown
      */
@@ -1588,13 +1651,7 @@ DPS_Status DPS_CreateNode(DPS_Node** nodeOut, int mcast, int tcpPort, const char
     node->scratch.needs = DPS_BitVectorAllocFH();
 
     if (!node->interests || !node->needs || !node->scratch.interests || !node->scratch.needs) {
-        FreeNode(node);
         return DPS_ERR_RESOURCES;
-    }
-    ret = DPS_InitUUID();
-    if (ret != DPS_OK) {
-        FreeNode(node);
-        return ret;
     }
     if (mcast & DPS_MCAST_PUB_ENABLE_RECV) {
         node->mcastReceiver = DPS_MulticastStartReceive(node, OnMulticastReceive);
@@ -1607,7 +1664,6 @@ DPS_Status DPS_CreateNode(DPS_Node** nodeOut, int mcast, int tcpPort, const char
     node->netListener = DPS_NetStartListening(node, tcpPort, OnNetReceive);
     if (!node->netListener) {
         DPS_ERRPRINT("Failed to initialize listener on TCP port %d\n", tcpPort);
-        FreeNode(node);
         return DPS_ERR_NETWORK;
     }
     /*
@@ -1623,10 +1679,8 @@ DPS_Status DPS_CreateNode(DPS_Node** nodeOut, int mcast, int tcpPort, const char
     r = uv_thread_create(&node->thread, NodeRun, node);
     if (r) {
         DPS_ERRPRINT("Failed to create node thread\n");
-        FreeNode(node);
         return DPS_ERR_FAILURE;
     }
-    *nodeOut = node;
     return DPS_OK;
 }
 
@@ -1672,6 +1726,7 @@ static void StopOnTimeout(uv_timer_t* handle)
 
 static void StopNodeTask(DPS_Node* node)
 {
+    DPS_DBGTRACE();
     uv_timer_start(&node->shutdownTimer, StopOnTimeout, STOP_TIMEOUT, 0);
 }
 
@@ -1690,35 +1745,47 @@ void DPS_DestroyNode(DPS_Node* node)
     }
 }
 
-DPS_Status DPS_CreatePublication(DPS_Node* node, char* const* topics, size_t numTopics, DPS_AcknowledgementHandler handler, DPS_Publication** publication)
+DPS_Publication* DPS_CreatePublication(DPS_Node* node)
+{
+    DPS_Publication* pub;
+    if (!node) {
+        return NULL;
+    }
+    /*
+     * Create the publication
+     */
+    pub = calloc(1, sizeof(DPS_Publication));
+    if (!pub) {
+        return NULL;
+    }
+    DPS_GenerateUUID(&pub->pubId);
+    pub->node = node;
+    return pub;
+}
+
+DPS_Status DPS_InitPublication(DPS_Publication* pub, char* const* topics, size_t numTopics, DPS_AcknowledgementHandler handler)
 {
     size_t i;
-    DPS_Publication* pub;
+    DPS_Node* node = pub ? pub->node : NULL;
     DPS_Status ret = DPS_OK;
 
-    if (!node || !topics || !publication) {
+    if (!node) {
         return DPS_ERR_NULL;
     }
-    *publication = NULL;
+    if (!node->loop) {
+        return DPS_ERR_NOT_STARTED;
+    }
     /*
-     * Must have a topic
+     * Must have at least one topic
      */
     if (numTopics == 0) {
         return DPS_ERR_ARGS;
     }
     DPS_DBGPRINT("Creating publication with %lu topics\n", numTopics);
     DumpTopics(topics, numTopics);
-    /*
-     * Create the publication
-     */
-    pub = calloc(1, sizeof(DPS_Publication));
-    if (!pub) {
-        return DPS_ERR_RESOURCES;
-    }
-    DPS_GenerateUUID(&pub->pubId);
+
     pub->bf = DPS_BitVectorAlloc();
     if (!pub->bf) {
-        free(pub);
         return DPS_ERR_RESOURCES;
     }
     if (handler) {
@@ -1733,29 +1800,33 @@ DPS_Status DPS_CreatePublication(DPS_Node* node, char* const* topics, size_t num
             break;
         }
     }
-    LockNode(node);
-    pub->next = node->publications;
-    node->publications = pub;
     if (ret == DPS_OK) {
-        *publication = pub;
-    } else {
-        FreePublication(node, pub);
+        LockNode(node);
+        pub->next = node->publications;
+        node->publications = pub;
+        UnlockNode(node);
     }
-    UnlockNode(node);
     return ret;
 }
 
-DPS_Status DPS_Publish(DPS_Node* node, DPS_Publication* pub, void* payload, size_t len, int16_t ttl, void** oldPayload)
+DPS_Status DPS_Publish(DPS_Publication* pub, uint8_t* payload, size_t len, int16_t ttl, uint8_t** oldPayload)
 {
+    DPS_Node* node = pub ? pub->node : NULL;
     DPS_DBGTRACE();
 
-    if (!node || !pub) {
+    if (!pub) {
         return DPS_ERR_NULL;
+    }
+    if (!node) {
+        return DPS_ERR_NOT_INITIALIZED;
+    }
+    if (!node->loop) {
+        return DPS_ERR_NOT_STARTED;
     }
     /*
      * Check publication is listed and is local
      */
-    if (!IsValidPub(node, pub) || !(pub->flags & PUB_FLAG_LOCAL)) {
+    if (!IsValidPub(pub) || !(pub->flags & PUB_FLAG_LOCAL)) {
         return DPS_ERR_MISSING;
     }
     LockNode(node);
@@ -1779,21 +1850,35 @@ DPS_Status DPS_Publish(DPS_Node* node, DPS_Publication* pub, void* payload, size
     return DPS_OK;
 }
 
-DPS_Status DPS_DestroyPublication(DPS_Node* node, DPS_Publication* pub, void** payload)
+DPS_Status DPS_DestroyPublication(DPS_Publication* pub, uint8_t** payload)
 {
+    DPS_Node* node;
+
     DPS_DBGTRACE();
-    if (!node || !pub || !payload) {
+    if (!pub) {
         return DPS_ERR_NULL;
     }
-    *payload = NULL;
+    if (payload) {
+        *payload = NULL;
+    }
+    node = pub->node;
+    /*
+     * Maybe destroying an uninitialized publication
+     */
+    if (!node) {
+        free(pub);
+        return DPS_OK;
+    }
     /*
      * Check publication is listed and is local
      */
-    if (!IsValidPub(node, pub) || !(pub->flags & PUB_FLAG_LOCAL)) {
+    if (!IsValidPub(pub) || !(pub->flags & PUB_FLAG_LOCAL)) {
         return DPS_ERR_MISSING;
     }
     LockNode(node);
-    *payload = pub->payload;
+    if (payload) {
+        *payload = pub->payload;
+    }
     FreePublication(node, pub);
     UnlockNode(node);
     return DPS_OK;
@@ -1802,7 +1887,7 @@ DPS_Status DPS_DestroyPublication(DPS_Node* node, DPS_Publication* pub, void** p
 DPS_Status DPS_Join(DPS_Node* node, DPS_NodeAddress* addr)
 {
     DPS_Status ret = DPS_OK;
-    RemoteNode* remote;
+    RemoteNode* remote = NULL;
 
     DPS_DBGTRACE();
     if (!addr || !node) {
@@ -1820,7 +1905,7 @@ DPS_Status DPS_Join(DPS_Node* node, DPS_NodeAddress* addr)
     if (ret == DPS_OK) {
         SendSubs(node, remote);
     } else if (ret == DPS_ERR_EXISTS) {
-        DPS_ERRPRINT("Node at %s already joined\n", DPS_NodeAddressText(addr));
+        DPS_ERRPRINT("Node at %s already joined\n", NodeAddressText(addr));
         ret = DPS_OK;
     }
     /*
@@ -1849,110 +1934,166 @@ DPS_Status DPS_Leave(DPS_Node* node, DPS_NodeAddress* addr)
     return status;
 }
 
-DPS_Status DPS_AcknowledgePublication(DPS_Node* node, const DPS_UUID* pubId, uint32_t serialNumber, void* payload, size_t len)
+DPS_Status DPS_DestroyPublicationAck(DPS_PublicationAck* ack)
 {
-    DPS_Status ret = DPS_OK;
-    DPS_NodeAddress* addr = NULL;
+    DPS_PublicationAck* prev = NULL;
+    DPS_PublicationAck* freeList;
+    DPS_Node* node = ack ? ack->node : NULL;
 
-    if (!node || !pubId) {
+    if (!node) {
         return DPS_ERR_NULL;
     }
-    ret = DPS_LookupPublisher(&node->history, pubId, serialNumber, &addr);
+    if (!ack->appOwned) {
+        return DPS_ERR_INVALID;
+    }
+    LockNode(node);
+    /*
+     * App has given up ownership
+     */
+    ack->appOwned = DPS_FALSE;
+    /*
+     * If the ack is on the free list is can be freed now otherwise it will be free after the ack has been sent
+     */
+    for (freeList = node->ackQueue.freeList; freeList != NULL; freeList = freeList->next) {
+        if (ack == freeList) {
+            break;
+        }
+        prev = freeList;
+    }
+    if (freeList) {
+        if (prev) {
+            prev->next = ack->next;
+        } else {
+            node->ackQueue.freeList = ack->next;
+        }
+        free(ack);
+    }
+    UnlockNode(node);
+    return DPS_OK;
+}
+
+DPS_PublicationAck* DPS_CreatePublicationAck(const DPS_Publication* pub)
+{
+    DPS_PublicationAck* ack;
+
+    if (!IsValidPub(pub)) {
+        return NULL;
+    }
+    ack = AllocPubAck(pub->node, &pub->pubId, pub->serialNumber);
+    if (!ack) {
+        return NULL;
+    }
+    ack->appOwned = DPS_TRUE;
+    return ack;
+}
+
+DPS_Status DPS_AckPublication(DPS_PublicationAck* ack, uint8_t* payload, size_t len)
+{
+    DPS_Status ret;
+    DPS_NodeAddress* addr = NULL;
+    DPS_Node* node = ack ? ack->node : NULL;
+
+    if (!node) {
+        return DPS_ERR_NULL;
+    }
+    ret = DPS_LookupPublisher(&node->history, &ack->pubId, ack->serialNumber, &addr);
     if (ret != DPS_OK) {
         return ret;
     }
     if (!addr) {
         return DPS_ERR_NO_ROUTE;
     }
-    DPS_DBGPRINT("Queueing acknowledgement for %s/%d to %s\n", DPS_UUIDToString(pubId), serialNumber, NodeAddressText(addr));
-    return QueuePubAck(node, pubId, serialNumber, payload, len, addr);
+    DPS_DBGPRINT("Queueing acknowledgement for %s/%d to %s\n", DPS_UUIDToString(&ack->pubId), ack->serialNumber, NodeAddressText(addr));
+    return QueuePublicationAck(node, ack, payload, len, addr);
 }
 
-DPS_Status DPS_Subscribe(DPS_Node* node, char* const* topics, size_t numTopics, DPS_PublicationHandler handler, DPS_Subscription** subscription)
+DPS_Subscription* DPS_CreateSubscription(DPS_Node* node, char* const* topics, size_t numTopics)
 {
     size_t i;
     DPS_Subscription* sub;
-    DPS_Status ret = DPS_OK;
 
-    if (!node || !topics || !handler || !subscription) {
-        return DPS_ERR_NULL;
+    if (!node || !topics || !numTopics) {
+        return NULL;
     }
-    *subscription = NULL;
-    /*
-     * Must have a topic
-     */
-    if (numTopics == 0) {
-        return DPS_ERR_ARGS;
-    }
-    /*
-     * Create the subscription
-     */
     sub = calloc(1, sizeof(DPS_Subscription) + sizeof(char*) * (numTopics - 1));
-    if (!sub) {
-        return DPS_ERR_RESOURCES;
-    }
-    sub->handler = handler;
-    sub->bf = DPS_BitVectorAlloc();
-    sub->needs = DPS_BitVectorAllocFH();
-    if (!sub->bf || !sub->needs) {
-        FreeSubscription(sub);
-        return DPS_ERR_RESOURCES;
-    }
     /*
-     * Add the topics to the subscription and the bloom filter
+     * Add the topics to the subscription
      */
     for (i = 0; i < numTopics; ++i) {
         size_t len = strlen(topics[i]);
         sub->topics[i] = malloc(len + 1);
         if (!sub->topics[i]) {
-            ret = DPS_ERR_RESOURCES;
-            break;
+            FreeSubscription(sub);
+            return NULL;
         }
         ++sub->numTopics;
         memcpy(sub->topics[i], topics[i], len + 1);
+    }
+    sub->node = node;
+    return sub;
+}
+
+DPS_Status DPS_Subscribe(DPS_Subscription* sub, DPS_PublicationHandler handler)
+{
+    size_t i;
+    DPS_Status ret = DPS_OK;
+    DPS_Node* node = sub ? sub->node : NULL;
+
+    if (!node) {
+        return DPS_ERR_NULL;
+    }
+    if (!node->loop) {
+        return DPS_ERR_NOT_STARTED;
+    }
+    sub->handler = handler;
+    sub->bf = DPS_BitVectorAlloc();
+    sub->needs = DPS_BitVectorAllocFH();
+    if (!sub->bf || !sub->needs) {
+        return DPS_ERR_RESOURCES;
+    }
+    /*
+     * Add the topics to the bloom filter
+     */
+    for (i = 0; i < sub->numTopics; ++i) {
         ret = DPS_AddTopic(sub->bf, sub->topics[i], node->separators, DPS_Sub);
         if (ret != DPS_OK) {
             break;
         }
     }
     if (ret != DPS_OK) {
-        FreeSubscription(sub);
-    } else {
-        DPS_DBGPRINT("Subscribing to %lu topics\n", numTopics);
-        DumpTopics(sub->topics, sub->numTopics);
+        return ret;
+    }
 
-        DPS_BitVectorFuzzyHash(sub->needs, sub->bf);
+    DPS_DBGPRINT("Subscribing to %lu topics\n", sub->numTopics);
+    DumpTopics(sub->topics, sub->numTopics);
 
-        /*
-         * Protect the node while we update it
-         */
-        LockNode(node);
-        sub->next = node->subscriptions;
-        node->subscriptions = sub;
-        *subscription = sub;
-        ret = DPS_CountVectorAdd(node->interests, sub->bf);
-        if (ret == DPS_OK) {
-            ret = DPS_CountVectorAdd(node->needs, sub->needs);
-        }
-        UnlockNode(node);
-
-        if (ret == DPS_OK) {
-            SendSubs(node, NULL);
-        }
+    DPS_BitVectorFuzzyHash(sub->needs, sub->bf);
+    /*
+     * Protect the node while we update it
+     */
+    LockNode(node);
+    sub->next = node->subscriptions;
+    node->subscriptions = sub;
+    ret = DPS_CountVectorAdd(node->interests, sub->bf);
+    if (ret == DPS_OK) {
+        ret = DPS_CountVectorAdd(node->needs, sub->needs);
+    }
+    UnlockNode(node);
+    if (ret == DPS_OK) {
+        SendSubs(node, NULL);
     }
     return ret;
 }
 
-DPS_Status DPS_SubscribeCancel(DPS_Node* node, DPS_Subscription* sub)
+DPS_Status DPS_DestroySubscription(DPS_Subscription* sub)
 {
+    DPS_Node* node;
     DPS_Status ret;
 
-    if (!node || !sub) {
-        return DPS_ERR_NULL;
-    }
-    if (!IsValidSub(node, sub)) {
+    if (!IsValidSub(sub)) {
         return DPS_ERR_MISSING;
     }
+    node = sub->node;
     /*
      * Protect the node while we update it
      */
@@ -1993,8 +2134,8 @@ static void RunBackgroundTasks(uv_async_t* handle)
 
     DPS_DBGTRACE();
 
-    LockNode(node);
     while (node->tasks) {
+        LockNode(node);
         if (node->tasks & SEND_SUBS_TASK) {
             node->tasks &= ~SEND_SUBS_TASK;
             SendSubsTask(node);
@@ -2012,46 +2153,151 @@ static void RunBackgroundTasks(uv_async_t* handle)
          * TODO - the task is not complete until all of the packets have
          * been sent - may not be necessary but needs more investigation
          */
-        UnlockNode(node);
         uv_cond_broadcast(&node->bgComplete);
-        LockNode(node);
+        UnlockNode(node);
     }
-    UnlockNode(node);
 }
 
-DPS_Status DPS_ResolveAddress(DPS_Node* node, const char* host, const char* service, DPS_NodeAddress* addr)
+
+typedef struct {
+    int ok;
+    const char* host;
+    const char* service;
+    DPS_NodeAddress addr;
+    uv_cond_t cond;
+    uv_mutex_t* mutex;
+} ResolverInfo;
+
+static void AsyncResolveAddress(uv_async_t* async)
 {
-    DPS_Status dpsRet = DPS_OK;
-    int ret;
-    uv_getaddrinfo_t info;
+    ResolverInfo* resolver = (ResolverInfo*)async->data;
+    int r;
     struct addrinfo hints;
+    uv_getaddrinfo_t info;
+
+    DPS_DBGTRACE();
 
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET6;
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_protocol = IPPROTO_TCP;
-    hints.ai_flags = 0;
 
-    if (!host) {
-        host = "localhost";
-    }
-    /*
-     * TODO !!!!!!  - needs to run asyncronously on node thread 
-     */
-    ret = uv_getaddrinfo(uv_default_loop(), &info, NULL, host, service, &hints);
-    if (ret) {
-        DPS_ERRPRINT("uv_getaddrinfo call error %s\n", uv_err_name(ret));
-        dpsRet = DPS_ERR_NETWORK;
+    r = uv_getaddrinfo(async->loop, &info, NULL, resolver->host, resolver->service, &hints);
+    if (r) {
+        DPS_ERRPRINT("uv_getaddrinfo call error %s\n", uv_err_name(r));
     } else {
         struct sockaddr_in6* ip6 = (struct sockaddr_in6*)info.addrinfo->ai_addr;
         if (ip6->sin6_family == AF_INET6) {
-            memcpy(&addr->inaddr, ip6, sizeof(*ip6));
-            freeaddrinfo(info.addrinfo);
-        } else {
-            dpsRet = DPS_ERR_NETWORK;
+            memcpy(&resolver->addr, ip6, sizeof(*ip6));
+            DPS_DBGPRINT("Resolved address\n");
+            resolver->ok = DPS_TRUE;
+        }
+        freeaddrinfo(info.addrinfo);
+    }
+    uv_mutex_lock(resolver->mutex);
+    uv_cond_signal(&resolver->cond);
+    uv_mutex_unlock(resolver->mutex);
+}
+
+static void FreeHandle(uv_handle_t* handle)
+{
+    free(handle);
+}
+
+DPS_NodeAddress* DPS_ResolveAddress(DPS_Node* node, const char* host, const char* service)
+{
+    uv_async_t* async;
+    DPS_NodeAddress* addr = NULL;
+    ResolverInfo resolver;
+
+    DPS_DBGTRACE();
+
+    if (!node->loop) {
+        DPS_ERRPRINT("Cannot resolve address - node has not been started\n");
+        return NULL;
+    }
+    async = malloc(sizeof(uv_async_t));
+    if (!async) {
+        return NULL;
+    }
+    if (!host) {
+        host = "localhost";
+    }
+    resolver.host = host;
+    resolver.service = service;
+    resolver.ok = DPS_FALSE;
+    resolver.mutex = &node->nodeLock;
+    /*
+     * Async callback
+     */
+    async->data = &resolver;
+    if (uv_async_init(node->loop, async, AsyncResolveAddress)) {
+        free(async);
+        return NULL;
+    }
+    /*
+     * Condition variable for signaling completion
+     */
+    uv_cond_init(&resolver.cond);
+    /*
+     * This runs address resolution on the node loop
+     */
+    uv_mutex_lock(resolver.mutex);
+    if (uv_async_send(async) == 0) {
+        uv_cond_wait(&resolver.cond, resolver.mutex);
+        if (resolver.ok) {
+            addr = malloc(sizeof(DPS_NodeAddress));
+            if (addr) {
+                memcpy(addr, &resolver.addr, sizeof(DPS_NodeAddress));
+            }
         }
     }
-    return dpsRet;
+    uv_mutex_unlock(resolver.mutex);
+    uv_close((uv_handle_t*)async, FreeHandle);
+    uv_cond_destroy(&resolver.cond);
+    return addr;
+}
+
+const char* DPS_GetAddressText(DPS_NodeAddress* addr)
+{
+    return NodeAddressText(addr);
+}
+
+void DPS_DestroyAddress(DPS_NodeAddress* addr)
+{
+    if (addr) {
+        free(addr);
+    }
+}
+
+DPS_Status DPS_SetPublicationData(DPS_Publication* pub, void* data)
+{
+    if (pub) {
+        pub->userData = data;
+        return DPS_OK;
+    } else {
+        return DPS_ERR_NULL;
+    }
+}
+
+void* DPS_GetPublicationData(DPS_Publication* pub)
+{
+    return pub ?  pub->userData : NULL;
+}
+
+DPS_Status DPS_SetSubscriptionData(DPS_Subscription* sub, void* data)
+{
+    if (sub) {
+        sub->userData = data;
+        return DPS_OK;
+    } else {
+        return DPS_ERR_NULL;
+    }
+}
+
+void* DPS_GetSubscriptionData(DPS_Subscription* sub)
+{
+    return sub ? sub->userData : NULL;
 }
 
 void DPS_DumpSubscriptions(DPS_Node* node)

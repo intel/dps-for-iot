@@ -2,7 +2,7 @@
 #define _TOPICS_H
 
 #include <bitvec.h>
-#include <dps.h>
+#include <dps_internal.h>
 
 
 /**

@@ -5,7 +5,15 @@ Import('env')
 cflags = env['CFLAGS'] + ['-Wall', '-Werror', '-Wno-format-extra-args']
 
 staticlib = env.StaticLibrary('lib/dps', Glob('src/*.c'), LIBS=[], CFLAGS=cflags)
-env.SharedLibrary('lib/dps', Glob('src/*.c'), LIBS=[], CFLAGS=cflags)
+
+# standalone shared library
+#env.SharedLibrary('lib/dps', Glob('src/*.c'), LIBS=[], CFLAGS=cflags)
+
+# Use SWIG to build the python wrapper
+env.Append(SWIGFLAGS = ['-python', '-Werror', '-v'], SWIGPATH = '#/inc')
+env.Append(CPPPATH = '/usr/include/python2.7')
+pydps = env.SharedLibrary('lib/pydps', Glob('src/*.c') + ['swig/dps_python.i'], CFLAGS=cflags)
+env.InstallAs('./swig/_dps.so', pydps)
 
 # Force test and examples to link with the static library
 env['LIBS'] = env['LIBS'] + staticlib
@@ -30,3 +38,5 @@ env.Program('bin/cbortest', env.Object('test/cbortest.c'))
 # Examples
 env.Program('bin/publisher', env.Object('examples/publisher.c'))
 env.Program('bin/subscriber', env.Object('examples/subscriber.c'))
+
+

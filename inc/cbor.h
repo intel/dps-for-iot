@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include <dps.h>
+#include <dps_internal.h>
 
 DPS_Status CBOR_EncodeUint(DPS_Buffer* buffer, uint64_t n);
 

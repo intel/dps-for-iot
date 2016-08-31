@@ -41,17 +41,17 @@ static int IntArg(char* opt, char*** argp, int* argcp, int* val, uint32_t min, u
     return 1;
 }
 
-static void OnPubMatch(DPS_Node* node, DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* data, size_t len)
+static void OnPubMatch(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* data, size_t len)
 {
     size_t i;
-    size_t numTopics = DPS_SubscriptionGetNumTopics(node, sub);
+    size_t numTopics = DPS_SubscriptionGetNumTopics(sub);
 
     DPS_PRINT("Got match for:\n    ");
     for (i = 0; i < numTopics; ++i) {
         if (i) {
             DPS_PRINT(" & ");
         }
-        DPS_PRINT("%s", DPS_SubscriptionGetTopic(node, sub, i));
+        DPS_PRINT("%s", DPS_SubscriptionGetTopic(sub, i));
     }
     DPS_PRINT("\n");
     if (data) {
@@ -75,23 +75,24 @@ static void OnTimer(uv_timer_t* handle)
      * Publish some topics
      */
     for (p = 0; p < numPubs; ++p) {
-        void* data;
+        uint8_t* data;
         char* msg;
 
         if (publications[p]) {
-            void* data;
-            DPS_DestroyPublication(pubNode[p], publications[p], &data);
+            uint8_t* data;
+            DPS_DestroyPublication(publications[p], &data);
             free(data);
         }
         msg = malloc(32);
         sprintf(msg, "publication #%d", ++pubcount);
 
-        ret = DPS_CreatePublication(pubNode[p], pubTopics, 1, NULL, &publications[p]);
+        publications[p] = DPS_CreatePublication(pubNode[p]);
+        ret = DPS_InitPublication(publications[p], pubTopics, 1, NULL);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("Failed to create publication - error=%d\n", ret);
             return;
         }
-        ret = DPS_Publish(pubNode[p], publications[p], msg, strlen(msg), 0, NULL);
+        ret = DPS_Publish(publications[p], msg, strlen(msg), 0, NULL);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("Failed to publish topics - error=%d\n", ret);
         }
@@ -146,11 +147,13 @@ int main(int argc, char** argv)
     publications = calloc(1, numPubs * sizeof(DPS_Publication*));
 
     for (s = 0; s < numSubs; ++s) {
-        ret = DPS_CreateNode(&subNode[s], DPS_MCAST_PUB_DISABLED, 0, "/.");
+        subNode[s] = DPS_CreateNode("/.");
+        ret = DPS_StartNode(subNode[s], DPS_MCAST_PUB_DISABLED, 0);
         assert(ret == DPS_OK);
     }
     for (p = 0; p < numPubs; ++p) {
-        ret = DPS_CreateNode(&pubNode[p], DPS_MCAST_PUB_DISABLED, BASE_PORT_NUM + p, "/.");
+        pubNode[p] = DPS_CreateNode("/.");
+        ret = DPS_StartNode(pubNode[p], DPS_MCAST_PUB_DISABLED, BASE_PORT_NUM + p);
         assert(ret == DPS_OK);
         loop = DPS_GetLoop(pubNode[p]);
         uv_timer_init(loop, &timer);
@@ -167,9 +170,10 @@ int main(int argc, char** argv)
         char port[16];
         sprintf(port, "%d", BASE_PORT_NUM + p);
         for (s = 0; s < numSubs; ++s) {
-            ret = DPS_ResolveAddress(subNode[s], NULL, port, &addr);
-            assert(ret == DPS_OK);
-            ret = DPS_Join(subNode[s], &addr);
+            DPS_NodeAddress* addr = DPS_ResolveAddress(subNode[s], NULL, port);
+            assert(addr);
+            ret = DPS_Join(subNode[s], addr);
+            DPS_DestroyAddress(addr);
             assert(ret == DPS_OK);
             DPS_PRINT("***** Subscriber %d joined publisher %d\n", DPS_GetPortNumber(subNode[s]), BASE_PORT_NUM + p);
         }
@@ -181,8 +185,8 @@ int main(int argc, char** argv)
      * Subscribe to some topics
      */
     for (s = 0; s < numSubs; ++s) {
-        DPS_Subscription* subscription;
-        ret = DPS_Subscribe(subNode[s], subTopics, 1, OnPubMatch, &subscription);
+        DPS_Subscription* subscription = DPS_CreateSubscription(subNode[s], subTopics, 1);
+        ret = DPS_Subscribe(subscription, OnPubMatch);
         if (ret != DPS_OK)  {
             DPS_ERRPRINT("Failed to susbscribe to topics - error=%s\n", DPS_ErrTxt(ret));
         }

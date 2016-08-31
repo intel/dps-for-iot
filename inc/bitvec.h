@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include <dps.h>
+#include <dps_internal.h>
 
 /**
  * Opaque type for bit vector and Bloom Filter operations

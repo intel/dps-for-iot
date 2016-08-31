@@ -61,15 +61,16 @@ static void OnTimer(uv_timer_t* handle)
         }
     }
     if (currentPub) {
-        void* data;
-        ret = DPS_DestroyPublication(node, currentPub, &data);
+        uint8_t* data;
+        ret = DPS_DestroyPublication(currentPub, &data);
     }
-    ret = DPS_CreatePublication(node, topics, numTopics, NULL, &currentPub);
+    currentPub = DPS_CreatePublication(node);
+    ret = DPS_InitPublication(currentPub, topics, numTopics, NULL);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to create publication - error=%d\n", ret);
         return;
     }
-    ret = DPS_Publish(node, currentPub, NULL, 0, 0, NULL);
+    ret = DPS_Publish(currentPub, NULL, 0, 0, NULL);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to publish topics - error=%s\n", DPS_ErrTxt(ret));
     }
@@ -108,8 +109,12 @@ int main(int argc, char** argv)
         goto Usage;
     }
 
-    DPS_CreateNode(&node, DPS_MCAST_PUB_ENABLE_SEND, portNum, "/.");
-    assert(node);
+    node = DPS_CreateNode("/.");
+    ret = DPS_StartNode(node, DPS_MCAST_PUB_ENABLE_SEND, portNum);
+    if (ret != DPS_OK) {
+        DPS_ERRPRINT("Failed to start node\n");
+        return 1;
+    }
 
     loop = DPS_GetLoop(node);
     uv_timer_init(loop, &timer);

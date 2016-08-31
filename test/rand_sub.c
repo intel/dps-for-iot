@@ -7,7 +7,7 @@
 #include <dps.h>
 #include <uv.h>
 
-static void OnPubMatch(DPS_Node* node, DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* data, size_t len)
+static void OnPubMatch(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* data, size_t len)
 {
     static DPS_Subscription* prev;
     static int count;
@@ -16,7 +16,7 @@ static void OnPubMatch(DPS_Node* node, DPS_Subscription* sub, const DPS_Publicat
         ++count;
     } else {
         size_t i;
-        size_t numTopics = DPS_SubscriptionGetNumTopics(node, sub);
+        size_t numTopics = DPS_SubscriptionGetNumTopics(sub);
 
         if (count > 1) {
             DPS_PRINT("and another %d matches\n", count);
@@ -29,7 +29,7 @@ static void OnPubMatch(DPS_Node* node, DPS_Subscription* sub, const DPS_Publicat
             if (i) {
                 DPS_PRINT(" & ");
             }
-            DPS_PRINT("%s", DPS_SubscriptionGetTopic(node, sub, i));
+            DPS_PRINT("%s", DPS_SubscriptionGetTopic(sub, i));
         }
         DPS_PRINT("\n");
         if (data) {
@@ -67,7 +67,7 @@ static void OnTimer(uv_timer_t* handle)
      */
     sub = rand() % MAX_SUB;
     if (subscriptions[sub]) {
-        ret = DPS_SubscribeCancel(node, subscriptions[sub]);
+        ret = DPS_DestroySubscription(subscriptions[sub]);
         subscriptions[sub] = NULL;
         return;
     }
@@ -85,7 +85,8 @@ static void OnTimer(uv_timer_t* handle)
         sprintf(topics[i], fmt, a, b, c, d);
     }
 
-    ret = DPS_Subscribe(node, topics, numTopics, OnPubMatch, &subscriptions[sub]);
+    subscriptions[sub] = DPS_CreateSubscription(node, topics, numTopics);
+    ret = DPS_Subscribe(subscriptions[sub], OnPubMatch);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to susbscribe topics - error=%s\n", DPS_ErrTxt(ret));
     }
@@ -99,7 +100,6 @@ int main(int argc, char** argv)
     DPS_Status ret;
     char** arg = ++argv;
     DPS_Node* node;
-    DPS_NodeAddress addr;
     uv_loop_t* loop;
     uv_idle_t idler;
     uv_timer_t timer;
@@ -158,19 +158,25 @@ int main(int argc, char** argv)
         mcastPub = DPS_MCAST_PUB_ENABLE_RECV;
     }
 
-    ret = DPS_CreateNode(&node, mcastPub, listenPort, "/.");
+    node = DPS_CreateNode("/.");
+    ret = DPS_StartNode(node, mcastPub, listenPort);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to initialize node: %s\n", DPS_ErrTxt(ret));
         return 1;
     }
 
     if (host || connectPort) {
-        ret = DPS_ResolveAddress(node, host, connectPort, &addr);
-        if (ret != DPS_OK) {
+        DPS_NodeAddress* addr = DPS_ResolveAddress(node, host, connectPort);
+        if (!addr) {
             DPS_ERRPRINT("Failed to resolve %s/%s\n", host ? host : "<localhost>", connectPort);
             return 1;
         }
-        ret = DPS_Join(node, &addr);
+        ret = DPS_Join(node, addr);
+        DPS_DestroyAddress(addr);
+        if (!ret) {
+            DPS_ERRPRINT("Failed to joine %s/%s\n", host ? host : "<localhost>", connectPort);
+            return 1;
+        }
     }
 
     loop = DPS_GetLoop(node);

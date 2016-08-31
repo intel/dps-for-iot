@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include <dps.h>
+#include <dps_internal.h>
 #include <dps_uuid.h>
 
 typedef struct _DPS_PubHistory {

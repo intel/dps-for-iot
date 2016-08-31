@@ -2,7 +2,7 @@
 #define _NETWORK_H
 
 #include <stdint.h>
-#include <dps.h>
+#include <dps_internal.h>
 #include <uv.h>
 
 typedef struct _DPS_MulticastReceiver DPS_MulticastReceiver;

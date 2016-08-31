@@ -70,9 +70,9 @@ static int AddTopics(char* topicList, char** msg, int* keep, int* ttl)
     return 1;
 }
 
-static void OnAck(DPS_Node* node, const DPS_Publication* pub, uint8_t* data, size_t len)
+static void OnAck(DPS_Publication* pub, uint8_t* data, size_t len)
 {
-    DPS_PRINT("Ack for pub UUID %s(%d)\n", DPS_UUIDToString(DPS_PublicationGetUUID(node, pub)), DPS_PublicationGetSerialNumber(node, pub));
+    DPS_PRINT("Ack for pub UUID %s(%d)\n", DPS_UUIDToString(DPS_PublicationGetUUID(pub)), DPS_PublicationGetSerialNumber(pub));
     if (len) {
         DPS_PRINT("    %.*s\n", len, data);
     }
@@ -80,7 +80,7 @@ static void OnAck(DPS_Node* node, const DPS_Publication* pub, uint8_t* data, siz
 
 static void ReadStdin(DPS_Node* node)
 {
-    void* data;
+    uint8_t* data;
     char lineBuf[200];
 
     while (fgets(lineBuf, sizeof(lineBuf), stdin) != NULL) {
@@ -108,16 +108,17 @@ static void ReadStdin(DPS_Node* node)
             keep = 0;
         }
         if (!keep) {
-            DPS_DestroyPublication(node, currentPub, &data);
-            ret = DPS_CreatePublication(node, topics, numTopics, requestAck ? OnAck : NULL, &currentPub);
+            DPS_DestroyPublication(currentPub, &data);
+            currentPub = DPS_CreatePublication(node);
+            ret = DPS_InitPublication(currentPub, topics, numTopics, requestAck ? OnAck : NULL);
             if (ret != DPS_OK) {
                 DPS_ERRPRINT("Failed to create publication - error=%d\n", ret);
                 return;
             }
         }
-        ret = DPS_Publish(node, currentPub, msg, msg ? strlen(msg) : 0, ttl, NULL);
+        ret = DPS_Publish(currentPub, msg, msg ? strlen(msg) : 0, ttl, NULL);
         if (ret == DPS_OK) {
-            DPS_PRINT("Pub UUID %s(%d)\n", DPS_UUIDToString(DPS_PublicationGetUUID(node, currentPub)), DPS_PublicationGetSerialNumber(node, currentPub));
+            DPS_PRINT("Pub UUID %s(%d)\n", DPS_UUIDToString(DPS_PublicationGetUUID(currentPub)), DPS_PublicationGetSerialNumber(currentPub));
         } else {
             DPS_ERRPRINT("Failed to publish %s error=%s\n", lineBuf, DPS_ErrTxt(ret));
         }
@@ -154,14 +155,11 @@ int main(int argc, char** argv)
     int r;
     DPS_Status ret;
     DPS_Node* node;
-    DPS_NodeAddress addr;
     char** arg = argv + 1;
     uv_loop_t* loop;
     uv_tty_t tty;
     const char* host = NULL;
     const char* connectPort = NULL;
-    int bitLen = 16 * 1024;
-    int numHashes = 4;
     int wait = DPS_FALSE;
     int ttl = 0;
     char* msg = NULL;
@@ -170,12 +168,6 @@ int main(int argc, char** argv)
     DPS_Debug = 0;
 
     while (--argc) {
-        if (IntArg("-n", &arg, &argc, &numHashes, 2, 16)) {
-            continue;
-        }
-        if (IntArg("-b", &arg, &argc, &bitLen, 64, 8 * 1024 * 1024)) {
-            continue;
-        }
         if (strcmp(*arg, "-p") == 0) {
             ++arg;
             if (!--argc) {
@@ -227,12 +219,6 @@ int main(int argc, char** argv)
         }
         topics[numTopics++] = *arg++;
     }
-    ret = DPS_Configure(bitLen, numHashes);
-    if (ret != DPS_OK) {
-        DPS_ERRPRINT("Invalid configuration parameters\n");
-        goto Usage;
-    }
-
     /*
      * Disable multicast publications if we have an explicit destination
      */
@@ -240,19 +226,21 @@ int main(int argc, char** argv)
         mcast = DPS_MCAST_PUB_DISABLED;
     }
 
-    ret = DPS_CreateNode(&node, mcast, 0, "/.");
+    node = DPS_CreateNode("/.");
+    ret = DPS_StartNode(node, mcast, 0);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("DPS_CreateNode failed: %s\n", DPS_ErrTxt(ret));
         return 1;
     }
 
     if (host || connectPort) {
-        ret = DPS_ResolveAddress(node, host, connectPort, &addr);
-        if (ret != DPS_OK) {
+        DPS_NodeAddress* addr = DPS_ResolveAddress(node, host, connectPort);
+        if (!addr) {
             DPS_ERRPRINT("Failed to resolve %s/%s\n", host ? host : "<localhost>", connectPort);
             return 1;
         }
-        ret = DPS_Join(node, &addr);
+        ret = DPS_Join(node, addr);
+        DPS_DestroyAddress(addr);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("DPS_Join failed: %s\n", DPS_ErrTxt(ret));
             return 1;
@@ -260,14 +248,15 @@ int main(int argc, char** argv)
     }
 
     if (numTopics) {
-        ret = DPS_CreatePublication(node, topics, numTopics, NULL, &currentPub);
+        currentPub = DPS_CreatePublication(node);
+        ret = DPS_InitPublication(currentPub, topics, numTopics, requestAck ? OnAck : NULL);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("Failed to create publication - error=%d\n", ret);
             return 1;
         }
-        ret = DPS_Publish(node, currentPub, msg, msg ? strlen(msg) + 1 : 0, ttl, NULL);
+        ret = DPS_Publish(currentPub, msg, msg ? strlen(msg) + 1 : 0, ttl, NULL);
         if (ret == DPS_OK) {
-            DPS_PRINT("Pub UUID %s\n", DPS_UUIDToString(DPS_PublicationGetUUID(node, currentPub)));
+            DPS_PRINT("Pub UUID %s\n", DPS_UUIDToString(DPS_PublicationGetUUID(currentPub)));
         } else {
             DPS_ERRPRINT("Failed to publish topics - error=%d\n", ret);
         }

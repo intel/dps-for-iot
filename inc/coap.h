@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <uv.h>
-#include <dps.h>
+#include <dps_internal.h>
 
 #define COAP_OVER_UDP   0
 #define COAP_OVER_TCP   1

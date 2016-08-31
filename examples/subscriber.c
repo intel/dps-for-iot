@@ -12,28 +12,32 @@ static int sendAck = DPS_FALSE;
 
 static uint8_t AckMsg[] = "This is an ACK";
 
-static void OnPubMatch(DPS_Node* node, DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* data, size_t len)
+static void OnPubMatch(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* data, size_t len)
 {
-    const DPS_UUID* pubId = DPS_PublicationGetUUID(node, pub);
-    uint32_t serialNumber = DPS_PublicationGetSerialNumber(node, pub);
+    const DPS_UUID* pubId = DPS_PublicationGetUUID(pub);
+    uint32_t serialNumber = DPS_PublicationGetSerialNumber(pub);
     size_t i;
-    size_t numTopics = DPS_SubscriptionGetNumTopics(node, sub);
+    size_t numTopics = DPS_SubscriptionGetNumTopics(sub);
 
     DPS_PRINT("Pub %s(%d) matches:\n    ", DPS_UUIDToString(pubId), serialNumber);
     for (i = 0; i < numTopics; ++i) {
         if (i) {
             DPS_PRINT(" & ");
         }
-        DPS_PRINT("%s", DPS_SubscriptionGetTopic(node, sub, i));
+        DPS_PRINT("%s", DPS_SubscriptionGetTopic(sub, i));
     }
     DPS_PRINT("\n");
     if (data) {
         DPS_PRINT("%.*s\n", len, data);
     }
     if (sendAck) {
-        DPS_Status ret = DPS_AcknowledgePublication(node, pubId, serialNumber, AckMsg, sizeof(AckMsg));
-        if (ret != DPS_OK) {
-            DPS_PRINT("Failed to ack pub %s\n", DPS_ErrTxt(ret));
+        DPS_PublicationAck* ack = DPS_CreatePublicationAck(pub);
+        if (ack) {
+            DPS_Status ret = DPS_AckPublication(ack, AckMsg, sizeof(AckMsg));
+            if (ret != DPS_OK) {
+                DPS_PRINT("Failed to ack pub %s\n", DPS_ErrTxt(ret));
+            }
+            DPS_DestroyPublicationAck(ack);
         }
     }
 }
@@ -84,25 +88,14 @@ int main(int argc, char** argv)
     size_t numTopics = 0;
     DPS_Node* node;
     DPS_Subscription* subscription;
-    DPS_NodeAddress addr;
-    uv_loop_t* loop;
-    uv_idle_t idler;
     int mcastPub = DPS_MCAST_PUB_DISABLED;
     const char* host = NULL;
     int listenPort = 0;
     const char* connectPort = NULL;
-    int bitLen = 16 * 1024;
-    int numHashes = 4;
 
     DPS_Debug = 0;
 
     while (--argc) {
-        if (IntArg("-h", &arg, &argc, &numHashes, 2, 16)) {
-            continue;
-        }
-        if (IntArg("-b", &arg, &argc, &bitLen, 64, 8 * 1024 * 1024)) {
-            continue;
-        }
         if (IntArg("-l", &arg, &argc, &listenPort, 1, UINT16_MAX)) {
             continue;
         }
@@ -147,37 +140,34 @@ int main(int argc, char** argv)
         topics[numTopics++] = *arg++;
     }
 
-    ret = DPS_Configure(bitLen, numHashes);
-    if (ret != DPS_OK) {
-        DPS_ERRPRINT("Invalid configuration parameters\n");
-        goto Usage;
-    }
-
     if ((host == NULL) && (connectPort == NULL)) {
         mcastPub = DPS_MCAST_PUB_ENABLE_RECV;
     }
 
-    ret = DPS_CreateNode(&node, mcastPub, listenPort, "/.");
-    if (!node) {
-        DPS_ERRPRINT("Failed to create node: %s\n", DPS_ErrTxt(ret));
+    node = DPS_CreateNode("/.");
+    ret = DPS_StartNode(node, mcastPub, listenPort);
+    if (ret != DPS_OK) {
+        DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
         return 1;
     }
     DPS_PRINT("Subscriber is listening on port %d\n", DPS_GetPortNumber(node));
 
     if (numTopics > 0) {
-        ret = DPS_Subscribe(node, topics, numTopics, OnPubMatch, &subscription);
+        DPS_Subscription* subscription = DPS_CreateSubscription(node, topics, numTopics);
+        ret = DPS_Subscribe(subscription, OnPubMatch);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("Failed to susbscribe topics - error=%s\n", DPS_ErrTxt(ret));
             return 1;
         }
     }
     if (host || connectPort) {
-        ret = DPS_ResolveAddress(node, host, connectPort, &addr);
-        if (ret != DPS_OK) {
+        DPS_NodeAddress* addr = DPS_ResolveAddress(node, host, connectPort);
+        if (!addr) {
             DPS_ERRPRINT("Failed to resolve %s/%s\n", host ? host : "<localhost>", connectPort);
             return 1;
         }
-        ret = DPS_Join(node, &addr);
+        ret = DPS_Join(node, addr);
+        DPS_DestroyAddress(addr);
     }
     DPS_DestroyNode(node);
     return 0;
