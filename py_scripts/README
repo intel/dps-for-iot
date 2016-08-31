@@ -1,0 +1,7 @@
+To run these scripts from this directory
+
+export PYTHONPATH=../build/swig
+
+python -i script.py
+
+ 

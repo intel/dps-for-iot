@@ -13,7 +13,7 @@
 #define DPS_FALSE 0
 
 /**
- * 
+ *
  */
 #define DPS_MCAST_PUB_DISABLED       0
 #define DPS_MCAST_PUB_ENABLE_SEND    1
@@ -178,10 +178,10 @@ DPS_Status DPS_InitPublication(DPS_Publication* pub, char* const* topics, size_t
  * publication.
  *
  * @param pub          The publication to send
- * @param pubPayload   Optional payload 
+ * @param pubPayload   Optional payload
  * @param len          Length of the payload
  * @param ttl          Time to live in seconds - maximum TTL is about 9 hours
- * @param oldPayload   Returns pointer to payload passed to previous call to DPS_Pubish() 
+ * @param oldPayload   Returns pointer to payload passed to previous call to DPS_Pubish()
  *
  * @return - DPS_OK if the topics were succesfully published
  */
@@ -200,7 +200,7 @@ DPS_Status DPS_DestroyPublication(DPS_Publication* pub, uint8_t** oldPayload);
  * Function prototype for a publication handler called when a publication is received that
  * matches a subscription. Note that there is a possibilitly of false-positive matches.
  *
- * The publication handle is only valid within the body of this callback function. 
+ * The publication handle is only valid within the body of this callback function.
  *
  * The accessor functions DPS_PublicationGetUUID() and DPS_PublicationGetSerialNumber()
  * return information about the received publication.
@@ -216,7 +216,7 @@ DPS_Status DPS_DestroyPublication(DPS_Publication* pub, uint8_t** oldPayload);
 typedef void (*DPS_PublicationHandler)(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* payload, size_t len);
 
 /**
- * Create an aknowledgement for a publication. 
+ * Create an aknowledgement for a publication.
  *
  * @param pub  The publication that will be acknowledged.
  */
@@ -226,7 +226,7 @@ DPS_PublicationAck* DPS_CreatePublicationAck(const DPS_Publication* pub);
  * Aknowledge a publication. A publication should be acknowledged as soon as possible after receipt ideally from within the publication
  * handler callback function.
  *
- * @param ack           The acknowledgment 
+ * @param ack           The acknowledgment
  * @param ackPayload    Optional payload to accompany the aknowledgment
  * @param len           The length of the payload
  */
