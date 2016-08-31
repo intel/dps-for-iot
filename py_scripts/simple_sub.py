@@ -11,6 +11,3 @@ node = dps.CreateNode()
 dps.StartNode(node, dps.MCAST_PUB_ENABLE_RECV, 0)
 sub = dps.CreateSubscription(node, ['a/b/c']);
 dps.Subscribe(sub, OnPub)
-
-# Let the callbacks come in
-time.sleep(1000)

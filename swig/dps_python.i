@@ -215,7 +215,6 @@ void PubHandler(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* payl
     Py_XDECREF(pubObj);
     Py_XDECREF(subObj);
     Py_XDECREF(ret);
-    Py_DECREF(cb);
     /*
      * All done we can release the lock
      */
