@@ -27,6 +27,7 @@
  */
 %typemap(in) uint8_t* = char*;
 %typemap(in) int16_t = int;
+%typemap(out) uint32_t = unsigned long;
 
 
 /*
@@ -68,7 +69,7 @@
  * Eventually need to figure out how to handle binary data.
  */
 %typemap(in) (uint8_t* payload, size_t len) {
-    /* Only supprting strings for now */
+    /* Only supporting strings for now */
     if (PyString_Check($input)) {
         $2 = PyString_Size($input);
         $1 = (uint8_t*)malloc(($2 + 1) * sizeof(uint8_t*));
@@ -119,11 +120,26 @@
     $2 = 0;
 }
 
+%inline %{
+static void _ClearAckHandler(DPS_Publication* pub)
+{
+    PyObject* cb = (PyObject*)DPS_GetPublicationData(pub);
+    Py_XDECREF(cb);
+}
+%}
+
+/*
+ * Dereference the python callback function when freeing a publication
+ */
+%pythonprepend DPS_DestroyPublication %{
+   _ClearAckHandler(pub)
+%}
+
 /*
  * Publication acknowledgment function calls into Python
  */
-%inline %{
-void AckHandler(DPS_Publication* pub, uint8_t* payload, size_t len)
+%{
+static void AckHandler(DPS_Publication* pub, uint8_t* payload, size_t len)
 {
     PyObject* cb = (PyObject*)DPS_GetPublicationData(pub);
     PyObject* pubObj;
@@ -150,15 +166,6 @@ void AckHandler(DPS_Publication* pub, uint8_t* payload, size_t len)
      */
     PyGILState_Release(gilState);
 }
-
-void AckHandlerCleanup(DPS_Publication* pub)
-{
-    PyObject* cb = (PyObject*)DPS_GetPublicationData(pub);
-    if (cb) {
-        Py_DECREF(cb);
-        DPS_SetPublicationData(pub, NULL);
-    }
-}
 %}
 
 /*
@@ -183,7 +190,7 @@ void AckHandlerCleanup(DPS_Publication* pub)
 /*
  * Publication received callback call into Python function
  */
-%inline %{
+%{
 void PubHandler(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* payload, size_t len)
 {
     PyObject* cb = (PyObject*)DPS_GetSubscriptionData(sub);
@@ -217,14 +224,18 @@ void PubHandler(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* payl
 %}
 
 %inline %{
-void PubHandlerCleanup(DPS_Subscription* sub)
+static void _ClearPubHandler(DPS_Subscription* sub)
 {
     PyObject* cb = (PyObject*)DPS_GetSubscriptionData(sub);
-    if (cb) {
-        Py_DECREF(cb);
-        DPS_SetSubscriptionData(sub, NULL);
-    }
+    Py_XDECREF(cb);
 }
+%}
+
+/*
+ * Dereference the python callback function when freeing a publication
+ */
+%pythonprepend DPS_DestroySubscription %{
+   _ClearPubHandler(sub)
 %}
 
 /*
@@ -246,6 +257,22 @@ void PubHandlerCleanup(DPS_Subscription* sub)
     }
 }
 
+%{
+static PyObject* UUIDToPyString(DPS_UUID* uuid)
+{
+    const char* uuidStr = DPS_UUIDToString(uuid);
+    if (uuidStr) {
+        return PyString_FromString(uuidStr);
+    } else {
+        Py_RETURN_NONE;
+    }
+}
+%}
+
+%typemap(out) DPS_UUID* {
+    $result = UUIDToPyString($1);
+}
+
 /*
  * Disallow NULL for these pointer types
  */
@@ -260,15 +287,13 @@ void PubHandlerCleanup(DPS_Subscription* sub)
  *
  * Note we need to undef the header guards otherwise we get nothing
  */
-#undef _DPS_UUID_H
-%include "dps_uuid.h"
 #undef _DPS_ERR_H
 %include "dps_err.h"
 #undef _DPS_H
 %include "dps.h"
 
 /*
- * Module initialization
+ n Module initialization
  */
 %init %{
     /* Must be called during module initialization to enable DPS callbacks */
