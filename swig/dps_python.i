@@ -31,6 +31,13 @@
 
 
 /*
+ * Debug control
+ */
+%inline %{
+int DPS_Debug;
+%}
+
+/*
  * This allows topic strings to be expressed as a list of strings
  */
 %typemap(in) (char* const* topics, size_t numTopics) {
@@ -64,21 +71,43 @@
     free($1);
 }
 
+%{
 /*
  * For now just allow strings as payloads.
  * Eventually need to figure out how to handle binary data.
  */
-%typemap(in) (uint8_t* payload, size_t len) {
-    /* Only supporting strings for now */
-    if (PyString_Check($input)) {
-        $2 = PyString_Size($input);
-        $1 = (uint8_t*)malloc(($2 + 1) * sizeof(uint8_t*));
-        memcpy($1, PyString_AsString($input), $2);
-        $1[$2] = 0;
+static uint8_t* AllocPayload(PyObject* py, size_t* len)
+{
+    uint8_t* str = NULL;
+    if (PyString_Check(py)) {
+        int sz = PyString_Size(py);
+        str = malloc(sz + 1);
+        memcpy(str, PyString_AsString(py), sz);
+        str[sz] = 0;
+        *len = (size_t)sz;
     } else {
         PyErr_SetString(PyExc_TypeError,"not a string");
+    }
+    return str;
+}
+%}
+
+%typemap(in) (uint8_t* pubPayload, size_t len) {
+    $1 = AllocPayload($input, &$2);
+    if (!$1) {
         return NULL;
     }
+}
+
+%typemap(in) (uint8_t* ackPayload, size_t len) {
+    $1 = AllocPayload($input, &$2);
+    if (!$1) {
+        return NULL;
+    }
+}
+
+%typemap(freearg) (uint8_t* ackPayload, size_t len) {
+    free($1);
 }
 
 /*
@@ -160,7 +189,6 @@ static void AckHandler(DPS_Publication* pub, uint8_t* payload, size_t len)
     ret = PyObject_CallFunction(cb, "Os#", pubObj, payload, len);
     Py_XDECREF(pubObj);
     Py_XDECREF(ret);
-    Py_DECREF(cb);
     /*
      * All done we can release the lock
      */
@@ -279,6 +307,7 @@ static PyObject* UUIDToPyString(DPS_UUID* uuid)
 %apply Pointer NONNULL { DPS_UUID* };
 %apply Pointer NONNULL { DPS_Subscription* };
 %apply Pointer NONNULL { DPS_Publication* };
+%apply Pointer NONNULL { DPS_PublicationAck* };
 %apply Pointer NONNULL { DPS_NodeAddress* };
 
 /*
@@ -292,9 +321,10 @@ static PyObject* UUIDToPyString(DPS_UUID* uuid)
 %include "dps.h"
 
 /*
- n Module initialization
+ * Module initialization
  */
 %init %{
     /* Must be called during module initialization to enable DPS callbacks */
     PyEval_InitThreads();
+    DPS_Debug = 0;
 %}

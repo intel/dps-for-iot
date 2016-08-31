@@ -5,6 +5,9 @@ def OnAck(pub, payload):
     print "PubAck %s/%d" % (dps.PublicationGetUUID(pub), dps.PublicationGetSerialNumber(pub))
     print "Payload %s" % payload
 
+# Set to 1 to enable DPS debug output
+dps.cvar.Debug = 1
+
 node = dps.CreateNode()
 dps.StartNode(node, dps.MCAST_PUB_ENABLE_SEND, 0)
 pub = dps.CreatePublication(node)

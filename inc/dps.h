@@ -178,14 +178,14 @@ DPS_Status DPS_InitPublication(DPS_Publication* pub, char* const* topics, size_t
  * publication.
  *
  * @param pub          The publication to send
- * @param payload      Optional payload 
+ * @param pubPayload   Optional payload 
  * @param len          Length of the payload
  * @param ttl          Time to live in seconds - maximum TTL is about 9 hours
  * @param oldPayload   Returns pointer to payload passed to previous call to DPS_Pubish() 
  *
  * @return - DPS_OK if the topics were succesfully published
  */
-DPS_Status DPS_Publish(DPS_Publication* pub, uint8_t* payload, size_t len, int16_t ttl, uint8_t** oldPayload);
+DPS_Status DPS_Publish(DPS_Publication* pub, uint8_t* pubPayload, size_t len, int16_t ttl, uint8_t** oldPayload);
 
 /**
  * Delete a local publication and frees any resources allocated. This does not cancel retained publications that have an
@@ -227,10 +227,10 @@ DPS_PublicationAck* DPS_CreatePublicationAck(const DPS_Publication* pub);
  * handler callback function.
  *
  * @param ack           The acknowledgment 
- * @param payload       Optional payload to accompany the aknowledgment
+ * @param ackPayload    Optional payload to accompany the aknowledgment
  * @param len           The length of the payload
  */
-DPS_Status DPS_AckPublication(DPS_PublicationAck* ack, uint8_t* payload, size_t len);
+DPS_Status DPS_AckPublication(DPS_PublicationAck* ack, uint8_t* ackPayload, size_t len);
 
 /**
  * Free resources associated with an publication acknowledgement

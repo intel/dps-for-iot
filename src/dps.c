@@ -1781,7 +1781,7 @@ DPS_Status DPS_InitPublication(DPS_Publication* pub, char* const* topics, size_t
     if (numTopics == 0) {
         return DPS_ERR_ARGS;
     }
-    DPS_DBGPRINT("Creating publication with %lu topics\n", numTopics);
+    DPS_DBGPRINT("Creating publication with %lu topics %s\n", numTopics, handler ? "and ACK handler" : "");
     DumpTopics(topics, numTopics);
 
     pub->bf = DPS_BitVectorAlloc();
@@ -1992,6 +1992,8 @@ DPS_Status DPS_AckPublication(DPS_PublicationAck* ack, uint8_t* payload, size_t 
     DPS_Status ret;
     DPS_NodeAddress* addr = NULL;
     DPS_Node* node = ack ? ack->node : NULL;
+
+    DPS_DBGTRACE();
 
     if (!node) {
         return DPS_ERR_NULL;
