@@ -39,7 +39,7 @@ int main(int argc, char** argv)
         CBOR_EncodeInt(&buffer, Sints[i]);
     }
 
-    printf("Encoded %d bytes\n", DPS_BufferAvail(&buffer));
+    printf("Encoded %zu bytes\n", DPS_BufferAvail(&buffer));
 
     buffer.pos = buffer.base;
     for (i = 0; i < sizeof(Uints) / sizeof(Uints[0]); ++i) {

@@ -1503,7 +1503,7 @@ static ssize_t OnMulticastReceive(DPS_Node* node, const struct sockaddr* addr, c
     }
     ret = CoAP_Parse(COAP_OVER_UDP, data, len, &coap, &payload);
     if (ret != DPS_OK) {
-        DPS_ERRPRINT("Discarding garbage multicast packet len=%lu\n", len);
+        DPS_ERRPRINT("Discarding garbage multicast packet len=%zu\n", len);
         return 0;
     }
     /*
@@ -1780,7 +1780,7 @@ DPS_Status DPS_InitPublication(DPS_Publication* pub, char* const* topics, size_t
     if (numTopics == 0) {
         return DPS_ERR_ARGS;
     }
-    DPS_DBGPRINT("Creating publication with %lu topics %s\n", numTopics, handler ? "and ACK handler" : "");
+    DPS_DBGPRINT("Creating publication with %zu topics %s\n", numTopics, handler ? "and ACK handler" : "");
     DumpTopics(topics, numTopics);
 
     pub->bf = DPS_BitVectorAlloc();
@@ -2065,7 +2065,7 @@ DPS_Status DPS_Subscribe(DPS_Subscription* sub, DPS_PublicationHandler handler)
         return ret;
     }
 
-    DPS_DBGPRINT("Subscribing to %lu topics\n", sub->numTopics);
+    DPS_DBGPRINT("Subscribing to %zu topics\n", sub->numTopics);
     DumpTopics(sub->topics, sub->numTopics);
 
     DPS_BitVectorFuzzyHash(sub->needs, sub->bf);
@@ -2120,7 +2120,7 @@ DPS_Status DPS_DestroySubscription(DPS_Subscription* sub)
     assert(ret == DPS_OK);
     UnlockNode(node);
 
-    DPS_DBGPRINT("Unsubscribing from %lu topics\n", sub->numTopics);
+    DPS_DBGPRINT("Unsubscribing from %zu topics\n", sub->numTopics);
     DumpTopics(sub->topics, sub->numTopics);
     FreeSubscription(sub);
 

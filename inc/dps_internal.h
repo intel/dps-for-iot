@@ -40,17 +40,17 @@ DPS_Status DPS_BufferInit(DPS_Buffer* buffer, uint8_t* storage, size_t size);
 /*
  * Space left in a buffer being written
  */
-#define DPS_BufferSpace(b)  ((b)->eod - (b)->pos)
+#define DPS_BufferSpace(b)  ((size_t)((b)->eod - (b)->pos))
 
 /*
  * Data available in a buffer being read
  */
-#define DPS_BufferAvail(b)  ((b)->eod - (b)->pos)
+#define DPS_BufferAvail(b)  ((size_t)((b)->eod - (b)->pos))
 
 /*
  * Space currently used in buffer
  */
-#define DPS_BufferUsed(b)  ((b)->pos - (b)->base)
+#define DPS_BufferUsed(b)  ((size_t)((b)->pos - (b)->base))
 
 /**
  * Print the current subscriptions

@@ -222,7 +222,7 @@ void DPS_BitVectorFree(DPS_BitVector* bv)
 void DPS_BitVectorBloomInsert(DPS_BitVector* bv, const uint8_t* data, size_t len)
 {
     int h = config.numHashes;
-    //DPS_PRINT("%.*s   (%lu)\n", (int)len, data, len);
+    //DPS_PRINT("%.*s   (%zu)\n", (int)len, data, len);
     while (h) {
         uint32_t index = Hash(data, len, --h) % bv->len;
         SET_BIT(bv->bits, index);
@@ -750,9 +750,9 @@ DPS_Status DPS_BitVectorSet(DPS_BitVector* bv, uint8_t* data, size_t len)
 void DPS_BitVectorDump(const DPS_BitVector* bv, int dumpBits)
 {
     if (DPS_DEBUG_ENABLED()) {
-        DPS_PRINT("Bit len = %lu, ", bv->len);
-        DPS_PRINT("Pop = %lu, ", DPS_BitVectorPopCount((DPS_BitVector*)bv));
-        DPS_PRINT("RLE bits = %lu, ", RLE_Size(bv));
+        DPS_PRINT("Bit len = %zu, ", bv->len);
+        DPS_PRINT("Pop = %zu, ", DPS_BitVectorPopCount((DPS_BitVector*)bv));
+        DPS_PRINT("RLE bits = %zu, ", RLE_Size(bv));
         DPS_PRINT("Loading = %.2f%%\n", DPS_BitVectorLoadFactor((DPS_BitVector*)bv));
 #ifdef DPS_DEBUG
         if (dumpBits) {
@@ -889,7 +889,7 @@ DPS_BitVector* DPS_CountVectorToIntersection(DPS_CountVector* cv)
 void DPS_CountVectorDump(DPS_CountVector* cv)
 {
     size_t i;
-    DPS_PRINT("Entries %lu\n", cv->entries);
+    DPS_PRINT("Entries %zu\n", cv->entries);
     for (i = 0; i < NUM_CHUNKS(cv); ++i) {
         size_t j;
         for (j = 0; j < CHUNK_SIZE; ++j) {
