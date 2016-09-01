@@ -1,5 +1,4 @@
 #include <assert.h>
-#include <unistd.h>
 #include <string.h>
 #include <malloc.h>
 #include <uv.h>
