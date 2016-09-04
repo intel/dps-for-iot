@@ -27,6 +27,7 @@
  */
 %typemap(in) uint8_t* = char*;
 %typemap(in) int16_t = int;
+%typemap(in) uint16_t = unsigned int;
 %typemap(out) uint32_t = unsigned long;
 
 

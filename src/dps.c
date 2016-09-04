@@ -201,7 +201,7 @@ DPS_Status WaitForTask(DPS_Node* node, uint16_t task, uint32_t timeout)
 #ifndef NDEBUG
         --node->lockCount;
 #endif
-        r = uv_cond_timedwait(&node->bgComplete, &node->nodeLock, (uint64_t)timeout * 1e6);
+        r = uv_cond_timedwait(&node->bgComplete, &node->nodeLock, (uint64_t)timeout * 1000000);
 #ifndef NDEBUG
         ++node->lockCount;
 #endif
@@ -620,11 +620,11 @@ static void FreeBufs(uv_buf_t* bufs, size_t numBufs)
     }
 }
 
-static void OnSendToComplete(DPS_Node* node, struct sockaddr* addr, uv_buf_t* bufs, size_t numBufs, DPS_Status status)
+static void OnNetSendComplete(DPS_Node* node, struct sockaddr* addr, uv_buf_t* bufs, size_t numBufs, DPS_Status status)
 {
     if (status != DPS_OK) {
         RemoteNode* remote = LookupRemoteNode(node, addr);
-        DPS_ERRPRINT("OnSendToComplete %s\n", DPS_ErrTxt(status));
+        DPS_ERRPRINT("OnNetSendComplete %s\n", DPS_ErrTxt(status));
         if (remote) {
             DeleteRemoteNode(node, remote);
             DPS_ERRPRINT("Removed node %s\n", DPS_NetAddrText(addr));
@@ -698,11 +698,11 @@ static DPS_Status SendPublication(DPS_Node* node, DPS_Publication* pub, DPS_BitV
     }
     if (ret == DPS_OK) {
         if (remote) {
-            ret = DPS_NetSend(node, bufs, A_SIZEOF(bufs), (struct sockaddr*)&remote->addr.inaddr, OnSendToComplete);
+            ret = DPS_NetSend(node, bufs, A_SIZEOF(bufs), (struct sockaddr*)&remote->addr.inaddr, OnNetSendComplete);
             if (ret == DPS_OK) {
                 UpdatePubHistory(node, pub);
             } else {
-                OnSendToComplete(node, (struct sockaddr*)&remote->addr.inaddr, bufs, A_SIZEOF(bufs), ret);
+                OnNetSendComplete(node, (struct sockaddr*)&remote->addr.inaddr, bufs, A_SIZEOF(bufs), ret);
             }
         } else {
             ret = DPS_MulticastSend(node->mcastSender, bufs, A_SIZEOF(bufs));
@@ -897,9 +897,9 @@ static void SendAcksTask(DPS_Node* node)
     DPS_DBGTRACE();
 
     while ((ack = node->ackQueue.first) != NULL) {
-        DPS_Status ret = DPS_NetSend(node, ack->bufs, A_SIZEOF(ack->bufs), (struct sockaddr*)&ack->destAddr.inaddr, OnSendToComplete);
+        DPS_Status ret = DPS_NetSend(node, ack->bufs, A_SIZEOF(ack->bufs), (struct sockaddr*)&ack->destAddr.inaddr, OnNetSendComplete);
         if (ret != DPS_OK) {
-            OnSendToComplete(node, (struct sockaddr*)&ack->destAddr.inaddr, ack->bufs, A_SIZEOF(ack->bufs), ret);
+            OnNetSendComplete(node, (struct sockaddr*)&ack->destAddr.inaddr, ack->bufs, A_SIZEOF(ack->bufs), ret);
         }
         node->ackQueue.first = ack->next;
         FreePubAck(ack);
@@ -1207,10 +1207,10 @@ static DPS_Status SendSubscription(DPS_Node* node, RemoteNode* remote, DPS_BitVe
         free(payload.base);
         return ret;
     }
-    ret = DPS_NetSend(node, bufs, A_SIZEOF(bufs), (struct sockaddr*)&remote->addr.inaddr, OnSendToComplete);
+    ret = DPS_NetSend(node, bufs, A_SIZEOF(bufs), (struct sockaddr*)&remote->addr.inaddr, OnNetSendComplete);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to send subscription request %s\n", DPS_ErrTxt(ret));
-        OnSendToComplete(node, (struct sockaddr*)&remote->addr, bufs, A_SIZEOF(bufs), ret);
+        OnNetSendComplete(node, (struct sockaddr*)&remote->addr, bufs, A_SIZEOF(bufs), ret);
     }
     /*
      * Done with these flags
@@ -1538,7 +1538,7 @@ static ssize_t OnNetReceive(DPS_Node* node, const struct sockaddr* addr, const u
         ret = CoAP_Parse(COAP_OVER_TCP, data, len, &coap, &payload);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("CoAP_Parse failed: ret= %d\n", ret);
-            return -len;
+            return -(ssize_t)len;
         }
     }
     if (ret == DPS_ERR_EOD) {
@@ -1580,11 +1580,31 @@ static void FreeNode(DPS_Node* node)
     free(node);
 }
 
+static void NodeClose(DPS_Node* node)
+{
+    if (node->mcastReceiver) {
+        DPS_MulticastStopReceive(node->mcastReceiver);
+        node->mcastReceiver = NULL;
+    }
+    if (node->mcastSender) {
+        DPS_MulticastStopSend(node->mcastSender);
+        node->mcastSender = NULL;
+    }
+    if (node->netListener) {
+        DPS_NetStopListening(node->netListener);
+        node->netListener = NULL;
+    }
+    uv_close((uv_handle_t*)&node->bgHandler, NULL);
+}
+
 static void NodeRun(void* arg)
 {
     DPS_Node* node = (DPS_Node*)arg;
 
     uv_run(node->loop, UV_RUN_DEFAULT);
+    DPS_DBGPRINT("Exiting node thread\n");
+    NodeClose(node);
+    uv_stop(node->loop);
 }
 
 DPS_Node* DPS_CreateNode(const char* separators)
@@ -1633,16 +1653,20 @@ DPS_Status DPS_StartNode(DPS_Node* node, int mcast, int tcpPort)
      * For triggering background tasks
      */
     node->bgHandler.data = node;
-    uv_async_init(node->loop, &node->bgHandler, RunBackgroundTasks);
+    r = uv_async_init(node->loop, &node->bgHandler, RunBackgroundTasks);
+    assert(!r);
     /*
      * For signaling completion of a background task
      */
-    uv_cond_init(&node->bgComplete);
+    r = uv_cond_init(&node->bgComplete);
+    assert(!r);
     /*
      * Mutex for protecting the node
      */
-    uv_mutex_init(&node->nodeLock);
-    uv_mutex_init(&node->history.lock);
+    r = uv_mutex_init(&node->nodeLock);
+    assert(!r);
+    r = uv_mutex_init(&node->history.lock);
+    assert(!r);
 
     node->interests = DPS_CountVectorAlloc();
     node->needs = DPS_CountVectorAllocFH();
@@ -1706,21 +1730,9 @@ static void StopOnTimeout(uv_timer_t* handle)
 
     DPS_DBGTRACE();
 
-    if (node->mcastReceiver) {
-        DPS_MulticastStopReceive(node->mcastReceiver);
-        node->mcastReceiver = NULL;
-    }
-    if (node->mcastSender) {
-        DPS_MulticastStopSend(node->mcastSender);
-        node->mcastSender = NULL;
-    }
-    if (node->netListener) {
-        DPS_NetStopListening(node->netListener);
-        node->netListener = NULL;
-    }
-    uv_close((uv_handle_t*)&node->bgHandler, NULL);
+    NodeClose(node);
     uv_timer_stop(handle);
-    uv_stop(node->loop);
+    uv_run(node->loop, UV_RUN_ONCE);
 }
 
 static void StopNodeTask(DPS_Node* node)
@@ -2159,45 +2171,56 @@ static void RunBackgroundTasks(uv_async_t* handle)
     }
 }
 
-
 typedef struct {
     int ok;
     const char* host;
     const char* service;
     DPS_NodeAddress addr;
-    uv_cond_t cond;
     uv_mutex_t* mutex;
+    uv_cond_t cond;
+    uv_getaddrinfo_t info;
 } ResolverInfo;
+
+static void GetAddrInfoCB(uv_getaddrinfo_t* req, int status, struct addrinfo* res)
+{
+    ResolverInfo* resolver = (ResolverInfo*)req->data;
+    if (status == 0) {
+        if (res->ai_family == AF_INET6) {
+            memcpy(&resolver->addr.inaddr, res->ai_addr, sizeof(struct sockaddr_in6));
+        } else {
+            memcpy(&resolver->addr.inaddr, res->ai_addr, sizeof(struct sockaddr_in));
+        }
+        resolver->ok = DPS_TRUE;
+        uv_freeaddrinfo(res);
+    } else {
+        DPS_ERRPRINT("uv_getaddrinfo failed %s\n", uv_err_name(status));
+    }
+    uv_mutex_lock(resolver->mutex);
+    uv_cond_signal(&resolver->cond);
+    uv_mutex_unlock(resolver->mutex);
+}
 
 static void AsyncResolveAddress(uv_async_t* async)
 {
     ResolverInfo* resolver = (ResolverInfo*)async->data;
     int r;
     struct addrinfo hints;
-    uv_getaddrinfo_t info;
 
     DPS_DBGTRACE();
 
     memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_INET6;
+    hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_protocol = IPPROTO_TCP;
+    resolver->info.data = resolver;
 
-    r = uv_getaddrinfo(async->loop, &info, NULL, resolver->host, resolver->service, &hints);
+    r = uv_getaddrinfo(async->loop, &resolver->info, GetAddrInfoCB, resolver->host, resolver->service, &hints);
     if (r) {
         DPS_ERRPRINT("uv_getaddrinfo call error %s\n", uv_err_name(r));
-    } else {
-        struct sockaddr_in6* ip6 = (struct sockaddr_in6*)info.addrinfo->ai_addr;
-        if (ip6->sin6_family == AF_INET6) {
-            memcpy(&resolver->addr, ip6, sizeof(*ip6));
-            DPS_DBGPRINT("Resolved address\n");
-            resolver->ok = DPS_TRUE;
-        }
-        freeaddrinfo(info.addrinfo);
+        uv_mutex_lock(resolver->mutex);
+        uv_cond_signal(&resolver->cond);
+        uv_mutex_unlock(resolver->mutex);
     }
-    uv_mutex_lock(resolver->mutex);
-    uv_cond_signal(&resolver->cond);
-    uv_mutex_unlock(resolver->mutex);
 }
 
 static void FreeHandle(uv_handle_t* handle)
@@ -2207,9 +2230,10 @@ static void FreeHandle(uv_handle_t* handle)
 
 DPS_NodeAddress* DPS_ResolveAddress(DPS_Node* node, const char* host, const char* service)
 {
+    int r;
     uv_async_t* async;
     DPS_NodeAddress* addr = NULL;
-    ResolverInfo resolver;
+    ResolverInfo* resolver;
 
     DPS_DBGTRACE();
 
@@ -2221,41 +2245,49 @@ DPS_NodeAddress* DPS_ResolveAddress(DPS_Node* node, const char* host, const char
     if (!async) {
         return NULL;
     }
+    resolver = calloc(1, sizeof(ResolverInfo));
+    if (!resolver) {
+        free(async);
+        return NULL;
+    }
     if (!host) {
         host = "localhost";
     }
-    resolver.host = host;
-    resolver.service = service;
-    resolver.ok = DPS_FALSE;
-    resolver.mutex = &node->nodeLock;
+    resolver->host = host;
+    resolver->service = service;
+    resolver->ok = DPS_FALSE;
+    resolver->mutex = &node->nodeLock;
     /*
      * Async callback
      */
-    async->data = &resolver;
     if (uv_async_init(node->loop, async, AsyncResolveAddress)) {
         free(async);
         return NULL;
     }
+    async->data = resolver;
     /*
      * Condition variable for signaling completion
      */
-    uv_cond_init(&resolver.cond);
+    r = uv_cond_init(&resolver->cond);
+    assert(!r);
     /*
      * This runs address resolution on the node loop
      */
-    uv_mutex_lock(resolver.mutex);
+    uv_mutex_lock(resolver->mutex);
     if (uv_async_send(async) == 0) {
-        uv_cond_wait(&resolver.cond, resolver.mutex);
-        if (resolver.ok) {
+        uv_cond_wait(&resolver->cond, resolver->mutex);
+        if (resolver->ok) {
             addr = malloc(sizeof(DPS_NodeAddress));
             if (addr) {
-                memcpy(addr, &resolver.addr, sizeof(DPS_NodeAddress));
+                memcpy(addr, &resolver->addr, sizeof(DPS_NodeAddress));
             }
         }
     }
-    uv_mutex_unlock(resolver.mutex);
+    uv_mutex_unlock(resolver->mutex);
     uv_close((uv_handle_t*)async, FreeHandle);
-    uv_cond_destroy(&resolver.cond);
+    uv_cond_destroy(&resolver->cond);
+    free(resolver);
+
     return addr;
 }
 

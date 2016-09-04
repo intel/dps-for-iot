@@ -3,10 +3,24 @@
 #include <assert.h>
 #include <string.h>
 #include <malloc.h>
-#include <endian.h>
 #include <dps_dbg.h>
 #include <cbor.h>
 #include <murmurhash3.h>
+
+#ifdef WIN32
+
+#define BSWAP_32(n)  _byteswap_ulong(n)
+
+#else
+
+#include <endian.h>
+#if __BYTE_ORDER != __LITTLE_ENDIAN
+   #define ENDIAN_SWAP
+#endif
+
+#define BSWAP_32(n)  __builtin_bswap32(n)
+
+#endif
 
 /*
  * Debug control for this module
@@ -14,11 +28,6 @@
 DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
 
-#if __BYTE_ORDER != __LITTLE_ENDIAN
-#define ENDIAN_SWAP
-#endif
-
-#define BSWAP_32(n)  __builtin_bswap32(n)
 
 
 #ifndef DPS_CONFIG_BIT_LEN
@@ -69,9 +78,23 @@ typedef count_t counter_t[CHUNK_SIZE];
 
 #define SET_BIT(a, b)  (a)[(b) >> 6] |= (1ull << ((b) & 0x3F))
 #define TEST_BIT(a, b) ((a)[(b) >> 6] & (1ull << ((b) & 0x3F)))
-#define POPCOUNT(n)    __builtin_popcountll((chunk_t)n)
 #define ROTL64(n, r)  (((n) << r) | ((n) >> (64 - r)))
+
+#ifdef _WIN32
+#define POPCOUNT(n)    __popcnt64((chunk_t)n)
+static inline uint32_t COUNT_TZ(uint64_t n)
+{
+    uint32_t index;
+    if (_BitScanForward64(&index, n)) {
+        return index;
+    } else {
+        return 0;
+    }
+}
+#else
+#define POPCOUNT(n)    __builtin_popcountll((chunk_t)n)
 #define COUNT_TZ(n)    __builtin_ctzll((chunk_t)n)
+#endif
 
 struct _DPS_BitVector {
     size_t len;
@@ -552,7 +575,7 @@ static DPS_Status RunLengthDecode(uint8_t* packed, size_t packedSize, chunk_t* b
              */
             val = current & ((1 << tz) - 1);
             /*
-             * The value is little-endia so we May need to do an endian swap
+             * The value is little-endian so we May need to do an endian swap
              */
 #ifdef ENDIAN_SWAP
             val = BSWAP_32(val);

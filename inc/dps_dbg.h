@@ -31,6 +31,10 @@ extern int DPS_Debug;
 /*
  * Used at the top of a file to turn debugging on or off for that file
  */
+#ifdef _WIN32
+#define DPS_DEBUG_CONTROL(dbg) static int __DPS_DebugControl = dbg
+#else
 #define DPS_DEBUG_CONTROL(dbg) __attribute__((__unused__))static int __DPS_DebugControl = dbg
+#endif
 
 #endif

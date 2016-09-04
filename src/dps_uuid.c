@@ -1,3 +1,8 @@
+#ifdef _WIN32
+#define _CRT_RAND_S
+#include <stdlib.h>
+#endif
+
 #include <stdint.h>
 #include <stdio.h>
 #include <dps_dbg.h>
@@ -7,11 +12,6 @@
  * Debug control for this module
  */
 DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
-
-/*
- * Linux specific implementation
- */
-static const char* randPath = "/dev/urandom";
 
 static inline uint8_t BIN(char c)
 {
@@ -41,6 +41,22 @@ static struct {
     uint32_t seeds[4];
 } entropy; 
 
+#ifdef _WIN32
+DPS_Status DPS_InitUUID()
+{
+    uint32_t* n = (uint32_t*)entropy.nonce;
+    rand_s(n++);
+    rand_s(n++);
+    rand_s(n++);
+    rand_s(n++);
+    return DPS_OK;
+}
+#else
+/*
+ * Linux specific implementation
+ */
+static const char* randPath = "/dev/urandom";
+
 DPS_Status DPS_InitUUID()
 {
     while (!entropy.nonce[0]) {
@@ -58,6 +74,7 @@ DPS_Status DPS_InitUUID()
     }
     return DPS_OK;
 }
+#endif
 
 /*
  * Very simple linear congruational generator based PRNG (Lehmer/Park-Miller generator) 

@@ -1,14 +1,69 @@
-cflags = ['-ggdb', '-DDPS_DEBUG']
+import platform
 
-cppdefines = []
+# 
+# It not clear why but if SWIG cannot be found when the environment is created the
+# SWIG builder does not get applied
+#
+if platform.system() == 'Windows':
+    env = Environment(CPPDEFINES=[], CPPPATH=['./inc'], SWIG='c:\swigwin-3.0.10\swig.exe')
+else:
+    env = Environment(CPPDEFINES=[], CPPPATH=['./inc'])
+
+optimize = False
+debug = True
 
 for key, val in ARGLIST:
     if key.lower() == 'define':
-        cppdefines.append(val)
-    if (key == 'optimize' and val == 'true'):
-        cflags = ['-O3', '-DNDEBUG']
+	    env['CPPDEFINES'].append(val)
+    elif (key == 'optimize' and val == 'true'):
+        optimize = True
+    elif (key == 'debug' and val == 'false'):
+        debug = False
 
-env = Environment(CPPDEFINES=cppdefines, CFLAGS=cflags, CPPPATH=['./inc'], LIBS=['uv'])
+
+# Platform specific configuration
+
+if env['PLATFORM'] == 'win32':
+
+    env.Append(CFLAGS = ['/J', '/W2', '/nologo'])
+    env.Append(CPPDEFINES = ['_CRT_SECURE_NO_WARNINGS'])
+
+    if debug == True:
+        env.Append(CFLAGS = ['/Zi', '/MT', '/Od', '-DDPS_DEBUG'])
+        env.Append(LINKFLAGS = ['/DEBUG'])
+    else:
+        env.Append(CFLAGS = ['/Gy', '/O3', '/GF', '/MT'])
+        env.Append(LINKFLAGS = ['/opt:ref', '/NODEFAULTLIB:libcmt.lib'])
+
+
+    # Where to find Python.h
+    env['PY_CPPPATH'] = ['c:\python27\include']
+    env['PY_LIBPATH'] = ['c:\python27\libs']
+
+    # Where to find libuv
+    env.Append(LIBS = ['libuv', 'ws2_32'])
+    env.Append(LIBPATH=['c:\Program Files\libuv'])
+    env.Append(CPPPATH = 'c:\Program Files\libuv\include')
+
+elif env['PLATFORM'] == 'posix':
+
+    if debug == True:
+        env.Append(CFLAGS = ['-ggdb', '-DDPS_DEBUG'])
+
+    if optimize == True:
+        env.Append(CFLAGS = ['-O3', '-DNDEBUG'])
+
+    # Where to find Python.h
+    env['PY_CPPPATH'] = ['/usr/include/python2.7']
+    env['PY_LIBPATH'] = []
+
+    # Where to find libuv
+    env.Append(LIBS = ['uv'])
+
+else:
+    print 'Unsupported system'
+    exit()
+
 
 print env['CPPDEFINES']
 

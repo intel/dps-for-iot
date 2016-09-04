@@ -7,6 +7,7 @@
 #include <bitvec.h>
 #include <dps.h>
 #include <uv.h>
+#include <crtdbg.h>
 
 #define MAX_TOPICS 64
 
@@ -74,7 +75,7 @@ static void OnAck(DPS_Publication* pub, uint8_t* data, size_t len)
 {
     DPS_PRINT("Ack for pub UUID %s(%d)\n", DPS_UUIDToString(DPS_PublicationGetUUID(pub)), DPS_PublicationGetSerialNumber(pub));
     if (len) {
-        DPS_PRINT("    %.*s\n", len, data);
+        DPS_PRINT("    %.*s\n", (int)len, data);
     }
 }
 
@@ -164,6 +165,9 @@ int main(int argc, char** argv)
     int ttl = 0;
     char* msg = NULL;
     int mcast = DPS_MCAST_PUB_ENABLE_SEND;
+
+    int dbgflag = _CrtSetDbgFlag(_CRTDBG_REPORT_FLAG);
+    _CrtSetDbgFlag(dbgflag | _CRTDBG_CHECK_ALWAYS_DF);
 
     DPS_Debug = 0;
 

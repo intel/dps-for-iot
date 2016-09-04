@@ -55,7 +55,7 @@ static void OnPubMatch(DPS_Subscription* sub, const DPS_Publication* pub, uint8_
     }
     DPS_PRINT("\n");
     if (data) {
-        DPS_PRINT("%.*s\n", len, data);
+        DPS_PRINT("%.*s\n", (int)len, data);
     }
 }
 
@@ -168,14 +168,14 @@ int main(int argc, char** argv)
     for (p = 0; p < numPubs; ++p) {
         DPS_NodeAddress addr;
         char port[16];
-        sprintf(port, "%d", BASE_PORT_NUM + p);
+        sprintf(port, "%zd", BASE_PORT_NUM + p);
         for (s = 0; s < numSubs; ++s) {
             DPS_NodeAddress* addr = DPS_ResolveAddress(subNode[s], NULL, port);
             assert(addr);
             ret = DPS_Join(subNode[s], addr);
             DPS_DestroyAddress(addr);
             assert(ret == DPS_OK);
-            DPS_PRINT("***** Subscriber %d joined publisher %d\n", DPS_GetPortNumber(subNode[s]), BASE_PORT_NUM + p);
+            DPS_PRINT("***** Subscriber %d joined publisher %zd\n", DPS_GetPortNumber(subNode[s]), BASE_PORT_NUM + p);
         }
     }
 
