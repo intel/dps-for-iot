@@ -1,42 +1,55 @@
 Import('env')
 
+# Core libraries
+libenv = env.Clone()
 # Additional warning for the core object files
-
-cflags = env['CFLAGS'] + ['-Wall', '-Werror', '-Wno-format-extra-args']
-
-staticlib = env.StaticLibrary('lib/dps', Glob('src/*.c'), LIBS=[], CFLAGS=cflags)
-
-# standalone shared library
-#env.SharedLibrary('lib/dps', Glob('src/*.c'), LIBS=[], CFLAGS=cflags)
+libenv.Append(CFLAGS = ['-Wall', '-Werror', '-Wno-format-extra-args'])
+srcs = libenv.Glob('src/*.c')
+objs = libenv.StaticObject(srcs)
+lib = libenv.StaticLibrary('lib/dps', objs)
+shobjs = libenv.SharedObject(srcs)
+shlib = libenv.SharedLibrary('lib/dps', shobjs)
 
 # Use SWIG to build the python wrapper
-env.Append(SWIGFLAGS = ['-python', '-Werror', '-v'], SWIGPATH = '#/inc')
-env.Append(CPPPATH = '/usr/include/python2.7')
-pydps = env.SharedLibrary('lib/pydps', Glob('src/*.c') + ['swig/dps_python.i'], CFLAGS=cflags)
-env.InstallAs('./swig/_dps.so', pydps)
+pyenv = libenv.Clone();
+pyenv.Append(SWIGFLAGS = ['-python', '-Werror', '-v'],
+             SWIGPATH = '#/inc')
+pyenv.Append(CPPPATH = '/usr/include/python2.7')
+pydps = pyenv.SharedLibrary('lib/pydps', shobjs + ['swig/dps_python.i'])
+pyenv.InstallAs('swig/_dps.so', pydps)
 
-# Force test and examples to link with the static library
-env['LIBS'] = env['LIBS'] + staticlib
+# Use SWIG to build the node.js wrapper
+nodeenv = libenv.Clone();
+nodeenv.Append(SWIGFLAGS = ['-javascript', '-node', '-c++', '-DV8_VERSION=0x04059937', '-Wall', '-Werror', '-v'],
+               SWIGPATH = '#/inc')
+nodeenv.Append(CPPFLAGS = ['-DBUILDING_NODE_EXTENSION'])
+nodeenv.Append(CPPPATH = ['/usr/include/node'])
+nodedps = nodeenv.SharedLibrary('lib/nodedps', shobjs + ['swig/dps_node.i'])
+nodeenv.InstallAs('swig/dps.node', nodedps)
 
 # Unit tests
-env.Program('bin/countvec', env.Object('test/countvec.c'))
-env.Program('bin/unified', env.Object('test/unified.c'))
-env.Program('bin/subtree_sim', env.Object('test/subtree_sim.c'))
-env.Program('bin/tree_sim', env.Object('test/tree_sim.c'))
-env.Program('bin/rle_compression', env.Object('test/rle_compression.c'))
-env.Program('bin/topic_match', env.Object('test/topic_match.c'))
-env.Program('bin/rand_sub', env.Object('test/rand_sub.c'))
-env.Program('bin/rand_pub', env.Object('test/rand_pub.c'))
-env.Program('bin/hashtest', env.Object('test/hashtest.c'))
-env.Program('bin/stats', env.Object('test/stats.c'))
-env.Program('bin/pubsub', env.Object('test/pubsub.c'))
-env.Program('bin/coap_mcast_test', env.Object('test/coap_mcast_test.c'))
-env.Program('bin/packtest', env.Object('test/packtest.c'))
-env.Program('bin/nettest', env.Object('test/nettest.c'))
-env.Program('bin/cbortest', env.Object('test/cbortest.c'))
+testenv = env.Clone()
+testenv.Append(LIBS = lib)
+testenv.Program('bin/countvec', 'test/countvec.c')
+testenv.Program('bin/unified', 'test/unified.c')
+testenv.Program('bin/subtree_sim', 'test/subtree_sim.c')
+testenv.Program('bin/tree_sim', 'test/tree_sim.c')
+testenv.Program('bin/rle_compression', 'test/rle_compression.c')
+testenv.Program('bin/topic_match', 'test/topic_match.c')
+testenv.Program('bin/rand_sub', 'test/rand_sub.c')
+testenv.Program('bin/rand_pub', 'test/rand_pub.c')
+testenv.Program('bin/hashtest', 'test/hashtest.c')
+testenv.Program('bin/stats', 'test/stats.c')
+testenv.Program('bin/pubsub', 'test/pubsub.c')
+testenv.Program('bin/coap_mcast_test', 'test/coap_mcast_test.c')
+testenv.Program('bin/packtest', 'test/packtest.c')
+testenv.Program('bin/nettest', 'test/nettest.c')
+testenv.Program('bin/cbortest', 'test/cbortest.c')
 
 # Examples
-env.Program('bin/publisher', env.Object('examples/publisher.c'))
-env.Program('bin/subscriber', env.Object('examples/subscriber.c'))
+exampleenv = env.Clone()
+exampleenv.Append(LIBS = lib)
+exampleenv.Program('bin/publisher', 'examples/publisher.c')
+exampleenv.Program('bin/subscriber', 'examples/subscriber.c')
 
 

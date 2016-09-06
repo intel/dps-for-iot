@@ -150,7 +150,7 @@ DPS_Status DPS_SetPublicationData(DPS_Publication* pub, void* data);
  *
  * @return  A pointer to the data or NULL if the publication is invalid
  */
-void* DPS_GetPublicationData(DPS_Publication* pub);
+void* DPS_GetPublicationData(const DPS_Publication* pub);
 
 /**
  * Initializes a newly created publication with a set of topics. Each publication has a UUID and a serial number. The
