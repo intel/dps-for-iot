@@ -7,7 +7,6 @@
 #include <bitvec.h>
 #include <dps.h>
 #include <uv.h>
-#include <crtdbg.h>
 
 #define MAX_TOPICS 64
 
@@ -165,9 +164,6 @@ int main(int argc, char** argv)
     int ttl = 0;
     char* msg = NULL;
     int mcast = DPS_MCAST_PUB_ENABLE_SEND;
-
-    int dbgflag = _CrtSetDbgFlag(_CRTDBG_REPORT_FLAG);
-    _CrtSetDbgFlag(dbgflag | _CRTDBG_CHECK_ALWAYS_DF);
 
     DPS_Debug = 0;
 

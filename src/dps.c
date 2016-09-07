@@ -750,7 +750,7 @@ static DPS_Status SendMatchingPubToSub(DPS_Node* node, DPS_Publication* pub, Rem
 static void FreePubAck(DPS_PublicationAck* ack)
 {
     /*
-     * Cannot free an ack that is owned by the application so 
+     * Cannot free an ack that is owned by the application so
      * we put it on the free list and the application will free
      * it when DPS_DestroyPublicationAck() is called.
      */
@@ -1594,7 +1594,9 @@ static void NodeClose(DPS_Node* node)
         DPS_NetStopListening(node->netListener);
         node->netListener = NULL;
     }
-    uv_close((uv_handle_t*)&node->bgHandler, NULL);
+    if (!uv_is_closing((uv_handle_t*)&node->bgHandler)) {
+        uv_close((uv_handle_t*)&node->bgHandler, NULL);
+    }
 }
 
 static void NodeRun(void* arg)
@@ -2113,7 +2115,7 @@ DPS_Status DPS_DestroySubscription(DPS_Subscription* sub)
     LockNode(node);
     /*
      * Unlink the subscription
-     */ 
+     */
     if (node->subscriptions == sub) {
         node->subscriptions = sub->next;
     } else {

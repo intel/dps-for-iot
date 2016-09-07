@@ -7,6 +7,7 @@
 #include <coap.h>
 #include <cbor.h>
 #include <uv.h>
+#include <unistd.h>
 
 static DPS_MulticastReceiver* receiver;
 static DPS_MulticastSender* sender;

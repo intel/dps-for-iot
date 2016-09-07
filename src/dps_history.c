@@ -69,7 +69,7 @@ int DPS_PublicationIsStale(DPS_History* history, DPS_UUID* pubId, uint32_t seria
 {
     DPS_PubHistory* ph;
 
-    uv_mutex_unlock(&history->lock);
+    uv_mutex_lock(&history->lock);
     ph = history->oldest;
     /*
      * TODO - for scalabililty nees to replace the linear search with a more efficient lookup 

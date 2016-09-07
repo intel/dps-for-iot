@@ -32,7 +32,7 @@ pyenv.SharedLibrary('py/_dps', shobjs + ['swig/dps_python.i'])
 pyenv.InstallAs('./py', './swig')
 
 # Use SWIG to build the node.js wrapper
-if platform == 'posix':
+if platform == '!!posix':
     nodeenv = libenv.Clone();
     nodeenv.Append(SWIGFLAGS = ['-javascript', '-node', '-c++', '-DV8_VERSION=0x04059937', '-Wall', '-Werror', '-v'], SWIGPATH = '#/inc')
     nodeenv.Append(CPPFLAGS = ['-DBUILDING_NODE_EXTENSION'])

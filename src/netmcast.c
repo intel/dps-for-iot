@@ -195,20 +195,6 @@ void DPS_MulticastStopReceive(DPS_MulticastReceiver* receiver)
  * Send path
  ****************************************************/
 
-/*
- * Given an IPv4 interface lookup the corresponding IPv6 entry
- */
-static uv_interface_address_t* GetIP6Interface(uv_interface_address_t* ifList, int numIfs, uv_interface_address_t* if4)
-{
-    while (numIfs--) {
-        if (ifList != if4 && memcmp(&ifList->phys_addr, &if4->phys_addr, sizeof(if4->phys_addr)) == 0) {
-            return ifList;
-        }
-        ++ifList;
-    }
-    return NULL;
-}
-
 static DPS_Status MulticastTxInit(DPS_MulticastSender* sender)
 {
     int ret;
