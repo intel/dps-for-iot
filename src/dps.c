@@ -201,7 +201,7 @@ DPS_Status WaitForTask(DPS_Node* node, uint16_t task, uint32_t timeout)
 #ifndef NDEBUG
         --node->lockCount;
 #endif
-        r = uv_cond_timedwait(&node->bgComplete, &node->nodeLock, (uint64_t)timeout * 1000000);
+        r = uv_cond_timedwait(&node->bgComplete, &node->nodeLock, (uint64_t)(timeout) * 1000000ull);
 #ifndef NDEBUG
         ++node->lockCount;
 #endif

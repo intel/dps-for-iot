@@ -76,6 +76,7 @@ int DPS_PublicationIsStale(DPS_History* history, DPS_UUID* pubId, uint32_t seria
      */
     while (ph) {
         if ((ph->pub.sn == serialNumber) && (memcmp(&ph->pub.id, pubId, sizeof(pubId->val)) == 0)) {
+            uv_mutex_unlock(&history->lock);
             return DPS_TRUE;
         }
         ph = ph->next;
@@ -111,6 +112,7 @@ DPS_Status DPS_LookupPublisher(DPS_History* history, const DPS_UUID* pubId, uint
             if (ph->pub.addr.inaddr.ss_family) {
                 *addr = &ph->pub.addr;
             }
+            uv_mutex_unlock(&history->lock);
             return DPS_OK;
         }
         ph = ph->next;
