@@ -44,8 +44,8 @@ int DPS_Debug;
 %typemap(in) (char* const* topics, size_t numTopics) {
     /* Expecting a list of strings */
     if (PyList_Check($input)) {
-        int i;
-        int sz = PyList_Size($input);
+        Py_ssize_t i;
+        Py_ssize_t sz = PyList_Size($input);
         $1 = (char**)malloc((sz + 1) * sizeof(char*));
         for (i = 0; i < sz; ++i) {
             PyObject *ob = PyList_GetItem($input, i);
@@ -81,7 +81,7 @@ static uint8_t* AllocPayload(PyObject* py, size_t* len)
 {
     uint8_t* str = NULL;
     if (PyString_Check(py)) {
-        int sz = PyString_Size(py);
+        Py_ssize_t sz = PyString_Size(py);
         str = malloc(sz + 1);
         memcpy(str, PyString_AsString(py), sz);
         str[sz] = 0;

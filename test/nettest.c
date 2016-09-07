@@ -13,7 +13,7 @@ static ssize_t OnData(DPS_Node* node, const struct sockaddr* addr, const uint8_t
     DPS_Status ret;
 
     if (data && len) {
-        printf("Received %d bytes\n", len);
+        printf("Received %zd bytes\n", len);
     }
 
     ret = CoAP_GetPktLen(COAP_OVER_TCP, data, len, &pktLen);
@@ -44,7 +44,7 @@ static ssize_t OnData(DPS_Node* node, const struct sockaddr* addr, const uint8_t
             return 0;
         } else {
             printf("CoAP_Parse failed: ret= %d\n", ret);
-            return -len;
+            return -(ssize_t)len;
         }
     }
     if (ret == DPS_ERR_EOD) {
@@ -56,7 +56,7 @@ static ssize_t OnData(DPS_Node* node, const struct sockaddr* addr, const uint8_t
     /*
      * Indicate we consumed nothing
      */
-    return -len;
+    return -(ssize_t)len;
 }
 
 static void Listener(DPS_Node* node)

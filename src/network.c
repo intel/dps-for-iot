@@ -67,7 +67,7 @@ static void OnData(uv_stream_t* socket, ssize_t nread, const uv_buf_t* buf)
         return;
     }
     uv_tcp_getpeername((uv_tcp_t*)socket, (struct sockaddr*)&sender, &sz);
-    reader->readLen += nread;
+    reader->readLen += (uint16_t)nread;
     while (1) {
         ssize_t toRead = reader->receiveCB(reader->node, (struct sockaddr*)&sender, (uint8_t*)reader->buffer, reader->readLen);
         if (toRead > 0) {
@@ -219,7 +219,7 @@ static void OnOutgoingConnection(uv_connect_t *req, int status)
         writer->writeReq.data = writer;
         writer->socket.data = writer;
 
-        status = uv_write(&writer->writeReq, (uv_stream_t*)&writer->socket, writer->bufs, writer->numBufs, OnWriteComplete);
+        status = uv_write(&writer->writeReq, (uv_stream_t*)&writer->socket, writer->bufs, (uint32_t)writer->numBufs, OnWriteComplete);
         if (status != 0) {
             DPS_ERRPRINT("OnOutgoingConnection - write failed: %s\n", uv_err_name(status));
         }
@@ -227,7 +227,7 @@ static void OnOutgoingConnection(uv_connect_t *req, int status)
         DPS_ERRPRINT("OnOutgoingConnection - connect %s failed: %s\n", DPS_NetAddrText((struct sockaddr*)&writer->addr), uv_err_name(status));
     }
     if (status != 0) {
-        writer->onSendComplete(writer->node, (struct sockaddr*)&writer->addr, writer->bufs, writer->numBufs, DPS_ERR_NETWORK);
+        writer->onSendComplete(writer->node, (struct sockaddr*)&writer->addr, writer->bufs, (uint32_t)writer->numBufs, DPS_ERR_NETWORK);
         uv_close((uv_handle_t*)&writer->socket, HandleClosed);
     }
 }

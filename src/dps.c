@@ -547,7 +547,7 @@ static DPS_Status AddRemoteNode(DPS_Node* node, DPS_NodeAddress* addr, RemoteNod
 static uint32_t UpdateTTLBasis(DPS_Node* node)
 {
     uint64_t now = uv_hrtime();
-    uint32_t elapsedSeconds = (now - node->ttlBasis) / 1000000000ull;
+    uint32_t elapsedSeconds = (uint32_t)(now - node->ttlBasis) / 1000000000ull;
     node->ttlBasis = now;
     return elapsedSeconds;
 }
@@ -574,7 +574,7 @@ static void CheckTTLs(DPS_Node* node)
          * In case this publication is freed below
          */
         next = pub->next;
-        if (pub->ttl > elapsed) {
+        if ((pub->ttl > 0) && ((uint32_t)pub->ttl > elapsed)) {
             pub->ttl -= elapsed;
             ++numTTLs;
             continue;
@@ -1289,7 +1289,7 @@ static void SendSubsTask(DPS_Node* node)
          * explicitly join it there is no reason to keep it around.
          */
         if (!remote->joined && DPS_BitVectorIsClear(remote->inbound.interests)) {
-            DPS_DBGPRINT("Remote node has no interests - deleting\n", RemoteNodeAddressText(remote));
+            DPS_DBGPRINT("Remote node has no interests - deleting\n");
             DeleteRemoteNode(node, remote);
         }
     }

@@ -53,7 +53,7 @@ static int UseInterface(uint8_t ipVersions, uv_interface_address_t* ifn)
 
 static void AllocBuffer(uv_handle_t* handle, size_t suggestedSize, uv_buf_t* buf)
 {
-    buf->len = suggestedSize;
+    buf->len = (uint32_t)suggestedSize;
     buf->base = malloc(buf->len);
 }
 
@@ -63,7 +63,7 @@ static void OnMcastRx(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf, cons
 
     DPS_DBGPRINT("OnMcastRx\n");
     if (nread < 0) {
-        DPS_ERRPRINT("Read error %s\n", uv_err_name(nread));
+        DPS_ERRPRINT("Read error %s\n", uv_err_name((int)nread));
         uv_close((uv_handle_t*)handle, NULL);
         free(buf->base);
         return;
@@ -305,11 +305,8 @@ static void TxCloseCB(uv_handle_t* handle)
 
 void DPS_MulticastStopSend(DPS_MulticastSender* sender)
 {
-    int i;
-    int numTx = sender->numTx;
-
-    for (i = 0; i < numTx; ++i) {
-        uv_close((uv_handle_t*)&sender->udpTx[i].udp, TxCloseCB);
+    while (sender->numTx--) {
+        uv_close((uv_handle_t*)&sender->udpTx[sender->numTx].udp, TxCloseCB);
     }
 }
 
@@ -323,7 +320,7 @@ static void MulticastSendComplete(uv_udp_send_t* req, int status)
 
 DPS_Status DPS_MulticastSend(DPS_MulticastSender* sender, uv_buf_t* bufs, size_t numBufs)
 {
-    int i;
+    size_t i;
     /*
      * Send on each interface
      */
@@ -339,7 +336,7 @@ DPS_Status DPS_MulticastSend(DPS_MulticastSender* sender, uv_buf_t* bufs, size_t
         /*
          * Synchronous send
          */
-        ret = uv_udp_send(&sender->udpTx[i].req, &sender->udpTx[i].udp, bufs, numBufs, (struct sockaddr*)&addr, MulticastSendComplete);
+        ret = uv_udp_send(&sender->udpTx[i].req, &sender->udpTx[i].udp, bufs, (unsigned int)numBufs, (struct sockaddr*)&addr, MulticastSendComplete);
         if (ret < 0) {
             DPS_ERRPRINT("uv_udp_send to %s failed: %s\n", DPS_NetAddrText((struct sockaddr*)&addr), uv_err_name(ret));
         } else {

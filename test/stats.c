@@ -31,7 +31,7 @@ int main(int argc, char** argv)
     /* Validate the filter is working */
     for (i = 0; i < numKeys; ++i) {
         if (!DPS_BitVectorBloomTest(bv, (uint8_t*)&i, sizeof(i))) {
-            printf("Failed %d\n", i);
+            printf("Failed %zd\n", i);
         }
     }
     
@@ -42,7 +42,7 @@ int main(int argc, char** argv)
         }
         ++count;
     }
-    printf("False positives = %d out of %d\n", falsePositive, count);
+    printf("False positives = %zd out of %zd\n", falsePositive, count);
     printf("False positive rate = %f%%\n", 100.0 * (float)falsePositive / count);
 
     return 0;

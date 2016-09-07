@@ -28,7 +28,7 @@ static void OnPubMatch(DPS_Subscription* sub, const DPS_Publication* pub, uint8_
     }
     DPS_PRINT("\n");
     if (data) {
-        DPS_PRINT("%.*s\n", len, data);
+        DPS_PRINT("%.*s\n", (int)len, data);
     }
     if (sendAck) {
         DPS_PublicationAck* ack = DPS_CreatePublicationAck(pub);

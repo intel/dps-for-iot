@@ -55,34 +55,34 @@ static DPS_Status EncodeUint(DPS_Buffer* buffer, uint64_t n, uint8_t maj)
     }
     switch (lenReq) {
         case 0:
-            *p++ = maj | n;
+            *p++ = (uint8_t)(maj | n);
             break;
         case 1:
-            *p++ = maj | CBOR_LEN1;
-            *p++ = n;
+            *p++ = (uint8_t)(maj | CBOR_LEN1);
+            *p++ = (uint8_t)(n);
             break;
         case 2:
-            *p++ = maj | CBOR_LEN2;
-            *p++ = n >> 8;
-            *p++ = n;
+            (uint8_t)*p++ = maj | CBOR_LEN2;
+            *p++ = (uint8_t)(n >> 8);
+            *p++ = (uint8_t)(n);
             break;
         case 4:
-            *p++ = maj | CBOR_LEN4;
-            *p++ = n >> 24;
-            *p++ = n >> 16;
-            *p++ = n >> 8;
-            *p++ = n;
+            *p++ = (uint8_t)(maj | CBOR_LEN4);
+            *p++ = (uint8_t)(n >> 24);
+            *p++ = (uint8_t)(n >> 16);
+            *p++ = (uint8_t)(n >> 8);
+            *p++ = (uint8_t)(n);
             break;
         case 8:
-            *p++ = maj | CBOR_LEN8;
-            *p++ = n >> 56;
-            *p++ = n >> 48;
-            *p++ = n >> 40;
-            *p++ = n >> 32;
-            *p++ = n >> 24;
-            *p++ = n >> 16;
-            *p++ = n >> 8;
-            *p++ = n;
+            *p++ = (uint8_t)(maj | CBOR_LEN8);
+            *p++ = (uint8_t)(n >> 56);
+            *p++ = (uint8_t)(n >> 48);
+            *p++ = (uint8_t)(n >> 40);
+            *p++ = (uint8_t)(n >> 32);
+            *p++ = (uint8_t)(n >> 24);
+            *p++ = (uint8_t)(n >> 16);
+            *p++ = (uint8_t)(n >> 8);
+            *p++ = (uint8_t)(n);
     }
     buffer->pos = p;
     return DPS_OK;
@@ -190,23 +190,23 @@ DPS_Status CBOR_FixupLength(DPS_Buffer* buffer, size_t origLen, size_t newLen)
         return DPS_ERR_INVALID;
     }
     if (lenReq == 0) {
-        *p++ = maj | newLen;
+        *p++ = (uint8_t)(maj | newLen);
     } else {
         ++p;
         if (lenReq == 8) {
-            *p++ = newLen >> 56;
-            *p++ = newLen >> 48;
-            *p++ = newLen >> 40;
-            *p++ = newLen >> 32;
+            *p++ = (uint8_t)(newLen >> 56);
+            *p++ = (uint8_t)(newLen >> 48);
+            *p++ = (uint8_t)(newLen >> 40);
+            *p++ = (uint8_t)(newLen >> 32);
         }
         if (lenReq >= 4) {
-            *p++ = newLen >> 24;
-            *p++ = newLen >> 16;
+            *p++ = (uint8_t)(newLen >> 24);
+            *p++ = (uint8_t)(newLen >> 16);
         }
         if (lenReq >= 2) {
-            *p++ = newLen >> 8;
+            *p++ = (uint8_t)(newLen >> 8);
         }
-        *p++ = newLen;
+        *p++ = (uint8_t)(newLen);
     }
     buffer->pos += newLen;
     assert(buffer->pos == pos);

@@ -11,7 +11,7 @@
 /*
  * How long to keep publication history (in nanoseconds)
  */
-#define PUB_HISTORY_LIFETIME   (30ul * 1000000000ul)
+#define PUB_HISTORY_LIFETIME   (30ull * 1000000000ull)
 
 void DPS_FreshenHistory(DPS_History* history)
 {

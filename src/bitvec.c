@@ -109,13 +109,13 @@ struct _DPS_CountVector {
 
 typedef struct {
     size_t bitLen;
-    size_t numHashes;
+    uint8_t numHashes;
 } Configuration;
 
 /*
  * Compile time defaults for the configuration parameters
  */
-static Configuration config = { DPS_CONFIG_BIT_LEN, DPS_CONFIG_HASHES };
+static Configuration config = { DPS_CONFIG_BIT_LEN, (uint8_t)DPS_CONFIG_HASHES };
 
 #define NUM_CHUNKS(bv)  ((bv)->len / CHUNK_SIZE)
 
@@ -149,7 +149,7 @@ DPS_Status DPS_Configure(size_t bitLen, size_t numHashes)
         return DPS_ERR_ARGS;
     }
     config.bitLen = bitLen;
-    config.numHashes = numHashes;
+    config.numHashes = (uint8_t)numHashes;
     return DPS_ERR_OK;
 }
 
@@ -178,7 +178,7 @@ static uint32_t Hash(const uint8_t* data, size_t len, uint8_t hashNum)
         0x728afedd,
         0x21c32156
     };
-    MurmurHash3_x86_32(data, len, Seeds[hashNum], &hash);
+    MurmurHash3_x86_32(data, (int)len, Seeds[hashNum], &hash);
     return hash;
 }
 
@@ -244,7 +244,7 @@ void DPS_BitVectorFree(DPS_BitVector* bv)
 
 void DPS_BitVectorBloomInsert(DPS_BitVector* bv, const uint8_t* data, size_t len)
 {
-    int h = config.numHashes;
+    uint8_t h = config.numHashes;
     //DPS_PRINT("%.*s   (%zu)\n", (int)len, data, len);
     while (h) {
         uint32_t index = Hash(data, len, --h) % bv->len;
@@ -254,7 +254,7 @@ void DPS_BitVectorBloomInsert(DPS_BitVector* bv, const uint8_t* data, size_t len
 
 int DPS_BitVectorBloomTest(const DPS_BitVector* bv, const uint8_t* data, size_t len)
 {
-    int h = config.numHashes;
+    uint8_t h = config.numHashes;
     while (h) {
         size_t index = Hash(data, len, --h) % bv->len;
         if (!TEST_BIT(bv->bits, index)) {
@@ -266,7 +266,7 @@ int DPS_BitVectorBloomTest(const DPS_BitVector* bv, const uint8_t* data, size_t 
 
 float DPS_BitVectorLoadFactor(const DPS_BitVector* bv)
 {
-    return (100.0 * DPS_BitVectorPopCount(bv) + 1.0) / bv->len;
+    return (float)((100.0 * DPS_BitVectorPopCount(bv) + 1.0) / bv->len);
 }
 
 int DPS_BitVectorEquals(const DPS_BitVector* bv1, const DPS_BitVector* bv2)
@@ -479,7 +479,7 @@ static DPS_Status RunLengthEncode(const DPS_BitVector* bv, DPS_Buffer* buffer, s
     memset(packed, 0, DPS_BufferSpace(buffer));
 
     for (i = 0; i < NUM_CHUNKS(bv); ++i) {
-        size_t rem0;
+        uint32_t rem0;
         chunk_t chunk = bv->bits[i] ^ complement;
         if (!chunk) {
             num0 += CHUNK_SIZE;
@@ -737,7 +737,7 @@ static size_t RLE_Size(const DPS_BitVector* bv)
     }
 
     for (i = 0; i < NUM_CHUNKS(bv); ++i) {
-        size_t rem0;
+        uint32_t rem0;
         chunk_t chunk = bv->bits[i] ^ complement;
         if (!chunk) {
             num0 += CHUNK_SIZE;

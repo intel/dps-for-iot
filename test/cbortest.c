@@ -9,7 +9,7 @@ static uint8_t buf[10000];
 
 static uint64_t Uints[] = {
     0, 1, 2, 3, 23, 24, 254, 255, 256, 65534, 65536, 65537,
-    UINT32_MAX - 1, UINT32_MAX, UINT32_MAX + 1, 
+    UINT32_MAX - 1, UINT32_MAX, (uint64_t)UINT32_MAX + 1, 
     UINT64_MAX - 1, UINT64_MAX
 };
 

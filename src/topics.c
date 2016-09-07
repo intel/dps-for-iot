@@ -128,7 +128,7 @@ DPS_Status DPS_AddTopic(DPS_BitVector* bf, const char* topic, const char* separa
         return DPS_ERR_RESOURCES;
     }
     while (*tp) {
-        int len;
+        size_t len;
         segment[prefix++] = *tp++;
         if (role == DPS_Pub) {
             DPS_BitVectorBloomInsert(bf, (const uint8_t*)topic, tp - topic);
@@ -198,7 +198,7 @@ DPS_Status DPS_MatchTopicString(const char* pubTopic, const char* subTopic, cons
     *match = DPS_TRUE;
     while (*pubTopic && *subTopic) {
         if (ANY_WILDC(subTopic[0])) {
-            int len = strcspn(pubTopic, separators);
+            size_t len = strcspn(pubTopic, separators);
             if (len) {
                 pubTopic += len;
                 if (subTopic[1] == 0) {

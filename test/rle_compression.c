@@ -9,7 +9,7 @@
 #define NUM_KEYS        397
 
 
-static const float Report[] = {
+static const double Report[] = {
     -1.0, 0.0, 0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 10.0, 15.0, 20.0, 30.0, 50.0, 70.0, 80.0, 95.0, 97.0, 98.0, 99.0, 100.0 
 };
 
@@ -66,7 +66,7 @@ int main(int argc, char** argv)
     for (i = base; i < (base + filterBits * 2); ++i) {
         float load = DPS_BitVectorLoadFactor(bf);
         if (load > Report[report]) {
-            DPS_PRINT("Added %d: ", i - base);
+            DPS_PRINT("Added %d: ", (int)(i - base));
             DPS_BitVectorDump(bf, 0);
             load = Report[report];
             ++report;
@@ -77,7 +77,7 @@ int main(int argc, char** argv)
         DPS_BitVectorBloomInsert(bf, (uint8_t*)&i, sizeof(i));
     }
 
-    DPS_PRINT("Added %d: ", i - base);
+    DPS_PRINT("Added %d: ", (int)(i - base));
     DPS_BitVectorDump(bf, 0);
 
     return 0;
