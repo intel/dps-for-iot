@@ -62,7 +62,7 @@ static DPS_Status EncodeUint(DPS_Buffer* buffer, uint64_t n, uint8_t maj)
             *p++ = (uint8_t)(n);
             break;
         case 2:
-            (uint8_t)*p++ = maj | CBOR_LEN2;
+            *p++ = (uint8_t)(maj | CBOR_LEN2);
             *p++ = (uint8_t)(n >> 8);
             *p++ = (uint8_t)(n);
             break;
