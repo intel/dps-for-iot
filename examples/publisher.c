@@ -164,6 +164,7 @@ int main(int argc, char** argv)
     int ttl = 0;
     char* msg = NULL;
     int mcast = DPS_MCAST_PUB_ENABLE_SEND;
+    DPS_NodeAddress* addr = NULL;
 
     DPS_Debug = 0;
 
@@ -234,13 +235,12 @@ int main(int argc, char** argv)
     }
 
     if (host || connectPort) {
-        DPS_NodeAddress* addr = DPS_ResolveAddress(node, host, connectPort);
+        addr = DPS_ResolveAddress(node, host, connectPort);
         if (!addr) {
             DPS_ERRPRINT("Failed to resolve %s/%s\n", host ? host : "<localhost>", connectPort);
             return 1;
         }
         ret = DPS_Join(node, addr);
-        DPS_DestroyAddress(addr);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("DPS_Join failed: %s\n", DPS_ErrTxt(ret));
             return 1;
@@ -254,11 +254,17 @@ int main(int argc, char** argv)
             DPS_ERRPRINT("Failed to create publication - error=%d\n", ret);
             return 1;
         }
+        usleep(1000);
         ret = DPS_Publish(currentPub, msg, msg ? strlen(msg) + 1 : 0, ttl, NULL);
         if (ret == DPS_OK) {
             DPS_PRINT("Pub UUID %s\n", DPS_UUIDToString(DPS_PublicationGetUUID(currentPub)));
         } else {
             DPS_ERRPRINT("Failed to publish topics - error=%d\n", ret);
+        }
+        if (addr) {
+            usleep(1000);
+            //DPS_Leave(node, addr);
+            DPS_DestroyAddress(addr);
         }
         if (!wait) {
             DPS_StopNode(node);

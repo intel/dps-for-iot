@@ -43,6 +43,7 @@ typedef struct _RemoteNode {
         DPS_BitVector* interests;      /* Interests bit vector sent outbound to this remote node */
     } outbound;
     DPS_NodeAddress addr;
+    uint64_t expires;
     struct _RemoteNode* next;
 } RemoteNode;
 
@@ -325,12 +326,29 @@ static void AddrSetPort(DPS_NodeAddress* dest, const struct sockaddr* addr, uint
     }
 }
 
+static const uint8_t IP4as6[16] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 0, 0, 0, 0 };
+
 static int SameAddr(DPS_NodeAddress* addr, const struct sockaddr* b)
 {
     struct sockaddr* a = (struct sockaddr*)&addr->inaddr;
+    struct sockaddr_in6 tmp;
 
     if (a->sa_family != b->sa_family) {
-        return 0;
+        uint32_t ip;
+        if (a->sa_family == AF_INET6) {
+            struct sockaddr_in* ipb = (struct sockaddr_in*)b;
+            ip = ipb->sin_addr.s_addr;
+            tmp.sin6_port = ipb->sin_port;
+            b = (struct sockaddr*)&tmp;
+        } else {
+            struct sockaddr_in* ipa = (struct sockaddr_in*)a;
+            ip = ipa->sin_addr.s_addr;
+            tmp.sin6_port = ipa->sin_port;
+            a = (struct sockaddr*)&tmp;
+        }
+        memcpy(&tmp.sin6_addr, IP4as6, 12);
+        memcpy((uint8_t*)&tmp.sin6_addr + 12, &ip, 4);
+        tmp.sin6_family = AF_INET6;
     }
     if (a->sa_family == AF_INET6) {
         struct sockaddr_in6* ip6a = (struct sockaddr_in6*)a;
@@ -338,7 +356,7 @@ static int SameAddr(DPS_NodeAddress* addr, const struct sockaddr* b)
         return (ip6a->sin6_port == ip6b->sin6_port) && (memcmp(&ip6a->sin6_addr, &ip6b->sin6_addr, 16) == 0);
     } else {
         struct sockaddr_in* ipa = (struct sockaddr_in*)a;
-        struct sockaddr_in* ipb= (struct sockaddr_in*)b;
+        struct sockaddr_in* ipb = (struct sockaddr_in*)b;
         return (ipa->sin_port == ipb->sin_port) && (ipa->sin_addr.s_addr == ipb->sin_addr.s_addr);
     }
 }
@@ -524,12 +542,19 @@ static RemoteNode* LookupRemoteNode(DPS_Node* node, const struct sockaddr* addr)
 /*
  * Add a remote node or return an existing one
  */
-static DPS_Status AddRemoteNode(DPS_Node* node, DPS_NodeAddress* addr, RemoteNode** remoteOut)
+static DPS_Status AddRemoteNode(DPS_Node* node, DPS_NodeAddress* addr, uint16_t ttl, RemoteNode** remoteOut)
 {
     RemoteNode* remote = LookupRemoteNode(node, (struct sockaddr*)&addr->inaddr);
     if (remote) {
         *remoteOut = remote;
+        remote->expires = uv_hrtime() + ((uint64_t)ttl * 1000000000ull);
         return DPS_ERR_EXISTS;
+    }
+    /*
+     * Don't add an already expired remote node
+     */
+    if (ttl == 0) {
+        return DPS_ERR_EXPIRED;
     }
     remote = calloc(1, sizeof(RemoteNode));
     if (!remote) {
@@ -539,6 +564,7 @@ static DPS_Status AddRemoteNode(DPS_Node* node, DPS_NodeAddress* addr, RemoteNod
     DPS_DBGPRINT("Adding new remote node %s\n", NodeAddressText(addr));
     remote->addr.inaddr = addr->inaddr;
     remote->next = node->remoteNodes;
+    remote->expires = uv_hrtime() + ((uint64_t)ttl * 1000000000ull);
     node->remoteNodes = remote;
     *remoteOut = remote;
     return DPS_OK;
@@ -930,7 +956,7 @@ static void SendPubsTask(DPS_Node* node)
         /*
          * If the node is a multicast sender local publications are always multicast
          */
-        if (node->mcastSender && (pub->flags & (PUB_FLAG_LOCAL | PUB_FLAG_PUBLISH))) {
+        if (node->mcastSender && (pub->flags & PUB_FLAG_LOCAL) && (pub->flags & PUB_FLAG_PUBLISH)) {
             DPS_Status ret = SendPublication(node, pub, pub->bf, NULL);
             if (ret != DPS_OK) {
                 DPS_ERRPRINT("SendPublication (multicast) returned %s\n", DPS_ErrTxt(ret));
@@ -977,26 +1003,37 @@ static void SendPubsTask(DPS_Node* node)
 /*
  * Run checks of one or more publications against the current subscriptions
  */
-static void SendPubs(DPS_Node* node, DPS_Publication* pub)
+static int SendPubs(DPS_Node* node, DPS_Publication* pub)
 {
+    int count = 0;
     LockNode(node);
+
     /*
      * Need something to send and somwhere to send it
      */
     if (node->publications && (node->remoteNodes || node->mcastSender)) {
         if (pub) {
-            pub->checkToSend = DPS_TRUE;
+            if (pub->flags & PUB_FLAG_PUBLISH) {
+                pub->checkToSend = DPS_TRUE;
+                ++count;
+            }
         } else {
             /*
              * Check all publications
              */
             for (pub = node->publications; pub != NULL; pub = pub->next) {
-                pub->checkToSend = DPS_TRUE;
+                if (pub->flags & PUB_FLAG_PUBLISH) {
+                    pub->checkToSend = DPS_TRUE;
+                    ++count;
+                }
             }
         }
-        ScheduleBackgroundTask(node, SEND_PUBS_TASK);
+        if (count) {
+            ScheduleBackgroundTask(node, SEND_PUBS_TASK);
+        }
     }
     UnlockNode(node);
+    return count;
 }
 
 /*
@@ -1108,7 +1145,7 @@ static DPS_Status DecodePublication(DPS_Node* node, DPS_Buffer* buffer, const st
      * We have no reason to hold onto a node for multicast publishers
      */
     if (!multicast) {
-        ret = AddRemoteNode(node, &pub->sender, &pubNode);
+        ret = AddRemoteNode(node, &pub->sender, UINT16_MAX, &pubNode);
         if (ret == DPS_ERR_EXISTS) {
             DPS_DBGPRINT("Updating existing node\n");
             ret = DPS_OK;
@@ -1168,7 +1205,7 @@ Exit:
     return ret;
 }
 
-static DPS_Status SendSubscription(DPS_Node* node, RemoteNode* remote, DPS_BitVector* interests)
+static DPS_Status SendSubscription(DPS_Node* node, RemoteNode* remote, DPS_BitVector* interests, uint16_t ttl)
 {
     uv_buf_t bufs[3];
     DPS_Status ret;
@@ -1194,6 +1231,7 @@ static DPS_Status SendSubscription(DPS_Node* node, RemoteNode* remote, DPS_BitVe
      * Write listening port
      */
     CBOR_EncodeUint16(&payload, node->port);
+    CBOR_EncodeUint16(&payload, ttl);
     CBOR_EncodeBoolean(&payload, remote->inbound.sync);
     CBOR_EncodeBoolean(&payload, remote->outbound.sync);
     ret = DPS_BitVectorSerialize(needs, &payload);
@@ -1220,45 +1258,37 @@ static DPS_Status SendSubscription(DPS_Node* node, RemoteNode* remote, DPS_BitVe
     return ret;
 }
 
-#if 0
 /*
  * Unsubscribes this node from a remote node by sending a cleared bit vector
- *
- * TODO - needs to be triggered when DPS_Leave() is called
  */
-static DPS_Status SendUnsubscribe(DPS_Node* node, DPS_NodeAddress* dest)
+static DPS_Status SendUnsubscribe(DPS_Node* node, RemoteNode* remote)
 {
-    DPS_Status ret;
-    RemoteNode remote;
-    DPS_BitVector* interests = DPS_BitVectorAlloc();
-    DPS_BitVector* needs = DPS_BitVectorAllocFH();
-
-    if (!interests || !needs) {
-        ret = DPS_ERR_RESOURCES;
+    if (remote->outbound.interests) {
+        DPS_BitVectorClear(remote->outbound.interests);
+        DPS_BitVectorClear(remote->outbound.needs);
     } else {
-        remote.inbound.sync = DPS_FALSE;
-        remote.outbound.sync = DPS_TRUE;
-        remote.outbound.needs = needs;
-        remote.addr = *dest;
-        ret = SendSubscription(node, &remote, interests);
+        remote->outbound.interests = DPS_BitVectorAlloc();
+        remote->outbound.needs = DPS_BitVectorAllocFH();
+        if (!remote->outbound.interests || !remote->outbound.needs) {
+            DPS_BitVectorFree(remote->outbound.interests);
+            DPS_BitVectorFree(remote->outbound.needs);
+            return DPS_ERR_RESOURCES;
+        }
     }
-    DPS_BitVectorFree(interests);
-    DPS_BitVectorFree(needs);
-    return ret;
+    remote->inbound.sync = DPS_FALSE;
+    remote->outbound.sync = DPS_TRUE;
+    return SendSubscription(node, remote, remote->outbound.interests, 0);
 }
-#endif
 
 static void SendSubsTask(DPS_Node* node)
 {
     DPS_Status ret;
     RemoteNode* remote;
     RemoteNode* remoteNext;
+    uint64_t now = uv_hrtime();
 
     DPS_DBGTRACE();
 
-    /*
-     * TODO - process one remote at a time to allow for interleaved I/O
-     */
     /*
      * Forward subscription to all remote nodes with interestss
      */
@@ -1271,26 +1301,24 @@ static void SendSubsTask(DPS_Node* node)
             continue;
         }
         remote->outbound.checkForUpdates = DPS_FALSE;
-
+        if (now > remote->expires) {
+            DPS_PRINT("Expired node\n");
+            SendUnsubscribe(node, remote);
+            DPS_DBGPRINT("Remote node has expired - deleting\n");
+            DeleteRemoteNode(node, remote);
+            continue;
+        }
         ret = UpdateOutboundInterests(node, remote, &newInterests);
         if (ret != DPS_OK) {
             break;
         }
         if (newInterests) {
-            ret = SendSubscription(node, remote, newInterests);
+            ret = SendSubscription(node, remote, newInterests, UINT16_MAX);
             if (ret != DPS_OK) {
                 DeleteRemoteNode(node, remote);
                 DPS_ERRPRINT("Failed to send subscription request %s\n", DPS_ErrTxt(ret));
                 continue;
             }
-        }
-        /*
-         * Now that we have updated the remote node if it has no inbound intersts and we didn't
-         * explicitly join it there is no reason to keep it around.
-         */
-        if (!remote->joined && DPS_BitVectorIsClear(remote->inbound.interests)) {
-            DPS_DBGPRINT("Remote node has no interests - deleting\n");
-            DeleteRemoteNode(node, remote);
         }
     }
     if (ret != DPS_OK) {
@@ -1298,47 +1326,64 @@ static void SendSubsTask(DPS_Node* node)
     }
 }
 
-static void SendSubs(DPS_Node* node, RemoteNode* remote)
+static int SendSubs(DPS_Node* node, RemoteNode* remote)
 {
+    int count = 0;
     DPS_DBGTRACE();
     LockNode(node);
     if (node->remoteNodes) {
         if (remote) {
             remote->outbound.checkForUpdates = DPS_TRUE;
+            ++count;
         } else {
             /*
-             * Check all remotes that have inbound interests
+             * TODO - when multi-tenancy is implemented subscriptions will only
+             * be sent to remotes that match the tenancy criteria. For now we flood
+             * subscriptions to all remote nodes.
              */
             for (remote = node->remoteNodes; remote != NULL; remote = remote->next) {
-                remote->outbound.checkForUpdates = remote->inbound.interests != NULL;
+                remote->outbound.checkForUpdates = DPS_TRUE;
+                ++count;
             }
         }
-        ScheduleBackgroundTask(node, SEND_SUBS_TASK);
+        if (count) {
+            ScheduleBackgroundTask(node, SEND_SUBS_TASK);
+        }
     }
     UnlockNode(node);
+    return count;
 }
 
 /*
  * Update the interests for a remote node
  */
-static DPS_Status UpdateInboundInterests(DPS_Node* node, RemoteNode* remote, DPS_BitVector* interests, DPS_BitVector* needs)
+static DPS_Status UpdateInboundInterests(DPS_Node* node, RemoteNode* remote, DPS_BitVector* interests, DPS_BitVector* needs, int delta)
 {
     DPS_DBGTRACE();
 
     if (remote->inbound.interests) {
-        DPS_DBGPRINT("Received interests delta\n");
+        if (delta) {
+            DPS_DBGPRINT("Received interests delta\n");
+            DPS_BitVectorXor(interests, interests, remote->inbound.interests, NULL);
+        }
         DPS_CountVectorDel(node->interests, remote->inbound.interests);
-        DPS_BitVectorXor(interests, interests, remote->inbound.interests, NULL);
-        DPS_BitVectorFree(remote->inbound.interests);
-
         DPS_CountVectorDel(node->needs, remote->inbound.needs);
+        DPS_BitVectorFree(remote->inbound.interests);
+        remote->inbound.interests = NULL;
         DPS_BitVectorFree(remote->inbound.needs);
+        remote->inbound.needs = NULL;
+        remote->inbound.updates = DPS_TRUE;
     }
-    DPS_CountVectorAdd(node->interests, interests);
-    DPS_CountVectorAdd(node->needs, needs);
-    remote->inbound.interests = interests;
-    remote->inbound.needs = needs;
-    remote->inbound.updates = DPS_TRUE;
+    if (DPS_BitVectorIsClear(interests)) {
+        DPS_BitVectorFree(interests);
+        DPS_BitVectorFree(needs);
+    } else {
+        DPS_CountVectorAdd(node->interests, interests);
+        DPS_CountVectorAdd(node->needs, needs);
+        remote->inbound.interests = interests;
+        remote->inbound.needs = needs;
+        remote->inbound.updates = DPS_TRUE;
+    }
     return DPS_OK;
 }
 
@@ -1352,6 +1397,7 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_Buffer* buffer, const s
     DPS_BitVector* needs;
     DPS_NodeAddress senderAddr;
     uint16_t port;
+    uint16_t ttl;
     RemoteNode* remote;
     int syncRequested;
     int syncReceived;
@@ -1371,6 +1417,11 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_Buffer* buffer, const s
     if (ret != DPS_OK) {
         return ret;
     }
+    ret = CBOR_DecodeUint16(buffer, &ttl);
+    if (ret != DPS_OK) {
+        return ret;
+    }
+    DPS_DBGPRINT("TTL=%d\n", ttl);
     ret = CBOR_DecodeBoolean(buffer, &syncRequested);
     if (ret != DPS_OK) {
         return ret;
@@ -1388,31 +1439,29 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_Buffer* buffer, const s
         return ret;
     }
     AddrSetPort(&senderAddr, addr, port);
-    ret = AddRemoteNode(node, &senderAddr, &remote);
+    ret = AddRemoteNode(node, &senderAddr, ttl, &remote);
     if (ret != DPS_OK) {
         if (ret != DPS_ERR_EXISTS) {
             DPS_BitVectorFree(interests);
             DPS_BitVectorFree(needs);
             return ret;
         }
+        ret = DPS_OK;
     } else {
         /*
-         * The remote is new to us so we need to synchronize even uf the remote
+         * The remote is new to us so we need to synchronize even if the remote
          * didn't request to.
          */
         syncRequested = DPS_TRUE;
     }
-    if (syncRequested) {
-        remote->outbound.sync = DPS_TRUE;
+    if (ttl == 0) {
+        DeleteRemoteNode(node, remote);
+    } else {
+        if (syncRequested) {
+            remote->outbound.sync = DPS_TRUE;
+        }
+        ret = UpdateInboundInterests(node, remote, interests, needs, !syncReceived);
     }
-    /*
-     * Not computing a delta if interests are being synchronized
-     */
-    if (syncReceived) {
-        DPS_BitVectorFree(remote->inbound.interests);
-        remote->inbound.interests = NULL;
-    }
-    ret = UpdateInboundInterests(node, remote, interests, needs);
     /*
      * Schedule background tasks
      */
@@ -1859,8 +1908,11 @@ DPS_Status DPS_Publish(DPS_Publication* pub, uint8_t* payload, size_t len, int16
         UpdateTTLBasis(node);
     }
     UnlockNode(node);
-    SendPubs(node, pub);
-    return DPS_OK;
+    if (SendPubs(node, pub)) {
+        return WaitForTask(node, SEND_PUBS_TASK, 1000);
+    } else {
+        return DPS_OK;
+    }
 }
 
 DPS_Status DPS_DestroyPublication(DPS_Publication* pub, uint8_t** payload)
@@ -1901,50 +1953,55 @@ DPS_Status DPS_Join(DPS_Node* node, DPS_NodeAddress* addr)
 {
     DPS_Status ret = DPS_OK;
     RemoteNode* remote = NULL;
+    uint16_t ttl = UINT16_MAX;
 
     DPS_DBGTRACE();
     if (!addr || !node) {
         return DPS_ERR_NULL;
     }
     LockNode(node);
-    ret = AddRemoteNode(node, addr, &remote);
+    ret = AddRemoteNode(node, addr, ttl, &remote);
     if (remote) {
         remote->joined = DPS_TRUE;
         if (ret != DPS_ERR_EXISTS) {
             remote->outbound.sync = DPS_TRUE;
+            remote->inbound.sync = DPS_TRUE;
         }
     }
     UnlockNode(node);
     if (ret == DPS_OK) {
-        SendSubs(node, remote);
+        if (SendSubs(node, remote)) {
+            /*
+             * Wait for the subscription exchange to complete
+             */
+            ret = WaitForTask(node, SEND_SUBS_TASK, 1000);
+        }
     } else if (ret == DPS_ERR_EXISTS) {
         DPS_ERRPRINT("Node at %s already joined\n", NodeAddressText(addr));
         ret = DPS_OK;
     }
-    /*
-     * Wait for the subscription exchange to complete
-     */
-    return WaitForTask(node, SEND_SUBS_TASK, 1000);
+    return ret;
 }
 
 DPS_Status DPS_Leave(DPS_Node* node, DPS_NodeAddress* addr)
 {
-    DPS_Status status;
+    DPS_Status ret;
     RemoteNode* remote;
 
-    /*
-     * TODO - send an update to remote to cancel subscriptions
-     */
+    DPS_DBGTRACE();
     LockNode(node);
     remote = LookupRemoteNode(node, (struct sockaddr*)&addr->inaddr);
     if (remote && remote->joined) {
-        DeleteRemoteNode(node, remote);
-        status = DPS_OK;
+        remote->expires = uv_hrtime();
+        ret = DPS_OK;
     } else {
-        status = DPS_ERR_MISSING;
+        ret = DPS_ERR_MISSING;
     }
     UnlockNode(node);
-    return status;
+    if (ret == DPS_OK) {
+        SendSubs(node, remote);
+    }
+    return ret;
 }
 
 DPS_Status DPS_DestroyPublicationAck(DPS_PublicationAck* ack)

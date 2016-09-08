@@ -42,7 +42,7 @@ if platform == '!!posix':
 
 # Unit tests
 testenv = env.Clone()
-testenv.Append(LIBS = lib)
+testenv.Prepend(LIBS = lib)
 testenv.Program('bin/countvec', 'test/countvec.c')
 testenv.Program('bin/unified', 'test/unified.c')
 testenv.Program('bin/rle_compression', 'test/rle_compression.c')
@@ -65,7 +65,7 @@ if platform == 'posix':
 
 # Examples
 exampleenv = env.Clone()
-exampleenv.Append(LIBS = lib)
+exampleenv.Prepend(LIBS = lib)
 exampleenv.Program('bin/publisher', 'examples/publisher.c')
 exampleenv.Program('bin/subscriber', 'examples/subscriber.c')
 
