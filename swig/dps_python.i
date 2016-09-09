@@ -2,6 +2,7 @@
 %module dps
 %{
 #include "dps.h"
+#include "dps_synchronous.h"
 %}
 
 %include "cdata.i"
@@ -16,6 +17,19 @@
 %ignore DPS_SetPublicationData;
 %ignore DPS_GetPublicationData;
 %ignore DPS_GetLoop;
+
+/*
+ * Declarations that are not relevant in Python
+ */
+%ignore DPS_TRUE;
+%ignore DPS_FALSE;
+
+/*
+ * Only exposing the synchronous versions of these
+ */
+%ignore DPS_Link;
+%ignore DPS_Unlink;
+%ignore DPS_ResolveAddress;
 
 /*
  * Module is called dps we don't need the DPS prefix on every function
@@ -308,18 +322,14 @@ static PyObject* UUIDToPyString(DPS_UUID* uuid)
 %apply Pointer NONNULL { DPS_UUID* };
 %apply Pointer NONNULL { DPS_Subscription* };
 %apply Pointer NONNULL { DPS_Publication* };
-%apply Pointer NONNULL { DPS_PublicationAck* };
 %apply Pointer NONNULL { DPS_NodeAddress* };
 
 /*
  * The DPS public header files
- *
- * Note we need to undef the header guards otherwise we get nothing
  */
-#undef _DPS_ERR_H
 %include "dps_err.h"
-#undef _DPS_H
 %include "dps.h"
+%include "dps_synchronous.h"
 
 /*
  * Module initialization

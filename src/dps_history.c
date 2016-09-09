@@ -3,8 +3,14 @@
 #include <assert.h>
 #include <uv.h>
 #include <dps.h>
+#include <dps_dbg.h>
 #include <search.h>
 #include "dps_history.h"
+
+/*
+ * Debug control for this module
+ */
+DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
 #define HISTORY_THRESHOLD   10
 

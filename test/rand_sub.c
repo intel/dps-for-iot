@@ -5,7 +5,7 @@
 #include <dps_dbg.h>
 #include <network.h>
 #include <dps.h>
-#include <uv.h>
+#include <dps_synchronous.h>
 
 static void OnPubMatch(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* data, size_t len)
 {
@@ -95,6 +95,31 @@ static void OnTimer(uv_timer_t* handle)
     }
 }
 
+static int IntArg(char* opt, char*** argp, int* argcp, int* val, uint32_t min, uint32_t max)
+{
+    char* p;
+    char** arg = *argp;
+    int argc = *argcp;
+
+    if (strcmp(*arg++, opt) != 0) {
+        return 0;
+    }
+    if (!--argc) {
+        return 0;
+    }
+    *val = strtol(*arg++, &p, 10);
+    if (*p) {
+        return 0;
+    }
+    if (*val < min || *val > max) {
+        DPS_PRINT("Value for option %s must be in range %d..%d\n", opt, min, max);
+        return 0;
+    }
+    *argp = arg;
+    *argcp = argc;
+    return 1;
+}
+
 int main(int argc, char** argv)
 {
     DPS_Status ret;
@@ -106,31 +131,15 @@ int main(int argc, char** argv)
     int mcastPub = DPS_MCAST_PUB_DISABLED;
     const char* host = NULL;
     int listenPort = 0;
-    const char* connectPort = NULL;
+    int linkPort = 0;
 
     DPS_Debug = 0;
 
     while (--argc) {
-        if (strcmp(*arg, "-p") == 0) {
-            ++arg;
-            if (!--argc) {
-                goto Usage;
-            }
-            connectPort = *arg++;
+        if (IntArg("-p", &arg, &argc, &linkPort, 1, UINT16_MAX)) {
             continue;
         }
-        if (strcmp(*arg, "-l") == 0) {
-            char* p;
-
-            ++arg;
-            if (!--argc) {
-                goto Usage;
-            }
-            listenPort = strtol(*arg++, &p, 10);
-            if (*p) {
-                DPS_PRINT("Listen port option (-l) requires a decimal number\n");
-                goto Usage;
-            }
+        if (IntArg("-l", &arg, &argc, &listenPort, 1, UINT16_MAX)) {
             continue;
         }
         if (strcmp(*arg, "-a") == 0) {
@@ -154,7 +163,7 @@ int main(int argc, char** argv)
         goto Usage;
     }
 
-    if ((host == NULL) && (connectPort == NULL)) {
+    if (!linkPort) {
         mcastPub = DPS_MCAST_PUB_ENABLE_RECV;
     }
 
@@ -165,16 +174,12 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    if (host || connectPort) {
-        DPS_NodeAddress* addr = DPS_ResolveAddress(node, host, connectPort);
-        if (!addr) {
-            DPS_ERRPRINT("Failed to resolve %s/%s\n", host ? host : "<localhost>", connectPort);
-            return 1;
-        }
-        ret = DPS_Join(node, addr);
+    if (linkPort) {
+        DPS_NodeAddress* addr = DPS_CreateAddress(addr);
+        ret = DPS_LinkTo(node, host, linkPort, addr);
         DPS_DestroyAddress(addr);
-        if (!ret) {
-            DPS_ERRPRINT("Failed to joine %s/%s\n", host ? host : "<localhost>", connectPort);
+        if (ret != DPS_OK) {
+            DPS_ERRPRINT("DPS_LinkTo returned %s\n", DPS_ErrTxt(ret));
             return 1;
         }
     }

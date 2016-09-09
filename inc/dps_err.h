@@ -27,6 +27,7 @@ typedef int DPS_Status;
 #define DPS_ERR_NOT_STARTED       17 /**< Node has not yet been started */
 #define DPS_ERR_NOT_INITIALIZED   18 /**< Object has not yet been initialized */
 #define DPS_ERR_EXPIRED           19 /**< A remote node has expired */
+#define DPS_ERR_UNRESOLVED        20 /**< Name resolution failed */
 
 const char* DPS_ErrTxt(DPS_Status s);
 

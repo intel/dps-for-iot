@@ -26,7 +26,7 @@
 typedef struct _DPS_Node DPS_Node;
 
 /**
- * Opaque type for an address
+ * Opaque type for a remote node address.
  */
 typedef struct _DPS_NodeAddress DPS_NodeAddress;
 
@@ -49,11 +49,6 @@ size_t DPS_SubscriptionGetNumTopics(const DPS_Subscription* sub);
  * Opaque type for a publication
  */
 typedef struct _DPS_Publication DPS_Publication;
-
-/**
- * Opaque type for a publication acknowledgement
- */
-typedef struct _DPS_PublicationAck DPS_PublicationAck;
 
 /**
  * Get the UUID for a publication
@@ -134,6 +129,19 @@ typedef void (*DPS_AcknowledgementHandler)(DPS_Publication* pub, uint8_t* payloa
 DPS_Publication* DPS_CreatePublication(DPS_Node* node);
 
 /**
+ * Creates a partial copy of a publication that can be used to acknowledge the publication.
+ * The copy is not useful for anything other than in a call to DPS_AckPublication() and should
+ * be freed by calling DPS_DestroyPublcation() when no longer needed.
+ *
+ * The partial copy can be used with DPS_PublicationGetUUID() and DPS_PublicationGetSerialNumber()
+ *
+ * @param pub  The publication to copy
+ *
+ * @return A partial copy of the publication or NULL if the publication could not be copied.
+ */
+DPS_Publication* DPS_CopyPublication(const DPS_Publication* pub);
+
+/**
  * Store a pointer to application data in a publication.
  *
  * @param pub   The publication
@@ -188,8 +196,11 @@ DPS_Status DPS_InitPublication(DPS_Publication* pub, char* const* topics, size_t
 DPS_Status DPS_Publish(DPS_Publication* pub, uint8_t* pubPayload, size_t len, int16_t ttl, uint8_t** oldPayload);
 
 /**
- * Delete a local publication and frees any resources allocated. This does not cancel retained publications that have an
- * unexpired TTL. To expire a retained publication call DPS_Publish() with a zero TTL.
+ * Delete a publication and frees any resources allocated. This does not cancel retained publications
+ * that have an unexpired TTL. To expire a retained publication call DPS_Publish() with a zero TTL.
+ *
+ * This function should only be called for publications created by DPS_CreatePublication() or 
+ * DPS_CopyPublication().
  *
  * @param pub      The publication to destroy
  * @param payload  Returns pointer to last payload passed to DPS_Pubish()
@@ -200,7 +211,8 @@ DPS_Status DPS_DestroyPublication(DPS_Publication* pub, uint8_t** oldPayload);
  * Function prototype for a publication handler called when a publication is received that
  * matches a subscription. Note that there is a possibilitly of false-positive matches.
  *
- * The publication handle is only valid within the body of this callback function.
+ * The publication handle is only valid within the body of this callback function. DPS_CopyPublication()
+ * will make a partial copy of the publication that can be used later, for example to call DPS_AckPublication().
  *
  * The accessor functions DPS_PublicationGetUUID() and DPS_PublicationGetSerialNumber()
  * return information about the received publication.
@@ -216,28 +228,16 @@ DPS_Status DPS_DestroyPublication(DPS_Publication* pub, uint8_t** oldPayload);
 typedef void (*DPS_PublicationHandler)(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* payload, size_t len);
 
 /**
- * Create an aknowledgement for a publication.
+ * Aknowledge a publication. A publication should be acknowledged as soon as possible after receipt
+ * ideally from within the publication handler callback function. If the publication cannot be acknowedged
+ * immediately in the publication handler callback, call DPS_CopyPublication() to make a partial copy of
+ * the publication that can be passed to this function at a later time.
  *
- * @param pub  The publication that will be acknowledged.
- */
-DPS_PublicationAck* DPS_CreatePublicationAck(const DPS_Publication* pub);
-
-/**
- * Aknowledge a publication. A publication should be acknowledged as soon as possible after receipt ideally from within the publication
- * handler callback function.
- *
- * @param ack           The acknowledgment
+ * @param pub           The publication to acknowledge
  * @param ackPayload    Optional payload to accompany the aknowledgment
  * @param len           The length of the payload
  */
-DPS_Status DPS_AckPublication(DPS_PublicationAck* ack, uint8_t* ackPayload, size_t len);
-
-/**
- * Free resources associated with an publication acknowledgement
- *
- * @param ack  The acknowledgment to destroy
- */
-DPS_Status DPS_DestroyPublicationAck(DPS_PublicationAck* ack);
+DPS_Status DPS_AckPublication(const DPS_Publication* pub, uint8_t* ackPayload, size_t len);
 
 /**
  * Allocate memory for a subscription and initialize topics
@@ -286,38 +286,76 @@ DPS_Status DPS_Subscribe(DPS_Subscription* sub, DPS_PublicationHandler handler);
 DPS_Status DPS_DestroySubscription(DPS_Subscription* sub);
 
 /**
- * Join the local node to a remote node
+ * Function prototype for function called when a DPS_Link() completes.
  *
  * @param node   The local node to use
- * @param addr   The address of the remote node to join
+ * @param addr   The address of the remote node that was linked
+ * @param status Indicates if the link completed or failed
+ * @param data   Application data passed in the call to DPS_Link()
  */
-DPS_Status DPS_Join(DPS_Node* node, DPS_NodeAddress* addr);
+typedef void (*DPS_OnLinkComplete)(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, void* data);
 
 /**
- * Remove a remote node.
+ * Link the local node to a remote node
  *
  * @param node   The local node to use
- * @param addr   The address of a remote node
+ * @param addr   The address of the remote node to link to
+ * @param cb     The callback function to call on completion, can be NULL which case the function is synchronous
+ * @param data   Application data to be passed to the callback
+
+ * @return DPS_OK or an error status. If an error status is returned the callback function will not be called.
  */
-DPS_Status DPS_Leave(DPS_Node* node, DPS_NodeAddress* addr);
+DPS_Status DPS_Link(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnLinkComplete cb, void* data);
+
+/**
+ * Function prototype for function called when a DPS_Unlink() completes.
+ *
+ * @param node   The local node to use
+ * @param addr   The address of the remote node that was unlinked
+ * @param data   Application data passed in the call to DPS_Link()
+ */
+typedef void (*DPS_OnUnlinkComplete)(DPS_Node* node, DPS_NodeAddress* addr, void* data);
+
+/**
+ * Unlink the local node from a remote node
+ *
+ * @param node   The local node to use
+ * @param addr   The address of the remote node to unlink from
+ * @param cb     The callback function to call on completion, can be NULL which case the function is synchronous
+ * @param data   Application data to be passed to the callback
+ *
+ * @return DPS_OK or an error status. If an error status is returned the callback function will not be called.
+ */
+DPS_Status DPS_Unlink(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnUnlinkComplete cb, void* data);
 
 /**
  * Get the port number this node is listening for connections on
  *
- * @param node          The local node to use
+ * @param node     The local node to use
  */
 uint16_t DPS_GetPortNumber(DPS_Node* node);
 
 /**
- * Wrapper around uv_getaddrinfo
+ * Function prototype for function called when a DPS_ResolveAddress() completes.
  *
- * @param node          The local node to use
- * @param host          The host name or IP address to resolve
- * @param service       The port or service name to resolve
- *
- * @return addr  Returns the address or NULL if the address could not be resolved
+ * @param node   The local node to use
+ * @param addr   The resolved address or NULL if the address could not be resolved
+ * @param data   Application data passed in the call to DPS_ResolveAddress()
  */
-DPS_NodeAddress* DPS_ResolveAddress(DPS_Node* node, const char* host, const char* service);
+typedef void (*DPS_OnResolveAddressComplete)(DPS_Node* node, DPS_NodeAddress* addr, void* data);
+
+/**
+ * Resolve a host name or IP address and service name or port number.
+ *
+ * @param node     The local node to use
+ * @param host     The host name or IP address to resolve
+ * @param service  The port or service name to resolve
+ * @param cb       The callback function to call on completion
+ * @param data     Application data to be passed to the callback
+ *
+ * @return DPS_OK or an error status. If an error status is returned the callback function will not be called.
+ */
+DPS_Status DPS_ResolveAddress(DPS_Node* node, const char* host, const char* service, DPS_OnResolveAddressComplete cb, void* data);
 
 /**
  * Get text representation of an address. This function uses a static string buffer so it not thread safe.
@@ -327,6 +365,16 @@ DPS_NodeAddress* DPS_ResolveAddress(DPS_Node* node, const char* host, const char
  * @return  A text string for the address
  */
 const char* DPS_GetAddressText(DPS_NodeAddress* addr);
+
+/**
+ * Creates an node address.
+ */
+DPS_NodeAddress* DPS_CreateAddress();
+
+/**
+ * Copy a node address
+ */
+void DPS_CopyAddress(DPS_NodeAddress* dest, const DPS_NodeAddress* src);
 
 /**
  * Frees resources associated with an address

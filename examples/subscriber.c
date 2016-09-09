@@ -5,6 +5,7 @@
 #include <dps_dbg.h>
 #include <network.h>
 #include <dps.h>
+#include <dps_synchronous.h>
 #include <bitvec.h>
 #include <uv.h>
 
@@ -31,13 +32,9 @@ static void OnPubMatch(DPS_Subscription* sub, const DPS_Publication* pub, uint8_
         DPS_PRINT("%.*s\n", (int)len, data);
     }
     if (sendAck) {
-        DPS_PublicationAck* ack = DPS_CreatePublicationAck(pub);
-        if (ack) {
-            DPS_Status ret = DPS_AckPublication(ack, AckMsg, sizeof(AckMsg));
-            if (ret != DPS_OK) {
-                DPS_PRINT("Failed to ack pub %s\n", DPS_ErrTxt(ret));
-            }
-            DPS_DestroyPublicationAck(ack);
+        DPS_Status ret = DPS_AckPublication(pub, AckMsg, sizeof(AckMsg));
+        if (ret != DPS_OK) {
+            DPS_PRINT("Failed to ack pub %s\n", DPS_ErrTxt(ret));
         }
     }
 }
@@ -91,7 +88,7 @@ int main(int argc, char** argv)
     int mcastPub = DPS_MCAST_PUB_DISABLED;
     const char* host = NULL;
     int listenPort = 0;
-    const char* connectPort = NULL;
+    int linkPort = 0;
 
     DPS_Debug = 0;
 
@@ -99,12 +96,7 @@ int main(int argc, char** argv)
         if (IntArg("-l", &arg, &argc, &listenPort, 1, UINT16_MAX)) {
             continue;
         }
-        if (strcmp(*arg, "-p") == 0) {
-            ++arg;
-            if (!--argc) {
-                goto Usage;
-            }
-            connectPort = *arg++;
+        if (IntArg("-p", &arg, &argc, &linkPort, 1, UINT16_MAX)) {
             continue;
         }
         if (strcmp(*arg, "-h") == 0) {
@@ -140,7 +132,7 @@ int main(int argc, char** argv)
         topics[numTopics++] = *arg++;
     }
 
-    if ((host == NULL) && (connectPort == NULL)) {
+    if (!linkPort) {
         mcastPub = DPS_MCAST_PUB_ENABLE_RECV;
     }
 
@@ -160,14 +152,15 @@ int main(int argc, char** argv)
             return 1;
         }
     }
-    if (host || connectPort) {
-        DPS_NodeAddress* addr = DPS_ResolveAddress(node, host, connectPort);
-        if (!addr) {
-            DPS_ERRPRINT("Failed to resolve %s/%s\n", host ? host : "<localhost>", connectPort);
+    if (linkPort) {
+        DPS_NodeAddress* addr = DPS_CreateAddress();
+        DPS_Status linkRet = DPS_ERR_FAILURE;
+        ret = DPS_LinkTo(node, host, linkPort, addr);
+        DPS_DestroyAddress(addr);
+        if (ret != DPS_OK) {
+            DPS_ERRPRINT("DPS_LinkTo returned %s\n", DPS_ErrTxt(ret));
             return 1;
         }
-        ret = DPS_Join(node, addr);
-        DPS_DestroyAddress(addr);
     }
     DPS_DestroyNode(node);
     return 0;

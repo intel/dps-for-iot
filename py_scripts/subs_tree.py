@@ -25,8 +25,9 @@ def Subscriber(port, topic, connectPort):
     subs[port] = dps.CreateSubscription(nodes[port], [topic])
     dps.Subscribe(subs[port], OnPub)
     if (connectPort != 0):
-        addr = dps.ResolveAddress(nodes[port], None, str(connectPort))
-        dps.Join(nodes[port], addr)
+        addr = dps.CreateAddress()
+        ret = dps.LinkTo(nodes[port], None, connectPort, addr)
+        dps.DestroyAddress(addr)
 
 Subscriber(20000, 'B/B', 0)
 Subscriber(30000, 'A/A', 20000)

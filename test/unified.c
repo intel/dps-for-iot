@@ -5,6 +5,7 @@
 #include <dps_dbg.h>
 #include <bitvec.h>
 #include <dps.h>
+#include <dps_synchronous.h>
 #include <uv.h>
 
 #define MAX_TOPICS 64
@@ -152,8 +153,9 @@ int main(int argc, char** argv)
         assert(ret == DPS_OK);
     }
     for (p = 0; p < numPubs; ++p) {
+        int port = BASE_PORT_NUM + p;
         pubNode[p] = DPS_CreateNode("/.");
-        ret = DPS_StartNode(pubNode[p], DPS_MCAST_PUB_DISABLED, BASE_PORT_NUM + p);
+        ret = DPS_StartNode(pubNode[p], DPS_MCAST_PUB_DISABLED, port);
         assert(ret == DPS_OK);
         loop = DPS_GetLoop(pubNode[p]);
         uv_timer_init(loop, &timer);
@@ -166,17 +168,15 @@ int main(int argc, char** argv)
      * Join each subscriber to all publishers
      */
     for (p = 0; p < numPubs; ++p) {
-        DPS_NodeAddress addr;
-        char port[16];
-        sprintf(port, "%zd", BASE_PORT_NUM + p);
-        for (s = 0; s < numSubs; ++s) {
-            DPS_NodeAddress* addr = DPS_ResolveAddress(subNode[s], NULL, port);
-            assert(addr);
-            ret = DPS_Join(subNode[s], addr);
-            DPS_DestroyAddress(addr);
-            assert(ret == DPS_OK);
-            DPS_PRINT("***** Subscriber %d joined publisher %zd\n", DPS_GetPortNumber(subNode[s]), BASE_PORT_NUM + p);
+        DPS_NodeAddress* addr = DPS_CreateAddress();
+        int port = BASE_PORT_NUM + p;
+        ret = DPS_LinkTo(subNode[s], NULL, port, addr);
+        DPS_DestroyAddress(addr);
+        if (ret != DPS_OK) {
+            DPS_ERRPRINT("DPS_LinkTo returned %s\n", DPS_ErrTxt(ret));
+            return 1;
         }
+        DPS_PRINT("***** Subscriber %d joined publisher %zd\n", DPS_GetPortNumber(subNode[s]), port);
     }
 
     DPS_PRINT("***** Register subscriptions\n");

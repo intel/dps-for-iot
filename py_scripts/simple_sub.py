@@ -4,9 +4,7 @@ import time
 def OnPub(sub, pub, payload):
     print "Pub %s/%d" % (dps.PublicationGetUUID(pub), dps.PublicationGetSerialNumber(pub))
     print "Payload %s" % payload
-    ack = dps.CreatePublicationAck(pub);
-    dps.AckPublication(ack, "Acking %d" % (dps.PublicationGetSerialNumber(pub)))
-    dps.DestroyPublicationAck(ack)
+    dps.AckPublication(pub, "Acking %d" % (dps.PublicationGetSerialNumber(pub)))
 
 # Set to 1 to enable DPS debug output
 dps.cvar.Debug = 0

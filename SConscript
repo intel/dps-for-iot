@@ -24,12 +24,15 @@ shlib = libenv.SharedLibrary('lib/dps_shared', shobjs)
 pyenv = libenv.Clone()
 pyenv.Append(LIBPATH = env['PY_LIBPATH'])
 pyenv.Append(CPPPATH = env['PY_CPPPATH'])
-# On Widows Python has a special .pyd suffix for module libraries
-if platform == 'win32':  pyenv['SHLIBSUFFIX'] = '.pyd'
+# Python has platform specific naming conventions
+if platform == 'win32':
+    pyenv['SHLIBSUFFIX'] = '.pyd'
+else:
+    pyenv['SHLIBPREFIX'] = '_'
 pyenv.Append(SWIGFLAGS = ['-python', '-Werror', '-v'], SWIGPATH = '#/inc')
 # Build python module library
-pyenv.SharedLibrary('py/_dps', shobjs + ['swig/dps_python.i'])
-pyenv.InstallAs('./py', './swig')
+pylib = pyenv.SharedLibrary('./py/dps', shobjs + ['swig/dps_python.i'])
+pyenv.InstallAs('./py/dps.py', './swig/dps.py')
 
 # Use SWIG to build the node.js wrapper
 if platform == '!!posix':

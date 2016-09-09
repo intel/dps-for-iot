@@ -22,14 +22,32 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 #define _MIN_(x, y)  (((x) < (y)) ? (x) : (y))
 
 
+#define SECS_TO_NS(t)   ((uint64_t)(t) * 1000000000ull)
+#define NS_TO_SECS(t)   ((uint32_t)((t) / 1000000000ull))
+
 static const char DPS_SubscriptionURI[] = "dps/sub";
 static const char DPS_PublicationURI[] = "dps/pub";
 static const char DPS_AcknowledgmentURI[] = "dps/ack";
 
 typedef enum { NO_REQ, SUB_REQ, PUB_REQ, ACK_REQ } RequestType;
 
+typedef enum { LINK_OP, UNLINK_OP } OpType;
+
+typedef struct {
+    OpType op;
+    void* data;
+    uint64_t timeout;
+    uv_mutex_t mutex;
+    union {
+        DPS_OnLinkComplete link;
+        DPS_OnUnlinkComplete unlink;
+        void* cb;
+    } on;
+} OnOpCompletion;
+
 typedef struct _RemoteNode {
-    uint8_t joined;                    /* True if this is a node that was explicitly joined */
+    OnOpCompletion* completion;
+    uint8_t linked;                    /* True if this is a node that was explicitly linked */
     struct {
         uint8_t sync;                  /* If TRUE request remote to synchronize interests */
         uint8_t updates;               /* TRUE if updates have been received but not acted on */
@@ -67,6 +85,7 @@ typedef struct _DPS_Subscription {
 #define PUB_FLAG_LOCAL    (0x02) /* The publication is local to this node */
 #define PUB_FLAG_RETAINED (0x04) /* A received publication had a non-zero TTL */
 #define PUB_FLAG_HISTORY  (0x08) /* A history record has been added for this publication */
+#define PUB_FLAG_IS_COPY  (0x80) /* This publication is a copy and can only be used for acknowledgements */
 
 /*
  * Notes on the use of the DPS_Publication fields:
@@ -97,15 +116,13 @@ typedef struct _DPS_Publication {
 /*
  * Acknowledgment packet queued to be sent on node loop
  */
-typedef struct _DPS_PublicationAck {
-    uint8_t appOwned;       /* Indicates if the ack is owned by the application */
+typedef struct _PublicationAck {
     uv_buf_t bufs[3];
     DPS_NodeAddress destAddr;
     uint32_t serialNumber;
     DPS_UUID pubId;
-    DPS_Node* node;
-    DPS_PublicationAck* next;
-} DPS_PublicationAck;
+    struct _PublicationAck* next;
+} PublicationAck;
 
 #define SEND_SUBS_TASK  0x01
 #define SEND_PUBS_TASK  0x02
@@ -122,19 +139,18 @@ typedef struct _DPS_Node {
     uv_thread_t thread;                   /* Thread for the event loop */
     uv_loop_t* loop;                      /* uv lib event loop */
     uv_timer_t shutdownTimer;             /* for graceful shut down */
-    uv_mutex_t nodeLock;                  /* Mutex to protect this node */
+    uv_mutex_t nodeMutex;                 /* Mutex to protect this node */
+    uv_mutex_t condMutex;                 /* Mutex for use wih condition variables */
 #ifndef NDEBUG
     int lockCount;                        /* Detect recursive locks */
 #endif
     uv_async_t bgHandler;                 /* Async handler for background tasks */
-    uv_cond_t bgComplete;                 /* Conditional variable for indicating completion of background tasks */
 
     uint64_t ttlBasis;                    /* basis time for expiring retained messages */
 
     struct {
-        DPS_PublicationAck* first;
-        DPS_PublicationAck* last;
-        DPS_PublicationAck* freeList;     /* Released acks that are still owned by the application */
+        PublicationAck* first;
+        PublicationAck* last;
     } ackQueue;                           /* Queued acknowledgment packets */
 
     RemoteNode* remoteNodes;              /* Linked list of remote nodes */
@@ -166,7 +182,7 @@ static void RunBackgroundTasks(uv_async_t* handle);
 
 void LockNode(DPS_Node* node)
 {
-    uv_mutex_lock(&node->nodeLock);
+    uv_mutex_lock(&node->nodeMutex);
 #ifndef NDEBUG
     ++node->lockCount;
     assert(node->lockCount == 1);
@@ -179,7 +195,7 @@ void UnlockNode(DPS_Node* node)
     assert(node->lockCount == 1);
     --node->lockCount;
 #endif
-    uv_mutex_unlock(&node->nodeLock);
+    uv_mutex_unlock(&node->nodeMutex);
 }
 
 static void ScheduleBackgroundTask(DPS_Node* node, uint8_t task)
@@ -189,29 +205,6 @@ static void ScheduleBackgroundTask(DPS_Node* node, uint8_t task)
     UnlockNode(node);
     uv_async_send(&node->bgHandler);
     LockNode(node);
-}
-
-/*
- * Timeout is in milliseconds
- */
-DPS_Status WaitForTask(DPS_Node* node, uint16_t task, uint32_t timeout)
-{
-    while (node->tasks & task) {
-        int r;
-        LockNode(node);
-#ifndef NDEBUG
-        --node->lockCount;
-#endif
-        r = uv_cond_timedwait(&node->bgComplete, &node->nodeLock, (uint64_t)(timeout) * 1000000ull);
-#ifndef NDEBUG
-        ++node->lockCount;
-#endif
-        UnlockNode(node);
-        if (r < 0) {
-            return DPS_ERR_TIMEOUT;
-        }
-    }
-    return DPS_OK;
 }
 
 #ifdef NDEBUG
@@ -387,6 +380,39 @@ static DPS_Subscription* FreeSubscription(DPS_Subscription* sub)
     return next;
 }
 
+static void RemoteCompletion(DPS_Node* node, RemoteNode* remote, DPS_Status status)
+{
+    OnOpCompletion* cpn = remote->completion;
+    DPS_NodeAddress addr = remote->addr;
+
+    remote->completion = NULL;
+    UnlockNode(node);
+    /*
+     * TODO - need to consider making this callback from a worker thread
+     */
+    if (cpn->op == LINK_OP) {
+        cpn->on.link(node, &addr, status, cpn->data);
+    } else if (cpn->op == UNLINK_OP) {
+        cpn->on.unlink(node, &addr, cpn->data);
+    }
+    LockNode(node);
+    free(cpn);
+}
+
+static int IsValidRemoteNode(DPS_Node* node, RemoteNode* remote)
+{
+    RemoteNode* r = node->remoteNodes;
+
+    while (r) {
+        if (r == remote) {
+            return DPS_TRUE;
+        }
+        r = r->next;
+    }
+
+    return DPS_FALSE;
+}
+
 static RemoteNode* DeleteRemoteNode(DPS_Node* node, RemoteNode* remote)
 {
     DPS_Status ret;
@@ -394,6 +420,7 @@ static RemoteNode* DeleteRemoteNode(DPS_Node* node, RemoteNode* remote)
 
     DPS_DBGTRACE();
 
+    assert(IsValidRemoteNode(node, remote));
     assert(node->remoteNodes);
     assert(remote);
 
@@ -421,6 +448,11 @@ static RemoteNode* DeleteRemoteNode(DPS_Node* node, RemoteNode* remote)
     }
     DPS_BitVectorFree(remote->outbound.interests);
     DPS_BitVectorFree(remote->outbound.needs);
+
+    if (remote->completion) {
+        RemoteCompletion(node, remote, DPS_ERR_FAILURE);
+    }
+
     free(remote);
     return next;
 }
@@ -539,6 +571,20 @@ static RemoteNode* LookupRemoteNode(DPS_Node* node, const struct sockaddr* addr)
     return NULL;
 }
 
+static OnOpCompletion* AllocCompletion(OpType op, void* data, uint16_t ttl, void* cb)
+{
+    OnOpCompletion* cpn;
+
+    cpn = calloc(1, sizeof(OnOpCompletion));
+    if (cpn) {
+        cpn->op = op;
+        cpn->data = data;
+        cpn->on.cb = cb;
+        cpn->timeout = uv_hrtime() + SECS_TO_NS(ttl);
+    }
+    return cpn;
+}
+
 /*
  * Add a remote node or return an existing one
  */
@@ -547,7 +593,7 @@ static DPS_Status AddRemoteNode(DPS_Node* node, DPS_NodeAddress* addr, uint16_t 
     RemoteNode* remote = LookupRemoteNode(node, (struct sockaddr*)&addr->inaddr);
     if (remote) {
         *remoteOut = remote;
-        remote->expires = uv_hrtime() + ((uint64_t)ttl * 1000000000ull);
+        remote->expires = uv_hrtime() + SECS_TO_NS(ttl);
         return DPS_ERR_EXISTS;
     }
     /*
@@ -564,7 +610,7 @@ static DPS_Status AddRemoteNode(DPS_Node* node, DPS_NodeAddress* addr, uint16_t 
     DPS_DBGPRINT("Adding new remote node %s\n", NodeAddressText(addr));
     remote->addr.inaddr = addr->inaddr;
     remote->next = node->remoteNodes;
-    remote->expires = uv_hrtime() + ((uint64_t)ttl * 1000000000ull);
+    remote->expires = uv_hrtime() + SECS_TO_NS(ttl);
     node->remoteNodes = remote;
     *remoteOut = remote;
     return DPS_OK;
@@ -573,7 +619,7 @@ static DPS_Status AddRemoteNode(DPS_Node* node, DPS_NodeAddress* addr, uint16_t 
 static uint32_t UpdateTTLBasis(DPS_Node* node)
 {
     uint64_t now = uv_hrtime();
-    uint32_t elapsedSeconds = (uint32_t)(now - node->ttlBasis) / 1000000000ull;
+    uint32_t elapsedSeconds = NS_TO_SECS(now - node->ttlBasis);
     node->ttlBasis = now;
     return elapsedSeconds;
 }
@@ -649,12 +695,16 @@ static void FreeBufs(uv_buf_t* bufs, size_t numBufs)
 static void OnNetSendComplete(DPS_Node* node, struct sockaddr* addr, uv_buf_t* bufs, size_t numBufs, DPS_Status status)
 {
     if (status != DPS_OK) {
-        RemoteNode* remote = LookupRemoteNode(node, addr);
+        RemoteNode* remote;
+
+        LockNode(node);
+        remote = LookupRemoteNode(node, addr);
         DPS_ERRPRINT("OnNetSendComplete %s\n", DPS_ErrTxt(status));
         if (remote) {
             DeleteRemoteNode(node, remote);
             DPS_ERRPRINT("Removed node %s\n", DPS_NetAddrText(addr));
         }
+        UnlockNode(node);
     }
     FreeBufs(bufs, numBufs);
 }
@@ -773,34 +823,18 @@ static DPS_Status SendMatchingPubToSub(DPS_Node* node, DPS_Publication* pub, Rem
     return DPS_OK;
 }
 
-static void FreePubAck(DPS_PublicationAck* ack)
+static PublicationAck* AllocPubAck(const DPS_UUID* pubId, uint32_t serialNumber)
 {
-    /*
-     * Cannot free an ack that is owned by the application so
-     * we put it on the free list and the application will free
-     * it when DPS_DestroyPublicationAck() is called.
-     */
-    if (ack->appOwned) {
-        ack->next = ack->node->ackQueue.freeList;
-        ack->node->ackQueue.freeList = ack;
-    } else {
-        free(ack);
-    }
-}
-
-static DPS_PublicationAck* AllocPubAck(DPS_Node* node, const DPS_UUID* pubId, uint32_t serialNumber)
-{
-    DPS_PublicationAck* ack = calloc(1, sizeof(DPS_PublicationAck));
+    PublicationAck* ack = calloc(1, sizeof(PublicationAck));
     if (!ack) {
         return NULL;
     }
     ack->pubId = *pubId;
     ack->serialNumber = serialNumber;
-    ack->node = node;
     return ack;
 }
 
-static DPS_Status QueuePublicationAck(DPS_Node* node, DPS_PublicationAck* ack, uint8_t* data, size_t len, DPS_NodeAddress* destAddr)
+static DPS_Status QueuePublicationAck(DPS_Node* node, PublicationAck* ack, uint8_t* data, size_t len, DPS_NodeAddress* destAddr)
 {
     DPS_Status ret;
     CoAP_Option opts[1];
@@ -821,9 +855,7 @@ static DPS_Status QueuePublicationAck(DPS_Node* node, DPS_PublicationAck* ack, u
 
     ret = DPS_BufferInit(&payload, NULL, allocSize);
     if (ret != DPS_OK) {
-        LockNode(node);
-        FreePubAck(ack);
-        UnlockNode(node);
+        free(ack);
         return ret;
     }
     CBOR_EncodeBytes(&payload, (uint8_t*)&ack->pubId, sizeof(DPS_UUID));
@@ -833,9 +865,7 @@ static DPS_Status QueuePublicationAck(DPS_Node* node, DPS_PublicationAck* ack, u
         ret = CoAP_Compose(COAP_OVER_TCP, ack->bufs, A_SIZEOF(ack->bufs), COAP_CODE(COAP_REQUEST, COAP_PUT), opts, A_SIZEOF(opts), &payload);
         if (ret != DPS_OK) {
             free(payload.base);
-            LockNode(node);
-            FreePubAck(ack);
-            UnlockNode(node);
+            free(ack);
         } else {
             LockNode(node);
             ack->destAddr = *destAddr;
@@ -905,7 +935,7 @@ static DPS_Status DecodeAcknowledgment(DPS_Node* node, DPS_Buffer* buffer)
      */
     ret = DPS_LookupPublisher(&node->history, pubId, serialNumber, &addr);
     if ((ret == DPS_OK) && addr) {
-        DPS_PublicationAck* ack = AllocPubAck(node, pubId, serialNumber);
+        PublicationAck* ack = AllocPubAck(pubId, serialNumber);
         if (ack) {
             DPS_DBGPRINT("Forwarding acknowledgement for %s/%d to %s\n", DPS_UUIDToString(pubId), serialNumber, NodeAddressText(addr));
             ret = QueuePublicationAck(node, ack, payload, len, addr);
@@ -918,7 +948,7 @@ static DPS_Status DecodeAcknowledgment(DPS_Node* node, DPS_Buffer* buffer)
 
 static void SendAcksTask(DPS_Node* node)
 {
-    DPS_PublicationAck* ack;
+    PublicationAck* ack;
 
     DPS_DBGTRACE();
 
@@ -928,7 +958,7 @@ static void SendAcksTask(DPS_Node* node)
             OnNetSendComplete(node, (struct sockaddr*)&ack->destAddr.inaddr, ack->bufs, A_SIZEOF(ack->bufs), ret);
         }
         node->ackQueue.first = ack->next;
-        FreePubAck(ack);
+        free(ack);
     }
     node->ackQueue.last = NULL;
 }
@@ -1145,11 +1175,13 @@ static DPS_Status DecodePublication(DPS_Node* node, DPS_Buffer* buffer, const st
      * We have no reason to hold onto a node for multicast publishers
      */
     if (!multicast) {
+        LockNode(node);
         ret = AddRemoteNode(node, &pub->sender, UINT16_MAX, &pubNode);
         if (ret == DPS_ERR_EXISTS) {
             DPS_DBGPRINT("Updating existing node\n");
             ret = DPS_OK;
         }
+        UnlockNode(node);
         if (ret != DPS_OK) {
             goto Exit;
         }
@@ -1199,9 +1231,13 @@ Exit:
      */
     if (ret == DPS_ERR_INVALID) {
         DPS_ERRPRINT("Deleteing bad publisher\n");
+        LockNode(node);
         DeleteRemoteNode(node, pubNode);
+        UnlockNode(node);
     }
+    LockNode(node);
     FreePublication(node, pub);
+    UnlockNode(node);
     return ret;
 }
 
@@ -1302,7 +1338,6 @@ static void SendSubsTask(DPS_Node* node)
         }
         remote->outbound.checkForUpdates = DPS_FALSE;
         if (now > remote->expires) {
-            DPS_PRINT("Expired node\n");
             SendUnsubscribe(node, remote);
             DPS_DBGPRINT("Remote node has expired - deleting\n");
             DeleteRemoteNode(node, remote);
@@ -1439,7 +1474,9 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_Buffer* buffer, const s
         return ret;
     }
     AddrSetPort(&senderAddr, addr, port);
+    LockNode(node);
     ret = AddRemoteNode(node, &senderAddr, ttl, &remote);
+    UnlockNode(node);
     if (ret != DPS_OK) {
         if (ret != DPS_ERR_EXISTS) {
             DPS_BitVectorFree(interests);
@@ -1454,6 +1491,7 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_Buffer* buffer, const s
          */
         syncRequested = DPS_TRUE;
     }
+    LockNode(node);
     if (ttl == 0) {
         DeleteRemoteNode(node, remote);
     } else {
@@ -1461,7 +1499,14 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_Buffer* buffer, const s
             remote->outbound.sync = DPS_TRUE;
         }
         ret = UpdateInboundInterests(node, remote, interests, needs, !syncReceived);
+        /*
+         * Check if application waiting for a completion callback
+         */
+        if (remote->completion) {
+            RemoteCompletion(node, remote, DPS_OK);
+        }
     }
+    UnlockNode(node);
     /*
      * Schedule background tasks
      */
@@ -1618,8 +1663,8 @@ static void FreeNode(DPS_Node* node)
     DPS_BitVectorFree(node->scratch.needs);
     DPS_HistoryFree(&node->history);
 
-    uv_cond_destroy(&node->bgComplete);
-    uv_mutex_destroy(&node->nodeLock);
+    uv_mutex_destroy(&node->nodeMutex);
+    uv_mutex_destroy(&node->condMutex);
     uv_mutex_destroy(&node->history.lock);
 
     assert(!uv_loop_alive(node->loop));
@@ -1707,14 +1752,11 @@ DPS_Status DPS_StartNode(DPS_Node* node, int mcast, int tcpPort)
     r = uv_async_init(node->loop, &node->bgHandler, RunBackgroundTasks);
     assert(!r);
     /*
-     * For signaling completion of a background task
-     */
-    r = uv_cond_init(&node->bgComplete);
-    assert(!r);
-    /*
      * Mutex for protecting the node
      */
-    r = uv_mutex_init(&node->nodeLock);
+    r = uv_mutex_init(&node->condMutex);
+    assert(!r);
+    r = uv_mutex_init(&node->nodeMutex);
     assert(!r);
     r = uv_mutex_init(&node->history.lock);
     assert(!r);
@@ -1825,6 +1867,26 @@ DPS_Publication* DPS_CreatePublication(DPS_Node* node)
     return pub;
 }
 
+DPS_Publication* DPS_CopyPublication(const DPS_Publication* pub)
+{
+    DPS_Publication* copy;
+    if (!pub->node) {
+        return NULL;
+    }
+    if (pub->flags & PUB_FLAG_LOCAL) {
+        return NULL;
+    }
+    copy = calloc(1, sizeof(DPS_Publication));
+    if (!copy) {
+        return NULL;
+    }
+    copy->pubId = pub->pubId;
+    copy->serialNumber = pub->serialNumber;
+    copy->node = pub->node;
+    copy->flags = PUB_FLAG_IS_COPY;
+    return copy;
+}
+
 DPS_Status DPS_InitPublication(DPS_Publication* pub, char* const* topics, size_t numTopics, DPS_AcknowledgementHandler handler)
 {
     size_t i;
@@ -1836,6 +1898,12 @@ DPS_Status DPS_InitPublication(DPS_Publication* pub, char* const* topics, size_t
     }
     if (!node->loop) {
         return DPS_ERR_NOT_STARTED;
+    }
+    /*
+     * Check publication can be initialized
+     */
+    if ((pub->flags & PUB_FLAG_IS_COPY) || pub->bf) {
+        return DPS_ERR_INVALID;
     }
     /*
      * Must have at least one topic
@@ -1908,11 +1976,8 @@ DPS_Status DPS_Publish(DPS_Publication* pub, uint8_t* payload, size_t len, int16
         UpdateTTLBasis(node);
     }
     UnlockNode(node);
-    if (SendPubs(node, pub)) {
-        return WaitForTask(node, SEND_PUBS_TASK, 1000);
-    } else {
-        return DPS_OK;
-    }
+    SendPubs(node, pub);
+    return DPS_OK;
 }
 
 DPS_Status DPS_DestroyPublication(DPS_Publication* pub, uint8_t** payload)
@@ -1930,7 +1995,7 @@ DPS_Status DPS_DestroyPublication(DPS_Publication* pub, uint8_t** payload)
     /*
      * Maybe destroying an uninitialized publication
      */
-    if (!node) {
+    if (!node || (pub->flags & PUB_FLAG_IS_COPY)) {
         free(pub);
         return DPS_OK;
     }
@@ -1949,133 +2014,120 @@ DPS_Status DPS_DestroyPublication(DPS_Publication* pub, uint8_t** payload)
     return DPS_OK;
 }
 
-DPS_Status DPS_Join(DPS_Node* node, DPS_NodeAddress* addr)
+#define LINK_TTL  5
+
+DPS_Status DPS_Link(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnLinkComplete cb, void* data)
 {
     DPS_Status ret = DPS_OK;
     RemoteNode* remote = NULL;
     uint16_t ttl = UINT16_MAX;
 
     DPS_DBGTRACE();
-    if (!addr || !node) {
+    if (!addr || !node || !cb) {
         return DPS_ERR_NULL;
     }
     LockNode(node);
     ret = AddRemoteNode(node, addr, ttl, &remote);
-    if (remote) {
-        remote->joined = DPS_TRUE;
-        if (ret != DPS_ERR_EXISTS) {
-            remote->outbound.sync = DPS_TRUE;
-            remote->inbound.sync = DPS_TRUE;
-        }
+    if (ret != DPS_OK && ret != DPS_ERR_EXISTS) {
+        UnlockNode(node);
+        return ret;
     }
-    UnlockNode(node);
-    if (ret == DPS_OK) {
-        if (SendSubs(node, remote)) {
-            /*
-             * Wait for the subscription exchange to complete
-             */
-            ret = WaitForTask(node, SEND_SUBS_TASK, 1000);
-        }
-    } else if (ret == DPS_ERR_EXISTS) {
-        DPS_ERRPRINT("Node at %s already joined\n", NodeAddressText(addr));
-        ret = DPS_OK;
-    }
-    return ret;
-}
-
-DPS_Status DPS_Leave(DPS_Node* node, DPS_NodeAddress* addr)
-{
-    DPS_Status ret;
-    RemoteNode* remote;
-
-    DPS_DBGTRACE();
-    LockNode(node);
-    remote = LookupRemoteNode(node, (struct sockaddr*)&addr->inaddr);
-    if (remote && remote->joined) {
-        remote->expires = uv_hrtime();
-        ret = DPS_OK;
-    } else {
-        ret = DPS_ERR_MISSING;
-    }
-    UnlockNode(node);
-    if (ret == DPS_OK) {
-        SendSubs(node, remote);
-    }
-    return ret;
-}
-
-DPS_Status DPS_DestroyPublicationAck(DPS_PublicationAck* ack)
-{
-    DPS_PublicationAck* prev = NULL;
-    DPS_PublicationAck* freeList;
-    DPS_Node* node = ack ? ack->node : NULL;
-
-    if (!node) {
-        return DPS_ERR_NULL;
-    }
-    if (!ack->appOwned) {
-        return DPS_ERR_INVALID;
-    }
-    LockNode(node);
     /*
-     * App has given up ownership
+     * Remote may already exist due to incoming data
      */
-    ack->appOwned = DPS_FALSE;
-    /*
-     * If the ack is on the free list is can be freed now otherwise it will be free after the ack has been sent
-     */
-    for (freeList = node->ackQueue.freeList; freeList != NULL; freeList = freeList->next) {
-        if (ack == freeList) {
-            break;
-        }
-        prev = freeList;
+    if (remote->linked) {
+        DPS_ERRPRINT("Node at %s already linked\n", NodeAddressText(addr));
+        UnlockNode(node);
+        return ret;
     }
-    if (freeList) {
-        if (prev) {
-            prev->next = ack->next;
-        } else {
-            node->ackQueue.freeList = ack->next;
-        }
-        free(ack);
+    /*
+     * Operations must be serialized
+     */
+    if (remote->completion) {
+        UnlockNode(node);
+        return DPS_ERR_BUSY;
+    }
+    remote->linked = DPS_TRUE;
+    remote->outbound.sync = DPS_TRUE;
+    if (ret == DPS_OK) {
+        remote->inbound.sync = DPS_TRUE;
+    }
+    remote->completion = AllocCompletion(LINK_OP, data, LINK_TTL, cb);
+    if (!remote->completion) {
+        DeleteRemoteNode(node, remote);
+        UnlockNode(node);
+        return DPS_ERR_RESOURCES;
     }
     UnlockNode(node);
+    SendSubs(node, remote);
     return DPS_OK;
 }
 
-DPS_PublicationAck* DPS_CreatePublicationAck(const DPS_Publication* pub)
+DPS_Status DPS_Unlink(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnUnlinkComplete cb, void* data)
 {
-    DPS_PublicationAck* ack;
+    RemoteNode* remote;
 
-    if (!IsValidPub(pub)) {
-        return NULL;
+    DPS_DBGTRACE();
+    if (!addr || !node || !cb) {
+        return DPS_ERR_NULL;
     }
-    ack = AllocPubAck(pub->node, &pub->pubId, pub->serialNumber);
-    if (!ack) {
-        return NULL;
+    LockNode(node);
+    remote = LookupRemoteNode(node, (struct sockaddr*)&addr->inaddr);
+    if (!remote || !remote->linked) {
+        UnlockNode(node);
+        return DPS_ERR_MISSING;
     }
-    ack->appOwned = DPS_TRUE;
-    return ack;
+    /*
+     * Operations must be serialized
+     */
+    if (remote->completion) {
+        UnlockNode(node);
+        return DPS_ERR_BUSY;
+    }
+    /*
+     * Expiring the remote node will cause it to be deleted after the
+     * subscriptions are updated. When the remote node is removed
+     * the completion callback will be called.
+     */
+    remote->expires = uv_hrtime();
+    remote->completion = AllocCompletion(UNLINK_OP, data, LINK_TTL, cb);
+    if (!remote->completion) {
+        DeleteRemoteNode(node, remote);
+        UnlockNode(node);
+        return DPS_ERR_RESOURCES;
+    }
+    UnlockNode(node);
+    SendSubs(node, remote);
+    return DPS_OK;
 }
 
-DPS_Status DPS_AckPublication(DPS_PublicationAck* ack, uint8_t* payload, size_t len)
+DPS_Status DPS_AckPublication(const DPS_Publication* pub, uint8_t* payload, size_t len)
 {
     DPS_Status ret;
     DPS_NodeAddress* addr = NULL;
-    DPS_Node* node = ack ? ack->node : NULL;
+    DPS_Node* node = pub ? pub->node : NULL;
+    PublicationAck* ack;
 
     DPS_DBGTRACE();
 
     if (!node) {
         return DPS_ERR_NULL;
     }
-    ret = DPS_LookupPublisher(&node->history, &ack->pubId, ack->serialNumber, &addr);
+    if (pub->flags & PUB_FLAG_LOCAL) {
+        return DPS_ERR_INVALID;
+    }
+    ret = DPS_LookupPublisher(&node->history, &pub->pubId, pub->serialNumber, &addr);
     if (ret != DPS_OK) {
         return ret;
     }
     if (!addr) {
         return DPS_ERR_NO_ROUTE;
     }
-    DPS_DBGPRINT("Queueing acknowledgement for %s/%d to %s\n", DPS_UUIDToString(&ack->pubId), ack->serialNumber, NodeAddressText(addr));
+    DPS_DBGPRINT("Queueing acknowledgement for %s/%d to %s\n", DPS_UUIDToString(&pub->pubId), pub->serialNumber, NodeAddressText(addr));
+    ack = AllocPubAck(&pub->pubId, pub->serialNumber);
+    if (!ack) {
+        return DPS_ERR_RESOURCES;
+    }
     return QueuePublicationAck(node, ack, payload, len, addr);
 }
 
@@ -2206,57 +2258,65 @@ static void RunBackgroundTasks(uv_async_t* handle)
 
     DPS_DBGTRACE();
 
-    while (node->tasks) {
-        LockNode(node);
-        if (node->tasks & SEND_SUBS_TASK) {
-            node->tasks &= ~SEND_SUBS_TASK;
-            SendSubsTask(node);
-        } else if (node->tasks & SEND_PUBS_TASK) {
-            node->tasks &= ~SEND_PUBS_TASK;
-            SendPubsTask(node);
-        } else if (node->tasks & SEND_ACKS_TASK) {
-            node->tasks &= ~SEND_ACKS_TASK;
-            SendAcksTask(node);
-        } else if (node->tasks & STOP_NODE_TASK) {
-            node->tasks &= ~STOP_NODE_TASK;
-            StopNodeTask(node);
-        }
-        /*
-         * TODO - the task is not complete until all of the packets have
-         * been sent - may not be necessary but needs more investigation
-         */
-        uv_cond_broadcast(&node->bgComplete);
-        UnlockNode(node);
+    /*
+     * TODO - may need to break some tasks into subtasks,
+     * for example limit the number of subs or pubs on each
+     * iteration so the node lock doesn't get held for too long.
+     */
+    LockNode(node);
+    if (node->tasks & SEND_ACKS_TASK) {
+        node->tasks &= ~SEND_ACKS_TASK;
+        SendAcksTask(node);
+    } else if (node->tasks & SEND_PUBS_TASK) {
+        node->tasks &= ~SEND_PUBS_TASK;
+        SendPubsTask(node);
+    } else if (node->tasks & SEND_SUBS_TASK) {
+        node->tasks &= ~SEND_SUBS_TASK;
+        SendSubsTask(node);
+    } else if (node->tasks & STOP_NODE_TASK) {
+        node->tasks &= ~STOP_NODE_TASK;
+        StopNodeTask(node);
     }
+    if (node->tasks) {
+        uv_async_send(&node->bgHandler);
+    }
+    UnlockNode(node);
 }
 
+#define MAX_HOST_LEN    256  /* Per RFC 1034/1035 */
+#define MAX_SERVICE_LEN  16  /* Per RFC 6335 section 5.1 */
+
 typedef struct {
-    int ok;
-    const char* host;
-    const char* service;
-    DPS_NodeAddress addr;
-    uv_mutex_t* mutex;
-    uv_cond_t cond;
+    DPS_Node* node;
+    DPS_OnResolveAddressComplete cb;
+    void* data;
     uv_getaddrinfo_t info;
+    char host[MAX_HOST_LEN];
+    char service[MAX_SERVICE_LEN];
 } ResolverInfo;
 
 static void GetAddrInfoCB(uv_getaddrinfo_t* req, int status, struct addrinfo* res)
 {
     ResolverInfo* resolver = (ResolverInfo*)req->data;
     if (status == 0) {
+        DPS_NodeAddress addr;
         if (res->ai_family == AF_INET6) {
-            memcpy(&resolver->addr.inaddr, res->ai_addr, sizeof(struct sockaddr_in6));
+            memcpy(&addr.inaddr, res->ai_addr, sizeof(struct sockaddr_in6));
         } else {
-            memcpy(&resolver->addr.inaddr, res->ai_addr, sizeof(struct sockaddr_in));
+            memcpy(&addr.inaddr, res->ai_addr, sizeof(struct sockaddr_in));
         }
-        resolver->ok = DPS_TRUE;
+        resolver->cb(resolver->node, &addr, resolver->data);
         uv_freeaddrinfo(res);
     } else {
         DPS_ERRPRINT("uv_getaddrinfo failed %s\n", uv_err_name(status));
+        resolver->cb(resolver->node, NULL, resolver->data);
     }
-    uv_mutex_lock(resolver->mutex);
-    uv_cond_signal(&resolver->cond);
-    uv_mutex_unlock(resolver->mutex);
+    free(resolver);
+}
+
+static void FreeHandle(uv_handle_t* handle)
+{
+    free(handle);
 }
 
 static void AsyncResolveAddress(uv_async_t* async)
@@ -2276,83 +2336,76 @@ static void AsyncResolveAddress(uv_async_t* async)
     r = uv_getaddrinfo(async->loop, &resolver->info, GetAddrInfoCB, resolver->host, resolver->service, &hints);
     if (r) {
         DPS_ERRPRINT("uv_getaddrinfo call error %s\n", uv_err_name(r));
-        uv_mutex_lock(resolver->mutex);
-        uv_cond_signal(&resolver->cond);
-        uv_mutex_unlock(resolver->mutex);
+        resolver->cb(resolver->node, NULL, resolver->data);
+        free(resolver);
     }
+    uv_close((uv_handle_t*)async, FreeHandle);
 }
 
-static void FreeHandle(uv_handle_t* handle)
+DPS_Status DPS_ResolveAddress(DPS_Node* node, const char* host, const char* service, DPS_OnResolveAddressComplete cb, void* data)
 {
-    free(handle);
-}
-
-DPS_NodeAddress* DPS_ResolveAddress(DPS_Node* node, const char* host, const char* service)
-{
-    int r;
     uv_async_t* async;
-    DPS_NodeAddress* addr = NULL;
     ResolverInfo* resolver;
 
     DPS_DBGTRACE();
 
     if (!node->loop) {
         DPS_ERRPRINT("Cannot resolve address - node has not been started\n");
-        return NULL;
+        return DPS_ERR_INVALID;
     }
-    async = malloc(sizeof(uv_async_t));
-    if (!async) {
-        return NULL;
-    }
-    resolver = calloc(1, sizeof(ResolverInfo));
-    if (!resolver) {
-        free(async);
-        return NULL;
+    if (!service || !cb) {
+        return DPS_ERR_NULL;
     }
     if (!host) {
         host = "localhost";
     }
-    resolver->host = host;
-    resolver->service = service;
-    resolver->ok = DPS_FALSE;
-    resolver->mutex = &node->nodeLock;
+    async = malloc(sizeof(uv_async_t));
+    if (!async) {
+        return DPS_ERR_RESOURCES;
+    }
+    resolver = calloc(1, sizeof(ResolverInfo));
+    if (!resolver) {
+        free(async);
+        return DPS_ERR_RESOURCES;
+    }
+    strncpy(resolver->host, host, sizeof(resolver->host));
+    strncpy(resolver->service, service, sizeof(resolver->service));
+    resolver->node = node;
+    resolver->cb = cb;
+    resolver->data = data;
     /*
      * Async callback
      */
     if (uv_async_init(node->loop, async, AsyncResolveAddress)) {
         free(async);
-        return NULL;
+        free(resolver);
+        return DPS_ERR_RESOURCES;
     }
     async->data = resolver;
-    /*
-     * Condition variable for signaling completion
-     */
-    r = uv_cond_init(&resolver->cond);
-    assert(!r);
-    /*
-     * This runs address resolution on the node loop
-     */
-    uv_mutex_lock(resolver->mutex);
-    if (uv_async_send(async) == 0) {
-        uv_cond_wait(&resolver->cond, resolver->mutex);
-        if (resolver->ok) {
-            addr = malloc(sizeof(DPS_NodeAddress));
-            if (addr) {
-                memcpy(addr, &resolver->addr, sizeof(DPS_NodeAddress));
-            }
-        }
+    if (uv_async_send(async)) {
+        free(async);
+        free(resolver);
+        return DPS_ERR_FAILURE;
+    } else {
+        return DPS_OK;
     }
-    uv_mutex_unlock(resolver->mutex);
-    uv_close((uv_handle_t*)async, FreeHandle);
-    uv_cond_destroy(&resolver->cond);
-    free(resolver);
-
-    return addr;
 }
 
 const char* DPS_GetAddressText(DPS_NodeAddress* addr)
 {
     return NodeAddressText(addr);
+}
+
+DPS_NodeAddress* DPS_CreateAddress()
+{
+    return calloc(1, sizeof(DPS_NodeAddress));
+}
+
+void DPS_CopyAddress(DPS_NodeAddress* dest, const DPS_NodeAddress* src)
+{
+    if (dest && src) {
+        *dest = *src;
+    }
 }
 
 void DPS_DestroyAddress(DPS_NodeAddress* addr)

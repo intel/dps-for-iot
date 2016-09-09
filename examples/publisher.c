@@ -6,6 +6,7 @@
 #include <dps_dbg.h>
 #include <bitvec.h>
 #include <dps.h>
+#include <dps_synchronous.h>
 #include <uv.h>
 
 #define MAX_TOPICS 64
@@ -159,7 +160,7 @@ int main(int argc, char** argv)
     uv_loop_t* loop;
     uv_tty_t tty;
     const char* host = NULL;
-    const char* connectPort = NULL;
+    int linkPort = 0;
     int wait = DPS_FALSE;
     int ttl = 0;
     char* msg = NULL;
@@ -169,12 +170,7 @@ int main(int argc, char** argv)
     DPS_Debug = 0;
 
     while (--argc) {
-        if (strcmp(*arg, "-p") == 0) {
-            ++arg;
-            if (!--argc) {
-                goto Usage;
-            }
-            connectPort = *arg++;
+        if (IntArg("-p", &arg, &argc, &linkPort, 1, UINT16_MAX)) {
             continue;
         }
         if (strcmp(*arg, "-h") == 0) {
@@ -223,7 +219,7 @@ int main(int argc, char** argv)
     /*
      * Disable multicast publications if we have an explicit destination
      */
-    if (host || connectPort) {
+    if (linkPort) {
         mcast = DPS_MCAST_PUB_DISABLED;
     }
 
@@ -234,15 +230,11 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    if (host || connectPort) {
-        addr = DPS_ResolveAddress(node, host, connectPort);
-        if (!addr) {
-            DPS_ERRPRINT("Failed to resolve %s/%s\n", host ? host : "<localhost>", connectPort);
-            return 1;
-        }
-        ret = DPS_Join(node, addr);
+    if (linkPort) {
+        addr = DPS_CreateAddress();
+        ret = DPS_LinkTo(node, host, linkPort, addr);
         if (ret != DPS_OK) {
-            DPS_ERRPRINT("DPS_Join failed: %s\n", DPS_ErrTxt(ret));
+            DPS_ERRPRINT("DPS_LinkTo returned %s\n", DPS_ErrTxt(ret));
             return 1;
         }
     }
@@ -254,7 +246,6 @@ int main(int argc, char** argv)
             DPS_ERRPRINT("Failed to create publication - error=%d\n", ret);
             return 1;
         }
-        usleep(1000);
         ret = DPS_Publish(currentPub, msg, msg ? strlen(msg) + 1 : 0, ttl, NULL);
         if (ret == DPS_OK) {
             DPS_PRINT("Pub UUID %s\n", DPS_UUIDToString(DPS_PublicationGetUUID(currentPub)));
@@ -262,8 +253,7 @@ int main(int argc, char** argv)
             DPS_ERRPRINT("Failed to publish topics - error=%d\n", ret);
         }
         if (addr) {
-            usleep(1000);
-            //DPS_Leave(node, addr);
+            DPS_UnlinkFrom(node, addr);
             DPS_DestroyAddress(addr);
         }
         if (!wait) {
