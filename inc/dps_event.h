@@ -17,16 +17,23 @@ DPS_Event* DPS_CreateEvent();
 
 /**
  * Destroy an event and free resources
+ *
+ * @param event   The event to destroy
  */
 void DPS_DestroyEvent(DPS_Event* event);
 
 /**
- * Set the event data pointer
+ * Set the event application data pointer
+ *
+ * @param event   The event to set an application data pointer on
+ * @param data    The data pointer to set
  */
 void DPS_SetEventData(DPS_Event* event, void* data);
 
 /**
- * Get the event data pointer
+ * Get the event application data pointer
+ *
+ * @param event   The event to get the application data pointer from
  */
 void* DPS_GetEventData(const DPS_Event* event);
 
