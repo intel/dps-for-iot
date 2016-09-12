@@ -6,6 +6,10 @@
 #include <uv.h>
 #include <dps_internal.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define COAP_OVER_UDP   0
 #define COAP_OVER_TCP   1
 
@@ -134,5 +138,9 @@ DPS_Status CoAP_Compose(int protocol, uv_buf_t* bufs, size_t numBufs, uint8_t co
  * Print a CoAP option to stdout
  */
 void CoAP_DumpOpt(const CoAP_Option* opt);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

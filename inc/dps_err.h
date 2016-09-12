@@ -1,6 +1,10 @@
 #ifndef _DPS_ERR_H
 #define _DPS_ERR_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef int DPS_Status;
 
 /**
@@ -30,5 +34,9 @@ typedef int DPS_Status;
 #define DPS_ERR_UNRESOLVED        20 /**< Name resolution failed */
 
 const char* DPS_ErrTxt(DPS_Status s);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

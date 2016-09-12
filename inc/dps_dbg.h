@@ -7,6 +7,10 @@
 #include <assert.h>
 #include <uv.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 extern int DPS_Debug;
 
 #define DPS_DBG_TIME   ((uint32_t)((uv_hrtime() / 1000000) & 0xFFFFFFF))
@@ -35,6 +39,10 @@ extern int DPS_Debug;
 #define DPS_DEBUG_CONTROL(dbg) static int __DPS_DebugControl = dbg
 #else
 #define DPS_DEBUG_CONTROL(dbg) __attribute__((__unused__))static int __DPS_DebugControl = dbg
+#endif
+
+#ifdef __cplusplus
+}
 #endif
 
 #endif

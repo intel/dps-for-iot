@@ -5,6 +5,10 @@
 #include <dps_internal.h>
 #include <uv.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct _DPS_MulticastReceiver DPS_MulticastReceiver;
 
 /**
@@ -120,5 +124,8 @@ DPS_Status DPS_NetSend(DPS_Node* node, uv_buf_t* bufs, size_t numBufs, const str
  */
 const char* DPS_NetAddrText(const struct sockaddr* addr);
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

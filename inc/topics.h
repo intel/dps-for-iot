@@ -4,6 +4,10 @@
 #include <bitvec.h>
 #include <dps_internal.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 
 /**
  * Add a topic to a Bloom filter.  A topic has the general form "A<sep>B<sep>C..."
@@ -55,5 +59,9 @@ DPS_Status DPS_MatchTopicString(const char* pubTopic, const char* subTopic, cons
  * @return DPS_OK or an error
  */
 DPS_Status DPS_MatchTopicList(char* const* pubs, size_t numPubs, char* const* subs, size_t numSubs, const char* separators, int* match);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

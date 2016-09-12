@@ -3,6 +3,10 @@
 
 #include <dps.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * Synchronous helper APIs that wrap the asynchronous versions
  */
@@ -27,5 +31,9 @@ DPS_Status DPS_LinkTo(DPS_Node* node, const char* host, uint16_t port, DPS_NodeA
  * @param addr  The address of the remote node to unlink
  */
 DPS_Status DPS_UnlinkFrom(DPS_Node* node, DPS_NodeAddress* addr);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

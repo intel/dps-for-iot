@@ -5,6 +5,10 @@
 #include <dps_err.h>
 #include <dps.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * Opaque type for an event
  */
@@ -63,5 +67,9 @@ DPS_Status DPS_WaitForEvent(DPS_Event* event);
  * @return  The status passed to DPS_SignalEvent() or DPS_ERR_TIMEOUT if the call timed out.
  */
 DPS_Status DPS_TimedWaitForEvent(DPS_Event* event, uint16_t timeout);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -5,6 +5,10 @@
 #include <stddef.h>
 #include <dps_internal.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * Opaque type for bit vector and Bloom Filter operations
  */
@@ -294,5 +298,9 @@ DPS_BitVector* DPS_CountVectorToUnion(DPS_CountVector* cv);
 DPS_BitVector* DPS_CountVectorToIntersection(DPS_CountVector* cv);
 
 void DPS_CountVectorDump(DPS_CountVector* cv);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

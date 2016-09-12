@@ -5,6 +5,10 @@
 #include <stddef.h>
 #include <dps_internal.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 DPS_Status CBOR_EncodeUint(DPS_Buffer* buffer, uint64_t n);
 
 DPS_Status CBOR_EncodeInt(DPS_Buffer* buffer, int64_t i);
@@ -96,5 +100,9 @@ DPS_Status CBOR_DecodeString(DPS_Buffer* buffer, char** data, size_t* size);
  * equal to the length passed in the call to CBOR_EncodeBytes().
  */
 DPS_Status CBOR_FixupLength(DPS_Buffer* buffer, size_t origSize, size_t newSizcons);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

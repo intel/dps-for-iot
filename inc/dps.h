@@ -7,6 +7,10 @@
 #include <dps_err.h>
 #include <dps_uuid.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define A_SIZEOF(a)  (sizeof(a) / sizeof((a)[0]))
 
 #define DPS_TRUE  1
@@ -380,5 +384,9 @@ void DPS_CopyAddress(DPS_NodeAddress* dest, const DPS_NodeAddress* src);
  * Frees resources associated with an address
  */
 void DPS_DestroyAddress(DPS_NodeAddress* addr);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -6,6 +6,10 @@
 #include <dps_internal.h>
 #include <dps_uuid.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct _DPS_PubHistory {
     struct {
         uint32_t sn;
@@ -69,5 +73,9 @@ int DPS_PublicationIsStale(DPS_History* history, DPS_UUID* pubId, uint32_t seria
  *         DPS_ERR_MISSING if no sender was found in the history record
  */
 DPS_Status DPS_LookupPublisher(DPS_History* history, const DPS_UUID* pubId, uint32_t serialNumber, DPS_NodeAddress** addr);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

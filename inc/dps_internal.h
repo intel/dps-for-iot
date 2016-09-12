@@ -3,6 +3,10 @@
 
 #include <dps.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * Address type
  */
@@ -56,5 +60,9 @@ DPS_Status DPS_BufferInit(DPS_Buffer* buffer, uint8_t* storage, size_t size);
  * Print the current subscriptions
  */
 void DPS_DumpSubscriptions(DPS_Node* node);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
