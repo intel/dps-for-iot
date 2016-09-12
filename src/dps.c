@@ -1318,7 +1318,7 @@ static DPS_Status SendUnsubscribe(DPS_Node* node, RemoteNode* remote)
 
 static void SendSubsTask(DPS_Node* node)
 {
-    DPS_Status ret;
+    DPS_Status ret = DPS_OK;
     RemoteNode* remote;
     RemoteNode* remoteNext;
     uint64_t now = uv_hrtime();
@@ -1352,6 +1352,7 @@ static void SendSubsTask(DPS_Node* node)
             if (ret != DPS_OK) {
                 DeleteRemoteNode(node, remote);
                 DPS_ERRPRINT("Failed to send subscription request %s\n", DPS_ErrTxt(ret));
+                ret = DPS_OK;
                 continue;
             }
         }
@@ -2264,6 +2265,9 @@ static void RunBackgroundTasks(uv_async_t* handle)
      * iteration so the node lock doesn't get held for too long.
      */
     LockNode(node);
+    /*
+     * The tasks are ordered according to priority
+     */
     if (node->tasks & SEND_ACKS_TASK) {
         node->tasks &= ~SEND_ACKS_TASK;
         SendAcksTask(node);

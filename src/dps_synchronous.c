@@ -87,7 +87,7 @@ DPS_Status DPS_UnlinkFrom(DPS_Node* node, DPS_NodeAddress* addr)
     }
     ret = DPS_Unlink(node, addr, OnUnlinked, event);
     if (ret == DPS_OK) {
-        ret = DPS_TimedWaitForEvent(event, 5000);
+        ret = DPS_WaitForEvent(event);
     }
     DPS_DestroyEvent(event);
     return ret;
