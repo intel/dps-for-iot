@@ -12,6 +12,7 @@
 #include <cbor.h>
 #include <network.h>
 #include "dps_history.h"
+#include "dps_internal.h"
 
 /*
  * Debug control for this module
@@ -21,9 +22,6 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
 #define _MIN_(x, y)  (((x) < (y)) ? (x) : (y))
 
-
-#define SECS_TO_NS(t)   ((uint64_t)(t) * 1000000000ull)
-#define NS_TO_SECS(t)   ((uint32_t)((t) / 1000000000ull))
 
 static const char DPS_SubscriptionURI[] = "dps/sub";
 static const char DPS_PublicationURI[] = "dps/pub";
@@ -102,7 +100,7 @@ typedef struct _DPS_Publication {
     uint8_t checkToSend;            /* TRUE if this publication should be checked to send */
     uint8_t ackRequested;           /* TRUE if an ack was requested by the publisher */
     int16_t ttl;                    /* Remaining time-to-live in seconds */
-    uint32_t serialNumber;          /* Serial number for this publication */
+    uint32_t sequenceNum;          /* Serial number for this publication */
     uint8_t* payload;
     size_t len;
     DPS_AcknowledgementHandler handler;
@@ -119,7 +117,7 @@ typedef struct _DPS_Publication {
 typedef struct _PublicationAck {
     uv_buf_t bufs[3];
     DPS_NodeAddress destAddr;
-    uint32_t serialNumber;
+    uint32_t sequenceNum;
     DPS_UUID pubId;
     struct _PublicationAck* next;
 } PublicationAck;
@@ -235,7 +233,7 @@ static void DumpPubs(DPS_Node* node)
         DPS_Publication* pub;
         DPS_PRINT("Node %d:\n", node->port);
         for (pub = node->publications; pub != NULL; pub = pub->next) {
-            DPS_PRINT("  %s(%d) %s ttl=%d\n", DPS_UUIDToString(&pub->pubId), pub->serialNumber, pub->flags & PUB_FLAG_RETAINED ? "RETAINED" : "", pub->ttl);
+            DPS_PRINT("  %s(%d) %s ttl=%d\n", DPS_UUIDToString(&pub->pubId), pub->sequenceNum, pub->flags & PUB_FLAG_RETAINED ? "RETAINED" : "", pub->ttl);
         }
     }
 }
@@ -300,9 +298,9 @@ const DPS_UUID* DPS_PublicationGetUUID(const DPS_Publication* pub)
     return IsValidPub(pub) ? &pub->pubId : NULL;
 }
 
-uint32_t DPS_PublicationGetSerialNumber(const DPS_Publication* pub)
+uint32_t DPS_PublicationGetSequenceNum(const DPS_Publication* pub)
 {
-    return IsValidPub(pub) ? pub->serialNumber : 0;
+    return IsValidPub(pub) ? pub->sequenceNum : 0;
 }
 
 static void AddrSetPort(DPS_NodeAddress* dest, const struct sockaddr* addr, uint16_t port)
@@ -399,6 +397,7 @@ static void RemoteCompletion(DPS_Node* node, RemoteNode* remote, DPS_Status stat
     free(cpn);
 }
 
+#ifndef NDEBUG
 static int IsValidRemoteNode(DPS_Node* node, RemoteNode* remote)
 {
     RemoteNode* r = node->remoteNodes;
@@ -412,10 +411,10 @@ static int IsValidRemoteNode(DPS_Node* node, RemoteNode* remote)
 
     return DPS_FALSE;
 }
+#endif
 
 static RemoteNode* DeleteRemoteNode(DPS_Node* node, RemoteNode* remote)
 {
-    DPS_Status ret;
     RemoteNode* next;
 
     DPS_DBGTRACE();
@@ -437,13 +436,15 @@ static RemoteNode* DeleteRemoteNode(DPS_Node* node, RemoteNode* remote)
         prev->next = next;
     }
     if (remote->inbound.interests) {
-        ret = DPS_CountVectorDel(node->interests, remote->inbound.interests);
-        assert(ret == DPS_OK);
+        if (DPS_CountVectorDel(node->interests, remote->inbound.interests) != DPS_OK) {
+            assert(!"Count error");
+        }
         DPS_BitVectorFree(remote->inbound.interests);
     }
     if (remote->inbound.needs) {
-        ret = DPS_CountVectorDel(node->needs, remote->inbound.needs);
-        assert(ret == DPS_OK);
+        if (DPS_CountVectorDel(node->needs, remote->inbound.needs) != DPS_OK) {
+            assert(!"Count error");
+        }
         DPS_BitVectorFree(remote->inbound.needs);
     }
     DPS_BitVectorFree(remote->outbound.interests);
@@ -580,7 +581,7 @@ static OnOpCompletion* AllocCompletion(OpType op, void* data, uint16_t ttl, void
         cpn->op = op;
         cpn->data = data;
         cpn->on.cb = cb;
-        cpn->timeout = uv_hrtime() + SECS_TO_NS(ttl);
+        cpn->timeout = uv_hrtime() + DPS_SECS_TO_NS(ttl);
     }
     return cpn;
 }
@@ -593,7 +594,7 @@ static DPS_Status AddRemoteNode(DPS_Node* node, DPS_NodeAddress* addr, uint16_t 
     RemoteNode* remote = LookupRemoteNode(node, (struct sockaddr*)&addr->inaddr);
     if (remote) {
         *remoteOut = remote;
-        remote->expires = uv_hrtime() + SECS_TO_NS(ttl);
+        remote->expires = uv_hrtime() + DPS_SECS_TO_NS(ttl);
         return DPS_ERR_EXISTS;
     }
     /*
@@ -610,7 +611,7 @@ static DPS_Status AddRemoteNode(DPS_Node* node, DPS_NodeAddress* addr, uint16_t 
     DPS_DBGPRINT("Adding new remote node %s\n", NodeAddressText(addr));
     remote->addr.inaddr = addr->inaddr;
     remote->next = node->remoteNodes;
-    remote->expires = uv_hrtime() + SECS_TO_NS(ttl);
+    remote->expires = uv_hrtime() + DPS_SECS_TO_NS(ttl);
     node->remoteNodes = remote;
     *remoteOut = remote;
     return DPS_OK;
@@ -619,7 +620,7 @@ static DPS_Status AddRemoteNode(DPS_Node* node, DPS_NodeAddress* addr, uint16_t 
 static uint32_t UpdateTTLBasis(DPS_Node* node)
 {
     uint64_t now = uv_hrtime();
-    uint32_t elapsedSeconds = NS_TO_SECS(now - node->ttlBasis);
+    uint32_t elapsedSeconds = DPS_NS_TO_SECS(now - node->ttlBasis);
     node->ttlBasis = now;
     return elapsedSeconds;
 }
@@ -716,7 +717,7 @@ static DPS_Status UpdatePubHistory(DPS_Node* node, DPS_Publication* pub)
 {
     DPS_Status ret = DPS_OK;
     if (!(pub->flags & PUB_FLAG_HISTORY)) {
-        ret = DPS_AppendPubHistory(&node->history, &pub->pubId, pub->serialNumber, pub->ackRequested ? &pub->sender : NULL);
+        ret = DPS_UpdatePubHistory(&node->history, &pub->pubId, pub->sequenceNum, pub->ttl, pub->ackRequested ? &pub->sender : NULL);
         pub->flags |= PUB_FLAG_HISTORY;
     }
     return ret;
@@ -764,7 +765,7 @@ static DPS_Status SendPublication(DPS_Node* node, DPS_Publication* pub, DPS_BitV
     CBOR_EncodeUint16(&payload, node->port);
     CBOR_EncodeInt16(&payload, pub->ttl);
     CBOR_EncodeBytes(&payload, (uint8_t*)&pub->pubId, sizeof(pub->pubId));
-    CBOR_EncodeUint(&payload, pub->serialNumber);
+    CBOR_EncodeUint(&payload, pub->sequenceNum);
     CBOR_EncodeBoolean(&payload, pub->ackRequested);
 
     ret = DPS_BitVectorSerialize(bf, &payload);
@@ -815,22 +816,22 @@ static DPS_Status SendMatchingPubToSub(DPS_Node* node, DPS_Publication* pub, Rem
     if (!SameAddr(&pub->sender, (struct sockaddr*)&sub->addr)) {
         DPS_BitVector* pubBV = PubSubMatch(node, pub, sub);
         if (pubBV) {
-            DPS_DBGPRINT("Sending pub %d to %s\n", pub->serialNumber, RemoteNodeAddressText(sub));
+            DPS_DBGPRINT("Sending pub %d to %s\n", pub->sequenceNum, RemoteNodeAddressText(sub));
             return SendPublication(node, pub, pubBV, sub);
         }
-        DPS_DBGPRINT("Rejected pub %d for %s\n", pub->serialNumber, RemoteNodeAddressText(sub));
+        DPS_DBGPRINT("Rejected pub %d for %s\n", pub->sequenceNum, RemoteNodeAddressText(sub));
     }
     return DPS_OK;
 }
 
-static PublicationAck* AllocPubAck(const DPS_UUID* pubId, uint32_t serialNumber)
+static PublicationAck* AllocPubAck(const DPS_UUID* pubId, uint32_t sequenceNum)
 {
     PublicationAck* ack = calloc(1, sizeof(PublicationAck));
     if (!ack) {
         return NULL;
     }
     ack->pubId = *pubId;
-    ack->serialNumber = serialNumber;
+    ack->sequenceNum = sequenceNum;
     return ack;
 }
 
@@ -843,7 +844,7 @@ static DPS_Status QueuePublicationAck(DPS_Node* node, PublicationAck* ack, uint8
 
     DPS_DBGTRACE();
 
-    assert(ack->serialNumber != 0);
+    assert(ack->sequenceNum != 0);
 
     if (!node->netListener) {
         return DPS_ERR_NETWORK;
@@ -859,7 +860,7 @@ static DPS_Status QueuePublicationAck(DPS_Node* node, PublicationAck* ack, uint8
         return ret;
     }
     CBOR_EncodeBytes(&payload, (uint8_t*)&ack->pubId, sizeof(DPS_UUID));
-    CBOR_EncodeUint32(&payload, ack->serialNumber);
+    CBOR_EncodeUint32(&payload, ack->sequenceNum);
     if (ret == DPS_OK) {
         CBOR_EncodeBytes(&payload, data, len);
         ret = CoAP_Compose(COAP_OVER_TCP, ack->bufs, A_SIZEOF(ack->bufs), COAP_CODE(COAP_REQUEST, COAP_PUT), opts, A_SIZEOF(opts), &payload);
@@ -885,7 +886,8 @@ static DPS_Status DecodeAcknowledgment(DPS_Node* node, DPS_Buffer* buffer)
 {
     DPS_Status ret;
     DPS_Publication* pub;
-    uint32_t serialNumber;
+    uint32_t sn;
+    uint32_t sequenceNum;
     DPS_UUID* pubId;
     DPS_NodeAddress* addr;
     uint8_t* payload;
@@ -900,11 +902,11 @@ static DPS_Status DecodeAcknowledgment(DPS_Node* node, DPS_Buffer* buffer)
     if (len != sizeof(DPS_UUID)) {
         return DPS_ERR_INVALID;
     }
-    ret = CBOR_DecodeUint32(buffer, &serialNumber);
+    ret = CBOR_DecodeUint32(buffer, &sequenceNum);
     if (ret != DPS_OK) {
         return ret;
     }
-    if (serialNumber == 0) {
+    if (sequenceNum == 0) {
         return DPS_ERR_INVALID;
     }
     ret = CBOR_DecodeBytes(buffer, &payload, &len);
@@ -916,7 +918,7 @@ static DPS_Status DecodeAcknowledgment(DPS_Node* node, DPS_Buffer* buffer)
      * See if this is an ACK for a local publication
      */
     for (pub = node->publications; pub != NULL; pub = pub->next) {
-        if (pub->handler && (pub->serialNumber == serialNumber) && SameUUID(&pub->pubId, pubId)) {
+        if (pub->handler && (pub->sequenceNum == sequenceNum) && SameUUID(&pub->pubId, pubId)) {
             break;
         }
     }
@@ -933,11 +935,11 @@ static DPS_Status DecodeAcknowledgment(DPS_Node* node, DPS_Buffer* buffer)
     /*
      * Look for in the history record for somewhere to forward the ACK
      */
-    ret = DPS_LookupPublisher(&node->history, pubId, serialNumber, &addr);
-    if ((ret == DPS_OK) && addr) {
-        PublicationAck* ack = AllocPubAck(pubId, serialNumber);
+    ret = DPS_LookupPublisher(&node->history, pubId, &sn, &addr);
+    if ((ret == DPS_OK) && (sequenceNum <= sn) && addr) {
+        PublicationAck* ack = AllocPubAck(pubId, sequenceNum);
         if (ack) {
-            DPS_DBGPRINT("Forwarding acknowledgement for %s/%d to %s\n", DPS_UUIDToString(pubId), serialNumber, NodeAddressText(addr));
+            DPS_DBGPRINT("Forwarding acknowledgement for %s/%d to %s\n", DPS_UUIDToString(pubId), sequenceNum, NodeAddressText(addr));
             ret = QueuePublicationAck(node, ack, payload, len, addr);
         } else {
             ret = DPS_ERR_RESOURCES;
@@ -1098,9 +1100,9 @@ static DPS_Status DecodePublication(DPS_Node* node, DPS_Buffer* buffer, const st
     DPS_Status ret;
     RemoteNode* pubNode = NULL;
     uint16_t port;
-    DPS_Publication* pub;
+    DPS_Publication* pub = NULL;
     DPS_UUID* pubId;
-    uint32_t serialNumber;
+    uint32_t sequenceNum;
     int16_t ttl;
     uint8_t* payload;
     int ackRequested;
@@ -1124,7 +1126,7 @@ static DPS_Status DecodePublication(DPS_Node* node, DPS_Buffer* buffer, const st
         ret = DPS_ERR_INVALID;
         goto Exit;
     }
-    ret = CBOR_DecodeUint32(buffer, &serialNumber);
+    ret = CBOR_DecodeUint32(buffer, &sequenceNum);
     if (ret != DPS_OK) {
         goto Exit;
     }
@@ -1132,7 +1134,7 @@ static DPS_Status DecodePublication(DPS_Node* node, DPS_Buffer* buffer, const st
     if (ret != DPS_OK) {
         goto Exit;
     }
-    if (DPS_PublicationIsStale(&node->history, pubId, serialNumber)) {
+    if (DPS_PublicationIsStale(&node->history, pubId, sequenceNum)) {
         DPS_DBGPRINT("Publication is stale\n");
         return DPS_OK;
     }
@@ -1144,7 +1146,7 @@ static DPS_Status DecodePublication(DPS_Node* node, DPS_Buffer* buffer, const st
         /*
          * Retained publications can only be updated with newer revisions
          */
-        if (serialNumber < pub->serialNumber) {
+        if (sequenceNum < pub->sequenceNum) {
             DPS_ERRPRINT("Publication is stale");
             return DPS_ERR_STALE;
         }
@@ -1167,7 +1169,7 @@ static DPS_Status DecodePublication(DPS_Node* node, DPS_Buffer* buffer, const st
         pub->node = node;
     }
     pub->ttl = ttl;
-    pub->serialNumber = serialNumber;
+    pub->sequenceNum = sequenceNum;
     pub->ackRequested = ackRequested;
     pub->flags = PUB_FLAG_PUBLISH;
     AddrSetPort(&pub->sender, addr, port);
@@ -1235,9 +1237,11 @@ Exit:
         DeleteRemoteNode(node, pubNode);
         UnlockNode(node);
     }
-    LockNode(node);
-    FreePublication(node, pub);
-    UnlockNode(node);
+    if (pub) {
+        LockNode(node);
+        FreePublication(node, pub);
+        UnlockNode(node);
+    }
     return ret;
 }
 
@@ -1882,7 +1886,7 @@ DPS_Publication* DPS_CopyPublication(const DPS_Publication* pub)
         return NULL;
     }
     copy->pubId = pub->pubId;
-    copy->serialNumber = pub->serialNumber;
+    copy->sequenceNum = pub->sequenceNum;
     copy->node = pub->node;
     copy->flags = PUB_FLAG_IS_COPY;
     return copy;
@@ -1971,7 +1975,7 @@ DPS_Status DPS_Publish(DPS_Publication* pub, uint8_t* payload, size_t len, int16
     pub->len = len;
     pub->flags |= PUB_FLAG_PUBLISH;
     pub->ttl = ttl >= 0 ? ttl : -1;
-    ++pub->serialNumber;
+    ++pub->sequenceNum;
 
     if ((pub->ttl > 0) && !node->ttlBasis) {
         UpdateTTLBasis(node);
@@ -2107,6 +2111,7 @@ DPS_Status DPS_AckPublication(const DPS_Publication* pub, uint8_t* payload, size
     DPS_Status ret;
     DPS_NodeAddress* addr = NULL;
     DPS_Node* node = pub ? pub->node : NULL;
+    uint32_t sequenceNum;
     PublicationAck* ack;
 
     DPS_DBGTRACE();
@@ -2117,15 +2122,15 @@ DPS_Status DPS_AckPublication(const DPS_Publication* pub, uint8_t* payload, size
     if (pub->flags & PUB_FLAG_LOCAL) {
         return DPS_ERR_INVALID;
     }
-    ret = DPS_LookupPublisher(&node->history, &pub->pubId, pub->serialNumber, &addr);
+    ret = DPS_LookupPublisher(&node->history, &pub->pubId, &sequenceNum, &addr);
     if (ret != DPS_OK) {
         return ret;
     }
     if (!addr) {
         return DPS_ERR_NO_ROUTE;
     }
-    DPS_DBGPRINT("Queueing acknowledgement for %s/%d to %s\n", DPS_UUIDToString(&pub->pubId), pub->serialNumber, NodeAddressText(addr));
-    ack = AllocPubAck(&pub->pubId, pub->serialNumber);
+    DPS_DBGPRINT("Queueing acknowledgement for %s/%d to %s\n", DPS_UUIDToString(&pub->pubId), pub->sequenceNum, NodeAddressText(addr));
+    ack = AllocPubAck(&pub->pubId, pub->sequenceNum);
     if (!ack) {
         return DPS_ERR_RESOURCES;
     }
@@ -2213,7 +2218,6 @@ DPS_Status DPS_Subscribe(DPS_Subscription* sub, DPS_PublicationHandler handler)
 DPS_Status DPS_DestroySubscription(DPS_Subscription* sub)
 {
     DPS_Node* node;
-    DPS_Status ret;
 
     if (!IsValidSub(sub)) {
         return DPS_ERR_MISSING;
@@ -2238,10 +2242,12 @@ DPS_Status DPS_DestroySubscription(DPS_Subscription* sub)
     /*
      * This remove this subscriptions contributions to the interests and needs
      */
-    ret = DPS_CountVectorDel(node->interests, sub->bf);
-    assert(ret == DPS_OK);
-    ret = DPS_CountVectorDel(node->needs, sub->needs);
-    assert(ret == DPS_OK);
+    if (DPS_CountVectorDel(node->interests, sub->bf) != DPS_OK) {
+        assert(!"Count error");
+    }
+    if (DPS_CountVectorDel(node->needs, sub->needs) != DPS_OK) {
+        assert(!"Count error");
+    }
     UnlockNode(node);
 
     DPS_DBGPRINT("Unsubscribing from %zu topics\n", sub->numTopics);
@@ -2432,6 +2438,11 @@ DPS_Status DPS_SetPublicationData(DPS_Publication* pub, void* data)
 void* DPS_GetPublicationData(const DPS_Publication* pub)
 {
     return pub ?  pub->userData : NULL;
+}
+
+DPS_Node* DPS_GetPublicationNode(const DPS_Publication* pub)
+{
+    return pub ? pub->node : NULL;
 }
 
 DPS_Status DPS_SetSubscriptionData(DPS_Subscription* sub, void* data)

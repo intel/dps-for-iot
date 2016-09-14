@@ -156,15 +156,15 @@ DPS_NetListener* DPS_NetStartListening(DPS_Node* node, int port, DPS_OnReceive c
 
 uint16_t DPS_NetGetListenerPort(DPS_NetListener* listener)
 {
-    int ret;
     struct sockaddr_in6 addr;
     int len = sizeof(addr);
 
     if (!listener) {
         return 0;
     }
-    ret = uv_tcp_getsockname(&listener->socket, (struct sockaddr*)&addr, &len);
-    assert(ret == 0);
+    if (uv_tcp_getsockname(&listener->socket, (struct sockaddr*)&addr, &len)) {
+        return 0;
+    }
     DPS_DBGPRINT("Listener port = %d\n", ntohs(addr.sin6_port));
     return ntohs(addr.sin6_port);
 }

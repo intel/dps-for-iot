@@ -73,7 +73,7 @@ static int AddTopics(char* topicList, char** msg, int* keep, int* ttl)
 
 static void OnAck(DPS_Publication* pub, uint8_t* data, size_t len)
 {
-    DPS_PRINT("Ack for pub UUID %s(%d)\n", DPS_UUIDToString(DPS_PublicationGetUUID(pub)), DPS_PublicationGetSerialNumber(pub));
+    DPS_PRINT("Ack for pub UUID %s(%d)\n", DPS_UUIDToString(DPS_PublicationGetUUID(pub)), DPS_PublicationGetSequenceNum(pub));
     if (len) {
         DPS_PRINT("    %.*s\n", (int)len, data);
     }
@@ -119,7 +119,7 @@ static void ReadStdin(DPS_Node* node)
         }
         ret = DPS_Publish(currentPub, msg, msg ? strlen(msg) : 0, ttl, NULL);
         if (ret == DPS_OK) {
-            DPS_PRINT("Pub UUID %s(%d)\n", DPS_UUIDToString(DPS_PublicationGetUUID(currentPub)), DPS_PublicationGetSerialNumber(currentPub));
+            DPS_PRINT("Pub UUID %s(%d)\n", DPS_UUIDToString(DPS_PublicationGetUUID(currentPub)), DPS_PublicationGetSequenceNum(currentPub));
         } else {
             DPS_ERRPRINT("Failed to publish %s error=%s\n", lineBuf, DPS_ErrTxt(ret));
         }
@@ -153,12 +153,9 @@ static int IntArg(char* opt, char*** argp, int* argcp, int* val, uint32_t min, u
 
 int main(int argc, char** argv)
 {
-    int r;
     DPS_Status ret;
     DPS_Node* node;
     char** arg = argv + 1;
-    uv_loop_t* loop;
-    uv_tty_t tty;
     const char* host = NULL;
     int linkPort = 0;
     int wait = DPS_FALSE;

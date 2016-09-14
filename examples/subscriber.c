@@ -9,6 +9,7 @@
 #include <bitvec.h>
 #include <uv.h>
 
+static int quiet = DPS_FALSE;
 static int sendAck = DPS_FALSE;
 
 static uint8_t AckMsg[] = "This is an ACK";
@@ -16,20 +17,22 @@ static uint8_t AckMsg[] = "This is an ACK";
 static void OnPubMatch(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* data, size_t len)
 {
     const DPS_UUID* pubId = DPS_PublicationGetUUID(pub);
-    uint32_t serialNumber = DPS_PublicationGetSerialNumber(pub);
+    uint32_t sn = DPS_PublicationGetSequenceNum(pub);
     size_t i;
     size_t numTopics = DPS_SubscriptionGetNumTopics(sub);
 
-    DPS_PRINT("Pub %s(%d) matches:\n    ", DPS_UUIDToString(pubId), serialNumber);
-    for (i = 0; i < numTopics; ++i) {
-        if (i) {
-            DPS_PRINT(" & ");
+    if (!quiet) {
+        DPS_PRINT("Pub %s(%d) matches:\n    ", DPS_UUIDToString(pubId), sn);
+        for (i = 0; i < numTopics; ++i) {
+            if (i) {
+                DPS_PRINT(" & ");
+            }
+            DPS_PRINT("%s", DPS_SubscriptionGetTopic(sub, i));
         }
-        DPS_PRINT("%s", DPS_SubscriptionGetTopic(sub, i));
-    }
-    DPS_PRINT("\n");
-    if (data) {
-        DPS_PRINT("%.*s\n", (int)len, data);
+        DPS_PRINT("\n");
+        if (data) {
+            DPS_PRINT("%.*s\n", (int)len, data);
+        }
     }
     if (sendAck) {
         DPS_Status ret = DPS_AckPublication(pub, AckMsg, sizeof(AckMsg));
@@ -105,6 +108,11 @@ int main(int argc, char** argv)
                 goto Usage;
             }
             host = *arg++;
+            continue;
+        }
+        if (strcmp(*arg, "-q") == 0) {
+            ++arg;
+            quiet = DPS_TRUE;
             continue;
         }
         if (strcmp(*arg, "-a") == 0) {

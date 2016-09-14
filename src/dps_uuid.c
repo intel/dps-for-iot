@@ -86,14 +86,26 @@ DPS_Status DPS_InitUUID()
  */
 void DPS_GenerateUUID(DPS_UUID* uuid)
 {
-    uint64_t* u = (uint64_t*)uuid;
     uint64_t* s = (uint64_t*)entropy.seeds;
     uint32_t s0 = entropy.seeds[0];
     entropy.seeds[0] = LEPRNG(entropy.seeds[1]);
     entropy.seeds[1] = LEPRNG(entropy.seeds[2]);
     entropy.seeds[2] = LEPRNG(entropy.seeds[3]);
     entropy.seeds[3] = LEPRNG(s0);
-    u[0] = s[0] ^ entropy.nonce[0];
-    u[1] = s[1] ^ entropy.nonce[1];
+    uuid->val64[0] = s[0] ^ entropy.nonce[0];
+    uuid->val64[1] = s[1] ^ entropy.nonce[1];
 }
 
+int DPS_UUIDCompare(const DPS_UUID* a, const DPS_UUID* b)
+{
+    int i;
+    for (i = 0; i < 4; ++i) {
+        if (a->val64[i] < b->val64[i]) {
+            return -1;
+        }
+        if (a->val64[i] > b->val64[i]) {
+            return 1;
+        }
+    }
+    return 0;
+}

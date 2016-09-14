@@ -11,12 +11,15 @@ else:
 
 optimize = False
 debug = True
+profile = False
 
 for key, val in ARGLIST:
     if key.lower() == 'define':
 	    env['CPPDEFINES'].append(val)
     elif (key == 'optimize' and val == 'true'):
         optimize = True
+    elif (key == 'profile' and val == 'true'):
+        profile = True
     elif (key == 'debug' and val == 'false'):
         debug = False
 
@@ -47,11 +50,16 @@ if env['PLATFORM'] == 'win32':
 
 elif env['PLATFORM'] == 'posix':
 
-    if debug == True:
-        env.Append(CFLAGS = ['-ggdb', '-DDPS_DEBUG'])
+    if profile == True:
+        env.Append(CFLAGS = ['-pg'])
+        env.Append(LINKFLAGS = ['-pg'])
 
     if optimize == True:
+        debug = False
         env.Append(CFLAGS = ['-O3', '-DNDEBUG'])
+
+    if debug == True:
+        env.Append(CFLAGS = ['-ggdb', '-DDPS_DEBUG'])
 
     # Where to find Python.h
     env['PY_CPPPATH'] = ['/usr/include/python2.7']

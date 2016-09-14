@@ -66,7 +66,7 @@ const DPS_UUID* DPS_PublicationGetUUID(const DPS_Publication* pub);
  *
  * @return The serial number or zero if the publication is invalid.
  */
-uint32_t DPS_PublicationGetSerialNumber(const DPS_Publication* pub);
+uint32_t DPS_PublicationGetSequenceNum(const DPS_Publication* pub);
 
 /**
  * Allocates space for a local DPS node.
@@ -137,7 +137,7 @@ DPS_Publication* DPS_CreatePublication(DPS_Node* node);
  * The copy is not useful for anything other than in a call to DPS_AckPublication() and should
  * be freed by calling DPS_DestroyPublcation() when no longer needed.
  *
- * The partial copy can be used with DPS_PublicationGetUUID() and DPS_PublicationGetSerialNumber()
+ * The partial copy can be used with DPS_PublicationGetUUID() and DPS_PublicationGetSequenceNum()
  *
  * @param pub  The publication to copy
  *
@@ -185,7 +185,7 @@ DPS_Status DPS_InitPublication(DPS_Publication* pub, char* const* topics, size_t
  * subscribers and then re-published whenever a new matching subscription is received.
  *
  * Call the accessor function DPS_PublicationGetUUID() to get the UUID for this publication.
- * Call the accessor function DPS_PublicationGetSerialNumber() to get the current serial number for this
+ * Call the accessor function DPS_PublicationGetSequenceNum() to get the current serial number for this
  * publication. The serial number is incremented each time DPS_Publish() is called for the same
  * publication.
  *
@@ -218,7 +218,7 @@ DPS_Status DPS_DestroyPublication(DPS_Publication* pub, uint8_t** oldPayload);
  * The publication handle is only valid within the body of this callback function. DPS_CopyPublication()
  * will make a partial copy of the publication that can be used later, for example to call DPS_AckPublication().
  *
- * The accessor functions DPS_PublicationGetUUID() and DPS_PublicationGetSerialNumber()
+ * The accessor functions DPS_PublicationGetUUID() and DPS_PublicationGetSequenceNum()
  * return information about the received publication.
  *
  * The accessor functions DPS_SubscriptionGetNumTopics() and DPS_SubscriptionGetTopic()
@@ -242,6 +242,15 @@ typedef void (*DPS_PublicationHandler)(DPS_Subscription* sub, const DPS_Publicat
  * @param len           The length of the payload
  */
 DPS_Status DPS_AckPublication(const DPS_Publication* pub, uint8_t* ackPayload, size_t len);
+
+/**
+ * Get the local node associated with a publication
+ *
+ * @param pub   A publication
+ *
+ * @return  Returns the local node associated with a publication
+ */
+DPS_Node* DPS_GetPublicationNode(const DPS_Publication* pub);
 
 /**
  * Allocate memory for a subscription and initialize topics

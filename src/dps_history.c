@@ -4,8 +4,9 @@
 #include <uv.h>
 #include <dps.h>
 #include <dps_dbg.h>
-#include <search.h>
+#include "dps_uuid.h"
 #include "dps_history.h"
+#include "dps_internal.h"
 
 /*
  * Debug control for this module
@@ -17,112 +18,305 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 /*
  * How long to keep publication history (in nanoseconds)
  */
-#define PUB_HISTORY_LIFETIME   (30ull * 1000000000ull)
+#define PUB_HISTORY_LIFETIME   DPS_SECS_TO_NS(10)
+
+static DPS_PubHistory* Find(const DPS_History* history, const DPS_UUID* pubId)
+{
+    DPS_PubHistory* curr = history->root;
+    while (curr) {
+        int cmp = DPS_UUIDCompare(pubId, &curr->pub.id);
+        if (cmp == 0) {
+            break;
+        }
+        if (cmp < 0) {
+            curr = curr->left;
+        } else {
+            curr = curr->right;
+        }
+    }
+    return curr;
+}
+
+static void DumpHistory(DPS_PubHistory* ph, int indent, const char* tag)
+{
+    static const char spaces[] = "                                                          ";
+    if (ph) {
+        DPS_PRINT("%.*s%s%s\n", indent, spaces, tag, DPS_UUIDToString(&ph->pub.id));
+        DumpHistory(ph->left, indent + 2, "L->");
+        DumpHistory(ph->right, indent + 2, "R->");
+        if (indent) {
+            assert(ph == ph->parent->left || ph == ph->parent->right);
+        }
+    }
+}
+
+void DPS_DumpHistory(DPS_History* history)
+{
+    DumpHistory(history->root, 0, "");
+}
+
+/*
+ * Adds a new node or returns an existing node
+ *
+ * UUIDs are random so statistically we expect the tree will be pretty balanced
+ */
+static DPS_PubHistory* Insert(DPS_History* history, DPS_PubHistory* add)
+{
+    DPS_PubHistory* curr = history->root;
+    DPS_PubHistory* parent = NULL;
+    int cmp;
+
+    while (curr) {
+        cmp = DPS_UUIDCompare(&add->pub.id, &curr->pub.id);
+        if (cmp == 0) {
+            break;
+        }
+        parent = curr;
+        if (cmp < 0) {
+            curr = curr->left;
+        } else {
+            curr = curr->right;
+        }
+    }
+    if (curr) {
+        return curr;
+    }
+    if (parent) {
+        if (cmp < 0) {
+            parent->left = add;
+        } else {
+            parent->right = add;
+        }
+        add->parent = parent;
+    } else {
+        history->root = add;
+    }
+    return add;
+}
+
+static void Remove(DPS_History* history, DPS_PubHistory* ph)
+{
+    DPS_PubHistory* repl;
+
+    if (ph->left && ph->right) {
+        /*
+         * Get element that will replace ph in the tree
+         *
+         * LSB of the UUID does not correlate with the location in the tree
+         * so it effectively become a random selection to go left or right
+         */
+        if (ph->pub.id.val[15] & 1) {
+            repl = ph->left;
+            while (repl->right) {
+                repl = repl->right;
+            }
+        } else {
+            repl = ph->right;
+            while (repl->left) {
+                repl = repl->left;
+            }
+        }
+        /*
+         * Remove the replacement element from the tree
+         */
+        Remove(history, repl);
+        repl->left = ph->left;
+        repl->right = ph->right;
+        if (repl->left) {
+            repl->left->parent = repl;
+        }
+        if (repl->right) {
+            repl->right->parent = repl;
+        }
+    } else {
+        repl = ph->left ? ph->left : ph->right;
+    }
+    /*
+     * Fix up parent pointers
+     */
+    if (repl) {
+        repl->parent = ph->parent;
+    }
+    if (ph->parent) {
+        if (ph->parent->left == ph) {
+            ph->parent->left = repl;
+        } else {
+            ph->parent->right = repl;
+        }
+    } else {
+        history->root = repl;
+    }
+}
+
+/*
+ * Link in according to expiration
+ */
+static void LinkPub(DPS_History* history, DPS_PubHistory* ph)
+{
+
+    assert(!ph->next && !ph->prev);
+
+    if (history->count == 0) {
+        assert(!history->latest);
+        history->soonest = history->latest = ph;
+        history->count = 1;
+        return;
+    }
+    /*
+     * Quick check in case this is the soonest
+     */
+    if (ph->expiration <= history->soonest->expiration) {
+        ph->next = history->soonest;
+        history->soonest->prev = ph;
+        history->soonest = ph;
+    } else {
+        DPS_PubHistory* h = history->latest;
+        /*
+         * Work back from latest
+         */
+        while (ph->expiration < h->expiration) {
+            h = h->prev;
+        }
+        ph->prev = h;
+        h->next = ph;
+        if (h == history->latest) {
+            history->latest = ph;
+        }
+    }
+    ++history->count;
+}
+
+static DPS_PubHistory* UnlinkPub(DPS_History* history, DPS_PubHistory* ph)
+{
+    if (ph->prev) {
+        ph->prev->next = ph->next;
+    } else {
+        assert(ph == history->soonest);
+        history->soonest = ph->next;
+    }
+    if (ph->next) {
+        ph->next->prev = ph->prev;
+    } else {
+        assert(ph == history->latest);
+        history->latest = ph->prev;
+    }
+    ph->next = NULL;
+    ph->prev = NULL;
+    --history->count;
+    return ph;
+}
+
+DPS_Status DPS_DeletePubHistory(DPS_History* history, DPS_UUID* pubId)
+{
+    DPS_PubHistory* ph;
+
+    ph = Find(history, pubId);
+    if (!ph) {
+        return DPS_ERR_MISSING;
+    }
+    assert(memcmp(&ph->pub.id, pubId, sizeof(DPS_UUID)) == 0);
+    UnlinkPub(history, ph);
+    Remove(history, ph);
+    free(ph);
+    return DPS_OK;
+}
 
 void DPS_FreshenHistory(DPS_History* history)
 {
     uv_mutex_lock(&history->lock);
     if (history->count > HISTORY_THRESHOLD) {
         uint64_t now = uv_hrtime();
-        DPS_PubHistory* ph = history->oldest;
-
-        while (ph) {
-            if (now < ph->expiration) {
+        while (history->soonest) {
+            DPS_PubHistory* ph = history->soonest;
+            assert(ph->prev == NULL);
+            /*
+             * Delete expired history records
+             */
+            if (now >= ph->expiration) {
+                UnlinkPub(history, ph);
+                Remove(history, ph);
+                free(ph);
+            } else {
                 break;
             }
-            history->oldest = ph->next;
-            free(ph);
-            --history->count;
-            ph = history->oldest;
-        }
-        if (!ph) {
-            history->newest = NULL;
         }
     }
     uv_mutex_unlock(&history->lock);
 }
 
-DPS_Status DPS_AppendPubHistory(DPS_History* history, DPS_UUID* pubId, uint32_t serialNumber, DPS_NodeAddress* addr)
+DPS_Status DPS_UpdatePubHistory(DPS_History* history, DPS_UUID* pubId, uint32_t sequenceNum, uint16_t ttl, DPS_NodeAddress* addr)
 {
     uint64_t now = uv_hrtime();
-    DPS_PubHistory* ph = calloc(1, sizeof(DPS_PubHistory));
+    DPS_PubHistory* phNew = calloc(1, sizeof(DPS_PubHistory));
+    DPS_PubHistory* ph;
 
-    if (!ph) {
+    if (!phNew) {
         return DPS_ERR_RESOURCES;
     }
-    ph->pub.id = *pubId;
-    ph->pub.sn = serialNumber;
+    phNew->pub.id = *pubId;
+
+    uv_mutex_lock(&history->lock);
+    ph = Insert(history, phNew);
+    if (ph != phNew) {
+        /*
+         * Updates existing history
+         */
+        free(phNew);
+        UnlinkPub(history, ph);
+    }
+    ph->pub.sn = sequenceNum;
     if (addr) {
         ph->pub.addr = *addr;
     }
-    ph->expiration = now + PUB_HISTORY_LIFETIME;
-
-    uv_mutex_lock(&history->lock);
-    if (history->newest) {
-        history->newest->next = ph;
-        history->newest = ph;
-    } else {
-        assert(!history->oldest);
-        assert(!history->count);
-        history->newest = history->oldest = ph;
-    }
-    ++history->count;
+    ph->expiration = now + DPS_SECS_TO_NS(ttl) + PUB_HISTORY_LIFETIME;
+    LinkPub(history, ph);
     uv_mutex_unlock(&history->lock);
     return DPS_OK;
 }
 
-int DPS_PublicationIsStale(DPS_History* history, DPS_UUID* pubId, uint32_t serialNumber)
+int DPS_PublicationIsStale(DPS_History* history, DPS_UUID* pubId, uint32_t sequenceNum)
 {
+    int stale = DPS_FALSE;
     DPS_PubHistory* ph;
 
     uv_mutex_lock(&history->lock);
-    ph = history->oldest;
-    /*
-     * TODO - for scalabililty nees to replace the linear search with a more efficient lookup 
-     */
-    while (ph) {
-        if ((ph->pub.sn == serialNumber) && (memcmp(&ph->pub.id, pubId, sizeof(pubId->val)) == 0)) {
-            uv_mutex_unlock(&history->lock);
-            return DPS_TRUE;
-        }
-        ph = ph->next;
+    ph = Find(history, pubId);
+    if (ph && (sequenceNum <= ph->pub.sn)) {
+        stale = DPS_TRUE;
     }
     uv_mutex_unlock(&history->lock);
-    return DPS_FALSE;
+    return stale;
 }
 
 void DPS_HistoryFree(DPS_History* history)
 {
-    DPS_PubHistory* ph = history->oldest;
+    DPS_PubHistory* ph = history->latest;
     while (ph) {
         DPS_PubHistory* next = ph->next;
         free(ph);
         ph = next;
     }
-    history->oldest = NULL;
-    history->newest = NULL;
+    history->latest = NULL;
+    history->soonest = NULL;
     history->count = 0;
 }
 
-DPS_Status DPS_LookupPublisher(DPS_History* history, const DPS_UUID* pubId, uint32_t serialNumber, DPS_NodeAddress** addr)
+DPS_Status DPS_LookupPublisher(DPS_History* history, const DPS_UUID* pubId, uint32_t* sequenceNum, DPS_NodeAddress** addr)
 {
+    DPS_Status ret;
     DPS_PubHistory* ph;
-    /*
-     * TODO - for scalabililty need to replace the linear search with a more efficient lookup 
-     */
-    *addr = NULL;
+
     uv_mutex_lock(&history->lock);
-    ph = history->oldest;
-    while (ph) {
-        if ((ph->pub.sn == serialNumber) && (memcmp(&ph->pub.id, pubId, sizeof(pubId->val)) == 0)) {
-            if (ph->pub.addr.inaddr.ss_family) {
-                *addr = &ph->pub.addr;
-            }
-            uv_mutex_unlock(&history->lock);
-            return DPS_OK;
-        }
-        ph = ph->next;
+    ph = Find(history, pubId);
+    if (ph && ph->pub.addr.inaddr.ss_family) {
+        *sequenceNum = ph->pub.sn;
+        *addr = &ph->pub.addr;
+        ret = DPS_OK;
+    } else {
+        *sequenceNum = 0;
+        *addr = NULL;
+        ret = DPS_ERR_MISSING;
     }
     uv_mutex_unlock(&history->lock);
-    return DPS_ERR_MISSING;
+    return ret;
 }
