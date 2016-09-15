@@ -12,16 +12,23 @@
 #include "dps_history.h"
 #include "dps_internal.h"
 
+#ifdef _WIN32
+#define SLEEP(t) Sleep(t)
+#else
 extern void usleep(int);
+#define SLEEP(t) usleep((t) * 1000)
+#endif
 
 extern void DPS_DumpHistory(DPS_History* history);
 
 static DPS_History history;
 
+//#define READABLE_UUIDS
 #define NUM_PUBS   1000
 
 int main()
 {
+    DPS_Status ret;
     int i = 0;
     int j;
     uint32_t sn;
@@ -31,7 +38,14 @@ int main()
 
     DPS_Debug = 1;
     addr.inaddr.ss_family = AF_INET6;
-    DPS_InitUUID();
+
+    ret = DPS_InitUUID();
+    if (ret != DPS_OK) {
+        DPS_PRINT("DPS_InitUUID failed\n");
+        return 1;
+    }
+
+    uv_mutex_init(&history.lock);
 
 #ifdef READABLE_UUIDS
     /* 
@@ -113,7 +127,7 @@ int main()
      * Wait a while - default timeout is 10 seconds
      */
     DPS_PRINT("Wait for history to expire\n");
-    usleep(12 * 1000000);
+    SLEEP(12 * 1000);
     /*
      * Expire the stale entries
      */

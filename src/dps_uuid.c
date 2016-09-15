@@ -44,11 +44,16 @@ static struct {
 #ifdef _WIN32
 DPS_Status DPS_InitUUID()
 {
-    uint32_t* n = (uint32_t*)entropy.nonce;
-    rand_s(n++);
-    rand_s(n++);
-    rand_s(n++);
-    rand_s(n++);
+    errno_t ret = 0;
+    int i;
+    uint32_t* n = (uint32_t*)&entropy;
+
+    for (i = 0; i < (sizeof(entropy) / sizeof(uint32_t)); ++i) {
+        ret = rand_s(n++);
+        if (ret) {
+            return DPS_ERR_FAILURE;
+        }
+    }
     return DPS_OK;
 }
 #else
