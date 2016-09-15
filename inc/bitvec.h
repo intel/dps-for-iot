@@ -87,14 +87,14 @@ void DPS_BitVectorFree(DPS_BitVector* bv);
  *
  * @param bv   An intialized bit vector
  */
-float DPS_BitVectorLoadFactor(const DPS_BitVector* bv);
+float DPS_BitVectorLoadFactor(DPS_BitVector* bv);
 
 /**
  * Returns the population count (number of bits set) of the bit vector.
  *
  * @param bv   An intialized bit vector
  */
-size_t DPS_BitVectorPopCount(const DPS_BitVector* bv);
+size_t DPS_BitVectorPopCount(DPS_BitVector* bv);
 
 /**
  * Generate a "fuzzy hash" (also called a "similarity preserving hash") of a bit vector. The hash has the additional
@@ -170,7 +170,7 @@ DPS_Status DPS_BitVectorUnion(DPS_BitVector* bvOut, DPS_BitVector* bv);
  *
  * @return  The success or failure of the operation
  */
-DPS_Status DPS_BitVectorSerialize(const DPS_BitVector* bv, DPS_Buffer* buffer);
+DPS_Status DPS_BitVectorSerialize(DPS_BitVector* bv, DPS_Buffer* buffer);
 
 /**
  * Maximum buffer space needed to serialize a bit vector.
@@ -179,7 +179,7 @@ DPS_Status DPS_BitVectorSerialize(const DPS_BitVector* bv, DPS_Buffer* buffer);
  *
  * @return  The maximum space needed to serialize a bit vector.
  */
-size_t DPS_BitVectorSerializeMaxSize(const DPS_BitVector* bv);
+size_t DPS_BitVectorSerializeMaxSize(DPS_BitVector* bv);
 
 /**
  * Deserialize an decompress a bit vector from a buffer
@@ -234,7 +234,7 @@ DPS_Status DPS_BitVectorSet(DPS_BitVector* bv, uint8_t* data, size_t len);
  * @param bv    The bit vector to dump
  * @param bits  If non-zero dump out the bit array
  */
-void DPS_BitVectorDump(const DPS_BitVector* bv, int bits);
+void DPS_BitVectorDump(DPS_BitVector* bv, int bits);
 
 /**
  * Allocates a count vector using the default values set by DPS_Configure()

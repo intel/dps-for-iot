@@ -133,7 +133,6 @@ int main()
                 DPS_PRINT("Pub history was not expired\n");
                 return 1;
             }
-            DPS_PRINT("Pub history %s expired\n", DPS_UUIDToString(&uuid[i]));
         }
     }
     DPS_HistoryFree(&history);

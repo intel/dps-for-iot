@@ -50,6 +50,9 @@ if env['PLATFORM'] == 'win32':
 
 elif env['PLATFORM'] == 'posix':
 
+    #gcc option  -mmsse4.2 is to enble generation on popcountq instruction
+    env.Append(CFLAGS = ['-ggdb', '-msse4.2'])
+
     if profile == True:
         env.Append(CFLAGS = ['-pg'])
         env.Append(LINKFLAGS = ['-pg'])
@@ -59,7 +62,7 @@ elif env['PLATFORM'] == 'posix':
         env.Append(CFLAGS = ['-O3', '-DNDEBUG'])
 
     if debug == True:
-        env.Append(CFLAGS = ['-ggdb', '-DDPS_DEBUG'])
+        env.Append(CFLAGS = ['-DDPS_DEBUG'])
 
     # Where to find Python.h
     env['PY_CPPPATH'] = ['/usr/include/python2.7']
