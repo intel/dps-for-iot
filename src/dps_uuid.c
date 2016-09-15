@@ -103,14 +103,17 @@ void DPS_GenerateUUID(DPS_UUID* uuid)
 
 int DPS_UUIDCompare(const DPS_UUID* a, const DPS_UUID* b)
 {
-    int i;
-    for (i = 0; i < 4; ++i) {
-        if (a->val64[i] < b->val64[i]) {
-            return -1;
-        }
-        if (a->val64[i] > b->val64[i]) {
-            return 1;
-        }
+    if (a->val64[0] < b->val64[0]) {
+        return -1;
+    }
+    if (a->val64[0] > b->val64[0]) {
+        return 1;
+    }
+    if (a->val64[1] < b->val64[1]) {
+        return -1;
+    }
+    if (a->val64[1] > b->val64[1]) {
+        return 1;
     }
     return 0;
 }

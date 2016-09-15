@@ -81,7 +81,7 @@ typedef count_t counter_t[CHUNK_SIZE];
 #define ROTL64(n, r)  (((n) << r) | ((n) >> (64 - r)))
 
 #ifdef _WIN32
-#define POPCOUNT(n)    __popcnt64((chunk_t)n)
+#define POPCOUNT(n)    (uint32_t)(__popcnt64((chunk_t)n))
 static inline uint32_t COUNT_TZ(uint64_t n)
 {
     uint32_t index;
@@ -229,7 +229,7 @@ int DPS_BitVectorIsClear(DPS_BitVector* bv)
 size_t DPS_BitVectorPopCount(DPS_BitVector* bv)
 {
     if (UNKNOWN_POPCOUNT(bv)) {
-        size_t popCount = 0;
+        uint32_t popCount = 0;
         size_t i;
         for (i = 0; i < NUM_CHUNKS(bv); ++i) {
             popCount += POPCOUNT(bv->bits[i]);
@@ -323,7 +323,7 @@ DPS_Status DPS_BitVectorFuzzyHash(DPS_BitVector* hash, DPS_BitVector* bv)
     size_t i;
     chunk_t s = 0;
     chunk_t p;
-    size_t popCount = 0;
+    uint32_t popCount = 0;
 
     if (!hash || !bv) {
         return DPS_ERR_NULL;
@@ -724,7 +724,7 @@ void DPS_BitVectorFill(DPS_BitVector* bv)
 {
     if (bv) {
         memset(bv->bits, 0xFF, bv->len / 8);
-        bv->popCount = bv->len;
+        bv->popCount = (uint32_t)bv->len;
     }
 }
 
@@ -743,7 +743,7 @@ void DPS_BitVectorComplement(DPS_BitVector* bv)
         bv->bits[i] = ~bv->bits[i];
     }
     if (bv->popCount) {
-        bv->popCount = bv->len - bv->popCount;
+        bv->popCount = (uint32_t)bv->len - bv->popCount;
     }
 }
 

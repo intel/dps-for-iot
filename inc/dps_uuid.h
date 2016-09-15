@@ -14,7 +14,7 @@ extern "C" {
 typedef struct {
     union {
         uint8_t val[16];
-        uint64_t val64[4];
+        uint64_t val64[2];
     };
 } DPS_UUID;
 
