@@ -108,6 +108,7 @@ struct _DPS_BitVector {
 struct _DPS_CountVector {
     size_t entries;
     size_t len;
+    DPS_BitVector* bvUnion;
     counter_t counts[1];
 };
 
@@ -241,10 +242,10 @@ size_t DPS_BitVectorPopCount(DPS_BitVector* bv)
 
 DPS_BitVector* DPS_BitVectorClone(DPS_BitVector* bv)
 {
-    DPS_BitVector* clone = AllocBV(bv->len);
+    size_t sz = sizeof(DPS_CountVector) + ((bv->len / CHUNK_SIZE) - 1) * sizeof(chunk_t);
+    DPS_BitVector* clone = malloc(sz);
     if (clone) {
-        memcpy(clone->bits, bv->bits, bv->len / 8);
-        clone->popCount = bv->popCount;
+        memcpy(clone, bv, sz);
     }
     return clone;
 }
@@ -827,7 +828,15 @@ static DPS_CountVector* AllocCV(size_t sz)
 
 DPS_CountVector* DPS_CountVectorAlloc()
 {
-    return AllocCV(config.bitLen);
+    DPS_CountVector* cv = AllocCV(config.bitLen);
+    if (cv) {
+        cv->bvUnion = AllocBV(config.bitLen);
+        if (!cv->bvUnion) {
+            free(cv);
+            cv = NULL;
+        }
+    }
+    return cv;
 }
 
 DPS_CountVector* DPS_CountVectorAllocFH()
@@ -854,16 +863,25 @@ DPS_Status DPS_CountVectorAdd(DPS_CountVector* cv, DPS_BitVector* bv)
     }
     for (i = 0; i < NUM_CHUNKS(bv); ++i) {
         count_t* count = cv->counts[i];
+        chunk_t bit = 1;
         chunk_t chunk = bv->bits[i];
+
+        if (cv->bvUnion) {
+            cv->bvUnion->bits[i] |= chunk;
+        }
         while (chunk) {
-            if (chunk & 1) {
-                (*count)++;
+            if (chunk & bit) {
+                ++(*count);
+                chunk ^= bit;
             }
-            chunk >>= 1;
+            bit <<= 1;
             ++count;
         }
     }
     ++cv->entries;
+    if (cv->bvUnion) {
+        INVALIDATE_POPCOUNT(cv->bvUnion);
+    }
     return DPS_OK;
 }
 
@@ -879,17 +897,27 @@ DPS_Status DPS_CountVectorDel(DPS_CountVector* cv, DPS_BitVector* bv)
     }
     for (i = 0; i < NUM_CHUNKS(bv); ++i) {
         count_t* count = cv->counts[i];
+        chunk_t bit = 1;
         chunk_t chunk = bv->bits[i];
+        chunk_t clear = 0;
+
         while (chunk) {
-            if (chunk & 1) {
-                if (!(*count)--) {
-                    DPS_ERRPRINT("CountVector is zero\n");
-                    return DPS_ERR_INVALID;
+            if (chunk & bit) {
+                assert(*count);
+                if (--(*count) == 0) {
+                    clear |= bit;
                 }
+                chunk ^= bit;
             }
-            chunk >>= 1;
+            bit <<= 1;
             ++count;
         }
+        if (cv->bvUnion) {
+            cv->bvUnion->bits[i] ^= clear;
+        }
+    }
+    if (cv->bvUnion) {
+        INVALIDATE_POPCOUNT(cv->bvUnion);
     }
     --cv->entries;
     return DPS_OK;
@@ -897,23 +925,11 @@ DPS_Status DPS_CountVectorDel(DPS_CountVector* cv, DPS_BitVector* bv)
 
 DPS_BitVector* DPS_CountVectorToUnion(DPS_CountVector* cv)
 {
-    DPS_BitVector* bv = AllocBV(cv->len);
-    if (bv) {
-        size_t i;
-        for (i = 0; i < NUM_CHUNKS(bv); ++i) {
-            chunk_t b = 1;
-            count_t* count = cv->counts[i];
-            chunk_t chunk = 0;
-            while (b) {
-                if (*count++) {
-                    chunk |= b;
-                }
-                b <<= 1;
-            }
-            bv->bits[i] = chunk;
-        }
+    if (!cv || !cv->bvUnion) {
+        return NULL;
+    } else {
+        return DPS_BitVectorClone(cv->bvUnion);
     }
-    return bv;
 }
 
 DPS_BitVector* DPS_CountVectorToIntersection(DPS_CountVector* cv)

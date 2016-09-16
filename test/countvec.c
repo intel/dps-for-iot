@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <bitvec.h>
+#include <dps_dbg.h>
 
 #define BITLEN  64
 
@@ -13,50 +14,70 @@ static void SetBits(DPS_BitVector* bv, uint8_t n)
     DPS_BitVectorSet(bv, buf, sizeof(buf));
 }
 
-int main(int argc, char** argv)
+static void TestAdd(DPS_CountVector* cv, uint8_t n)
 {
-    DPS_BitVector* bv;
+    DPS_BitVector* bv = DPS_BitVectorAlloc();
     DPS_BitVector* bvU;
     DPS_BitVector* bvI;
+
+    DPS_PRINT("Add %02x\n", n);
+    SetBits(bv, n);
+    DPS_CountVectorAdd(cv, bv);
+    DPS_CountVectorDump(cv);
+
+    DPS_PRINT("Union        ");
+    bvU = DPS_CountVectorToUnion(cv);
+    DPS_BitVectorDump(bvU, 1);
+    DPS_PRINT("Intersection ");
+    bvI = DPS_CountVectorToIntersection(cv);
+    DPS_BitVectorDump(bvI, 1);
+
+    DPS_BitVectorFree(bvI);
+    DPS_BitVectorFree(bvU);
+    DPS_BitVectorFree(bv);
+}
+
+static void TestDel(DPS_CountVector* cv, uint8_t n)
+{
+    DPS_BitVector* bv = DPS_BitVectorAlloc();
+    DPS_BitVector* bvU;
+    DPS_BitVector* bvI;
+
+    DPS_PRINT("Del %02x\n", n);
+    SetBits(bv, n);
+    DPS_CountVectorDel(cv, bv);
+    DPS_CountVectorDump(cv);
+
+    DPS_PRINT("Union        ");
+    bvU = DPS_CountVectorToUnion(cv);
+    DPS_BitVectorDump(bvU, 1);
+    DPS_PRINT("Intersection ");
+    bvI = DPS_CountVectorToIntersection(cv);
+    DPS_BitVectorDump(bvI, 1);
+
+    DPS_BitVectorFree(bvI);
+    DPS_BitVectorFree(bvU);
+    DPS_BitVectorFree(bv);
+}
+
+int main(int argc, char** argv)
+{
     DPS_CountVector* cv;
 
     DPS_Configure(BITLEN, 4);
 
-    bv = DPS_BitVectorAlloc();
     cv = DPS_CountVectorAlloc();
 
-    SetBits(bv, 0x01);
-    DPS_CountVectorAdd(cv, bv);
-    DPS_CountVectorDump(cv);
-    SetBits(bv, 0x80);
-    DPS_CountVectorAdd(cv, bv);
-    DPS_CountVectorDump(cv);
-    SetBits(bv, 0xFF);
-    DPS_CountVectorAdd(cv, bv);
-    DPS_CountVectorDump(cv);
+    TestAdd(cv, 0x01);
+    TestAdd(cv, 0x80);
+    TestAdd(cv, 0xFF);
 
-    SetBits(bv, 0xFF);
-    DPS_CountVectorDel(cv, bv);
-    DPS_CountVectorDump(cv);
+    TestDel(cv, 0xFF);
+    TestDel(cv, 0x01);
+    TestDel(cv, 0x80);
 
-    SetBits(bv, 0x01);
-    DPS_CountVectorDel(cv, bv);
-    SetBits(bv, 0x80);
-    DPS_CountVectorDel(cv, bv);
-    DPS_CountVectorDump(cv);
-
-    SetBits(bv, 0x01);
-    DPS_CountVectorAdd(cv, bv);
-    SetBits(bv, 0x03);
-    DPS_CountVectorAdd(cv, bv);
-
-    DPS_CountVectorDump(cv);
-
-    bvU = DPS_CountVectorToUnion(cv);
-    DPS_BitVectorDump(bvU, 1);
-
-    bvI = DPS_CountVectorToIntersection(cv);
-    DPS_BitVectorDump(bvI, 1);
+    TestAdd(cv, 0x01);
+    TestAdd(cv, 0x03);
 
     return 0;
 }

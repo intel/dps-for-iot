@@ -490,9 +490,6 @@ static DPS_Status UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, 
      * Inbound interests from the node we are updating are excluded from the outbound interests
      */
     if (destNode->inbound.interests) {
-        /*
-         * TODO- check if this could be optimized to avoid the Del/Add
-         */
         ret = DPS_CountVectorDel(node->interests, destNode->inbound.interests);
         if (ret != DPS_OK) {
             goto ErrExit;
@@ -502,9 +499,6 @@ static DPS_Status UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, 
         if (ret != DPS_OK) {
             goto ErrExit;
         }
-        /*
-         * TODO- check if this could be optimized to avoid the Del/Add
-         */
         ret = DPS_CountVectorDel(node->needs, destNode->inbound.needs);
         if (ret != DPS_OK) {
             goto ErrExit;
