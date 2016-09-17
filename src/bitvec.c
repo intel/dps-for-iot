@@ -67,18 +67,18 @@ typedef uint64_t chunk_t;
  * CountVectors are entirely internal so can be sized according to scalability requirements
  */
 #ifdef DPS_BIG_COUNTER
-typedef uint16_t count_t;
-#define CV_MAX UINT16_MAX
+typedef uint32_t count_t;
+#define CV_MAX UINT32_MAX
 #else
 typedef uint16_t count_t;
-#define CV_MAX UINT8_MAX
+#define CV_MAX UINT16_MAX
 #endif
 
 typedef count_t counter_t[CHUNK_SIZE];
 
 #define SET_BIT(a, b)  (a)[(b) >> 6] |= (1ull << ((b) & 0x3F))
 #define TEST_BIT(a, b) ((a)[(b) >> 6] & (1ull << ((b) & 0x3F)))
-#define ROTL64(n, r)  (((n) << r) | ((n) >> (64 - r)))
+#define ROTL64(n, r)   (((n) << r) | ((n) >> (64 - r)))
 
 #ifdef _WIN32
 #define POPCOUNT(n)    (uint32_t)(__popcnt64((chunk_t)n))
@@ -330,15 +330,17 @@ DPS_Status DPS_BitVectorFuzzyHash(DPS_BitVector* hash, DPS_BitVector* bv)
         return DPS_ERR_NULL;
     }
     assert(hash->len == FH_BITVECTOR_LEN);
-    /*
-     * Squash the bit vector into 64 bits
-     */
-    for (i = 0; i < NUM_CHUNKS(bv); ++i) {
-        chunk_t n = bv->bits[i];
-        popCount += POPCOUNT(n);
-        s |= n;
+    if (bv->popCount != 0) {
+        /*
+         * Squash the bit vector into 64 bits
+         */
+        for (i = 0; i < NUM_CHUNKS(bv); ++i) {
+            chunk_t n = bv->bits[i];
+            popCount += POPCOUNT(n);
+            s |= n;
+        }
+        bv->popCount = popCount;
     }
-    bv->popCount = popCount;
     if (popCount == 0) {
         DPS_BitVectorClear(hash);
         return DPS_OK;
@@ -383,14 +385,20 @@ DPS_Status DPS_BitVectorUnion(DPS_BitVector* bvOut, DPS_BitVector* bv)
 DPS_Status DPS_BitVectorIntersection(DPS_BitVector* bvOut, DPS_BitVector* bv1, DPS_BitVector* bv2)
 {
     size_t i;
+    chunk_t n = 0;
+
     if (!bvOut || !bv1 || !bv2) {
         return DPS_ERR_NULL;
     }
     assert(bvOut->len == bv1->len && bvOut->len == bv2->len);
     for (i = 0; i < NUM_CHUNKS(bv1); ++i) {
-        bvOut->bits[i] = bv1->bits[i] & bv2->bits[i];
+        n |= (bvOut->bits[i] = bv1->bits[i] & bv2->bits[i]);
     }
-    INVALIDATE_POPCOUNT(bvOut);
+    if (n) {
+        INVALIDATE_POPCOUNT(bvOut);
+    } else {
+        bvOut->popCount = 0;
+    }
     return DPS_OK;
 }
 
@@ -731,7 +739,7 @@ void DPS_BitVectorFill(DPS_BitVector* bv)
 
 void DPS_BitVectorClear(DPS_BitVector* bv)
 {
-    if (bv) {
+    if (bv->popCount != 0) {
         memset(bv->bits, 0, bv->len / 8);
         bv->popCount = 0;
     }
