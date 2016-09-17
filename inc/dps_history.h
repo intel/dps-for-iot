@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <uv.h>
 #include <dps_uuid.h>
 #include <dps_internal.h>
 
@@ -31,6 +32,7 @@ typedef struct _DPS_PubHistory {
  * list sorted by expiration.
  */
 typedef struct {
+   uv_loop_t* loop;         /* same loop as the node loop */
    uv_mutex_t lock;         /* mutex to protect the history struct */
    DPS_PubHistory* root;    /* Root of binary tree */
    DPS_PubHistory* latest;  /* Latest publication to expire */

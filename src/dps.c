@@ -60,6 +60,10 @@ typedef struct _RemoteNode {
     } outbound;
     DPS_NodeAddress addr;
     uint64_t expires;
+    /*
+     * Remote nodes are doubly linked into a ring
+     */
+    struct _RemoteNode* prev;
     struct _RemoteNode* next;
 } RemoteNode;
 
@@ -562,7 +566,7 @@ static RemoteNode* LookupRemoteNode(DPS_Node* node, const struct sockaddr* addr)
     return NULL;
 }
 
-static OnOpCompletion* AllocCompletion(OpType op, void* data, uint16_t ttl, void* cb)
+static OnOpCompletion* AllocCompletion(DPS_Node* node, OpType op, void* data, uint16_t ttl, void* cb)
 {
     OnOpCompletion* cpn;
 
@@ -571,7 +575,7 @@ static OnOpCompletion* AllocCompletion(OpType op, void* data, uint16_t ttl, void
         cpn->op = op;
         cpn->data = data;
         cpn->on.cb = cb;
-        cpn->timeout = uv_hrtime() + DPS_SECS_TO_NS(ttl);
+        cpn->timeout = uv_now(node->loop) + DPS_SECS_TO_MS(ttl);
     }
     return cpn;
 }
@@ -584,7 +588,7 @@ static DPS_Status AddRemoteNode(DPS_Node* node, DPS_NodeAddress* addr, uint16_t 
     RemoteNode* remote = LookupRemoteNode(node, (struct sockaddr*)&addr->inaddr);
     if (remote) {
         *remoteOut = remote;
-        remote->expires = uv_hrtime() + DPS_SECS_TO_NS(ttl);
+        remote->expires = uv_now(node->loop) + DPS_SECS_TO_MS(ttl);
         return DPS_ERR_EXISTS;
     }
     /*
@@ -601,7 +605,7 @@ static DPS_Status AddRemoteNode(DPS_Node* node, DPS_NodeAddress* addr, uint16_t 
     DPS_DBGPRINT("Adding new remote node %s\n", NodeAddressText(addr));
     remote->addr.inaddr = addr->inaddr;
     remote->next = node->remoteNodes;
-    remote->expires = uv_hrtime() + DPS_SECS_TO_NS(ttl);
+    remote->expires = uv_now(node->loop) + DPS_SECS_TO_MS(ttl);
     node->remoteNodes = remote;
     *remoteOut = remote;
     return DPS_OK;
@@ -609,8 +613,8 @@ static DPS_Status AddRemoteNode(DPS_Node* node, DPS_NodeAddress* addr, uint16_t 
 
 static uint32_t UpdateTTLBasis(DPS_Node* node)
 {
-    uint64_t now = uv_hrtime();
-    uint32_t elapsedSeconds = DPS_NS_TO_SECS(now - node->ttlBasis);
+    uint64_t now = uv_now(node->loop);
+    uint32_t elapsedSeconds = DPS_MS_TO_SECS(now - node->ttlBasis);
     node->ttlBasis = now;
     return elapsedSeconds;
 }
@@ -1332,7 +1336,7 @@ static void SendSubsTask(DPS_Node* node)
     DPS_Status ret = DPS_OK;
     RemoteNode* remote;
     RemoteNode* remoteNext;
-    uint64_t now = uv_hrtime();
+    uint64_t now = uv_now(node->loop);
 
     DPS_DBGTRACE();
 
@@ -1348,7 +1352,7 @@ static void SendSubsTask(DPS_Node* node)
             continue;
         }
         remote->outbound.checkForUpdates = DPS_FALSE;
-        if (now > remote->expires) {
+        if (now >= remote->expires) {
             SendUnsubscribe(node, remote);
             DPS_DBGPRINT("Remote node has expired - deleting\n");
             DeleteRemoteNode(node, remote);
@@ -1743,7 +1747,7 @@ DPS_Status DPS_StartNode(DPS_Node* node, int mcast, int tcpPort)
     if (!node) {
         return DPS_ERR_NULL;
     }
-    node->loop = calloc(1, sizeof(uv_loop_t));
+    node->history.loop = node->loop = calloc(1, sizeof(uv_loop_t));
     if (!node->loop) {
         free(node);
         return DPS_ERR_RESOURCES;
@@ -2064,7 +2068,7 @@ DPS_Status DPS_Link(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnLinkComplete cb
     if (ret == DPS_OK) {
         remote->inbound.sync = DPS_TRUE;
     }
-    remote->completion = AllocCompletion(LINK_OP, data, LINK_TTL, cb);
+    remote->completion = AllocCompletion(node, LINK_OP, data, LINK_TTL, cb);
     if (!remote->completion) {
         DeleteRemoteNode(node, remote);
         UnlockNode(node);
@@ -2101,8 +2105,8 @@ DPS_Status DPS_Unlink(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnUnlinkComplet
      * subscriptions are updated. When the remote node is removed
      * the completion callback will be called.
      */
-    remote->expires = uv_hrtime();
-    remote->completion = AllocCompletion(UNLINK_OP, data, LINK_TTL, cb);
+    remote->expires = uv_now(node->loop);
+    remote->completion = AllocCompletion(node, UNLINK_OP, data, LINK_TTL, cb);
     if (!remote->completion) {
         DeleteRemoteNode(node, remote);
         UnlockNode(node);

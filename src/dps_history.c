@@ -18,7 +18,7 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 /*
  * How long to keep publication history (in nanoseconds)
  */
-#define PUB_HISTORY_LIFETIME   DPS_SECS_TO_NS(10)
+#define PUB_HISTORY_LIFETIME   DPS_SECS_TO_MS(10)
 
 static DPS_PubHistory* Find(const DPS_History* history, const DPS_UUID* pubId)
 {
@@ -225,7 +225,10 @@ void DPS_FreshenHistory(DPS_History* history)
 {
     uv_mutex_lock(&history->lock);
     if (history->count > HISTORY_THRESHOLD) {
-        uint64_t now = uv_hrtime();
+        uint64_t now;
+
+        uv_update_time(history->loop);
+        now = uv_now(history->loop);
         while (history->soonest) {
             DPS_PubHistory* ph = history->soonest;
             assert(ph->prev == NULL);
@@ -246,7 +249,7 @@ void DPS_FreshenHistory(DPS_History* history)
 
 DPS_Status DPS_UpdatePubHistory(DPS_History* history, DPS_UUID* pubId, uint32_t sequenceNum, uint16_t ttl, DPS_NodeAddress* addr)
 {
-    uint64_t now = uv_hrtime();
+    uint64_t now = uv_now(history->loop);
     DPS_PubHistory* phNew = calloc(1, sizeof(DPS_PubHistory));
     DPS_PubHistory* ph;
 
@@ -268,7 +271,7 @@ DPS_Status DPS_UpdatePubHistory(DPS_History* history, DPS_UUID* pubId, uint32_t 
     if (addr) {
         ph->pub.addr = *addr;
     }
-    ph->expiration = now + DPS_SECS_TO_NS(ttl) + PUB_HISTORY_LIFETIME;
+    ph->expiration = now + DPS_SECS_TO_MS(ttl) + PUB_HISTORY_LIFETIME;
     LinkPub(history, ph);
     uv_mutex_unlock(&history->lock);
     return DPS_OK;

@@ -45,6 +45,7 @@ int main()
         return 1;
     }
 
+    history.loop = uv_default_loop();
     uv_mutex_init(&history.lock);
 
 #ifdef READABLE_UUIDS

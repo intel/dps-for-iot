@@ -7,8 +7,8 @@
 extern "C" {
 #endif
 
-#define DPS_SECS_TO_NS(t)   ((uint64_t)(t) * 1000000000ull)
-#define DPS_NS_TO_SECS(t)   ((uint32_t)((t) / 1000000000ull))
+#define DPS_SECS_TO_MS(t)   ((uint64_t)(t) * 1000ull)
+#define DPS_MS_TO_SECS(t)   ((uint32_t)((t) / 1000ull))
 
 /**
  * Address type
