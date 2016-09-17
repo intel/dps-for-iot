@@ -107,19 +107,27 @@ static void OnIncomingConnection(uv_stream_t* stream, int status)
         return;
     }
     ret = uv_tcp_init(stream->loop, &reader->socket);
-    assert(ret == 0);
+    if (ret) {
+        DPS_ERRPRINT("uv_tcp_init error=%s\n", uv_err_name(ret));
+        free(reader);
+        return;
+    }
 
     reader->node = listener->node;
     reader->receiveCB = listener->receiveCB;
     reader->socket.data = reader;
 
     ret = uv_accept(stream, (uv_stream_t*)&reader->socket);
-    if (ret == 0) {
-        ret = uv_read_start((uv_stream_t*)&reader->socket, AllocBuffer, OnData);
-    }
-    if (ret != 0) {
-        DPS_ERRPRINT("OnIncomingConnection %s\n", uv_strerror(ret));
+    if (ret) {
+        DPS_ERRPRINT("OnIncomingConnection accept %s\n", uv_strerror(ret));
         uv_close((uv_handle_t*)stream, HandleClosed);
+        return;
+    }
+    ret = uv_read_start((uv_stream_t*)&reader->socket, AllocBuffer, OnData);
+    if (ret) {
+        DPS_ERRPRINT("OnIncomingConnection read start %s\n", uv_strerror(ret));
+        uv_shutdown(&reader->shutdownReq, (uv_stream_t*)&reader->socket, OnShutdownComplete);
+        return;
     }
 }
 
@@ -135,23 +143,34 @@ DPS_NetListener* DPS_NetStartListening(DPS_Node* node, int port, DPS_OnReceive c
     if (!listener) {
         return NULL;
     }
-    uv_tcp_init(DPS_GetLoop(node), &listener->socket);
-
-    listener->node = node;
-    listener->receiveCB = cb;
-    ret = uv_ip6_addr("::", port, &addr);
-    assert(ret == 0);
-    ret = uv_tcp_bind(&listener->socket, (const struct sockaddr*)&addr, 0);
-    assert(ret == 0);
-
-    listener->socket.data = listener;
-    ret = uv_listen((uv_stream_t*)&listener->socket, LISTEN_BACKLOG, OnIncomingConnection);
+    ret = uv_tcp_init(DPS_GetLoop(node), &listener->socket);
     if (ret) {
-        DPS_DBGPRINT("Listen error %s\n", uv_strerror(ret));
-        uv_close((uv_handle_t*)&listener->socket, HandleClosed);
+        DPS_ERRPRINT("uv_tcp_init error=%s\n", uv_err_name(ret));
+        free(listener);
         return NULL;
     }
+    listener->node = node;
+    listener->receiveCB = cb;
+    listener->socket.data = listener;
+    ret = uv_ip6_addr("::", port, &addr);
+    if (ret) {
+        goto ErrorExit;
+    }
+    ret = uv_tcp_bind(&listener->socket, (const struct sockaddr*)&addr, 0);
+    if (ret) {
+        goto ErrorExit;
+    }
+    ret = uv_listen((uv_stream_t*)&listener->socket, LISTEN_BACKLOG, OnIncomingConnection);
+    if (ret) {
+        goto ErrorExit;
+    }
     return listener;
+
+ErrorExit:
+
+    DPS_ERRPRINT("Failed to start net listener: error=%s\n", uv_err_name(ret));
+    uv_close((uv_handle_t*)&listener->socket, HandleClosed);
+    return NULL;
 }
 
 uint16_t DPS_NetGetListenerPort(DPS_NetListener* listener)
@@ -263,7 +282,11 @@ DPS_Status DPS_NetSend(DPS_Node* node, uv_buf_t* bufs, size_t numBufs, const str
     memcpy(&writer->addr, addr, sizeof(writer->addr));
 
     ret = uv_tcp_init(DPS_GetLoop(node), &writer->socket);
-    assert(ret == 0);
+    if (ret) {
+        DPS_ERRPRINT("uv_tcp_init error=%s\n", uv_err_name(ret));
+        free(writer);
+        return DPS_ERR_NETWORK;
+    }
     ret = uv_tcp_connect(&writer->connectReq, &writer->socket, addr, OnOutgoingConnection);
     if (ret) {
         DPS_ERRPRINT("uv_tcp_connect error=%s\n", uv_err_name(ret));

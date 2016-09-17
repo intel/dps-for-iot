@@ -386,7 +386,7 @@ static void RemoteCompletion(DPS_Node* node, RemoteNode* remote, DPS_Status stat
     remote->completion = NULL;
     UnlockNode(node);
     /*
-     * TODO - need to consider making this callback from a worker thread
+     * TODO - make callback from an asynch
      */
     if (cpn->op == LINK_OP) {
         cpn->on.link(node, &addr, status, cpn->data);
@@ -397,7 +397,6 @@ static void RemoteCompletion(DPS_Node* node, RemoteNode* remote, DPS_Status stat
     free(cpn);
 }
 
-#ifndef NDEBUG
 static int IsValidRemoteNode(DPS_Node* node, RemoteNode* remote)
 {
     RemoteNode* r = node->remoteNodes;
@@ -411,7 +410,6 @@ static int IsValidRemoteNode(DPS_Node* node, RemoteNode* remote)
 
     return DPS_FALSE;
 }
-#endif
 
 static RemoteNode* DeleteRemoteNode(DPS_Node* node, RemoteNode* remote)
 {
@@ -419,12 +417,10 @@ static RemoteNode* DeleteRemoteNode(DPS_Node* node, RemoteNode* remote)
 
     DPS_DBGTRACE();
 
-    assert(IsValidRemoteNode(node, remote));
-    assert(node->remoteNodes);
-    assert(remote);
-
+    if (!IsValidRemoteNode(node, remote)) {
+        return NULL;
+    }
     next = remote->next;
-
     if (node->remoteNodes == remote) {
         node->remoteNodes = next;
     } else {
@@ -687,6 +683,19 @@ static void FreeBufs(uv_buf_t* bufs, size_t numBufs)
     }
 }
 
+static void NetSendFailed(DPS_Node* node, struct sockaddr* addr, uv_buf_t* bufs, size_t numBufs, DPS_Status status)
+{
+    RemoteNode* remote;
+
+    DPS_ERRPRINT("NetSend failed %s\n", DPS_ErrTxt(status));
+    remote = LookupRemoteNode(node, addr);
+    if (remote) {
+        DeleteRemoteNode(node, remote);
+        DPS_ERRPRINT("Removed node %s\n", DPS_NetAddrText(addr));
+    }
+    FreeBufs(bufs, numBufs);
+}
+
 static void OnNetSendComplete(DPS_Node* node, struct sockaddr* addr, uv_buf_t* bufs, size_t numBufs, DPS_Status status)
 {
     if (status != DPS_OK) {
@@ -773,7 +782,7 @@ static DPS_Status SendPublication(DPS_Node* node, DPS_Publication* pub, DPS_BitV
             if (ret == DPS_OK) {
                 UpdatePubHistory(node, pub);
             } else {
-                OnNetSendComplete(node, (struct sockaddr*)&remote->addr.inaddr, bufs, A_SIZEOF(bufs), ret);
+                NetSendFailed(node, (struct sockaddr*)&remote->addr.inaddr, bufs, A_SIZEOF(bufs), ret);
             }
         } else {
             ret = DPS_MulticastSend(node->mcastSender, bufs, A_SIZEOF(bufs));
@@ -951,7 +960,7 @@ static void SendAcksTask(DPS_Node* node)
     while ((ack = node->ackQueue.first) != NULL) {
         DPS_Status ret = DPS_NetSend(node, ack->bufs, A_SIZEOF(ack->bufs), (struct sockaddr*)&ack->destAddr.inaddr, OnNetSendComplete);
         if (ret != DPS_OK) {
-            OnNetSendComplete(node, (struct sockaddr*)&ack->destAddr.inaddr, ack->bufs, A_SIZEOF(ack->bufs), ret);
+            NetSendFailed(node, (struct sockaddr*)&ack->destAddr.inaddr, ack->bufs, A_SIZEOF(ack->bufs), ret);
         }
         node->ackQueue.first = ack->next;
         free(ack);
@@ -1073,6 +1082,7 @@ static void CallPubHandlers(DPS_Node* node, DPS_Publication* pub)
 
     DPS_DBGTRACE();
 
+    LockNode(node);
     for (sub = node->subscriptions; sub != NULL; sub = next) {
         /*
          * Ths current subscription might get freed by the handler so need to hold the next pointer here.
@@ -1082,11 +1092,14 @@ static void CallPubHandlers(DPS_Node* node, DPS_Publication* pub)
             DPS_DBGPRINT("Matched subscription\n");
             UpdatePubHistory(node, pub);
             /*
-             * TODO - consider making callback from a worker thread so uv_loop isn't blocked
+             * TODO - make callback from any async
              */
+            UnlockNode(node);
             sub->handler(sub, pub, pub->payload, pub->len);
+            LockNode(node);
         }
     }
+    UnlockNode(node);
 }
 
 static DPS_Status DecodePublication(DPS_Node* node, DPS_Buffer* buffer, const struct sockaddr* addr, int multicast)
@@ -1282,7 +1295,7 @@ static DPS_Status SendSubscription(DPS_Node* node, RemoteNode* remote, DPS_BitVe
     ret = DPS_NetSend(node, bufs, A_SIZEOF(bufs), (struct sockaddr*)&remote->addr.inaddr, OnNetSendComplete);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to send subscription request %s\n", DPS_ErrTxt(ret));
-        OnNetSendComplete(node, (struct sockaddr*)&remote->addr, bufs, A_SIZEOF(bufs), ret);
+        NetSendFailed(node, (struct sockaddr*)&remote->addr, bufs, A_SIZEOF(bufs), ret);
     }
     /*
      * Done with these flags
