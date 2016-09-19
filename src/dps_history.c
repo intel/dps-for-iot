@@ -293,7 +293,7 @@ int DPS_PublicationIsStale(DPS_History* history, DPS_UUID* pubId, uint32_t seque
 
 void DPS_HistoryFree(DPS_History* history)
 {
-    DPS_PubHistory* ph = history->latest;
+    DPS_PubHistory* ph = history->soonest;
     while (ph) {
         DPS_PubHistory* next = ph->next;
         free(ph);

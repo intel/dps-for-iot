@@ -474,6 +474,9 @@ static DPS_Publication* FreePublication(DPS_Node* node, DPS_Publication* pub)
     if (pub->bf) {
         DPS_BitVectorFree(pub->bf);
     }
+    if (pub->payload && !(pub->flags & PUB_FLAG_LOCAL)) {
+        free(pub->payload);
+    }
     free(pub);
     return next;
 }
@@ -1220,11 +1223,16 @@ static DPS_Status DecodePublication(DPS_Node* node, DPS_Buffer* buffer, const st
         if (ret != DPS_OK) {
             goto Exit;
         }
-        pub->payload = realloc(pub->payload, len);
-        if (!pub->payload) {
-            goto Exit;
+        if (len) {
+            pub->payload = realloc(pub->payload, len);
+            if (!pub->payload) {
+                goto Exit;
+            }
+            memcpy(pub->payload, payload, len);
+        } else if (pub->payload) {
+            free(pub->payload);
+            pub->payload = NULL;
         }
-        memcpy(pub->payload, payload, len);
         pub->len = len;
         if (pub->ttl > 0) {
             pub->flags |= PUB_FLAG_RETAINED;
@@ -1662,7 +1670,35 @@ static ssize_t OnNetReceive(DPS_Node* node, const struct sockaddr* addr, const u
     return 0;
 }
 
-static void FreeNode(DPS_Node* node)
+static void StopNode(DPS_Node* node)
+{
+    /*
+     * Close all the handles and...
+     */
+    if (node->mcastReceiver) {
+        DPS_MulticastStopReceive(node->mcastReceiver);
+        node->mcastReceiver = NULL;
+    }
+    if (node->mcastSender) {
+        DPS_MulticastStopSend(node->mcastSender);
+        node->mcastSender = NULL;
+    }
+    if (node->netListener) {
+        DPS_NetStopListening(node->netListener);
+        node->netListener = NULL;
+    }
+    assert(!uv_is_closing((uv_handle_t*)&node->bgHandler));
+    uv_close((uv_handle_t*)&node->bgHandler, NULL);
+    assert(!uv_is_closing((uv_handle_t*)&node->shutdownTimer));
+    uv_close((uv_handle_t*)&node->shutdownTimer, NULL);
+    /*
+     * ...run the event loop again to ensure that all cleanup is
+     * completed
+     */
+    uv_run(node->loop, UV_RUN_DEFAULT);
+}
+
+static void DestroyNode(DPS_Node* node)
 {
     while (node->remoteNodes) {
         DeleteRemoteNode(node, node->remoteNodes);
@@ -1690,33 +1726,14 @@ static void FreeNode(DPS_Node* node)
     free(node);
 }
 
-static void NodeClose(DPS_Node* node)
-{
-    if (node->mcastReceiver) {
-        DPS_MulticastStopReceive(node->mcastReceiver);
-        node->mcastReceiver = NULL;
-    }
-    if (node->mcastSender) {
-        DPS_MulticastStopSend(node->mcastSender);
-        node->mcastSender = NULL;
-    }
-    if (node->netListener) {
-        DPS_NetStopListening(node->netListener);
-        node->netListener = NULL;
-    }
-    if (!uv_is_closing((uv_handle_t*)&node->bgHandler)) {
-        uv_close((uv_handle_t*)&node->bgHandler, NULL);
-    }
-}
-
 static void NodeRun(void* arg)
 {
     DPS_Node* node = (DPS_Node*)arg;
 
     uv_run(node->loop, UV_RUN_DEFAULT);
+
     DPS_DBGPRINT("Exiting node thread\n");
-    NodeClose(node);
-    uv_stop(node->loop);
+    StopNode(node);
 }
 
 DPS_Node* DPS_CreateNode(const char* separators)
@@ -1787,11 +1804,9 @@ DPS_Status DPS_StartNode(DPS_Node* node, int mcast, int tcpPort)
     }
     if (mcast & DPS_MCAST_PUB_ENABLE_RECV) {
         node->mcastReceiver = DPS_MulticastStartReceive(node, OnMulticastReceive);
-        uv_run(node->loop, UV_RUN_NOWAIT);
     }
     if (mcast & DPS_MCAST_PUB_ENABLE_SEND) {
         node->mcastSender = DPS_MulticastStartSend(node);
-        uv_run(node->loop, UV_RUN_NOWAIT);
     }
     node->netListener = DPS_NetStartListening(node, tcpPort, OnNetReceive);
     if (!node->netListener) {
@@ -1801,10 +1816,8 @@ DPS_Status DPS_StartNode(DPS_Node* node, int mcast, int tcpPort)
     /*
      * Make sure have the listenting port before we return
      */
-    while (!node->port) {
-        uv_run(node->loop, UV_RUN_NOWAIT);
-        node->port = DPS_NetGetListenerPort(node->netListener);
-    }
+    node->port = DPS_NetGetListenerPort(node->netListener);
+    assert(node->port);
     /*
      *  The node loop gets its own thread to run on
      */
@@ -1836,12 +1849,8 @@ uint16_t DPS_GetPortNumber(DPS_Node* node)
 static void StopOnTimeout(uv_timer_t* handle)
 {
     DPS_Node* node = (DPS_Node*)handle->data;
-
     DPS_DBGTRACE();
-
-    NodeClose(node);
-    uv_timer_stop(handle);
-    uv_run(node->loop, UV_RUN_ONCE);
+    uv_stop(node->loop);
 }
 
 static void StopNodeTask(DPS_Node* node)
@@ -1861,7 +1870,7 @@ void DPS_StopNode(DPS_Node* node)
 void DPS_DestroyNode(DPS_Node* node)
 {
     if (uv_thread_join(&node->thread) == 0) {
-        FreeNode(node);
+        DestroyNode(node);
     }
 }
 

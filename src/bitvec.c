@@ -242,7 +242,7 @@ size_t DPS_BitVectorPopCount(DPS_BitVector* bv)
 
 DPS_BitVector* DPS_BitVectorClone(DPS_BitVector* bv)
 {
-    size_t sz = sizeof(DPS_CountVector) + ((bv->len / CHUNK_SIZE) - 1) * sizeof(chunk_t);
+    size_t sz = sizeof(DPS_BitVector) + ((bv->len / CHUNK_SIZE) - 1) * sizeof(chunk_t);
     DPS_BitVector* clone = malloc(sz);
     if (clone) {
         memcpy(clone, bv, sz);
@@ -855,6 +855,9 @@ DPS_CountVector* DPS_CountVectorAllocFH()
 void DPS_CountVectorFree(DPS_CountVector* cv)
 {
     if (cv) {
+        if (cv->bvUnion) {
+            free(cv->bvUnion);
+        }
         free(cv);
     }
 }

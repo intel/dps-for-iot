@@ -315,11 +315,11 @@ static void TxCloseCB(uv_handle_t* handle)
 
 void DPS_MulticastStopSend(DPS_MulticastSender* sender)
 {
-    while (sender->numTx--) {
-        uv_close((uv_handle_t*)&sender->udpTx[sender->numTx].udp, TxCloseCB);
+    size_t i;
+    for (i = 0; i < sender->numTx; ++i) {
+        uv_close((uv_handle_t*)&sender->udpTx[i].udp, TxCloseCB);
     }
 }
-
 
 static void MulticastSendComplete(uv_udp_send_t* req, int status)
 {
