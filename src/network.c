@@ -247,7 +247,7 @@ static void OnOutgoingConnection(uv_connect_t *req, int status)
     }
     if (status != 0) {
         writer->onSendComplete(writer->node, (struct sockaddr*)&writer->addr, writer->bufs, (uint32_t)writer->numBufs, DPS_ERR_NETWORK);
-        uv_close((uv_handle_t*)&writer->socket, HandleClosed);
+        uv_shutdown(&writer->shutdownReq, (uv_stream_t*)req->handle, OnShutdownComplete);
     }
 }
 
