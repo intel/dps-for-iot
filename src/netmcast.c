@@ -175,20 +175,30 @@ DPS_MulticastReceiver* DPS_MulticastStartReceive(DPS_Node* node, DPS_OnReceive c
     return receiver;
 }
 
+static void RxCloseCB(uv_handle_t* handle);
+
+static void MulticastStopReceive(DPS_MulticastReceiver* receiver)
+{
+    if (receiver->ipVersions & USE_IPV4) {
+        receiver->ipVersions &= ~USE_IPV4;
+        uv_close((uv_handle_t*)&receiver->udp4Rx, RxCloseCB);
+    } else if (receiver->ipVersions & USE_IPV6) {
+        receiver->ipVersions &= ~USE_IPV6;
+        uv_close((uv_handle_t*)&receiver->udp6Rx, RxCloseCB);
+    } else {
+        free(receiver);
+    }
+}
+
 static void RxCloseCB(uv_handle_t* handle)
 {
     DPS_MulticastReceiver* receiver = (DPS_MulticastReceiver*)handle->data;
-    free(receiver);
+    MulticastStopReceive(receiver);
 }
 
 void DPS_MulticastStopReceive(DPS_MulticastReceiver* receiver)
 {
-    if (receiver->ipVersions & USE_IPV4) { 
-        uv_close((uv_handle_t*)&receiver->udp4Rx, RxCloseCB);
-    }
-    if (receiver->ipVersions & USE_IPV6) { 
-        uv_close((uv_handle_t*)&receiver->udp6Rx, RxCloseCB);
-    }
+    MulticastStopReceive(receiver);
 }
 
 /*****************************************************
