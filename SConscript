@@ -13,7 +13,19 @@ if platform == 'win32':
 elif platform == 'posix':
     libenv.Append(CFLAGS = ['-Wall', '-Werror', '-Wno-format-extra-args'])
 
-srcs = libenv.Glob('src/*.c')
+srcs = ['src/bitvec.c',
+        'src/cbor.c',
+        'src/coap.c',
+        'src/dps.c',
+        'src/dps_dbg.c',
+        'src/dps_err.c',
+        'src/dps_event.c',
+        'src/dps_history.c',
+        'src/dps_synchronous.c',
+        'src/dps_uuid.c',
+        'src/murmurhash3.c',
+        'src/netmcast.c',
+        'src/topics.c']
 
 if ('USE_UDP' in libenv.Dictionary().keys()):
     srcs.append('src/udp/network.c')
@@ -25,6 +37,20 @@ lib = libenv.Library('lib/dps', objs)
 # Windows doesn't distinguish between static and dynamic obj files
 shobjs = objs if platform == 'win32' else libenv.SharedObject(srcs)
 shlib = libenv.SharedLibrary('lib/dps_shared', shobjs)
+
+ns3srcs = ['src/bitvec.c',
+           'src/cbor.c',
+           'src/coap.c',
+           'src/dps.c',
+           'src/dps_dbg.c',
+           'src/dps_err.c',
+           'src/dps_history.c',
+           'src/dps_uuid.c',
+           'src/murmurhash3.c',
+           'src/topics.c']
+# Windows doesn't distinguish between static and dynamic obj files
+ns3shobjs = libenv.Object(ns3srcs) if platform == 'win32' else libenv.SharedObject(ns3srcs)
+ns3shlib = libenv.SharedLibrary('lib/dps_ns3', ns3shobjs)
 
 # Using SWIG to build the python wrapper
 pyenv = libenv.Clone()
@@ -51,7 +77,7 @@ if platform == '!!posix':
 
 # Unit tests
 testenv = env.Clone()
-testenv.Prepend(LIBS = lib)
+testenv.Append(LIBS = [lib, env['UV_LIBS']])
 testenv.Program('bin/hist_unit', 'test/hist_unit.c')
 testenv.Program('bin/countvec', 'test/countvec.c')
 testenv.Program('bin/unified', 'test/unified.c')
@@ -74,7 +100,7 @@ if platform == 'posix':
 
 # Examples
 exampleenv = env.Clone()
-exampleenv.Prepend(LIBS = lib)
+exampleenv.Append(LIBS = [lib, env['UV_LIBS']])
 exampleenv.Program('bin/publisher', 'examples/publisher.c')
 exampleenv.Program('bin/pub_many', 'examples/pub_many.c')
 exampleenv.Program('bin/subscriber', 'examples/subscriber.c')

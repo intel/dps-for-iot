@@ -1,0 +1,13 @@
+# Package Information for pkg-config
+
+prefix=@PREFIX@
+exec_prefix=${prefix}
+libdir=${prefix}/build/lib
+includedir=${prefix}/inc
+
+Name: dps_ns3
+Description: Distributed PubSub
+Version: @VERSION@
+Requires:
+Libs: -L${libdir} -ldps_ns3
+Cflags: -I${includedir}

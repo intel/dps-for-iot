@@ -5,9 +5,9 @@ import platform
 # SWIG builder does not get applied
 #
 if platform.system() == 'Windows':
-    env = Environment(CPPDEFINES=[], CPPPATH=['./inc'], SWIG='c:\swigwin-3.0.10\swig.exe')
+    env = Environment(CPPDEFINES=[], CPPPATH=['./inc'], SWIG='c:\swigwin-3.0.10\swig.exe', tools=['default', 'textfile'])
 else:
-    env = Environment(CPPDEFINES=[], CPPPATH=['./inc'])
+    env = Environment(CPPDEFINES=[], CPPPATH=['./inc'], tools=['default', 'textfile'])
 
 optimize = False
 debug = True
@@ -47,7 +47,7 @@ if env['PLATFORM'] == 'win32':
     env['PY_LIBPATH'] = ['c:\python27\libs']
 
     # Where to find libuv
-    env.Append(LIBS = ['libuv', 'ws2_32'])
+    env['UV_LIBS'] = ['libuv', 'ws2_32']
     env.Append(LIBPATH=['c:\Program Files\libuv'])
     env.Append(CPPPATH = 'c:\Program Files\libuv\include')
 
@@ -72,7 +72,7 @@ elif env['PLATFORM'] == 'posix':
     env['PY_LIBPATH'] = []
 
     # Where to find libuv
-    env.Append(LIBS = ['uv'])
+    env['UV_LIBS'] = ['uv']
 
 else:
     print 'Unsupported system'
@@ -82,3 +82,12 @@ else:
 print env['CPPDEFINES']
 
 SConscript('SConscript', src_dir='.', variant_dir='build', duplicate=0, exports='env')
+
+######################################################################
+# Scons to generate the dps_ns3.pc file from dps_ns3.pc.in file
+######################################################################
+pc_file = 'dps_ns3.pc.in'
+pc_vars = {'\@PREFIX\@': env.GetLaunchDir().encode('string_escape'),
+           '\@VERSION\@': '0.9',
+}
+env.Substfile(pc_file, SUBST_DICT = pc_vars)

@@ -1,3 +1,4 @@
 .*
 *.o
 build/*
+dps_ns3.pc
