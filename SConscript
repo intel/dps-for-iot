@@ -25,6 +25,7 @@ srcs = ['src/bitvec.c',
         'src/dps_uuid.c',
         'src/murmurhash3.c',
         'src/netmcast.c',
+        'src/network.c',
         'src/topics.c']
 
 if ('USE_UDP' in libenv.Dictionary().keys()):

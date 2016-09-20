@@ -13,6 +13,7 @@
 #include <dps/network.h>
 #include <dps/dps_history.h>
 #include <dps/dps_internal.h>
+#include "dps_node.h"
 
 /*
  * Debug control for this module
@@ -33,44 +34,6 @@ static const char DPS_PublicationURI[] = "dps/pub";
 static const char DPS_AcknowledgmentURI[] = "dps/ack";
 
 typedef enum { NO_REQ, SUB_REQ, PUB_REQ, ACK_REQ } RequestType;
-
-typedef enum { LINK_OP, UNLINK_OP } OpType;
-
-typedef struct {
-    OpType op;
-    void* data;
-    uint64_t timeout;
-    uv_mutex_t mutex;
-    union {
-        DPS_OnLinkComplete link;
-        DPS_OnUnlinkComplete unlink;
-        void* cb;
-    } on;
-} OnOpCompletion;
-
-typedef struct _RemoteNode {
-    OnOpCompletion* completion;
-    uint8_t linked;                    /* True if this is a node that was explicitly linked */
-    struct {
-        uint8_t sync;                  /* If TRUE request remote to synchronize interests */
-        uint8_t updates;               /* TRUE if updates have been received but not acted on */
-        DPS_BitVector* needs;          /* Bit vector of needs received from  this remote node */
-        DPS_BitVector* interests;      /* Bit vector of interests received from  this remote node */
-    } inbound;
-    struct {
-        uint8_t sync;                  /* If TRUE synchronize outbound interests with remote node (no deltas) */
-        uint8_t checkForUpdates;       /* TRUE if there may be updated interests to send to this remote */
-        DPS_BitVector* needs;          /* Needs bit vector sent outbound to this remote node */
-        DPS_BitVector* interests;      /* Interests bit vector sent outbound to this remote node */
-    } outbound;
-    DPS_NodeAddress addr;
-    uint64_t expires;
-    /*
-     * Remote nodes are doubly linked into a ring
-     */
-    struct _RemoteNode* prev;
-    struct _RemoteNode* next;
-} RemoteNode;
 
 /*
  * Struct to hold the state of a local subscription. We hold the topics so we can provide return the topic list when we
@@ -120,67 +83,11 @@ typedef struct _DPS_Publication {
     DPS_Publication* next;
 } DPS_Publication;
 
-/*
- * Acknowledgment packet queued to be sent on node loop
- */
-typedef struct _PublicationAck {
-    uv_buf_t bufs[3];
-    DPS_NodeAddress destAddr;
-    uint32_t sequenceNum;
-    DPS_UUID pubId;
-    struct _PublicationAck* next;
-} PublicationAck;
-
 #define SEND_SUBS_TASK  0x01
 #define SEND_PUBS_TASK  0x02
 #define SEND_ACKS_TASK  0x04
 #define STOP_NODE_TASK  0x08
 #define FIND_ADDR_TASK  0x10
-
-typedef struct _DPS_Node {
-
-    uint16_t tasks;                        /* Background tasks that have been scheduled */
-    uint16_t port;
-    char separators[13];                  /* List of separator characters */
-
-    uv_thread_t thread;                   /* Thread for the event loop */
-    uv_loop_t* loop;                      /* uv lib event loop */
-    uv_timer_t shutdownTimer;             /* for graceful shut down */
-    uv_mutex_t nodeMutex;                 /* Mutex to protect this node */
-    uv_mutex_t condMutex;                 /* Mutex for use wih condition variables */
-#ifndef NDEBUG
-    int lockCount;                        /* Detect recursive locks */
-#endif
-    uv_async_t bgHandler;                 /* Async handler for background tasks */
-
-    uint64_t ttlBasis;                    /* basis time for expiring retained messages */
-
-    struct {
-        PublicationAck* first;
-        PublicationAck* last;
-    } ackQueue;                           /* Queued acknowledgment packets */
-
-    RemoteNode* remoteNodes;              /* Linked list of remote nodes */
-
-    struct {
-        DPS_BitVector* needs;             /* Preallocated needs bit vector */
-        DPS_BitVector* interests;         /* Preallocated interests bit vector */
-    } scratch;
-
-    DPS_CountVector* interests;           /* Tracks all interests for this node */
-    DPS_CountVector* needs;               /* Tracks all needs for this node */
-
-    DPS_History history;                  /* History of recently sent publications */
-
-    DPS_Publication* publications;        /* Linked list of local and retained publications */
-    DPS_Subscription* subscriptions;      /* Linked list of local subscriptions */
-
-    DPS_MulticastReceiver* mcastReceiver;
-    DPS_MulticastSender* mcastSender;
-
-    DPS_NetContext* netCtx;               /* Network context */
-
-} DPS_Node;
 
 /*
  * Forward declaration
@@ -1762,6 +1669,21 @@ DPS_Node* DPS_CreateNode(const char* separators)
     return node;
 }
 
+DPS_Status DPS_SetNodeData(DPS_Node* node, void* data)
+{
+    if (node) {
+        node->userData = data;
+        return DPS_OK;
+    } else {
+        return DPS_ERR_NULL;
+    }
+}
+
+void* DPS_GetNodeData(const DPS_Node* node)
+{
+    return node ?  node->userData : NULL;
+}
+
 DPS_Status DPS_StartNode(DPS_Node* node, int mcast, int rxPort)
 {
     int r;
@@ -2322,114 +2244,6 @@ static void RunBackgroundTasks(uv_async_t* handle)
         uv_async_send(&node->bgHandler);
     }
     UnlockNode(node);
-}
-
-#define MAX_HOST_LEN    256  /* Per RFC 1034/1035 */
-#define MAX_SERVICE_LEN  16  /* Per RFC 6335 section 5.1 */
-
-typedef struct {
-    DPS_Node* node;
-    DPS_OnResolveAddressComplete cb;
-    void* data;
-    uv_getaddrinfo_t info;
-    char host[MAX_HOST_LEN];
-    char service[MAX_SERVICE_LEN];
-} ResolverInfo;
-
-static void GetAddrInfoCB(uv_getaddrinfo_t* req, int status, struct addrinfo* res)
-{
-    ResolverInfo* resolver = (ResolverInfo*)req->data;
-    if (status == 0) {
-        DPS_NodeAddress addr;
-        if (res->ai_family == AF_INET6) {
-            memcpy(&addr.inaddr, res->ai_addr, sizeof(struct sockaddr_in6));
-        } else {
-            memcpy(&addr.inaddr, res->ai_addr, sizeof(struct sockaddr_in));
-        }
-        resolver->cb(resolver->node, &addr, resolver->data);
-        uv_freeaddrinfo(res);
-    } else {
-        DPS_ERRPRINT("uv_getaddrinfo failed %s\n", uv_err_name(status));
-        resolver->cb(resolver->node, NULL, resolver->data);
-    }
-    free(resolver);
-}
-
-static void FreeHandle(uv_handle_t* handle)
-{
-    free(handle);
-}
-
-static void AsyncResolveAddress(uv_async_t* async)
-{
-    ResolverInfo* resolver = (ResolverInfo*)async->data;
-    int r;
-    struct addrinfo hints;
-
-    DPS_DBGTRACE();
-
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_UNSPEC;
-    hints.ai_socktype = SOCK_STREAM;
-    hints.ai_protocol = IPPROTO_TCP;
-    resolver->info.data = resolver;
-
-    r = uv_getaddrinfo(async->loop, &resolver->info, GetAddrInfoCB, resolver->host, resolver->service, &hints);
-    if (r) {
-        DPS_ERRPRINT("uv_getaddrinfo call error %s\n", uv_err_name(r));
-        resolver->cb(resolver->node, NULL, resolver->data);
-        free(resolver);
-    }
-    uv_close((uv_handle_t*)async, FreeHandle);
-}
-
-DPS_Status DPS_ResolveAddress(DPS_Node* node, const char* host, const char* service, DPS_OnResolveAddressComplete cb, void* data)
-{
-    uv_async_t* async;
-    ResolverInfo* resolver;
-
-    DPS_DBGTRACE();
-
-    if (!node->loop) {
-        DPS_ERRPRINT("Cannot resolve address - node has not been started\n");
-        return DPS_ERR_INVALID;
-    }
-    if (!service || !cb) {
-        return DPS_ERR_NULL;
-    }
-    if (!host) {
-        host = "localhost";
-    }
-    async = malloc(sizeof(uv_async_t));
-    if (!async) {
-        return DPS_ERR_RESOURCES;
-    }
-    resolver = calloc(1, sizeof(ResolverInfo));
-    if (!resolver) {
-        free(async);
-        return DPS_ERR_RESOURCES;
-    }
-    strncpy(resolver->host, host, sizeof(resolver->host));
-    strncpy(resolver->service, service, sizeof(resolver->service));
-    resolver->node = node;
-    resolver->cb = cb;
-    resolver->data = data;
-    /*
-     * Async callback
-     */
-    if (uv_async_init(node->loop, async, AsyncResolveAddress)) {
-        free(async);
-        free(resolver);
-        return DPS_ERR_RESOURCES;
-    }
-    async->data = resolver;
-    if (uv_async_send(async)) {
-        free(async);
-        free(resolver);
-        return DPS_ERR_FAILURE;
-    } else {
-        return DPS_OK;
-    }
 }
 
 const char* DPS_GetAddressText(DPS_NodeAddress* addr)

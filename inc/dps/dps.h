@@ -78,6 +78,25 @@ uint32_t DPS_PublicationGetSequenceNum(const DPS_Publication* pub);
 DPS_Node* DPS_CreateNode(const char* separators);
 
 /**
+ * Store a pointer to application data in a node.
+ *
+ * @param node   The node
+ * @param data  The data pointer to store
+ *
+ * @return DPS_OK or and error
+ */
+DPS_Status DPS_SetNodeData(DPS_Node* node, void* data);
+
+/**
+ * Get application data pointer previously set by DPS_SetNodeData()
+ *
+ * @param node   The node
+ *
+ * @return  A pointer to the data or NULL if the node is invalid
+ */
+void* DPS_GetNodeData(const DPS_Node* node);
+
+/**
  * Initialized and starts running a local node. Node can only be started once and cannot be restarted after it has been
  * stopped.
  *

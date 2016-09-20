@@ -11,8 +11,6 @@
  */
 DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
-
-
 #define MAX_READ_LEN   4096
 #define MAX_WRITE_LEN  4096
 #define MIN_READ_LEN      8
@@ -295,27 +293,3 @@ DPS_Status DPS_NetSend(DPS_NetContext* netCtx, uv_buf_t* bufs, size_t numBufs, c
     }
     return DPS_OK;
 }
-
-const char* DPS_NetAddrText(const struct sockaddr* addr)
-{
-    if (addr) {
-        static char txt[INET6_ADDRSTRLEN + 8];
-        uint16_t port;
-        int ret;
-        if (addr->sa_family == AF_INET6) {
-            ret = uv_ip6_name((const struct sockaddr_in6*)addr, txt, sizeof(txt));
-            port = ((const struct sockaddr_in6*)addr)->sin6_port;
-        } else {
-            ret = uv_ip4_name((const struct sockaddr_in*)addr, txt, sizeof(txt));
-            port = ((const struct sockaddr_in*)addr)->sin_port;
-        }
-        if (ret) {
-            return "Invalid address";
-        }
-        sprintf(txt + strlen(txt), "/%d", ntohs(port));
-        return txt;
-    } else {
-        return "NULL";
-    }
-}
-
