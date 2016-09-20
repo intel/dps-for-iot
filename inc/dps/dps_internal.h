@@ -1,7 +1,7 @@
 #ifndef _DPS_INTERNAL_H
 #define _DPS_INTERNAL_H
 
-#include <dps.h>
+#include <dps/dps.h>
 
 #ifdef __cplusplus
 extern "C" {

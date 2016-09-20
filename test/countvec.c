@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <bitvec.h>
-#include <dps_dbg.h>
+#include <dps/bitvec.h>
+#include <dps/dps_dbg.h>
 
 #define BITLEN  64
 

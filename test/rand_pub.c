@@ -2,8 +2,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
-#include <dps_dbg.h>
-#include <dps.h>
+#include <dps/dps_dbg.h>
+#include <dps/dps.h>
 #include <uv.h>
 
 static char lineBuf[200];

@@ -2,10 +2,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
-#include <dps_dbg.h>
-#include <dps.h>
-#include <bitvec.h>
-#include <topics.h>
+#include <dps/dps_dbg.h>
+#include <dps/dps.h>
+#include <dps/bitvec.h>
+#include <dps/topics.h>
 #include <search.h>
 #include <uv.h>
 

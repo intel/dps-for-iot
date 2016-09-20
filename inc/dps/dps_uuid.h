@@ -2,7 +2,7 @@
 #define _DPS_UUID_H
 
 #include <stdint.h>
-#include <dps_err.h>
+#include <dps/dps_err.h>
 
 #ifdef __cplusplus
 extern "C" {

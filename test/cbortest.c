@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
-#include <cbor.h>
+#include <dps/cbor.h>
 
 static uint8_t buf[10000];
 

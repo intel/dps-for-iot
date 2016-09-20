@@ -1,5 +1,5 @@
-#include <dps_dbg.h>
-#include <cbor.h>
+#include <dps/dps_dbg.h>
+#include <dps/cbor.h>
 #include <stdint.h>
 #include <string.h>
 #include <assert.h>

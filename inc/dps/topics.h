@@ -1,8 +1,8 @@
 #ifndef _TOPICS_H
 #define _TOPICS_H
 
-#include <bitvec.h>
-#include <dps_internal.h>
+#include <dps/bitvec.h>
+#include <dps/dps_internal.h>
 
 #ifdef __cplusplus
 extern "C" {

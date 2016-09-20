@@ -2,10 +2,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
-#include <dps_dbg.h>
-#include <bitvec.h>
-#include <dps.h>
-#include <dps_synchronous.h>
+#include <dps/dps_dbg.h>
+#include <dps/bitvec.h>
+#include <dps/dps.h>
+#include <dps/dps_synchronous.h>
 #include <uv.h>
 
 #define MAX_TOPICS 64

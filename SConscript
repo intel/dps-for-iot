@@ -13,8 +13,6 @@ if platform == 'win32':
 elif platform == 'posix':
     libenv.Append(CFLAGS = ['-Wall', '-Werror', '-Wno-format-extra-args'])
 
-hdrs = libenv.Glob('inc/*.h')
-env.Install('inc/dps', hdrs)
 srcs = libenv.Glob('src/*.c')
 
 if ('USE_UDP' in libenv.Dictionary().keys()):

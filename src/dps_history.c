@@ -2,11 +2,11 @@
 #include <string.h>
 #include <assert.h>
 #include <uv.h>
-#include <dps.h>
-#include <dps_dbg.h>
-#include "dps_uuid.h"
-#include "dps_history.h"
-#include "dps_internal.h"
+#include <dps/dps.h>
+#include <dps/dps_dbg.h>
+#include <dps/dps_uuid.h>
+#include <dps/dps_history.h>
+#include <dps/dps_internal.h>
 
 /*
  * Debug control for this module

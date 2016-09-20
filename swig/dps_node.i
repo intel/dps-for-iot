@@ -2,9 +2,9 @@
 %module dps
 %{
 extern "C" {
-#include "dps.h"
-#include "dps_dbg.h"
-#include "dps_err.h"
+#include <dps/dps.h>
+#include <dps/dps_dbg.h>
+#include <dps/dps_err.h>
 };
 #include <mutex>
 #include <queue>
@@ -292,9 +292,9 @@ static v8::Handle<v8::Value> UUIDToString(DPS_UUID* uuid)
 %apply Pointer NONNULL { DPS_PublicationAck* };
 %apply Pointer NONNULL { DPS_NodeAddress* };
 
-%include "dps.h"
-%include "dps_dbg.h"
-%include "dps_err.h"
+%include <dps/dps.h>
+%include <dps/dps_dbg.h>
+%include <dps/dps_err.h>
 
 /*
  * Module initialization

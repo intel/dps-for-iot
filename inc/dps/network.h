@@ -2,7 +2,7 @@
 #define _NETWORK_H
 
 #include <stdint.h>
-#include <dps_internal.h>
+#include <dps/dps_internal.h>
 #include <uv.h>
 
 #ifdef __cplusplus

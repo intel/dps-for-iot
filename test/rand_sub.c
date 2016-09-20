@@ -2,10 +2,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
-#include <dps_dbg.h>
-#include <network.h>
-#include <dps.h>
-#include <dps_synchronous.h>
+#include <dps/dps_dbg.h>
+#include <dps/network.h>
+#include <dps/dps.h>
+#include <dps/dps_synchronous.h>
 
 static void OnPubMatch(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* data, size_t len)
 {

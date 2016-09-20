@@ -1,9 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <bitvec.h>
-#include <dps_dbg.h>
-#include <dps_err.h>
+#include <dps/bitvec.h>
+#include <dps/dps_dbg.h>
+#include <dps/dps_err.h>
 
 #define FILTER_BITS     768 * 8
 #define NUM_KEYS        397

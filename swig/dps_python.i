@@ -1,8 +1,8 @@
 
 %module dps
 %{
-#include "dps.h"
-#include "dps_synchronous.h"
+#include <dps/dps.h>
+#include <dps/dps_synchronous.h>
 %}
 
 %include "cdata.i"
@@ -327,9 +327,9 @@ static PyObject* UUIDToPyString(DPS_UUID* uuid)
 /*
  * The DPS public header files
  */
-%include "dps_err.h"
-%include "dps.h"
-%include "dps_synchronous.h"
+%include <dps/dps_err.h>
+%include <dps/dps.h>
+%include <dps/dps_synchronous.h>
 
 /*
  * Module initialization

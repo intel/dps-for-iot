@@ -2,11 +2,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
-#include <dps_dbg.h>
-#include <network.h>
-#include <dps.h>
-#include <dps_synchronous.h>
-#include <bitvec.h>
+#include <dps/dps_dbg.h>
+#include <dps/network.h>
+#include <dps/dps.h>
+#include <dps/dps_synchronous.h>
+#include <dps/bitvec.h>
 #include <uv.h>
 
 static int quiet = DPS_FALSE;

@@ -1,11 +1,11 @@
 #include <stdlib.h>
-#include <bitvec.h>
+#include <dps/bitvec.h>
 #include <assert.h>
 #include <string.h>
 #include <malloc.h>
-#include <dps_dbg.h>
-#include <cbor.h>
-#include <murmurhash3.h>
+#include <dps/dps_dbg.h>
+#include <dps/cbor.h>
+#include <dps/murmurhash3.h>
 
 #ifdef WIN32
 

@@ -1,7 +1,7 @@
 #ifndef _DPS_SYNCHRONOUS_H
 #define _DPS_SYNCHRONOUS_H
 
-#include <dps.h>
+#include <dps/dps.h>
 
 #ifdef __cplusplus
 extern "C" {

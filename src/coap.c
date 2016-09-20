@@ -1,8 +1,8 @@
 #include <string.h>
 #include <malloc.h>
 #include <assert.h>
-#include <dps_dbg.h>
-#include <coap.h>
+#include <dps/dps_dbg.h>
+#include <dps/coap.h>
 
 /*
  * Debug control for this module

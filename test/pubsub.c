@@ -2,9 +2,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <bitvec.h>
-#include <dps_dbg.h>
-#include <topics.h>
+#include <dps/bitvec.h>
+#include <dps/dps_dbg.h>
+#include <dps/topics.h>
 
 /*
  * A published topic has the form "A<sep>B<sep>C" where <sep> is any of a specified set of separators and

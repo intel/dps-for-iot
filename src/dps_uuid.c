@@ -5,8 +5,8 @@
 
 #include <stdint.h>
 #include <stdio.h>
-#include <dps_dbg.h>
-#include <dps_uuid.h>
+#include <dps/dps_dbg.h>
+#include <dps/dps_uuid.h>
 
 /*
  * Debug control for this module

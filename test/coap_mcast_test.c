@@ -3,9 +3,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-#include <network.h>
-#include <coap.h>
-#include <cbor.h>
+#include <dps/network.h>
+#include <dps/coap.h>
+#include <dps/cbor.h>
 #include <uv.h>
 #include <unistd.h>
 
