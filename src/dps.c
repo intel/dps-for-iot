@@ -1807,6 +1807,17 @@ void DPS_DestroyNode(DPS_Node* node)
     }
 }
 
+/*
+ * This is not safe to be called generally, it is only used in the
+ * simulator environment.
+ */
+void DPS_StopAndDestroyNode(DPS_Node* node)
+{
+    DPS_DBGTRACE();
+    StopNode(node);
+    DestroyNode(node);
+}
+
 DPS_Publication* DPS_CreatePublication(DPS_Node* node)
 {
     DPS_Publication* pub;
