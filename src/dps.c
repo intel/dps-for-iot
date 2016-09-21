@@ -1773,6 +1773,7 @@ DPS_Status DPS_StartNode(DPS_Node* node, int mcast, int tcpPort)
     if (r) {
         return DPS_ERR_FAILURE;
     }
+    DPS_DBGPRINT("libuv version %s\n", uv_version_string());
     /*
      * Timer for clean shutdown
      */
