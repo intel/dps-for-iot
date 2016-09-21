@@ -1612,6 +1612,7 @@ static void StopNode(DPS_Node* node)
 
 static void DestroyNode(DPS_Node* node)
 {
+    LockNode(node);
     while (node->remoteNodes) {
         DeleteRemoteNode(node, node->remoteNodes);
     }
@@ -1626,6 +1627,7 @@ static void DestroyNode(DPS_Node* node)
     DPS_BitVectorFree(node->scratch.interests);
     DPS_BitVectorFree(node->scratch.needs);
     DPS_HistoryFree(&node->history);
+    UnlockNode(node);
 
     uv_mutex_destroy(&node->nodeMutex);
     uv_mutex_destroy(&node->condMutex);
