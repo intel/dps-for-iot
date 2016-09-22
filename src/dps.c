@@ -19,6 +19,11 @@
  */
 DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
+#ifdef DPS_USE_UDP
+#define COAP_PROTOCOL COAP_OVER_UDP
+#else
+#define COAP_PROTOCOL COAP_OVER_TCP
+#endif
 
 #define _MIN_(x, y)  (((x) < (y)) ? (x) : (y))
 
@@ -173,7 +178,7 @@ typedef struct _DPS_Node {
     DPS_MulticastReceiver* mcastReceiver;
     DPS_MulticastSender* mcastSender;
 
-    DPS_NetListener* netListener;         /* TCP listener */
+    DPS_NetContext* netCtx;               /* Network context */
 
 } DPS_Node;
 
@@ -757,7 +762,7 @@ static DPS_Status SendPublication(DPS_Node* node, DPS_Publication* pub, DPS_BitV
 
     if (remote) {
         DPS_DBGPRINT("SendPublication (ttl=%d) to %s\n", pub->ttl, RemoteNodeAddressText(remote));
-        protocol = COAP_OVER_TCP;
+        protocol = COAP_PROTOCOL;
     } else {
         DPS_DBGPRINT("SendPublication (ttl=%d) as multicast\n", pub->ttl);
         protocol = COAP_OVER_UDP;
@@ -785,7 +790,7 @@ static DPS_Status SendPublication(DPS_Node* node, DPS_Publication* pub, DPS_BitV
     }
     if (ret == DPS_OK) {
         if (remote) {
-            ret = DPS_NetSend(node, bufs, A_SIZEOF(bufs), (struct sockaddr*)&remote->addr.inaddr, OnNetSendComplete);
+            ret = DPS_NetSend(node->netCtx, bufs, A_SIZEOF(bufs), (struct sockaddr*)&remote->addr.inaddr, OnNetSendComplete);
             if (ret == DPS_OK) {
                 UpdatePubHistory(node, pub);
             } else {
@@ -856,7 +861,7 @@ static DPS_Status QueuePublicationAck(DPS_Node* node, PublicationAck* ack, uint8
 
     assert(ack->sequenceNum != 0);
 
-    if (!node->netListener) {
+    if (!node->netCtx) {
         return DPS_ERR_NETWORK;
     }
 
@@ -873,7 +878,7 @@ static DPS_Status QueuePublicationAck(DPS_Node* node, PublicationAck* ack, uint8
     CBOR_EncodeUint32(&payload, ack->sequenceNum);
     if (ret == DPS_OK) {
         CBOR_EncodeBytes(&payload, data, len);
-        ret = CoAP_Compose(COAP_OVER_TCP, ack->bufs, A_SIZEOF(ack->bufs), COAP_CODE(COAP_REQUEST, COAP_PUT), opts, A_SIZEOF(opts), &payload);
+        ret = CoAP_Compose(COAP_PROTOCOL, ack->bufs, A_SIZEOF(ack->bufs), COAP_CODE(COAP_REQUEST, COAP_PUT), opts, A_SIZEOF(opts), &payload);
         if (ret != DPS_OK) {
             free(payload.base);
             free(ack);
@@ -965,7 +970,7 @@ static void SendAcksTask(DPS_Node* node)
     DPS_DBGTRACE();
 
     while ((ack = node->ackQueue.first) != NULL) {
-        DPS_Status ret = DPS_NetSend(node, ack->bufs, A_SIZEOF(ack->bufs), (struct sockaddr*)&ack->destAddr.inaddr, OnNetSendComplete);
+        DPS_Status ret = DPS_NetSend(node->netCtx, ack->bufs, A_SIZEOF(ack->bufs), (struct sockaddr*)&ack->destAddr.inaddr, OnNetSendComplete);
         if (ret != DPS_OK) {
             NetSendFailed(node, (struct sockaddr*)&ack->destAddr.inaddr, ack->bufs, A_SIZEOF(ack->bufs), ret);
         }
@@ -1274,7 +1279,7 @@ static DPS_Status SendSubscription(DPS_Node* node, RemoteNode* remote, DPS_BitVe
 
     size_t allocSize = DPS_BitVectorSerializeMaxSize(needs) + DPS_BitVectorSerializeMaxSize(interests) + 40;
 
-    if (!node->netListener) {
+    if (!node->netCtx) {
         return DPS_ERR_NETWORK;
     }
 
@@ -1298,13 +1303,13 @@ static DPS_Status SendSubscription(DPS_Node* node, RemoteNode* remote, DPS_BitVe
         ret = DPS_BitVectorSerialize(interests, &payload);
     }
     if (ret == DPS_OK) {
-        ret = CoAP_Compose(COAP_OVER_TCP, bufs, A_SIZEOF(bufs), COAP_CODE(COAP_REQUEST, COAP_GET), opts, A_SIZEOF(opts), &payload);
+        ret = CoAP_Compose(COAP_PROTOCOL, bufs, A_SIZEOF(bufs), COAP_CODE(COAP_REQUEST, COAP_GET), opts, A_SIZEOF(opts), &payload);
     }
     if (ret != DPS_OK) {
         free(payload.base);
         return ret;
     }
-    ret = DPS_NetSend(node, bufs, A_SIZEOF(bufs), (struct sockaddr*)&remote->addr.inaddr, OnNetSendComplete);
+    ret = DPS_NetSend(node->netCtx, bufs, A_SIZEOF(bufs), (struct sockaddr*)&remote->addr.inaddr, OnNetSendComplete);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to send subscription request %s\n", DPS_ErrTxt(ret));
         NetSendFailed(node, (struct sockaddr*)&remote->addr, bufs, A_SIZEOF(bufs), ret);
@@ -1645,7 +1650,7 @@ static ssize_t OnNetReceive(DPS_Node* node, const struct sockaddr* addr, const u
 
     DPS_DBGTRACE();
 
-    ret = CoAP_GetPktLen(COAP_OVER_TCP, data, len, &pktLen);
+    ret = CoAP_GetPktLen(COAP_PROTOCOL, data, len, &pktLen);
     if (ret == DPS_OK) {
         if (len < pktLen) {
             /*
@@ -1653,7 +1658,7 @@ static ssize_t OnNetReceive(DPS_Node* node, const struct sockaddr* addr, const u
              */
             return pktLen - len;
         }
-        ret = CoAP_Parse(COAP_OVER_TCP, data, len, &coap, &payload);
+        ret = CoAP_Parse(COAP_PROTOCOL, data, len, &coap, &payload);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("CoAP_Parse failed: ret= %d\n", ret);
             return -(ssize_t)len;
@@ -1683,9 +1688,9 @@ static void StopNode(DPS_Node* node)
         DPS_MulticastStopSend(node->mcastSender);
         node->mcastSender = NULL;
     }
-    if (node->netListener) {
-        DPS_NetStopListening(node->netListener);
-        node->netListener = NULL;
+    if (node->netCtx) {
+        DPS_NetStop(node->netCtx);
+        node->netCtx = NULL;
     }
     assert(!uv_is_closing((uv_handle_t*)&node->bgHandler));
     uv_close((uv_handle_t*)&node->bgHandler, NULL);
@@ -1757,7 +1762,7 @@ DPS_Node* DPS_CreateNode(const char* separators)
     return node;
 }
 
-DPS_Status DPS_StartNode(DPS_Node* node, int mcast, int tcpPort)
+DPS_Status DPS_StartNode(DPS_Node* node, int mcast, int rxPort)
 {
     int r;
 
@@ -1809,15 +1814,15 @@ DPS_Status DPS_StartNode(DPS_Node* node, int mcast, int tcpPort)
     if (mcast & DPS_MCAST_PUB_ENABLE_SEND) {
         node->mcastSender = DPS_MulticastStartSend(node);
     }
-    node->netListener = DPS_NetStartListening(node, tcpPort, OnNetReceive);
-    if (!node->netListener) {
-        DPS_ERRPRINT("Failed to initialize listener on TCP port %d\n", tcpPort);
+    node->netCtx = DPS_NetStart(node, rxPort, OnNetReceive);
+    if (!node->netCtx) {
+        DPS_ERRPRINT("Failed to initialize network context on port %d\n", rxPort);
         return DPS_ERR_NETWORK;
     }
     /*
      * Make sure have the listenting port before we return
      */
-    node->port = DPS_NetGetListenerPort(node->netListener);
+    node->port = DPS_NetGetListenerPort(node->netCtx);
     assert(node->port);
     /*
      *  The node loop gets its own thread to run on
@@ -1828,6 +1833,11 @@ DPS_Status DPS_StartNode(DPS_Node* node, int mcast, int tcpPort)
         return DPS_ERR_FAILURE;
     }
     return DPS_OK;
+}
+
+DPS_NetContext* DPS_GetNetContext(DPS_Node* node)
+{
+    return node->netCtx;
 }
 
 uv_loop_t* DPS_GetLoop(DPS_Node* node)

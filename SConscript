@@ -16,6 +16,12 @@ elif platform == 'posix':
 hdrs = libenv.Glob('inc/*.h')
 env.Install('inc/dps', hdrs)
 srcs = libenv.Glob('src/*.c')
+
+if ('USE_UDP' in libenv.Dictionary().keys()):
+    srcs.append('src/udp/network.c')
+else:
+    srcs.append('src/tcp/network.c')
+
 objs = libenv.Object(srcs)
 lib = libenv.Library('lib/dps', objs)
 # Windows doesn't distinguish between static and dynamic obj files
@@ -59,7 +65,6 @@ testenv.Program('bin/hashtest', 'test/hashtest.c')
 testenv.Program('bin/stats', 'test/stats.c')
 testenv.Program('bin/pubsub', 'test/pubsub.c')
 testenv.Program('bin/packtest', 'test/packtest.c')
-testenv.Program('bin/nettest', 'test/nettest.c')
 testenv.Program('bin/cbortest', 'test/cbortest.c')
 
 # Platform-specific test cases

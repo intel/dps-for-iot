@@ -22,6 +22,9 @@ for key, val in ARGLIST:
         profile = True
     elif (key == 'debug' and val == 'false'):
         debug = False
+    elif (key == 'udp' and val == 'true'):
+        env['USE_UDP'] = 'true'
+        env['CPPDEFINES'].append('DPS_USE_UDP')
 
 
 # Platform specific configuration

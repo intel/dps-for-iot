@@ -17,7 +17,7 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 #define MAX_WRITE_LEN  4096
 #define MIN_READ_LEN      8
 
-struct _DPS_NetListener {
+struct _DPS_NetContext {
     uv_tcp_t socket;
     DPS_Node* node;
     DPS_OnReceive receiveCB;
@@ -92,7 +92,7 @@ static void OnData(uv_stream_t* socket, ssize_t nread, const uv_buf_t* buf)
 static void OnIncomingConnection(uv_stream_t* stream, int status)
 {
     int ret;
-    DPS_NetListener* listener = (DPS_NetListener*)stream->data;
+    DPS_NetContext* netCtx = (DPS_NetContext*)stream->data;
     NetReader* reader;
 
     DPS_DBGTRACE();
@@ -113,8 +113,8 @@ static void OnIncomingConnection(uv_stream_t* stream, int status)
         return;
     }
 
-    reader->node = listener->node;
-    reader->receiveCB = listener->receiveCB;
+    reader->node = netCtx->node;
+    reader->receiveCB = netCtx->receiveCB;
     reader->socket.data = reader;
 
     ret = uv_accept(stream, (uv_stream_t*)&reader->socket);
@@ -133,65 +133,65 @@ static void OnIncomingConnection(uv_stream_t* stream, int status)
 
 #define LISTEN_BACKLOG  2
 
-DPS_NetListener* DPS_NetStartListening(DPS_Node* node, int port, DPS_OnReceive cb)
+DPS_NetContext* DPS_NetStart(DPS_Node* node, int port, DPS_OnReceive cb)
 {
     int ret;
-    DPS_NetListener* listener;
+    DPS_NetContext* netCtx;
     struct sockaddr_in6 addr;
 
-    listener = calloc(1, sizeof(*listener));
-    if (!listener) {
+    netCtx = calloc(1, sizeof(*netCtx));
+    if (!netCtx) {
         return NULL;
     }
-    ret = uv_tcp_init(DPS_GetLoop(node), &listener->socket);
+    ret = uv_tcp_init(DPS_GetLoop(node), &netCtx->socket);
     if (ret) {
         DPS_ERRPRINT("uv_tcp_init error=%s\n", uv_err_name(ret));
-        free(listener);
+        free(netCtx);
         return NULL;
     }
-    listener->node = node;
-    listener->receiveCB = cb;
-    listener->socket.data = listener;
+    netCtx->node = node;
+    netCtx->receiveCB = cb;
+    netCtx->socket.data = netCtx;
     ret = uv_ip6_addr("::", port, &addr);
     if (ret) {
         goto ErrorExit;
     }
-    ret = uv_tcp_bind(&listener->socket, (const struct sockaddr*)&addr, 0);
+    ret = uv_tcp_bind(&netCtx->socket, (const struct sockaddr*)&addr, 0);
     if (ret) {
         goto ErrorExit;
     }
-    ret = uv_listen((uv_stream_t*)&listener->socket, LISTEN_BACKLOG, OnIncomingConnection);
+    ret = uv_listen((uv_stream_t*)&netCtx->socket, LISTEN_BACKLOG, OnIncomingConnection);
     if (ret) {
         goto ErrorExit;
     }
-    return listener;
+    return netCtx;
 
 ErrorExit:
 
-    DPS_ERRPRINT("Failed to start net listener: error=%s\n", uv_err_name(ret));
-    uv_close((uv_handle_t*)&listener->socket, HandleClosed);
+    DPS_ERRPRINT("Failed to start net netCtx: error=%s\n", uv_err_name(ret));
+    uv_close((uv_handle_t*)&netCtx->socket, HandleClosed);
     return NULL;
 }
 
-uint16_t DPS_NetGetListenerPort(DPS_NetListener* listener)
+uint16_t DPS_NetGetListenerPort(DPS_NetContext* netCtx)
 {
     struct sockaddr_in6 addr;
     int len = sizeof(addr);
 
-    if (!listener) {
+    if (!netCtx) {
         return 0;
     }
-    if (uv_tcp_getsockname(&listener->socket, (struct sockaddr*)&addr, &len)) {
+    if (uv_tcp_getsockname(&netCtx->socket, (struct sockaddr*)&addr, &len)) {
         return 0;
     }
     DPS_DBGPRINT("Listener port = %d\n", ntohs(addr.sin6_port));
     return ntohs(addr.sin6_port);
 }
 
-void DPS_NetStopListening(DPS_NetListener* listener)
+void DPS_NetStop(DPS_NetContext* netCtx)
 {
-    if (listener) {
-        uv_close((uv_handle_t*)&listener->socket, HandleClosed);
+    if (netCtx) {
+        uv_close((uv_handle_t*)&netCtx->socket, HandleClosed);
     }
 }
 
@@ -251,7 +251,7 @@ static void OnOutgoingConnection(uv_connect_t *req, int status)
     }
 }
 
-DPS_Status DPS_NetSend(DPS_Node* node, uv_buf_t* bufs, size_t numBufs, const struct sockaddr* addr, DPS_NetSendComplete sendCompleteCB)
+DPS_Status DPS_NetSend(DPS_NetContext* netCtx, uv_buf_t* bufs, size_t numBufs, const struct sockaddr* addr, DPS_NetSendComplete sendCompleteCB)
 {
     int ret;
     NetWriter* writer;
@@ -273,7 +273,7 @@ DPS_Status DPS_NetSend(DPS_Node* node, uv_buf_t* bufs, size_t numBufs, const str
     if (!writer) {
         return DPS_ERR_RESOURCES;
     }
-    writer->node = node;
+    writer->node = netCtx->node;
     memcpy(writer->bufs, bufs, numBufs * sizeof(uv_buf_t));
     writer->numBufs = numBufs;
     writer->onSendComplete = sendCompleteCB;
@@ -281,7 +281,7 @@ DPS_Status DPS_NetSend(DPS_Node* node, uv_buf_t* bufs, size_t numBufs, const str
     writer->socket.data = writer;
     memcpy(&writer->addr, addr, sizeof(writer->addr));
 
-    ret = uv_tcp_init(DPS_GetLoop(node), &writer->socket);
+    ret = uv_tcp_init(DPS_GetLoop(netCtx->node), &writer->socket);
     if (ret) {
         DPS_ERRPRINT("uv_tcp_init error=%s\n", uv_err_name(ret));
         free(writer);

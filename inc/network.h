@@ -76,46 +76,46 @@ typedef void (*DPS_NetSendComplete)(DPS_Node* node, struct sockaddr* addr, uv_bu
 DPS_Status DPS_MulticastSend(DPS_MulticastSender* sender, uv_buf_t* bufs, size_t numBufs);
 
 /*
- * Opaque data structure for a TCP listener
+ * Opaque data structure for network-specific state
  */
-typedef struct _DPS_NetListener DPS_NetListener;
+typedef struct _DPS_NetContext DPS_NetContext;
 
 /*
- * Start listening and receiving data on TCP connections
+ * Start listening and receiving data
  *
  * @param node  Opaque pointer to the DPS node 
  * @param port  If non-zero the port number to listen on, if zero use an ephemeral port
  * @param cb    Function to call when data is received
  *
- * @return   Returns a pointer to an opaque data structure that holds the state of the listener.
+ * @return   Returns a pointer to an opaque data structure that holds the state of the netCtx.
  */
-DPS_NetListener* DPS_NetStartListening(DPS_Node* node, int port, DPS_OnReceive cb);
+DPS_NetContext* DPS_NetStart(DPS_Node* node, int port, DPS_OnReceive cb);
 
 /*
- * Get the port the listener is listening on
+ * Get the port the netCtx is listening on
  *
- * @param listener  Pointer to an opaque data structure that holds the state of the listener.
+ * @param netCtx  Pointer to an opaque data structure that holds the state of the netCtx.
  */
-uint16_t DPS_NetGetListenerPort(DPS_NetListener* listener);
+uint16_t DPS_NetGetListenerPort(DPS_NetContext* netCtx);
 
 /*
- * Stop listening for new TCP connections
+ * Stop listening for data
  *
- * @param listener  Pointer to an opaque data structure that holds the state of the listener.
- *                  The listener will be freed and this pointer will be invalid after this call.
+ * @param netCtx  Pointer to an opaque data structure that holds the network state.
+ *                The netCtx will be freed and this pointer will be invalid after this call.
  */
-void DPS_NetStopListening(DPS_NetListener* listener);
+void DPS_NetStop(DPS_NetContext* netCtx);
 
 /*
  * Connect and send data to a specific destination address
  *
- * @param node            Opaque pointer to the DPS node 
+ * @param netCtx          Opaque pointer to the network context
  * @param bufs            Data buffers to send, the data in the buffers must be live until the send completes.
  * @param numBufs         Number of buffers to send
  * @param addr            Destination address
  * @param sendCompleteCB  Function called when the send is completeso the content of the data buffers can be freed.
  */
-DPS_Status DPS_NetSend(DPS_Node* node, uv_buf_t* bufs, size_t numBufs, const struct sockaddr* addr, DPS_NetSendComplete sendCompleteCB);
+DPS_Status DPS_NetSend(DPS_NetContext* netCtx, uv_buf_t* bufs, size_t numBufs, const struct sockaddr* addr, DPS_NetSendComplete sendCompleteCB);
 
 /*
  * Generates text for an address
