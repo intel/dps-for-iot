@@ -2,11 +2,14 @@
 #define _DPS_NODE_H
 
 #include <dps/bitvec.h>
+#include <dps/network.h>
 #include <dps/dps_history.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+typedef struct _BackgroundHandler BackgroundHandler;
 
 typedef enum { LINK_OP, UNLINK_OP } OpType;
 
@@ -66,13 +69,12 @@ typedef struct _DPS_Node {
 
     uv_thread_t thread;                   /* Thread for the event loop */
     uv_loop_t* loop;                      /* uv lib event loop */
-    uv_timer_t shutdownTimer;             /* for graceful shut down */
     uv_mutex_t nodeMutex;                 /* Mutex to protect this node */
     uv_mutex_t condMutex;                 /* Mutex for use wih condition variables */
 #ifndef NDEBUG
     int lockCount;                        /* Detect recursive locks */
 #endif
-    uv_async_t bgHandler;                 /* Async handler for background tasks */
+    BackgroundHandler* bgHandler;         /* Async handler for background tasks */
 
     uint64_t ttlBasis;                    /* basis time for expiring retained messages */
 
@@ -102,6 +104,11 @@ typedef struct _DPS_Node {
     DPS_NetContext* netCtx;               /* Network context */
 
 } DPS_Node;
+
+BackgroundHandler* DPS_BackgroundCreate(DPS_Node* node, void (*run)(DPS_Node*));
+void DPS_BackgroundScheduleNow(BackgroundHandler* bg);
+void DPS_BackgroundSchedule(BackgroundHandler* bg, void (*run)(DPS_Node*), uint64_t delayMsecs);
+void DPS_BackgroundClose(BackgroundHandler* bg);
 
 #ifdef __cplusplus
 }
