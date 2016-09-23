@@ -55,6 +55,7 @@ void DPS_BackgroundScheduleNow(BackgroundHandler* bg)
 
 void DPS_BackgroundSchedule(BackgroundHandler* bg, void (*run)(DPS_Node*), uint64_t delayMsecs)
 {
+    assert(uv_thread_self() == bg->node->thread);
     bg->timerRun = run;
     uv_timer_start(&bg->timer, TimerRun, delayMsecs, 0);
 }
@@ -73,6 +74,7 @@ static void AsyncClose(uv_handle_t* handle)
 
 void DPS_BackgroundClose(BackgroundHandler* bg)
 {
+    assert(uv_thread_self() == bg->node->thread);
     assert(!uv_is_closing((uv_handle_t*)&bg->async));
     assert(!uv_is_closing((uv_handle_t*)&bg->timer));
     uv_close((uv_handle_t*)&bg->async, AsyncClose);

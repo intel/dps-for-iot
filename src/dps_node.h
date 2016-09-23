@@ -105,14 +105,51 @@ typedef struct _DPS_Node {
 
 } DPS_Node;
 
+/*
+ * Create a background handler to run a function on the node's event
+ * loop thread when scheduled.
+ *
+ * This should be called prior to running the node's event loop thread.
+ *
+ * @param node   The node whose thread the function will be called on
+ * @param run    The function called when the handler runs
+ *
+ * @return The background handler
+ */
 BackgroundHandler* DPS_BackgroundCreate(DPS_Node* node, void (*run)(DPS_Node*));
-void DPS_BackgroundScheduleNow(BackgroundHandler* bg);
-void DPS_BackgroundSchedule(BackgroundHandler* bg, void (*run)(DPS_Node*), uint64_t delayMsecs);
+
+/*
+ * Release the background handler resources.
+ *
+ * This must be called from the node's event loop thread, and the event loop
+ * must run after calling to ensure all cleanup is completed.
+ */
 void DPS_BackgroundClose(BackgroundHandler* bg);
+
+/*
+ * Request the background handler to run.
+ *
+ * This is safe to call from any thread.
+ *
+ * @param bg  The background handler
+ */
+void DPS_BackgroundScheduleNow(BackgroundHandler* bg);
+
+/*
+ * Request the background handler to call a function from the node's event
+ * loop thread at some future time.
+ *
+ * This must be called from the node's thread.
+ *
+ * @param bg            The background handler
+ * @param run           The function called when the handler runs
+ * @param delayMsecs    Milliseconds from now when to call the function
+ */
+void DPS_BackgroundSchedule(BackgroundHandler* bg, void (*run)(DPS_Node*), uint64_t delayMsecs);
 
 #ifdef __cplusplus
 }
 #endif
 
 #endif
-    
+
