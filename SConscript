@@ -54,7 +54,7 @@ ns3srcs = ['src/bitvec.c',
 
 
 if platform == 'posix':
-    ns3shobjs = SharedObject(ns3srcs)
+    ns3shobjs = libenv.SharedObject(ns3srcs)
     ns3shlib = libenv.SharedLibrary('lib/dps_ns3', ns3shobjs)
 
 # Using SWIG to build the python wrapper
