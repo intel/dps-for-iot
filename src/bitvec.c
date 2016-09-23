@@ -384,41 +384,47 @@ DPS_Status DPS_BitVectorUnion(DPS_BitVector* bvOut, DPS_BitVector* bv)
 
 DPS_Status DPS_BitVectorIntersection(DPS_BitVector* bvOut, DPS_BitVector* bv1, DPS_BitVector* bv2)
 {
-    size_t i;
-    chunk_t n = 0;
-
     if (!bvOut || !bv1 || !bv2) {
         return DPS_ERR_NULL;
     }
     assert(bvOut->len == bv1->len && bvOut->len == bv2->len);
-    for (i = 0; i < NUM_CHUNKS(bv1); ++i) {
-        n |= (bvOut->bits[i] = bv1->bits[i] & bv2->bits[i]);
-    }
-    if (n) {
-        INVALIDATE_POPCOUNT(bvOut);
+    if ((bv1->popCount && bv2->popCount)) {
+        size_t i;
+        int nz = 0;
+        assert(bvOut->len == bv1->len && bvOut->len == bv2->len);
+        for (i = 0; i < NUM_CHUNKS(bv1); ++i) {
+            nz |= ((bvOut->bits[i] = bv1->bits[i] & bv2->bits[i]) != 0);
+        }
+        if (nz) {
+            INVALIDATE_POPCOUNT(bvOut);
+        } else {
+            bvOut->popCount = 0;
+        }
     } else {
-        bvOut->popCount = 0;
+        DPS_BitVectorClear(bvOut);
     }
     return DPS_OK;
 }
 
 DPS_Status DPS_BitVectorXor(DPS_BitVector* bvOut, DPS_BitVector* bv1, DPS_BitVector* bv2, int* equal)
 {
-    size_t i;
-    int diff = 0;
     if (!bvOut || !bv1 || !bv2) {
         return DPS_ERR_NULL;
     }
     assert(bvOut->len == bv1->len && bvOut->len == bv2->len);
-    for (i = 0; i < NUM_CHUNKS(bv1); ++i) {
-        if ((bvOut->bits[i] = bv1->bits[i] ^ bv2->bits[i]) != 0) {
-            diff = 1;
+    if (bv1->popCount && bv2->popCount) {
+        size_t i;
+        int diff = 0;
+        for (i = 0; i < NUM_CHUNKS(bv1); ++i) {
+            diff |= ((bvOut->bits[i] = bv1->bits[i] ^ bv2->bits[i]) != 0);
         }
+        if (equal) {
+            *equal = !diff;
+        }
+        INVALIDATE_POPCOUNT(bvOut);
+    } else {
+        DPS_BitVectorClear(bvOut);
     }
-    if (equal) {
-        *equal = !diff;
-    }
-    INVALIDATE_POPCOUNT(bvOut);
     return DPS_OK;
 }
 
@@ -872,27 +878,28 @@ DPS_Status DPS_CountVectorAdd(DPS_CountVector* cv, DPS_BitVector* bv)
     if (cv->entries == CV_MAX) {
         return DPS_ERR_RESOURCES;
     }
-    for (i = 0; i < NUM_CHUNKS(bv); ++i) {
-        count_t* count = cv->counts[i];
-        chunk_t bit = 1;
-        chunk_t chunk = bv->bits[i];
-
-        if (cv->bvUnion) {
-            cv->bvUnion->bits[i] |= chunk;
-        }
-        while (chunk) {
-            if (chunk & bit) {
-                ++(*count);
-                chunk ^= bit;
+    if (bv->popCount != 0) {
+        for (i = 0; i < NUM_CHUNKS(bv); ++i) {
+            chunk_t chunk = bv->bits[i];
+            if (chunk) {
+                count_t* count = cv->counts[i];
+                if (cv->bvUnion) {
+                    cv->bvUnion->bits[i] |= chunk;
+                }
+                do {
+                    if (chunk & 1) {
+                        ++(*count);
+                    }
+                    chunk >>= 1;
+                    ++count;
+                } while (chunk);
             }
-            bit <<= 1;
-            ++count;
+        }
+        if (cv->bvUnion) {
+            INVALIDATE_POPCOUNT(cv->bvUnion);
         }
     }
     ++cv->entries;
-    if (cv->bvUnion) {
-        INVALIDATE_POPCOUNT(cv->bvUnion);
-    }
     return DPS_OK;
 }
 
@@ -906,29 +913,31 @@ DPS_Status DPS_CountVectorDel(DPS_CountVector* cv, DPS_BitVector* bv)
     if (cv->entries == 0) {
         return DPS_ERR_ARGS;
     }
-    for (i = 0; i < NUM_CHUNKS(bv); ++i) {
-        count_t* count = cv->counts[i];
-        chunk_t bit = 1;
-        chunk_t chunk = bv->bits[i];
-        chunk_t clear = 0;
-
-        while (chunk) {
-            if (chunk & bit) {
-                assert(*count);
-                if (--(*count) == 0) {
-                    clear |= bit;
+    if (bv->popCount != 0) {
+        for (i = 0; i < NUM_CHUNKS(bv); ++i) {
+            chunk_t chunk = bv->bits[i];
+            if (chunk) {
+                count_t* count = cv->counts[i];
+                chunk_t bit = 1;
+                chunk_t clear = 0;
+                do {
+                    if (chunk & 1) {
+                        if (--(*count) == 0) {
+                            clear |= bit;
+                        }
+                    }
+                    bit <<= 1;
+                    chunk >>= 1;
+                    ++count;
+                } while (chunk);
+                if (cv->bvUnion) {
+                    cv->bvUnion->bits[i] ^= clear;
                 }
-                chunk ^= bit;
             }
-            bit <<= 1;
-            ++count;
         }
         if (cv->bvUnion) {
-            cv->bvUnion->bits[i] ^= clear;
+            INVALIDATE_POPCOUNT(cv->bvUnion);
         }
-    }
-    if (cv->bvUnion) {
-        INVALIDATE_POPCOUNT(cv->bvUnion);
     }
     --cv->entries;
     return DPS_OK;
@@ -949,16 +958,18 @@ DPS_BitVector* DPS_CountVectorToIntersection(DPS_CountVector* cv)
     if (bv) {
         size_t i;
         for (i = 0; i < NUM_CHUNKS(bv); ++i) {
-            chunk_t b = 1;
-            count_t* count = cv->counts[i];
-            chunk_t chunk = 0;
-            while (b) {
-                if (*count++ == cv->entries) {
-                    chunk |= b;
+            if (!cv->bvUnion || cv->bvUnion->bits[i]) {
+                chunk_t b = 1;
+                count_t* count = cv->counts[i];
+                chunk_t chunk = 0;
+                while (b) {
+                    if (*count++ == cv->entries) {
+                        chunk |= b;
+                    }
+                    b <<= 1;
                 }
-                b <<= 1;
+                bv->bits[i] = chunk;
             }
-            bv->bits[i] = chunk;
         }
     }
     return bv;
