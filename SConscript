@@ -10,6 +10,7 @@ libenv = env.Clone()
 # Additional warnings for the core object files
 if platform == 'win32':
     libenv.Append(CFLAGS = ['/W3']);
+    libenv.Append(LIBS = env['UV_LIBS'])
 elif platform == 'posix':
     libenv.Append(CFLAGS = ['-Wall', '-Werror', '-Wno-format-extra-args'])
 
@@ -50,9 +51,11 @@ ns3srcs = ['src/bitvec.c',
            'src/dps_uuid.c',
            'src/murmurhash3.c',
            'src/topics.c']
-# Windows doesn't distinguish between static and dynamic obj files
-ns3shobjs = libenv.Object(ns3srcs) if platform == 'win32' else libenv.SharedObject(ns3srcs)
-ns3shlib = libenv.SharedLibrary('lib/dps_ns3', ns3shobjs)
+
+
+if platform == 'posix':
+    ns3shobjs = SharedObject(ns3srcs)
+    ns3shlib = libenv.SharedLibrary('lib/dps_ns3', ns3shobjs)
 
 # Using SWIG to build the python wrapper
 pyenv = libenv.Clone()
