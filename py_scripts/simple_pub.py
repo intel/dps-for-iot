@@ -12,7 +12,7 @@ node = dps.CreateNode()
 dps.StartNode(node, dps.MCAST_PUB_ENABLE_SEND, 0)
 pub = dps.CreatePublication(node)
 
-dps.InitPublication(pub, ['a/b/c'], OnAck)
+dps.InitPublication(pub, ['a/b/c'], 0, OnAck)
 dps.Publish(pub, "hello")
 time.sleep(0.1)
 dps.Publish(pub, "world")

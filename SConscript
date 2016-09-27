@@ -61,6 +61,7 @@ if platform == 'posix':
 pyenv = libenv.Clone()
 pyenv.Append(LIBPATH = env['PY_LIBPATH'])
 pyenv.Append(CPPPATH = env['PY_CPPPATH'])
+pyenv.Append(LIBS = [lib, env['UV_LIBS']])
 # Python has platform specific naming conventions
 if platform == 'win32':
     pyenv['SHLIBSUFFIX'] = '.pyd'
