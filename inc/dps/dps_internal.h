@@ -18,14 +18,7 @@ typedef struct _DPS_NodeAddress {
 } DPS_NodeAddress;
 
 /**
- * Enumeration for Pub and Sub roles
- */
-typedef enum { DPS_Sub, DPS_Pub } DPS_Role;
-
-/**
  * For passing buffers around
- *
- * TODO - put this in a private header
  */
 typedef struct {
     uint8_t* base; /**< base address for buffer */

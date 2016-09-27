@@ -88,7 +88,7 @@ static void OnTimer(uv_timer_t* handle)
         sprintf(msg, "publication #%d", ++pubcount);
 
         publications[p] = DPS_CreatePublication(pubNode[p]);
-        ret = DPS_InitPublication(publications[p], pubTopics, 1, NULL);
+        ret = DPS_InitPublication(publications[p], pubTopics, 1, DPS_FALSE, NULL);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("Failed to create publication - error=%d\n", ret);
             return;

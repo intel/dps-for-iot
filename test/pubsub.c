@@ -13,7 +13,7 @@
 static void AddTopic(DPS_BitVector* filter, const char* topic)
 {
     printf("AddTopic %s\n", topic);
-    DPS_AddTopic(filter, topic, "/.", DPS_Pub);
+    DPS_AddTopic(filter, topic, "/.", DPS_PubTopic);
     DPS_BitVectorDump(filter, DPS_TRUE);
 }
 

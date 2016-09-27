@@ -94,7 +94,7 @@ static size_t InitRandomSub(DPS_BitVector* bv, char* topics[])
     if (uniqueSub) {
         uniqueSub = 0;
         topics[0] = strdup(UniqueSubTopic);
-        ret = DPS_AddTopic(bv, topics[0], "/.", DPS_Sub);
+        ret = DPS_AddTopic(bv, topics[0], "/.", DPS_SubTopic);
         assert(ret == DPS_OK);
         return 1;
     }
@@ -109,7 +109,7 @@ static size_t InitRandomSub(DPS_BitVector* bv, char* topics[])
             int d = random() % 10;
             topics[i] = malloc(32);
             sprintf(topics[i], subFormats[fmt], a, b, c, d);
-            ret = DPS_AddTopic(bv, topics[i], "/.", DPS_Sub);
+            ret = DPS_AddTopic(bv, topics[i], "/.", DPS_SubTopic);
             assert(ret == DPS_OK);
             /*
              * Use hash table to track unique subscription topics
@@ -148,7 +148,7 @@ static size_t InitRandomPub(DPS_BitVector* bv, char* topics[])
         int e = random() % 50;
         topics[i] = malloc(32);
         sprintf(topics[i], pubFormats[fmt], a, b, c, d, e);
-        ret = DPS_AddTopic(bv, topics[i], "/.", DPS_Pub);
+        ret = DPS_AddTopic(bv, topics[i], "/.", DPS_PubTopic);
         assert(ret == DPS_OK);
     }
     return numPubs;
@@ -365,7 +365,7 @@ static int SetExpects(SubNode* node, char** pubs, size_t numPubs)
         return 0;
     }
     if (node->numChildren == 0) {
-        DPS_MatchTopicList(pubs, numPubs, node->strings, node->count, "/.", &node->expect);
+        DPS_MatchTopicList(pubs, numPubs, node->strings, node->count, "/.", DPS_FALSE, &node->expect);
     } else {
         size_t i;
         for (i = 0; i < node->numChildren; ++i) {
@@ -535,7 +535,7 @@ static void RunSimulation(int runs, int depth, int pubIters)
 
             pubTopics[0] = strdup(UniquePubTopic);
             DPS_BitVectorClear(pub);
-            DPS_AddTopic(pub, pubTopics[0], "/.", DPS_Pub);
+            DPS_AddTopic(pub, pubTopics[0], "/.", DPS_PubTopic);
 
             ClearExpects(subscriptions);
             expects = SetExpects(subscriptions, pubTopics, numPubTopics);

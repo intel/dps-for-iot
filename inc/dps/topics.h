@@ -8,6 +8,14 @@
 extern "C" {
 #endif
 
+/**
+ * Enumeration for Pub and Sub topicTypes
+ *
+ * DPS_SubTopic encode the bloom filter bits for a subscription
+ * DPS_PubTopic encode the bloom filter bits for a publication allowing wild-card matching
+ * DPS_PubNoWild is for publications that do not permit wild-card matches
+ */
+typedef enum { DPS_SubTopic, DPS_PubTopic, DPS_PubNoWild } DPS_TopicType;
 
 /**
  * Add a topic to a Bloom filter.  A topic has the general form "A<sep>B<sep>C..."
@@ -17,11 +25,11 @@ extern "C" {
  * @param bf          The Bloom filter to add the topic to
  * @param topic       The topic to add
  * @param separators  The separator strings for the topic
- * @param role        DPS_Pub or DPS_Sub
+ * @param topicType   The type encoding for the topic string being added
  *
  * @return DPS_OK or an error
  */
-DPS_Status DPS_AddTopic(DPS_BitVector* bf, const char* topic, const char* separators, DPS_Role role);
+DPS_Status DPS_AddTopic(DPS_BitVector* bf, const char* topic, const char* separators, DPS_TopicType topicType);
 
 /**
  * Check a bloom filter for a topic match.
@@ -40,11 +48,12 @@ int DPS_MatchTopic(DPS_BitVector* bf, const char* topic, const char* separators)
  * @param pubTopic    The publication topic
  * @param subTopic    The subscription topic to match 
  * @param separators  The separator strings for the topic
+ * @param noWild      Wild card matches are disallowed
  * @param match       Returns 1 for a match and 0 for no match
  *
  * @return DPS_OK or an error
  */
-DPS_Status DPS_MatchTopicString(const char* pubTopic, const char* subTopic, const char* separators, int* match);
+DPS_Status DPS_MatchTopicString(const char* pubTopic, const char* subTopic, const char* separators, int noWild, int* match);
 
 /**
  * String based topic matching. The publication topics must provide a match for all of the subscription topics
@@ -54,11 +63,12 @@ DPS_Status DPS_MatchTopicString(const char* pubTopic, const char* subTopic, cons
  * @param subs        The array of subscription topics to match 
  * @param numSubs     Size of the subs array
  * @param separators  The separator strings for the topics
+ * @param noWild      Wild card matches are disallowed
  * @param match       Returns 1 for a match and 0 for no match
  *
  * @return DPS_OK or an error
  */
-DPS_Status DPS_MatchTopicList(char* const* pubs, size_t numPubs, char* const* subs, size_t numSubs, const char* separators, int* match);
+DPS_Status DPS_MatchTopicList(char* const* pubs, size_t numPubs, char* const* subs, size_t numSubs, const char* separators, int noWild, int* match);
 
 #ifdef __cplusplus
 }

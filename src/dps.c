@@ -270,16 +270,18 @@ static int SameAddr(DPS_NodeAddress* addr, const struct sockaddr* b)
 
 DPS_Status DPS_BufferInit(DPS_Buffer* buffer, uint8_t* storage, size_t size)
 {
+    DPS_Status ret = DPS_OK;
     if (!storage) {
         storage = malloc(size);
         if (!storage) {
-            return DPS_ERR_RESOURCES;
+            ret = DPS_ERR_RESOURCES;
+            size = 0;
         }
     }
     buffer->base = storage;
     buffer->pos = storage;
     buffer->eod = storage + size;
-    return DPS_OK;
+    return ret;
 }
 
 static DPS_Subscription* FreeSubscription(DPS_Subscription* sub)
@@ -433,7 +435,7 @@ static DPS_Status UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, 
         goto ErrExit;
     }
     /*
-     * Don't compute the delta if we are sycnronizing outbound interests
+     * Don't compute the delta if we are synchronizing outbound interests
      */
     if (destNode->outbound.sync) {
         DPS_BitVectorFree(destNode->outbound.interests);
@@ -1848,7 +1850,7 @@ DPS_Publication* DPS_CopyPublication(const DPS_Publication* pub)
     return copy;
 }
 
-DPS_Status DPS_InitPublication(DPS_Publication* pub, char* const* topics, size_t numTopics, DPS_AcknowledgementHandler handler)
+DPS_Status DPS_InitPublication(DPS_Publication* pub, char* const* topics, size_t numTopics, int noWildCard, DPS_AcknowledgementHandler handler)
 {
     size_t i;
     DPS_Node* node = pub ? pub->node : NULL;
@@ -1886,7 +1888,7 @@ DPS_Status DPS_InitPublication(DPS_Publication* pub, char* const* topics, size_t
     pub->flags = PUB_FLAG_LOCAL;
 
     for (i = 0; i < numTopics; ++i) {
-        ret = DPS_AddTopic(pub->bf, topics[i], node->separators, DPS_Pub);
+        ret = DPS_AddTopic(pub->bf, topics[i], node->separators, noWildCard ? DPS_PubNoWild : DPS_PubTopic);
         if (ret != DPS_OK) {
             break;
         }
@@ -2141,7 +2143,7 @@ DPS_Status DPS_Subscribe(DPS_Subscription* sub, DPS_PublicationHandler handler)
      * Add the topics to the bloom filter
      */
     for (i = 0; i < sub->numTopics; ++i) {
-        ret = DPS_AddTopic(sub->bf, sub->topics[i], node->separators, DPS_Sub);
+        ret = DPS_AddTopic(sub->bf, sub->topics[i], node->separators, DPS_SubTopic);
         if (ret != DPS_OK) {
             break;
         }

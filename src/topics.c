@@ -18,7 +18,7 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
 #define ANY_WILDC(c)  ((c) == FINAL_WILDC || (c) == INFIX_WILDC)
 
-static DPS_Status CheckWildcarding(const char* topic, const char* separators, DPS_Role role, const char** wcPos)
+static DPS_Status CheckWildcarding(const char* topic, const char* separators, DPS_TopicType topicType, const char** wcPos)
 {
     const char* wc = topic + strcspn(topic, WILDCARDS);
 
@@ -27,7 +27,7 @@ static DPS_Status CheckWildcarding(const char* topic, const char* separators, DP
         /*
          * Wildcards are only allowed in subscriptions
          */
-        if (role != DPS_Sub) {
+        if (topicType != DPS_SubTopic) {
             return DPS_ERR_INVALID;
         }
         /*
@@ -92,7 +92,7 @@ static DPS_Status CheckWildcarding(const char* topic, const char* separators, DP
  * This is because the bits representing prefixes "A/", "C/" and the suffixes "//2", "//1" are both present in the
  * publication Bloom filter. 
  */
-DPS_Status DPS_AddTopic(DPS_BitVector* bf, const char* topic, const char* separators, DPS_Role role)
+DPS_Status DPS_AddTopic(DPS_BitVector* bf, const char* topic, const char* separators, DPS_TopicType topicType)
 {
     DPS_Status ret = DPS_OK;
     char* segment;
@@ -109,7 +109,7 @@ DPS_Status DPS_AddTopic(DPS_BitVector* bf, const char* topic, const char* separa
         DPS_ERRPRINT("Topic string cannot start with a separator\n");
         return DPS_ERR_INVALID;
     }
-    ret = CheckWildcarding(topic, separators, role, &wc);
+    ret = CheckWildcarding(topic, separators, topicType, &wc);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Invalid use of wildcard in topic string \"%s\"\n", topic);
         return ret;
@@ -117,7 +117,7 @@ DPS_Status DPS_AddTopic(DPS_BitVector* bf, const char* topic, const char* separa
     tp = topic + strcspn(topic, separators);
     if (!wc) {
         DPS_BitVectorBloomInsert(bf, (const uint8_t*)topic, tlen);
-        if (role == DPS_Sub) {
+        if (topicType != DPS_PubTopic) {
             return DPS_OK;
         }
     } else if (wc != topic) {
@@ -130,7 +130,7 @@ DPS_Status DPS_AddTopic(DPS_BitVector* bf, const char* topic, const char* separa
     while (*tp) {
         size_t len;
         segment[prefix++] = *tp++;
-        if (role == DPS_Pub) {
+        if (topicType == DPS_PubTopic) {
             DPS_BitVectorBloomInsert(bf, (const uint8_t*)topic, tp - topic);
         }
         len = strcspn(tp, separators);
@@ -145,7 +145,7 @@ DPS_Status DPS_AddTopic(DPS_BitVector* bf, const char* topic, const char* separa
         }
         tp += len;
     }
-    if (role == DPS_Pub) {
+    if (topicType == DPS_PubTopic) {
         if (prefix > 1) {
             segment[prefix] = INFIX_WILDC;
             DPS_BitVectorBloomInsert(bf, (uint8_t*)segment, prefix + 1);
@@ -166,7 +166,7 @@ int DPS_MatchTopic(DPS_BitVector* bf, const char* topic, const char* separators)
     DPS_BitVector* tmp = DPS_BitVectorAlloc();
 
     if (tmp) {
-        if (DPS_AddTopic(tmp, topic, separators, DPS_Sub) == DPS_OK) {
+        if (DPS_AddTopic(tmp, topic, separators, DPS_SubTopic) == DPS_OK) {
             match = DPS_BitVectorIncludes(bf, tmp);
         }
         DPS_BitVectorFree(tmp);
@@ -174,7 +174,7 @@ int DPS_MatchTopic(DPS_BitVector* bf, const char* topic, const char* separators)
     return match;
 }
 
-DPS_Status DPS_MatchTopicString(const char* pubTopic, const char* subTopic, const char* separators, int* match)
+DPS_Status DPS_MatchTopicString(const char* pubTopic, const char* subTopic, const char* separators, int noWild, int* match)
 {
     DPS_Status ret;
     const char* wc;
@@ -185,15 +185,22 @@ DPS_Status DPS_MatchTopicString(const char* pubTopic, const char* subTopic, cons
     if (*pubTopic == 0 || *subTopic == 0 || *separators == 0) {
         return DPS_ERR_INVALID;
     }
-    ret = CheckWildcarding(pubTopic, separators, DPS_Pub, &wc);
+    ret = CheckWildcarding(pubTopic, separators, DPS_PubTopic, &wc);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Invalid use of wildcard in PUB topic string\n");
         return ret;
     }
-    ret = CheckWildcarding(subTopic, separators, DPS_Sub, &wc);
+    ret = CheckWildcarding(subTopic, separators, DPS_SubTopic, &wc);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Invalid use of wildcard in SUB topic string\n");
         return ret;
+    }
+    /*
+     * Check if match is permitting wildcards
+     */
+    if (noWild && wc) {
+        *match = DPS_FALSE;
+        return DPS_OK;
     }
     *match = DPS_TRUE;
     while (*pubTopic && *subTopic) {
@@ -223,9 +230,9 @@ DPS_Status DPS_MatchTopicString(const char* pubTopic, const char* subTopic, cons
     return DPS_OK;
 }
 
-DPS_Status DPS_MatchTopicList(char* const* pubs, size_t numPubs, char* const* subs, size_t numSubs, const char* separators, int* match)
+DPS_Status DPS_MatchTopicList(char* const* pubs, size_t numPubs, char* const* subs, size_t numSubs, const char* separators, int noWild, int* match)
 {
-    DPS_Status ret;
+    DPS_Status ret = DPS_ERR_INVALID;
 
     if (!pubs || !subs || !separators || !match) {
         return DPS_ERR_NULL;
@@ -235,7 +242,7 @@ DPS_Status DPS_MatchTopicList(char* const* pubs, size_t numPubs, char* const* su
         int ok = DPS_FALSE;
         size_t i;
         for (i = 0; i < numPubs; ++i) {
-            ret = DPS_MatchTopicString(pubs[i], *subs, separators, &ok);
+            ret = DPS_MatchTopicString(pubs[i], *subs, separators, noWild, &ok);
             if (ret != DPS_OK) {
                 return ret;
             }

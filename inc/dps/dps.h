@@ -60,11 +60,11 @@ typedef struct _DPS_Publication DPS_Publication;
 const DPS_UUID* DPS_PublicationGetUUID(const DPS_Publication* pub);
 
 /**
- * Get the serial number for a publication. Serial numbers are always > 0.
+ * Get the sequence number for a publication. Serial numbers are always > 0.
  *
  * @param pub
  *
- * @return The serial number or zero if the publication is invalid.
+ * @return The sequence number or zero if the publication is invalid.
  */
 uint32_t DPS_PublicationGetSequenceNum(const DPS_Publication* pub);
 
@@ -184,28 +184,29 @@ DPS_Status DPS_SetPublicationData(DPS_Publication* pub, void* data);
 void* DPS_GetPublicationData(const DPS_Publication* pub);
 
 /**
- * Initializes a newly created publication with a set of topics. Each publication has a UUID and a serial number. The
- * serial number of incremented each time the publication is published. This allows subscriber to
- * determine that publications received form a series. The acknowledgment handler is optional, if
- * present the publication is marked as requesting acknowledgment and that information is provided
- * to the subscribers.
+ * Initializes a newly created publication with a set of topics. Each publication has a UUID and a
+ * sequence number. The sequence number is incremented each time the publication is published. This
+ * allows subscriber to determine that publications received form a series. The acknowledgment
+ * handler is optional, if present the publication is marked as requesting acknowledgment and that
+ * information is provided to the subscribers.
  *
  * Call the accessor function DPS_PublicationGetUUID() to get the UUID for this publication.
  *
  * @param pub         The the publication to initialize
  * @param topics      The topic strings to publish
  * @param numTopics   The number of topic strings to publish - must be >= 1
+ * @param noWildCard  If TRUE the publication will not match wildcard subscriptions
  * @param handler     Optional handler for receiving acknowledgments
  */
-DPS_Status DPS_InitPublication(DPS_Publication* pub, char* const* topics, size_t numTopics, DPS_AcknowledgementHandler handler);
+DPS_Status DPS_InitPublication(DPS_Publication* pub, char* const* topics, size_t numTopics, int noWildCard, DPS_AcknowledgementHandler handler);
 
 /**
- * Publish a set of topics along with an optional payload. The topics will be published immediately to matching
- * subscribers and then re-published whenever a new matching subscription is received.
+ * Publish a set of topics along with an optional payload. The topics will be published immediately
+ * to matching subscribers and then re-published whenever a new matching subscription is received.
  *
- * Call the accessor function DPS_PublicationGetUUID() to get the UUID for this publication.
- * Call the accessor function DPS_PublicationGetSequenceNum() to get the current serial number for this
- * publication. The serial number is incremented each time DPS_Publish() is called for the same
+ * Call the accessor function DPS_PublicationGetUUID() to get the UUID for this publication.  Call
+ * the accessor function DPS_PublicationGetSequenceNum() to get the current sequence number for this
+ * publication. The sequence number is incremented each time DPS_Publish() is called for the same
  * publication.
  *
  * @param pub          The publication to send
@@ -234,8 +235,9 @@ DPS_Status DPS_DestroyPublication(DPS_Publication* pub, uint8_t** oldPayload);
  * Function prototype for a publication handler called when a publication is received that
  * matches a subscription. Note that there is a possibilitly of false-positive matches.
  *
- * The publication handle is only valid within the body of this callback function. DPS_CopyPublication()
- * will make a partial copy of the publication that can be used later, for example to call DPS_AckPublication().
+ * The publication handle is only valid within the body of this callback function.
+ * DPS_CopyPublication() will make a partial copy of the publication that can be used later for
+ * example to call DPS_AckPublication().
  *
  * The accessor functions DPS_PublicationGetUUID() and DPS_PublicationGetSequenceNum()
  * return information about the received publication.
@@ -252,9 +254,9 @@ typedef void (*DPS_PublicationHandler)(DPS_Subscription* sub, const DPS_Publicat
 
 /**
  * Aknowledge a publication. A publication should be acknowledged as soon as possible after receipt
- * ideally from within the publication handler callback function. If the publication cannot be acknowedged
- * immediately in the publication handler callback, call DPS_CopyPublication() to make a partial copy of
- * the publication that can be passed to this function at a later time.
+ * ideally from within the publication handler callback function. If the publication cannot be
+ * acknowedged immediately in the publication handler callback, call DPS_CopyPublication() to make a
+ * partial copy of the publication that can be passed to this function at a later time.
  *
  * @param pub           The publication to acknowledge
  * @param ackPayload    Optional payload to accompany the aknowledgment
@@ -390,7 +392,7 @@ typedef void (*DPS_OnResolveAddressComplete)(DPS_Node* node, DPS_NodeAddress* ad
 DPS_Status DPS_ResolveAddress(DPS_Node* node, const char* host, const char* service, DPS_OnResolveAddressComplete cb, void* data);
 
 /**
- * Get text representation of an address. This function uses a static string buffer so it not thread safe.
+ * Get text representation of an address. This function uses a static string buffer so is not thread safe.
  *
  * @param Address to get the text for
  *

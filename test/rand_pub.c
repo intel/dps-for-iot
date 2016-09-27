@@ -65,7 +65,7 @@ static void OnTimer(uv_timer_t* handle)
         ret = DPS_DestroyPublication(currentPub, &data);
     }
     currentPub = DPS_CreatePublication(node);
-    ret = DPS_InitPublication(currentPub, topics, numTopics, NULL);
+    ret = DPS_InitPublication(currentPub, topics, numTopics, DPS_FALSE, NULL);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to create publication - error=%d\n", ret);
         return;
