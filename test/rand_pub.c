@@ -23,7 +23,7 @@ static void OnTimer(uv_timer_t* handle)
 {
     static DPS_Publication* currentPub = NULL;
     static char* randTopics[MAX_TOPICS];
-    char* topics[MAX_TOPICS];
+    const char* topics[MAX_TOPICS];
     size_t numTopics = 0;
     DPS_Node* node = (DPS_Node*)handle->data;
     DPS_Status ret;

@@ -12,7 +12,7 @@ if platform == 'win32':
     libenv.Append(CFLAGS = ['/W3']);
     libenv.Append(LIBS = env['UV_LIBS'])
 elif platform == 'posix':
-    libenv.Append(CFLAGS = ['-Wall', '-Werror', '-Wno-format-extra-args'])
+    libenv.Append(CFLAGS = ['-Wall', '-Wno-format-extra-args'])
 
 srcs = ['src/bitvec.c',
         'src/cbor.c',

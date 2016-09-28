@@ -124,7 +124,7 @@ static void ScheduleBackgroundTask(DPS_Node* node, uint8_t task)
 #ifdef NDEBUG
 #define DumpTopics(t, n)
 #else
-static void DumpTopics(char* const* topics, size_t numTopics)
+static void DumpTopics(const char** topics, size_t numTopics)
 {
     if (DPS_Debug) {
         size_t i;
@@ -1850,7 +1850,7 @@ DPS_Publication* DPS_CopyPublication(const DPS_Publication* pub)
     return copy;
 }
 
-DPS_Status DPS_InitPublication(DPS_Publication* pub, char* const* topics, size_t numTopics, int noWildCard, DPS_AcknowledgementHandler handler)
+DPS_Status DPS_InitPublication(DPS_Publication* pub, const char** topics, size_t numTopics, int noWildCard, DPS_AcknowledgementHandler handler)
 {
     size_t i;
     DPS_Node* node = pub ? pub->node : NULL;
@@ -2095,7 +2095,7 @@ DPS_Status DPS_AckPublication(const DPS_Publication* pub, uint8_t* payload, size
     return QueuePublicationAck(node, ack, payload, len, addr);
 }
 
-DPS_Subscription* DPS_CreateSubscription(DPS_Node* node, char* const* topics, size_t numTopics)
+DPS_Subscription* DPS_CreateSubscription(DPS_Node* node, const char** topics, size_t numTopics)
 {
     size_t i;
     DPS_Subscription* sub;
@@ -2153,7 +2153,7 @@ DPS_Status DPS_Subscribe(DPS_Subscription* sub, DPS_PublicationHandler handler)
     }
 
     DPS_DBGPRINT("Subscribing to %zu topics\n", sub->numTopics);
-    DumpTopics(sub->topics, sub->numTopics);
+    DumpTopics((const char**)sub->topics, sub->numTopics);
 
     DPS_BitVectorFuzzyHash(sub->needs, sub->bf);
     /*
@@ -2209,7 +2209,7 @@ DPS_Status DPS_DestroySubscription(DPS_Subscription* sub)
     UnlockNode(node);
 
     DPS_DBGPRINT("Unsubscribing from %zu topics\n", sub->numTopics);
-    DumpTopics(sub->topics, sub->numTopics);
+    DumpTopics((const char**)sub->topics, sub->numTopics);
     FreeSubscription(sub);
 
     SendSubs(node, NULL);
@@ -2314,6 +2314,6 @@ void DPS_DumpSubscriptions(DPS_Node* node)
 
     DPS_DBGPRINT("Current subscriptions:\n");
     for (sub = node->subscriptions; sub != NULL; sub = sub->next) {
-        DumpTopics(sub->topics, sub->numTopics);
+        DumpTopics((const char**)sub->topics, sub->numTopics);
     }
 }

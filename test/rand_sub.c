@@ -85,7 +85,7 @@ static void OnTimer(uv_timer_t* handle)
         sprintf(topics[i], fmt, a, b, c, d);
     }
 
-    subscriptions[sub] = DPS_CreateSubscription(node, topics, numTopics);
+    subscriptions[sub] = DPS_CreateSubscription(node, (const char**)topics, numTopics);
     ret = DPS_Subscribe(subscriptions[sub], OnPubMatch);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to susbscribe topics - error=%s\n", DPS_ErrTxt(ret));

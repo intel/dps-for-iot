@@ -198,7 +198,7 @@ void* DPS_GetPublicationData(const DPS_Publication* pub);
  * @param noWildCard  If TRUE the publication will not match wildcard subscriptions
  * @param handler     Optional handler for receiving acknowledgments
  */
-DPS_Status DPS_InitPublication(DPS_Publication* pub, char* const* topics, size_t numTopics, int noWildCard, DPS_AcknowledgementHandler handler);
+DPS_Status DPS_InitPublication(DPS_Publication* pub, const char** topics, size_t numTopics, int noWildCard, DPS_AcknowledgementHandler handler);
 
 /**
  * Publish a set of topics along with an optional payload. The topics will be published immediately
@@ -283,7 +283,7 @@ DPS_Node* DPS_GetPublicationNode(const DPS_Publication* pub);
  * @param return   Returns a pointer to the newly created subscription or NULL if resources
  *                 could not be allocated or the arguments were invalid
  */
-DPS_Subscription* DPS_CreateSubscription(DPS_Node* node, char* const* topics, size_t numTopics);
+DPS_Subscription* DPS_CreateSubscription(DPS_Node* node, const char** topics, size_t numTopics);
 
 /**
  * Store a pointer to application data in a subscription.

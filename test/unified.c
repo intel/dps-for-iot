@@ -14,8 +14,8 @@
 #define BASE_PORT_NUM 35000
 
 
-static char* subTopics[] = { "1/2/3" };
-static char* pubTopics[] = { "1/2/3" };
+static const char* subTopics[] = { "1/2/3" };
+static const char* pubTopics[] = { "1/2/3" };
 
 static int IntArg(char* opt, char*** argp, int* argcp, int* val, uint32_t min, uint32_t max)
 {

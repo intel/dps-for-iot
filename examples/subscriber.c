@@ -153,7 +153,7 @@ int main(int argc, char** argv)
     DPS_PRINT("Subscriber is listening on port %d\n", DPS_GetPortNumber(node));
 
     if (numTopics > 0) {
-        DPS_Subscription* subscription = DPS_CreateSubscription(node, topics, numTopics);
+        DPS_Subscription* subscription = DPS_CreateSubscription(node, (const char**)topics, numTopics);
         ret = DPS_Subscribe(subscription, OnPubMatch);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("Failed to susbscribe topics - error=%s\n", DPS_ErrTxt(ret));

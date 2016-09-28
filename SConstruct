@@ -55,6 +55,7 @@ elif env['PLATFORM'] == 'posix':
 
     #gcc option  -mmsse4.2 is to enble generation on popcountq instruction
     env.Append(CFLAGS = ['-ggdb', '-msse4.2'])
+    env.Append(CFLAGS = ['-Werror'])
 
     if profile == True:
         env.Append(CFLAGS = ['-pg'])

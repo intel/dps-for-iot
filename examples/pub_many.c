@@ -63,7 +63,7 @@ static int IntArg(char* opt, char*** argp, int* argcp, int* val, uint32_t min, u
 int main(int argc, char** argv)
 {
     DPS_Status ret;
-    char* topics[MAX_TOPICS];
+    const char* topics[MAX_TOPICS];
     size_t numTopics = 0;
     DPS_Publication* pub = NULL;
     DPS_Node* node;
