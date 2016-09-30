@@ -92,7 +92,7 @@ typedef struct _DPS_Publication {
 /*
  * Forward declaration
  */
-static void RunBackgroundTasks(DPS_Node* node);
+static void RunBackgroundTasks(uv_async_t* handle);
 
 void LockNode(DPS_Node* node)
 {
@@ -117,7 +117,7 @@ static void ScheduleBackgroundTask(DPS_Node* node, uint8_t task)
     DPS_DBGTRACE();
     node->tasks |= task;
     UnlockNode(node);
-    DPS_BackgroundScheduleNow(node->bgHandler);
+    uv_async_send(&node->bgHandler);
     LockNode(node);
 }
 
@@ -1601,7 +1601,10 @@ static void StopNode(DPS_Node* node)
         DPS_NetStop(node->netCtx);
         node->netCtx = NULL;
     }
-    DPS_BackgroundClose(node->bgHandler);
+    assert(!uv_is_closing((uv_handle_t*)&node->bgHandler));
+    uv_close((uv_handle_t*)&node->bgHandler, NULL);
+    assert(!uv_is_closing((uv_handle_t*)&node->shutdownTimer));
+    uv_close((uv_handle_t*)&node->shutdownTimer, NULL);
     /*
      * ...run the event loop again to ensure that all cleanup is
      * completed
@@ -1703,10 +1706,16 @@ DPS_Status DPS_StartNode(DPS_Node* node, int mcast, int rxPort)
     }
     DPS_DBGPRINT("libuv version %s\n", uv_version_string());
     /*
+     * Timer for clean shutdown
+     */
+    node->shutdownTimer.data = node;
+    uv_timer_init(node->loop, &node->shutdownTimer);
+    /*
      * For triggering background tasks
      */
-    node->bgHandler = DPS_BackgroundCreate(node, RunBackgroundTasks);
-    assert(node->bgHandler);
+    node->bgHandler.data = node;
+    r = uv_async_init(node->loop, &node->bgHandler, RunBackgroundTasks);
+    assert(!r);
     /*
      * Mutex for protecting the node
      */
@@ -1774,8 +1783,9 @@ uint16_t DPS_GetPortNumber(DPS_Node* node)
 
 #define STOP_TIMEOUT 200
 
-static void StopOnTimeout(DPS_Node* node)
+static void StopOnTimeout(uv_timer_t* handle)
 {
+    DPS_Node* node = (DPS_Node*)handle->data;
     DPS_DBGTRACE();
     uv_stop(node->loop);
 }
@@ -1783,7 +1793,7 @@ static void StopOnTimeout(DPS_Node* node)
 static void StopNodeTask(DPS_Node* node)
 {
     DPS_DBGTRACE();
-    DPS_BackgroundSchedule(node->bgHandler, StopOnTimeout, STOP_TIMEOUT);
+    uv_timer_start(&node->shutdownTimer, StopOnTimeout, STOP_TIMEOUT, 0);
 }
 
 void DPS_StopNode(DPS_Node* node)
@@ -2217,8 +2227,10 @@ DPS_Status DPS_DestroySubscription(DPS_Subscription* sub)
     return DPS_OK;
 }
 
-static void RunBackgroundTasks(DPS_Node* node)
+static void RunBackgroundTasks(uv_async_t* handle)
 {
+    DPS_Node* node = (DPS_Node*)handle->data;
+
     DPS_DBGTRACE();
 
     /*
@@ -2244,7 +2256,7 @@ static void RunBackgroundTasks(DPS_Node* node)
         StopNodeTask(node);
     }
     if (node->tasks) {
-        DPS_BackgroundScheduleNow(node->bgHandler);
+        uv_async_send(&node->bgHandler);
     }
     UnlockNode(node);
 }
