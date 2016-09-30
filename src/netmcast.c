@@ -87,9 +87,9 @@ static DPS_Status MulticastRxInit(DPS_MulticastReceiver* receiver)
     DPS_DBGPRINT("MulticastRxInit UDP port %d\n", COAP_UDP_PORT);
 
     /*
-     * Initialize v6 udp multicast listener
+     * Initialize v4 udp multicast listener
      */
-    if (receiver->ipVersions & USE_IPV6) { 
+    if (receiver->ipVersions & USE_IPV4) {
         ret = uv_udp_init(uv, &receiver->udp4Rx);
         assert(ret == 0);
         ret = uv_ip4_addr("0.0.0.0", COAP_UDP_PORT, (struct sockaddr_in*)&recv_addr);
@@ -100,9 +100,9 @@ static DPS_Status MulticastRxInit(DPS_MulticastReceiver* receiver)
         }
     }
     /*
-     * Initialize v4 udp multicast listener
+     * Initialize v6 udp multicast listener
      */
-    if (receiver->ipVersions & USE_IPV4) { 
+    if (receiver->ipVersions & USE_IPV6) {
         ret = uv_udp_init(uv, &receiver->udp6Rx);
         assert(ret == 0);
         ret = uv_ip6_addr("::", COAP_UDP_PORT, (struct sockaddr_in6*)&recv_addr);
