@@ -75,6 +75,14 @@ DPS_BitVector* DPS_BitVectorAllocFH();
 DPS_BitVector* DPS_BitVectorClone(DPS_BitVector* bv);
 
 /**
+ * Duplicate a bit vector
+ *
+ * @param dst Destination bit vector
+ * @param src Source bit vector
+ */
+void DPS_BitVectorDup(DPS_BitVector* dst, DPS_BitVector* src);
+
+/**
  * Free resources for a bit vector
  *
  * @param bv   An intialized bit vector

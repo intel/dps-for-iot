@@ -129,12 +129,18 @@ static Configuration config = { DPS_CONFIG_BIT_LEN, (uint8_t)DPS_CONFIG_HASHES }
 #ifdef DPS_DEBUG
 static void BitDump(const chunk_t* data, size_t bits)
 {
+    size_t stride = bits / 128;
     size_t i;
-    for (i = 0; i < bits; ++i) {
-        putc(TEST_BIT(data, i) ? '1' : '0', stderr);
-        if ((i & 63) == 63) {
-            putc('\n', stderr);
+    for (i = 0; i < bits; i += stride) {
+        int bit = 0;
+        int j;
+        for (j = 0; j < stride; ++j) {
+            if (TEST_BIT(data, i + j)) {
+                bit = 1;
+                break;
+            }
         }
+        putc(bit ? '1' : '0', stderr);
     }
     putc('\n', stderr);
 }
@@ -238,6 +244,15 @@ size_t DPS_BitVectorPopCount(DPS_BitVector* bv)
         bv->popCount = popCount;
     }
     return bv->popCount;
+}
+
+void DPS_BitVectorDup(DPS_BitVector* dst, DPS_BitVector* src)
+{
+    assert(dst->len == src->len);
+    if (dst != src) {
+        memcpy(dst->bits, src->bits, src->len / 8);
+        dst->popCount = src->popCount;
+    }
 }
 
 DPS_BitVector* DPS_BitVectorClone(DPS_BitVector* bv)
@@ -422,8 +437,15 @@ DPS_Status DPS_BitVectorXor(DPS_BitVector* bvOut, DPS_BitVector* bv1, DPS_BitVec
             *equal = !diff;
         }
         INVALIDATE_POPCOUNT(bvOut);
+    } else if (bv1->popCount) {
+        DPS_BitVectorDup(bvOut, bv1);
+        *equal = DPS_FALSE;
+    } else if (bv2->popCount) {
+        DPS_BitVectorDup(bvOut, bv2);
+        *equal = DPS_FALSE;
     } else {
         DPS_BitVectorClear(bvOut);
+        *equal = DPS_TRUE;
     }
     return DPS_OK;
 }
