@@ -6,6 +6,7 @@
 #include <dps/dps_dbg.h>
 #include <dps/dps.h>
 #include <dps/dps_synchronous.h>
+#include <dps/dps_registration.h>
 
 #define MAX_TOPICS 64
 
@@ -124,6 +125,33 @@ static void ReadStdin(DPS_Node* node)
     }
 }
 
+
+static DPS_Status FindAndJoin(DPS_Node* node, const char* host, uint16_t port, const char* tenant, DPS_NodeAddress* remoteAddr)
+{
+    DPS_Status ret;
+    DPS_RegistrationList* regs = DPS_CreateRegistrationList(16);
+
+    /*
+     * Find nodes to join
+     */
+    ret = DPS_Registration_GetSyn(node, host, port, tenant, regs);
+    if (ret != DPS_OK) {
+        DPS_ERRPRINT("Registration service lookup failed: %s\n", DPS_ErrTxt(ret));
+        return ret;
+    }
+    DPS_PRINT("Found %d remote nodes\n", regs->count);
+
+    if (regs->count == 0) {
+        return DPS_ERR_NO_ROUTE;
+    }
+    ret = DPS_Registration_LinkToSyn(node, regs, remoteAddr);
+    if (ret == DPS_OK) {
+        DPS_PRINT("Linked to remote node %s\n", DPS_GetAddressText(remoteAddr));
+    }
+    DPS_DestroyRegistrationList(regs);
+    return ret;
+}
+
 static int IntArg(char* opt, char*** argp, int* argcp, int* val, uint32_t min, uint32_t max)
 {
     char* p;
@@ -152,20 +180,23 @@ static int IntArg(char* opt, char*** argp, int* argcp, int* val, uint32_t min, u
 int main(int argc, char** argv)
 {
     DPS_Status ret;
+    char* topics[64];
+    char** arg = ++argv;
+    const char* tenant = "anonymous_tenant";
+    size_t numTopics = 0;
     DPS_Node* node;
-    char** arg = argv + 1;
-    const char* host = NULL;
-    int linkPort = 0;
-    int wait = DPS_FALSE;
-    int ttl = 0;
+    DPS_Subscription* subscription;
+    DPS_NodeAddress* remoteAddr;
+    int mcastPub = DPS_MCAST_PUB_DISABLED;
+    const char* host = "localhost";
     char* msg = NULL;
-    int mcast = DPS_MCAST_PUB_ENABLE_SEND;
-    DPS_NodeAddress* addr = NULL;
+    int ttl = 0;
+    int port = 30000;
 
     DPS_Debug = 0;
 
     while (--argc) {
-        if (IntArg("-p", &arg, &argc, &linkPort, 1, UINT16_MAX)) {
+        if (IntArg("-p", &arg, &argc, &port, 1, UINT16_MAX)) {
             continue;
         }
         if (strcmp(*arg, "-h") == 0) {
@@ -176,7 +207,7 @@ int main(int argc, char** argv)
             host = *arg++;
             continue;
         }
-        if (strcmp(*arg, "-m") == 0) {
+        if (strcmp(*arg, "--msg") == 0) {
             ++arg;
             if (!--argc) {
                 goto Usage;
@@ -184,17 +215,20 @@ int main(int argc, char** argv)
             msg = *arg++;
             continue;
         }
-        if (IntArg("-t", &arg, &argc, &ttl, 0, 2000)) {
+        if (IntArg("--ttl", &arg, &argc, &ttl, 0, 2000)) {
             continue;
         }
-        if (strcmp(*arg, "-w") == 0) {
-            ++arg;
-            wait = DPS_TRUE;
-            continue;
-        }
-        if (strcmp(*arg, "-a") == 0) {
+        if (strcmp(*arg, "--request-ack") == 0) {
             ++arg;
             requestAck = DPS_TRUE;
+            continue;
+        }
+        if (strcmp(*arg, "-t") == 0) {
+            ++arg;
+            if (!--argc) {
+                goto Usage;
+            }
+            tenant = *arg++;
             continue;
         }
         if (strcmp(*arg, "-d") == 0) {
@@ -206,32 +240,30 @@ int main(int argc, char** argv)
             goto Usage;
         }
         if (numTopics == A_SIZEOF(topics)) {
-            DPS_PRINT("Too many topics - increase limit and recompile\n");
+            DPS_PRINT("%s: Too many topics - increase limit and recompile\n", *argv);
             goto Usage;
         }
         topics[numTopics++] = *arg++;
     }
-    /*
-     * Disable multicast publications if we have an explicit destination
-     */
-    if (linkPort) {
-        mcast = DPS_MCAST_PUB_DISABLED;
+
+    if (!host || !port) {
+        DPS_PRINT("Need host name and port\n");
+        goto Usage;
     }
 
     node = DPS_CreateNode("/.");
-    ret = DPS_StartNode(node, mcast, 0);
+
+    ret = DPS_StartNode(node, mcastPub, 0);
     if (ret != DPS_OK) {
-        DPS_ERRPRINT("DPS_CreateNode failed: %s\n", DPS_ErrTxt(ret));
+        DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
         return 1;
     }
 
-    if (linkPort) {
-        addr = DPS_CreateAddress();
-        ret = DPS_LinkTo(node, host, linkPort, addr);
-        if (ret != DPS_OK) {
-            DPS_ERRPRINT("DPS_LinkTo returned %s\n", DPS_ErrTxt(ret));
-            return 1;
-        }
+    remoteAddr = DPS_CreateAddress();
+
+    ret = FindAndJoin(node, host, port, tenant, remoteAddr);
+    if (ret != DPS_OK) {
+        DPS_ERRPRINT("Failed to join node: %s\n", DPS_ErrTxt(ret));
     }
 
     if (numTopics) {
@@ -247,13 +279,9 @@ int main(int argc, char** argv)
         } else {
             DPS_ERRPRINT("Failed to publish topics - error=%d\n", ret);
         }
-        if (addr) {
-            DPS_UnlinkFrom(node, addr);
-            DPS_DestroyAddress(addr);
-        }
-        if (!wait) {
-            DPS_StopNode(node);
-        }
+        DPS_UnlinkFrom(node, remoteAddr);
+        DPS_DestroyAddress(remoteAddr);
+        DPS_StopNode(node);
         DPS_DestroyNode(node);
     } else {
         DPS_PRINT("Running in interactive mode\n");
@@ -262,8 +290,6 @@ int main(int argc, char** argv)
     return 0;
 
 Usage:
-    DPS_PRINT("Usage %s [-p <portnum>] [-h <hostname>] [-d] [-m <message>] [topic1 topic2 ... topicN]\n", *argv);
+    DPS_PRINT("Usage %s [-d] [-h <hostname>] [-p <portnum>] [-t <tenant string>] [--ttl <pub ttl>] [--msg <message>] topic1 topic2 ... topicN\n", *argv);
     return 1;
 }
-
-

@@ -3,11 +3,9 @@
 #include <stdio.h>
 #include <assert.h>
 #include <dps/dps_dbg.h>
-#include <dps/network.h>
 #include <dps/dps.h>
 #include <dps/dps_synchronous.h>
 #include <dps/dps_registration.h>
-#include <dps/bitvec.h>
 #include <uv.h>
 
 static int quiet = DPS_FALSE;
@@ -47,12 +45,10 @@ static void OnPubMatch(DPS_Subscription* sub, const DPS_Publication* pub, uint8_
 static DPS_Status RegisterAndJoin(DPS_Node* node, const char* host, uint16_t port, const char* tenant)
 {
     DPS_Status ret;
-    DPS_Candidate candidates[16];
-    DPS_CandidateList remotes;
-    DPS_NodeAddress remoteAddr;
+    DPS_RegistrationList* regs;
+    DPS_NodeAddress* remoteAddr = DPS_CreateAddress();
 
-    remotes.count = 16;
-    remotes.candidates = candidates;
+    regs = DPS_CreateRegistrationList(16);
 
     /*
      * Register with the registration service
@@ -65,20 +61,23 @@ static DPS_Status RegisterAndJoin(DPS_Node* node, const char* host, uint16_t por
     /*
      * Find nodes to join
      */
-    ret = DPS_Registration_GetSyn(node, host, port, tenant, &remotes);
+    ret = DPS_Registration_GetSyn(node, host, port, tenant, regs);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Registration service lookup failed: %s\n", DPS_ErrTxt(ret));
         return ret;
     }
-    DPS_PRINT("Found %d remote nodes\n", remotes.count);
+    DPS_PRINT("Found %d remote nodes\n", regs->count);
 
-    if (remotes.count == 0) {
+    if (regs->count == 0) {
         return DPS_ERR_NO_ROUTE;
     }
-    ret = DPS_Registration_LinkToSyn(node, &remotes, &remoteAddr);
+    remoteAddr = DPS_CreateAddress();
+    ret = DPS_Registration_LinkToSyn(node, regs, remoteAddr);
     if (ret == DPS_OK) {
-        DPS_PRINT("Linked to remote node %s\n", DPS_GetAddressText(&remoteAddr));
+        DPS_PRINT("Linked to remote node %s\n", DPS_GetAddressText(remoteAddr));
     }
+    DPS_DestroyAddress(remoteAddr);
+    DPS_DestroyRegistrationList(regs);
     return ret;
 }
 
