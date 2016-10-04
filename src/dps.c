@@ -703,11 +703,11 @@ static DPS_Status SendPublication(DPS_Node* node, DPS_Publication* pub, DPS_BitV
     return ret;
 }
 
-static DPS_BitVector* PubSubMatch(DPS_Node* node, DPS_Publication* pub, RemoteNode* sub)
+static DPS_BitVector* PubSubMatch(DPS_Node* node, DPS_Publication* pub, RemoteNode* subscriber)
 {
-    DPS_BitVectorIntersection(node->scratch.interests, pub->bf, sub->inbound.interests);
+    DPS_BitVectorIntersection(node->scratch.interests, pub->bf, subscriber->inbound.interests);
     DPS_BitVectorFuzzyHash(node->scratch.needs, node->scratch.interests);
-    if (DPS_BitVectorIncludes(node->scratch.needs, sub->inbound.needs)) {
+    if (DPS_BitVectorIncludes(node->scratch.needs, subscriber->inbound.needs)) {
         /*
          * If the publication will be retained we send the full publication Bloom
          * filter otherwise we only send the intersection with the subscription interests.
@@ -720,18 +720,18 @@ static DPS_BitVector* PubSubMatch(DPS_Node* node, DPS_Publication* pub, RemoteNo
     }
 }
 
-static DPS_Status SendMatchingPubToSub(DPS_Node* node, DPS_Publication* pub, RemoteNode* sub)
+static DPS_Status SendMatchingPubToSub(DPS_Node* node, DPS_Publication* pub, RemoteNode* subscriber)
 {
     /*
      * We don't send publications back to the remote node than sent them
      */
-    if (!DPS_SameAddr(&pub->sender, (struct sockaddr*)&sub->addr)) {
-        DPS_BitVector* pubBV = PubSubMatch(node, pub, sub);
+    if (!DPS_SameAddr(&pub->sender, (struct sockaddr*)&subscriber->addr)) {
+        DPS_BitVector* pubBV = PubSubMatch(node, pub, subscriber);
         if (pubBV) {
-            DPS_DBGPRINT("Sending pub %d to %s\n", pub->sequenceNum, RemoteNodeAddressText(sub));
-            return SendPublication(node, pub, pubBV, sub);
+            DPS_DBGPRINT("Sending pub %d to %s\n", pub->sequenceNum, RemoteNodeAddressText(subscriber));
+            return SendPublication(node, pub, pubBV, subscriber);
         }
-        DPS_DBGPRINT("Rejected pub %d for %s\n", pub->sequenceNum, RemoteNodeAddressText(sub));
+        DPS_DBGPRINT("Rejected pub %d for %s\n", pub->sequenceNum, RemoteNodeAddressText(subscriber));
     }
     return DPS_OK;
 }
@@ -782,7 +782,9 @@ static DPS_Status QueuePublicationAck(DPS_Node* node, PublicationAck* ack, uint8
         } else {
             LockNode(node);
             ack->destAddr = *destAddr;
-            ack->next = node->ackQueue.last;
+            if (node->ackQueue.last) {
+                node->ackQueue.last->next = ack;
+            }
             node->ackQueue.last = ack;
             if (!node->ackQueue.first) {
                 node->ackQueue.first = ack;
@@ -1051,7 +1053,7 @@ static DPS_Status DecodePublication(DPS_Node* node, DPS_Buffer* buffer, const st
         goto Exit;
     }
     if (DPS_PublicationIsStale(&node->history, pubId, sequenceNum)) {
-        DPS_DBGPRINT("Publication is stale\n");
+        DPS_DBGPRINT("Publication %s/%d is stale\n", DPS_UUIDToString(pubId), sequenceNum);
         return DPS_OK;
     }
     /*

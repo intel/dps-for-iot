@@ -49,6 +49,7 @@ static DPS_Status RegisterAndJoin(DPS_Node* node, const char* host, uint16_t por
     DPS_Status ret;
     DPS_Candidate candidates[16];
     DPS_CandidateList remotes;
+    DPS_NodeAddress remoteAddr;
 
     remotes.count = 16;
     remotes.candidates = candidates;
@@ -71,7 +72,14 @@ static DPS_Status RegisterAndJoin(DPS_Node* node, const char* host, uint16_t por
     }
     DPS_PRINT("Found %d remote nodes\n", remotes.count);
 
-    return DPS_OK;
+    if (remotes.count == 0) {
+        return DPS_ERR_NO_ROUTE;
+    }
+    ret = DPS_Registration_LinkToSyn(node, &remotes, &remoteAddr);
+    if (ret == DPS_OK) {
+        DPS_PRINT("Linked to remote node %s\n", DPS_GetAddressText(&remoteAddr));
+    }
+    return ret;
 }
 
 static int IntArg(char* opt, char*** argp, int* argcp, int* val, uint32_t min, uint32_t max)
@@ -109,12 +117,16 @@ int main(int argc, char** argv)
     DPS_Node* node;
     DPS_Subscription* subscription;
     int mcastPub = DPS_MCAST_PUB_DISABLED;
-    const char* host = NULL;
-    int port = 0;
+    const char* host = "localhost";
+    int listen = 0;
+    int port = 30000;
 
     DPS_Debug = 0;
 
     while (--argc) {
+        if (IntArg("-l", &arg, &argc, &listen, 1, UINT16_MAX)) {
+            continue;
+        }
         if (IntArg("-p", &arg, &argc, &port, 1, UINT16_MAX)) {
             continue;
         }
@@ -171,7 +183,7 @@ int main(int argc, char** argv)
 
     node = DPS_CreateNode("/.");
 
-    ret = DPS_StartNode(node, mcastPub, 0);
+    ret = DPS_StartNode(node, mcastPub, listen);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
         return 1;
@@ -181,7 +193,6 @@ int main(int argc, char** argv)
     ret = RegisterAndJoin(node, host, port, tenant);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to join node: %s\n", DPS_ErrTxt(ret));
-        return 1;
     }
 
     if (numTopics > 0) {
@@ -192,22 +203,10 @@ int main(int argc, char** argv)
             return 1;
         }
     }
-#if 0
-    if (linkPort) {
-        DPS_NodeAddress* addr = DPS_CreateAddress();
-        DPS_Status linkRet = DPS_ERR_FAILURE;
-        ret = DPS_LinkTo(node, host, linkPort, addr);
-        DPS_DestroyAddress(addr);
-        if (ret != DPS_OK) {
-            DPS_ERRPRINT("DPS_LinkTo returned %s\n", DPS_ErrTxt(ret));
-            return 1;
-        }
-    }
-#endif
     DPS_DestroyNode(node);
     return 0;
 
 Usage:
-    DPS_PRINT("Usage %s [-d] -h <hostname> -p <portnum> [-t <tenant string>] [-m] topic1 topic2 ... topicN\n", *argv);
+    DPS_PRINT("Usage %s [-d] [-l <listen-port>] -h <hostname> -p <portnum> [-t <tenant string>] [-m] topic1 topic2 ... topicN\n", *argv);
     return 1;
 }

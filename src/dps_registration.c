@@ -351,11 +351,7 @@ static void RegGetCB(RegGet* reg, DPS_Status status)
 static void OnGetTimerClosed(uv_handle_t* handle)
 {
     RegGet* reg = (RegGet*)handle->data;
-    if (reg->list.count == 0) {
-        RegGetCB(reg, DPS_ERR_TIMEOUT);
-    } else {
-        RegGetCB(reg, DPS_OK);
-    }
+    RegGetCB(reg, DPS_OK);
 }
 
 static void OnGetTimeout(uv_timer_t* timer)
