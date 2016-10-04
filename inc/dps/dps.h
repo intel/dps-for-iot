@@ -415,6 +415,11 @@ void DPS_CopyAddress(DPS_NodeAddress* dest, const DPS_NodeAddress* src);
  */
 void DPS_DestroyAddress(DPS_NodeAddress* addr);
 
+/**
+ * Returns a non-secure random number
+ */
+uint32_t DPS_Rand();
+
 #ifdef __cplusplus
 }
 #endif

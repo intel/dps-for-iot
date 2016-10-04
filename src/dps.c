@@ -251,41 +251,6 @@ static void AddrSetPort(DPS_NodeAddress* dest, const struct sockaddr* addr, uint
     }
 }
 
-static const uint8_t IP4as6[16] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 0, 0, 0, 0 };
-
-static int SameAddr(DPS_NodeAddress* addr, const struct sockaddr* b)
-{
-    struct sockaddr* a = (struct sockaddr*)&addr->inaddr;
-    struct sockaddr_in6 tmp;
-
-    if (a->sa_family != b->sa_family) {
-        uint32_t ip;
-        if (a->sa_family == AF_INET6) {
-            struct sockaddr_in* ipb = (struct sockaddr_in*)b;
-            ip = ipb->sin_addr.s_addr;
-            tmp.sin6_port = ipb->sin_port;
-            b = (struct sockaddr*)&tmp;
-        } else {
-            struct sockaddr_in* ipa = (struct sockaddr_in*)a;
-            ip = ipa->sin_addr.s_addr;
-            tmp.sin6_port = ipa->sin_port;
-            a = (struct sockaddr*)&tmp;
-        }
-        memcpy(&tmp.sin6_addr, IP4as6, 12);
-        memcpy((uint8_t*)&tmp.sin6_addr + 12, &ip, 4);
-        tmp.sin6_family = AF_INET6;
-    }
-    if (a->sa_family == AF_INET6) {
-        struct sockaddr_in6* ip6a = (struct sockaddr_in6*)a;
-        struct sockaddr_in6* ip6b = (struct sockaddr_in6*)b;
-        return (ip6a->sin6_port == ip6b->sin6_port) && (memcmp(&ip6a->sin6_addr, &ip6b->sin6_addr, 16) == 0);
-    } else {
-        struct sockaddr_in* ipa = (struct sockaddr_in*)a;
-        struct sockaddr_in* ipb = (struct sockaddr_in*)b;
-        return (ipa->sin_port == ipb->sin_port) && (ipa->sin_addr.s_addr == ipb->sin_addr.s_addr);
-    }
-}
-
 DPS_Status DPS_BufferInit(DPS_Buffer* buffer, uint8_t* storage, size_t size)
 {
     DPS_Status ret = DPS_OK;
@@ -494,7 +459,7 @@ static RemoteNode* LookupRemoteNode(DPS_Node* node, const struct sockaddr* addr)
     RemoteNode* remote;
 
     for (remote = node->remoteNodes; remote != NULL; remote = remote->next) {
-        if (SameAddr(&remote->addr, addr)) {
+        if (DPS_SameAddr(&remote->addr, addr)) {
             return remote;
         }
     }
@@ -760,7 +725,7 @@ static DPS_Status SendMatchingPubToSub(DPS_Node* node, DPS_Publication* pub, Rem
     /*
      * We don't send publications back to the remote node than sent them
      */
-    if (!SameAddr(&pub->sender, (struct sockaddr*)&sub->addr)) {
+    if (!DPS_SameAddr(&pub->sender, (struct sockaddr*)&sub->addr)) {
         DPS_BitVector* pubBV = PubSubMatch(node, pub, sub);
         if (pubBV) {
             DPS_DBGPRINT("Sending pub %d to %s\n", pub->sequenceNum, RemoteNodeAddressText(sub));

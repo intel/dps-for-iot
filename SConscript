@@ -27,6 +27,7 @@ srcs = ['src/bitvec.c',
         'src/murmurhash3.c',
         'src/netmcast.c',
         'src/network.c',
+        'src/dps_registration.c',
         'src/topics.c']
 
 if ('USE_UDP' in libenv.Dictionary().keys()):
@@ -106,6 +107,8 @@ if platform == 'posix':
 # Examples
 exampleenv = env.Clone()
 exampleenv.Append(LIBS = [lib, env['UV_LIBS']])
+exampleenv.Program('bin/registry', 'examples/registry.c')
+exampleenv.Program('bin/reg_subs', 'examples/reg_subs.c')
 exampleenv.Program('bin/publisher', 'examples/publisher.c')
 exampleenv.Program('bin/pub_many', 'examples/pub_many.c')
 exampleenv.Program('bin/subscriber', 'examples/subscriber.c')

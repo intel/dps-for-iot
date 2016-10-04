@@ -118,6 +118,11 @@ void DPS_NetStop(DPS_NetContext* netCtx);
 DPS_Status DPS_NetSend(DPS_NetContext* netCtx, uv_buf_t* bufs, size_t numBufs, const struct sockaddr* addr, DPS_NetSendComplete sendCompleteCB);
 
 /*
+ * Compare two addresses. This match takes care of an ipv6 mapped ipv4 address
+ */
+int DPS_SameAddr(DPS_NodeAddress* addr, const struct sockaddr* b);
+
+/*
  * Generates text for an address
  *
  * This function uses a static string internally so is not thread-safe

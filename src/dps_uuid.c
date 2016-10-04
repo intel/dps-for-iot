@@ -117,3 +117,13 @@ int DPS_UUIDCompare(const DPS_UUID* a, const DPS_UUID* b)
     }
     return 0;
 }
+
+uint32_t DPS_Rand()
+{
+    uint32_t s0 = entropy.seeds[0];
+    entropy.seeds[0] = LEPRNG(entropy.seeds[1]);
+    entropy.seeds[1] = LEPRNG(entropy.seeds[2]);
+    entropy.seeds[2] = LEPRNG(entropy.seeds[3]);
+    entropy.seeds[3] = LEPRNG(s0);
+    return entropy.seeds[0];
+}
