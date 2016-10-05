@@ -119,6 +119,14 @@ DPS_NetContext* DPS_NetStart(DPS_Node* node, int port, DPS_OnReceive cb)
     if (ret) {
         goto ErrorExit;
     }
+    ret = uv_ip6_addr("::", 0, &addr);
+    if (ret) {
+        goto ErrorExit;
+    }
+    ret = uv_udp_bind(&netCtx->txSocket, (const struct sockaddr*)&addr, 0);
+    if (ret) {
+        goto ErrorExit;
+    }
     return netCtx;
 
 ErrorExit:
