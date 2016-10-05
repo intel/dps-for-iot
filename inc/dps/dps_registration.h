@@ -13,17 +13,19 @@ extern "C" {
 
 const char* DPS_RegistryTopicString;
 
-#define DPS_CANDIDATE_TRYING    1  /** An attempt is being made link to a candidate */
-#define DPS_CANDIDATE_FAILED    2  /** An attempt to link to a candidate was attempted but failed */
-#define DPS_CANDIDATE_LINKED    4  /** Registration is currently linked */
-#define DPS_CANDIDATE_UNLINKED  8  /** Registration was linked but is currently not linked */
+#define DPS_CANDIDATE_TRYING   0x01  /** An attempt is being made link to a candidate */
+#define DPS_CANDIDATE_FAILED   0x02  /** An attempt to link to a candidate was attempted but failed */
+#define DPS_CANDIDATE_LINKED   0x04  /** Registration is currently linked */
+#define DPS_CANDIDATE_UNLINKED 0x08  /** Registration was linked but is currently not linked */
+#define DPS_CANDIDATE_INVALID  0x10  /** This is a invalid candidate address for linking */
 
-/*
- * 
+/**
+ * Registration entryg
  */
 typedef struct {
     uint8_t flags;
-    DPS_NodeAddress* addr;
+    uint16_t port;
+    char* host;
 } DPS_Registration;
 
 /**
@@ -130,9 +132,9 @@ DPS_Status DPS_Registration_GetSyn(DPS_Node* node, const char* host, uint16_t po
 typedef void (*DPS_OnRegLinkToComplete)(DPS_Node* node, DPS_RegistrationList* regs, DPS_NodeAddress* addr, DPS_Status status, void* data);
 
 /**
- * Randomly select a remote candidate to link to. 
+ * Randomly select a remote candidate to link to.g
  *
- * @param node  The local node to link 
+ * @param node  The local node to linkg
  * @param regs  The list of candidate registrations to try to link to
  * @param cb    The callback to call with the result
  * @param data  Called supplied data to be passed to the callback
@@ -145,7 +147,7 @@ DPS_Status DPS_Registration_LinkTo(DPS_Node* node, DPS_RegistrationList* regs, D
 /**
  * Synchronous version of Registration_LinkTo
  *
- * @param node  The local node to link 
+ * @param node  The local node to linkg
  * @param regs  The list of candidate registrations to try to link to
  * @param addr  Set to the address of the linked candidate
  *

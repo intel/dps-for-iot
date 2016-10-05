@@ -79,10 +79,7 @@ static DPS_Status EncodeAddr(DPS_Buffer* buf, struct sockaddr* addr, uint16_t po
         uv_ip4_name((const struct sockaddr_in*)addr, txt, sizeof(txt));
     }
     DPS_DBGPRINT("EncodeAddr %s/%d\n", txt, port);
-    ret = CBOR_EncodeUint8(buf, addr->sa_family);
-    if (ret == DPS_OK) {
-        ret = CBOR_EncodeUint16(buf, port);
-    }
+    ret = CBOR_EncodeUint16(buf, port);
     if (ret == DPS_OK) {
         ret = CBOR_EncodeString(buf, txt);
     }
@@ -273,39 +270,6 @@ typedef struct {
     DPS_RegistrationList* regs;
 } RegGet;
 
-static DPS_Status DecodeAddr(DPS_Buffer* buf, DPS_NodeAddress* addr)
-{
-    DPS_Status ret;
-    char* addrText;
-    size_t len;
-    uint8_t family;
-    uint16_t port;
-
-    ret = CBOR_DecodeUint8(buf, &family);
-    if (ret == DPS_OK) {
-        ret = CBOR_DecodeUint16(buf, &port);
-    }
-    if (ret == DPS_OK) {
-        ret = CBOR_DecodeString(buf, &addrText, &len);
-    }
-    if (ret == DPS_OK) {
-        int r;
-        DPS_DBGPRINT("DecodeAddr %s/%d\n", addrText, port);
-        if (family == AF_INET6) {
-            r = uv_ip6_addr(addrText, port, (struct sockaddr_in6*)&addr->inaddr);
-        } else {
-            r = uv_ip4_addr(addrText, port, (struct sockaddr_in*)&addr->inaddr);
-        }
-        if (r) {
-            ret = DPS_ERR_INVALID;
-        }
-    }
-    if (ret != DPS_OK) {
-        DPS_ERRPRINT("DecodeAddr failed: %s\n", DPS_ErrTxt(ret));
-    }
-    return ret;
-}
-
 static void RegGetCB(RegGet* regGet, DPS_Status status)
 {
     if (regGet->sub) {
@@ -333,35 +297,6 @@ static void OnGetTimeout(uv_timer_t* timer)
 #define GetPort(a)     (((struct sockaddr_in*)(a))->sin_port)
 #define SetPort(a, p)  (((struct sockaddr_in*)(a))->sin_port = (p))
 
-static int IsLocalAddr(DPS_NodeAddress* addr, uint16_t port)
-{
-    int local = DPS_FALSE;
-    uv_interface_address_t* ifsAddrs;
-    int numIfs;
-    int r;
-
-    port = htons(port);
-    if (GetPort(addr) != port) {
-        return DPS_FALSE;
-    }
-    r = uv_interface_addresses(&ifsAddrs, &numIfs);
-    if (!r) {
-        size_t i;
-        for (i = 0; i < numIfs; ++i) {
-            uv_interface_address_t* ifn = &ifsAddrs[i];
-            if (!ifn->is_internal) {
-                SetPort(&ifn->address, port);
-                if (DPS_SameAddr(addr, (struct sockaddr*)&ifn->address)) {
-                    local = DPS_TRUE;
-                    break;
-                }
-            }
-        }
-        uv_free_interface_addresses(ifsAddrs, numIfs);
-    }
-    return local;
-}
-
 static void OnPub(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* data, size_t len)
 {
     RegGet* regGet = (RegGet*)DPS_GetSubscriptionData(sub);
@@ -378,6 +313,9 @@ static void OnPub(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* da
         ret = CBOR_DecodeUint8(&buf, &count);
         if (ret == DPS_OK) {
             while (count--) {
+                uint16_t port;
+                char* host;
+                size_t len;
                 /*
                  * Stop if we have reached the max registrations 
                  */
@@ -388,16 +326,15 @@ static void OnPub(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* da
                     uv_close((uv_handle_t*)&regGet->timer, OnGetTimerClosed);
                     break;
                 }
-                ret = DecodeAddr(&buf, regGet->regs->list[regGet->regs->count].addr);
-                if (ret != DPS_OK) {
+                if (CBOR_DecodeUint16(&buf, &port) != DPS_OK) {
                     break;
                 }
-                /*
-                 * Check this isn't our own address
-                 */
-                if (!IsLocalAddr(regGet->regs->list[regGet->regs->count].addr, regGet->port)) {
-                    ++regGet->regs->count;
+                if (CBOR_DecodeString(&buf, &host, &len) != DPS_OK) {
+                    break;
                 }
+                regGet->regs->list[regGet->regs->count].port = port;
+                regGet->regs->list[regGet->regs->count].host = strdup(host);
+                ++regGet->regs->count;
             }
         }
     }
@@ -579,6 +516,59 @@ static void OnLinked(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, v
     free(linkTo);
 }
 
+static int IsLocalAddr(DPS_NodeAddress* addr, uint16_t port)
+{
+    int local = DPS_FALSE;
+    uv_interface_address_t* ifsAddrs;
+    int numIfs;
+    int r;
+
+    port = htons(port);
+    if (GetPort(addr) != port) {
+        return DPS_FALSE;
+    }
+    r = uv_interface_addresses(&ifsAddrs, &numIfs);
+    if (!r) {
+        size_t i;
+        for (i = 0; i < numIfs; ++i) {
+            uv_interface_address_t* ifn = &ifsAddrs[i];
+            if (!ifn->is_internal) {
+                SetPort(&ifn->address, port);
+                if (DPS_SameAddr(addr, (struct sockaddr*)&ifn->address)) {
+                    local = DPS_TRUE;
+                    break;
+                }
+            }
+        }
+        uv_free_interface_addresses(ifsAddrs, numIfs);
+    }
+    return local;
+}
+
+static void OnResolve(DPS_Node* node, DPS_NodeAddress* addr, void* data)
+{
+    DPS_Status ret = DPS_ERR_NO_ROUTE;
+    LinkTo* linkTo = (LinkTo*)data;
+
+    if (addr) {
+        if (IsLocalAddr(addr, DPS_GetPortNumber(node))) {
+            linkTo->candidate->flags = DPS_CANDIDATE_INVALID;
+        } else {
+            ret = DPS_Link(node, addr, OnLinked, linkTo);
+        }
+    }
+    if (ret != DPS_OK) {
+        /*
+         * Keep trying other registrations
+         */
+        linkTo->candidate->flags |= DPS_CANDIDATE_FAILED;
+        if (DPS_Registration_LinkTo(node, linkTo->regs, linkTo->cb, linkTo->data) != DPS_OK) {
+            linkTo->cb(node, linkTo->regs, addr, ret, linkTo->data);
+        }
+        free(linkTo);
+    }
+}
+
 DPS_Status DPS_Registration_LinkTo(DPS_Node* node, DPS_RegistrationList* regs, DPS_OnRegLinkToComplete cb, void* data)
 {
     size_t i;
@@ -594,6 +584,7 @@ DPS_Status DPS_Registration_LinkTo(DPS_Node* node, DPS_RegistrationList* regs, D
     while (untried) {
         uint32_t r = DPS_Rand() % regs->count;
         if (regs->list[r].flags == 0) {
+            char portTxt[8];
             DPS_Status ret;
             LinkTo* linkTo = malloc(sizeof(LinkTo));
 
@@ -603,7 +594,8 @@ DPS_Status DPS_Registration_LinkTo(DPS_Node* node, DPS_RegistrationList* regs, D
             linkTo->candidate = &regs->list[r];
 
             regs->list[r].flags = DPS_CANDIDATE_TRYING;
-            ret = DPS_Link(node, regs->list[r].addr, OnLinked, linkTo);
+            sprintf(portTxt, "%d", regs->list[r].port);
+            ret = DPS_ResolveAddress(node, regs->list[r].host, portTxt, OnResolve, linkTo);
             if (ret == DPS_OK) {
                 break;
             }
@@ -656,15 +648,7 @@ DPS_RegistrationList* DPS_CreateRegistrationList(uint8_t size)
 {
     DPS_RegistrationList* regs = calloc(1, sizeof(DPS_RegistrationList) + (size - 1) * sizeof(DPS_Registration));
     if (regs) {
-        int i;
         regs->size = size;
-        for (i = 0; i < size; ++i) {
-            regs->list[i].addr = DPS_CreateAddress();
-            if (!regs->list[i].addr) {
-                DPS_DestroyRegistrationList(regs);
-                return NULL;
-            }
-        }
     }
     return regs;
 }
@@ -673,7 +657,9 @@ void DPS_DestroyRegistrationList(DPS_RegistrationList* regs)
 {
     if (regs) {
         while (regs->size--) {
-            DPS_DestroyAddress(regs->list[regs->size].addr);
+            if (regs->list[regs->size].host) {
+                free(regs->list[regs->size].host);
+            }
         }
         free(regs);
     }

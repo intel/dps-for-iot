@@ -287,7 +287,7 @@ DPS_Status DPS_NetSend(DPS_NetContext* netCtx, uv_buf_t* bufs, size_t numBufs, c
     }
     ret = uv_tcp_connect(&writer->connectReq, &writer->socket, addr, OnOutgoingConnection);
     if (ret) {
-        DPS_ERRPRINT("uv_tcp_connect error=%s\n", uv_err_name(ret));
+        DPS_ERRPRINT("uv_tcp_connect %s error=%s\n", DPS_NetAddrText(addr), uv_err_name(ret));
         uv_close((uv_handle_t*)&writer->socket, HandleClosed);
         return DPS_ERR_NETWORK;
     }

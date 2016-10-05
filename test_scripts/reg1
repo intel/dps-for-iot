@@ -1,0 +1,34 @@
+#!/bin/sh
+
+killall registry
+killall reg_sub
+
+
+# Start the registry service
+
+build/bin/registry&
+sleep 1
+
+# Start some subscribers
+
+build/bin/reg_subs a/b/c&
+build/bin/reg_subs a/b/c&
+build/bin/reg_subs a/b/c&
+build/bin/reg_subs a/b/c&
+build/bin/reg_subs a/b/c&
+build/bin/reg_subs a/b/c&
+build/bin/reg_subs a/b/c&
+build/bin/reg_subs a/b/c&
+build/bin/reg_subs a/b/c&
+build/bin/reg_subs a/b/c&
+build/bin/reg_subs a/b/c&
+build/bin/reg_subs a/b/c&
+build/bin/reg_subs a/b/c&
+build/bin/reg_subs a/b/c&
+build/bin/reg_subs a/b/c&
+build/bin/reg_subs 1/2/3&
+build/bin/reg_subs "+/+/#"&
+
+sleep 1
+build/bin/reg_pubs a/b/c --msg hello
+build/bin/reg_pubs 1/2/3 --msg world
