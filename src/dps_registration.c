@@ -35,6 +35,7 @@ typedef struct {
 
 static void RegPutCB(RegPut* regPut, DPS_Status status)
 {
+    DPS_DBGTRACE();
     if (regPut->pub) {
         DPS_DestroyPublication(regPut->pub, NULL);
     }
@@ -48,21 +49,25 @@ static void RegPutCB(RegPut* regPut, DPS_Status status)
 
 static void OnPutTimerClosedTO(uv_handle_t* handle)
 {
+    DPS_DBGTRACE();
     RegPutCB((RegPut*)handle->data, DPS_ERR_TIMEOUT);
 }
 
 static void OnPutTimeout(uv_timer_t* timer)
 {
+    DPS_DBGTRACE();
     uv_close((uv_handle_t*)timer, OnPutTimerClosedTO);
 }
 
 static void OnPutTimerClosedOK(uv_handle_t* handle)
 {
+    DPS_DBGTRACE();
     RegPutCB((RegPut*)handle->data, DPS_OK);
 }
 
 static void OnPutAck(DPS_Publication* pub, uint8_t* data, size_t len)
 {
+    DPS_DBGTRACE();
     RegPut* regPut = (RegPut*)DPS_GetPublicationData(pub);
     uv_timer_stop(&regPut->timer);
     uv_close((uv_handle_t*)&regPut->timer, OnPutTimerClosedOK);

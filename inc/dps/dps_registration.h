@@ -11,7 +11,7 @@ extern "C" {
  * APIs for interacting with a registration service
  */
 
-const char* DPS_RegistryTopicString;
+extern const char* DPS_RegistryTopicString;
 
 #define DPS_CANDIDATE_TRYING   0x01  /** An attempt is being made link to a candidate */
 #define DPS_CANDIDATE_FAILED   0x02  /** An attempt to link to a candidate was attempted but failed */
