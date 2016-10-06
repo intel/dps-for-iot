@@ -3,16 +3,21 @@
 #include <stdio.h>
 #include <assert.h>
 #include <dps/dps_dbg.h>
-#include <dps/network.h>
 #include <dps/dps.h>
 #include <dps/dps_synchronous.h>
-#include <dps/bitvec.h>
-#include <uv.h>
+#include <dps/dps_event.h>
 
 static int quiet = DPS_FALSE;
 static int sendAck = DPS_FALSE;
 
 static uint8_t AckMsg[] = "This is an ACK";
+
+static void OnNodeDestroyed(DPS_Node* node, void* data)
+{
+    if (data) {
+        DPS_SignalEvent((DPS_Event*)data, DPS_OK);
+    }
+}
 
 static void OnPubMatch(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* data, size_t len)
 {
@@ -41,19 +46,6 @@ static void OnPubMatch(DPS_Subscription* sub, const DPS_Publication* pub, uint8_
         }
     }
 }
-
-#if 0
-static void ReadStdin()
-{
-    char lineBuf[200];
-
-    while (fgets(lineBuf, sizeof(lineBuf), stdin) != NULL) {
-        if (lineBuf[0] == 'q') {
-            exit(0);
-        }
-    }
-}
-#endif
 
 static int IntArg(char* opt, char*** argp, int* argcp, int* val, uint32_t min, uint32_t max)
 {
@@ -87,6 +79,7 @@ int main(int argc, char** argv)
     char** arg = ++argv;
     size_t numTopics = 0;
     DPS_Node* node;
+    DPS_Event* nodeDestroyed;
     DPS_Subscription* subscription;
     int mcastPub = DPS_MCAST_PUB_DISABLED;
     const char* host = NULL;
@@ -152,11 +145,15 @@ int main(int argc, char** argv)
     }
     DPS_PRINT("Subscriber is listening on port %d\n", DPS_GetPortNumber(node));
 
+    nodeDestroyed = DPS_CreateEvent();
+
     if (numTopics > 0) {
         DPS_Subscription* subscription = DPS_CreateSubscription(node, (const char**)topics, numTopics);
         ret = DPS_Subscribe(subscription, OnPubMatch);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("Failed to susbscribe topics - error=%s\n", DPS_ErrTxt(ret));
+            DPS_DestroyNode(node, OnNodeDestroyed, nodeDestroyed);
+            DPS_WaitForEvent(nodeDestroyed);
             return 1;
         }
     }
@@ -167,10 +164,13 @@ int main(int argc, char** argv)
         DPS_DestroyAddress(addr);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("DPS_LinkTo returned %s\n", DPS_ErrTxt(ret));
+            DPS_DestroyNode(node, OnNodeDestroyed, nodeDestroyed);
+            DPS_WaitForEvent(nodeDestroyed);
             return 1;
         }
     }
-    DPS_DestroyNode(node);
+    DPS_WaitForEvent(nodeDestroyed);
+    DPS_DestroyEvent(nodeDestroyed);
     return 0;
 
 Usage:

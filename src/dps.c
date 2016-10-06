@@ -1570,6 +1570,12 @@ static ssize_t OnNetReceive(DPS_Node* node, const struct sockaddr* addr, const u
 
 static void StopNode(DPS_Node* node)
 {
+    LockNode(node);
+
+    /*
+     * Indicates the node is no longer running
+     */
+    node->stopped = DPS_TRUE;
     /*
      * Close all the handles and...
      */
@@ -1592,11 +1598,9 @@ static void StopNode(DPS_Node* node)
      * completed
      */
     uv_run(node->loop, UV_RUN_DEFAULT);
-}
-
-static void DestroyNode(DPS_Node* node)
-{
-    LockNode(node);
+    /*
+     * Free data structures
+     */
     while (node->remoteNodes) {
         DeleteRemoteNode(node, node->remoteNodes);
     }
@@ -1611,9 +1615,9 @@ static void DestroyNode(DPS_Node* node)
     DPS_BitVectorFree(node->scratch.interests);
     DPS_BitVectorFree(node->scratch.needs);
     DPS_HistoryFree(&node->history);
-    UnlockNode(node);
-
-    uv_mutex_destroy(&node->nodeMutex);
+    /*
+     * Cleanup mutexes etc.
+     */
     uv_mutex_destroy(&node->condMutex);
     uv_mutex_destroy(&node->history.lock);
 
@@ -1621,7 +1625,18 @@ static void DestroyNode(DPS_Node* node)
 
     uv_loop_close(node->loop);
     free(node->loop);
-    free(node);
+    /*
+     * If we got here before the application called DPS_DestroyNode() we cannot free the node now,
+     * it will be freed when DPS_DestroyNode() is called.
+     */
+    if (node->onDestroyed) {
+        UnlockNode(node);
+        node->onDestroyed(node, node->onDestroyedData);
+        uv_mutex_destroy(&node->nodeMutex);
+        free(node);
+    } else {
+        UnlockNode(node);
+    }
 }
 
 static void NodeRun(void* arg)
@@ -1634,7 +1649,6 @@ static void NodeRun(void* arg)
     StopNode(node);
 
     DPS_DBGPRINT("Exiting node thread\n");
-    DestroyNode(node);
 }
 
 DPS_Node* DPS_CreateNode(const char* separators)
@@ -1675,6 +1689,7 @@ void* DPS_GetNodeData(const DPS_Node* node)
 
 DPS_Status DPS_StartNode(DPS_Node* node, int mcast, int rxPort)
 {
+    DPS_Status ret = DPS_OK;
     int r;
 
     if (!node) {
@@ -1682,12 +1697,12 @@ DPS_Status DPS_StartNode(DPS_Node* node, int mcast, int rxPort)
     }
     node->history.loop = node->loop = calloc(1, sizeof(uv_loop_t));
     if (!node->loop) {
-        free(node);
         return DPS_ERR_RESOURCES;
     }
     r = uv_loop_init(node->loop);
     if (r) {
-        return DPS_ERR_FAILURE;
+        ret = DPS_ERR_FAILURE;
+        goto ErrExit;
     }
     DPS_DBGPRINT("libuv version %s\n", uv_version_string());
     /*
@@ -1712,7 +1727,8 @@ DPS_Status DPS_StartNode(DPS_Node* node, int mcast, int rxPort)
     node->scratch.needs = DPS_BitVectorAllocFH();
 
     if (!node->interests || !node->needs || !node->scratch.interests || !node->scratch.needs) {
-        return DPS_ERR_RESOURCES;
+        ret = DPS_ERR_RESOURCES;
+        goto ErrExit;
     }
     if (mcast & DPS_MCAST_PUB_ENABLE_RECV) {
         node->mcastReceiver = DPS_MulticastStartReceive(node, OnMulticastReceive);
@@ -1723,7 +1739,8 @@ DPS_Status DPS_StartNode(DPS_Node* node, int mcast, int rxPort)
     node->netCtx = DPS_NetStart(node, rxPort, OnNetReceive);
     if (!node->netCtx) {
         DPS_ERRPRINT("Failed to initialize network context on port %d\n", rxPort);
-        return DPS_ERR_NETWORK;
+        ret = DPS_ERR_NETWORK;
+        goto ErrExit;
     }
     /*
      * Make sure have the listenting port before we return
@@ -1736,9 +1753,22 @@ DPS_Status DPS_StartNode(DPS_Node* node, int mcast, int rxPort)
     r = uv_thread_create(&node->thread, NodeRun, node);
     if (r) {
         DPS_ERRPRINT("Failed to create node thread\n");
-        return DPS_ERR_FAILURE;
+        ret = DPS_ERR_FAILURE;
+        goto ErrExit;
     }
     return DPS_OK;
+
+ErrExit:
+
+    DPS_CountVectorFree(node->interests);
+    DPS_CountVectorFree(node->needs);
+    DPS_BitVectorFree(node->scratch.needs);
+    DPS_BitVectorFree(node->scratch.interests);
+
+    free(node->loop);
+    node->loop = NULL;
+    return ret;
+
 }
 
 DPS_NetContext* DPS_GetNetContext(DPS_Node* node)
@@ -1767,33 +1797,31 @@ static void StopNodeTask(DPS_Node* node)
     uv_stop(node->loop);
 }
 
-void DPS_StopNode(DPS_Node* node)
+DPS_Status DPS_DestroyNode(DPS_Node* node, DPS_OnNodeDestroyed cb, void* data)
 {
     DPS_DBGTRACE();
-    LockNode(node);
-    node->tasks |= STOP_NODE_TASK;
-    UnlockNode(node);
-    uv_async_send(&node->bgHandler);
-}
-
-void DPS_DestroyNode(DPS_Node* node)
-{
-    uv_thread_t self = uv_thread_self();
-
-    if (!uv_thread_equal(&node->thread, &self)) {
-        uv_thread_join(&node->thread);
+    if (!node || !cb) {
+        return DPS_ERR_NULL;
     }
-}
-
-/*
- * This is not safe to be called generally, it is only used in the
- * simulator environment.
- */
-void DPS_StopAndDestroyNode(DPS_Node* node)
-{
-    DPS_DBGTRACE();
-    StopNode(node);
-    DestroyNode(node);
+    if (node->onDestroyed) {
+        return DPS_ERR_INVALID;
+    }
+    if (!node->loop) {
+        return DPS_OK;
+    }
+    LockNode(node);
+    if (!node->stopped) {
+        node->onDestroyed = cb;
+        node->onDestroyedData = data;
+        node->tasks |= STOP_NODE_TASK;
+        uv_async_send(&node->bgHandler);
+        UnlockNode(node);
+        return DPS_OK;
+    }
+    UnlockNode(node);
+    uv_mutex_destroy(&node->nodeMutex);
+    free(node);
+    return DPS_ERR_NODE_DESTROYED;
 }
 
 DPS_Publication* DPS_CreatePublication(DPS_Node* node)

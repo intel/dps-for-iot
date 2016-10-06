@@ -6,12 +6,19 @@
 #include <dps/dps.h>
 #include <dps/dps_synchronous.h>
 #include <dps/dps_registration.h>
-#include <uv.h>
+#include <dps/dps_event.h>
 
 static int quiet = DPS_FALSE;
 static int sendAck = DPS_FALSE;
 
 static uint8_t AckMsg[] = "This is an ACK";
+
+static void OnNodeDestroyed(DPS_Node* node, void* data)
+{
+    if (data) {
+        DPS_SignalEvent((DPS_Event*)data, DPS_OK);
+    }
+}
 
 static void OnPubMatch(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* data, size_t len)
 {
@@ -109,13 +116,13 @@ static int IntArg(char* opt, char*** argp, int* argcp, int* val, uint32_t min, u
 int main(int argc, char** argv)
 {
     DPS_Status ret;
+    DPS_Event* nodeDestroyed;
     char* topics[64];
     char** arg = ++argv;
     const char* tenant = "anonymous_tenant";
     size_t numTopics = 0;
     DPS_Node* node;
     DPS_Subscription* subscription;
-    int mcastPub = DPS_MCAST_PUB_DISABLED;
     const char* host = "localhost";
     int listen = 0;
     int port = 30000;
@@ -155,11 +162,6 @@ int main(int argc, char** argv)
             sendAck = DPS_TRUE;
             continue;
         }
-        if (strcmp(*arg, "-m") == 0) {
-            ++arg;
-            mcastPub = DPS_MCAST_PUB_ENABLE_RECV;
-            continue;
-        }
         if (strcmp(*arg, "-d") == 0) {
             ++arg;
             DPS_Debug = 1;
@@ -182,7 +184,7 @@ int main(int argc, char** argv)
 
     node = DPS_CreateNode("/.");
 
-    ret = DPS_StartNode(node, mcastPub, listen);
+    ret = DPS_StartNode(node, DPS_MCAST_PUB_DISABLED, listen);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
         return 1;
@@ -194,15 +196,18 @@ int main(int argc, char** argv)
         DPS_ERRPRINT("Failed to join node: %s\n", DPS_ErrTxt(ret));
     }
 
+    nodeDestroyed = DPS_CreateEvent();
+
     if (numTopics > 0) {
         DPS_Subscription* subscription = DPS_CreateSubscription(node, (const char**)topics, numTopics);
         ret = DPS_Subscribe(subscription, OnPubMatch);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("Failed to susbscribe topics - error=%s\n", DPS_ErrTxt(ret));
-            return 1;
+            DPS_DestroyNode(node, OnNodeDestroyed, nodeDestroyed);
         }
     }
-    DPS_DestroyNode(node);
+    DPS_WaitForEvent(nodeDestroyed);
+    DPS_DestroyEvent(nodeDestroyed);
     return 0;
 
 Usage:

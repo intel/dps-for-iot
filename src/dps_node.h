@@ -100,6 +100,10 @@ typedef struct _DPS_Node {
 
     DPS_NetContext* netCtx;               /* Network context */
 
+    uint8_t stopped;                      /* True if the node is no longer running */
+    DPS_OnNodeDestroyed onDestroyed;      /* Function to call when the node is destroyed */
+    void* onDestroyedData;                /* Context to pass to onDestroyed callback */
+
 } DPS_Node;
 
 #ifdef __cplusplus

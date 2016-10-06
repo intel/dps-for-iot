@@ -7,12 +7,20 @@
 #include <dps/bitvec.h>
 #include <dps/dps.h>
 #include <dps/dps_synchronous.h>
+#include <dps/dps_event.h>
 
 #define MAX_TOPICS 64
 
 static int pubCount = 1;
 static int ttl = 0;
 static int quiet = DPS_FALSE;
+
+static DPS_Event* nodeDestroyed;
+
+static void OnNodeDestroyed(DPS_Node* node, void* data)
+{
+    DPS_SignalEvent(nodeDestroyed, DPS_OK);
+}
 
 static void OnAck(DPS_Publication* pub, uint8_t* data, size_t len)
 {
@@ -32,7 +40,7 @@ static void OnAck(DPS_Publication* pub, uint8_t* data, size_t len)
         DPS_ERRPRINT("Failed to publish: %s\n", DPS_ErrTxt(ret));
     }
     DPS_DestroyPublication(pub, NULL);
-    DPS_StopNode(node);
+    DPS_DestroyNode(node, OnNodeDestroyed, NULL);
 }
 
 static int IntArg(char* opt, char*** argp, int* argcp, int* val, uint32_t min, uint32_t max)
@@ -150,15 +158,20 @@ int main(int argc, char** argv)
         DPS_ERRPRINT("Failed to create publication - error=%d\n", ret);
         return 1;
     }
+
+    nodeDestroyed = DPS_CreateEvent();
+
     ret = DPS_Publish(pub, msg, msg ? strlen(msg) + 1 : 0, ttl, NULL);
     if (ret == DPS_OK) {
         DPS_PRINT("Pub UUID %s\n", DPS_UUIDToString(DPS_PublicationGetUUID(pub)));
     } else {
         DPS_ERRPRINT("Failed to publish topics - error=%d\n", ret);
         DPS_DestroyPublication(pub, NULL);
-        DPS_StopNode(node);
+        DPS_DestroyNode(node, OnNodeDestroyed, NULL);
     }
-    DPS_DestroyNode(node);
+
+    DPS_WaitForEvent(nodeDestroyed);
+    DPS_DestroyEvent(nodeDestroyed);
 
     return 0;
 

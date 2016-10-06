@@ -97,7 +97,7 @@ DPS_Status DPS_SetNodeData(DPS_Node* node, void* data);
 void* DPS_GetNodeData(const DPS_Node* node);
 
 /**
- * Initialized and starts running a local node. Node can only be started once and cannot be restarted after it has been
+ * Initialized and starts running a local node. Node can only be started once.
  * stopped.
  *
  * @param mcastPub     Indicates if this node sends or listens for multicast publications
@@ -108,20 +108,27 @@ void* DPS_GetNodeData(const DPS_Node* node);
 DPS_Status DPS_StartNode(DPS_Node* node, int mcastPub, int listenPort);
 
 /**
- * Stop a local node. This can be called from any thread. The node must be stopped before it can be destroyed.
+ * Function prototype for callback function called when a node is destroyed.
  *
- * @param node   The node to stop
+ * @param node   The node that was destroyed. This pointer is valid during 
+ *               the callback.
+ * @param data   Data pointer passed to DPS_DestroyNode()
+ *
  */
-void DPS_StopNode(DPS_Node* node);
+typedef void (*DPS_OnNodeDestroyed)(DPS_Node* node, void* data);
 
 /**
- * Waits for the node to stop and destroys node and free any resources.
- *
- * Note: if not waiting for the node to stop call DPS_StopNode() first.
+ * Destroys a node and free any resources.
  *
  * @param node   The node to destroy
+ * @param cb     Callback function to be called when the node is destroyed
+ * @param data   Data to be passed to the callback function
+ *
+ * @return -DPS_OK if the node will be destroyed and the callback called
+ *         -DPS_ERR_NULL node or cb was a null pointer
+ *         -Or an error status code in which case the callback will not be called.
  */
-void DPS_DestroyNode(DPS_Node* node);
+DPS_Status DPS_DestroyNode(DPS_Node* node, DPS_OnNodeDestroyed cb, void* data);
 
 /**
  * Get the uv event loop for this node. The only thing that is safe to do with the node

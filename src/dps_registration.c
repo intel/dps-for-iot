@@ -20,6 +20,9 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 #define REG_PUT_TIMEOUT    (1000 * 5)     /* Timeout is in milliseconds */
 #define REG_GET_TIMEOUT    (5000)          /* Timeout is in milliseconds */
 
+static void OnNodeDestroyed(DPS_Node* node, void* data)
+{
+}
 
 const char* DPS_RegistryTopicString = "dps/registration_service";
 
@@ -39,8 +42,7 @@ static void RegPutCB(RegPut* regPut, DPS_Status status)
     if (regPut->pub) {
         DPS_DestroyPublication(regPut->pub, NULL);
     }
-    DPS_StopNode(regPut->node);
-    DPS_DestroyNode(regPut->node);
+    DPS_DestroyNode(regPut->node, OnNodeDestroyed, NULL);
     free(regPut->tenant);
     free(regPut->payload.base);
     regPut->cb(status, regPut->data);
@@ -221,15 +223,12 @@ DPS_Status DPS_Registration_Put(DPS_Node* node, const char* host, uint16_t port,
             sprintf(portStr, "%d", port);
             ret = DPS_ResolveAddress(regPut->node, host, portStr, OnResolvePut, regPut);
         }
-        if (ret != DPS_OK) {
-            DPS_StopNode(regPut->node);
-        }
     }
 
 Exit:
     if (ret != DPS_OK) {
         if (regPut->node) {
-            DPS_DestroyNode(regPut->node);
+            DPS_DestroyNode(regPut->node, OnNodeDestroyed, NULL);
         }
         if (regPut->payload.base) {
             free(regPut->payload.base);
@@ -280,8 +279,7 @@ static void RegGetCB(RegGet* regGet, DPS_Status status)
     if (regGet->sub) {
         DPS_DestroySubscription(regGet->sub);
     }
-    DPS_StopNode(regGet->node);
-    DPS_DestroyNode(regGet->node);
+    DPS_DestroyNode(regGet->node, OnNodeDestroyed, NULL);
     free(regGet->tenant);
     regGet->cb(regGet->regs, status, regGet->data);
     free(regGet);
@@ -446,15 +444,12 @@ DPS_Status DPS_Registration_Get(DPS_Node* node, const char* host, uint16_t port,
         char portStr[8];
         sprintf(portStr, "%d", port);
         ret = DPS_ResolveAddress(regGet->node, host, portStr, OnResolveGet, regGet);
-        if (ret != DPS_OK) {
-            DPS_StopNode(regGet->node);
-        }
     }
 
 Exit:
     if (ret != DPS_OK) {
         if (regGet->node) {
-            DPS_DestroyNode(regGet->node);
+            DPS_DestroyNode(regGet->node, OnNodeDestroyed, NULL);
         }
         if (regGet->tenant) {
             free(regGet->tenant);

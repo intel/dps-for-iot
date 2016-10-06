@@ -6,6 +6,7 @@
 #include <dps/dps_dbg.h>
 #include <dps/dps.h>
 #include <dps/dps_synchronous.h>
+#include <dps/dps_event.h>
 
 #define MAX_TOPICS 64
 
@@ -15,6 +16,13 @@ static size_t numTopics = 0;
 static int requestAck = DPS_FALSE;
 
 static DPS_Publication* currentPub = NULL;
+
+static DPS_Event* nodeDestroyed;
+
+static void OnNodeDestroyed(DPS_Node* node, void* data)
+{
+    DPS_SignalEvent(nodeDestroyed, DPS_OK);
+}
 
 static int AddTopics(char* topicList, char** msg, int* keep, int* ttl)
 {
@@ -234,6 +242,8 @@ int main(int argc, char** argv)
         }
     }
 
+    nodeDestroyed = DPS_CreateEvent();
+
     if (numTopics) {
         currentPub = DPS_CreatePublication(node);
         ret = DPS_InitPublication(currentPub, (const char**)topics, numTopics, DPS_FALSE, requestAck ? OnAck : NULL);
@@ -252,13 +262,14 @@ int main(int argc, char** argv)
             DPS_DestroyAddress(addr);
         }
         if (!wait) {
-            DPS_StopNode(node);
+            DPS_DestroyNode(node, OnNodeDestroyed, NULL);
         }
-        DPS_DestroyNode(node);
     } else {
         DPS_PRINT("Running in interactive mode\n");
         ReadStdin(node);
     }
+    DPS_WaitForEvent(nodeDestroyed);
+    DPS_DestroyEvent(nodeDestroyed);
     return 0;
 
 Usage:

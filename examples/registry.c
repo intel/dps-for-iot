@@ -3,12 +3,17 @@
 #include <stdio.h>
 #include <assert.h>
 #include <dps/dps_dbg.h>
-#include <dps/network.h>
 #include <dps/dps.h>
 #include <dps/dps_synchronous.h>
 #include <dps/dps_registration.h>
-#include <dps/bitvec.h>
-#include <uv.h>
+#include <dps/dps_event.h>
+
+static void OnNodeDestroyed(DPS_Node* node, void* data)
+{
+    if (data) {
+        DPS_SignalEvent((DPS_Event*)data, DPS_OK);
+    }
+}
 
 static void OnPubMatch(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* data, size_t len)
 {
@@ -48,6 +53,7 @@ int main(int argc, char** argv)
     DPS_Status ret;
     char** arg = ++argv;
     DPS_Node* node;
+    DPS_Event* nodeDestroyed;
     const char* topics[1];
     DPS_Subscription* subscription;
     int listenPort = 30000;
@@ -76,14 +82,17 @@ int main(int argc, char** argv)
     }
     DPS_PRINT("Registration services is listening on port %d\n", DPS_GetPortNumber(node));
 
+    nodeDestroyed = DPS_CreateEvent();
+
     topics[0] = DPS_RegistryTopicString;
     subscription = DPS_CreateSubscription(node, topics, 1);
     ret = DPS_Subscribe(subscription, OnPubMatch);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to susbscribe topics - error=%s\n", DPS_ErrTxt(ret));
-        return 1;
+        DPS_DestroyNode(node, OnNodeDestroyed, nodeDestroyed);
     }
-    DPS_DestroyNode(node);
+    DPS_WaitForEvent(nodeDestroyed);
+    DPS_DestroyEvent(nodeDestroyed);
     return 0;
 
 Usage:
