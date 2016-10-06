@@ -101,11 +101,11 @@ void* DPS_GetNodeData(const DPS_Node* node);
  * stopped.
  *
  * @param mcastPub     Indicates if this node sends or listens for multicast publications
- * @param tcpPort      If non-zero identifies specific port to listen on
+ * @param listenPort   If non-zero identifies specific port to listen on
  *
  * @return DPS_OK or various error status codes
  */
-DPS_Status DPS_StartNode(DPS_Node* node, int mcastPub, int tcpPort);
+DPS_Status DPS_StartNode(DPS_Node* node, int mcastPub, int listenPort);
 
 /**
  * Stop a local node. This can be called from any thread. The node must be stopped before it can be destroyed.

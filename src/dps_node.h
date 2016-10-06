@@ -66,7 +66,6 @@ typedef struct _DPS_Node {
 
     uv_thread_t thread;                   /* Thread for the event loop */
     uv_loop_t* loop;                      /* uv lib event loop */
-    uv_timer_t shutdownTimer;             /* for graceful shut down */
     uv_mutex_t nodeMutex;                 /* Mutex to protect this node */
     uv_mutex_t condMutex;                 /* Mutex for use wih condition variables */
 #ifndef NDEBUG

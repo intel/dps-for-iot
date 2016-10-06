@@ -103,11 +103,6 @@ typedef struct _DPS_Publication {
 #define LINK_RESPONSE_TIMEOUT  5
 
 /*
- * How long to wait (in milliseconds) while the loop cleans up
- */
-#define STOP_DELAY_TIMEOUT 200
-
-/*
  * Forward declaration
  */
 static void RunBackgroundTasks(uv_async_t* handle);
@@ -1592,8 +1587,6 @@ static void StopNode(DPS_Node* node)
     }
     assert(!uv_is_closing((uv_handle_t*)&node->bgHandler));
     uv_close((uv_handle_t*)&node->bgHandler, NULL);
-    assert(!uv_is_closing((uv_handle_t*)&node->shutdownTimer));
-    uv_close((uv_handle_t*)&node->shutdownTimer, NULL);
     /*
      * ...run the event loop again to ensure that all cleanup is
      * completed
@@ -1637,8 +1630,11 @@ static void NodeRun(void* arg)
 
     uv_run(node->loop, UV_RUN_DEFAULT);
 
-    DPS_DBGPRINT("Exiting node thread\n");
+    DPS_DBGPRINT("Stopping node\n");
     StopNode(node);
+
+    DPS_DBGPRINT("Exiting node thread\n");
+    DestroyNode(node);
 }
 
 DPS_Node* DPS_CreateNode(const char* separators)
@@ -1694,11 +1690,6 @@ DPS_Status DPS_StartNode(DPS_Node* node, int mcast, int rxPort)
         return DPS_ERR_FAILURE;
     }
     DPS_DBGPRINT("libuv version %s\n", uv_version_string());
-    /*
-     * Timer for clean shutdown
-     */
-    node->shutdownTimer.data = node;
-    uv_timer_init(node->loop, &node->shutdownTimer);
     /*
      * For triggering background tasks
      */
@@ -1770,30 +1761,27 @@ uint16_t DPS_GetPortNumber(DPS_Node* node)
 
 }
 
-static void StopOnTimeout(uv_timer_t* handle)
-{
-    DPS_DBGTRACE();
-    uv_stop(handle->loop);
-}
-
 static void StopNodeTask(DPS_Node* node)
 {
     DPS_DBGTRACE();
-    uv_timer_start(&node->shutdownTimer, StopOnTimeout, STOP_DELAY_TIMEOUT, 0);
+    uv_stop(node->loop);
 }
 
 void DPS_StopNode(DPS_Node* node)
 {
     DPS_DBGTRACE();
     LockNode(node);
-    ScheduleBackgroundTask(node, STOP_NODE_TASK);
+    node->tasks |= STOP_NODE_TASK;
     UnlockNode(node);
+    uv_async_send(&node->bgHandler);
 }
 
 void DPS_DestroyNode(DPS_Node* node)
 {
-    if (uv_thread_join(&node->thread) == 0) {
-        DestroyNode(node);
+    uv_thread_t self = uv_thread_self();
+
+    if (!uv_thread_equal(&node->thread, &self)) {
+        uv_thread_join(&node->thread);
     }
 }
 
