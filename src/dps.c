@@ -14,6 +14,7 @@
 #include <dps/dps_history.h>
 #include <dps/dps_internal.h>
 #include "dps_node.h"
+#include "uv_extra.h"
 
 /*
  * Debug control for this module
@@ -1641,6 +1642,7 @@ static void StopNode(DPS_Node* node)
 
 static void NodeRun(void* arg)
 {
+    int r;
     DPS_Node* node = (DPS_Node*)arg;
 
     uv_run(node->loop, UV_RUN_DEFAULT);
@@ -1649,6 +1651,14 @@ static void NodeRun(void* arg)
     StopNode(node);
 
     DPS_DBGPRINT("Exiting node thread\n");
+
+    /*
+     * Note: this is not currently a libuv API and is implemented locally
+     */
+    r = uv_thread_detach(&node->thread);
+    if (r) {
+        DPS_ERRPRINT("Failed to detatch thread: %s\n", uv_err_name(r));
+    }
 }
 
 DPS_Node* DPS_CreateNode(const char* separators)

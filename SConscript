@@ -28,7 +28,8 @@ srcs = ['src/bitvec.c',
         'src/netmcast.c',
         'src/network.c',
         'src/dps_registration.c',
-        'src/topics.c']
+        'src/topics.c',
+        'src/uv_extra.c']
 
 if ('USE_UDP' in libenv.Dictionary().keys()):
     srcs.append('src/udp/network.c')

@@ -73,7 +73,7 @@ elif env['PLATFORM'] == 'posix':
     env['PY_LIBPATH'] = []
 
     # Where to find libuv
-    env['UV_LIBS'] = ['uv']
+    env['UV_LIBS'] = ['uv', 'pthread']
 
 else:
     print 'Unsupported system'
