@@ -179,6 +179,7 @@ static void OnSendComplete(uv_udp_send_t* req, int status)
         dpsRet = DPS_ERR_NETWORK;
     }
     sender->onSendComplete(sender->netCtx->node, (struct sockaddr*)&sender->addr, sender->bufs, sender->numBufs, dpsRet);
+    free(sender);
 }
 
 DPS_Status DPS_NetSend(DPS_NetContext* netCtx, uv_buf_t* bufs, size_t numBufs, const struct sockaddr* addr, DPS_NetSendComplete sendCompleteCB)
