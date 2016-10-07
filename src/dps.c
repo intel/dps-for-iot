@@ -36,6 +36,57 @@ static const char DPS_AcknowledgmentURI[] = "dps/ack";
 
 typedef enum { NO_REQ, SUB_REQ, PUB_REQ, ACK_REQ } RequestType;
 
+typedef enum { LINK_OP, UNLINK_OP } OpType;
+
+typedef struct {
+    OpType op;
+    void* data;
+    DPS_Node* node;
+    struct _RemoteNode* remote;
+    uv_timer_t timer;
+    uv_mutex_t mutex;
+    union {
+        DPS_OnLinkComplete link;
+        DPS_OnUnlinkComplete unlink;
+        void* cb;
+    } on;
+} OnOpCompletion;
+
+typedef struct _RemoteNode {
+    OnOpCompletion* completion;
+    uint8_t linked;                    /* True if this is a node that was explicitly linked */
+    struct {
+        uint8_t sync;                  /* If TRUE request remote to synchronize interests */
+        uint8_t updates;               /* TRUE if updates have been received but not acted on */
+        DPS_BitVector* needs;          /* Bit vector of needs received from  this remote node */
+        DPS_BitVector* interests;      /* Bit vector of interests received from  this remote node */
+    } inbound;
+    struct {
+        uint8_t sync;                  /* If TRUE synchronize outbound interests with remote node (no deltas) */
+        uint8_t checkForUpdates;       /* TRUE if there may be updated interests to send to this remote */
+        DPS_BitVector* needs;          /* Needs bit vector sent outbound to this remote node */
+        DPS_BitVector* interests;      /* Interests bit vector sent outbound to this remote node */
+    } outbound;
+    DPS_NodeAddress addr;
+    uint64_t expires;
+    /*
+     * Remote nodes are doubly linked into a ring
+     */
+    struct _RemoteNode* prev;
+    struct _RemoteNode* next;
+} RemoteNode;
+
+/*
+ * Acknowledgment packet queued to be sent on node loop
+ */
+typedef struct _PublicationAck {
+    uv_buf_t bufs[3];
+    DPS_NodeAddress destAddr;
+    uint32_t sequenceNum;
+    DPS_UUID pubId;
+    struct _PublicationAck* next;
+} PublicationAck;
+
 /*
  * Struct to hold the state of a local subscription. We hold the topics so we can provide return the topic list when we
  * get a match. We compute the filter so we can forward to outbound subscribers.
@@ -98,10 +149,10 @@ typedef struct _DPS_Publication {
 #define REMOTE_NODE_KEEPALIVE  360
 
 /*
- * How long (in seconds) to wait to received a response from a remote
+ * How long (in milliseconds) to wait to received a response from a remote
  * node this node is linking with.
  */
-#define LINK_RESPONSE_TIMEOUT  5
+#define LINK_RESPONSE_TIMEOUT  1000
 
 /*
  * Forward declaration
@@ -275,23 +326,27 @@ static DPS_Subscription* FreeSubscription(DPS_Subscription* sub)
     return next;
 }
 
+static void OnTimerClosed(uv_handle_t* handle)
+{
+    free(handle->data);
+}
+
 static void RemoteCompletion(DPS_Node* node, RemoteNode* remote, DPS_Status status)
 {
     OnOpCompletion* cpn = remote->completion;
     DPS_NodeAddress addr = remote->addr;
 
+    uv_timer_stop(&cpn->timer);
+
     remote->completion = NULL;
     UnlockNode(node);
-    /*
-     * TODO - make callback from an asynch
-     */
     if (cpn->op == LINK_OP) {
         cpn->on.link(node, &addr, status, cpn->data);
     } else if (cpn->op == UNLINK_OP) {
         cpn->on.unlink(node, &addr, cpn->data);
     }
     LockNode(node);
-    free(cpn);
+    uv_close((uv_handle_t*)&cpn->timer, OnTimerClosed);
 }
 
 static int IsValidRemoteNode(DPS_Node* node, RemoteNode* remote)
@@ -462,7 +517,15 @@ static RemoteNode* LookupRemoteNode(DPS_Node* node, const struct sockaddr* addr)
     return NULL;
 }
 
-static OnOpCompletion* AllocCompletion(DPS_Node* node, OpType op, void* data, uint16_t ttl, void* cb)
+static void OnCompletionTimeout(uv_timer_t* timer)
+{
+    OnOpCompletion* cpn = (OnOpCompletion*)timer->data;
+    LockNode(cpn->node);
+    RemoteCompletion(cpn->node, cpn->remote, DPS_ERR_TIMEOUT);
+    UnlockNode(cpn->node);
+}
+
+static OnOpCompletion* AllocCompletion(DPS_Node* node, RemoteNode* remote, OpType op, void* data, uint16_t ttl, void* cb)
 {
     OnOpCompletion* cpn;
 
@@ -470,8 +533,19 @@ static OnOpCompletion* AllocCompletion(DPS_Node* node, OpType op, void* data, ui
     if (cpn) {
         cpn->op = op;
         cpn->data = data;
+        cpn->node = node;
+        cpn->remote = remote;
         cpn->on.cb = cb;
-        cpn->timeout = uv_now(node->loop) + DPS_SECS_TO_MS(ttl);
+
+        if (uv_timer_init(node->loop, &cpn->timer)) {
+            free(cpn);
+            return NULL;
+        }
+        cpn->timer.data = cpn;
+        if (uv_timer_start(&cpn->timer, OnCompletionTimeout, ttl, 0)) {
+            uv_close((uv_handle_t*)&cpn->timer, OnTimerClosed);
+            return NULL;
+        }
     }
     return cpn;
 }
@@ -1518,6 +1592,12 @@ static ssize_t OnMulticastReceive(DPS_Node* node, const struct sockaddr* addr, c
     if (!data || !len) {
         return 0;
     }
+    /*
+     * Ignore input that comes in after the node has been stopped
+     */
+    if (node->stopped) {
+        return 0;
+    }
     ret = CoAP_Parse(COAP_OVER_UDP, data, len, &coap, &payload);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Discarding garbage multicast packet len=%zu\n", len);
@@ -1544,6 +1624,12 @@ static ssize_t OnNetReceive(DPS_Node* node, const struct sockaddr* addr, const u
 
     DPS_DBGTRACE();
 
+    /*
+     * Ignore input that comes in after the node has been stopped
+     */
+    if (node->stopped) {
+        return 0;
+    }
     ret = CoAP_GetPktLen(COAP_PROTOCOL, data, len, &pktLen);
     if (ret == DPS_OK) {
         if (len < pktLen) {
@@ -2040,7 +2126,7 @@ DPS_Status DPS_Link(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnLinkComplete cb
     if (ret == DPS_OK) {
         remote->inbound.sync = DPS_TRUE;
     }
-    remote->completion = AllocCompletion(node, LINK_OP, data, LINK_RESPONSE_TIMEOUT, cb);
+    remote->completion = AllocCompletion(node, remote, LINK_OP, data, LINK_RESPONSE_TIMEOUT, cb);
     if (!remote->completion) {
         DeleteRemoteNode(node, remote);
         UnlockNode(node);
@@ -2078,7 +2164,7 @@ DPS_Status DPS_Unlink(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnUnlinkComplet
      * the completion callback will be called.
      */
     remote->expires = 0;
-    remote->completion = AllocCompletion(node, UNLINK_OP, data, LINK_RESPONSE_TIMEOUT, cb);
+    remote->completion = AllocCompletion(node, remote, UNLINK_OP, data, LINK_RESPONSE_TIMEOUT, cb);
     if (!remote->completion) {
         DeleteRemoteNode(node, remote);
         UnlockNode(node);

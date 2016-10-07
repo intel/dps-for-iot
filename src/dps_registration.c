@@ -11,17 +11,22 @@
 #include <dps/network.h>
 #include <dps/dps_internal.h>
 
+#ifdef _WIN32
+#define strdup(s) _strdup(s)
+#endif
+
 /*
  * Debug control for this module
  */
 DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
 #define REGISTRATION_TTL   (60 * 60 * 8)  /* TTL is is seconds */
-#define REG_PUT_TIMEOUT    (1000 * 5)     /* Timeout is in milliseconds */
-#define REG_GET_TIMEOUT    (5000)          /* Timeout is in milliseconds */
+#define REG_PUT_TIMEOUT    (1000)         /* Timeout is in milliseconds */
+#define REG_GET_TIMEOUT    (1000)         /* Timeout is in milliseconds */
 
 static void OnNodeDestroyed(DPS_Node* node, void* data)
 {
+    DPS_DBGTRACE();
 }
 
 const char* DPS_RegistryTopicString = "dps/registration_service";
@@ -276,6 +281,7 @@ typedef struct {
 
 static void RegGetCB(RegGet* regGet, DPS_Status status)
 {
+    DPS_DBGTRACE();
     if (regGet->sub) {
         DPS_DestroySubscription(regGet->sub);
     }
@@ -297,8 +303,8 @@ static void OnGetTimeout(uv_timer_t* timer)
     uv_close((uv_handle_t*)timer, OnGetTimerClosed);
 }
 
-#define GetPort(a)     (((struct sockaddr_in*)(a))->sin_port)
-#define SetPort(a, p)  (((struct sockaddr_in*)(a))->sin_port = (p))
+#define AddrGetPort(a)     (((struct sockaddr_in*)(a))->sin_port)
+#define AddrSetPort(a, p)  (((struct sockaddr_in*)(a))->sin_port = (p))
 
 static void OnPub(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* data, size_t len)
 {
@@ -467,6 +473,8 @@ typedef struct {
 static void OnGetComplete(DPS_RegistrationList* regs, DPS_Status status, void* data)
 {
     GetResult* getResult = (GetResult*)data;
+
+    DPS_DBGTRACE();
     DPS_SignalEvent(getResult->event, status);
 }
 
@@ -475,6 +483,7 @@ DPS_Status DPS_Registration_GetSyn(DPS_Node* node, const char* host, uint16_t po
     DPS_Status ret;
     GetResult getResult;
 
+    DPS_DBGTRACE();
     getResult.event = DPS_CreateEvent();
     getResult.regs = regs;
     regs->count = 0;
@@ -500,7 +509,9 @@ static void OnLinked(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, v
 {
     LinkTo* linkTo = (LinkTo*)data;
 
+    DPS_DBGTRACE();
     if (status == DPS_OK) {
+        assert(addr);
         linkTo->candidate->flags = DPS_CANDIDATE_LINKED;
     } else {
         /*
@@ -524,7 +535,7 @@ static int IsLocalAddr(DPS_NodeAddress* addr, uint16_t port)
     int r;
 
     port = htons(port);
-    if (GetPort(addr) != port) {
+    if (AddrGetPort(addr) != port) {
         return DPS_FALSE;
     }
     r = uv_interface_addresses(&ifsAddrs, &numIfs);
@@ -533,7 +544,7 @@ static int IsLocalAddr(DPS_NodeAddress* addr, uint16_t port)
         for (i = 0; i < numIfs; ++i) {
             uv_interface_address_t* ifn = &ifsAddrs[i];
             if (!ifn->is_internal) {
-                SetPort(&ifn->address, port);
+                AddrSetPort(&ifn->address, port);
                 if (DPS_SameAddr(addr, (struct sockaddr*)&ifn->address)) {
                     local = DPS_TRUE;
                     break;
@@ -550,6 +561,7 @@ static void OnResolve(DPS_Node* node, DPS_NodeAddress* addr, void* data)
     DPS_Status ret = DPS_ERR_NO_ROUTE;
     LinkTo* linkTo = (LinkTo*)data;
 
+    DPS_DBGTRACE();
     if (addr) {
         if (IsLocalAddr(addr, DPS_GetPortNumber(node))) {
             linkTo->candidate->flags = DPS_CANDIDATE_INVALID;
@@ -571,6 +583,7 @@ static void OnResolve(DPS_Node* node, DPS_NodeAddress* addr, void* data)
 
 DPS_Status DPS_Registration_LinkTo(DPS_Node* node, DPS_RegistrationList* regs, DPS_OnRegLinkToComplete cb, void* data)
 {
+    DPS_Status ret = DPS_ERR_NO_ROUTE;
     size_t i;
     size_t untried = 0;
     /*
@@ -585,7 +598,6 @@ DPS_Status DPS_Registration_LinkTo(DPS_Node* node, DPS_RegistrationList* regs, D
         uint32_t r = DPS_Rand() % regs->count;
         if (regs->list[r].flags == 0) {
             char portTxt[8];
-            DPS_Status ret;
             LinkTo* linkTo = malloc(sizeof(LinkTo));
 
             linkTo->cb = cb;
@@ -599,16 +611,13 @@ DPS_Status DPS_Registration_LinkTo(DPS_Node* node, DPS_RegistrationList* regs, D
             if (ret == DPS_OK) {
                 break;
             }
+            DPS_ERRPRINT("DPS_ResolveAddress returned %s\n", DPS_ErrTxt(ret));
             regs->list[r].flags = DPS_CANDIDATE_FAILED;
             free(linkTo);
             --untried;
         }
     }
-    if (untried) {
-        return DPS_ERR_OK;
-    } else {
-        return DPS_ERR_NO_ROUTE;
-    }
+    return ret;
 }
 
 typedef struct {
@@ -619,6 +628,8 @@ typedef struct {
 static void OnRegLinkTo(DPS_Node* node, DPS_RegistrationList* regs, DPS_NodeAddress* addr, DPS_Status status, void* data)
 {
     LinkResult* linkResult = (LinkResult*)data;
+
+    DPS_DBGTRACE();
     if (status == DPS_OK) {
         *linkResult->addr = *addr;
     }

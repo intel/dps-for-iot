@@ -134,13 +134,13 @@ static void ReadStdin(DPS_Node* node)
 }
 
 
-static DPS_Status FindAndJoin(DPS_Node* node, const char* host, uint16_t port, const char* tenant, DPS_NodeAddress* remoteAddr)
+static DPS_Status FindAndLink(DPS_Node* node, const char* host, uint16_t port, const char* tenant, DPS_NodeAddress* remoteAddr)
 {
     DPS_Status ret;
     DPS_RegistrationList* regs = DPS_CreateRegistrationList(16);
 
     /*
-     * Find nodes to join
+     * Find nodes to link to
      */
     ret = DPS_Registration_GetSyn(node, host, port, tenant, regs);
     if (ret != DPS_OK) {
@@ -269,19 +269,20 @@ int main(int argc, char** argv)
 
     remoteAddr = DPS_CreateAddress();
 
-    ret = FindAndJoin(node, host, port, tenant, remoteAddr);
-    if (ret != DPS_OK) {
-        DPS_ERRPRINT("Failed to join node: %s\n", DPS_ErrTxt(ret));
-    }
-
     nodeDestroyed = DPS_CreateEvent();
+
+    ret = FindAndLink(node, host, port, tenant, remoteAddr);
+    if (ret != DPS_OK) {
+        DPS_ERRPRINT("Failed to link to node: %s\n", DPS_ErrTxt(ret));
+        goto Exit;
+    }
 
     if (numTopics) {
         currentPub = DPS_CreatePublication(node);
         ret = DPS_InitPublication(currentPub, (const char**)topics, numTopics, DPS_FALSE, requestAck ? OnAck : NULL);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("Failed to create publication - error=%d\n", ret);
-            return 1;
+            goto Exit;
         }
         ret = DPS_Publish(currentPub, msg, msg ? strlen(msg) + 1 : 0, ttl, NULL);
         if (ret == DPS_OK) {
@@ -291,11 +292,13 @@ int main(int argc, char** argv)
         }
         DPS_UnlinkFrom(node, remoteAddr);
         DPS_DestroyAddress(remoteAddr);
-        DPS_DestroyNode(node, OnNodeDestroyed, NULL);
     } else {
         DPS_PRINT("Running in interactive mode\n");
         ReadStdin(node);
     }
+
+Exit:
+    DPS_DestroyNode(node, OnNodeDestroyed, NULL);
     DPS_WaitForEvent(nodeDestroyed);
     DPS_DestroyEvent(nodeDestroyed);
     return 0;

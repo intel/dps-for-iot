@@ -73,7 +73,7 @@ static DPS_Status RegisterAndJoin(DPS_Node* node, const char* host, uint16_t por
         DPS_ERRPRINT("Registration service lookup failed: %s\n", DPS_ErrTxt(ret));
         return ret;
     }
-    DPS_PRINT("Found %d remote nodes\n", regs->count);
+    DPS_PRINT("Found %d candidate nodes\n", regs->count);
 
     if (regs->count == 0) {
         return DPS_ERR_NO_ROUTE;
@@ -191,12 +191,12 @@ int main(int argc, char** argv)
     }
     DPS_PRINT("Subscriber is listening on port %d\n", DPS_GetPortNumber(node));
 
+    nodeDestroyed = DPS_CreateEvent();
+
     ret = RegisterAndJoin(node, host, port, tenant);
     if (ret != DPS_OK) {
-        DPS_ERRPRINT("Failed to join node: %s\n", DPS_ErrTxt(ret));
+        DPS_PRINT("Failed to link with any other \"%s\" nodes - continuing\n", tenant);
     }
-
-    nodeDestroyed = DPS_CreateEvent();
 
     if (numTopics > 0) {
         DPS_Subscription* subscription = DPS_CreateSubscription(node, (const char**)topics, numTopics);
@@ -206,6 +206,8 @@ int main(int argc, char** argv)
             DPS_DestroyNode(node, OnNodeDestroyed, nodeDestroyed);
         }
     }
+
+Exit:
     DPS_WaitForEvent(nodeDestroyed);
     DPS_DestroyEvent(nodeDestroyed);
     return 0;

@@ -8,54 +8,9 @@
 extern "C" {
 #endif
 
-typedef enum { LINK_OP, UNLINK_OP } OpType;
+typedef struct _RemoteNode RemoteNode;
 
-typedef struct {
-    OpType op;
-    void* data;
-    uint64_t timeout;
-    uv_mutex_t mutex;
-    union {
-        DPS_OnLinkComplete link;
-        DPS_OnUnlinkComplete unlink;
-        void* cb;
-    } on;
-} OnOpCompletion;
-
-typedef struct _RemoteNode {
-    OnOpCompletion* completion;
-    uint8_t linked;                    /* True if this is a node that was explicitly linked */
-    struct {
-        uint8_t sync;                  /* If TRUE request remote to synchronize interests */
-        uint8_t updates;               /* TRUE if updates have been received but not acted on */
-        DPS_BitVector* needs;          /* Bit vector of needs received from  this remote node */
-        DPS_BitVector* interests;      /* Bit vector of interests received from  this remote node */
-    } inbound;
-    struct {
-        uint8_t sync;                  /* If TRUE synchronize outbound interests with remote node (no deltas) */
-        uint8_t checkForUpdates;       /* TRUE if there may be updated interests to send to this remote */
-        DPS_BitVector* needs;          /* Needs bit vector sent outbound to this remote node */
-        DPS_BitVector* interests;      /* Interests bit vector sent outbound to this remote node */
-    } outbound;
-    DPS_NodeAddress addr;
-    uint64_t expires;
-    /*
-     * Remote nodes are doubly linked into a ring
-     */
-    struct _RemoteNode* prev;
-    struct _RemoteNode* next;
-} RemoteNode;
-
-/*
- * Acknowledgment packet queued to be sent on node loop
- */
-typedef struct _PublicationAck {
-    uv_buf_t bufs[3];
-    DPS_NodeAddress destAddr;
-    uint32_t sequenceNum;
-    DPS_UUID pubId;
-    struct _PublicationAck* next;
-} PublicationAck;
+typedef struct _PublicationAck PublicationAck;
 
 typedef struct _DPS_Node {
     void* userData;
