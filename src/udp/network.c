@@ -50,6 +50,7 @@ static void TxHandleClosed(uv_handle_t* handle)
 
 static void OnData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, const struct sockaddr* addr, unsigned flags)
 {
+    DPS_NodeAddress nodeAddr;
     size_t toRead;
     DPS_NetContext* netCtx = (DPS_NetContext*)socket->data;
 
@@ -73,7 +74,7 @@ static void OnData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, const s
         netCtx->readLen = 0;
         return;
     }
-    toRead = netCtx->receiveCB(netCtx->node, addr, (uint8_t*)netCtx->buffer, nread);
+    toRead = netCtx->receiveCB(netCtx->node, DPS_SetAddress(&nodeAddr, addr), (uint8_t*)netCtx->buffer, nread);
     if (toRead == 0) {
         netCtx->readLen = 0;
     } else {
@@ -178,11 +179,11 @@ static void OnSendComplete(uv_udp_send_t* req, int status)
         DPS_ERRPRINT("OnSendComplete status=%s\n", uv_err_name(status));
         dpsRet = DPS_ERR_NETWORK;
     }
-    sender->onSendComplete(sender->netCtx->node, (struct sockaddr*)&sender->addr, sender->bufs, sender->numBufs, dpsRet);
+    sender->onSendComplete(sender->netCtx->node, &sender->addr, sender->bufs, sender->numBufs, dpsRet);
     free(sender);
 }
 
-DPS_Status DPS_NetSend(DPS_NetContext* netCtx, uv_buf_t* bufs, size_t numBufs, const struct sockaddr* addr, DPS_NetSendComplete sendCompleteCB)
+DPS_Status DPS_NetSend(DPS_NetContext* netCtx, uv_buf_t* bufs, size_t numBufs, DPS_NodeAddress* addr, DPS_NetSendComplete sendCompleteCB)
 {
     int ret;
     size_t i;
@@ -198,7 +199,7 @@ DPS_Status DPS_NetSend(DPS_NetContext* netCtx, uv_buf_t* bufs, size_t numBufs, c
     if (len > MAX_WRITE_LEN) {
         return DPS_ERR_OVERFLOW;
     }
-    DPS_DBGPRINT("DPS_NetSend total %zu bytes to %s\n", len, DPS_NetAddrText(addr));
+    DPS_DBGPRINT("DPS_NetSend total %zu bytes to %s\n", len, DPS_NodeAddrToString(addr));
 
     sender = malloc(sizeof(NetSender));
     if (!sender) {
@@ -207,15 +208,15 @@ DPS_Status DPS_NetSend(DPS_NetContext* netCtx, uv_buf_t* bufs, size_t numBufs, c
 
     sender->sendReq.data = sender;
     sender->onSendComplete = sendCompleteCB;
-    memcpy(&sender->addr, addr, sizeof(sender->addr));
+    sender->addr = *addr;
     sender->netCtx = netCtx;
     memcpy(sender->bufs, bufs, numBufs * sizeof(uv_buf_t));
     sender->numBufs = numBufs;
 
-    if (addr->sa_family == AF_INET) {
-        ret = uv_udp_send(&sender->sendReq, &netCtx->tx4Socket, sender->bufs, (uint32_t)numBufs, addr, OnSendComplete);
+    if (addr->inaddr.ss_family == AF_INET) {
+        ret = uv_udp_send(&sender->sendReq, &netCtx->tx4Socket, sender->bufs, (uint32_t)numBufs, (struct sockaddr*)&addr->inaddr, OnSendComplete);
     } else {
-        ret = uv_udp_send(&sender->sendReq, &netCtx->rxSocket, sender->bufs, (uint32_t)numBufs, addr, OnSendComplete);
+        ret = uv_udp_send(&sender->sendReq, &netCtx->rxSocket, sender->bufs, (uint32_t)numBufs, (struct sockaddr*)&addr->inaddr, OnSendComplete);
     }
     if (ret) {
         DPS_ERRPRINT("DPS_NetSend status=%s\n", uv_err_name(ret));

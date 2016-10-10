@@ -55,8 +55,8 @@ static void OnShutdownComplete(uv_shutdown_t* req, int status)
 static void OnData(uv_stream_t* socket, ssize_t nread, const uv_buf_t* buf)
 {
     NetReader* reader = (NetReader*)socket->data;
-    struct sockaddr_storage sender;
-    int sz = sizeof(sender);
+    DPS_NodeAddress sender;
+    int sz = sizeof(sender.inaddr);
 
     if (nread < 0) {
         if (!uv_is_closing((uv_handle_t*) socket)) {
@@ -64,10 +64,10 @@ static void OnData(uv_stream_t* socket, ssize_t nread, const uv_buf_t* buf)
         }
         return;
     }
-    uv_tcp_getpeername((uv_tcp_t*)socket, (struct sockaddr*)&sender, &sz);
+    uv_tcp_getpeername((uv_tcp_t*)socket, (struct sockaddr*)&sender.inaddr, &sz);
     reader->readLen += (uint16_t)nread;
     while (1) {
-        ssize_t toRead = reader->receiveCB(reader->node, (struct sockaddr*)&sender, (uint8_t*)reader->buffer, reader->readLen);
+        ssize_t toRead = reader->receiveCB(reader->node, &sender, (uint8_t*)reader->buffer, reader->readLen);
         if (toRead > 0) {
             break;
         }
@@ -128,6 +128,27 @@ static void OnIncomingConnection(uv_stream_t* stream, int status)
         return;
     }
 }
+
+static int GetLocalScopeId()
+{
+    static int localScope = 0;
+
+    if (!localScope) {
+        uv_interface_address_t* ifsAddrs;
+        int numIfs;
+        int i;
+        uv_interface_addresses(&ifsAddrs, &numIfs);
+        for (i = 0; i < numIfs; ++i) {
+            uv_interface_address_t* ifn = &ifsAddrs[i];
+            if ((ifn->address.address4.sin_family == AF_INET6) && (strcmp(ifn->name, "lo") == 0)) {
+                localScope = i;
+            }
+        }
+        uv_free_interface_addresses(ifsAddrs, numIfs);
+    }
+    return localScope;
+}
+
 
 #define LISTEN_BACKLOG  2
 
@@ -197,7 +218,7 @@ void DPS_NetStop(DPS_NetContext* netCtx)
 
 typedef struct {
     DPS_Node* node;
-    struct sockaddr_in6 addr;
+    DPS_NodeAddress addr;
     uv_tcp_t socket;
     union {
         uv_connect_t connectReq;
@@ -221,7 +242,7 @@ static void OnWriteComplete(uv_write_t* req, int status)
     /*
      * TODO - allow ongoing use of the socket for sending and receiving
      */
-    writer->onSendComplete(writer->node, (struct sockaddr*)&writer->addr, writer->bufs, writer->numBufs, dpsRet);
+    writer->onSendComplete(writer->node, &writer->addr, writer->bufs, writer->numBufs, dpsRet);
     uv_shutdown(&writer->shutdownReq, (uv_stream_t*)req->handle, OnShutdownComplete);
 }
 
@@ -244,12 +265,12 @@ static void OnOutgoingConnection(uv_connect_t *req, int status)
         DPS_ERRPRINT("OnOutgoingConnection - connect %s failed: %s\n", DPS_NetAddrText((struct sockaddr*)&writer->addr), uv_err_name(status));
     }
     if (status != 0) {
-        writer->onSendComplete(writer->node, (struct sockaddr*)&writer->addr, writer->bufs, (uint32_t)writer->numBufs, DPS_ERR_NETWORK);
+        writer->onSendComplete(writer->node, &writer->addr, writer->bufs, (uint32_t)writer->numBufs, DPS_ERR_NETWORK);
         uv_shutdown(&writer->shutdownReq, (uv_stream_t*)req->handle, OnShutdownComplete);
     }
 }
 
-DPS_Status DPS_NetSend(DPS_NetContext* netCtx, uv_buf_t* bufs, size_t numBufs, const struct sockaddr* addr, DPS_NetSendComplete sendCompleteCB)
+DPS_Status DPS_NetSend(DPS_NetContext* netCtx, uv_buf_t* bufs, size_t numBufs, DPS_NodeAddress* addr, DPS_NetSendComplete sendCompleteCB)
 {
     int ret;
     NetWriter* writer;
@@ -265,7 +286,7 @@ DPS_Status DPS_NetSend(DPS_NetContext* netCtx, uv_buf_t* bufs, size_t numBufs, c
     if (len > MAX_WRITE_LEN) {
         return DPS_ERR_OVERFLOW;
     }
-    DPS_DBGPRINT("DPS_NetSend total %zu bytes to %s\n", len, DPS_NetAddrText(addr));
+    DPS_DBGPRINT("DPS_NetSend total %zu bytes to %s\n", len, DPS_NodeAddrToString(addr));
 
     writer = calloc(1, sizeof(*writer));
     if (!writer) {
@@ -279,15 +300,22 @@ DPS_Status DPS_NetSend(DPS_NetContext* netCtx, uv_buf_t* bufs, size_t numBufs, c
     writer->socket.data = writer;
     memcpy(&writer->addr, addr, sizeof(writer->addr));
 
+    if (addr->inaddr.ss_family == AF_INET6) {
+        struct sockaddr_in6* in6 = (struct sockaddr_in6*)&addr->inaddr;
+        if (!in6->sin6_scope_id) {
+            in6->sin6_scope_id = GetLocalScopeId();
+        }
+    }
+
     ret = uv_tcp_init(DPS_GetLoop(netCtx->node), &writer->socket);
     if (ret) {
         DPS_ERRPRINT("uv_tcp_init error=%s\n", uv_err_name(ret));
         free(writer);
         return DPS_ERR_NETWORK;
     }
-    ret = uv_tcp_connect(&writer->connectReq, &writer->socket, addr, OnOutgoingConnection);
+    ret = uv_tcp_connect(&writer->connectReq, &writer->socket, (struct sockaddr*)&addr->inaddr, OnOutgoingConnection);
     if (ret) {
-        DPS_ERRPRINT("uv_tcp_connect %s error=%s\n", DPS_NetAddrText(addr), uv_err_name(ret));
+        DPS_ERRPRINT("uv_tcp_connect %s error=%s\n", DPS_NodeAddrToString(addr), uv_err_name(ret));
         uv_close((uv_handle_t*)&writer->socket, HandleClosed);
         return DPS_ERR_NETWORK;
     }

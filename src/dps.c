@@ -217,8 +217,7 @@ static void DumpPubs(DPS_Node* node)
 
 #define SameUUID(u1, u2)  (memcmp((u1), (u2), sizeof(DPS_UUID)) == 0)
 
-#define NodeAddressText(a)        DPS_NetAddrText((struct sockaddr*)(&(a)->inaddr))
-#define RemoteNodeAddressText(n)  NodeAddressText(&(n)->addr)
+#define RemoteNodeAddressText(n)  DPS_NodeAddrToString(&(n)->addr)
 
 
 static int IsValidSub(const DPS_Subscription* sub)
@@ -279,16 +278,16 @@ uint32_t DPS_PublicationGetSequenceNum(const DPS_Publication* pub)
     return IsValidPub(pub) ? pub->sequenceNum : 0;
 }
 
-static void AddrSetPort(DPS_NodeAddress* dest, const struct sockaddr* addr, uint16_t port)
+static void AddrSetPort(DPS_NodeAddress* dest, DPS_NodeAddress* addr, uint16_t port)
 {
     port = htons(port);
-    if (addr->sa_family == AF_INET6) {
+    if (addr->inaddr.ss_family == AF_INET6) {
         struct sockaddr_in6* ip6 = (struct sockaddr_in6*)&dest->inaddr;
-        memcpy(ip6, addr, sizeof(*ip6));
+        memcpy(ip6, &addr->inaddr, sizeof(*ip6));
         ip6->sin6_port = port;
     } else {
         struct sockaddr_in* ip4 = (struct sockaddr_in*)&dest->inaddr;
-        memcpy(ip4, addr, sizeof(*ip4));
+        memcpy(ip4, &addr->inaddr, sizeof(*ip4));
         ip4->sin_port = port;
     }
 }
@@ -500,7 +499,7 @@ ErrExit:
     return ret;
 }
 
-static RemoteNode* LookupRemoteNode(DPS_Node* node, const struct sockaddr* addr)
+static RemoteNode* LookupRemoteNode(DPS_Node* node, DPS_NodeAddress* addr)
 {
     RemoteNode* remote;
 
@@ -550,7 +549,7 @@ static OnOpCompletion* AllocCompletion(DPS_Node* node, RemoteNode* remote, OpTyp
  */
 static DPS_Status AddRemoteNode(DPS_Node* node, DPS_NodeAddress* addr, uint16_t ttl, RemoteNode** remoteOut)
 {
-    RemoteNode* remote = LookupRemoteNode(node, (struct sockaddr*)&addr->inaddr);
+    RemoteNode* remote = LookupRemoteNode(node, addr);
     if (remote) {
         /*
          * If the remote node has not been explicitly expired we extend the lifetime
@@ -572,8 +571,8 @@ static DPS_Status AddRemoteNode(DPS_Node* node, DPS_NodeAddress* addr, uint16_t 
         *remoteOut = NULL;
         return DPS_ERR_RESOURCES;
     }
-    DPS_DBGPRINT("Adding new remote node %s\n", NodeAddressText(addr));
-    remote->addr.inaddr = addr->inaddr;
+    DPS_DBGPRINT("Adding new remote node %s\n", DPS_NodeAddrToString(addr));
+    remote->addr = *addr;
     remote->next = node->remoteNodes;
     remote->expires = uv_now(node->loop) + DPS_SECS_TO_MS(ttl);
     node->remoteNodes = remote;
@@ -657,7 +656,7 @@ static void FreeBufs(uv_buf_t* bufs, size_t numBufs)
     }
 }
 
-static void NetSendFailed(DPS_Node* node, struct sockaddr* addr, uv_buf_t* bufs, size_t numBufs, DPS_Status status)
+static void NetSendFailed(DPS_Node* node, DPS_NodeAddress* addr, uv_buf_t* bufs, size_t numBufs, DPS_Status status)
 {
     RemoteNode* remote;
 
@@ -665,12 +664,12 @@ static void NetSendFailed(DPS_Node* node, struct sockaddr* addr, uv_buf_t* bufs,
     remote = LookupRemoteNode(node, addr);
     if (remote) {
         DeleteRemoteNode(node, remote);
-        DPS_ERRPRINT("Removed node %s\n", DPS_NetAddrText(addr));
+        DPS_ERRPRINT("Removed node %s\n", DPS_NodeAddrToString(addr));
     }
     FreeBufs(bufs, numBufs);
 }
 
-static void OnNetSendComplete(DPS_Node* node, struct sockaddr* addr, uv_buf_t* bufs, size_t numBufs, DPS_Status status)
+static void OnNetSendComplete(DPS_Node* node, DPS_NodeAddress* addr, uv_buf_t* bufs, size_t numBufs, DPS_Status status)
 {
     if (status != DPS_OK) {
         RemoteNode* remote;
@@ -680,7 +679,7 @@ static void OnNetSendComplete(DPS_Node* node, struct sockaddr* addr, uv_buf_t* b
         DPS_ERRPRINT("OnNetSendComplete %s\n", DPS_ErrTxt(status));
         if (remote) {
             DeleteRemoteNode(node, remote);
-            DPS_ERRPRINT("Removed node %s\n", DPS_NetAddrText(addr));
+            DPS_ERRPRINT("Removed node %s\n", DPS_NodeAddrToString(addr));
         }
         UnlockNode(node);
     }
@@ -752,11 +751,11 @@ static DPS_Status SendPublication(DPS_Node* node, DPS_Publication* pub, DPS_BitV
     }
     if (ret == DPS_OK) {
         if (remote) {
-            ret = DPS_NetSend(node->netCtx, bufs, A_SIZEOF(bufs), (struct sockaddr*)&remote->addr.inaddr, OnNetSendComplete);
+            ret = DPS_NetSend(node->netCtx, bufs, A_SIZEOF(bufs), &remote->addr, OnNetSendComplete);
             if (ret == DPS_OK) {
                 UpdatePubHistory(node, pub);
             } else {
-                NetSendFailed(node, (struct sockaddr*)&remote->addr.inaddr, bufs, A_SIZEOF(bufs), ret);
+                NetSendFailed(node, &remote->addr, bufs, A_SIZEOF(bufs), ret);
             }
         } else {
             ret = DPS_MulticastSend(node->mcastSender, bufs, A_SIZEOF(bufs));
@@ -790,7 +789,7 @@ static DPS_Status SendMatchingPubToSub(DPS_Node* node, DPS_Publication* pub, Rem
     /*
      * We don't send publications back to the remote node than sent them
      */
-    if (!DPS_SameAddr(&pub->sender, (struct sockaddr*)&subscriber->addr)) {
+    if (!DPS_SameAddr(&pub->sender, &subscriber->addr)) {
         DPS_BitVector* pubBV = PubSubMatch(node, pub, subscriber);
         if (pubBV) {
             DPS_DBGPRINT("Sending pub %d to %s\n", pub->sequenceNum, RemoteNodeAddressText(subscriber));
@@ -918,7 +917,7 @@ static DPS_Status DecodeAcknowledgment(DPS_Node* node, DPS_Buffer* buffer)
     if ((ret == DPS_OK) && (sequenceNum <= sn) && addr) {
         PublicationAck* ack = AllocPubAck(pubId, sequenceNum);
         if (ack) {
-            DPS_DBGPRINT("Forwarding acknowledgement for %s/%d to %s\n", DPS_UUIDToString(pubId), sequenceNum, NodeAddressText(addr));
+            DPS_DBGPRINT("Forwarding acknowledgement for %s/%d to %s\n", DPS_UUIDToString(pubId), sequenceNum, DPS_NodeAddrToString(addr));
             ret = QueuePublicationAck(node, ack, payload, len, addr);
         } else {
             ret = DPS_ERR_RESOURCES;
@@ -934,9 +933,9 @@ static void SendAcksTask(DPS_Node* node)
     DPS_DBGTRACE();
 
     while ((ack = node->ackQueue.first) != NULL) {
-        DPS_Status ret = DPS_NetSend(node->netCtx, ack->bufs, A_SIZEOF(ack->bufs), (struct sockaddr*)&ack->destAddr.inaddr, OnNetSendComplete);
+        DPS_Status ret = DPS_NetSend(node->netCtx, ack->bufs, A_SIZEOF(ack->bufs), &ack->destAddr, OnNetSendComplete);
         if (ret != DPS_OK) {
-            NetSendFailed(node, (struct sockaddr*)&ack->destAddr.inaddr, ack->bufs, A_SIZEOF(ack->bufs), ret);
+            NetSendFailed(node, &ack->destAddr, ack->bufs, A_SIZEOF(ack->bufs), ret);
         }
         node->ackQueue.first = ack->next;
         free(ack);
@@ -1078,7 +1077,7 @@ static void CallPubHandlers(DPS_Node* node, DPS_Publication* pub)
     UnlockNode(node);
 }
 
-static DPS_Status DecodePublication(DPS_Node* node, DPS_Buffer* buffer, const struct sockaddr* addr, int multicast)
+static DPS_Status DecodePublication(DPS_Node* node, DPS_Buffer* buffer, DPS_NodeAddress* addr, int multicast)
 {
     DPS_Status ret;
     RemoteNode* pubNode = NULL;
@@ -1273,10 +1272,10 @@ static DPS_Status SendSubscription(DPS_Node* node, RemoteNode* remote, DPS_BitVe
         free(payload.base);
         return ret;
     }
-    ret = DPS_NetSend(node->netCtx, bufs, A_SIZEOF(bufs), (struct sockaddr*)&remote->addr.inaddr, OnNetSendComplete);
+    ret = DPS_NetSend(node->netCtx, bufs, A_SIZEOF(bufs), &remote->addr, OnNetSendComplete);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to send subscription request %s\n", DPS_ErrTxt(ret));
-        NetSendFailed(node, (struct sockaddr*)&remote->addr, bufs, A_SIZEOF(bufs), ret);
+        NetSendFailed(node, &remote->addr, bufs, A_SIZEOF(bufs), ret);
     }
     /*
      * Done with these flags
@@ -1417,7 +1416,7 @@ static DPS_Status UpdateInboundInterests(DPS_Node* node, RemoteNode* remote, DPS
 /*
  *
  */
-static DPS_Status DecodeSubscription(DPS_Node* node, DPS_Buffer* buffer, const struct sockaddr* addr)
+static DPS_Status DecodeSubscription(DPS_Node* node, DPS_Buffer* buffer, DPS_NodeAddress* addr)
 {
     DPS_Status ret;
     DPS_BitVector* interests;
@@ -1509,7 +1508,7 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_Buffer* buffer, const s
     return ret;
 }
 
-static void DecodeRequest(DPS_Node* node, CoAP_Parsed* coap, DPS_Buffer* payload, const struct sockaddr* sender, int multicast)
+static void DecodeRequest(DPS_Node* node, CoAP_Parsed* coap, DPS_Buffer* payload, DPS_NodeAddress* sender, int multicast)
 {
     DPS_Status ret;
     RequestType req = 0;
@@ -1551,7 +1550,7 @@ static void DecodeRequest(DPS_Node* node, CoAP_Parsed* coap, DPS_Buffer* payload
             DPS_ERRPRINT("Expected a PUT request\n");
             return;
         }
-        DPS_DBGPRINT("Received publication via %s\n", DPS_NetAddrText(sender));
+        DPS_DBGPRINT("Received publication via %s\n", DPS_NodeAddrToString(sender));
         ret = DecodePublication(node, payload, sender, multicast);
         if (ret != DPS_OK) {
             DPS_DBGPRINT("DecodePublication returned %s\n", DPS_ErrTxt(ret));
@@ -1562,7 +1561,7 @@ static void DecodeRequest(DPS_Node* node, CoAP_Parsed* coap, DPS_Buffer* payload
             DPS_ERRPRINT("Expected a PUT request\n");
             return;
         }
-        DPS_DBGPRINT("Received acknowledgment via %s\n", DPS_NetAddrText(sender));
+        DPS_DBGPRINT("Received acknowledgment via %s\n", DPS_NodeAddrToString(sender));
         ret = DecodeAcknowledgment(node, payload);
         if (ret != DPS_OK) {
             DPS_DBGPRINT("DecodeAcknowledgment returned %s\n", DPS_ErrTxt(ret));
@@ -1576,7 +1575,7 @@ static void DecodeRequest(DPS_Node* node, CoAP_Parsed* coap, DPS_Buffer* payload
 /*
  * Using CoAP packetization for receiving multicast subscription requests
  */
-static ssize_t OnMulticastReceive(DPS_Node* node, const struct sockaddr* addr, const uint8_t* data, size_t len)
+static ssize_t OnMulticastReceive(DPS_Node* node, DPS_NodeAddress* addr, const uint8_t* data, size_t len)
 {
     DPS_Buffer payload;
     ssize_t ret;
@@ -1610,7 +1609,7 @@ static ssize_t OnMulticastReceive(DPS_Node* node, const struct sockaddr* addr, c
     return len;
 }
 
-static ssize_t OnNetReceive(DPS_Node* node, const struct sockaddr* addr, const uint8_t* data, size_t len)
+static ssize_t OnNetReceive(DPS_Node* node, DPS_NodeAddress* addr, const uint8_t* data, size_t len)
 {
     DPS_Buffer payload;
     CoAP_Parsed coap;
@@ -2105,7 +2104,7 @@ DPS_Status DPS_Link(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnLinkComplete cb
      * Remote may already exist due to incoming data
      */
     if (remote->linked) {
-        DPS_ERRPRINT("Node at %s already linked\n", NodeAddressText(addr));
+        DPS_ERRPRINT("Node at %s already linked\n", DPS_NodeAddrToString(addr));
         UnlockNode(node);
         return ret;
     }
@@ -2141,7 +2140,7 @@ DPS_Status DPS_Unlink(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnUnlinkComplet
         return DPS_ERR_NULL;
     }
     LockNode(node);
-    remote = LookupRemoteNode(node, (struct sockaddr*)&addr->inaddr);
+    remote = LookupRemoteNode(node, addr);
     if (!remote || !remote->linked) {
         UnlockNode(node);
         return DPS_ERR_MISSING;
@@ -2193,7 +2192,7 @@ DPS_Status DPS_AckPublication(const DPS_Publication* pub, uint8_t* payload, size
     if (!addr) {
         return DPS_ERR_NO_ROUTE;
     }
-    DPS_DBGPRINT("Queueing acknowledgement for %s/%d to %s\n", DPS_UUIDToString(&pub->pubId), pub->sequenceNum, NodeAddressText(addr));
+    DPS_DBGPRINT("Queueing acknowledgement for %s/%d to %s\n", DPS_UUIDToString(&pub->pubId), pub->sequenceNum, DPS_NodeAddrToString(addr));
     ack = AllocPubAck(&pub->pubId, pub->sequenceNum);
     if (!ack) {
         return DPS_ERR_RESOURCES;
@@ -2357,9 +2356,9 @@ static void RunBackgroundTasks(uv_async_t* handle)
     UnlockNode(node);
 }
 
-const char* DPS_GetAddressText(DPS_NodeAddress* addr)
+const char* DPS_NodeAddrToString(DPS_NodeAddress* addr)
 {
-    return NodeAddressText(addr);
+    return DPS_NetAddrText((struct sockaddr*)&addr->inaddr);
 }
 
 DPS_NodeAddress* DPS_CreateAddress()

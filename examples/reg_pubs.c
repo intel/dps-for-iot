@@ -154,7 +154,7 @@ static DPS_Status FindAndLink(DPS_Node* node, const char* host, uint16_t port, c
     }
     ret = DPS_Registration_LinkToSyn(node, regs, remoteAddr);
     if (ret == DPS_OK) {
-        DPS_PRINT("Linked to remote node %s\n", DPS_GetAddressText(remoteAddr));
+        DPS_PRINT("Linked to remote node %s\n", DPS_NodeAddrToString(remoteAddr));
     }
     DPS_DestroyRegistrationList(regs);
     return ret;

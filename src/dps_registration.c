@@ -544,8 +544,10 @@ static int IsLocalAddr(DPS_NodeAddress* addr, uint16_t port)
         for (i = 0; i < numIfs; ++i) {
             uv_interface_address_t* ifn = &ifsAddrs[i];
             if (!ifn->is_internal) {
-                AddrSetPort(&ifn->address, port);
-                if (DPS_SameAddr(addr, (struct sockaddr*)&ifn->address)) {
+                DPS_NodeAddress a;
+                memcpy(&a.inaddr, &ifn->address, sizeof(ifn->address));
+                AddrSetPort(&a.inaddr, port);
+                if (DPS_SameAddr(addr, &a)) {
                     local = DPS_TRUE;
                     break;
                 }

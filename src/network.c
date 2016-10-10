@@ -37,9 +37,10 @@ const char* DPS_NetAddrText(const struct sockaddr* addr)
 
 static const uint8_t IP4as6[16] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 0, 0, 0, 0 };
 
-int DPS_SameAddr(DPS_NodeAddress* addr, const struct sockaddr* b)
+int DPS_SameAddr(DPS_NodeAddress* addr1, DPS_NodeAddress* addr2)
 {
-    struct sockaddr* a = (struct sockaddr*)&addr->inaddr;
+    struct sockaddr* a = (struct sockaddr*)&addr1->inaddr;
+    struct sockaddr* b = (struct sockaddr*)&addr2->inaddr;
     struct sockaddr_in6 tmp;
 
     if (a->sa_family != b->sa_family) {
@@ -177,3 +178,15 @@ DPS_Status DPS_ResolveAddress(DPS_Node* node, const char* host, const char* serv
         return DPS_OK;
     }
 }
+
+DPS_NodeAddress* DPS_SetAddress(DPS_NodeAddress* addr, const struct sockaddr* sa)
+{
+    memset(addr, 0, sizeof(DPS_NodeAddress));
+    if (sa->sa_family == AF_INET) {
+        memcpy(&addr->inaddr, sa, sizeof(struct sockaddr_in));
+    } else {
+        memcpy(&addr->inaddr, sa, sizeof(struct sockaddr_in6));
+    }
+    return addr;
+}
+

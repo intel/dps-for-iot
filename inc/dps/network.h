@@ -21,7 +21,7 @@ typedef struct _DPS_MulticastReceiver DPS_MulticastReceiver;
  * @return  If positive the minimum number of bytes still to be read
  *          If negative the excess bytes to be pushed back
  */
-typedef ssize_t (*DPS_OnReceive)(DPS_Node* node, const struct sockaddr* addr, const uint8_t* data, size_t len);
+typedef ssize_t (*DPS_OnReceive)(DPS_Node* node, DPS_NodeAddress* addr, const uint8_t* data, size_t len);
 
 /*
  * Start receiving multicast data
@@ -64,7 +64,7 @@ void DPS_MulticastStopSend(DPS_MulticastSender* sender);
  * @param          The length of the bufs array
  * @param status   Indicates if the send was successful or not
  */
-typedef void (*DPS_NetSendComplete)(DPS_Node* node, struct sockaddr* addr, uv_buf_t* bufs, size_t numBufs, DPS_Status status);
+typedef void (*DPS_NetSendComplete)(DPS_Node* node, DPS_NodeAddress* addr, uv_buf_t* bufs, size_t numBufs, DPS_Status status);
 
 /*
  * Multicast some data immediately
@@ -106,8 +106,36 @@ uint16_t DPS_NetGetListenerPort(DPS_NetContext* netCtx);
  */
 void DPS_NetStop(DPS_NetContext* netCtx);
 
+#if 0
 /*
- * Connect and send data to a specific destination address
+ * Opaque type for a TCP connection
+ */
+typedef struct _DPS_TCPConnection DPS_TCPConnection;
+
+
+/*
+ * Function prototype for reporting completion of a TCP connection
+ */
+typedef void (*DPS_ConnectTCPComplete)(DPS_TCPConnection* connection, DPS_NodeAddress* addr, DPS_Status status);
+
+/*
+ *
+ */
+DPS_Status DPS_ConnectTCP(DPS_NetContext* netCtx, DPS_NodeAddress* addr, DPS_ConnectTCPComplete connectCompleteCB);
+
+/*
+ *
+ */
+DPS_Status DPS_DisconnectTCP(DPS_TCPConnection* connection);
+
+/*
+ *
+ */
+DPS_Status DPS_NetSendTCP(DPS_TCPConnection* netConnection, uv_buf_t* bufs, size_t numBufs, DPS_NetSendComplete sendCompleteCB);
+#endif
+
+/*
+ * Connectionless send data to a specific destination address
  *
  * @param netCtx          Opaque pointer to the network context
  * @param bufs            Data buffers to send, the data in the buffers must be live until the send completes.
@@ -115,12 +143,12 @@ void DPS_NetStop(DPS_NetContext* netCtx);
  * @param addr            Destination address
  * @param sendCompleteCB  Function called when the send is completeso the content of the data buffers can be freed.
  */
-DPS_Status DPS_NetSend(DPS_NetContext* netCtx, uv_buf_t* bufs, size_t numBufs, const struct sockaddr* addr, DPS_NetSendComplete sendCompleteCB);
+DPS_Status DPS_NetSend(DPS_NetContext* netCtx, uv_buf_t* bufs, size_t numBufs, DPS_NodeAddress* addr, DPS_NetSendComplete sendCompleteCB);
 
 /*
  * Compare two addresses. This match takes care of an ipv6 mapped ipv4 address
  */
-int DPS_SameAddr(DPS_NodeAddress* addr, const struct sockaddr* b);
+int DPS_SameAddr(DPS_NodeAddress* addr1, DPS_NodeAddress* addr2);
 
 /*
  * Generates text for an address

@@ -405,12 +405,22 @@ DPS_Status DPS_ResolveAddress(DPS_Node* node, const char* host, const char* serv
  *
  * @return  A text string for the address
  */
-const char* DPS_GetAddressText(DPS_NodeAddress* addr);
+const char* DPS_NodeAddrToString(DPS_NodeAddress* addr);
 
 /**
  * Creates an node address.
  */
 DPS_NodeAddress* DPS_CreateAddress();
+
+/**
+ * Set a node address
+ *
+ * @param addr  The address to set
+ * @param sa    The value to set
+ *
+ * @return The addr passed in.
+ */
+DPS_NodeAddress* DPS_SetAddress(DPS_NodeAddress* addr, const struct sockaddr* sa);
 
 /**
  * Copy a node address

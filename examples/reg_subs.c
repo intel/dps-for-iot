@@ -81,7 +81,7 @@ static DPS_Status RegisterAndJoin(DPS_Node* node, const char* host, uint16_t por
     remoteAddr = DPS_CreateAddress();
     ret = DPS_Registration_LinkToSyn(node, regs, remoteAddr);
     if (ret == DPS_OK) {
-        DPS_PRINT("Linked to remote node %s\n", DPS_GetAddressText(remoteAddr));
+        DPS_PRINT("Linked to remote node %s\n", DPS_NodeAddrToString(remoteAddr));
     }
     DPS_DestroyAddress(remoteAddr);
     DPS_DestroyRegistrationList(regs);
