@@ -13,11 +13,18 @@ extern "C" {
 
 extern int DPS_Debug;
 
-#define DPS_DBG_TIME   ((uint32_t)((uv_hrtime() / 1000000) & 0xFFFFFFF))
+typedef enum {
+    DPS_LOG_ERROR,
+    DPS_LOG_PRINT,
+    DPS_LOG_DBGTRACE,
+    DPS_LOG_DBGPRINT,
+} DPS_LogLevel;
 
-#define DPS_ERRPRINT(fmt, ...) fprintf(stderr, "%09u:%s@%d\t ERROR! " fmt, DPS_DBG_TIME, __FILE__, __LINE__, __VA_ARGS__ + 0)
+void DPS_Log(DPS_LogLevel level, const char* file, int line, const char *function, const char *fmt, ...);
 
-#define DPS_PRINT(fmt, ...) fprintf(stderr, fmt, __VA_ARGS__ + 0)
+#define DPS_ERRPRINT(fmt, ...) DPS_Log(DPS_LOG_ERROR, __FILE__, __LINE__, __FUNCTION__, fmt, ##__VA_ARGS__)
+
+#define DPS_PRINT(fmt, ...) DPS_Log(DPS_LOG_PRINT, __FILE__, __LINE__, __FUNCTION__, fmt, ##__VA_ARGS__)
 
 #define DPS_DEBUG_OFF  0
 #define DPS_DEBUG_ON   1
@@ -25,8 +32,8 @@ extern int DPS_Debug;
 #define DPS_DEBUG_ENABLED()  (DPS_Debug && (__DPS_DebugControl == DPS_DEBUG_ON))
 
 #ifdef DPS_DEBUG
-#define DPS_DBGTRACE() (DPS_DEBUG_ENABLED() ? fprintf(stderr, "%09u:%s@%d\t %s()\n", DPS_DBG_TIME, __FILE__, __LINE__, __FUNCTION__) : 0)
-#define DPS_DBGPRINT(fmt, ...) (DPS_DEBUG_ENABLED() ? fprintf(stderr, "%09u:%s@%d\t " fmt, DPS_DBG_TIME, __FILE__, __LINE__, __VA_ARGS__ + 0) : 0)
+#define DPS_DBGTRACE() (DPS_DEBUG_ENABLED() ? DPS_Log(DPS_LOG_DBGTRACE, __FILE__, __LINE__, __FUNCTION__, "\n") : 0)
+#define DPS_DBGPRINT(fmt, ...) (DPS_DEBUG_ENABLED() ? DPS_Log(DPS_LOG_DBGPRINT, __FILE__, __LINE__, __FUNCTION__, fmt, ##__VA_ARGS__) : 0)
 #else
 #define DPS_DBGTRACE() 
 #define DPS_DBGPRINT(...) 

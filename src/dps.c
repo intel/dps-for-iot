@@ -193,14 +193,9 @@ static void DumpTopics(const char** topics, size_t numTopics)
 {
     if (DPS_Debug) {
         size_t i;
-        DPS_PRINT("     ");
         for (i = 0; i < numTopics; ++i) {
-            if (i) {
-                DPS_PRINT(" & ");
-            }
-            DPS_PRINT("%s", topics[i]);
+            DPS_PRINT("%s\n", topics[i]);
         }
-        DPS_PRINT("\n");
     }
 }
 #endif

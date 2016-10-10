@@ -46,13 +46,11 @@ ns3srcs = ['src/bitvec.c',
            'src/cbor.c',
            'src/coap.c',
            'src/dps.c',
-           'src/dps_dbg.c',
            'src/dps_err.c',
            'src/dps_history.c',
            'src/dps_uuid.c',
            'src/murmurhash3.c',
            'src/topics.c']
-
 
 if platform == 'posix':
     ns3shobjs = libenv.SharedObject(ns3srcs)
