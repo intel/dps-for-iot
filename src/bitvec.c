@@ -320,14 +320,17 @@ int DPS_BitVectorIncludes(const DPS_BitVector* bv1, const DPS_BitVector* bv2)
     chunk_t b1un = 0;
 
     if (!bv1 || !bv2) {
-        return DPS_ERR_NULL;
+        return DPS_FALSE;
     }
     assert(bv1->len == bv2->len);
+    if (bv1->popCount == 0) {
+        return DPS_FALSE;
+    }
     b1 = bv1->bits;
     b2 = bv2->bits;
     for (i = 0; i < NUM_CHUNKS(bv1); ++i, ++b1, ++b2) {
         if ((*b1 & *b2) != *b2) {
-            return 0;
+            return DPS_FALSE;
         }
         b1un |= *b1;
     }
@@ -380,6 +383,7 @@ DPS_Status DPS_BitVectorFuzzyHash(DPS_BitVector* hash, DPS_BitVector* bv)
     } else {
         hash->bits[3] = (1ull << popCount) - 1;
     }
+    INVALIDATE_POPCOUNT(hash);
     return DPS_OK;
 }
 
