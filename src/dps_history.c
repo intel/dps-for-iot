@@ -178,6 +178,10 @@ static void LinkPub(DPS_History* history, DPS_PubHistory* ph)
             h = h->prev;
         }
         ph->prev = h;
+        ph->next = h->next;
+        if (h->next) {
+            h->next->prev = ph;
+        }
         h->next = ph;
         if (h == history->latest) {
             history->latest = ph;
