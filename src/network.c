@@ -182,10 +182,12 @@ DPS_Status DPS_ResolveAddress(DPS_Node* node, const char* host, const char* serv
 DPS_NodeAddress* DPS_SetAddress(DPS_NodeAddress* addr, const struct sockaddr* sa)
 {
     memset(addr, 0, sizeof(DPS_NodeAddress));
-    if (sa->sa_family == AF_INET) {
-        memcpy(&addr->inaddr, sa, sizeof(struct sockaddr_in));
-    } else {
-        memcpy(&addr->inaddr, sa, sizeof(struct sockaddr_in6));
+    if (sa) {
+        if (sa->sa_family == AF_INET) {
+            memcpy(&addr->inaddr, sa, sizeof(struct sockaddr_in));
+        } else if (sa->sa_family == AF_INET6) {
+            memcpy(&addr->inaddr, sa, sizeof(struct sockaddr_in6));
+        }
     }
     return addr;
 }
