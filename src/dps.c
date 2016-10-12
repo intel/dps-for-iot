@@ -106,7 +106,6 @@ typedef struct _DPS_Subscription {
 #define PUB_FLAG_PUBLISH  (0x01) /* The publication should be published */
 #define PUB_FLAG_LOCAL    (0x02) /* The publication is local to this node */
 #define PUB_FLAG_RETAINED (0x04) /* A received publication had a non-zero TTL */
-#define PUB_FLAG_HISTORY  (0x08) /* A history record has been added for this publication */
 #define PUB_FLAG_IS_COPY  (0x80) /* This publication is a copy and can only be used for acknowledgements */
 
 /*
@@ -691,12 +690,7 @@ static void OnNetSendComplete(DPS_Node* node, DPS_NodeAddress* addr, uv_buf_t* b
  */
 static DPS_Status UpdatePubHistory(DPS_Node* node, DPS_Publication* pub)
 {
-    DPS_Status ret = DPS_OK;
-    if (!(pub->flags & PUB_FLAG_HISTORY)) {
-        ret = DPS_UpdatePubHistory(&node->history, &pub->pubId, pub->sequenceNum, pub->ttl, pub->ackRequested ? &pub->sender : NULL);
-        pub->flags |= PUB_FLAG_HISTORY;
-    }
-    return ret;
+    return DPS_UpdatePubHistory(&node->history, &pub->pubId, pub->sequenceNum, pub->ackRequested, pub->ttl, &pub->sender);
 }
 
 /*
@@ -787,9 +781,9 @@ static DPS_BitVector* PubSubMatch(DPS_Node* node, DPS_Publication* pub, RemoteNo
 static DPS_Status SendMatchingPubToSub(DPS_Node* node, DPS_Publication* pub, RemoteNode* subscriber)
 {
     /*
-     * We don't send publications back to the remote node than sent them
+     * We don't send publications to remote nodes we have received them from.
      */
-    if (!DPS_SameAddr(&pub->sender, &subscriber->addr)) {
+    if (!DPS_PublicationReceivedFrom(&node->history, &pub->pubId, &pub->sender, &subscriber->addr)) {
         DPS_BitVector* pubBV = PubSubMatch(node, pub, subscriber);
         if (pubBV) {
             DPS_DBGPRINT("Sending pub %d to %s\n", pub->sequenceNum, RemoteNodeAddressText(subscriber));
@@ -963,6 +957,7 @@ static void SendPubsTask(DPS_Node* node)
         RemoteNode* nextRemote;
 
         nextPub = pub->next;
+
         /*
          * If the node is a multicast sender local publications are always multicast
          */
@@ -1116,10 +1111,6 @@ static DPS_Status DecodePublication(DPS_Node* node, DPS_Buffer* buffer, DPS_Node
     if (ret != DPS_OK) {
         goto Exit;
     }
-    if (DPS_PublicationIsStale(&node->history, pubId, sequenceNum)) {
-        DPS_DBGPRINT("Publication %s/%d is stale\n", DPS_UUIDToString(pubId), sequenceNum);
-        return DPS_OK;
-    }
     /*
      * See if this is an update for an existing retained publication
      */
@@ -1155,6 +1146,13 @@ static DPS_Status DecodePublication(DPS_Node* node, DPS_Buffer* buffer, DPS_Node
     pub->ackRequested = ackRequested;
     pub->flags = PUB_FLAG_PUBLISH;
     AddrSetPort(&pub->sender, addr, port);
+    /*
+     * Stale publications are dropped
+     */
+    if (DPS_PublicationIsStale(&node->history, pubId, sequenceNum)) {
+        DPS_DBGPRINT("Publication %s/%d is stale\n", DPS_UUIDToString(pubId), sequenceNum);
+        goto Exit;
+    }
     /*
      * We have no reason to hold onto a node for multicast publishers
      */
@@ -1210,6 +1208,7 @@ static DPS_Status DecodePublication(DPS_Node* node, DPS_Buffer* buffer, DPS_Node
          */
         CallPubHandlers(node, pub);
     }
+    UpdatePubHistory(node, pub);
     SendPubs(node, pub);
     return DPS_OK;
 
@@ -1226,6 +1225,7 @@ Exit:
     }
     if (pub) {
         LockNode(node);
+        UpdatePubHistory(node, pub);
         FreePublication(node, pub);
         UnlockNode(node);
     }

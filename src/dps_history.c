@@ -7,6 +7,7 @@
 #include <dps/dps_uuid.h>
 #include <dps/dps_history.h>
 #include <dps/dps_internal.h>
+#include <dps/network.h>
 
 /*
  * Debug control for this module
@@ -24,7 +25,7 @@ static DPS_PubHistory* Find(const DPS_History* history, const DPS_UUID* pubId)
 {
     DPS_PubHistory* curr = history->root;
     while (curr) {
-        int cmp = DPS_UUIDCompare(pubId, &curr->pub.id);
+        int cmp = DPS_UUIDCompare(pubId, &curr->id);
         if (cmp == 0) {
             break;
         }
@@ -41,7 +42,7 @@ static void DumpHistory(DPS_PubHistory* ph, int indent, const char* tag)
 {
     static const char spaces[] = "                                                          ";
     if (ph) {
-        DPS_PRINT("%.*s%s%s\n", indent, spaces, tag, DPS_UUIDToString(&ph->pub.id));
+        DPS_PRINT("%.*s%s%s\n", indent, spaces, tag, DPS_UUIDToString(&ph->id));
         DumpHistory(ph->left, indent + 2, "L->");
         DumpHistory(ph->right, indent + 2, "R->");
         if (indent) {
@@ -67,7 +68,7 @@ static DPS_PubHistory* Insert(DPS_History* history, DPS_PubHistory* add)
     int cmp;
 
     while (curr) {
-        cmp = DPS_UUIDCompare(&add->pub.id, &curr->pub.id);
+        cmp = DPS_UUIDCompare(&add->id, &curr->id);
         if (cmp == 0) {
             break;
         }
@@ -105,7 +106,7 @@ static void Remove(DPS_History* history, DPS_PubHistory* ph)
          * LSB of the UUID does not correlate with the location in the tree
          * so it effectively become a random selection to go left or right
          */
-        if (ph->pub.id.val[15] & 1) {
+        if (ph->id.val[15] & 1) {
             repl = ph->left;
             while (repl->right) {
                 repl = repl->right;
@@ -153,7 +154,6 @@ static void Remove(DPS_History* history, DPS_PubHistory* ph)
  */
 static void LinkPub(DPS_History* history, DPS_PubHistory* ph)
 {
-
     assert(!ph->next && !ph->prev);
 
     if (history->count == 0) {
@@ -210,6 +210,17 @@ static DPS_PubHistory* UnlinkPub(DPS_History* history, DPS_PubHistory* ph)
     return ph;
 }
 
+static void FreePubHistory(DPS_PubHistory* ph)
+{
+    DPS_NodeAddressList* addr;
+    DPS_NodeAddressList* nextAddr;
+    for (addr = ph->addrs; addr; addr = nextAddr) {
+        nextAddr = addr->next;
+        free(addr);
+    }
+    free(ph);
+}
+
 DPS_Status DPS_DeletePubHistory(DPS_History* history, DPS_UUID* pubId)
 {
     DPS_PubHistory* ph;
@@ -218,10 +229,10 @@ DPS_Status DPS_DeletePubHistory(DPS_History* history, DPS_UUID* pubId)
     if (!ph) {
         return DPS_ERR_MISSING;
     }
-    assert(memcmp(&ph->pub.id, pubId, sizeof(DPS_UUID)) == 0);
+    assert(memcmp(&ph->id, pubId, sizeof(DPS_UUID)) == 0);
     UnlinkPub(history, ph);
     Remove(history, ph);
-    free(ph);
+    FreePubHistory(ph);
     return DPS_OK;
 }
 
@@ -242,7 +253,7 @@ void DPS_FreshenHistory(DPS_History* history)
             if (now >= ph->expiration) {
                 UnlinkPub(history, ph);
                 Remove(history, ph);
-                free(ph);
+                FreePubHistory(ph);
             } else {
                 break;
             }
@@ -251,16 +262,17 @@ void DPS_FreshenHistory(DPS_History* history)
     uv_mutex_unlock(&history->lock);
 }
 
-DPS_Status DPS_UpdatePubHistory(DPS_History* history, DPS_UUID* pubId, uint32_t sequenceNum, uint16_t ttl, DPS_NodeAddress* addr)
+DPS_Status DPS_UpdatePubHistory(DPS_History* history, DPS_UUID* pubId, uint32_t sequenceNum, uint8_t ackRequested, uint16_t ttl, DPS_NodeAddress* addr)
 {
     uint64_t now = uv_now(history->loop);
     DPS_PubHistory* phNew = calloc(1, sizeof(DPS_PubHistory));
     DPS_PubHistory* ph;
+    DPS_NodeAddressList **phAddr;
 
     if (!phNew) {
         return DPS_ERR_RESOURCES;
     }
-    phNew->pub.id = *pubId;
+    phNew->id = *pubId;
 
     uv_mutex_lock(&history->lock);
     ph = Insert(history, phNew);
@@ -268,12 +280,20 @@ DPS_Status DPS_UpdatePubHistory(DPS_History* history, DPS_UUID* pubId, uint32_t 
         /*
          * Updates existing history
          */
-        free(phNew);
+        FreePubHistory(phNew);
         UnlinkPub(history, ph);
     }
-    ph->pub.sn = sequenceNum;
-    if (addr) {
-        ph->pub.addr = *addr;
+    ph->sn = sequenceNum;
+    ph->ackRequested = ackRequested;
+    for (phAddr = &ph->addrs; (*phAddr); phAddr = &(*phAddr)->next) {
+        if (DPS_SameAddr(&(*phAddr)->addr, addr)) {
+            break;
+        }
+    }
+    if (!(*phAddr)) {
+        (*phAddr) = calloc(1, sizeof(DPS_NodeAddressList));
+        (*phAddr)->addr = *addr;
+        DPS_DBGPRINT("Added %s to pub %s\n", DPS_NetAddrText((struct sockaddr*) &(*phAddr)->addr.inaddr), DPS_UUIDToString(pubId));
     }
     ph->expiration = now + DPS_SECS_TO_MS(ttl) + PUB_HISTORY_LIFETIME;
     LinkPub(history, ph);
@@ -288,7 +308,7 @@ int DPS_PublicationIsStale(DPS_History* history, DPS_UUID* pubId, uint32_t seque
 
     uv_mutex_lock(&history->lock);
     ph = Find(history, pubId);
-    if (ph && (sequenceNum <= ph->pub.sn)) {
+    if (ph && (sequenceNum <= ph->sn)) {
         stale = DPS_TRUE;
     }
     uv_mutex_unlock(&history->lock);
@@ -300,7 +320,7 @@ void DPS_HistoryFree(DPS_History* history)
     DPS_PubHistory* ph = history->soonest;
     while (ph) {
         DPS_PubHistory* next = ph->next;
-        free(ph);
+        FreePubHistory(ph);
         ph = next;
     }
     history->latest = NULL;
@@ -315,14 +335,39 @@ DPS_Status DPS_LookupPublisher(DPS_History* history, const DPS_UUID* pubId, uint
 
     uv_mutex_lock(&history->lock);
     ph = Find(history, pubId);
-    if (ph && ph->pub.addr.inaddr.ss_family) {
-        *sequenceNum = ph->pub.sn;
-        *addr = &ph->pub.addr;
+    if (ph && ph->ackRequested && ph->addrs) {
+        *sequenceNum = ph->sn;
+        *addr = &ph->addrs->addr;
         ret = DPS_OK;
     } else {
         *sequenceNum = 0;
         *addr = NULL;
         ret = DPS_ERR_MISSING;
+    }
+    uv_mutex_unlock(&history->lock);
+    return ret;
+}
+
+int DPS_PublicationReceivedFrom(DPS_History* history, DPS_UUID* pubId, DPS_NodeAddress* source, DPS_NodeAddress* destination)
+{
+    DPS_PubHistory* ph;
+    DPS_NodeAddressList *phAddr;
+    int ret;
+
+    if (DPS_SameAddr(source, destination)) {
+        return DPS_TRUE;
+    }
+
+    ret = DPS_FALSE;
+    uv_mutex_lock(&history->lock);
+    ph = Find(history, pubId);
+    if (ph) {
+        for (phAddr = ph->addrs; phAddr; phAddr = phAddr->next) {
+            if (DPS_SameAddr(&phAddr->addr, destination)) {
+                ret = DPS_TRUE;
+                break;
+            }
+        }
     }
     uv_mutex_unlock(&history->lock);
     return ret;

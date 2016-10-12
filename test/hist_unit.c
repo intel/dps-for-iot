@@ -69,7 +69,7 @@ int main()
      */
     DPS_PRINT("Add entries\n");
     for (i = 0; i < NUM_PUBS; ++i) {
-        DPS_UpdatePubHistory(&history, &uuid[i], 1, 0, &addr);
+        DPS_UpdatePubHistory(&history, &uuid[i], 1, DPS_TRUE, 0, &addr);
     }
     /*
      * Check there are all there
@@ -106,7 +106,7 @@ int main()
      */
     DPS_PRINT("Replace removed entries\n");
     for (i = 0; i < NUM_PUBS / 4; ++i) {
-        DPS_UpdatePubHistory(&history, &uuid[i], 1, 0, &addr);
+        DPS_UpdatePubHistory(&history, &uuid[i], 1, DPS_TRUE, 0, &addr);
     }
     /*
      * Check there are all there
@@ -122,7 +122,7 @@ int main()
      * Protect some by setting a longer timeout
      */
     for (i = NUM_PUBS / 4; i < NUM_PUBS / 3; ++i) {
-        DPS_UpdatePubHistory(&history, &uuid[i], 1, 20, &addr);
+        DPS_UpdatePubHistory(&history, &uuid[i], 1, DPS_TRUE, 20, &addr);
     }
     /*
      * Wait a while - default timeout is 10 seconds
