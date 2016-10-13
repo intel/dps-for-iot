@@ -12,6 +12,7 @@ extern "C" {
 #endif
 
 typedef struct _DPS_NodeAddressList {
+    uint32_t sn;
     DPS_NodeAddress addr;
     struct _DPS_NodeAddressList* next;
 } DPS_NodeAddressList;
@@ -113,7 +114,7 @@ DPS_Status DPS_LookupPublisher(DPS_History* history, const DPS_UUID* pubId, uint
  *
  * @return DPS_TRUE if publication has been received from destination, DPS_FALSE otherwise.
  */
-int DPS_PublicationReceivedFrom(DPS_History* history, DPS_UUID* pubId, DPS_NodeAddress* source, DPS_NodeAddress* destination);
+int DPS_PublicationReceivedFrom(DPS_History* history, DPS_UUID* pubId, uint32_t sequenceNum, DPS_NodeAddress* source, DPS_NodeAddress* destination);
 
 #ifdef __cplusplus
 }

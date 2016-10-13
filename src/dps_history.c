@@ -292,6 +292,7 @@ DPS_Status DPS_UpdatePubHistory(DPS_History* history, DPS_UUID* pubId, uint32_t 
     }
     if (!(*phAddr)) {
         (*phAddr) = calloc(1, sizeof(DPS_NodeAddressList));
+        (*phAddr)->sn = sequenceNum;
         (*phAddr)->addr = *addr;
         DPS_DBGPRINT("Added %s to pub %s\n", DPS_NetAddrText((struct sockaddr*) &(*phAddr)->addr.inaddr), DPS_UUIDToString(pubId));
     }
@@ -348,7 +349,7 @@ DPS_Status DPS_LookupPublisher(DPS_History* history, const DPS_UUID* pubId, uint
     return ret;
 }
 
-int DPS_PublicationReceivedFrom(DPS_History* history, DPS_UUID* pubId, DPS_NodeAddress* source, DPS_NodeAddress* destination)
+int DPS_PublicationReceivedFrom(DPS_History* history, DPS_UUID* pubId, uint32_t sequenceNum, DPS_NodeAddress* source, DPS_NodeAddress* destination)
 {
     DPS_PubHistory* ph;
     DPS_NodeAddressList *phAddr;
@@ -363,7 +364,7 @@ int DPS_PublicationReceivedFrom(DPS_History* history, DPS_UUID* pubId, DPS_NodeA
     ph = Find(history, pubId);
     if (ph) {
         for (phAddr = ph->addrs; phAddr; phAddr = phAddr->next) {
-            if (DPS_SameAddr(&phAddr->addr, destination)) {
+            if ((sequenceNum <= phAddr->sn) && DPS_SameAddr(&phAddr->addr, destination)) {
                 ret = DPS_TRUE;
                 break;
             }
