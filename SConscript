@@ -75,7 +75,7 @@ pyenv.InstallAs('./py/dps.py', './swig/dps.py')
 if platform == '!!posix':
     nodeenv = libenv.Clone();
     nodeenv.Append(SWIGFLAGS = ['-javascript', '-node', '-c++', '-DV8_VERSION=0x04059937', '-Wall', '-Werror', '-v'], SWIGPATH = '#/inc')
-    nodeenv.Append(CPPFLAGS = ['-DBUILDING_NODE_EXTENSION'])
+    nodeenv.Append(CPPFLAGS = ['-DBUILDING_NODE_EXTENSION', '-std=c++11'])
     nodeenv.Append(CPPPATH = ['/usr/include/node'])
     nodedps = nodeenv.SharedLibrary('lib/nodedps', shobjs + ['swig/dps_node.i'])
     nodeenv.InstallAs('swig/dps.node', nodedps)
