@@ -25,7 +25,7 @@ static ssize_t ReceiveCB(DPS_Node* node, DPS_NodeAddress* addr, const uint8_t* d
         ret = CoAP_GetPktLen(protocol, data, len, &pktLen);
         assert(ret == DPS_OK);
         if (pktLen != len) {
-            fprintf(stderr, "Base packet length expected %d got %d\n", len, pktLen);
+            fprintf(stderr, "Base packet length expected %zu got %zu\n", len, pktLen);
             assert(pktLen == len);
         }
         ret = CoAP_Parse(protocol, data, len, &coap, &payload);

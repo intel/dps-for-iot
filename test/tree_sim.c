@@ -46,14 +46,14 @@ static void DumpVector(void* vec, size_t sz)
             ++pop;
         }
     }
-    printf("%02d %s\n", pop, txt);
+    printf("%02zu %s\n", pop, txt);
 }
 
 static void DumpTree(Node* n, size_t indent)
 {
     size_t i;
     static const char* ws = "                                       ";
-    printf("%.*s  ", indent * 4, ws);
+    printf("%.*s  ", (int)indent * 4, ws);
     DumpVector(&n->_union, 8 * sizeof(n->_union));
     for (i = 0; i < n->count; ++i) {
         DumpTree(n->children[i], indent + 1);
@@ -267,9 +267,9 @@ int main(int argc, char** argv)
     for (i = 0; i < numLeafs; ++i) {
         int cmps = 0;
         if (Lookup(tree, leafs[i], &cmps)) {
-            printf("Found leaf %d (compared %d)\n", i, cmps);
+            printf("Found leaf %zu (compared %d)\n", i, cmps);
         } else {
-            printf("Missing leaf %d\n", i);
+            printf("Missing leaf %zu\n", i);
         }
     }
     return 0;
