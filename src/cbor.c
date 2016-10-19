@@ -33,13 +33,13 @@ static int Requires(uint64_t n)
     if (n < 24) {
         return 0;
     }
-    if (n < UINT8_MAX) {
+    if (n <= UINT8_MAX) {
         return 1;
     }
-    if (n < UINT16_MAX) {
+    if (n <= UINT16_MAX) {
         return 2;
     }
-    if (n < UINT32_MAX) {
+    if (n <= UINT32_MAX) {
         return 4;
     }
     return 8;
