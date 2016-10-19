@@ -28,8 +28,6 @@ typedef struct _DPS_Node {
 #endif
     uv_async_t bgHandler;                 /* Async handler for background tasks */
 
-    uint64_t ttlBasis;                    /* basis time for expiring retained messages */
-
     struct {
         PublicationAck* first;
         PublicationAck* last;

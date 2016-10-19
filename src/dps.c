@@ -105,7 +105,8 @@ typedef struct _DPS_Subscription {
 
 #define PUB_FLAG_PUBLISH  (0x01) /* The publication should be published */
 #define PUB_FLAG_LOCAL    (0x02) /* The publication is local to this node */
-#define PUB_FLAG_RETAINED (0x04) /* A received publication had a non-zero TTL */
+#define PUB_FLAG_RETAINED (0x04) /* The publication had a non-zero TTL */
+#define PUB_FLAG_EXPIRED  (0x10) /* The publication had a negative TTL */
 #define PUB_FLAG_IS_COPY  (0x80) /* This publication is a copy and can only be used for acknowledgements */
 
 /*
@@ -122,8 +123,8 @@ typedef struct _DPS_Publication {
     uint8_t flags;                  /* Internal state flags */
     uint8_t checkToSend;            /* TRUE if this publication should be checked to send */
     uint8_t ackRequested;           /* TRUE if an ack was requested by the publisher */
-    int16_t ttl;                    /* Remaining time-to-live in seconds */
-    uint32_t sequenceNum;          /* Serial number for this publication */
+    uint64_t expires;               /* Time (in milliseconds) that this publication expires */
+    uint32_t sequenceNum;           /* Sequence number for this publication */
     uint8_t* payload;
     size_t len;
     DPS_AcknowledgementHandler handler;
@@ -135,6 +136,10 @@ typedef struct _DPS_Publication {
     size_t numTopics;
     DPS_Publication* next;
 } DPS_Publication;
+
+
+#define PUB_TTL(node, pub)  (int16_t)((pub->expires + 999 - uv_now((node)->loop)) / 1000)
+
 
 #define SEND_SUBS_TASK  0x01
 #define SEND_PUBS_TASK  0x02
@@ -210,7 +215,8 @@ static void DumpPubs(DPS_Node* node)
         DPS_Publication* pub;
         DPS_PRINT("Node %d:\n", node->port);
         for (pub = node->publications; pub != NULL; pub = pub->next) {
-            DPS_PRINT("  %s(%d) %s ttl=%d\n", DPS_UUIDToString(&pub->pubId), pub->sequenceNum, pub->flags & PUB_FLAG_RETAINED ? "RETAINED" : "", pub->ttl);
+            int16_t ttl = PUB_TTL(node, pub);
+            DPS_PRINT("  %s(%d) %s ttl=%d\n", DPS_UUIDToString(&pub->pubId), pub->sequenceNum, pub->flags & PUB_FLAG_RETAINED ? "RETAINED" : "", ttl);
         }
     }
 }
@@ -599,60 +605,6 @@ static DPS_Status AddRemoteNode(DPS_Node* node, DPS_NodeAddress* addr, uint16_t 
     return DPS_OK;
 }
 
-static uint32_t UpdateTTLBasis(DPS_Node* node)
-{
-    uint64_t now = uv_now(node->loop);
-    uint32_t elapsedSeconds = DPS_MS_TO_SECS(now - node->ttlBasis);
-    node->ttlBasis = now;
-    return elapsedSeconds;
-}
-
-static void CheckTTLs(DPS_Node* node)
-{
-    DPS_Publication* pub;
-    DPS_Publication* next;
-    uint32_t elapsed;
-    size_t numTTLs = 0;
-
-    if (!node->ttlBasis) {
-        return;
-    }
-    elapsed = UpdateTTLBasis(node);
-    if (!elapsed) {
-        /*
-         * Granularity is 1 second so this can happen
-         */
-        return;
-    }
-    for (pub = node->publications; pub != NULL; pub = next) {
-        /*
-         * In case this publication is freed below
-         */
-        next = pub->next;
-        if ((pub->ttl > 0) && ((uint32_t)pub->ttl > elapsed)) {
-            pub->ttl -= elapsed;
-            ++numTTLs;
-            continue;
-        }
-        /*
-         * When a ttl expires retained publications are freed, local
-         * publications are disabled by clearing the PUBLISH flag.
-         */
-        if (pub->flags & PUB_FLAG_LOCAL) {
-            pub->flags &= ~PUB_FLAG_PUBLISH;
-        } else if (pub->flags & PUB_FLAG_RETAINED) {
-            DPS_DBGPRINT("Expiring retained pub %s\n", DPS_UUIDToString(&pub->pubId));
-            FreePublication(node, pub);
-        }
-    }
-    /*
-     * If there are no TTLs to check clear the ttlBasis
-     */
-    if (numTTLs == 0) {
-        node->ttlBasis = 0;
-    }
-}
-
 static DPS_Publication* LookupRetained(DPS_Node* node, DPS_UUID* pubId)
 {
     DPS_Publication* pub;
@@ -710,7 +662,7 @@ static void OnNetSendComplete(DPS_Node* node, DPS_NodeAddress* addr, uv_buf_t* b
  */
 static DPS_Status UpdatePubHistory(DPS_Node* node, DPS_Publication* pub)
 {
-    return DPS_UpdatePubHistory(&node->history, &pub->pubId, pub->sequenceNum, pub->ackRequested, pub->ttl, &pub->sender);
+    return DPS_UpdatePubHistory(&node->history, &pub->pubId, pub->sequenceNum, pub->ackRequested, PUB_TTL(node, pub), &pub->sender);
 }
 
 /*
@@ -733,19 +685,35 @@ static DPS_Status SendPublication(DPS_Node* node, DPS_Publication* pub, DPS_BitV
     CoAP_Option opts[1];
     int protocol;
     size_t i;
+    int16_t ttl = 0;
 
     DPS_DBGTRACE();
 
+    if (pub->flags & PUB_FLAG_RETAINED) {
+        if (pub->flags & PUB_FLAG_EXPIRED) {
+            ttl = -1;
+        } else {
+            ttl = PUB_TTL(node, pub);
+            /*
+             * It is possible that a retained publication has expired between
+             * being marked to send and getting to this point. If so we
+             * silently ignore the publication.
+             */
+            if (ttl <= 0) {
+                return DPS_OK;
+            }
+        }
+    } 
     if (remote) {
-        DPS_DBGPRINT("SendPublication (ttl=%d) to %s\n", pub->ttl, RemoteNodeAddressText(remote));
+        DPS_DBGPRINT("SendPublication (ttl=%d) to %s\n", ttl, RemoteNodeAddressText(remote));
         protocol = COAP_PROTOCOL;
     } else {
-        DPS_DBGPRINT("SendPublication (ttl=%d) as multicast\n", pub->ttl);
+        DPS_DBGPRINT("SendPublication (ttl=%d) as multicast\n", ttl);
         protocol = COAP_OVER_UDP;
     }
     ret = DPS_BufferInit(&payload, NULL, 32 + DPS_BitVectorSerializeMaxSize(bf) + pub->len);
     if (ret != DPS_OK) {
-        return DPS_OK;
+        return ret;
     }
     opts[0].id = COAP_OPT_URI_PATH;
     opts[0].val = (uint8_t*)DPS_PublicationURI;
@@ -754,7 +722,7 @@ static DPS_Status SendPublication(DPS_Node* node, DPS_Publication* pub, DPS_BitV
      * Write the listening port, ttl, pubId, and serial number
      */
     CBOR_EncodeUint16(&payload, node->port);
-    CBOR_EncodeInt16(&payload, pub->ttl);
+    CBOR_EncodeInt16(&payload, ttl);
     CBOR_EncodeBytes(&payload, (uint8_t*)&pub->pubId, sizeof(pub->pubId));
     CBOR_EncodeUint(&payload, pub->sequenceNum);
     CBOR_EncodeBoolean(&payload, pub->ackRequested);
@@ -962,41 +930,49 @@ static void SendAcksTask(DPS_Node* node)
     node->ackQueue.last = NULL;
 }
 
+/*
+ * When a ttl expires retained publications are freed, local
+ * publications are disabled by clearing the PUBLISH flag.
+ */
+static void ExpirePub(DPS_Node* node, DPS_Publication* pub)
+{
+    if (pub->flags & PUB_FLAG_LOCAL) {
+        pub->flags &= ~PUB_FLAG_PUBLISH;
+        pub->flags &= ~PUB_FLAG_EXPIRED;
+    } else  {
+        DPS_DBGPRINT("Expiring %spub %s\n", pub->flags & PUB_FLAG_RETAINED ? "retained " : "", DPS_UUIDToString(&pub->pubId));
+        FreePublication(node, pub);
+    }
+}
+
 static void SendPubsTask(DPS_Node* node)
 {
-    DPS_Status ret;
     DPS_Publication* pub;
     DPS_Publication* nextPub;
 
     DPS_DBGTRACE();
 
     /*
-     * Removed any stale retained pubs
-     */
-    CheckTTLs(node);
-    /*
      * Check if any local or retained publications need to be forwarded to this subscriber
      */
     for (pub = node->publications; pub != NULL; pub = nextPub) {
-        RemoteNode* remote;
-        RemoteNode* nextRemote;
-
         nextPub = pub->next;
-
-        /*
-         * If the node is a multicast sender local publications are always multicast
-         */
-        if (node->mcastSender && (pub->flags & PUB_FLAG_LOCAL) && (pub->flags & PUB_FLAG_PUBLISH)) {
-            DPS_Status ret = SendPublication(node, pub, pub->bf, NULL);
-            if (ret != DPS_OK) {
-                DPS_ERRPRINT("SendPublication (multicast) returned %s\n", DPS_ErrTxt(ret));
-            }
-        }
         /*
          * Only check publications that are flagged to be checked
          */
         if (pub->checkToSend) {
-            pub->checkToSend = DPS_FALSE;
+            DPS_Status ret;
+            RemoteNode* remote;
+            RemoteNode* nextRemote;
+            /*
+             * If the node is a multicast sender local publications are always multicast
+             */
+            if (node->mcastSender && (pub->flags & PUB_FLAG_LOCAL)) {
+                ret = SendPublication(node, pub, pub->bf, NULL);
+                if (ret != DPS_OK) {
+                    DPS_ERRPRINT("SendPublication (multicast) returned %s\n", DPS_ErrTxt(ret));
+                }
+            }
             for (remote = node->remoteNodes; remote != NULL; remote = nextRemote) {
                 nextRemote = remote->next;
                 if (remote->inbound.interests) {
@@ -1007,25 +983,11 @@ static void SendPubsTask(DPS_Node* node)
                     }
                 }
             }
+            pub->checkToSend = DPS_FALSE;
         }
-        /*
-         * Check if the publication has expired
-         */
-        if (pub->ttl <= 0) {
-            if (pub->flags & PUB_FLAG_LOCAL) {
-                pub->flags &= ~PUB_FLAG_PUBLISH;
-                DPS_DBGPRINT("Disabling local pub %s\n", DPS_UUIDToString(&pub->pubId));
-            } else {
-                DPS_DBGPRINT("Deleting pub %s\n", DPS_UUIDToString(&pub->pubId));
-                FreePublication(node, pub);
-            }
+        if (uv_now(node->loop) >= pub->expires) {
+            ExpirePub(node, pub);
         }
-    }
-    /*
-     * If there are no other retained pubs the ttlBasis time will not be set
-     */
-    if (!node->ttlBasis) {
-        UpdateTTLBasis(node);
     }
     DumpPubs(node);
 }
@@ -1033,37 +995,33 @@ static void SendPubsTask(DPS_Node* node)
 /*
  * Run checks of one or more publications against the current subscriptions
  */
-static int SendPubs(DPS_Node* node, DPS_Publication* pub)
+static void SendPubs(DPS_Node* node, DPS_Publication* pub)
 {
     int count = 0;
     LockNode(node);
 
-    /*
-     * Need something to send and somwhere to send it
-     */
-    if (node->publications && (node->remoteNodes || node->mcastSender)) {
-        if (pub) {
-            if (pub->flags & PUB_FLAG_PUBLISH) {
-                pub->checkToSend = DPS_TRUE;
-                ++count;
-            }
-        } else {
-            /*
-             * Check all publications
-             */
-            for (pub = node->publications; pub != NULL; pub = pub->next) {
-                if (pub->flags & PUB_FLAG_PUBLISH) {
+    if (pub) {
+        pub->checkToSend = DPS_TRUE;
+        ++count;
+    } else {
+        DPS_Publication* pubNext;
+        for (pub = node->publications; pub != NULL; pub = pubNext) {
+            pubNext = pub->next;
+            if (uv_now(node->loop) >= pub->expires) {
+                ExpirePub(node, pub);
+            } else {
+                if ((pub->flags & PUB_FLAG_PUBLISH) && (node->remoteNodes || node->mcastSender)) {
                     pub->checkToSend = DPS_TRUE;
                     ++count;
                 }
             }
         }
-        if (count) {
-            ScheduleBackgroundTask(node, SEND_PUBS_TASK);
-        }
+    }
+    if (count) {
+        DPS_DBGPRINT("SendPubs %d publications to send\n", count);
+        ScheduleBackgroundTask(node, SEND_PUBS_TASK);
     }
     UnlockNode(node);
-    return count;
 }
 
 /*
@@ -1184,16 +1142,25 @@ static DPS_Status DecodePublication(DPS_Node* node, DPS_Buffer* buffer, DPS_Node
         goto Exit;
     }
     for (i = 0; i < pub->numTopics; ++i) {
-        size_t unused;
-        ret = CBOR_DecodeString(buffer, &pub->topics[i], &unused);
+        size_t sz;
+        char* topic;
+        ret = CBOR_DecodeString(buffer, &topic, &sz);
+        if (ret == DPS_OK) {
+            pub->topics[i] = malloc(sz + 1);
+            if (!pub->topics) {
+                ret = DPS_ERR_RESOURCES;
+            }
+        }
         if (ret != DPS_OK) {
+            pub->numTopics = i - 1;
             goto Exit;
         }
+        memcpy(pub->topics[i], topic, sz);
+        pub->topics[i][sz] = 0;
     }
-    pub->ttl = ttl;
     pub->sequenceNum = sequenceNum;
     pub->ackRequested = ackRequested;
-    pub->flags = PUB_FLAG_PUBLISH;
+    pub->flags |= PUB_FLAG_PUBLISH;
     AddrSetPort(&pub->sender, addr, port);
     /*
      * Stale publications are dropped
@@ -1225,11 +1192,20 @@ static DPS_Status DecodePublication(DPS_Node* node, DPS_Buffer* buffer, DPS_Node
      * A negative TTL is a forced expiration. We don't care about payloads and
      * we don't call local handlers.
      */
-    if (pub->ttl < 0) {
+    if (ttl < 0) {
         if (pub->payload) {
             free(pub->payload);
         }
         pub->len = 0;
+        /*
+         * We only expect negative TTL's for retained publications
+         */
+        if (!(pub->flags & PUB_FLAG_RETAINED)) {
+            ret = DPS_ERR_INVALID;
+            goto Exit;
+        }
+        pub->flags |= PUB_FLAG_EXPIRED;
+        ttl = 0;
     } else {
         /*
          * Payload is a pointer into the receive buffer so must be copied
@@ -1249,14 +1225,17 @@ static DPS_Status DecodePublication(DPS_Node* node, DPS_Buffer* buffer, DPS_Node
             pub->payload = NULL;
         }
         pub->len = len;
-        if (pub->ttl > 0) {
+        if (ttl > 0) {
             pub->flags |= PUB_FLAG_RETAINED;
+        } else {
+            pub->flags &= ~PUB_FLAG_RETAINED;
         }
         /*
          * Forward the publication to matching local subscribers
          */
         CallPubHandlers(node, pub);
     }
+    pub->expires = uv_now(node->loop) + DPS_SECS_TO_MS(ttl);
     UpdatePubHistory(node, pub);
     SendPubs(node, pub);
     return DPS_OK;
@@ -2105,21 +2084,37 @@ DPS_Status DPS_Publish(DPS_Publication* pub, uint8_t* payload, size_t len, int16
     if (oldPayload) {
         *oldPayload = pub->payload;
     }
+    /*
+     * Do some sanity checks for retained publication cancellation
+     */
+    if (ttl < 0) {
+        if (!(pub->flags & PUB_FLAG_RETAINED)) {
+            UnlockNode(node);
+            DPS_ERRPRINT("Negative ttl only valid for retained publications\n");
+            return DPS_ERR_INVALID;
+        }
+        if (payload) {
+            UnlockNode(node);
+            DPS_ERRPRINT("Payload not permitted when canceling a retained publication\n");
+            return DPS_ERR_INVALID;
+        }
+        ttl = 0;
+        pub->flags |= PUB_FLAG_EXPIRED;
+    }
     pub->payload = payload;
     pub->len = len;
     pub->flags |= PUB_FLAG_PUBLISH;
+    /*
+     * Update time before setting expiration because the loop only updates on each iteration and
+     * we have no idea know how long it is since the loop last ran.
+     */
+    uv_update_time(node->loop);
+    pub->expires = uv_now(node->loop) + DPS_SECS_TO_MS(ttl);
     if (ttl > 0) {
-        pub->ttl = ttl;
         pub->flags |= PUB_FLAG_RETAINED;
-    } else {
-        pub->flags &= ~PUB_FLAG_RETAINED;
-        pub->ttl = ttl < 0 ? -1 : 0;
     }
     ++pub->sequenceNum;
 
-    if ((pub->ttl > 0) && !node->ttlBasis) {
-        UpdateTTLBasis(node);
-    }
     UnlockNode(node);
     SendPubs(node, pub);
     return DPS_OK;
