@@ -24,10 +24,21 @@ static void OnPubMatch(DPS_Subscription* sub, const DPS_Publication* pub, uint8_
     const DPS_UUID* pubId = DPS_PublicationGetUUID(pub);
     uint32_t sn = DPS_PublicationGetSequenceNum(pub);
     size_t i;
-    size_t numTopics = DPS_SubscriptionGetNumTopics(sub);
+    size_t numTopics;
 
     if (!quiet) {
-        DPS_PRINT("Pub %s(%d) matches:\n    ", DPS_UUIDToString(pubId), sn);
+        DPS_PRINT("Pub %s(%d) matches:\n", DPS_UUIDToString(pubId), sn);
+        DPS_PRINT("  pub ");
+        numTopics = DPS_PublicationGetNumTopics(pub);
+        for (i = 0; i < numTopics; ++i) {
+            if (i) {
+                DPS_PRINT(" | ");
+            }
+            DPS_PRINT("%s", DPS_PublicationGetTopic(pub, i));
+        }
+        DPS_PRINT("\n");
+        DPS_PRINT("  sub ");
+        numTopics = DPS_SubscriptionGetNumTopics(sub);
         for (i = 0; i < numTopics; ++i) {
             if (i) {
                 DPS_PRINT(" & ");

@@ -69,6 +69,16 @@ const DPS_UUID* DPS_PublicationGetUUID(const DPS_Publication* pub);
 uint32_t DPS_PublicationGetSequenceNum(const DPS_Publication* pub);
 
 /**
+ * Get a topic for a publication
+ */
+const char* DPS_PublicationGetTopic(const DPS_Publication* pub, size_t index);
+
+/**
+ * Get the number of topics in a publication
+ */
+size_t DPS_PublicationGetNumTopics(const DPS_Publication* pub);
+
+/**
  * Allocates space for a local DPS node.
  *
  * @param separators   The separator characters to use for topic matching, if NULL defaults to "/"

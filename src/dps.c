@@ -131,6 +131,8 @@ typedef struct _DPS_Publication {
     DPS_NodeAddress sender;         /* for retained messages - the sender address */
     DPS_BitVector* bf;              /* The Bloom filter bit vector for the topics for this publication */
     DPS_Node* node;                 /* Node for this publication */
+    char** topics;                  /* Publication topics */
+    size_t numTopics;
     DPS_Publication* next;
 } DPS_Publication;
 
@@ -277,6 +279,20 @@ uint32_t DPS_PublicationGetSequenceNum(const DPS_Publication* pub)
     return IsValidPub(pub) ? pub->sequenceNum : 0;
 }
 
+size_t DPS_PublicationGetNumTopics(const DPS_Publication* pub)
+{
+    return IsValidPub(pub) ? pub->numTopics : 0;
+}
+
+const char* DPS_PublicationGetTopic(const DPS_Publication* pub, size_t index)
+{
+    if (IsValidPub(pub) && (pub->numTopics > index)) {
+        return pub->topics[index];
+    } else {
+        return NULL;
+    }
+}
+
 static void AddrSetPort(DPS_NodeAddress* dest, DPS_NodeAddress* addr, uint16_t port)
 {
     port = htons(port);
@@ -418,6 +434,10 @@ static DPS_Publication* FreePublication(DPS_Node* node, DPS_Publication* pub)
     if (pub->payload && !(pub->flags & PUB_FLAG_LOCAL)) {
         free(pub->payload);
     }
+    while (pub->numTopics) {
+        free(pub->topics[--pub->numTopics]);
+    }
+    free(pub->topics);
     free(pub);
     return next;
 }
@@ -712,6 +732,7 @@ static DPS_Status SendPublication(DPS_Node* node, DPS_Publication* pub, DPS_BitV
     uv_buf_t bufs[3];
     CoAP_Option opts[1];
     int protocol;
+    size_t i;
 
     DPS_DBGTRACE();
 
@@ -737,6 +758,10 @@ static DPS_Status SendPublication(DPS_Node* node, DPS_Publication* pub, DPS_BitV
     CBOR_EncodeBytes(&payload, (uint8_t*)&pub->pubId, sizeof(pub->pubId));
     CBOR_EncodeUint(&payload, pub->sequenceNum);
     CBOR_EncodeBoolean(&payload, pub->ackRequested);
+    CBOR_EncodeArray(&payload, pub->numTopics);
+    for (i = 0; i < pub->numTopics; ++i) {
+        CBOR_EncodeString(&payload, pub->topics[i]);
+    }
 
     ret = DPS_BitVectorSerialize(bf, &payload);
     if (ret == DPS_OK) {
@@ -1049,6 +1074,7 @@ static void CallPubHandlers(DPS_Node* node, DPS_Publication* pub)
 {
     DPS_Subscription* sub;
     DPS_Subscription* next;
+    int match;
 
     DPS_DBGTRACE();
 
@@ -1058,7 +1084,9 @@ static void CallPubHandlers(DPS_Node* node, DPS_Publication* pub)
          * Ths current subscription might get freed by the handler so need to hold the next pointer here.
          */
         next = sub->next;
-        if (DPS_BitVectorIncludes(pub->bf, sub->bf)) {
+        if (DPS_BitVectorIncludes(pub->bf, sub->bf) &&
+            (DPS_MatchTopicList(pub->topics, pub->numTopics, sub->topics, sub->numTopics, node->separators, DPS_FALSE, &match) == DPS_OK) &&
+            match) {
             DPS_DBGPRINT("Matched subscription\n");
             UpdatePubHistory(node, pub);
             /*
@@ -1084,6 +1112,7 @@ static DPS_Status DecodePublication(DPS_Node* node, DPS_Buffer* buffer, DPS_Node
     uint8_t* payload;
     int ackRequested;
     size_t len;
+    size_t i;
 
     DPS_DBGTRACE();
 
@@ -1111,6 +1140,7 @@ static DPS_Status DecodePublication(DPS_Node* node, DPS_Buffer* buffer, DPS_Node
     if (ret != DPS_OK) {
         goto Exit;
     }
+
     /*
      * See if this is an update for an existing retained publication
      */
@@ -1140,6 +1170,25 @@ static DPS_Status DecodePublication(DPS_Node* node, DPS_Buffer* buffer, DPS_Node
         pub->next = node->publications;
         node->publications = pub;
         pub->node = node;
+    }
+    if (pub->topics) {
+        free(pub->topics);
+        pub->topics = NULL;
+    }
+    ret = CBOR_DecodeArray(buffer, &pub->numTopics);
+    if (ret != DPS_OK) {
+        goto Exit;
+    }
+    pub->topics = malloc(pub->numTopics * sizeof(char*));
+    if (!pub->topics) {
+        goto Exit;
+    }
+    for (i = 0; i < pub->numTopics; ++i) {
+        size_t unused;
+        ret = CBOR_DecodeString(buffer, &pub->topics[i], &unused);
+        if (ret != DPS_OK) {
+            goto Exit;
+        }
     }
     pub->ttl = ttl;
     pub->sequenceNum = sequenceNum;
@@ -1213,7 +1262,6 @@ static DPS_Status DecodePublication(DPS_Node* node, DPS_Buffer* buffer, DPS_Node
     return DPS_OK;
 
 Exit:
-
     /*
      * Delete the publisher node if it is sending bad data
      */
@@ -1967,7 +2015,7 @@ DPS_Status DPS_InitPublication(DPS_Publication* pub, const char** topics, size_t
     /*
      * Check publication can be initialized
      */
-    if ((pub->flags & PUB_FLAG_IS_COPY) || pub->bf) {
+    if ((pub->flags & PUB_FLAG_IS_COPY) || pub->bf || pub->topics) {
         return DPS_ERR_INVALID;
     }
     /*
@@ -1989,10 +2037,24 @@ DPS_Status DPS_InitPublication(DPS_Publication* pub, const char** topics, size_t
     }
     pub->flags = PUB_FLAG_LOCAL;
 
-    for (i = 0; i < numTopics; ++i) {
-        ret = DPS_AddTopic(pub->bf, topics[i], node->separators, noWildCard ? DPS_PubNoWild : DPS_PubTopic);
-        if (ret != DPS_OK) {
-            break;
+    pub->topics = malloc(numTopics * sizeof(char*));
+    if (!pub->topics) {
+        ret = DPS_ERR_RESOURCES;
+    }
+    if (ret == DPS_OK) {
+        for (i = 0; i < numTopics; ++i) {
+            size_t len = strlen(topics[i]);
+            pub->topics[i] = malloc(len + 1);
+            if (!pub->topics[i]) {
+                ret = DPS_ERR_RESOURCES;
+                break;
+            }
+            ++pub->numTopics;
+            memcpy(pub->topics[i], topics[i], len + 1);
+            ret = DPS_AddTopic(pub->bf, topics[i], node->separators, noWildCard ? DPS_PubNoWild : DPS_PubTopic);
+            if (ret != DPS_OK) {
+                break;
+            }
         }
     }
     if (ret == DPS_OK) {
@@ -2000,6 +2062,18 @@ DPS_Status DPS_InitPublication(DPS_Publication* pub, const char** topics, size_t
         pub->next = node->publications;
         node->publications = pub;
         UnlockNode(node);
+    } else {
+        if (pub->bf) {
+            DPS_BitVectorFree(pub->bf);
+            pub->bf = NULL;
+        }
+        if (pub->topics) {
+            while (pub->numTopics) {
+                free(pub->topics[--pub->numTopics]);
+            }
+            free(pub->topics);
+            pub->topics = NULL;
+        }
     }
     return ret;
 }
