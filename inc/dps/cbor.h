@@ -17,6 +17,8 @@ DPS_Status CBOR_EncodeBytes(DPS_Buffer* buffer, const uint8_t* data, size_t len)
 
 DPS_Status CBOR_EncodeString(DPS_Buffer* buffer, const char* str);
 
+DPS_Status CBOR_EncodeArray(DPS_Buffer* buffer, size_t len);
+
 DPS_Status CBOR_EncodeBoolean(DPS_Buffer* buffer, int b);
 
 DPS_Status CBOR_DecodeUint8(DPS_Buffer* buffer, uint8_t* n);
@@ -92,6 +94,17 @@ DPS_Status CBOR_DecodeBytes(DPS_Buffer* buffer, uint8_t** data, size_t* size);
  *
  */
 DPS_Status CBOR_DecodeString(DPS_Buffer* buffer, char** data, size_t* size);
+
+/**
+ *
+ * @param buffer  Buffer to decode from
+ * @param size    Returns number of array items
+ *
+ * @return - DPS_OK if the array was decoded
+ *         - DPS_ERR_EOD if there was insufficient data in the buffer
+ *
+ */
+DPS_Status CBOR_DecodeArray(DPS_Buffer* buffer, size_t* size);
 
 /**
  * Fix up the length of a byte string after the byte string has been appended

@@ -20,12 +20,17 @@ static uint64_t Sints[] = {
 
 };
 
+static const char *Strings[] = {
+    "a", "bc", "def"
+};
+
 int main(int argc, char** argv)
 {
     size_t i;
     DPS_Status ret;
     DPS_Buffer buffer;
     uint8_t* test;
+    size_t size;
 
     DPS_BufferInit(&buffer, buf, sizeof(buf));
 
@@ -37,6 +42,12 @@ int main(int argc, char** argv)
 
     for (i = 0; i < sizeof(Sints) / sizeof(Sints[0]); ++i) {
         CBOR_EncodeInt(&buffer, Sints[i]);
+    }
+
+    CBOR_EncodeArray(&buffer, sizeof(Strings) / sizeof(Strings[0]));
+
+    for (i = 0; i < sizeof(Strings) / sizeof(Strings[0]); ++i) {
+        CBOR_EncodeString(&buffer, Strings[i]);
     }
 
     printf("Encoded %zu bytes\n", DPS_BufferAvail(&buffer));
@@ -57,5 +68,16 @@ int main(int argc, char** argv)
         CBOR_DecodeInt(&buffer, &n);
         assert(n == Sints[i]);
     }
+
+    CBOR_DecodeArray(&buffer, &size);
+    assert(size == (sizeof(Strings) / sizeof(Strings[0])));
+
+    for (i = 0; i < sizeof(Strings) / sizeof(Strings[0]); ++i) {
+        char *str;
+        size_t len;
+        CBOR_DecodeString(&buffer, &str, &len);
+        assert(!strcmp(str, Strings[i]));
+    }
+
     printf("Passed\n");
 }
