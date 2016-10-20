@@ -86,9 +86,9 @@ static int IntArg(char* opt, char*** argp, int* argcp, int* val, uint32_t min, u
 int main(int argc, char** argv)
 {
     DPS_Status ret;
-    char* topics[64];
+    char* topicList[64];
     char** arg = ++argv;
-    size_t numTopics = 0;
+    int numTopics = 0;
     DPS_Node* node;
     DPS_Event* nodeDestroyed;
     DPS_Subscription* subscription;
@@ -134,14 +134,24 @@ int main(int argc, char** argv)
             DPS_Debug = 1;
             continue;
         }
+        if (strcmp(*arg, "-s") == 0) {
+            ++arg;
+            /*
+             * NULL separator between topic lists
+             */
+            if (numTopics > 0) {
+                topicList[numTopics++] = NULL;
+            }
+            continue;
+        }
         if (*arg[0] == '-') {
             goto Usage;
         }
-        if (numTopics == A_SIZEOF(topics)) {
+        if (numTopics == A_SIZEOF(topicList)) {
             DPS_PRINT("%s: Too many topics - increase limit and recompile\n", *argv);
             goto Usage;
         }
-        topics[numTopics++] = *arg++;
+        topicList[numTopics++] = *arg++;
     }
 
     if (!linkPort) {
@@ -159,8 +169,24 @@ int main(int argc, char** argv)
     nodeDestroyed = DPS_CreateEvent();
 
     if (numTopics > 0) {
-        DPS_Subscription* subscription = DPS_CreateSubscription(node, (const char**)topics, numTopics);
-        ret = DPS_Subscribe(subscription, OnPubMatch);
+        char** topics = topicList;
+        while (numTopics >= 0) {
+            DPS_Subscription* subscription;
+            int count = 0;
+            while (count < numTopics) {
+                if (!topics[count]) {
+                    break;
+                }
+                ++count;
+            }
+            subscription = DPS_CreateSubscription(node, (const char**)topics, count);
+            ret = DPS_Subscribe(subscription, OnPubMatch);
+            if (ret != DPS_OK) {
+                break;
+            }
+            topics += count + 1;
+            numTopics -= count + 1;
+        }
         if (ret != DPS_OK) {
             DPS_ERRPRINT("Failed to susbscribe topics - error=%s\n", DPS_ErrTxt(ret));
             DPS_DestroyNode(node, OnNodeDestroyed, nodeDestroyed);
@@ -185,6 +211,6 @@ int main(int argc, char** argv)
     return 0;
 
 Usage:
-    DPS_PRINT("Usage %s [-p <portnum>] [-h <hostname>] [-l <listen port] [-m] [-d] topic1 topic2 ... topicN\n", *argv);
+    DPS_PRINT("Usage %s [-p <portnum>] [-h <hostname>] [-l <listen port] [-m] [-d] [-s topic1 ... topicN]\n", *argv);
     return 1;
 }
