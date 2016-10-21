@@ -109,6 +109,7 @@ DPS_Status DPS_LookupPublisher(DPS_History* history, const DPS_UUID* pubId, uint
  *
  * @param history       The history from a local node
  * @param pubId         The UUID for the publication
+ * @param sequenceNum   The sequence number for the publication
  * @param source        The sender of the publication
  * @param destination   The intended receiver of the publication
  *

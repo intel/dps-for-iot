@@ -110,4 +110,9 @@ exampleenv.Program('bin/publisher', 'examples/publisher.c')
 exampleenv.Program('bin/pub_many', 'examples/pub_many.c')
 exampleenv.Program('bin/subscriber', 'examples/subscriber.c')
 
-
+# Documentation
+try:
+    env.Doxygen('doc/Doxyfile')
+except:
+    # Doxygen may not be installed
+    pass

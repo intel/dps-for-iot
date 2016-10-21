@@ -110,6 +110,7 @@ void* DPS_GetNodeData(const DPS_Node* node);
  * Initialized and starts running a local node. Node can only be started once.
  * stopped.
  *
+ * @param node         The node
  * @param mcastPub     Indicates if this node sends or listens for multicast publications
  * @param listenPort   If non-zero identifies specific port to listen on
  *
@@ -243,8 +244,8 @@ DPS_Status DPS_Publish(DPS_Publication* pub, uint8_t* pubPayload, size_t len, in
  * This function should only be called for publications created by DPS_CreatePublication() or 
  * DPS_CopyPublication().
  *
- * @param pub      The publication to destroy
- * @param payload  Returns pointer to last payload passed to DPS_Pubish()
+ * @param pub         The publication to destroy
+ * @param oldPayload  Returns pointer to last payload passed to DPS_Pubish()
  */
 DPS_Status DPS_DestroyPublication(DPS_Publication* pub, uint8_t** oldPayload);
 
@@ -297,8 +298,8 @@ DPS_Node* DPS_GetPublicationNode(const DPS_Publication* pub);
  * @param topics       The topic strings to match
  * @param numTopics    The number of topic strings to match - must be >= 1
  *
- * @param return   Returns a pointer to the newly created subscription or NULL if resources
- *                 could not be allocated or the arguments were invalid
+ * @return   Returns a pointer to the newly created subscription or NULL if resources
+ *           could not be allocated or the arguments were invalid
  */
 DPS_Subscription* DPS_CreateSubscription(DPS_Node* node, const char** topics, size_t numTopics);
 
@@ -411,7 +412,7 @@ DPS_Status DPS_ResolveAddress(DPS_Node* node, const char* host, const char* serv
 /**
  * Get text representation of an address. This function uses a static string buffer so is not thread safe.
  *
- * @param Address to get the text for
+ * @param addr to get the text for
  *
  * @return  A text string for the address
  */

@@ -18,8 +18,8 @@ extern "C" {
 typedef enum { DPS_SubTopic, DPS_PubTopic, DPS_PubNoWild } DPS_TopicType;
 
 /**
- * Add a topic to a Bloom filter.  A topic has the general form "A<sep>B<sep>C..."
- * where <sep> is any of a specified set of separators and A, B, C are
+ * Add a topic to a Bloom filter.  A topic has the general form \"A<sep>B<sep>C...\"
+ * where \<sep\> is any of a specified set of separators and A, B, C are
  * arbitrary strings or a standalone wild-card character "*"
  *
  * @param bf          The Bloom filter to add the topic to

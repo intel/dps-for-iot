@@ -95,6 +95,7 @@ typedef void (*DPS_OnRegGetComplete)(DPS_RegistrationList* regs, DPS_Status stat
  * Resolve the host and port of a registration service and lookup the addresses
  * registered with that service.
  *
+ * @param node          The node
  * @param host          The host name or IP address to register with
  * @param port          The port number
  * @param tenantString  Topic string indentifying the tenant
@@ -111,6 +112,7 @@ DPS_Status DPS_Registration_Get(DPS_Node* node, const char* host, uint16_t port,
  * A synchronous version of DPS_RegistrationGet() this function blocks until the candidate list has
  * been populated or the request times out.
  *
+ * @param node          The node
  * @param host          The host name or IP address to register with
  * @param port          The port number
  * @param tenantString  Topic string indentifying the tenant
@@ -132,9 +134,9 @@ DPS_Status DPS_Registration_GetSyn(DPS_Node* node, const char* host, uint16_t po
 typedef void (*DPS_OnRegLinkToComplete)(DPS_Node* node, DPS_RegistrationList* regs, DPS_NodeAddress* addr, DPS_Status status, void* data);
 
 /**
- * Randomly select a remote candidate to link to.g
+ * Randomly select a remote candidate to link to.
  *
- * @param node  The local node to linkg
+ * @param node  The local node to link
  * @param regs  The list of candidate registrations to try to link to
  * @param cb    The callback to call with the result
  * @param data  Called supplied data to be passed to the callback
@@ -147,7 +149,7 @@ DPS_Status DPS_Registration_LinkTo(DPS_Node* node, DPS_RegistrationList* regs, D
 /**
  * Synchronous version of Registration_LinkTo
  *
- * @param node  The local node to linkg
+ * @param node  The local node to link
  * @param regs  The list of candidate registrations to try to link to
  * @param addr  Set to the address of the linked candidate
  *

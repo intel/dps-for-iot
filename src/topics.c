@@ -73,7 +73,7 @@ static DPS_Status CheckWildcarding(const char* topic, const char* separators, DP
 }
 
 /**
- * A topic has the form "A<sep>B<sep>C" where <sep> is any of a specified set of separators and A, B, C are arbitrary
+ * A topic has the form \"A<sep>B<sep>C\" where \<sep\> is any of a specified set of separators and A, B, C are arbitrary
  * strings or the wild-card characters '+' or '#'. The '#' wild card if present can only appear as the last character.
  * Wildcards are only meaningful in subscriptions. The '+' wild card can appear anywhere including at the end of a
  * topic. These are all valid topic strings:

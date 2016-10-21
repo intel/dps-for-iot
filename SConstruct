@@ -1,13 +1,21 @@
 import platform
 
+tools=['default', 'textfile']
+# Doxygen is optional
+try:
+    env = Environment(tools=['doxygen'])
+    tools.append('doxygen')
+except:
+    pass
+
 # 
 # It not clear why but if SWIG cannot be found when the environment is created the
 # SWIG builder does not get applied
 #
 if platform.system() == 'Windows':
-    env = Environment(CPPDEFINES=[], CPPPATH=['./inc'], SWIG='c:\swigwin-3.0.10\swig.exe', tools=['default', 'textfile'])
+    env = Environment(CPPDEFINES=[], CPPPATH=['./inc'], SWIG='c:\swigwin-3.0.10\swig.exe', tools=tools)
 else:
-    env = Environment(CPPDEFINES=[], CPPPATH=['./inc'], tools=['default', 'textfile'])
+    env = Environment(CPPDEFINES=[], CPPPATH=['./inc'], tools=tools)
 
 optimize = False
 debug = True
@@ -15,7 +23,7 @@ profile = False
 
 for key, val in ARGLIST:
     if key.lower() == 'define':
-	    env['CPPDEFINES'].append(val)
+        env['CPPDEFINES'].append(val)
     elif (key == 'optimize' and val == 'true'):
         optimize = True
     elif (key == 'profile' and val == 'true'):
