@@ -14,20 +14,23 @@ if platform == 'win32':
 elif platform == 'posix':
     libenv.Append(CFLAGS = ['-Wall', '-Wno-format-extra-args'])
 
+hdrs = libenv.Glob('#/inc/dps/*.h')
+libenv.Install('#/build/dist/inc/dps', hdrs)
+
 srcs = ['src/bitvec.c',
         'src/cbor.c',
         'src/coap.c',
         'src/dps.c',
-        'src/dps_dbg.c',
-        'src/dps_err.c',
-        'src/dps_event.c',
-        'src/dps_history.c',
-        'src/dps_synchronous.c',
-        'src/dps_uuid.c',
+        'src/dbg.c',
+        'src/err.c',
+        'src/event.c',
+        'src/history.c',
+        'src/synchronous.c',
+        'src/uuid.c',
         'src/murmurhash3.c',
         'src/netmcast.c',
         'src/network.c',
-        'src/dps_registration.c',
+        'src/registration.c',
         'src/topics.c',
         'src/uv_extra.c']
 
@@ -38,23 +41,26 @@ else:
 
 objs = libenv.Object(srcs)
 lib = libenv.Library('lib/dps', objs)
+libenv.Install('#/build/dist/lib', lib)
 # Windows doesn't distinguish between static and dynamic obj files
 shobjs = objs if platform == 'win32' else libenv.SharedObject(srcs)
 shlib = libenv.SharedLibrary('lib/dps_shared', shobjs)
+libenv.Install('#/build/dist/lib', shlib)
 
 ns3srcs = ['src/bitvec.c',
            'src/cbor.c',
            'src/coap.c',
            'src/dps.c',
-           'src/dps_err.c',
-           'src/dps_history.c',
-           'src/dps_uuid.c',
+           'src/err.c',
+           'src/history.c',
+           'src/uuid.c',
            'src/murmurhash3.c',
            'src/topics.c']
 
 if platform == 'posix':
     ns3shobjs = libenv.SharedObject(ns3srcs)
     ns3shlib = libenv.SharedLibrary('lib/dps_ns3', ns3shobjs)
+    libenv.Install('#/build/dist/lib', ns3shlib)
 
 # Using SWIG to build the python wrapper
 pyenv = libenv.Clone()
@@ -69,7 +75,8 @@ else:
 pyenv.Append(SWIGFLAGS = ['-python', '-Werror', '-v'], SWIGPATH = '#/inc')
 # Build python module library
 pylib = pyenv.SharedLibrary('./py/dps', shobjs + ['swig/dps_python.i'])
-pyenv.InstallAs('./py/dps.py', './swig/dps.py')
+pyenv.Install('#/build/dist/py', pylib)
+pyenv.InstallAs('#/build/dist/py/dps.py', './swig/dps.py')
 
 # Use SWIG to build the node.js wrapper
 if platform == '!!posix':
@@ -78,10 +85,11 @@ if platform == '!!posix':
     nodeenv.Append(CPPFLAGS = ['-DBUILDING_NODE_EXTENSION', '-std=c++11'])
     nodeenv.Append(CPPPATH = ['/usr/include/node'])
     nodedps = nodeenv.SharedLibrary('lib/nodedps', shobjs + ['swig/dps_node.i'])
-    nodeenv.InstallAs('swig/dps.node', nodedps)
+    nodeenv.InstallAs('#/build/dist/js/dps.node', nodedps)
 
 # Unit tests
 testenv = env.Clone()
+testenv.Append(CPPPATH = ['src'])
 testenv.Append(LIBS = [lib, env['UV_LIBS']])
 testenv.Program('bin/hist_unit', 'test/hist_unit.c')
 testenv.Program('bin/countvec', 'test/countvec.c')
@@ -103,16 +111,17 @@ if platform == 'posix':
 # Examples
 exampleenv = env.Clone()
 exampleenv.Append(LIBS = [lib, env['UV_LIBS']])
-exampleenv.Program('bin/registry', 'examples/registry.c')
-exampleenv.Program('bin/reg_subs', 'examples/reg_subs.c')
-exampleenv.Program('bin/reg_pubs', 'examples/reg_pubs.c')
-exampleenv.Program('bin/publisher', 'examples/publisher.c')
-exampleenv.Program('bin/pub_many', 'examples/pub_many.c')
-exampleenv.Program('bin/subscriber', 'examples/subscriber.c')
+exampleprogs = [exampleenv.Program('registry', 'examples/registry.c'),
+                exampleenv.Program('reg_subs', 'examples/reg_subs.c'),
+                exampleenv.Program('reg_pubs', 'examples/reg_pubs.c'),
+                exampleenv.Program('publisher', 'examples/publisher.c'),
+                exampleenv.Program('pub_many', 'examples/pub_many.c'),
+                exampleenv.Program('subscriber', 'examples/subscriber.c')]
+exampleenv.Install('#/build/dist/bin', exampleprogs)
 
 # Documentation
 try:
-    env.Doxygen('doc/Doxyfile')
+    libenv.Doxygen('doc/Doxyfile')
 except:
     # Doxygen may not be installed
     pass

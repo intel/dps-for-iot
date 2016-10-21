@@ -3,11 +3,10 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <assert.h>
-#include <dps/dps_dbg.h>
-#include <dps/bitvec.h>
+#include <dps/dbg.h>
 #include <dps/dps.h>
-#include <dps/dps_synchronous.h>
-#include <dps/dps_event.h>
+#include <dps/synchronous.h>
+#include <dps/event.h>
 
 #define MAX_TOPICS 64
 

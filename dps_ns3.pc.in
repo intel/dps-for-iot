@@ -2,7 +2,7 @@
 
 prefix=@PREFIX@
 exec_prefix=${prefix}
-libdir=${prefix}/build/lib
+libdir=${prefix}/build/dist/lib
 includedir=${prefix}/inc
 
 Name: dps_ns3

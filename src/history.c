@@ -3,11 +3,11 @@
 #include <assert.h>
 #include <uv.h>
 #include <dps/dps.h>
-#include <dps/dps_dbg.h>
-#include <dps/dps_uuid.h>
-#include <dps/dps_history.h>
-#include <dps/dps_internal.h>
-#include <dps/network.h>
+#include <dps/dbg.h>
+#include <dps/uuid.h>
+#include "history.h"
+#include "internal.h"
+#include "network.h"
 
 /*
  * Debug control for this module

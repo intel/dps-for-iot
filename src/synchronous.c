@@ -1,8 +1,8 @@
 #include <uv.h>
 #include <dps/dps.h>
-#include <dps/dps_dbg.h>
-#include <dps/dps_synchronous.h>
-#include <dps/dps_event.h>
+#include <dps/dbg.h>
+#include <dps/synchronous.h>
+#include <dps/event.h>
 
 /*
  * Debug control for this module

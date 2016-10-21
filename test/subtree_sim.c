@@ -2,13 +2,12 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
-#include <dps/dps_dbg.h>
+#include <dps/dbg.h>
 #include <dps/dps.h>
-#include <dps/bitvec.h>
-#include <dps/topics.h>
 #include <search.h>
 #include <uv.h>
-
+#include "bitvec.h"
+#include "topics.h"
 
 static int verbose = 0;
 static int infixWildcards = 0;

@@ -2,8 +2,8 @@
 #include <malloc.h>
 #include <uv.h>
 #include <dps/dps.h>
-#include <dps/dps_dbg.h>
-#include <dps/dps_event.h>
+#include <dps/dbg.h>
+#include <dps/event.h>
 
 typedef struct _DPS_Event {
     DPS_Status status;

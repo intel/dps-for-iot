@@ -1,4 +1,4 @@
 To run these scripts from this directory
 
-NODE_PATH=../build/swig node -i
-> .load script.py
+NODE_PATH=../build/dist/js node -i
+> .load script.js

@@ -3,13 +3,13 @@
 #include <malloc.h>
 #include <uv.h>
 #include <dps/dps.h>
-#include <dps/cbor.h>
-#include <dps/dps_dbg.h>
-#include <dps/dps_event.h>
-#include <dps/dps_synchronous.h>
-#include <dps/dps_registration.h>
-#include <dps/network.h>
-#include <dps/dps_internal.h>
+#include <dps/dbg.h>
+#include <dps/event.h>
+#include <dps/synchronous.h>
+#include <dps/registration.h>
+#include "cbor.h"
+#include "internal.h"
+#include "network.h"
 
 #ifdef _WIN32
 #define strdup(s) _strdup(s)

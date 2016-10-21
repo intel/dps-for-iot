@@ -13,9 +13,9 @@ except:
 # SWIG builder does not get applied
 #
 if platform.system() == 'Windows':
-    env = Environment(CPPDEFINES=[], CPPPATH=['./inc'], SWIG='c:\swigwin-3.0.10\swig.exe', tools=tools)
+    env = Environment(CPPDEFINES=[], CPPPATH=['#/inc'], SWIG='c:\swigwin-3.0.10\swig.exe', tools=tools)
 else:
-    env = Environment(CPPDEFINES=[], CPPPATH=['./inc'], tools=tools)
+    env = Environment(CPPDEFINES=[], CPPPATH=['#/inc'], tools=tools)
 
 optimize = False
 debug = True
@@ -90,7 +90,7 @@ else:
 
 print env['CPPDEFINES']
 
-SConscript('SConscript', src_dir='.', variant_dir='build', duplicate=0, exports='env')
+SConscript('SConscript', src_dir='.', variant_dir='build/obj', duplicate=0, exports='env')
 
 ######################################################################
 # Scons to generate the dps_ns3.pc file from dps_ns3.pc.in file

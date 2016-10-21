@@ -4,13 +4,13 @@
  */
 #include <memory.h>
 #include <assert.h>
+#include <stdlib.h>
 #include <uv.h>
 #include <dps/dps.h>
-#include <dps/dps_dbg.h>
-#include <stdlib.h>
-#include <dps/dps_uuid.h>
-#include <dps/dps_history.h>
-#include <dps/dps_internal.h>
+#include <dps/dbg.h>
+#include <dps/uuid.h>
+#include "history.h"
+#include "internal.h"
 
 #ifdef _WIN32
 #define SLEEP(t) Sleep(t)

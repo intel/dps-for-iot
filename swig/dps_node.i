@@ -3,8 +3,8 @@
 %{
 extern "C" {
 #include <dps/dps.h>
-#include <dps/dps_dbg.h>
-#include <dps/dps_err.h>
+#include <dps/dbg.h>
+#include <dps/err.h>
 };
 #include <mutex>
 #include <queue>
@@ -293,8 +293,8 @@ static v8::Handle<v8::Value> UUIDToString(DPS_UUID* uuid)
 %apply Pointer NONNULL { DPS_NodeAddress* };
 
 %include <dps/dps.h>
-%include <dps/dps_dbg.h>
-%include <dps/dps_err.h>
+%include <dps/dbg.h>
+%include <dps/err.h>
 
 /*
  * Module initialization

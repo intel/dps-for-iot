@@ -2,8 +2,8 @@
 #define _NETWORK_H
 
 #include <stdint.h>
-#include <dps/dps_internal.h>
 #include <uv.h>
+#include "internal.h"
 
 #ifdef __cplusplus
 extern "C" {

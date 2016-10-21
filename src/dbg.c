@@ -1,4 +1,4 @@
-#include <dps/dps_dbg.h>
+#include <dps/dbg.h>
 #include <stdarg.h>
 
 int DPS_Debug = 1;

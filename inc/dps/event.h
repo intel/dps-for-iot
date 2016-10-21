@@ -2,7 +2,7 @@
 #define _DPS_EVENT_H
 
 #include <uv.h>
-#include <dps/dps_err.h>
+#include <dps/err.h>
 #include <dps/dps.h>
 
 #ifdef __cplusplus

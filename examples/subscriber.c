@@ -2,10 +2,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
-#include <dps/dps_dbg.h>
+#include <dps/dbg.h>
 #include <dps/dps.h>
-#include <dps/dps_synchronous.h>
-#include <dps/dps_event.h>
+#include <dps/synchronous.h>
+#include <dps/event.h>
 
 static int quiet = DPS_FALSE;
 static int sendAck = DPS_FALSE;

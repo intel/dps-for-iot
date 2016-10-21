@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include <dps/dps_err.h>
+#include <dps/err.h>
 
 #define ERR_CASE(_s) case _s: return # _s + 8
 

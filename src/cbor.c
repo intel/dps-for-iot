@@ -1,8 +1,8 @@
-#include <dps/dps_dbg.h>
-#include <dps/cbor.h>
+#include <dps/dbg.h>
 #include <stdint.h>
 #include <string.h>
 #include <assert.h>
+#include "cbor.h"
 
 /*
  * Debug control for this module

@@ -4,8 +4,8 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <uv.h>
-#include <dps/dps_uuid.h>
-#include <dps/dps_internal.h>
+#include <dps/uuid.h>
+#include "internal.h"
 
 #ifdef __cplusplus
 extern "C" {

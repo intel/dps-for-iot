@@ -1,8 +1,9 @@
 #ifndef _DPS_NODE_H
 #define _DPS_NODE_H
 
-#include <dps/bitvec.h>
-#include <dps/dps_history.h>
+#include "bitvec.h"
+#include "network.h"
+#include "history.h"
 
 #ifdef __cplusplus
 extern "C" {

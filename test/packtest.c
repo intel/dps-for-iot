@@ -3,8 +3,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
-#include <dps/topics.h>
-#include <dps/dps_dbg.h>
+#include <dps/dbg.h>
+#include "topics.h"
 
 static uint8_t packed[10000];
 

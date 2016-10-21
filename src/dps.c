@@ -3,17 +3,17 @@
 #include <malloc.h>
 #include <math.h>
 #include <uv.h>
-#include <dps/dps_dbg.h>
-#include <dps/bitvec.h>
-#include <dps/topics.h>
+#include <dps/dbg.h>
 #include <dps/dps.h>
-#include <dps/dps_uuid.h>
-#include <dps/coap.h>
-#include <dps/cbor.h>
-#include <dps/network.h>
-#include <dps/dps_history.h>
-#include <dps/dps_internal.h>
-#include "dps_node.h"
+#include <dps/uuid.h>
+#include "bitvec.h"
+#include "cbor.h"
+#include "coap.h"
+#include "history.h"
+#include "internal.h"
+#include "node.h"
+#include "network.h"
+#include "topics.h"
 #include "uv_extra.h"
 
 /*

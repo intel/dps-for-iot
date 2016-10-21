@@ -1,9 +1,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
-#include <dps/murmurhash3.h>
-
-
+#include "murmurhash3.h"
 
 static uint32_t Seeds[] = {
     0xCBA13EBF,
@@ -24,7 +22,6 @@ static uint32_t Seeds[] = {
     0xD9AF1677,
     0xCBC065B5
 };
-
 
 static void Hash(const uint8_t* data, size_t len, uint32_t* hashes, size_t numHashes)
 {

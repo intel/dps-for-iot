@@ -2,10 +2,10 @@
 #include <string.h>
 #include <malloc.h>
 #include <uv.h>
-#include <dps/dps_dbg.h>
+#include <dps/dbg.h>
 #include <dps/dps.h>
-#include <dps/network.h>
-#include "dps_node.h"
+#include "network.h"
+#include "node.h"
 
 /*
  * Debug control for this module

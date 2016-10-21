@@ -1,9 +1,8 @@
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <dps/dps_dbg.h>
-#include <dps/topics.h>
+#include <dps/dbg.h>
+#include "topics.h"
 
 /*
  * Debug control for this module

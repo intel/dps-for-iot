@@ -2,10 +2,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <dps/topics.h>
-#include <dps/dps_dbg.h>
-#include <dps/bitvec.h>
+#include <dps/dbg.h>
 #include <dps/dps.h>
+#include "topics.h"
+#include "bitvec.h"
 
 /*
  * Debug control for this module

@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <dps/bitvec.h>
+#include "bitvec.h"
 
 #define FILTER_BITS     768 * 8
 #define NUM_KEYS        397
