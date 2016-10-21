@@ -34,7 +34,7 @@ srcs = ['src/bitvec.c',
         'src/topics.c',
         'src/uv_extra.c']
 
-if ('USE_UDP' in libenv.Dictionary().keys()):
+if env['udp'] == True:
     srcs.append('src/udp/network.c')
 else:
     srcs.append('src/tcp/network.c')

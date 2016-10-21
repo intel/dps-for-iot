@@ -1,5 +1,12 @@
 import platform
 
+vars = Variables()
+vars.AddVariables(
+    BoolVariable('optimize', 'Build for release?', False),
+    BoolVariable('profile', 'Build for profiling?', False),
+    BoolVariable('debug', 'Build with debugging information?', True),
+    BoolVariable('udp', 'Use UDP network layer?', False))
+
 tools=['default', 'textfile']
 # Doxygen is optional
 try:
@@ -13,27 +20,19 @@ except:
 # SWIG builder does not get applied
 #
 if platform.system() == 'Windows':
-    env = Environment(CPPDEFINES=[], CPPPATH=['#/inc'], SWIG='c:\swigwin-3.0.10\swig.exe', tools=tools)
+    env = Environment(CPPDEFINES=[], CPPPATH=['#/inc'], SWIG='c:\swigwin-3.0.10\swig.exe', variables=vars, tools=tools)
 else:
-    env = Environment(CPPDEFINES=[], CPPPATH=['#/inc'], tools=tools)
+    env = Environment(CPPDEFINES=[], CPPPATH=['#/inc'], variables=vars, tools=tools)
 
-optimize = False
-debug = True
-profile = False
+Help(vars.GenerateHelpText(env))
 
 for key, val in ARGLIST:
     if key.lower() == 'define':
         env['CPPDEFINES'].append(val)
-    elif (key == 'optimize' and val == 'true'):
-        optimize = True
-    elif (key == 'profile' and val == 'true'):
-        profile = True
-    elif (key == 'debug' and val == 'false'):
-        debug = False
-    elif (key == 'udp' and val == 'true'):
-        env['USE_UDP'] = 'true'
-        env['CPPDEFINES'].append('DPS_USE_UDP')
 
+if env['udp'] == True:
+    env['USE_UDP'] = 'true'
+    env['CPPDEFINES'].append('DPS_USE_UDP')
 
 # Platform specific configuration
 
@@ -42,7 +41,7 @@ if env['PLATFORM'] == 'win32':
     env.Append(CFLAGS = ['/J', '/W2', '/nologo'])
     env.Append(CPPDEFINES = ['_CRT_SECURE_NO_WARNINGS'])
 
-    if debug == True:
+    if env['debug'] == True:
         env.Append(CFLAGS = ['/Zi', '/MT', '/Od', '-DDPS_DEBUG'])
         env.Append(LINKFLAGS = ['/DEBUG'])
     else:
@@ -65,15 +64,15 @@ elif env['PLATFORM'] == 'posix':
     env.Append(CFLAGS = ['-ggdb', '-msse4.2'])
     env.Append(CFLAGS = ['-Werror'])
 
-    if profile == True:
+    if env['profile'] == True:
         env.Append(CFLAGS = ['-pg'])
         env.Append(LINKFLAGS = ['-pg'])
 
-    if optimize == True:
-        debug = False
+    if env['optimize'] == True:
+        env['debug'] = False
         env.Append(CFLAGS = ['-O3', '-DNDEBUG'])
 
-    if debug == True:
+    if env['debug'] == True:
         env.Append(CFLAGS = ['-DDPS_DEBUG'])
 
     # Where to find Python.h
