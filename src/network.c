@@ -4,7 +4,7 @@
 #include <uv.h>
 #include <dps/dbg.h>
 #include <dps/dps.h>
-#include "network.h"
+#include <dps/private/network.h>
 #include "node.h"
 
 /*

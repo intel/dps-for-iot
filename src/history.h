@@ -5,7 +5,7 @@
 #include <stddef.h>
 #include <uv.h>
 #include <dps/uuid.h>
-#include "internal.h"
+#include <dps/private/dps.h>
 
 #ifdef __cplusplus
 extern "C" {

@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "internal.h"
+#include <dps/private/dps.h>
 
 #ifdef __cplusplus
 extern "C" {

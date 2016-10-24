@@ -6,13 +6,13 @@
 #include <dps/dbg.h>
 #include <dps/dps.h>
 #include <dps/uuid.h>
+#include <dps/private/dps.h>
+#include <dps/private/network.h>
 #include "bitvec.h"
 #include "cbor.h"
 #include "coap.h"
 #include "history.h"
-#include "internal.h"
 #include "node.h"
-#include "network.h"
 #include "topics.h"
 #include "uv_extra.h"
 

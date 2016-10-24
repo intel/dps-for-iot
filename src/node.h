@@ -1,8 +1,8 @@
 #ifndef _DPS_NODE_H
 #define _DPS_NODE_H
 
+#include <dps/private/network.h>
 #include "bitvec.h"
-#include "network.h"
 #include "history.h"
 
 #ifdef __cplusplus

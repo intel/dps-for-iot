@@ -9,8 +9,8 @@
 #include <dps/dps.h>
 #include <dps/dbg.h>
 #include <dps/uuid.h>
+#include <dps/private/dps.h>
 #include "history.h"
-#include "internal.h"
 
 #ifdef _WIN32
 #define SLEEP(t) Sleep(t)

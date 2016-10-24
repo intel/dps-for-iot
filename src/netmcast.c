@@ -4,8 +4,8 @@
 #include <uv.h>
 #include <dps/dbg.h>
 #include <dps/dps.h>
+#include <dps/private/network.h>
 #include "coap.h"
-#include "network.h"
 
 /*
  * Debug control for this module

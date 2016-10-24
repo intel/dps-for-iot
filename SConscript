@@ -14,8 +14,8 @@ if platform == 'win32':
 elif platform == 'posix':
     libenv.Append(CFLAGS = ['-Wall', '-Wno-format-extra-args'])
 
-hdrs = libenv.Glob('#/inc/dps/*.h')
-libenv.Install('#/build/dist/inc/dps', hdrs)
+libenv.Install('#/build/dist/inc/dps', libenv.Glob('#/inc/dps/*.h'))
+libenv.Install('#/build/dist/inc/dps/private', libenv.Glob('#/inc/dps/private/*.h'))
 
 srcs = ['src/bitvec.c',
         'src/cbor.c',
