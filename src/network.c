@@ -76,12 +76,20 @@ int DPS_SameAddr(DPS_NodeAddress* addr1, DPS_NodeAddress* addr2)
 
 typedef struct {
     DPS_Node* node;
+    uv_async_t async;
     DPS_OnResolveAddressComplete cb;
     void* data;
     uv_getaddrinfo_t info;
     char host[MAX_HOST_LEN];
     char service[MAX_SERVICE_LEN];
 } ResolverInfo;
+
+static void FreeHandle(uv_handle_t* handle)
+{
+    if (handle->data) {
+        free(handle->data);
+    }
+}
 
 static void GetAddrInfoCB(uv_getaddrinfo_t* req, int status, struct addrinfo* res)
 {
@@ -99,12 +107,9 @@ static void GetAddrInfoCB(uv_getaddrinfo_t* req, int status, struct addrinfo* re
         DPS_ERRPRINT("uv_getaddrinfo failed %s\n", uv_err_name(status));
         resolver->cb(resolver->node, NULL, resolver->data);
     }
-    free(resolver);
-}
-
-static void FreeHandle(uv_handle_t* handle)
-{
-    free(handle);
+    assert(resolver->async.data == resolver);
+    resolver->async.data = resolver;
+    uv_close((uv_handle_t*)&resolver->async, FreeHandle);
 }
 
 static void AsyncResolveAddress(uv_async_t* async)
@@ -119,20 +124,19 @@ static void AsyncResolveAddress(uv_async_t* async)
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_protocol = IPPROTO_TCP;
-    resolver->info.data = resolver;
 
+    resolver->info.data = resolver;
     r = uv_getaddrinfo(async->loop, &resolver->info, GetAddrInfoCB, resolver->host, resolver->service, &hints);
     if (r) {
         DPS_ERRPRINT("uv_getaddrinfo call error %s\n", uv_err_name(r));
         resolver->cb(resolver->node, NULL, resolver->data);
-        free(resolver);
+        uv_close((uv_handle_t*)async, FreeHandle);
     }
-    uv_close((uv_handle_t*)async, FreeHandle);
 }
 
 DPS_Status DPS_ResolveAddress(DPS_Node* node, const char* host, const char* service, DPS_OnResolveAddressComplete cb, void* data)
 {
-    uv_async_t* async;
+    int r;
     ResolverInfo* resolver;
 
     DPS_DBGTRACE();
@@ -147,13 +151,8 @@ DPS_Status DPS_ResolveAddress(DPS_Node* node, const char* host, const char* serv
     if (!host) {
         host = "localhost";
     }
-    async = malloc(sizeof(uv_async_t));
-    if (!async) {
-        return DPS_ERR_RESOURCES;
-    }
     resolver = calloc(1, sizeof(ResolverInfo));
     if (!resolver) {
-        free(async);
         return DPS_ERR_RESOURCES;
     }
     strncpy(resolver->host, host, sizeof(resolver->host));
@@ -164,15 +163,15 @@ DPS_Status DPS_ResolveAddress(DPS_Node* node, const char* host, const char* serv
     /*
      * Async callback
      */
-    if (uv_async_init(node->loop, async, AsyncResolveAddress)) {
-        free(async);
+    r = uv_async_init(node->loop, &resolver->async, AsyncResolveAddress);
+    if (r) {
         free(resolver);
         return DPS_ERR_RESOURCES;
     }
-    async->data = resolver;
-    if (uv_async_send(async)) {
-        free(async);
-        free(resolver);
+    resolver->async.data = resolver;
+    r = uv_async_send(&resolver->async);
+    if (r) {
+        uv_close((uv_handle_t*)&resolver->async, FreeHandle);
         return DPS_ERR_FAILURE;
     } else {
         return DPS_OK;

@@ -9,7 +9,7 @@
  */
 DPS_DEBUG_CONTROL(DPS_DEBUG_OFF);
 
-static size_t ParseOpt(const uint8_t* buf, size_t bufLen, int prevOpt, CoAP_Option* opt)
+static int ParseOpt(const uint8_t* buf, size_t bufLen, int prevOpt, CoAP_Option* opt)
 {
     const uint8_t* head = buf;
     uint8_t lFlag = head[0] & 0xF;
@@ -144,7 +144,7 @@ DPS_Status CoAP_Parse(int protocol, const uint8_t* buffer, size_t bufLen, CoAP_P
     len = bufLen;
     while (len) {
         CoAP_Option opt;
-        size_t optSize = ParseOpt(p, len, 0, &opt);
+        int optSize = ParseOpt(p, len, 0, &opt);
         if (optSize == 0) {
             break;
         }

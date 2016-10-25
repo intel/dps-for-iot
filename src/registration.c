@@ -81,13 +81,18 @@ static void OnPutAck(DPS_Publication* pub, uint8_t* data, size_t len)
 
 static DPS_Status EncodeAddr(DPS_Buffer* buf, struct sockaddr* addr, uint16_t port)
 {
+    int r;
     DPS_Status ret;
     char txt[INET6_ADDRSTRLEN];
 
     if (addr->sa_family == AF_INET6) {
-        uv_ip6_name((const struct sockaddr_in6*)addr, txt, sizeof(txt));
+        r  = uv_ip6_name((const struct sockaddr_in6*)addr, txt, sizeof(txt));
     } else {
-        uv_ip4_name((const struct sockaddr_in*)addr, txt, sizeof(txt));
+        r  = uv_ip4_name((const struct sockaddr_in*)addr, txt, sizeof(txt));
+    }
+    if (r) {
+        DPS_ERRPRINT("Could not encode address %s\n", uv_err_name(r));
+        return DPS_ERR_INVALID;
     }
     DPS_DBGPRINT("EncodeAddr %s/%d\n", txt, port);
     ret = CBOR_EncodeUint16(buf, port);

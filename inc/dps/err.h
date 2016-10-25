@@ -33,6 +33,7 @@ typedef int DPS_Status;
 #define DPS_ERR_EXPIRED           19 /**< A remote node has expired */
 #define DPS_ERR_UNRESOLVED        20 /**< Name resolution failed */
 #define DPS_ERR_NODE_DESTROYED    21 /**< Node has already been destroyed */
+#define DPS_ERR_EOF               22 /**< End of file or socket closed */
 
 const char* DPS_ErrTxt(DPS_Status s);
 

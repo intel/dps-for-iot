@@ -266,7 +266,6 @@ DPS_Status DPS_UpdatePubHistory(DPS_History* history, DPS_UUID* pubId, uint32_t 
     uint64_t now = uv_now(history->loop);
     DPS_PubHistory* phNew = calloc(1, sizeof(DPS_PubHistory));
     DPS_PubHistory* ph;
-    DPS_NodeAddressList **phAddr;
 
     if (!phNew) {
         return DPS_ERR_RESOURCES;
@@ -284,16 +283,22 @@ DPS_Status DPS_UpdatePubHistory(DPS_History* history, DPS_UUID* pubId, uint32_t 
     }
     ph->sn = sequenceNum;
     ph->ackRequested = ackRequested;
-    for (phAddr = &ph->addrs; (*phAddr); phAddr = &(*phAddr)->next) {
-        if (DPS_SameAddr(&(*phAddr)->addr, addr)) {
-            break;
+    /*
+     * The address is not set in publications being sent from the local node
+     */
+    if (addr->inaddr.ss_family) {
+        DPS_NodeAddressList **phAddr;
+        for (phAddr = &ph->addrs; (*phAddr); phAddr = &(*phAddr)->next) {
+            if (DPS_SameAddr(&(*phAddr)->addr, addr)) {
+                break;
+            }
         }
-    }
-    if (!(*phAddr)) {
-        (*phAddr) = calloc(1, sizeof(DPS_NodeAddressList));
-        (*phAddr)->sn = sequenceNum;
-        (*phAddr)->addr = *addr;
-        DPS_DBGPRINT("Added %s to pub %s\n", DPS_NetAddrText((struct sockaddr*) &(*phAddr)->addr.inaddr), DPS_UUIDToString(pubId));
+        if (!(*phAddr)) {
+            (*phAddr) = calloc(1, sizeof(DPS_NodeAddressList));
+            (*phAddr)->sn = sequenceNum;
+            (*phAddr)->addr = *addr;
+            DPS_DBGPRINT("Added %s to pub %s\n", DPS_NetAddrText((struct sockaddr*) &(*phAddr)->addr.inaddr), DPS_UUIDToString(pubId));
+        }
     }
     ph->expiration = now + DPS_SECS_TO_MS(ttl) + PUB_HISTORY_LIFETIME;
     LinkPub(history, ph);

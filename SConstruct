@@ -7,6 +7,10 @@ vars.AddVariables(
     BoolVariable('debug', 'Build with debugging information?', True),
     BoolVariable('udp', 'Use UDP network layer?', False))
 
+if platform.system() == 'Linux':
+    vars.AddVariables(
+        BoolVariable('asan', 'Enable address sanitizer?', False))
+
 tools=['default', 'textfile']
 # Doxygen is optional
 try:
@@ -15,7 +19,7 @@ try:
 except:
     pass
 
-# 
+#
 # It not clear why but if SWIG cannot be found when the environment is created the
 # SWIG builder does not get applied
 #
@@ -59,6 +63,11 @@ if env['PLATFORM'] == 'win32':
     env.Append(CPPPATH = 'c:\Program Files\libuv\include')
 
 elif env['PLATFORM'] == 'posix':
+
+    # Enable address sanitizer
+    if env['asan'] == True:
+        env.Append(CFLAGS = ['-fno-omit-frame-pointer', '-fsanitize=address'])
+        env.Append(LIBS = ['asan'])
 
     #gcc option  -mmsse4.2 is to enble generation on popcountq instruction
     env.Append(CFLAGS = ['-ggdb', '-msse4.2'])

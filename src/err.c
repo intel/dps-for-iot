@@ -30,6 +30,7 @@ const char* DPS_ErrTxt(DPS_Status s)
         ERR_CASE(DPS_ERR_EXPIRED);
         ERR_CASE(DPS_ERR_UNRESOLVED);
         ERR_CASE(DPS_ERR_NODE_DESTROYED);
+        ERR_CASE(DPS_ERR_EOF);
     default:
         snprintf(buf, sizeof(buf), "ERR%d", s);
         return buf;
