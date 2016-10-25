@@ -42,8 +42,10 @@ else:
 objs = libenv.Object(srcs)
 lib = libenv.Library('lib/dps', objs)
 libenv.Install('#/build/dist/lib', lib)
-# Windows doesn't distinguish between static and dynamic obj files
-shobjs = objs if platform == 'win32' else libenv.SharedObject(srcs)
+
+shobjs = libenv.SharedObject(srcs)
+if platform == 'win32':
+    shobjs += ['dps_shared.def']
 shlib = libenv.SharedLibrary('lib/dps_shared', shobjs)
 libenv.Install('#/build/dist/lib', shlib)
 
