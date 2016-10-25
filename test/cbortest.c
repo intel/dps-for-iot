@@ -27,7 +27,6 @@ static const char *Strings[] = {
 int main(int argc, char** argv)
 {
     size_t i;
-    DPS_Status ret;
     DPS_Buffer buffer;
     uint8_t* test;
     size_t size;

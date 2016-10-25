@@ -42,7 +42,7 @@ static void OnAck(DPS_Publication* pub, uint8_t* data, size_t len)
     DPS_DestroyNode(node, OnNodeDestroyed, NULL);
 }
 
-static int IntArg(char* opt, char*** argp, int* argcp, int* val, uint32_t min, uint32_t max)
+static int IntArg(char* opt, char*** argp, int* argcp, int* val, int min, int max)
 {
     char* p;
     char** arg = *argp;

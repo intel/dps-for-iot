@@ -160,7 +160,7 @@ static DPS_Status FindAndLink(DPS_Node* node, const char* host, uint16_t port, c
     return ret;
 }
 
-static int IntArg(char* opt, char*** argp, int* argcp, int* val, uint32_t min, uint32_t max)
+static int IntArg(char* opt, char*** argp, int* argcp, int* val, int min, int max)
 {
     char* p;
     char** arg = *argp;
@@ -193,7 +193,6 @@ int main(int argc, char** argv)
     const char* tenant = "anonymous_tenant";
     size_t numTopics = 0;
     DPS_Node* node;
-    DPS_Subscription* subscription;
     DPS_NodeAddress* remoteAddr;
     int mcastPub = DPS_MCAST_PUB_DISABLED;
     const char* host = "localhost";

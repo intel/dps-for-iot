@@ -23,7 +23,7 @@ static void OnPubMatch(DPS_Subscription* sub, const DPS_Publication* pub, uint8_
     }
 }
 
-static int IntArg(char* opt, char*** argp, int* argcp, int* val, uint32_t min, uint32_t max)
+static int IntArg(char* opt, char*** argp, int* argcp, int* val, int min, int max)
 {
     char* p;
     char** arg = *argp;

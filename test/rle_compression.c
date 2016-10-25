@@ -64,7 +64,7 @@ int main(int argc, char** argv)
     bf = DPS_BitVectorAlloc();
 
     for (i = base; i < (base + filterBits * 2); ++i) {
-        float load = DPS_BitVectorLoadFactor(bf);
+        double load = DPS_BitVectorLoadFactor(bf);
         if (load > Report[report]) {
             DPS_PRINT("Added %d: ", (int)(i - base));
             DPS_BitVectorDump(bf, 0);

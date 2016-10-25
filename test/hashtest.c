@@ -23,9 +23,9 @@ static uint32_t Seeds[] = {
     0xCBC065B5
 };
 
-static void Hash(const uint8_t* data, size_t len, uint32_t* hashes, size_t numHashes)
+static void Hash(const uint8_t* data, int len, uint32_t* hashes, size_t numHashes)
 {
-    size_t i;
+    int i;
     for (i = 0; i < numHashes; ++i) {
         MurmurHash3_x86_32(data, len, Seeds[i], &hashes[i]);
     }
@@ -33,7 +33,7 @@ static void Hash(const uint8_t* data, size_t len, uint32_t* hashes, size_t numHa
 
 int main()
 {
-    size_t i;
+    int i;
     size_t n;
     char test[2];
     uint32_t hashes[16];

@@ -44,7 +44,7 @@ if env['udp'] == True:
 
 if env['PLATFORM'] == 'win32':
 
-    env.Append(CFLAGS = ['/J', '/W2', '/nologo'])
+    env.Append(CFLAGS = ['/J', '/W3', '/nologo'])
     env.Append(CPPDEFINES = ['_CRT_SECURE_NO_WARNINGS'])
 
     if env['debug'] == True:

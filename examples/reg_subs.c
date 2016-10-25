@@ -88,7 +88,7 @@ static DPS_Status RegisterAndJoin(DPS_Node* node, const char* host, uint16_t por
     return ret;
 }
 
-static int IntArg(char* opt, char*** argp, int* argcp, int* val, uint32_t min, uint32_t max)
+static int IntArg(char* opt, char*** argp, int* argcp, int* val, int min, int max)
 {
     char* p;
     char** arg = *argp;
@@ -122,7 +122,6 @@ int main(int argc, char** argv)
     const char* tenant = "anonymous_tenant";
     size_t numTopics = 0;
     DPS_Node* node;
-    DPS_Subscription* subscription;
     const char* host = "localhost";
     int listen = 0;
     int port = 30000;
@@ -207,7 +206,6 @@ int main(int argc, char** argv)
         }
     }
 
-Exit:
     DPS_WaitForEvent(nodeDestroyed);
     DPS_DestroyEvent(nodeDestroyed);
     return 0;

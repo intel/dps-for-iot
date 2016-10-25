@@ -30,7 +30,6 @@ int main()
 {
     DPS_Status ret;
     int i = 0;
-    int j;
     uint32_t sn;
     DPS_UUID uuid[NUM_PUBS];
     DPS_NodeAddress addr;

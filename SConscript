@@ -9,7 +9,6 @@ libenv = env.Clone()
 
 # Additional warnings for the core object files
 if platform == 'win32':
-    libenv.Append(CFLAGS = ['/W3']);
     libenv.Append(LIBS = env['UV_LIBS'])
 elif platform == 'posix':
     libenv.Append(CFLAGS = ['-Wall', '-Wno-format-extra-args'])

@@ -60,7 +60,7 @@ static void InitBitVector(DPS_BitVector* bf, size_t len, int testCase)
         break;
     case 9:
         for (i = 0; i < len; ++i) {
-            data[i] = i;
+            data[i] = (uint8_t) i;
         }
         ret = DPS_BitVectorSet(bf, data, len);
         break;
@@ -112,7 +112,7 @@ static void InitBitVector(DPS_BitVector* bf, size_t len, int testCase)
 
 static void RunTests(DPS_BitVector* pubBf, size_t size)
 {
-    size_t i;
+    int i;
     DPS_Status ret;
     DPS_Buffer buffer;
     DPS_BitVector* bf;
