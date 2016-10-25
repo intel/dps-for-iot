@@ -5,7 +5,9 @@ vars.AddVariables(
     BoolVariable('optimize', 'Build for release?', False),
     BoolVariable('profile', 'Build for profiling?', False),
     BoolVariable('debug', 'Build with debugging information?', True),
-    BoolVariable('udp', 'Use UDP network layer?', False))
+    BoolVariable('udp', 'Use UDP network layer?', False),
+    PathVariable('UV_PATH', 'Path to libuv', 'C:\Program Files\libuv'),
+    PathVariable('PYTHON_PATH', 'Path to Python', 'C:\Python27'))
 
 if platform.system() == 'Linux':
     vars.AddVariables(
@@ -54,13 +56,13 @@ if env['PLATFORM'] == 'win32':
 
 
     # Where to find Python.h
-    env['PY_CPPPATH'] = ['c:\python27\include']
-    env['PY_LIBPATH'] = ['c:\python27\libs']
+    env['PY_CPPPATH'] = [env['PYTHON_PATH'] + '\include']
+    env['PY_LIBPATH'] = [env['PYTHON_PATH'] + '\libs']
 
     # Where to find libuv
     env['UV_LIBS'] = ['libuv', 'ws2_32']
-    env.Append(LIBPATH=['c:\Program Files\libuv'])
-    env.Append(CPPPATH = 'c:\Program Files\libuv\include')
+    env.Append(LIBPATH=[env['UV_PATH']])
+    env.Append(CPPPATH=env['UV_PATH'] + '\include')
 
 elif env['PLATFORM'] == 'posix':
 
