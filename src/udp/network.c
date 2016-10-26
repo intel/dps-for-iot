@@ -14,7 +14,6 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
 
 #define MAX_READ_LEN   4096
-#define MAX_WRITE_LEN  4096
 #define MIN_READ_LEN      8
 
 struct _DPS_NetContext {
@@ -167,9 +166,9 @@ typedef struct {
     DPS_Node* node;
     DPS_NetEndpoint peerEp;
     uv_udp_send_t sendReq;
-    uv_buf_t bufs[MAX_BUFS];
-    size_t numBufs;
     DPS_NetSendComplete onSendComplete;
+    size_t numBufs;
+    uv_buf_t bufs[1];
 } NetSender;
 
 static void OnSendComplete(uv_udp_send_t* req, int status)
@@ -188,22 +187,20 @@ static void OnSendComplete(uv_udp_send_t* req, int status)
 DPS_Status DPS_NetSend(DPS_Node* node, DPS_NetEndpoint* ep, uv_buf_t* bufs, size_t numBufs, DPS_NetSendComplete sendCompleteCB)
 {
     int ret;
-    size_t i;
-    size_t len = 0;
     NetSender* sender;
 
-    if (numBufs > MAX_BUFS) {
-        return DPS_ERR_OVERFLOW;
+#ifndef NDEBUG
+    {
+        size_t i;
+        size_t len = 0;
+        for (i = 0; i < numBufs; ++i) {
+            len += bufs[i].len;
+        }
+        DPS_DBGPRINT("DPS_NetSend total %zu bytes to %s\n", len, DPS_NodeAddrToString(&ep->addr));
     }
-    for (i = 0; i < numBufs; ++i) {
-        len += bufs[i].len;
-    }
-    if (len > MAX_WRITE_LEN) {
-        return DPS_ERR_OVERFLOW;
-    }
-    DPS_DBGPRINT("DPS_NetSend total %zu bytes to %s\n", len, DPS_NodeAddrToString(&ep->addr));
+#endif
 
-    sender = malloc(sizeof(NetSender));
+    sender = malloc(sizeof(NetSender) + (numBufs - 1) * sizeof(uv_buf_t));
     if (!sender) {
         return DPS_ERR_RESOURCES;
     }

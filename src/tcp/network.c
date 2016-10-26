@@ -282,6 +282,12 @@ DPS_NetContext* DPS_NetStart(DPS_Node* node, int port, DPS_OnReceive cb)
     if (ret) {
         goto ErrorExit;
     }
+#ifndef _WIN32
+    /*
+     * libuv does not ignore SIGPIPE on Linux
+     */
+    signal(SIGPIPE, SIG_IGN);
+#endif
     return netCtx;
 
 ErrorExit:
@@ -369,6 +375,7 @@ static void OnOutgoingConnection(uv_connect_t *req, int status)
 DPS_Status DPS_NetSend(DPS_Node* node, DPS_NetEndpoint* ep, uv_buf_t* bufs, size_t numBufs, DPS_NetSendComplete sendCompleteCB)
 {
     WriteRequest* wr;
+    uv_handle_t* socket = NULL;
     int r;
 
 #ifndef NDEBUG
@@ -419,6 +426,7 @@ DPS_Status DPS_NetSend(DPS_Node* node, DPS_NetEndpoint* ep, uv_buf_t* bufs, size
     }
     ep->cn->peerEp.addr = ep->addr;
     ep->cn->node = node;
+    socket = (uv_handle_t*)&ep->cn->socket;
 
     if (ep->addr.inaddr.ss_family == AF_INET6) {
         struct sockaddr_in6* in6 = (struct sockaddr_in6*)&ep->addr.inaddr;
@@ -430,8 +438,6 @@ DPS_Status DPS_NetSend(DPS_Node* node, DPS_NetEndpoint* ep, uv_buf_t* bufs, size
     r = uv_tcp_connect(&ep->cn->connectReq, &ep->cn->socket, (struct sockaddr*)&ep->addr.inaddr, OnOutgoingConnection);
     if (r) {
         DPS_ERRPRINT("uv_tcp_connect %s error=%s\n", DPS_NodeAddrToString(&ep->addr), uv_err_name(r));
-        ep->cn->socket.data = ep->cn;
-        uv_close((uv_handle_t*)&ep->cn->socket, StreamClosed);
         goto ErrExit;
     }
     ep->cn->peerEp.cn = ep->cn;
@@ -445,8 +451,13 @@ ErrExit:
     if (wr) {
         free(wr);
     }
-    if (ep->cn) {
-        free(ep->cn);
+    if (socket) {
+        socket->data = ep->cn;
+        uv_close(socket, StreamClosed);
+    } else {
+        if (ep->cn) {
+            free(ep->cn);
+        }
     }
     ep->cn = NULL;
     return DPS_ERR_NETWORK;

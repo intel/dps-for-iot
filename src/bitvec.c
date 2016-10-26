@@ -7,7 +7,7 @@
 #include "bitvec.h"
 #include "cbor.h"
 
-#ifdef WIN32
+#ifdef _WIN32
 
 #define BSWAP_32(n)  _byteswap_ulong(n)
 

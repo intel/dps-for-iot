@@ -63,7 +63,7 @@ static DPS_Status RegisterAndJoin(DPS_Node* node, const char* host, uint16_t por
     ret = DPS_Registration_PutSyn(node, host, port, tenant);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to register with registration service: %s\n", DPS_ErrTxt(ret));
-        return ret;
+        goto Exit;
     }
     /*
      * Find nodes to join
@@ -71,7 +71,7 @@ static DPS_Status RegisterAndJoin(DPS_Node* node, const char* host, uint16_t por
     ret = DPS_Registration_GetSyn(node, host, port, tenant, regs);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Registration service lookup failed: %s\n", DPS_ErrTxt(ret));
-        return ret;
+        goto Exit;
     }
     //DPS_PRINT("Found %d candidate nodes\n", regs->count);
 
@@ -81,8 +81,11 @@ static DPS_Status RegisterAndJoin(DPS_Node* node, const char* host, uint16_t por
     remoteAddr = DPS_CreateAddress();
     ret = DPS_Registration_LinkToSyn(node, regs, remoteAddr);
     if (ret == DPS_OK) {
+        goto Exit;
         DPS_PRINT("Linked %d to remote node %s\n", DPS_GetPortNumber(node), DPS_NodeAddrToString(remoteAddr));
     }
+
+Exit:
     DPS_DestroyAddress(remoteAddr);
     DPS_DestroyRegistrationList(regs);
     return ret;
