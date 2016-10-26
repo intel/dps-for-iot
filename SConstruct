@@ -6,12 +6,12 @@ vars.AddVariables(
     BoolVariable('profile', 'Build for profiling?', False),
     BoolVariable('debug', 'Build with debugging information?', True),
     BoolVariable('udp', 'Use UDP network layer?', False))
-
 if platform.system() == 'Windows':
     vars.AddVariables(
         PathVariable('UV_PATH', 'Path to libuv', 'C:\Program Files\libuv'),
-        PathVariable('PYTHON_PATH', 'Path to Python', 'C:\Python27'))
-
+        PathVariable('PYTHON_PATH', 'Path to Python', 'C:\Python27'),
+        PathVariable('SWIG', 'Path to SWIG executable', 'C:\swigwin-3.0.10\swig.exe'),
+        PathVariable('DOXYGEN_PATH', 'Path to Doxygen', 'C:\Program Files\Doxygen', PathVariable.PathAccept))
 if platform.system() == 'Linux':
     vars.AddVariables(
         BoolVariable('asan', 'Enable address sanitizer?', False))
@@ -24,14 +24,7 @@ try:
 except:
     pass
 
-#
-# It not clear why but if SWIG cannot be found when the environment is created the
-# SWIG builder does not get applied
-#
-if platform.system() == 'Windows':
-    env = Environment(CPPDEFINES=[], CPPPATH=['#/inc'], SWIG='c:\swigwin-3.0.10\swig.exe', variables=vars, tools=tools)
-else:
-    env = Environment(CPPDEFINES=[], CPPPATH=['#/inc'], variables=vars, tools=tools)
+env = Environment(CPPDEFINES=[], CPPPATH = ['#/inc'], variables=vars, tools=tools)
 
 Help(vars.GenerateHelpText(env))
 
@@ -57,7 +50,6 @@ if env['PLATFORM'] == 'win32':
         env.Append(CFLAGS = ['/Gy', '/O3', '/GF', '/MT'])
         env.Append(LINKFLAGS = ['/opt:ref', '/NODEFAULTLIB:libcmt.lib'])
 
-
     # Where to find Python.h
     env['PY_CPPPATH'] = [env['PYTHON_PATH'] + '\include']
     env['PY_LIBPATH'] = [env['PYTHON_PATH'] + '\libs']
@@ -66,6 +58,10 @@ if env['PLATFORM'] == 'win32':
     env['UV_LIBS'] = ['libuv', 'ws2_32']
     env.Append(LIBPATH=[env['UV_PATH']])
     env.Append(CPPPATH=env['UV_PATH'] + '\include')
+
+    # Doxygen needs to be added to default path if available
+    if env['DOXYGEN_PATH']:
+        env.PrependENVPath('PATH', env['DOXYGEN_PATH'] + '/bin')
 
 elif env['PLATFORM'] == 'posix':
 
