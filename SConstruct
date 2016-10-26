@@ -5,9 +5,12 @@ vars.AddVariables(
     BoolVariable('optimize', 'Build for release?', False),
     BoolVariable('profile', 'Build for profiling?', False),
     BoolVariable('debug', 'Build with debugging information?', True),
-    BoolVariable('udp', 'Use UDP network layer?', False),
-    PathVariable('UV_PATH', 'Path to libuv', 'C:\Program Files\libuv'),
-    PathVariable('PYTHON_PATH', 'Path to Python', 'C:\Python27'))
+    BoolVariable('udp', 'Use UDP network layer?', False))
+
+if platform.system() == 'Windows':
+    vars.AddVariables(
+        PathVariable('UV_PATH', 'Path to libuv', 'C:\Program Files\libuv'),
+        PathVariable('PYTHON_PATH', 'Path to Python', 'C:\Python27'))
 
 if platform.system() == 'Linux':
     vars.AddVariables(
