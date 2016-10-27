@@ -20,8 +20,8 @@
 DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
 #define REGISTRATION_TTL   (60 * 60 * 8)  /* TTL is is seconds */
-#define REG_PUT_TIMEOUT    (1000)         /* Timeout is in milliseconds */
-#define REG_GET_TIMEOUT    (1000)         /* Timeout is in milliseconds */
+#define REG_PUT_TIMEOUT    (2000)         /* Timeout is in milliseconds */
+#define REG_GET_TIMEOUT    (5000)         /* Timeout is in milliseconds */
 
 static void OnNodeDestroyed(DPS_Node* node, void* data)
 {

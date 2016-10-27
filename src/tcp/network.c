@@ -7,6 +7,12 @@
 #include <dps/private/network.h>
 #include "../node.h"
 
+#ifdef _WIN32
+#include <netioapi.h>
+#else
+#include <net/if.h>
+#endif
+
 /*
  * Debug control for this module
  */
@@ -29,8 +35,8 @@ typedef struct _DPS_NetConnection {
     int refCount;
     uv_shutdown_t shutdownReq;
     /* Rx side */
-    uint16_t readLen; /* how much data has already been read */
-    uint16_t bufLen;  /* how big the buffer is */
+    size_t readLen; /* how much data has already been read */
+    size_t bufLen;  /* how big the buffer is */
     char* buffer;
     /* Tx side */
     uv_connect_t connectReq;
@@ -63,7 +69,7 @@ static void AllocBuffer(uv_handle_t* handle, size_t suggestedSize, uv_buf_t* buf
         cn->readLen = 0;
     }
     if (cn->readLen) {
-        buf->len = cn->bufLen - cn->readLen;
+        buf->len = (uint32_t)(cn->bufLen - cn->readLen);
         buf->base = cn->buffer + cn->readLen;
     } else {
         buf->len = MIN_READ_SIZE;
@@ -75,6 +81,17 @@ static void SocketClosed(uv_handle_t* handle)
 {
     DPS_DBGPRINT("Closed handle %p\n", handle);
     free(handle->data);
+}
+
+static void CancelPendingWrites(DPS_NetConnection* cn)
+{
+    while (cn->pendingWrites) {
+        WriteRequest* wr = cn->pendingWrites;
+        cn->pendingWrites = wr->next;
+        DPS_ERRPRINT("Canceling pending write\n");
+        wr->onSendComplete(cn->node, &cn->peerEp, wr->bufs, wr->numBufs, DPS_ERR_NETWORK);
+        free(wr);
+    }
 }
 
 static void StreamClosed(uv_handle_t* handle)
@@ -90,30 +107,21 @@ static void StreamClosed(uv_handle_t* handle)
 
 static void OnShutdownComplete(uv_shutdown_t* req, int status)
 {
+    DPS_NetConnection* cn = (DPS_NetConnection*)req->data;
+
     DPS_DBGPRINT("Shutdown complete handle %p\n", req->handle);
+    CancelPendingWrites(cn);
     if (!uv_is_closing((uv_handle_t*)req->handle)) {
-        req->handle->data = req->data;
+        req->handle->data = cn;
         uv_close((uv_handle_t*)req->handle, StreamClosed);
     }
 }
-
-static void CancelPendingWrites(DPS_NetConnection* cn)
-{
-    while (cn->pendingWrites) {
-        WriteRequest* wr = cn->pendingWrites;
-        cn->pendingWrites = wr->next;
-        wr->onSendComplete(cn->node, &cn->peerEp, wr->bufs, wr->numBufs, DPS_ERR_NETWORK);
-        free(wr);
-    }
-}
-
 
 static void Shutdown(DPS_NetConnection* cn)
 {
     assert(cn->refCount == 0);
     uv_read_stop((uv_stream_t*)&cn->socket);
     cn->shutdownReq.data = cn;
-    CancelPendingWrites(cn);
     uv_shutdown(&cn->shutdownReq, (uv_stream_t*)&cn->socket, OnShutdownComplete);
 }
 
@@ -228,24 +236,34 @@ static void OnIncomingConnection(uv_stream_t* stream, int status)
     }
 }
 
-static int GetLocalScopeId()
+/*
+ * The scope id must be set for link local addresses. This won't work if there are
+ * multiple interfaces with link local addresses.
+ */
+static int GetScopeId(struct sockaddr_in6* addr)
 {
-    static int localScope = 0;
-
-    if (!localScope) {
-        uv_interface_address_t* ifsAddrs;
-        int numIfs;
-        int i;
-        uv_interface_addresses(&ifsAddrs, &numIfs);
-        for (i = 0; i < numIfs; ++i) {
-            uv_interface_address_t* ifn = &ifsAddrs[i];
-            if ((ifn->address.address4.sin_family == AF_INET6) && (strcmp(ifn->name, "lo") == 0)) {
-                localScope = i;
+    if (IN6_IS_ADDR_LINKLOCAL(&addr->sin6_addr)) {
+        static int linkLocalScope = 0;
+        if (!linkLocalScope) {
+            uv_interface_address_t* ifsAddrs;
+            int numIfs;
+            int i;
+            uv_interface_addresses(&ifsAddrs, &numIfs);
+            for (i = 0; i < numIfs; ++i) {
+                uv_interface_address_t* ifn = &ifsAddrs[i];
+                if (ifn->is_internal || (ifn->address.address6.sin6_family != AF_INET6)) {
+                    continue;
+                }
+                if (IN6_IS_ADDR_LINKLOCAL(&ifn->address.address6.sin6_addr)) {
+                    linkLocalScope = if_nametoindex(ifn->name);
+                    break;
+                }
             }
+            uv_free_interface_addresses(ifsAddrs, numIfs);
         }
-        uv_free_interface_addresses(ifsAddrs, numIfs);
+        return linkLocalScope;
     }
-    return localScope;
+    return 0;
 }
 
 
@@ -350,7 +368,7 @@ static DPS_Status DoWrite(DPS_NetConnection* cn)
         DPS_NetConnectionAddRef(cn);
     }
     if (r) {
-        DPS_ERRPRINT("OnOutgoingConnection - write failed: %s\n", uv_err_name(r));
+        DPS_ERRPRINT("DoWrite - write failed: %s\n", uv_err_name(r));
         return DPS_ERR_NETWORK;
     } else {
         return DPS_OK;
@@ -368,7 +386,7 @@ static void OnOutgoingConnection(uv_connect_t *req, int status)
         DoWrite(cn);
     } else {
         DPS_ERRPRINT("OnOutgoingConnection - connect %s failed: %s\n", DPS_NodeAddrToString(&cn->peerEp.addr), uv_err_name(status));
-        CancelPendingWrites(cn);
+        Shutdown(cn);
     }
 }
 
@@ -431,7 +449,7 @@ DPS_Status DPS_NetSend(DPS_Node* node, DPS_NetEndpoint* ep, uv_buf_t* bufs, size
     if (ep->addr.inaddr.ss_family == AF_INET6) {
         struct sockaddr_in6* in6 = (struct sockaddr_in6*)&ep->addr.inaddr;
         if (!in6->sin6_scope_id) {
-            in6->sin6_scope_id = GetLocalScopeId();
+            in6->sin6_scope_id = GetScopeId(in6);
         }
     }
     ep->cn->connectReq.data = ep->cn;

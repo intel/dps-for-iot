@@ -158,7 +158,7 @@ typedef struct _DPS_Publication {
  * How long (in milliseconds) to wait to received a response from a remote
  * node this node is linking with.
  */
-#define LINK_RESPONSE_TIMEOUT  1000
+#define LINK_RESPONSE_TIMEOUT  5000
 
 /*
  * Forward declaration

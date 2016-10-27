@@ -73,16 +73,14 @@ static DPS_Status RegisterAndJoin(DPS_Node* node, const char* host, uint16_t por
         DPS_ERRPRINT("Registration service lookup failed: %s\n", DPS_ErrTxt(ret));
         goto Exit;
     }
-    //DPS_PRINT("Found %d candidate nodes\n", regs->count);
-
     if (regs->count == 0) {
         return DPS_ERR_NO_ROUTE;
     }
     remoteAddr = DPS_CreateAddress();
     ret = DPS_Registration_LinkToSyn(node, regs, remoteAddr);
     if (ret == DPS_OK) {
-        goto Exit;
         DPS_PRINT("Linked %d to remote node %s\n", DPS_GetPortNumber(node), DPS_NodeAddrToString(remoteAddr));
+        goto Exit;
     }
 
 Exit:
