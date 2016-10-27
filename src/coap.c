@@ -196,21 +196,16 @@ DPS_Status CoAP_Parse(int protocol, const uint8_t* buffer, size_t bufLen, CoAP_P
     return DPS_OK;
 }
 
-DPS_Status CoAP_Compose(int protocol, uv_buf_t* bufs, size_t numBufs, uint8_t code, const CoAP_Option* opts, size_t numOpts, DPS_Buffer* payload)
+DPS_Status CoAP_Compose(int protocol, uint8_t code, const CoAP_Option* opts, size_t numOpts, size_t payloadLen, DPS_Buffer* buf)
 {
     static uint16_t msgId = 1;
     size_t i;
-    uint8_t* p;
     uint8_t tokenLen = 0; /* TODO - not currently supporting tokens */
     uint8_t* token = NULL;
     size_t optLen = 0;
     uint8_t optIdLast = 0;
-    size_t dataLen = DPS_BufferUsed(payload);
+    DPS_Status ret = DPS_OK;
 
-    if (numBufs < 3) {
-        return DPS_ERR_RESOURCES;
-    }
-    memset(bufs, 0, sizeof(uv_buf_t) * numBufs);
     /*
      * Calculate the total length of options
      */
@@ -236,71 +231,60 @@ DPS_Status CoAP_Compose(int protocol, uv_buf_t* bufs, size_t numBufs, uint8_t co
         }
         optIdLast += delta;
     }
-    if (dataLen > 0) {
+    if (payloadLen > 0) {
         ++optLen;
     }
-    /*
-     * Allocate space for maximum header size + token
-     */
-    p = malloc(6 + tokenLen);
-    if (!p) {
-        return DPS_ERR_RESOURCES;
+    ret = DPS_BufferInit(buf, NULL, 6 /* maximum header size */ + tokenLen + optLen + 1 /* end of opts marker */);
+    if (ret != DPS_OK) {
+        return ret;
     }
-    bufs[0].base = (char*)p;
     /*
      * Compose the header
      */
     if (protocol == COAP_OVER_UDP) {
-        *p++ = COAP_VERSION << 6 | (COAP_TYPE_NON_CONFIRMABLE << 4) | tokenLen;
-        *p++ = code;
-        *p++ = msgId >> 8;
-        *p++ = msgId & 0xFF;
+        *buf->pos++ = COAP_VERSION << 6 | (COAP_TYPE_NON_CONFIRMABLE << 4) | tokenLen;
+        *buf->pos++ = code;
+        *buf->pos++ = msgId >> 8;
+        *buf->pos++ = msgId & 0xFF;
         ++msgId;
     } else {
-        size_t extLen = optLen + dataLen;
+        size_t extLen = optLen + payloadLen;
         if (extLen < 13) {
-            *p++ = (uint8_t)(extLen << 4 | tokenLen);
+            *buf->pos++ = (uint8_t)(extLen << 4 | tokenLen);
         } else if (extLen < 269) {
             extLen -= 13;
-            *p++ = (uint8_t)((13 << 4) | tokenLen);
-            *p++ = (uint8_t)(extLen);
+            *buf->pos++ = (uint8_t)((13 << 4) | tokenLen);
+            *buf->pos++ = (uint8_t)(extLen);
         } else if (extLen < 65805) {
             extLen -= 269;
-            *p++ = (uint8_t)((14 << 4) | tokenLen);
-            *p++ = (uint8_t)(extLen >> 8);
-            *p++ = (uint8_t)(extLen);
+            *buf->pos++ = (uint8_t)((14 << 4) | tokenLen);
+            *buf->pos++ = (uint8_t)(extLen >> 8);
+            *buf->pos++ = (uint8_t)(extLen);
         } else {
             extLen -= 65805;
-            *p++ = (uint8_t)((15 << 4) | tokenLen);
-            *p++ = (uint8_t)(extLen >> 24);
-            *p++ = (uint8_t)(extLen >> 16);
-            *p++ = (uint8_t)(extLen >> 8);
-            *p++ = (uint8_t)(extLen);
+            *buf->pos++ = (uint8_t)((15 << 4) | tokenLen);
+            *buf->pos++ = (uint8_t)(extLen >> 24);
+            *buf->pos++ = (uint8_t)(extLen >> 16);
+            *buf->pos++ = (uint8_t)(extLen >> 8);
+            *buf->pos++ = (uint8_t)(extLen);
         }
-        *p++ = code;
+        *buf->pos++ = code;
     }
     /*
      * Write the token if there is one
      */
     if (tokenLen) {
-        memcpy(p, token, tokenLen);
-        p += tokenLen;
+        memcpy(buf->pos, token, tokenLen);
+        buf->pos += tokenLen;
     }
-    bufs[0].len = (uint32_t)(p - (uint8_t*)bufs[0].base);
     /*
-     * Write the options - one extra byte in case there is an end of opts marker
+     * Write the options
      */
-    p = malloc(optLen + 1);
-    if (!p) {
-        free(bufs[0].base);
-        return DPS_ERR_RESOURCES;
-    }
-    bufs[1].base = (char*)p;
     optIdLast = 0;
     while (numOpts--) {
         uint16_t delta = opts->id - optIdLast;
         size_t len = opts->len;
-        uint8_t* optHead = p++;
+        uint8_t* optHead = buf->pos++;
         /*
          * Three different option encodings
          */
@@ -309,12 +293,12 @@ DPS_Status CoAP_Compose(int protocol, uv_buf_t* bufs, size_t numBufs, uint8_t co
         } else if (delta < 269) {
             delta -= 13;
             *optHead = (uint8_t)(13 << 4);
-            *p++ = (uint8_t)(delta);
+            *buf->pos++ = (uint8_t)(delta);
         } else {
             delta -= 269;
             *optHead = (uint8_t)(14 << 4);
-            *p++ = (uint8_t)(delta >> 8);
-            *p++ = (uint8_t)(delta & 0xFF);
+            *buf->pos++ = (uint8_t)(delta >> 8);
+            *buf->pos++ = (uint8_t)(delta & 0xFF);
         }
         /*
          * Three different length encodings
@@ -324,28 +308,23 @@ DPS_Status CoAP_Compose(int protocol, uv_buf_t* bufs, size_t numBufs, uint8_t co
         } else if (len < 269) {
             len -= 13;
             *optHead |= (uint8_t)13;
-            *p++ = (uint8_t)(len);
+            *buf->pos++ = (uint8_t)(len);
         } else {
             len -= 269;
             *optHead |= (uint8_t)14;
-            *p++ = (uint8_t)(len >> 8);
-            *p++ = (uint8_t)(len & 0xFF);
+            *buf->pos++ = (uint8_t)(len >> 8);
+            *buf->pos++ = (uint8_t)(len & 0xFF);
         }
-        memcpy(p, opts->val, opts->len);
-        p += opts->len;
+        memcpy(buf->pos, opts->val, opts->len);
+        buf->pos += opts->len;
         optIdLast += delta;
         ++opts;
     }
-    if (dataLen > 0) {
-        *p++ = COAP_END_OF_OPTS;
+    if (payloadLen > 0) {
+        *buf->pos++ = COAP_END_OF_OPTS;
     }
-    bufs[1].len = (uint32_t)(p - (uint8_t*)bufs[1].base);
-    assert(bufs[1].len == optLen || bufs[1].len == (optLen + 1));
 
-    bufs[2].base = (char*)payload->base;
-    bufs[2].len = (uint32_t)dataLen;
-
-    return DPS_OK;
+    return ret;
 }
 
 void CoAP_DumpOpt(const CoAP_Option* opt)

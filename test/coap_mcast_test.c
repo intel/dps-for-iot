@@ -54,8 +54,8 @@ static uint8_t buffer[1025];
 static void DataSender(uv_idle_t* handle)
 {
     DPS_Status ret;
+    DPS_Buffer headers;
     DPS_Buffer payload;
-    uv_buf_t bufs[3];
     size_t len;
     CoAP_Option opts[2];
 
@@ -67,10 +67,14 @@ static void DataSender(uv_idle_t* handle)
 
     DPS_BufferInit(&payload, buffer, sizeof(buffer));
 
-    ret = CoAP_Compose(protocol, bufs, 3, COAP_CODE(COAP_REQUEST, COAP_GET), opts, 1, &payload);
+    ret = CoAP_Compose(protocol, COAP_CODE(COAP_REQUEST, COAP_GET), opts, 1, DPS_BufferUsed(&payload), &headers);
     if (ret != DPS_OK) {
         printf("ComposeCoAP failed ret=%d\n", ret);
     } else {
+        uv_buf_t bufs[] = {
+            { (char*)headers.base, DPS_BufferUsed(&headers) },
+            { (char*)payload.base, DPS_BufferUsed(&payload) }
+        };
         ret = DPS_MulticastSend(sender, bufs, 3);
         if (ret != DPS_OK) {
             fprintf(stderr, "DPS_MulticastSend failed ret=%d\n", ret);

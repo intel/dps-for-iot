@@ -3,7 +3,6 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include <uv.h>
 #include <dps/private/dps.h>
 
 #ifdef __cplusplus
@@ -86,14 +85,14 @@ typedef struct {
  * because for COAP over UDP the UPD datagram size IS the packet size.
  *
  * @param protocol  UDP or TCP
- * @param buffer    The buffer containing a CoAP packet
+ * @param buf       The buffer containing a CoAP packet
  * @param bufLen    The length of data in the buffer
  * @param pktLen    Returns the length of the packet
  *
  * @return   - DPS_OK if the packet size is known
  *           - DPS_ERR_EOD if there is not enought data in the buffer to determine the packet size
  */
-DPS_Status CoAP_GetPktLen(int protocol, const uint8_t* buffer, size_t bufLen, size_t* pktLen);
+DPS_Status CoAP_GetPktLen(int protocol, const uint8_t* buf, size_t bufLen, size_t* pktLen);
 
 /*
  * Parse a CoAP packet from the buffer. The parsed contents hold pointer into
@@ -101,7 +100,7 @@ DPS_Status CoAP_GetPktLen(int protocol, const uint8_t* buffer, size_t bufLen, si
  * needed.
  *
  * @param protocol  UDP or TCP
- * @param buffer    The buffer containing a CoAP packet
+ * @param buf       The buffer containing a CoAP packet
  * @param bufLen    The length of the CoAP packet
  * @param coAP      Data structure to return the parsed CoAP packet
  * @param data      Returns a pointer to the CoAP payload
@@ -110,7 +109,7 @@ DPS_Status CoAP_GetPktLen(int protocol, const uint8_t* buffer, size_t bufLen, si
  * @return  Returns DPS_OK if the packet was succesfully parsed or an error
  *          code if the packet was not succesfully parsed.
  */
-DPS_Status CoAP_Parse(int protocol, const uint8_t* buffer, size_t bufLen, CoAP_Parsed* coap, DPS_Buffer* payload);
+DPS_Status CoAP_Parse(int protocol, const uint8_t* buf, size_t bufLen, CoAP_Parsed* coap, DPS_Buffer* payload);
 
 /*
  * Free resources allocated for a parsed CoAP packet
@@ -120,19 +119,18 @@ DPS_Status CoAP_Parse(int protocol, const uint8_t* buffer, size_t bufLen, CoAP_P
 void CoAP_Free(CoAP_Parsed* coap);
 
 /**
- * Compose a CoAP packet into a buffer list. Memory is allocated as needed for the header and options.
+ * Compose a CoAP packet into a buffer.
  *
- * @param protocol  UDP or TCP - the serialization is different depeding on the underlying protocol
- * @param bufs      An array of buffer
- * @param numBufs   Number of buffers available to use
- * @param code      The CoAP command code
- * @param opts      CoAP options to serialize into the buffer
- * @param numOpts   The number of options to serialize
- * @param payload   Buffer containing the CoAP payload section
+ * @param protocol   UDP or TCP - the serialization is different depeding on the underlying protocol
+ * @param code       The CoAP command code
+ * @param opts       CoAP options to serialize into the buffer
+ * @param numOpts    The number of options to serialize
+ * @param payloadLen The number of bytes in the payload
+ * @param buf        The output buffer
  *
  * @return   Returns DPS_OK if the packet was composed on an error if the operation failed.
  */
-DPS_Status CoAP_Compose(int protocol, uv_buf_t* bufs, size_t numBufs, uint8_t code, const CoAP_Option* opts, size_t numOpts, DPS_Buffer* payload);
+DPS_Status CoAP_Compose(int protocol, uint8_t code, const CoAP_Option* opts, size_t numOpts, size_t payloadLen, DPS_Buffer* buf);
 
 /*
  * Print a CoAP option to stdout

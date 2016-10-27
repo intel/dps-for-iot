@@ -80,7 +80,8 @@ typedef struct _RemoteNode {
  * Acknowledgment packet queued to be sent on node loop
  */
 typedef struct _PublicationAck {
-    uv_buf_t bufs[3];
+    DPS_Buffer headers;
+    DPS_Buffer payload;
     DPS_NodeAddress destAddr;
     uint32_t sequenceNum;
     DPS_UUID pubId;
@@ -699,8 +700,8 @@ static DPS_Status UpdatePubHistory(DPS_Node* node, DPS_Publication* pub)
 static DPS_Status SendPublication(DPS_Node* node, DPS_Publication* pub, DPS_BitVector* bf, RemoteNode* remote)
 {
     DPS_Status ret;
+    DPS_Buffer headers;
     DPS_Buffer payload;
-    uv_buf_t bufs[3];
     CoAP_Option opts[1];
     int protocol;
     size_t i;
@@ -753,9 +754,13 @@ static DPS_Status SendPublication(DPS_Node* node, DPS_Publication* pub, DPS_BitV
     ret = DPS_BitVectorSerialize(bf, &payload);
     if (ret == DPS_OK) {
         CBOR_EncodeBytes(&payload, pub->payload, pub->len);
-        ret = CoAP_Compose(protocol, bufs, A_SIZEOF(bufs), COAP_CODE(COAP_REQUEST, COAP_PUT), opts, A_SIZEOF(opts), &payload);
+        ret = CoAP_Compose(protocol, COAP_CODE(COAP_REQUEST, COAP_PUT), opts, A_SIZEOF(opts), DPS_BufferUsed(&payload), &headers);
     }
     if (ret == DPS_OK) {
+        uv_buf_t bufs[] = {
+            { (char*)headers.base, DPS_BufferUsed(&headers) },
+            { (char*)payload.base, DPS_BufferUsed(&payload) }
+        };
         if (remote) {
             ret = DPS_NetSend(node, &remote->ep, bufs, A_SIZEOF(bufs), OnNetSendComplete);
             if (ret == DPS_OK) {
@@ -821,7 +826,6 @@ static DPS_Status QueuePublicationAck(DPS_Node* node, PublicationAck* ack, uint8
 {
     DPS_Status ret;
     CoAP_Option opts[1];
-    DPS_Buffer payload;
     size_t allocSize = 8 + sizeof(DPS_UUID) + sizeof(uint32_t) + len;
 
     DPS_DBGTRACE();
@@ -836,18 +840,18 @@ static DPS_Status QueuePublicationAck(DPS_Node* node, PublicationAck* ack, uint8
     opts[0].val = (uint8_t*)DPS_AcknowledgmentURI;
     opts[0].len = sizeof(DPS_AcknowledgmentURI);
 
-    ret = DPS_BufferInit(&payload, NULL, allocSize);
+    ret = DPS_BufferInit(&ack->payload, NULL, allocSize);
     if (ret != DPS_OK) {
         free(ack);
         return ret;
     }
-    CBOR_EncodeBytes(&payload, (uint8_t*)&ack->pubId, sizeof(DPS_UUID));
-    CBOR_EncodeUint32(&payload, ack->sequenceNum);
+    CBOR_EncodeBytes(&ack->payload, (uint8_t*)&ack->pubId, sizeof(DPS_UUID));
+    CBOR_EncodeUint32(&ack->payload, ack->sequenceNum);
     if (ret == DPS_OK) {
-        CBOR_EncodeBytes(&payload, data, len);
-        ret = CoAP_Compose(COAP_PROTOCOL, ack->bufs, A_SIZEOF(ack->bufs), COAP_CODE(COAP_REQUEST, COAP_PUT), opts, A_SIZEOF(opts), &payload);
+        CBOR_EncodeBytes(&ack->payload, data, len);
+        ret = CoAP_Compose(COAP_PROTOCOL, COAP_CODE(COAP_REQUEST, COAP_PUT), opts, A_SIZEOF(opts), DPS_BufferUsed(&ack->payload), &ack->headers);
         if (ret != DPS_OK) {
-            free(payload.base);
+            free(ack->payload.base);
             free(ack);
         } else {
             LockNode(node);
@@ -942,9 +946,13 @@ static void SendAcksTask(DPS_Node* node)
         RemoteNode* ackNode;
         DPS_Status ret = AddRemoteNode(node, &ack->destAddr, NULL, REMOTE_NODE_KEEPALIVE, &ackNode);
         if (ret == DPS_OK || ret == DPS_ERR_EXISTS) {
-            ret = DPS_NetSend(node, &ackNode->ep, ack->bufs, A_SIZEOF(ack->bufs), OnNetSendComplete);
+            uv_buf_t bufs[] = {
+                { (char*)ack->headers.base, DPS_BufferUsed(&ack->headers) },
+                { (char*)ack->payload.base, DPS_BufferUsed(&ack->payload) }
+            };
+            ret = DPS_NetSend(node, &ackNode->ep, bufs, A_SIZEOF(bufs), OnNetSendComplete);
             if (ret != DPS_OK) {
-                NetSendFailed(node, &ack->destAddr, ack->bufs, A_SIZEOF(ack->bufs), ret);
+                NetSendFailed(node, &ack->destAddr, bufs, A_SIZEOF(bufs), ret);
             }
         }
         node->ackQueue.first = ack->next;
@@ -1292,9 +1300,9 @@ Exit:
 
 static DPS_Status SendSubscription(DPS_Node* node, RemoteNode* remote, DPS_BitVector* interests, uint16_t ttl)
 {
-    uv_buf_t bufs[3];
     DPS_Status ret;
     CoAP_Option opts[1];
+    DPS_Buffer headers;
     DPS_Buffer payload;
     DPS_BitVector* needs = remote->outbound.needs;
 
@@ -1324,16 +1332,21 @@ static DPS_Status SendSubscription(DPS_Node* node, RemoteNode* remote, DPS_BitVe
         ret = DPS_BitVectorSerialize(interests, &payload);
     }
     if (ret == DPS_OK) {
-        ret = CoAP_Compose(COAP_PROTOCOL, bufs, A_SIZEOF(bufs), COAP_CODE(COAP_REQUEST, COAP_GET), opts, A_SIZEOF(opts), &payload);
+        ret = CoAP_Compose(COAP_PROTOCOL, COAP_CODE(COAP_REQUEST, COAP_GET), opts, A_SIZEOF(opts), DPS_BufferUsed(&payload), &headers);
     }
-    if (ret != DPS_OK) {
+    if (ret == DPS_OK) {
+        uv_buf_t bufs[] = {
+            { (char*)headers.base, DPS_BufferUsed(&headers) },
+            { (char*)payload.base, DPS_BufferUsed(&payload) }
+        };
+        ret = DPS_NetSend(node, &remote->ep, bufs, A_SIZEOF(bufs), OnNetSendComplete);
+        if (ret != DPS_OK) {
+            DPS_ERRPRINT("Failed to send subscription request %s\n", DPS_ErrTxt(ret));
+            NetSendFailed(node, &remote->ep.addr, bufs, A_SIZEOF(bufs), ret);
+        }
+    } else {
         free(payload.base);
         return ret;
-    }
-    ret = DPS_NetSend(node, &remote->ep, bufs, A_SIZEOF(bufs), OnNetSendComplete);
-    if (ret != DPS_OK) {
-        DPS_ERRPRINT("Failed to send subscription request %s\n", DPS_ErrTxt(ret));
-        NetSendFailed(node, &remote->ep.addr, bufs, A_SIZEOF(bufs), ret);
     }
     /*
      * Done with these flags
