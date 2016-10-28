@@ -1,0 +1,15 @@
+This is repository for useful tools
+
+================================
+
+dps_graph.pl 
+
+Generates an input file to dot that graphs the TCP connections beween instances of the reg_subs example program.
+
+Run test_scripts/reg1 or similar to create a network of connected nodes.
+
+dps_graph | dot -Tpng -o graph.png 
+
+Generates a .png file for the connections. 
+
+================================
