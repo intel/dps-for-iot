@@ -397,7 +397,8 @@ static void OnOutgoingConnection(uv_connect_t *req, int status)
         DoWrite(cn);
     } else {
         DPS_ERRPRINT("OnOutgoingConnection - connect %s failed: %s\n", DPS_NodeAddrToString(&cn->peerEp.addr), uv_err_name(status));
-        Shutdown(cn);
+        assert(cn->pendingWrites);
+        CancelPendingWrites(cn);
     }
 }
 
