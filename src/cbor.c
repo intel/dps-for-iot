@@ -9,16 +9,6 @@
  */
 DPS_DEBUG_CONTROL(DPS_DEBUG_OFF);
 
-
-#define CBOR_UINT   (0 << 5)
-#define CBOR_NEG    (1 << 5)
-#define CBOR_BYTES  (2 << 5)
-#define CBOR_STRING (3 << 5)
-#define CBOR_ARRAY  (4 << 5)
-#define CBOR_MAP    (5 << 5)
-#define CBOR_OPT    (6 << 5)
-#define CBOR_OTHER  (7 << 5)
-
 #define CBOR_LEN1   24
 #define CBOR_LEN2   25
 #define CBOR_LEN4   26
@@ -86,6 +76,23 @@ static DPS_Status EncodeUint(DPS_Buffer* buffer, uint64_t n, uint8_t maj)
     }
     buffer->pos = p;
     return DPS_OK;
+}
+
+DPS_Status CBOR_EncodeLength(DPS_Buffer* buffer, uint64_t len, uint8_t maj)
+{
+    return EncodeUint(buffer, len, maj);
+}
+
+DPS_Status CBOR_Copy(DPS_Buffer* buffer, const uint8_t* data, size_t len)
+{
+    DPS_Status ret = DPS_OK;
+    if (DPS_BufferSpace(buffer) < len) {
+        ret = DPS_ERR_OVERFLOW;
+    } else if (data) {
+        memcpy(buffer->pos, data, len);
+        buffer->pos += len;
+    }
+    return ret;
 }
 
 DPS_Status CBOR_DecodeBoolean(DPS_Buffer* buffer, int* i)

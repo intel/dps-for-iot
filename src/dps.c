@@ -126,8 +126,8 @@ typedef struct _DPS_Publication {
     uint8_t ackRequested;           /* TRUE if an ack was requested by the publisher */
     uint64_t expires;               /* Time (in milliseconds) that this publication expires */
     uint32_t sequenceNum;           /* Sequence number for this publication */
-    uint8_t* payload;
-    size_t len;
+    DPS_Buffer payloadLenBuf;
+    uv_buf_t payload;
     DPS_AcknowledgementHandler handler;
     DPS_UUID pubId;                 /* Publication identifier */
     DPS_NodeAddress sender;         /* for retained messages - the sender address */
@@ -135,6 +135,7 @@ typedef struct _DPS_Publication {
     DPS_Node* node;                 /* Node for this publication */
     char** topics;                  /* Publication topics */
     size_t numTopics;
+    DPS_Buffer topicsBuf;
     DPS_Publication* next;
 } DPS_Publication;
 
@@ -315,7 +316,7 @@ static void EndpointSetPort(DPS_NetEndpoint* ep, uint16_t port)
 DPS_Status DPS_BufferInit(DPS_Buffer* buffer, uint8_t* storage, size_t size)
 {
     DPS_Status ret = DPS_OK;
-    if (!storage) {
+    if (!storage && size) {
         storage = malloc(size);
         if (!storage) {
             ret = DPS_ERR_RESOURCES;
@@ -445,13 +446,18 @@ static DPS_Publication* FreePublication(DPS_Node* node, DPS_Publication* pub)
     if (pub->bf) {
         DPS_BitVectorFree(pub->bf);
     }
-    if (pub->payload && !(pub->flags & PUB_FLAG_LOCAL)) {
-        free(pub->payload);
+    if (pub->payloadLenBuf.base) {
+        free(pub->payloadLenBuf.base);
     }
-    while (pub->numTopics) {
-        free(pub->topics[--pub->numTopics]);
+    if (pub->payload.base && !(pub->flags & PUB_FLAG_LOCAL)) {
+        free(pub->payload.base);
     }
-    free(pub->topics);
+    if (pub->topics) {
+        free(pub->topics);
+    }
+    if (pub->topicsBuf.base) {
+        free(pub->topicsBuf.base);
+    }
     free(pub);
     return next;
 }
@@ -647,6 +653,16 @@ static void FreeBufs(uv_buf_t* bufs, size_t numBufs)
     }
 }
 
+static void FreeMessage(uv_buf_t* bufs, size_t numBufs)
+{
+    /*
+     * Only the first two buffers in a message are allocated
+     * per-message.  The others have a longer lifetime.
+     */
+    assert(numBufs >= 2);
+    FreeBufs(bufs, 2);
+}
+
 static void NetSendFailed(DPS_Node* node, DPS_NodeAddress* addr, uv_buf_t* bufs, size_t numBufs, DPS_Status status)
 {
     RemoteNode* remote;
@@ -657,7 +673,7 @@ static void NetSendFailed(DPS_Node* node, DPS_NodeAddress* addr, uv_buf_t* bufs,
         DeleteRemoteNode(node, remote);
         DPS_DBGPRINT("Removed node %s\n", DPS_NodeAddrToString(addr));
     }
-    FreeBufs(bufs, numBufs);
+    FreeMessage(bufs, numBufs);
 }
 
 static void OnNetSendComplete(DPS_Node* node, DPS_NetEndpoint* ep, uv_buf_t* bufs, size_t numBufs, DPS_Status status)
@@ -674,7 +690,7 @@ static void OnNetSendComplete(DPS_Node* node, DPS_NetEndpoint* ep, uv_buf_t* buf
         }
         UnlockNode(node);
     }
-    FreeBufs(bufs, numBufs);
+    FreeMessage(bufs, numBufs);
 }
 
 /*
@@ -704,7 +720,6 @@ static DPS_Status SendPublication(DPS_Node* node, DPS_Publication* pub, DPS_BitV
     DPS_Buffer payload;
     CoAP_Option opts[1];
     int protocol;
-    size_t i;
     int16_t ttl = 0;
 
     DPS_DBGTRACE();
@@ -731,7 +746,7 @@ static DPS_Status SendPublication(DPS_Node* node, DPS_Publication* pub, DPS_BitV
         DPS_DBGPRINT("SendPublication (ttl=%d) as multicast\n", ttl);
         protocol = COAP_OVER_UDP;
     }
-    ret = DPS_BufferInit(&payload, NULL, 32 + DPS_BitVectorSerializeMaxSize(bf) + pub->len);
+    ret = DPS_BufferInit(&payload, NULL, 32 + DPS_BitVectorSerializeMaxSize(bf));
     if (ret != DPS_OK) {
         return ret;
     }
@@ -746,20 +761,19 @@ static DPS_Status SendPublication(DPS_Node* node, DPS_Publication* pub, DPS_BitV
     CBOR_EncodeBytes(&payload, (uint8_t*)&pub->pubId, sizeof(pub->pubId));
     CBOR_EncodeUint(&payload, pub->sequenceNum);
     CBOR_EncodeBoolean(&payload, pub->ackRequested);
-    CBOR_EncodeArray(&payload, pub->numTopics);
-    for (i = 0; i < pub->numTopics; ++i) {
-        CBOR_EncodeString(&payload, pub->topics[i]);
-    }
-
     ret = DPS_BitVectorSerialize(bf, &payload);
     if (ret == DPS_OK) {
-        CBOR_EncodeBytes(&payload, pub->payload, pub->len);
-        ret = CoAP_Compose(protocol, COAP_CODE(COAP_REQUEST, COAP_PUT), opts, A_SIZEOF(opts), DPS_BufferUsed(&payload), &headers);
+        ret = CoAP_Compose(protocol, COAP_CODE(COAP_REQUEST, COAP_PUT), opts, A_SIZEOF(opts),
+                           DPS_BufferUsed(&payload) + DPS_BufferUsed(&pub->topicsBuf) + DPS_BufferUsed(&pub->payloadLenBuf) + pub->payload.len,
+                           &headers);
     }
     if (ret == DPS_OK) {
         uv_buf_t bufs[] = {
             { (char*)headers.base, DPS_BufferUsed(&headers) },
-            { (char*)payload.base, DPS_BufferUsed(&payload) }
+            { (char*)payload.base, DPS_BufferUsed(&payload) },
+            { (char*)pub->topicsBuf.base, DPS_BufferUsed(&pub->topicsBuf) },
+            { (char*)pub->payloadLenBuf.base, DPS_BufferUsed(&pub->payloadLenBuf) },
+            { pub->payload.base, pub->payload.len }
         };
         if (remote) {
             ret = DPS_NetSend(node, &remote->ep, bufs, A_SIZEOF(bufs), OnNetSendComplete);
@@ -770,7 +784,7 @@ static DPS_Status SendPublication(DPS_Node* node, DPS_Publication* pub, DPS_BitV
             }
         } else {
             ret = DPS_MulticastSend(node->mcastSender, bufs, A_SIZEOF(bufs));
-            FreeBufs(bufs, A_SIZEOF(bufs));
+            FreeMessage(bufs, A_SIZEOF(bufs));
         }
     } else {
         free(payload.base);
@@ -1089,11 +1103,102 @@ static void CallPubHandlers(DPS_Node* node, DPS_Publication* pub)
              * TODO - make callback from any async
              */
             UnlockNode(node);
-            sub->handler(sub, pub, pub->payload, pub->len);
+            sub->handler(sub, pub, (uint8_t*)pub->payload.base, pub->payload.len);
             LockNode(node);
         }
     }
     UnlockNode(node);
+}
+
+DPS_Status CopyPayload(DPS_Publication* pub, DPS_Buffer* in)
+{
+    uint8_t* begin;
+    uint8_t* end;
+    size_t len;
+    size_t i;
+    uint8_t *payload;
+    size_t plen;
+    DPS_Status ret;
+
+    /*
+     * Copy the topic strings
+     */
+    begin = in->pos;
+    ret = CBOR_DecodeArray(in, &pub->numTopics);
+    if (ret != DPS_OK) {
+        goto Exit;
+    }
+    if (pub->topics) {
+        free(pub->topics);
+        pub->topics = NULL;
+    }
+    pub->topics = malloc(pub->numTopics * sizeof(char*));
+    if (!pub->topics) {
+        goto Exit;
+    }
+    for (i = 0; i < pub->numTopics; ++i) {
+        size_t unused;
+        ret = CBOR_DecodeString(in, &pub->topics[i], &unused);
+        if (ret != DPS_OK) {
+            goto Exit;
+        }
+    }
+    end = in->pos;
+    len = end - begin;
+    if (pub->topicsBuf.base) {
+        free(pub->topicsBuf.base);
+        pub->topicsBuf.base = NULL;
+    }
+    ret = DPS_BufferInit(&pub->topicsBuf, NULL, len);
+    if (ret != DPS_OK) {
+        goto Exit;
+    }
+    memcpy(pub->topicsBuf.base, begin, len);
+    pub->topicsBuf.pos += len;
+    /*
+     * Fixup topics pointers to point into topicsBuf
+     */
+    for (i = 0; i < pub->numTopics; ++i) {
+        ptrdiff_t offset = (uint8_t*)pub->topics[i] - begin;
+        pub->topics[i] = (char*)pub->topicsBuf.base + offset;
+    }
+    /*
+     * Then copy the payload length
+     */
+    begin = in->pos;
+    ret = CBOR_DecodeBytes(in, &payload, &plen);
+    if (ret != DPS_OK) {
+        goto Exit;
+    }
+    end = in->pos;
+    len = end - begin;
+    if (pub->payloadLenBuf.base) {
+        free(pub->payloadLenBuf.base);
+        pub->payloadLenBuf.base = NULL;
+    }
+    ret = DPS_BufferInit(&pub->payloadLenBuf, NULL, len);
+    if (ret != DPS_OK) {
+        goto Exit;
+    }
+    memcpy(pub->payloadLenBuf.base, begin, len);
+    pub->payloadLenBuf.pos += len;
+    /*
+     * And finally the payload
+     */
+    if (plen) {
+        pub->payload.base = realloc(pub->payload.base, plen);
+        if (!pub->payload.base) {
+            ret = DPS_ERR_RESOURCES;
+            goto Exit;
+        }
+        memcpy(pub->payload.base, payload, plen);
+    } else if (pub->payload.base) {
+        free(pub->payload.base);
+        pub->payload.base = NULL;
+    }
+    pub->payload.len = plen;
+Exit:
+    return ret;
 }
 
 static DPS_Status DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Buffer* buffer, int multicast)
@@ -1105,10 +1210,8 @@ static DPS_Status DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Buf
     DPS_UUID* pubId;
     uint32_t sequenceNum;
     int16_t ttl;
-    uint8_t* payload;
     int ackRequested;
     size_t len;
-    size_t i;
 
     DPS_DBGTRACE();
 
@@ -1168,35 +1271,6 @@ static DPS_Status DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Buf
         node->publications = pub;
         pub->node = node;
     }
-    if (pub->topics) {
-        free(pub->topics);
-        pub->topics = NULL;
-    }
-    ret = CBOR_DecodeArray(buffer, &pub->numTopics);
-    if (ret != DPS_OK) {
-        goto Exit;
-    }
-    pub->topics = malloc(pub->numTopics * sizeof(char*));
-    if (!pub->topics) {
-        goto Exit;
-    }
-    for (i = 0; i < pub->numTopics; ++i) {
-        size_t sz;
-        char* topic;
-        ret = CBOR_DecodeString(buffer, &topic, &sz);
-        if (ret == DPS_OK) {
-            pub->topics[i] = malloc(sz + 1);
-            if (!pub->topics) {
-                ret = DPS_ERR_RESOURCES;
-            }
-        }
-        if (ret != DPS_OK) {
-            pub->numTopics = i - 1;
-            goto Exit;
-        }
-        memcpy(pub->topics[i], topic, sz);
-        pub->topics[i][sz] = 0;
-    }
     pub->sequenceNum = sequenceNum;
     pub->ackRequested = ackRequested;
     pub->flags |= PUB_FLAG_PUBLISH;
@@ -1232,10 +1306,11 @@ static DPS_Status DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Buf
      * we don't call local handlers.
      */
     if (ttl < 0) {
-        if (pub->payload) {
-            free(pub->payload);
+        if (pub->payload.base) {
+            free(pub->payload.base);
+            pub->payload.base = NULL;
         }
-        pub->len = 0;
+        pub->payload.len = 0;
         /*
          * We only expect negative TTL's for retained publications
          */
@@ -1249,21 +1324,10 @@ static DPS_Status DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Buf
         /*
          * Payload is a pointer into the receive buffer so must be copied
          */
-        ret = CBOR_DecodeBytes(buffer, &payload, &len);
+        ret = CopyPayload(pub, buffer);
         if (ret != DPS_OK) {
             goto Exit;
         }
-        if (len) {
-            pub->payload = realloc(pub->payload, len);
-            if (!pub->payload) {
-                goto Exit;
-            }
-            memcpy(pub->payload, payload, len);
-        } else if (pub->payload) {
-            free(pub->payload);
-            pub->payload = NULL;
-        }
-        pub->len = len;
         if (ttl > 0) {
             pub->flags |= PUB_FLAG_RETAINED;
         } else {
@@ -2039,6 +2103,7 @@ DPS_Publication* DPS_CopyPublication(const DPS_Publication* pub)
 DPS_Status DPS_InitPublication(DPS_Publication* pub, const char** topics, size_t numTopics, int noWildCard, DPS_AcknowledgementHandler handler)
 {
     size_t i;
+    size_t bufLen;
     DPS_Node* node = pub ? pub->node : NULL;
     DPS_Status ret = DPS_OK;
 
@@ -2073,26 +2138,41 @@ DPS_Status DPS_InitPublication(DPS_Publication* pub, const char** topics, size_t
     }
     pub->flags = PUB_FLAG_LOCAL;
 
-    pub->topics = malloc(numTopics * sizeof(char*));
-    if (!pub->topics) {
-        ret = DPS_ERR_RESOURCES;
-    }
     if (ret == DPS_OK) {
+        bufLen = CBOR_MAX_LENGTH; /* CBOR array encoding */
         for (i = 0; i < numTopics; ++i) {
-            size_t len = strlen(topics[i]);
-            pub->topics[i] = malloc(len + 1);
-            if (!pub->topics[i]) {
-                ret = DPS_ERR_RESOURCES;
-                break;
-            }
-            ++pub->numTopics;
-            memcpy(pub->topics[i], topics[i], len + 1);
+            bufLen += CBOR_MAX_LENGTH + strlen(topics[i]) + 1; /* CBOR string encoding */
             ret = DPS_AddTopic(pub->bf, topics[i], node->separators, noWildCard ? DPS_PubNoWild : DPS_PubTopic);
             if (ret != DPS_OK) {
                 break;
             }
         }
     }
+    if (ret == DPS_OK) {
+        pub->topics = malloc(numTopics * sizeof(char*));
+        if (pub->topics) {
+            pub->numTopics = numTopics;
+        } else {
+            ret = DPS_ERR_RESOURCES;
+        }
+    }
+    if (ret == DPS_OK) {
+        assert(!pub->topicsBuf.base);
+        ret = DPS_BufferInit(&pub->topicsBuf, NULL, bufLen);
+    }
+    if (ret == DPS_OK) {
+        CBOR_EncodeArray(&pub->topicsBuf, numTopics);
+        for (i = 0; i < numTopics; ++i) {
+            size_t len = strlen(topics[i]) + 1;
+            CBOR_EncodeLength(&pub->topicsBuf, len, CBOR_STRING);
+            pub->topics[i] = (char*)pub->topicsBuf.pos;
+            CBOR_Copy(&pub->topicsBuf, (uint8_t*)topics[i], len);
+        }
+    }
+    if (ret == DPS_OK) {
+        ret = DPS_BufferInit(&pub->payloadLenBuf, NULL, CBOR_MAX_LENGTH);
+    }
+
     if (ret == DPS_OK) {
         LockNode(node);
         pub->next = node->publications;
@@ -2104,11 +2184,12 @@ DPS_Status DPS_InitPublication(DPS_Publication* pub, const char** topics, size_t
             pub->bf = NULL;
         }
         if (pub->topics) {
-            while (pub->numTopics) {
-                free(pub->topics[--pub->numTopics]);
-            }
             free(pub->topics);
             pub->topics = NULL;
+        }
+        if (pub->topicsBuf.base) {
+            free(pub->topicsBuf.base);
+            pub->topicsBuf.base = NULL;
         }
     }
     return ret;
@@ -2116,6 +2197,7 @@ DPS_Status DPS_InitPublication(DPS_Publication* pub, const char** topics, size_t
 
 DPS_Status DPS_Publish(DPS_Publication* pub, uint8_t* payload, size_t len, int16_t ttl, uint8_t** oldPayload)
 {
+    DPS_Status ret;
     DPS_Node* node = pub ? pub->node : NULL;
     DPS_DBGTRACE();
 
@@ -2139,7 +2221,7 @@ DPS_Status DPS_Publish(DPS_Publication* pub, uint8_t* payload, size_t len, int16
      * Return the existing payload pointer if requested
      */
     if (oldPayload) {
-        *oldPayload = pub->payload;
+        *oldPayload = (uint8_t*)pub->payload.base;
     }
     /*
      * Do some sanity checks for retained publication cancellation
@@ -2158,8 +2240,17 @@ DPS_Status DPS_Publish(DPS_Publication* pub, uint8_t* payload, size_t len, int16
         ttl = 0;
         pub->flags |= PUB_FLAG_EXPIRED;
     }
-    pub->payload = payload;
-    pub->len = len;
+    /*
+     * Encode payload length and save off payload pointer
+     */
+    DPS_BufferReset(&pub->payloadLenBuf);
+    ret = CBOR_EncodeLength(&pub->payloadLenBuf, len, CBOR_BYTES);
+    if (ret != DPS_OK) {
+        UnlockNode(node);
+        return ret;
+    }
+    pub->payload.base = (char*)payload;
+    pub->payload.len = len;
     pub->flags |= PUB_FLAG_PUBLISH;
     /*
      * Update time before setting expiration because the loop only updates on each iteration and
@@ -2204,7 +2295,7 @@ DPS_Status DPS_DestroyPublication(DPS_Publication* pub, uint8_t** payload)
     }
     LockNode(node);
     if (payload) {
-        *payload = pub->payload;
+        *payload = (uint8_t*)pub->payload.base;
     }
     FreePublication(node, pub);
     UnlockNode(node);

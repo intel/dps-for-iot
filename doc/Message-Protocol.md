@@ -1,8 +1,8 @@
-Message Protocol
-================
+# Message Protocol
 
-Publication
------------
+
+## Publication
+
 ~~~~{.js}
 {
   "type": "array",
@@ -12,16 +12,16 @@ Publication
     { "title": "pubId", "type": "string", "format": "byte" },
     { "title": "sequenceNum", "type": "integer" },
     { "title": "ackRequested", "type": "boolean" },
-    { "title": "topics", "type": "array", "items": { "type": "string" } },
     { "title": "bf", "type": "$ref/definitions/bitvec" },
+    { "title": "topics", "type": "array", "items": { "type": "string" } },
     { "title": "payload", "type": "string", "format": "byte" }
   ],
-  "required": [ "port", "ttl", "pubId", "sequenceNum", "ackRequested", "topics", "bf", "payload" ]
+  "required": [ "port", "ttl", "pubId", "sequenceNum", "ackRequested", "bt", "topics", "payload" ]
 }
 ~~~~
 
-Subscription
------------
+## Subscription
+
 ~~~~{.js}
 {
   "type": "array",
@@ -37,8 +37,8 @@ Subscription
 }
 ~~~~
 
-Ack
----
+## Ack
+
 ~~~~{.js}
 {
   "type": "array",
@@ -51,8 +51,8 @@ Ack
 }
 ~~~~
 
-Bitvec
-------
+## Bitvec
+
 ~~~~{.js}
 {
   "type": "array",

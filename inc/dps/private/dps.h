@@ -39,6 +39,11 @@ typedef struct {
 DPS_Status DPS_BufferInit(DPS_Buffer* buffer, uint8_t* storage, size_t size);
 
 /*
+ * Reset the buffer pointers to the initialized state
+ */
+#define DPS_BufferReset(b)  ((size_t)((b)->pos = (b)->base))
+
+/*
  * Space left in a buffer being written
  */
 #define DPS_BufferSpace(b)  ((size_t)((b)->eod - (b)->pos))
