@@ -339,6 +339,8 @@ static DPS_Subscription* FreeSubscription(DPS_Subscription* sub)
     return next;
 }
 
+static RemoteNode* DeleteRemoteNode(DPS_Node* node, RemoteNode* remote);
+
 static void OnTimerClosed(uv_handle_t* handle)
 {
     free(handle->data);
@@ -360,6 +362,10 @@ static void RemoteCompletion(DPS_Node* node, RemoteNode* remote, DPS_Status stat
     }
     LockNode(node);
     uv_close((uv_handle_t*)&cpn->timer, OnTimerClosed);
+    if (status != DPS_OK) {
+        DPS_ERRPRINT("RemoteCompletion deleting remote node: %s\n", DPS_ErrTxt(status));
+        DeleteRemoteNode(node, remote);
+    }
 }
 
 static int IsValidRemoteNode(DPS_Node* node, RemoteNode* remote)

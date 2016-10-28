@@ -77,7 +77,7 @@ static void AllocBuffer(uv_handle_t* handle, size_t suggestedSize, uv_buf_t* buf
     }
 }
 
-static void SocketClosed(uv_handle_t* handle)
+static void ListenSocketClosed(uv_handle_t* handle)
 {
     DPS_DBGPRINT("Closed handle %p\n", handle);
     free(handle->data);
@@ -88,7 +88,6 @@ static void CancelPendingWrites(DPS_NetConnection* cn)
     while (cn->pendingWrites) {
         WriteRequest* wr = cn->pendingWrites;
         cn->pendingWrites = wr->next;
-        DPS_ERRPRINT("Canceling pending write\n");
         wr->onSendComplete(cn->node, &cn->peerEp, wr->bufs, wr->numBufs, DPS_ERR_NETWORK);
         free(wr);
     }
@@ -97,7 +96,10 @@ static void CancelPendingWrites(DPS_NetConnection* cn)
 static void StreamClosed(uv_handle_t* handle)
 {
     DPS_NetConnection* cn = (DPS_NetConnection*)handle->data;
-
+    /*
+     * Free memory for any pending write operations
+     */
+    CancelPendingWrites(cn);
     DPS_DBGPRINT("Closed stream handle %p\n", handle);
     if (cn->buffer) {
         free(cn->buffer);
@@ -119,10 +121,19 @@ static void OnShutdownComplete(uv_shutdown_t* req, int status)
 
 static void Shutdown(DPS_NetConnection* cn)
 {
+    int r;
+
     assert(cn->refCount == 0);
     uv_read_stop((uv_stream_t*)&cn->socket);
     cn->shutdownReq.data = cn;
-    uv_shutdown(&cn->shutdownReq, (uv_stream_t*)&cn->socket, OnShutdownComplete);
+    r = uv_shutdown(&cn->shutdownReq, (uv_stream_t*)&cn->socket, OnShutdownComplete);
+    if (r) {
+        DPS_ERRPRINT("Shutdown failed %s - closing\n", uv_err_name(r));
+        if (!uv_is_closing((uv_handle_t*)&cn->socket)) {
+            cn->socket.data = cn;
+            uv_close((uv_handle_t*)&cn->socket, StreamClosed);
+        }
+    }
 }
 
 static void OnData(uv_stream_t* socket, ssize_t nread, const uv_buf_t* buf)
@@ -224,8 +235,6 @@ static void OnIncomingConnection(uv_stream_t* stream, int status)
     ret = uv_accept(stream, (uv_stream_t*)&cn->socket);
     if (ret) {
         DPS_ERRPRINT("OnIncomingConnection accept %s\n", uv_strerror(ret));
-        stream->data = cn;
-        uv_close((uv_handle_t*)stream, StreamClosed);
         return;
     }
     uv_tcp_getpeername((uv_tcp_t*)&cn->socket, (struct sockaddr*)&cn->peerEp.addr.inaddr, &sz);
@@ -237,8 +246,9 @@ static void OnIncomingConnection(uv_stream_t* stream, int status)
 }
 
 /*
- * The scope id must be set for link local addresses. This won't work if there are
- * multiple interfaces with link local addresses.
+ * The scope id must be set for link local addresses.
+ *
+ * TODO - how to handle case where there are multiple interfaces with link local addresses.
  */
 static int GetScopeId(struct sockaddr_in6* addr)
 {
@@ -300,6 +310,7 @@ DPS_NetContext* DPS_NetStart(DPS_Node* node, int port, DPS_OnReceive cb)
     if (ret) {
         goto ErrorExit;
     }
+    DPS_DBGPRINT("Listening on socket %p\n", &netCtx->socket);
 #ifndef _WIN32
     /*
      * libuv does not ignore SIGPIPE on Linux
@@ -312,7 +323,7 @@ ErrorExit:
 
     DPS_ERRPRINT("Failed to start net netCtx: error=%s\n", uv_err_name(ret));
     netCtx->socket.data = netCtx;
-    uv_close((uv_handle_t*)&netCtx->socket, SocketClosed);
+    uv_close((uv_handle_t*)&netCtx->socket, ListenSocketClosed);
     return NULL;
 }
 
@@ -335,7 +346,7 @@ void DPS_NetStop(DPS_NetContext* netCtx)
 {
     if (netCtx) {
         netCtx->socket.data = netCtx;
-        uv_close((uv_handle_t*)&netCtx->socket, SocketClosed);
+        uv_close((uv_handle_t*)&netCtx->socket, ListenSocketClosed);
     }
 }
 

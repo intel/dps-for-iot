@@ -119,7 +119,7 @@ static void OnLinkedPut(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status ret, v
             DPS_InitPublication(regPut->pub, topics, 2, DPS_TRUE, OnPutAck);
             ret = DPS_Publish(regPut->pub, regPut->payload.base, DPS_BufferUsed(&regPut->payload), REGISTRATION_TTL, NULL);
             /*
-             * Start a timer 
+             * Start a timer
              */
             if (ret == DPS_OK) {
                 int r;
@@ -330,7 +330,7 @@ static void OnPub(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* da
                 char* host;
                 size_t len;
                 /*
-                 * Stop if we have reached the max registrations 
+                 * Stop if we have reached the max registrations
                  */
                 if (regGet->regs->count == regGet->regs->size) {
                     DPS_DestroySubscription(regGet->sub);
@@ -372,7 +372,7 @@ static void OnLinkedGet(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status ret, v
             DPS_SetSubscriptionData(regGet->sub, regGet);
             ret = DPS_Subscribe(regGet->sub, OnPub);
             /*
-             * Start a timer 
+             * Start a timer
              */
             if (ret == DPS_OK) {
                 int r;
@@ -505,8 +505,8 @@ DPS_Status DPS_Registration_GetSyn(DPS_Node* node, const char* host, uint16_t po
 typedef struct {
     void* data;
     DPS_OnRegLinkToComplete cb;
+    size_t candidate;
     DPS_RegistrationList* regs;
-    DPS_Registration* candidate;
 } LinkTo;
 
 static void OnLinked(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, void* data)
@@ -516,12 +516,14 @@ static void OnLinked(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, v
     DPS_DBGTRACE();
     if (status == DPS_OK) {
         assert(addr);
-        linkTo->candidate->flags = DPS_CANDIDATE_LINKED;
+        DPS_DBGPRINT("Candidate %d LINKED\n", linkTo->candidate);
+        linkTo->regs->list[linkTo->candidate].flags = DPS_CANDIDATE_LINKED;
     } else {
         /*
          * Keep trying other registrations
          */
-        linkTo->candidate->flags = DPS_CANDIDATE_FAILED;
+        DPS_DBGPRINT("Candidate %d FAILED\n", linkTo->candidate);
+        linkTo->regs->list[linkTo->candidate].flags = DPS_CANDIDATE_FAILED;
         if (DPS_Registration_LinkTo(node, linkTo->regs, linkTo->cb, linkTo->data) == DPS_OK) {
             free(linkTo);
             return;
@@ -570,7 +572,8 @@ static void OnResolve(DPS_Node* node, DPS_NodeAddress* addr, void* data)
     DPS_DBGTRACE();
     if (addr) {
         if (IsLocalAddr(addr, DPS_GetPortNumber(node))) {
-            linkTo->candidate->flags = DPS_CANDIDATE_INVALID;
+            DPS_DBGPRINT("Candidate %d INVALID\n", linkTo->candidate);
+            linkTo->regs->list[linkTo->candidate].flags = DPS_CANDIDATE_FAILED;
         } else {
             ret = DPS_Link(node, addr, OnLinked, linkTo);
         }
@@ -579,7 +582,8 @@ static void OnResolve(DPS_Node* node, DPS_NodeAddress* addr, void* data)
         /*
          * Keep trying other registrations
          */
-        linkTo->candidate->flags |= DPS_CANDIDATE_FAILED;
+        DPS_DBGPRINT("Candidate %d FAILED\n", linkTo->candidate);
+        linkTo->regs->list[linkTo->candidate].flags = DPS_CANDIDATE_FAILED;
         if (DPS_Registration_LinkTo(node, linkTo->regs, linkTo->cb, linkTo->data) != DPS_OK) {
             linkTo->cb(node, linkTo->regs, addr, ret, linkTo->data);
         }
@@ -591,15 +595,16 @@ DPS_Status DPS_Registration_LinkTo(DPS_Node* node, DPS_RegistrationList* regs, D
 {
     DPS_Status ret = DPS_ERR_NO_ROUTE;
     size_t i;
-    size_t untried = 0;
+    int untried = 0;
     /*
      * Check there is at least one candidate that hasn't been tried yet
      */
     for (i = 0; i < regs->count; ++i) {
-        if (regs->list[untried].flags == 0) {
+        if (regs->list[i].flags == 0) {
             ++untried;
         }
     }
+    DPS_DBGPRINT("LinkTo untried=%d\n", untried);
     while (untried) {
         uint32_t r = DPS_Rand() % regs->count;
         if (regs->list[r].flags == 0) {
@@ -609,15 +614,17 @@ DPS_Status DPS_Registration_LinkTo(DPS_Node* node, DPS_RegistrationList* regs, D
             linkTo->cb = cb;
             linkTo->data = data;
             linkTo->regs = regs;
-            linkTo->candidate = &regs->list[r];
+            linkTo->candidate = r;
 
             regs->list[r].flags = DPS_CANDIDATE_TRYING;
+            DPS_DBGPRINT("Candidate %d TRYING\n", linkTo->candidate);
             sprintf(portTxt, "%d", regs->list[r].port);
             ret = DPS_ResolveAddress(node, regs->list[r].host, portTxt, OnResolve, linkTo);
             if (ret == DPS_OK) {
                 break;
             }
             DPS_ERRPRINT("DPS_ResolveAddress returned %s\n", DPS_ErrTxt(ret));
+            DPS_DBGPRINT("Candidate %d FAILED\n", linkTo->candidate);
             regs->list[r].flags = DPS_CANDIDATE_FAILED;
             free(linkTo);
             --untried;
