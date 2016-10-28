@@ -31,7 +31,9 @@ srcs = ['src/bitvec.c',
         'src/network.c',
         'src/registration.c',
         'src/topics.c',
-        'src/uv_extra.c']
+        'src/uv_extra.c',
+        'src/crypto/aes.c',
+        'src/crypto/ccm.c']
 
 if env['udp'] == True:
     srcs.append('src/udp/network.c')
