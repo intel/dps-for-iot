@@ -102,6 +102,7 @@ testenv.Program('bin/stats', 'test/stats.c')
 testenv.Program('bin/pubsub', 'test/pubsub.c')
 testenv.Program('bin/packtest', 'test/packtest.c')
 testenv.Program('bin/cbortest', 'test/cbortest.c')
+testenv.Program('bin/aesccm', 'test/aesccm.c')
 
 # Platform-specific test cases
 if platform == 'posix':
