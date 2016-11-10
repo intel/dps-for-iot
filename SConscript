@@ -31,7 +31,9 @@ srcs = ['src/bitvec.c',
         'src/network.c',
         'src/registration.c',
         'src/topics.c',
-        'src/uv_extra.c']
+        'src/uv_extra.c',
+        'src/crypto/rijndael.c',
+        'src/crypto/ccm.c']
 
 if env['udp'] == True:
     srcs.append('src/udp/network.c')
@@ -100,6 +102,7 @@ testenv.Program('bin/stats', 'test/stats.c')
 testenv.Program('bin/pubsub', 'test/pubsub.c')
 testenv.Program('bin/packtest', 'test/packtest.c')
 testenv.Program('bin/cbortest', 'test/cbortest.c')
+testenv.Program('bin/ccm-test', 'test/ccm-test.c')
 
 # Platform-specific test cases
 if platform == 'posix':
