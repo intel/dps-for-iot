@@ -1,9 +1,30 @@
+/*
+ *******************************************************************
+ *
+ * Copyright 2016 Intel Corporation All rights reserved.
+ *
+ *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "crypto/numeric.h"
-#include "crypto/ccm.h"
+#include "ccm.h"
 
 #include "ccm-testdata.c"
 
@@ -20,43 +41,48 @@ dump(unsigned char *buf, size_t len) {
   printf("\n");
 }
 
-int main(int argc, char **argv) {
-  long int len;
-  int n;
+int main(int argc, char **argv)
+{
+    DPS_Status ret;
+    long int len;
+    int n;
 
-  rijndael_ctx ctx;
+    for (n = 0; n < sizeof(data)/sizeof(struct test_vector); ++n) {
 
-  for (n = 0; n < sizeof(data)/sizeof(struct test_vector); ++n) {
+        ret = Encrypt_CCM(data[n].key,
+                          data[n].M,
+                          data[n].L,
+                          data[n].nonce, 
+                          data[n].msg + data[n].la, 
+                          data[n].lm - data[n].la, 
+                          data[n].msg, data[n].la);
 
-    if (rijndael_set_key_enc_only(&ctx, data[n].key, 8*sizeof(data[n].key)) < 0) {
-      fprintf(stderr, "cannot set key\n");
-      return -1;
+        len = data[n].lm + data[n].M;
+        printf("Packet Vector #%d ", n+1);
+        if (len != data[n].r_lm || memcmp(data[n].msg, data[n].result, len))
+            printf("FAILED, ");
+        else 
+            printf("OK, ");
+
+        printf("result is (total length = %lu):\n\t", len);
+        dump(data[n].msg, len);
+
+        ret = Decrypt_CCM(data[n].key,
+                          data[n].M,
+                          data[n].L,
+                          data[n].nonce, 
+                          data[n].msg + data[n].la,
+                          len - data[n].la, 
+                          data[n].msg,
+                          data[n].la);
+
+        if (ret != DPS_OK) {
+            printf("Packet Vector #%d: cannot decrypt message\n", n+1);
+            return 1;
+        } else {
+            printf("\t*** MAC verified (total length = %lu) ***\n", len + data[n].la);
+        }
     }
 
-    len = dtls_ccm_encrypt_message(&ctx, data[n].M, data[n].L, data[n].nonce, 
-				   data[n].msg + data[n].la, 
-				   data[n].lm - data[n].la, 
-				   data[n].msg, data[n].la);
-    
-    len +=  + data[n].la;
-    printf("Packet Vector #%d ", n+1);
-    if (len != data[n].r_lm || memcmp(data[n].msg, data[n].result, len))
-      printf("FAILED, ");
-    else 
-      printf("OK, ");
-    
-    printf("result is (total length = %lu):\n\t", len);
-    dump(data[n].msg, len);
-
-    len = dtls_ccm_decrypt_message(&ctx, data[n].M, data[n].L, data[n].nonce, 
-				   data[n].msg + data[n].la, len - data[n].la, 
-				   data[n].msg, data[n].la);
-    
-    if (len < 0)
-      printf("Packet Vector #%d: cannot decrypt message\n", n+1);
-    else 
-      printf("\t*** MAC verified (total length = %lu) ***\n", len + data[n].la);
-  }
-
-  return 0;
+    return 0;
 }

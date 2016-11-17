@@ -351,6 +351,16 @@ DPS_Status DPS_BufferInit(DPS_Buffer* buffer, uint8_t* storage, size_t size)
     return ret;
 }
 
+DPS_Status DPS_BufferAppend(DPS_Buffer* buffer, const uint8_t* data, size_t len)
+{
+    if (DPS_BufferSpace(buffer) < len) {
+        return DPS_ERR_RESOURCES;
+    }
+    memcpy(buffer->pos, data, len);
+    buffer->pos += len;
+    return DPS_OK;
+}
+
 static DPS_Subscription* FreeSubscription(DPS_Subscription* sub)
 {
     DPS_Subscription* next = sub->next;

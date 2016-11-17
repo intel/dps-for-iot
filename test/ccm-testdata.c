@@ -29,8 +29,8 @@ struct test_vector {
   size_t M, L;
   size_t lm;			/* overall message length */
   size_t la;			/* number of bytes additional data */
-  unsigned char key[DTLS_CCM_BLOCKSIZE];
-  unsigned char nonce[DTLS_CCM_BLOCKSIZE];
+  unsigned char key[AES_128_KEY_LENGTH];
+  unsigned char nonce[DPS_CCM_NONCE_SIZE];
   unsigned char msg[200];
   size_t r_lm;			/* overall result length */
   unsigned char result[200];	/* result */
@@ -289,6 +289,12 @@ struct test_vector data[] = {
     } /* result */
   },
 
+#if 0
+  /*
+   * The CCM implementation used by DPS only supports 2 byte lengh field (L == 2)
+   * so these test cases will fail.
+   */
+
   /* #27 */
   /* Cipher: AES-128 M=8 L=5 K_LEN=16 N_LEN=10 K=0x001234567890abcdefdcaffeed3921ee N=0x00112233445566778899 */
   { 8, 5, 0, 0,
@@ -392,4 +398,5 @@ struct test_vector data[] = {
       0x14, 0x96, 0xa4, 0x84, 0x7f, 0x37, 0x55, 0x42,
       0xce, 0x7e, 0xf9, 0x3b, 0xe5 } /* result */
   }
+#endif
 };

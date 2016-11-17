@@ -53,6 +53,9 @@ const char* DPS_ErrTxt(DPS_Status s)
         ERR_CASE(DPS_ERR_UNRESOLVED);
         ERR_CASE(DPS_ERR_NODE_DESTROYED);
         ERR_CASE(DPS_ERR_EOF);
+        ERR_CASE(DPS_ERR_NOT_IMPLEMENTED);
+        ERR_CASE(DPS_ERR_SECURITY);
+        ERR_CASE(DPS_ERR_NOT_ENCRYPTED);
     default:
         snprintf(buf, sizeof(buf), "ERR%d", s);
         return buf;

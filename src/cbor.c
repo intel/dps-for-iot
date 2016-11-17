@@ -273,6 +273,50 @@ DPS_Status CBOR_ReserveBytes(DPS_Buffer* buffer, size_t len, uint8_t** ptr)
     return ret;
 }
 
+DPS_Status CBOR_StartWrapBytes(DPS_Buffer* buffer, size_t hintLen, uint8_t** ptr)
+{
+    DPS_Status ret;
+    uint8_t* tmp;
+
+    *ptr = buffer->pos;
+    ret = CBOR_ReserveBytes(buffer, hintLen, &tmp);
+    if (ret == DPS_OK) {
+        buffer->pos = tmp;
+    }
+    return ret;
+}
+
+DPS_Status CBOR_EndWrapBytes(DPS_Buffer* buffer, uint8_t* ptr)
+{
+    uint8_t maj;
+    uint8_t* pos = buffer->pos;
+    uint64_t hint;
+    size_t actual;
+    int diff;
+
+    /*
+     * Rewind and decode the original hint length
+     */
+    buffer->pos = ptr;
+    if ((DecodeUint(buffer, &hint, &maj) != DPS_OK) || (maj != CBOR_BYTES)) {
+        return DPS_ERR_INVALID;
+    }
+    /*
+     * See if the length encoding changed
+     */
+    actual = pos - buffer->pos;
+    diff = Requires(actual) - Requires(hint);
+    if (diff) {
+        memmove(buffer->pos + diff, buffer->pos, actual);
+    }
+    /*
+     * Rewind again and write the new length
+     */
+    buffer->pos = ptr;
+    return CBOR_ReserveBytes(buffer, actual, &pos);
+}
+
+
 DPS_Status CBOR_EncodeString(DPS_Buffer* buffer, const char* str)
 {
     size_t len = strlen(str) + 1;

@@ -52,6 +52,13 @@ DPS_Status CBOR_EncodeInt(DPS_Buffer* buffer, int64_t i);
 
 DPS_Status CBOR_EncodeBytes(DPS_Buffer* buffer, const uint8_t* data, size_t len);
 
+/*
+ * Note - this function automatically appends the trailing NUL. To encode a string
+ * without the trailing NUL use
+ *
+ *  CBOR_EncodeLength(buf, strlen(str), CBOR_STRING);
+ *  CBOR_Copy(buf, str, strlen(str));
+ */
 DPS_Status CBOR_EncodeString(DPS_Buffer* buffer, const char* str);
 
 DPS_Status CBOR_EncodeArray(DPS_Buffer* buffer, size_t len);
@@ -85,6 +92,16 @@ DPS_Status CBOR_DecodeTag(DPS_Buffer* buffer, uint64_t* n);
 DPS_Status CBOR_DecodeBoolean(DPS_Buffer* buffer, int* b);
 
 DPS_Status CBOR_ReserveBytes(DPS_Buffer* buffer, size_t len, uint8_t** ptr);
+
+/**
+ * Prepare a CBOR structure to be wrapped in a bytes stream
+ */
+DPS_Status CBOR_StartWrapBytes(DPS_Buffer* buffer, size_t hintLen, uint8_t** ptr);
+
+/**
+ * Finalize byte stream wrapping of a CBOR encode structure
+ */
+DPS_Status CBOR_EndWrapBytes(DPS_Buffer* buffer, uint8_t* ptr);
 
 /*
  * For symmetry with CBOR_DecodeInt8()
@@ -157,7 +174,7 @@ DPS_Status CBOR_DecodeArray(DPS_Buffer* buffer, size_t* size);
  * before with NULL passed as the data arg. The new length must be less than or
  * equal to the length passed in the call to CBOR_EncodeBytes().
  */
-DPS_Status CBOR_FixupLength(DPS_Buffer* buffer, size_t origSize, size_t newSizcons);
+DPS_Status CBOR_FixupLength(DPS_Buffer* buffer, size_t origSize, size_t newSize);
 
 #ifdef __cplusplus
 }

@@ -56,6 +56,9 @@ typedef int DPS_Status;
 #define DPS_ERR_UNRESOLVED        20 /**< Name resolution failed */
 #define DPS_ERR_NODE_DESTROYED    21 /**< Node has already been destroyed */
 #define DPS_ERR_EOF               22 /**< End of file or socket closed */
+#define DPS_ERR_NOT_IMPLEMENTED   23 /**< Feature or function not implemented */
+#define DPS_ERR_SECURITY          24 /**< A security related error - failure to decrypt or authenticate */
+#define DPS_ERR_NOT_ENCRYPTED     25 /**< Payload does not appear to be encrypted */
 
 const char* DPS_ErrTxt(DPS_Status s);
 

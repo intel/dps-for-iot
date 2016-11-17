@@ -1,3 +1,4 @@
+import os
 import platform
 
 vars = Variables()
@@ -24,7 +25,7 @@ try:
 except:
     pass
 
-env = Environment(CPPDEFINES=[], CPPPATH = ['#/inc'], variables=vars, tools=tools)
+env = Environment(CPPDEFINES=[], CPPPATH = ['#/inc', '#/ext/tinycrypt/lib/include'], variables=vars, tools=tools)
 
 Help(vars.GenerateHelpText(env))
 
@@ -35,6 +36,11 @@ for key, val in ARGLIST:
 if env['udp'] == True:
     env['USE_UDP'] = 'true'
     env['CPPDEFINES'].append('DPS_USE_UDP')
+
+# Dependencies
+depenv = Environment(ENV = os.environ)
+tcgit = depenv.Command("ext/tinycrypt/.git", None, "git clone https://github.com/01org/tinycrypt.git ext/tinycrypt")
+ext_deps = depenv.Command("ext/tinycrypt/lib/libtinycrypt.a", tcgit, "cd ext/tinycrypt && make")
 
 # Platform specific configuration
 
@@ -55,7 +61,7 @@ if env['PLATFORM'] == 'win32':
     env['PY_LIBPATH'] = [env['PYTHON_PATH'] + '\libs']
 
     # Where to find libuv
-    env['UV_LIBS'] = ['libuv', 'ws2_32','iphlpapi']
+    env['UV_LIBS'] = ['libuv', 'ws2_32','iphlpapi', 'libtinycrypt']
     env.Append(LIBPATH=[env['UV_PATH']])
     env.Append(CPPPATH=env['UV_PATH'] + '\include')
 
@@ -89,8 +95,10 @@ elif env['PLATFORM'] == 'posix':
     env['PY_CPPPATH'] = ['/usr/include/python2.7']
     env['PY_LIBPATH'] = []
 
+    env.Append(LIBPATH=['#/ext/tinycrypt/lib'])
+
     # Where to find libuv
-    env['UV_LIBS'] = ['uv', 'pthread']
+    env['UV_LIBS'] = ['uv', 'pthread', 'tinycrypt']
 
 else:
     print 'Unsupported system'
@@ -99,7 +107,7 @@ else:
 
 print env['CPPDEFINES']
 
-SConscript('SConscript', src_dir='.', variant_dir='build/obj', duplicate=0, exports='env')
+SConscript('SConscript', src_dir='.', variant_dir='build/obj', duplicate=0, exports=['env', 'ext_deps'])
 
 ######################################################################
 # Scons to generate the dps_ns3.pc file from dps_ns3.pc.in file

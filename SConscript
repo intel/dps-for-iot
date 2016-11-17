@@ -1,4 +1,4 @@
-Import('env')
+Import(['env', 'ext_deps'])
 
 platform = env['PLATFORM']
 
@@ -18,6 +18,7 @@ libenv.Install('#/build/dist/inc/dps/private', libenv.Glob('#/inc/dps/private/*.
 
 srcs = ['src/bitvec.c',
         'src/cbor.c',
+        'src/cose.c',
         'src/coap.c',
         'src/dps.c',
         'src/dbg.c',
@@ -32,10 +33,7 @@ srcs = ['src/bitvec.c',
         'src/registration.c',
         'src/topics.c',
         'src/uv_extra.c',
-        'src/crypto/rijndael.c',
-        'src/crypto/ccm.c',
-        'src/crypto/ecc.c',
-        'src/crypto/sha2.c']
+        'src/ccm.c']
 
 if env['udp'] == True:
     srcs.append('src/udp/network.c')
@@ -43,6 +41,8 @@ else:
     srcs.append('src/tcp/network.c')
 
 objs = libenv.Object(srcs)
+Depends(objs, ext_deps);
+
 lib = libenv.Library('lib/dps', objs)
 libenv.Install('#/build/dist/lib', lib)
 
@@ -95,22 +95,25 @@ if platform == '!!posix':
 testenv = env.Clone()
 testenv.Append(CPPPATH = ['src'])
 testenv.Append(LIBS = [lib, env['UV_LIBS']])
-testenv.Program('bin/hist_unit', 'test/hist_unit.c')
-testenv.Program('bin/countvec', 'test/countvec.c')
-testenv.Program('bin/rle_compression', 'test/rle_compression.c')
-testenv.Program('bin/topic_match', 'test/topic_match.c')
-testenv.Program('bin/hashtest', 'test/hashtest.c')
-testenv.Program('bin/stats', 'test/stats.c')
-testenv.Program('bin/pubsub', 'test/pubsub.c')
-testenv.Program('bin/packtest', 'test/packtest.c')
-testenv.Program('bin/cbortest', 'test/cbortest.c')
-testenv.Program('bin/ccm-test', 'test/ccm-test.c')
+testprogs = [testenv.Program('bin/hist_unit', 'test/hist_unit.c'),
+             testenv.Program('bin/countvec', 'test/countvec.c'),
+             testenv.Program('bin/rle_compression', 'test/rle_compression.c'),
+             testenv.Program('bin/topic_match', 'test/topic_match.c'),
+             testenv.Program('bin/hashtest', 'test/hashtest.c'),
+             testenv.Program('bin/stats', 'test/stats.c'),
+             testenv.Program('bin/pubsub', 'test/pubsub.c'),
+             testenv.Program('bin/packtest', 'test/packtest.c'),
+             testenv.Program('bin/cbortest', 'test/cbortest.c'),
+             testenv.Program('bin/ccm-test', 'test/ccm-test.c'),
+             testenv.Program('bin/cosetest', 'test/cosetest.c')]
 
 # Platform-specific test cases
 if platform == 'posix':
-    testenv.Program('bin/coap_mcast_test', 'test/coap_mcast_test.c')
-    testenv.Program('bin/subtree_sim', 'test/subtree_sim.c')
-    testenv.Program('bin/tree_sim', 'test/tree_sim.c')
+    testprogs.append([testenv.Program('bin/coap_mcast_test', 'test/coap_mcast_test.c'),
+                      testenv.Program('bin/subtree_sim', 'test/subtree_sim.c'),
+                      testenv.Program('bin/tree_sim', 'test/tree_sim.c')])
+
+testenv.Install('#/build/test/bin', testprogs)
 
 
 # Examples

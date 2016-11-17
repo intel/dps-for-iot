@@ -60,6 +60,17 @@ typedef struct {
  */
 DPS_Status DPS_BufferInit(DPS_Buffer* buffer, uint8_t* storage, size_t size);
 
+/**
+ * Add data to a buffer
+ *
+ * @param buffer    Buffer to append to
+ * @param storage   The data to append
+ * @param len      Length of the data to append
+ *
+ * @return   DPS_OK or DP_ERR_RESOURCES if there not enough room in the buffer
+ */
+DPS_Status DPS_BufferAppend(DPS_Buffer* buffer, const uint8_t* data, size_t len);
+
 /*
  * Reset the buffer pointers to the initialized state
  */
