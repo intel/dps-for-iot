@@ -298,6 +298,11 @@ DPS_Status CBOR_EncodeMap(DPS_Buffer* buffer, size_t len)
     return EncodeUint(buffer, (uint32_t)len, CBOR_MAP);
 }
 
+DPS_Status CBOR_EncodeTag(DPS_Buffer* buffer, uint64_t n)
+{
+    return EncodeUint(buffer, n, CBOR_TAG);
+}
+
 DPS_Status CBOR_DecodeUint(DPS_Buffer* buffer, uint64_t* n)
 {
     uint8_t maj;
@@ -482,6 +487,18 @@ DPS_Status CBOR_DecodeMap(DPS_Buffer* buffer, size_t* size)
         } else {
             *size = len;
         }
+    }
+    return ret;
+}
+
+DPS_Status CBOR_DecodeTag(DPS_Buffer* buffer, uint64_t* n)
+{
+    uint8_t maj;
+    DPS_Status ret;
+
+    ret = DecodeUint(buffer, n, &maj);
+    if ((ret == DPS_OK) && (maj != CBOR_TAG)) {
+        ret = DPS_ERR_INVALID;
     }
     return ret;
 }

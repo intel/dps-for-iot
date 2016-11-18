@@ -37,7 +37,7 @@ extern "C" {
 #define CBOR_STRING (3 << 5)
 #define CBOR_ARRAY  (4 << 5)
 #define CBOR_MAP    (5 << 5)
-#define CBOR_OPT    (6 << 5)
+#define CBOR_TAG    (6 << 5)
 #define CBOR_OTHER  (7 << 5)
 
 #define CBOR_MAX_LENGTH (1 + sizeof(uint64_t))
@@ -58,6 +58,8 @@ DPS_Status CBOR_EncodeArray(DPS_Buffer* buffer, size_t len);
 
 DPS_Status CBOR_EncodeMap(DPS_Buffer* buffer, size_t len);
 
+DPS_Status CBOR_EncodeTag(DPS_Buffer* buffer, uint64_t n);
+
 DPS_Status CBOR_EncodeBoolean(DPS_Buffer* buffer, int b);
 
 DPS_Status CBOR_DecodeUint8(DPS_Buffer* buffer, uint8_t* n);
@@ -77,6 +79,8 @@ DPS_Status CBOR_DecodeInt16(DPS_Buffer* buffer, int16_t* n);
 DPS_Status CBOR_DecodeInt32(DPS_Buffer* buffer, int32_t* n);
 
 DPS_Status CBOR_DecodeMap(DPS_Buffer* buffer, size_t* size);
+
+DPS_Status CBOR_DecodeTag(DPS_Buffer* buffer, uint64_t* n);
 
 DPS_Status CBOR_DecodeBoolean(DPS_Buffer* buffer, int* b);
 

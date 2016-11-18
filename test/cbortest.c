@@ -34,6 +34,10 @@ typedef struct _map {
     char *string;
 }map;
 
+static uint64_t Tags[] = {
+    993, 996, 997, 998, 999
+};
+
 static uint64_t Uints[] = {
     0, 1, 2, 3, 23, 24, 254, 255, 256, 65534, 65536, 65537,
     UINT32_MAX - 1, UINT32_MAX, (uint64_t)UINT32_MAX + 1, 
@@ -87,6 +91,10 @@ int main(int argc, char** argv)
         CBOR_EncodeString(&buffer, Maps[i].string);
     }
 
+    for (i = 0; i < sizeof(Tags) / sizeof(Tags[0]); ++i) {
+        CBOR_EncodeTag(&buffer, Tags[i]);
+    }
+
     printf("Encoded %zu bytes\n", DPS_BufferAvail(&buffer));
 
     buffer.pos = buffer.base;
@@ -127,6 +135,12 @@ int main(int argc, char** argv)
         assert(n == Maps[i].key);
         CBOR_DecodeString(&buffer, &str, &len);
         assert(!strcmp(str, Maps[i].string));
+    }
+
+    for (i = 0; i < sizeof(Tags) / sizeof(Tags[0]); ++i) {
+        int64_t n;
+        CBOR_DecodeTag(&buffer, &n);
+        assert(n == Tags[i]);
     }
 
     printf("Passed\n");
