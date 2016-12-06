@@ -35,6 +35,8 @@ typedef struct _RemoteNode RemoteNode;
 
 typedef struct _PublicationAck PublicationAck;
 
+typedef struct _OnOpCompletion OnOpCompletion;
+
 typedef struct _DPS_Node {
     void* userData;
 
@@ -81,6 +83,30 @@ typedef struct _DPS_Node {
     void* onDestroyedData;                /* Context to pass to onDestroyed callback */
 
 } DPS_Node;
+
+typedef struct _RemoteNode {
+    OnOpCompletion* completion;
+    uint8_t linked;                    /* True if this is a node that was explicitly linked */
+    struct {
+        uint8_t sync;                  /* If TRUE request remote to synchronize interests */
+        uint8_t updates;               /* TRUE if updates have been received but not acted on */
+        DPS_BitVector* needs;          /* Bit vector of needs received from  this remote node */
+        DPS_BitVector* interests;      /* Bit vector of interests received from  this remote node */
+    } inbound;
+    struct {
+        uint8_t sync;                  /* If TRUE synchronize outbound interests with remote node (no deltas) */
+        uint8_t checkForUpdates;       /* TRUE if there may be updated interests to send to this remote */
+        DPS_BitVector* needs;          /* Needs bit vector sent outbound to this remote node */
+        DPS_BitVector* interests;      /* Interests bit vector sent outbound to this remote node */
+    } outbound;
+    DPS_NetEndpoint ep;
+    uint64_t expires;
+    /*
+     * Remote nodes are doubly linked into a ring
+     */
+    struct _RemoteNode* prev;
+    struct _RemoteNode* next;
+} RemoteNode;
 
 #ifdef __cplusplus
 }

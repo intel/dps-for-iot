@@ -35,6 +35,9 @@
 #include "coap.h"
 #include "history.h"
 #include "node.h"
+#include "pub.h"
+#include "sub.h"
+#include "ack.h"
 #include "topics.h"
 #include "uv_extra.h"
 
@@ -60,7 +63,7 @@ typedef enum { NO_REQ, SUB_REQ, PUB_REQ, ACK_REQ } RequestType;
 
 typedef enum { LINK_OP, UNLINK_OP } OpType;
 
-typedef struct {
+typedef struct _OnOpCompletion {
     OpType op;
     void* data;
     DPS_Node* node;
@@ -73,97 +76,6 @@ typedef struct {
         void* cb;
     } on;
 } OnOpCompletion;
-
-typedef struct _RemoteNode {
-    OnOpCompletion* completion;
-    uint8_t linked;                    /* True if this is a node that was explicitly linked */
-    struct {
-        uint8_t sync;                  /* If TRUE request remote to synchronize interests */
-        uint8_t updates;               /* TRUE if updates have been received but not acted on */
-        DPS_BitVector* needs;          /* Bit vector of needs received from  this remote node */
-        DPS_BitVector* interests;      /* Bit vector of interests received from  this remote node */
-    } inbound;
-    struct {
-        uint8_t sync;                  /* If TRUE synchronize outbound interests with remote node (no deltas) */
-        uint8_t checkForUpdates;       /* TRUE if there may be updated interests to send to this remote */
-        DPS_BitVector* needs;          /* Needs bit vector sent outbound to this remote node */
-        DPS_BitVector* interests;      /* Interests bit vector sent outbound to this remote node */
-    } outbound;
-    DPS_NetEndpoint ep;
-    uint64_t expires;
-    /*
-     * Remote nodes are doubly linked into a ring
-     */
-    struct _RemoteNode* prev;
-    struct _RemoteNode* next;
-} RemoteNode;
-
-/*
- * Acknowledgment packet queued to be sent on node loop
- */
-typedef struct _PublicationAck {
-    DPS_Buffer headers;
-    DPS_Buffer payload;
-    DPS_NodeAddress destAddr;
-    uint32_t sequenceNum;
-    DPS_UUID pubId;
-    struct _PublicationAck* next;
-} PublicationAck;
-
-/*
- * Struct to hold the state of a local subscription. We hold the topics so we can provide return the topic list when we
- * get a match. We compute the filter so we can forward to outbound subscribers.
- */
-typedef struct _DPS_Subscription {
-    void* userData;
-    DPS_BitVector* needs;           /* Subscription needs */
-    DPS_BitVector* bf;              /* The Bloom filter bit vector for the topics for this subscription */
-    DPS_PublicationHandler handler; /* Callback function to be called for a matching publication */
-    DPS_Node* node;                 /* Node for this subscription */
-    DPS_Subscription* next;
-    size_t numTopics;               /* Number of subscription topics */
-    char* topics[1];                /* Subscription topics */
-} DPS_Subscription;
-
-
-#define PUB_FLAG_PUBLISH  (0x01) /* The publication should be published */
-#define PUB_FLAG_LOCAL    (0x02) /* The publication is local to this node */
-#define PUB_FLAG_RETAINED (0x04) /* The publication had a non-zero TTL */
-#define PUB_FLAG_EXPIRED  (0x10) /* The publication had a negative TTL */
-#define PUB_FLAG_IS_COPY  (0x80) /* This publication is a copy and can only be used for acknowledgements */
-
-/*
- * Notes on the use of the DPS_Publication fields:
- *
- * The pubId identifies a publication that replaces an earlier retained instance of the same publication.
- *
- * The ttl starts when a publication is first published. It may expire before the publication is ever sent.
- * If a publication received by a subscriber has a non-zero ttl is will be retained for later publication
- * until the ttl expires or it is explicitly expired.
- */
-typedef struct _DPS_Publication {
-    void* userData;
-    uint8_t flags;                  /* Internal state flags */
-    uint8_t checkToSend;            /* TRUE if this publication should be checked to send */
-    uint8_t ackRequested;           /* TRUE if an ack was requested by the publisher */
-    uint64_t expires;               /* Time (in milliseconds) that this publication expires */
-    uint32_t sequenceNum;           /* Sequence number for this publication */
-    DPS_Buffer payloadLenBuf;
-    uv_buf_t payload;
-    DPS_AcknowledgementHandler handler;
-    DPS_UUID pubId;                 /* Publication identifier */
-    DPS_NodeAddress sender;         /* for retained messages - the sender address */
-    DPS_BitVector* bf;              /* The Bloom filter bit vector for the topics for this publication */
-    DPS_Node* node;                 /* Node for this publication */
-    char** topics;                  /* Publication topics */
-    size_t numTopics;
-    DPS_Buffer topicsBuf;
-    DPS_Publication* next;
-} DPS_Publication;
-
-
-#define PUB_TTL(node, pub)  (int16_t)((pub->expires + 999 - uv_now((node)->loop)) / 1000)
-
 
 #define SEND_SUBS_TASK  0x01
 #define SEND_PUBS_TASK  0x02
