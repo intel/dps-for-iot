@@ -115,6 +115,12 @@ typedef struct _RemoteNode {
     struct _RemoteNode* next;
 } RemoteNode;
 
+/*
+ * If we have not heard anything from a remote node within the
+ * keep alive time period it may be deleted. The keep alive
+ * time is specified in seconds.
+ */
+#define DPS_REMOTE_NODE_KEEPALIVE  360
 
 /*
  * Request to asynchronously updates subscriptions

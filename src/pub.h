@@ -74,6 +74,20 @@ typedef struct _DPS_Publication {
  */
 void DPS_UpdatePubs(DPS_Node* node, DPS_Publication* pub);
 
+DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Buffer* buffer, int multicast);
+
+DPS_Status DPS_SendPublication(DPS_Node* node, DPS_Publication* pub, DPS_BitVector* bf, RemoteNode* remote);
+
+void DPS_ExpirePub(DPS_Node* node, DPS_Publication* pub);
+
+void DPS_FreePublications(DPS_Node* node);
+
+#ifdef NDEBUG
+#define DumpPubs(node)
+#else
+void DPS_DumpPubs(DPS_Node* node);
+#endif
+
 #ifdef __cplusplus
 }
 #endif

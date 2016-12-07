@@ -53,6 +53,14 @@ typedef struct {
 typedef struct _DPS_MulticastReceiver DPS_MulticastReceiver;
 
 /**
+ * Free us buffer resources
+ *
+ * @param bufs     The buffers to free
+ * @param numBufs  The number of buffers to free
+ */
+void DPS_NetFreeBufs(uv_buf_t* bufs, size_t numBufs);
+
+/**
  * Function prototype for handler to be called on receiving data from a remote node
  *
  * @param node      The node that received the data

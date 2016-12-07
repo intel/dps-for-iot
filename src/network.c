@@ -225,3 +225,13 @@ void DPS_EndpointSetPort(DPS_NetEndpoint* ep, uint16_t port)
     }
 }
 
+void DPS_NetFreeBufs(uv_buf_t* bufs, size_t numBufs)
+{
+    while (numBufs--) {
+        if (bufs->base) {
+            free(bufs->base);
+        }
+        ++bufs;
+    }
+}
+
