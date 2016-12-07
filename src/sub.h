@@ -47,6 +47,19 @@ typedef struct _DPS_Subscription {
     char* topics[1];                /* Subscription topics */
 } DPS_Subscription;
 
+/*
+ * Free all subscriptions registered with this node
+ *
+ * @param node  The node for this operation
+ */
+void DPS_FreeSubscriptions(DPS_Node* node);
+
+DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote, DPS_BitVector* interests, uint16_t ttl);
+
+DPS_Status DPS_SendUnsubscribe(DPS_Node* node, RemoteNode* remote);
+
+DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Buffer* buffer);
+
 #ifdef __cplusplus
 }
 #endif

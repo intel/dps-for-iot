@@ -24,11 +24,18 @@
 #define _DPS_NODE_H
 
 #include <dps/private/network.h>
+#include <uv.h>
 #include "bitvec.h"
 #include "history.h"
 
 #ifdef __cplusplus
 extern "C" {
+#endif
+
+#ifdef DPS_USE_UDP
+#define COAP_PROTOCOL COAP_OVER_UDP
+#else
+#define COAP_PROTOCOL COAP_OVER_TCP
 #endif
 
 typedef struct _RemoteNode RemoteNode;
@@ -107,6 +114,54 @@ typedef struct _RemoteNode {
     struct _RemoteNode* prev;
     struct _RemoteNode* next;
 } RemoteNode;
+
+
+/*
+ * Request to asynchronously updates subscriptions
+ *
+ * @param node    The node
+ * @param remote  Remote node to check for updates or if NULL all remote nodes are checked
+ */
+int DPS_UpdateSubs(DPS_Node* node, RemoteNode* remote);
+
+/*
+ * Callback function called when a network send operation completes
+ */
+void DPS_OnSendComplete(DPS_Node* node, DPS_NetEndpoint* ep, uv_buf_t* bufs, size_t numBufs, DPS_Status status);
+
+/*
+ * Function to call when a network send operation fails. Must be called with the node lock held.
+ */
+void DPS_SendFailed(DPS_Node* node, DPS_NodeAddress* addr, uv_buf_t* bufs, size_t numBufs, DPS_Status status);
+
+/*
+ *
+ */
+DPS_Status DPS_AddRemoteNode(DPS_Node* node, DPS_NodeAddress* addr, DPS_NetConnection* cn, uint16_t ttl, RemoteNode** remoteOut);
+
+/*
+ *
+ */
+RemoteNode* DPS_DeleteRemoteNode(DPS_Node* node, RemoteNode* remote);
+
+/*
+ *
+ */
+void DPS_RemoteCompletion(DPS_Node* node, RemoteNode* remote, DPS_Status status);
+
+/*
+ * Lock the node
+ *
+ * @param The node to lock
+ */
+void DPS_LockNode(DPS_Node* node);
+
+/*
+ * Unlock the node
+ *
+ * @param The node to unlock
+ */
+void DPS_UnlockNode(DPS_Node* node);
 
 #ifdef __cplusplus
 }

@@ -213,3 +213,15 @@ DPS_NodeAddress* DPS_SetAddress(DPS_NodeAddress* addr, const struct sockaddr* sa
     return addr;
 }
 
+void DPS_EndpointSetPort(DPS_NetEndpoint* ep, uint16_t port)
+{
+    port = htons(port);
+    if (ep->addr.inaddr.ss_family == AF_INET6) {
+        struct sockaddr_in6* ip6 = (struct sockaddr_in6*)&ep->addr.inaddr;
+        ip6->sin6_port = port;
+    } else {
+        struct sockaddr_in* ip4 = (struct sockaddr_in*)&ep->addr.inaddr;
+        ip4->sin_port = port;
+    }
+}
+

@@ -46,12 +46,6 @@
  */
 DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
-#ifdef DPS_USE_UDP
-#define COAP_PROTOCOL COAP_OVER_UDP
-#else
-#define COAP_PROTOCOL COAP_OVER_TCP
-#endif
-
 #define _MIN_(x, y)  (((x) < (y)) ? (x) : (y))
 
 
@@ -101,7 +95,7 @@ typedef struct _OnOpCompletion {
  */
 static void RunBackgroundTasks(uv_async_t* handle);
 
-void LockNode(DPS_Node* node)
+void DPS_LockNode(DPS_Node* node)
 {
     uv_mutex_lock(&node->nodeMutex);
 #ifndef NDEBUG
@@ -110,7 +104,7 @@ void LockNode(DPS_Node* node)
 #endif
 }
 
-void UnlockNode(DPS_Node* node)
+void DPS_UnlockNode(DPS_Node* node)
 {
 #ifndef NDEBUG
     assert(node->lockCount == 1);
@@ -123,24 +117,10 @@ static void ScheduleBackgroundTask(DPS_Node* node, uint8_t task)
 {
     DPS_DBGTRACE();
     node->tasks |= task;
-    UnlockNode(node);
+    DPS_UnlockNode(node);
     uv_async_send(&node->bgHandler);
-    LockNode(node);
+    DPS_LockNode(node);
 }
-
-#ifdef NDEBUG
-#define DumpTopics(t, n)
-#else
-static void DumpTopics(const char** topics, size_t numTopics)
-{
-    if (DPS_Debug) {
-        size_t i;
-        for (i = 0; i < numTopics; ++i) {
-            DPS_PRINT("%s\n", topics[i]);
-        }
-    }
-}
-#endif
 
 #ifdef NDEBUG
 #define DumpPubs(node)
@@ -163,23 +143,6 @@ static void DumpPubs(DPS_Node* node)
 #define RemoteNodeAddressText(n)  DPS_NodeAddrToString(&(n)->ep.addr)
 
 
-static int IsValidSub(const DPS_Subscription* sub)
-{
-    DPS_Subscription* subList;
-
-    if (!sub || !sub->node || !sub->node->loop) {
-        return DPS_FALSE;
-    }
-    LockNode(sub->node);
-    for (subList = sub->node->subscriptions; subList != NULL; subList = subList->next) {
-        if (sub == subList) {
-            break;
-        }
-    }
-    UnlockNode(sub->node);
-    return subList != NULL;
-}
-
 static int IsValidPub(const DPS_Publication* pub)
 {
     DPS_Publication* pubList;
@@ -187,28 +150,14 @@ static int IsValidPub(const DPS_Publication* pub)
     if (!pub|| !pub->node || !pub->node->loop) {
         return DPS_FALSE;
     }
-    LockNode(pub->node);
+    DPS_LockNode(pub->node);
     for (pubList = pub->node->publications; pubList != NULL; pubList = pubList->next) {
         if (pub == pubList) {
             break;
         }
     }
-    UnlockNode(pub->node);
+    DPS_UnlockNode(pub->node);
     return pubList != NULL;
-}
-
-size_t DPS_SubscriptionGetNumTopics(const DPS_Subscription* sub)
-{
-    return IsValidSub(sub) ? sub->numTopics : 0;
-}
-
-const char* DPS_SubscriptionGetTopic(const DPS_Subscription* sub, size_t index)
-{
-    if (IsValidSub(sub) && (sub->numTopics > index)) {
-        return sub->topics[index];
-    } else {
-        return NULL;
-    }
 }
 
 const DPS_UUID* DPS_PublicationGetUUID(const DPS_Publication* pub)
@@ -232,18 +181,6 @@ const char* DPS_PublicationGetTopic(const DPS_Publication* pub, size_t index)
         return pub->topics[index];
     } else {
         return NULL;
-    }
-}
-
-static void EndpointSetPort(DPS_NetEndpoint* ep, uint16_t port)
-{
-    port = htons(port);
-    if (ep->addr.inaddr.ss_family == AF_INET6) {
-        struct sockaddr_in6* ip6 = (struct sockaddr_in6*)&ep->addr.inaddr;
-        ip6->sin6_port = port;
-    } else {
-        struct sockaddr_in* ip4 = (struct sockaddr_in*)&ep->addr.inaddr;
-        ip4->sin_port = port;
     }
 }
 
@@ -273,26 +210,12 @@ DPS_Status DPS_BufferAppend(DPS_Buffer* buffer, const uint8_t* data, size_t len)
     return DPS_OK;
 }
 
-static DPS_Subscription* FreeSubscription(DPS_Subscription* sub)
-{
-    DPS_Subscription* next = sub->next;
-    DPS_BitVectorFree(sub->bf);
-    DPS_BitVectorFree(sub->needs);
-    while (sub->numTopics) {
-        free(sub->topics[--sub->numTopics]);
-    }
-    free(sub);
-    return next;
-}
-
-static RemoteNode* DeleteRemoteNode(DPS_Node* node, RemoteNode* remote);
-
 static void OnTimerClosed(uv_handle_t* handle)
 {
     free(handle->data);
 }
 
-static void RemoteCompletion(DPS_Node* node, RemoteNode* remote, DPS_Status status)
+void DPS_RemoteCompletion(DPS_Node* node, RemoteNode* remote, DPS_Status status)
 {
     OnOpCompletion* cpn = remote->completion;
     DPS_NodeAddress addr = remote->ep.addr;
@@ -300,16 +223,16 @@ static void RemoteCompletion(DPS_Node* node, RemoteNode* remote, DPS_Status stat
     uv_timer_stop(&cpn->timer);
 
     remote->completion = NULL;
-    UnlockNode(node);
+    DPS_UnlockNode(node);
     if (cpn->op == LINK_OP) {
         cpn->on.link(node, &addr, status, cpn->data);
     } else if (cpn->op == UNLINK_OP) {
         cpn->on.unlink(node, &addr, cpn->data);
     }
-    LockNode(node);
+    DPS_LockNode(node);
     uv_close((uv_handle_t*)&cpn->timer, OnTimerClosed);
     if (status != DPS_OK) {
-        DeleteRemoteNode(node, remote);
+        DPS_DeleteRemoteNode(node, remote);
     }
 }
 
@@ -327,7 +250,7 @@ static int IsValidRemoteNode(DPS_Node* node, RemoteNode* remote)
     return DPS_FALSE;
 }
 
-static RemoteNode* DeleteRemoteNode(DPS_Node* node, RemoteNode* remote)
+RemoteNode* DPS_DeleteRemoteNode(DPS_Node* node, RemoteNode* remote)
 {
     RemoteNode* next;
 
@@ -363,7 +286,7 @@ static RemoteNode* DeleteRemoteNode(DPS_Node* node, RemoteNode* remote)
     DPS_BitVectorFree(remote->outbound.needs);
 
     if (remote->completion) {
-        RemoteCompletion(node, remote, DPS_ERR_FAILURE);
+        DPS_RemoteCompletion(node, remote, DPS_ERR_FAILURE);
     }
     /*
      * This tells the network layer we no longer need to keep connection alive for this address
@@ -496,9 +419,9 @@ static RemoteNode* LookupRemoteNode(DPS_Node* node, DPS_NodeAddress* addr)
 static void OnCompletionTimeout(uv_timer_t* timer)
 {
     OnOpCompletion* cpn = (OnOpCompletion*)timer->data;
-    LockNode(cpn->node);
-    RemoteCompletion(cpn->node, cpn->remote, DPS_ERR_TIMEOUT);
-    UnlockNode(cpn->node);
+    DPS_LockNode(cpn->node);
+    DPS_RemoteCompletion(cpn->node, cpn->remote, DPS_ERR_TIMEOUT);
+    DPS_UnlockNode(cpn->node);
 }
 
 static OnOpCompletion* AllocCompletion(DPS_Node* node, RemoteNode* remote, OpType op, void* data, uint16_t ttl, void* cb)
@@ -529,7 +452,7 @@ static OnOpCompletion* AllocCompletion(DPS_Node* node, RemoteNode* remote, OpTyp
 /*
  * Add a remote node or return an existing one
  */
-static DPS_Status AddRemoteNode(DPS_Node* node, DPS_NodeAddress* addr, DPS_NetConnection* cn, uint16_t ttl, RemoteNode** remoteOut)
+DPS_Status DPS_AddRemoteNode(DPS_Node* node, DPS_NodeAddress* addr, DPS_NetConnection* cn, uint16_t ttl, RemoteNode** remoteOut)
 {
     RemoteNode* remote = LookupRemoteNode(node, addr);
     if (remote) {
@@ -606,32 +529,32 @@ static void FreeMessage(uv_buf_t* bufs, size_t numBufs)
     FreeBufs(bufs, 2);
 }
 
-static void NetSendFailed(DPS_Node* node, DPS_NodeAddress* addr, uv_buf_t* bufs, size_t numBufs, DPS_Status status)
+void DPS_SendFailed(DPS_Node* node, DPS_NodeAddress* addr, uv_buf_t* bufs, size_t numBufs, DPS_Status status)
 {
     RemoteNode* remote;
 
-    DPS_DBGPRINT("NetSend failed %s\n", DPS_ErrTxt(status));
+    DPS_DBGPRINT("NetSendFailed %s\n", DPS_ErrTxt(status));
     remote = LookupRemoteNode(node, addr);
     if (remote) {
-        DeleteRemoteNode(node, remote);
+        DPS_DeleteRemoteNode(node, remote);
         DPS_DBGPRINT("Removed node %s\n", DPS_NodeAddrToString(addr));
     }
     FreeMessage(bufs, numBufs);
 }
 
-static void OnNetSendComplete(DPS_Node* node, DPS_NetEndpoint* ep, uv_buf_t* bufs, size_t numBufs, DPS_Status status)
+void DPS_OnSendComplete(DPS_Node* node, DPS_NetEndpoint* ep, uv_buf_t* bufs, size_t numBufs, DPS_Status status)
 {
     if (status != DPS_OK) {
         RemoteNode* remote;
 
-        LockNode(node);
+        DPS_LockNode(node);
         remote = LookupRemoteNode(node, &ep->addr);
-        DPS_DBGPRINT("OnNetSendComplete %s\n", DPS_ErrTxt(status));
+        DPS_DBGPRINT("NetSendComplete %s\n", DPS_ErrTxt(status));
         if (remote) {
-            DeleteRemoteNode(node, remote);
+            DPS_DeleteRemoteNode(node, remote);
             DPS_DBGPRINT("Removed node %s\n", DPS_NodeAddrToString(&ep->addr));
         }
-        UnlockNode(node);
+        DPS_UnlockNode(node);
     }
     FreeMessage(bufs, numBufs);
 }
@@ -719,11 +642,11 @@ static DPS_Status SendPublication(DPS_Node* node, DPS_Publication* pub, DPS_BitV
             { pub->payload.base, pub->payload.len }
         };
         if (remote) {
-            ret = DPS_NetSend(node, &remote->ep, bufs, A_SIZEOF(bufs), OnNetSendComplete);
+            ret = DPS_NetSend(node, &remote->ep, bufs, A_SIZEOF(bufs), DPS_OnSendComplete);
             if (ret == DPS_OK) {
                 UpdatePubHistory(node, pub);
             } else {
-                NetSendFailed(node, &remote->ep.addr, bufs, A_SIZEOF(bufs), ret);
+                DPS_SendFailed(node, &remote->ep.addr, bufs, A_SIZEOF(bufs), ret);
             }
         } else {
             ret = DPS_MulticastSend(node->mcastSender, bufs, A_SIZEOF(bufs));
@@ -811,7 +734,7 @@ static DPS_Status QueuePublicationAck(DPS_Node* node, PublicationAck* ack, uint8
             free(ack->payload.base);
             free(ack);
         } else {
-            LockNode(node);
+            DPS_LockNode(node);
             ack->destAddr = *destAddr;
             if (node->ackQueue.last) {
                 node->ackQueue.last->next = ack;
@@ -821,7 +744,7 @@ static DPS_Status QueuePublicationAck(DPS_Node* node, PublicationAck* ack, uint8
                 node->ackQueue.first = ack;
             }
             ScheduleBackgroundTask(node, SEND_ACKS_TASK);
-            UnlockNode(node);
+            DPS_UnlockNode(node);
         }
     }
     return ret;
@@ -858,7 +781,7 @@ static DPS_Status DecodeAcknowledgment(DPS_Node* node, DPS_NetEndpoint* ep, DPS_
     if (ret != DPS_OK) {
         return ret;
     }
-    LockNode(node);
+    DPS_LockNode(node);
     /*
      * See if this is an ACK for a local publication
      */
@@ -869,14 +792,14 @@ static DPS_Status DecodeAcknowledgment(DPS_Node* node, DPS_NetEndpoint* ep, DPS_
     }
     if (pub) {
         if (pub->handler) {
-            UnlockNode(node);
+            DPS_UnlockNode(node);
             pub->handler(pub, payload, len);
-            LockNode(node);
+            DPS_LockNode(node);
         }
-        UnlockNode(node);
+        DPS_UnlockNode(node);
         return DPS_OK;
     }
-    UnlockNode(node);
+    DPS_UnlockNode(node);
     /*
      * Look for in the history record for somewhere to forward the ACK
      */
@@ -901,15 +824,15 @@ static void SendAcksTask(DPS_Node* node)
 
     while ((ack = node->ackQueue.first) != NULL) {
         RemoteNode* ackNode;
-        DPS_Status ret = AddRemoteNode(node, &ack->destAddr, NULL, REMOTE_NODE_KEEPALIVE, &ackNode);
+        DPS_Status ret = DPS_AddRemoteNode(node, &ack->destAddr, NULL, REMOTE_NODE_KEEPALIVE, &ackNode);
         if (ret == DPS_OK || ret == DPS_ERR_EXISTS) {
             uv_buf_t bufs[] = {
                 { (char*)ack->headers.base, DPS_BufferUsed(&ack->headers) },
                 { (char*)ack->payload.base, DPS_BufferUsed(&ack->payload) }
             };
-            ret = DPS_NetSend(node, &ackNode->ep, bufs, A_SIZEOF(bufs), OnNetSendComplete);
+            ret = DPS_NetSend(node, &ackNode->ep, bufs, A_SIZEOF(bufs), DPS_OnSendComplete);
             if (ret != DPS_OK) {
-                NetSendFailed(node, &ack->destAddr, bufs, A_SIZEOF(bufs), ret);
+                DPS_SendFailed(node, &ack->destAddr, bufs, A_SIZEOF(bufs), ret);
             }
         }
         node->ackQueue.first = ack->next;
@@ -966,7 +889,7 @@ static void SendPubsTask(DPS_Node* node)
                 if (remote->inbound.interests) {
                     ret = SendMatchingPubToSub(node, pub, remote);
                     if (ret != DPS_OK) {
-                        DeleteRemoteNode(node, remote);
+                        DPS_DeleteRemoteNode(node, remote);
                         DPS_ERRPRINT("SendMatchingPubToSub failed %s\n", DPS_ErrTxt(ret));
                     }
                 }
@@ -983,10 +906,10 @@ static void SendPubsTask(DPS_Node* node)
 /*
  * Run checks of one or more publications against the current subscriptions
  */
-static void SendPubs(DPS_Node* node, DPS_Publication* pub)
+void DPS_UpdatePubs(DPS_Node* node, DPS_Publication* pub)
 {
     int count = 0;
-    LockNode(node);
+    DPS_LockNode(node);
 
     if (pub) {
         pub->checkToSend = DPS_TRUE;
@@ -1013,10 +936,10 @@ static void SendPubs(DPS_Node* node, DPS_Publication* pub)
         }
     }
     if (count) {
-        DPS_DBGPRINT("SendPubs %d publications to send\n", count);
+        DPS_DBGPRINT("DPS_UpdatePubs %d publications to send\n", count);
         ScheduleBackgroundTask(node, SEND_PUBS_TASK);
     }
-    UnlockNode(node);
+    DPS_UnlockNode(node);
 }
 
 /*
@@ -1031,7 +954,7 @@ static void CallPubHandlers(DPS_Node* node, DPS_Publication* pub)
 
     DPS_DBGTRACE();
 
-    LockNode(node);
+    DPS_LockNode(node);
     for (sub = node->subscriptions; sub != NULL; sub = next) {
         /*
          * Ths current subscription might get freed by the handler so need to hold the next pointer here.
@@ -1045,12 +968,12 @@ static void CallPubHandlers(DPS_Node* node, DPS_Publication* pub)
             /*
              * TODO - make callback from any async
              */
-            UnlockNode(node);
+            DPS_UnlockNode(node);
             sub->handler(sub, pub, (uint8_t*)pub->payload.base, pub->payload.len);
-            LockNode(node);
+            DPS_LockNode(node);
         }
     }
-    UnlockNode(node);
+    DPS_UnlockNode(node);
 }
 
 DPS_Status CopyPayload(DPS_Publication* pub, DPS_Buffer* in)
@@ -1162,7 +1085,7 @@ static DPS_Status DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Buf
     if (ret != DPS_OK) {
         goto Exit;
     }
-    EndpointSetPort(ep, port);
+    DPS_EndpointSetPort(ep, port);
     ret = CBOR_DecodeInt16(buffer, &ttl);
     if (ret != DPS_OK) {
         goto Exit;
@@ -1229,13 +1152,13 @@ static DPS_Status DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Buf
      * We have no reason to hold onto a node for multicast publishers
      */
     if (!multicast) {
-        LockNode(node);
-        ret = AddRemoteNode(node, &ep->addr, ep->cn, REMOTE_NODE_KEEPALIVE, &pubNode);
+        DPS_LockNode(node);
+        ret = DPS_AddRemoteNode(node, &ep->addr, ep->cn, REMOTE_NODE_KEEPALIVE, &pubNode);
         if (ret == DPS_ERR_EXISTS) {
             DPS_DBGPRINT("Updating existing node\n");
             ret = DPS_OK;
         }
-        UnlockNode(node);
+        DPS_UnlockNode(node);
         if (ret != DPS_OK) {
             goto Exit;
         }
@@ -1283,7 +1206,7 @@ static DPS_Status DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Buf
     }
     pub->expires = uv_now(node->loop) + DPS_SECS_TO_MS(ttl);
     UpdatePubHistory(node, pub);
-    SendPubs(node, pub);
+    DPS_UpdatePubs(node, pub);
     return DPS_OK;
 
 Exit:
@@ -1292,97 +1215,17 @@ Exit:
      */
     if (ret == DPS_ERR_INVALID) {
         DPS_ERRPRINT("Deleteing bad publisher\n");
-        LockNode(node);
-        DeleteRemoteNode(node, pubNode);
-        UnlockNode(node);
+        DPS_LockNode(node);
+        DPS_DeleteRemoteNode(node, pubNode);
+        DPS_UnlockNode(node);
     }
     if (pub) {
-        LockNode(node);
+        DPS_LockNode(node);
         UpdatePubHistory(node, pub);
         FreePublication(node, pub);
-        UnlockNode(node);
+        DPS_UnlockNode(node);
     }
     return ret;
-}
-
-static DPS_Status SendSubscription(DPS_Node* node, RemoteNode* remote, DPS_BitVector* interests, uint16_t ttl)
-{
-    DPS_Status ret;
-    CoAP_Option opts[1];
-    DPS_Buffer headers;
-    DPS_Buffer payload;
-    DPS_BitVector* needs = remote->outbound.needs;
-
-    size_t allocSize = DPS_BitVectorSerializeMaxSize(needs) + DPS_BitVectorSerializeMaxSize(interests) + 40;
-
-    if (!node->netCtx) {
-        return DPS_ERR_NETWORK;
-    }
-
-    opts[0].id = COAP_OPT_URI_PATH;
-    opts[0].val = (uint8_t*)DPS_SubscriptionURI;
-    opts[0].len = sizeof(DPS_SubscriptionURI);
-
-    ret = DPS_BufferInit(&payload, NULL, allocSize);
-    if (ret != DPS_OK) {
-        return ret;
-    }
-    /*
-     * Write listening port
-     */
-    CBOR_EncodeUint16(&payload, node->port);
-    CBOR_EncodeUint16(&payload, ttl);
-    CBOR_EncodeBoolean(&payload, remote->inbound.sync);
-    CBOR_EncodeBoolean(&payload, remote->outbound.sync);
-    ret = DPS_BitVectorSerialize(needs, &payload);
-    if (ret == DPS_OK) {
-        ret = DPS_BitVectorSerialize(interests, &payload);
-    }
-    if (ret == DPS_OK) {
-        ret = CoAP_Compose(COAP_PROTOCOL, COAP_CODE(COAP_REQUEST, COAP_GET), opts, A_SIZEOF(opts), DPS_BufferUsed(&payload), &headers);
-    }
-    if (ret == DPS_OK) {
-        uv_buf_t bufs[] = {
-            { (char*)headers.base, DPS_BufferUsed(&headers) },
-            { (char*)payload.base, DPS_BufferUsed(&payload) }
-        };
-        ret = DPS_NetSend(node, &remote->ep, bufs, A_SIZEOF(bufs), OnNetSendComplete);
-        if (ret != DPS_OK) {
-            DPS_ERRPRINT("Failed to send subscription request %s\n", DPS_ErrTxt(ret));
-            NetSendFailed(node, &remote->ep.addr, bufs, A_SIZEOF(bufs), ret);
-        }
-    } else {
-        free(payload.base);
-        return ret;
-    }
-    /*
-     * Done with these flags
-     */
-    remote->inbound.sync = DPS_FALSE;
-    remote->outbound.sync = DPS_FALSE;
-    return ret;
-}
-
-/*
- * Unsubscribes this node from a remote node by sending a cleared bit vector
- */
-static DPS_Status SendUnsubscribe(DPS_Node* node, RemoteNode* remote)
-{
-    if (remote->outbound.interests) {
-        DPS_BitVectorClear(remote->outbound.interests);
-        DPS_BitVectorClear(remote->outbound.needs);
-    } else {
-        remote->outbound.interests = DPS_BitVectorAlloc();
-        remote->outbound.needs = DPS_BitVectorAllocFH();
-        if (!remote->outbound.interests || !remote->outbound.needs) {
-            DPS_BitVectorFree(remote->outbound.interests);
-            DPS_BitVectorFree(remote->outbound.needs);
-            return DPS_ERR_RESOURCES;
-        }
-    }
-    remote->inbound.sync = DPS_FALSE;
-    remote->outbound.sync = DPS_TRUE;
-    return SendSubscription(node, remote, remote->outbound.interests, 0);
 }
 
 static void SendSubsTask(DPS_Node* node)
@@ -1406,9 +1249,9 @@ static void SendSubsTask(DPS_Node* node)
         }
         remote->outbound.checkForUpdates = DPS_FALSE;
         if (uv_now(node->loop) >= remote->expires) {
-            SendUnsubscribe(node, remote);
+            DPS_SendUnsubscribe(node, remote);
             DPS_DBGPRINT("Remote node has expired - deleting\n");
-            DeleteRemoteNode(node, remote);
+            DPS_DeleteRemoteNode(node, remote);
             continue;
         }
         ret = UpdateOutboundInterests(node, remote, &newInterests);
@@ -1416,9 +1259,9 @@ static void SendSubsTask(DPS_Node* node)
             break;
         }
         if (newInterests) {
-            ret = SendSubscription(node, remote, newInterests, UINT16_MAX);
+            ret = DPS_SendSubscription(node, remote, newInterests, UINT16_MAX);
             if (ret != DPS_OK) {
-                DeleteRemoteNode(node, remote);
+                DPS_DeleteRemoteNode(node, remote);
                 DPS_ERRPRINT("Failed to send subscription request %s\n", DPS_ErrTxt(ret));
                 ret = DPS_OK;
                 continue;
@@ -1430,11 +1273,11 @@ static void SendSubsTask(DPS_Node* node)
     }
 }
 
-static int SendSubs(DPS_Node* node, RemoteNode* remote)
+int DPS_UpdateSubs(DPS_Node* node, RemoteNode* remote)
 {
     int count = 0;
     DPS_DBGTRACE();
-    LockNode(node);
+    DPS_LockNode(node);
     if (node->remoteNodes) {
         if (remote) {
             remote->outbound.checkForUpdates = DPS_TRUE;
@@ -1454,135 +1297,8 @@ static int SendSubs(DPS_Node* node, RemoteNode* remote)
             ScheduleBackgroundTask(node, SEND_SUBS_TASK);
         }
     }
-    UnlockNode(node);
+    DPS_UnlockNode(node);
     return count;
-}
-
-/*
- * Update the interests for a remote node
- */
-static DPS_Status UpdateInboundInterests(DPS_Node* node, RemoteNode* remote, DPS_BitVector* interests, DPS_BitVector* needs, int delta)
-{
-    DPS_DBGTRACE();
-
-    if (remote->inbound.interests) {
-        if (delta) {
-            DPS_DBGPRINT("Received interests delta\n");
-            DPS_BitVectorXor(interests, interests, remote->inbound.interests, NULL);
-        }
-        DPS_CountVectorDel(node->interests, remote->inbound.interests);
-        DPS_CountVectorDel(node->needs, remote->inbound.needs);
-        DPS_BitVectorFree(remote->inbound.interests);
-        remote->inbound.interests = NULL;
-        DPS_BitVectorFree(remote->inbound.needs);
-        remote->inbound.needs = NULL;
-        remote->inbound.updates = DPS_TRUE;
-    }
-    if (DPS_BitVectorIsClear(interests)) {
-        DPS_BitVectorFree(interests);
-        DPS_BitVectorFree(needs);
-    } else {
-        DPS_CountVectorAdd(node->interests, interests);
-        DPS_CountVectorAdd(node->needs, needs);
-        remote->inbound.interests = interests;
-        remote->inbound.needs = needs;
-        remote->inbound.updates = DPS_TRUE;
-    }
-    return DPS_OK;
-}
-
-/*
- *
- */
-static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Buffer* buffer)
-{
-    DPS_Status ret;
-    DPS_BitVector* interests;
-    DPS_BitVector* needs;
-    uint16_t port;
-    uint16_t ttl;
-    RemoteNode* remote;
-    int syncRequested;
-    int syncReceived;
-
-    DPS_DBGTRACE();
-
-    interests = DPS_BitVectorAlloc();
-    if (!interests) {
-        return DPS_ERR_RESOURCES;
-    }
-    needs = DPS_BitVectorAllocFH();
-    if (!needs) {
-        DPS_BitVectorFree(interests);
-        return DPS_ERR_RESOURCES;
-    }
-    ret = CBOR_DecodeUint16(buffer, &port);
-    if (ret != DPS_OK) {
-        return ret;
-    }
-    EndpointSetPort(ep, port);
-    ret = CBOR_DecodeUint16(buffer, &ttl);
-    if (ret != DPS_OK) {
-        return ret;
-    }
-    DPS_DBGPRINT("TTL=%d\n", ttl);
-    ret = CBOR_DecodeBoolean(buffer, &syncRequested);
-    if (ret != DPS_OK) {
-        return ret;
-    }
-    ret = CBOR_DecodeBoolean(buffer, &syncReceived);
-    if (ret != DPS_OK) {
-        return ret;
-    }
-    ret = DPS_BitVectorDeserialize(needs, buffer);
-    if (ret != DPS_OK) {
-        return ret;
-    }
-    ret = DPS_BitVectorDeserialize(interests, buffer);
-    if (ret != DPS_OK) {
-        return ret;
-    }
-    LockNode(node);
-    ret = AddRemoteNode(node, &ep->addr, ep->cn, ttl, &remote);
-    UnlockNode(node);
-    if (ret != DPS_OK) {
-        if (ret != DPS_ERR_EXISTS) {
-            DPS_BitVectorFree(interests);
-            DPS_BitVectorFree(needs);
-            return ret;
-        }
-        ret = DPS_OK;
-    } else {
-        /*
-         * The remote is new to us so we need to synchronize even if the remote
-         * didn't request to.
-         */
-        syncRequested = DPS_TRUE;
-    }
-    LockNode(node);
-    if (ttl == 0) {
-        DeleteRemoteNode(node, remote);
-    } else {
-        if (syncRequested) {
-            remote->outbound.sync = DPS_TRUE;
-        }
-        ret = UpdateInboundInterests(node, remote, interests, needs, !syncReceived);
-        /*
-         * Check if application waiting for a completion callback
-         */
-        if (remote->completion) {
-            RemoteCompletion(node, remote, DPS_OK);
-        }
-    }
-    UnlockNode(node);
-    /*
-     * Schedule background tasks
-     */
-    if (ret == DPS_OK) {
-        SendPubs(node, NULL);
-        SendSubs(node, NULL);
-    }
-    return ret;
 }
 
 static void DecodeRequest(DPS_Node* node, DPS_NetEndpoint* ep, CoAP_Parsed* coap, DPS_Buffer* payload, int multicast)
@@ -1617,7 +1333,7 @@ static void DecodeRequest(DPS_Node* node, DPS_NetEndpoint* ep, CoAP_Parsed* coap
             DPS_ERRPRINT("Expected a GET request\n");
             return;
         }
-        ret = DecodeSubscription(node, ep, payload);
+        ret = DPS_DecodeSubscription(node, ep, payload);
         if (ret != DPS_OK) {
             DPS_DBGPRINT("DecodeSubscription returned %s\n", DPS_ErrTxt(ret));
         }
@@ -1707,12 +1423,12 @@ static ssize_t OnNetReceive(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Status stat
      */
     if (status != DPS_OK) {
         RemoteNode* remote;
-        LockNode(node);
+        DPS_LockNode(node);
         remote = LookupRemoteNode(node, &ep->addr);
         if (remote) {
-            DeleteRemoteNode(node, remote);
+            DPS_DeleteRemoteNode(node, remote);
         }
-        UnlockNode(node);
+        DPS_UnlockNode(node);
         return -1;
     }
     ret = CoAP_GetPktLen(protocol, data, len, &pktLen);
@@ -1742,7 +1458,7 @@ static ssize_t OnNetReceive(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Status stat
 
 static void StopNode(DPS_Node* node)
 {
-    LockNode(node);
+    DPS_LockNode(node);
 
     /*
      * Indicates the node is no longer running
@@ -1769,7 +1485,7 @@ static void StopNode(DPS_Node* node)
      * Delete remote nodes and shutdown any connections.
      */
     while (node->remoteNodes) {
-        DeleteRemoteNode(node, node->remoteNodes);
+        DPS_DeleteRemoteNode(node, node->remoteNodes);
     }
     /*
      * Run the event loop again to ensure that all cleanup is
@@ -1779,9 +1495,7 @@ static void StopNode(DPS_Node* node)
     /*
      * Free data structures
      */
-    while (node->subscriptions) {
-        node->subscriptions = FreeSubscription(node->subscriptions);
-    }
+    DPS_FreeSubscriptions(node);
     while (node->publications) {
         node->publications = FreePublication(node, node->publications);
     }
@@ -1805,12 +1519,12 @@ static void StopNode(DPS_Node* node)
      * it will be freed when DPS_DestroyNode() is called.
      */
     if (node->onDestroyed) {
-        UnlockNode(node);
+        DPS_UnlockNode(node);
         node->onDestroyed(node, node->onDestroyedData);
         uv_mutex_destroy(&node->nodeMutex);
         free(node);
     } else {
-        UnlockNode(node);
+        DPS_UnlockNode(node);
     }
 }
 
@@ -1990,16 +1704,16 @@ DPS_Status DPS_DestroyNode(DPS_Node* node, DPS_OnNodeDestroyed cb, void* data)
     if (!node->loop) {
         return DPS_OK;
     }
-    LockNode(node);
+    DPS_LockNode(node);
     if (!node->stopped) {
         node->onDestroyed = cb;
         node->onDestroyedData = data;
         node->tasks |= STOP_NODE_TASK;
         uv_async_send(&node->bgHandler);
-        UnlockNode(node);
+        DPS_UnlockNode(node);
         return DPS_OK;
     }
-    UnlockNode(node);
+    DPS_UnlockNode(node);
     uv_mutex_destroy(&node->nodeMutex);
     free(node);
     return DPS_ERR_NODE_DESTROYED;
@@ -2069,7 +1783,7 @@ DPS_Status DPS_InitPublication(DPS_Publication* pub, const char** topics, size_t
         return DPS_ERR_ARGS;
     }
     DPS_DBGPRINT("Creating publication with %zu topics %s\n", numTopics, handler ? "and ACK handler" : "");
-    DumpTopics(topics, numTopics);
+    DPS_DumpTopics(topics, numTopics);
 
     pub->bf = DPS_BitVectorAlloc();
     if (!pub->bf) {
@@ -2117,10 +1831,10 @@ DPS_Status DPS_InitPublication(DPS_Publication* pub, const char** topics, size_t
     }
 
     if (ret == DPS_OK) {
-        LockNode(node);
+        DPS_LockNode(node);
         pub->next = node->publications;
         node->publications = pub;
-        UnlockNode(node);
+        DPS_UnlockNode(node);
     } else {
         if (pub->bf) {
             DPS_BitVectorFree(pub->bf);
@@ -2159,7 +1873,7 @@ DPS_Status DPS_Publish(DPS_Publication* pub, uint8_t* payload, size_t len, int16
     if (!IsValidPub(pub) || !(pub->flags & PUB_FLAG_LOCAL)) {
         return DPS_ERR_MISSING;
     }
-    LockNode(node);
+    DPS_LockNode(node);
     /*
      * Return the existing payload pointer if requested
      */
@@ -2171,12 +1885,12 @@ DPS_Status DPS_Publish(DPS_Publication* pub, uint8_t* payload, size_t len, int16
      */
     if (ttl < 0) {
         if (!(pub->flags & PUB_FLAG_RETAINED)) {
-            UnlockNode(node);
+            DPS_UnlockNode(node);
             DPS_ERRPRINT("Negative ttl only valid for retained publications\n");
             return DPS_ERR_INVALID;
         }
         if (payload) {
-            UnlockNode(node);
+            DPS_UnlockNode(node);
             DPS_ERRPRINT("Payload not permitted when canceling a retained publication\n");
             return DPS_ERR_INVALID;
         }
@@ -2189,7 +1903,7 @@ DPS_Status DPS_Publish(DPS_Publication* pub, uint8_t* payload, size_t len, int16
     DPS_BufferReset(&pub->payloadLenBuf);
     ret = CBOR_EncodeLength(&pub->payloadLenBuf, len, CBOR_BYTES);
     if (ret != DPS_OK) {
-        UnlockNode(node);
+        DPS_UnlockNode(node);
         return ret;
     }
     pub->payload.base = (char*)payload;
@@ -2206,8 +1920,8 @@ DPS_Status DPS_Publish(DPS_Publication* pub, uint8_t* payload, size_t len, int16
     }
     ++pub->sequenceNum;
 
-    UnlockNode(node);
-    SendPubs(node, pub);
+    DPS_UnlockNode(node);
+    DPS_UpdatePubs(node, pub);
     return DPS_OK;
 }
 
@@ -2236,12 +1950,12 @@ DPS_Status DPS_DestroyPublication(DPS_Publication* pub, uint8_t** payload)
     if (!IsValidPub(pub) || !(pub->flags & PUB_FLAG_LOCAL)) {
         return DPS_ERR_MISSING;
     }
-    LockNode(node);
+    DPS_LockNode(node);
     if (payload) {
         *payload = (uint8_t*)pub->payload.base;
     }
     FreePublication(node, pub);
-    UnlockNode(node);
+    DPS_UnlockNode(node);
     return DPS_OK;
 }
 
@@ -2254,10 +1968,10 @@ DPS_Status DPS_Link(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnLinkComplete cb
     if (!addr || !node || !cb) {
         return DPS_ERR_NULL;
     }
-    LockNode(node);
-    ret = AddRemoteNode(node, addr, NULL, REMOTE_NODE_KEEPALIVE, &remote);
+    DPS_LockNode(node);
+    ret = DPS_AddRemoteNode(node, addr, NULL, REMOTE_NODE_KEEPALIVE, &remote);
     if (ret != DPS_OK && ret != DPS_ERR_EXISTS) {
-        UnlockNode(node);
+        DPS_UnlockNode(node);
         return ret;
     }
     /*
@@ -2265,14 +1979,14 @@ DPS_Status DPS_Link(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnLinkComplete cb
      */
     if (remote->linked) {
         DPS_ERRPRINT("Node at %s already linked\n", DPS_NodeAddrToString(addr));
-        UnlockNode(node);
+        DPS_UnlockNode(node);
         return ret;
     }
     /*
      * Operations must be serialized
      */
     if (remote->completion) {
-        UnlockNode(node);
+        DPS_UnlockNode(node);
         return DPS_ERR_BUSY;
     }
     remote->linked = DPS_TRUE;
@@ -2282,12 +1996,12 @@ DPS_Status DPS_Link(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnLinkComplete cb
     }
     remote->completion = AllocCompletion(node, remote, LINK_OP, data, LINK_RESPONSE_TIMEOUT, cb);
     if (!remote->completion) {
-        DeleteRemoteNode(node, remote);
-        UnlockNode(node);
+        DPS_DeleteRemoteNode(node, remote);
+        DPS_UnlockNode(node);
         return DPS_ERR_RESOURCES;
     }
-    UnlockNode(node);
-    SendSubs(node, remote);
+    DPS_UnlockNode(node);
+    DPS_UpdateSubs(node, remote);
     return DPS_OK;
 }
 
@@ -2299,17 +2013,17 @@ DPS_Status DPS_Unlink(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnUnlinkComplet
     if (!addr || !node || !cb) {
         return DPS_ERR_NULL;
     }
-    LockNode(node);
+    DPS_LockNode(node);
     remote = LookupRemoteNode(node, addr);
     if (!remote || !remote->linked) {
-        UnlockNode(node);
+        DPS_UnlockNode(node);
         return DPS_ERR_MISSING;
     }
     /*
      * Operations must be serialized
      */
     if (remote->completion) {
-        UnlockNode(node);
+        DPS_UnlockNode(node);
         return DPS_ERR_BUSY;
     }
     /*
@@ -2320,12 +2034,12 @@ DPS_Status DPS_Unlink(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnUnlinkComplet
     remote->expires = 0;
     remote->completion = AllocCompletion(node, remote, UNLINK_OP, data, LINK_RESPONSE_TIMEOUT, cb);
     if (!remote->completion) {
-        DeleteRemoteNode(node, remote);
-        UnlockNode(node);
+        DPS_DeleteRemoteNode(node, remote);
+        DPS_UnlockNode(node);
         return DPS_ERR_RESOURCES;
     }
-    UnlockNode(node);
-    SendSubs(node, remote);
+    DPS_UnlockNode(node);
+    DPS_UpdateSubs(node, remote);
     return DPS_OK;
 }
 
@@ -2360,128 +2074,6 @@ DPS_Status DPS_AckPublication(const DPS_Publication* pub, uint8_t* payload, size
     return QueuePublicationAck(node, ack, payload, len, addr);
 }
 
-DPS_Subscription* DPS_CreateSubscription(DPS_Node* node, const char** topics, size_t numTopics)
-{
-    size_t i;
-    DPS_Subscription* sub;
-
-    if (!node || !topics || !numTopics) {
-        return NULL;
-    }
-    sub = calloc(1, sizeof(DPS_Subscription) + sizeof(char*) * (numTopics - 1));
-    /*
-     * Add the topics to the subscription
-     */
-    for (i = 0; i < numTopics; ++i) {
-        size_t len = strlen(topics[i]);
-        sub->topics[i] = malloc(len + 1);
-        if (!sub->topics[i]) {
-            FreeSubscription(sub);
-            return NULL;
-        }
-        ++sub->numTopics;
-        memcpy(sub->topics[i], topics[i], len + 1);
-    }
-    sub->node = node;
-    return sub;
-}
-
-DPS_Status DPS_Subscribe(DPS_Subscription* sub, DPS_PublicationHandler handler)
-{
-    size_t i;
-    DPS_Status ret = DPS_OK;
-    DPS_Node* node = sub ? sub->node : NULL;
-
-    if (!node) {
-        return DPS_ERR_NULL;
-    }
-    if (!node->loop) {
-        return DPS_ERR_NOT_STARTED;
-    }
-    sub->handler = handler;
-    sub->bf = DPS_BitVectorAlloc();
-    sub->needs = DPS_BitVectorAllocFH();
-    if (!sub->bf || !sub->needs) {
-        return DPS_ERR_RESOURCES;
-    }
-    /*
-     * Add the topics to the bloom filter
-     */
-    for (i = 0; i < sub->numTopics; ++i) {
-        ret = DPS_AddTopic(sub->bf, sub->topics[i], node->separators, DPS_SubTopic);
-        if (ret != DPS_OK) {
-            break;
-        }
-    }
-    if (ret != DPS_OK) {
-        return ret;
-    }
-
-    DPS_DBGPRINT("Subscribing to %zu topics\n", sub->numTopics);
-    DumpTopics((const char**)sub->topics, sub->numTopics);
-
-    DPS_BitVectorFuzzyHash(sub->needs, sub->bf);
-    /*
-     * Protect the node while we update it
-     */
-    LockNode(node);
-    sub->next = node->subscriptions;
-    node->subscriptions = sub;
-    ret = DPS_CountVectorAdd(node->interests, sub->bf);
-    if (ret == DPS_OK) {
-        ret = DPS_CountVectorAdd(node->needs, sub->needs);
-    }
-    UnlockNode(node);
-    if (ret == DPS_OK) {
-        SendSubs(node, NULL);
-    }
-    return ret;
-}
-
-DPS_Status DPS_DestroySubscription(DPS_Subscription* sub)
-{
-    DPS_Node* node;
-
-    if (!IsValidSub(sub)) {
-        return DPS_ERR_MISSING;
-    }
-    node = sub->node;
-    /*
-     * Protect the node while we update it
-     */
-    LockNode(node);
-    /*
-     * Unlink the subscription
-     */
-    if (node->subscriptions == sub) {
-        node->subscriptions = sub->next;
-    } else {
-        DPS_Subscription* prev = node->subscriptions;
-        while (prev->next != sub) {
-            prev = prev->next;
-        }
-        prev->next = sub->next;
-    }
-    /*
-     * This remove this subscriptions contributions to the interests and needs
-     */
-    if (DPS_CountVectorDel(node->interests, sub->bf) != DPS_OK) {
-        assert(!"Count error");
-    }
-    if (DPS_CountVectorDel(node->needs, sub->needs) != DPS_OK) {
-        assert(!"Count error");
-    }
-    UnlockNode(node);
-
-    DPS_DBGPRINT("Unsubscribing from %zu topics\n", sub->numTopics);
-    DumpTopics((const char**)sub->topics, sub->numTopics);
-    FreeSubscription(sub);
-
-    SendSubs(node, NULL);
-
-    return DPS_OK;
-}
-
 static void RunBackgroundTasks(uv_async_t* handle)
 {
     DPS_Node* node = (DPS_Node*)handle->data;
@@ -2493,7 +2085,7 @@ static void RunBackgroundTasks(uv_async_t* handle)
      * for example limit the number of subs or pubs on each
      * iteration so the node lock doesn't get held for too long.
      */
-    LockNode(node);
+    DPS_LockNode(node);
     /*
      * The tasks are ordered according to priority
      */
@@ -2513,7 +2105,7 @@ static void RunBackgroundTasks(uv_async_t* handle)
     if (node->tasks) {
         uv_async_send(&node->bgHandler);
     }
-    UnlockNode(node);
+    DPS_UnlockNode(node);
 }
 
 const char* DPS_NodeAddrToString(DPS_NodeAddress* addr)
@@ -2560,27 +2152,3 @@ DPS_Node* DPS_GetPublicationNode(const DPS_Publication* pub)
     return pub ? pub->node : NULL;
 }
 
-DPS_Status DPS_SetSubscriptionData(DPS_Subscription* sub, void* data)
-{
-    if (sub) {
-        sub->userData = data;
-        return DPS_OK;
-    } else {
-        return DPS_ERR_NULL;
-    }
-}
-
-void* DPS_GetSubscriptionData(DPS_Subscription* sub)
-{
-    return sub ? sub->userData : NULL;
-}
-
-void DPS_DumpSubscriptions(DPS_Node* node)
-{
-    DPS_Subscription* sub;
-
-    DPS_DBGPRINT("Current subscriptions:\n");
-    for (sub = node->subscriptions; sub != NULL; sub = sub->next) {
-        DumpTopics((const char**)sub->topics, sub->numTopics);
-    }
-}

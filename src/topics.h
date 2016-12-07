@@ -92,6 +92,12 @@ DPS_Status DPS_MatchTopicString(const char* pubTopic, const char* subTopic, cons
  */
 DPS_Status DPS_MatchTopicList(char* const* pubs, size_t numPubs, char* const* subs, size_t numSubs, const char* separators, int noWild, int* match);
 
+#ifdef NDEBUG
+#define DumpTopics(t, n)
+#else
+void DPS_DumpTopics(const char** topics, size_t numTopics);
+#endif
+
 #ifdef __cplusplus
 }
 #endif

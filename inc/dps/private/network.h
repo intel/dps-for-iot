@@ -66,6 +66,14 @@ typedef struct _DPS_MulticastReceiver DPS_MulticastReceiver;
  */
 typedef ssize_t (*DPS_OnReceive)(DPS_Node* node, DPS_NetEndpoint* endpoint, DPS_Status status, const uint8_t* data, size_t len);
 
+/**
+ * Set the port number on a network endpoint
+ *
+ * @param endpoint  The endpoint to set
+ * @param port      The port number to set on the endpoint
+ */
+void DPS_EndpointSetPort(DPS_NetEndpoint* endpoint, uint16_t port);
+
 /*
  * Start receiving multicast data
  */
