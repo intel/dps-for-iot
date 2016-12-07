@@ -475,131 +475,6 @@ static DPS_Status SendMatchingPubToSub(DPS_Node* node, DPS_Publication* pub, Rem
     return DPS_OK;
 }
 
-static PublicationAck* AllocPubAck(const DPS_UUID* pubId, uint32_t sequenceNum)
-{
-    PublicationAck* ack = calloc(1, sizeof(PublicationAck));
-    if (!ack) {
-        return NULL;
-    }
-    ack->pubId = *pubId;
-    ack->sequenceNum = sequenceNum;
-    return ack;
-}
-
-static DPS_Status QueuePublicationAck(DPS_Node* node, PublicationAck* ack, uint8_t* data, size_t len, DPS_NodeAddress* destAddr)
-{
-    DPS_Status ret;
-    CoAP_Option opts[1];
-    size_t allocSize = 8 + sizeof(DPS_UUID) + sizeof(uint32_t) + len;
-
-    DPS_DBGTRACE();
-
-    assert(ack->sequenceNum != 0);
-
-    if (!node->netCtx) {
-        return DPS_ERR_NETWORK;
-    }
-
-    opts[0].id = COAP_OPT_URI_PATH;
-    opts[0].val = (uint8_t*)DPS_AcknowledgmentURI;
-    opts[0].len = sizeof(DPS_AcknowledgmentURI);
-
-    ret = DPS_BufferInit(&ack->payload, NULL, allocSize);
-    if (ret != DPS_OK) {
-        free(ack);
-        return ret;
-    }
-    CBOR_EncodeBytes(&ack->payload, (uint8_t*)&ack->pubId, sizeof(DPS_UUID));
-    CBOR_EncodeUint32(&ack->payload, ack->sequenceNum);
-    if (ret == DPS_OK) {
-        CBOR_EncodeBytes(&ack->payload, data, len);
-        ret = CoAP_Compose(COAP_PROTOCOL, COAP_CODE(COAP_REQUEST, COAP_PUT), opts, A_SIZEOF(opts), DPS_BufferUsed(&ack->payload), &ack->headers);
-        if (ret != DPS_OK) {
-            free(ack->payload.base);
-            free(ack);
-        } else {
-            DPS_LockNode(node);
-            ack->destAddr = *destAddr;
-            if (node->ackQueue.last) {
-                node->ackQueue.last->next = ack;
-            }
-            node->ackQueue.last = ack;
-            if (!node->ackQueue.first) {
-                node->ackQueue.first = ack;
-            }
-            ScheduleBackgroundTask(node, SEND_ACKS_TASK);
-            DPS_UnlockNode(node);
-        }
-    }
-    return ret;
-}
-
-static DPS_Status DecodeAcknowledgment(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Buffer* buffer)
-{
-    DPS_Status ret;
-    DPS_Publication* pub;
-    uint32_t sn;
-    uint32_t sequenceNum;
-    DPS_UUID* pubId;
-    DPS_NodeAddress* addr;
-    uint8_t* payload;
-    size_t len;
-
-    DPS_DBGTRACE();
-
-    ret = CBOR_DecodeBytes(buffer, (uint8_t**)&pubId, &len);
-    if (ret != DPS_OK) {
-        return ret;
-    }
-    if (len != sizeof(DPS_UUID)) {
-        return DPS_ERR_INVALID;
-    }
-    ret = CBOR_DecodeUint32(buffer, &sequenceNum);
-    if (ret != DPS_OK) {
-        return ret;
-    }
-    if (sequenceNum == 0) {
-        return DPS_ERR_INVALID;
-    }
-    ret = CBOR_DecodeBytes(buffer, &payload, &len);
-    if (ret != DPS_OK) {
-        return ret;
-    }
-    DPS_LockNode(node);
-    /*
-     * See if this is an ACK for a local publication
-     */
-    for (pub = node->publications; pub != NULL; pub = pub->next) {
-        if (pub->handler && (pub->sequenceNum == sequenceNum) && (DPS_UUIDCompare(&pub->pubId, pubId) == 0)) {
-            break;
-        }
-    }
-    if (pub) {
-        if (pub->handler) {
-            DPS_UnlockNode(node);
-            pub->handler(pub, payload, len);
-            DPS_LockNode(node);
-        }
-        DPS_UnlockNode(node);
-        return DPS_OK;
-    }
-    DPS_UnlockNode(node);
-    /*
-     * Look for in the history record for somewhere to forward the ACK
-     */
-    ret = DPS_LookupPublisher(&node->history, pubId, &sn, &addr);
-    if ((ret == DPS_OK) && (sequenceNum <= sn) && addr) {
-        PublicationAck* ack = AllocPubAck(pubId, sequenceNum);
-        if (ack) {
-            DPS_DBGPRINT("Forwarding acknowledgement for %s/%d to %s\n", DPS_UUIDToString(pubId), sequenceNum, DPS_NodeAddrToString(addr));
-            ret = QueuePublicationAck(node, ack, payload, len, addr);
-        } else {
-            ret = DPS_ERR_RESOURCES;
-        }
-    }
-    return ret;
-}
-
 static void SendAcksTask(DPS_Node* node)
 {
     PublicationAck* ack;
@@ -610,14 +485,7 @@ static void SendAcksTask(DPS_Node* node)
         RemoteNode* ackNode;
         DPS_Status ret = DPS_AddRemoteNode(node, &ack->destAddr, NULL, DPS_REMOTE_NODE_KEEPALIVE, &ackNode);
         if (ret == DPS_OK || ret == DPS_ERR_EXISTS) {
-            uv_buf_t bufs[] = {
-                { (char*)ack->headers.base, DPS_BufferUsed(&ack->headers) },
-                { (char*)ack->payload.base, DPS_BufferUsed(&ack->payload) }
-            };
-            ret = DPS_NetSend(node, &ackNode->ep, bufs, A_SIZEOF(bufs), DPS_OnSendComplete);
-            if (ret != DPS_OK) {
-                DPS_SendFailed(node, &ack->destAddr, bufs, A_SIZEOF(bufs), ret);
-            }
+            DPS_SendAcknowledgment(node, ack, ackNode);
         }
         node->ackQueue.first = ack->next;
         free(ack);
@@ -784,6 +652,20 @@ int DPS_UpdateSubs(DPS_Node* node, RemoteNode* remote)
     return count;
 }
 
+void DPS_QueuePublicationAck(DPS_Node* node, PublicationAck* ack)
+{
+    DPS_LockNode(node);
+    if (node->ackQueue.last) {
+        node->ackQueue.last->next = ack;
+    }
+    node->ackQueue.last = ack;
+    if (!node->ackQueue.first) {
+        node->ackQueue.first = ack;
+    }
+    ScheduleBackgroundTask(node, SEND_ACKS_TASK);
+    DPS_UnlockNode(node);
+}
+
 static void DecodeRequest(DPS_Node* node, DPS_NetEndpoint* ep, CoAP_Parsed* coap, DPS_Buffer* payload, int multicast)
 {
     DPS_Status ret;
@@ -838,7 +720,7 @@ static void DecodeRequest(DPS_Node* node, DPS_NetEndpoint* ep, CoAP_Parsed* coap
             return;
         }
         DPS_DBGPRINT("Received acknowledgment via %s\n", DPS_NodeAddrToString(&ep->addr));
-        ret = DecodeAcknowledgment(node, ep, payload);
+        ret = DPS_DecodeAcknowledgment(node, ep, payload);
         if (ret != DPS_OK) {
             DPS_DBGPRINT("DecodeAcknowledgment returned %s\n", DPS_ErrTxt(ret));
         }
@@ -1282,37 +1164,6 @@ DPS_Status DPS_Unlink(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnUnlinkComplet
     DPS_UnlockNode(node);
     DPS_UpdateSubs(node, remote);
     return DPS_OK;
-}
-
-DPS_Status DPS_AckPublication(const DPS_Publication* pub, uint8_t* payload, size_t len)
-{
-    DPS_Status ret;
-    DPS_NodeAddress* addr = NULL;
-    DPS_Node* node = pub ? pub->node : NULL;
-    uint32_t sequenceNum;
-    PublicationAck* ack;
-
-    DPS_DBGTRACE();
-
-    if (!node) {
-        return DPS_ERR_NULL;
-    }
-    if (pub->flags & PUB_FLAG_LOCAL) {
-        return DPS_ERR_INVALID;
-    }
-    ret = DPS_LookupPublisher(&node->history, &pub->pubId, &sequenceNum, &addr);
-    if (ret != DPS_OK) {
-        return ret;
-    }
-    if (!addr) {
-        return DPS_ERR_NO_ROUTE;
-    }
-    DPS_DBGPRINT("Queueing acknowledgement for %s/%d to %s\n", DPS_UUIDToString(&pub->pubId), pub->sequenceNum, DPS_NodeAddrToString(addr));
-    ack = AllocPubAck(&pub->pubId, pub->sequenceNum);
-    if (!ack) {
-        return DPS_ERR_RESOURCES;
-    }
-    return QueuePublicationAck(node, ack, payload, len, addr);
 }
 
 static void RunBackgroundTasks(uv_async_t* handle)

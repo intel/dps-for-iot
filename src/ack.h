@@ -45,6 +45,19 @@ typedef struct _PublicationAck {
     struct _PublicationAck* next;
 } PublicationAck;
 
+/*
+ */
+DPS_Status DPS_DecodeAcknowledgment(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Buffer* buffer);
+
+/*
+ * Send an previously serialized acknowledgement
+ *
+ * @param node    The local node
+ * @param ack     The acknowledgment to send
+ * @param ackNode The remote node to send the acknowledgment to
+ */
+DPS_Status DPS_SendAcknowledgment(DPS_Node*node, PublicationAck* ack, RemoteNode* ackNode);
+
 #ifdef __cplusplus
 }
 #endif

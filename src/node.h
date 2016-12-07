@@ -131,6 +131,14 @@ typedef struct _RemoteNode {
 int DPS_UpdateSubs(DPS_Node* node, RemoteNode* remote);
 
 /*
+ * Queue an acknowledgment to be sent asynchronously
+ *
+ * @param node    The node
+ * @param ack     The acknowledgment to queue
+ */
+void DPS_QueuePublicationAck(DPS_Node* node, PublicationAck* ack);
+
+/*
  * Callback function called when a network send operation completes
  */
 void DPS_OnSendComplete(DPS_Node* node, DPS_NetEndpoint* ep, uv_buf_t* bufs, size_t numBufs, DPS_Status status);
