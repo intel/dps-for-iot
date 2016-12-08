@@ -131,51 +131,48 @@ DPS_Status CBOR_DecodeBoolean(DPS_Buffer* buffer, int* i)
     }
 }
 
+/*
+ * Byte length corresponding the various info encodings
+ */
+static const size_t IntLengths[] = { 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,3,5,9,0,0,0,0 };
+
 static DPS_Status DecodeUint(DPS_Buffer* buffer, uint64_t* n, uint8_t* maj)
 {
     size_t avail = DPS_BufferAvail(buffer);
     uint8_t* p = buffer->pos;
     uint8_t info;
+    size_t len;
 
     if (avail < 1) {
-        *n = 0;
         return DPS_ERR_EOD;
     }
-    info = *p++;
+    info = *p;
     *maj = info & 0xE0;
     info &= 0x1F;
-
-    if (info < 24) {
+    len = IntLengths[info];
+    if (avail < len) {
+        return DPS_ERR_EOD;
+    }
+    switch (len) {
+    case 1:
         *n = info;
-    } else if (info == CBOR_LEN1) {
-        if (avail < 2) {
-            return DPS_ERR_EOD;
-        }
-        *n = (uint64_t)p[0];
-        p += 1;
-    } else if (info == CBOR_LEN2) {
-        if (avail < 3) {
-            return DPS_ERR_EOD;
-        }
-        *n = ((uint64_t)p[0] << 8) | (uint64_t)p[1];
-        p += 2;
-    } else if (info == CBOR_LEN4) {
-        if (avail < 5) {
-            return DPS_ERR_EOD;
-        }
-        *n = ((uint64_t)p[0] << 24) | ((uint64_t)p[1] << 16) | ((uint64_t)p[2]) << 8 | (uint64_t)p[3];
-        p += 4;
-    } else if (info == CBOR_LEN8) {
-        if (avail < 9) {
-            return DPS_ERR_EOD;
-        }
-        *n = ((uint64_t)p[0] << 56) | ((uint64_t)p[1] << 48) | ((uint64_t)p[2] << 40) | ((uint64_t)p[3] << 32) | ((uint64_t)p[4] << 24) | ((uint64_t)p[5] << 16) | ((uint64_t)p[6] << 8) | (uint64_t)p[7];
-        p += 8;
-    } else {
-        *n = 0;
+        break;
+    case 2:
+        *n = (uint64_t)p[1];
+        break;
+    case 3:
+        *n = ((uint64_t)p[1] << 8) | (uint64_t)p[2];
+        break;
+    case 5:
+        *n = ((uint64_t)p[1] << 24) | ((uint64_t)p[2] << 16) | ((uint64_t)p[3]) << 8 | (uint64_t)p[4];
+        break;
+    case 9:
+        *n = ((uint64_t)p[1] << 56) | ((uint64_t)p[2] << 48) | ((uint64_t)p[3] << 40) | ((uint64_t)p[4] << 32) | ((uint64_t)p[5] << 24) | ((uint64_t)p[6] << 16) | ((uint64_t)p[7] << 8) | (uint64_t)p[8];
+        break;
+    default:
         return DPS_ERR_INVALID;
     }
-    buffer->pos = p;
+    buffer->pos += len;
     return DPS_OK;
 }
 
@@ -200,49 +197,6 @@ DPS_Status CBOR_EncodeInt(DPS_Buffer* buffer, int64_t i)
     } else {
         return EncodeUint(buffer, ~(uint64_t)i, CBOR_NEG);
     }
-}
-
-DPS_Status CBOR_FixupLength(DPS_Buffer* buffer, size_t origLen, size_t newLen)
-{
-    uint8_t* pos = buffer->pos;
-    uint8_t* p;
-    uint8_t maj;
-    uint64_t len;
-    int lenReq = Requires(origLen);
-    
-    if (origLen < newLen) {
-        return DPS_ERR_INVALID;
-    }
-    /*
-     * Back-off the pointer to the start of the byte string
-     */
-    p = pos - newLen - (1 + lenReq);
-    buffer->pos = p;
-    if (DecodeUint(buffer, &len, &maj) != DPS_OK || len != origLen) {
-        return DPS_ERR_INVALID;
-    }
-    if (lenReq == 0) {
-        *p++ = (uint8_t)(maj | newLen);
-    } else {
-        ++p;
-        if (lenReq == 8) {
-            *p++ = (uint8_t)(newLen >> 56);
-            *p++ = (uint8_t)(newLen >> 48);
-            *p++ = (uint8_t)(newLen >> 40);
-            *p++ = (uint8_t)(newLen >> 32);
-        }
-        if (lenReq >= 4) {
-            *p++ = (uint8_t)(newLen >> 24);
-            *p++ = (uint8_t)(newLen >> 16);
-        }
-        if (lenReq >= 2) {
-            *p++ = (uint8_t)(newLen >> 8);
-        }
-        *p++ = (uint8_t)(newLen);
-    }
-    buffer->pos += newLen;
-    assert(buffer->pos == pos);
-    return DPS_OK;
 }
 
 DPS_Status CBOR_EncodeBytes(DPS_Buffer* buffer, const uint8_t* data, size_t len)
@@ -545,4 +499,80 @@ DPS_Status CBOR_DecodeTag(DPS_Buffer* buffer, uint64_t* n)
         ret = DPS_ERR_INVALID;
     }
     return ret;
+}
+
+DPS_Status CBOR_Skip(DPS_Buffer* buffer, uint8_t* majOut, size_t* size)
+{
+    DPS_Status ret = DPS_OK;
+    size_t avail = DPS_BufferAvail(buffer);
+    uint8_t* p = buffer->pos;
+    size_t len = 0;
+    uint8_t* dummy;
+    uint8_t info;
+    uint8_t maj;
+
+    if (avail < 1) {
+        return DPS_ERR_EOD;
+    }
+    info = *p;
+    maj = info & 0xE0;
+    info &= 0x1F;
+
+    switch (maj) {
+    case CBOR_UINT:
+    case CBOR_NEG:
+    case CBOR_TAG:
+        len = IntLengths[info];
+        if (len == 0) {
+            ret = DPS_ERR_INVALID;
+        } else if (avail < len) {
+            ret = DPS_ERR_EOD;
+        } else {
+            buffer->pos += len;
+        }
+        break;
+    case CBOR_BYTES:
+        ret = CBOR_DecodeBytes(buffer, &dummy, &len);
+        break;
+    case CBOR_STRING:
+        ret = CBOR_DecodeString(buffer, (char**)&dummy, &len);
+        break;
+    case CBOR_ARRAY:
+        ret = DecodeUint(buffer, &len, &maj);
+        while ((ret == DPS_OK) && len--) {
+            ret = CBOR_Skip(buffer, NULL, NULL);
+        }
+        break;
+    case CBOR_MAP:
+        ret = DecodeUint(buffer, &len, &maj);
+        while ((ret == DPS_OK) && len--) {
+            ret = CBOR_Skip(buffer, NULL, NULL);
+            if (ret == DPS_OK) {
+                ret = CBOR_Skip(buffer, NULL, NULL);
+            }
+        }
+        break;
+    case CBOR_OTHER:
+        if (info < 20 || info > 22) {
+            ret = DPS_ERR_INVALID;
+        } else {
+            buffer->pos += 1;
+        }
+        break;
+    default:
+        ret = DPS_ERR_INVALID;
+    }
+    if (size) {
+        *size = buffer->pos - p;
+    }
+    if (majOut) {
+        *majOut = maj;
+    }
+    return ret;
+}
+
+size_t _CBOR_SizeOfString(const char* s)
+{
+    size_t l = strlen(s) + 1;
+    return l + CBOR_SIZEOF_LEN(l);
 }

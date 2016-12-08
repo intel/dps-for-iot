@@ -62,42 +62,54 @@ static const map Maps[] = {
 int main(int argc, char** argv)
 {
     size_t i;
+    size_t n;
     DPS_Buffer buffer;
     uint8_t* test;
     size_t size;
 
     DPS_BufferInit(&buffer, buf, sizeof(buf));
 
-    for (i = 0; i < sizeof(Uints) / sizeof(Uints[0]); ++i) {
-        CBOR_EncodeUint(&buffer, Uints[i]);
-    }
+    /*
+     * Encode same values twice
+     */
+    for (n = 0; n < 2; ++n) {
 
-    CBOR_EncodeBytes(&buffer, (uint8_t*)Uints, sizeof(Uints));
+        for (i = 0; i < sizeof(Uints) / sizeof(Uints[0]); ++i) {
+            CBOR_EncodeUint(&buffer, Uints[i]);
+        }
 
-    for (i = 0; i < sizeof(Sints) / sizeof(Sints[0]); ++i) {
-        CBOR_EncodeInt(&buffer, Sints[i]);
-    }
+        CBOR_EncodeBytes(&buffer, (uint8_t*)Uints, sizeof(Uints));
 
-    CBOR_EncodeArray(&buffer, sizeof(Strings) / sizeof(Strings[0]));
+        for (i = 0; i < sizeof(Sints) / sizeof(Sints[0]); ++i) {
+            CBOR_EncodeInt(&buffer, Sints[i]);
+        }
 
-    for (i = 0; i < sizeof(Strings) / sizeof(Strings[0]); ++i) {
-        CBOR_EncodeString(&buffer, Strings[i]);
-    }
+        CBOR_EncodeArray(&buffer, sizeof(Strings) / sizeof(Strings[0]));
 
-    CBOR_EncodeMap(&buffer, sizeof(Maps) / sizeof(Maps[0]));
+        for (i = 0; i < sizeof(Strings) / sizeof(Strings[0]); ++i) {
+            CBOR_EncodeString(&buffer, Strings[i]);
+        }
 
-    for (i = 0; i < sizeof(Maps) / sizeof(Maps[0]); ++i) {
-        CBOR_EncodeInt(&buffer, Maps[i].key);
-        CBOR_EncodeString(&buffer, Maps[i].string);
-    }
+        CBOR_EncodeMap(&buffer, sizeof(Maps) / sizeof(Maps[0]));
 
-    for (i = 0; i < sizeof(Tags) / sizeof(Tags[0]); ++i) {
-        CBOR_EncodeTag(&buffer, Tags[i]);
+        for (i = 0; i < sizeof(Maps) / sizeof(Maps[0]); ++i) {
+            CBOR_EncodeInt(&buffer, Maps[i].key);
+            CBOR_EncodeString(&buffer, Maps[i].string);
+        }
+
+        for (i = 0; i < sizeof(Tags) / sizeof(Tags[0]); ++i) {
+            CBOR_EncodeTag(&buffer, Tags[i]);
+        }
     }
 
     printf("Encoded %zu bytes\n", DPS_BufferAvail(&buffer));
 
+    buffer.eod = buffer.pos;
     buffer.pos = buffer.base;
+
+    /*
+     * Decode
+     */
     for (i = 0; i < sizeof(Uints) / sizeof(Uints[0]); ++i) {
         uint64_t n;
         CBOR_DecodeUint(&buffer, &n);
@@ -141,6 +153,49 @@ int main(int argc, char** argv)
         int64_t n;
         CBOR_DecodeTag(&buffer, &n);
         assert(n == Tags[i]);
+    }
+
+    /*
+     * Skip
+     */
+    for (n = 0; n < 40; ++n) {
+        size_t sz;
+        uint8_t maj;
+        DPS_Status ret = CBOR_Skip(&buffer, &maj, &sz);
+        if (ret != DPS_OK) {
+            printf("Failed\n");
+            exit(1);
+        }
+        switch (maj) {
+        case CBOR_UINT:
+            printf("Skipped UINT size %d\n", sz);
+            break;
+        case CBOR_NEG:
+            printf("Skipped NEG size %d\n", sz);
+            break;
+        case CBOR_BYTES:
+            printf("Skipped Bytes size %d\n", sz);
+            break;
+        case CBOR_STRING:
+            printf("Skipped String size %d\n", sz);
+            break;
+        case CBOR_ARRAY:
+            printf("Skipped Array size %d\n", sz);
+            break;
+        case CBOR_MAP:
+            printf("Skipped Map size %d\n", sz);
+            break;
+        case CBOR_TAG:
+            printf("Skipped Tag size %d\n", sz);
+            break;
+        case CBOR_OTHER:
+            printf("Skipped Other size %d\n", sz);
+            break;
+        }
+    }
+    if (buffer.pos != buffer.eod) {
+        printf("Failed\n");
+        exit(1);
     }
 
     printf("Passed\n");

@@ -689,6 +689,15 @@ DPS_Status DPS_BitVectorSerialize(DPS_BitVector* bv, DPS_Buffer* buffer)
     float load = DPS_BitVectorLoadFactor(bv);
 
     /*
+     * Bit vector is encoded as an array of 3 items
+     * [
+     *    flags (uint),
+     *    bit vector length (uint)
+     *    compressed bit vector (bstr)
+     * ]
+     */
+    CBOR_EncodeArray(buffer, 3);
+    /*
      * The load factor will tell us if it is worth trying run length encoding and if
      * the bit complement will result in a more compact encoding.
      */
@@ -710,16 +719,17 @@ DPS_Status DPS_BitVectorSerialize(DPS_BitVector* bv, DPS_Buffer* buffer)
             return ret;
         }
         if (flags & FLAG_RLE_ENCODED) {
+            uint8_t* wrapPos;
             size_t rleSize = 0;
             size_t maxSize = DPS_BufferSpace(buffer) - 4;
             /*
              * Reserve space in the buffer
              */
-            ret = CBOR_EncodeBytes(buffer, NULL, maxSize);
+            ret = CBOR_StartWrapBytes(buffer, maxSize, &wrapPos);
             if (ret == DPS_OK) {
                 ret = RunLengthEncode(bv, buffer, &rleSize, flags);
                 if (ret == DPS_OK) {
-                    ret = CBOR_FixupLength(buffer, maxSize, rleSize);
+                    ret = CBOR_EndWrapBytes(buffer, wrapPos);
                 }
             } else if (ret == DPS_ERR_OVERFLOW) {
                 /*
@@ -743,7 +753,7 @@ DPS_Status DPS_BitVectorSerialize(DPS_BitVector* bv, DPS_Buffer* buffer)
 
 size_t DPS_BitVectorSerializeMaxSize(DPS_BitVector* bv)
 {
-    return 8 + bv->len / 8;
+    return CBOR_SIZEOF_ARRAY(3) + CBOR_SIZEOF(uint8_t) + CBOR_SIZEOF(uint32_t) + CBOR_SIZEOF_BSTR(bv->len / 8);
 }
 
 DPS_Status DPS_BitVectorDeserialize(DPS_BitVector* bv, DPS_Buffer* buffer)
@@ -753,6 +763,13 @@ DPS_Status DPS_BitVectorDeserialize(DPS_BitVector* bv, DPS_Buffer* buffer)
     uint64_t len;
     uint8_t* data;
 
+    ret = CBOR_DecodeArray(buffer, &len);
+    if (ret != DPS_OK) {
+        return ret;
+    }
+    if (len != 3) {
+        return DPS_ERR_INVALID;
+    }
     ret = CBOR_DecodeUint(buffer, &flags);
     if (ret != DPS_OK) {
         return ret;

@@ -31,6 +31,9 @@
 extern "C" {
 #endif
 
+/*
+ * CBOR major types
+ */
 #define CBOR_UINT   (0 << 5)
 #define CBOR_NEG    (1 << 5)
 #define CBOR_BYTES  (2 << 5)
@@ -40,12 +43,47 @@ extern "C" {
 #define CBOR_TAG    (6 << 5)
 #define CBOR_OTHER  (7 << 5)
 
+/*
+ * Maximum bytes needed to encode any length
+ */
 #define CBOR_MAX_LENGTH (1 + sizeof(uint64_t))
+
+/*
+ * Actual bytes needed to encode a specific length (up to (2^16 - 1))
+ */
+#define CBOR_SIZEOF_LEN(l)      ((((l) < 24) ? 1 : (((l) < 256) ? 2 : 3)))
+
+/*
+ * Actual bytes needed for encoding a map size
+ */
+#define CBOR_SIZEOF_MAP(m)       CBOR_SIZEOF_LEN(m)
+
+/*
+ * Actual bytes needed for encoding an array size
+ */
+#define CBOR_SIZEOF_ARRAY(a)     CBOR_SIZEOF_LEN(a)
+
+/*
+ * Actual bytes need to encode a string (includes NUL terminator)
+ */
+#define CBOR_SIZEOF_STRING(s)    _CBOR_SizeOfString(s)
+
+/*
+ * Actual bytes needed to encode a byte stream of a specified length
+ */
+#define CBOR_SIZEOF_BSTR(l)     ((l) + CBOR_SIZEOF_LEN(l))
 
 /*
  * Maximum bytes needed to encode an integer type
  */
 #define CBOR_SIZEOF(t)          (1 + sizeof(t))
+
+/*
+ * Actual bytes need to encode a boolean
+ */
+#define CBOR_SIZEOF_BOOL        (1)
+
+size_t _CBOR_SizeOfString(const char* s);
 
 DPS_Status CBOR_EncodeLength(DPS_Buffer* buffer, uint64_t len, uint8_t maj);
 
@@ -99,14 +137,24 @@ DPS_Status CBOR_DecodeBoolean(DPS_Buffer* buffer, int* b);
 DPS_Status CBOR_ReserveBytes(DPS_Buffer* buffer, size_t len, uint8_t** ptr);
 
 /**
- * Prepare a CBOR structure to be wrapped in a bytes stream
+ * Prepare a CBOR structure to be wrapped in a bytes stream. This function
+ * is used when the exact length of data to be enclosed is not know ahead
+ * of time.
+ *
+ * @param buffer   The buffer to encode into
+ * @param hintLen  Estimated size of the bytes to be wrapped
+ * @param wrapPtr  Returns pointer to start of the byte stream
  */
-DPS_Status CBOR_StartWrapBytes(DPS_Buffer* buffer, size_t hintLen, uint8_t** ptr);
+DPS_Status CBOR_StartWrapBytes(DPS_Buffer* buffer, size_t hintLen, uint8_t** wrapPtr);
 
 /**
- * Finalize byte stream wrapping of a CBOR encode structure
+ * Finalize byte stream wrapping of a CBOR encode structure by fixing
+ * up the actual length and if necessary moving the data
+ *
+ * @param buffer   The buffer to encode into
+ * @param wrapPtr  The pointer that was returned by CBOR_StartWrapBytes
  */
-DPS_Status CBOR_EndWrapBytes(DPS_Buffer* buffer, uint8_t* ptr);
+DPS_Status CBOR_EndWrapBytes(DPS_Buffer* buffer, uint8_t* wrapPtr);
 
 /*
  * For symmetry with CBOR_DecodeInt8()
@@ -145,6 +193,7 @@ DPS_Status CBOR_EndWrapBytes(DPS_Buffer* buffer, uint8_t* ptr);
  * @param size    Returns length of the decoded bytes
  *
  * @return - DPS_OK if the bytes were decoded
+ *         - DPS_ERR_INVALID if the major is not byte string
  *         - DPS_ERR_EOD if there was insufficient data in the buffer
  *
  */
@@ -157,6 +206,7 @@ DPS_Status CBOR_DecodeBytes(DPS_Buffer* buffer, uint8_t** data, size_t* size);
  * @param size    Returns length of the decoded string
  *
  * @return - DPS_OK if the string was decoded
+ *         - DPS_ERR_INVALID if the major is not string
  *         - DPS_ERR_EOD if there was insufficient data in the buffer
  *
  */
@@ -168,18 +218,23 @@ DPS_Status CBOR_DecodeString(DPS_Buffer* buffer, char** data, size_t* size);
  * @param size    Returns number of array items
  *
  * @return - DPS_OK if the array was decoded
+ *         - DPS_ERR_INVALID if the major is not an array
  *         - DPS_ERR_EOD if there was insufficient data in the buffer
  *
  */
 DPS_Status CBOR_DecodeArray(DPS_Buffer* buffer, size_t* size);
 
 /**
- * Fix up the length of a byte string after the byte string has been appended
- * to the buffer.  CBOR_EncodeBytes() should have been called immediately
- * before with NULL passed as the data arg. The new length must be less than or
- * equal to the length passed in the call to CBOR_EncodeBytes().
+ *
+ * @param buffer  Buffer to decode from
+ * @param maj     Returns the major type of the value skipped
+ * @param size    Returns number of bytes skipped
+ *
+ * @return - DPS_OK if the array was decoded
+ *         - DPS_ERR_EOD if there was insufficient data in the buffer
+ *
  */
-DPS_Status CBOR_FixupLength(DPS_Buffer* buffer, size_t origSize, size_t newSize);
+DPS_Status CBOR_Skip(DPS_Buffer* buffer, uint8_t* maj, size_t* size);
 
 #ifdef __cplusplus
 }
