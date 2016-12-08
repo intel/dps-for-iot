@@ -53,7 +53,7 @@ typedef struct {
 typedef struct _DPS_MulticastReceiver DPS_MulticastReceiver;
 
 /**
- * Free us buffer resources
+ * Free uv buffer resources
  *
  * @param bufs     The buffers to free
  * @param numBufs  The number of buffers to free
@@ -69,10 +69,10 @@ void DPS_NetFreeBufs(uv_buf_t* bufs, size_t numBufs);
  * @param data      The raw data 
  * @param len       Length of the raw data
  *
- * @return  If positive the minimum number of bytes still to be read
- *          If negative indicates the data was not succesfully decoded
+ * @return  - DPS_OK if the message was correctly parsed
+ *          - An error code indicating the data received was invalid
  */
-typedef ssize_t (*DPS_OnReceive)(DPS_Node* node, DPS_NetEndpoint* endpoint, DPS_Status status, const uint8_t* data, size_t len);
+typedef DPS_Status (*DPS_OnReceive)(DPS_Node* node, DPS_NetEndpoint* endpoint, DPS_Status status, const uint8_t* data, size_t len);
 
 /**
  * Set the port number on a network endpoint

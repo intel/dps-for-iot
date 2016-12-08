@@ -32,7 +32,6 @@
 #include "node.h"
 #include "bitvec.h"
 #include "cbor.h"
-#include "coap.h"
 #include "sub.h"
 #include "pub.h"
 #include "topics.h"
@@ -42,8 +41,6 @@
  * Debug control for this module
  */
 DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
-
-static const char DPS_SubscriptionURI[] = "dps/sub";
 
 static int IsValidSub(const DPS_Subscription* sub)
 {
@@ -167,8 +164,6 @@ DPS_Status DPS_DestroySubscription(DPS_Subscription* sub)
 DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote, DPS_BitVector* interests, uint16_t ttl)
 {
     DPS_Status ret;
-    CoAP_Option opts[1];
-    DPS_Buffer headers;
     DPS_Buffer payload;
     DPS_BitVector* needs = remote->outbound.needs;
 
@@ -177,15 +172,11 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote, DPS_BitVecto
     if (!node->netCtx) {
         return DPS_ERR_NETWORK;
     }
-
-    opts[0].id = COAP_OPT_URI_PATH;
-    opts[0].val = (uint8_t*)DPS_SubscriptionURI;
-    opts[0].len = sizeof(DPS_SubscriptionURI);
-
     ret = DPS_BufferInit(&payload, NULL, allocSize);
     if (ret != DPS_OK) {
         return ret;
     }
+    CBOR_EncodeUint8(&payload, DPS_MSG_TYPE_SUB);
     /*
      * Write listening port
      */
@@ -198,11 +189,7 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote, DPS_BitVecto
         ret = DPS_BitVectorSerialize(interests, &payload);
     }
     if (ret == DPS_OK) {
-        ret = CoAP_Compose(COAP_PROTOCOL, COAP_CODE(COAP_REQUEST, COAP_GET), opts, A_SIZEOF(opts), DPS_BufferUsed(&payload), &headers);
-    }
-    if (ret == DPS_OK) {
         uv_buf_t bufs[] = {
-            { (char*)headers.base, DPS_BufferUsed(&headers) },
             { (char*)payload.base, DPS_BufferUsed(&payload) }
         };
         ret = DPS_NetSend(node, &remote->ep, bufs, A_SIZEOF(bufs), DPS_OnSendComplete);

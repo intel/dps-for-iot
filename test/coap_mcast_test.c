@@ -35,10 +35,10 @@ static DPS_MulticastSender* sender;
 
 static int protocol = COAP_OVER_UDP;
 
-static ssize_t ReceiveCB(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Status status, const uint8_t* data, size_t len)
+static DPS_Status ReceiveCB(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Status status, const uint8_t* data, size_t len)
 {
     DPS_Buffer payload;
-    DPS_Status ret;
+    DPS_Status ret = DPS_OK;
     CoAP_Parsed coap;
 
     if (data && len) {
@@ -67,7 +67,7 @@ static ssize_t ReceiveCB(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Status status,
             printf("CoAP_Parse failed: ret= %d\n", ret);
         }
     }
-    return len;
+    return ret;
 }
 
 static uint8_t buffer[1025];

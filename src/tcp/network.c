@@ -27,6 +27,7 @@
 #include <dps/dbg.h>
 #include <dps/dps.h>
 #include <dps/private/network.h>
+#include "../cbor.h"
 #include "../node.h"
 
 #ifdef _WIN32
@@ -47,6 +48,7 @@ typedef struct _WriteRequest {
     DPS_NetSendComplete onSendComplete;
     struct _WriteRequest* next;
     size_t numBufs;
+    uint8_t lenBuf[CBOR_SIZEOF(uint32_t)]; /* pre-allocated buffer for serializing message length */
     uv_buf_t bufs[1];
 } WriteRequest;
 
@@ -57,9 +59,10 @@ typedef struct _DPS_NetConnection {
     int refCount;
     uv_shutdown_t shutdownReq;
     /* Rx side */
+    uint8_t lenBuf[CBOR_SIZEOF(uint32_t)]; /* pre-allocated buffer for deserializing message length */
+    size_t msgLen;  /* size of the message */
     size_t readLen; /* how much data has already been read */
-    size_t bufLen;  /* how big the buffer is */
-    char* buffer;
+    char* msgBuf;
     /* Tx side */
     uv_connect_t connectReq;
     WriteRequest* pendingWrites;
@@ -72,30 +75,19 @@ struct _DPS_NetContext {
 };
 
 #define MIN_BUF_ALLOC_SIZE   512
-#define MIN_READ_SIZE         16
+#define MIN_READ_SIZE        CBOR_SIZEOF(uint32_t)
 
 static void AllocBuffer(uv_handle_t* handle, size_t suggestedSize, uv_buf_t* buf)
 {
     DPS_NetConnection* cn = (DPS_NetConnection*)handle->data;
 
-    if (!cn->buffer) {
-        cn->buffer = malloc(MIN_BUF_ALLOC_SIZE);
-        if (!cn->buffer) {
-            cn->bufLen = 0;
-            cn->readLen = 0;
-            buf->len = 0;
-            buf->base = NULL;
-            return;
-        }
-        cn->bufLen = MIN_BUF_ALLOC_SIZE;
-        cn->readLen = 0;
-    }
-    if (cn->readLen) {
-        buf->len = (uint32_t)(cn->bufLen - cn->readLen);
-        buf->base = cn->buffer + cn->readLen;
+    if (cn->msgLen) {
+        assert(cn->msgBuf);
+        buf->len = (uint32_t)(cn->msgLen - cn->readLen);
+        buf->base = cn->msgBuf + cn->readLen;
     } else {
-        buf->len = MIN_READ_SIZE;
-        buf->base = cn->buffer;
+        buf->len = sizeof(cn->lenBuf) - cn->readLen;
+        buf->base = (char*)(cn->lenBuf + cn->readLen);
     }
 }
 
@@ -110,7 +102,7 @@ static void CancelPendingWrites(DPS_NetConnection* cn)
     while (cn->pendingWrites) {
         WriteRequest* wr = cn->pendingWrites;
         cn->pendingWrites = wr->next;
-        wr->onSendComplete(cn->node, &cn->peerEp, wr->bufs, wr->numBufs, DPS_ERR_NETWORK);
+        wr->onSendComplete(cn->node, &cn->peerEp, wr->bufs + 1, wr->numBufs - 1, DPS_ERR_NETWORK);
         free(wr);
     }
 }
@@ -123,8 +115,8 @@ static void StreamClosed(uv_handle_t* handle)
      */
     CancelPendingWrites(cn);
     DPS_DBGPRINT("Closed stream handle %p\n", handle);
-    if (cn->buffer) {
-        free(cn->buffer);
+    if (cn->msgBuf) {
+        free(cn->msgBuf);
     }
     free(cn);
 }
@@ -143,26 +135,27 @@ static void OnShutdownComplete(uv_shutdown_t* req, int status)
 
 static void Shutdown(DPS_NetConnection* cn)
 {
-    int r;
-
-    assert(cn->refCount == 0);
-    uv_read_stop((uv_stream_t*)&cn->socket);
-    cn->shutdownReq.data = cn;
-    r = uv_shutdown(&cn->shutdownReq, (uv_stream_t*)&cn->socket, OnShutdownComplete);
-    if (r) {
-        DPS_ERRPRINT("Shutdown failed %s - closing\n", uv_err_name(r));
-        if (!uv_is_closing((uv_handle_t*)&cn->socket)) {
-            cn->socket.data = cn;
-            uv_close((uv_handle_t*)&cn->socket, StreamClosed);
+    if (!cn->shutdownReq.data) {
+        int r;
+        assert(cn->refCount == 0);
+        uv_read_stop((uv_stream_t*)&cn->socket);
+        cn->shutdownReq.data = cn;
+        r = uv_shutdown(&cn->shutdownReq, (uv_stream_t*)&cn->socket, OnShutdownComplete);
+        if (r) {
+            DPS_ERRPRINT("Shutdown failed %s - closing\n", uv_err_name(r));
+            if (!uv_is_closing((uv_handle_t*)&cn->socket)) {
+                cn->socket.data = cn;
+                uv_close((uv_handle_t*)&cn->socket, StreamClosed);
+            }
         }
     }
 }
 
 static void OnData(uv_stream_t* socket, ssize_t nread, const uv_buf_t* buf)
 {
+    DPS_Status ret;
     DPS_NetConnection* cn = (DPS_NetConnection*)socket->data;
     DPS_NetContext* netCtx = cn->node->netCtx;
-    ssize_t toRead;
 
     DPS_DBGTRACE();
     /*
@@ -185,44 +178,69 @@ static void OnData(uv_stream_t* socket, ssize_t nread, const uv_buf_t* buf)
     assert(socket == (uv_stream_t*)&cn->socket);
 
     cn->readLen += (uint16_t)nread;
-    toRead = netCtx->receiveCB(cn->node, &cn->peerEp, DPS_OK, (uint8_t*)cn->buffer, cn->readLen);
     /*
-     * All done if there is nothing to read or the data was bad
+     * Parse out the message length
      */
-    if (toRead <= 0) {
-        free(cn->buffer);
-        cn->buffer = NULL;
-        cn->readLen = 0;
+    if (!cn->msgLen) {
+        DPS_Buffer lenBuf;
+        uint32_t msgLen;
         /*
-         * Stop reading if we got an error
+         * Keep reading if we don't have enough data to parse the length
          */
-        if (toRead < 0) {
-            uv_read_stop(socket);
+        if (cn->readLen < MIN_READ_SIZE) {
+            return;
+        }
+        assert(cn->readLen == MIN_READ_SIZE);
+        DPS_BufferInit(&lenBuf, cn->lenBuf, cn->readLen);
+        ret = CBOR_DecodeUint32(&lenBuf, &msgLen);
+        if (ret == DPS_OK) {
+            cn->msgLen = msgLen;
+            cn->msgBuf = malloc(msgLen);
+            if (!cn->msgBuf) {
+                ret = DPS_ERR_RESOURCES;
+            } else {
+                /*
+                 * Copy message bytes if any
+                 */
+                cn->readLen = DPS_BufferAvail(&lenBuf);
+                memcpy(cn->msgBuf, lenBuf.pos, cn->readLen);
+            }
+        }
+        if (ret == DPS_OK) {
+            return;
         }
         /*
-         * Shutdown the connect if  the upper layer didn't AddRef to keep it alive
+         * Report error to receive callback
          */
-        if (cn->refCount == 0) {
-            Shutdown(cn);
+        netCtx->receiveCB(cn->node, &cn->peerEp, ret, NULL, 0);
+    } else {
+        /*
+         * Keep reading if we don't have a complete message
+         */
+        if (cn->readLen < cn->msgLen) {
+            return;
         }
-        return;
+        DPS_DBGPRINT("Received message of length %zd\n", cn->msgLen);
+        ret = netCtx->receiveCB(cn->node, &cn->peerEp, DPS_OK, (uint8_t*)cn->msgBuf, cn->msgLen);
+    }
+    if (cn->msgBuf) {
+        free(cn->msgBuf);
+        cn->msgBuf = NULL;
+    }
+    cn->msgLen = 0;
+    cn->readLen = 0;
+    /*
+     * Stop reading if we got an error
+     */
+    if (ret != DPS_OK) {
+        uv_read_stop(socket);
     }
     /*
-     * Keep reading if we don't have enough data to parse the header
+     * Shutdown the connection if the upper layer didn't AddRef to keep it alive
      */
-    if (cn->readLen < MIN_READ_SIZE) {
-        return;
+    if (cn->refCount == 0) {
+        Shutdown(cn);
     }
-    /*
-     * May need to allocate a larger buffer to complete the read.
-     */
-    if (cn->bufLen < (toRead + cn->readLen)) {
-        cn->buffer = realloc(cn->buffer, cn->bufLen);
-    }
-    /*
-     * Clamp bufLen to the total packet size
-     */
-    cn->bufLen = toRead + cn->readLen;
 }
 
 static void OnIncomingConnection(uv_stream_t* stream, int status)
@@ -381,7 +399,7 @@ static void OnWriteComplete(uv_write_t* req, int status)
         DPS_DBGPRINT("OnWriteComplete status=%s\n", uv_err_name(status));
         dpsRet = DPS_ERR_NETWORK;
     }
-    wr->onSendComplete(wr->cn->node, &wr->cn->peerEp, wr->bufs, wr->numBufs, dpsRet);
+    wr->onSendComplete(wr->cn->node, &wr->cn->peerEp, wr->bufs + 1, wr->numBufs - 1, dpsRet);
     DPS_NetConnectionDecRef(wr->cn);
     free(wr);
 }
@@ -426,27 +444,38 @@ static void OnOutgoingConnection(uv_connect_t *req, int status)
 
 DPS_Status DPS_NetSend(DPS_Node* node, DPS_NetEndpoint* ep, uv_buf_t* bufs, size_t numBufs, DPS_NetSendComplete sendCompleteCB)
 {
+    DPS_Buffer lenBuf;
     WriteRequest* wr;
     uv_handle_t* socket = NULL;
     int r;
+    size_t i;
+    size_t len = 0;
 
-#ifndef NDEBUG
-    {
-        size_t i;
-        size_t len = 0;
-        for (i = 0; i < numBufs; ++i) {
-            len += bufs[i].len;
-        }
-        DPS_DBGPRINT("DPS_NetSend total %zu bytes to %s\n", len, DPS_NodeAddrToString(&ep->addr));
+    for (i = 0; i < numBufs; ++i) {
+        len += bufs[i].len;
     }
-#endif
+    if (len > UINT32_MAX) {
+        return DPS_ERR_RESOURCES;
+    }
 
-    wr = malloc(sizeof(WriteRequest) + (numBufs - 1) * sizeof(uv_buf_t));
+    DPS_DBGPRINT("DPS_NetSend total %zu bytes to %s\n", len, DPS_NodeAddrToString(&ep->addr));
+
+    wr = malloc(sizeof(WriteRequest) + numBufs * sizeof(uv_buf_t));
     if (!wr) {
         return DPS_ERR_RESOURCES;
     }
-    memcpy(wr->bufs, bufs, numBufs * sizeof(uv_buf_t));
-    wr->numBufs = numBufs;
+    /*
+     * Write total message length
+     */
+    DPS_BufferInit(&lenBuf, wr->lenBuf, sizeof(wr->lenBuf));
+    CBOR_EncodeUint32(&lenBuf, len);
+    wr->bufs[0].base = (char*)wr->lenBuf;
+    wr->bufs[0].len = DPS_BufferUsed(&lenBuf);;
+    /*
+     * Copy other uvbufs into the write request
+     */
+    memcpy(wr->bufs + 1, bufs, numBufs * sizeof(uv_buf_t));
+    wr->numBufs = numBufs + 1;
     wr->onSendComplete = sendCompleteCB;
     wr->next = NULL;
     /*

@@ -43,13 +43,10 @@
  */
 DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
-static const char DPS_AcknowledgmentURI[] = "dps/ack";
-
 DPS_Status DPS_SendAcknowledgment(DPS_Node*node, PublicationAck* ack, RemoteNode* ackNode)
 {
     DPS_Status ret;
     uv_buf_t bufs[] = {
-        { (char*)ack->headers.base, DPS_BufferUsed(&ack->headers) },
         { (char*)ack->payload.base, DPS_BufferUsed(&ack->payload) }
     };
 
@@ -74,7 +71,6 @@ static PublicationAck* AllocPubAck(const DPS_UUID* pubId, uint32_t sequenceNum)
 static DPS_Status ComposeAck(DPS_Node* node, PublicationAck* ack, uint8_t* data, size_t len, DPS_NodeAddress* destAddr)
 {
     DPS_Status ret;
-    CoAP_Option opts[1];
     size_t allocSize = 8 + sizeof(DPS_UUID) + sizeof(uint32_t) + len;
 
     DPS_DBGTRACE();
@@ -85,20 +81,16 @@ static DPS_Status ComposeAck(DPS_Node* node, PublicationAck* ack, uint8_t* data,
         return DPS_ERR_NETWORK;
     }
 
-    opts[0].id = COAP_OPT_URI_PATH;
-    opts[0].val = (uint8_t*)DPS_AcknowledgmentURI;
-    opts[0].len = sizeof(DPS_AcknowledgmentURI);
-
     ret = DPS_BufferInit(&ack->payload, NULL, allocSize);
     if (ret != DPS_OK) {
         free(ack);
         return ret;
     }
+    CBOR_EncodeUint8(&ack->payload, DPS_MSG_TYPE_ACK);
     CBOR_EncodeBytes(&ack->payload, (uint8_t*)&ack->pubId, sizeof(DPS_UUID));
     CBOR_EncodeUint32(&ack->payload, ack->sequenceNum);
     if (ret == DPS_OK) {
         CBOR_EncodeBytes(&ack->payload, data, len);
-        ret = CoAP_Compose(COAP_PROTOCOL, COAP_CODE(COAP_REQUEST, COAP_PUT), opts, A_SIZEOF(opts), DPS_BufferUsed(&ack->payload), &ack->headers);
         if (ret != DPS_OK) {
             free(ack->payload.base);
             free(ack);

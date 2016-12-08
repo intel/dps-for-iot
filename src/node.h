@@ -32,11 +32,12 @@
 extern "C" {
 #endif
 
-#ifdef DPS_USE_UDP
-#define COAP_PROTOCOL COAP_OVER_UDP
-#else
-#define COAP_PROTOCOL COAP_OVER_TCP
-#endif
+/*
+ * DPS message types
+ */
+#define DPS_MSG_TYPE_PUB  1
+#define DPS_MSG_TYPE_SUB  2
+#define DPS_MSG_TYPE_ACK  3
 
 typedef struct _RemoteNode RemoteNode;
 

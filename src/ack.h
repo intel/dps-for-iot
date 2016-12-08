@@ -37,7 +37,6 @@ extern "C" {
  * Acknowledgment packet queued to be sent on node loop
  */
 typedef struct _PublicationAck {
-    DPS_Buffer headers;
     DPS_Buffer payload;
     DPS_NodeAddress destAddr;
     uint32_t sequenceNum;

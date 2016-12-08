@@ -43,9 +43,9 @@
  */
 DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
-#define RemoteNodeAddressText(n)  DPS_NodeAddrToString(&(n)->ep.addr)
-
 static const char DPS_PublicationURI[] = "dps/pub";
+
+#define RemoteNodeAddressText(n)  DPS_NodeAddrToString(&(n)->ep.addr)
 
 static DPS_Publication* FreePublication(DPS_Node* node, DPS_Publication* pub)
 {
@@ -431,24 +431,33 @@ Exit:
 }
 
 /*
+ * TODO - for now we use a CoAP envelope for multicast publications.
+ */
+static DPS_Status CoAP_Wrap(DPS_Buffer* cbor, uv_buf_t* buf)
+{
+    DPS_Status ret;
+    DPS_Buffer coap;
+    CoAP_Option opts[1];
+
+    opts[0].id = COAP_OPT_URI_PATH;
+    opts[0].val = (uint8_t*)DPS_PublicationURI;
+    opts[0].len = sizeof(DPS_PublicationURI);
+
+    ret =  CoAP_Compose(COAP_OVER_UDP, COAP_CODE(COAP_REQUEST, COAP_PUT), opts, A_SIZEOF(opts), DPS_BufferUsed(cbor), &coap);
+    if (ret == DPS_OK) {
+        buf->base = (void*)coap.base;
+        buf->len = DPS_BufferUsed(&coap);
+    }
+    return ret;
+}
+
+/*
  * Multicast a publication or send it directly to a remote subscriber node
- *
- * COAP header
- * COAP URI PATH
- * Payload (CBOR encoded):
- *      Port publisher is listening on
- *      Publishers IPv6 address (filled in later)
- *      Revision number
- *      Contributor count
- *      Serialized bloom filter
  */
 DPS_Status DPS_SendPublication(DPS_Node* node, DPS_Publication* pub, DPS_BitVector* bf, RemoteNode* remote)
 {
     DPS_Status ret;
-    DPS_Buffer headers;
     DPS_Buffer payload;
-    CoAP_Option opts[1];
-    int protocol;
     int16_t ttl = 0;
 
     DPS_DBGTRACE();
@@ -468,20 +477,11 @@ DPS_Status DPS_SendPublication(DPS_Node* node, DPS_Publication* pub, DPS_BitVect
             }
         }
     } 
-    if (remote) {
-        DPS_DBGPRINT("SendPublication (ttl=%d) to %s\n", ttl, RemoteNodeAddressText(remote));
-        protocol = COAP_PROTOCOL;
-    } else {
-        DPS_DBGPRINT("SendPublication (ttl=%d) as multicast\n", ttl);
-        protocol = COAP_OVER_UDP;
-    }
     ret = DPS_BufferInit(&payload, NULL, 32 + DPS_BitVectorSerializeMaxSize(bf));
     if (ret != DPS_OK) {
         return ret;
     }
-    opts[0].id = COAP_OPT_URI_PATH;
-    opts[0].val = (uint8_t*)DPS_PublicationURI;
-    opts[0].len = sizeof(DPS_PublicationURI);
+    CBOR_EncodeUint8(&payload, DPS_MSG_TYPE_PUB);
     /*
      * Write the listening port, ttl, pubId, and serial number
      */
@@ -492,32 +492,30 @@ DPS_Status DPS_SendPublication(DPS_Node* node, DPS_Publication* pub, DPS_BitVect
     CBOR_EncodeBoolean(&payload, pub->ackRequested);
     ret = DPS_BitVectorSerialize(bf, &payload);
     if (ret == DPS_OK) {
-        ret = CoAP_Compose(protocol, COAP_CODE(COAP_REQUEST, COAP_PUT), opts, A_SIZEOF(opts),
-                           DPS_BufferUsed(&payload) + DPS_BufferUsed(&pub->topicsBuf) + DPS_BufferUsed(&pub->payloadLenBuf) + pub->payload.len,
-                           &headers);
-    }
-    if (ret == DPS_OK) {
         uv_buf_t bufs[] = {
-            { (char*)headers.base, DPS_BufferUsed(&headers) },
+            { NULL, 0 },
             { (char*)payload.base, DPS_BufferUsed(&payload) },
             { (char*)pub->topicsBuf.base, DPS_BufferUsed(&pub->topicsBuf) },
             { (char*)pub->payloadLenBuf.base, DPS_BufferUsed(&pub->payloadLenBuf) },
             { pub->payload.base, pub->payload.len }
         };
         if (remote) {
-            ret = DPS_NetSend(node, &remote->ep, bufs, A_SIZEOF(bufs), DPS_OnSendComplete);
+            ret = DPS_NetSend(node, &remote->ep, bufs + 1, A_SIZEOF(bufs) - 1, DPS_OnSendComplete);
             if (ret == DPS_OK) {
                 UpdatePubHistory(node, pub);
             } else {
                 DPS_SendFailed(node, &remote->ep.addr, bufs, A_SIZEOF(bufs), ret);
             }
         } else {
-            ret = DPS_MulticastSend(node->mcastSender, bufs, A_SIZEOF(bufs));
-            /*
-             * Only the first two buffers in a message are allocated
-             * per-message.  The others have a longer lifetime.
-             */
-            DPS_NetFreeBufs(bufs, 2);
+            ret = CoAP_Wrap(&payload, bufs);
+            if (ret == DPS_OK) {
+                ret = DPS_MulticastSend(node->mcastSender, bufs, A_SIZEOF(bufs));
+                /*
+                 * The first two buffers in a message are allocated
+                 * per-message.  The others have a longer lifetime.
+                 */
+                DPS_NetFreeBufs(bufs, 2);
+            }
         }
     } else {
         free(payload.base);

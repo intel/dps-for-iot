@@ -48,11 +48,6 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
 #define _MIN_(x, y)  (((x) < (y)) ? (x) : (y))
 
-
-static const char DPS_SubscriptionURI[] = "dps/sub";
-static const char DPS_PublicationURI[] = "dps/pub";
-static const char DPS_AcknowledgmentURI[] = "dps/ack";
-
 typedef enum { NO_REQ, SUB_REQ, PUB_REQ, ACK_REQ } RequestType;
 
 typedef enum { LINK_OP, UNLINK_OP } OpType;
@@ -399,16 +394,6 @@ DPS_Status DPS_AddRemoteNode(DPS_Node* node, DPS_NodeAddress* addr, DPS_NetConne
     return DPS_OK;
 }
 
-static void FreeMessage(uv_buf_t* bufs, size_t numBufs)
-{
-    /*
-     * Only the first two buffers in a message are allocated
-     * per-message.  The others have a longer lifetime.
-     */
-    assert(numBufs >= 2);
-    DPS_NetFreeBufs(bufs, 2);
-}
-
 void DPS_SendFailed(DPS_Node* node, DPS_NodeAddress* addr, uv_buf_t* bufs, size_t numBufs, DPS_Status status)
 {
     RemoteNode* remote;
@@ -419,7 +404,10 @@ void DPS_SendFailed(DPS_Node* node, DPS_NodeAddress* addr, uv_buf_t* bufs, size_
         DPS_DeleteRemoteNode(node, remote);
         DPS_DBGPRINT("Removed node %s\n", DPS_NodeAddrToString(addr));
     }
-    FreeMessage(bufs, numBufs);
+    /*
+     * Only the first buffers in a message are allocated per-message.  The others have a longer lifetime.
+     */
+    DPS_NetFreeBufs(bufs, 1);
 }
 
 void DPS_OnSendComplete(DPS_Node* node, DPS_NetEndpoint* ep, uv_buf_t* bufs, size_t numBufs, DPS_Status status)
@@ -436,7 +424,10 @@ void DPS_OnSendComplete(DPS_Node* node, DPS_NetEndpoint* ep, uv_buf_t* bufs, siz
         }
         DPS_UnlockNode(node);
     }
-    FreeMessage(bufs, numBufs);
+    /*
+     * Only the first buffers in a message are allocated per-message.  The others have a longer lifetime.
+     */
+    DPS_NetFreeBufs(bufs, 1);
 }
 
 /*
@@ -666,114 +657,85 @@ void DPS_QueuePublicationAck(DPS_Node* node, PublicationAck* ack)
     DPS_UnlockNode(node);
 }
 
-static void DecodeRequest(DPS_Node* node, DPS_NetEndpoint* ep, CoAP_Parsed* coap, DPS_Buffer* payload, int multicast)
+static DPS_Status DecodeRequest(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Buffer* payload, int multicast)
 {
     DPS_Status ret;
-    RequestType req = 0;
-    size_t i;
+    uint8_t msgType;
 
-    for (i = 0; i < coap->numOpts; ++i) {
-        if (coap->opts[i].id == COAP_OPT_URI_PATH) {
-            if (strncmp((char*)coap->opts[i].val, DPS_SubscriptionURI, coap->opts[i].len) == 0) {
-                req = SUB_REQ;
-                break;
-            }
-            if (strncmp((char*)coap->opts[i].val, DPS_PublicationURI, coap->opts[i].len) == 0) {
-                req = PUB_REQ;
-                break;
-            }
-            if (strncmp((char*)coap->opts[i].val, DPS_AcknowledgmentURI, coap->opts[i].len) == 0) {
-                req = ACK_REQ;
-                break;
-            }
-        }
+    ret = CBOR_DecodeUint8(payload, &msgType);
+    if (ret != DPS_OK) {
+        DPS_ERRPRINT("Expected a message type\n");
+        return ret;
     }
-    if (!req) {
-        DPS_DBGPRINT("CoAP packet is not for us\n");
-        return;
-    }
-    switch (req) {
-    case SUB_REQ:
-        if (coap->code != COAP_CODE(COAP_REQUEST, COAP_GET)) {
-            DPS_ERRPRINT("Expected a GET request\n");
-            return;
-        }
+    switch (msgType) {
+    case DPS_MSG_TYPE_SUB:
         ret = DPS_DecodeSubscription(node, ep, payload);
         if (ret != DPS_OK) {
             DPS_DBGPRINT("DecodeSubscription returned %s\n", DPS_ErrTxt(ret));
         }
         break;
-    case PUB_REQ:
-        if (coap->code != COAP_CODE(COAP_REQUEST, COAP_PUT)) {
-            DPS_ERRPRINT("Expected a PUT request\n");
-            return;
-        }
+    case DPS_MSG_TYPE_PUB:
         DPS_DBGPRINT("Received publication via %s\n", DPS_NodeAddrToString(&ep->addr));
         ret = DPS_DecodePublication(node, ep, payload, multicast);
         if (ret != DPS_OK) {
             DPS_DBGPRINT("DecodePublication returned %s\n", DPS_ErrTxt(ret));
         }
         break;
-    case ACK_REQ:
-        if (coap->code != COAP_CODE(COAP_REQUEST, COAP_PUT)) {
-            DPS_ERRPRINT("Expected a PUT request\n");
-            return;
-        }
+    case DPS_MSG_TYPE_ACK:
         DPS_DBGPRINT("Received acknowledgment via %s\n", DPS_NodeAddrToString(&ep->addr));
         ret = DPS_DecodeAcknowledgment(node, ep, payload);
         if (ret != DPS_OK) {
-            DPS_DBGPRINT("DecodeAcknowledgment returned %s\n", DPS_ErrTxt(ret));
+            DPS_DBGPRINT("DPS_DecodeAcknowledgment returned %s\n", DPS_ErrTxt(ret));
         }
         break;
     default:
+        DPS_ERRPRINT("Invalid message type\n");
+        ret = DPS_ERR_INVALID;
         break;
     }
+    return ret;
 }
 
 /*
  * Using CoAP packetization for receiving multicast subscription requests
  */
-static ssize_t OnMulticastReceive(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Status status, const uint8_t* data, size_t len)
+static DPS_Status OnMulticastReceive(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Status status, const uint8_t* data, size_t len)
 {
     DPS_Buffer payload;
-    ssize_t ret;
+    DPS_Status ret;
     CoAP_Parsed coap;
 
     DPS_DBGTRACE();
 
     if (!data || !len) {
-        return 0;
+        return DPS_OK;
     }
     /*
      * Ignore input that comes in after the node has been stopped
      */
     if (node->stopped) {
-        return 0;
+        return DPS_OK;
     }
     ret = CoAP_Parse(COAP_OVER_UDP, data, len, &coap, &payload);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Discarding garbage multicast packet len=%zu\n", len);
-        return 0;
+        return ret;
     }
     /*
      * Multicast packets must be non-confirmable
      */
     if (coap.type != COAP_TYPE_NON_CONFIRMABLE) {
         DPS_ERRPRINT("Discarding packet within bad type=%d\n", coap.type);
-        return 0;
+        return DPS_ERR_INVALID;
     }
-    DecodeRequest(node, ep, &coap, &payload, DPS_TRUE);
+    ret = DecodeRequest(node, ep, &payload, DPS_TRUE);
     CoAP_Free(&coap);
-    return len;
+    return ret;
 }
 
-static ssize_t OnNetReceive(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Status status, const uint8_t* data, size_t len)
+static DPS_Status OnNetReceive(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Status status, const uint8_t* data, size_t len)
 {
     DPS_Buffer payload;
-    CoAP_Parsed coap;
-    size_t pktLen;
-    DPS_Status ret;
-    int protocol = COAP_PROTOCOL;
 
     DPS_DBGTRACE();
 
@@ -794,31 +756,10 @@ static ssize_t OnNetReceive(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Status stat
             DPS_DeleteRemoteNode(node, remote);
         }
         DPS_UnlockNode(node);
-        return -1;
+        return status;
     }
-    ret = CoAP_GetPktLen(protocol, data, len, &pktLen);
-    if (ret == DPS_OK) {
-        if (len < pktLen) {
-            /*
-             * Need more data
-             */
-            return pktLen - len;
-        }
-        ret = CoAP_Parse(protocol, data, len, &coap, &payload);
-        if (ret != DPS_OK) {
-            DPS_ERRPRINT("CoAP_Parse failed: ret= %d\n", ret);
-            return -1;
-        }
-    }
-    if (ret == DPS_ERR_EOD) {
-        /*
-         * Not enough data to parse length
-         */
-        return 1;
-    }
-    DecodeRequest(node, ep, &coap, &payload, DPS_FALSE);
-    CoAP_Free(&coap);
-    return 0;
+    DPS_BufferInit(&payload, (uint8_t*)data, len);
+    return DecodeRequest(node, ep, &payload, DPS_FALSE);
 }
 
 static void StopNode(DPS_Node* node)

@@ -42,6 +42,11 @@ extern "C" {
 
 #define CBOR_MAX_LENGTH (1 + sizeof(uint64_t))
 
+/*
+ * Maximum bytes needed to encode an integer type
+ */
+#define CBOR_SIZEOF(t)          (1 + sizeof(t))
+
 DPS_Status CBOR_EncodeLength(DPS_Buffer* buffer, uint64_t len, uint8_t maj);
 
 DPS_Status CBOR_Copy(DPS_Buffer* buffer, const uint8_t* data, size_t len);
