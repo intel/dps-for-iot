@@ -20,46 +20,22 @@
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  */
 
-#ifndef _ACK_H
-#define _ACK_H
+#ifndef _SHA2_H
+#define _SHA2_H
 
 #include <stdint.h>
-#include <stddef.h>
-#include <dps/private/dps.h>
-#include "node.h"
+#include <dps/dbg.h>
+#include <dps/err.h>
 
+#define DPS_SHA2_DIGEST_LEN 32
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-/*
- * Acknowledgment packet queued to be sent on node loop
- */
-typedef struct _PublicationAck {
-    DPS_Buffer headers;
-    DPS_Buffer payload;
-    DPS_NodeAddress destAddr;
-    uint32_t sequenceNum;
-    DPS_UUID pubId;
-    struct _PublicationAck* next;
-} PublicationAck;
-
-/*
- */
-DPS_Status DPS_DecodeAcknowledgment(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Buffer* buffer);
-
-/*
- * Send an previously serialized acknowledgement
+/**
+ * Compute the SHA2 hash of some data
  *
- * @param node    The local node
- * @param ack     The acknowledgment to send
- * @param ackNode The remote node to send the acknowledgment to
+ * @param digest  The result
+ * @param data    The data to hash
+ * @param len     The length of the data to hash
  */
-DPS_Status DPS_SendAcknowledgment(DPS_Node*node, PublicationAck* ack, RemoteNode* ackNode);
-
-#ifdef __cplusplus
-}
-#endif
+void DPS_Sha2(uint8_t digest[DPS_SHA2_DIGEST_LEN], const uint8_t* data, size_t len);
 
 #endif

@@ -26,6 +26,7 @@
 #include <stdint.h>
 #include <dps/dbg.h>
 #include <dps/err.h>
+#include <dps/private/dps.h>
 
 #define AES_128_KEY_LENGTH   16
 
@@ -41,15 +42,16 @@
  * Implements AES-CCM (Counter with CBC-MAC) encryption as described in RFC 3610. The message in
  * encrypted in place.
  *
- * @param key     The AES-128 encryption key
- * @param M       Length of the authentication tag in bytes (even numbers 4..16)
- * @param L       Bytes for encoding the length (must be 2 in this implementation)
- * @param nonce   The nonce (must be 13 bytes in this implementation)
- * @param msg     Plaintext to be encrypted, The buffer must have room at the end to append
- *                authentication tag of length M bytes.
- * @param msgLen  The length of the plaintext
- * @param aad     The auxiliary data that will be authenticated but not encrypted
- * @param aadLen  The length of the auxiliary data
+ * @param key        The AES-128 encryption key
+ * @param M          Length of the authentication tag in bytes (even numbers 4..16)
+ * @param L          Bytes for encoding the length (must be 2 in this implementation)
+ * @param nonce      The nonce (must be 13 bytes in this implementation)
+ * @param plainText  Plaintext to be encrypted,
+ * @param ptLen      The length of the plaintext
+ * @param aad        The auxiliary data that will be authenticated but not encrypted
+ * @param aadLen     The length of the auxiliary data
+ * @param cipherText Returns the cipher text. The buffer must have room to append
+ *                   (ptLen + M) bytes.
  *
  * @return
  *         - DPS_OK if the CCM context is initialized
@@ -59,23 +61,26 @@ DPS_Status Encrypt_CCM(const uint8_t key[AES_128_KEY_LENGTH],
                        uint8_t M,
                        uint8_t L,
                        const uint8_t nonce[DPS_CCM_NONCE_SIZE],
-                       uint8_t* msg,
-                       uint32_t msgLen,
+                       const uint8_t* plainText,
+                       uint32_t ptLen,
                        const uint8_t* aad,
-                       uint32_t aadLen);
+                       uint32_t aadLen,
+                       DPS_Buffer* cipherText);
 
 /**
  * Implements AES-CCM (Counter with CBC-MAC) decryption as described in RFC 3610. The message in
  * decrypted in place.
  *
- * @param key     The AES-128 encryption key
- * @param M       Length of the authentication tag in bytes (even numbers 4..16)
- * @param L       Bytes for encoding the length (must be 2 in this implementation)
- * @param nonce   The nonce (must be 13 bytes in this implementation)
- * @param msg     The buffer containing the cryptext for the message.
- * @param msgLen  The length of the cryptext
- * @param aad     The auxiliary data that will be authenticated but not encrypted
- * @param aadLen  The length of the auxiliary data
+ * @param key        The AES-128 encryption key
+ * @param M          Length of the authentication tag in bytes (even numbers 4..16)
+ * @param L          Bytes for encoding the length (must be 2 in this implementation)
+ * @param nonce      The nonce (must be 13 bytes in this implementation)
+ * @param cipherText The cipher text to be decrypted
+ * @param ctLen      The length of the cipher text
+ * @param aad        The auxiliary data that will be authenticated but not encrypted
+ * @param aadLen     The length of the auxiliary data
+ * @param plainText  Returns the decrypted plain text. The buffer must have room
+ *                   to append (ctLen - M) bytes.
  *
  * @return
  *         - DPS_OK if the CCM context is initialized
@@ -86,10 +91,11 @@ DPS_Status Decrypt_CCM(const uint8_t key[AES_128_KEY_LENGTH],
                        uint8_t M,
                        uint8_t L,
                        const uint8_t nonce[DPS_CCM_NONCE_SIZE],
-                       uint8_t* msg,
-                       uint32_t msgLen,
+                       const uint8_t* cipherText,
+                       uint32_t ctLen,
                        const uint8_t* aad,
-                       uint32_t aadLen);
+                       uint32_t aadLen,
+                       DPS_Buffer* plainText);
 
 
 #endif

@@ -101,13 +101,29 @@ const char* DPS_PublicationGetTopic(const DPS_Publication* pub, size_t index);
 size_t DPS_PublicationGetNumTopics(const DPS_Publication* pub);
 
 /**
+ * Function prototype for callback function for requesting the encryption key
+ * for a specific key identifier. This function must not block
+ *
+ * @param node    The node that is requesting the key
+ * @param kid     The key identifier
+ * @param key     Buffer for returning the key.
+ * @param keyLen  Size of the key buffer
+ *
+ * @return  DPS_OK if a key matching the kid was returned
+ *          DPS_ERR_MSSING if there is no matching key
+ */
+typedef DPS_Status (*DPS_KeyRequestCallback)(DPS_Node* node, DPS_UUID* kid, uint8_t* key, size_t keyLen);
+
+/**
  * Allocates space for a local DPS node.
  *
- * @param separators   The separator characters to use for topic matching, if NULL defaults to "/"
+ * @param separators    The separator characters to use for topic matching, if NULL defaults to "/"
+ * @param keyRequestCB  Callback to request a decryption key
+ * @param keyId         Encryption key id to use for publications sent from this node
  *
  * @return A pointer to the uninitialized node or NULL if there were no resources for the node.
  */
-DPS_Node* DPS_CreateNode(const char* separators);
+DPS_Node* DPS_CreateNode(const char* separators, DPS_KeyRequestCallback keyRequestCB, DPS_UUID* keyId);
 
 /**
  * Store a pointer to application data in a node.
@@ -253,11 +269,10 @@ DPS_Status DPS_InitPublication(DPS_Publication* pub, const char** topics, size_t
  * @param pubPayload   Optional payload
  * @param len          Length of the payload
  * @param ttl          Time to live in seconds - maximum TTL is about 9 hours
- * @param oldPayload   Returns pointer to payload passed to previous call to DPS_Pubish()
  *
  * @return - DPS_OK if the topics were succesfully published
  */
-DPS_Status DPS_Publish(DPS_Publication* pub, uint8_t* pubPayload, size_t len, int16_t ttl, uint8_t** oldPayload);
+DPS_Status DPS_Publish(DPS_Publication* pub, const uint8_t* pubPayload, size_t len, int16_t ttl);
 
 /**
  * Delete a publication and frees any resources allocated. This does not cancel retained publications
@@ -267,9 +282,8 @@ DPS_Status DPS_Publish(DPS_Publication* pub, uint8_t* pubPayload, size_t len, in
  * DPS_CopyPublication().
  *
  * @param pub         The publication to destroy
- * @param oldPayload  Returns pointer to last payload passed to DPS_Pubish()
  */
-DPS_Status DPS_DestroyPublication(DPS_Publication* pub, uint8_t** oldPayload);
+DPS_Status DPS_DestroyPublication(DPS_Publication* pub);
 
 /**
  * Function prototype for a publication handler called when a publication is received that

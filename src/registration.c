@@ -66,7 +66,7 @@ static void RegPutCB(RegPut* regPut, DPS_Status status)
 {
     DPS_DBGTRACE();
     if (regPut->pub) {
-        DPS_DestroyPublication(regPut->pub, NULL);
+        DPS_DestroyPublication(regPut->pub);
     }
     DPS_DestroyNode(regPut->node, OnNodeDestroyed, NULL);
     free(regPut->tenant);
@@ -139,7 +139,7 @@ static void OnLinkedPut(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status ret, v
 
             DPS_SetPublicationData(regPut->pub, regPut);
             DPS_InitPublication(regPut->pub, topics, 2, DPS_TRUE, OnPutAck);
-            ret = DPS_Publish(regPut->pub, regPut->payload.base, DPS_BufferUsed(&regPut->payload), REGISTRATION_TTL, NULL);
+            ret = DPS_Publish(regPut->pub, regPut->payload.base, DPS_BufferUsed(&regPut->payload), REGISTRATION_TTL);
             /*
              * Start a timer
              */
@@ -238,7 +238,7 @@ DPS_Status DPS_Registration_Put(DPS_Node* node, const char* host, uint16_t port,
     regPut->cb = cb;
     regPut->data = data;
     regPut->tenant = strdup(tenantString);
-    regPut->node = DPS_CreateNode("/");
+    regPut->node = DPS_CreateNode("/", NULL, NULL);
     if (!regPut->node || !regPut->tenant) {
         ret = DPS_ERR_RESOURCES;
         goto Exit;
@@ -464,7 +464,7 @@ DPS_Status DPS_Registration_Get(DPS_Node* node, const char* host, uint16_t port,
         ret = DPS_ERR_RESOURCES;
         goto Exit;
     }
-    regGet->node = DPS_CreateNode("/");
+    regGet->node = DPS_CreateNode("/", NULL, NULL);
     if (!regGet->node) {
         ret = DPS_ERR_RESOURCES;
         goto Exit;

@@ -26,6 +26,7 @@
 #include <dps/private/network.h>
 #include <uv.h>
 #include "bitvec.h"
+#include "cose.h"
 #include "history.h"
 
 #ifdef __cplusplus
@@ -39,6 +40,25 @@ extern "C" {
 #define DPS_MSG_TYPE_SUB  2
 #define DPS_MSG_TYPE_ACK  3
 
+/*
+ * Map keys for CBOR serialization of DPS messages
+ */
+#define DPS_CBOR_KEY_PORT           1   /* uint */
+#define DPS_CBOR_KEY_CANCEL         2   /* bool */
+#define DPS_CBOR_KEY_TTL            3   /* int */
+#define DPS_CBOR_KEY_PUB_ID         4   /* uint */
+#define DPS_CBOR_KEY_SEQ_NUM        5   /* bool */
+#define DPS_CBOR_KEY_ACK_REQ        6   /* bool */
+#define DPS_CBOR_KEY_BLOOM_FILTER   7   /* bstr */
+#define DPS_CBOR_KEY_INBOUND_SYNC   8   /* bool */
+#define DPS_CBOR_KEY_OUTBOUND_SYNC  9   /* bool */
+#define DPS_CBOR_KEY_NEEDS         10   /* bstr */
+#define DPS_CBOR_KEY_INTERESTS     11   /* bstr */
+
+#define DPS_NODE_RUNNING      0
+#define DPS_NODE_STOPPING     1
+#define DPS_NODE_STOPPED      2
+
 typedef struct _RemoteNode RemoteNode;
 
 typedef struct _PublicationAck PublicationAck;
@@ -48,9 +68,12 @@ typedef struct _OnOpCompletion OnOpCompletion;
 typedef struct _DPS_Node {
     void* userData;
 
-    uint16_t tasks;                        /* Background tasks that have been scheduled */
+    uint8_t isSecured;                    /* Indicates if this node is secured */
+    uint16_t tasks;                       /* Background tasks that have been scheduled */
     uint16_t port;
     char separators[13];                  /* List of separator characters */
+    DPS_KeyRequestCallback keyRequestCB;  /* Callback function for loading encryption keys */
+    DPS_UUID keyId;                       /* Encryption key identifier */
 
     uv_thread_t thread;                   /* Thread for the event loop */
     uv_loop_t* loop;                      /* uv lib event loop */
@@ -86,7 +109,7 @@ typedef struct _DPS_Node {
 
     DPS_NetContext* netCtx;               /* Network context */
 
-    uint8_t stopped;                      /* True if the node is no longer running */
+    uint8_t state;                        /* Indicates if the node is running, stopping, or stopped */
     DPS_OnNodeDestroyed onDestroyed;      /* Function to call when the node is destroyed */
     void* onDestroyedData;                /* Context to pass to onDestroyed callback */
 
@@ -95,6 +118,7 @@ typedef struct _DPS_Node {
 typedef struct _RemoteNode {
     OnOpCompletion* completion;
     uint8_t linked;                    /* True if this is a node that was explicitly linked */
+    uint8_t unlink;                    /* True if this node is about to be unlinked */
     struct {
         uint8_t sync;                  /* If TRUE request remote to synchronize interests */
         uint8_t updates;               /* TRUE if updates have been received but not acted on */
@@ -108,20 +132,12 @@ typedef struct _RemoteNode {
         DPS_BitVector* interests;      /* Interests bit vector sent outbound to this remote node */
     } outbound;
     DPS_NetEndpoint ep;
-    uint64_t expires;
     /*
      * Remote nodes are doubly linked into a ring
      */
     struct _RemoteNode* prev;
     struct _RemoteNode* next;
 } RemoteNode;
-
-/*
- * If we have not heard anything from a remote node within the
- * keep alive time period it may be deleted. The keep alive
- * time is specified in seconds.
- */
-#define DPS_REMOTE_NODE_KEEPALIVE  360
 
 /*
  * Request to asynchronously updates subscriptions
@@ -142,7 +158,12 @@ void DPS_QueuePublicationAck(DPS_Node* node, PublicationAck* ack);
 /*
  * Callback function called when a network send operation completes
  */
-void DPS_OnSendComplete(DPS_Node* node, DPS_NetEndpoint* ep, uv_buf_t* bufs, size_t numBufs, DPS_Status status);
+void DPS_OnSendComplete(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf_t* bufs, size_t numBufs, DPS_Status status);
+
+/*
+ * Make a nonce for a specifc message type
+ */
+void DPS_MakeNonce(const DPS_UUID* uuid, uint32_t seqNum, uint8_t msgType, uint8_t nonce[DPS_COSE_NONCE_SIZE]);
 
 /*
  * Function to call when a network send operation fails. Must be called with the node lock held.
@@ -152,12 +173,22 @@ void DPS_SendFailed(DPS_Node* node, DPS_NodeAddress* addr, uv_buf_t* bufs, size_
 /*
  *
  */
-DPS_Status DPS_AddRemoteNode(DPS_Node* node, DPS_NodeAddress* addr, DPS_NetConnection* cn, uint16_t ttl, RemoteNode** remoteOut);
+DPS_Status DPS_AddRemoteNode(DPS_Node* node, DPS_NodeAddress* addr, DPS_NetConnection* cn, RemoteNode** remoteOut);
+
+/*
+ * Lookup a remote node by address
+ */
+RemoteNode* DPS_LookupRemoteNode(DPS_Node* node, DPS_NodeAddress* addr);
 
 /*
  *
  */
 RemoteNode* DPS_DeleteRemoteNode(DPS_Node* node, RemoteNode* remote);
+
+/*
+ *
+ */
+void DPS_DestroyAck(PublicationAck* ack);
 
 /*
  *

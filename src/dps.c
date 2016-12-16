@@ -112,6 +112,15 @@ static void ScheduleBackgroundTask(DPS_Node* node, uint8_t task)
 
 #define RemoteNodeAddressText(n)  DPS_NodeAddrToString(&(n)->ep.addr)
 
+void DPS_BufferFree(DPS_Buffer* buffer)
+{
+    if (buffer->base) {
+        free(buffer->base);
+        buffer->base = NULL;
+    }
+    buffer->pos = NULL;
+    buffer->eod = NULL;
+}
 
 DPS_Status DPS_BufferInit(DPS_Buffer* buffer, uint8_t* storage, size_t size)
 {
@@ -301,7 +310,7 @@ ErrExit:
     return ret;
 }
 
-static RemoteNode* LookupRemoteNode(DPS_Node* node, DPS_NodeAddress* addr)
+RemoteNode* DPS_LookupRemoteNode(DPS_Node* node, DPS_NodeAddress* addr)
 {
     RemoteNode* remote;
 
@@ -349,16 +358,10 @@ static OnOpCompletion* AllocCompletion(DPS_Node* node, RemoteNode* remote, OpTyp
 /*
  * Add a remote node or return an existing one
  */
-DPS_Status DPS_AddRemoteNode(DPS_Node* node, DPS_NodeAddress* addr, DPS_NetConnection* cn, uint16_t ttl, RemoteNode** remoteOut)
+DPS_Status DPS_AddRemoteNode(DPS_Node* node, DPS_NodeAddress* addr, DPS_NetConnection* cn, RemoteNode** remoteOut)
 {
-    RemoteNode* remote = LookupRemoteNode(node, addr);
+    RemoteNode* remote = DPS_LookupRemoteNode(node, addr);
     if (remote) {
-        /*
-         * If the remote node has not been explicitly expired we extend the lifetime
-         */
-        if (remote->expires) {
-            remote->expires = uv_now(node->loop) + DPS_SECS_TO_MS(ttl);
-        }
         *remoteOut = remote;
         /*
          * AddRef a newly established connection
@@ -369,12 +372,6 @@ DPS_Status DPS_AddRemoteNode(DPS_Node* node, DPS_NodeAddress* addr, DPS_NetConne
         }
         return DPS_ERR_EXISTS;
     }
-    /*
-     * Don't add an already expired remote node
-     */
-    if (ttl == 0) {
-        return DPS_ERR_EXPIRED;
-    }
     remote = calloc(1, sizeof(RemoteNode));
     if (!remote) {
         *remoteOut = NULL;
@@ -384,7 +381,6 @@ DPS_Status DPS_AddRemoteNode(DPS_Node* node, DPS_NodeAddress* addr, DPS_NetConne
     remote->ep.addr = *addr;
     remote->ep.cn = cn;
     remote->next = node->remoteNodes;
-    remote->expires = uv_now(node->loop) + DPS_SECS_TO_MS(ttl);
     node->remoteNodes = remote;
     /*
      * This tells the network layer to keep connection alive for this address
@@ -399,24 +395,21 @@ void DPS_SendFailed(DPS_Node* node, DPS_NodeAddress* addr, uv_buf_t* bufs, size_
     RemoteNode* remote;
 
     DPS_DBGPRINT("NetSendFailed %s\n", DPS_ErrTxt(status));
-    remote = LookupRemoteNode(node, addr);
+    remote = DPS_LookupRemoteNode(node, addr);
     if (remote) {
         DPS_DeleteRemoteNode(node, remote);
         DPS_DBGPRINT("Removed node %s\n", DPS_NodeAddrToString(addr));
     }
-    /*
-     * Only the first buffers in a message are allocated per-message.  The others have a longer lifetime.
-     */
-    DPS_NetFreeBufs(bufs, 1);
+    DPS_NetFreeBufs(bufs, numBufs);
 }
 
-void DPS_OnSendComplete(DPS_Node* node, DPS_NetEndpoint* ep, uv_buf_t* bufs, size_t numBufs, DPS_Status status)
+void DPS_OnSendComplete(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf_t* bufs, size_t numBufs, DPS_Status status)
 {
     if (status != DPS_OK) {
         RemoteNode* remote;
 
         DPS_LockNode(node);
-        remote = LookupRemoteNode(node, &ep->addr);
+        remote = DPS_LookupRemoteNode(node, &ep->addr);
         DPS_DBGPRINT("NetSendComplete %s\n", DPS_ErrTxt(status));
         if (remote) {
             DPS_DeleteRemoteNode(node, remote);
@@ -424,10 +417,7 @@ void DPS_OnSendComplete(DPS_Node* node, DPS_NetEndpoint* ep, uv_buf_t* bufs, siz
         }
         DPS_UnlockNode(node);
     }
-    /*
-     * Only the first buffers in a message are allocated per-message.  The others have a longer lifetime.
-     */
-    DPS_NetFreeBufs(bufs, 1);
+    DPS_NetFreeBufs(bufs, numBufs);
 }
 
 /*
@@ -474,12 +464,12 @@ static void SendAcksTask(DPS_Node* node)
 
     while ((ack = node->ackQueue.first) != NULL) {
         RemoteNode* ackNode;
-        DPS_Status ret = DPS_AddRemoteNode(node, &ack->destAddr, NULL, DPS_REMOTE_NODE_KEEPALIVE, &ackNode);
+        DPS_Status ret = DPS_AddRemoteNode(node, &ack->destAddr, NULL, &ackNode);
         if (ret == DPS_OK || ret == DPS_ERR_EXISTS) {
             DPS_SendAcknowledgment(node, ack, ackNode);
         }
         node->ackQueue.first = ack->next;
-        free(ack);
+        DPS_DestroyAck(ack);
     }
     node->ackQueue.last = NULL;
 }
@@ -551,9 +541,9 @@ static void SendSubsTask(DPS_Node* node)
             continue;
         }
         remote->outbound.checkForUpdates = DPS_FALSE;
-        if (uv_now(node->loop) >= remote->expires) {
-            DPS_SendUnsubscribe(node, remote);
-            DPS_DBGPRINT("Remote node has expired - deleting\n");
+        if (remote->unlink) {
+            DPS_SendSubscription(node, remote, NULL);
+            DPS_DBGPRINT("Remote node has been unlinked - deleting\n");
             DPS_DeleteRemoteNode(node, remote);
             continue;
         }
@@ -562,7 +552,7 @@ static void SendSubsTask(DPS_Node* node)
             break;
         }
         if (newInterests) {
-            ret = DPS_SendSubscription(node, remote, newInterests, UINT16_MAX);
+            ret = DPS_SendSubscription(node, remote, newInterests);
             if (ret != DPS_OK) {
                 DPS_DeleteRemoteNode(node, remote);
                 DPS_ERRPRINT("Failed to send subscription request %s\n", DPS_ErrTxt(ret));
@@ -645,6 +635,8 @@ int DPS_UpdateSubs(DPS_Node* node, RemoteNode* remote)
 
 void DPS_QueuePublicationAck(DPS_Node* node, PublicationAck* ack)
 {
+    DPS_DBGTRACE();
+
     DPS_LockNode(node);
     if (node->ackQueue.last) {
         node->ackQueue.last->next = ack;
@@ -657,33 +649,53 @@ void DPS_QueuePublicationAck(DPS_Node* node, PublicationAck* ack)
     DPS_UnlockNode(node);
 }
 
-static DPS_Status DecodeRequest(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Buffer* payload, int multicast)
+static DPS_Status DecodeRequest(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Buffer* buf, int multicast)
 {
     DPS_Status ret;
     uint8_t msgType;
+    size_t len;
 
-    ret = CBOR_DecodeUint8(payload, &msgType);
+    DPS_DBGTRACE();
+    CBOR_Dump(buf->pos, DPS_BufferAvail(buf));
+    ret = CBOR_DecodeArray(buf, &len);
+    if (ret != DPS_OK || (len < 2)) {
+        DPS_ERRPRINT("Expected a CBOR array or 2 or more elements\n");
+        return ret;
+    }
+    ret = CBOR_DecodeUint8(buf, &msgType);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Expected a message type\n");
         return ret;
     }
     switch (msgType) {
     case DPS_MSG_TYPE_SUB:
-        ret = DPS_DecodeSubscription(node, ep, payload);
+        if (len != 3) {
+            DPS_ERRPRINT("Expected 3 element array\n");
+            break;
+        }
+        ret = DPS_DecodeSubscription(node, ep, buf);
         if (ret != DPS_OK) {
             DPS_DBGPRINT("DecodeSubscription returned %s\n", DPS_ErrTxt(ret));
         }
         break;
     case DPS_MSG_TYPE_PUB:
+        if (len != 4) {
+            DPS_ERRPRINT("Expected 4 element array\n");
+            break;
+        }
         DPS_DBGPRINT("Received publication via %s\n", DPS_NodeAddrToString(&ep->addr));
-        ret = DPS_DecodePublication(node, ep, payload, multicast);
+        ret = DPS_DecodePublication(node, ep, buf, multicast);
         if (ret != DPS_OK) {
             DPS_DBGPRINT("DecodePublication returned %s\n", DPS_ErrTxt(ret));
         }
         break;
     case DPS_MSG_TYPE_ACK:
+        if (len != 3) {
+            DPS_ERRPRINT("Expected 3 element array\n");
+            break;
+        }
         DPS_DBGPRINT("Received acknowledgment via %s\n", DPS_NodeAddrToString(&ep->addr));
-        ret = DPS_DecodeAcknowledgment(node, ep, payload);
+        ret = DPS_DecodeAcknowledgment(node, ep, buf);
         if (ret != DPS_OK) {
             DPS_DBGPRINT("DPS_DecodeAcknowledgment returned %s\n", DPS_ErrTxt(ret));
         }
@@ -711,10 +723,10 @@ static DPS_Status OnMulticastReceive(DPS_Node* node, DPS_NetEndpoint* ep, DPS_St
         return DPS_OK;
     }
     /*
-     * Ignore input that comes in after the node has been stopped
+     * Fail input that comes in when the node is no longer running
      */
-    if (node->stopped) {
-        return DPS_OK;
+    if (node->state != DPS_NODE_RUNNING) {
+        return DPS_ERR_FAILURE;
     }
     ret = CoAP_Parse(COAP_OVER_UDP, data, len, &coap, &payload);
     if (ret != DPS_OK) {
@@ -740,10 +752,10 @@ static DPS_Status OnNetReceive(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Status s
     DPS_DBGTRACE();
 
     /*
-     * Ignore input that comes in after the node has been stopped
+     * Fail input that comes in when the node is no longer running
      */
-    if (node->stopped) {
-        return 0;
+    if (node->state != DPS_NODE_RUNNING) {
+        return DPS_ERR_FAILURE;
     }
     /*
      * Delete the remote node if the received failed
@@ -751,7 +763,7 @@ static DPS_Status OnNetReceive(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Status s
     if (status != DPS_OK) {
         RemoteNode* remote;
         DPS_LockNode(node);
-        remote = LookupRemoteNode(node, &ep->addr);
+        remote = DPS_LookupRemoteNode(node, &ep->addr);
         if (remote) {
             DPS_DeleteRemoteNode(node, remote);
         }
@@ -769,7 +781,7 @@ static void StopNode(DPS_Node* node)
     /*
      * Indicates the node is no longer running
      */
-    node->stopped = DPS_TRUE;
+    node->state = DPS_NODE_STOPPED;
     /*
      * Stop receivng and close all global handle
      */
@@ -854,7 +866,7 @@ static void NodeRun(void* arg)
     }
 }
 
-DPS_Node* DPS_CreateNode(const char* separators)
+DPS_Node* DPS_CreateNode(const char* separators, DPS_KeyRequestCallback keyRequestCB, DPS_UUID* keyId)
 {
     DPS_Node* node = calloc(1, sizeof(DPS_Node));
 
@@ -871,7 +883,12 @@ DPS_Node* DPS_CreateNode(const char* separators)
     if (!separators) {
         separators = "/";
     }
+    if (keyId) {
+        node->isSecured = DPS_TRUE;
+        memcpy(&node->keyId, keyId, sizeof(DPS_UUID));
+    }
     strncpy(node->separators, separators, sizeof(node->separators));
+    node->keyRequestCB = keyRequestCB;
     return node;
 }
 
@@ -1002,14 +1019,15 @@ DPS_Status DPS_DestroyNode(DPS_Node* node, DPS_OnNodeDestroyed cb, void* data)
     if (!node || !cb) {
         return DPS_ERR_NULL;
     }
-    if (node->onDestroyed) {
+    if (node->state == DPS_NODE_STOPPING) {
         return DPS_ERR_INVALID;
     }
     if (!node->loop) {
         return DPS_OK;
     }
     DPS_LockNode(node);
-    if (!node->stopped) {
+    if (node->state == DPS_NODE_RUNNING) {
+        node->state = DPS_NODE_STOPPING;
         node->onDestroyed = cb;
         node->onDestroyedData = data;
         node->tasks |= STOP_NODE_TASK;
@@ -1018,6 +1036,7 @@ DPS_Status DPS_DestroyNode(DPS_Node* node, DPS_OnNodeDestroyed cb, void* data)
         return DPS_OK;
     }
     DPS_UnlockNode(node);
+    assert(node->state == DPS_NODE_STOPPED);
     uv_mutex_destroy(&node->nodeMutex);
     free(node);
     return DPS_ERR_NODE_DESTROYED;
@@ -1033,7 +1052,7 @@ DPS_Status DPS_Link(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnLinkComplete cb
         return DPS_ERR_NULL;
     }
     DPS_LockNode(node);
-    ret = DPS_AddRemoteNode(node, addr, NULL, DPS_REMOTE_NODE_KEEPALIVE, &remote);
+    ret = DPS_AddRemoteNode(node, addr, NULL, &remote);
     if (ret != DPS_OK && ret != DPS_ERR_EXISTS) {
         DPS_UnlockNode(node);
         return ret;
@@ -1078,7 +1097,7 @@ DPS_Status DPS_Unlink(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnUnlinkComplet
         return DPS_ERR_NULL;
     }
     DPS_LockNode(node);
-    remote = LookupRemoteNode(node, addr);
+    remote = DPS_LookupRemoteNode(node, addr);
     if (!remote || !remote->linked) {
         DPS_UnlockNode(node);
         return DPS_ERR_MISSING;
@@ -1091,11 +1110,11 @@ DPS_Status DPS_Unlink(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnUnlinkComplet
         return DPS_ERR_BUSY;
     }
     /*
-     * Expiring the remote node will cause it to be deleted after the
+     * Unlinking the remote node will cause it to be deleted after the
      * subscriptions are updated. When the remote node is removed
      * the completion callback will be called.
      */
-    remote->expires = 0;
+    remote->unlink = DPS_TRUE;
     remote->completion = AllocCompletion(node, remote, UNLINK_OP, data, LINK_RESPONSE_TIMEOUT, cb);
     if (!remote->completion) {
         DPS_DeleteRemoteNode(node, remote);
@@ -1165,4 +1184,21 @@ void DPS_DestroyAddress(DPS_NodeAddress* addr)
     }
 }
 
+void DPS_MakeNonce(const DPS_UUID* uuid, uint32_t seqNum, uint8_t msgType, uint8_t nonce[DPS_COSE_NONCE_SIZE])
+{
+    uint8_t* p = nonce;
 
+    *p++ = (uint8_t)(seqNum >> 0);
+    *p++ = (uint8_t)(seqNum >> 8);
+    *p++ = (uint8_t)(seqNum >> 16);
+    *p++ = (uint8_t)(seqNum >> 24);
+    memcpy(p, uuid, DPS_COSE_NONCE_SIZE - sizeof(uint32_t));
+    /*
+     * Adjust one bit so nonce for PUB's and ACK's for same pub id and sequence number are different
+     */
+    if (msgType == DPS_MSG_TYPE_PUB) {
+        p[0] &= 0x7F;
+    } else {
+        p[0] |= 0x80;
+    }
+}

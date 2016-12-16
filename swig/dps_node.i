@@ -176,11 +176,11 @@ static void async_cb(uv_async_t* handle)
     }
 }
 
-DPS_Status DestroyPublication(DPS_Publication* pub, uint8_t** oldPayload)
+DPS_Status DestroyPublication(DPS_Publication* pub)
 {
     Handler* handler = (Handler*)DPS_GetPublicationData(pub);
     delete handler;
-    return DPS_DestroyPublication(pub, oldPayload);
+    return DPS_DestroyPublication(pub);
 }
 
 DPS_Status DestroySubscription(DPS_Subscription* sub)
@@ -191,7 +191,7 @@ DPS_Status DestroySubscription(DPS_Subscription* sub)
 }
 %}
 
-DPS_Status DestroyPublication(DPS_Publication* pub, uint8_t** oldPayload);
+DPS_Status DestroyPublication(DPS_Publication* pub);
 DPS_Status DestroySubscription(DPS_Subscription* sub);
 
 /*

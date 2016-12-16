@@ -13,6 +13,23 @@ static int sendAck = DPS_FALSE;
 
 static uint8_t AckMsg[] = "This is an ACK";
 
+static uint8_t keyId[] = { 0xed,0x54,0x14,0xa8,0x5c,0x4d,0x4d,0x15,0xb6,0x9f,0x0e,0x99,0x8a,0xb1,0x71,0xf2 };
+
+/*
+ * Preshared key for testing only
+ */
+static uint8_t keyData[] = { 0x77,0x58,0x22,0xfc,0x3d,0xef,0x48,0x88,0x91,0x25,0x78,0xd0,0xe2,0x74,0x5c,0x10 };
+
+DPS_Status GetKey(DPS_Node* node, DPS_UUID* kid, uint8_t* key, size_t keyLen)
+{
+    if (memcmp(kid, keyId, sizeof(DPS_UUID)) == 0) {
+        memcpy(key, keyData, keyLen);
+        return DPS_OK;
+    } else {
+        return DPS_ERR_MISSING;
+    }
+}
+
 static void OnNodeDestroyed(DPS_Node* node, void* data)
 {
     if (data) {
@@ -182,7 +199,7 @@ int main(int argc, char** argv)
         goto Usage;
     }
 
-    node = DPS_CreateNode("/.");
+    node = DPS_CreateNode("/.", GetKey, (DPS_UUID*)keyId);
 
     ret = DPS_StartNode(node, DPS_MCAST_PUB_DISABLED, listen);
     if (ret != DPS_OK) {

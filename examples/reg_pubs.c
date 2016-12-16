@@ -42,6 +42,23 @@ static DPS_Publication* currentPub = NULL;
 
 static DPS_Event* nodeDestroyed;
 
+static uint8_t keyId[] = { 0xed,0x54,0x14,0xa8,0x5c,0x4d,0x4d,0x15,0xb6,0x9f,0x0e,0x99,0x8a,0xb1,0x71,0xf2 };
+
+/*
+ * Preshared key for testing only
+ */
+static uint8_t keyData[] = { 0x77,0x58,0x22,0xfc,0x3d,0xef,0x48,0x88,0x91,0x25,0x78,0xd0,0xe2,0x74,0x5c,0x10 };
+
+DPS_Status GetKey(DPS_Node* node, DPS_UUID* kid, uint8_t* key, size_t keyLen)
+{
+    if (memcmp(kid, keyId, sizeof(DPS_UUID)) == 0) {
+        memcpy(key, keyData, keyLen);
+        return DPS_OK;
+    } else {
+        return DPS_ERR_MISSING;
+    }
+}
+
 static void OnNodeDestroyed(DPS_Node* node, void* data)
 {
     DPS_SignalEvent(nodeDestroyed, DPS_OK);
@@ -138,7 +155,7 @@ static void ReadStdin(DPS_Node* node)
             keep = 0;
         }
         if (!keep) {
-            DPS_DestroyPublication(currentPub, &data);
+            DPS_DestroyPublication(currentPub);
             currentPub = DPS_CreatePublication(node);
             ret = DPS_InitPublication(currentPub, (const char**)topics, numTopics, DPS_FALSE, requestAck ? OnAck : NULL);
             if (ret != DPS_OK) {
@@ -146,7 +163,7 @@ static void ReadStdin(DPS_Node* node)
                 return;
             }
         }
-        ret = DPS_Publish(currentPub, msg, msg ? strlen(msg) : 0, ttl, NULL);
+        ret = DPS_Publish(currentPub, msg, msg ? strlen(msg) : 0, ttl);
         if (ret == DPS_OK) {
             DPS_PRINT("Pub UUID %s(%d)\n", DPS_UUIDToString(DPS_PublicationGetUUID(currentPub)), DPS_PublicationGetSequenceNum(currentPub));
         } else {
@@ -280,7 +297,7 @@ int main(int argc, char** argv)
         goto Usage;
     }
 
-    node = DPS_CreateNode("/.");
+    node = DPS_CreateNode("/.", GetKey, (DPS_UUID*)keyId);
 
     ret = DPS_StartNode(node, mcastPub, 0);
     if (ret != DPS_OK) {
@@ -305,7 +322,7 @@ int main(int argc, char** argv)
             DPS_ERRPRINT("Failed to create publication - error=%d\n", ret);
             goto Exit;
         }
-        ret = DPS_Publish(currentPub, msg, msg ? strlen(msg) + 1 : 0, ttl, NULL);
+        ret = DPS_Publish(currentPub, msg, msg ? strlen(msg) + 1 : 0, ttl);
         if (ret == DPS_OK) {
             DPS_PRINT("Pub UUID %s\n", DPS_UUIDToString(DPS_PublicationGetUUID(currentPub)));
         } else {

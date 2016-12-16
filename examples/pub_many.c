@@ -54,13 +54,13 @@ static void OnAck(DPS_Publication* pub, uint8_t* data, size_t len)
         }
     }
     if (--pubCount) {
-        DPS_Status ret = DPS_Publish(pub, NULL, 0, ttl, NULL);
+        DPS_Status ret = DPS_Publish(pub, NULL, 0, ttl);
         if (ret == DPS_OK) {
             return;
         }
         DPS_ERRPRINT("Failed to publish: %s\n", DPS_ErrTxt(ret));
     }
-    DPS_DestroyPublication(pub, NULL);
+    DPS_DestroyPublication(pub);
     DPS_DestroyNode(node, OnNodeDestroyed, NULL);
 }
 
@@ -157,7 +157,7 @@ int main(int argc, char** argv)
         mcast = DPS_MCAST_PUB_DISABLED;
     }
 
-    node = DPS_CreateNode("/.");
+    node = DPS_CreateNode("/.", NULL, NULL);
     ret = DPS_StartNode(node, mcast, 0);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("DPS_CreateNode failed: %s\n", DPS_ErrTxt(ret));
@@ -182,12 +182,12 @@ int main(int argc, char** argv)
 
     nodeDestroyed = DPS_CreateEvent();
 
-    ret = DPS_Publish(pub, msg, msg ? strlen(msg) + 1 : 0, ttl, NULL);
+    ret = DPS_Publish(pub, msg, msg ? strlen(msg) + 1 : 0, ttl);
     if (ret == DPS_OK) {
         DPS_PRINT("Pub UUID %s\n", DPS_UUIDToString(DPS_PublicationGetUUID(pub)));
     } else {
         DPS_ERRPRINT("Failed to publish topics - error=%d\n", ret);
-        DPS_DestroyPublication(pub, NULL);
+        DPS_DestroyPublication(pub);
         DPS_DestroyNode(node, OnNodeDestroyed, NULL);
     }
 

@@ -74,6 +74,8 @@ int main(int argc, char** argv)
      */
     for (n = 0; n < 2; ++n) {
 
+        CBOR_EncodeArray(&buffer, 40);
+
         for (i = 0; i < sizeof(Uints) / sizeof(Uints[0]); ++i) {
             CBOR_EncodeUint(&buffer, Uints[i]);
         }
@@ -104,8 +106,13 @@ int main(int argc, char** argv)
 
     printf("Encoded %zu bytes\n", DPS_BufferAvail(&buffer));
 
+    CBOR_Dump(buffer.base, DPS_BufferAvail(&buffer));
+
     buffer.eod = buffer.pos;
     buffer.pos = buffer.base;
+
+    CBOR_DecodeArray(&buffer, &size);
+    assert(size == 40);
 
     /*
      * Decode
@@ -158,6 +165,9 @@ int main(int argc, char** argv)
     /*
      * Skip
      */
+    CBOR_DecodeArray(&buffer, &size);
+    assert(size == 40);
+
     for (n = 0; n < 40; ++n) {
         size_t sz;
         uint8_t maj;

@@ -25,6 +25,7 @@
 #include <string.h>
 
 #include "ccm.h"
+#include <dps/private/dps.h>
 
 #include "ccm-testdata.c"
 
@@ -43,6 +44,7 @@ dump(unsigned char *buf, size_t len) {
 
 int main(int argc, char **argv)
 {
+    DPS_Buffer buf;
     DPS_Status ret;
     long int len;
     int n;

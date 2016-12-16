@@ -120,10 +120,10 @@ static DPS_Status EncodeProtectedMap(DPS_Buffer* buf, uint8_t alg)
     return CBOR_EndWrapBytes(buf, wrapPtr);
 }
 
-static DPS_Status EncodeAAD(uint8_t alg, DPS_Buffer* buf, DPS_Buffer* aad)
+static DPS_Status EncodeAAD(uint8_t alg, DPS_Buffer* buf, uint8_t* aad, size_t aadLen)
 {
     DPS_Status ret;
-    size_t bufSize = sizeof(ENCRYPT0) + DPS_BufferUsed(aad) + HEADROOM;
+    size_t bufSize = sizeof(ENCRYPT0) + aadLen + HEADROOM;
 
     ret = DPS_BufferInit(buf, NULL, bufSize);
     if (ret != DPS_OK) {
@@ -149,7 +149,7 @@ static DPS_Status EncodeAAD(uint8_t alg, DPS_Buffer* buf, DPS_Buffer* aad)
     /*
      * external aad
      */
-    return CBOR_EncodeBytes(buf, aad->base, DPS_BufferUsed(aad));
+    return CBOR_EncodeBytes(buf, aad, aadLen);
 }
 
 DPS_Status COSE_Encrypt(int8_t alg,
@@ -158,6 +158,7 @@ DPS_Status COSE_Encrypt(int8_t alg,
                         DPS_Buffer* aad,
                         DPS_Buffer* plainText,
                         COSE_KeyRequest keyCB,
+                        void* ctx,
                         DPS_Buffer* cipherText)
 {
     DPS_Status ret;
@@ -165,10 +166,14 @@ DPS_Status COSE_Encrypt(int8_t alg,
     uint8_t key[AES_128_KEY_LENGTH];
     uint8_t L;
     uint8_t M;
-    size_t msgLen;
+    size_t ptLen;
     size_t aadLen;
-    size_t outLen;
-    uint8_t* msg;
+    size_t ctLen;
+
+    DPS_DBGTRACE();
+
+    assert(DPS_BufferUsed(aad));
+    assert(DPS_BufferUsed(plainText));
 
     cipherText->base = NULL;
     AAD.base = NULL;
@@ -177,25 +182,24 @@ DPS_Status COSE_Encrypt(int8_t alg,
     if (ret != DPS_OK) {
         goto ErrorExit;
     }
-    ret = keyCB(kid, alg, key);
+    ret = keyCB(ctx, kid, alg, key);
     if (ret != DPS_OK) {
         goto ErrorExit;
     }
     /*
      * Encode the canonical AAD
      */
-    ret = EncodeAAD(alg, &AAD, aad);
+    ret = EncodeAAD(alg, &AAD, aad->base, DPS_BufferUsed(aad));
     if (ret != DPS_OK) {
         goto ErrorExit;
     }
     aadLen = DPS_BufferUsed(&AAD);
-    msgLen = DPS_BufferUsed(plainText);
-
+    ptLen = DPS_BufferUsed(plainText);
     /*
      * Allocate cipherText buffer and copy in headers
      */
-    outLen = aadLen - DPS_BufferUsed(aad) + msgLen + M + sizeof(kid) + HEADROOM;
-    ret = DPS_BufferInit(cipherText, NULL, outLen);
+    ctLen = aadLen - DPS_BufferUsed(aad) + ptLen + M + sizeof(kid) + HEADROOM;
+    ret = DPS_BufferInit(cipherText, NULL, ctLen);
     if (ret != DPS_OK) {
         goto ErrorExit;
     }
@@ -230,12 +234,11 @@ DPS_Status COSE_Encrypt(int8_t alg,
     /*
      * [3] Cryptext byte string
      */
-    ret = CBOR_ReserveBytes(cipherText, msgLen + M, &msg);
+    ret = CBOR_EncodeLength(cipherText, ptLen + M, CBOR_BYTES);
     if (ret != DPS_OK) {
         goto ErrorExit;
     }
-    memcpy(msg, plainText->base, msgLen);
-    ret = Encrypt_CCM(key, M, L, nonce, msg, msgLen, AAD.base, aadLen);
+    ret = Encrypt_CCM(key, M, L, nonce, plainText->base, ptLen, AAD.base, aadLen, cipherText);
     if (ret != DPS_OK) {
         goto ErrorExit;
     }
@@ -243,19 +246,15 @@ DPS_Status COSE_Encrypt(int8_t alg,
     /*
      * Don't need AAD anymore
      */
-    free(AAD.base);
+    DPS_BufferFree(&AAD);
 
     return DPS_OK;
 
 ErrorExit:
 
     SecureZeroMemory(key, sizeof(key));
-    if (cipherText->base) {
-        free(cipherText->base);
-    }
-    if (AAD.base) {
-        free(AAD.base);
-    }
+    DPS_BufferFree(cipherText);
+    DPS_BufferFree(&AAD);
     return ret;
 }
 
@@ -340,6 +339,7 @@ DPS_Status COSE_Decrypt(const uint8_t nonce[DPS_COSE_NONCE_SIZE],
                         DPS_Buffer* aad,
                         DPS_Buffer* cipherText,
                         COSE_KeyRequest keyCB,
+                        void* ctx,
                         DPS_Buffer* plainText)
 {
     DPS_Status ret;
@@ -350,11 +350,15 @@ DPS_Status COSE_Decrypt(const uint8_t nonce[DPS_COSE_NONCE_SIZE],
     size_t sz;
     int8_t alg;
     DPS_UUID kid;
-    size_t cryptLen;
     uint64_t tag;
+    size_t aadLen;
+    size_t ctLen;
     uint8_t* cryptText;
 
     AAD.base = NULL;
+    plainText->base =  NULL;
+
+    DPS_DBGTRACE();
 
     /*
      * Check this is a COSE payload
@@ -392,39 +396,45 @@ DPS_Status COSE_Decrypt(const uint8_t nonce[DPS_COSE_NONCE_SIZE],
     if (ret != DPS_OK) {
         goto ErrorExit;
     }
-    ret = keyCB(&kid, alg, key);
+    ret = keyCB(ctx, &kid, alg, key);
     if (ret != DPS_OK) {
         goto ErrorExit;
     }
     /*
-     * [3] Cryptext byte string
+     * [3] Encrypted byte string
      */
-    ret = CBOR_DecodeBytes(cipherText, &cryptText, &cryptLen);
+    ret = CBOR_DecodeBytes(cipherText, &cryptText, &ctLen);
+    if (ret != DPS_OK) {
+        goto ErrorExit;
+    }
+    /*
+     * Buffer to return the decrypted plain text
+     */
+    ret = DPS_BufferInit(plainText, NULL, ctLen - M);
     if (ret != DPS_OK) {
         goto ErrorExit;
     }
     /*
      * Encode the cannonical AAD
      */
-    ret = EncodeAAD(alg, &AAD, aad);
+    ret = EncodeAAD(alg, &AAD, aad->base, DPS_BufferAvail(aad));
     if (ret != DPS_OK) {
         goto ErrorExit;
     }
-    ret = Decrypt_CCM(key, M, L, nonce, cryptText, cryptLen, AAD.base, DPS_BufferUsed(&AAD));
+    aadLen = DPS_BufferUsed(&AAD);
+    ret = Decrypt_CCM(key, M, L, nonce, cryptText, ctLen, AAD.base, aadLen, plainText);
     if (ret != DPS_OK) {
         goto ErrorExit;
     }
     SecureZeroMemory(key, sizeof(key));
-    DPS_BufferInit(plainText, cryptText, cryptLen + M);
-    free(AAD.base);
+    DPS_BufferFree(&AAD);
 
     return DPS_OK;
 
 ErrorExit:
 
     SecureZeroMemory(key, sizeof(key));
-    if (AAD.base) {
-        free(AAD.base);
-    }
+    DPS_BufferFree(&AAD);
+    DPS_BufferFree(plainText);
     return ret;
 }

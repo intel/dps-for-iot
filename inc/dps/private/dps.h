@@ -61,10 +61,17 @@ typedef struct {
 DPS_Status DPS_BufferInit(DPS_Buffer* buffer, uint8_t* storage, size_t size);
 
 /**
+ * Free resources allocated for a buffer and nul out the buffer pointers.
+ *
+ * @param buffer    Buffer to free
+ */
+void DPS_BufferFree(DPS_Buffer* buffer);
+
+/**
  * Add data to a buffer
  *
- * @param buffer    Buffer to append to
- * @param storage   The data to append
+ * @param buffer   Buffer to append to
+ * @param storage  The data to append
  * @param len      Length of the data to append
  *
  * @return   DPS_OK or DP_ERR_RESOURCES if there not enough room in the buffer
@@ -72,22 +79,27 @@ DPS_Status DPS_BufferInit(DPS_Buffer* buffer, uint8_t* storage, size_t size);
 DPS_Status DPS_BufferAppend(DPS_Buffer* buffer, const uint8_t* data, size_t len);
 
 /*
- * Reset the buffer pointers to the initialized state
+ * Rewind a buffer
  */
-#define DPS_BufferReset(b)  ((size_t)((b)->pos = (b)->base))
+#define DPS_BufferRewind(b) do { (b)->eod = (b)->pos; (b)->pos = (b)->base; } while (0)
 
 /*
- * Space left in a buffer being written
+ * Set the end of a buffer
+ */
+#define DPS_BufferSeekEnd(b) do { (b)->pos = (b)->eod; } while (0)
+
+/*
+ * Space left in an output buffer
  */
 #define DPS_BufferSpace(b)  ((size_t)((b)->eod - (b)->pos))
 
 /*
- * Data available in a buffer being read
+ * Data available in an input buffer
  */
 #define DPS_BufferAvail(b)  ((size_t)((b)->eod - (b)->pos))
 
 /*
- * Space currently used in buffer
+ * Number of bytes currently in an output buffer
  */
 #define DPS_BufferUsed(b)  ((size_t)((b)->pos - (b)->base))
 

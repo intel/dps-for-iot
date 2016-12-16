@@ -96,7 +96,7 @@ int main(int argc, char** argv)
         }
     }
 
-    node = DPS_CreateNode("/");
+    node = DPS_CreateNode("/", NULL, NULL);
     ret = DPS_StartNode(node, 0, listenPort);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));

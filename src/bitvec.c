@@ -25,7 +25,7 @@
 #include <string.h>
 #include <malloc.h>
 #include <dps/dbg.h>
-#include "murmurhash3.h"
+#include "sha2.h"
 #include "bitvec.h"
 #include "cbor.h"
 
@@ -71,12 +71,12 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 /*
  * Flag that indicates if serialized bit vector was rle encode or sent raw
  */
-#define FLAG_RLE_ENCODED     0x80
+#define FLAG_RLE_ENCODED     0x01
 
 /*
  * Indicates the complement of the bit vector was serialized
  */
-#define FLAG_RLE_COMPLEMENT  0x40
+#define FLAG_RLE_COMPLEMENT  0x02
 
 /*
  * Process bit vectors in 64 bit chunks
@@ -169,7 +169,7 @@ static void BitDump(const chunk_t* data, size_t bits)
 #endif
 
 #define MIN_HASHES    1
-#define MAX_HASHES   16
+#define MAX_HASHES    8
 
 DPS_Status DPS_Configure(size_t bitLen, size_t numHashes)
 {
@@ -185,36 +185,6 @@ DPS_Status DPS_Configure(size_t bitLen, size_t numHashes)
     config.numHashes = (uint8_t)numHashes;
     return DPS_ERR_OK;
 }
-
-
-static uint32_t Hash(const uint8_t* data, size_t len, uint8_t hashNum)
-{
-    uint32_t hash;
-    /*
-     * These are just random numbers
-     */
-    static const uint32_t Seeds[16] = {
-        0x2dbcd6b2,
-        0x7756c402,
-        0x34bae8e3,
-        0x8c86f563,
-        0xc1312fdc,
-        0xe4bd86ac,
-        0xa2ed06f6,
-        0x1ec69ce9,
-        0x204de832,
-        0xf206107b,
-        0xc3fe6144,
-        0x061f9cf5,
-        0x20058da7,
-        0x43c6b743,
-        0x728afedd,
-        0x21c32156
-    };
-    MurmurHash3_x86_32(data, (int)len, Seeds[hashNum], &hash);
-    return hash;
-}
-
 
 static DPS_BitVector* AllocBV(size_t sz)
 {
@@ -296,10 +266,20 @@ void DPS_BitVectorFree(DPS_BitVector* bv)
 
 void DPS_BitVectorBloomInsert(DPS_BitVector* bv, const uint8_t* data, size_t len)
 {
-    uint8_t h = config.numHashes;
+    uint8_t h;
+    uint32_t hashes[MAX_HASHES];
+    uint32_t index;
+
+    assert(sizeof(hashes) == DPS_SHA2_DIGEST_LEN);
+
+    DPS_Sha2((uint8_t*)hashes, data, len);
     //DPS_PRINT("%.*s   (%zu)\n", (int)len, data, len);
-    while (h) {
-        uint32_t index = Hash(data, len, --h) % bv->len;
+    for (h = 0; h < config.numHashes; ++h) {
+#ifdef ENDIAN_SWAP
+        index = hashes[h] % bv->len;
+#else
+        index = BSWAP_32(hashes[h]) % bv->len;
+#endif
         SET_BIT(bv->bits, index);
     }
     INVALIDATE_POPCOUNT(bv);
@@ -307,9 +287,17 @@ void DPS_BitVectorBloomInsert(DPS_BitVector* bv, const uint8_t* data, size_t len
 
 int DPS_BitVectorBloomTest(const DPS_BitVector* bv, const uint8_t* data, size_t len)
 {
-    uint8_t h = config.numHashes;
-    while (h) {
-        size_t index = Hash(data, len, --h) % bv->len;
+    uint8_t h;
+    uint32_t hashes[MAX_HASHES];
+    uint32_t index;
+
+    DPS_Sha2((uint8_t*)hashes, data, len);
+    for (h = 0; h < config.numHashes; ++h) {
+#ifdef ENDIAN_SWAP
+        index = hashes[h] % bv->len;
+#else
+        index = BSWAP_32(hashes[h]) % bv->len;
+#endif
         if (!TEST_BIT(bv->bits, index)) {
             return 0;
         }

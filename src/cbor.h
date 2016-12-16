@@ -189,7 +189,7 @@ DPS_Status CBOR_EndWrapBytes(DPS_Buffer* buffer, uint8_t* wrapPtr);
 /**
  *
  * @param buffer  Buffer to decode from
- * @param data    Returns pointer into buffer storage to the decoded bytes 
+ * @param data    Returns pointer into buffer storage to the decoded bytes
  * @param size    Returns length of the decoded bytes
  *
  * @return - DPS_OK if the bytes were decoded
@@ -202,7 +202,7 @@ DPS_Status CBOR_DecodeBytes(DPS_Buffer* buffer, uint8_t** data, size_t* size);
 /**
  *
  * @param buffer  Buffer to decode from
- * @param data    Returns pointer into buffer storage to the decoded string 
+ * @param data    Returns pointer into buffer storage to the decoded string
  * @param size    Returns length of the decoded string
  *
  * @return - DPS_OK if the string was decoded
@@ -235,6 +235,48 @@ DPS_Status CBOR_DecodeArray(DPS_Buffer* buffer, size_t* size);
  *
  */
 DPS_Status CBOR_Skip(DPS_Buffer* buffer, uint8_t* maj, size_t* size);
+
+/**
+ * Structure for holding state while parsing a map
+ */
+typedef struct {
+    DPS_Buffer* buffer;   /** buffer being parsed */
+    const int32_t* keys;  /** array of remaining keys to match */
+    size_t needKeys;      /** remaining number of unmatched keys */
+    size_t entries;       /** remaining entries in map */
+} CBOR_MapState;
+
+/**
+ * Helper function for matching keys in a map. The keys must be signed integers and
+ * fit in 32 bits. The keys must be in ascending order in the keys array and in the
+ * map being parsed.
+ *
+ * @param mapState  Map state struct to initialize
+ * @param buffer    Buffer to parse from
+ * @param keys      Array of keys to be matched
+ * @param numkeys   The number of keys to match
+ */
+DPS_Status DPS_ParseMapInit(CBOR_MapState* mapState, DPS_Buffer* buffer, const int32_t* keys, size_t numKeys);
+
+/**
+ * Find the next matching key and return it. The value for the key can be
+ * decoded from the buffer.
+ *
+ * @param mapState  Map state struct
+ * @param key       Returns the key that was matched
+ *
+ * @return - DPS_OK if the required key was matched
+ *         - DPS_ERR_MISSING if a required key was not found
+ *         - other errors if the CBOR was invalid
+ */
+DPS_Status DPS_ParseMapNext(CBOR_MapState* mapState, int32_t* key);
+
+/**
+ * Macro for checking that a map has been completely parsed
+ */
+#define DPS_ParseMapDone(m)  ((m)->needKeys == 0)
+
+void CBOR_Dump(uint8_t* data, size_t len);
 
 #ifdef __cplusplus
 }

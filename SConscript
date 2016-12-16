@@ -30,12 +30,12 @@ srcs = ['src/bitvec.c',
         'src/history.c',
         'src/synchronous.c',
         'src/uuid.c',
-        'src/murmurhash3.c',
         'src/netmcast.c',
         'src/network.c',
         'src/registration.c',
         'src/topics.c',
         'src/uv_extra.c',
+        'src/sha2.c',
         'src/ccm.c']
 
 if env['udp'] == True:
@@ -59,22 +59,12 @@ ns3srcs = ['src/bitvec.c',
            'src/cbor.c',
            'src/coap.c',
            'src/dps.c',
-           'src/err.c',
-           'src/history.c',
-           'src/uuid.c',
-           'src/murmurhash3.c',
-           'src/topics.c']
-ns3srcs = ['src/bitvec.c',
-           'src/cbor.c',
-           'src/coap.c',
-           'src/dps.c',
            'src/pub.c',
            'src/sub.c',
            'src/ack.c',
            'src/err.c',
            'src/history.c',
            'src/uuid.c',
-           'src/murmurhash3.c',
            'src/topics.c']
 
 if platform == 'posix':
@@ -114,12 +104,11 @@ testprogs = [testenv.Program('bin/hist_unit', 'test/hist_unit.c'),
              testenv.Program('bin/countvec', 'test/countvec.c'),
              testenv.Program('bin/rle_compression', 'test/rle_compression.c'),
              testenv.Program('bin/topic_match', 'test/topic_match.c'),
-             testenv.Program('bin/hashtest', 'test/hashtest.c'),
              testenv.Program('bin/stats', 'test/stats.c'),
              testenv.Program('bin/pubsub', 'test/pubsub.c'),
              testenv.Program('bin/packtest', 'test/packtest.c'),
              testenv.Program('bin/cbortest', 'test/cbortest.c'),
-             testenv.Program('bin/ccm-test', 'test/ccm-test.c'),
+#testenv.Program('bin/ccm-test', 'test/ccm-test.c'),
              testenv.Program('bin/cosetest', 'test/cosetest.c')]
 
 # Platform-specific test cases

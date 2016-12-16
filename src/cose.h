@@ -31,7 +31,14 @@
 extern "C" {
 #endif
 
-#define DPS_COSE_NONCE_SIZE   13
+/**
+ * Size of the nonce
+ */
+#define DPS_COSE_NONCE_SIZE        13
+
+/**
+ * Key length
+ */
 #define AES_128_KEY_LEN       16
 
 /*
@@ -46,6 +53,7 @@ extern "C" {
  * Function prototype for callback function for requesting the encryption key
  * for a specific key identifier. This function must not block
  *
+ * @param ctx   Caller provided context
  * @param alg   The symmetric crypto algorithm variant to use
  * @param kid   The key identifier
  * @param key   Buffer for returning the key.
@@ -53,7 +61,7 @@ extern "C" {
  * @return  DPS_OK if a key matching the kid was returned
  *          DPS_ERR_MSSING if there is no matchin key
  */
-typedef DPS_Status (*COSE_KeyRequest)(DPS_UUID* kid, int8_t alg, uint8_t key[AES_128_KEY_LEN]);
+typedef DPS_Status (*COSE_KeyRequest)(void* ctx, DPS_UUID* kid, int8_t alg, uint8_t key[AES_128_KEY_LEN]);
 
 /**
  * COSE Encryption
@@ -64,28 +72,33 @@ typedef DPS_Status (*COSE_KeyRequest)(DPS_UUID* kid, int8_t alg, uint8_t key[AES
  * @param aad        Buffer containing the external auxiliary authenticated data
  * @param plainText  Buffer containing the plain text payload to be encrypted
  * @param keyCB      Callback function called to request the encryption key
+ * @param ctx        Context to be passed to the key request callback
  * @param cipherText Buffer for returning the authenticated and encrypted output. The storage for this
  *                   buffer is allocated by this function and must be freed by the caller.
+ *
+ * @return  - DPS_OK if the plaintext was succesfully encrypted
+ *          - Other error codes
  */
 DPS_Status COSE_Encrypt(int8_t alg,
                         DPS_UUID* kid, 
                         const uint8_t nonce[DPS_COSE_NONCE_SIZE],
                         DPS_Buffer* aad,
-                        DPS_Buffer* payload,
+                        DPS_Buffer* plainText,
                         COSE_KeyRequest keyCB,
-                        DPS_Buffer* output);
+                        void* ctx,
+                        DPS_Buffer* cipherText);
  
 /**
  * COSE Decryption
  *
- * @param ctx        The COSE context
  * @param aad        Buffer containing the external auxiliary authenticated data.
  * @param cipherText Buffer containing the authenticated and encrypted input data
  * @param keyCB      Callback function called to request the encryption key
- * @param plainText  Buffer for returning the decrypted payload. The storage is shared with the input
- *                   buffer and must not separately freed
+ * @param ctx        Context to be passed to the key request callback
+ * @param plainText  Buffer for returning the decrypted payload. The storage for this
+ *                   buffer is allocated by this function and must be freed by the caller.
  *
- * @return  - DPS_OK if the payloadd was succesfully decrypted
+ * @return  - DPS_OK if the payload was succesfully decrypted
  *          - DPS_ERR_NOT_ENCRYPTED if the payload is not a COSE payload (no COSE tag)
  *          - DPS_ERR_INVALID if the payload is badly formed
  *          - DPS_ERR_SECURITY if the payload failed to decrypt
@@ -93,9 +106,10 @@ DPS_Status COSE_Encrypt(int8_t alg,
  */
 DPS_Status COSE_Decrypt(const uint8_t nonce[DPS_COSE_NONCE_SIZE],
                         DPS_Buffer* aad,
-                        DPS_Buffer* input,
+                        DPS_Buffer* cipherText,
                         COSE_KeyRequest keyCB,
-                        DPS_Buffer* payload);
+                        void* ctx,
+                        DPS_Buffer* plainText);
 
 
 #ifdef __cplusplus

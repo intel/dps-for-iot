@@ -32,11 +32,12 @@
 extern "C" {
 #endif
 
-#define PUB_FLAG_PUBLISH  (0x01) /* The publication should be published */
-#define PUB_FLAG_LOCAL    (0x02) /* The publication is local to this node */
-#define PUB_FLAG_RETAINED (0x04) /* The publication had a non-zero TTL */
-#define PUB_FLAG_EXPIRED  (0x10) /* The publication had a negative TTL */
-#define PUB_FLAG_IS_COPY  (0x80) /* This publication is a copy and can only be used for acknowledgements */
+#define PUB_FLAG_PUBLISH   (0x01) /* The publication should be published */
+#define PUB_FLAG_LOCAL     (0x02) /* The publication is local to this node */
+#define PUB_FLAG_RETAINED  (0x04) /* The publication had a non-zero TTL */
+#define PUB_FLAG_EXPIRED   (0x10) /* The publication had a negative TTL */
+#define PUB_FLAG_WAS_FREED (0x20) /* The publication has been freed but has a non-zero ref count */
+#define PUB_FLAG_IS_COPY   (0x80) /* This publication is a copy and can only be used for acknowledgements */
 
 /*
  * Notes on the use of the DPS_Publication fields:
@@ -52,18 +53,21 @@ typedef struct _DPS_Publication {
     uint8_t flags;                  /* Internal state flags */
     uint8_t checkToSend;            /* TRUE if this publication should be checked to send */
     uint8_t ackRequested;           /* TRUE if an ack was requested by the publisher */
-    uint64_t expires;               /* Time (in milliseconds) that this publication expires */
+    uint32_t refCount;              /* Ref count to prevent publication from being free while a send is in progress */
     uint32_t sequenceNum;           /* Sequence number for this publication */
-    DPS_Buffer payloadLenBuf;
-    uv_buf_t payload;
+    uint64_t expires;               /* Time (in milliseconds) that this publication expires */
     DPS_AcknowledgementHandler handler;
     DPS_UUID pubId;                 /* Publication identifier */
     DPS_NodeAddress sender;         /* for retained messages - the sender address */
     DPS_BitVector* bf;              /* The Bloom filter bit vector for the topics for this publication */
     DPS_Node* node;                 /* Node for this publication */
-    char** topics;                  /* Publication topics */
-    size_t numTopics;
-    DPS_Buffer topicsBuf;
+
+    char** topics;                  /* Publication topics - pointers into topicsBuf */
+    size_t numTopics;               /* Number of publication topics */
+    DPS_Buffer topicsBuf;           /* Pre-serialized topic strings */
+    DPS_Buffer bfBuf;               /* Pre-serialized bloom filter */
+    DPS_Buffer body;                /* Authenticated body fields */
+    DPS_Buffer payload;             /* Encrypted body fields */
     DPS_Publication* next;
 } DPS_Publication;
 
@@ -81,6 +85,10 @@ DPS_Status DPS_SendPublication(DPS_Node* node, DPS_Publication* pub, DPS_BitVect
 void DPS_ExpirePub(DPS_Node* node, DPS_Publication* pub);
 
 void DPS_FreePublications(DPS_Node* node);
+
+void DPS_PublicationIncRef(DPS_Publication* pub);
+
+void DPS_PublicationDecRef(DPS_Publication* pub);
 
 #ifdef NDEBUG
 #define DumpPubs(node)

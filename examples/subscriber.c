@@ -34,6 +34,23 @@ static int sendAck = DPS_FALSE;
 
 static uint8_t AckMsg[] = "This is an ACK";
 
+static uint8_t keyId[] = { 0xed,0x54,0x14,0xa8,0x5c,0x4d,0x4d,0x15,0xb6,0x9f,0x0e,0x99,0x8a,0xb1,0x71,0xf2 };
+
+/*
+ * Preshared key for testing only
+ */
+static uint8_t keyData[] = { 0x77,0x58,0x22,0xfc,0x3d,0xef,0x48,0x88,0x91,0x25,0x78,0xd0,0xe2,0x74,0x5c,0x10 };
+
+DPS_Status GetKey(DPS_Node* node, DPS_UUID* kid, uint8_t* key, size_t keyLen)
+{
+    if (memcmp(kid, keyId, sizeof(DPS_UUID)) == 0) {
+        memcpy(key, keyData, keyLen);
+        return DPS_OK;
+    } else {
+        return DPS_ERR_MISSING;
+    }
+}
+
 static void OnNodeDestroyed(DPS_Node* node, void* data)
 {
     if (data) {
@@ -115,6 +132,7 @@ int main(int argc, char** argv)
     DPS_Event* nodeDestroyed;
     int mcastPub = DPS_MCAST_PUB_DISABLED;
     const char* host = NULL;
+    int encrypt = DPS_TRUE;
     int listenPort = 0;
     int linkPort = 0;
 
@@ -138,6 +156,9 @@ int main(int argc, char** argv)
         if (strcmp(*arg, "-q") == 0) {
             ++arg;
             quiet = DPS_TRUE;
+            continue;
+        }
+        if (IntArg("-x", &arg, &argc, &encrypt, 0, 1)) {
             continue;
         }
         if (strcmp(*arg, "-a") == 0) {
@@ -179,7 +200,8 @@ int main(int argc, char** argv)
         mcastPub = DPS_MCAST_PUB_ENABLE_RECV;
     }
 
-    node = DPS_CreateNode("/.");
+    node = DPS_CreateNode("/.", GetKey, encrypt ? (DPS_UUID*)keyId : NULL);
+
     ret = DPS_StartNode(node, mcastPub, listenPort);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
@@ -212,6 +234,7 @@ int main(int argc, char** argv)
             DPS_ERRPRINT("Failed to susbscribe topics - error=%s\n", DPS_ErrTxt(ret));
             DPS_DestroyNode(node, OnNodeDestroyed, nodeDestroyed);
             DPS_WaitForEvent(nodeDestroyed);
+            DPS_DestroyEvent(nodeDestroyed);
             return 1;
         }
     }
@@ -223,8 +246,6 @@ int main(int argc, char** argv)
         if (ret != DPS_OK) {
             DPS_ERRPRINT("DPS_LinkTo returned %s\n", DPS_ErrTxt(ret));
             DPS_DestroyNode(node, OnNodeDestroyed, nodeDestroyed);
-            DPS_WaitForEvent(nodeDestroyed);
-            return 1;
         }
     }
     DPS_WaitForEvent(nodeDestroyed);

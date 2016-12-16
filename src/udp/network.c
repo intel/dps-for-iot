@@ -186,6 +186,7 @@ void DPS_NetStop(DPS_NetContext* netCtx)
 
 typedef struct {
     DPS_Node* node;
+    void* appCtx;
     DPS_NetEndpoint peerEp;
     uv_udp_send_t sendReq;
     DPS_NetSendComplete onSendComplete;
@@ -202,11 +203,11 @@ static void OnSendComplete(uv_udp_send_t* req, int status)
         DPS_ERRPRINT("OnSendComplete status=%s\n", uv_err_name(status));
         dpsRet = DPS_ERR_NETWORK;
     }
-    sender->onSendComplete(sender->node, &sender->peerEp, sender->bufs, sender->numBufs, dpsRet);
+    sender->onSendComplete(sender->node, sender->appCtx, &sender->peerEp, sender->bufs, sender->numBufs, dpsRet);
     free(sender);
 }
 
-DPS_Status DPS_NetSend(DPS_Node* node, DPS_NetEndpoint* ep, uv_buf_t* bufs, size_t numBufs, DPS_NetSendComplete sendCompleteCB)
+DPS_Status DPS_NetSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf_t* bufs, size_t numBufs, DPS_NetSendComplete sendCompleteCB)
 {
     int ret;
     NetSender* sender;
@@ -229,6 +230,7 @@ DPS_Status DPS_NetSend(DPS_Node* node, DPS_NetEndpoint* ep, uv_buf_t* bufs, size
 
     sender->sendReq.data = sender;
     sender->onSendComplete = sendCompleteCB;
+    sender->appCtx = appCtx;
     sender->peerEp = *ep;
     sender->node = node;
     memcpy(sender->bufs, bufs, numBufs * sizeof(uv_buf_t));

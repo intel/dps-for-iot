@@ -114,19 +114,20 @@ DPS_MulticastSender* DPS_MulticastStartSend(DPS_Node* node);
 void DPS_MulticastStopSend(DPS_MulticastSender* sender);
 
 /*
- * Prototype for function called when a send completes 
+ * Prototype for function called when a send completes .
  *
  * @param node     Opaque pointer to the DPS node 
+ * @param appCtx   Application context pointer that was passed into DPS_NetSend()
  * @param endpoint The endpoint for which the send was complete
  * @param bufs     Array holding pointers to the buffers passed in the send API call. The data in these buffers
  *                 can now be freed. 
  * @param          The length of the bufs array
  * @param status   Indicates if the send was successful or not
  */
-typedef void (*DPS_NetSendComplete)(DPS_Node* node, DPS_NetEndpoint* endpoint, uv_buf_t* bufs, size_t numBufs, DPS_Status status);
+typedef void (*DPS_NetSendComplete)(DPS_Node* node, void* appCtx, DPS_NetEndpoint* endpoint, uv_buf_t* bufs, size_t numBufs, DPS_Status status);
 
 /*
- * Multicast some data immediately
+ * Multicast some data immediately. This is a synchronous API
  *
  * @param node     Opaque pointer to the DPS node 
  * @param bufs     Data buffers to send
@@ -163,7 +164,8 @@ void DPS_NetStop(DPS_NetContext* netCtx);
 /*
  * Send data to a specific endpoint.
  *
- * @param node            Opaque pointer to the DPS node
+ * @param node            Pointer to the DPS node
+ * @param appCtx          An application context to be passed to the send complete callback
  * @param endpoint        The endpoint to send to - note this may be updated with connection state
  *                        information.
  * @param bufs            Data buffers to send, the data in the buffers must be live until the send completes.
@@ -171,7 +173,7 @@ void DPS_NetStop(DPS_NetContext* netCtx);
  * @param addr            Destination address
  * @param sendCompleteCB  Function called when the send is completeso the content of the data buffers can be freed.
  */
-DPS_Status DPS_NetSend(DPS_Node* node, DPS_NetEndpoint* endpoint, uv_buf_t* bufs, size_t numBufs, DPS_NetSendComplete sendCompleteCB);
+DPS_Status DPS_NetSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* endpoint, uv_buf_t* bufs, size_t numBufs, DPS_NetSendComplete sendCompleteCB);
 
 /*
  * Increment the reference count to potentialy keeping a underlying connection alive. This is only

@@ -41,26 +41,31 @@ DPS_Status Encrypt_CCM(const uint8_t key[AES_128_KEY_LENGTH],
                        uint8_t M,
                        uint8_t L,
                        const uint8_t nonce[DPS_CCM_NONCE_SIZE],
-                       uint8_t* msg,
-                       uint32_t msgLen,
+                       const uint8_t* plainText,
+                       uint32_t ptLen,
                        const uint8_t* aad,
-                       uint32_t aadLen)
+                       uint32_t aadLen,
+                       DPS_Buffer* cipherText)
 {
     int32_t r;
     struct tc_aes_key_sched_struct sched;
     struct tc_ccm_mode_struct ctx;
 
+    if (DPS_BufferSpace(cipherText) < (ptLen + M)) {
+        return DPS_ERR_OVERFLOW;
+    }
     tc_aes128_set_encrypt_key(&sched, key);
 
     r = tc_ccm_config(&ctx, &sched, (uint8_t*)nonce, DPS_CCM_NONCE_SIZE, M);
     if (!r) {
         return DPS_ERR_INVALID;
     }
-    r = tc_ccm_generation_encryption(msg, aad, aadLen, msg, msgLen, &ctx);
+    r = tc_ccm_generation_encryption(cipherText->pos, aad, aadLen, plainText, ptLen, &ctx);
     if (!r) {
         return DPS_ERR_INVALID;
     }
     SecureZeroMemory(&sched, sizeof(sched));
+    cipherText->pos += ptLen + M;
     return DPS_OK;
 }
 
@@ -68,22 +73,25 @@ DPS_Status Decrypt_CCM(const uint8_t key[AES_128_KEY_LENGTH],
                        uint8_t M,
                        uint8_t L,
                        const uint8_t nonce[DPS_CCM_NONCE_SIZE],
-                       uint8_t* msg,
-                       uint32_t msgLen,
+                       const uint8_t* cipherText,
+                       uint32_t ctLen,
                        const uint8_t* aad,
-                       uint32_t aadLen)
+                       uint32_t aadLen,
+                       DPS_Buffer* plainText)
 {
     int32_t r;
     struct tc_aes_key_sched_struct sched;
     struct tc_ccm_mode_struct ctx;
 
+    if (DPS_BufferSpace(plainText) < (ctLen - M)) {
+        return DPS_ERR_OVERFLOW;
+    }
     tc_aes128_set_encrypt_key(&sched, key);
-
     r = tc_ccm_config(&ctx, &sched, (uint8_t*)nonce, DPS_CCM_NONCE_SIZE, M);
     if (!r) {
         return DPS_ERR_INVALID;
     }
-    r = tc_ccm_decryption_verification(msg, aad, aadLen, msg, msgLen, &ctx);
+    r = tc_ccm_decryption_verification(plainText->base, aad, aadLen, cipherText, ctLen, &ctx);
     if (!r) {
         return DPS_ERR_SECURITY;
     }

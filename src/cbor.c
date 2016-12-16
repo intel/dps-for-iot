@@ -492,10 +492,12 @@ DPS_Status CBOR_DecodeMap(DPS_Buffer* buffer, size_t* size)
 DPS_Status CBOR_DecodeTag(DPS_Buffer* buffer, uint64_t* n)
 {
     uint8_t maj;
+    uint8_t* pos = buffer->pos;
     DPS_Status ret;
 
     ret = DecodeUint(buffer, n, &maj);
     if ((ret == DPS_OK) && (maj != CBOR_TAG)) {
+        buffer->pos = pos;
         ret = DPS_ERR_INVALID;
     }
     return ret;
@@ -505,7 +507,7 @@ DPS_Status CBOR_Skip(DPS_Buffer* buffer, uint8_t* majOut, size_t* size)
 {
     DPS_Status ret = DPS_OK;
     size_t avail = DPS_BufferAvail(buffer);
-    uint8_t* p = buffer->pos;
+    uint8_t* startPos = buffer->pos;
     size_t len = 0;
     uint8_t* dummy;
     uint8_t info;
@@ -514,7 +516,7 @@ DPS_Status CBOR_Skip(DPS_Buffer* buffer, uint8_t* majOut, size_t* size)
     if (avail < 1) {
         return DPS_ERR_EOD;
     }
-    info = *p;
+    info = buffer->pos[0];
     maj = info & 0xE0;
     info &= 0x1F;
 
@@ -563,7 +565,7 @@ DPS_Status CBOR_Skip(DPS_Buffer* buffer, uint8_t* majOut, size_t* size)
         ret = DPS_ERR_INVALID;
     }
     if (size) {
-        *size = buffer->pos - p;
+        *size = buffer->pos - startPos;
     }
     if (majOut) {
         *majOut = maj;
@@ -576,3 +578,165 @@ size_t _CBOR_SizeOfString(const char* s)
     size_t l = strlen(s) + 1;
     return l + CBOR_SIZEOF_LEN(l);
 }
+
+DPS_Status DPS_ParseMapInit(CBOR_MapState* mapState, DPS_Buffer* buffer, const int32_t* keys, size_t numKeys)
+{
+    mapState->buffer = buffer;
+    mapState->keys = keys;
+    mapState->needKeys = numKeys;
+    return CBOR_DecodeMap(buffer, &mapState->entries);
+}
+
+DPS_Status DPS_ParseMapNext(CBOR_MapState* mapState, int32_t* key)
+{
+    DPS_Status ret = DPS_ERR_MISSING;
+    int32_t k = 0;
+
+    while (mapState->entries && mapState->needKeys) {
+        --mapState->entries;
+        ret = CBOR_DecodeInt32(mapState->buffer, &k);
+        if (ret != DPS_OK) {
+            break;
+        }
+        if (k == mapState->keys[0]) {
+            ++mapState->keys;
+            --mapState->needKeys;
+            *key = k;
+            break;
+        }
+        /*
+         * Keys must be in ascending order
+         */
+        if (k > mapState->keys[0]) {
+            ret = DPS_ERR_MISSING;
+            break;
+        }
+        /*
+         * Skip map entries for keys we are not looking for
+         */
+        ret = CBOR_Skip(mapState->buffer, NULL, NULL);
+        if (ret != DPS_OK) {
+            break;
+        }
+    }
+    if (ret != DPS_OK) {
+        return ret;
+    }
+    if (mapState->needKeys) {
+        /*
+         * We expect there to be more entries
+         */
+        if (!mapState->entries) {
+            ret = DPS_ERR_MISSING;
+        }
+    } else {
+        /*
+         * We have all the keys we need so skip all remaining entries
+         */
+        while (mapState->entries) {
+            --mapState->entries;
+            ret = CBOR_DecodeInt32(mapState->buffer, &k);
+            if (ret == DPS_OK) {
+                ret = CBOR_Skip(mapState->buffer, NULL, NULL);
+            }
+            if (ret != DPS_OK) {
+                break;
+            }
+        }
+    }
+    return ret;
+}
+
+static DPS_Status Dump(DPS_Buffer* buffer, int in)
+{
+    static const char indent[] = "                                                            ";
+    DPS_Status ret = DPS_OK;
+    size_t len = 0;
+    uint8_t* dummy;
+    uint8_t maj;
+    uint64_t n;
+
+    if (DPS_BufferAvail(buffer) < 1) {
+        return DPS_ERR_EOD;
+    }
+    switch(buffer->pos[0] & 0xE0) {
+    case CBOR_UINT:
+        ret = DecodeUint(buffer, &n, &maj);
+        DPS_PRINT("%.*suint:%zu\n", in, indent, n);
+        break;
+    case CBOR_NEG:
+        ret = DecodeUint(buffer, &n, &maj);
+        DPS_PRINT("%.*sint:-%zu\n", in, indent, n);
+        break;
+    case CBOR_TAG:
+        ret = DecodeUint(buffer, &n, &maj);
+        DPS_PRINT("%.*stag:%zu\n", in, indent, n);
+        break;
+    case CBOR_BYTES:
+        ret = CBOR_DecodeBytes(buffer, &dummy, &len);
+        DPS_PRINT("%.*sbstr: len=%zu\n", in, indent, len);
+        break;
+    case CBOR_STRING:
+        ret = CBOR_DecodeString(buffer, (char**)&dummy, &len);
+        DPS_PRINT("%.*sstring: \"%.*s\"\n", in, indent, (int)len, dummy);
+        break;
+    case CBOR_ARRAY:
+        DPS_PRINT("%.*s[\n", in, indent);
+        ret = DecodeUint(buffer, &len, &maj);
+        while ((ret == DPS_OK) && len--) {
+            ret = Dump(buffer, in + 2);
+        }
+        DPS_PRINT("%.*s]\n", in, indent);
+        break;
+    case CBOR_MAP:
+        DPS_PRINT("%.*s{\n", in, indent);
+        ret = DecodeUint(buffer, &len, &maj);
+        while ((ret == DPS_OK) && len--) {
+            ret = Dump(buffer, in + 2);
+            if (ret == DPS_OK) {
+                ret = Dump(buffer, in + 4);
+            }
+        }
+        DPS_PRINT("%.*s}\n", in, indent);
+        break;
+    case CBOR_OTHER:
+        if (buffer->pos[0] == CBOR_TRUE) {
+            DPS_PRINT("%.*sTRUE\n", in, indent);
+            ++buffer->pos;
+            break;
+        }
+        if (buffer->pos[0] == CBOR_FALSE) {
+            DPS_PRINT("%.*sFALSE\n", in, indent);
+            ++buffer->pos;
+            break;
+        }
+        if (buffer->pos[0] == CBOR_NULL) {
+            DPS_PRINT("%.*sNULL\n", in, indent);
+            ++buffer->pos;
+            break;
+        }
+        ret = DPS_ERR_INVALID;
+        break;
+    default:
+        ret = DPS_ERR_INVALID;
+    }
+    return ret;
+}
+
+void CBOR_Dump(uint8_t* data, size_t len)
+{
+    if (DPS_DEBUG_ENABLED()) {
+        DPS_Status ret;
+        DPS_Buffer tmp;
+
+        DPS_BufferInit(&tmp, data, len);
+        while (DPS_BufferAvail(&tmp)) {
+            ret = Dump(&tmp, 0);
+            if (ret != DPS_OK) {
+                DPS_ERRPRINT("Invalid CBOR at offset %d\n", (int)(tmp.pos - tmp.base));
+                break;
+            }
+        }
+    }
+}
+
