@@ -1,0 +1,47 @@
+Import(['extEnv'])
+
+platform = extEnv['PLATFORM']
+
+tcgit = extEnv.Command('./tinycrypt/.git', None, 'git clone https://github.com/01org/tinycrypt.git ext/tinycrypt')
+
+extEnv['CFLAGS'] = ''
+
+if extEnv['PLATFORM'] == 'win32':
+
+    extEnv.Append(CPPDEFINES = ['_CRT_SECURE_NO_WARNINGS'])
+    extEnv.Append(CFLAGS = ['/J', '/W3', '/nologo'])
+    extEnv.Append(CFLAGS = ['/Gy', '/Ot', '/GF', '/MT'])
+
+elif extEnv['PLATFORM'] == 'posix':
+
+    extEnv.Append(CFLAGS = ['-Os', '-fPIC', '-std=c99', '-Wall', '-Wextra',  '-D_ISOC99_SOURCE', '-MMD'])
+
+else:
+    print 'Unsupported system'
+    exit()
+
+extEnv['CPPPATH'] = './tinycrypt/lib/include'
+
+srcs = ['./tinycrypt/lib/source/aes_decrypt.c',
+        './tinycrypt/lib/source/aes_encrypt.c',
+        './tinycrypt/lib/source/cbc_mode.c',
+        './tinycrypt/lib/source/ccm_mode.c',
+        './tinycrypt/lib/source/cmac_mode.c',
+        './tinycrypt/lib/source/ctr_mode.c',
+        './tinycrypt/lib/source/ctr_prng.c',
+        './tinycrypt/lib/source/ecc.c',
+        './tinycrypt/lib/source/ecc_dh.c',
+        './tinycrypt/lib/source/ecc_dsa.c',
+        './tinycrypt/lib/source/hmac_prng.c',
+        './tinycrypt/lib/source/sha256.c',
+        './tinycrypt/lib/source/utils.c']
+
+
+if extEnv['PLATFORM'] != 'win32':
+    # This file doesn't currently compile on Windows
+	srcs.append(['./tinycrypt/lib/source/hmac.c'])
+
+lib = extEnv.Library('lib/libtinycrypt', srcs)
+shlib = extEnv.SharedLibrary('lib/libtinycrypt', srcs)
+
+Return(['tcgit', 'lib', 'shlib'])

@@ -37,10 +37,9 @@ if env['udp'] == True:
     env['USE_UDP'] = 'true'
     env['CPPDEFINES'].append('DPS_USE_UDP')
 
-# Dependencies
-depenv = Environment(ENV = os.environ)
-tcgit = depenv.Command("ext/tinycrypt/.git", None, "git clone https://github.com/01org/tinycrypt.git ext/tinycrypt")
-ext_deps = depenv.Command("ext/tinycrypt/lib/libtinycrypt.a", tcgit, "cd ext/tinycrypt && make")
+# Build external dependencies
+extEnv = Environment(ENV = os.environ)
+ext_deps = SConscript('ext/SConscript', exports=['extEnv'])
 
 # Platform specific configuration
 
@@ -60,8 +59,8 @@ if env['PLATFORM'] == 'win32':
     env['PY_CPPPATH'] = [env['PYTHON_PATH'] + '\include']
     env['PY_LIBPATH'] = [env['PYTHON_PATH'] + '\libs']
 
-    # Where to find libuv
-    env['UV_LIBS'] = ['libuv', 'ws2_32','iphlpapi', 'libtinycrypt']
+    # Where to find libuv and the libraries it needs
+    env['UV_LIBS'] = ['libuv', 'ws2_32','iphlpapi']
     env.Append(LIBPATH=[env['UV_PATH']])
     env.Append(CPPPATH=env['UV_PATH'] + '\include')
 
@@ -95,15 +94,14 @@ elif env['PLATFORM'] == 'posix':
     env['PY_CPPPATH'] = ['/usr/include/python2.7']
     env['PY_LIBPATH'] = []
 
-    env.Append(LIBPATH=['#/ext/tinycrypt/lib'])
-
-    # Where to find libuv
-    env['UV_LIBS'] = ['uv', 'pthread', 'tinycrypt']
+    # Where to find libuv and the libraries it needs
+    env['UV_LIBS'] = ['uv', 'pthread']
 
 else:
     print 'Unsupported system'
     exit()
 
+env.Append(LIBPATH=['./ext'])
 
 print env['CPPDEFINES']
 

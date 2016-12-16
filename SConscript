@@ -2,6 +2,9 @@ Import(['env', 'ext_deps'])
 
 platform = env['PLATFORM']
 
+tclib = ext_deps[1]
+env['UV_LIBS'].append(tclib)
+
 # Additional warning for the lib object files
 
 # Core libraries
@@ -43,8 +46,9 @@ if env['udp'] == True:
 else:
     srcs.append('src/tcp/network.c')
 
+Depends(srcs, ext_deps)
+
 objs = libenv.Object(srcs)
-Depends(objs, ext_deps);
 
 lib = libenv.Library('lib/dps', objs)
 libenv.Install('#/build/dist/lib', lib)
@@ -76,6 +80,7 @@ if platform == 'posix':
 pyenv = libenv.Clone()
 pyenv.Append(LIBPATH = env['PY_LIBPATH'])
 pyenv.Append(CPPPATH = env['PY_CPPPATH'])
+pyenv.Append(LIBS = [lib, env['UV_LIBS']])
 # Python has platform specific naming conventions
 if platform == 'win32':
     pyenv['SHLIBSUFFIX'] = '.pyd'
