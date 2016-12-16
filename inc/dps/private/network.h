@@ -45,9 +45,9 @@ typedef struct _DPS_NetConnection DPS_NetConnection;
  * Type for a remote network endpoint. This provides an abstraction connectionless and
  * connection-oriented network layers.
  */
-typedef struct {
+typedef struct _DPS_NetEndpoint {
     DPS_NodeAddress addr;   /**< The endpoint address */
-    DPS_NetConnection* cn;  /**< The connection state or NULL for connectionless networ layers */
+    DPS_NetConnection* cn;  /**< The connection state or NULL for connectionless network layers */
 } DPS_NetEndpoint;
 
 typedef struct _DPS_MulticastReceiver DPS_MulticastReceiver;
