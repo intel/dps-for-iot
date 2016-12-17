@@ -56,7 +56,7 @@ int main(int argc, char** argv)
             printf("Failed %zd\n", i);
         }
     }
-    
+
     /* Count false positives */
     for (i = numKeys; i < 100000 * numKeys; ++i) {
         if (DPS_BitVectorBloomTest(bv, (uint8_t*)&i, sizeof(i))) {

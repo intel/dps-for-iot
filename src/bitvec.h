@@ -200,7 +200,7 @@ DPS_Status DPS_BitVectorUnion(DPS_BitVector* bvOut, DPS_BitVector* bv);
  *
  * @return  The success or failure of the operation
  */
-DPS_Status DPS_BitVectorSerialize(DPS_BitVector* bv, DPS_Buffer* buffer);
+DPS_Status DPS_BitVectorSerialize(DPS_BitVector* bv, DPS_TxBuffer* buffer);
 
 /**
  * Maximum buffer space needed to serialize a bit vector.
@@ -219,7 +219,7 @@ size_t DPS_BitVectorSerializeMaxSize(DPS_BitVector* bv);
  *
  * @return  an initialized bit vector or null if the deserialization failed
  */
-DPS_Status DPS_BitVectorDeserialize(DPS_BitVector* bv, DPS_Buffer* buffer);
+DPS_Status DPS_BitVectorDeserialize(DPS_BitVector* bv, DPS_RxBuffer* buffer);
 
 /**
  * Clear all bits in an existing bit vector.

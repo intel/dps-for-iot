@@ -80,14 +80,14 @@ typedef DPS_Status (*COSE_KeyRequest)(void* ctx, DPS_UUID* kid, int8_t alg, uint
  *          - Other error codes
  */
 DPS_Status COSE_Encrypt(int8_t alg,
-                        DPS_UUID* kid, 
+                        DPS_UUID* kid,
                         const uint8_t nonce[DPS_COSE_NONCE_SIZE],
-                        DPS_Buffer* aad,
-                        DPS_Buffer* plainText,
+                        DPS_RxBuffer* aad,
+                        DPS_RxBuffer* plainText,
                         COSE_KeyRequest keyCB,
                         void* ctx,
-                        DPS_Buffer* cipherText);
- 
+                        DPS_TxBuffer* cipherText);
+
 /**
  * COSE Decryption
  *
@@ -105,11 +105,11 @@ DPS_Status COSE_Encrypt(int8_t alg,
  *          - Other error codes
  */
 DPS_Status COSE_Decrypt(const uint8_t nonce[DPS_COSE_NONCE_SIZE],
-                        DPS_Buffer* aad,
-                        DPS_Buffer* cipherText,
+                        DPS_RxBuffer* aad,
+                        DPS_RxBuffer* cipherText,
                         COSE_KeyRequest keyCB,
                         void* ctx,
-                        DPS_Buffer* plainText);
+                        DPS_TxBuffer* plainText);
 
 
 #ifdef __cplusplus

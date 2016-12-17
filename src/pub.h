@@ -64,10 +64,10 @@ typedef struct _DPS_Publication {
 
     char** topics;                  /* Publication topics - pointers into topicsBuf */
     size_t numTopics;               /* Number of publication topics */
-    DPS_Buffer topicsBuf;           /* Pre-serialized topic strings */
-    DPS_Buffer bfBuf;               /* Pre-serialized bloom filter */
-    DPS_Buffer body;                /* Authenticated body fields */
-    DPS_Buffer payload;             /* Encrypted body fields */
+    DPS_TxBuffer topicsBuf;         /* Pre-serialized topic strings */
+    DPS_TxBuffer bfBuf;             /* Pre-serialized bloom filter */
+    DPS_TxBuffer body;              /* Authenticated body fields */
+    DPS_TxBuffer payload;           /* Encrypted body fields */
     DPS_Publication* next;
 } DPS_Publication;
 
@@ -78,7 +78,7 @@ typedef struct _DPS_Publication {
  */
 void DPS_UpdatePubs(DPS_Node* node, DPS_Publication* pub);
 
-DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Buffer* buffer, int multicast);
+DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuffer* buffer, int multicast);
 
 DPS_Status DPS_SendPublication(DPS_Node* node, DPS_Publication* pub, DPS_BitVector* bf, RemoteNode* remote);
 
@@ -90,10 +90,10 @@ void DPS_PublicationIncRef(DPS_Publication* pub);
 
 void DPS_PublicationDecRef(DPS_Publication* pub);
 
-#ifdef NDEBUG
-#define DumpPubs(node)
-#else
+#ifndef NDEBUG
 void DPS_DumpPubs(DPS_Node* node);
+#else
+#define DPS_DumpPubs(node)
 #endif
 
 #ifdef __cplusplus

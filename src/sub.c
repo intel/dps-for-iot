@@ -164,7 +164,7 @@ DPS_Status DPS_DestroySubscription(DPS_Subscription* sub)
 DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote, DPS_BitVector* interests)
 {
     DPS_Status ret;
-    DPS_Buffer buf;
+    DPS_TxBuffer buf;
     size_t len;
 
     if (!node->netCtx) {
@@ -194,7 +194,7 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote, DPS_BitVecto
         len += CBOR_SIZEOF_MAP(0);
     }
 
-    ret = DPS_BufferInit(&buf, NULL, len);
+    ret = DPS_TxBufferInit(&buf, NULL, len);
     if (ret != DPS_OK) {
         return ret;
     }
@@ -248,15 +248,15 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote, DPS_BitVecto
         ret = CBOR_EncodeMap(&buf, 0);
     }
     if (ret == DPS_OK) {
-        uv_buf_t uvBuf = { (char*)buf.base, DPS_BufferUsed(&buf) };
-        CBOR_Dump((uint8_t*)uvBuf.base, uvBuf.len);
+        uv_buf_t uvBuf = { (char*)buf.base, DPS_TxBufferUsed(&buf) };
+        CBOR_Dump("Sub out", (uint8_t*)uvBuf.base, uvBuf.len);
         ret = DPS_NetSend(node, NULL, &remote->ep, &uvBuf, 1, DPS_OnSendComplete);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("Failed to send subscription request %s\n", DPS_ErrTxt(ret));
             DPS_SendFailed(node, &remote->ep.addr, &uvBuf, 1, ret);
         }
     } else {
-        DPS_BufferFree(&buf);
+        DPS_TxBufferFree(&buf);
     }
     /*
      * Done with these flags (even in case of failure)
@@ -302,7 +302,7 @@ static DPS_Status UpdateInboundInterests(DPS_Node* node, RemoteNode* remote, DPS
 /*
  *
  */
-DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Buffer* buffer)
+DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuffer* buffer)
 {
     static const int32_t HeaderKeys[] = { DPS_CBOR_KEY_PORT };
     static const int32_t BodyKeys[] = { DPS_CBOR_KEY_INBOUND_SYNC, DPS_CBOR_KEY_OUTBOUND_SYNC,
@@ -318,7 +318,7 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Buffe
 
     DPS_DBGTRACE();
 
-    CBOR_Dump(buffer->pos, DPS_BufferAvail(buffer));
+    CBOR_Dump("Sub in", buffer->rxPos, DPS_RxBufferAvail(buffer));
     /*
      * Parse keys from header map
      */

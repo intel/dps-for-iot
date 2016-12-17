@@ -39,18 +39,54 @@ typedef struct _DPS_NodeAddress {
     struct sockaddr_storage inaddr;
 } DPS_NodeAddress;
 
-
 /**
- * For passing buffers around
+ * For managing data that has been received
  */
 typedef struct {
-    uint8_t* base; /**< base address for buffer */
-    uint8_t* eod;  /**< end of buffer or data */
-    uint8_t* pos;  /**< current read/write location in buffer */
-} DPS_Buffer;
+    uint8_t* base;   /**< base address for buffer */
+    uint8_t* eod;    /**< end of data */
+    uint8_t* rxPos;  /**< current read location in buffer */
+} DPS_RxBuffer;
 
 /**
- * Initialize a buffer struct
+ * Initialize a receive buffer
+ *
+ * @param buffer    Buffer to initialized
+ * @param storage   The storage for the buffer. The storage cannot be NULL
+ * @param size      The size of the storage
+ *
+ * @return   DPS_OK or DP_ERR_RESOURCES if storage is needed and could not be allocated.
+ */
+DPS_Status DPS_RxBufferInit(DPS_RxBuffer* buffer, uint8_t* storage, size_t size);
+
+/**
+ * Free resources allocated for a buffer and nul out the buffer pointers.
+ *
+ * @param buffer    Buffer to free
+ */
+void DPS_RxBufferFree(DPS_RxBuffer* buffer);
+
+/*
+ * Clear receive buffer fields
+ */
+#define DPS_RxBufferClear(b) do { (b)->base = (b)->rxPos = (b)->eod = NULL; } while (0)
+
+/*
+ * Data available in a receive buffer
+ */
+#define DPS_RxBufferAvail(b)  ((size_t)((b)->eod - (b)->rxPos))
+
+/**
+ * For managing data to be transmitted
+ */
+typedef struct {
+    uint8_t* base;  /**< base address for buffer */
+    uint8_t* eob;   /**< end of buffer */
+    uint8_t* txPos; /**< current write location in buffer */
+} DPS_TxBuffer;
+
+/**
+ * Initialize a transmit buffer
  *
  * @param buffer    Buffer to initialized
  * @param storage   The storage for the buffer. If the storage is NULL storage is allocated.
@@ -58,17 +94,17 @@ typedef struct {
  *
  * @return   DPS_OK or DP_ERR_RESOURCES if storage is needed and could not be allocated.
  */
-DPS_Status DPS_BufferInit(DPS_Buffer* buffer, uint8_t* storage, size_t size);
+DPS_Status DPS_TxBufferInit(DPS_TxBuffer* buffer, uint8_t* storage, size_t size);
 
 /**
  * Free resources allocated for a buffer and nul out the buffer pointers.
  *
  * @param buffer    Buffer to free
  */
-void DPS_BufferFree(DPS_Buffer* buffer);
+void DPS_TxBufferFree(DPS_TxBuffer* buffer);
 
 /**
- * Add data to a buffer
+ * Add data to a transmit buffer
  *
  * @param buffer   Buffer to append to
  * @param storage  The data to append
@@ -76,32 +112,42 @@ void DPS_BufferFree(DPS_Buffer* buffer);
  *
  * @return   DPS_OK or DP_ERR_RESOURCES if there not enough room in the buffer
  */
-DPS_Status DPS_BufferAppend(DPS_Buffer* buffer, const uint8_t* data, size_t len);
+DPS_Status DPS_TxBufferAppend(DPS_TxBuffer* buffer, const uint8_t* data, size_t len);
 
 /*
- * Rewind a buffer
+ * Clear transmit buffer fields
  */
-#define DPS_BufferRewind(b) do { (b)->eod = (b)->pos; (b)->pos = (b)->base; } while (0)
+#define DPS_TxBufferClear(b) do { (b)->base = (b)->txPos = (b)->eob = NULL; } while (0)
 
 /*
- * Set the end of a buffer
+ * Space left in a transmit buffer
  */
-#define DPS_BufferSeekEnd(b) do { (b)->pos = (b)->eod; } while (0)
+#define DPS_TxBufferSpace(b)  ((size_t)((b)->eob - (b)->txPos))
 
 /*
- * Space left in an output buffer
+ * Number of bytes that have been written to a transmit buffer
  */
-#define DPS_BufferSpace(b)  ((size_t)((b)->eod - (b)->pos))
+#define DPS_TxBufferUsed(b)  ((size_t)((b)->txPos - (b)->base))
 
-/*
- * Data available in an input buffer
+/**
+ * Convert a transmit buffer into a receive buffer. Note that this
+ * aliases the internal storage so care must be taken to avoid a
+ * double free.
+ *
+ * @param txBuffer   A buffer containing data
+ * @param rxBuffer   Receive buffer struct to be initialized
  */
-#define DPS_BufferAvail(b)  ((size_t)((b)->eod - (b)->pos))
+void DPS_TxBufferToRx(DPS_TxBuffer* txBuffer, DPS_RxBuffer* rxBuffer);
 
-/*
- * Number of bytes currently in an output buffer
+/**
+ * Convert a receive buffer into a transmit buffer. Note that this
+ * aliases the internal storage so care must be taken to avoid a
+ * double free.
+ *
+ * @param rxBuffer   A buffer containing data
+ * @param txBuffer   Transmit buffer struct to be initialized
  */
-#define DPS_BufferUsed(b)  ((size_t)((b)->pos - (b)->base))
+void DPS_RxBufferToTx(DPS_RxBuffer* rxBuffer, DPS_TxBuffer* txBuffer);
 
 /**
  * Print the current subscriptions

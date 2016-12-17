@@ -57,7 +57,7 @@ typedef struct {
     DPS_Node* node;
     void* data;
     DPS_Publication* pub;
-    DPS_Buffer payload;
+    DPS_TxBuffer payload;
     DPS_OnRegPutComplete cb;
     uv_timer_t timer;
 } RegPut;
@@ -101,7 +101,7 @@ static void OnPutAck(DPS_Publication* pub, uint8_t* data, size_t len)
     uv_close((uv_handle_t*)&regPut->timer, OnPutTimerClosedOK);
 }
 
-static DPS_Status EncodeAddr(DPS_Buffer* buf, struct sockaddr* addr, uint16_t port)
+static DPS_Status EncodeAddr(DPS_TxBuffer* buf, struct sockaddr* addr, uint16_t port)
 {
     int r;
     DPS_Status ret;
@@ -139,7 +139,7 @@ static void OnLinkedPut(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status ret, v
 
             DPS_SetPublicationData(regPut->pub, regPut);
             DPS_InitPublication(regPut->pub, topics, 2, DPS_TRUE, OnPutAck);
-            ret = DPS_Publish(regPut->pub, regPut->payload.base, DPS_BufferUsed(&regPut->payload), REGISTRATION_TTL);
+            ret = DPS_Publish(regPut->pub, regPut->payload.base, DPS_TxBufferUsed(&regPut->payload), REGISTRATION_TTL);
             /*
              * Start a timer
              */
@@ -175,7 +175,7 @@ static void OnResolvePut(DPS_Node* node, DPS_NodeAddress* addr, void* data)
     }
 }
 
-static DPS_Status BuildPutPayload(DPS_Buffer* payload, uint16_t port)
+static DPS_Status BuildPutPayload(DPS_TxBuffer* payload, uint16_t port)
 {
     DPS_Status ret;
     uv_interface_address_t* ifsAddrs;
@@ -197,7 +197,7 @@ static DPS_Status BuildPutPayload(DPS_Buffer* payload, uint16_t port)
             ++extIfs;
         }
     }
-    ret = DPS_BufferInit(payload, NULL, 8 + extIfs * (INET6_ADDRSTRLEN + 10));
+    ret = DPS_TxBufferInit(payload, NULL, 8 + extIfs * (INET6_ADDRSTRLEN + 10));
     if (ret != DPS_OK) {
         goto Exit;
     }
@@ -340,11 +340,11 @@ static void OnPub(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* da
     if (regGet) {
         DPS_Status ret;
         uint8_t count;
-        DPS_Buffer buf;
+        DPS_RxBuffer buf;
         /*
          * Parse out the addresses from the payload
          */
-        DPS_BufferInit(&buf, data, len);
+        DPS_RxBufferInit(&buf, data, len);
         ret = CBOR_DecodeUint8(&buf, &count);
         if (ret == DPS_OK) {
             while (count--) {

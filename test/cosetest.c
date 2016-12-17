@@ -48,7 +48,7 @@ static const uint8_t aad[] = {
     0x00,0x1f,0x01,0xc6,0x00,0x4a,0x00,0xd6,0x00,0x06,0x81,0x19,0x20,0x3d
 };
 
-static const uint8_t nonce[] = { 
+static const uint8_t nonce[] = {
     0x01,0x00,0x00,0x00,0x38,0x5e,0x9a,0xdd,0xd5,0x55,0x88,0xc4,0x57
 };
 
@@ -92,28 +92,27 @@ static DPS_Status GetKey(void* ctx, DPS_UUID* kid, int8_t alg, uint8_t* k)
 static void CCM_Raw()
 {
     DPS_Status ret;
-    DPS_Buffer cipherText;
-    DPS_Buffer plainText;
+    DPS_TxBuffer cipherText;
+    DPS_TxBuffer plainText;
 
-    DPS_BufferInit(&cipherText, NULL, 512);
-    DPS_BufferInit(&plainText, NULL, 512);
+    DPS_TxBufferInit(&cipherText, NULL, 512);
+    DPS_TxBufferInit(&plainText, NULL, 512);
 
     ret = Encrypt_CCM(key, 16, 2, nonce, (uint8_t*)msg, sizeof(msg), aad, sizeof(aad), &cipherText);
     assert(ret == DPS_OK);
-    ret = Decrypt_CCM(key, 16, 2, nonce, cipherText.base, DPS_BufferUsed(&cipherText), aad, sizeof(aad), &plainText);
+    ret = Decrypt_CCM(key, 16, 2, nonce, cipherText.base, DPS_TxBufferUsed(&cipherText), aad, sizeof(aad), &plainText);
     assert(ret == DPS_OK);
 
-    DPS_BufferFree(&cipherText);
-    DPS_BufferFree(&plainText);
+    assert(DPS_TxBufferUsed(&plainText) == sizeof(msg));
+    assert(memcmp(plainText.base, msg, sizeof(msg)) == 0);
+
+    DPS_TxBufferFree(&cipherText);
+    DPS_TxBufferFree(&plainText);
 }
 
 int main(int argc, char** argv)
 {
     DPS_Status ret;
-    DPS_Buffer aadBuf;
-    DPS_Buffer msgBuf;
-    DPS_Buffer cipherText;
-    DPS_Buffer input;
     int i;
 
     DPS_Debug = 1;
@@ -122,39 +121,39 @@ int main(int argc, char** argv)
 
     for (i = 0; i < sizeof(config); ++i) {
         uint8_t alg = config[i];
+        DPS_RxBuffer aadBuf;
+        DPS_RxBuffer msgBuf;
+        DPS_TxBuffer cipherText;
+        DPS_TxBuffer plainText;
+        DPS_RxBuffer input;
 
-        DPS_BufferInit(&aadBuf, NULL, sizeof(aad));
-        DPS_BufferAppend(&aadBuf, aad, sizeof(aad));
-
-        DPS_BufferInit(&msgBuf, NULL, sizeof(msg));
-        DPS_BufferAppend(&msgBuf, msg, sizeof(msg));
+        DPS_RxBufferInit(&aadBuf, (uint8_t*)aad, sizeof(aad));
+        DPS_RxBufferInit(&msgBuf, (uint8_t*)msg, sizeof(msg));
 
         ret = COSE_Encrypt(alg, (DPS_UUID*)keyId, nonce, &aadBuf, &msgBuf, GetKey, NULL, &cipherText);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("COSE_Encrypt failed: %s\n", DPS_ErrTxt(ret));
             return 1;
         }
-
-        DPS_BufferFree(&msgBuf);
-
+        Dump("CipherText", cipherText.base, DPS_TxBufferUsed(&cipherText));
         /*
          * Turn output buffers into input buffers
          */
-        cipherText.eod = cipherText.pos;
-        cipherText.pos = cipherText.base;
-        aadBuf.eod = aadBuf.pos;
-        aadBuf.pos = aadBuf.base;
+        DPS_TxBufferToRx(&cipherText, &input);
 
-        Dump("CipherText", cipherText.base, DPS_BufferAvail(&cipherText));
+        DPS_RxBufferInit(&aadBuf, (uint8_t*)aad, sizeof(aad));
 
-        ret = COSE_Decrypt(nonce, &aadBuf, &cipherText, GetKey, NULL, &msgBuf);
+        ret = COSE_Decrypt(nonce, &aadBuf, &input, GetKey, NULL, &plainText);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("COSE_Decrypt failed: %s\n", DPS_ErrTxt(ret));
             return 1;
         }
-        DPS_BufferFree(&cipherText);
-        DPS_BufferFree(&aadBuf);
-        DPS_BufferFree(&msgBuf);
+
+        assert(DPS_TxBufferUsed(&plainText) == sizeof(msg));
+        assert(memcmp(plainText.base, msg, sizeof(msg)) == 0);
+
+        DPS_TxBufferFree(&cipherText);
+        DPS_TxBufferFree(&plainText);
     }
 
     DPS_PRINT("Passed\n");

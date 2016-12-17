@@ -111,7 +111,7 @@ static DPS_Status CheckWildcarding(const char* topic, const char* separators, DP
  * "A/+/2" or "C/+/1" will return false positive matches.
  *
  * This is because the bits representing prefixes "A/", "C/" and the suffixes "//2", "//1" are both present in the
- * publication Bloom filter. 
+ * publication Bloom filter.
  */
 DPS_Status DPS_AddTopic(DPS_BitVector* bf, const char* topic, const char* separators, DPS_TopicType topicType)
 {

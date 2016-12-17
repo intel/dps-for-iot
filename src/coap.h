@@ -131,7 +131,7 @@ DPS_Status CoAP_GetPktLen(int protocol, const uint8_t* buf, size_t bufLen, size_
  * @return  Returns DPS_OK if the packet was succesfully parsed or an error
  *          code if the packet was not succesfully parsed.
  */
-DPS_Status CoAP_Parse(int protocol, const uint8_t* buf, size_t bufLen, CoAP_Parsed* coap, DPS_Buffer* payload);
+DPS_Status CoAP_Parse(int protocol, const uint8_t* buf, size_t bufLen, CoAP_Parsed* coap, DPS_RxBuffer* payload);
 
 /*
  * Free resources allocated for a parsed CoAP packet
@@ -152,7 +152,7 @@ void CoAP_Free(CoAP_Parsed* coap);
  *
  * @return   Returns DPS_OK if the packet was composed on an error if the operation failed.
  */
-DPS_Status CoAP_Compose(int protocol, uint8_t code, const CoAP_Option* opts, size_t numOpts, size_t payloadLen, DPS_Buffer* buf);
+DPS_Status CoAP_Compose(int protocol, uint8_t code, const CoAP_Option* opts, size_t numOpts, size_t payloadLen, DPS_TxBuffer* buf);
 
 /*
  * Print a CoAP option to stdout

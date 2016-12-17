@@ -45,13 +45,13 @@ DPS_Status Encrypt_CCM(const uint8_t key[AES_128_KEY_LENGTH],
                        uint32_t ptLen,
                        const uint8_t* aad,
                        uint32_t aadLen,
-                       DPS_Buffer* cipherText)
+                       DPS_TxBuffer* cipherText)
 {
     int32_t r;
     struct tc_aes_key_sched_struct sched;
     struct tc_ccm_mode_struct ctx;
 
-    if (DPS_BufferSpace(cipherText) < (ptLen + M)) {
+    if (DPS_TxBufferSpace(cipherText) < (ptLen + M)) {
         return DPS_ERR_OVERFLOW;
     }
     tc_aes128_set_encrypt_key(&sched, key);
@@ -60,12 +60,12 @@ DPS_Status Encrypt_CCM(const uint8_t key[AES_128_KEY_LENGTH],
     if (!r) {
         return DPS_ERR_INVALID;
     }
-    r = tc_ccm_generation_encryption(cipherText->pos, aad, aadLen, plainText, ptLen, &ctx);
+    r = tc_ccm_generation_encryption(cipherText->txPos, aad, aadLen, plainText, ptLen, &ctx);
     if (!r) {
         return DPS_ERR_INVALID;
     }
     SecureZeroMemory(&sched, sizeof(sched));
-    cipherText->pos += ptLen + M;
+    cipherText->txPos += ptLen + M;
     return DPS_OK;
 }
 
@@ -77,13 +77,14 @@ DPS_Status Decrypt_CCM(const uint8_t key[AES_128_KEY_LENGTH],
                        uint32_t ctLen,
                        const uint8_t* aad,
                        uint32_t aadLen,
-                       DPS_Buffer* plainText)
+                       DPS_TxBuffer* plainText)
 {
     int32_t r;
+    size_t ptLen = ctLen - M;
     struct tc_aes_key_sched_struct sched;
     struct tc_ccm_mode_struct ctx;
 
-    if (DPS_BufferSpace(plainText) < (ctLen - M)) {
+    if (DPS_TxBufferSpace(plainText) < ptLen) {
         return DPS_ERR_OVERFLOW;
     }
     tc_aes128_set_encrypt_key(&sched, key);
@@ -96,5 +97,6 @@ DPS_Status Decrypt_CCM(const uint8_t key[AES_128_KEY_LENGTH],
         return DPS_ERR_SECURITY;
     }
     SecureZeroMemory(&sched, sizeof(sched));
+    plainText->txPos += ptLen;
     return DPS_OK;
 }

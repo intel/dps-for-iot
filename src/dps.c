@@ -112,17 +112,42 @@ static void ScheduleBackgroundTask(DPS_Node* node, uint8_t task)
 
 #define RemoteNodeAddressText(n)  DPS_NodeAddrToString(&(n)->ep.addr)
 
-void DPS_BufferFree(DPS_Buffer* buffer)
+void DPS_RxBufferFree(DPS_RxBuffer* buffer)
 {
     if (buffer->base) {
         free(buffer->base);
         buffer->base = NULL;
     }
-    buffer->pos = NULL;
+    buffer->rxPos = NULL;
     buffer->eod = NULL;
 }
 
-DPS_Status DPS_BufferInit(DPS_Buffer* buffer, uint8_t* storage, size_t size)
+void DPS_TxBufferFree(DPS_TxBuffer* buffer)
+{
+    if (buffer->base) {
+        free(buffer->base);
+        buffer->base = NULL;
+    }
+    buffer->txPos = NULL;
+    buffer->eob = NULL;
+}
+
+DPS_Status DPS_RxBufferInit(DPS_RxBuffer* buffer, uint8_t* storage, size_t size)
+{
+    if (!size) {
+        buffer->base = NULL;
+        buffer->rxPos = NULL;
+        buffer->eod = NULL;
+    } else {
+        assert(storage);
+        buffer->base = storage;
+        buffer->rxPos = storage;
+        buffer->eod = storage + size;
+    }
+    return DPS_OK;
+}
+
+DPS_Status DPS_TxBufferInit(DPS_TxBuffer* buffer, uint8_t* storage, size_t size)
 {
     DPS_Status ret = DPS_OK;
     if (!storage && size) {
@@ -133,19 +158,35 @@ DPS_Status DPS_BufferInit(DPS_Buffer* buffer, uint8_t* storage, size_t size)
         }
     }
     buffer->base = storage;
-    buffer->pos = storage;
-    buffer->eod = storage + size;
+    buffer->txPos = storage;
+    buffer->eob = storage + size;
     return ret;
 }
 
-DPS_Status DPS_BufferAppend(DPS_Buffer* buffer, const uint8_t* data, size_t len)
+DPS_Status DPS_TxBufferAppend(DPS_TxBuffer* buffer, const uint8_t* data, size_t len)
 {
-    if (DPS_BufferSpace(buffer) < len) {
+    if (DPS_TxBufferSpace(buffer) < len) {
         return DPS_ERR_RESOURCES;
     }
-    memcpy(buffer->pos, data, len);
-    buffer->pos += len;
+    memcpy(buffer->txPos, data, len);
+    buffer->txPos += len;
     return DPS_OK;
+}
+
+void DPS_TxBufferToRx(DPS_TxBuffer* txBuffer, DPS_RxBuffer* rxBuffer)
+{
+    assert(txBuffer && rxBuffer);
+    rxBuffer->base = txBuffer->base;
+    rxBuffer->eod = txBuffer->txPos;
+    rxBuffer->rxPos = txBuffer->base;
+}
+
+void DPS_RxBufferToTx(DPS_RxBuffer* rxBuffer, DPS_TxBuffer* txBuffer)
+{
+    assert(rxBuffer && txBuffer);
+    txBuffer->base = rxBuffer->base;
+    txBuffer->eob = rxBuffer->eod;
+    txBuffer->txPos = rxBuffer->eod;
 }
 
 static void OnTimerClosed(uv_handle_t* handle)
@@ -649,14 +690,14 @@ void DPS_QueuePublicationAck(DPS_Node* node, PublicationAck* ack)
     DPS_UnlockNode(node);
 }
 
-static DPS_Status DecodeRequest(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Buffer* buf, int multicast)
+static DPS_Status DecodeRequest(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuffer* buf, int multicast)
 {
     DPS_Status ret;
     uint8_t msgType;
     size_t len;
 
     DPS_DBGTRACE();
-    CBOR_Dump(buf->pos, DPS_BufferAvail(buf));
+    CBOR_Dump("Request in", buf->rxPos, DPS_RxBufferAvail(buf));
     ret = CBOR_DecodeArray(buf, &len);
     if (ret != DPS_OK || (len < 2)) {
         DPS_ERRPRINT("Expected a CBOR array or 2 or more elements\n");
@@ -713,7 +754,7 @@ static DPS_Status DecodeRequest(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Buffer*
  */
 static DPS_Status OnMulticastReceive(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Status status, const uint8_t* data, size_t len)
 {
-    DPS_Buffer payload;
+    DPS_RxBuffer payload;
     DPS_Status ret;
     CoAP_Parsed coap;
 
@@ -747,7 +788,7 @@ static DPS_Status OnMulticastReceive(DPS_Node* node, DPS_NetEndpoint* ep, DPS_St
 
 static DPS_Status OnNetReceive(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Status status, const uint8_t* data, size_t len)
 {
-    DPS_Buffer payload;
+    DPS_RxBuffer payload;
 
     DPS_DBGTRACE();
 
@@ -770,7 +811,7 @@ static DPS_Status OnNetReceive(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Status s
         DPS_UnlockNode(node);
         return status;
     }
-    DPS_BufferInit(&payload, (uint8_t*)data, len);
+    DPS_RxBufferInit(&payload, (uint8_t*)data, len);
     return DecodeRequest(node, ep, &payload, DPS_FALSE);
 }
 

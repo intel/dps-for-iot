@@ -533,14 +533,13 @@ static uint32_t Ceil_Log2(uint16_t n)
 }
 
 
-static DPS_Status RunLengthEncode(DPS_BitVector* bv, DPS_Buffer* buffer, size_t* size, uint8_t flags)
+static DPS_Status RunLengthEncode(DPS_BitVector* bv, DPS_TxBuffer* buffer, uint8_t flags)
 {
     size_t i;
     size_t rleSize = 0;
     size_t sz;
     uint32_t num0 = 0;
-    uint8_t* packed = buffer->pos;
-    size_t maxEncode = DPS_BufferSpace(buffer) * 8;
+    uint8_t* packed = buffer->txPos;
     chunk_t complement = flags & FLAG_RLE_COMPLEMENT ? ~0 : 0;
 
     if (bv->popCount == 0) {
@@ -549,7 +548,7 @@ static DPS_Status RunLengthEncode(DPS_BitVector* bv, DPS_Buffer* buffer, size_t*
     /*
      * We only need to set the 1's
      */
-    memset(packed, 0, DPS_BufferSpace(buffer));
+    memset(packed, 0, DPS_TxBufferSpace(buffer));
 
     for (i = 0; i < NUM_CHUNKS(bv); ++i) {
         uint32_t rem0;
@@ -579,7 +578,7 @@ static DPS_Status RunLengthEncode(DPS_BitVector* bv, DPS_Buffer* buffer, size_t*
             rleSize += sz;
             SET_BIT8(packed, rleSize);
             ++rleSize;
-            if ((rleSize + sz) > maxEncode) {
+            if ((rleSize + sz) > bv->len) {
                 return DPS_ERR_OVERFLOW;
             }
             /*
@@ -600,8 +599,7 @@ static DPS_Status RunLengthEncode(DPS_BitVector* bv, DPS_Buffer* buffer, size_t*
     if (rleSize > bv->len) {
         return DPS_ERR_OVERFLOW;
     }
-    *size = (rleSize + 7) / 8;
-    buffer->pos += *size;
+    buffer->txPos += (rleSize + 7) / 8;
     return DPS_OK;
 }
 
@@ -670,7 +668,7 @@ static DPS_Status RunLengthDecode(uint8_t* packed, size_t packedSize, chunk_t* b
     return DPS_OK;
 }
 
-DPS_Status DPS_BitVectorSerialize(DPS_BitVector* bv, DPS_Buffer* buffer)
+DPS_Status DPS_BitVectorSerialize(DPS_BitVector* bv, DPS_TxBuffer* buffer)
 {
     DPS_Status ret;
     uint8_t flags;
@@ -697,7 +695,7 @@ DPS_Status DPS_BitVectorSerialize(DPS_BitVector* bv, DPS_Buffer* buffer)
         flags = 0;
     }
     while (1) {
-        uint8_t* resetPos = buffer->pos;
+        uint8_t* resetPos = buffer->txPos;
         ret = CBOR_EncodeUint(buffer, flags);
         if (ret != DPS_OK) {
             return ret;
@@ -708,14 +706,12 @@ DPS_Status DPS_BitVectorSerialize(DPS_BitVector* bv, DPS_Buffer* buffer)
         }
         if (flags & FLAG_RLE_ENCODED) {
             uint8_t* wrapPos;
-            size_t rleSize = 0;
-            size_t maxSize = DPS_BufferSpace(buffer) - 4;
             /*
              * Reserve space in the buffer
              */
-            ret = CBOR_StartWrapBytes(buffer, maxSize, &wrapPos);
+            ret = CBOR_StartWrapBytes(buffer, bv->len / 8, &wrapPos);
             if (ret == DPS_OK) {
-                ret = RunLengthEncode(bv, buffer, &rleSize, flags);
+                ret = RunLengthEncode(bv, buffer, flags);
                 if (ret == DPS_OK) {
                     ret = CBOR_EndWrapBytes(buffer, wrapPos);
                 }
@@ -724,7 +720,7 @@ DPS_Status DPS_BitVectorSerialize(DPS_BitVector* bv, DPS_Buffer* buffer)
                  * Reset buffer and use raw encoding
                  */
                 flags = 0;
-                buffer->pos = resetPos;
+                buffer->txPos = resetPos;
                 continue;
             }
         } else {
@@ -744,7 +740,7 @@ size_t DPS_BitVectorSerializeMaxSize(DPS_BitVector* bv)
     return CBOR_SIZEOF_ARRAY(3) + CBOR_SIZEOF(uint8_t) + CBOR_SIZEOF(uint32_t) + CBOR_SIZEOF_BSTR(bv->len / 8);
 }
 
-DPS_Status DPS_BitVectorDeserialize(DPS_BitVector* bv, DPS_Buffer* buffer)
+DPS_Status DPS_BitVectorDeserialize(DPS_BitVector* bv, DPS_RxBuffer* buffer)
 {
     DPS_Status ret;
     uint64_t flags;

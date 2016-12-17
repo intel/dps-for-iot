@@ -65,7 +65,7 @@ DPS_Status Encrypt_CCM(const uint8_t key[AES_128_KEY_LENGTH],
                        uint32_t ptLen,
                        const uint8_t* aad,
                        uint32_t aadLen,
-                       DPS_Buffer* cipherText);
+                       DPS_TxBuffer* cipherText);
 
 /**
  * Implements AES-CCM (Counter with CBC-MAC) decryption as described in RFC 3610. The message in
@@ -95,7 +95,7 @@ DPS_Status Decrypt_CCM(const uint8_t key[AES_128_KEY_LENGTH],
                        uint32_t ctLen,
                        const uint8_t* aad,
                        uint32_t aadLen,
-                       DPS_Buffer* plainText);
+                       DPS_TxBuffer* plainText);
 
 
 #endif

@@ -108,7 +108,6 @@ testprogs = [testenv.Program('bin/hist_unit', 'test/hist_unit.c'),
              testenv.Program('bin/pubsub', 'test/pubsub.c'),
              testenv.Program('bin/packtest', 'test/packtest.c'),
              testenv.Program('bin/cbortest', 'test/cbortest.c'),
-#testenv.Program('bin/ccm-test', 'test/ccm-test.c'),
              testenv.Program('bin/cosetest', 'test/cosetest.c')]
 
 # Platform-specific test cases

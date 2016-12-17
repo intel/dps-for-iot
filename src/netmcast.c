@@ -152,12 +152,12 @@ static DPS_Status MulticastRxInit(DPS_MulticastReceiver* receiver)
             ret = uv_ip6_name((struct sockaddr_in6*)&ifn->address, addr, sizeof(addr));
             assert(ret == 0);
             DPS_DBGPRINT("Joining IPv6 interface %s [%s]\n", ifn->name, addr);
-            ret = uv_udp_set_membership(&receiver->udp6Rx, COAP_MCAST_ALL_NODES_LINK_LOCAL_6, addr, UV_JOIN_GROUP); 
+            ret = uv_udp_set_membership(&receiver->udp6Rx, COAP_MCAST_ALL_NODES_LINK_LOCAL_6, addr, UV_JOIN_GROUP);
         } else {
             ret = uv_ip4_name((struct sockaddr_in*)&ifn->address, addr, sizeof(addr));
             assert(ret == 0);
             DPS_DBGPRINT("Joining IPv4 interface %s [%s]\n", ifn->name, addr);
-            ret = uv_udp_set_membership(&receiver->udp4Rx, COAP_MCAST_ALL_NODES_LINK_LOCAL_4, addr, UV_JOIN_GROUP); 
+            ret = uv_udp_set_membership(&receiver->udp4Rx, COAP_MCAST_ALL_NODES_LINK_LOCAL_4, addr, UV_JOIN_GROUP);
         }
         if (ret) {
             DPS_ERRPRINT("Join group failed %s: %s\n", ifn->name, uv_err_name(ret));
@@ -167,12 +167,12 @@ static DPS_Status MulticastRxInit(DPS_MulticastReceiver* receiver)
     /*
      * Start listening for data
      */
-    if (receiver->ipVersions & USE_IPV4) { 
+    if (receiver->ipVersions & USE_IPV4) {
         receiver->udp4Rx.data = receiver;
         ret = uv_udp_recv_start(&receiver->udp4Rx, AllocBuffer, OnMcastRx);
         assert(ret == 0);
     }
-    if (receiver->ipVersions & USE_IPV6) { 
+    if (receiver->ipVersions & USE_IPV6) {
         receiver->udp6Rx.data = receiver;
         ret = uv_udp_recv_start(&receiver->udp6Rx, AllocBuffer, OnMcastRx);
         assert(ret == 0);
@@ -272,7 +272,7 @@ static DPS_Status MulticastTxInit(DPS_MulticastSender* sender)
             uv_ip4_addr("0.0.0.0", 0, (struct sockaddr_in*)&addr);
         }
         /*
-         * Initialize udp Tx socket 
+         * Initialize udp Tx socket
          */
         ret = uv_udp_init(uv, &sock->udp);
         assert(ret == 0);

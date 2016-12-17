@@ -37,7 +37,7 @@ static int protocol = COAP_OVER_UDP;
 
 static DPS_Status ReceiveCB(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Status status, const uint8_t* data, size_t len)
 {
-    DPS_Buffer payload;
+    DPS_RxBuffer payload;
     DPS_Status ret = DPS_OK;
     CoAP_Parsed coap;
 
@@ -61,7 +61,7 @@ static DPS_Status ReceiveCB(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Status stat
             ret = CBOR_DecodeBytes(&payload, &addr, &l);
             assert(ret == DPS_OK);
             assert(l == 16);
-            printf("%s\n", payload.pos);
+            printf("%s\n", payload.rxPos);
             CoAP_Free(&coap);
         } else {
             printf("CoAP_Parse failed: ret= %d\n", ret);
@@ -75,8 +75,8 @@ static uint8_t buffer[1025];
 static void DataSender(uv_idle_t* handle)
 {
     DPS_Status ret;
-    DPS_Buffer headers;
-    DPS_Buffer payload;
+    DPS_TxBuffer headers;
+    DPS_TxBuffer payload;
     size_t len;
     CoAP_Option opts[2];
 
@@ -86,15 +86,15 @@ static void DataSender(uv_idle_t* handle)
     opts[0].val = "distributed_pub_sub";
     opts[0].len = 1 + strlen(opts[0].val);
 
-    DPS_BufferInit(&payload, buffer, sizeof(buffer));
+    DPS_TxBufferInit(&payload, buffer, sizeof(buffer));
 
-    ret = CoAP_Compose(protocol, COAP_CODE(COAP_REQUEST, COAP_GET), opts, 1, DPS_BufferUsed(&payload), &headers);
+    ret = CoAP_Compose(protocol, COAP_CODE(COAP_REQUEST, COAP_GET), opts, 1, DPS_TxBufferUsed(&payload), &headers);
     if (ret != DPS_OK) {
         printf("ComposeCoAP failed ret=%d\n", ret);
     } else {
         uv_buf_t bufs[] = {
-            { (char*)headers.base, DPS_BufferUsed(&headers) },
-            { (char*)payload.base, DPS_BufferUsed(&payload) }
+            { (char*)headers.base, DPS_TxBufferUsed(&headers) },
+            { (char*)payload.base, DPS_TxBufferUsed(&payload) }
         };
         ret = DPS_MulticastSend(sender, bufs, 3);
         if (ret != DPS_OK) {
@@ -115,7 +115,7 @@ static void SendLoop()
 int main(int argc, char** argv)
 {
     int i;
-    
+
     if (argc > 1) {
         /*
          * Allows s app to be used for testing of CoAP over TCP serialization

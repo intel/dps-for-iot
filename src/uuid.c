@@ -61,7 +61,7 @@ const char* DPS_UUIDToString(const DPS_UUID* uuid)
 static struct {
     uint64_t nonce[2];
     uint32_t seeds[4];
-} entropy; 
+} entropy;
 
 #ifdef _WIN32
 DPS_Status DPS_InitUUID()
@@ -104,7 +104,7 @@ DPS_Status DPS_InitUUID()
 #endif
 
 /*
- * Very simple linear congruational generator based PRNG (Lehmer/Park-Miller generator) 
+ * Very simple linear congruational generator based PRNG (Lehmer/Park-Miller generator)
  */
 #define LEPRNG(n)  (uint32_t)(((uint64_t)(n) * 279470273ull) % 4294967291ul)
 

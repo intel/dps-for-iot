@@ -70,7 +70,7 @@ int main()
     uv_mutex_init(&history.lock);
 
 #ifdef READABLE_UUIDS
-    /* 
+    /*
      * This makes debugging easier
      */
     memset(uuid, 0, sizeof(uuid));

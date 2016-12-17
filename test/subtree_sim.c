@@ -401,7 +401,7 @@ static int PropagatePub(SubNode* node, DPS_BitVector* pub, uint32_t revision, in
     int numMatches = 0;
     DPS_Status ret;
 
-    ++totalMessages[depth];
+    ++totalMessages[depth + 1];
     /*
      * Ignore if we have already seen this publication. This is equivalent to the check in dps.c
      */

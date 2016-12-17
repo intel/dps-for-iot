@@ -135,27 +135,30 @@ static void InitBitVector(DPS_BitVector* bf, size_t len, int testCase)
 static void RunTests(DPS_BitVector* pubBf, size_t size)
 {
     int i;
-    DPS_Status ret;
-    DPS_Buffer buffer;
-    DPS_BitVector* bf;
     int cmp;
 
     for (i = 0; i < NUM_TESTS; ++i) {
+        DPS_Status ret;
+        DPS_RxBuffer rxBuf;
+        DPS_TxBuffer txBuf;
+        DPS_BitVector* bf;
 
-        DPS_BufferInit(&buffer, packed, sizeof(packed));
+        DPS_TxBufferInit(&txBuf, packed, sizeof(packed));
 
         InitBitVector(pubBf, size, i);
 
-        ret = DPS_BitVectorSerialize(pubBf, &buffer);
+        ret = DPS_BitVectorSerialize(pubBf, &txBuf);
         assert(ret == DPS_OK);
         /*
          * Switch over from writing to reading
          */
-        DPS_BufferInit(&buffer, packed, DPS_BufferUsed(&buffer));
+        DPS_TxBufferToRx(&txBuf, &rxBuf);
 
         bf = DPS_BitVectorAlloc();
-        ret = DPS_BitVectorDeserialize(bf, &buffer);
+        ret = DPS_BitVectorDeserialize(bf, &rxBuf);
         assert(ret == DPS_OK);
+
+        DPS_BitVectorDump(bf, 1);
 
         cmp = DPS_BitVectorEquals(bf, pubBf);
         assert(cmp == 1);

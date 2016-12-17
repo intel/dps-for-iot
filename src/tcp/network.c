@@ -183,7 +183,7 @@ static void OnData(uv_stream_t* socket, ssize_t nread, const uv_buf_t* buf)
      * Parse out the message length
      */
     if (!cn->msgLen) {
-        DPS_Buffer lenBuf;
+        DPS_RxBuffer lenBuf;
         uint32_t msgLen;
         /*
          * Keep reading if we don't have enough data to parse the length
@@ -192,7 +192,7 @@ static void OnData(uv_stream_t* socket, ssize_t nread, const uv_buf_t* buf)
             return;
         }
         assert(cn->readLen == MIN_READ_SIZE);
-        DPS_BufferInit(&lenBuf, cn->lenBuf, cn->readLen);
+        DPS_RxBufferInit(&lenBuf, cn->lenBuf, cn->readLen);
         ret = CBOR_DecodeUint32(&lenBuf, &msgLen);
         if (ret == DPS_OK) {
             cn->msgLen = msgLen;
@@ -203,8 +203,8 @@ static void OnData(uv_stream_t* socket, ssize_t nread, const uv_buf_t* buf)
                 /*
                  * Copy message bytes if any
                  */
-                cn->readLen = DPS_BufferAvail(&lenBuf);
-                memcpy(cn->msgBuf, lenBuf.pos, cn->readLen);
+                cn->readLen = DPS_RxBufferAvail(&lenBuf);
+                memcpy(cn->msgBuf, lenBuf.rxPos, cn->readLen);
             }
         }
         if (ret == DPS_OK) {
@@ -453,7 +453,7 @@ static void OnOutgoingConnection(uv_connect_t *req, int status)
 
 DPS_Status DPS_NetSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf_t* bufs, size_t numBufs, DPS_NetSendComplete sendCompleteCB)
 {
-    DPS_Buffer lenBuf;
+    DPS_TxBuffer lenBuf;
     WriteRequest* wr;
     uv_handle_t* socket = NULL;
     int r;
@@ -476,10 +476,10 @@ DPS_Status DPS_NetSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf
     /*
      * Write total message length
      */
-    DPS_BufferInit(&lenBuf, wr->lenBuf, sizeof(wr->lenBuf));
+    DPS_TxBufferInit(&lenBuf, wr->lenBuf, sizeof(wr->lenBuf));
     CBOR_EncodeUint32(&lenBuf, len);
     wr->bufs[0].base = (char*)wr->lenBuf;
-    wr->bufs[0].len = DPS_BufferUsed(&lenBuf);;
+    wr->bufs[0].len = DPS_TxBufferUsed(&lenBuf);
     /*
      * Copy other uvbufs into the write request
      */

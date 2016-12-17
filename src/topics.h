@@ -57,7 +57,7 @@ DPS_Status DPS_AddTopic(DPS_BitVector* bf, const char* topic, const char* separa
  * Check a bloom filter for a topic match.
  *
  * @param bf          The Bloom filter to match against
- * @param topic       The topic to match 
+ * @param topic       The topic to match
  * @param separators  The separator strings for the topic
  *
  * @return - DPS_TRUE is there was match, DPS_FALSE is there was not a match.
@@ -68,7 +68,7 @@ int DPS_MatchTopic(DPS_BitVector* bf, const char* topic, const char* separators)
  * String based topic matching
  *
  * @param pubTopic    The publication topic
- * @param subTopic    The subscription topic to match 
+ * @param subTopic    The subscription topic to match
  * @param separators  The separator strings for the topic
  * @param noWild      Wild card matches are disallowed
  * @param match       Returns 1 for a match and 0 for no match
@@ -82,7 +82,7 @@ DPS_Status DPS_MatchTopicString(const char* pubTopic, const char* subTopic, cons
  *
  * @param pubs        The array of publication topics
  * @param numPubs     Size of the pubs array
- * @param subs        The array of subscription topics to match 
+ * @param subs        The array of subscription topics to match
  * @param numSubs     Size of the subs array
  * @param separators  The separator strings for the topics
  * @param noWild      Wild card matches are disallowed
@@ -92,10 +92,10 @@ DPS_Status DPS_MatchTopicString(const char* pubTopic, const char* subTopic, cons
  */
 DPS_Status DPS_MatchTopicList(char* const* pubs, size_t numPubs, char* const* subs, size_t numSubs, const char* separators, int noWild, int* match);
 
-#ifdef NDEBUG
-#define DumpTopics(t, n)
-#else
+#ifndef NDEBUG
 void DPS_DumpTopics(const char** topics, size_t numTopics);
+#else
+#define DPS_DumpTopics(t, n)
 #endif
 
 #ifdef __cplusplus

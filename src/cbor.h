@@ -85,15 +85,15 @@ extern "C" {
 
 size_t _CBOR_SizeOfString(const char* s);
 
-DPS_Status CBOR_EncodeLength(DPS_Buffer* buffer, uint64_t len, uint8_t maj);
+DPS_Status CBOR_EncodeLength(DPS_TxBuffer* buffer, uint64_t len, uint8_t maj);
 
-DPS_Status CBOR_Copy(DPS_Buffer* buffer, const uint8_t* data, size_t len);
+DPS_Status CBOR_Copy(DPS_TxBuffer* buffer, const uint8_t* data, size_t len);
 
-DPS_Status CBOR_EncodeUint(DPS_Buffer* buffer, uint64_t n);
+DPS_Status CBOR_EncodeUint(DPS_TxBuffer* buffer, uint64_t n);
 
-DPS_Status CBOR_EncodeInt(DPS_Buffer* buffer, int64_t i);
+DPS_Status CBOR_EncodeInt(DPS_TxBuffer* buffer, int64_t i);
 
-DPS_Status CBOR_EncodeBytes(DPS_Buffer* buffer, const uint8_t* data, size_t len);
+DPS_Status CBOR_EncodeBytes(DPS_TxBuffer* buffer, const uint8_t* data, size_t len);
 
 /*
  * Note - this function automatically appends the trailing NUL. To encode a string
@@ -102,39 +102,43 @@ DPS_Status CBOR_EncodeBytes(DPS_Buffer* buffer, const uint8_t* data, size_t len)
  *  CBOR_EncodeLength(buf, strlen(str), CBOR_STRING);
  *  CBOR_Copy(buf, str, strlen(str));
  */
-DPS_Status CBOR_EncodeString(DPS_Buffer* buffer, const char* str);
+DPS_Status CBOR_EncodeString(DPS_TxBuffer* buffer, const char* str);
 
-DPS_Status CBOR_EncodeArray(DPS_Buffer* buffer, size_t len);
+DPS_Status CBOR_EncodeArray(DPS_TxBuffer* buffer, size_t len);
 
-DPS_Status CBOR_EncodeMap(DPS_Buffer* buffer, size_t len);
+DPS_Status CBOR_EncodeMap(DPS_TxBuffer* buffer, size_t len);
 
-DPS_Status CBOR_EncodeTag(DPS_Buffer* buffer, uint64_t n);
+DPS_Status CBOR_EncodeTag(DPS_TxBuffer* buffer, uint64_t n);
 
-DPS_Status CBOR_EncodeBoolean(DPS_Buffer* buffer, int b);
+DPS_Status CBOR_EncodeBoolean(DPS_TxBuffer* buffer, int b);
 
-DPS_Status CBOR_DecodeUint8(DPS_Buffer* buffer, uint8_t* n);
+DPS_Status CBOR_DecodeUint8(DPS_RxBuffer* buffer, uint8_t* n);
 
-DPS_Status CBOR_DecodeUint16(DPS_Buffer* buffer, uint16_t* n);
+DPS_Status CBOR_DecodeUint16(DPS_RxBuffer* buffer, uint16_t* n);
 
-DPS_Status CBOR_DecodeUint32(DPS_Buffer* buffer, uint32_t* n);
+DPS_Status CBOR_DecodeUint32(DPS_RxBuffer* buffer, uint32_t* n);
 
-DPS_Status CBOR_DecodeUint(DPS_Buffer* buffer, uint64_t* n);
+DPS_Status CBOR_DecodeUint(DPS_RxBuffer* buffer, uint64_t* n);
 
-DPS_Status CBOR_DecodeInt(DPS_Buffer* buffer, int64_t* i);
+DPS_Status CBOR_DecodeInt(DPS_RxBuffer* buffer, int64_t* i);
 
-DPS_Status CBOR_DecodeInt8(DPS_Buffer* buffer, int8_t* n);
+DPS_Status CBOR_DecodeInt8(DPS_RxBuffer* buffer, int8_t* n);
 
-DPS_Status CBOR_DecodeInt16(DPS_Buffer* buffer, int16_t* n);
+DPS_Status CBOR_DecodeInt16(DPS_RxBuffer* buffer, int16_t* n);
 
-DPS_Status CBOR_DecodeInt32(DPS_Buffer* buffer, int32_t* n);
+DPS_Status CBOR_DecodeInt32(DPS_RxBuffer* buffer, int32_t* n);
 
-DPS_Status CBOR_DecodeMap(DPS_Buffer* buffer, size_t* size);
+DPS_Status CBOR_DecodeMap(DPS_RxBuffer* buffer, size_t* size);
 
-DPS_Status CBOR_DecodeTag(DPS_Buffer* buffer, uint64_t* n);
+DPS_Status CBOR_DecodeTag(DPS_RxBuffer* buffer, uint64_t* n);
 
-DPS_Status CBOR_DecodeBoolean(DPS_Buffer* buffer, int* b);
+DPS_Status CBOR_DecodeBoolean(DPS_RxBuffer* buffer, int* b);
 
-DPS_Status CBOR_ReserveBytes(DPS_Buffer* buffer, size_t len, uint8_t** ptr);
+/*
+ * Write the length, adjust the buffer pointer and return the
+ * pointer to the start of where the bytes are to written.
+ */
+DPS_Status CBOR_ReserveBytes(DPS_TxBuffer* buffer, size_t len, uint8_t** ptr);
 
 /**
  * Prepare a CBOR structure to be wrapped in a bytes stream. This function
@@ -145,7 +149,7 @@ DPS_Status CBOR_ReserveBytes(DPS_Buffer* buffer, size_t len, uint8_t** ptr);
  * @param hintLen  Estimated size of the bytes to be wrapped
  * @param wrapPtr  Returns pointer to start of the byte stream
  */
-DPS_Status CBOR_StartWrapBytes(DPS_Buffer* buffer, size_t hintLen, uint8_t** wrapPtr);
+DPS_Status CBOR_StartWrapBytes(DPS_TxBuffer* buffer, size_t hintLen, uint8_t** wrapPtr);
 
 /**
  * Finalize byte stream wrapping of a CBOR encode structure by fixing
@@ -154,7 +158,7 @@ DPS_Status CBOR_StartWrapBytes(DPS_Buffer* buffer, size_t hintLen, uint8_t** wra
  * @param buffer   The buffer to encode into
  * @param wrapPtr  The pointer that was returned by CBOR_StartWrapBytes
  */
-DPS_Status CBOR_EndWrapBytes(DPS_Buffer* buffer, uint8_t* wrapPtr);
+DPS_Status CBOR_EndWrapBytes(DPS_TxBuffer* buffer, uint8_t* wrapPtr);
 
 /*
  * For symmetry with CBOR_DecodeInt8()
@@ -197,7 +201,7 @@ DPS_Status CBOR_EndWrapBytes(DPS_Buffer* buffer, uint8_t* wrapPtr);
  *         - DPS_ERR_EOD if there was insufficient data in the buffer
  *
  */
-DPS_Status CBOR_DecodeBytes(DPS_Buffer* buffer, uint8_t** data, size_t* size);
+DPS_Status CBOR_DecodeBytes(DPS_RxBuffer* buffer, uint8_t** data, size_t* size);
 
 /**
  *
@@ -210,7 +214,7 @@ DPS_Status CBOR_DecodeBytes(DPS_Buffer* buffer, uint8_t** data, size_t* size);
  *         - DPS_ERR_EOD if there was insufficient data in the buffer
  *
  */
-DPS_Status CBOR_DecodeString(DPS_Buffer* buffer, char** data, size_t* size);
+DPS_Status CBOR_DecodeString(DPS_RxBuffer* buffer, char** data, size_t* size);
 
 /**
  *
@@ -222,7 +226,7 @@ DPS_Status CBOR_DecodeString(DPS_Buffer* buffer, char** data, size_t* size);
  *         - DPS_ERR_EOD if there was insufficient data in the buffer
  *
  */
-DPS_Status CBOR_DecodeArray(DPS_Buffer* buffer, size_t* size);
+DPS_Status CBOR_DecodeArray(DPS_RxBuffer* buffer, size_t* size);
 
 /**
  *
@@ -234,13 +238,13 @@ DPS_Status CBOR_DecodeArray(DPS_Buffer* buffer, size_t* size);
  *         - DPS_ERR_EOD if there was insufficient data in the buffer
  *
  */
-DPS_Status CBOR_Skip(DPS_Buffer* buffer, uint8_t* maj, size_t* size);
+DPS_Status CBOR_Skip(DPS_RxBuffer* buffer, uint8_t* maj, size_t* size);
 
 /**
  * Structure for holding state while parsing a map
  */
 typedef struct {
-    DPS_Buffer* buffer;   /** buffer being parsed */
+    DPS_RxBuffer* buffer; /** receive buffer being parsed */
     const int32_t* keys;  /** array of remaining keys to match */
     size_t needKeys;      /** remaining number of unmatched keys */
     size_t entries;       /** remaining entries in map */
@@ -256,7 +260,7 @@ typedef struct {
  * @param keys      Array of keys to be matched
  * @param numkeys   The number of keys to match
  */
-DPS_Status DPS_ParseMapInit(CBOR_MapState* mapState, DPS_Buffer* buffer, const int32_t* keys, size_t numKeys);
+DPS_Status DPS_ParseMapInit(CBOR_MapState* mapState, DPS_RxBuffer* buffer, const int32_t* keys, size_t numKeys);
 
 /**
  * Find the next matching key and return it. The value for the key can be
@@ -276,7 +280,11 @@ DPS_Status DPS_ParseMapNext(CBOR_MapState* mapState, int32_t* key);
  */
 #define DPS_ParseMapDone(m)  ((m)->needKeys == 0)
 
-void CBOR_Dump(uint8_t* data, size_t len);
+#ifndef NDEBUG
+void CBOR_Dump(const char* tag, uint8_t* data, size_t len);
+#else
+#define CBOR_Dump(t, d, l)
+#endif
 
 #ifdef __cplusplus
 }

@@ -37,8 +37,8 @@ extern "C" {
  * Acknowledgment packet queued to be sent on node loop
  */
 typedef struct _PublicationAck {
-    DPS_Buffer headers;
-    DPS_Buffer payload;
+    DPS_TxBuffer headers;
+    DPS_TxBuffer payload;
     DPS_NodeAddress destAddr;
     uint32_t sequenceNum;
     DPS_UUID pubId;
@@ -47,7 +47,7 @@ typedef struct _PublicationAck {
 
 /*
  */
-DPS_Status DPS_DecodeAcknowledgment(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Buffer* buffer);
+DPS_Status DPS_DecodeAcknowledgment(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuffer* buffer);
 
 /*
  * Send an previously serialized acknowledgement

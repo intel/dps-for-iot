@@ -57,12 +57,12 @@ static int Requires(uint64_t n)
     return 8;
 }
 
-static DPS_Status EncodeUint(DPS_Buffer* buffer, uint64_t n, uint8_t maj)
+static DPS_Status EncodeUint(DPS_TxBuffer* buffer, uint64_t n, uint8_t maj)
 {
-    uint8_t* p = buffer->pos;
+    uint8_t* p = buffer->txPos;
     int lenReq = Requires(n);
 
-    if ((lenReq + 1) > DPS_BufferSpace(buffer)) {
+    if ((lenReq + 1) > DPS_TxBufferSpace(buffer)) {
         return DPS_ERR_OVERFLOW;
     }
     switch (lenReq) {
@@ -96,33 +96,33 @@ static DPS_Status EncodeUint(DPS_Buffer* buffer, uint64_t n, uint8_t maj)
             *p++ = (uint8_t)(n >> 8);
             *p++ = (uint8_t)(n);
     }
-    buffer->pos = p;
+    buffer->txPos = p;
     return DPS_OK;
 }
 
-DPS_Status CBOR_EncodeLength(DPS_Buffer* buffer, uint64_t len, uint8_t maj)
+DPS_Status CBOR_EncodeLength(DPS_TxBuffer* buffer, uint64_t len, uint8_t maj)
 {
     return EncodeUint(buffer, len, maj);
 }
 
-DPS_Status CBOR_Copy(DPS_Buffer* buffer, const uint8_t* data, size_t len)
+DPS_Status CBOR_Copy(DPS_TxBuffer* buffer, const uint8_t* data, size_t len)
 {
     DPS_Status ret = DPS_OK;
-    if (DPS_BufferSpace(buffer) < len) {
+    if (DPS_TxBufferSpace(buffer) < len) {
         ret = DPS_ERR_OVERFLOW;
     } else if (data) {
-        memcpy(buffer->pos, data, len);
-        buffer->pos += len;
+        memcpy(buffer->txPos, data, len);
+        buffer->txPos += len;
     }
     return ret;
 }
 
-DPS_Status CBOR_DecodeBoolean(DPS_Buffer* buffer, int* i)
+DPS_Status CBOR_DecodeBoolean(DPS_RxBuffer* buffer, int* i)
 {
-    if (DPS_BufferAvail(buffer) < 1) {
+    if (DPS_RxBufferAvail(buffer) < 1) {
         return DPS_ERR_EOD;
     } else {
-        uint8_t b = *buffer->pos++;
+        uint8_t b = *buffer->rxPos++;
         if (b != CBOR_FALSE && b != CBOR_TRUE) {
             return DPS_ERR_INVALID;
         }
@@ -136,10 +136,10 @@ DPS_Status CBOR_DecodeBoolean(DPS_Buffer* buffer, int* i)
  */
 static const size_t IntLengths[] = { 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,3,5,9,0,0,0,0 };
 
-static DPS_Status DecodeUint(DPS_Buffer* buffer, uint64_t* n, uint8_t* maj)
+static DPS_Status DecodeUint(DPS_RxBuffer* buffer, uint64_t* n, uint8_t* maj)
 {
-    size_t avail = DPS_BufferAvail(buffer);
-    uint8_t* p = buffer->pos;
+    size_t avail = DPS_RxBufferAvail(buffer);
+    uint8_t* p = buffer->rxPos;
     uint8_t info;
     size_t len;
 
@@ -172,25 +172,25 @@ static DPS_Status DecodeUint(DPS_Buffer* buffer, uint64_t* n, uint8_t* maj)
     default:
         return DPS_ERR_INVALID;
     }
-    buffer->pos += len;
+    buffer->rxPos += len;
     return DPS_OK;
 }
 
-DPS_Status CBOR_EncodeBoolean(DPS_Buffer* buffer, int i)
+DPS_Status CBOR_EncodeBoolean(DPS_TxBuffer* buffer, int i)
 {
-    if (DPS_BufferSpace(buffer) < 1) {
+    if (DPS_TxBufferSpace(buffer) < 1) {
         return DPS_ERR_OVERFLOW;
     }
-    *(buffer->pos++) = i ? CBOR_TRUE : CBOR_FALSE;
+    *(buffer->txPos++) = i ? CBOR_TRUE : CBOR_FALSE;
     return DPS_OK;
 }
 
-DPS_Status CBOR_EncodeUint(DPS_Buffer* buffer, uint64_t n)
+DPS_Status CBOR_EncodeUint(DPS_TxBuffer* buffer, uint64_t n)
 {
     return EncodeUint(buffer, n, CBOR_UINT);
 }
 
-DPS_Status CBOR_EncodeInt(DPS_Buffer* buffer, int64_t i)
+DPS_Status CBOR_EncodeInt(DPS_TxBuffer* buffer, int64_t i)
 {
     if (i >= 0) {
         return EncodeUint(buffer, (uint64_t)i, CBOR_UINT);
@@ -199,109 +199,110 @@ DPS_Status CBOR_EncodeInt(DPS_Buffer* buffer, int64_t i)
     }
 }
 
-DPS_Status CBOR_EncodeBytes(DPS_Buffer* buffer, const uint8_t* data, size_t len)
+DPS_Status CBOR_EncodeBytes(DPS_TxBuffer* buffer, const uint8_t* data, size_t len)
 {
     DPS_Status ret = EncodeUint(buffer, (uint32_t)len, CBOR_BYTES);
     if (ret == DPS_OK) {
-        if (DPS_BufferSpace(buffer) < len) {
+        if (DPS_TxBufferSpace(buffer) < len) {
             ret = DPS_ERR_OVERFLOW;
         } else if (data) {
-            memcpy(buffer->pos, data, len);
-            buffer->pos += len;
+            memcpy(buffer->txPos, data, len);
+            buffer->txPos += len;
         }
     }
     return ret;
 }
 
-DPS_Status CBOR_ReserveBytes(DPS_Buffer* buffer, size_t len, uint8_t** ptr)
+DPS_Status CBOR_ReserveBytes(DPS_TxBuffer* buffer, size_t len, uint8_t** ptr)
 {
     DPS_Status ret = EncodeUint(buffer, (uint32_t)len, CBOR_BYTES);
     if (ret == DPS_OK) {
-        if (DPS_BufferSpace(buffer) < len) {
+        if (DPS_TxBufferSpace(buffer) < len) {
             ret = DPS_ERR_OVERFLOW;
         } else {
-            *ptr = buffer->pos;
-            buffer->pos += len;
+            *ptr = buffer->txPos;
+            buffer->txPos += len;
         }
     }
     return ret;
 }
 
-DPS_Status CBOR_StartWrapBytes(DPS_Buffer* buffer, size_t hintLen, uint8_t** ptr)
+DPS_Status CBOR_StartWrapBytes(DPS_TxBuffer* buffer, size_t hintLen, uint8_t** ptr)
 {
     DPS_Status ret;
     uint8_t* tmp;
 
-    *ptr = buffer->pos;
+    *ptr = buffer->txPos;
     ret = CBOR_ReserveBytes(buffer, hintLen, &tmp);
     if (ret == DPS_OK) {
-        buffer->pos = tmp;
+        buffer->txPos = tmp;
     }
     return ret;
 }
 
-DPS_Status CBOR_EndWrapBytes(DPS_Buffer* buffer, uint8_t* ptr)
+DPS_Status CBOR_EndWrapBytes(DPS_TxBuffer* buffer, uint8_t* wrapPtr)
 {
     uint8_t maj;
-    uint8_t* pos = buffer->pos;
+    uint8_t* pos = buffer->txPos;
     uint64_t hint;
     size_t actual;
     int diff;
+    DPS_RxBuffer rx;
 
     /*
-     * Rewind and decode the original hint length
+     * Decode the original hint length
      */
-    buffer->pos = ptr;
-    if ((DecodeUint(buffer, &hint, &maj) != DPS_OK) || (maj != CBOR_BYTES)) {
+    DPS_RxBufferInit(&rx, wrapPtr, CBOR_MAX_LENGTH);
+    if ((DecodeUint(&rx, &hint, &maj) != DPS_OK) || (maj != CBOR_BYTES)) {
         return DPS_ERR_INVALID;
     }
     /*
      * See if the length encoding changed
      */
-    actual = pos - buffer->pos;
+    actual = buffer->txPos - rx.rxPos;
     diff = Requires(actual) - Requires(hint);
     if (diff) {
-        memmove(buffer->pos + diff, buffer->pos, actual);
+        memmove(rx.rxPos + diff, rx.rxPos, actual);
     }
     /*
-     * Rewind again and write the new length
+     * Rewind to write the new length
      */
-    buffer->pos = ptr;
+    buffer->txPos = wrapPtr;
     return CBOR_ReserveBytes(buffer, actual, &pos);
 }
 
 
-DPS_Status CBOR_EncodeString(DPS_Buffer* buffer, const char* str)
+DPS_Status CBOR_EncodeString(DPS_TxBuffer* buffer, const char* str)
 {
     size_t len = strlen(str) + 1;
     DPS_Status ret = EncodeUint(buffer, (uint32_t)len, CBOR_STRING);
     if (ret == DPS_OK) {
-        if (DPS_BufferSpace(buffer) < len) {
+        if (DPS_TxBufferSpace(buffer) < len) {
             ret = DPS_ERR_OVERFLOW;
         } else if (str) {
-            memcpy(buffer->pos, str, len);
-            buffer->pos += len;
+            memcpy(buffer->txPos, str, len);
+            buffer->txPos += len;
         }
     }
     return ret;
 }
 
-DPS_Status CBOR_EncodeArray(DPS_Buffer* buffer, size_t len)
+DPS_Status CBOR_EncodeArray(DPS_TxBuffer* buffer, size_t len)
 {
     return EncodeUint(buffer, (uint32_t)len, CBOR_ARRAY);
 }
 
-DPS_Status CBOR_EncodeMap(DPS_Buffer* buffer, size_t len)
+DPS_Status CBOR_EncodeMap(DPS_TxBuffer* buffer, size_t len)
 {
     return EncodeUint(buffer, (uint32_t)len, CBOR_MAP);
 }
 
-DPS_Status CBOR_EncodeTag(DPS_Buffer* buffer, uint64_t n)
+DPS_Status CBOR_EncodeTag(DPS_TxBuffer* buffer, uint64_t n)
 {
     return EncodeUint(buffer, n, CBOR_TAG);
 }
 
-DPS_Status CBOR_DecodeUint(DPS_Buffer* buffer, uint64_t* n)
+DPS_Status CBOR_DecodeUint(DPS_RxBuffer* buffer, uint64_t* n)
 {
     uint8_t maj;
     DPS_Status ret;
@@ -313,7 +314,7 @@ DPS_Status CBOR_DecodeUint(DPS_Buffer* buffer, uint64_t* n)
     return ret;
 }
 
-DPS_Status CBOR_DecodeUint8(DPS_Buffer* buffer, uint8_t* n)
+DPS_Status CBOR_DecodeUint8(DPS_RxBuffer* buffer, uint8_t* n)
 {
     uint64_t u64 = 0;
     uint8_t maj;
@@ -327,7 +328,7 @@ DPS_Status CBOR_DecodeUint8(DPS_Buffer* buffer, uint8_t* n)
     return ret;
 }
 
-DPS_Status CBOR_DecodeUint16(DPS_Buffer* buffer, uint16_t* n)
+DPS_Status CBOR_DecodeUint16(DPS_RxBuffer* buffer, uint16_t* n)
 {
     uint64_t u64 = 0;
     uint8_t maj;
@@ -341,7 +342,7 @@ DPS_Status CBOR_DecodeUint16(DPS_Buffer* buffer, uint16_t* n)
     return ret;
 }
 
-DPS_Status CBOR_DecodeUint32(DPS_Buffer* buffer, uint32_t* n)
+DPS_Status CBOR_DecodeUint32(DPS_RxBuffer* buffer, uint32_t* n)
 {
     uint64_t u64 = 0;
     uint8_t maj;
@@ -355,7 +356,7 @@ DPS_Status CBOR_DecodeUint32(DPS_Buffer* buffer, uint32_t* n)
     return ret;
 }
 
-DPS_Status CBOR_DecodeInt(DPS_Buffer* buffer, int64_t* i)
+DPS_Status CBOR_DecodeInt(DPS_RxBuffer* buffer, int64_t* i)
 {
     uint8_t maj;
     uint64_t n = 0;
@@ -380,7 +381,7 @@ DPS_Status CBOR_DecodeInt(DPS_Buffer* buffer, int64_t* i)
     return ret;
 }
 
-DPS_Status CBOR_DecodeInt8(DPS_Buffer* buffer, int8_t* n)
+DPS_Status CBOR_DecodeInt8(DPS_RxBuffer* buffer, int8_t* n)
 {
     int64_t i64 = 0;
     DPS_Status ret = CBOR_DecodeInt(buffer, &i64);
@@ -391,7 +392,7 @@ DPS_Status CBOR_DecodeInt8(DPS_Buffer* buffer, int8_t* n)
     return ret;
 }
 
-DPS_Status CBOR_DecodeInt16(DPS_Buffer* buffer, int16_t* n)
+DPS_Status CBOR_DecodeInt16(DPS_RxBuffer* buffer, int16_t* n)
 {
     int64_t i64 = 0;
     DPS_Status ret = CBOR_DecodeInt(buffer, &i64);
@@ -402,7 +403,7 @@ DPS_Status CBOR_DecodeInt16(DPS_Buffer* buffer, int16_t* n)
     return ret;
 }
 
-DPS_Status CBOR_DecodeInt32(DPS_Buffer* buffer, int32_t* n)
+DPS_Status CBOR_DecodeInt32(DPS_RxBuffer* buffer, int32_t* n)
 {
     int64_t i64 = 0;
     DPS_Status ret = CBOR_DecodeInt(buffer, &i64);
@@ -413,7 +414,7 @@ DPS_Status CBOR_DecodeInt32(DPS_Buffer* buffer, int32_t* n)
     return ret;
 }
 
-DPS_Status CBOR_DecodeBytes(DPS_Buffer* buffer, uint8_t** data, size_t* size)
+DPS_Status CBOR_DecodeBytes(DPS_RxBuffer* buffer, uint8_t** data, size_t* size)
 {
     uint8_t maj;
     DPS_Status ret;
@@ -423,20 +424,20 @@ DPS_Status CBOR_DecodeBytes(DPS_Buffer* buffer, uint8_t** data, size_t* size)
     *size = 0;
     ret = DecodeUint(buffer, &len, &maj);
     if (ret == DPS_OK) {
-        if ((maj != CBOR_BYTES) || (len > DPS_BufferAvail(buffer))) {
+        if ((maj != CBOR_BYTES) || (len > DPS_RxBufferAvail(buffer))) {
             ret = DPS_ERR_INVALID;
         } else {
             if (len) {
-                *data = buffer->pos;
+                *data = buffer->rxPos;
                 *size = len;
-                buffer->pos += len;
+                buffer->rxPos += len;
             }
         }
     }
     return ret;
 }
 
-DPS_Status CBOR_DecodeString(DPS_Buffer* buffer, char** data, size_t* size)
+DPS_Status CBOR_DecodeString(DPS_RxBuffer* buffer, char** data, size_t* size)
 {
     uint8_t maj;
     DPS_Status ret;
@@ -444,18 +445,18 @@ DPS_Status CBOR_DecodeString(DPS_Buffer* buffer, char** data, size_t* size)
 
     ret = DecodeUint(buffer, &len, &maj);
     if (ret == DPS_OK) {
-        if ((maj != CBOR_STRING) || (len > DPS_BufferAvail(buffer))) {
+        if ((maj != CBOR_STRING) || (len > DPS_RxBufferAvail(buffer))) {
             ret = DPS_ERR_INVALID;
         } else {
-            *data = (char*)buffer->pos;
+            *data = (char*)buffer->rxPos;
             *size = len;
-            buffer->pos += len;
+            buffer->rxPos += len;
         }
     }
     return ret;
 }
 
-DPS_Status CBOR_DecodeArray(DPS_Buffer* buffer, size_t* size)
+DPS_Status CBOR_DecodeArray(DPS_RxBuffer* buffer, size_t* size)
 {
     uint8_t maj;
     DPS_Status ret;
@@ -472,7 +473,7 @@ DPS_Status CBOR_DecodeArray(DPS_Buffer* buffer, size_t* size)
     return ret;
 }
 
-DPS_Status CBOR_DecodeMap(DPS_Buffer* buffer, size_t* size)
+DPS_Status CBOR_DecodeMap(DPS_RxBuffer* buffer, size_t* size)
 {
     uint8_t maj;
     DPS_Status ret;
@@ -489,25 +490,25 @@ DPS_Status CBOR_DecodeMap(DPS_Buffer* buffer, size_t* size)
     return ret;
 }
 
-DPS_Status CBOR_DecodeTag(DPS_Buffer* buffer, uint64_t* n)
+DPS_Status CBOR_DecodeTag(DPS_RxBuffer* buffer, uint64_t* n)
 {
     uint8_t maj;
-    uint8_t* pos = buffer->pos;
+    uint8_t* pos = buffer->rxPos;
     DPS_Status ret;
 
     ret = DecodeUint(buffer, n, &maj);
     if ((ret == DPS_OK) && (maj != CBOR_TAG)) {
-        buffer->pos = pos;
+        buffer->rxPos = pos;
         ret = DPS_ERR_INVALID;
     }
     return ret;
 }
 
-DPS_Status CBOR_Skip(DPS_Buffer* buffer, uint8_t* majOut, size_t* size)
+DPS_Status CBOR_Skip(DPS_RxBuffer* buffer, uint8_t* majOut, size_t* size)
 {
     DPS_Status ret = DPS_OK;
-    size_t avail = DPS_BufferAvail(buffer);
-    uint8_t* startPos = buffer->pos;
+    size_t avail = DPS_RxBufferAvail(buffer);
+    uint8_t* startPos = buffer->rxPos;
     size_t len = 0;
     uint8_t* dummy;
     uint8_t info;
@@ -516,7 +517,7 @@ DPS_Status CBOR_Skip(DPS_Buffer* buffer, uint8_t* majOut, size_t* size)
     if (avail < 1) {
         return DPS_ERR_EOD;
     }
-    info = buffer->pos[0];
+    info = buffer->rxPos[0];
     maj = info & 0xE0;
     info &= 0x1F;
 
@@ -530,7 +531,7 @@ DPS_Status CBOR_Skip(DPS_Buffer* buffer, uint8_t* majOut, size_t* size)
         } else if (avail < len) {
             ret = DPS_ERR_EOD;
         } else {
-            buffer->pos += len;
+            buffer->rxPos += len;
         }
         break;
     case CBOR_BYTES:
@@ -558,14 +559,14 @@ DPS_Status CBOR_Skip(DPS_Buffer* buffer, uint8_t* majOut, size_t* size)
         if (info < 20 || info > 22) {
             ret = DPS_ERR_INVALID;
         } else {
-            buffer->pos += 1;
+            buffer->rxPos += 1;
         }
         break;
     default:
         ret = DPS_ERR_INVALID;
     }
     if (size) {
-        *size = buffer->pos - startPos;
+        *size = buffer->rxPos - startPos;
     }
     if (majOut) {
         *majOut = maj;
@@ -579,7 +580,7 @@ size_t _CBOR_SizeOfString(const char* s)
     return l + CBOR_SIZEOF_LEN(l);
 }
 
-DPS_Status DPS_ParseMapInit(CBOR_MapState* mapState, DPS_Buffer* buffer, const int32_t* keys, size_t numKeys)
+DPS_Status DPS_ParseMapInit(CBOR_MapState* mapState, DPS_RxBuffer* buffer, const int32_t* keys, size_t numKeys)
 {
     mapState->buffer = buffer;
     mapState->keys = keys;
@@ -647,7 +648,8 @@ DPS_Status DPS_ParseMapNext(CBOR_MapState* mapState, int32_t* key)
     return ret;
 }
 
-static DPS_Status Dump(DPS_Buffer* buffer, int in)
+#ifndef NDEBUG
+static DPS_Status Dump(DPS_RxBuffer* buffer, int in)
 {
     static const char indent[] = "                                                            ";
     DPS_Status ret = DPS_OK;
@@ -656,10 +658,10 @@ static DPS_Status Dump(DPS_Buffer* buffer, int in)
     uint8_t maj;
     uint64_t n;
 
-    if (DPS_BufferAvail(buffer) < 1) {
+    if (DPS_RxBufferAvail(buffer) < 1) {
         return DPS_ERR_EOD;
     }
-    switch(buffer->pos[0] & 0xE0) {
+    switch(buffer->rxPos[0] & 0xE0) {
     case CBOR_UINT:
         ret = DecodeUint(buffer, &n, &maj);
         DPS_PRINT("%.*suint:%zu\n", in, indent, n);
@@ -700,19 +702,19 @@ static DPS_Status Dump(DPS_Buffer* buffer, int in)
         DPS_PRINT("%.*s}\n", in, indent);
         break;
     case CBOR_OTHER:
-        if (buffer->pos[0] == CBOR_TRUE) {
+        if (buffer->rxPos[0] == CBOR_TRUE) {
             DPS_PRINT("%.*sTRUE\n", in, indent);
-            ++buffer->pos;
+            ++buffer->rxPos;
             break;
         }
-        if (buffer->pos[0] == CBOR_FALSE) {
+        if (buffer->rxPos[0] == CBOR_FALSE) {
             DPS_PRINT("%.*sFALSE\n", in, indent);
-            ++buffer->pos;
+            ++buffer->rxPos;
             break;
         }
-        if (buffer->pos[0] == CBOR_NULL) {
+        if (buffer->rxPos[0] == CBOR_NULL) {
             DPS_PRINT("%.*sNULL\n", in, indent);
-            ++buffer->pos;
+            ++buffer->rxPos;
             break;
         }
         ret = DPS_ERR_INVALID;
@@ -723,20 +725,24 @@ static DPS_Status Dump(DPS_Buffer* buffer, int in)
     return ret;
 }
 
-void CBOR_Dump(uint8_t* data, size_t len)
+void CBOR_Dump(const char* tag, uint8_t* data, size_t len)
 {
     if (DPS_DEBUG_ENABLED()) {
         DPS_Status ret;
-        DPS_Buffer tmp;
+        DPS_RxBuffer tmp;
 
-        DPS_BufferInit(&tmp, data, len);
-        while (DPS_BufferAvail(&tmp)) {
+        if (tag) {
+            DPS_PRINT("CBOR %s:\n", tag);
+        }
+        DPS_RxBufferInit(&tmp, data, len);
+        while (DPS_RxBufferAvail(&tmp)) {
             ret = Dump(&tmp, 0);
             if (ret != DPS_OK) {
-                DPS_ERRPRINT("Invalid CBOR at offset %d\n", (int)(tmp.pos - tmp.base));
+                DPS_ERRPRINT("Invalid CBOR at offset %d\n", (int)(tmp.rxPos - tmp.base));
                 break;
             }
         }
     }
 }
+#endif
 
