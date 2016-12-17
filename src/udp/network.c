@@ -36,14 +36,12 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
 
 #define MAX_READ_LEN   4096
-#define MIN_READ_LEN      8
 
 struct _DPS_NetContext {
     uv_udp_t tx4Socket;
     uv_udp_t rxSocket;
     DPS_Node* node;
     DPS_OnReceive receiveCB;
-    uint16_t readLen;
     char buffer[MAX_READ_LEN];
 };
 
@@ -52,8 +50,8 @@ static void AllocBuffer(uv_handle_t* handle, size_t suggestedSize, uv_buf_t* buf
     DPS_NetContext* netCtx = (DPS_NetContext*)handle->data;
 
     DPS_DBGTRACE();
-    buf->len = sizeof(netCtx->buffer) - netCtx->readLen;
-    buf->base = netCtx->buffer + netCtx->readLen;
+    buf->len = MAX_READ_LEN;
+    buf->base = netCtx->buffer;
 }
 
 static void RxHandleClosed(uv_handle_t* handle)
@@ -72,37 +70,27 @@ static void TxHandleClosed(uv_handle_t* handle)
 static void OnData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, const struct sockaddr* addr, unsigned flags)
 {
     DPS_NetEndpoint ep;
-    size_t toRead;
     DPS_NetContext* netCtx = (DPS_NetContext*)socket->data;
 
     DPS_DBGTRACE();
     if (nread < 0) {
-        netCtx->readLen = 0;
         DPS_ERRPRINT("OnData error %s\n", uv_err_name((int)nread));
         return;
     }
     if (!nread) {
-        netCtx->readLen = 0;
         return;
     }
     if (!buf) {
         DPS_ERRPRINT("OnData no buffer\n");
-        netCtx->readLen = 0;
         return;
     }
     if (!addr) {
         DPS_ERRPRINT("OnData no address\n");
-        netCtx->readLen = 0;
         return;
     }
     ep.cn = NULL;
     DPS_SetAddress(&ep.addr, addr);
-    toRead = netCtx->receiveCB(netCtx->node, &ep, DPS_OK, (uint8_t*)netCtx->buffer, nread);
-    if (toRead == 0) {
-        netCtx->readLen = 0;
-    } else {
-        netCtx->readLen += (uint16_t)nread;
-    }
+    netCtx->receiveCB(netCtx->node, &ep, DPS_OK, (uint8_t*)buf->base, nread);
 }
 
 DPS_NetContext* DPS_NetStart(DPS_Node* node, int port, DPS_OnReceive cb)
@@ -178,6 +166,7 @@ uint16_t DPS_NetGetListenerPort(DPS_NetContext* netCtx)
 void DPS_NetStop(DPS_NetContext* netCtx)
 {
     if (netCtx) {
+        uv_udp_recv_stop(&netCtx->rxSocket);
         uv_close((uv_handle_t*)&netCtx->tx4Socket, TxHandleClosed);
     }
 }
