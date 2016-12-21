@@ -248,6 +248,7 @@ typedef struct {
     const int32_t* keys;  /** array of remaining keys to match */
     size_t needKeys;      /** remaining number of unmatched keys */
     size_t entries;       /** remaining entries in map */
+    DPS_Status result;    /** result of parsing effort */
 } CBOR_MapState;
 
 /**
@@ -276,9 +277,9 @@ DPS_Status DPS_ParseMapInit(CBOR_MapState* mapState, DPS_RxBuffer* buffer, const
 DPS_Status DPS_ParseMapNext(CBOR_MapState* mapState, int32_t* key);
 
 /**
- * Macro for checking that a map has been completely parsed
+ * Check that a map has been completely parsed
  */
-#define DPS_ParseMapDone(m)  ((m)->needKeys == 0)
+int DPS_ParseMapDone(CBOR_MapState* mapState);
 
 #ifndef NDEBUG
 void CBOR_Dump(const char* tag, uint8_t* data, size_t len);

@@ -585,18 +585,22 @@ DPS_Status DPS_ParseMapInit(CBOR_MapState* mapState, DPS_RxBuffer* buffer, const
     mapState->buffer = buffer;
     mapState->keys = keys;
     mapState->needKeys = numKeys;
-    return CBOR_DecodeMap(buffer, &mapState->entries);
+    mapState->result = CBOR_DecodeMap(buffer, &mapState->entries);
+    return mapState->result;
 }
 
 DPS_Status DPS_ParseMapNext(CBOR_MapState* mapState, int32_t* key)
 {
-    DPS_Status ret = DPS_ERR_MISSING;
     int32_t k = 0;
 
+    if (mapState->result != DPS_OK) {
+        return mapState->result;
+    }
+    mapState->result = DPS_ERR_MISSING;
     while (mapState->entries && mapState->needKeys) {
         --mapState->entries;
-        ret = CBOR_DecodeInt32(mapState->buffer, &k);
-        if (ret != DPS_OK) {
+        mapState->result = CBOR_DecodeInt32(mapState->buffer, &k);
+        if (mapState->result != DPS_OK) {
             break;
         }
         if (k == mapState->keys[0]) {
@@ -609,43 +613,53 @@ DPS_Status DPS_ParseMapNext(CBOR_MapState* mapState, int32_t* key)
          * Keys must be in ascending order
          */
         if (k > mapState->keys[0]) {
-            ret = DPS_ERR_MISSING;
+            mapState->result = DPS_ERR_MISSING;
             break;
         }
         /*
          * Skip map entries for keys we are not looking for
          */
-        ret = CBOR_Skip(mapState->buffer, NULL, NULL);
-        if (ret != DPS_OK) {
+        mapState->result = CBOR_Skip(mapState->buffer, NULL, NULL);
+        if (mapState->result != DPS_OK) {
             break;
         }
     }
-    if (ret != DPS_OK) {
-        return ret;
+    if (mapState->result != DPS_OK) {
+        return mapState->result;
     }
     if (mapState->needKeys) {
         /*
          * We expect there to be more entries
          */
         if (!mapState->entries) {
-            ret = DPS_ERR_MISSING;
-        }
-    } else {
-        /*
-         * We have all the keys we need so skip all remaining entries
-         */
-        while (mapState->entries) {
-            --mapState->entries;
-            ret = CBOR_DecodeInt32(mapState->buffer, &k);
-            if (ret == DPS_OK) {
-                ret = CBOR_Skip(mapState->buffer, NULL, NULL);
-            }
-            if (ret != DPS_OK) {
-                break;
-            }
+            mapState->result = DPS_ERR_MISSING;
         }
     }
-    return ret;
+    return mapState->result;
+}
+
+int DPS_ParseMapDone(CBOR_MapState* mapState)
+{
+    int32_t k;
+
+    if (mapState->needKeys) {
+        return DPS_FALSE;
+    } else {
+        while (mapState->entries) {
+            /*
+             * We have all the keys we need so skip all remaining entries
+             */
+            --mapState->entries;
+            mapState->result = CBOR_DecodeInt32(mapState->buffer, &k);
+            if (mapState->result == DPS_OK) {
+                mapState->result = CBOR_Skip(mapState->buffer, NULL, NULL);
+            }
+            if (mapState->result != DPS_OK) {
+                return DPS_FALSE;
+            }
+        }
+        return DPS_TRUE;
+    }
 }
 
 #ifndef NDEBUG
