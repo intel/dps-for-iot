@@ -15,8 +15,9 @@ nodes = {}
 subs = {}
 
 def OnPub(sub, pub, payload):
+    print "Received on port %d" % dps.GetPortNumber(dps.SubscriptionGetNode(sub))
     print "Subscription ", dps.SubscriptionGetTopic(sub, 0)
-    print "  Pub %s/%d" % (dps.PublicationGetUUID(pub), dps.PublicationGetSerialNumber(pub))
+    print "  Pub %s/%d" % (dps.PublicationGetUUID(pub), dps.PublicationGetSequenceNum(pub))
     print "  Payload %s" % payload
 
 def Subscriber(port, topic, connectPort):
@@ -27,7 +28,12 @@ def Subscriber(port, topic, connectPort):
     if (connectPort != 0):
         addr = dps.CreateAddress()
         ret = dps.LinkTo(nodes[port], None, connectPort, addr)
+        if (ret == dps.OK):
+            print "Linked %d to %d" % (port, connectPort)
         dps.DestroyAddress(addr)
+
+# Enable or disable (default) DPS debug output
+dps.cvar.Debug = False
 
 Subscriber(20000, 'B/B', 0)
 Subscriber(30000, 'A/A', 20000)

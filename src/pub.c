@@ -150,6 +150,15 @@ const char* DPS_PublicationGetTopic(const DPS_Publication* pub, size_t index)
     }
 }
 
+DPS_Node* DPS_PublicationGetNode(const DPS_Publication* pub)
+{
+    if (IsValidPub(pub)) {
+        return pub->node;
+    } else {
+        return NULL;
+    }
+}
+
 static DPS_Status GetKey(void* ctx, DPS_UUID* kid, int8_t alg, uint8_t key[AES_128_KEY_LEN])
 {
     DPS_Node* node = (DPS_Node*)ctx;

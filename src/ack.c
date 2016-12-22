@@ -93,7 +93,7 @@ static DPS_Status GetKey(void* ctx, DPS_UUID* kid, int8_t alg, uint8_t key[AES_1
     }
 }
 
-static DPS_Status SerializeAck(DPS_Node* node, PublicationAck* ack, uint8_t* data, size_t dataLen)
+static DPS_Status SerializeAck(DPS_Node* node, PublicationAck* ack, const uint8_t* data, size_t dataLen)
 {
     DPS_Status ret;
     uint8_t* aadPos;
@@ -309,7 +309,7 @@ DPS_Status DPS_DecodeAcknowledgment(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxB
     return ret;
 }
 
-DPS_Status DPS_AckPublication(const DPS_Publication* pub, uint8_t* payload, size_t len)
+DPS_Status DPS_AckPublication(const DPS_Publication* pub, const uint8_t* payload, size_t len)
 {
     DPS_Status ret;
     DPS_NodeAddress* addr = NULL;

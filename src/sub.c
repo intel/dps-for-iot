@@ -73,6 +73,15 @@ const char* DPS_SubscriptionGetTopic(const DPS_Subscription* sub, size_t index)
     }
 }
 
+DPS_Node* DPS_SubscriptionGetNode(const DPS_Subscription* sub)
+{
+    if (IsValidSub(sub)) {
+        return sub->node;
+    } else {
+        return NULL;
+    }
+}
+
 static DPS_Subscription* FreeSubscription(DPS_Subscription* sub)
 {
     DPS_Subscription* next = sub->next;

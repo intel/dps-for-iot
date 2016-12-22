@@ -78,13 +78,15 @@ typedef struct _DPS_Publication DPS_Publication;
 
 /**
  * Get the UUID for a publication
+ *
+ * @param pub   The publication
  */
 const DPS_UUID* DPS_PublicationGetUUID(const DPS_Publication* pub);
 
 /**
  * Get the sequence number for a publication. Serial numbers are always > 0.
  *
- * @param pub
+ * @param pub   The publication
  *
  * @return The sequence number or zero if the publication is invalid.
  */
@@ -92,13 +94,26 @@ uint32_t DPS_PublicationGetSequenceNum(const DPS_Publication* pub);
 
 /**
  * Get a topic for a publication
+ *
+ * @param pub   The publication
  */
 const char* DPS_PublicationGetTopic(const DPS_Publication* pub, size_t index);
 
 /**
  * Get the number of topics in a publication
+ *
+ * @param pub   The publication
  */
 size_t DPS_PublicationGetNumTopics(const DPS_Publication* pub);
+
+/**
+ * Get the local node associated with a publication
+ *
+ * @param pub   The publication
+ *
+ * @return  A pointer to the node or NULL if the publication is invalid
+ */
+DPS_Node* DPS_PublicationGetNode(const DPS_Publication* pub);
 
 /**
  * Function prototype for callback function for requesting the encryption key
@@ -316,7 +331,7 @@ typedef void (*DPS_PublicationHandler)(DPS_Subscription* sub, const DPS_Publicat
  * @param ackPayload    Optional payload to accompany the aknowledgment
  * @param len           The length of the payload
  */
-DPS_Status DPS_AckPublication(const DPS_Publication* pub, uint8_t* ackPayload, size_t len);
+DPS_Status DPS_AckPublication(const DPS_Publication* pub, const uint8_t* ackPayload, size_t len);
 
 /**
  * Get the local node associated with a publication
@@ -357,6 +372,15 @@ DPS_Status DPS_SetSubscriptionData(DPS_Subscription* sub, void* data);
  * @return  A pointer to the data or NULL if the subscription is invalid
  */
 void* DPS_GetSubscriptionData(DPS_Subscription* sub);
+
+/**
+ * Get the local node associated with a subscription
+ *
+ * @param sub   The subscription
+ *
+ * @return  A pointer to the node or NULL if the subscription is invalid
+ */
+DPS_Node* DPS_SubscriptionGetNode(const DPS_Subscription* sub);
 
 /**
  * Start subscribing to a set of topics

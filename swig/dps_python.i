@@ -2,7 +2,13 @@
 %module dps
 %{
 #include <dps/dps.h>
+#include <dps/dbg.h>
 #include <dps/synchronous.h>
+/*
+ * Debug control for this module
+ */
+DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
+
 %}
 
 %include "cdata.i"
@@ -41,7 +47,10 @@
  */
 %typemap(in) uint8_t* = char*;
 %typemap(in) int16_t = int;
+%typemap(out) int16_t = int;
 %typemap(in) uint16_t = unsigned int;
+%typemap(out) uint16_t = unsigned int;
+%typemap(in) uint32_t = unsigned long;
 %typemap(out) uint32_t = unsigned long;
 
 
@@ -55,7 +64,7 @@ int DPS_Debug;
 /*
  * This allows topic strings to be expressed as a list of strings
  */
-%typemap(in) (char* const* topics, size_t numTopics) {
+%typemap(in) (const char** topics, size_t numTopics) {
     /* Expecting a list of strings */
     if (PyList_Check($input)) {
         Py_ssize_t i;
@@ -107,14 +116,14 @@ static uint8_t* AllocPayload(PyObject* py, size_t* len)
 }
 %}
 
-%typemap(in) (uint8_t* pubPayload, size_t len) {
+%typemap(in) (const uint8_t* pubPayload, size_t len) {
     $1 = AllocPayload($input, &$2);
     if (!$1) {
         return NULL;
     }
 }
 
-%typemap(in) (uint8_t* ackPayload, size_t len) {
+%typemap(in) (const uint8_t* ackPayload, size_t len) {
     $1 = AllocPayload($input, &$2);
     if (!$1) {
         return NULL;
@@ -123,19 +132,6 @@ static uint8_t* AllocPayload(PyObject* py, size_t* len)
 
 %typemap(freearg) (uint8_t* ackPayload, size_t len) {
     free($1);
-}
-
-/*
- * The following pair of typemaps cleanup old publication payloads
- */
-%typemap(in, numinputs=0) uint8_t** oldPayload (uint8_t* old) {
-    $1 = &old;
-}
-
-%typemap(argout) (uint8_t** oldPayload) {
-    if (*$1) {
-        free(*$1);
-    }
 }
 
 /*
@@ -150,18 +146,18 @@ static uint8_t* AllocPayload(PyObject* py, size_t* len)
     $1 = NULL;
 }
 
-%typemap(default) (int16_t ttl, uint8_t** oldPayload) {
-    $1 =  0;
-    $2 = NULL;
-}
-
-%typemap(default) uint8_t** oldPayload {
-    $1 = NULL;
-}
-
-%typemap(default) (uint8_t* payload, size_t len) {
+%typemap(default) (const uint8_t* payload, size_t len) {
     $1 = NULL;
     $2 = 0;
+}
+
+%typemap(default) (int16_t ttl) {
+    $1 = 0;
+}
+
+%typemap(default) (DPS_OnNodeDestroyed cb, void* data) { 
+    $1 = NULL;
+    $2 = NULL;
 }
 
 %inline %{
@@ -243,8 +239,10 @@ void PubHandler(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* payl
     PyGILState_STATE gilState;
 
     if (!cb) {
+        DPS_ERRPRINT("Callback is NULL\n");
         return;
     }
+    DPS_DBGPRINT("PubHandler\n");
     /*
      * This callback was called from an external thread so we
      * need to get the Global-Interpreter-Interlock before we
@@ -300,7 +298,7 @@ static void _ClearPubHandler(DPS_Subscription* sub)
 }
 
 %{
-static PyObject* UUIDToPyString(DPS_UUID* uuid)
+static PyObject* UUIDToPyString(const DPS_UUID* uuid)
 {
     const char* uuidStr = DPS_UUIDToString(uuid);
     if (uuidStr) {
@@ -315,11 +313,14 @@ static PyObject* UUIDToPyString(DPS_UUID* uuid)
     $result = UUIDToPyString($1);
 }
 
+%typemap(out) const DPS_UUID* {
+    $result = UUIDToPyString($1);
+}
+
 /*
  * Disallow NULL for these pointer types
  */
 %apply Pointer NONNULL { DPS_Node* };
-%apply Pointer NONNULL { DPS_UUID* };
 %apply Pointer NONNULL { DPS_Subscription* };
 %apply Pointer NONNULL { DPS_Publication* };
 %apply Pointer NONNULL { DPS_NodeAddress* };
