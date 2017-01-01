@@ -5,10 +5,13 @@ def OnAck(pub, payload):
     print "PubAck %s/%d" % (dps.PublicationGetUUID(pub), dps.PublicationGetSequenceNum(pub))
     print "Payload %s" % payload
 
+def OnGetKey(node, kid, key):
+    return 0
+
 # Enable or disable (default) DPS debug output
 dps.cvar.Debug = False
 
-node = dps.CreateNode()
+node = dps.CreateNode("/", OnGetKey)
 dps.StartNode(node, dps.MCAST_PUB_ENABLE_SEND, 0)
 pub = dps.CreatePublication(node)
 

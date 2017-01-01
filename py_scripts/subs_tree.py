@@ -20,8 +20,11 @@ def OnPub(sub, pub, payload):
     print "  Pub %s/%d" % (dps.PublicationGetUUID(pub), dps.PublicationGetSequenceNum(pub))
     print "  Payload %s" % payload
 
+def OnGetKey(node, kid, key):
+    return 0
+
 def Subscriber(port, topic, connectPort):
-    nodes[port] = dps.CreateNode()
+    nodes[port] = dps.CreateNode("/", OnGetKey)
     dps.StartNode(nodes[port], 0, port)
     subs[port] = dps.CreateSubscription(nodes[port], [topic])
     dps.Subscribe(subs[port], OnPub)

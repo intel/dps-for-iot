@@ -297,6 +297,88 @@ static void _ClearPubHandler(DPS_Subscription* sub)
     }
 }
 
+/*
+ * node callback call into Python function
+ */
+%{
+DPS_Status NodeHandler(DPS_Node* node, DPS_UUID* kid, uint8_t* key, size_t keyLen)
+{
+    PyObject* cb = (PyObject*)DPS_GetNodeData(node);
+    PyObject* nodeObj;
+    PyObject* uuidObj;
+    PyObject* ret;
+    PyGILState_STATE gilState;
+
+    if (!cb) {
+        PyErr_SetString(PyExc_TypeError,"Callback is NULL");
+        return DPS_ERR_FAILURE;
+    }
+
+    /*
+     * This callback was called from an external thread so we
+     * need to get the Global-Interpreter-Interlock before we
+     * can call into the Python interpreter.
+     */
+    gilState = PyGILState_Ensure();
+
+    nodeObj = SWIG_NewPointerObj(SWIG_as_voidptr(node), SWIGTYPE_p__DPS_Node, 0);
+    uuidObj = SWIG_NewPointerObj(SWIG_as_voidptr(kid), SWIGTYPE_p_DPS_UUID, 0);
+    ret = PyObject_CallFunction(cb, "OOs#", nodeObj, uuidObj, key, keyLen);
+    Py_XDECREF(nodeObj);
+    Py_XDECREF(uuidObj);
+    Py_XDECREF(ret);
+    /*
+     * All done we can release the lock
+     */
+    PyGILState_Release(gilState);
+
+    return DPS_OK;
+}
+%}
+
+/*
+ * KeyRequest callback wrapper
+ */
+%typemap(in) DPS_KeyRequestCallback {
+    if (!PyCallable_Check($input)) {
+        PyErr_SetString(PyExc_TypeError,"not a function");
+        return NULL;
+    }
+    Py_INCREF($input);
+    $1 = NodeHandler;
+}
+
+%inline %{
+static void _SetNodeHandler(PyObject* cb, PyObject* val)
+{
+    void* argp = 0 ;
+    DPS_Node* res = 0 ;
+
+    SWIG_ConvertPtr(val, &argp, SWIGTYPE_p__DPS_Node, 0 |  0 );
+    res = (DPS_Node*)argp;
+    DPS_SetNodeData(res, cb);
+}
+%}
+
+%pythonappend DPS_CreateNode %{
+    _SetNodeHandler(args[1], val);
+%}
+
+%inline %{
+static void _ClearNodeHandler(DPS_Node* node)
+{
+    PyObject* cb = (PyObject*)DPS_GetNodeData(node);
+    Py_XDECREF(cb);
+}
+%}
+
+/*
+ * Dereference the python callback function when freeing a node
+ */
+%pythonappend DPS_DestroyNode %{
+   _ClearNodeHandler(args[0]);
+%}
+
 %{
 static PyObject* UUIDToPyString(const DPS_UUID* uuid)
 {
