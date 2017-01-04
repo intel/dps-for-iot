@@ -63,6 +63,11 @@ typedef struct _DPS_Subscription DPS_Subscription;
 
 /**
  * Get a topic for an active subscription
+ *
+ * @param sub   The subscription
+ * @param index The topic index
+ *
+ * @return The topic string or NULL if the subscription or index is invalid.
  */
 const char* DPS_SubscriptionGetTopic(const DPS_Subscription* sub, size_t index);
 
@@ -96,6 +101,9 @@ uint32_t DPS_PublicationGetSequenceNum(const DPS_Publication* pub);
  * Get a topic for a publication
  *
  * @param pub   The publication
+ * @param index The topic index
+ *
+ * @return The topic string or NULL if the publication or index is invalid.
  */
 const char* DPS_PublicationGetTopic(const DPS_Publication* pub, size_t index);
 
