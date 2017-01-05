@@ -32,16 +32,17 @@ srcs = ['./tinycrypt/lib/source/aes_decrypt.c',
         './tinycrypt/lib/source/ecc.c',
         './tinycrypt/lib/source/ecc_dh.c',
         './tinycrypt/lib/source/ecc_dsa.c',
-        './tinycrypt/lib/source/hmac_prng.c',
         './tinycrypt/lib/source/sha256.c',
         './tinycrypt/lib/source/utils.c']
 
 
 if extEnv['PLATFORM'] != 'win32':
     # This file doesn't currently compile on Windows
-	srcs.append(['./tinycrypt/lib/source/hmac.c'])
+    srcs.append(['./tinycrypt/lib/source/hmac.c'])
+    # This file depends on hmac.c
+    srcs.append(['./tinycrypt/lib/source/hmac_prng.c'])
 
 lib = extEnv.Library('lib/libtinycrypt', srcs)
-shlib = extEnv.SharedLibrary('lib/libtinycrypt', srcs)
+shlib = extEnv.SharedLibrary('libsh/libtinycrypt', srcs)
 
 Return(['tcgit', 'lib', 'shlib'])
