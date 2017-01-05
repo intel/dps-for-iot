@@ -52,7 +52,7 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 %typemap(out) uint16_t = unsigned int;
 %typemap(in) uint32_t = unsigned long;
 %typemap(out) uint32_t = unsigned long;
-
+%typemap(in) DPS_UUID* = char*;
 
 /*
  * Debug control
@@ -390,6 +390,32 @@ static PyObject* UUIDToPyString(const DPS_UUID* uuid)
     }
 }
 %}
+
+%typemap(in) DPS_UUID* {
+    if (PyString_Check($input)) {
+        char* buf;
+        Py_ssize_t sz = PyString_Size($input);
+        buf = (char*)malloc(sz + 1);
+        if (!buf) {
+            PyErr_SetString(PyExc_TypeError,"no memory\n");
+            return NULL;
+        }
+        memcpy(buf, PyString_AsString($input), sz);
+        buf[sz] = 0;
+
+        $1 = (DPS_UUID*)StringToUUID((const char*)buf);
+        free(buf);
+        if (!$1) {
+            return NULL;
+        }
+    } else {
+        PyErr_SetString(PyExc_TypeError,"not a string");
+    }
+}
+
+%typemap(freearg) DPS_UUID* {
+    DPS_UUIDDestroy($1);
+}
 
 %typemap(out) DPS_UUID* {
     $result = UUIDToPyString($1);
