@@ -28,7 +28,7 @@
 #include <unistd.h>
 #include <dps/private/network.h>
 #include "coap.h"
-#include "cbor.h"
+#include <dps/private/cbor.h>
 
 static DPS_MulticastReceiver* receiver;
 static DPS_MulticastSender* sender;

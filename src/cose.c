@@ -27,7 +27,7 @@
 #include <dps/dbg.h>
 #include <dps/err.h>
 #include "cose.h"
-#include "cbor.h"
+#include <dps/private/cbor.h>
 #include "ccm.h"
 
 /*

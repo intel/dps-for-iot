@@ -31,7 +31,7 @@
 #include <dps/private/dps.h>
 #include <dps/private/network.h>
 #include "bitvec.h"
-#include "cbor.h"
+#include <dps/private/cbor.h>
 #include "coap.h"
 #include "history.h"
 #include "node.h"

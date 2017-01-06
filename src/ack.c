@@ -31,7 +31,7 @@
 #include <dps/private/network.h>
 #include "bitvec.h"
 #include "coap.h"
-#include "cbor.h"
+#include <dps/private/cbor.h>
 #include "ack.h"
 #include "pub.h"
 #include "history.h"

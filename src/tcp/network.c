@@ -27,7 +27,7 @@
 #include <dps/dbg.h>
 #include <dps/dps.h>
 #include <dps/private/network.h>
-#include "../cbor.h"
+#include <dps/private/cbor.h>
 #include "../node.h"
 
 #ifdef _WIN32

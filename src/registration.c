@@ -30,7 +30,7 @@
 #include <dps/synchronous.h>
 #include <dps/registration.h>
 #include <dps/private/network.h>
-#include "cbor.h"
+#include <dps/private/cbor.h>
 
 #ifdef _WIN32
 #define strdup(s) _strdup(s)

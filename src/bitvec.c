@@ -27,7 +27,7 @@
 #include <dps/dbg.h>
 #include "sha2.h"
 #include "bitvec.h"
-#include "cbor.h"
+#include <dps/private/cbor.h>
 
 #ifdef _WIN32
 

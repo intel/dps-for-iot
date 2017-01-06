@@ -24,7 +24,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <assert.h>
-#include "cbor.h"
+#include <dps/private/cbor.h>
 
 /*
  * Debug control for this module
