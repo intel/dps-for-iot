@@ -61,9 +61,12 @@ libenv.Install('#/build/dist/lib', shlib)
 
 ns3srcs = ['src/bitvec.c',
            'src/cbor.c',
+           'src/ccm.c',
            'src/coap.c',
+           'src/cose.c',
            'src/dps.c',
            'src/pub.c',
+           'src/sha2.c',
            'src/sub.c',
            'src/ack.c',
            'src/err.c',
@@ -73,7 +76,7 @@ ns3srcs = ['src/bitvec.c',
 
 if platform == 'posix':
     ns3shobjs = libenv.SharedObject(ns3srcs)
-    ns3shlib = libenv.SharedLibrary('lib/dps_ns3', ns3shobjs)
+    ns3shlib = libenv.SharedLibrary('lib/dps_ns3', ns3shobjs, LIBS = [tclib])
     libenv.Install('#/build/dist/lib', ns3shlib)
 
 # Using SWIG to build the python wrapper
