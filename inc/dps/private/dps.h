@@ -42,7 +42,7 @@ typedef struct _DPS_NodeAddress {
 /**
  * For managing data that has been received
  */
-typedef struct {
+typedef struct _DPS_RxBuffer {
     uint8_t* base;   /**< base address for buffer */
     uint8_t* eod;    /**< end of data */
     uint8_t* rxPos;  /**< current read location in buffer */
@@ -79,7 +79,7 @@ void DPS_RxBufferFree(DPS_RxBuffer* buffer);
 /**
  * For managing data to be transmitted
  */
-typedef struct {
+typedef struct _DPS_TxBuffer {
     uint8_t* base;  /**< base address for buffer */
     uint8_t* eob;   /**< end of buffer */
     uint8_t* txPos; /**< current write location in buffer */

@@ -33,7 +33,7 @@ extern "C" {
 /**
  * Type definition for a UUID
  */
-typedef struct {
+typedef struct _DPS_UUID {
     union {
         uint8_t val[16];
         uint64_t val64[2];

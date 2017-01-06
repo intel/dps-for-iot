@@ -44,7 +44,7 @@ extern const char* DPS_RegistryTopicString;
 /**
  * Registration entryg
  */
-typedef struct {
+typedef struct _DPS_Registration {
     uint8_t flags;
     uint16_t port;
     char* host;
@@ -53,7 +53,7 @@ typedef struct {
 /**
  * For returning a list of candidate remote nodes
  */
-typedef struct {
+typedef struct _DPS_RegistrationList {
     uint8_t size;     /* Size of the list */
     uint8_t count;    /* number of entries currently in the list */
     DPS_Registration list[1];
