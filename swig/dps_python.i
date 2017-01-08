@@ -52,7 +52,7 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 %typemap(out) uint16_t = unsigned int;
 %typemap(in) uint32_t = unsigned long;
 %typemap(out) uint32_t = unsigned long;
-%typemap(in) DPS_UUID* = char*;
+%typemap(in) DPS_UUID* = PyObject*;
 
 /*
  * Debug control
@@ -306,8 +306,11 @@ DPS_Status NodeHandler(DPS_Node* node, DPS_UUID* kid, uint8_t* key, size_t keyLe
     PyObject* cb = (PyObject*)DPS_GetNodeData(node);
     PyObject* nodeObj;
     PyObject* uuidObj;
+    PyObject* kidObj;
     PyObject* ret;
     PyGILState_STATE gilState;
+    DPS_Status retvalue;
+    int i, j;
 
     if (!cb) {
         PyErr_SetString(PyExc_TypeError,"Callback is NULL");
@@ -321,10 +324,31 @@ DPS_Status NodeHandler(DPS_Node* node, DPS_UUID* kid, uint8_t* key, size_t keyLe
      */
     gilState = PyGILState_Ensure();
 
+    kidObj = PyList_New(0);
+    uuidObj = PyList_New(0);
+    for (i = 0; i < sizeof(DPS_UUID); i++) {
+       PyList_Append(uuidObj, Py_BuildValue("i", kid->val[i]));
+    }
+
     nodeObj = SWIG_NewPointerObj(SWIG_as_voidptr(node), SWIGTYPE_p__DPS_Node, 0);
-    uuidObj = SWIG_NewPointerObj(SWIG_as_voidptr(kid), SWIGTYPE_p_DPS_UUID, 0);
-    ret = PyObject_CallFunction(cb, "OOs#", nodeObj, uuidObj, key, keyLen);
+    ret = PyObject_CallFunction(cb, "OOOi", nodeObj, uuidObj, kidObj, keyLen);
+    for(i = 0, j = 0; j < PyList_Size(kidObj); ++j) {
+        PyObject *pValue = PyList_GetItem(kidObj, j);
+        if (PyInt_Check(pValue) && i < sizeof(DPS_UUID)) {
+            key[i++] = PyInt_AsLong(pValue);
+        } else {
+            PyErr_SetString(PyExc_TypeError,"key is not int type or len > uuid");
+        }
+    }
+
+    if (PyInt_Check(ret)) {
+        retvalue = (DPS_Status)PyInt_AsLong(ret);
+    } else {
+        retvalue = DPS_ERR_MISSING;
+    }
+
     Py_XDECREF(nodeObj);
+    Py_XDECREF(kidObj);
     Py_XDECREF(uuidObj);
     Py_XDECREF(ret);
     /*
@@ -332,7 +356,7 @@ DPS_Status NodeHandler(DPS_Node* node, DPS_UUID* kid, uint8_t* key, size_t keyLe
      */
     PyGILState_Release(gilState);
 
-    return DPS_OK;
+    return retvalue;
 }
 %}
 
@@ -392,25 +416,25 @@ static PyObject* UUIDToPyString(const DPS_UUID* uuid)
 %}
 
 %typemap(in) DPS_UUID* {
-    if (PyString_Check($input)) {
-        char* buf;
-        Py_ssize_t sz = PyString_Size($input);
-        buf = (char*)malloc(sz + 1);
-        if (!buf) {
-            PyErr_SetString(PyExc_TypeError,"no memory\n");
-            return NULL;
-        }
-        memcpy(buf, PyString_AsString($input), sz);
-        buf[sz] = 0;
+    int j, i;
 
-        $1 = (DPS_UUID*)StringToUUID((const char*)buf);
-        free(buf);
-        if (!$1) {
-            return NULL;
-        }
-    } else {
-        PyErr_SetString(PyExc_TypeError,"not a string");
+    if (!PyList_Check($input)) {
+        PyErr_SetString(PyExc_TypeError,"DPS_UUID: no list\n");
+        return NULL;
     }
+
+    DPS_UUID* uuid = (DPS_UUID*)malloc(sizeof(DPS_UUID));
+    if (!uuid) {
+        PyErr_SetString(PyExc_TypeError,"DPS_UUID: no memory\n");
+        return NULL;
+    }
+    for(j = 0, i = 0; j < PyList_Size($input); ++j) {
+        PyObject *pValue = PyList_GetItem($input, j);
+        if (PyInt_Check(pValue)) {
+            uuid->val[i++] = PyInt_AsLong(pValue);
+        }
+    }
+    $1 = uuid;
 }
 
 %typemap(freearg) DPS_UUID* {

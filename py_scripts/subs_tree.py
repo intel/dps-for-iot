@@ -14,17 +14,27 @@ import time
 nodes = {}
 subs = {}
 
+keyID = [0xed,0x54,0x14,0xa8,0x5c,0x4d,0x4d,0x15,0xb6,0x9f,0x0e,0x99,0x8a,0xb1,0x71,0xf2];
+
+keyData = [0x77,0x58,0x22,0xfc,0x3d,0xef,0x48,0x88,0x91,0x25,0x78,0xd0,0xe2,0x74,0x5c,0x10];
+
 def OnPub(sub, pub, payload):
     print "Received on port %d" % dps.GetPortNumber(dps.SubscriptionGetNode(sub))
     print "Subscription ", dps.SubscriptionGetTopic(sub, 0)
     print "  Pub %s/%d" % (dps.PublicationGetUUID(pub), dps.PublicationGetSequenceNum(pub))
     print "  Payload %s" % payload
 
-def OnGetKey(node, kid, key):
-    return 0
+def OnGetKey(node, kid, key, keylen):
+    if cmp(keyID, kid) == 0:
+        for k in keyData:
+                key.append(k)
+        return 0
+    else:
+        print "kid not equal keyID\n"
+        return 14
 
 def Subscriber(port, topic, connectPort):
-    nodes[port] = dps.CreateNode("/", OnGetKey)
+    nodes[port] = dps.CreateNode("/", OnGetKey, keyID)
     dps.StartNode(nodes[port], 0, port)
     subs[port] = dps.CreateSubscription(nodes[port], [topic])
     dps.Subscribe(subs[port], OnPub)
