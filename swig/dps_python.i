@@ -438,7 +438,9 @@ static PyObject* UUIDToPyString(const DPS_UUID* uuid)
 }
 
 %typemap(freearg) DPS_UUID* {
-    DPS_UUIDDestroy($1);
+    if ($1) {
+        free($1);
+    }
 }
 
 %typemap(out) DPS_UUID* {

@@ -59,54 +59,6 @@ const char* DPS_UUIDToString(const DPS_UUID* uuid)
     return str;
 }
 
-const DPS_UUID* StringToUUID(const char* string)
-{
-    static DPS_UUID* uuid;
-    char str[38];
-    uint8_t high, low;
-    size_t i, j, r, n;
-
-    if (!string)
-        return NULL;
-
-    uuid = calloc(1, sizeof(DPS_UUID));
-    if (!uuid) {
-        DPS_ERRPRINT("StringToUUID: calloc failed\n");
-        return NULL;
-    }
-
-    memset(str, 0, 38);
-
-    for (i = 0, j = 0; i < strlen(string) && i < 38; i++) {
-        if (string[i] == '-')
-            continue;
-        str[j++] = string[i];
-    }
-
-    n = sizeof(str)/2;
-    r = sizeof(str)%2;
-
-    for (i = 0, j = 0; i < n; i++) {
-        high = BIN(str[j++]);
-        low = BIN(str[j++]);
-        uuid->val[i] = (high << 4) | (low & 0xF);
-    }
-
-    if (!r) {
-        low = BIN(str[j]);
-        uuid->val[i] = low & 0xF;
-    }
-
-    return uuid;
-}
-
-void DPS_UUIDDestroy(DPS_UUID* uuid)
-{
-    if (uuid) {
-        free(uuid);
-    }
-}
-
 static struct {
     uint64_t nonce[2];
     uint32_t seeds[4];

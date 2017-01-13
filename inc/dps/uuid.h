@@ -56,16 +56,6 @@ void DPS_GenerateUUID(DPS_UUID* uuid);
 const char* DPS_UUIDToString(const DPS_UUID* uuid);
 
 /**
- * Return a structure of a UUID. The memory is allocated for the DPS_UUID and must be freed by the caller.
- */
-const DPS_UUID* StringToUUID(const char* string);
-
-/**
- * Free the DPS_UUID memory.
- */
-void DPS_UUIDDestroy(DPS_UUID* uuid);
-
-/**
  * Lexicographic comparison of two UUIDs
  */
 int DPS_UUIDCompare(const DPS_UUID* a, const DPS_UUID* b);
