@@ -112,17 +112,10 @@ testprogs = [testenv.Program('bin/hist_unit', 'test/hist_unit.c'),
              testenv.Program('bin/countvec', 'test/countvec.c'),
              testenv.Program('bin/rle_compression', 'test/rle_compression.c'),
              testenv.Program('bin/topic_match', 'test/topic_match.c'),
-             testenv.Program('bin/stats', 'test/stats.c'),
              testenv.Program('bin/pubsub', 'test/pubsub.c'),
              testenv.Program('bin/packtest', 'test/packtest.c'),
              testenv.Program('bin/cbortest', 'test/cbortest.c'),
              testenv.Program('bin/cosetest', 'test/cosetest.c')]
-
-# Platform-specific test cases
-if platform == 'posix':
-    testprogs.append([testenv.Program('bin/coap_mcast_test', 'test/coap_mcast_test.c'),
-                      testenv.Program('bin/subtree_sim', 'test/subtree_sim.c'),
-                      testenv.Program('bin/tree_sim', 'test/tree_sim.c')])
 
 testenv.Install('#/build/test/bin', testprogs)
 

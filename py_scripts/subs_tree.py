@@ -28,10 +28,10 @@ def OnGetKey(node, kid, key, keylen):
     if cmp(keyID, kid) == 0:
         for k in keyData:
                 key.append(k)
-        return 0
+        return dps.OK
     else:
         print "kid not equal keyID\n"
-        return 14
+        return dps.ERR_MISSING
 
 def Subscriber(port, topic, connectPort):
     nodes[port] = dps.CreateNode("/", OnGetKey, keyID)

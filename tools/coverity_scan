@@ -1,0 +1,14 @@
+#!/bin/sh
+
+export COV_PATH=../../coverity/bin
+export PATH=$PATH:$COV_PATH
+
+scons --clean
+cov-build --dir cov scons
+
+cov-analyze --dir cov --concurrency --security --rule --enable-constraint-fpp --enable-fnptr --enable-virtual
+
+rm -rf cov_errors
+cov-format-errors --dir cov --html-output cov_errors
+
+firefox cov_errors/index.html&

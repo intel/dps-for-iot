@@ -350,7 +350,7 @@ static void OnPub(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* da
             while (count--) {
                 uint16_t port;
                 char* host;
-                size_t len;
+                size_t hLen;
                 /*
                  * Stop if we have reached the max registrations
                  */
@@ -364,11 +364,11 @@ static void OnPub(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* da
                 if (CBOR_DecodeUint16(&buf, &port) != DPS_OK) {
                     break;
                 }
-                if (CBOR_DecodeString(&buf, &host, &len) != DPS_OK) {
+                if (CBOR_DecodeString(&buf, &host, &hLen) != DPS_OK) {
                     break;
                 }
                 regGet->regs->list[regGet->regs->count].port = port;
-                regGet->regs->list[regGet->regs->count].host = strdup(host);
+                regGet->regs->list[regGet->regs->count].host = strndup(host, hLen);
                 ++regGet->regs->count;
             }
         }

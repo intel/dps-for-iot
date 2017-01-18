@@ -204,25 +204,30 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote, DPS_BitVecto
     }
 
     ret = DPS_TxBufferInit(&buf, NULL, len);
-    if (ret != DPS_OK) {
-        return ret;
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeArray(&buf, 3);
     }
-    ret = CBOR_EncodeArray(&buf, 3);
-    assert(ret == DPS_OK);
-    ret = CBOR_EncodeUint8(&buf, DPS_MSG_TYPE_SUB);
-    assert(ret == DPS_OK);
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeUint8(&buf, DPS_MSG_TYPE_SUB);
+    }
     /*
      * Header map
      *  {
      *      port: uint
      *  }
      */
-    ret = CBOR_EncodeMap(&buf, 1);
-    assert(ret == DPS_OK);
-    ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_PORT);
-    assert(ret == DPS_OK);
-    ret = CBOR_EncodeInt16(&buf, node->port);
-    assert(ret == DPS_OK);
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeMap(&buf, 1);
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_PORT);
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeInt16(&buf, node->port);
+    }
+    if (ret != DPS_OK) {
+        return ret;
+    }
     /*
      * Body map
      *      {
@@ -236,23 +241,30 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote, DPS_BitVecto
      */
     if (interests) {
         ret = CBOR_EncodeMap(&buf, 4);
-        assert(ret == DPS_OK);
-        ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_INBOUND_SYNC);
-        assert(ret == DPS_OK);
-        ret = CBOR_EncodeBoolean(&buf, remote->inbound.sync);
-        assert(ret == DPS_OK);
-        ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_OUTBOUND_SYNC);
-        assert(ret == DPS_OK);
-        ret = CBOR_EncodeBoolean(&buf, remote->outbound.sync);
-        assert(ret == DPS_OK);
-        ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_NEEDS);
-        assert(ret == DPS_OK);
-        ret = DPS_BitVectorSerialize(remote->outbound.needs, &buf);
-        assert(ret == DPS_OK);
-        ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_INTERESTS);
-        assert(ret == DPS_OK);
-        ret = DPS_BitVectorSerialize(interests, &buf);
-        assert(ret == DPS_OK);
+        if (ret == DPS_OK) {
+            ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_INBOUND_SYNC);
+        }
+        if (ret == DPS_OK) {
+            ret = CBOR_EncodeBoolean(&buf, remote->inbound.sync);
+        }
+        if (ret == DPS_OK) {
+            ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_OUTBOUND_SYNC);
+        }
+        if (ret == DPS_OK) {
+            ret = CBOR_EncodeBoolean(&buf, remote->outbound.sync);
+        }
+        if (ret == DPS_OK) {
+            ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_NEEDS);
+        }
+        if (ret == DPS_OK) {
+            ret = DPS_BitVectorSerialize(remote->outbound.needs, &buf);
+        }
+        if (ret == DPS_OK) {
+            ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_INTERESTS);
+        }
+        if (ret == DPS_OK) {
+            ret = DPS_BitVectorSerialize(interests, &buf);
+        }
     } else {
         ret = CBOR_EncodeMap(&buf, 0);
     }
@@ -391,19 +403,27 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
             ret = CBOR_DecodeBoolean(buffer, &syncReceived);
             break;
         case DPS_CBOR_KEY_INTERESTS:
-            interests = DPS_BitVectorAlloc();
             if (interests) {
-                ret = DPS_BitVectorDeserialize(interests, buffer);
+                ret = DPS_ERR_INVALID;
             } else {
-                ret = DPS_ERR_RESOURCES;
+                interests = DPS_BitVectorAlloc();
+                if (interests) {
+                    ret = DPS_BitVectorDeserialize(interests, buffer);
+                } else {
+                    ret = DPS_ERR_RESOURCES;
+                }
             }
             break;
         case DPS_CBOR_KEY_NEEDS:
-            needs = DPS_BitVectorAllocFH();
             if (needs) {
-                ret = DPS_BitVectorDeserialize(needs, buffer);
+                ret = DPS_ERR_INVALID;
             } else {
-                ret = DPS_ERR_RESOURCES;
+                needs = DPS_BitVectorAllocFH();
+                if (needs) {
+                    ret = DPS_BitVectorDeserialize(needs, buffer);
+                } else {
+                    ret = DPS_ERR_RESOURCES;
+                }
             }
             break;
         }

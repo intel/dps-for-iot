@@ -27,7 +27,7 @@
 #include <assert.h>
 #include <dps/private/cbor.h>
 
-static uint8_t buf[10000];
+static uint8_t buf[1 << 19];
 
 typedef struct _map {
     int key;
@@ -59,10 +59,15 @@ static const map Maps[] = {
     {1, "a"}, {2, "bc"}, {3, "def"}, {4, "ghi"}
 };
 
+static int ln;
+
+#define CHECK(r)   if ((r) != DPS_OK) { ln = __LINE__; goto Failed; }
+
 int main(int argc, char** argv)
 {
     size_t i;
     size_t n;
+    DPS_Status ret;
     DPS_TxBuffer txBuffer;
     DPS_RxBuffer rxBuffer;
     uint8_t* test;
@@ -75,40 +80,44 @@ int main(int argc, char** argv)
      */
     for (n = 0; n < 2; ++n) {
 
-        CBOR_EncodeArray(&txBuffer, 41);
+        ret = CBOR_EncodeArray(&txBuffer, 41);
+        CHECK(ret);
 
         for (i = 0; i < sizeof(Uints) / sizeof(Uints[0]); ++i) {
-            CBOR_EncodeUint(&txBuffer, Uints[i]);
+            ret = CBOR_EncodeUint(&txBuffer, Uints[i]);
+            CHECK(ret);
         }
-
-        CBOR_EncodeBytes(&txBuffer, (uint8_t*)Uints, sizeof(Uints));
-
+        ret = CBOR_EncodeBytes(&txBuffer, (uint8_t*)Uints, sizeof(Uints));
+        CHECK(ret);
         for (i = 0; i < sizeof(Sints) / sizeof(Sints[0]); ++i) {
-            CBOR_EncodeInt(&txBuffer, Sints[i]);
+            ret = CBOR_EncodeInt(&txBuffer, Sints[i]);
+            CHECK(ret);
         }
-
-        CBOR_EncodeArray(&txBuffer, sizeof(Strings) / sizeof(Strings[0]));
-
+        ret = CBOR_EncodeArray(&txBuffer, sizeof(Strings) / sizeof(Strings[0]));
+        CHECK(ret);
         for (i = 0; i < sizeof(Strings) / sizeof(Strings[0]); ++i) {
-            CBOR_EncodeString(&txBuffer, Strings[i]);
+            ret = CBOR_EncodeString(&txBuffer, Strings[i]);
+            CHECK(ret);
         }
-
-        CBOR_EncodeMap(&txBuffer, sizeof(Maps) / sizeof(Maps[0]));
-
+        ret = CBOR_EncodeMap(&txBuffer, sizeof(Maps) / sizeof(Maps[0]));
+        CHECK(ret);
         for (i = 0; i < sizeof(Maps) / sizeof(Maps[0]); ++i) {
-            CBOR_EncodeInt(&txBuffer, Maps[i].key);
-            CBOR_EncodeString(&txBuffer, Maps[i].string);
+            ret = CBOR_EncodeInt(&txBuffer, Maps[i].key);
+            CHECK(ret);
+            ret = CBOR_EncodeString(&txBuffer, Maps[i].string);
+            CHECK(ret);
         }
-
-        CBOR_EncodeMap(&txBuffer, sizeof(Maps) / sizeof(Maps[0]));
-
+        ret = CBOR_EncodeMap(&txBuffer, sizeof(Maps) / sizeof(Maps[0]));
+        CHECK(ret);
         for (i = 0; i < sizeof(Maps) / sizeof(Maps[0]); ++i) {
-            CBOR_EncodeInt(&txBuffer, Maps[i].key);
-            CBOR_EncodeString(&txBuffer, Maps[i].string);
+            ret = CBOR_EncodeInt(&txBuffer, Maps[i].key);
+            CHECK(ret);
+            ret = CBOR_EncodeString(&txBuffer, Maps[i].string);
+            CHECK(ret);
         }
-
         for (i = 0; i < sizeof(Tags) / sizeof(Tags[0]); ++i) {
-            CBOR_EncodeTag(&txBuffer, Tags[i]);
+            ret = CBOR_EncodeTag(&txBuffer, Tags[i]);
+            CHECK(ret);
         }
     }
 
@@ -118,16 +127,18 @@ int main(int argc, char** argv)
 
     DPS_TxBufferToRx(&txBuffer, &rxBuffer);
 
-    CBOR_DecodeArray(&rxBuffer, &size);
+    ret = CBOR_DecodeArray(&rxBuffer, &size);
     assert(size == 41);
+    CHECK(ret);
 
     /*
      * Decode
      */
     for (i = 0; i < sizeof(Uints) / sizeof(Uints[0]); ++i) {
         uint64_t n;
-        CBOR_DecodeUint(&rxBuffer, &n);
+        ret = CBOR_DecodeUint(&rxBuffer, &n);
         assert(n == Uints[i]);
+        CHECK(ret);
     }
 
     CBOR_DecodeBytes(&rxBuffer, &test, &i);
@@ -136,47 +147,55 @@ int main(int argc, char** argv)
 
     for (i = 0; i < sizeof(Sints) / sizeof(Sints[0]); ++i) {
         int64_t n;
-        CBOR_DecodeInt(&rxBuffer, &n);
+        ret = CBOR_DecodeInt(&rxBuffer, &n);
         assert(n == Sints[i]);
+        CHECK(ret);
     }
 
-    CBOR_DecodeArray(&rxBuffer, &size);
+    ret = CBOR_DecodeArray(&rxBuffer, &size);
     assert(size == (sizeof(Strings) / sizeof(Strings[0])));
+    CHECK(ret);
 
     for (i = 0; i < sizeof(Strings) / sizeof(Strings[0]); ++i) {
         char *str;
         size_t len;
-        CBOR_DecodeString(&rxBuffer, &str, &len);
+        ret = CBOR_DecodeString(&rxBuffer, &str, &len);
         assert(!strcmp(str, Strings[i]));
+        CHECK(ret);
     }
 
-    CBOR_DecodeMap(&rxBuffer, &size);
+    ret = CBOR_DecodeMap(&rxBuffer, &size);
     assert(size == (sizeof(Maps) / sizeof(Maps[0])));
+    CHECK(ret);
 
     for (i = 0; i < sizeof(Maps) / sizeof(Maps[0]); ++i) {
         char *str;
         uint64_t n;
         size_t len;
-        CBOR_DecodeUint(&rxBuffer, &n);
+        ret = CBOR_DecodeUint(&rxBuffer, &n);
+        CHECK(ret);
         assert(n == Maps[i].key);
-        CBOR_DecodeString(&rxBuffer, &str, &len);
+        ret = CBOR_DecodeString(&rxBuffer, &str, &len);
+        CHECK(ret);
         assert(!strcmp(str, Maps[i].string));
     }
 
     CBOR_MapState map;
     int32_t keys[] = {2, 3};
-    DPS_Status ret = DPS_ParseMapInit(&map, &rxBuffer, keys, A_SIZEOF(keys));
-    assert(ret == DPS_OK);
+    ret = DPS_ParseMapInit(&map, &rxBuffer, keys, A_SIZEOF(keys));
+    CHECK(ret);
+
     while (!DPS_ParseMapDone(&map)) {
         int32_t key = 0;
         char *str;
         size_t len;
         ret = DPS_ParseMapNext(&map, &key);
-        assert(ret == DPS_OK);
+        CHECK(ret);
         switch (key) {
         case 2:
         case 3:
-            CBOR_DecodeString(&rxBuffer, &str, &len);
+            ret = CBOR_DecodeString(&rxBuffer, &str, &len);
+            CHECK(ret);
             break;
         default:
             assert(0);
@@ -186,24 +205,23 @@ int main(int argc, char** argv)
 
     for (i = 0; i < sizeof(Tags) / sizeof(Tags[0]); ++i) {
         int64_t n;
-        CBOR_DecodeTag(&rxBuffer, &n);
+        ret = CBOR_DecodeTag(&rxBuffer, &n);
         assert(n == Tags[i]);
+        CHECK(ret);
     }
 
     /*
      * Skip
      */
-    CBOR_DecodeArray(&rxBuffer, &size);
+    ret = CBOR_DecodeArray(&rxBuffer, &size);
+    CHECK(ret);
     assert(size == 41);
 
     for (n = 0; n < 41; ++n) {
         size_t sz;
         uint8_t maj;
-        DPS_Status ret = CBOR_Skip(&rxBuffer, &maj, &sz);
-        if (ret != DPS_OK) {
-            printf("Failed\n");
-            exit(1);
-        }
+        ret = CBOR_Skip(&rxBuffer, &maj, &sz);
+        CHECK(ret);
         switch (maj) {
         case CBOR_UINT:
             printf("Skipped UINT size %zu\n", sz);
@@ -231,15 +249,15 @@ int main(int argc, char** argv)
             break;
         }
     }
+
     if (DPS_RxBufferAvail(&rxBuffer)) {
-        printf("Failed\n");
-        exit(1);
+        CHECK(DPS_ERR_INVALID);
     }
 
     /*
-     * Test wrap bytes with various hint lengths from 1 byte to 8
+     * Test wrap bytes with various hint lengths from 1 byte to 4
      */
-    for (i = 5; i < 63; ++i) {
+    for (i = 5; i < 18; ++i) {
         DPS_RxBuffer rxInner;
         char* str;
         static const char testString[] = "Test string";
@@ -247,21 +265,28 @@ int main(int argc, char** argv)
         uint8_t* wrapPtr;
 
         DPS_TxBufferInit(&txBuffer, buf, sizeof(buf));
-        CBOR_StartWrapBytes(&txBuffer, 1ull << i, &wrapPtr);
-        CBOR_EncodeString(&txBuffer, testString);
-        CBOR_EndWrapBytes(&txBuffer, wrapPtr);
-
+        ret = CBOR_StartWrapBytes(&txBuffer, 1ull << i, &wrapPtr);
+        CHECK(ret);
+        ret = CBOR_EncodeString(&txBuffer, testString);
+        CHECK(ret);
+        ret = CBOR_EndWrapBytes(&txBuffer, wrapPtr);
+        CHECK(ret);
         DPS_TxBufferToRx(&txBuffer, &rxBuffer);
-
-        CBOR_DecodeBytes(&rxBuffer, &data, &size);
+        ret = CBOR_DecodeBytes(&rxBuffer, &data, &size);
         assert(!DPS_RxBufferAvail(&rxBuffer));
-
+        CHECK(ret);
         DPS_RxBufferInit(&rxInner, data, size);
-        CBOR_DecodeString(&rxInner, &str, &size);
+        ret = CBOR_DecodeString(&rxInner, &str, &size);
         assert(!DPS_RxBufferAvail(&rxInner));
-
         assert(strcmp(str, testString) == 0);
+        CHECK(ret);
     }
 
     printf("Passed\n");
+    return 0;
+
+Failed:
+
+    printf("Failed at line %d %s\n", ln, DPS_ErrTxt(ret));
+    return 1;
 }

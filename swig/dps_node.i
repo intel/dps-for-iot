@@ -40,7 +40,7 @@ extern "C" {
 /*
  * This allows topic strings to be expressed as a list of strings
  */
-%typemap(in) (char* const* topics, size_t numTopics) {
+%typemap(in) (const char** topics, size_t numTopics) {
     /* Expecting a list of strings */
     if ($input->IsArray()) {
         v8::Local<v8::Array> arr = v8::Local<v8::Array>::Cast($input);
@@ -70,7 +70,7 @@ extern "C" {
 /*
  * Post function call cleanup for topic strings
  */
-%typemap(freearg) (char* const* topics, size_t numTopics) {
+%typemap(freearg) (const char** topics, size_t numTopics) {
     /* Freeing a list of strings */
     for (uint32_t i = 0; i < $2; ++i)
         free($1[i]);
@@ -96,31 +96,26 @@ static uint8_t* AllocPayload(v8::Local<v8::Value> valRef, size_t* len)
 }
 %}
 
-%typemap(in) (uint8_t* pubPayload, size_t len) {
+%typemap(in) (const uint8_t* pubPayload, size_t len) {
     $1 = AllocPayload($input, &$2);
     if (!$1) {
         SWIG_exception_fail(SWIG_TypeError, "not a string");
     }
 }
 
-%typemap(in) (uint8_t* ackPayload, size_t len) {
+%typemap(in) (const uint8_t* ackPayload, size_t len) {
     $1 = AllocPayload($input, &$2);
     if (!$1) {
         SWIG_exception_fail(SWIG_TypeError, "not a string");
     }
 }
 
-/*
- * The following pair of typemaps cleanup old publication payloads
- */
-%typemap(in, numinputs=0) uint8_t** oldPayload (uint8_t* old) {
-    $1 = &old;
+%typemap(freearg) (const uint8_t* pubPayload, size_t len) {
+    free($1);
 }
 
-%typemap(argout) (uint8_t** oldPayload) {
-    if (*$1) {
-        free(*$1);
-    }
+%typemap(freearg) (const uint8_t* ackPayload, size_t len) {
+    free($1);
 }
 
 /*

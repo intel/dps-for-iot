@@ -126,27 +126,34 @@ static DPS_Status SerializeAck(DPS_Node* node, PublicationAck* ack, const uint8_
         return ret;
     }
     ret = CBOR_EncodeArray(&ack->headers, 3);
-    assert(ret == DPS_OK);
-    ret = CBOR_EncodeUint8(&ack->headers, DPS_MSG_TYPE_ACK);
-    assert(ret == DPS_OK);
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeUint8(&ack->headers, DPS_MSG_TYPE_ACK);
+    }
     aadPos = ack->headers.txPos;
-    ret = CBOR_EncodeMap(&ack->headers, 2);
-    assert(ret == DPS_OK);
-    ret = CBOR_EncodeUint8(&ack->headers, DPS_CBOR_KEY_PUB_ID);
-    assert(ret == DPS_OK);
-    ret = CBOR_EncodeBytes(&ack->headers, (uint8_t*)&ack->pubId, sizeof(ack->pubId));
-    assert(ret == DPS_OK);
-    ret = CBOR_EncodeUint8(&ack->headers, DPS_CBOR_KEY_SEQ_NUM);
-    assert(ret == DPS_OK);
-    ret = CBOR_EncodeUint32(&ack->headers, ack->sequenceNum);
-    assert(ret == DPS_OK);
-
-    ret = DPS_TxBufferInit(&ack->payload, NULL, CBOR_SIZEOF_BSTR(dataLen));
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeMap(&ack->headers, 2);
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeUint8(&ack->headers, DPS_CBOR_KEY_PUB_ID);
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeBytes(&ack->headers, (uint8_t*)&ack->pubId, sizeof(ack->pubId));
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeUint8(&ack->headers, DPS_CBOR_KEY_SEQ_NUM);
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeUint32(&ack->headers, ack->sequenceNum);
+    }
+    if (ret == DPS_OK) {
+        ret = DPS_TxBufferInit(&ack->payload, NULL, CBOR_SIZEOF_BSTR(dataLen));
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeBytes(&ack->payload, data, dataLen);
+    }
     if (ret != DPS_OK) {
         return ret;
     }
-    ret = CBOR_EncodeBytes(&ack->payload, data, dataLen);
-    assert(ret == DPS_OK);
     /*
      * Check if the ack should be encrypted
      */

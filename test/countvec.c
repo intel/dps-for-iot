@@ -30,10 +30,14 @@
 
 static void SetBits(DPS_BitVector* bv, uint8_t n)
 {
+    DPS_Status ret;
     static uint8_t buf[BITLEN / 8];
 
     memset(buf, n, sizeof(buf));
-    DPS_BitVectorSet(bv, buf, sizeof(buf));
+    ret = DPS_BitVectorSet(bv, buf, sizeof(buf));
+    if (ret != DPS_OK) {
+        DPS_PRINT("DPS_BitVectorSet returned %s\n", DPS_ErrTxt(ret));
+    }
 }
 
 static void TestAdd(DPS_CountVector* cv, uint8_t n)

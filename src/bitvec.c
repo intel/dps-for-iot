@@ -149,9 +149,14 @@ static Configuration config = { DPS_CONFIG_BIT_LEN, (uint8_t)DPS_CONFIG_HASHES }
 #define FH_BITVECTOR_LEN  (4 * CHUNK_SIZE)
 
 #ifdef DPS_DEBUG
-static void BitDump(const chunk_t* data, size_t bits)
+/*
+ * This is a compressed bit dump - it groups bits to keep
+ * the total output readable. This is usually more useful
+ * than dumping raw 8K long bit vectors.
+ */
+static void CompressedBitDump(const chunk_t* data, size_t bits)
 {
-    size_t stride = bits / 128;
+    size_t stride = bits < 128 ? 1 : bits / 128;
     size_t i;
     for (i = 0; i < bits; i += stride) {
         int bit = 0;
@@ -682,7 +687,10 @@ DPS_Status DPS_BitVectorSerialize(DPS_BitVector* bv, DPS_TxBuffer* buffer)
      *    compressed bit vector (bstr)
      * ]
      */
-    CBOR_EncodeArray(buffer, 3);
+    ret = CBOR_EncodeArray(buffer, 3);
+    if (ret != DPS_OK) {
+        return ret;
+    }
     /*
      * The load factor will tell us if it is worth trying run length encoding and if
      * the bit complement will result in a more compact encoding.
@@ -871,7 +879,7 @@ void DPS_BitVectorDump(DPS_BitVector* bv, int dumpBits)
         DPS_PRINT("Loading = %.2f%%\n", DPS_BitVectorLoadFactor((DPS_BitVector*)bv));
 #ifdef DPS_DEBUG
         if (dumpBits) {
-            BitDump(bv->bits, bv->len);
+            CompressedBitDump(bv->bits, bv->len);
         }
 #endif
     }

@@ -102,8 +102,8 @@ typedef struct {
     DPS_OnResolveAddressComplete cb;
     void* data;
     uv_getaddrinfo_t info;
-    char host[MAX_HOST_LEN];
-    char service[MAX_SERVICE_LEN];
+    char host[MAX_HOST_LEN + 1];
+    char service[MAX_SERVICE_LEN + 1];
 } ResolverInfo;
 
 static void FreeHandle(uv_handle_t* handle)
@@ -177,8 +177,8 @@ DPS_Status DPS_ResolveAddress(DPS_Node* node, const char* host, const char* serv
     if (!resolver) {
         return DPS_ERR_RESOURCES;
     }
-    strncpy(resolver->host, host, sizeof(resolver->host));
-    strncpy(resolver->service, service, sizeof(resolver->service));
+    strncpy(resolver->host, host, sizeof(resolver->host) - 1);
+    strncpy(resolver->service, service, sizeof(resolver->service) - 1);
     resolver->node = node;
     resolver->cb = cb;
     resolver->data = data;

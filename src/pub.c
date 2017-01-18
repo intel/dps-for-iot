@@ -651,13 +651,12 @@ DPS_Status DPS_SendPublication(DPS_Node* node, DPS_Publication* pub, DPS_BitVect
         CBOR_SIZEOF(int16_t);
 
     ret = DPS_TxBufferInit(&buf, NULL, len);
-    if (ret != DPS_OK) {
-        return ret;
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeArray(&buf, 4);
     }
-    ret = CBOR_EncodeArray(&buf, 4);
-    assert(ret == DPS_OK);
-    ret = CBOR_EncodeUint8(&buf, DPS_MSG_TYPE_PUB);
-    assert(ret == DPS_OK);
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeUint8(&buf, DPS_MSG_TYPE_PUB);
+    }
     /*
      * Header map
      *  {
@@ -665,15 +664,21 @@ DPS_Status DPS_SendPublication(DPS_Node* node, DPS_Publication* pub, DPS_BitVect
      *      ttl: int
      *  }
      */
-    ret = CBOR_EncodeMap(&buf, 2);
-    assert(ret == DPS_OK);
-    ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_PORT);
-    assert(ret == DPS_OK);
-    ret = CBOR_EncodeUint16(&buf, node->port);
-    assert(ret == DPS_OK);
-    ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_TTL);
-    assert(ret == DPS_OK);
-    ret = CBOR_EncodeInt16(&buf, ttl);
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeMap(&buf, 2);
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_PORT);
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeUint16(&buf, node->port);
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_TTL);
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeInt16(&buf, ttl);
+    }
     /*
      * Body and payload are already serialized
      *
@@ -829,14 +834,20 @@ DPS_Status DPS_InitPublication(DPS_Publication* pub, const char** topics, size_t
         assert(!pub->topicsBuf.base);
         ret = DPS_TxBufferInit(&pub->topicsBuf, NULL, bufLen);
         if (ret == DPS_OK) {
-            CBOR_EncodeArray(&pub->topicsBuf, numTopics);
+            ret = CBOR_EncodeArray(&pub->topicsBuf, numTopics);
+        }
+        if (ret == DPS_OK) {
             for (i = 0; i < numTopics; ++i) {
                 uint64_t len = strlen(topics[i]) + 1;
                 ret = CBOR_EncodeLength(&pub->topicsBuf, len, CBOR_STRING);
-                assert(ret == DPS_OK);
+                if (ret != DPS_OK) {
+                    break;
+                }
                 pub->topics[i] = (char*)pub->topicsBuf.txPos;
                 ret = CBOR_Copy(&pub->topicsBuf, (uint8_t*)topics[i], len);
-                assert(ret == DPS_OK);
+                if (ret != DPS_OK) {
+                    break;
+                }
             }
         }
     }
@@ -895,42 +906,56 @@ static DPS_Status SerializePub(DPS_Node* node, DPS_Publication* pub, const uint8
      * Encode body fields - if encrypting these fields form the external AAD
      */
     ret = CBOR_EncodeMap(&body, 5);
-    assert(ret == DPS_OK);
-    ret = CBOR_EncodeUint8(&body, DPS_CBOR_KEY_TTL);
-    assert(ret == DPS_OK);
-    ret = CBOR_EncodeInt16(&body, ttl);
-    assert(ret == DPS_OK);
-    ret = CBOR_EncodeUint8(&body, DPS_CBOR_KEY_PUB_ID);
-    assert(ret == DPS_OK);
-    ret = CBOR_EncodeBytes(&body, (uint8_t*)&pub->pubId, sizeof(pub->pubId));
-    assert(ret == DPS_OK);
-    ret = CBOR_EncodeUint8(&body, DPS_CBOR_KEY_SEQ_NUM);
-    assert(ret == DPS_OK);
-    ret = CBOR_EncodeUint32(&body, pub->sequenceNum);
-    assert(ret == DPS_OK);
-    ret = CBOR_EncodeUint8(&body, DPS_CBOR_KEY_ACK_REQ);
-    assert(ret == DPS_OK);
-    ret = CBOR_EncodeBoolean(&body, pub->ackRequested);
-    assert(ret == DPS_OK);
-    ret = CBOR_EncodeUint8(&body, DPS_CBOR_KEY_BLOOM_FILTER);
-    assert(ret == DPS_OK);
-    ret = CBOR_Copy(&body, pub->bfBuf.base, bfLen);
-    assert(ret == DPS_OK);
-    /*
-     * Encode the payload fields - if encrypting these fields are encrypted
-     */
-    len = CBOR_SIZEOF_ARRAY(2) + topicsLen + CBOR_SIZEOF_BSTR(dataLen);
-    ret = DPS_TxBufferInit(&payload, NULL, len);
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeUint8(&body, DPS_CBOR_KEY_TTL);
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeInt16(&body, ttl);
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeUint8(&body, DPS_CBOR_KEY_PUB_ID);
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeBytes(&body, (uint8_t*)&pub->pubId, sizeof(pub->pubId));
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeUint8(&body, DPS_CBOR_KEY_SEQ_NUM);
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeUint32(&body, pub->sequenceNum);
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeUint8(&body, DPS_CBOR_KEY_ACK_REQ);
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeBoolean(&body, pub->ackRequested);
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeUint8(&body, DPS_CBOR_KEY_BLOOM_FILTER);
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_Copy(&body, pub->bfBuf.base, bfLen);
+    }
+    if (ret == DPS_OK) {
+        /*
+         * Encode the payload fields - if encrypting these fields are encrypted
+         */
+        len = CBOR_SIZEOF_ARRAY(2) + topicsLen + CBOR_SIZEOF_BSTR(dataLen);
+        ret = DPS_TxBufferInit(&payload, NULL, len);
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeArray(&payload, 2);
+    }
+    if (ret == DPS_OK) {
+        ret = DPS_TxBufferAppend(&payload, pub->topicsBuf.base, topicsLen);
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeBytes(&payload, data, dataLen);
+    }
     if (ret != DPS_OK) {
         DPS_TxBufferFree(&body);
         return ret;
     }
-    ret = CBOR_EncodeArray(&payload, 2);
-    assert(ret == DPS_OK);
-    ret = DPS_TxBufferAppend(&payload, pub->topicsBuf.base, topicsLen);
-    assert(ret == DPS_OK);
-    ret = CBOR_EncodeBytes(&payload, data, dataLen);
-    assert(ret == DPS_OK);
     if (node->isSecured) {
         DPS_RxBuffer plainText;
         DPS_RxBuffer aad;

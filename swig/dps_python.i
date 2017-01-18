@@ -76,22 +76,21 @@ int DPS_Debug;
                 $1[i] = PyString_AsString(ob);
             else {
                 PyErr_SetString(PyExc_TypeError,"must be a list of one or more strings");
-                free($1);
-                return NULL;
+                SWIG_fail;
             }
         }
         $1[i] = 0;
         $2 = sz;
     } else {
         PyErr_SetString(PyExc_TypeError,"not a list");
-        return NULL;
+        SWIG_fail;
     }
 }
 
 /* 
  * Post function call cleanup for topic strings
  */
-%typemap(freearg) (char* const* topics, size_t numTopics) {
+%typemap(freearg) (const char** topics, size_t numTopics) {
     free($1);
 }
 
@@ -119,18 +118,24 @@ static uint8_t* AllocPayload(PyObject* py, size_t* len)
 %typemap(in) (const uint8_t* pubPayload, size_t len) {
     $1 = AllocPayload($input, &$2);
     if (!$1) {
-        return NULL;
+        PyErr_SetString(PyExc_MemoryError,"Allocation of pub payload failed");
+        SWIG_fail;
     }
 }
 
 %typemap(in) (const uint8_t* ackPayload, size_t len) {
     $1 = AllocPayload($input, &$2);
     if (!$1) {
-        return NULL;
+        PyErr_SetString(PyExc_MemoryError,"Allocation of ack payload failed");
+        SWIG_fail;
     }
 }
 
-%typemap(freearg) (uint8_t* ackPayload, size_t len) {
+%typemap(freearg) (const uint8_t* pubPayload, size_t len) {
+    free($1);
+}
+
+%typemap(freearg) (const uint8_t* ackPayload, size_t len) {
     free($1);
 }
 
@@ -213,13 +218,13 @@ static void AckHandler(DPS_Publication* pub, uint8_t* payload, size_t len)
 %typemap(in) DPS_AcknowledgementHandler {
     if (!PyCallable_Check($input)) {
         PyErr_SetString(PyExc_TypeError,"not a function");
-        return NULL;
+        SWIG_fail;
     }
     if (arg1) {
         DPS_Status ret = DPS_SetPublicationData(arg1, $input);
         if (ret != DPS_OK) {
             PyErr_SetString(PyExc_EnvironmentError,"unable to set callback");
-            return NULL;
+            SWIG_fail;
         }
         Py_INCREF($input);
         $1 = AckHandler;
@@ -284,13 +289,13 @@ static void _ClearPubHandler(DPS_Subscription* sub)
 %typemap(in) DPS_PublicationHandler {
     if (!PyCallable_Check($input)) {
         PyErr_SetString(PyExc_TypeError,"not a function");
-        return NULL;
+        SWIG_fail;
     }
     if (arg1) {
         DPS_Status ret = DPS_SetSubscriptionData(arg1, $input);
         if (ret != DPS_OK) {
             PyErr_SetString(PyExc_EnvironmentError,"unable to set callback");
-            return NULL;
+            SWIG_fail;
         }
         Py_INCREF($input);
         $1 = PubHandler;
@@ -366,7 +371,7 @@ DPS_Status NodeHandler(DPS_Node* node, DPS_UUID* kid, uint8_t* key, size_t keyLe
 %typemap(in) DPS_KeyRequestCallback {
     if (!PyCallable_Check($input)) {
         PyErr_SetString(PyExc_TypeError,"not a function");
-        return NULL;
+        SWIG_fail;
     }
     Py_INCREF($input);
     $1 = NodeHandler;
@@ -375,12 +380,15 @@ DPS_Status NodeHandler(DPS_Node* node, DPS_UUID* kid, uint8_t* key, size_t keyLe
 %inline %{
 static void _SetNodeHandler(PyObject* cb, PyObject* val)
 {
-    void* argp = 0 ;
-    DPS_Node* res = 0 ;
+    void* argp = 0;
+    int res1;
 
-    SWIG_ConvertPtr(val, &argp, SWIGTYPE_p__DPS_Node, 0 |  0 );
-    res = (DPS_Node*)argp;
-    DPS_SetNodeData(res, cb);
+    res1 = SWIG_ConvertPtr(val, &argp, SWIGTYPE_p__DPS_Node, 0 |  0 );
+    if (SWIG_IsOK(res1)) {
+        DPS_SetNodeData((DPS_Node*)argp, cb);
+    } else {
+        PyErr_SetString(PyExc_ValueError,"invalid dps.Node");
+    }
 }
 %}
 
@@ -420,13 +428,13 @@ static PyObject* UUIDToPyString(const DPS_UUID* uuid)
 
     if (!PyList_Check($input)) {
         PyErr_SetString(PyExc_TypeError,"DPS_UUID: no list\n");
-        return NULL;
+        SWIG_fail;
     }
 
     DPS_UUID* uuid = (DPS_UUID*)malloc(sizeof(DPS_UUID));
     if (!uuid) {
         PyErr_SetString(PyExc_TypeError,"DPS_UUID: no memory\n");
-        return NULL;
+        SWIG_fail;
     }
     for(j = 0, i = 0; j < PyList_Size($input); ++j) {
         PyObject *pValue = PyList_GetItem($input, j);

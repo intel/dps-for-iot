@@ -32,9 +32,9 @@ static uint8_t packed[10000];
 
 #define NUM_TESTS 13
 
-static void InitBitVector(DPS_BitVector* bf, size_t len, int testCase)
+static DPS_Status InitBitVector(DPS_BitVector* bf, size_t len, int testCase)
 {
-    DPS_Status ret;
+    DPS_Status ret = DPS_OK;
     size_t i;
     uint8_t* data;
 
@@ -90,45 +90,46 @@ static void InitBitVector(DPS_BitVector* bf, size_t len, int testCase)
         ret = DPS_AddTopic(bf, "a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q.r.s.t.u.v", ".", DPS_PubTopic);
         break;
     case 11:
-        ret = DPS_AddTopic(bf, "foo.bar.y", ".", DPS_PubTopic);
-        ret = DPS_AddTopic(bf, "red", "/", DPS_PubTopic);
-        ret = DPS_AddTopic(bf, "blue", "/", DPS_PubTopic);
-        ret = DPS_AddTopic(bf, "green", "/", DPS_PubTopic);
-        ret = DPS_AddTopic(bf, "foo", "/", DPS_PubTopic);
-        ret = DPS_AddTopic(bf, "foo/bar", "/", DPS_PubTopic);
-        ret = DPS_AddTopic(bf, "foo/baz", "/", DPS_PubTopic);
-        ret = DPS_AddTopic(bf, "foo/baz/gorn", "/", DPS_PubTopic);
-        ret = DPS_AddTopic(bf, "foo/baz/gorn.x", "/.", DPS_PubTopic);
-        ret = DPS_AddTopic(bf, "foo/baz/gorn.y", "/.", DPS_PubTopic);
-        ret = DPS_AddTopic(bf, "foo/baz/gorn.z", "/.", DPS_PubTopic);
-        ret = DPS_AddTopic(bf, "razz/baz/x=1", "/=", DPS_PubTopic);
-        ret = DPS_AddTopic(bf, "razz/baz/x=2", "/=", DPS_PubTopic);
-        ret = DPS_AddTopic(bf, "razz/baz/x=3", "/=", DPS_PubTopic);
-        ret = DPS_AddTopic(bf, "razz/baz/x=4", "/=", DPS_PubTopic);
-        ret = DPS_AddTopic(bf, "razz/baz/x=5", "/=", DPS_PubTopic);
+        ret |= DPS_AddTopic(bf, "foo.bar.y", ".", DPS_PubTopic);
+        ret |= DPS_AddTopic(bf, "red", "/", DPS_PubTopic);
+        ret |= DPS_AddTopic(bf, "blue", "/", DPS_PubTopic);
+        ret |= DPS_AddTopic(bf, "green", "/", DPS_PubTopic);
+        ret |= DPS_AddTopic(bf, "foo", "/", DPS_PubTopic);
+        ret |= DPS_AddTopic(bf, "foo/bar", "/", DPS_PubTopic);
+        ret |= DPS_AddTopic(bf, "foo/baz", "/", DPS_PubTopic);
+        ret |= DPS_AddTopic(bf, "foo/baz/gorn", "/", DPS_PubTopic);
+        ret |= DPS_AddTopic(bf, "foo/baz/gorn.x", "/.", DPS_PubTopic);
+        ret |= DPS_AddTopic(bf, "foo/baz/gorn.y", "/.", DPS_PubTopic);
+        ret |= DPS_AddTopic(bf, "foo/baz/gorn.z", "/.", DPS_PubTopic);
+        ret |= DPS_AddTopic(bf, "razz/baz/x=1", "/=", DPS_PubTopic);
+        ret |= DPS_AddTopic(bf, "razz/baz/x=2", "/=", DPS_PubTopic);
+        ret |= DPS_AddTopic(bf, "razz/baz/x=3", "/=", DPS_PubTopic);
+        ret |= DPS_AddTopic(bf, "razz/baz/x=4", "/=", DPS_PubTopic);
+        ret |= DPS_AddTopic(bf, "razz/baz/x=5", "/=", DPS_PubTopic);
         break;
     case 12:
-        ret = DPS_AddTopic(bf, "foo.bar.y", ".", DPS_SubTopic);
-        ret = DPS_AddTopic(bf, "red", "/", DPS_SubTopic);
-        ret = DPS_AddTopic(bf, "blue", "/", DPS_SubTopic);
-        ret = DPS_AddTopic(bf, "green", "/", DPS_SubTopic);
-        ret = DPS_AddTopic(bf, "foo", "/", DPS_SubTopic);
-        ret = DPS_AddTopic(bf, "foo/bar", "/", DPS_SubTopic);
-        ret = DPS_AddTopic(bf, "foo/baz", "/", DPS_SubTopic);
-        ret = DPS_AddTopic(bf, "foo/baz/gorn", "/", DPS_SubTopic);
-        ret = DPS_AddTopic(bf, "foo/baz/gorn.x", "/.", DPS_SubTopic);
-        ret = DPS_AddTopic(bf, "foo/baz/gorn.y", "/.", DPS_SubTopic);
-        ret = DPS_AddTopic(bf, "foo/baz/gorn.z", "/.", DPS_SubTopic);
-        ret = DPS_AddTopic(bf, "razz/baz/x=1", "/=", DPS_SubTopic);
-        ret = DPS_AddTopic(bf, "razz/baz/x=2", "/=", DPS_SubTopic);
-        ret = DPS_AddTopic(bf, "razz/baz/x=3", "/=", DPS_SubTopic);
-        ret = DPS_AddTopic(bf, "razz/baz/x=4", "/=", DPS_SubTopic);
-        ret = DPS_AddTopic(bf, "razz/baz/x=5", "/=", DPS_SubTopic);
+        ret |= DPS_AddTopic(bf, "foo.bar.y", ".", DPS_SubTopic);
+        ret |= DPS_AddTopic(bf, "red", "/", DPS_SubTopic);
+        ret |= DPS_AddTopic(bf, "blue", "/", DPS_SubTopic);
+        ret |= DPS_AddTopic(bf, "green", "/", DPS_SubTopic);
+        ret |= DPS_AddTopic(bf, "foo", "/", DPS_SubTopic);
+        ret |= DPS_AddTopic(bf, "foo/bar", "/", DPS_SubTopic);
+        ret |= DPS_AddTopic(bf, "foo/baz", "/", DPS_SubTopic);
+        ret |= DPS_AddTopic(bf, "foo/baz/gorn", "/", DPS_SubTopic);
+        ret |= DPS_AddTopic(bf, "foo/baz/gorn.x", "/.", DPS_SubTopic);
+        ret |= DPS_AddTopic(bf, "foo/baz/gorn.y", "/.", DPS_SubTopic);
+        ret |= DPS_AddTopic(bf, "foo/baz/gorn.z", "/.", DPS_SubTopic);
+        ret |= DPS_AddTopic(bf, "razz/baz/x=1", "/=", DPS_SubTopic);
+        ret |= DPS_AddTopic(bf, "razz/baz/x=2", "/=", DPS_SubTopic);
+        ret |= DPS_AddTopic(bf, "razz/baz/x=3", "/=", DPS_SubTopic);
+        ret |= DPS_AddTopic(bf, "razz/baz/x=4", "/=", DPS_SubTopic);
+        ret |= DPS_AddTopic(bf, "razz/baz/x=5", "/=", DPS_SubTopic);
         break;
     }
     assert(ret == DPS_OK);
     free(data);
     DPS_BitVectorDump(bf, 1);
+    return ret;
 }
 
 

@@ -37,6 +37,7 @@ const char separators[] = "/.";
 
 static int BloomMatch(char** pubs, size_t numPubs, char** subs, size_t numSubs, int noWildCard)
 {
+    int cmp;
     DPS_BitVector* pubBf = DPS_BitVectorAlloc();
     DPS_BitVector* subBf = DPS_BitVectorAlloc();
 
@@ -48,7 +49,12 @@ static int BloomMatch(char** pubs, size_t numPubs, char** subs, size_t numSubs, 
     while (numSubs--) {
         DPS_AddTopic(subBf, *subs++, separators, DPS_SubTopic);
     }
-    return DPS_BitVectorIncludes(pubBf, subBf);
+    cmp = DPS_BitVectorIncludes(pubBf, subBf);
+
+    DPS_BitVectorFree(pubBf);
+    DPS_BitVectorFree(subBf);
+
+    return cmp;
 }
 
 int main(int argc, char** argv)
@@ -108,7 +114,7 @@ int main(int argc, char** argv)
         }
         goto Usage;
     }
-    if (!numPubs || !numPubs) {
+    if (!numPubs || !numSubs) {
         goto Usage;
     }
     ret = DPS_MatchTopicList(pubs, numPubs, subs, numSubs, separators, noWildCard, &match);

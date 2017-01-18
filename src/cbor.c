@@ -274,7 +274,7 @@ DPS_Status CBOR_EndWrapBytes(DPS_TxBuffer* buffer, uint8_t* wrapPtr)
 
 DPS_Status CBOR_EncodeString(DPS_TxBuffer* buffer, const char* str)
 {
-    size_t len = strlen(str) + 1;
+    size_t len = str ? strlen(str) + 1 : 0;
     DPS_Status ret = EncodeUint(buffer, (uint32_t)len, CBOR_STRING);
     if (ret == DPS_OK) {
         if (DPS_TxBufferSpace(buffer) < len) {
@@ -448,7 +448,7 @@ DPS_Status CBOR_DecodeString(DPS_RxBuffer* buffer, char** data, size_t* size)
         if ((maj != CBOR_STRING) || (len > DPS_RxBufferAvail(buffer))) {
             ret = DPS_ERR_INVALID;
         } else {
-            *data = (char*)buffer->rxPos;
+            *data = len ? (char*)buffer->rxPos : NULL;
             *size = len;
             buffer->rxPos += len;
         }

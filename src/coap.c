@@ -40,7 +40,7 @@ static int ParseOpt(const uint8_t* buf, size_t bufLen, int prevOpt, CoAP_Option*
     if (bufLen < 2) {
         return -1;
     }
-    if (dFlag == 0xF || dFlag == 0xF) {
+    if (dFlag == 0xF || lFlag == 0xF) {
         return 0;
     }
     buf += 1;
@@ -94,7 +94,7 @@ static size_t ParseLengthsTCP(const uint8_t* buffer, size_t* extLen, size_t* tok
         return 3;
     }
     if (l == 15) {
-        *extLen = 65805 + (buffer[1] << 24 | buffer[2] << 16 | buffer[3] << 8 | buffer[4]);
+        *extLen = 65805ul + (uint32_t)(buffer[1] << 24 | buffer[2] << 16 | buffer[3] << 8 | buffer[4]);
         return 4;
     }
     *extLen = l;
@@ -185,7 +185,7 @@ DPS_Status CoAP_Parse(int protocol, const uint8_t* buffer, size_t bufLen, CoAP_P
     p = buffer;
     len = bufLen;
     while (len) {
-        size_t optSize = ParseOpt(p, len, prevOptId, &coap->opts[coap->numOpts]);
+        int optSize = ParseOpt(p, len, prevOptId, &coap->opts[coap->numOpts]);
         if (optSize == 0) {
             break;
         }
@@ -222,8 +222,8 @@ DPS_Status CoAP_Compose(int protocol, uint8_t code, const CoAP_Option* opts, siz
 {
     static uint16_t msgId = 1;
     size_t i;
-    uint8_t tokenLen = 0; /* TODO - not currently supporting tokens */
-    uint8_t* token = NULL;
+    char* token = "";
+    uint8_t tokenLen = strlen(token);
     size_t optLen = 0;
     uint8_t optIdLast = 0;
     DPS_Status ret = DPS_OK;

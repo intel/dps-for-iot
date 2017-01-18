@@ -129,10 +129,12 @@ static DPS_Status MulticastRxInit(DPS_MulticastReceiver* receiver)
      */
     if (receiver->ipVersions & USE_IPV6) {
         ret = uv_udp_init(uv, &receiver->udp6Rx);
-        assert(ret == 0);
-        ret = uv_ip6_addr("::", COAP_UDP_PORT, (struct sockaddr_in6*)&recv_addr);
-        assert(ret == 0);
-        ret = uv_udp_bind(&receiver->udp6Rx, (const struct sockaddr *)&recv_addr, UV_UDP_REUSEADDR);
+        if (ret == 0) {
+            ret = uv_ip6_addr("::", COAP_UDP_PORT, (struct sockaddr_in6*)&recv_addr);
+        }
+        if (ret == 0) {
+            ret = uv_udp_bind(&receiver->udp6Rx, (const struct sockaddr *)&recv_addr, UV_UDP_REUSEADDR);
+        }
         if (ret) {
             DPS_ERRPRINT("UDP IPv6 bind failed %s\n", uv_err_name(ret));
             return DPS_ERR_NETWORK;
@@ -267,9 +269,12 @@ static DPS_Status MulticastTxInit(DPS_MulticastSender* sender)
         }
         sock->family = ifn->address.address4.sin_family;
         if (sock->family == AF_INET6) {
-            uv_ip6_addr("::", 0, (struct sockaddr_in6*)&addr);
+            ret = uv_ip6_addr("::", 0, (struct sockaddr_in6*)&addr);
         } else {
-            uv_ip4_addr("0.0.0.0", 0, (struct sockaddr_in*)&addr);
+            ret = uv_ip4_addr("0.0.0.0", 0, (struct sockaddr_in*)&addr);
+        }
+        if (ret) {
+            continue;
         }
         /*
          * Initialize udp Tx socket
@@ -283,8 +288,8 @@ static DPS_Status MulticastTxInit(DPS_MulticastSender* sender)
              * Append interface name to the interface address for IPv6
              */
             uv_ip6_name(&ifn->address.address6, ifaddr, sizeof(ifaddr));
-            strncat(ifaddr, "%", sizeof(ifaddr));
-            strncat(ifaddr, ifn->name, sizeof(ifaddr));
+            strncat(ifaddr, "%", sizeof(ifaddr) - strlen(ifaddr));
+            strncat(ifaddr, ifn->name, sizeof(ifaddr) - strlen(ifaddr));
         } else {
             /*
              * Just the address for IPV4
@@ -367,7 +372,9 @@ DPS_Status DPS_MulticastSend(DPS_MulticastSender* sender, uv_buf_t* bufs, size_t
         } else {
             ret = uv_ip4_addr(COAP_MCAST_ALL_NODES_LINK_LOCAL_4, COAP_UDP_PORT, (struct sockaddr_in*)&addr);
         }
-        assert(!ret);
+        if (ret) {
+            continue;
+        }
         /*
          * Synchronous send
          */

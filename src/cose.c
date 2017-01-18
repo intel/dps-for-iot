@@ -93,11 +93,12 @@ static DPS_Status EncodeUnprotectedMap(DPS_TxBuffer* buf, DPS_UUID* kid)
      * { 5:nonce }
      */
     ret = CBOR_EncodeMap(buf, 1);
-    assert(ret == DPS_OK);
-    ret = CBOR_EncodeInt8(buf, COSE_KEY_KID);
-    assert(ret == DPS_OK);
-    ret = CBOR_EncodeBytes(buf, (uint8_t*)kid, sizeof(DPS_UUID));
-    assert(ret == DPS_OK);
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeInt8(buf, COSE_KEY_KID);
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeBytes(buf, (uint8_t*)kid, sizeof(DPS_UUID));
+    }
     return ret;
 }
 
@@ -110,15 +111,18 @@ static DPS_Status EncodeProtectedMap(DPS_TxBuffer* buf, uint8_t alg)
      * Map is wrapped in a bytstream
      */
     ret = CBOR_StartWrapBytes(buf, 3, &wrapPtr);
-    assert(ret == DPS_OK);
-    ret = CBOR_EncodeMap(buf, 1);
-    assert(ret == DPS_OK);
-    ret = CBOR_EncodeInt8(buf, COSE_KEY_KTY);
-    assert(ret == DPS_OK);
-    ret = CBOR_EncodeInt8(buf, alg);
-    assert(ret == DPS_OK);
-    ret = CBOR_EndWrapBytes(buf, wrapPtr);
-    assert(ret == DPS_OK);
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeMap(buf, 1);
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeInt8(buf, COSE_KEY_KTY);
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeInt8(buf, alg);
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_EndWrapBytes(buf, wrapPtr);
+    }
     return ret;
 }
 
@@ -128,30 +132,34 @@ static DPS_Status EncodeAAD(uint8_t alg, DPS_TxBuffer* buf, uint8_t* aad, size_t
     size_t bufSize = sizeof(ENCRYPT0) + aadLen + HEADROOM;
 
     ret = DPS_TxBufferInit(buf, NULL, bufSize);
-    if (ret != DPS_OK) {
-        return ret;
+    if (ret == DPS_OK) {
+        /*
+         * [ context: "Encrypt0", protected: map external-aad: bstr ]
+         */
+        ret = CBOR_EncodeArray(buf, 3);
     }
-    /*
-     * [ context: "Encrypt0", protected: map external-aad: bstr ]
-     */
-    ret = CBOR_EncodeArray(buf, 3);
-    assert(ret == DPS_OK);
-    /*
-     * COSE spec does not expect a trailing NUL
-     */
-    ret = CBOR_EncodeLength(buf, sizeof(ENCRYPT0), CBOR_STRING);
-    assert(ret == DPS_OK);
-    ret = CBOR_Copy(buf, ENCRYPT0, sizeof(ENCRYPT0));
-    assert(ret == DPS_OK);
-    /*
-     * { 1:algorithm }
-     */
-    ret = EncodeProtectedMap(buf, alg);
-    assert(ret == DPS_OK);
-    /*
-     * external aad
-     */
-    return CBOR_EncodeBytes(buf, aad, aadLen);
+    if (ret == DPS_OK) {
+        /*
+         * COSE spec does not expect a trailing NUL
+         */
+        ret = CBOR_EncodeLength(buf, sizeof(ENCRYPT0), CBOR_STRING);
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_Copy(buf, ENCRYPT0, sizeof(ENCRYPT0));
+    }
+    if (ret == DPS_OK) {
+        /*
+         * { 1:algorithm }
+         */
+        ret = EncodeProtectedMap(buf, alg);
+    }
+    if (ret == DPS_OK) {
+        /*
+         * external aad
+         */
+        ret = CBOR_EncodeBytes(buf, aad, aadLen);
+    }
+    return ret;
 }
 
 DPS_Status COSE_Encrypt(int8_t alg,

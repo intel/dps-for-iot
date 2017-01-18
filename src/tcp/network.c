@@ -453,6 +453,7 @@ static void OnOutgoingConnection(uv_connect_t *req, int status)
 
 DPS_Status DPS_NetSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf_t* bufs, size_t numBufs, DPS_NetSendComplete sendCompleteCB)
 {
+    DPS_Status ret;
     DPS_TxBuffer lenBuf;
     WriteRequest* wr;
     uv_handle_t* socket = NULL;
@@ -477,7 +478,10 @@ DPS_Status DPS_NetSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf
      * Write total message length
      */
     DPS_TxBufferInit(&lenBuf, wr->lenBuf, sizeof(wr->lenBuf));
-    CBOR_EncodeUint32(&lenBuf, len);
+    ret = CBOR_EncodeUint32(&lenBuf, len);
+    if (ret != DPS_OK) {
+        goto ErrExit;
+    }
     wr->bufs[0].base = (char*)wr->lenBuf;
     wr->bufs[0].len = DPS_TxBufferUsed(&lenBuf);
     /*
