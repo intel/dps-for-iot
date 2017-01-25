@@ -36,6 +36,7 @@
 #include "pub.h"
 #include "topics.h"
 #include "node.h"
+#include "compat.h"
 
 /*
  * Debug control for this module
@@ -114,14 +115,12 @@ DPS_Subscription* DPS_CreateSubscription(DPS_Node* node, const char** topics, si
      * Add the topics to the subscription
      */
     for (i = 0; i < numTopics; ++i) {
-        size_t len = strlen(topics[i]);
-        sub->topics[i] = malloc(len + 1);
+        sub->topics[i] = strndup(topics[i], DPS_MAX_TOPIC_STRLEN);
         if (!sub->topics[i]) {
             FreeSubscription(sub);
             return NULL;
         }
         ++sub->numTopics;
-        memcpy(sub->topics[i], topics[i], len + 1);
     }
     sub->node = node;
     return sub;

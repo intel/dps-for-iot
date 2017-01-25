@@ -23,6 +23,7 @@
 #ifndef _DPS_NODE_H
 #define _DPS_NODE_H
 
+#include <safe_lib.h>
 #include <dps/private/network.h>
 #include <uv.h>
 #include "bitvec.h"
@@ -40,9 +41,10 @@ extern "C" {
 #define DPS_MSG_TYPE_SUB  2
 #define DPS_MSG_TYPE_ACK  3
 
-#define DPS_NODE_RUNNING      0
-#define DPS_NODE_STOPPING     1
-#define DPS_NODE_STOPPED      2
+#define DPS_NODE_CREATED      0
+#define DPS_NODE_RUNNING      1
+#define DPS_NODE_STOPPING     2
+#define DPS_NODE_STOPPED      3
 
 typedef struct _RemoteNode RemoteNode;
 

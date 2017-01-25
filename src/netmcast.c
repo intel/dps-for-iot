@@ -143,7 +143,7 @@ static DPS_Status MulticastRxInit(DPS_MulticastReceiver* receiver)
     uv_interface_addresses(&ifsAddrs, &numIfs);
     for (i = 0; i < numIfs; ++i) {
         uv_interface_address_t* ifn = &ifsAddrs[i];
-        char addr[INET6_ADDRSTRLEN];
+        char addr[INET6_ADDRSTRLEN + 1];
         /*
          * Filter out interfaces we are not interested in
          */
@@ -232,6 +232,8 @@ void DPS_MulticastStopReceive(DPS_MulticastReceiver* receiver)
  * Send path
  ****************************************************/
 
+#define MAX_INTERFACE_NAME_LEN   64
+
 static DPS_Status MulticastTxInit(DPS_MulticastSender* sender)
 {
     int ret;
@@ -262,7 +264,7 @@ static DPS_Status MulticastTxInit(DPS_MulticastSender* sender)
      */
     for (i = 0; i < numIfs; ++i) {
         struct sockaddr_storage addr;
-        char ifaddr[INET6_ADDRSTRLEN + 32];
+        char ifaddr[INET6_ADDRSTRLEN + MAX_INTERFACE_NAME_LEN + 2];
         uv_interface_address_t* ifn = &ifsAddrs[i];
         if (!UseInterface(sender->ipVersions, ifn)) {
             continue;
@@ -284,17 +286,24 @@ static DPS_Status MulticastTxInit(DPS_MulticastSender* sender)
         ret = uv_udp_bind(&sock->udp, (const struct sockaddr *)&addr, 0);
         assert(ret == 0);
         if (sock->family == AF_INET6) {
+            char name[INET6_ADDRSTRLEN + 1];
             /*
              * Append interface name to the interface address for IPv6
              */
-            uv_ip6_name(&ifn->address.address6, ifaddr, sizeof(ifaddr));
-            strncat(ifaddr, "%", sizeof(ifaddr) - strlen(ifaddr));
-            strncat(ifaddr, ifn->name, sizeof(ifaddr) - strlen(ifaddr));
+            ret = uv_ip6_name(&ifn->address.address6, name, sizeof(name));
+            if (ret == 0) {
+                name[sizeof(name) - 1] = 0;
+                snprintf(ifaddr, sizeof(ifaddr), "%s%%%s", name, ifn->name);
+            }
         } else {
             /*
              * Just the address for IPV4
              */
-            uv_ip4_name(&ifn->address.address4, ifaddr, sizeof(ifaddr));
+            ret = uv_ip4_name(&ifn->address.address4, ifaddr, sizeof(ifaddr));
+        }
+        if (ret) {
+            DPS_ERRPRINT("Failed to get interface name: %s\n", uv_err_name(ret));
+            continue;
         }
         DPS_DBGPRINT("Setting interface %s [%s]\n", ifn->name, ifaddr);
         ret = uv_udp_set_multicast_interface(&sock->udp, ifaddr);

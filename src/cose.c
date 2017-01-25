@@ -293,7 +293,7 @@ static DPS_Status DecodeUnprotectedMap(DPS_RxBuffer* buf, DPS_UUID* kid)
         if (len != sizeof(DPS_UUID)) {
             return DPS_ERR_INVALID;
         }
-        memcpy(kid, data, len);
+        *kid = *((DPS_UUID*)data);
     }
     return ret;
 }

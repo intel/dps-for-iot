@@ -1,9 +1,8 @@
-Import(['env', 'ext_deps'])
+Import(['env', 'ext_libs'])
 
 platform = env['PLATFORM']
 
-tclib = ext_deps[1]
-env['UV_LIBS'].append(tclib)
+env['UV_LIBS'].append(ext_libs)
 
 # Additional warning for the lib object files
 
@@ -46,7 +45,7 @@ if env['udp'] == True:
 else:
     srcs.append('src/tcp/network.c')
 
-Depends(srcs, ext_deps)
+Depends(srcs, ext_libs)
 
 objs = libenv.Object(srcs)
 
@@ -76,7 +75,7 @@ ns3srcs = ['src/bitvec.c',
 
 if platform == 'posix':
     ns3shobjs = libenv.SharedObject(ns3srcs)
-    ns3shlib = libenv.SharedLibrary('lib/dps_ns3', ns3shobjs, LIBS = [tclib])
+    ns3shlib = libenv.SharedLibrary('lib/dps_ns3', ns3shobjs, LIBS = ext_libs)
     libenv.Install('#/build/dist/lib', ns3shlib)
 
 # Using SWIG to build the python wrapper

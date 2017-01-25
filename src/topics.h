@@ -31,6 +31,11 @@ extern "C" {
 #endif
 
 /**
+ * Maximum length for a topic string exluding NUL terminator
+ */
+#define DPS_MAX_TOPIC_STRLEN 4096
+
+/**
  * Enumeration for Pub and Sub topicTypes
  *
  * DPS_SubTopic encode the bloom filter bits for a subscription

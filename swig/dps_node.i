@@ -266,7 +266,7 @@ static v8::Handle<v8::Value> UUIDToString(DPS_UUID* uuid)
     v8::Handle<v8::Value> val;
     const char* uuidStr = DPS_UUIDToString(uuid);
     if (uuidStr) {
-        val = SWIGV8_STRING_NEW2(uuidStr, strlen(uuidStr));
+        val = SWIGV8_STRING_NEW2(uuidStr, strnlen(uuidStr, 2 * sizeof(DPS_UUID)));
     }
     return val;
 }

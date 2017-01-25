@@ -2,47 +2,69 @@ Import(['extEnv'])
 
 platform = extEnv['PLATFORM']
 
-tcgit = extEnv.Command('./tinycrypt/.git', None, 'git clone https://github.com/01org/tinycrypt.git ext/tinycrypt')
+# Pull down tinycrypt from github and build the library
 
-extEnv['CFLAGS'] = ''
+tcEnv = extEnv.Clone()
+tcgit = tcEnv.Command('./tinycrypt/.git', None, 'git clone https://github.com/01org/tinycrypt.git ext/tinycrypt')
 
-if extEnv['PLATFORM'] == 'win32':
+tcEnv['CFLAGS'] = ''
 
-    extEnv.Append(CPPDEFINES = ['_CRT_SECURE_NO_WARNINGS'])
-    extEnv.Append(CFLAGS = ['/J', '/W3', '/nologo'])
-    extEnv.Append(CFLAGS = ['/Gy', '/Ot', '/GF', '/MT'])
-
-elif extEnv['PLATFORM'] == 'posix':
-
-    extEnv.Append(CFLAGS = ['-Os', '-fPIC', '-std=c99', '-Wall', '-Wextra',  '-D_ISOC99_SOURCE', '-MMD'])
-
+if platform == 'win32':
+    tcEnv.Append(CPPDEFINES = ['_CRT_SECURE_NO_WARNINGS'])
+    tcEnv.Append(CFLAGS = ['/J', '/W3', '/nologo'])
+    tcEnv.Append(CFLAGS = ['/Gy', '/Ot', '/GF', '/MT'])
+elif tcEnv['PLATFORM'] == 'posix':
+    tcEnv.Append(CFLAGS = ['-Os', '-fPIC', '-std=c99', '-Wall', '-Wextra',  '-D_ISOC99_SOURCE', '-MMD'])
 else:
     print 'Unsupported system'
     exit()
 
-extEnv['CPPPATH'] = './tinycrypt/lib/include'
+tcEnv['CPPPATH'] = './tinycrypt/lib/include'
 
-srcs = ['./tinycrypt/lib/source/aes_decrypt.c',
-        './tinycrypt/lib/source/aes_encrypt.c',
-        './tinycrypt/lib/source/cbc_mode.c',
-        './tinycrypt/lib/source/ccm_mode.c',
-        './tinycrypt/lib/source/cmac_mode.c',
-        './tinycrypt/lib/source/ctr_mode.c',
-        './tinycrypt/lib/source/ctr_prng.c',
-        './tinycrypt/lib/source/ecc.c',
-        './tinycrypt/lib/source/ecc_dh.c',
-        './tinycrypt/lib/source/ecc_dsa.c',
-        './tinycrypt/lib/source/sha256.c',
-        './tinycrypt/lib/source/utils.c']
+tcsrcs = ['./tinycrypt/lib/source/aes_encrypt.c',
+          './tinycrypt/lib/source/ccm_mode.c',
+          './tinycrypt/lib/source/sha256.c',
+          './tinycrypt/lib/source/utils.c']
 
+tclib = tcEnv.Library('lib/libtinycrypt', tcsrcs)
 
-if extEnv['PLATFORM'] != 'win32':
-    # This file doesn't currently compile on Windows
-    srcs.append(['./tinycrypt/lib/source/hmac.c'])
-    # This file depends on hmac.c
-    srcs.append(['./tinycrypt/lib/source/hmac_prng.c'])
+Depends(tcsrcs, tcgit)
 
-lib = extEnv.Library('lib/libtinycrypt', srcs)
-shlib = extEnv.SharedLibrary('libsh/libtinycrypt', srcs)
+# Pull down safestringlib from github and build the library
 
-Return(['tcgit', 'lib', 'shlib'])
+scEnv = extEnv.Clone()
+scgit = scEnv.Command('./safestring/.git', None, 'git clone https://github.com/01org/safestringlib.git ext/safestring')
+
+if scEnv['PLATFORM'] == 'win32':
+    scEnv.Append(CPPDEFINES = ['_CRT_SECURE_NO_WARNINGS'])
+    scEnv.Append(CPPDEFINES = ['__STDC_WANT_SECURE_LIB__=0'])
+    scEnv.Append(CFLAGS = ['/J', '/W3', '/nologo'])
+    scEnv.Append(CFLAGS = ['/Gy', '/Ot', '/GF', '/MT'])
+elif scEnv['PLATFORM'] == 'posix':
+    scEnv.Append(CPPDEFINES = ['_ISCO99_SOURCE'])
+    scEnv.Append(CFLAGS = ['-Os', '-fPIC', '-std=c99', '-Wall', '-Wextra', '-Wno-unused-parameter', '-MMD'])
+else:
+    print 'Unsupported system'
+    exit()
+
+scsrcs = ['./safestring/safeclib/ignore_handler_s.c',
+          './safestring/safeclib/safe_mem_constraint.c',
+          './safestring/safeclib/safe_str_constraint.c',
+          './safestring/safeclib/memcpy_s.c',
+          './safestring/safeclib/memmove_s.c',
+          './safestring/safeclib/memset_s.c',
+          './safestring/safeclib/memzero_s.c',
+          './safestring/safeclib/strcmp_s.c',
+          './safestring/safeclib/strncpy_s.c',
+          './safestring/safeclib/strnlen_s.c',
+          './safestring/safeclib/mem_primitives_lib.c']
+
+scEnv['CPPPATH'] = './safestring/include'
+
+sclib = scEnv.Library('lib/safestring', scsrcs)
+
+Depends(scsrcs, scgit)
+
+# Return libraries 
+
+Return (['tclib', 'sclib'])

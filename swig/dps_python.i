@@ -4,6 +4,7 @@
 #include <dps/dps.h>
 #include <dps/dbg.h>
 #include <dps/synchronous.h>
+#include <safe_lib.h>
 /*
  * Debug control for this module
  */
@@ -105,7 +106,7 @@ static uint8_t* AllocPayload(PyObject* py, size_t* len)
     if (PyString_Check(py)) {
         Py_ssize_t sz = PyString_Size(py);
         str = malloc(sz + 1);
-        memcpy(str, PyString_AsString(py), sz);
+        memcpy_s(str, sz, PyString_AsString(py), sz);
         str[sz] = 0;
         *len = (size_t)sz;
     } else {

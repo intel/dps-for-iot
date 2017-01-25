@@ -204,7 +204,7 @@ static void OnData(uv_stream_t* socket, ssize_t nread, const uv_buf_t* buf)
                  * Copy message bytes if any
                  */
                 cn->readLen = DPS_RxBufferAvail(&lenBuf);
-                memcpy(cn->msgBuf, lenBuf.rxPos, cn->readLen);
+                memcpy_s(cn->msgBuf, msgLen, lenBuf.rxPos, cn->readLen);
             }
         }
         if (ret == DPS_OK) {
@@ -487,7 +487,9 @@ DPS_Status DPS_NetSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf
     /*
      * Copy other uvbufs into the write request
      */
-    memcpy(wr->bufs + 1, bufs, numBufs * sizeof(uv_buf_t));
+    for (i = 0; i < numBufs; ++i) {
+        wr->bufs[i + 1] = bufs[i];
+    }
     wr->numBufs = numBufs + 1;
     wr->onSendComplete = sendCompleteCB;
     wr->appCtx = appCtx;

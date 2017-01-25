@@ -91,7 +91,8 @@ static DPS_Status RegisterAndJoin(DPS_Node* node, const char* host, uint16_t por
         goto Exit;
     }
     if (regs->count == 0) {
-        return DPS_ERR_NO_ROUTE;
+        ret = DPS_ERR_NO_ROUTE;
+        goto Exit;
     }
     remoteAddr = DPS_CreateAddress();
     ret = DPS_Registration_LinkToSyn(node, regs, remoteAddr);

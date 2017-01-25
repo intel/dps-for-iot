@@ -838,7 +838,11 @@ DPS_Status DPS_InitPublication(DPS_Publication* pub, const char** topics, size_t
         }
         if (ret == DPS_OK) {
             for (i = 0; i < numTopics; ++i) {
-                uint64_t len = strlen(topics[i]) + 1;
+                uint64_t len = strnlen(topics[i], CBOR_MAX_STRING_LEN) + 1;
+                if (len > CBOR_MAX_STRING_LEN) {
+                    ret = DPS_ERR_OVERFLOW;
+                    break;
+                }
                 ret = CBOR_EncodeLength(&pub->topicsBuf, len, CBOR_STRING);
                 if (ret != DPS_OK) {
                     break;

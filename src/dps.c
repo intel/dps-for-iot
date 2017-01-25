@@ -165,10 +165,9 @@ DPS_Status DPS_TxBufferInit(DPS_TxBuffer* buffer, uint8_t* storage, size_t size)
 
 DPS_Status DPS_TxBufferAppend(DPS_TxBuffer* buffer, const uint8_t* data, size_t len)
 {
-    if (DPS_TxBufferSpace(buffer) < len) {
+    if (memcpy_s(buffer->txPos, DPS_TxBufferSpace(buffer), data, len) != EOK) {
         return DPS_ERR_RESOURCES;
     }
-    memcpy(buffer->txPos, data, len);
     buffer->txPos += len;
     return DPS_OK;
 }
@@ -817,8 +816,6 @@ static DPS_Status OnNetReceive(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Status s
 
 static void StopNode(DPS_Node* node)
 {
-    DPS_LockNode(node);
-
     /*
      * Indicates the node is no longer running
      */
@@ -871,6 +868,21 @@ static void StopNode(DPS_Node* node)
 
     uv_loop_close(node->loop);
     free(node->loop);
+    node->loop = NULL;
+}
+
+static void NodeRun(void* arg)
+{
+    int r;
+    DPS_Node* node = (DPS_Node*)arg;
+    uv_thread_t thisThread = node->thread;
+
+    uv_run(node->loop, UV_RUN_DEFAULT);
+
+    DPS_DBGPRINT("Stopping node\n");
+
+    DPS_LockNode(node);
+    StopNode(node);
     /*
      * If we got here before the application called DPS_DestroyNode() we cannot free the node now,
      * it will be freed when DPS_DestroyNode() is called.
@@ -883,18 +895,6 @@ static void StopNode(DPS_Node* node)
     } else {
         DPS_UnlockNode(node);
     }
-}
-
-static void NodeRun(void* arg)
-{
-    int r;
-    DPS_Node* node = (DPS_Node*)arg;
-    uv_thread_t thisThread = node->thread;
-
-    uv_run(node->loop, UV_RUN_DEFAULT);
-
-    DPS_DBGPRINT("Stopping node\n");
-    StopNode(node);
 
     DPS_DBGPRINT("Exiting node thread\n");
 
@@ -926,9 +926,9 @@ DPS_Node* DPS_CreateNode(const char* separators, DPS_KeyRequestCallback keyReque
     }
     if (keyId) {
         node->isSecured = DPS_TRUE;
-        memcpy(&node->keyId, keyId, sizeof(DPS_UUID));
+        memcpy_s(&node->keyId, sizeof(DPS_UUID), keyId, sizeof(DPS_UUID));
     }
-    strncpy(node->separators, separators, sizeof(node->separators));
+    strncpy_s(node->separators, sizeof(node->separators), separators, sizeof(node->separators) - 1);
     node->keyRequestCB = keyRequestCB;
     return node;
 }
@@ -1019,11 +1019,14 @@ DPS_Status DPS_StartNode(DPS_Node* node, int mcast, int rxPort)
         ret = DPS_ERR_FAILURE;
         goto ErrExit;
     }
+    node->state = DPS_NODE_RUNNING;
     return DPS_OK;
 
 ErrExit:
 
+    DPS_LockNode(node);
     StopNode(node);
+    DPS_UnlockNode(node);
     return ret;
 
 }
@@ -1051,6 +1054,9 @@ uint16_t DPS_GetPortNumber(DPS_Node* node)
 static void StopNodeTask(DPS_Node* node)
 {
     DPS_DBGTRACE();
+    /*
+     * Stopping the loop will cleanly stop the node
+     */
     uv_stop(node->loop);
 }
 
@@ -1063,22 +1069,24 @@ DPS_Status DPS_DestroyNode(DPS_Node* node, DPS_OnNodeDestroyed cb, void* data)
     if (node->state == DPS_NODE_STOPPING) {
         return DPS_ERR_INVALID;
     }
-    if (!node->loop) {
-        return DPS_OK;
-    }
-    DPS_LockNode(node);
-    if (node->state == DPS_NODE_RUNNING) {
-        node->state = DPS_NODE_STOPPING;
-        node->onDestroyed = cb;
-        node->onDestroyedData = data;
-        node->tasks |= STOP_NODE_TASK;
-        uv_async_send(&node->bgHandler);
+    /*
+     * Node might be destroyed before it was started
+     */
+    if (node->state != DPS_NODE_CREATED) {
+        DPS_LockNode(node);
+        if (node->state == DPS_NODE_RUNNING) {
+            node->state = DPS_NODE_STOPPING;
+            node->onDestroyed = cb;
+            node->onDestroyedData = data;
+            node->tasks |= STOP_NODE_TASK;
+            uv_async_send(&node->bgHandler);
+            DPS_UnlockNode(node);
+            return DPS_OK;
+        }
         DPS_UnlockNode(node);
-        return DPS_OK;
+        assert(node->state == DPS_NODE_STOPPED);
+        uv_mutex_destroy(&node->nodeMutex);
     }
-    DPS_UnlockNode(node);
-    assert(node->state == DPS_NODE_STOPPED);
-    uv_mutex_destroy(&node->nodeMutex);
     free(node);
     return DPS_ERR_NODE_DESTROYED;
 }
@@ -1233,7 +1241,7 @@ void DPS_MakeNonce(const DPS_UUID* uuid, uint32_t seqNum, uint8_t msgType, uint8
     *p++ = (uint8_t)(seqNum >> 8);
     *p++ = (uint8_t)(seqNum >> 16);
     *p++ = (uint8_t)(seqNum >> 24);
-    memcpy(p, uuid, DPS_COSE_NONCE_SIZE - sizeof(uint32_t));
+    memcpy_s(p, DPS_COSE_NONCE_SIZE - sizeof(uint32_t), uuid, DPS_COSE_NONCE_SIZE - sizeof(uint32_t));
     /*
      * Adjust one bit so nonce for PUB's and ACK's for same pub id and sequence number are different
      */

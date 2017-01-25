@@ -32,6 +32,11 @@ extern "C" {
 #endif
 
 /*
+ * Maximum string length this implementation will encode or decode
+ */
+#define CBOR_MAX_STRING_LEN 2048
+
+/*
  * CBOR major types
  */
 #define CBOR_UINT   (0 << 5)

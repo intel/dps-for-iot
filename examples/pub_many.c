@@ -31,6 +31,7 @@
 #include <dps/event.h>
 
 #define MAX_TOPICS 64
+#define MAX_MSG_LEN 128
 
 static int pubCount = 1;
 static int ttl = 0;
@@ -182,7 +183,7 @@ int main(int argc, char** argv)
 
     nodeDestroyed = DPS_CreateEvent();
 
-    ret = DPS_Publish(pub, msg, msg ? strlen(msg) + 1 : 0, ttl);
+    ret = DPS_Publish(pub, msg, msg ? strnlen(msg, MAX_MSG_LEN) + 1 : 0, ttl);
     if (ret == DPS_OK) {
         DPS_PRINT("Pub UUID %s\n", DPS_UUIDToString(DPS_PublicationGetUUID(pub)));
     } else {

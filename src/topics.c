@@ -22,6 +22,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <safe_lib.h>
 #include <string.h>
 #include <dps/dbg.h>
 #include <dps/dps.h>
@@ -125,7 +126,11 @@ DPS_Status DPS_AddTopic(DPS_BitVector* bf, const char* topic, const char* separa
     if (!bf || !topic || !separators) {
         return DPS_ERR_NULL;
     }
-    tlen = strlen(topic);
+    tlen = strnlen(topic, DPS_MAX_TOPIC_STRLEN + 1);
+    if (tlen > DPS_MAX_TOPIC_STRLEN) {
+        DPS_ERRPRINT("Topic string too long\n");
+        return DPS_ERR_INVALID;
+    }
     if (strchr(separators, topic[0])) {
         DPS_ERRPRINT("Topic string cannot start with a separator\n");
         return DPS_ERR_INVALID;
@@ -157,7 +162,10 @@ DPS_Status DPS_AddTopic(DPS_BitVector* bf, const char* topic, const char* separa
         len = strcspn(tp, separators);
         if ((tp > wc) && (tp[0] != INFIX_WILDC || !tp[1])) {
             size_t sz = prefix + len;
-            memcpy(segment + prefix, tp, len);
+            if (memcpy_s(segment + prefix, tlen - prefix, tp, len) != EOK) {
+                ret = DPS_ERR_RESOURCES;
+                break;
+            }
             segment[sz] = tp[len];
             if (tp[len]) {
                 ++sz;
@@ -166,19 +174,21 @@ DPS_Status DPS_AddTopic(DPS_BitVector* bf, const char* topic, const char* separa
         }
         tp += len;
     }
-    if (topicType == DPS_PubTopic) {
-        if (prefix > 1) {
-            segment[prefix] = INFIX_WILDC;
-            DPS_BitVectorBloomInsert(bf, (uint8_t*)segment, prefix + 1);
-        }
-        while (prefix) {
-            segment[prefix] = FINAL_WILDC;
-            DPS_BitVectorBloomInsert(bf, (uint8_t*)segment, prefix + 1);
-            --prefix;
+    if (ret == DPS_OK) {
+        if (topicType == DPS_PubTopic) {
+            if (prefix > 1) {
+                segment[prefix] = INFIX_WILDC;
+                DPS_BitVectorBloomInsert(bf, (uint8_t*)segment, prefix + 1);
+            }
+            while (prefix) {
+                segment[prefix] = FINAL_WILDC;
+                DPS_BitVectorBloomInsert(bf, (uint8_t*)segment, prefix + 1);
+                --prefix;
+            }
         }
     }
     free(segment);
-    return DPS_OK;
+    return ret;
 }
 
 int DPS_MatchTopic(DPS_BitVector* bf, const char* topic, const char* separators)

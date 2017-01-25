@@ -303,7 +303,7 @@ DPS_Status DPS_DecodeAcknowledgment(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxB
             uvBuf.len = buffer->eod - buffer->base;
             uvBuf.base = malloc(uvBuf.len);
             if (uvBuf.base) {
-                memcpy(uvBuf.base, buffer->base, uvBuf.len);
+                memcpy_s(uvBuf.base, uvBuf.len, buffer->base, uvBuf.len);
                 ret = DPS_NetSend(node, NULL, &ackNode->ep, &uvBuf, 1, DPS_OnSendComplete);
                 if (ret != DPS_OK) {
                     DPS_SendFailed(node, &ackNode->ep.addr, &uvBuf, 1, ret);

@@ -21,6 +21,7 @@
  */
 
 #include <assert.h>
+#include <safe_lib.h>
 #include <string.h>
 #include <malloc.h>
 #include <uv.h>
@@ -31,10 +32,8 @@
 #include <dps/registration.h>
 #include <dps/private/network.h>
 #include <dps/private/cbor.h>
-
-#ifdef _WIN32
-#define strdup(s) _strdup(s)
-#endif
+#include "topics.h"
+#include "compat.h"
 
 /*
  * Debug control for this module
@@ -105,7 +104,7 @@ static DPS_Status EncodeAddr(DPS_TxBuffer* buf, struct sockaddr* addr, uint16_t 
 {
     int r;
     DPS_Status ret;
-    char txt[INET6_ADDRSTRLEN];
+    char txt[INET6_ADDRSTRLEN + 1];
 
     if (addr->sa_family == AF_INET6) {
         r  = uv_ip6_name((const struct sockaddr_in6*)addr, txt, sizeof(txt));
@@ -237,7 +236,11 @@ DPS_Status DPS_Registration_Put(DPS_Node* node, const char* host, uint16_t port,
     }
     regPut->cb = cb;
     regPut->data = data;
-    regPut->tenant = strdup(tenantString);
+    regPut->tenant = strndup(tenantString, DPS_MAX_TOPIC_STRLEN);
+    if (!regPut->tenant) {
+        ret = DPS_ERR_RESOURCES;
+        goto Exit;
+    }
     regPut->node = DPS_CreateNode("/", NULL, NULL);
     if (!regPut->node || !regPut->tenant) {
         ret = DPS_ERR_RESOURCES;
@@ -251,7 +254,7 @@ DPS_Status DPS_Registration_Put(DPS_Node* node, const char* host, uint16_t port,
         ret = BuildPutPayload(&regPut->payload, localPort);
         if (ret == DPS_OK) {
             char portStr[8];
-            sprintf(portStr, "%d", port);
+            snprintf(portStr, sizeof(portStr), "%d", port);
             ret = DPS_ResolveAddress(regPut->node, host, portStr, OnResolvePut, regPut);
         }
     }
@@ -459,7 +462,7 @@ DPS_Status DPS_Registration_Get(DPS_Node* node, const char* host, uint16_t port,
     regGet->data = data;
     regGet->regs = regs;
     regGet->regs->count = 0;
-    regGet->tenant = strdup(tenantString);
+    regGet->tenant = strndup(tenantString, DPS_MAX_TOPIC_STRLEN);
     if (!regGet->tenant) {
         ret = DPS_ERR_RESOURCES;
         goto Exit;
@@ -474,7 +477,7 @@ DPS_Status DPS_Registration_Get(DPS_Node* node, const char* host, uint16_t port,
         DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
     } else {
         char portStr[8];
-        sprintf(portStr, "%d", port);
+        snprintf(portStr, sizeof(portStr), "%d", port);
         ret = DPS_ResolveAddress(regGet->node, host, portStr, OnResolveGet, regGet);
     }
 
@@ -573,7 +576,7 @@ static int IsLocalAddr(DPS_NodeAddress* addr, uint16_t port)
             uv_interface_address_t* ifn = &ifsAddrs[i];
             if (!ifn->is_internal) {
                 DPS_NodeAddress a;
-                memcpy(&a.inaddr, &ifn->address, sizeof(ifn->address));
+                memcpy_s(&a.inaddr, sizeof(a.inaddr), &ifn->address, sizeof(ifn->address));
                 AddrSetPort(&a.inaddr, port);
                 if (DPS_SameAddr(addr, &a)) {
                     local = DPS_TRUE;
@@ -630,7 +633,7 @@ DPS_Status DPS_Registration_LinkTo(DPS_Node* node, DPS_RegistrationList* regs, D
     while (untried) {
         uint32_t r = DPS_Rand() % regs->count;
         if (regs->list[r].flags == 0) {
-            char portTxt[8];
+            char portStr[8];
             LinkTo* linkTo = malloc(sizeof(LinkTo));
 
             linkTo->cb = cb;
@@ -640,8 +643,8 @@ DPS_Status DPS_Registration_LinkTo(DPS_Node* node, DPS_RegistrationList* regs, D
 
             regs->list[r].flags = DPS_CANDIDATE_TRYING;
             DPS_DBGPRINT("Candidate %d TRYING\n", linkTo->candidate);
-            sprintf(portTxt, "%d", regs->list[r].port);
-            ret = DPS_ResolveAddress(node, regs->list[r].host, portTxt, OnResolve, linkTo);
+            snprintf(portStr, sizeof(portStr), "%d", regs->list[r].port);
+            ret = DPS_ResolveAddress(node, regs->list[r].host, portStr, OnResolve, linkTo);
             if (ret == DPS_OK) {
                 break;
             }

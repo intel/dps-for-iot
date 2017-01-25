@@ -25,7 +25,7 @@ try:
 except:
     pass
 
-env = Environment(CPPDEFINES=[], CPPPATH = ['#/inc', '#/ext/tinycrypt/lib/include'], variables=vars, tools=tools)
+env = Environment(CPPDEFINES=[], CPPPATH = ['#/inc', '#/ext/tinycrypt/lib/include', '#/ext/safestring/include'], variables=vars, tools=tools)
 
 Help(vars.GenerateHelpText(env))
 
@@ -39,7 +39,7 @@ if env['udp'] == True:
 
 # Build external dependencies
 extEnv = Environment(ENV = os.environ)
-ext_deps = SConscript('ext/SConscript', exports=['extEnv'])
+ext_libs = SConscript('ext/SConscript', exports=['extEnv'])
 
 # Platform specific configuration
 
@@ -47,6 +47,10 @@ if env['PLATFORM'] == 'win32':
 
     env.Append(CFLAGS = ['/J', '/W3', '/nologo'])
     env.Append(CPPDEFINES = ['_CRT_SECURE_NO_WARNINGS'])
+
+    # We are getting our secure memory and string functions for
+    # SafeStringLib so need to disable the Windows supplied versions
+    env.Append(CPPDEFINES = ['__STDC_WANT_SECURE_LIB__=0'])
 
     if env['debug'] == True:
         env.Append(CFLAGS = ['/Zi', '/MT', '/Od', '-DDPS_DEBUG'])
@@ -75,8 +79,29 @@ elif env['PLATFORM'] == 'posix':
         env.Append(CFLAGS = ['-fno-omit-frame-pointer', '-fsanitize=address'])
         env.Append(LIBS = ['asan'])
 
-    #gcc option  -mmsse4.2 is to enble generation on popcountq instruction
+    # Stack execution protection:
+    env.Append(LDFLAGS = ['-z noexecstack'])
+
+    # Data relocation and protection (RELRO):
+    env.Append(LDLFAGS= ['-z relro', '-z now']) 
+
+    # Stack-based Buffer Overrun Detection:
+    env.Append(CFLAGS = ['-fstack-protector-strong'])
+
+    # Position Independent Execution (PIE)
+    env.Append(CFLAGS = ['-fPIE', '-fPIC'])
+    env.Append(LDFLAGS = ['-pie']) # PIE for executables only
+
+    # Fortify source:
+    env.Append(CPPDEIFINES = ['_FORTIFY_SOURCE=2'])
+
+    # Format string vulnerabilities
+    env.Append(CFLAGS= ['-Wformat', '-Wformat-security'])
+        
+    # gcc option  -mmsse4.2 is to enble generation of popcountq instruction
     env.Append(CFLAGS = ['-ggdb', '-msse4.2'])
+
+    # Treat warnings as errors
     env.Append(CFLAGS = ['-Werror'])
 
     if env['profile'] == True:
@@ -105,7 +130,7 @@ env.Append(LIBPATH=['./ext'])
 
 print env['CPPDEFINES']
 
-SConscript('SConscript', src_dir='.', variant_dir='build/obj', duplicate=0, exports=['env', 'ext_deps'])
+SConscript('SConscript', src_dir='.', variant_dir='build/obj', duplicate=0, exports=['env', 'ext_libs'])
 
 ######################################################################
 # Scons to generate the dps_ns3.pc file from dps_ns3.pc.in file

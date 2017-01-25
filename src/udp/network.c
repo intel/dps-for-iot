@@ -222,7 +222,7 @@ DPS_Status DPS_NetSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf
     sender->appCtx = appCtx;
     sender->peerEp = *ep;
     sender->node = node;
-    memcpy(sender->bufs, bufs, numBufs * sizeof(uv_buf_t));
+    memcpy_s(sender->bufs, numBufs * sizeof(uv_buf_t), bufs, numBufs * sizeof(uv_buf_t));
     sender->numBufs = numBufs;
 
     if (ep->addr.inaddr.ss_family == AF_INET) {

@@ -22,7 +22,7 @@
 
 #include <stdlib.h>
 #include <assert.h>
-#include <string.h>
+#include <safe_lib.h>
 #include <malloc.h>
 #include <dps/dbg.h>
 #include "sha2.h"
@@ -247,7 +247,7 @@ void DPS_BitVectorDup(DPS_BitVector* dst, DPS_BitVector* src)
 {
     assert(dst->len == src->len);
     if (dst != src) {
-        memcpy(dst->bits, src->bits, src->len / 8);
+        memcpy_s(dst->bits, src->len / 8, src->bits, src->len / 8);
         dst->popCount = src->popCount;
     }
 }
@@ -257,7 +257,7 @@ DPS_BitVector* DPS_BitVectorClone(DPS_BitVector* bv)
     size_t sz = sizeof(DPS_BitVector) + ((bv->len / CHUNK_SIZE) - 1) * sizeof(chunk_t);
     DPS_BitVector* clone = malloc(sz);
     if (clone) {
-        memcpy(clone, bv, sz);
+        memcpy_s(clone, sz, bv, sz);
     }
     return clone;
 }
@@ -304,10 +304,10 @@ int DPS_BitVectorBloomTest(const DPS_BitVector* bv, const uint8_t* data, size_t 
         index = BSWAP_32(hashes[h]) % bv->len;
 #endif
         if (!TEST_BIT(bv->bits, index)) {
-            return 0;
+            return DPS_FALSE;
         }
     }
-    return 1;
+    return DPS_TRUE;
 }
 
 float DPS_BitVectorLoadFactor(DPS_BitVector* bv)
@@ -317,14 +317,24 @@ float DPS_BitVectorLoadFactor(DPS_BitVector* bv)
 
 int DPS_BitVectorEquals(const DPS_BitVector* bv1, const DPS_BitVector* bv2)
 {
+    size_t i;
+    const chunk_t* b1;
+    const chunk_t* b2;
+
+    if (!bv1 || !bv2) {
+        return DPS_FALSE;
+    }
     if (bv1->len != bv2->len) {
-        return 0;
+        return DPS_FALSE;
     }
-    if (memcmp(bv1->bits, bv2->bits, bv1->len / 8) == 0) {
-        return 1;
-    } else {
-        return 0;
+    b1 = bv1->bits;
+    b2 = bv2->bits;
+    for (i = 0; i < NUM_CHUNKS(bv1); ++i, ++b1, ++b2) {
+        if (*b1 != *b2) {
+            return DPS_FALSE;
+        }
     }
+    return DPS_TRUE;
 }
 
 int DPS_BitVectorIncludes(const DPS_BitVector* bv1, const DPS_BitVector* bv2)
@@ -547,13 +557,22 @@ static DPS_Status RunLengthEncode(DPS_BitVector* bv, DPS_TxBuffer* buffer, uint8
     uint8_t* packed = buffer->txPos;
     chunk_t complement = flags & FLAG_RLE_COMPLEMENT ? ~0 : 0;
 
+    /*
+     * Nothing to enode for empty bit vectors
+     */
     if (bv->popCount == 0) {
         return DPS_OK;
     }
     /*
-     * We only need to set the 1's
+     * We don't allow RLE to expand the bit vector
      */
-    memset(packed, 0, DPS_TxBufferSpace(buffer));
+    if (DPS_TxBufferSpace(buffer) < (bv->len / 8)) {
+        return DPS_ERR_OVERFLOW;
+    }
+    /*
+     * We only need to set the 1's so clear the buffer
+     */
+    memzero_s(packed, bv->len / 8);
 
     for (i = 0; i < NUM_CHUNKS(bv); ++i) {
         uint32_t rem0;
@@ -616,7 +635,7 @@ static DPS_Status RunLengthDecode(uint8_t* packed, size_t packedSize, chunk_t* b
     uint64_t current;
     size_t currentBits = 0;
 
-    memset(bits, 0, len / 8);
+    memzero_s(bits, len / 8);
 
     if (packedSize) {
         currentBits = 8;
@@ -784,7 +803,7 @@ DPS_Status DPS_BitVectorDeserialize(DPS_BitVector* bv, DPS_RxBuffer* buffer)
             DPS_BitVectorComplement(bv);
         }
     } else if (len == bv->len / 8) {
-        memcpy(bv->bits, data, len);
+        memcpy_s(bv->bits, len, data, len);
     } else {
         DPS_ERRPRINT("Deserialized bloom filter has wrong length\n");
         ret = DPS_ERR_INVALID;
@@ -795,7 +814,7 @@ DPS_Status DPS_BitVectorDeserialize(DPS_BitVector* bv, DPS_RxBuffer* buffer)
 void DPS_BitVectorFill(DPS_BitVector* bv)
 {
     if (bv) {
-        memset(bv->bits, 0xFF, bv->len / 8);
+        memset_s(bv->bits, 0xFF, bv->len / 8);
         bv->popCount = (uint32_t)bv->len;
     }
 }
@@ -803,7 +822,7 @@ void DPS_BitVectorFill(DPS_BitVector* bv)
 void DPS_BitVectorClear(DPS_BitVector* bv)
 {
     if (bv->popCount != 0) {
-        memset(bv->bits, 0, bv->len / 8);
+        memzero_s(bv->bits, bv->len / 8);
         bv->popCount = 0;
     }
 }
@@ -864,7 +883,7 @@ DPS_Status DPS_BitVectorSet(DPS_BitVector* bv, uint8_t* data, size_t len)
     if (len != (bv->len / 8)) {
         return DPS_ERR_ARGS;
     } else {
-        memcpy(bv->bits, data, len);
+        memcpy_s(bv->bits, len, data, len);
         INVALIDATE_POPCOUNT(bv);
         return DPS_OK;
     }

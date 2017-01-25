@@ -62,7 +62,7 @@ DPS_Status DPS_LinkTo(DPS_Node* node, const char* host, uint16_t port, DPS_NodeA
         return DPS_ERR_RESOURCES;
     }
 
-    sprintf(portStr, "%d", port);
+    snprintf(portStr, sizeof(portStr), "%d", port);
 
     DPS_SetEventData(event, addr);
     ret = DPS_ResolveAddress(node, host, portStr, OnResolve, event);

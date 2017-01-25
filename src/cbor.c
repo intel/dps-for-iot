@@ -22,7 +22,7 @@
 
 #include <dps/dbg.h>
 #include <stdint.h>
-#include <string.h>
+#include <safe_lib.h>
 #include <assert.h>
 #include <dps/private/cbor.h>
 
@@ -108,11 +108,12 @@ DPS_Status CBOR_EncodeLength(DPS_TxBuffer* buffer, uint64_t len, uint8_t maj)
 DPS_Status CBOR_Copy(DPS_TxBuffer* buffer, const uint8_t* data, size_t len)
 {
     DPS_Status ret = DPS_OK;
-    if (DPS_TxBufferSpace(buffer) < len) {
-        ret = DPS_ERR_OVERFLOW;
-    } else if (data) {
-        memcpy(buffer->txPos, data, len);
-        buffer->txPos += len;
+    if (data) {
+        if (memcpy_s(buffer->txPos, DPS_TxBufferSpace(buffer), data, len) != EOK) {
+            ret = DPS_ERR_OVERFLOW;
+        } else {
+            buffer->txPos += len;
+        }
     }
     return ret;
 }
@@ -203,12 +204,7 @@ DPS_Status CBOR_EncodeBytes(DPS_TxBuffer* buffer, const uint8_t* data, size_t le
 {
     DPS_Status ret = EncodeUint(buffer, (uint32_t)len, CBOR_BYTES);
     if (ret == DPS_OK) {
-        if (DPS_TxBufferSpace(buffer) < len) {
-            ret = DPS_ERR_OVERFLOW;
-        } else if (data) {
-            memcpy(buffer->txPos, data, len);
-            buffer->txPos += len;
-        }
+        ret = CBOR_Copy(buffer, data, len);
     }
     return ret;
 }
@@ -243,7 +239,7 @@ DPS_Status CBOR_StartWrapBytes(DPS_TxBuffer* buffer, size_t hintLen, uint8_t** p
 DPS_Status CBOR_EndWrapBytes(DPS_TxBuffer* buffer, uint8_t* wrapPtr)
 {
     uint8_t maj;
-    uint8_t* pos = buffer->txPos;
+    uint8_t* pos;
     uint64_t hint;
     size_t actual;
     int diff;
@@ -257,15 +253,18 @@ DPS_Status CBOR_EndWrapBytes(DPS_TxBuffer* buffer, uint8_t* wrapPtr)
         return DPS_ERR_INVALID;
     }
     /*
-     * See if the length encoding changed
+     * See if the space needed to encode length changed
      */
     actual = buffer->txPos - rx.rxPos;
     diff = Requires(actual) - Requires(hint);
-    if (diff) {
-        memmove(rx.rxPos + diff, rx.rxPos, actual);
+    if (diff && actual) {
+        buffer->txPos = wrapPtr + Requires(actual);
+        if (memmove_s(rx.rxPos + diff, DPS_TxBufferSpace(buffer), rx.rxPos, actual) != EOK) {
+            return DPS_ERR_RESOURCES;
+        }
     }
     /*
-     * Rewind to write the new length
+     * Rewind to write the actual length
      */
     buffer->txPos = wrapPtr;
     return CBOR_ReserveBytes(buffer, actual, &pos);
@@ -274,15 +273,16 @@ DPS_Status CBOR_EndWrapBytes(DPS_TxBuffer* buffer, uint8_t* wrapPtr)
 
 DPS_Status CBOR_EncodeString(DPS_TxBuffer* buffer, const char* str)
 {
-    size_t len = str ? strlen(str) + 1 : 0;
-    DPS_Status ret = EncodeUint(buffer, (uint32_t)len, CBOR_STRING);
+    DPS_Status ret;
+    size_t len = strnlen_s(str, CBOR_MAX_STRING_LEN + 1);
+
+    if (len > CBOR_MAX_STRING_LEN) {
+        ret = DPS_ERR_OVERFLOW;
+    } else {
+        ret = EncodeUint(buffer, (uint32_t)len, CBOR_STRING);
+    }
     if (ret == DPS_OK) {
-        if (DPS_TxBufferSpace(buffer) < len) {
-            ret = DPS_ERR_OVERFLOW;
-        } else if (str) {
-            memcpy(buffer->txPos, str, len);
-            buffer->txPos += len;
-        }
+        ret = CBOR_Copy(buffer, (uint8_t*)str, len);
     }
     return ret;
 }
@@ -576,8 +576,8 @@ DPS_Status CBOR_Skip(DPS_RxBuffer* buffer, uint8_t* majOut, size_t* size)
 
 size_t _CBOR_SizeOfString(const char* s)
 {
-    size_t l = strlen(s) + 1;
-    return l + CBOR_SIZEOF_LEN(l);
+    size_t len = s ? strnlen_s(s, CBOR_MAX_STRING_LEN) + 1 : 0;
+    return len + CBOR_SIZEOF_LEN(len);
 }
 
 DPS_Status DPS_ParseMapInit(CBOR_MapState* mapState, DPS_RxBuffer* buffer, const int32_t* keys, size_t numKeys)

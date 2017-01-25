@@ -37,20 +37,25 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 const char* DPS_NetAddrText(const struct sockaddr* addr)
 {
     if (addr) {
-        static char txt[INET6_ADDRSTRLEN + 8];
+        char name[INET6_ADDRSTRLEN];
+        static char txt[sizeof(name) + 8];
         uint16_t port;
         int ret;
         if (addr->sa_family == AF_INET6) {
-            ret = uv_ip6_name((const struct sockaddr_in6*)addr, txt, sizeof(txt));
+            ret = uv_ip6_name((const struct sockaddr_in6*)addr, name, sizeof(name));
             port = ((const struct sockaddr_in6*)addr)->sin6_port;
         } else {
-            ret = uv_ip4_name((const struct sockaddr_in*)addr, txt, sizeof(txt));
+            ret = uv_ip4_name((const struct sockaddr_in*)addr, name, sizeof(name));
             port = ((const struct sockaddr_in*)addr)->sin_port;
         }
         if (ret) {
             return "Invalid address";
         }
-        sprintf(txt + strlen(txt), "/%d", ntohs(port));
+        /*
+         * Make sure name is NUL terminated
+         */
+        name[sizeof(name) - 1] = 0;
+        snprintf(txt, sizeof(txt), "%s/%d", name, ntohs(port));
         return txt;
     } else {
         return "NULL";
@@ -78,8 +83,8 @@ int DPS_SameAddr(DPS_NodeAddress* addr1, DPS_NodeAddress* addr2)
             tmp.sin6_port = ipa->sin_port;
             a = (struct sockaddr*)&tmp;
         }
-        memcpy(&tmp.sin6_addr, IP4as6, 12);
-        memcpy((uint8_t*)&tmp.sin6_addr + 12, &ip, 4);
+        memcpy_s(&tmp.sin6_addr, sizeof(tmp.sin6_addr), IP4as6, 12);
+        memcpy_s((uint8_t*)&tmp.sin6_addr + 12, sizeof(tmp.sin6_addr) - 12, &ip, 4);
         tmp.sin6_family = AF_INET6;
     }
     if (a->sa_family == AF_INET6) {
@@ -119,9 +124,9 @@ static void GetAddrInfoCB(uv_getaddrinfo_t* req, int status, struct addrinfo* re
     if (status == 0) {
         DPS_NodeAddress addr;
         if (res->ai_family == AF_INET6) {
-            memcpy(&addr.inaddr, res->ai_addr, sizeof(struct sockaddr_in6));
+            memcpy_s(&addr.inaddr, sizeof(addr.inaddr), res->ai_addr, sizeof(struct sockaddr_in6));
         } else {
-            memcpy(&addr.inaddr, res->ai_addr, sizeof(struct sockaddr_in));
+            memcpy_s(&addr.inaddr, sizeof(addr.inaddr), res->ai_addr, sizeof(struct sockaddr_in));
         }
         resolver->cb(resolver->node, &addr, resolver->data);
         uv_freeaddrinfo(res);
@@ -142,7 +147,7 @@ static void AsyncResolveAddress(uv_async_t* async)
 
     DPS_DBGTRACE();
 
-    memset(&hints, 0, sizeof(hints));
+    memzero_s(&hints, sizeof(hints));
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_protocol = IPPROTO_TCP;
@@ -177,8 +182,8 @@ DPS_Status DPS_ResolveAddress(DPS_Node* node, const char* host, const char* serv
     if (!resolver) {
         return DPS_ERR_RESOURCES;
     }
-    strncpy(resolver->host, host, sizeof(resolver->host) - 1);
-    strncpy(resolver->service, service, sizeof(resolver->service) - 1);
+    strncpy_s(resolver->host, sizeof(resolver->host), host, sizeof(resolver->host) - 1);
+    strncpy_s(resolver->service, sizeof(resolver->service), service, sizeof(resolver->service) - 1);
     resolver->node = node;
     resolver->cb = cb;
     resolver->data = data;
@@ -202,12 +207,12 @@ DPS_Status DPS_ResolveAddress(DPS_Node* node, const char* host, const char* serv
 
 DPS_NodeAddress* DPS_SetAddress(DPS_NodeAddress* addr, const struct sockaddr* sa)
 {
-    memset(addr, 0, sizeof(DPS_NodeAddress));
+    memzero_s(addr, sizeof(DPS_NodeAddress));
     if (sa) {
         if (sa->sa_family == AF_INET) {
-            memcpy(&addr->inaddr, sa, sizeof(struct sockaddr_in));
+            memcpy_s(&addr->inaddr, sizeof(addr->inaddr), sa, sizeof(struct sockaddr_in));
         } else if (sa->sa_family == AF_INET6) {
-            memcpy(&addr->inaddr, sa, sizeof(struct sockaddr_in6));
+            memcpy_s(&addr->inaddr, sizeof(addr->inaddr), sa, sizeof(struct sockaddr_in6));
         }
     }
     return addr;

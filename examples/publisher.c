@@ -31,6 +31,8 @@
 #include <dps/event.h>
 
 #define MAX_TOPICS 64
+#define MAX_MSG_LEN 128
+#define MAX_TOPIC_LEN 256
 
 static char* topics[MAX_TOPICS];
 static size_t numTopics = 0;
@@ -77,7 +79,10 @@ static int AddTopics(char* topicList, char** msg, int* keep, int* ttl)
     while (numTopics < MAX_TOPICS) {
         size_t len = strcspn(topicList, " ");
         if (!len) {
-            len = strlen(topicList);
+            len = strnlen(topicList, MAX_TOPIC_LEN + 1);
+            if (len > MAX_TOPIC_LEN) {
+                return 0;
+            }
         }
         if (topicList[0] == '-') {
             switch(topicList[1]) {
@@ -127,10 +132,10 @@ static void OnAck(DPS_Publication* pub, uint8_t* data, size_t len)
 static void ReadStdin(DPS_Node* node)
 {
     uint8_t* data;
-    char lineBuf[200];
+    char lineBuf[MAX_TOPIC_LEN + 1];
 
     while (fgets(lineBuf, sizeof(lineBuf), stdin) != NULL) {
-        size_t len = strlen(lineBuf);
+        size_t len = strnlen(lineBuf, sizeof(lineBuf));
         int ttl;
         int keep;
         char* msg;
@@ -162,7 +167,7 @@ static void ReadStdin(DPS_Node* node)
                 return;
             }
         }
-        ret = DPS_Publish(currentPub, msg, msg ? strlen(msg) : 0, ttl);
+        ret = DPS_Publish(currentPub, msg, msg ? strnlen(msg, MAX_MSG_LEN) : 0, ttl);
         if (ret == DPS_OK) {
             DPS_PRINT("Pub UUID %s(%d)\n", DPS_UUIDToString(DPS_PublicationGetUUID(currentPub)), DPS_PublicationGetSequenceNum(currentPub));
         } else {
@@ -295,7 +300,7 @@ int main(int argc, char** argv)
             DPS_ERRPRINT("Failed to create publication - error=%d\n", ret);
             return 1;
         }
-        ret = DPS_Publish(currentPub, msg, msg ? strlen(msg) + 1 : 0, ttl);
+        ret = DPS_Publish(currentPub, msg, msg ? strnlen(msg, MAX_MSG_LEN) + 1 : 0, ttl);
         if (ret == DPS_OK) {
             DPS_PRINT("Pub UUID %s\n", DPS_UUIDToString(DPS_PublicationGetUUID(currentPub)));
         } else {

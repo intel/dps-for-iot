@@ -20,7 +20,7 @@
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  */
 
-#include <string.h>
+#include <safe_lib.h>
 #include <malloc.h>
 #include <assert.h>
 #include <dps/dbg.h>
@@ -154,7 +154,9 @@ DPS_Status CoAP_Parse(int protocol, const uint8_t* buffer, size_t bufLen, CoAP_P
         buffer += 1;
     }
     if (coap->tokenLen) {
-        memcpy(coap->token, buffer, coap->tokenLen);
+        if (memcpy_s(coap->token, sizeof(coap->token), buffer, coap->tokenLen) != EOK) {
+            return DPS_ERR_INVALID;
+        }
         bufLen -= coap->tokenLen;
         buffer += coap->tokenLen;
     }
@@ -171,7 +173,7 @@ DPS_Status CoAP_Parse(int protocol, const uint8_t* buffer, size_t bufLen, CoAP_P
             break;
         }
         if (optSize < 0) {
-            return -1;
+            return DPS_ERR_INVALID;
         }
         len -= optSize;
         p += optSize;
@@ -190,7 +192,7 @@ DPS_Status CoAP_Parse(int protocol, const uint8_t* buffer, size_t bufLen, CoAP_P
             break;
         }
         if (optSize < 0) {
-            return -1;
+            return DPS_ERR_INVALID;
         }
         prevOptId = coap->opts[coap->numOpts].id;
         len -= optSize;
@@ -222,8 +224,8 @@ DPS_Status CoAP_Compose(int protocol, uint8_t code, const CoAP_Option* opts, siz
 {
     static uint16_t msgId = 1;
     size_t i;
-    char* token = "";
-    uint8_t tokenLen = strlen(token);
+    char token[] = "";
+    uint8_t tokenLen = strnlen_s(token, sizeof(token));
     size_t optLen = 0;
     uint8_t optIdLast = 0;
     DPS_Status ret = DPS_OK;
@@ -296,7 +298,9 @@ DPS_Status CoAP_Compose(int protocol, uint8_t code, const CoAP_Option* opts, siz
      * Write the token if there is one
      */
     if (tokenLen) {
-        memcpy(buf->txPos, token, tokenLen);
+        if (memcpy_s(buf->txPos, DPS_TxBufferSpace(buf), token, tokenLen) != EOK) {
+            return DPS_ERR_RESOURCES;
+        }
         buf->txPos += tokenLen;
     }
     /*
@@ -337,7 +341,9 @@ DPS_Status CoAP_Compose(int protocol, uint8_t code, const CoAP_Option* opts, siz
             *buf->txPos++ = (uint8_t)(len >> 8);
             *buf->txPos++ = (uint8_t)(len & 0xFF);
         }
-        memcpy(buf->txPos, opts->val, opts->len);
+        if (memcpy_s(buf->txPos, DPS_TxBufferSpace(buf), opts->val, opts->len) != EOK) {
+            return DPS_ERR_RESOURCES;
+        }
         buf->txPos += opts->len;
         optIdLast += delta;
         ++opts;
