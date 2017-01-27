@@ -907,7 +907,7 @@ static void NodeRun(void* arg)
     }
 }
 
-DPS_Node* DPS_CreateNode(const char* separators, DPS_KeyRequestCallback keyRequestCB, DPS_UUID* keyId)
+DPS_Node* DPS_CreateNode(const char* separators, DPS_KeyRequestCallback keyRequestCB, const DPS_UUID* keyId)
 {
     DPS_Node* node = calloc(1, sizeof(DPS_Node));
 

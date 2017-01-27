@@ -456,10 +456,12 @@ static PyObject* UUIDToPyString(const DPS_UUID* uuid)
                 uuid->val[i++] = (uint8_t)v;
             } else {
                 PyErr_SetString(PyExc_TypeError,"uuid values must be in range 0..255");
+                free(uuid);
                 SWIG_fail;
             }
         } else {
             PyErr_SetString(PyExc_TypeError,"value is not int type or len > uuid");
+            free(uuid);
             SWIG_fail;
         }
     }

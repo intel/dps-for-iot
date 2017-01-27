@@ -146,7 +146,7 @@ typedef DPS_Status (*DPS_KeyRequestCallback)(DPS_Node* node, DPS_UUID* kid, uint
  *
  * @return A pointer to the uninitialized node or NULL if there were no resources for the node.
  */
-DPS_Node* DPS_CreateNode(const char* separators, DPS_KeyRequestCallback keyRequestCB, DPS_UUID* keyId);
+DPS_Node* DPS_CreateNode(const char* separators, DPS_KeyRequestCallback keyRequestCB, const DPS_UUID* keyId);
 
 /**
  * Store a pointer to application data in a node.
