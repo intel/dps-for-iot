@@ -60,7 +60,7 @@ static int Requires(uint64_t n)
 static DPS_Status EncodeUint(DPS_TxBuffer* buffer, uint64_t n, uint8_t maj)
 {
     uint8_t* p = buffer->txPos;
-    int lenReq = Requires(n);
+    uint32_t lenReq = (uint32_t)Requires(n);
 
     if ((lenReq + 1) > DPS_TxBufferSpace(buffer)) {
         return DPS_ERR_OVERFLOW;

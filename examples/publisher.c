@@ -131,7 +131,6 @@ static void OnAck(DPS_Publication* pub, uint8_t* data, size_t len)
 
 static void ReadStdin(DPS_Node* node)
 {
-    uint8_t* data;
     char lineBuf[MAX_TOPIC_LEN + 1];
 
     while (fgets(lineBuf, sizeof(lineBuf), stdin) != NULL) {

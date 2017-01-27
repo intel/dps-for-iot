@@ -331,7 +331,7 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
     DPS_BitVector* interests = NULL;
     DPS_BitVector* needs = NULL;
     uint16_t port;
-    RemoteNode* remote;
+    RemoteNode* remote = NULL;
     CBOR_MapState mapState;
     int syncRequested;
     int syncReceived;

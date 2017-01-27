@@ -121,7 +121,7 @@ int main(int argc, char** argv)
         }
     }
 
-    printf("Encoded %zu bytes\n", DPS_TxBufferUsed(&txBuffer));
+    printf("Encoded %u bytes\n", DPS_TxBufferUsed(&txBuffer));
 
     CBOR_Dump(NULL, txBuffer.base, DPS_TxBufferUsed(&txBuffer));
 

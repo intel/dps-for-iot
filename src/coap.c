@@ -77,7 +77,7 @@ static int ParseOpt(const uint8_t* buf, size_t bufLen, int prevOpt, CoAP_Option*
         return -1;
     }
     opt->val = buf;
-    return opt->len + (buf - head);
+    return (int)(opt->len + (buf - head));
 }
 
 static size_t ParseLengthsTCP(const uint8_t* buffer, size_t* extLen, size_t* tokLen)
@@ -225,7 +225,7 @@ DPS_Status CoAP_Compose(int protocol, uint8_t code, const CoAP_Option* opts, siz
     static uint16_t msgId = 1;
     size_t i;
     char token[] = "";
-    uint8_t tokenLen = strnlen_s(token, sizeof(token));
+    uint8_t tokenLen = (uint8_t)strnlen_s(token, sizeof(token));
     size_t optLen = 0;
     uint8_t optIdLast = 0;
     DPS_Status ret = DPS_OK;

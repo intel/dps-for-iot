@@ -182,7 +182,7 @@ DPS_Status DPS_DecodeAcknowledgment(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxB
     CBOR_MapState mapState;
     uint32_t sn;
     uint32_t sequenceNum;
-    DPS_UUID* pubId;
+    DPS_UUID* pubId = NULL;
     DPS_NodeAddress* addr;
     uint8_t* aadPos = buffer->rxPos;
     size_t len;
@@ -300,7 +300,7 @@ DPS_Status DPS_DecodeAcknowledgment(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxB
             /*
              * The ACK is forwarded exactly as received
              */
-            uvBuf.len = buffer->eod - buffer->base;
+            uvBuf.len = (uint32_t)(buffer->eod - buffer->base);
             uvBuf.base = malloc(uvBuf.len);
             if (uvBuf.base) {
                 memcpy_s(uvBuf.base, uvBuf.len, buffer->base, uvBuf.len);

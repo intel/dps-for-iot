@@ -40,7 +40,7 @@ srcs = ['src/bitvec.c',
         'src/sha2.c',
         'src/ccm.c']
 
-if env['udp'] == True:
+if env['transport'] == 'udp':
     srcs.append('src/udp/network.c')
 else:
     srcs.append('src/tcp/network.c')
@@ -54,8 +54,9 @@ libenv.Install('#/build/dist/lib', lib)
 
 shobjs = libenv.SharedObject(srcs)
 if platform == 'win32':
-    shobjs += ['dps_shared.def']
-shlib = libenv.SharedLibrary('lib/dps_shared', shobjs)
+    shlib = libenv.SharedLibrary('lib/dps_shared', shobjs + ['dps_shared.def'])
+else:
+    shlib = libenv.SharedLibrary('lib/dps_shared', shobjs)
 libenv.Install('#/build/dist/lib', shlib)
 
 ns3srcs = ['src/bitvec.c',
@@ -84,10 +85,10 @@ pyenv.Append(LIBPATH = env['PY_LIBPATH'])
 pyenv.Append(CPPPATH = env['PY_CPPPATH'])
 pyenv.Append(LIBS = [lib, env['UV_LIBS']])
 # Python has platform specific naming conventions
+pyenv['SHLIBPREFIX'] = '_'
 if platform == 'win32':
     pyenv['SHLIBSUFFIX'] = '.pyd'
-else:
-    pyenv['SHLIBPREFIX'] = '_'
+
 pyenv.Append(SWIGFLAGS = ['-python', '-Werror', '-v'], SWIGPATH = '#/inc')
 # Build python module library
 pylib = pyenv.SharedLibrary('./py/dps', shobjs + ['swig/dps_python.i'])

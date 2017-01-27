@@ -814,7 +814,7 @@ DPS_Status DPS_BitVectorDeserialize(DPS_BitVector* bv, DPS_RxBuffer* buffer)
 void DPS_BitVectorFill(DPS_BitVector* bv)
 {
     if (bv) {
-        memset_s(bv->bits, 0xFF, bv->len / 8);
+        memset_s(bv->bits, bv->len / 8, 0xFF);
         bv->popCount = (uint32_t)bv->len;
     }
 }

@@ -87,7 +87,7 @@ static void AllocBuffer(uv_handle_t* handle, size_t suggestedSize, uv_buf_t* buf
         buf->len = (uint32_t)(cn->msgLen - cn->readLen);
         buf->base = cn->msgBuf + cn->readLen;
     } else {
-        buf->len = sizeof(cn->lenBuf) - cn->readLen;
+        buf->len = (uint32_t)(sizeof(cn->lenBuf) - cn->readLen);
         buf->base = (char*)(cn->lenBuf + cn->readLen);
     }
 }

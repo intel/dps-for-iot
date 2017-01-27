@@ -89,7 +89,7 @@ void DPS_RxBufferFree(DPS_RxBuffer* buffer);
 /*
  * Data available in a receive buffer
  */
-#define DPS_RxBufferAvail(b)  ((size_t)((b)->eod - (b)->rxPos))
+#define DPS_RxBufferAvail(b)  ((uint32_t)((b)->eod - (b)->rxPos))
 
 /**
  * For managing data to be transmitted
@@ -137,12 +137,12 @@ DPS_Status DPS_TxBufferAppend(DPS_TxBuffer* buffer, const uint8_t* data, size_t 
 /*
  * Space left in a transmit buffer
  */
-#define DPS_TxBufferSpace(b)  ((size_t)((b)->eob - (b)->txPos))
+#define DPS_TxBufferSpace(b)  ((uint32_t)((b)->eob - (b)->txPos))
 
 /*
  * Number of bytes that have been written to a transmit buffer
  */
-#define DPS_TxBufferUsed(b)  ((size_t)((b)->txPos - (b)->base))
+#define DPS_TxBufferUsed(b)  ((uint32_t)((b)->txPos - (b)->base))
 
 /**
  * Convert a transmit buffer into a receive buffer. Note that this

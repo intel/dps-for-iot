@@ -315,7 +315,7 @@ DPS_Status NodeHandler(DPS_Node* node, DPS_UUID* kid, uint8_t* key, size_t keyLe
     PyObject* kidObj;
     PyObject* ret;
     PyGILState_STATE gilState;
-    DPS_Status retvalue;
+    DPS_Status retvalue = DPS_OK;
     int i, j;
 
     if (!cb) {
@@ -338,17 +338,28 @@ DPS_Status NodeHandler(DPS_Node* node, DPS_UUID* kid, uint8_t* key, size_t keyLe
 
     nodeObj = SWIG_NewPointerObj(SWIG_as_voidptr(node), SWIGTYPE_p__DPS_Node, 0);
     ret = PyObject_CallFunction(cb, "OOOi", nodeObj, uuidObj, kidObj, keyLen);
-    for(i = 0, j = 0; j < PyList_Size(kidObj); ++j) {
+    for (i = 0, j = 0; j < PyList_Size(kidObj); ++j) {
         PyObject *pValue = PyList_GetItem(kidObj, j);
         if (PyInt_Check(pValue) && i < sizeof(DPS_UUID)) {
-            key[i++] = PyInt_AsLong(pValue);
+            int32_t v = PyInt_AsLong(pValue);
+            if (v >= 0 && v <= 255) {
+                key[i++] = (uint8_t)v;
+            } else {
+                PyErr_SetString(PyExc_TypeError,"key values must be in range 0..255");
+                retvalue = DPS_ERR_INVALID;
+                break;
+            }
         } else {
             PyErr_SetString(PyExc_TypeError,"key is not int type or len > uuid");
+            retvalue = DPS_ERR_INVALID;
+            break;
         }
     }
 
     if (PyInt_Check(ret)) {
-        retvalue = (DPS_Status)PyInt_AsLong(ret);
+        if (retvalue == DPS_OK) {
+            retvalue = (DPS_Status)PyInt_AsLong(ret);
+        }
     } else {
         retvalue = DPS_ERR_MISSING;
     }
@@ -434,13 +445,22 @@ static PyObject* UUIDToPyString(const DPS_UUID* uuid)
 
     DPS_UUID* uuid = (DPS_UUID*)malloc(sizeof(DPS_UUID));
     if (!uuid) {
-        PyErr_SetString(PyExc_TypeError,"DPS_UUID: no memory\n");
+        PyErr_SetString(PyExc_MemoryError,"DPS_UUID: no memory\n");
         SWIG_fail;
     }
-    for(j = 0, i = 0; j < PyList_Size($input); ++j) {
+    for (j = 0, i = 0; j < PyList_Size($input); ++j) {
         PyObject *pValue = PyList_GetItem($input, j);
-        if (PyInt_Check(pValue)) {
-            uuid->val[i++] = PyInt_AsLong(pValue);
+        if (PyInt_Check(pValue) && i < sizeof(DPS_UUID)) {
+            int32_t v = PyInt_AsLong(pValue);
+            if (v >= 0 && v <= 255) {
+                uuid->val[i++] = (uint8_t)v;
+            } else {
+                PyErr_SetString(PyExc_TypeError,"uuid values must be in range 0..255");
+                SWIG_fail;
+            }
+        } else {
+            PyErr_SetString(PyExc_TypeError,"value is not int type or len > uuid");
+            SWIG_fail;
         }
     }
     $1 = uuid;

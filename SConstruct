@@ -2,19 +2,24 @@ import os
 import platform
 
 vars = Variables()
+
+# Generic build variables
 vars.AddVariables(
-    BoolVariable('optimize', 'Build for release?', False),
-    BoolVariable('profile', 'Build for profiling?', False),
-    BoolVariable('debug', 'Build with debugging information?', True),
-    BoolVariable('udp', 'Use UDP network layer?', False))
+    EnumVariable('variant', 'Build variant', default='release', allowed_values=('debug', 'release'), ignorecase=2),
+    EnumVariable('transport', 'Transport protocol', default='udp', allowed_values=('udp', 'tcp'), ignorecase=2))
+
+# Windows-specific command line variables
 if platform.system() == 'Windows':
     vars.AddVariables(
         PathVariable('UV_PATH', 'Path to libuv', 'C:\Program Files\libuv'),
         PathVariable('PYTHON_PATH', 'Path to Python', 'C:\Python27'),
         PathVariable('SWIG', 'Path to SWIG executable', 'C:\swigwin-3.0.10\swig.exe'),
         PathVariable('DOXYGEN_PATH', 'Path to Doxygen', 'C:\Program Files\Doxygen', PathVariable.PathAccept))
+
+# Linux-specific command line variables
 if platform.system() == 'Linux':
     vars.AddVariables(
+        BoolVariable('profile', 'Build for profiling?', False),
         BoolVariable('asan', 'Enable address sanitizer?', False))
 
 tools=['default', 'textfile']
@@ -33,12 +38,12 @@ for key, val in ARGLIST:
     if key.lower() == 'define':
         env['CPPDEFINES'].append(val)
 
-if env['udp'] == True:
+if env['transport'] == 'udp':
     env['USE_UDP'] = 'true'
     env['CPPDEFINES'].append('DPS_USE_UDP')
 
 # Build external dependencies
-extEnv = Environment(ENV = os.environ)
+extEnv = Environment(ENV = os.environ, variables=vars)
 ext_libs = SConscript('ext/SConscript', exports=['extEnv'])
 
 # Platform specific configuration
@@ -52,12 +57,23 @@ if env['PLATFORM'] == 'win32':
     # SafeStringLib so need to disable the Windows supplied versions
     env.Append(CPPDEFINES = ['__STDC_WANT_SECURE_LIB__=0'])
 
-    if env['debug'] == True:
+    if env['variant'] == 'debug':
         env.Append(CFLAGS = ['/Zi', '/MT', '/Od', '-DDPS_DEBUG'])
         env.Append(LINKFLAGS = ['/DEBUG'])
     else:
-        env.Append(CFLAGS = ['/Gy', '/O3', '/GF', '/MT'])
-        env.Append(LINKFLAGS = ['/opt:ref', '/NODEFAULTLIB:libcmt.lib'])
+        env.Append(CFLAGS = ['/Gy', '/O2', '/GF', '/MT'])
+        env.Append(LINKFLAGS = ['/opt:ref'])
+
+
+    # Stack-based Buffer Overrun Detection
+    env.Append(CFLAGS = ['/GS'])
+    # Compiler settings validation
+    env.Append(CFLAGS = ['/sdl'])
+
+    # Data Execution Prevention 
+    env.Append(LINKFLAGS = ['/NXCompat'])
+    # Image Randomization
+    env.Append(LINKFLAGS = ['/DynamicBase'])
 
     # Where to find Python.h
     env['PY_CPPPATH'] = [env['PYTHON_PATH'] + '\include']
@@ -108,12 +124,10 @@ elif env['PLATFORM'] == 'posix':
         env.Append(CFLAGS = ['-pg'])
         env.Append(LINKFLAGS = ['-pg'])
 
-    if env['optimize'] == True:
-        env['debug'] = False
-        env.Append(CFLAGS = ['-O3', '-DNDEBUG'])
-
-    if env['debug'] == True:
+    if env['variant'] == 'debug':
         env.Append(CFLAGS = ['-DDPS_DEBUG'])
+    else:
+        env.Append(CFLAGS = ['-O3', '-DNDEBUG'])
 
     # Where to find Python.h
     env['PY_CPPPATH'] = ['/usr/include/python2.7']

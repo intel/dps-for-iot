@@ -313,7 +313,7 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
     RemoteNode* pubNode = NULL;
     uint16_t port;
     DPS_Publication* pub = NULL;
-    DPS_UUID* pubId;
+    DPS_UUID* pubId = NULL;
     DPS_RxBuffer bfBuf;
     uint8_t* bodyPtr;
     CBOR_MapState mapState;

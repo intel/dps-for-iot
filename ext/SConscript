@@ -12,7 +12,10 @@ tcEnv['CFLAGS'] = ''
 if platform == 'win32':
     tcEnv.Append(CPPDEFINES = ['_CRT_SECURE_NO_WARNINGS'])
     tcEnv.Append(CFLAGS = ['/J', '/W3', '/nologo'])
-    tcEnv.Append(CFLAGS = ['/Gy', '/Ot', '/GF', '/MT'])
+    tcEnv.Append(CFLAGS = ['/Gy', '/O2', '/GF', '/MT'])
+    # Suppress specific warnings
+    tcEnv.Append(CFLAGS = ['/wd4244', '/wd4267'])
+
 elif tcEnv['PLATFORM'] == 'posix':
     tcEnv.Append(CFLAGS = ['-Os', '-fPIC', '-std=c99', '-Wall', '-Wextra',  '-D_ISOC99_SOURCE', '-MMD'])
 else:
@@ -39,7 +42,10 @@ if scEnv['PLATFORM'] == 'win32':
     scEnv.Append(CPPDEFINES = ['_CRT_SECURE_NO_WARNINGS'])
     scEnv.Append(CPPDEFINES = ['__STDC_WANT_SECURE_LIB__=0'])
     scEnv.Append(CFLAGS = ['/J', '/W3', '/nologo'])
-    scEnv.Append(CFLAGS = ['/Gy', '/Ot', '/GF', '/MT'])
+    scEnv.Append(CFLAGS = ['/Gy', '/O2', '/GF', '/MT'])
+
+    # Suppress specific warnings
+    scEnv.Append(CFLAGS = ['/wd4267', '/wd4244'])
 elif scEnv['PLATFORM'] == 'posix':
     scEnv.Append(CPPDEFINES = ['_ISCO99_SOURCE'])
     scEnv.Append(CFLAGS = ['-Os', '-fPIC', '-std=c99', '-Wall', '-Wextra', '-Wno-unused-parameter', '-MMD'])

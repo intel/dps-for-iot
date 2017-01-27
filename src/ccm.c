@@ -42,9 +42,9 @@ DPS_Status Encrypt_CCM(const uint8_t key[AES_128_KEY_LENGTH],
                        uint8_t L,
                        const uint8_t nonce[DPS_CCM_NONCE_SIZE],
                        const uint8_t* plainText,
-                       uint32_t ptLen,
+                       size_t ptLen,
                        const uint8_t* aad,
-                       uint32_t aadLen,
+                       size_t aadLen,
                        DPS_TxBuffer* cipherText)
 {
     int32_t r;
@@ -60,7 +60,7 @@ DPS_Status Encrypt_CCM(const uint8_t key[AES_128_KEY_LENGTH],
     if (!r) {
         return DPS_ERR_INVALID;
     }
-    r = tc_ccm_generation_encryption(cipherText->txPos, aad, aadLen, plainText, ptLen, &ctx);
+    r = tc_ccm_generation_encryption(cipherText->txPos, aad, (uint32_t)aadLen, plainText, (uint32_t)ptLen, &ctx);
     if (!r) {
         return DPS_ERR_INVALID;
     }
@@ -74,9 +74,9 @@ DPS_Status Decrypt_CCM(const uint8_t key[AES_128_KEY_LENGTH],
                        uint8_t L,
                        const uint8_t nonce[DPS_CCM_NONCE_SIZE],
                        const uint8_t* cipherText,
-                       uint32_t ctLen,
+                       size_t ctLen,
                        const uint8_t* aad,
-                       uint32_t aadLen,
+                       size_t aadLen,
                        DPS_TxBuffer* plainText)
 {
     int32_t r;
@@ -92,7 +92,7 @@ DPS_Status Decrypt_CCM(const uint8_t key[AES_128_KEY_LENGTH],
     if (!r) {
         return DPS_ERR_INVALID;
     }
-    r = tc_ccm_decryption_verification(plainText->base, aad, aadLen, cipherText, ctLen, &ctx);
+    r = tc_ccm_decryption_verification(plainText->base, aad, (uint32_t)aadLen, cipherText, (uint32_t)ctLen, &ctx);
     if (!r) {
         return DPS_ERR_SECURITY;
     }
