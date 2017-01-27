@@ -268,7 +268,7 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote, DPS_BitVecto
         ret = CBOR_EncodeMap(&buf, 0);
     }
     if (ret == DPS_OK) {
-        uv_buf_t uvBuf = { (char*)buf.base, DPS_TxBufferUsed(&buf) };
+        uv_buf_t uvBuf = uv_buf_init((char*)buf.base, DPS_TxBufferUsed(&buf));
         CBOR_Dump("Sub out", (uint8_t*)uvBuf.base, uvBuf.len);
         ret = DPS_NetSend(node, NULL, &remote->ep, &uvBuf, 1, DPS_OnSendComplete);
         if (ret != DPS_OK) {

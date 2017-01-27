@@ -54,8 +54,8 @@ DPS_Status DPS_SendAcknowledgment(DPS_Node*node, PublicationAck* ack, RemoteNode
 {
     DPS_Status ret;
     uv_buf_t uvBufs[] = {
-        { (char*)ack->headers.base, DPS_TxBufferUsed(&ack->headers) },
-        { (char*)ack->payload.base, DPS_TxBufferUsed(&ack->payload) }
+        uv_buf_init((char*)ack->headers.base, DPS_TxBufferUsed(&ack->headers)),
+        uv_buf_init((char*)ack->payload.base, DPS_TxBufferUsed(&ack->payload))
     };
 
     DPS_DBGTRACE();

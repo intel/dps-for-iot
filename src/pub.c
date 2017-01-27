@@ -685,10 +685,10 @@ DPS_Status DPS_SendPublication(DPS_Node* node, DPS_Publication* pub, DPS_BitVect
      */
     if (ret == DPS_OK) {
         uv_buf_t bufs[] = {
-            { NULL, 0 },
-            { (char*)buf.base, DPS_TxBufferUsed(&buf) },
-            { (char*)pub->body.base, DPS_TxBufferUsed(&pub->body) },
-            { (char*)pub->payload.base, DPS_TxBufferUsed(&pub->payload) },
+            uv_buf_init(NULL, 0),
+            uv_buf_init((char*)buf.base, DPS_TxBufferUsed(&buf)),
+            uv_buf_init((char*)pub->body.base, DPS_TxBufferUsed(&pub->body)),
+            uv_buf_init((char*)pub->payload.base, DPS_TxBufferUsed(&pub->payload)),
         };
         if (remote) {
             ret = DPS_NetSend(node, pub, &remote->ep, bufs + 1, A_SIZEOF(bufs) - 1, OnPubSendComplete);
@@ -700,7 +700,7 @@ DPS_Status DPS_SendPublication(DPS_Node* node, DPS_Publication* pub, DPS_BitVect
                 UpdatePubHistory(node, pub);
             } else {
                 /*
-                 * Only the first buffer can be freed here
+                 * Only the first buffer can be freed here - we don't own the others
                  */
                 DPS_SendFailed(node, &remote->ep.addr, bufs + 1, 1, ret);
             }
@@ -710,7 +710,7 @@ DPS_Status DPS_SendPublication(DPS_Node* node, DPS_Publication* pub, DPS_BitVect
                 ret = DPS_MulticastSend(node->mcastSender, bufs, A_SIZEOF(bufs));
             }
             /*
-             * Only the first buffers can be freed
+             * Only the first two buffers can be freed - we don't own the others
              */
             DPS_NetFreeBufs(bufs, 2);
         }

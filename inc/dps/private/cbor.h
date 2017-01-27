@@ -25,6 +25,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <safe_lib.h>
 #include <dps/private/dps.h>
 
 #ifdef __cplusplus
@@ -35,6 +36,10 @@ extern "C" {
  * Maximum string length this implementation will encode or decode
  */
 #define CBOR_MAX_STRING_LEN 2048
+
+#if CBOR_MAX_STRING_LEN >= RSIZE_MAX_STR
+#error CBOR_MAX_STRING_LEN must be less than RSIZE_MAX_STR (see safe_str_lib.h)
+#endif
 
 /*
  * CBOR major types

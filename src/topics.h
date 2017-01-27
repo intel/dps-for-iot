@@ -23,6 +23,7 @@
 #ifndef _TOPICS_H
 #define _TOPICS_H
 
+#include <safe_lib.h>
 #include <dps/private/dps.h>
 #include "bitvec.h"
 
@@ -33,7 +34,11 @@ extern "C" {
 /**
  * Maximum length for a topic string exluding NUL terminator
  */
-#define DPS_MAX_TOPIC_STRLEN 4096
+#define DPS_MAX_TOPIC_STRLEN 2048
+
+#if DPS_MAX_TOPIC_STRLEN >= RSIZE_MAX_STR
+#error DPS_MAX_TOPIC_STRLEN must be less than RSIZE_MAX_STR (see safe_str_lib.h)
+#endif
 
 /**
  * Enumeration for Pub and Sub topicTypes
