@@ -115,6 +115,15 @@ const char* DPS_PublicationGetTopic(const DPS_Publication* pub, size_t index);
 size_t DPS_PublicationGetNumTopics(const DPS_Publication* pub);
 
 /**
+ * Check if an acknowledgement was requested for a publication.
+ *
+ * @param pub   The publication
+ *
+ * @return Returns 1 if an acknowledgement was requested, otherwise 0.
+ */
+int DPS_PublicationIsAckRequested(const DPS_Publication* pub);
+
+/**
  * Get the local node associated with a publication
  *
  * @param pub   The publication

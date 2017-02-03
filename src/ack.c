@@ -58,7 +58,7 @@ DPS_Status DPS_SendAcknowledgment(DPS_Node*node, PublicationAck* ack, RemoteNode
         uv_buf_init((char*)ack->payload.base, DPS_TxBufferUsed(&ack->payload))
     };
 
-    DPS_DBGTRACE();
+    DPS_DBGPRINT("SendAcknowledgement from %d\n", node->port);
     /*
      * Ownership of the buffers has been passed to the network
      */
@@ -294,7 +294,7 @@ DPS_Status DPS_DecodeAcknowledgment(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxB
     if ((ret == DPS_OK) && (sequenceNum <= sn) && addr) {
         RemoteNode* ackNode;
         ret = DPS_AddRemoteNode(node, addr, NULL, &ackNode);
-        if (ret == DPS_OK) {
+        if (ret == DPS_OK || ret == DPS_ERR_EXISTS) {
             uv_buf_t uvBuf;
             DPS_DBGPRINT("Forwarding acknowledgement for %s/%d to %s\n", DPS_UUIDToString(pubId), sequenceNum, DPS_NodeAddrToString(addr));
             /*
@@ -312,7 +312,7 @@ DPS_Status DPS_DecodeAcknowledgment(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxB
                 ret = DPS_ERR_RESOURCES;
             }
         }
-    };
+    }
     return ret;
 }
 

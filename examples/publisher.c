@@ -305,11 +305,11 @@ int main(int argc, char** argv)
         } else {
             DPS_ERRPRINT("Failed to publish topics - error=%d\n", ret);
         }
-        if (addr) {
-            DPS_UnlinkFrom(node, addr);
-            DPS_DestroyAddress(addr);
-        }
         if (!wait) {
+            if (addr) {
+                DPS_UnlinkFrom(node, addr);
+                DPS_DestroyAddress(addr);
+            }
             DPS_DestroyNode(node, OnNodeDestroyed, NULL);
         }
     } else {

@@ -30,7 +30,6 @@
 #include <dps/event.h>
 
 static int quiet = DPS_FALSE;
-static int sendAck = DPS_FALSE;
 
 static uint8_t AckMsg[] = "This is an ACK";
 
@@ -89,7 +88,7 @@ static void OnPubMatch(DPS_Subscription* sub, const DPS_Publication* pub, uint8_
             DPS_PRINT("%.*s\n", (int)len, data);
         }
     }
-    if (sendAck) {
+    if (DPS_PublicationIsAckRequested(pub)) {
         DPS_Status ret = DPS_AckPublication(pub, AckMsg, sizeof(AckMsg));
         if (ret != DPS_OK) {
             DPS_PRINT("Failed to ack pub %s\n", DPS_ErrTxt(ret));
@@ -159,11 +158,6 @@ int main(int argc, char** argv)
             continue;
         }
         if (IntArg("-x", &arg, &argc, &encrypt, 0, 1)) {
-            continue;
-        }
-        if (strcmp(*arg, "-a") == 0) {
-            ++arg;
-            sendAck = DPS_TRUE;
             continue;
         }
         if (strcmp(*arg, "-m") == 0) {

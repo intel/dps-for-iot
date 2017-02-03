@@ -29,7 +29,7 @@ foreach $pid (keys %links)
             if ($label == "") {
                 $label = "N/A";
             }
-            print "    $pid [label=\"$label\"];";
+            print "    $pid [label=\"$label\"];\n";
             print "    $pid -> $nodes{$port}";
         }
     }

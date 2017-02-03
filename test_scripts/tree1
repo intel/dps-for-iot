@@ -8,23 +8,23 @@
 #
 #   40000 ----\                                   /---- 60000
 #              \                                 /
-#   40001 ------> 30000 ----> 20000 <---- 50000 <------ 60001
+#   40001 ------> 40004 ----> 40003 <---- 50000 <------ 60001
 #              /                                 \
 #   40002 ----/                                   \---- 60002
 #
 
 killall subscriber
 
-build/dist/bin/subscriber -l 20000 B/B &
+build/dist/bin/subscriber -l 40003 B/B &
 sleep 1
-build/dist/bin/subscriber -l 30000 -p 20000 A/A &
+build/dist/bin/subscriber -l 40004 -p 40003 A/A &
 sleep 1
-build/dist/bin/subscriber -l 50000 -p 20000 C/C &
+build/dist/bin/subscriber -l 50000 -p 40003 C/C &
 sleep 1
 
-build/dist/bin/subscriber -l 40000 -p 30000 a/b/c &
-build/dist/bin/subscriber -l 40001 -p 30000 d/e/f &
-build/dist/bin/subscriber -l 40002 -p 30000 g/h/i &
+build/dist/bin/subscriber -l 40000 -p 40004 a/b/c &
+build/dist/bin/subscriber -l 40001 -p 40004 d/e/f &
+build/dist/bin/subscriber -l 40002 -p 40004 g/h/i &
 
 build/dist/bin/subscriber -l 60000 -p 50000 1/2/3 &
 build/dist/bin/subscriber -l 60001 -p 50000 4/5/6 &
@@ -32,8 +32,8 @@ build/dist/bin/subscriber -l 60002 -p 50000 7/8/9 &
 
 sleep 1
 
-build/dist/bin/publisher -p 20000 a/b/c 4/5/6 -m "---- published a/b/c 4/5/6"
-build/dist/bin/publisher -p 30000 d/e/f -m "---- published d/e/f"
+build/dist/bin/publisher -p 40003 a/b/c 4/5/6 -m "---- published a/b/c 4/5/6"
+build/dist/bin/publisher -p 40004 d/e/f -m "---- published d/e/f"
 build/dist/bin/publisher -p 40000 1/2/3 -m "---- published 1/2/3"
 build/dist/bin/publisher -p 50000 g/h/i -m "---- published g/h/i"
 
@@ -51,7 +51,7 @@ sleep 1
 
 build/dist/bin/publisher -t 20 -p 40000 X/X -m "---- published X/X"
 build/dist/bin/publisher -t 20 -p 60000 Y/Y -m "published Y/Y"
-build/dist/bin/publisher -t 20 -p 30000 Z/Z -m "published Z/Z"
+build/dist/bin/publisher -t 20 -p 40004 Z/Z -m "published Z/Z"
 
 sleep 1
 
@@ -63,4 +63,4 @@ sleep 1
 #                               |
 #
 
-build/dist/bin/subscriber -p 20000 "+/#" &
+build/dist/bin/subscriber -p 40003 "+/#" &

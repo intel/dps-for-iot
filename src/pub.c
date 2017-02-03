@@ -150,6 +150,11 @@ const char* DPS_PublicationGetTopic(const DPS_Publication* pub, size_t index)
     }
 }
 
+int DPS_PublicationIsAckRequested(const DPS_Publication* pub)
+{
+    return IsValidPub(pub) ? pub->ackRequested : 0;
+}
+
 DPS_Node* DPS_PublicationGetNode(const DPS_Publication* pub)
 {
     if (IsValidPub(pub)) {
