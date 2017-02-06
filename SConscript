@@ -108,14 +108,21 @@ if platform == '!!posix':
 testenv = env.Clone()
 testenv.Append(CPPPATH = ['src'])
 testenv.Append(LIBS = [lib, env['UV_LIBS']])
-testprogs = [testenv.Program('bin/hist_unit', 'test/hist_unit.c'),
-             testenv.Program('bin/countvec', 'test/countvec.c'),
-             testenv.Program('bin/rle_compression', 'test/rle_compression.c'),
-             testenv.Program('bin/topic_match', 'test/topic_match.c'),
-             testenv.Program('bin/pubsub', 'test/pubsub.c'),
-             testenv.Program('bin/packtest', 'test/packtest.c'),
-             testenv.Program('bin/cbortest', 'test/cbortest.c'),
-             testenv.Program('bin/cosetest', 'test/cosetest.c')]
+
+testsrcs = ['test/hist_unit.c',
+            'test/countvec.c',
+            'test/rle_compression.c',
+            'test/topic_match.c',
+            'test/pubsub.c',
+            'test/packtest.c',
+            'test/cbortest.c',
+            'test/cosetest.c']
+
+Depends(testsrcs, ext_libs)
+
+testprogs = []
+for test in testsrcs:
+    testprogs.append(testenv.Program(test))
 
 testenv.Install('#/build/test/bin', testprogs)
 
@@ -123,12 +130,20 @@ testenv.Install('#/build/test/bin', testprogs)
 # Examples
 exampleenv = env.Clone()
 exampleenv.Append(LIBS = [lib, env['UV_LIBS']])
-exampleprogs = [exampleenv.Program('registry', 'examples/registry.c'),
-                exampleenv.Program('reg_subs', 'examples/reg_subs.c'),
-                exampleenv.Program('reg_pubs', 'examples/reg_pubs.c'),
-                exampleenv.Program('publisher', 'examples/publisher.c'),
-                exampleenv.Program('pub_many', 'examples/pub_many.c'),
-                exampleenv.Program('subscriber', 'examples/subscriber.c')]
+
+examplesrcs = ['examples/registry.c',
+               'examples/reg_subs.c',
+               'examples/reg_pubs.c',
+               'examples/publisher.c',
+               'examples/pub_many.c',
+               'examples/subscriber.c']
+
+Depends(examplesrcs, ext_libs)
+
+exampleprogs = []
+for example in examplesrcs:
+    exampleprogs.append(exampleenv.Program(example))
+
 exampleenv.Install('#/build/dist/bin', exampleprogs)
 
 # Documentation
