@@ -38,7 +38,21 @@ except:
     pass
 
 extEnv = Environment(ENV = os.environ, variables=vars)
-env = Environment(CPPDEFINES=[], CPPPATH = ['#/inc', '#/ext/tinycrypt/lib/include', '#/ext/safestring/include'], variables=vars, tools=tools)
+
+env = Environment(
+    CPPDEFINES=[
+        'MBEDTLS_USER_CONFIG_FILE=\\"mbedtls_config.h\\"',
+    ],
+    CPPPATH=[
+        '#/inc',
+        '#/ext/tinycrypt/lib/include',
+        '#/ext/safestring/include',
+        '#/ext',
+        '#/ext/mbedtls/include',
+    ],
+    variables=vars,
+    tools=tools,
+)
 
 Help(vars.GenerateHelpText(env))
 
