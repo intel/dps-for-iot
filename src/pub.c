@@ -128,22 +128,34 @@ static int IsValidPub(const DPS_Publication* pub)
 
 const DPS_UUID* DPS_PublicationGetUUID(const DPS_Publication* pub)
 {
-    return IsValidPub(pub) ? &pub->pubId : NULL;
+    if (IsValidPub(pub) || (pub && (pub->flags & PUB_FLAG_IS_COPY))) {
+        return &pub->pubId;
+    } else {
+        return NULL;
+    }
 }
 
 uint32_t DPS_PublicationGetSequenceNum(const DPS_Publication* pub)
 {
-    return IsValidPub(pub) ? pub->sequenceNum : 0;
+    if (IsValidPub(pub) || (pub && (pub->flags & PUB_FLAG_IS_COPY))) {
+        return pub->sequenceNum;
+    } else {
+        return 0;
+    }
 }
 
 size_t DPS_PublicationGetNumTopics(const DPS_Publication* pub)
 {
-    return IsValidPub(pub) ? pub->numTopics : 0;
+    if (IsValidPub(pub) || (pub && (pub->flags & PUB_FLAG_IS_COPY))) {
+        return pub->numTopics;
+    } else {
+        return 0;
+    }
 }
 
 const char* DPS_PublicationGetTopic(const DPS_Publication* pub, size_t index)
 {
-    if (IsValidPub(pub) && (pub->numTopics > index)) {
+    if ((IsValidPub(pub) || (pub && (pub->flags & PUB_FLAG_IS_COPY))) && (pub->numTopics > index)) {
         return pub->topics[index];
     } else {
         return NULL;
@@ -152,12 +164,16 @@ const char* DPS_PublicationGetTopic(const DPS_Publication* pub, size_t index)
 
 int DPS_PublicationIsAckRequested(const DPS_Publication* pub)
 {
-    return IsValidPub(pub) ? pub->ackRequested : 0;
+    if (IsValidPub(pub) || (pub && (pub->flags & PUB_FLAG_IS_COPY))) {
+        return pub->ackRequested;
+    } else {
+        return 0;
+    }
 }
 
 DPS_Node* DPS_PublicationGetNode(const DPS_Publication* pub)
 {
-    if (IsValidPub(pub)) {
+    if (IsValidPub(pub) || (pub && (pub->flags & PUB_FLAG_IS_COPY))) {
         return pub->node;
     } else {
         return NULL;
@@ -774,6 +790,18 @@ DPS_Publication* DPS_CopyPublication(const DPS_Publication* pub)
     copy->pubId = pub->pubId;
     copy->sequenceNum = pub->sequenceNum;
     copy->node = pub->node;
+    copy->ackRequested = pub->ackRequested;
+    copy->numTopics = pub->numTopics;
+    if (pub->numTopics > 0) {
+        copy->topics = malloc(pub->numTopics * sizeof(char*));
+        if (!copy->topics) {
+            DPS_ERRPRINT("malloc failure: no memory\n");
+            return NULL;
+        }
+        for (int i = 0; i < pub->numTopics; i++) {
+            copy->topics[i] = strndup(pub->topics[i], DPS_MAX_TOPIC_STRLEN);
+        }
+    }
     copy->flags = PUB_FLAG_IS_COPY;
     return copy;
 }
@@ -1080,6 +1108,14 @@ DPS_Status DPS_DestroyPublication(DPS_Publication* pub)
      * Maybe destroying an uninitialized publication
      */
     if (!node || (pub->flags & PUB_FLAG_IS_COPY)) {
+        if (pub->topics) {
+            for (int i = 0; i < pub->numTopics; i++) {
+                if (pub->topics[i]) {
+                    free(pub->topics[i]);
+                }
+            }
+            free(pub->topics);
+        }
         free(pub);
         return DPS_OK;
     }
