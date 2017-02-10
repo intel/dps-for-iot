@@ -46,6 +46,8 @@ srcs = ['src/bitvec.c',
 
 if env['transport'] == 'udp':
     srcs.append('src/udp/network.c')
+elif env['transport'] == 'dtls':
+    srcs.append('src/dtls/network.c')
 else:
     srcs.append('src/tcp/network.c')
 

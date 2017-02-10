@@ -16,7 +16,7 @@ mbedtlsEnv.Append(
         'MBEDTLS_USER_CONFIG_FILE=\\"mbedtls_config.h\\"',
     ],
     CFLAGS = [
-        '-fPIC',
+        '-fPIC', "-g"
     ],
 )
 

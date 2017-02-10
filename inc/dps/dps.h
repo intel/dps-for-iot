@@ -148,16 +148,20 @@ typedef struct _DPS_KeyStore DPS_KeyStore;
  */
 typedef DPS_Status (*DPS_ContentKeyCallback)(DPS_KeyStore* keyStore, const DPS_UUID* kid, uint8_t* key, size_t keyLen);
 
+typedef DPS_Status (*DPS_NetworkKeyCallback)(DPS_KeyStore* keyStore, uint8_t* buffer, size_t bufferLen, size_t* keyLen);
+
 struct _DPS_KeyStore {
     /* TODO: Add version information to this exposed struct or make it opaque and add setters. */
     void* userData;
     DPS_ContentKeyCallback contentKeyCB;
+    DPS_NetworkKeyCallback networkKeyCB;
 };
 
 typedef struct _DPS_MemoryKeyStore DPS_MemoryKeyStore;
 DPS_MemoryKeyStore* DPS_CreateMemoryKeyStore();
 void DPS_DestroyMemoryKeyStore(DPS_MemoryKeyStore* mks);
 DPS_Status DPS_SetContentKey(DPS_MemoryKeyStore* mks, const DPS_UUID* kid, uint8_t* key, size_t keyLen);
+DPS_Status DPS_SetNetworkKey(DPS_MemoryKeyStore* mks, uint8_t* key, size_t keyLen);
 DPS_KeyStore* DPS_MemoryKeyStoreHandle(DPS_MemoryKeyStore* mks);
 
 /**
