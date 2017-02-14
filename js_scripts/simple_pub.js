@@ -24,7 +24,7 @@ var simple_pub = (function(){
     dps.StartNode(node, dps.MCAST_PUB_ENABLE_SEND, 0);
     var pub = dps.CreatePublication(node);
 
-    dps.InitPublication(pub, ['a/b/c'], 0, onAck);
+    dps.InitPublication(pub, ['a/b/c'], 0, 0, onAck);
     dps.Publish(pub, "hello", 0);
     setTimeout(publish, 100);
 })();

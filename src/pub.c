@@ -5,7 +5,6 @@
  *
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
@@ -63,6 +62,10 @@ static DPS_Publication* FreePublication(DPS_Node* node, DPS_Publication* pub)
                 assert(prev);
             }
             prev->next = next;
+        }
+        if (pub->keyId) {
+            free(pub->keyId);
+            pub->keyId = NULL;
         }
         if (pub->bf) {
             DPS_BitVectorFree(pub->bf);
@@ -181,7 +184,7 @@ DPS_Node* DPS_PublicationGetNode(const DPS_Publication* pub)
     }
 }
 
-static DPS_Status GetKey(void* ctx, DPS_UUID* kid, int8_t alg, uint8_t key[AES_128_KEY_LEN])
+static DPS_Status GetKey(void* ctx, const DPS_UUID* kid, int8_t alg, uint8_t key[AES_128_KEY_LEN])
 {
     DPS_Node* node = (DPS_Node*)ctx;
 
@@ -205,6 +208,7 @@ static DPS_Status CallPubHandlers(DPS_Node* node, DPS_Publication* pub)
 {
     DPS_Status ret;
     uint8_t nonce[DPS_COSE_NONCE_SIZE];
+    DPS_UUID keyId;
     DPS_Subscription* sub;
     DPS_Subscription* next;
     DPS_RxBuffer payload;
@@ -227,11 +231,22 @@ static DPS_Status CallPubHandlers(DPS_Node* node, DPS_Publication* pub)
     DPS_TxBufferToRx(&pub->body, &aad);
     DPS_TxBufferToRx(&pub->payload, &cipherText);
 
-    ret = COSE_Decrypt(nonce, &aad, &cipherText, GetKey, node, &plainText);
+    ret = COSE_Decrypt(nonce, &keyId, &aad, &cipherText, GetKey, node, &plainText);
     if (ret == DPS_OK) {
         DPS_DBGPRINT("Publication was decrypted\n");
         CBOR_Dump("plaintext", plainText.base, DPS_TxBufferUsed(&plainText));
         DPS_TxBufferToRx(&plainText, &payload);
+        /*
+         * We will use the same key id when we encrypt the acknowledgement
+         */
+        if (pub->ackRequested) {
+            pub->keyId = malloc(sizeof(UUID));
+            if (!pub->keyId) {
+                ret = DPS_ERR_RESOURCES;
+                goto Exit;
+            }
+            memcpy_s(pub->keyId, sizeof(DPS_UUID), &keyId, sizeof(DPS_UUID));
+        }
     } else if (ret == DPS_ERR_NOT_ENCRYPTED) {
         if (node->isSecured) {
             DPS_ERRPRINT("Publication was not encrypted - discarding\n");
@@ -807,7 +822,12 @@ DPS_Publication* DPS_CopyPublication(const DPS_Publication* pub)
     return copy;
 }
 
-DPS_Status DPS_InitPublication(DPS_Publication* pub, const char** topics, size_t numTopics, int noWildCard, DPS_AcknowledgementHandler handler)
+DPS_Status DPS_InitPublication(DPS_Publication* pub,
+                               const char** topics,
+                               size_t numTopics,
+                               int noWildCard,
+                               const DPS_UUID* keyId,
+                               DPS_AcknowledgementHandler handler)
 {
     size_t i;
     DPS_Node* node = pub ? pub->node : NULL;
@@ -843,11 +863,29 @@ DPS_Status DPS_InitPublication(DPS_Publication* pub, const char** topics, size_t
         pub->ackRequested = DPS_TRUE;
     }
     pub->flags = PUB_FLAG_LOCAL;
-
-    for (i = 0; i < numTopics; ++i) {
-        ret = DPS_AddTopic(pub->bf, topics[i], node->separators, noWildCard ? DPS_PubNoWild : DPS_PubTopic);
-        if (ret != DPS_OK) {
-            break;
+    /*
+     * Copy key identifier
+     */
+    if (keyId) {
+        DPS_DBGPRINT("Publication has a keyId\n");
+        if (!pub->node->isSecured) {
+            DPS_ERRPRINT("Node was not enabled for security\n");
+            ret = DPS_ERR_SECURITY;
+        } else {
+            pub->keyId = malloc(sizeof(DPS_UUID));
+            if (pub->keyId) {
+                memcpy_s(pub->keyId, sizeof(DPS_UUID), keyId, sizeof(DPS_UUID));
+            } else {
+                ret = DPS_ERR_RESOURCES;
+            }
+        }
+    }
+    if (ret == DPS_OK) {
+        for (i = 0; i < numTopics; ++i) {
+            ret = DPS_AddTopic(pub->bf, topics[i], node->separators, noWildCard ? DPS_PubNoWild : DPS_PubTopic);
+            if (ret != DPS_OK) {
+                break;
+            }
         }
     }
     if (ret == DPS_OK) {
@@ -997,12 +1035,13 @@ static DPS_Status SerializePub(DPS_Node* node, DPS_Publication* pub, const uint8
     if (node->isSecured) {
         DPS_RxBuffer plainText;
         DPS_RxBuffer aad;
+        DPS_UUID* keyId = pub->keyId ? pub->keyId : &node->keyId;
         uint8_t nonce[DPS_COSE_NONCE_SIZE];
 
         DPS_TxBufferToRx(&payload, &plainText);
         DPS_TxBufferToRx(&body, &aad);
         DPS_MakeNonce(&pub->pubId, pub->sequenceNum, DPS_MSG_TYPE_PUB, nonce);
-        ret = COSE_Encrypt(AES_CCM_16_128_128, &node->keyId, nonce, &aad, &plainText, GetKey, node, &payload);
+        ret = COSE_Encrypt(AES_CCM_16_128_128, keyId, nonce, &aad, &plainText, GetKey, node, &payload);
         DPS_RxBufferFree(&plainText);
         if (ret != DPS_OK) {
             DPS_TxBufferFree(&body);
@@ -1116,6 +1155,9 @@ DPS_Status DPS_DestroyPublication(DPS_Publication* pub)
                 }
             }
             free(pub->topics);
+        }
+        if (pub->keyId) {
+            free(pub->keyId);
         }
         free(pub);
         return DPS_OK;

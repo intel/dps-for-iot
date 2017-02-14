@@ -137,7 +137,7 @@ static void OnLinkedPut(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status ret, v
             topics[1] = regPut->tenant;
 
             DPS_SetPublicationData(regPut->pub, regPut);
-            DPS_InitPublication(regPut->pub, topics, 2, DPS_TRUE, OnPutAck);
+            DPS_InitPublication(regPut->pub, topics, 2, DPS_TRUE, NULL, OnPutAck);
             ret = DPS_Publish(regPut->pub, regPut->payload.base, DPS_TxBufferUsed(&regPut->payload), REGISTRATION_TTL);
             /*
              * Start a timer

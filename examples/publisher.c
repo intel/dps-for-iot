@@ -43,21 +43,33 @@ static DPS_Publication* currentPub = NULL;
 
 static DPS_Event* nodeDestroyed;
 
-static uint8_t keyId[] = { 0xed,0x54,0x14,0xa8,0x5c,0x4d,0x4d,0x15,0xb6,0x9f,0x0e,0x99,0x8a,0xb1,0x71,0xf2 };
+#define NUM_KEYS 2
+
+static DPS_UUID keyId[NUM_KEYS] = { 
+    { .val = { 0xed,0x54,0x14,0xa8,0x5c,0x4d,0x4d,0x15,0xb6,0x9f,0x0e,0x99,0x8a,0xb1,0x71,0xf2 } },
+    { .val = { 0x53,0x4d,0x2a,0x4b,0x98,0x76,0x1f,0x25,0x6b,0x78,0x3c,0xc2,0xf8,0x12,0x90,0xcc } }
+};
 
 /*
- * Preshared key for testing only
+ * Preshared keys for testing only - DO NOT USE THESE KEYS IN A REAL APPLICATION!!!!
  */
-static uint8_t keyData[] = { 0x77,0x58,0x22,0xfc,0x3d,0xef,0x48,0x88,0x91,0x25,0x78,0xd0,0xe2,0x74,0x5c,0x10 };
+static uint8_t keyData[NUM_KEYS][16] = {
+    { 0x77,0x58,0x22,0xfc,0x3d,0xef,0x48,0x88,0x91,0x25,0x78,0xd0,0xe2,0x74,0x5c,0x10 },
+    { 0x39,0x12,0x3e,0x7f,0x21,0xbc,0xa3,0x26,0x4e,0x6f,0x3a,0x21,0xa4,0xf1,0xb5,0x98 }
+};
 
-DPS_Status GetKey(DPS_Node* node, DPS_UUID* kid, uint8_t* key, size_t keyLen)
+DPS_Status GetKey(DPS_Node* node, const DPS_UUID* kid, uint8_t* key, size_t keyLen)
 {
-    if (memcmp(kid, keyId, sizeof(DPS_UUID)) == 0) {
-        memcpy(key, keyData, keyLen);
-        return DPS_OK;
-    } else {
-        return DPS_ERR_MISSING;
+    size_t i;
+
+    for (i = 0; i < NUM_KEYS; ++i) {
+        if (DPS_UUIDCompare(kid, &keyId[i]) == 0) {
+            memcpy(key, keyData[i], keyLen);
+            DPS_PRINT("Using key %d\n", i);
+            return DPS_OK;
+        }
     }
+    return DPS_ERR_MISSING;
 }
 
 static void OnNodeDestroyed(DPS_Node* node, void* data)
@@ -65,7 +77,7 @@ static void OnNodeDestroyed(DPS_Node* node, void* data)
     DPS_SignalEvent(nodeDestroyed, DPS_OK);
 }
 
-static int AddTopics(char* topicList, char** msg, int* keep, int* ttl)
+static int AddTopics(char* topicList, char** msg, int* keep, int* ttl, int* encrypt)
 {
     size_t i;
 
@@ -75,6 +87,7 @@ static int AddTopics(char* topicList, char** msg, int* keep, int* ttl)
     *msg = NULL;
     *keep = 0;
     *ttl = 0;
+    *encrypt = 1;
     numTopics = 0;
     while (numTopics < MAX_TOPICS) {
         size_t len = strcspn(topicList, " ");
@@ -88,6 +101,12 @@ static int AddTopics(char* topicList, char** msg, int* keep, int* ttl)
             switch(topicList[1]) {
             case 't':
                 if (!sscanf(topicList, "-t %d", ttl)) {
+                    return 0;
+                }
+                topicList += 3;
+                break;
+            case 'x':
+                if (!sscanf(topicList, "-x %d", encrypt)) {
                     return 0;
                 }
                 topicList += 3;
@@ -137,6 +156,7 @@ static void ReadStdin(DPS_Node* node)
         size_t len = strnlen(lineBuf, sizeof(lineBuf));
         int ttl;
         int keep;
+        int encrypt;
         char* msg;
         DPS_Status ret;
 
@@ -150,9 +170,9 @@ static void ReadStdin(DPS_Node* node)
 
         DPS_PRINT("Pub: %s\n", lineBuf);
 
-        if (!AddTopics(lineBuf, &msg, &keep, &ttl)) {
-            DPS_PRINT("Invalid\n");
-            return;
+        if (!AddTopics(lineBuf, &msg, &keep, &ttl, &encrypt)) {
+            DPS_PRINT("Invalid input\n");
+            continue;
         }
         if (!currentPub) {
             keep = 0;
@@ -160,10 +180,10 @@ static void ReadStdin(DPS_Node* node)
         if (!keep) {
             DPS_DestroyPublication(currentPub);
             currentPub = DPS_CreatePublication(node);
-            ret = DPS_InitPublication(currentPub, (const char**)topics, numTopics, DPS_FALSE, requestAck ? OnAck : NULL);
+            ret = DPS_InitPublication(currentPub, (const char**)topics, numTopics, DPS_FALSE, encrypt ? &keyId[1] : NULL, requestAck ? OnAck : NULL);
             if (ret != DPS_OK) {
                 DPS_ERRPRINT("Failed to create publication - error=%d\n", ret);
-                return;
+                break;
             }
         }
         ret = DPS_Publish(currentPub, msg, msg ? strnlen(msg, MAX_MSG_LEN) : 0, ttl);
@@ -171,8 +191,10 @@ static void ReadStdin(DPS_Node* node)
             DPS_PRINT("Pub UUID %s(%d)\n", DPS_UUIDToString(DPS_PublicationGetUUID(currentPub)), DPS_PublicationGetSequenceNum(currentPub));
         } else {
             DPS_ERRPRINT("Failed to publish %s error=%s\n", lineBuf, DPS_ErrTxt(ret));
+            break;
         }
     }
+    DPS_DestroyNode(node, OnNodeDestroyed, NULL);
 }
 
 static int IntArg(char* opt, char*** argp, int* argcp, int* val, int min, int max)
@@ -273,7 +295,7 @@ int main(int argc, char** argv)
         mcast = DPS_MCAST_PUB_DISABLED;
     }
 
-    node = DPS_CreateNode("/.", GetKey, encrypt ? (DPS_UUID*)keyId : NULL);
+    node = DPS_CreateNode("/.", encrypt ? GetKey : NULL, encrypt ? &keyId[0] : NULL);
 
     ret = DPS_StartNode(node, mcast, 0);
     if (ret != DPS_OK) {
@@ -294,16 +316,17 @@ int main(int argc, char** argv)
 
     if (numTopics) {
         currentPub = DPS_CreatePublication(node);
-        ret = DPS_InitPublication(currentPub, (const char**)topics, numTopics, DPS_FALSE, requestAck ? OnAck : NULL);
+
+        ret = DPS_InitPublication(currentPub, (const char**)topics, numTopics, DPS_FALSE, encrypt ? &keyId[1] : NULL, requestAck ? OnAck : NULL);
         if (ret != DPS_OK) {
-            DPS_ERRPRINT("Failed to create publication - error=%d\n", ret);
+            DPS_ERRPRINT("Failed to create publication - error=%s\n", DPS_ErrTxt(ret));
             return 1;
         }
         ret = DPS_Publish(currentPub, msg, msg ? strnlen(msg, MAX_MSG_LEN) + 1 : 0, ttl);
         if (ret == DPS_OK) {
             DPS_PRINT("Pub UUID %s\n", DPS_UUIDToString(DPS_PublicationGetUUID(currentPub)));
         } else {
-            DPS_ERRPRINT("Failed to publish topics - error=%d\n", ret);
+            DPS_ERRPRINT("Failed to publish topics - error=%s\n", DPS_ErrTxt(ret));
         }
         if (!wait) {
             if (addr) {
@@ -321,7 +344,7 @@ int main(int argc, char** argv)
     return 0;
 
 Usage:
-    DPS_PRINT("Usage %s [-p <portnum>] [-h <hostname>] [-d] [-m <message>] [topic1 topic2 ... topicN]\n", *argv);
+    DPS_PRINT("Usage %s [-x 0/1] [-a] [-w] [-p <portnum>] [-h <hostname>] [-d] [-m <message>] [topic1 topic2 ... topicN]\n", *argv);
     return 1;
 }
 

@@ -33,21 +33,33 @@ static int quiet = DPS_FALSE;
 
 static uint8_t AckMsg[] = "This is an ACK";
 
-static uint8_t keyId[] = { 0xed,0x54,0x14,0xa8,0x5c,0x4d,0x4d,0x15,0xb6,0x9f,0x0e,0x99,0x8a,0xb1,0x71,0xf2 };
+#define NUM_KEYS 2
+
+static DPS_UUID keyId[NUM_KEYS] = { 
+    { .val = { 0xed,0x54,0x14,0xa8,0x5c,0x4d,0x4d,0x15,0xb6,0x9f,0x0e,0x99,0x8a,0xb1,0x71,0xf2 } },
+    { .val = { 0x53,0x4d,0x2a,0x4b,0x98,0x76,0x1f,0x25,0x6b,0x78,0x3c,0xc2,0xf8,0x12,0x90,0xcc } }
+};
 
 /*
- * Preshared key for testing only
+ * Preshared keys for testing only - DO NOT USE THESE KEYS IN A REAL APPLICATION!!!!
  */
-static uint8_t keyData[] = { 0x77,0x58,0x22,0xfc,0x3d,0xef,0x48,0x88,0x91,0x25,0x78,0xd0,0xe2,0x74,0x5c,0x10 };
+static uint8_t keyData[NUM_KEYS][16] = {
+    { 0x77,0x58,0x22,0xfc,0x3d,0xef,0x48,0x88,0x91,0x25,0x78,0xd0,0xe2,0x74,0x5c,0x10 },
+    { 0x39,0x12,0x3e,0x7f,0x21,0xbc,0xa3,0x26,0x4e,0x6f,0x3a,0x21,0xa4,0xf1,0xb5,0x98 }
+};
 
-DPS_Status GetKey(DPS_Node* node, DPS_UUID* kid, uint8_t* key, size_t keyLen)
+DPS_Status GetKey(DPS_Node* node, const DPS_UUID* kid, uint8_t* key, size_t keyLen)
 {
-    if (memcmp(kid, keyId, sizeof(DPS_UUID)) == 0) {
-        memcpy(key, keyData, keyLen);
-        return DPS_OK;
-    } else {
-        return DPS_ERR_MISSING;
+    size_t i;
+
+    for (i = 0; i < NUM_KEYS; ++i) {
+        if (DPS_UUIDCompare(kid, &keyId[i]) == 0) {
+            memcpy(key, keyData[i], keyLen);
+            DPS_PRINT("Using key %d\n", i);
+            return DPS_OK;
+        }
     }
+    return DPS_ERR_MISSING;
 }
 
 static void OnNodeDestroyed(DPS_Node* node, void* data)
@@ -194,7 +206,7 @@ int main(int argc, char** argv)
         mcastPub = DPS_MCAST_PUB_ENABLE_RECV;
     }
 
-    node = DPS_CreateNode("/.", GetKey, encrypt ? (DPS_UUID*)keyId : NULL);
+    node = DPS_CreateNode("/.", encrypt ? GetKey : NULL, encrypt ? &keyId[0] : NULL);
 
     ret = DPS_StartNode(node, mcastPub, listenPort);
     if (ret != DPS_OK) {
@@ -247,6 +259,6 @@ int main(int argc, char** argv)
     return 0;
 
 Usage:
-    DPS_PRINT("Usage %s [-p <portnum>] [-h <hostname>] [-l <listen port] [-m] [-d] [-s topic1 ... topicN]\n", *argv);
+    DPS_PRINT("Usage %s [-x 0/1] [-p <portnum>] [-h <hostname>] [-l <listen port] [-m] [-d] [-s topic1 ... topicN]\n", *argv);
     return 1;
 }

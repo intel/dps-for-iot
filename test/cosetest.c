@@ -56,8 +56,8 @@ static const uint8_t key[] = {
     0x77,0x58,0x22,0xfc,0x3d,0xef,0x48,0x88,0x91,0x25,0x78,0xd0,0xe2,0x74,0x5c,0x10
 };
 
-static uint8_t keyId[] = {
-    0xed,0x54,0x14,0xa8,0x5c,0x4d,0x4d,0x15,0xb6,0x9f,0x0e,0x99,0x8a,0xb1,0x71,0xf2
+static DPS_UUID keyId = {
+    .val= { 0xed,0x54,0x14,0xa8,0x5c,0x4d,0x4d,0x15,0xb6,0x9f,0x0e,0x99,0x8a,0xb1,0x71,0xf2 }
 };
 
 static void Dump(const char* tag, const uint8_t* data, size_t len)
@@ -78,9 +78,9 @@ uint8_t config[] = {
     AES_CCM_16_128_128
 };
 
-static DPS_Status GetKey(void* ctx, DPS_UUID* kid, int8_t alg, uint8_t* k)
+static DPS_Status GetKey(void* ctx, const DPS_UUID* kid, int8_t alg, uint8_t* k)
 {
-    if (DPS_UUIDCompare(kid, (DPS_UUID*)keyId) != 0) {
+    if (DPS_UUIDCompare(kid, &keyId) != 0) {
         assert(0);
         return DPS_ERR_MISSING;
     } else {
@@ -121,6 +121,7 @@ int main(int argc, char** argv)
 
     for (i = 0; i < sizeof(config); ++i) {
         uint8_t alg = config[i];
+        DPS_UUID kid;
         DPS_RxBuffer aadBuf;
         DPS_RxBuffer msgBuf;
         DPS_TxBuffer cipherText;
@@ -130,7 +131,7 @@ int main(int argc, char** argv)
         DPS_RxBufferInit(&aadBuf, (uint8_t*)aad, sizeof(aad));
         DPS_RxBufferInit(&msgBuf, (uint8_t*)msg, sizeof(msg));
 
-        ret = COSE_Encrypt(alg, (DPS_UUID*)keyId, nonce, &aadBuf, &msgBuf, GetKey, NULL, &cipherText);
+        ret = COSE_Encrypt(alg, &keyId, nonce, &aadBuf, &msgBuf, GetKey, NULL, &cipherText);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("COSE_Encrypt failed: %s\n", DPS_ErrTxt(ret));
             return 1;
@@ -143,7 +144,7 @@ int main(int argc, char** argv)
 
         DPS_RxBufferInit(&aadBuf, (uint8_t*)aad, sizeof(aad));
 
-        ret = COSE_Decrypt(nonce, &aadBuf, &input, GetKey, NULL, &plainText);
+        ret = COSE_Decrypt(nonce, &kid, &aadBuf, &input, GetKey, NULL, &plainText);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("COSE_Decrypt failed: %s\n", DPS_ErrTxt(ret));
             return 1;

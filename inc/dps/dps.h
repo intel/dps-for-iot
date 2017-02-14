@@ -144,7 +144,7 @@ DPS_Node* DPS_PublicationGetNode(const DPS_Publication* pub);
  * @return  DPS_OK if a key matching the kid was returned
  *          DPS_ERR_MSSING if there is no matching key
  */
-typedef DPS_Status (*DPS_KeyRequestCallback)(DPS_Node* node, DPS_UUID* kid, uint8_t* key, size_t keyLen);
+typedef DPS_Status (*DPS_KeyRequestCallback)(DPS_Node* node, const DPS_UUID* kid, uint8_t* key, size_t keyLen);
 
 /**
  * Allocates space for a local DPS node.
@@ -191,7 +191,7 @@ DPS_Status DPS_StartNode(DPS_Node* node, int mcastPub, int listenPort);
 /**
  * Function prototype for callback function called when a node is destroyed.
  *
- * @param node   The node that was destroyed. This pointer is valid during 
+ * @param node   The node that was destroyed. This pointer is valid during
  *               the callback.
  * @param data   Data pointer passed to DPS_DestroyNode()
  *
@@ -284,9 +284,15 @@ void* DPS_GetPublicationData(const DPS_Publication* pub);
  * @param topics      The topic strings to publish
  * @param numTopics   The number of topic strings to publish - must be >= 1
  * @param noWildCard  If TRUE the publication will not match wildcard subscriptions
+ * @param keyId       Optional key identifier to use for encrypted publications
  * @param handler     Optional handler for receiving acknowledgments
  */
-DPS_Status DPS_InitPublication(DPS_Publication* pub, const char** topics, size_t numTopics, int noWildCard, DPS_AcknowledgementHandler handler);
+DPS_Status DPS_InitPublication(DPS_Publication* pub,
+                               const char** topics,
+                               size_t numTopics,
+                               int noWildCard,
+                               const DPS_UUID* keyId,
+                               DPS_AcknowledgementHandler handler);
 
 /**
  * Publish a set of topics along with an optional payload. The topics will be published immediately
@@ -310,7 +316,7 @@ DPS_Status DPS_Publish(DPS_Publication* pub, const uint8_t* pubPayload, size_t l
  * Delete a publication and frees any resources allocated. This does not cancel retained publications
  * that have an unexpired TTL. To expire a retained publication call DPS_Publish() with a zero TTL.
  *
- * This function should only be called for publications created by DPS_CreatePublication() or 
+ * This function should only be called for publications created by DPS_CreatePublication() or
  * DPS_CopyPublication().
  *
  * @param pub         The publication to destroy

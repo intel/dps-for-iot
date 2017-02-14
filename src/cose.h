@@ -61,7 +61,7 @@ extern "C" {
  * @return  DPS_OK if a key matching the kid was returned
  *          DPS_ERR_MSSING if there is no matchin key
  */
-typedef DPS_Status (*COSE_KeyRequest)(void* ctx, DPS_UUID* kid, int8_t alg, uint8_t key[AES_128_KEY_LEN]);
+typedef DPS_Status (*COSE_KeyRequest)(void* ctx, const DPS_UUID* kid, int8_t alg, uint8_t key[AES_128_KEY_LEN]);
 
 /**
  * COSE Encryption
@@ -80,7 +80,7 @@ typedef DPS_Status (*COSE_KeyRequest)(void* ctx, DPS_UUID* kid, int8_t alg, uint
  *          - Other error codes
  */
 DPS_Status COSE_Encrypt(int8_t alg,
-                        DPS_UUID* kid,
+                        const DPS_UUID* kid,
                         const uint8_t nonce[DPS_COSE_NONCE_SIZE],
                         DPS_RxBuffer* aad,
                         DPS_RxBuffer* plainText,
@@ -91,6 +91,8 @@ DPS_Status COSE_Encrypt(int8_t alg,
 /**
  * COSE Decryption
  *
+ * @param nonce      The nonce
+ * @param kid        Returns the key identifier used to lookup the decryption key.
  * @param aad        Buffer containing the external auxiliary authenticated data.
  * @param cipherText Buffer containing the authenticated and encrypted input data
  * @param keyCB      Callback function called to request the encryption key
@@ -105,6 +107,7 @@ DPS_Status COSE_Encrypt(int8_t alg,
  *          - Other error codes
  */
 DPS_Status COSE_Decrypt(const uint8_t nonce[DPS_COSE_NONCE_SIZE],
+                        DPS_UUID* kid,
                         DPS_RxBuffer* aad,
                         DPS_RxBuffer* cipherText,
                         COSE_KeyRequest keyCB,

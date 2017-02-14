@@ -86,7 +86,7 @@ static DPS_Status SetCryptoParams(uint8_t alg, uint8_t* L, uint8_t* M)
  */
 #define HEADROOM  32
 
-static DPS_Status EncodeUnprotectedMap(DPS_TxBuffer* buf, DPS_UUID* kid)
+static DPS_Status EncodeUnprotectedMap(DPS_TxBuffer* buf, const DPS_UUID* kid)
 {
     DPS_Status ret;
     /*
@@ -163,7 +163,7 @@ static DPS_Status EncodeAAD(uint8_t alg, DPS_TxBuffer* buf, uint8_t* aad, size_t
 }
 
 DPS_Status COSE_Encrypt(int8_t alg,
-                        DPS_UUID* kid,
+                        const DPS_UUID* kid,
                         const uint8_t nonce[DPS_COSE_NONCE_SIZE],
                         DPS_RxBuffer* aad,
                         DPS_RxBuffer* plainText,
@@ -185,6 +185,9 @@ DPS_Status COSE_Encrypt(int8_t alg,
     DPS_TxBufferClear(cipherText);
     DPS_TxBufferClear(&AAD);
 
+    if (!aad || !plainText || !keyCB || !cipherText || !kid) {
+        return DPS_ERR_NULL;
+    }
     ret = SetCryptoParams(alg, &L, &M);
     if (ret != DPS_OK) {
         goto ErrorExit;
@@ -343,6 +346,7 @@ static DPS_Status DecodeProtectedMap(DPS_RxBuffer* buf, int8_t* alg)
 }
 
 DPS_Status COSE_Decrypt(const uint8_t nonce[DPS_COSE_NONCE_SIZE],
+                        DPS_UUID* kid,
                         DPS_RxBuffer* aad,
                         DPS_RxBuffer* cipherText,
                         COSE_KeyRequest keyCB,
@@ -356,7 +360,6 @@ DPS_Status COSE_Decrypt(const uint8_t nonce[DPS_COSE_NONCE_SIZE],
     uint8_t M;
     size_t sz;
     int8_t alg;
-    DPS_UUID kid;
     uint64_t tag;
     size_t aadLen;
     size_t ctLen;
@@ -367,6 +370,9 @@ DPS_Status COSE_Decrypt(const uint8_t nonce[DPS_COSE_NONCE_SIZE],
     DPS_TxBufferClear(plainText);
     DPS_TxBufferClear(&AAD);
 
+    if (!aad || !cipherText || !keyCB || !plainText || !kid) {
+        return DPS_ERR_NULL;
+    }
     /*
      * Check this is a COSE payload
      */
@@ -399,11 +405,11 @@ DPS_Status COSE_Decrypt(const uint8_t nonce[DPS_COSE_NONCE_SIZE],
     /*
      * [2] Unprotected map
      */
-    ret = DecodeUnprotectedMap(cipherText, &kid);
+    ret = DecodeUnprotectedMap(cipherText, kid);
     if (ret != DPS_OK) {
         goto ErrorExit;
     }
-    ret = keyCB(ctx, &kid, alg, key);
+    ret = keyCB(ctx, kid, alg, key);
     if (ret != DPS_OK) {
         goto ErrorExit;
     }

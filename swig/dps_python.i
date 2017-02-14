@@ -307,7 +307,7 @@ static void _ClearPubHandler(DPS_Subscription* sub)
  * node callback call into Python function
  */
 %{
-DPS_Status NodeHandler(DPS_Node* node, DPS_UUID* kid, uint8_t* key, size_t keyLen)
+DPS_Status NodeHandler(DPS_Node* node, const DPS_UUID* kid, uint8_t* key, size_t keyLen)
 {
     PyObject* cb = (PyObject*)DPS_GetNodeData(node);
     PyObject* nodeObj;
@@ -322,7 +322,9 @@ DPS_Status NodeHandler(DPS_Node* node, DPS_UUID* kid, uint8_t* key, size_t keyLe
         PyErr_SetString(PyExc_TypeError,"Callback is NULL");
         return DPS_ERR_FAILURE;
     }
-
+    if (!kid) {
+        return DPS_ERR_MISSING;
+    }
     /*
      * This callback was called from an external thread so we
      * need to get the Global-Interpreter-Interlock before we
@@ -436,33 +438,35 @@ static PyObject* UUIDToPyString(const DPS_UUID* uuid)
 %}
 
 %typemap(in) DPS_UUID* {
-    int j, i;
+    DPS_UUID* uuid = NULL;
 
-    if (!PyList_Check($input)) {
-        PyErr_SetString(PyExc_TypeError,"DPS_UUID: no list\n");
-        SWIG_fail;
-    }
-
-    DPS_UUID* uuid = (DPS_UUID*)malloc(sizeof(DPS_UUID));
-    if (!uuid) {
-        PyErr_SetString(PyExc_MemoryError,"DPS_UUID: no memory\n");
-        SWIG_fail;
-    }
-    for (j = 0, i = 0; j < PyList_Size($input); ++j) {
-        PyObject *pValue = PyList_GetItem($input, j);
-        if (PyInt_Check(pValue) && i < sizeof(DPS_UUID)) {
-            int32_t v = PyInt_AsLong(pValue);
-            if (v >= 0 && v <= 255) {
-                uuid->val[i++] = (uint8_t)v;
+    if ($input != Py_None) {
+        int j, i;
+        if (!PyList_Check($input)) {
+            PyErr_SetString(PyExc_TypeError,"DPS_UUID: not a list\n");
+            SWIG_fail;
+        }
+        uuid = (DPS_UUID*)malloc(sizeof(DPS_UUID));
+        if (!uuid) {
+            PyErr_SetString(PyExc_MemoryError,"DPS_UUID: no memory\n");
+            SWIG_fail;
+        }
+        for (j = 0, i = 0; j < PyList_Size($input); ++j) {
+            PyObject *pValue = PyList_GetItem($input, j);
+            if (PyInt_Check(pValue) && i < sizeof(DPS_UUID)) {
+                int32_t v = PyInt_AsLong(pValue);
+                if (v >= 0 && v <= 255) {
+                    uuid->val[i++] = (uint8_t)v;
+                } else {
+                    PyErr_SetString(PyExc_TypeError,"uuid values must be in range 0..255");
+                    free(uuid);
+                    SWIG_fail;
+                }
             } else {
-                PyErr_SetString(PyExc_TypeError,"uuid values must be in range 0..255");
+                PyErr_SetString(PyExc_TypeError,"value is not int type or len > uuid");
                 free(uuid);
                 SWIG_fail;
             }
-        } else {
-            PyErr_SetString(PyExc_TypeError,"value is not int type or len > uuid");
-            free(uuid);
-            SWIG_fail;
         }
     }
     $1 = uuid;

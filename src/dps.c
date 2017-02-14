@@ -924,7 +924,15 @@ DPS_Node* DPS_CreateNode(const char* separators, DPS_KeyRequestCallback keyReque
     if (!separators) {
         separators = "/";
     }
-    if (keyId) {
+    /*
+     * Sanity check
+     */
+    if (keyId && !keyRequestCB) {
+        DPS_ERRPRINT("A key request callback is required\n");
+        free(node);
+        return NULL;
+    }
+    if (keyId || keyRequestCB) {
         node->isSecured = DPS_TRUE;
         memcpy_s(&node->keyId, sizeof(DPS_UUID), keyId, sizeof(DPS_UUID));
     }
