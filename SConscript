@@ -101,6 +101,7 @@ if platform == '!!posix':
     nodeenv.Append(SWIGFLAGS = ['-javascript', '-node', '-c++', '-DV8_VERSION=0x04059937', '-Wall', '-Werror', '-v'], SWIGPATH = '#/inc')
     nodeenv.Append(CPPFLAGS = ['-DBUILDING_NODE_EXTENSION', '-std=c++11'])
     nodeenv.Append(CPPPATH = ['/usr/include/node'])
+    nodeenv.Append(LIBS = [lib, env['UV_LIBS']])
     nodedps = nodeenv.SharedLibrary('lib/nodedps', shobjs + ['swig/dps_node.i'])
     nodeenv.InstallAs('#/build/dist/js/dps.node', nodedps)
 
