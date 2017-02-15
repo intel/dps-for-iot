@@ -240,7 +240,7 @@ static DPS_Status CallPubHandlers(DPS_Node* node, DPS_Publication* pub)
          * We will use the same key id when we encrypt the acknowledgement
          */
         if (pub->ackRequested) {
-            pub->keyId = malloc(sizeof(UUID));
+            pub->keyId = malloc(sizeof(DPS_UUID));
             if (!pub->keyId) {
                 ret = DPS_ERR_RESOURCES;
                 goto Exit;

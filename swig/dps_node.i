@@ -277,7 +277,7 @@ static void PubHandler(DPS_Subscription* sub, const DPS_Publication* pub, uint8_
 }
 
 %{
-DPS_Status KeyRequestHandler(DPS_Node* node, DPS_UUID* kid, uint8_t* key, size_t keyLen)
+DPS_Status KeyRequestHandler(DPS_Node* node, const DPS_UUID* kid, uint8_t* key, size_t keyLen)
 {
     return DPS_OK;
 }
