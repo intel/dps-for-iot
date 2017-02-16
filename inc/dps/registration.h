@@ -42,7 +42,7 @@ extern const char* DPS_RegistryTopicString;
 #define DPS_CANDIDATE_INVALID  0x10  /** This is a invalid candidate address for linking */
 
 /**
- * Registration entryg
+ * Registration entry
  */
 typedef struct _DPS_Registration {
     uint8_t flags;
@@ -72,8 +72,10 @@ void DPS_DestroyRegistrationList(DPS_RegistrationList* regs);
 /**
  * Function prototype for callback called when DPS_Registration_Put() completes
  *
- * @param status      DPS_OK if the registration was made
- * @param data        Caller supplied data passed into the DPS_Registration_Put()
+ * @param status  Status code indicating success or failure
+ *                - DPS_OK if the registration was made
+ *                - Other error status codes
+ * @param data    Caller supplied data passed into the DPS_Registration_Put()
  *
  */
 typedef void (*DPS_OnRegPutComplete)(DPS_Status status, void* data);
@@ -89,6 +91,8 @@ typedef void (*DPS_OnRegPutComplete)(DPS_Status status, void* data);
  * @param cb            Callback called when the registration completes.
  * @param data          Caller provided data to be passed to the callback function
  *
+ * @return DPS_OK if the registration put reequest was succesfully initiated, otherwise returns an
+ *         error status and the callback function will not be called.
  */
 DPS_Status DPS_Registration_Put(DPS_Node* node, const char* host, uint16_t port, const char* tenantString, DPS_OnRegPutComplete cb, void* data);
 
@@ -101,6 +105,7 @@ DPS_Status DPS_Registration_Put(DPS_Node* node, const char* host, uint16_t port,
  * @param port          The port number
  * @param tenantString  Topic string indentifying the tenant
  *
+ * @return DPS_OK if the put request succeeded or and error status for the failure.
  */
 DPS_Status DPS_Registration_PutSyn(DPS_Node* node, const char* host, uint16_t port, const char* tenantString);
 
@@ -125,8 +130,10 @@ typedef void (*DPS_OnRegGetComplete)(DPS_RegistrationList* regs, DPS_Status stat
  *                      initialized with the maximum number of registrations to be returned. The
  *                      candidate list pointer must remanin valid until the callback is called.
  * @param cb            The callback to call with the result
- * @param data          Called supplied data to be passed to the callback
+ * @param data          Caller supplied data to be passed to the callback
  *
+ * @return DPS_OK if the registration get request was succesfully initiated, otherwise returns an
+ *         error status and the callback function will not be called.
  */
 DPS_Status DPS_Registration_Get(DPS_Node* node, const char* host, uint16_t port, const char* tenantString, DPS_RegistrationList* regs, DPS_OnRegGetComplete cb, void* data);
 
@@ -140,6 +147,7 @@ DPS_Status DPS_Registration_Get(DPS_Node* node, const char* host, uint16_t port,
  * @param tenantString  Topic string indentifying the tenant
  * @param regs          Registration list for accumulating the results.
  *
+ * @return DPS_OK if the get request succeeded or and error status for the failure.
  */
 DPS_Status DPS_Registration_GetSyn(DPS_Node* node, const char* host, uint16_t port, const char* tenantString, DPS_RegistrationList* regs);
 
@@ -148,8 +156,10 @@ DPS_Status DPS_Registration_GetSyn(DPS_Node* node, const char* host, uint16_t po
  *
  * @param regs    The list of registrations addressess passed in to DPS_Registration_LinkTo().
  * @param addr    The address if the remote if status == DPS_OK
- * @param status  - DPS_OK if a link was sucessfully established
+ * @param status  Status code indicating success or failure
+ *                - DPS_OK if a link was sucessfully established
  *                - DPS_ERR_NO_ROUTE if a link could not be established
+ *                - Other error status codes
  * @param data    Caller supplied data passed into the DPS_Registration_LinkTo()
  *
  */
@@ -161,10 +171,12 @@ typedef void (*DPS_OnRegLinkToComplete)(DPS_Node* node, DPS_RegistrationList* re
  * @param node  The local node to link
  * @param regs  The list of candidate registrations to try to link to
  * @param cb    The callback to call with the result
- * @param data  Called supplied data to be passed to the callback
+ * @param data  Caller supplied data to be passed to the callback
  *
- * @return  DPS_OK if a link is being tried
- *          DPS_ERR_NO_ROUTE if no new links can be established
+ * @return  Status code indicating success or failure
+ *          - DPS_OK if a link is being tried, the success or failure will be reported in the callback
+ *          - DPS_ERR_NO_ROUTE if no new links can be established
+ *          - Other error status codes
  */
 DPS_Status DPS_Registration_LinkTo(DPS_Node* node, DPS_RegistrationList* regs, DPS_OnRegLinkToComplete cb, void* data);
 
@@ -175,6 +187,10 @@ DPS_Status DPS_Registration_LinkTo(DPS_Node* node, DPS_RegistrationList* regs, D
  * @param regs  The list of candidate registrations to try to link to
  * @param addr  Set to the address of the linked candidate
  *
+ * @return  Status code indicating success or failure
+ *          - DPS_OK if a link was successfully established
+ *          - DPS_ERR_NO_ROUTE if no new links can be established
+ *          - Other error status codes
  */
 DPS_Status DPS_Registration_LinkToSyn(DPS_Node* node, DPS_RegistrationList* regs, DPS_NodeAddress* addr);
 
