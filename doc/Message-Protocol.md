@@ -1,13 +1,18 @@
 # Message Protocol
 This section descbribes the DPS message protocol encodings. DPS messages are
 encoded in CBOR.
-### DPS has three message types
+
+## DPS Message types
+DPS has three messages types.
 ~~~~
 message = publication / subscription / ack
 ~~~~
 ## Common types
 These are types common across the various message types.
-### 16 byte UUIDs
+
+
+### UUID
+UUIDs identify publications and are also used as key identifiers for encrypted messages.
 ~~~~
 uuid = bstr .size 16
 ~~~~
