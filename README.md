@@ -62,19 +62,20 @@ Building the documentation requires the scons [DoxygenBuilder](https://bitbucket
 
 ---
 ## Build
-To build the DPS libraries, examples, bidings, and documentation run 'scons'.
+To build the DPS libraries, examples, bindings, and documentation run 'scons'.
 
 `$ scons [variant=debug|release] [transport=udp|tcp]`
 
 The default build configuration is `variant=release transport=udp`.
-> A limitation on the current implementation is that the transport must be configured at compile time.
+> *A limitation of the current implementation is that the transport must be configured at compile time.*
 
-The scons script pulls down source code from two external projects: tincrypt, and safestringlib.into the `./ext` directory. If necessary these projects can be populated manually:
+The scons script pulls down source code from two external projects (tinycrypt and safestringlib)
+into the `./ext` directory. If necessary these projects can be populated manually:
 
 `git clone https://github.com/01org/tinycrypt.git ext/tinycrypt`
 `git clone https://github.com/01org/safestringlib.git ext/safestring`
 
->Note: the ext projects are populated the first time DPS is built. To update these projects you need to manually delete them and rerun scons.
+> Note: the ext projects are populated the first time DPS is built. To update these projects you need to manually delete them and rerun scons.
 
 ## Examples
 
@@ -96,30 +97,33 @@ There are currently six C samples:
 - **subscriber.c**
 
     This application is the subscription counterpart to publisher.c, it creates a subscription and
-    either listens for multicast publications or links another node to form a subscriber mesh.
+    either listens for multicast publications or links another node to form a subscriber mesh. With the following
+    commands the subscriber application listens for multicast subscriptions that match the specified topic
+    string.
 ~~~~
     subscriber a/b/c
     subscriber a/+/c
     subscriber a/#
 ~~~~
-    listens for multicast subscriptions that match the specified topic string (in this case they all match **a/b/c**)
-    and prints out information about the received publications.
+    In the examples above the subscriptions all match **a/b/c**. On receiving a matching publication the
+    application prints out the subscription topic string that was matched and all the topic strings that
+    were in the publication, if the publication had a payload that is printed also.
 - **registry.c**
 
     This applications uses DPS to implement an experimental discovery service. There are two
-    companion applications, *reg_pubs* and *reg_subs* described below that make use of this service for
-    find and join a mesh identified by a *tenant*  topic string.
+    companion applications, *reg_pubs* and *reg_subs* described below that make use of this service
+    to find and join a mesh identified by a *tenant*  topic string.
 - **reg_pubs.c**
 
     This application is similar to *publisher* but it uses the *registry* service to find other nodes to
-    link with. The result is a multiply-connected (randomly connected) mesh.
+    link with. The result is a randomly multiply-connected mesh.
 - **reg_subs.c**
 
     This application is subscription counterpart to *reg_subs*, it uses the *registry* service to
     find other node and links into the mesh.
 - **pub_many.c**
 
-    This is application just sends a series of publications as fast as they are acknowledged.
+    This is application sends a series of publications as fast as they are acknowledged.
     It can be used with the *subscriber* application.
 
 The C examples are installed in `./build/dist/bin`. There are some some test scripts in
@@ -128,5 +132,6 @@ The test script **tree1** builds a small mesh and shows how publications sent to
 any node in the mesh get forwarded to the matching subscribers.
 The script **reg1** uses the *registry*, *reg_pubs*, and *reg_subs* examples programs
 to build a dynamic mesh using the experimental discovery service.
+
 
 
