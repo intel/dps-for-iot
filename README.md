@@ -69,9 +69,10 @@ The scons script pulls down source code from two external projects (tinycrypt an
 into the `./ext` directory. If necessary these projects can be populated manually:
 
 `git clone https://github.com/01org/tinycrypt.git ext/tinycrypt`
+
 `git clone https://github.com/01org/safestringlib.git ext/safestring`
 
-> Note: the ext projects are populated the first time DPS is built. To update these projects you need to manually delete them and rerun scons.
+> Note: the ext projects are populated the first time DPS is built. To update these projects you need to manually do a `git pull` or delete the project directory and rerun scons.
 
 ## Examples
 
