@@ -18,13 +18,9 @@ Note: NOT INTENDED FOR COMMERCIAL DEPLOYMENT.
 
 - [SCons](http://scons.org/pages/download.html)
 
-- libuv is available in most distributions, DPS required libuv 2.7 or later
-
-- [SCons](http://scons.org/pages/download.html)
+- libuv is available in most distributions, DPS requires libuv 1.7 or later
 
 - [SWIG](http://www.swig.org/download.html)
-
-- [Doxygen](http://www.stack.nl/~dimitri/doxygen/download.html)
 
 ---
 
