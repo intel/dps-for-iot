@@ -1,11 +1,11 @@
-# Introduction {#mainpage}
+# Introduction
 
 ***
 
-Note: NOT INTENDED FOR COMMERCIAL DEPLOYMENT.
-=============================================
+Distributed Publish Subscribe for IoT
+=====================================
 
-## This is a preview release of the software and is intended for evaluation and experimentation only.
+## Note: This is a preview release of the software and is intended for evaluation and experimentation only.
 
 ***
 
