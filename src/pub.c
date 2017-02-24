@@ -200,6 +200,12 @@ static DPS_Status UpdatePubHistory(DPS_Node* node, DPS_Publication* pub)
     return DPS_UpdatePubHistory(&node->history, &pub->pubId, pub->sequenceNum, pub->ackRequested, PUB_TTL(node, pub), &pub->sender);
 }
 
+
+typedef struct _SubCandidate {
+    DPS_Subscription* sub;
+    struct _SubCandidate* next;
+} SubCandidate;
+
 /*
  * Check if there is a local subscription for this publication
  * Note that we don't deliver expired publications to the handler.
@@ -210,7 +216,6 @@ static DPS_Status CallPubHandlers(DPS_Node* node, DPS_Publication* pub)
     uint8_t nonce[DPS_COSE_NONCE_SIZE];
     DPS_UUID keyId;
     DPS_Subscription* sub;
-    DPS_Subscription* next;
     DPS_RxBuffer payload;
     DPS_TxBuffer plainText;
     DPS_RxBuffer aad;
@@ -219,10 +224,34 @@ static DPS_Status CallPubHandlers(DPS_Node* node, DPS_Publication* pub)
     size_t pubPayloadLen;
     size_t len;
     size_t i;
-    int match;
+    SubCandidate* candidates = NULL;
+    SubCandidate* cdt = NULL;
 
     DPS_DBGTRACE();
 
+    /*
+     * See if the publication is match candidate. We may discover later that
+     * this is a false positive when we check if the actual topic strings match.
+     */
+    for (sub = node->subscriptions; sub != NULL; sub = sub->next) {
+        if (!DPS_BitVectorIncludes(pub->bf, sub->bf)) {
+            continue;
+        }
+        cdt = malloc(sizeof(SubCandidate));
+        if (!cdt) {
+            ret = DPS_ERR_RESOURCES;
+            goto Exit;
+        }
+        cdt->sub = sub;
+        cdt->next = candidates;
+        candidates = cdt;
+    }
+    /*
+     * Nothing more to do if we don't have any candidates
+     */
+    if (!candidates) {
+        return DPS_OK;
+    }
     /*
      * Try to decrypt the publication
      */
@@ -299,15 +328,12 @@ static DPS_Status CallPubHandlers(DPS_Node* node, DPS_Publication* pub)
         goto Exit;
     }
     DPS_LockNode(node);
-    for (sub = node->subscriptions; sub != NULL; sub = next) {
-        /*
-         * Ths current subscription might get freed by the handler so need to hold the next pointer here.
-         */
-        next = sub->next;
-        if (!DPS_BitVectorIncludes(pub->bf, sub->bf)) {
-            continue;
-        }
-        ret = DPS_MatchTopicList(pub->topics, pub->numTopics, sub->topics, sub->numTopics, node->separators, DPS_FALSE, &match);
+    /*
+     * Iterate over the candidates and check that the pub strings are a match
+     */
+    for (cdt = candidates; cdt; cdt = cdt->next) {
+        int match;
+        ret = DPS_MatchTopicList(pub->topics, pub->numTopics, cdt->sub->topics, cdt->sub->numTopics, node->separators, DPS_FALSE, &match);
         if (ret != DPS_OK) {
             ret = DPS_OK;
             continue;
@@ -316,7 +342,7 @@ static DPS_Status CallPubHandlers(DPS_Node* node, DPS_Publication* pub)
             DPS_DBGPRINT("Matched subscription\n");
             UpdatePubHistory(node, pub);
             DPS_UnlockNode(node);
-            sub->handler(sub, pub, pubPayload, pubPayloadLen);
+            cdt->sub->handler(cdt->sub, pub, pubPayload, pubPayloadLen);
             DPS_LockNode(node);
         }
     }
@@ -324,6 +350,11 @@ static DPS_Status CallPubHandlers(DPS_Node* node, DPS_Publication* pub)
 
 Exit:
 
+    while (candidates) {
+        cdt = candidates;
+        candidates = candidates->next;
+        free(cdt);
+    }
     DPS_TxBufferFree(&plainText);
     return ret;
 
