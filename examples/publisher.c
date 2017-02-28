@@ -85,7 +85,7 @@ static int AddTopics(char* topicList, char** msg, int* keep, int* ttl, int* encr
         free(topics[i]);
     }
     *msg = NULL;
-    *keep = 0;
+    *keep = 1;
     *ttl = 0;
     *encrypt = 1;
     numTopics = 0;
@@ -100,16 +100,19 @@ static int AddTopics(char* topicList, char** msg, int* keep, int* ttl, int* encr
         if (topicList[0] == '-') {
             switch(topicList[1]) {
             case 't':
-                if (!sscanf(topicList, "-t %d", ttl)) {
+                if (!sscanf(topicList, "-t %d", ttl) || *ttl <= 0) {
+                    DPS_PRINT("-t requires a positive integer\n");
                     return 0;
                 }
                 topicList += 3;
                 break;
             case 'x':
-                if (!sscanf(topicList, "-x %d", encrypt)) {
+                if (!sscanf(topicList, "-x %d", encrypt) || (*encrypt != 0 && *encrypt != 1)) {
+                    DPS_PRINT("-x requires 1 or 0\n");
                     return 0;
                 }
                 topicList += 3;
+                *keep = 0;
                 break;
             case 'm':
                 /*
@@ -117,22 +120,30 @@ static int AddTopics(char* topicList, char** msg, int* keep, int* ttl, int* encr
                  */
                 *msg = topicList + 1 + len;
                 return 1;
-            case 'k':
-                *keep = 1;
-                break;
-
+            default:
+                DPS_PRINT("Send one publication.\n");
+                DPS_PRINT("  [topic1 ... topicN  [-x 0/1]] [-t <ttl>] [-m message]\n");
+                DPS_PRINT("        -h: Print this message\n");
+                DPS_PRINT("        -t: Set ttl on the publication\n");
+                DPS_PRINT("        -x: Enable or disable encryption for this publication.\n\n");
+                DPS_PRINT("        -m: Everything after the -m is the payload for the publication.\n\n");
+                DPS_PRINT("  If there are no topic strings sends previous publication with a new sequence number\n");
+                return 0;
             }
             len = strcspn(topicList, " ");
             if (!len) {
                 return 0;
             }
         } else {
-            topics[numTopics] = malloc(len + 1);
-            memcpy(topics[numTopics], topicList, len);
-            topics[numTopics][len] = 0;
-            ++numTopics;
-            if (!topicList[len]) {
-                break;
+            if (len) {
+                *keep = 0;
+                topics[numTopics] = malloc(len + 1);
+                memcpy(topics[numTopics], topicList, len);
+                topics[numTopics][len] = 0;
+                ++numTopics;
+                if (!topicList[len]) {
+                    break;
+                }
             }
         }
         topicList += len + 1;
@@ -163,19 +174,20 @@ static void ReadStdin(DPS_Node* node)
         while (len && isspace(lineBuf[len - 1])) {
             --len;
         }
-        if (!len) {
+        if (len) {
+            lineBuf[len] = 0;
+            DPS_PRINT("Pub: %s\n", lineBuf);
+            if (!AddTopics(lineBuf, &msg, &keep, &ttl, &encrypt)) {
+                continue;
+            }
+        } else if (currentPub) {
+            keep = 1;
+        } else {
+            /*
+             * Force the usage message to be printed
+             */
+            AddTopics("-h", &msg, &keep, &ttl, &encrypt);
             continue;
-        }
-        lineBuf[len] = 0;
-
-        DPS_PRINT("Pub: %s\n", lineBuf);
-
-        if (!AddTopics(lineBuf, &msg, &keep, &ttl, &encrypt)) {
-            DPS_PRINT("Invalid input\n");
-            continue;
-        }
-        if (!currentPub) {
-            keep = 0;
         }
         if (!keep) {
             DPS_DestroyPublication(currentPub);
@@ -222,16 +234,21 @@ static int IntArg(char* opt, char*** argp, int* argcp, int* val, int min, int ma
     return 1;
 }
 
+#define MAX_LINKS  8
+
 int main(int argc, char** argv)
 {
     DPS_Status ret;
     DPS_Node* node;
     char** arg = argv + 1;
     const char* host = NULL;
-    int linkPort = 0;
+    int linkPort[MAX_LINKS];
+    const char* linkHosts[MAX_LINKS];
+    int numLinks = 0;
     int wait = DPS_FALSE;
     int encrypt = DPS_TRUE;
     int ttl = 0;
+    int i;
     char* msg = NULL;
     int mcast = DPS_MCAST_PUB_ENABLE_SEND;
     DPS_NodeAddress* addr = NULL;
@@ -239,7 +256,9 @@ int main(int argc, char** argv)
     DPS_Debug = 0;
 
     while (--argc) {
-        if (IntArg("-p", &arg, &argc, &linkPort, 1, UINT16_MAX)) {
+        if (IntArg("-p", &arg, &argc, &linkPort[numLinks], 1, UINT16_MAX)) {
+            linkHosts[numLinks] = host;
+            ++numLinks;
             continue;
         }
         if (strcmp(*arg, "-h") == 0) {
@@ -291,8 +310,9 @@ int main(int argc, char** argv)
     /*
      * Disable multicast publications if we have an explicit destination
      */
-    if (linkPort) {
+    if (numLinks) {
         mcast = DPS_MCAST_PUB_DISABLED;
+        addr = DPS_CreateAddress();
     }
 
     node = DPS_CreateNode("/.", encrypt ? GetKey : NULL, encrypt ? &keyId[0] : NULL);
@@ -303,12 +323,10 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    if (linkPort) {
-        addr = DPS_CreateAddress();
-        ret = DPS_LinkTo(node, host, linkPort, addr);
+    for (i = 0; i < numLinks; ++i) {
+        ret = DPS_LinkTo(node, linkHosts[i], linkPort[i], addr);
         if (ret != DPS_OK) {
-            DPS_ERRPRINT("DPS_LinkTo returned %s\n", DPS_ErrTxt(ret));
-            return 1;
+            DPS_ERRPRINT("DPS_LinkTo $d returned %s\n", linkPort[i], DPS_ErrTxt(ret));
         }
     }
 
@@ -344,7 +362,16 @@ int main(int argc, char** argv)
     return 0;
 
 Usage:
-    DPS_PRINT("Usage %s [-x 0/1] [-a] [-w] [-p <portnum>] [-h <hostname>] [-d] [-m <message>] [topic1 topic2 ... topicN]\n", *argv);
+    DPS_PRINT("Usage %s [-d] [-x 0/1] [-a] [-w] [[-h <hostname>] -p <portnum>] [-m <message>] [topic1 topic2 ... topicN]\n", argv[0]);
+    DPS_PRINT("       -d: Enable debug ouput if built for debug.\n");
+    DPS_PRINT("       -x: Enable or disable encryption. Default is encryption enabled.\n");
+    DPS_PRINT("       -a: Request an acknowledgement\n");
+    DPS_PRINT("       -w: Wait after sending a publication\n");
+    DPS_PRINT("       -h: Specifies host (localhost is default). Mutiple -h options are permitted.\n");
+    DPS_PRINT("       -p: port to link. Multiple -p options are permitted.\n");
+    DPS_PRINT("       -m: A payload message to accompany the publication.\n\n");
+    DPS_PRINT("           Enters interactive mode if there are no topic strings on the command line.\n");
+    DPS_PRINT("           In interactive mode type -h for commands.\n");
     return 1;
 }
 

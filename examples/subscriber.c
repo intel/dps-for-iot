@@ -133,11 +133,13 @@ static int IntArg(char* opt, char*** argp, int* argcp, int* val, int min, int ma
     return 1;
 }
 
+#define MAX_LINKS 8
+
 int main(int argc, char** argv)
 {
     DPS_Status ret;
     char* topicList[64];
-    char** arg = ++argv;
+    char** arg = argv + 1;
     int numTopics = 0;
     DPS_Node* node;
     DPS_Event* nodeDestroyed;
@@ -145,7 +147,9 @@ int main(int argc, char** argv)
     const char* host = NULL;
     int encrypt = DPS_TRUE;
     int listenPort = 0;
-    int linkPort = 0;
+    int numLinks = 0;
+    int linkPort[MAX_LINKS];
+    const char* linkHosts[MAX_LINKS];
 
     DPS_Debug = 0;
 
@@ -153,7 +157,9 @@ int main(int argc, char** argv)
         if (IntArg("-l", &arg, &argc, &listenPort, 1, UINT16_MAX)) {
             continue;
         }
-        if (IntArg("-p", &arg, &argc, &linkPort, 1, UINT16_MAX)) {
+        if (IntArg("-p", &arg, &argc, &linkPort[numLinks], 1, UINT16_MAX)) {
+            linkHosts[numLinks] = host;
+            ++numLinks;
             continue;
         }
         if (strcmp(*arg, "-h") == 0) {
@@ -196,13 +202,13 @@ int main(int argc, char** argv)
             goto Usage;
         }
         if (numTopics == A_SIZEOF(topicList)) {
-            DPS_PRINT("%s: Too many topics - increase limit and recompile\n", *argv);
+            DPS_PRINT("%s: Too many topics - increase limit and recompile\n", argv[0]);
             goto Usage;
         }
         topicList[numTopics++] = *arg++;
     }
 
-    if (!linkPort) {
+    if (!numLinks) {
         mcastPub = DPS_MCAST_PUB_ENABLE_RECV;
     }
 
@@ -244,21 +250,32 @@ int main(int argc, char** argv)
             return 1;
         }
     }
-    if (linkPort) {
+    if (numLinks) {
+        int i;
         DPS_NodeAddress* addr = DPS_CreateAddress();
-        DPS_Status linkRet = DPS_ERR_FAILURE;
-        ret = DPS_LinkTo(node, host, linkPort, addr);
-        DPS_DestroyAddress(addr);
-        if (ret != DPS_OK) {
-            DPS_ERRPRINT("DPS_LinkTo returned %s\n", DPS_ErrTxt(ret));
-            DPS_DestroyNode(node, OnNodeDestroyed, nodeDestroyed);
+        for (i = 0; i < numLinks; ++i) {
+            ret = DPS_LinkTo(node, linkHosts[i], linkPort[i], addr);
+            if (ret != DPS_OK) {
+                DPS_ERRPRINT("DPS_LinkTo $d returned %s\n", linkPort[i], DPS_ErrTxt(ret));
+                DPS_DestroyNode(node, OnNodeDestroyed, nodeDestroyed);
+                break;
+            }
         }
+        DPS_DestroyAddress(addr);
     }
     DPS_WaitForEvent(nodeDestroyed);
     DPS_DestroyEvent(nodeDestroyed);
     return 0;
 
 Usage:
-    DPS_PRINT("Usage %s [-x 0/1] [-p <portnum>] [-h <hostname>] [-l <listen port] [-m] [-d] [-s topic1 ... topicN]\n", *argv);
+    DPS_PRINT("Usage %s [-d] [-q] [-m] [-x 0/1] [[-h <hostname>] -p <portnum>] [-l <listen port] [-m] [-d] [-s topic1 ... topicN]\n", argv[0]);
+    DPS_PRINT("       -d: Enable debug ouput if built for debug.\n");
+    DPS_PRINT("       -q: Quiet - suppresses output about received publications.\n");
+    DPS_PRINT("       -x: Enable or disable encryption. Default is encryption enabled.\n");
+    DPS_PRINT("       -h: Specifies host (localhost is default). Mutiple -h options are permitted.\n");
+    DPS_PRINT("       -p: A port to link. Multiple -p options are permitted.\n");
+    DPS_PRINT("       -m: Enable multicast receive. Enabled by default is there are no -p options.\n");
+    DPS_PRINT("       -l: port to listen on. Default is an ephemeral port.\n");
+    DPS_PRINT("       -s: list of subscription topic strings. Multiple -s options are permitted\n");
     return 1;
 }

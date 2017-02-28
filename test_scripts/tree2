@@ -1,0 +1,24 @@
+#
+#           /---> B ----\
+#          /             \
+#         /               \
+#       A ------> C -------> E
+#         \               /
+#          \             /
+#           \---> D-----/
+#
+#
+
+killall subscriber
+
+build/dist/bin/subscriber -l 40000 E &
+sleep 1
+
+build/dist/bin/subscriber -l 40001 -p 40000 B &
+build/dist/bin/subscriber -l 40002 -p 40000 C &
+build/dist/bin/subscriber -l 40003 -p 40000 D &
+
+sleep 1
+build/dist/bin/subscriber -l 40004 -p 40001 -p 40002 -p 40003 A &
+
+sleep 1
