@@ -109,7 +109,7 @@ elif env['PLATFORM'] == 'posix':
     env.Append(LDFLAGS = ['-pie']) # PIE for executables only
 
     # Fortify source:
-    env.Append(CPPDEIFINES = ['_FORTIFY_SOURCE=2'])
+    env.Append(CPPDEFINES = ['_FORTIFY_SOURCE=2'])
 
     # Format string vulnerabilities
     env.Append(CFLAGS= ['-Wformat', '-Wformat-security'])
@@ -125,7 +125,7 @@ elif env['PLATFORM'] == 'posix':
         env.Append(LINKFLAGS = ['-pg'])
 
     if env['variant'] == 'debug':
-        env.Append(CFLAGS = ['-DDPS_DEBUG'])
+        env.Append(CFLAGS = ['-O', '-DDPS_DEBUG'])
     else:
         env.Append(CFLAGS = ['-O3', '-DNDEBUG'])
 

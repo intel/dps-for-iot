@@ -89,17 +89,18 @@ pyenv['SHLIBPREFIX'] = '_'
 if platform == 'win32':
     pyenv['SHLIBSUFFIX'] = '.pyd'
 
-pyenv.Append(SWIGFLAGS = ['-python', '-Werror', '-v'], SWIGPATH = '#/inc')
+pyenv.Append(SWIGFLAGS = ['-python', '-Werror', '-v', '-O'], SWIGPATH = '#/inc')
 # Build python module library
 pylib = pyenv.SharedLibrary('./py/dps', shobjs + ['swig/dps_python.i'])
 pyenv.Install('#/build/dist/py', pylib)
 pyenv.InstallAs('#/build/dist/py/dps.py', './swig/dps.py')
 
 # Use SWIG to build the node.js wrapper
-if platform == '!!posix':
+if platform == 'posix':
     nodeenv = libenv.Clone();
-    nodeenv.Append(SWIGFLAGS = ['-javascript', '-node', '-c++', '-DV8_VERSION=0x04059937', '-Wall', '-Werror', '-v'], SWIGPATH = '#/inc')
-    nodeenv.Append(CPPFLAGS = ['-DBUILDING_NODE_EXTENSION', '-std=c++11'])
+    nodeenv.Append(SWIGFLAGS = ['-javascript', '-node', '-c++', '-DV8_VERSION=0x04059937', '-Wall', '-Werror', '-v', '-O'], SWIGPATH = '#/inc')
+    # There may be a bug with the SWIG builder - add -O to CPPFLAGS to get it passed on to the compiler
+    nodeenv.Append(CPPFLAGS = ['-DBUILDING_NODE_EXTENSION', '-std=c++11', '-O'])
     nodeenv.Append(CPPPATH = ['/usr/include/node'])
     nodeenv.Append(LIBS = [lib, env['UV_LIBS']])
     nodedps = nodeenv.SharedLibrary('lib/nodedps', shobjs + ['swig/dps_node.i'])
