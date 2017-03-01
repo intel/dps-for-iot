@@ -242,13 +242,13 @@ DPS_Status CBOR_DecodeArray(DPS_RxBuffer* buffer, size_t* size);
  *
  * @param buffer  Buffer to decode from
  * @param maj     Returns the major type of the value skipped
- * @param size    Returns number of bytes skipped
+ * @param skipped Returns number of bytes skipped
  *
  * @return - DPS_OK if the array was decoded
  *         - DPS_ERR_EOD if there was insufficient data in the buffer
  *
  */
-DPS_Status CBOR_Skip(DPS_RxBuffer* buffer, uint8_t* maj, size_t* size);
+DPS_Status CBOR_Skip(DPS_RxBuffer* buffer, uint8_t* maj, size_t* skipped);
 
 /**
  * Structure for holding state while parsing a map

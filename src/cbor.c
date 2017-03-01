@@ -504,12 +504,13 @@ DPS_Status CBOR_DecodeTag(DPS_RxBuffer* buffer, uint64_t* n)
     return ret;
 }
 
-DPS_Status CBOR_Skip(DPS_RxBuffer* buffer, uint8_t* majOut, size_t* size)
+DPS_Status CBOR_Skip(DPS_RxBuffer* buffer, uint8_t* majOut, size_t* skipped)
 {
     DPS_Status ret = DPS_OK;
     size_t avail = DPS_RxBufferAvail(buffer);
     uint8_t* startPos = buffer->rxPos;
-    size_t len = 0;
+    uint64_t len = 0;
+    size_t size = 0;
     uint8_t* dummy;
     uint8_t info;
     uint8_t maj;
@@ -535,10 +536,10 @@ DPS_Status CBOR_Skip(DPS_RxBuffer* buffer, uint8_t* majOut, size_t* size)
         }
         break;
     case CBOR_BYTES:
-        ret = CBOR_DecodeBytes(buffer, &dummy, &len);
+        ret = CBOR_DecodeBytes(buffer, &dummy, &size);
         break;
     case CBOR_STRING:
-        ret = CBOR_DecodeString(buffer, (char**)&dummy, &len);
+        ret = CBOR_DecodeString(buffer, (char**)&dummy, &size);
         break;
     case CBOR_ARRAY:
         ret = DecodeUint(buffer, &len, &maj);
@@ -565,8 +566,8 @@ DPS_Status CBOR_Skip(DPS_RxBuffer* buffer, uint8_t* majOut, size_t* size)
     default:
         ret = DPS_ERR_INVALID;
     }
-    if (size) {
-        *size = buffer->rxPos - startPos;
+    if (skipped) {
+        *skipped = buffer->rxPos - startPos;
     }
     if (majOut) {
         *majOut = maj;
@@ -667,7 +668,8 @@ static DPS_Status Dump(DPS_RxBuffer* buffer, int in)
 {
     static const char indent[] = "                                                            ";
     DPS_Status ret = DPS_OK;
-    size_t len = 0;
+    size_t size = 0;
+    uint64_t len;
     uint8_t* dummy;
     uint8_t maj;
     uint64_t n;
@@ -689,12 +691,12 @@ static DPS_Status Dump(DPS_RxBuffer* buffer, int in)
         DPS_PRINT("%.*stag:%zu\n", in, indent, n);
         break;
     case CBOR_BYTES:
-        ret = CBOR_DecodeBytes(buffer, &dummy, &len);
-        DPS_PRINT("%.*sbstr: len=%zu\n", in, indent, len);
+        ret = CBOR_DecodeBytes(buffer, &dummy, &size);
+        DPS_PRINT("%.*sbstr: len=%zu\n", in, indent, size);
         break;
     case CBOR_STRING:
-        ret = CBOR_DecodeString(buffer, (char**)&dummy, &len);
-        DPS_PRINT("%.*sstring: \"%.*s\"\n", in, indent, (int)len, dummy);
+        ret = CBOR_DecodeString(buffer, (char**)&dummy, &size);
+        DPS_PRINT("%.*sstring: \"%.*s\"\n", in, indent, (int)size, dummy);
         break;
     case CBOR_ARRAY:
         DPS_PRINT("%.*s[\n", in, indent);

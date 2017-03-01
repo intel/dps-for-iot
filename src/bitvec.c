@@ -772,13 +772,14 @@ DPS_Status DPS_BitVectorDeserialize(DPS_BitVector* bv, DPS_RxBuffer* buffer)
     DPS_Status ret;
     uint64_t flags;
     uint64_t len;
+    size_t size;
     uint8_t* data;
 
-    ret = CBOR_DecodeArray(buffer, &len);
+    ret = CBOR_DecodeArray(buffer, &size);
     if (ret != DPS_OK) {
         return ret;
     }
-    if (len != 3) {
+    if (size != 3) {
         return DPS_ERR_INVALID;
     }
     ret = CBOR_DecodeUint(buffer, &flags);
@@ -793,17 +794,17 @@ DPS_Status DPS_BitVectorDeserialize(DPS_BitVector* bv, DPS_RxBuffer* buffer)
         DPS_ERRPRINT("Deserialized bloom filter has wrong size\n");
         return DPS_ERR_INVALID;
     }
-    ret = CBOR_DecodeBytes(buffer, &data, &len);
+    ret = CBOR_DecodeBytes(buffer, &data, &size);
     if (ret != DPS_OK) {
         return ret;
     }
     if (flags & FLAG_RLE_ENCODED) {
-        ret = RunLengthDecode(data, len, bv->bits, bv->len);
+        ret = RunLengthDecode(data, size, bv->bits, bv->len);
         if ((ret == DPS_OK) && (flags & FLAG_RLE_COMPLEMENT)) {
             DPS_BitVectorComplement(bv);
         }
-    } else if (len == bv->len / 8) {
-        memcpy_s(bv->bits, len, data, len);
+    } else if (size == bv->len / 8) {
+        memcpy_s(bv->bits, size, data, size);
     } else {
         DPS_ERRPRINT("Deserialized bloom filter has wrong length\n");
         ret = DPS_ERR_INVALID;
