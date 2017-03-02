@@ -168,7 +168,7 @@ static void ReadStdin(DPS_Node* node)
         int ttl;
         int keep;
         int encrypt;
-        char* msg;
+        char* msg = NULL;
         DPS_Status ret;
 
         while (len && isspace(lineBuf[len - 1])) {
