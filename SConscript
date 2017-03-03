@@ -79,32 +79,34 @@ if platform == 'posix':
     ns3shlib = libenv.SharedLibrary('lib/dps_ns3', ns3shobjs, LIBS = ext_libs)
     libenv.Install('#/build/dist/lib', ns3shlib)
 
-# Using SWIG to build the python wrapper
-pyenv = libenv.Clone()
-pyenv.Append(LIBPATH = env['PY_LIBPATH'])
-pyenv.Append(CPPPATH = env['PY_CPPPATH'])
-pyenv.Append(LIBS = [lib, env['UV_LIBS']])
-# Python has platform specific naming conventions
-pyenv['SHLIBPREFIX'] = '_'
-if platform == 'win32':
-    pyenv['SHLIBSUFFIX'] = '.pyd'
+if env['python']:
+    # Using SWIG to build the python wrapper
+    pyenv = libenv.Clone()
+    pyenv.Append(LIBPATH = env['PY_LIBPATH'])
+    pyenv.Append(CPPPATH = env['PY_CPPPATH'])
+    pyenv.Append(LIBS = [lib, env['UV_LIBS']])
+    # Python has platform specific naming conventions
+    pyenv['SHLIBPREFIX'] = '_'
+    if platform == 'win32':
+        pyenv['SHLIBSUFFIX'] = '.pyd'
 
-pyenv.Append(SWIGFLAGS = ['-python', '-Werror', '-v', '-O'], SWIGPATH = '#/inc')
-# Build python module library
-pylib = pyenv.SharedLibrary('./py/dps', shobjs + ['swig/dps_python.i'])
-pyenv.Install('#/build/dist/py', pylib)
-pyenv.InstallAs('#/build/dist/py/dps.py', './swig/dps.py')
+    pyenv.Append(SWIGFLAGS = ['-python', '-Werror', '-v', '-O'], SWIGPATH = '#/inc')
+    # Build python module library
+    pylib = pyenv.SharedLibrary('./py/dps', shobjs + ['swig/dps_python.i'])
+    pyenv.Install('#/build/dist/py', pylib)
+    pyenv.InstallAs('#/build/dist/py/dps.py', './swig/dps.py')
 
-# Use SWIG to build the node.js wrapper
-if platform == 'posix':
-    nodeenv = libenv.Clone();
-    nodeenv.Append(SWIGFLAGS = ['-javascript', '-node', '-c++', '-DV8_VERSION=0x04059937', '-Wall', '-Werror', '-v', '-O'], SWIGPATH = '#/inc')
-    # There may be a bug with the SWIG builder - add -O to CPPFLAGS to get it passed on to the compiler
-    nodeenv.Append(CPPFLAGS = ['-DBUILDING_NODE_EXTENSION', '-std=c++11', '-O'])
-    nodeenv.Append(CPPPATH = ['/usr/include/node'])
-    nodeenv.Append(LIBS = [lib, env['UV_LIBS']])
-    nodedps = nodeenv.SharedLibrary('lib/nodedps', shobjs + ['swig/dps_node.i'])
-    nodeenv.InstallAs('#/build/dist/js/dps.node', nodedps)
+if env['nodejs']:
+    # Use SWIG to build the node.js wrapper
+    if platform == 'posix':
+        nodeenv = libenv.Clone();
+        nodeenv.Append(SWIGFLAGS = ['-javascript', '-node', '-c++', '-DV8_VERSION=0x04059937', '-Wall', '-Werror', '-v', '-O'], SWIGPATH = '#/inc')
+        # There may be a bug with the SWIG builder - add -O to CPPFLAGS to get it passed on to the compiler
+        nodeenv.Append(CPPFLAGS = ['-DBUILDING_NODE_EXTENSION', '-std=c++11', '-O'])
+        nodeenv.Append(CPPPATH = ['/usr/include/node'])
+        nodeenv.Append(LIBS = [lib, env['UV_LIBS']])
+        nodedps = nodeenv.SharedLibrary('lib/nodedps', shobjs + ['swig/dps_node.i'])
+        nodeenv.InstallAs('#/build/dist/js/dps.node', nodedps)
 
 # Unit tests
 testenv = env.Clone()

@@ -3,15 +3,19 @@ import platform
 
 vars = Variables()
 
+bindings = Split('python nodejs')
+
 # Generic build variables
 vars.AddVariables(
     EnumVariable('variant', 'Build variant', default='release', allowed_values=('debug', 'release'), ignorecase=2),
-    EnumVariable('transport', 'Transport protocol', default='udp', allowed_values=('udp', 'tcp'), ignorecase=2))
+    EnumVariable('transport', 'Transport protocol', default='udp', allowed_values=('udp', 'tcp'), ignorecase=2),
+    ListVariable('bindings', 'Bindings to build', bindings, bindings))
 
 # Windows-specific command line variables
 if platform.system() == 'Windows':
     vars.AddVariables(
-        PathVariable('UV_PATH', 'Path to libuv', 'C:\Program Files\libuv'),
+        PathVariable('UV_INC', 'Path where libuv includes are installed', 'C:\Program Files\libuv\include'),
+        PathVariable('UV_LIB', 'Path where libuv libraries are installed', 'C:\Program Files\libuv'),
         PathVariable('PYTHON_PATH', 'Path to Python', 'C:\Python27'),
         PathVariable('SWIG', 'Path to SWIG executable', 'C:\swigwin-3.0.10\swig.exe'),
         PathVariable('DOXYGEN_PATH', 'Path to Doxygen', 'C:\Program Files\Doxygen', PathVariable.PathAccept))
@@ -19,6 +23,8 @@ if platform.system() == 'Windows':
 # Linux-specific command line variables
 if platform.system() == 'Linux':
     vars.AddVariables(
+        PathVariable('UV_INC', 'Path where libuv includes are installed', '', PathVariable.PathAccept),
+        PathVariable('UV_LIB', 'Path where libuv libraries are installed', '', PathVariable.PathAccept),
         BoolVariable('profile', 'Build for profiling?', False),
         BoolVariable('asan', 'Enable address sanitizer?', False))
 
@@ -38,9 +44,15 @@ for key, val in ARGLIST:
     if key.lower() == 'define':
         env['CPPDEFINES'].append(val)
 
+# Unpack bindings into individually testable booleans
+for b in bindings:
+    env[b] = b in env['bindings']
+
 if env['transport'] == 'udp':
     env['USE_UDP'] = 'true'
     env['CPPDEFINES'].append('DPS_USE_UDP')
+
+print "Building for " + env['variant']
 
 # Build external dependencies
 extEnv = Environment(ENV = os.environ, variables=vars)
@@ -70,7 +82,7 @@ if env['PLATFORM'] == 'win32':
     # Compiler settings validation
     env.Append(CFLAGS = ['/sdl'])
 
-    # Data Execution Prevention 
+    # Data Execution Prevention
     env.Append(LINKFLAGS = ['/NXCompat'])
     # Image Randomization
     env.Append(LINKFLAGS = ['/DynamicBase'])
@@ -81,8 +93,8 @@ if env['PLATFORM'] == 'win32':
 
     # Where to find libuv and the libraries it needs
     env['UV_LIBS'] = ['libuv', 'ws2_32','iphlpapi']
-    env.Append(LIBPATH=[env['UV_PATH']])
-    env.Append(CPPPATH=env['UV_PATH'] + '\include')
+    env.Append(LIBPATH=[env['UV_LIB']])
+    env.Append(CPPPATH=[env['UV_INC']])
 
     # Doxygen needs to be added to default path if available
     if env['DOXYGEN_PATH']:
@@ -99,7 +111,7 @@ elif env['PLATFORM'] == 'posix':
     env.Append(LDFLAGS = ['-z noexecstack'])
 
     # Data relocation and protection (RELRO):
-    env.Append(LDLFAGS= ['-z relro', '-z now']) 
+    env.Append(LDLFAGS= ['-z relro', '-z now'])
 
     # Stack-based Buffer Overrun Detection:
     env.Append(CFLAGS = ['-fstack-protector-strong'])
@@ -113,7 +125,7 @@ elif env['PLATFORM'] == 'posix':
 
     # Format string vulnerabilities
     env.Append(CFLAGS= ['-Wformat', '-Wformat-security'])
-        
+
     # gcc option  -mmsse4.2 is to enble generation of popcountq instruction
     env.Append(CFLAGS = ['-ggdb', '-msse4.2'])
 
@@ -135,6 +147,12 @@ elif env['PLATFORM'] == 'posix':
 
     # Where to find libuv and the libraries it needs
     env['UV_LIBS'] = ['uv', 'pthread']
+
+    if env['UV_LIB']:
+        env.Prepend(LIBPATH = env['UV_LIB'])
+
+    if env['UV_INC']:
+        env.Prepend(CPPPATH = env['UV_INC'])
 
 else:
     print 'Unsupported system'

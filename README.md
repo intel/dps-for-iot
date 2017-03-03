@@ -1,11 +1,8 @@
-# Introduction
+# Introduction to Distributed Publish Subscribe for IoT
 
 ***
 
-Distributed Publish Subscribe for IoT
-=====================================
-
-## Note: This is a preview release of the software and is intended for evaluation and experimentation only.
+### Note: This is a preview release of the software and is intended for evaluation and experimentation only.
 
 ***
 
@@ -18,7 +15,9 @@ Distributed Publish Subscribe for IoT
 
 - [SCons](http://scons.org/pages/download.html)
 
-- libuv is available in most distributions, DPS requires libuv 1.7 or later
+- libuv is used by node.js so packages are available for many distributions
+but note that DPS requires libuv 1.7 or later so it may be necessary to build
+libuv from source. [libuv source code on GitHub.](https://github.com/libuv)
 
 - [SWIG](http://www.swig.org/download.html)
 
@@ -60,9 +59,11 @@ Building the documentation requires the scons [DoxygenBuilder](https://bitbucket
 ## Build
 To build the DPS libraries, examples, bindings, and documentation run 'scons'.
 
-`$ scons [variant=debug|release] [transport=udp|tcp]`
+`$ scons [variant=debug|release] [transport=udp|tcp] [bindings=all|none]`
 
-The default build configuration is `variant=release transport=udp`.
+To see the complete list of build options trune `scons --help`
+
+The default build configuration is `variant=release transport=udp bindings=all`.
 > *A limitation of the current implementation is that the transport must be configured at compile time.*
 
 The scons script pulls down source code from two external projects (tinycrypt and safestringlib)
