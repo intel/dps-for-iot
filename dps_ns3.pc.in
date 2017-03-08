@@ -10,4 +10,4 @@ Description: Distributed PubSub
 Version: @VERSION@
 Requires:
 Libs: -L${libdir} -ldps_ns3
-Cflags: -I${includedir}
+Cflags: -I${includedir} -I${prefix}/ext/safestring/include
