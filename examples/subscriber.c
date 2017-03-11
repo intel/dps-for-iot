@@ -256,7 +256,7 @@ int main(int argc, char** argv)
         for (i = 0; i < numLinks; ++i) {
             ret = DPS_LinkTo(node, linkHosts[i], linkPort[i], addr);
             if (ret != DPS_OK) {
-                DPS_ERRPRINT("DPS_LinkTo $d returned %s\n", linkPort[i], DPS_ErrTxt(ret));
+                DPS_ERRPRINT("DPS_LinkTo %d returned %s\n", linkPort[i], DPS_ErrTxt(ret));
                 DPS_DestroyNode(node, OnNodeDestroyed, nodeDestroyed);
                 break;
             }
