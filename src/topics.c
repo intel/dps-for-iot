@@ -300,4 +300,23 @@ void DPS_DumpTopics(const char** topics, size_t numTopics)
         }
     }
 }
+
+void DPS_DumpMatchingTopics(DPS_BitVector* bv)
+{
+    size_t i;
+    int match = 0;
+
+    DPS_PRINT("[");
+    for (i = 'A'; i <= 'Z'; ++i) {
+        char topic[2] = { i, 0 };
+        if (DPS_MatchTopic(bv, topic, ".")) {
+            if (match++) {
+                DPS_PRINT("|%c", i);
+            } else {
+                DPS_PRINT("%c", i);
+            }
+        }
+    }
+    DPS_PRINT("]\n");
+}
 #endif
