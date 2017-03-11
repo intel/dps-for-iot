@@ -38,6 +38,7 @@ extern int DPS_Debug;
 typedef enum {
     DPS_LOG_ERROR,
     DPS_LOG_PRINT,
+    DPS_LOG_PRINTT,
     DPS_LOG_DBGTRACE,
     DPS_LOG_DBGPRINT,
 } DPS_LogLevel;
@@ -47,6 +48,11 @@ void DPS_Log(DPS_LogLevel level, const char* file, int line, const char *functio
 #define DPS_ERRPRINT(fmt, ...) DPS_Log(DPS_LOG_ERROR, __FILE__, __LINE__, __FUNCTION__, fmt, ##__VA_ARGS__)
 
 #define DPS_PRINT(fmt, ...) DPS_Log(DPS_LOG_PRINT, __FILE__, __LINE__, __FUNCTION__, fmt, ##__VA_ARGS__)
+
+/*
+ * Same a DPS_PRINT but prepends a sytem timestamp
+ */
+#define DPS_PRINTT(fmt, ...) DPS_Log(DPS_LOG_PRINTT, __FILE__, __LINE__, __FUNCTION__, fmt, ##__VA_ARGS__)
 
 #define DPS_DEBUG_OFF  0
 #define DPS_DEBUG_ON   1
