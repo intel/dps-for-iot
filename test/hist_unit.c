@@ -97,7 +97,7 @@ int main()
      */
     DPS_PRINT("Check all entries present\n");
     for (i = 0; i < NUM_PUBS; ++i) {
-        if (DPS_LookupPublisher(&history, &uuid[i], &sn, &addrPtr) != DPS_OK) {
+        if (DPS_LookupPublisherForAck(&history, &uuid[i], &sn, &addrPtr) != DPS_OK) {
             DPS_PRINT("Pub history lookup failed\n");
             return 1;
         }
@@ -117,7 +117,7 @@ int main()
      */
     DPS_PRINT("Check remaining entries\n");
     for (i = NUM_PUBS / 4; i < NUM_PUBS; ++i) {
-        if (DPS_LookupPublisher(&history, &uuid[i], &sn, &addrPtr) != DPS_OK) {
+        if (DPS_LookupPublisherForAck(&history, &uuid[i], &sn, &addrPtr) != DPS_OK) {
             DPS_PRINT("Pub history lookup failed\n");
             return 1;
         }
@@ -134,7 +134,7 @@ int main()
      */
     DPS_PRINT("Check all entries present after replacement\n");
     for (i = 0; i < NUM_PUBS; ++i) {
-        if (DPS_LookupPublisher(&history, &uuid[i], &sn, &addrPtr) != DPS_OK) {
+        if (DPS_LookupPublisherForAck(&history, &uuid[i], &sn, &addrPtr) != DPS_OK) {
             DPS_PRINT("Pub history lookup failed\n");
             return 1;
         }
@@ -158,7 +158,7 @@ int main()
      * Check protected entries are still there and others have expired
      */
     for (i = 0; i < NUM_PUBS; ++i) {
-        DPS_Status ret = DPS_LookupPublisher(&history, &uuid[i], &sn, &addrPtr);
+        DPS_Status ret = DPS_LookupPublisherForAck(&history, &uuid[i], &sn, &addrPtr);
         if (i >= NUM_PUBS / 4 &&  i < NUM_PUBS / 3) {
             if (ret != DPS_OK) {
                 DPS_PRINT("Pub history is missing\n");

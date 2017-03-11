@@ -112,8 +112,8 @@ int DPS_PublicationIsStale(DPS_History* history, DPS_UUID* pubId, uint32_t seque
 DPS_Status DPS_DeletePubHistory(DPS_History* history, DPS_UUID* pubId);
 
 /**
- * Lookup a publisher address in the publication history. This is the address of the sender not
- * necessarily the original publisher.
+ * Lookup a publisher address in the publication history to match an acknowledgment. This is the
+ * address of the sender not necessarily the original publisher.
  *
  * @param history       The history from a local node
  * @param pubId         The UUID for the publication
@@ -124,7 +124,7 @@ DPS_Status DPS_DeletePubHistory(DPS_History* history, DPS_UUID* pubId);
  * @return DPS_OK if the sender was found in the history record
  *         DPS_ERR_MISSING if no sender was found in the history record
  */
-DPS_Status DPS_LookupPublisher(DPS_History* history, const DPS_UUID* pubId, uint32_t* sequenceNum, DPS_NodeAddress** addr);
+DPS_Status DPS_LookupPublisherForAck(DPS_History* history, const DPS_UUID* pubId, uint32_t* sequenceNum, DPS_NodeAddress** addr);
 
 /**
  * Determine if a publication has been received from the destination already.

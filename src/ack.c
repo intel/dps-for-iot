@@ -292,7 +292,7 @@ DPS_Status DPS_DecodeAcknowledgment(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxB
     /*
      * Search the history record for somewhere to forward the ACK
      */
-    ret = DPS_LookupPublisher(&node->history, pubId, &sn, &addr);
+    ret = DPS_LookupPublisherForAck(&node->history, pubId, &sn, &addr);
     if ((ret == DPS_OK) && (sequenceNum <= sn) && addr) {
         RemoteNode* ackNode;
         ret = DPS_AddRemoteNode(node, addr, NULL, &ackNode);
@@ -334,7 +334,7 @@ DPS_Status DPS_AckPublication(const DPS_Publication* pub, const uint8_t* payload
     if (pub->flags & PUB_FLAG_LOCAL) {
         return DPS_ERR_INVALID;
     }
-    ret = DPS_LookupPublisher(&node->history, &pub->pubId, &sequenceNum, &addr);
+    ret = DPS_LookupPublisherForAck(&node->history, &pub->pubId, &sequenceNum, &addr);
     if (ret != DPS_OK) {
         return ret;
     }

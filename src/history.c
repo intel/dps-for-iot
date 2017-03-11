@@ -317,9 +317,11 @@ DPS_Status DPS_UpdatePubHistory(DPS_History* history, DPS_UUID* pubId, uint32_t 
         }
         if (!(*phAddr)) {
             (*phAddr) = calloc(1, sizeof(DPS_NodeAddressList));
-            (*phAddr)->sn = sequenceNum;
-            (*phAddr)->addr = *addr;
-            DPS_DBGPRINT("Added %s to pub %s\n", DPS_NetAddrText((struct sockaddr*) &(*phAddr)->addr.inaddr), DPS_UUIDToString(pubId));
+            if ((*phAddr)) {
+                (*phAddr)->sn = sequenceNum;
+                (*phAddr)->addr = *addr;
+                DPS_DBGPRINT("Added %s to pub %s\n", DPS_NetAddrText((struct sockaddr*) &(*phAddr)->addr.inaddr), DPS_UUIDToString(pubId));
+            }
         }
     }
     ph->expiration = now + DPS_SECS_TO_MS(ttl) + PUB_HISTORY_LIFETIME;
@@ -355,7 +357,7 @@ void DPS_HistoryFree(DPS_History* history)
     history->count = 0;
 }
 
-DPS_Status DPS_LookupPublisher(DPS_History* history, const DPS_UUID* pubId, uint32_t* sequenceNum, DPS_NodeAddress** addr)
+DPS_Status DPS_LookupPublisherForAck(DPS_History* history, const DPS_UUID* pubId, uint32_t* sequenceNum, DPS_NodeAddress** addr)
 {
     DPS_Status ret;
     DPS_PubHistory* ph;
@@ -378,7 +380,6 @@ DPS_Status DPS_LookupPublisher(DPS_History* history, const DPS_UUID* pubId, uint
 int DPS_PublicationReceivedFrom(DPS_History* history, DPS_UUID* pubId, uint32_t sequenceNum, DPS_NodeAddress* source, DPS_NodeAddress* destination)
 {
     DPS_PubHistory* ph;
-    DPS_NodeAddressList *phAddr;
     int ret;
 
     if (DPS_SameAddr(source, destination)) {
@@ -389,6 +390,7 @@ int DPS_PublicationReceivedFrom(DPS_History* history, DPS_UUID* pubId, uint32_t 
     uv_mutex_lock(&history->lock);
     ph = Find(history, pubId);
     if (ph) {
+        DPS_NodeAddressList *phAddr;
         for (phAddr = ph->addrs; phAddr; phAddr = phAddr->next) {
             if ((sequenceNum <= phAddr->sn) && DPS_SameAddr(&phAddr->addr, destination)) {
                 ret = DPS_TRUE;
