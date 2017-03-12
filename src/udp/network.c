@@ -144,6 +144,7 @@ DPS_NetContext* DPS_NetStart(DPS_Node* node, int port, DPS_OnReceive cb)
 ErrorExit:
 
     DPS_ERRPRINT("Failed to start net netCtx: error=%s\n", uv_err_name(ret));
+    netCtx->tx4Socket.data = netCtx;
     uv_close((uv_handle_t*)&netCtx->tx4Socket, TxHandleClosed);
     return NULL;
 }
