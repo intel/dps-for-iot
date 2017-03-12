@@ -179,11 +179,6 @@ RemoteNode* DPS_DeleteRemoteNode(DPS_Node* node, RemoteNode* remote);
 /*
  *
  */
-void DPS_DestroyAck(PublicationAck* ack);
-
-/*
- *
- */
 void DPS_RemoteCompletion(DPS_Node* node, RemoteNode* remote, DPS_Status status);
 
 /*

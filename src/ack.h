@@ -58,6 +58,13 @@ DPS_Status DPS_DecodeAcknowledgment(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxB
  */
 DPS_Status DPS_SendAcknowledgment(DPS_Node*node, PublicationAck* ack, RemoteNode* ackNode);
 
+/*
+ * Free resources associated with an acknowledgement
+ *
+ * @param ack   The acknowledgment to destroy.
+ */
+void DPS_DestroyAck(PublicationAck* ack);
+
 #ifdef __cplusplus
 }
 #endif
