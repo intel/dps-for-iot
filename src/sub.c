@@ -43,6 +43,8 @@
  */
 DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
+#define RemoteNodeAddressText(n)  DPS_NodeAddrToString(&(n)->ep.addr)
+
 static int IsValidSub(const DPS_Subscription* sub)
 {
     DPS_Subscription* subList;
@@ -230,6 +232,7 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote, DPS_BitVecto
     /*
      * Body map
      *      {
+     *          sequence_num: uint,
      *          inbound_sync: bool,
      *          outbound_sync: bool,
      *          needs: bit-vector,
@@ -239,7 +242,14 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote, DPS_BitVecto
      *       { }
      */
     if (interests) {
-        ret = CBOR_EncodeMap(&buf, 4);
+        ret = CBOR_EncodeMap(&buf, 5);
+        if (ret == DPS_OK) {
+            ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_SEQ_NUM);
+        }
+        if (ret == DPS_OK) {
+            ++remote->outbound.sequenceNum;
+            ret = CBOR_EncodeUint32(&buf, remote->outbound.sequenceNum);
+        }
         if (ret == DPS_OK) {
             ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_INBOUND_SYNC);
         }
@@ -267,6 +277,21 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote, DPS_BitVecto
     } else {
         ret = CBOR_EncodeMap(&buf, 0);
     }
+
+#ifdef SIMULATE_LOST_SUBSCRIPTION
+    /*
+     * Enable this code to simulate lost subscriptions to test
+     * out the resynchronization code.
+     */
+    if (!remote->outbound.sync && (DPS_Rand() & 0x8)) {
+        DPS_ERRPRINT("Simulating lost subscription\n");
+        DPS_TxBufferFree(&buf);
+        remote->inbound.sync = DPS_FALSE;
+        remote->outbound.sync = DPS_FALSE;
+        return DPS_OK;
+    }
+#endif
+
     if (ret == DPS_OK) {
         uv_buf_t uvBuf = uv_buf_init((char*)buf.base, DPS_TxBufferUsed(&buf));
         CBOR_Dump("Sub out", (uint8_t*)uvBuf.base, uvBuf.len);
@@ -304,7 +329,6 @@ static DPS_Status UpdateInboundInterests(DPS_Node* node, RemoteNode* remote, DPS
         remote->inbound.interests = NULL;
         DPS_BitVectorFree(remote->inbound.needs);
         remote->inbound.needs = NULL;
-        remote->inbound.updates = DPS_TRUE;
     }
     if (DPS_BitVectorIsClear(interests)) {
         DPS_BitVectorFree(interests);
@@ -314,7 +338,6 @@ static DPS_Status UpdateInboundInterests(DPS_Node* node, RemoteNode* remote, DPS
         DPS_CountVectorAdd(node->needs, needs);
         remote->inbound.interests = interests;
         remote->inbound.needs = needs;
-        remote->inbound.updates = DPS_TRUE;
     }
     return DPS_OK;
 }
@@ -325,12 +348,13 @@ static DPS_Status UpdateInboundInterests(DPS_Node* node, RemoteNode* remote, DPS
 DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuffer* buffer)
 {
     static const int32_t HeaderKeys[] = { DPS_CBOR_KEY_PORT };
-    static const int32_t BodyKeys[] = { DPS_CBOR_KEY_INBOUND_SYNC, DPS_CBOR_KEY_OUTBOUND_SYNC,
+    static const int32_t BodyKeys[] = { DPS_CBOR_KEY_SEQ_NUM, DPS_CBOR_KEY_INBOUND_SYNC, DPS_CBOR_KEY_OUTBOUND_SYNC,
                                         DPS_CBOR_KEY_NEEDS, DPS_CBOR_KEY_INTERESTS };
     DPS_Status ret;
     DPS_BitVector* interests = NULL;
     DPS_BitVector* needs = NULL;
     uint16_t port;
+    uint32_t sequenceNum = 0;
     RemoteNode* remote = NULL;
     CBOR_MapState mapState;
     int syncRequested;
@@ -395,6 +419,9 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
             break;
         }
         switch (key) {
+        case DPS_CBOR_KEY_SEQ_NUM:
+            ret = CBOR_DecodeUint32(buffer, &sequenceNum);
+            break;
         case DPS_CBOR_KEY_INBOUND_SYNC:
             ret = CBOR_DecodeBoolean(buffer, &syncRequested);
             break;
@@ -452,9 +479,25 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
     if (syncRequested) {
         remote->outbound.sync = DPS_TRUE;
     }
-    ret = UpdateInboundInterests(node, remote, interests, needs, !syncReceived);
     /*
-     * Check if application waiting for a completion callback
+     * If we got a delta check the sequence number to make sure we
+     * haven't got out of sync due to a lost packet.
+     */
+    if (!syncReceived && (sequenceNum != (remote->inbound.sequenceNum + 1))) {
+        DPS_ERRPRINT("Mismatched sequence number - request sync with remote\n");
+        /*
+         * Ignore this subscription and request synchronization
+         */
+        remote->inbound.sync = DPS_TRUE;
+    } else {
+        ret = UpdateInboundInterests(node, remote, interests, needs, !syncReceived);
+        if (ret == DPS_OK) {
+            remote->inbound.sequenceNum = sequenceNum;
+        }
+    }
+    /*
+     * Check if application waiting for a completion callback. Even if there was
+     * an error we are ok to complete because all we need is a response.
      */
     if (remote->completion) {
         DPS_RemoteCompletion(node, remote, DPS_OK);

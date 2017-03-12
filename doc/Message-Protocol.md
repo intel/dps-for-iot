@@ -86,12 +86,12 @@ publication = [
 ]
 ~~~~
 ### Subscription message encoding
-Subscription messages are not encrypte so there is only one encoding.
+Subscription messages are not encrypted so there is only one encoding.
 ~~~~py
 subscription = [
   type: 2,
   headers: { * header-field }, ; # port
-  body: { * header-field }     ; # inbound-sync, outbound-sync, needs, interests or empty for unlink
+  body: { * header-field }     ; # seq-num, inbound-sync, outbound-sync, needs, interests or empty for unlink
 ]
 ~~~~
 ### Acknowledgement message encoding

@@ -315,30 +315,51 @@ static DPS_Status UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, 
         goto ErrExit;
     }
     /*
-     * Don't compute the delta if we are synchronizing outbound interests
+     * Try computing a delta if we have a previous outbound interests
+     * bit vector and we have not been asked to do a full synchronization.
+     *
+     * Since the needs vector is relatively small there is little
+     * advantage gained is computing the delta.
      */
-    if (destNode->outbound.sync) {
-        DPS_BitVectorFree(destNode->outbound.interests);
-        destNode->outbound.interests = NULL;
-    }
-    if (destNode->outbound.interests) {
+    if (destNode->outbound.interests && !destNode->outbound.sync) {
         int same = DPS_FALSE;
-        DPS_BitVectorXor(node->scratch.interests, destNode->outbound.interests, newInterests, &same);
+        DPS_BitVector* delta = node->scratch.interests;
+
+        DPS_BitVectorXor(delta, destNode->outbound.interests, newInterests, &same);
+        /*
+         * If there is no change there is nothing to send unless we are
+         * requesting synchronization from the remote.
+         */
         if (same && DPS_BitVectorEquals(destNode->outbound.needs, newNeeds)) {
-            *outboundInterests = NULL;
+            if (destNode->inbound.sync) {
+                assert(DPS_BitVectorIsClear(delta));
+                *outboundInterests = delta;
+            } else {
+                *outboundInterests = NULL;
+            }
         } else {
-            *outboundInterests = node->scratch.interests;
+            /*
+             * If the full bit vector has fewer bits set than the delta it will
+             * probably encode into a smaller packet.
+             */
+            if (DPS_BitVectorPopCount(newInterests) < DPS_BitVectorPopCount(delta)) {
+                *outboundInterests = newInterests;
+                destNode->outbound.sync = DPS_TRUE;
+            } else {
+                *outboundInterests = delta;
+            }
         }
-        DPS_BitVectorFree(destNode->outbound.interests);
-        DPS_BitVectorFree(destNode->outbound.needs);
     } else {
         /*
-         * Inform receiver we are synchronizing interests
+         * Full sychronization is required
          */
         destNode->outbound.sync = DPS_TRUE;
         *outboundInterests = newInterests;
     }
+
+    DPS_BitVectorFree(destNode->outbound.interests);
     destNode->outbound.interests = newInterests;
+    DPS_BitVectorFree(destNode->outbound.needs);
     destNode->outbound.needs = newNeeds;
 
     DPS_DBGPRINT("UpdateOutboundInterests: %s %s\n", RemoteNodeAddressText(destNode), *outboundInterests ? "Changes" : "No Change");

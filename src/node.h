@@ -112,13 +112,14 @@ typedef struct _RemoteNode {
     uint8_t unlink;                    /* True if this node is about to be unlinked */
     struct {
         uint8_t sync;                  /* If TRUE request remote to synchronize interests */
-        uint8_t updates;               /* TRUE if updates have been received but not acted on */
+        uint32_t sequenceNum;          /* Sequence number of last subscription received from this node */
         DPS_BitVector* needs;          /* Bit vector of needs received from  this remote node */
         DPS_BitVector* interests;      /* Bit vector of interests received from  this remote node */
     } inbound;
     struct {
         uint8_t sync;                  /* If TRUE synchronize outbound interests with remote node (no deltas) */
         uint8_t checkForUpdates;       /* TRUE if there may be updated interests to send to this remote */
+        uint32_t sequenceNum;          /* Sequence number of last subscription sent to this node */
         DPS_BitVector* needs;          /* Needs bit vector sent outbound to this remote node */
         DPS_BitVector* interests;      /* Interests bit vector sent outbound to this remote node */
     } outbound;
@@ -130,7 +131,7 @@ typedef struct _RemoteNode {
     struct _RemoteNode* next;
 } RemoteNode;
 
-/*
+/**
  * Request to asynchronously updates subscriptions
  *
  * @param node    The node
@@ -138,7 +139,7 @@ typedef struct _RemoteNode {
  */
 int DPS_UpdateSubs(DPS_Node* node, RemoteNode* remote);
 
-/*
+/**
  * Queue an acknowledgment to be sent asynchronously
  *
  * @param node    The node
@@ -146,52 +147,80 @@ int DPS_UpdateSubs(DPS_Node* node, RemoteNode* remote);
  */
 void DPS_QueuePublicationAck(DPS_Node* node, PublicationAck* ack);
 
-/*
+/**
  * Callback function called when a network send operation completes
+ *
+ * @param node    The node
  */
 void DPS_OnSendComplete(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf_t* bufs, size_t numBufs, DPS_Status status);
 
 /*
- * Make a nonce for a specifc message type
+ * Make a nonce for a specific message type
  */
 void DPS_MakeNonce(const DPS_UUID* uuid, uint32_t seqNum, uint8_t msgType, uint8_t nonce[DPS_COSE_NONCE_SIZE]);
 
-/*
+/**
  * Function to call when a network send operation fails. Must be called with the node lock held.
+ *
+ * @param node    The local node
  */
 void DPS_SendFailed(DPS_Node* node, DPS_NodeAddress* addr, uv_buf_t* bufs, size_t numBufs, DPS_Status status);
 
-/*
+/**
+ * Add an entry for new remote node or return a pointer to the existing remote node.
  *
+ * @param node      The local node
+ * @param addr      The address of the remote node
+ * @param cn        Connection state information for the node
+ * @param remoteOut Returns an existing or new remote node structure
+ *
+ * @return
+ *          - DPS_OK if a new remote node was added
+ *          - DPS_ERR_EXISTS if the node already exists
+ *          - Other status codes indicating an error
  */
 DPS_Status DPS_AddRemoteNode(DPS_Node* node, DPS_NodeAddress* addr, DPS_NetConnection* cn, RemoteNode** remoteOut);
 
-/*
- * Lookup a remote node by address
+/**
+ * Lookup a remote node by address.
+ *
+ * Must be called with the node lock held.
+ *
+ * @param node    The local node
+ * @param addr    The address of the remote node to lookup
+ *
+ * @return  A pointer to the remote node or NULL if the lookup failed.
  */
 RemoteNode* DPS_LookupRemoteNode(DPS_Node* node, DPS_NodeAddress* addr);
 
-/*
+/**
+ * Deletes a remote node and related state information.
  *
+ * @param node    The local node
+ * @param remote  The remote node to delete
  */
 RemoteNode* DPS_DeleteRemoteNode(DPS_Node* node, RemoteNode* remote);
 
-/*
+/**
+ * Complete an asychronous operation on a remote node
  *
+ * @param node    The local node
+ * @param remote  The remote node to complete
+ * @param status  Status code indicating the success or failure of the operation
  */
 void DPS_RemoteCompletion(DPS_Node* node, RemoteNode* remote, DPS_Status status);
 
-/*
+/**
  * Lock the node
  *
- * @param The node to lock
+ * @param node The node to lock
  */
 void DPS_LockNode(DPS_Node* node);
 
-/*
+/**
  * Unlock the node
  *
- * @param The node to unlock
+ * @param node The node to unlock
  */
 void DPS_UnlockNode(DPS_Node* node);
 
