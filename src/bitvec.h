@@ -195,7 +195,7 @@ DPS_Status DPS_BitVectorUnion(DPS_BitVector* bvOut, DPS_BitVector* bv);
 /**
  * Compress and serialize a bit vector into a buffer
  *
- * @param bv  The bit vector to serialize
+ * @param bv      The bit vector to serialize
  * @param buffer  The buffer to serialize the bit vector into
  *
  * @return  The success or failure of the operation

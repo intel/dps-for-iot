@@ -376,7 +376,7 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
 {
     static const int32_t HeaderKeys[] = { DPS_CBOR_KEY_PORT, DPS_CBOR_KEY_TTL };
     static const int32_t BodyKeys[] = { DPS_CBOR_KEY_TTL, DPS_CBOR_KEY_PUB_ID, DPS_CBOR_KEY_SEQ_NUM,
-        DPS_CBOR_KEY_ACK_REQ, DPS_CBOR_KEY_BLOOM_FILTER };
+                                        DPS_CBOR_KEY_ACK_REQ, DPS_CBOR_KEY_BLOOM_FILTER };
     DPS_Status ret;
     RemoteNode* pubNode = NULL;
     uint16_t port;
@@ -528,7 +528,8 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
     pub->flags |= PUB_FLAG_PUBLISH;
     pub->sender = ep->addr;
     /*
-     * Stale publications are dropped
+     * A stale publication is a publication that has the same or older sequence number than the
+     * latest publication with the same pubId.
      */
     if (DPS_PublicationIsStale(&node->history, pubId, sequenceNum)) {
         DPS_DBGPRINT("Publication %s/%d is stale\n", DPS_UUIDToString(pubId), sequenceNum);
@@ -617,7 +618,7 @@ Exit:
      * Delete the publisher node if it is sending bad data
      */
     if (ret == DPS_ERR_INVALID || ret == DPS_ERR_SECURITY) {
-        DPS_ERRPRINT("Deleteing bad publisher\n");
+        DPS_ERRPRINT("Deleting bad publisher\n");
         DPS_LockNode(node);
         DPS_DeleteRemoteNode(node, pubNode);
         DPS_UnlockNode(node);

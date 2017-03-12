@@ -283,7 +283,8 @@ static DPS_Status UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, 
     DPS_DBGTRACE();
 
     /*
-     * Inbound interests from the node we are updating are excluded from the outbound interests
+     * Inbound interests from the node we are updating are excluded from the
+     * recalculation of outbound interests
      */
     if (destNode->inbound.interests) {
         ret = DPS_CountVectorDel(node->interests, destNode->inbound.interests);
@@ -332,7 +333,7 @@ static DPS_Status UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, 
         DPS_BitVectorFree(destNode->outbound.needs);
     } else {
         /*
-         * Inform receiver we are sycnronizing interests
+         * Inform receiver we are synchronizing interests
          */
         destNode->outbound.sync = DPS_TRUE;
         *outboundInterests = newInterests;
