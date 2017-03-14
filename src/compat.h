@@ -47,6 +47,20 @@ inline char* strndup(const char* str, size_t maxLen)
     }
 }
 
+#define BSWAP_32(n)  _byteswap_ulong(n)
+#define BSWAP_64(n)  _byteswap_uint64(n)
+
+#define __LITTLE_ENDIAN   0
+#define __BIG_ENDIAN      1
+#define __BYTE_ORDER      __LITTLE_ENDIAN
+
+#else // posix
+
+#include <endian.h>
+
+#define BSWAP_32(n)  __builtin_bswap32(n)
+#define BSWAP_64(n)  __builtin_bswap64(n)
+
 #endif
 
 #endif

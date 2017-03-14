@@ -27,30 +27,17 @@
 #include <dps/dbg.h>
 #include "sha2.h"
 #include "bitvec.h"
+#include "compat.h"
 #include <dps/private/cbor.h>
-
-#ifdef _WIN32
-
-#define BSWAP_32(n)  _byteswap_ulong(n)
-
-#else
-
-#include <endian.h>
-#if __BYTE_ORDER != __LITTLE_ENDIAN
-   #define ENDIAN_SWAP
-#endif
-
-#define BSWAP_32(n)  __builtin_bswap32(n)
-
-#endif
 
 /*
  * Debug control for this module
  */
 DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
-
-
+#if __BYTE_ORDER != __LITTLE_ENDIAN
+   #define ENDIAN_SWAP
+#endif
 
 #ifndef DPS_CONFIG_BIT_LEN
 #define DPS_CONFIG_BIT_LEN 8192
@@ -456,25 +443,28 @@ DPS_Status DPS_BitVectorXor(DPS_BitVector* bvOut, DPS_BitVector* bv1, DPS_BitVec
         return DPS_ERR_NULL;
     }
     assert(bvOut->len == bv1->len && bvOut->len == bv2->len);
-    if (bv1->popCount && bv2->popCount) {
+
+    if (bv1->popCount == 0) {
+        if (equal && DPS_BitVectorPopCount(bv2) == 0) {
+            *equal = DPS_TRUE;
+        }
+        DPS_BitVectorDup(bvOut, bv2);
+    } else if (bv2->popCount == 0) {
+        if (equal && DPS_BitVectorPopCount(bv1) == 0) {
+            *equal = DPS_TRUE;
+        }
+        DPS_BitVectorDup(bvOut, bv1);
+    } else {
         size_t i;
         int diff = 0;
+
         for (i = 0; i < NUM_CHUNKS(bv1); ++i) {
-            diff |= ((bvOut->bits[i] = bv1->bits[i] ^ bv2->bits[i]) != 0);
+            diff |= ((bvOut->bits[i] = bv1->bits[i] ^ bv2->bits[i]) != 0ull);
         }
         if (equal) {
             *equal = !diff;
         }
         INVALIDATE_POPCOUNT(bvOut);
-    } else if (bv1->popCount) {
-        DPS_BitVectorDup(bvOut, bv1);
-        *equal = DPS_FALSE;
-    } else if (bv2->popCount) {
-        DPS_BitVectorDup(bvOut, bv2);
-        *equal = DPS_FALSE;
-    } else {
-        DPS_BitVectorClear(bvOut);
-        *equal = DPS_TRUE;
     }
     return DPS_OK;
 }
