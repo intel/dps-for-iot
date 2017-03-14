@@ -30,6 +30,7 @@
 #include <dps/uuid.h>
 #include <stdlib.h>
 #include <string.h>
+#include "compat.h"
 
 /*
  * Debug control for this module
@@ -126,19 +127,7 @@ void DPS_GenerateUUID(DPS_UUID* uuid)
 
 int DPS_UUIDCompare(const DPS_UUID* a, const DPS_UUID* b)
 {
-    if (a->val64[0] < b->val64[0]) {
-        return -1;
-    }
-    if (a->val64[0] > b->val64[0]) {
-        return 1;
-    }
-    if (a->val64[1] < b->val64[1]) {
-        return -1;
-    }
-    if (a->val64[1] > b->val64[1]) {
-        return 1;
-    }
-    return 0;
+    return memcmp(&a->val, &b->val, sizeof(a->val));
 }
 
 uint32_t DPS_Rand()

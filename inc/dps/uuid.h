@@ -56,7 +56,7 @@ void DPS_GenerateUUID(DPS_UUID* uuid);
 const char* DPS_UUIDToString(const DPS_UUID* uuid);
 
 /**
- * Lexicographic comparison of two UUIDs
+ * Numerical comparison of two UUIDs
  */
 int DPS_UUIDCompare(const DPS_UUID* a, const DPS_UUID* b);
 
