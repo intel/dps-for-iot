@@ -245,7 +245,7 @@ int main(int argc, char** argv)
     int linkPort[MAX_LINKS];
     const char* linkHosts[MAX_LINKS];
     int numLinks = 0;
-    int wait = DPS_FALSE;
+    int wait = 0;
     int encrypt = DPS_TRUE;
     int ttl = 0;
     int i;
@@ -277,15 +277,13 @@ int main(int argc, char** argv)
             msg = *arg++;
             continue;
         }
+        if (IntArg("-w", &arg, &argc, &wait, 0, 30)) {
+            continue;
+        }
         if (IntArg("-t", &arg, &argc, &ttl, 0, 2000)) {
             continue;
         }
         if (IntArg("-x", &arg, &argc, &encrypt, 0, 1)) {
-            continue;
-        }
-        if (strcmp(*arg, "-w") == 0) {
-            ++arg;
-            wait = DPS_TRUE;
             continue;
         }
         if (strcmp(*arg, "-a") == 0) {
@@ -340,19 +338,30 @@ int main(int argc, char** argv)
             DPS_ERRPRINT("Failed to create publication - error=%s\n", DPS_ErrTxt(ret));
             return 1;
         }
+
+        if (wait) {
+            /*
+             * Wait for a while before sending a publication
+             */
+            DPS_TimedWaitForEvent(nodeDestroyed, wait * 1000);
+        }
+
         ret = DPS_Publish(currentPub, msg, msg ? strnlen(msg, MAX_MSG_LEN) + 1 : 0, ttl);
         if (ret == DPS_OK) {
             DPS_PRINT("Pub UUID %s\n", DPS_UUIDToString(DPS_PublicationGetUUID(currentPub)));
         } else {
             DPS_ERRPRINT("Failed to publish topics - error=%s\n", DPS_ErrTxt(ret));
         }
-        if (!wait) {
-            if (addr) {
-                DPS_UnlinkFrom(node, addr);
-                DPS_DestroyAddress(addr);
-            }
-            DPS_DestroyNode(node, OnNodeDestroyed, NULL);
+        if (addr) {
+            /*
+             * A brief delay before exiting to ensure the publication
+             * gets sent and we have a chance to receive acks if requested
+             */
+            DPS_TimedWaitForEvent(nodeDestroyed, requestAck ? 2000 : 500);
+            DPS_UnlinkFrom(node, addr);
+            DPS_DestroyAddress(addr);
         }
+        DPS_DestroyNode(node, OnNodeDestroyed, NULL);
     } else {
         DPS_PRINT("Running in interactive mode\n");
         ReadStdin(node);
@@ -362,11 +371,12 @@ int main(int argc, char** argv)
     return 0;
 
 Usage:
-    DPS_PRINT("Usage %s [-d] [-x 0/1] [-a] [-w] [[-h <hostname>] -p <portnum>] [-m <message>] [topic1 topic2 ... topicN]\n", argv[0]);
+    DPS_PRINT("Usage %s [-d] [-x 0/1] [-a] [-w <seconds>] <seconds>] [-t <ttl>] [[-h <hostname>] -p <portnum>] [-m <message>] [topic1 topic2 ... topicN]\n", argv[0]);
     DPS_PRINT("       -d: Enable debug ouput if built for debug.\n");
     DPS_PRINT("       -x: Enable or disable encryption. Default is encryption enabled.\n");
     DPS_PRINT("       -a: Request an acknowledgement\n");
-    DPS_PRINT("       -w: Wait after sending a publication\n");
+    DPS_PRINT("       -t: Set a time-to-live on a publication\n");
+    DPS_PRINT("       -w: Time to wait between linking to remote node and sending publication\n");
     DPS_PRINT("       -h: Specifies host (localhost is default). Mutiple -h options are permitted.\n");
     DPS_PRINT("       -p: port to link. Multiple -p options are permitted.\n");
     DPS_PRINT("       -m: A payload message to accompany the publication.\n\n");

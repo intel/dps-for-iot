@@ -31,7 +31,7 @@
 
 static int quiet = DPS_FALSE;
 
-static uint8_t AckMsg[] = "This is an ACK";
+static uint8_t AckFmt[] = "This is an ACK from %d";
 
 #define NUM_KEYS 2
 
@@ -71,6 +71,7 @@ static void OnNodeDestroyed(DPS_Node* node, void* data)
 
 static void OnPubMatch(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* data, size_t len)
 {
+    DPS_Status ret;
     const DPS_UUID* pubId = DPS_PublicationGetUUID(pub);
     uint32_t sn = DPS_PublicationGetSequenceNum(pub);
     size_t i;
@@ -101,7 +102,11 @@ static void OnPubMatch(DPS_Subscription* sub, const DPS_Publication* pub, uint8_
         }
     }
     if (DPS_PublicationIsAckRequested(pub)) {
-        DPS_Status ret = DPS_AckPublication(pub, AckMsg, sizeof(AckMsg));
+        char ackMsg[sizeof(AckFmt) + 8];
+
+        sprintf(ackMsg, AckFmt, DPS_GetPortNumber(DPS_PublicationGetNode(pub)));
+
+        ret = DPS_AckPublication(pub, ackMsg, sizeof(ackMsg));
         if (ret != DPS_OK) {
             DPS_PRINT("Failed to ack pub %s\n", DPS_ErrTxt(ret));
         }
@@ -141,6 +146,7 @@ int main(int argc, char** argv)
     char* topicList[64];
     char** arg = argv + 1;
     int numTopics = 0;
+    int wait = 0;
     DPS_Node* node;
     DPS_Event* nodeDestroyed;
     int mcastPub = DPS_MCAST_PUB_DISABLED;
@@ -173,6 +179,9 @@ int main(int argc, char** argv)
         if (strcmp(*arg, "-q") == 0) {
             ++arg;
             quiet = DPS_TRUE;
+            continue;
+        }
+        if (IntArg("-w", &arg, &argc, &wait, 0, 30)) {
             continue;
         }
         if (IntArg("-x", &arg, &argc, &encrypt, 0, 1)) {
@@ -223,6 +232,13 @@ int main(int argc, char** argv)
 
     nodeDestroyed = DPS_CreateEvent();
 
+    if (wait) {
+        /*
+         * Wait for a while before trying to link
+         */
+        DPS_TimedWaitForEvent(nodeDestroyed, wait * 1000);
+    }
+
     if (numTopics > 0) {
         char** topics = topicList;
         while (numTopics >= 0) {
@@ -268,11 +284,12 @@ int main(int argc, char** argv)
     return 0;
 
 Usage:
-    DPS_PRINT("Usage %s [-d] [-q] [-m] [-x 0/1] [[-h <hostname>] -p <portnum>] [-l <listen port] [-m] [-d] [-s topic1 ... topicN]\n", argv[0]);
+    DPS_PRINT("Usage %s [-d] [-q] [-m] [-w <seconds>] [-x 0/1] [[-h <hostname>] -p <portnum>] [-l <listen port] [-m] [-d] [-s topic1 ... topicN]\n", argv[0]);
     DPS_PRINT("       -d: Enable debug ouput if built for debug.\n");
     DPS_PRINT("       -q: Quiet - suppresses output about received publications.\n");
     DPS_PRINT("       -x: Enable or disable encryption. Default is encryption enabled.\n");
     DPS_PRINT("       -h: Specifies host (localhost is default). Mutiple -h options are permitted.\n");
+    DPS_PRINT("       -w: Time to wait before establishing links\n");
     DPS_PRINT("       -p: A port to link. Multiple -p options are permitted.\n");
     DPS_PRINT("       -m: Enable multicast receive. Enabled by default is there are no -p options.\n");
     DPS_PRINT("       -l: port to listen on. Default is an ephemeral port.\n");
