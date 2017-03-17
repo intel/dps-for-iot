@@ -9,6 +9,7 @@ bindings = Split('python nodejs')
 vars.AddVariables(
     EnumVariable('variant', 'Build variant', default='release', allowed_values=('debug', 'release'), ignorecase=2),
     EnumVariable('transport', 'Transport protocol', default='udp', allowed_values=('udp', 'tcp'), ignorecase=2),
+    EnumVariable('target', 'Build target', default='local', allowed_values=('local', 'yocto'), ignorecase=2),
     ListVariable('bindings', 'Bindings to build', bindings, bindings))
 
 # Windows-specific command line variables
@@ -36,7 +37,23 @@ try:
 except:
     pass
 
+extEnv = Environment(ENV = os.environ, variables=vars)
 env = Environment(CPPDEFINES=[], CPPPATH = ['#/inc', '#/ext/tinycrypt/lib/include', '#/ext/safestring/include'], variables=vars, tools=tools)
+
+if env['target'] == 'yocto':
+    env_options = ["SYSROOT", "CC", "AR", "ARFLAGS", "CCFLAGS", "CFLAGS", "CXX", "CXXFLAGS", "LINKFLAGS", "STRIP", "PKG_CONFIG", "CHRPATH", "LD", "TAR"]
+    for i in env_options:
+        if os.environ.has_key(i):
+            if i in ("CFLAGS", "CCFLAGS", "LINKFLAGS"):
+                env.Replace(**{i: Split(os.getenv(i))})
+                extEnv.Replace(**{i: Split(os.getenv(i))})
+            else:
+                env.Replace(**{i: os.getenv(i)})
+                extEnv.Replace(**{i: os.getenv(i)})
+    env.PrependENVPath('PATH', os.getenv('PATH'))
+    env.PrependENVPath('LDFLAGS', os.getenv('LDFLAGS'))
+    extEnv.PrependENVPath('PATH', os.getenv('PATH'))
+    extEnv.PrependENVPath('LDFLAGS', os.getenv('LDFLAGS'))
 
 Help(vars.GenerateHelpText(env))
 
@@ -55,7 +72,6 @@ if env['transport'] == 'udp':
 print "Building for " + env['variant']
 
 # Build external dependencies
-extEnv = Environment(ENV = os.environ, variables=vars)
 ext_libs = SConscript('ext/SConscript', exports=['extEnv'])
 
 # Platform specific configuration
@@ -142,7 +158,10 @@ elif env['PLATFORM'] == 'posix':
         env.Append(CFLAGS = ['-O3', '-DNDEBUG'])
 
     # Where to find Python.h
-    env['PY_CPPPATH'] = ['/usr/include/python2.7']
+    if env['target'] == 'yocto':
+        env['PY_CPPPATH'] = [os.getenv('SYSROOT') + '/usr/include/python2.7']
+    else:
+        env['PY_CPPPATH'] = ['/usr/include/python2.7']
     env['PY_LIBPATH'] = []
 
     # Where to find libuv and the libraries it needs

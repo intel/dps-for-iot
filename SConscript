@@ -1,3 +1,4 @@
+import os
 Import(['env', 'ext_libs'])
 
 platform = env['PLATFORM']
@@ -103,7 +104,10 @@ if env['nodejs']:
         nodeenv.Append(SWIGFLAGS = ['-javascript', '-node', '-c++', '-DV8_VERSION=0x04059937', '-Wall', '-Werror', '-v', '-O'], SWIGPATH = '#/inc')
         # There may be a bug with the SWIG builder - add -O to CPPFLAGS to get it passed on to the compiler
         nodeenv.Append(CPPFLAGS = ['-DBUILDING_NODE_EXTENSION', '-std=c++11', '-O'])
-        nodeenv.Append(CPPPATH = ['/usr/include/node'])
+        if env['target'] == 'yocto':
+            nodeenv.Append(CPPPATH = [os.getenv('SYSROOT') + '/usr/include/node'])
+        else:
+            nodeenv.Append(CPPPATH = ['/usr/include/node'])
         nodeenv.Append(LIBS = [lib, env['UV_LIBS']])
         nodedps = nodeenv.SharedLibrary('lib/nodedps', shobjs + ['swig/dps_node.i'])
         nodeenv.InstallAs('#/build/dist/js/dps.node', nodedps)
