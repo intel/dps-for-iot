@@ -109,6 +109,7 @@ typedef struct _DPS_Node {
 typedef struct _RemoteNode {
     OnOpCompletion* completion;
     uint8_t linked;                    /* True if this is a node that was explicitly linked */
+    uint8_t muted;                     /* Non zero if this remote is muted or being muted */
     uint8_t unlink;                    /* True if this node is about to be unlinked */
     struct {
         uint8_t sync;                  /* If TRUE request remote to synchronize interests */

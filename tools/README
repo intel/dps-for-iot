@@ -2,6 +2,27 @@ This is repository for useful tools
 
 ================================
 
+showmesh
+
+Runs the make_mesh test on an input file and displays the resultant graph.
+
+tools/showmesh [-o <png file>] [-l <logfile>] [-s <count>] [-m[0|1]] [-n|-d] <file>
+
+Requires graphviz and imagemagick (or some other png viewer)
+
+    -m  -- 0 to hide muted arcs, 1 (default) to show them
+    -d  -- use dot for layout
+    -n  -- use neato for layout (default)
+    -o  -- Capture the png output file
+    -l  -- Capture the log file from make_mesh
+    -s  -- Maximum number of subscriptions to register (default=1)
+
+There are some sample meshes in the ./meshes subdir.
+
+Active arcs are shown solid, muted arcs (if not hidden) are dotted.
+
+================================
+
 dps_graph.pl 
 
 Generates an input file to dot that graphs the TCP connections beween instances of the reg_subs example program.

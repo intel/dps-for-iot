@@ -118,6 +118,7 @@ testenv.Append(CPPPATH = ['src'])
 testenv.Append(LIBS = [lib, env['UV_LIBS']])
 
 testsrcs = ['test/hist_unit.c',
+            'test/make_mesh.c',
             'test/countvec.c',
             'test/rle_compression.c',
             'test/topic_match.c',

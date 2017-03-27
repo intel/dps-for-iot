@@ -1,0 +1,39 @@
+#!/bin/bash
+
+OPTIND=1
+
+gcmd="neato"
+show_muted="1"
+outfile=''
+logfile="log"
+num_subs=1
+
+while getopts "hm:dno:l:s:" opt; do
+    case "$opt" in
+    h)
+        echo "[-n|d] [-m] <mesh-file>"
+        exit 0
+        ;;
+    d)  gcmd="dot"
+        ;;
+    n)  gcmd="neato"
+        ;;
+    m)  show_muted=$OPTARG
+        ;;
+    o)  outfile=$OPTARG
+        ;;
+    l)  logfile=$OPTARG
+        ;;
+    s)  num_subs=$OPTARG
+        ;;
+    esac
+done
+
+shift $((OPTIND-1))
+
+if [[ $outfile != '' ]]; then
+    build/test/bin/make_mesh -s $num_subs -m $show_muted -f $@ 2> $logfile | $gcmd -Tpng > $outfile
+    display $outfile&
+else
+    build/test/bin/make_mesh -s $num_subs -m $show_muted -f $@ 2> $logfile | $gcmd -Tpng | display &
+fi
