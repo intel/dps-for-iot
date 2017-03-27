@@ -33,10 +33,10 @@ extern "C" {
  * Map keys for CBOR serialization of DPS messages
  */
 #define DPS_CBOR_KEY_PORT           1   /* uint */
-#define DPS_CBOR_KEY_CANCEL         2   /* bool */
+#define DPS_CBOR_KEY_MESH_ID        2   /* bstr (UUID) */
 #define DPS_CBOR_KEY_TTL            3   /* int */
-#define DPS_CBOR_KEY_PUB_ID         4   /* uint */
-#define DPS_CBOR_KEY_SEQ_NUM        5   /* bool */
+#define DPS_CBOR_KEY_PUB_ID         4   /* bstr (UUID) */
+#define DPS_CBOR_KEY_SEQ_NUM        5   /* uint */
 #define DPS_CBOR_KEY_ACK_REQ        6   /* bool */
 #define DPS_CBOR_KEY_BLOOM_FILTER   7   /* bstr */
 #define DPS_CBOR_KEY_INBOUND_SYNC   8   /* bool */

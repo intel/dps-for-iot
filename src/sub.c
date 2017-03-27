@@ -43,7 +43,7 @@
  */
 DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
-#define RemoteNodeAddressText(n)  DPS_NodeAddrToString(&(n)->ep.addr)
+#define DESCRIBE(n)  DPS_NodeAddrToString(&(n)->ep.addr)
 
 static int IsValidSub(const DPS_Subscription* sub)
 {
@@ -191,8 +191,9 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote, DPS_BitVecto
     len = CBOR_SIZEOF_ARRAY(3) +
           CBOR_SIZEOF(uint8_t) +
 
-          CBOR_SIZEOF_MAP(1) + 1 * CBOR_SIZEOF(uint8_t) +
-          CBOR_SIZEOF(uint16_t);
+          CBOR_SIZEOF_MAP(1) + 2 * CBOR_SIZEOF(uint8_t) +
+          CBOR_SIZEOF(uint16_t) +
+          CBOR_SIZEOF_BSTR(sizeof(DPS_UUID));
 
     if (interests) {
         len += CBOR_SIZEOF_MAP(4) + 4 * CBOR_SIZEOF(uint8_t) +
@@ -215,16 +216,23 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote, DPS_BitVecto
      * Header map
      *  {
      *      port: uint
+     *      meshId : uuid
      *  }
      */
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeMap(&buf, 1);
+        ret = CBOR_EncodeMap(&buf, 2);
     }
     if (ret == DPS_OK) {
         ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_PORT);
     }
     if (ret == DPS_OK) {
         ret = CBOR_EncodeInt16(&buf, node->port);
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_MESH_ID);
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeBytes(&buf, (uint8_t*)&remote->outbound.meshId, sizeof(DPS_UUID));
     }
     if (ret != DPS_OK) {
         return ret;
@@ -318,6 +326,8 @@ static DPS_Status UpdateInboundInterests(DPS_Node* node, RemoteNode* remote, DPS
 {
     DPS_DBGTRACE();
 
+    assert(!remote->muted);
+
     if (remote->inbound.interests) {
         if (delta) {
             DPS_DBGPRINT("Received interests delta\n");
@@ -339,6 +349,12 @@ static DPS_Status UpdateInboundInterests(DPS_Node* node, RemoteNode* remote, DPS
         remote->inbound.interests = interests;
         remote->inbound.needs = needs;
     }
+
+#ifndef NDEBUG
+    DPS_DBGPRINT("New inbound interests from %s: ", DESCRIBE(remote));
+    DPS_DumpMatchingTopics(remote->inbound.interests);
+#endif
+
     return DPS_OK;
 }
 
@@ -347,7 +363,7 @@ static DPS_Status UpdateInboundInterests(DPS_Node* node, RemoteNode* remote, DPS
  */
 DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuffer* buffer)
 {
-    static const int32_t HeaderKeys[] = { DPS_CBOR_KEY_PORT };
+    static const int32_t HeaderKeys[] = { DPS_CBOR_KEY_PORT, DPS_CBOR_KEY_MESH_ID };
     static const int32_t BodyKeys[] = { DPS_CBOR_KEY_SEQ_NUM, DPS_CBOR_KEY_INBOUND_SYNC, DPS_CBOR_KEY_OUTBOUND_SYNC,
                                         DPS_CBOR_KEY_NEEDS, DPS_CBOR_KEY_INTERESTS };
     DPS_Status ret;
@@ -357,8 +373,9 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
     uint32_t sequenceNum = 0;
     RemoteNode* remote = NULL;
     CBOR_MapState mapState;
-    int syncRequested;
-    int syncReceived;
+    DPS_UUID* meshId = NULL;
+    int syncRequested = DPS_FALSE;
+    int syncReceived = DPS_FALSE;
 
     DPS_DBGTRACE();
 
@@ -371,13 +388,22 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
         return ret;
     }
     while (!DPS_ParseMapDone(&mapState)) {
+        size_t len;
         int32_t key;
         ret = DPS_ParseMapNext(&mapState, &key);
         if (ret != DPS_OK) {
             break;
         }
-        if (key == DPS_CBOR_KEY_PORT) {
+        switch (key) {
+        case DPS_CBOR_KEY_PORT:
             ret = CBOR_DecodeUint16(buffer, &port);
+            break;
+        case DPS_CBOR_KEY_MESH_ID:
+            ret = CBOR_DecodeBytes(buffer, (uint8_t**)&meshId, &len);
+            if ((ret == DPS_OK) && (len != sizeof(DPS_UUID))) {
+                ret = DPS_ERR_INVALID;
+            }
+            break;
         }
         if (ret != DPS_OK) {
             break;
@@ -464,7 +490,7 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
             ret = DPS_OK;
         } else {
             /*
-             * The remote is new to us so force a synchronize
+             * The remote is new to us so we need to sync
              */
             syncRequested = DPS_TRUE;
         }
@@ -480,20 +506,25 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
         remote->outbound.sync = DPS_TRUE;
     }
     /*
-     * If we got a delta check the sequence number to make sure we
-     * haven't got out of sync due to a lost packet.
+     * Check the sequence number to detect lost packets
      */
-    if (!syncReceived && (sequenceNum != (remote->inbound.sequenceNum + 1))) {
-        DPS_ERRPRINT("Mismatched sequence number - request sync with remote\n");
-        /*
-         * Ignore this subscription and request synchronization
-         */
-        remote->inbound.sync = DPS_TRUE;
-    } else {
-        ret = UpdateInboundInterests(node, remote, interests, needs, !syncReceived);
-        if (ret == DPS_OK) {
-            remote->inbound.sequenceNum = sequenceNum;
+    if (sequenceNum != (remote->inbound.sequenceNum + 1)) {
+        DPS_ERRPRINT("Mismatched sequence number %d != %d from %s\n", sequenceNum, remote->inbound.sequenceNum + 1, DESCRIBE(remote));
+        if (syncReceived) {
+            if (sequenceNum > remote->inbound.sequenceNum) {
+                remote->inbound.sequenceNum = sequenceNum;
+            }
+        } else {
+            DPS_ERRPRINT("Ignore invalid delta and request resync\n");
+            remote->inbound.sync = DPS_TRUE;
         }
+    } else {
+        ++remote->inbound.sequenceNum;
+    }
+    if (sequenceNum == remote->inbound.sequenceNum) {
+        DPS_DBGPRINT("Received mesh id %08x from %s\n", UUID_32(meshId), DESCRIBE(remote));
+        remote->inbound.meshId = *meshId;
+        ret = UpdateInboundInterests(node, remote, interests, needs, !syncReceived);
     }
     /*
      * Check if application waiting for a completion callback. Even if there was

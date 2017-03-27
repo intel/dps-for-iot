@@ -114,6 +114,7 @@ typedef struct _RemoteNode {
     struct {
         uint8_t sync;                  /* If TRUE request remote to synchronize interests */
         uint32_t sequenceNum;          /* Sequence number of last subscription received from this node */
+        DPS_UUID meshId;               /* The mesh id received from this remote node */
         DPS_BitVector* needs;          /* Bit vector of needs received from  this remote node */
         DPS_BitVector* interests;      /* Bit vector of interests received from  this remote node */
     } inbound;
@@ -121,6 +122,7 @@ typedef struct _RemoteNode {
         uint8_t sync;                  /* If TRUE synchronize outbound interests with remote node (no deltas) */
         uint8_t checkForUpdates;       /* TRUE if there may be updated interests to send to this remote */
         uint32_t sequenceNum;          /* Sequence number of last subscription sent to this node */
+        DPS_UUID meshId;               /* The mesh id sent to this remote node */
         DPS_BitVector* needs;          /* Needs bit vector sent outbound to this remote node */
         DPS_BitVector* interests;      /* Interests bit vector sent outbound to this remote node */
     } outbound;
