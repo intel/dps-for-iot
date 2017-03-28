@@ -429,7 +429,7 @@ int main(int argc, char** argv)
 
     DPS_PRINT("%d nodes created %d links \n", numNodes, numLinks);
 
-    DPS_TimedWaitForEvent(sleeper, 3000);
+    DPS_TimedWaitForEvent(sleeper, 100);
     /*
      * Add some subscriptions
      */
@@ -452,7 +452,7 @@ int main(int argc, char** argv)
                 } else {
                     DPS_ERRPRINT("Subscribe failed %s\n", DPS_ErrTxt(ret));
                 }
-                DPS_TimedWaitForEvent(sleeper, DPS_Rand() % 500);
+                DPS_TimedWaitForEvent(sleeper, DPS_Rand() % 100);
             }
         }
         /*
@@ -463,7 +463,7 @@ int main(int argc, char** argv)
         }
     }
 
-    DPS_TimedWaitForEvent(sleeper, 2000);
+    DPS_TimedWaitForEvent(sleeper, 1000);
 
     PrintGraph(node, numNodes, outFn, showMuted);
 

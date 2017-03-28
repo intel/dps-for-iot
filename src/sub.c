@@ -326,6 +326,29 @@ static DPS_Status UpdateInboundInterests(DPS_Node* node, RemoteNode* remote, DPS
 {
     DPS_DBGTRACE();
 
+    /*
+     * If the remote is muted or being muted we discard incoming interests
+     */
+    if (remote->muted) {
+        /*
+         * Tie-breaker for links that are muted on both sides:
+         *
+         * Loop detection is independent of which endpoint initiated the link
+         * but there is a race condition where both endpoints simultaneousy
+         * detect the loop. Fortunately we can detect this case because each
+         * endpoint sends a subscription with MaxMeshId and break the tie
+         * by unmuting one end. We arbitrarily choose to unmute the endpoint
+         * that originally initiated the link.
+         */
+        if (remote->linked && (DPS_UUIDCompare(&remote->inbound.meshId, &DPS_MaxMeshId) == 0)) {
+            DPS_DBGPRINT("Unmuting %s\n", DESCRIBE(remote));
+            remote->muted = DPS_REMOTE_UNMUTED;
+        }
+        DPS_ClearInboundInterests(node, remote);
+        DPS_BitVectorFree(interests);
+        DPS_BitVectorFree(needs);
+        return DPS_OK;
+    }
     if (remote->inbound.interests) {
         if (delta) {
             DPS_DBGPRINT("Received interests delta\n");
@@ -516,8 +539,18 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
     }
     if (sequenceNum == remote->inbound.sequenceNum) {
         DPS_DBGPRINT("Received mesh id %08x from %s\n", UUID_32(meshId), DESCRIBE(remote));
-        remote->inbound.meshId = *meshId;
-        ret = UpdateInboundInterests(node, remote, interests, needs, !syncReceived);
+        /*
+         * Check for a loop in the mesh. If there is a loop and the link was
+         * formed by the sending remote we mute the link.
+         */
+        if (DPS_MeshHasLoop(node, remote, meshId)) {
+            DPS_BitVectorFree(interests);
+            DPS_BitVectorFree(needs);
+            ret = DPS_MuteRemoteNode(node, remote);
+        } else {
+            remote->inbound.meshId = *meshId;
+            ret = UpdateInboundInterests(node, remote, interests, needs, !syncReceived);
+        }
     }
     /*
      * Check if application waiting for a completion callback. Even if there was

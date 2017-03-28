@@ -62,6 +62,7 @@ typedef struct _DPS_Node {
     uint8_t isSecured;                    /* Indicates if this node is secured */
     uint16_t tasks;                       /* Background tasks that have been scheduled */
     uint16_t port;
+    DPS_UUID meshId;                      /* Randomly allocated mesh id for this node */
     char separators[13];                  /* List of separator characters */
     DPS_KeyRequestCallback keyRequestCB;  /* Callback function for loading encryption keys */
     DPS_UUID keyId;                       /* Encryption key identifier */
@@ -106,11 +107,17 @@ typedef struct _DPS_Node {
 
 } DPS_Node;
 
+#define DPS_REMOTE_UNMUTED 0
+#define DPS_REMOTE_MUTING  1
+#define DPS_REMOTE_MUTED   2
+
+extern const DPS_UUID DPS_MaxMeshId;
+
 typedef struct _RemoteNode {
     OnOpCompletion* completion;
     uint8_t linked;                    /* True if this is a node that was explicitly linked */
-    uint8_t muted;                     /* Non zero if this remote is muted or being muted */
     uint8_t unlink;                    /* True if this node is about to be unlinked */
+    uint8_t muted;                     /* Non zero if this remote is muted or being muted */
     struct {
         uint8_t sync;                  /* If TRUE request remote to synchronize interests */
         uint32_t sequenceNum;          /* Sequence number of last subscription received from this node */
@@ -193,6 +200,15 @@ DPS_Status DPS_AddRemoteNode(DPS_Node* node, DPS_NodeAddress* addr, DPS_NetConne
 RemoteNode* DPS_LookupRemoteNode(DPS_Node* node, DPS_NodeAddress* addr);
 
 /**
+ * Must be called with the node lock held.
+ *
+ * @param node    The local node
+ * @param src     The remote that just sent a subscription
+ * @param meshId  The mesh id in the subscription
+ */
+int DPS_MeshHasLoop(DPS_Node* node, RemoteNode* src, DPS_UUID* meshId);
+
+/**
  * Deletes a remote node and related state information.
  *
  * @param node    The local node
@@ -210,10 +226,24 @@ RemoteNode* DPS_DeleteRemoteNode(DPS_Node* node, RemoteNode* remote);
 void DPS_RemoteCompletion(DPS_Node* node, RemoteNode* remote, DPS_Status status);
 
 /**
- * Clear the inbound interests for a remote node.
+ * Mute a remote node. Remote nodes are muted we detect a
+ * loop in the mesh.
  *
  * @param node    The local node
- * @param remote  The remote node to clear
+ * @param remote  The remote node to mute
+ */
+DPS_Status DPS_MuteRemoteNode(DPS_Node* node, RemoteNode* remote);
+
+/**
+ * Unmute a remote node
+ *
+ * @param node    The local node
+ * @param remote  The remote node to unmute
+ */
+DPS_Status DPS_UnmuteRemoteNode(DPS_Node* node, RemoteNode* remote);
+
+/**
+ *
  */
 void DPS_ClearInboundInterests(DPS_Node* node, RemoteNode* remote);
 
@@ -230,6 +260,8 @@ void DPS_LockNode(DPS_Node* node);
  * @param node The node to unlock
  */
 void DPS_UnlockNode(DPS_Node* node);
+
+#define UUID_32(n) (((n)->val[12]) | ((n)->val[13] << 8) | ((n)->val[14] << 16) | ((n)->val[15] << 24))
 
 #ifdef __cplusplus
 }
