@@ -53,7 +53,7 @@ DPS_Status GetKey(DPS_Node* node, const DPS_UUID* kid, uint8_t* key, size_t keyL
     size_t i;
 
     for (i = 0; i < NUM_KEYS; ++i) {
-        if (DPS_UUIDCompare(kid, &keyId[i]) == 0) {
+        if (keyLen == 16 && DPS_UUIDCompare(kid, &keyId[i]) == 0) {
             memcpy(key, keyData[i], keyLen);
             DPS_PRINT("Using key %d\n", i);
             return DPS_OK;
@@ -138,7 +138,7 @@ static int IntArg(char* opt, char*** argp, int* argcp, int* val, int min, int ma
     return 1;
 }
 
-#define MAX_LINKS 8
+#define MAX_LINKS 16
 
 int main(int argc, char** argv)
 {
@@ -160,42 +160,51 @@ int main(int argc, char** argv)
     DPS_Debug = 0;
 
     while (--argc) {
-        if (IntArg("-l", &arg, &argc, &listenPort, 1, UINT16_MAX)) {
-            continue;
-        }
-        if (IntArg("-p", &arg, &argc, &linkPort[numLinks], 1, UINT16_MAX)) {
-            linkHosts[numLinks] = host;
-            ++numLinks;
-            continue;
-        }
-        if (strcmp(*arg, "-h") == 0) {
-            ++arg;
-            if (!--argc) {
-                goto Usage;
+        /*
+         * Topics must come last
+         */
+        if (numTopics == 0) {
+            if (IntArg("-l", &arg, &argc, &listenPort, 1, UINT16_MAX)) {
+                continue;
             }
-            host = *arg++;
-            continue;
-        }
-        if (strcmp(*arg, "-q") == 0) {
-            ++arg;
-            quiet = DPS_TRUE;
-            continue;
-        }
-        if (IntArg("-w", &arg, &argc, &wait, 0, 30)) {
-            continue;
-        }
-        if (IntArg("-x", &arg, &argc, &encrypt, 0, 1)) {
-            continue;
-        }
-        if (strcmp(*arg, "-m") == 0) {
-            ++arg;
-            mcastPub = DPS_MCAST_PUB_ENABLE_RECV;
-            continue;
-        }
-        if (strcmp(*arg, "-d") == 0) {
-            ++arg;
-            DPS_Debug = 1;
-            continue;
+            if (IntArg("-p", &arg, &argc, &linkPort[numLinks], 1, UINT16_MAX)) {
+                if (numLinks == (MAX_LINKS - 1)) {
+                    DPS_PRINT("Too many -p options\n");
+                    goto Usage;
+                }
+                linkHosts[numLinks] = host;
+                ++numLinks;
+                continue;
+            }
+            if (strcmp(*arg, "-h") == 0) {
+                ++arg;
+                if (!--argc) {
+                    goto Usage;
+                }
+                host = *arg++;
+                continue;
+            }
+            if (strcmp(*arg, "-q") == 0) {
+                ++arg;
+                quiet = DPS_TRUE;
+                continue;
+            }
+            if (IntArg("-w", &arg, &argc, &wait, 0, 30)) {
+                continue;
+            }
+            if (IntArg("-x", &arg, &argc, &encrypt, 0, 1)) {
+                continue;
+            }
+            if (strcmp(*arg, "-m") == 0) {
+                ++arg;
+                mcastPub = DPS_MCAST_PUB_ENABLE_RECV;
+                continue;
+            }
+            if (strcmp(*arg, "-d") == 0) {
+                ++arg;
+                DPS_Debug = 1;
+                continue;
+            }
         }
         if (strcmp(*arg, "-s") == 0) {
             ++arg;
@@ -284,7 +293,7 @@ int main(int argc, char** argv)
     return 0;
 
 Usage:
-    DPS_PRINT("Usage %s [-d] [-q] [-m] [-w <seconds>] [-x 0/1] [[-h <hostname>] -p <portnum>] [-l <listen port] [-m] [-d] [-s topic1 ... topicN]\n", argv[0]);
+    DPS_PRINT("Usage %s [-d] [-q] [-m] [-w <seconds>] [-x 0/1] [[-h <hostname>] -p <portnum>] [-l <listen port] [-m] [-d] [[-s] topic1 ... topicN]\n", argv[0]);
     DPS_PRINT("       -d: Enable debug ouput if built for debug.\n");
     DPS_PRINT("       -q: Quiet - suppresses output about received publications.\n");
     DPS_PRINT("       -x: Enable or disable encryption. Default is encryption enabled.\n");

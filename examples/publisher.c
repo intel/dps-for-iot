@@ -63,7 +63,7 @@ DPS_Status GetKey(DPS_Node* node, const DPS_UUID* kid, uint8_t* key, size_t keyL
     size_t i;
 
     for (i = 0; i < NUM_KEYS; ++i) {
-        if (DPS_UUIDCompare(kid, &keyId[i]) == 0) {
+        if (keyLen == 16 && DPS_UUIDCompare(kid, &keyId[i]) == 0) {
             memcpy(key, keyData[i], keyLen);
             DPS_PRINT("Using key %d\n", i);
             return DPS_OK;
