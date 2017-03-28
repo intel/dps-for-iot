@@ -1,0 +1,131 @@
+#!/bin/bash
+
+# Include common functions
+dir="${BASH_SOURCE%/*}"
+if [[ ! -d "$dir" ]]; then dir="$PWD"; fi
+. "$dir/common.sh"
+
+cleanup
+
+sub -w 3 -l 40000 -p 40001 -p 40002 -p 40003 -p 40004 -s X
+sub -w 3 -l 40001 -p 40011 -p 40012 -p 40013 -s X
+sub -w 3 -l 40002 -p 40012 -p 40038 -s X
+sub -w 3 -l 40003 -p 40013 -s X
+sub -w 3 -l 40004 -s X
+sub -w 3 -l 40011 -p 40015 -p 40016 -p 40017 -s X -s B
+sub -w 3 -l 40012 -p 40016 -p 40040 -s X
+sub -w 3 -l 40013 -p 40017 -s X
+sub -w 3 -l 40015 -p 40020 -p 40021 -p 40022 -s X
+sub -w 3 -l 40016 -p 40021 -p 40043 -s X
+sub -w 3 -l 40017 -p 40022 -s X
+sub -w 3 -l 40020 -p 40025 -p 40026 -p 40027 -s X
+sub -w 3 -l 40021 -p 40026 -p 40047 -s X
+sub -w 3 -l 40022 -p 40027 -s X
+sub -w 3 -l 40025 -p 40030 -p 40031 -p 40032 -s X -s G
+sub -w 3 -l 40026 -p 40031 -p 40049 -s X
+sub -w 3 -l 40027 -p 40032 -s X
+sub -w 3 -l 40030 -p 40002 -p 40035 -p 40004 -s X
+sub -w 3 -l 40031 -p 40035 -p 40056 -s X
+sub -w 3 -l 40032 -p 40004 -s X
+sub -w 3 -l 40035 -p 40038 -p 40058 -s X
+sub -w 3 -l 40038 -p 40040 -p 40061 -s X
+sub -w 3 -l 40040 -p 40043 -p 40066 -s X
+sub -w 3 -l 40043 -p 40047 -p 40072 -s X -s A
+sub -w 3 -l 40047 -p 40049 -p 40076 -s X
+sub -w 3 -l 40049 -p 40056 -p 40078 -s X
+sub -w 3 -l 40056 -p 40058 -p 40081 -s X -s C
+sub -w 3 -l 40058 -p 40061 -p 40084 -s X
+sub -w 3 -l 40061 -p 40066 -p 40089 -s X
+sub -w 3 -l 40066 -p 40072 -p 40091 -s X
+sub -w 3 -l 40072 -p 40076 -p 40094 -s X
+sub -w 3 -l 40076 -p 40078 -p 40098 -s X
+sub -w 3 -l 40078 -p 40103 -p 40081 -s X -s D
+sub -w 3 -l 40081 -p 40109 -p 40084 -s X
+sub -w 3 -l 40084 -p 40111 -p 40089 -s X
+sub -w 3 -l 40089 -p 40116 -p 40091 -s X
+sub -w 3 -l 40091 -p 40118 -p 40094 -s X
+sub -w 3 -l 40094 -p 40121 -p 40098 -s X
+sub -w 3 -l 40098 -p 40103 -p 40125 -s X -s F
+sub -w 3 -l 40103 -p 40109 -p 40130 -s X
+sub -w 3 -l 40109 -p 40111 -p 40132 -s X
+sub -w 3 -l 40111 -p 40116 -p 40135 -s X
+sub -w 3 -l 40116 -p 40118 -p 40003 -s X
+sub -w 3 -l 40118 -p 40121 -p 40013 -s X
+sub -w 3 -l 40121 -p 40125 -p 40017 -s X -s E
+sub -w 3 -l 40125 -p 40130 -p 40022 -s X
+sub -w 3 -l 40130 -p 40132 -p 40027 -s X
+sub -w 3 -l 40132 -p 40135 -p 40032 -s X
+sub -w 3 -l 40135 -p 40003 -p 40004 -s X
+
+sleep 4
+
+echo "Errors"
+grep -r "ERROR" out | wc -l
+
+# Routing check
+
+pub -p 40000 A B C D E F G
+pub -p 40001 A B C D E F G
+pub -p 40002 A B C D E F G
+pub -p 40003 A B C D E F G
+pub -p 40004 A B C D E F G
+pub -p 40011 A B C D E F G
+pub -p 40012 A B C D E F G
+pub -p 40013 A B C D E F G
+pub -p 40015 A B C D E F G
+pub -p 40016 A B C D E F G
+pub -p 40017 A B C D E F G
+pub -p 40020 A B C D E F G
+pub -p 40021 A B C D E F G
+pub -p 40022 A B C D E F G
+pub -p 40025 A B C D E F G
+pub -p 40026 A B C D E F G
+pub -p 40027 A B C D E F G
+pub -p 40030 A B C D E F G
+pub -p 40031 A B C D E F G
+pub -p 40032 A B C D E F G
+pub -p 40035 A B C D E F G
+pub -p 40038 A B C D E F G
+pub -p 40040 A B C D E F G
+pub -p 40043 A B C D E F G
+pub -p 40047 A B C D E F G
+pub -p 40049 A B C D E F G
+pub -p 40056 A B C D E F G
+pub -p 40058 A B C D E F G
+pub -p 40061 A B C D E F G
+pub -p 40066 A B C D E F G
+pub -p 40072 A B C D E F G
+pub -p 40076 A B C D E F G
+pub -p 40078 A B C D E F G
+pub -p 40081 A B C D E F G
+pub -p 40084 A B C D E F G
+pub -p 40089 A B C D E F G
+pub -p 40091 A B C D E F G
+pub -p 40094 A B C D E F G
+pub -p 40098 A B C D E F G
+pub -p 40103 A B C D E F G
+pub -p 40109 A B C D E F G
+pub -p 40111 A B C D E F G
+pub -p 40116 A B C D E F G
+pub -p 40118 A B C D E F G
+pub -p 40121 A B C D E F G
+pub -p 40125 A B C D E F G
+pub -p 40130 A B C D E F G
+pub -p 40132 A B C D E F G
+pub -p 40135 A B C D E F G
+
+sleep 1
+
+echo
+echo "Pubs received (expect 343)"
+grep "pub [A|B|C|D|E|F]" out/sub*.log | wc -l
+
+# Reachability check
+
+pub -p 40111 X
+
+sleep 1
+
+echo
+echo "Pubs received (expect 49)"
+grep "pub X" out/sub*.log | wc -l

@@ -1,0 +1,41 @@
+#!/bin/bash
+
+# Include common functions
+dir="${BASH_SOURCE%/*}"
+if [[ ! -d "$dir" ]]; then dir="$PWD"; fi
+. "$dir/common.sh"
+
+cleanup
+
+# loop
+
+sub -w 3 -l 40000 -p 40024
+sub -w 1 -l 40001 -p 40000
+sub -w 1 -l 40002 -p 40001
+sub -w 1 -l 40003 -p 40002
+sub -w 1 -l 40004 -p 40003
+sub -w 1 -l 40005 -p 40004 A
+sub -w 1 -l 40006 -p 40005
+sub -w 1 -l 40007 -p 40006
+sub -w 1 -l 40008 -p 40007
+sub -w 1 -l 40009 -p 40008 B
+sub -w 1 -l 40010 -p 40009
+sub -w 1 -l 40011 -p 40010
+sub -w 1 -l 40012 -p 40011
+sub -w 4 -l 40013 -p 40012
+sub -w 1 -l 40014 -p 40013
+sub -w 1 -l 40015 -p 40014
+sub -w 1 -l 40016 -p 40015
+sub -w 1 -l 40017 -p 40016
+sub -w 5 -l 40018 -p 40017
+sub -w 1 -l 40019 -p 40018
+sub -w 1 -l 40020 -p 40019
+sub -w 1 -l 40021 -p 40020
+sub -w 1 -l 40022 -p 40021
+sub -w 1 -l 40023 -p 40022
+sub -w 1 -l 40024 -p 40023
+
+sleep 6
+
+echo "Errors"
+grep "ERROR" out/sub*.log | wc -l

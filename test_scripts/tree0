@@ -5,15 +5,11 @@ dir="${BASH_SOURCE%/*}"
 if [[ ! -d "$dir" ]]; then dir="$PWD"; fi
 . "$dir/common.sh"
 
-sub -l 50000  top
-sleep 1
-sub -l 40000 -p 50000 a/b/c
-sleep 1
-sub -l 30000 -p 50000 1/2/3
-
-pub -p 30000 a/b/c
-sleep 5
-pub -p 40000 1/2/3
-sleep 1
-
 cleanup
+
+sub -w 1 -l 50000  T
+sub -w 1 -l 40000 -p 50000 A
+sub -w 1 -l 30000 -p 50000 B
+
+pub -w 2 -b -p 30000 A
+pub -w 2 -b -p 40000 B
