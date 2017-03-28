@@ -56,10 +56,13 @@ typedef struct _PublicationAck PublicationAck;
 
 typedef struct _OnOpCompletion OnOpCompletion;
 
+typedef struct _LinkMonitor LinkMonitor;
+
 typedef struct _DPS_Node {
     void* userData;
 
     uint8_t isSecured;                    /* Indicates if this node is secured */
+    uint8_t lockCount;                    /* Recursive lock counter */
     uint16_t tasks;                       /* Background tasks that have been scheduled */
     uint16_t port;
     DPS_UUID meshId;                      /* Randomly allocated mesh id for this node */
@@ -67,13 +70,11 @@ typedef struct _DPS_Node {
     DPS_KeyRequestCallback keyRequestCB;  /* Callback function for loading encryption keys */
     DPS_UUID keyId;                       /* Encryption key identifier */
 
+    uv_thread_t lockHolder;               /* Thread currently holding the node lock */
     uv_thread_t thread;                   /* Thread for the event loop */
     uv_loop_t* loop;                      /* uv lib event loop */
     uv_mutex_t nodeMutex;                 /* Mutex to protect this node */
     uv_mutex_t condMutex;                 /* Mutex for use wih condition variables */
-#ifndef NDEBUG
-    int lockCount;                        /* Detect recursive locks */
-#endif
     uv_async_t bgHandler;                 /* Async handler for background tasks */
 
     struct {
@@ -133,6 +134,7 @@ typedef struct _RemoteNode {
         DPS_BitVector* needs;          /* Needs bit vector sent outbound to this remote node */
         DPS_BitVector* interests;      /* Interests bit vector sent outbound to this remote node */
     } outbound;
+    LinkMonitor* monitor;              /* For monitoring muted links */
     DPS_NetEndpoint ep;
     RemoteNode* next;                  /* Remotes are a linked list attached to the local node */
 } RemoteNode;
@@ -243,7 +245,11 @@ DPS_Status DPS_MuteRemoteNode(DPS_Node* node, RemoteNode* remote);
 DPS_Status DPS_UnmuteRemoteNode(DPS_Node* node, RemoteNode* remote);
 
 /**
+ * Clears the inbound interests and needs for a remote node
+ * including all the count vector bookkeeping.
  *
+ * @param node    The local node
+ * @param remote  The remote node to clear
  */
 void DPS_ClearInboundInterests(DPS_Node* node, RemoteNode* remote);
 
@@ -261,6 +267,9 @@ void DPS_LockNode(DPS_Node* node);
  */
 void DPS_UnlockNode(DPS_Node* node);
 
+/**
+ * For debug output of mesh ids
+ */
 #define UUID_32(n) (((n)->val[12]) | ((n)->val[13] << 8) | ((n)->val[14] << 16) | ((n)->val[15] << 24))
 
 #ifdef __cplusplus

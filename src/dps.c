@@ -39,6 +39,7 @@
 #include "sub.h"
 #include "ack.h"
 #include "topics.h"
+#include "linkmon.h"
 #include "uv_extra.h"
 
 /*
@@ -87,19 +88,22 @@ static void RunBackgroundTasks(uv_async_t* handle);
 
 void DPS_LockNode(DPS_Node* node)
 {
-    uv_mutex_lock(&node->nodeMutex);
-#ifndef NDEBUG
-    ++node->lockCount;
-    assert(node->lockCount == 1);
-#endif
+    uv_thread_t self = uv_thread_self();
+    if (!uv_thread_equal(&node->lockHolder, &self)) {
+        uv_mutex_lock(&node->nodeMutex);
+        if (node->lockCount == 0) {
+            node->lockHolder = self;
+        }
+    }
+     ++node->lockCount;
 }
 
 void DPS_UnlockNode(DPS_Node* node)
 {
-#ifndef NDEBUG
-    assert(node->lockCount == 1);
-    --node->lockCount;
-#endif
+    assert(node->lockCount);
+    if (--node->lockCount == 0) {
+        node->lockHolder = 0;
+    }
     uv_mutex_unlock(&node->nodeMutex);
 }
 
@@ -270,6 +274,9 @@ RemoteNode* DPS_DeleteRemoteNode(DPS_Node* node, RemoteNode* remote)
     }
     DPS_ClearInboundInterests(node, remote);
 
+    if (remote->monitor) {
+        DPS_LinkMonitorStop(remote);
+    }
     if (remote->completion) {
         DPS_RemoteCompletion(node, remote, DPS_ERR_FAILURE);
     }
@@ -444,7 +451,7 @@ DPS_Status DPS_MuteRemoteNode(DPS_Node* node, RemoteNode* remote)
     remote->inbound.meshId = DPS_MaxMeshId;
     remote->outbound.meshId = DPS_MaxMeshId;
     DPS_ClearInboundInterests(node, remote);
-    return DPS_OK;
+    return DPS_LinkMonitorStart(node, remote);
 }
 
 DPS_Status DPS_UnmuteRemoteNode(DPS_Node* node, RemoteNode* remote)
@@ -452,9 +459,13 @@ DPS_Status DPS_UnmuteRemoteNode(DPS_Node* node, RemoteNode* remote)
     DPS_DBGTRACE();
 
     /*
-     * This will update the subscriptions for this remote
+     * Unmute and stop the link monitor
      */
     remote->muted = DPS_REMOTE_UNMUTED;
+    DPS_LinkMonitorStop(remote);
+    /*
+     * This will update the subscriptions for this remote
+     */
     return DPS_UpdateSubs(node, remote);
 }
 
