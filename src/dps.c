@@ -110,7 +110,7 @@ static void ScheduleBackgroundTask(DPS_Node* node, uint8_t task)
     DPS_LockNode(node);
 }
 
-#define RemoteNodeAddressText(n)  DPS_NodeAddrToString(&(n)->ep.addr)
+#define DESCRIBE(n)  DPS_NodeAddrToString(&(n)->ep.addr)
 
 void DPS_RxBufferFree(DPS_RxBuffer* buffer)
 {
@@ -228,6 +228,24 @@ static int IsValidRemoteNode(DPS_Node* node, RemoteNode* remote)
     return DPS_FALSE;
 }
 
+void DPS_ClearInboundInterests(DPS_Node* node, RemoteNode* remote)
+{
+    if (remote->inbound.interests) {
+        if (DPS_CountVectorDel(node->interests, remote->inbound.interests) != DPS_OK) {
+            assert(!"Count error");
+        }
+        DPS_BitVectorFree(remote->inbound.interests);
+        remote->inbound.interests = NULL;
+    }
+    if (remote->inbound.needs) {
+        if (DPS_CountVectorDel(node->needs, remote->inbound.needs) != DPS_OK) {
+            assert(!"Count error");
+        }
+        DPS_BitVectorFree(remote->inbound.needs);
+        remote->inbound.needs = NULL;
+    }
+}
+
 RemoteNode* DPS_DeleteRemoteNode(DPS_Node* node, RemoteNode* remote)
 {
     RemoteNode* next;
@@ -248,20 +266,7 @@ RemoteNode* DPS_DeleteRemoteNode(DPS_Node* node, RemoteNode* remote)
         }
         prev->next = next;
     }
-    if (remote->inbound.interests) {
-        if (DPS_CountVectorDel(node->interests, remote->inbound.interests) != DPS_OK) {
-            assert(!"Count error");
-        }
-        DPS_BitVectorFree(remote->inbound.interests);
-    }
-    if (remote->inbound.needs) {
-        if (DPS_CountVectorDel(node->needs, remote->inbound.needs) != DPS_OK) {
-            assert(!"Count error");
-        }
-        DPS_BitVectorFree(remote->inbound.needs);
-    }
-    DPS_BitVectorFree(remote->outbound.interests);
-    DPS_BitVectorFree(remote->outbound.needs);
+    DPS_ClearInboundInterests(node, remote);
 
     if (remote->completion) {
         DPS_RemoteCompletion(node, remote, DPS_ERR_FAILURE);
@@ -362,11 +367,17 @@ static DPS_Status UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, 
     DPS_BitVectorFree(destNode->outbound.needs);
     destNode->outbound.needs = newNeeds;
 
-    DPS_DBGPRINT("UpdateOutboundInterests: %s %s\n", RemoteNodeAddressText(destNode), *outboundInterests ? "Changes" : "No Change");
+#ifndef NDEBUG
+    if (*outboundInterests) {
+        DPS_DBGPRINT("New outbound interests for %s: ", DESCRIBE(destNode));
+        DPS_DumpMatchingTopics(destNode->outbound.interests);
+    }
+#endif
     return DPS_OK;
 
 ErrExit:
     DPS_ERRPRINT("UpdateOutboundInterests: %s\n", DPS_ErrTxt(ret));
+
     DPS_BitVectorFree(newInterests);
     DPS_BitVectorFree(newNeeds);
     return ret;
@@ -510,10 +521,10 @@ static DPS_Status SendMatchingPubToSub(DPS_Node* node, DPS_Publication* pub, Rem
     if (!DPS_PublicationReceivedFrom(&node->history, &pub->pubId, pub->sequenceNum, &pub->sender, &subscriber->ep.addr)) {
         DPS_BitVector* pubBV = PubSubMatch(node, pub, subscriber);
         if (pubBV) {
-            DPS_DBGPRINT("Sending pub %d to %s\n", pub->sequenceNum, RemoteNodeAddressText(subscriber));
+            DPS_DBGPRINT("Sending pub %d to %s\n", pub->sequenceNum, DESCRIBE(subscriber));
             return DPS_SendPublication(node, pub, pubBV, subscriber);
         }
-        DPS_DBGPRINT("Rejected pub %d for %s\n", pub->sequenceNum, RemoteNodeAddressText(subscriber));
+        DPS_DBGPRINT("Rejected pub %d for %s\n", pub->sequenceNum, DESCRIBE(subscriber));
     }
     return DPS_OK;
 }
@@ -595,7 +606,7 @@ static void SendSubsTask(DPS_Node* node)
      * Forward subscription to all remote nodes with interestss
      */
     for (remote = node->remoteNodes; remote != NULL; remote = remoteNext) {
-        DPS_BitVector* newInterests;
+        DPS_BitVector* newInterests = NULL;
 
         remoteNext = remote->next;
 

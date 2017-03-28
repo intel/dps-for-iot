@@ -153,7 +153,7 @@ DPS_Status DPS_DestroySubscription(DPS_Subscription* sub)
         prev->next = sub->next;
     }
     /*
-     * This remove this subscriptions contributions to the interests and needs
+     * This removes this subscription's contributions to the interests and needs
      */
     if (DPS_CountVectorDel(node->interests, sub->bf) != DPS_OK) {
         assert(!"Count error");
@@ -326,19 +326,12 @@ static DPS_Status UpdateInboundInterests(DPS_Node* node, RemoteNode* remote, DPS
 {
     DPS_DBGTRACE();
 
-    assert(!remote->muted);
-
     if (remote->inbound.interests) {
         if (delta) {
             DPS_DBGPRINT("Received interests delta\n");
             DPS_BitVectorXor(interests, interests, remote->inbound.interests, NULL);
         }
-        DPS_CountVectorDel(node->interests, remote->inbound.interests);
-        DPS_CountVectorDel(node->needs, remote->inbound.needs);
-        DPS_BitVectorFree(remote->inbound.interests);
-        remote->inbound.interests = NULL;
-        DPS_BitVectorFree(remote->inbound.needs);
-        remote->inbound.needs = NULL;
+        DPS_ClearInboundInterests(node, remote);
     }
     if (DPS_BitVectorIsClear(interests)) {
         DPS_BitVectorFree(interests);

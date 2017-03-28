@@ -127,11 +127,7 @@ typedef struct _RemoteNode {
         DPS_BitVector* interests;      /* Interests bit vector sent outbound to this remote node */
     } outbound;
     DPS_NetEndpoint ep;
-    /*
-     * Remote nodes are doubly linked into a ring
-     */
-    struct _RemoteNode* prev;
-    struct _RemoteNode* next;
+    RemoteNode* next;                  /* Remotes are a linked list attached to the local node */
 } RemoteNode;
 
 /**
@@ -212,6 +208,14 @@ RemoteNode* DPS_DeleteRemoteNode(DPS_Node* node, RemoteNode* remote);
  * @param status  Status code indicating the success or failure of the operation
  */
 void DPS_RemoteCompletion(DPS_Node* node, RemoteNode* remote, DPS_Status status);
+
+/**
+ * Clear the inbound interests for a remote node.
+ *
+ * @param node    The local node
+ * @param remote  The remote node to clear
+ */
+void DPS_ClearInboundInterests(DPS_Node* node, RemoteNode* remote);
 
 /**
  * Lock the node

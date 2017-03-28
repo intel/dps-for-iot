@@ -457,10 +457,8 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
             break;
         case DPS_CBOR_KEY_PUB_ID:
             ret = CBOR_DecodeBytes(buffer, (uint8_t**)&pubId, &len);
-            if (ret == DPS_OK) {
-                if (len != sizeof(DPS_UUID)) {
-                    ret = DPS_ERR_INVALID;
-                }
+            if ((ret == DPS_OK) && (len != sizeof(DPS_UUID))) {
+                ret = DPS_ERR_INVALID;
             }
             break;
         case DPS_CBOR_KEY_SEQ_NUM:
