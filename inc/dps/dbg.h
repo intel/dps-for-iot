@@ -54,10 +54,11 @@ void DPS_Log(DPS_LogLevel level, const char* file, int line, const char *functio
  */
 #define DPS_PRINTT(fmt, ...) DPS_Log(DPS_LOG_PRINTT, __FILE__, __LINE__, __FUNCTION__, fmt, ##__VA_ARGS__)
 
-#define DPS_DEBUG_OFF  0
-#define DPS_DEBUG_ON   1
+#define DPS_DEBUG_OFF   0
+#define DPS_DEBUG_ON    1
+#define DPS_DEBUG_FORCE 2
 
-#define DPS_DEBUG_ENABLED()  (DPS_Debug && (__DPS_DebugControl == DPS_DEBUG_ON))
+#define DPS_DEBUG_ENABLED()  ((DPS_Debug && (__DPS_DebugControl == DPS_DEBUG_ON)) || (__DPS_DebugControl == DPS_DEBUG_FORCE))
 
 #ifdef DPS_DEBUG
 #define DPS_DBGTRACE() (DPS_DEBUG_ENABLED() ? DPS_Log(DPS_LOG_DBGTRACE, __FILE__, __LINE__, __FUNCTION__, "\n") : 0)
