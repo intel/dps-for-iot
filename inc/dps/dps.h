@@ -45,6 +45,11 @@ extern "C" {
 #define DPS_MCAST_PUB_ENABLE_SEND    1
 #define DPS_MCAST_PUB_ENABLE_RECV    2
 
+typedef enum {
+    DPS_KEY_PUBLICATION,
+    DPS_KEY_DTLS_SHARED_KEY,
+} DPS_KeyType;
+
 
 /**
  * Opaque type for a node
@@ -137,6 +142,7 @@ DPS_Node* DPS_PublicationGetNode(const DPS_Publication* pub);
  * for a specific key identifier. This function must not block
  *
  * @param node    The node that is requesting the key
+ * @param type    The type of key requested, e.g. publication, pre-shared key of DTLS.
  * @param kid     The key identifier
  * @param key     Buffer for returning the key.
  * @param keyLen  Size of the key buffer
@@ -144,7 +150,7 @@ DPS_Node* DPS_PublicationGetNode(const DPS_Publication* pub);
  * @return  DPS_OK if a key matching the kid was returned
  *          DPS_ERR_MSSING if there is no matching key
  */
-typedef DPS_Status (*DPS_KeyRequestCallback)(DPS_Node* node, const DPS_UUID* kid, uint8_t* key, size_t keyLen);
+typedef DPS_Status (*DPS_KeyRequestCallback)(DPS_Node* node, DPS_KeyType type, const DPS_UUID* kid, uint8_t* key, size_t keyLen);
 
 /**
  * Allocates space for a local DPS node.

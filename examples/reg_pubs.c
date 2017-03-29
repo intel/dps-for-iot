@@ -59,9 +59,13 @@ static uint8_t keyData[NUM_KEYS][16] = {
     { 0x39,0x12,0x3e,0x7f,0x21,0xbc,0xa3,0x26,0x4e,0x6f,0x3a,0x21,0xa4,0xf1,0xb5,0x98 }
 };
 
-DPS_Status GetKey(DPS_Node* node, const DPS_UUID* kid, uint8_t* key, size_t keyLen)
+DPS_Status GetKey(DPS_Node* node, DPS_KeyType type, const DPS_UUID* kid, uint8_t* key, size_t keyLen)
 {
     size_t i;
+
+    if (type != DPS_KEY_PUBLICATION) {
+        return DPS_ERR_MISSING;
+    }
 
     for (i = 0; i < NUM_KEYS; ++i) {
         if (DPS_UUIDCompare(kid, &keyId[i]) == 0) {
