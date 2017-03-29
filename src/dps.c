@@ -451,7 +451,14 @@ DPS_Status DPS_MuteRemoteNode(DPS_Node* node, RemoteNode* remote)
     remote->inbound.meshId = DPS_MaxMeshId;
     remote->outbound.meshId = DPS_MaxMeshId;
     DPS_ClearInboundInterests(node, remote);
-    return DPS_LinkMonitorStart(node, remote);
+    /*
+     * We only monitor a muted link from the passive side
+     */
+    if (remote->linked) {
+        return DPS_OK;
+    } else {
+        return DPS_LinkMonitorStart(node, remote);
+    }
 }
 
 DPS_Status DPS_UnmuteRemoteNode(DPS_Node* node, RemoteNode* remote)
