@@ -189,7 +189,7 @@ static DPS_Status GetKey(void* ctx, const DPS_UUID* kid, int8_t alg, uint8_t key
     DPS_Node* node = (DPS_Node*)ctx;
 
     if (node->keyRequestCB) {
-        return node->keyRequestCB(node, kid, key, AES_128_KEY_LEN);
+        return node->keyRequestCB(node, DPS_KEY_PUBLICATION, kid, key, AES_128_KEY_LEN);
     } else {
         return DPS_ERR_MISSING;
     }
