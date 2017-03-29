@@ -366,10 +366,10 @@ static DPS_Status UpdateInboundInterests(DPS_Node* node, RemoteNode* remote, DPS
         remote->inbound.needs = needs;
     }
 
-#ifndef NDEBUG
-    DPS_DBGPRINT("New inbound interests from %s: ", DESCRIBE(remote));
-    DPS_DumpMatchingTopics(remote->inbound.interests);
-#endif
+    if (DPS_DEBUG_ENABLED()) {
+        DPS_DBGPRINT("New inbound interests from %s: ", DESCRIBE(remote));
+        DPS_DumpMatchingTopics(remote->inbound.interests);
+    }
 
     return DPS_OK;
 }
@@ -602,7 +602,9 @@ DPS_Status DPS_Subscribe(DPS_Subscription* sub, DPS_PublicationHandler handler)
     }
 
     DPS_DBGPRINT("Subscribing to %zu topics\n", sub->numTopics);
-    DPS_DumpTopics((const char**)sub->topics, sub->numTopics);
+    if (DPS_DEBUG_ENABLED()) {
+        DPS_DumpTopics((const char**)sub->topics, sub->numTopics);
+    }
 
     DPS_BitVectorFuzzyHash(sub->needs, sub->bf);
     /*
@@ -639,10 +641,11 @@ void* DPS_GetSubscriptionData(DPS_Subscription* sub)
 
 void DPS_DumpSubscriptions(DPS_Node* node)
 {
-    DPS_Subscription* sub;
-
     DPS_DBGPRINT("Current subscriptions:\n");
-    for (sub = node->subscriptions; sub != NULL; sub = sub->next) {
-        DPS_DumpTopics((const char**)sub->topics, sub->numTopics);
+    if (DPS_DEBUG_ENABLED()) {
+        DPS_Subscription* sub;
+        for (sub = node->subscriptions; sub != NULL; sub = sub->next) {
+            DPS_DumpTopics((const char**)sub->topics, sub->numTopics);
+        }
     }
 }

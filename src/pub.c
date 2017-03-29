@@ -882,7 +882,9 @@ DPS_Status DPS_InitPublication(DPS_Publication* pub,
         return DPS_ERR_ARGS;
     }
     DPS_DBGPRINT("Creating publication with %zu topics %s\n", numTopics, handler ? "and ACK handler" : "");
-    DPS_DumpTopics(topics, numTopics);
+    if (DPS_DEBUG_ENABLED()) {
+        DPS_DumpTopics(topics, numTopics);
+    }
 
     pub->bf = DPS_BitVectorAlloc();
     if (!pub->bf) {

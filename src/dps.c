@@ -427,12 +427,12 @@ static DPS_Status UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, 
     DPS_BitVectorFree(destNode->outbound.needs);
     destNode->outbound.needs = newNeeds;
 
-#ifndef NDEBUG
-    if (*outboundInterests) {
-        DPS_DBGPRINT("New outbound interests for %s: ", DESCRIBE(destNode));
-        DPS_DumpMatchingTopics(destNode->outbound.interests);
-    }
-#endif
+    if (DPS_DEBUG_ENABLED()) {
+        if (*outboundInterests) {
+            DPS_DBGPRINT("New outbound interests for %s: ", DESCRIBE(destNode));
+            DPS_DumpMatchingTopics(destNode->outbound.interests);
+        }
+     }
     return DPS_OK;
 
 ErrExit:
