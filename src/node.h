@@ -67,7 +67,7 @@ typedef struct _DPS_Node {
     uint16_t port;
     DPS_UUID meshId;                      /* Randomly allocated mesh id for this node */
     char separators[13];                  /* List of separator characters */
-    DPS_KeyRequestCallback keyRequestCB;  /* Callback function for loading encryption keys */
+    DPS_KeyStore *keyStore;               /* Functions for loading encryption keys */
     DPS_UUID keyId;                       /* Encryption key identifier */
 
     uv_thread_t lockHolder;               /* Thread currently holding the node lock */

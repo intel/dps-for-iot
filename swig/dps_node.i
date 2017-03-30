@@ -276,20 +276,6 @@ static void PubHandler(DPS_Subscription* sub, const DPS_Publication* pub, uint8_
     }
 }
 
-%{
-DPS_Status KeyRequestHandler(DPS_Node* node, const DPS_UUID* kid, uint8_t* key, size_t keyLen)
-{
-    return DPS_OK;
-}
-%}
-
-%typemap(in) DPS_KeyRequestCallback {
-    if (!$input->IsFunction()) {
-        SWIG_exception_fail(SWIG_TypeError, "argument of type '" "DPS_KeyRequestCallback""'");
-    }
-    $1 = KeyRequestHandler;
-}
-
 %typemap(in) char** {
     v8::Handle<v8::Value> obj($input);
     if (obj->IsArray()) {

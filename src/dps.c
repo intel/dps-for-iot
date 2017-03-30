@@ -1054,7 +1054,8 @@ static void NodeRun(void* arg)
     }
 }
 
-DPS_Node* DPS_CreateNode(const char* separators, DPS_KeyRequestCallback keyRequestCB, const DPS_UUID* keyId)
+
+DPS_Node* DPS_CreateNode(const char* separators, DPS_KeyStore* keyStore, const DPS_UUID* keyId)
 {
     DPS_Node* node = calloc(1, sizeof(DPS_Node));
 
@@ -1074,17 +1075,17 @@ DPS_Node* DPS_CreateNode(const char* separators, DPS_KeyRequestCallback keyReque
     /*
      * Sanity check
      */
-    if (keyId && !keyRequestCB) {
-        DPS_ERRPRINT("A key request callback is required\n");
+    if (keyId && (!keyStore || !keyStore->contentKeyCB)) {
+        DPS_ERRPRINT("A content key request callback is required\n");
         free(node);
         return NULL;
     }
-    if (keyId || keyRequestCB) {
+    if (keyId || (keyStore && keyStore->contentKeyCB)) {
         node->isSecured = DPS_TRUE;
         memcpy_s(&node->keyId, sizeof(DPS_UUID), keyId, sizeof(DPS_UUID));
     }
     strncpy_s(node->separators, sizeof(node->separators), separators, sizeof(node->separators) - 1);
-    node->keyRequestCB = keyRequestCB;
+    node->keyStore = keyStore;
     return node;
 }
 

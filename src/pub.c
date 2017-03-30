@@ -187,9 +187,10 @@ DPS_Node* DPS_PublicationGetNode(const DPS_Publication* pub)
 static DPS_Status GetKey(void* ctx, const DPS_UUID* kid, int8_t alg, uint8_t key[AES_128_KEY_LEN])
 {
     DPS_Node* node = (DPS_Node*)ctx;
+    DPS_KeyStore* keyStore = node->keyStore;
 
-    if (node->keyRequestCB) {
-        return node->keyRequestCB(node, kid, key, AES_128_KEY_LEN);
+    if (keyStore && keyStore->contentKeyCB) {
+        return keyStore->contentKeyCB(keyStore, kid, key, AES_128_KEY_LEN);
     } else {
         return DPS_ERR_MISSING;
     }

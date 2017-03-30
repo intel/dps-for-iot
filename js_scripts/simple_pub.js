@@ -13,14 +13,10 @@ var simple_pub = (function(){
         dps.DestroyPublication(pub);
         dps.DestroyNode(node);
     }
-    var onNode = function(node, kid, key, keylen) {
-        console.log("Key Request Callback");
-        return 0;
-    };
     /* Set to 1 to enable DPS debug output */
     dps.Debug = 1;
 
-    var node = dps.CreateNode("/", onNode, 0);
+    var node = dps.CreateNode("/", null, 0);
     dps.StartNode(node, dps.MCAST_PUB_ENABLE_SEND, 0);
     var pub = dps.CreatePublication(node);
 
