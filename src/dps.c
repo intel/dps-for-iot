@@ -236,6 +236,14 @@ static int IsValidRemoteNode(DPS_Node* node, RemoteNode* remote)
     return DPS_FALSE;
 }
 
+static void FreeOutboundInterests(RemoteNode* remote)
+{
+    DPS_BitVectorFree(remote->outbound.interests);
+    remote->outbound.interests = NULL;
+    DPS_BitVectorFree(remote->outbound.needs);
+    remote->outbound.needs = NULL;
+}
+
 void DPS_ClearInboundInterests(DPS_Node* node, RemoteNode* remote)
 {
     if (remote->inbound.interests) {
@@ -278,6 +286,7 @@ RemoteNode* DPS_DeleteRemoteNode(DPS_Node* node, RemoteNode* remote)
         prev->next = next;
     }
     DPS_ClearInboundInterests(node, remote);
+    FreeOutboundInterests(remote);
 
     if (remote->completion) {
         DPS_RemoteCompletion(node, remote, DPS_ERR_FAILURE);
@@ -290,6 +299,22 @@ RemoteNode* DPS_DeleteRemoteNode(DPS_Node* node, RemoteNode* remote)
     return next;
 }
 
+static const DPS_UUID* MinMeshId(DPS_Node* node, RemoteNode* excluded)
+{
+    RemoteNode* remote;
+    DPS_UUID* minMeshId = &node->meshId;
+
+    for (remote = node->remoteNodes; remote != NULL; remote = remote->next) {
+        if (remote->muted || remote == excluded) {
+            continue;
+        }
+        if (DPS_UUIDCompare(&remote->inbound.meshId, minMeshId) < 0) {
+            minMeshId = &remote->inbound.meshId;
+        }
+    }
+    return minMeshId;
+}
+
 /*
  * Returns TRUE is there was a change
  *
@@ -298,19 +323,10 @@ RemoteNode* DPS_DeleteRemoteNode(DPS_Node* node, RemoteNode* remote)
  */
 static int UpdateOutboundMeshId(DPS_Node* node, RemoteNode* dest, DPS_BitVector* interests)
 {
-    RemoteNode* remote;
-    const DPS_UUID* meshId = &node->meshId;
+    const DPS_UUID* meshId = MinMeshId(node, dest);
 
     assert(!dest->muted);
 
-    for (remote = node->remoteNodes; remote != NULL; remote = remote->next) {
-        if (remote->muted || remote == dest) {
-            continue;
-        }
-        if (DPS_UUIDCompare(&remote->inbound.meshId, meshId) < 0) {
-            meshId = &remote->inbound.meshId;
-        }
-    }
     if (DPS_UUIDCompare(meshId, &dest->outbound.meshId) == 0) {
         return DPS_FALSE;
     }
@@ -424,9 +440,8 @@ static DPS_Status UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, 
         }
     }
 
-    DPS_BitVectorFree(destNode->outbound.interests);
+    FreeOutboundInterests(destNode);
     destNode->outbound.interests = newInterests;
-    DPS_BitVectorFree(destNode->outbound.needs);
     destNode->outbound.needs = newNeeds;
 
     if (DPS_DEBUG_ENABLED()) {
@@ -452,7 +467,12 @@ DPS_Status DPS_MuteRemoteNode(DPS_Node* node, RemoteNode* remote)
     remote->muted = DPS_REMOTE_MUTING;
     remote->inbound.meshId = DPS_MaxMeshId;
     remote->outbound.meshId = DPS_MaxMeshId;
+    remote->inbound.meshId = DPS_MaxMeshId;
+    /*
+     * Clear the inbound and outbound interests
+     */
     DPS_ClearInboundInterests(node, remote);
+    FreeOutboundInterests(remote);
     /*
      * We only monitor a muted link from the passive side
      */
@@ -479,21 +499,10 @@ DPS_Status DPS_UnmuteRemoteNode(DPS_Node* node, RemoteNode* remote)
 
 int DPS_MeshHasLoop(DPS_Node* node, RemoteNode* src, DPS_UUID* meshId)
 {
-    RemoteNode* remote;
-    DPS_UUID* minMeshId = &node->meshId;
-
     if (src->muted) {
         return DPS_FALSE;
     }
-    for (remote = node->remoteNodes; remote != NULL; remote = remote->next) {
-        if (remote->muted || remote == src) {
-            continue;
-        }
-        if (DPS_UUIDCompare(&remote->inbound.meshId, minMeshId) < 0) {
-            minMeshId = &remote->inbound.meshId;
-        }
-    }
-    return DPS_UUIDCompare(meshId, minMeshId) == 0;
+    return DPS_UUIDCompare(meshId, MinMeshId(node, src)) == 0;
 }
 
 RemoteNode* DPS_LookupRemoteNode(DPS_Node* node, DPS_NodeAddress* addr)
