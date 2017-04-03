@@ -1086,6 +1086,10 @@ DPS_Node* DPS_CreateNode(const char* separators, DPS_KeyRequestCallback keyReque
     }
     strncpy_s(node->separators, sizeof(node->separators), separators, sizeof(node->separators) - 1);
     node->keyRequestCB = keyRequestCB;
+    /*
+     * Set default probe configuration parameters
+     */
+    node->linkMonitorConfig = LinkMonitorConfigDefaults;
     return node;
 }
 

@@ -31,6 +31,8 @@
 extern "C" {
 #endif
 
+extern const LinkMonitorConfig LinkMonitorConfigDefaults;
+
 /*
  * Structure for holding information about a muted remote that is
  * being monitored to detect network disconnects.

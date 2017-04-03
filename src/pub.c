@@ -990,7 +990,7 @@ DPS_Status DPS_InitPublication(DPS_Publication* pub,
  * The topic strings and bloom filter have already been serialized into buffers in
  * the publication structure,
  */
-static DPS_Status SerializePub(DPS_Node* node, DPS_Publication* pub, const uint8_t* data, size_t dataLen, int16_t ttl)
+DPS_Status DPS_SerializePub(DPS_Node* node, DPS_Publication* pub, const uint8_t* data, size_t dataLen, int16_t ttl)
 {
     DPS_Status ret;
     size_t len;
@@ -1155,7 +1155,7 @@ DPS_Status DPS_Publish(DPS_Publication* pub, const uint8_t* payload, size_t len,
     /*
      * Serialize the publication
      */
-    ret = SerializePub(node, pub, payload, len, ttl);
+    ret = DPS_SerializePub(node, pub, payload, len, ttl);
     if (ret != DPS_OK) {
         return ret;
     }

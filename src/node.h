@@ -58,6 +58,15 @@ typedef struct _OnOpCompletion OnOpCompletion;
 
 typedef struct _LinkMonitor LinkMonitor;
 
+/*
+ * Link monitor configuration values. All times are in milliseconds.
+ */
+typedef struct _LinkMonitorConfig {
+    uint16_t retries;  /* Number of probe retries after a timeout */
+    uint16_t retryTO;  /* Probe retry time */
+    uint32_t probeTO;  /* Probe repeat time */
+} LinkMonitorConfig;
+
 typedef struct _DPS_Node {
     void* userData;
 
@@ -105,6 +114,8 @@ typedef struct _DPS_Node {
     uint8_t state;                        /* Indicates if the node is running, stopping, or stopped */
     DPS_OnNodeDestroyed onDestroyed;      /* Function to call when the node is destroyed */
     void* onDestroyedData;                /* Context to pass to onDestroyed callback */
+
+    LinkMonitorConfig linkMonitorConfig;  /* Configuration parameters for mesh probe publications */
 
 } DPS_Node;
 

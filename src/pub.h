@@ -85,6 +85,8 @@ DPS_Status DPS_SendPublication(DPS_Node* node, DPS_Publication* pub, DPS_BitVect
 
 void DPS_ExpirePub(DPS_Node* node, DPS_Publication* pub);
 
+DPS_Status DPS_SerializePub(DPS_Node* node, DPS_Publication* pub, const uint8_t* data, size_t dataLen, int16_t ttl);
+
 void DPS_FreePublications(DPS_Node* node);
 
 void DPS_PublicationIncRef(DPS_Publication* pub);
