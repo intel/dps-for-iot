@@ -109,11 +109,13 @@ void DPS_UnlockNode(DPS_Node* node)
 
 static void ScheduleBackgroundTask(DPS_Node* node, uint8_t task)
 {
-    DPS_DBGTRACE();
-    node->tasks |= task;
-    DPS_UnlockNode(node);
-    uv_async_send(&node->bgHandler);
-    DPS_LockNode(node);
+    if (node->state == DPS_NODE_RUNNING) {
+        DPS_DBGTRACE();
+        node->tasks |= task;
+        DPS_UnlockNode(node);
+        uv_async_send(&node->bgHandler);
+        DPS_LockNode(node);
+    }
 }
 
 #define DESCRIBE(n)  DPS_NodeAddrToString(&(n)->ep.addr)
@@ -261,6 +263,9 @@ RemoteNode* DPS_DeleteRemoteNode(DPS_Node* node, RemoteNode* remote)
     if (!IsValidRemoteNode(node, remote)) {
         return NULL;
     }
+    if (remote->monitor) {
+        DPS_LinkMonitorStop(remote);
+    }
     next = remote->next;
     if (node->remoteNodes == remote) {
         node->remoteNodes = next;
@@ -274,9 +279,6 @@ RemoteNode* DPS_DeleteRemoteNode(DPS_Node* node, RemoteNode* remote)
     }
     DPS_ClearInboundInterests(node, remote);
 
-    if (remote->monitor) {
-        DPS_LinkMonitorStop(remote);
-    }
     if (remote->completion) {
         DPS_RemoteCompletion(node, remote, DPS_ERR_FAILURE);
     }
@@ -432,7 +434,7 @@ static DPS_Status UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, 
             DPS_DBGPRINT("New outbound interests for %s: ", DESCRIBE(destNode));
             DPS_DumpMatchingTopics(destNode->outbound.interests);
         }
-     }
+    }
     return DPS_OK;
 
 ErrExit:
@@ -465,14 +467,13 @@ DPS_Status DPS_UnmuteRemoteNode(DPS_Node* node, RemoteNode* remote)
 {
     DPS_DBGTRACE();
 
-    /*
-     * Unmute and stop the link monitor
-     */
-    remote->muted = DPS_REMOTE_UNMUTED;
     DPS_LinkMonitorStop(remote);
     /*
      * This will update the subscriptions for this remote
      */
+    remote->muted = DPS_REMOTE_UNMUTED;
+    remote->outbound.sync = DPS_TRUE;
+    remote->inbound.sync = DPS_TRUE;
     return DPS_UpdateSubs(node, remote);
 }
 

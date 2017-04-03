@@ -114,10 +114,14 @@ typedef struct _DPS_Node {
 
 extern const DPS_UUID DPS_MaxMeshId;
 
+#define DPS_SUB_FLAG_SYNC_INF    1      /* Inform remote interests are being synched (not delta) */
+#define DPS_SUB_FLAG_SYNC_REQ    2      /* Request remote to send synched interests */
+#define DPS_SUB_FLAG_MUTE_INF    4      /* Inform remote node sender is muted */
+
 typedef struct _RemoteNode {
     OnOpCompletion* completion;
-    uint8_t linked;                    /* True if this is a node that was explicitly linked */
-    uint8_t unlink;                    /* True if this node is about to be unlinked */
+    uint8_t linked;                    /* TRUE if this is a node that was explicitly linked */
+    uint8_t unlink;                    /* TRUE if this node is about to be unlinked */
     uint8_t muted;                     /* Non zero if this remote is muted or being muted */
     struct {
         uint8_t sync;                  /* If TRUE request remote to synchronize interests */

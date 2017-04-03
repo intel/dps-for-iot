@@ -39,10 +39,9 @@ extern "C" {
 #define DPS_CBOR_KEY_SEQ_NUM        5   /* uint */
 #define DPS_CBOR_KEY_ACK_REQ        6   /* bool */
 #define DPS_CBOR_KEY_BLOOM_FILTER   7   /* bstr */
-#define DPS_CBOR_KEY_INBOUND_SYNC   8   /* bool */
-#define DPS_CBOR_KEY_OUTBOUND_SYNC  9   /* bool */
-#define DPS_CBOR_KEY_NEEDS         10   /* bstr */
-#define DPS_CBOR_KEY_INTERESTS     11   /* bstr */
+#define DPS_CBOR_KEY_SUB_FLAGS      8   /* uint */
+#define DPS_CBOR_KEY_NEEDS          9   /* bstr */
+#define DPS_CBOR_KEY_INTERESTS     10   /* bstr */
 
 #define DPS_SECS_TO_MS(t)   ((uint64_t)(t) * 1000ull)
 #define DPS_MS_TO_SECS(t)   ((uint32_t)((t) / 1000ull))

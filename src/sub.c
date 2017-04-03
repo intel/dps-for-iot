@@ -176,9 +176,22 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote, DPS_BitVecto
     DPS_Status ret;
     DPS_TxBuffer buf;
     size_t len;
+    uint8_t flags = 0;
 
     if (!node->netCtx) {
         return DPS_ERR_NETWORK;
+    }
+    /*
+     * Set flags
+     */
+    if (remote->outbound.sync) {
+        flags |= DPS_SUB_FLAG_SYNC_INF;
+    }
+    if (remote->inbound.sync) {
+        flags |= DPS_SUB_FLAG_SYNC_REQ;
+    }
+    if (remote->muted) {
+        flags |= DPS_SUB_FLAG_MUTE_INF;
     }
     /*
      * Subscription is encoded as an array of 3 elements
@@ -241,8 +254,7 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote, DPS_BitVecto
      * Body map
      *      {
      *          sequence_num: uint,
-     *          inbound_sync: bool,
-     *          outbound_sync: bool,
+     *          flags: uint,
      *          needs: bit-vector,
      *          interests: bit-vector
      *       }
@@ -250,7 +262,7 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote, DPS_BitVecto
      *       { }
      */
     if (interests) {
-        ret = CBOR_EncodeMap(&buf, 5);
+        ret = CBOR_EncodeMap(&buf, 4);
         if (ret == DPS_OK) {
             ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_SEQ_NUM);
         }
@@ -259,16 +271,10 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote, DPS_BitVecto
             ret = CBOR_EncodeUint32(&buf, remote->outbound.sequenceNum);
         }
         if (ret == DPS_OK) {
-            ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_INBOUND_SYNC);
+            ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_SUB_FLAGS);
         }
         if (ret == DPS_OK) {
-            ret = CBOR_EncodeBoolean(&buf, remote->inbound.sync);
-        }
-        if (ret == DPS_OK) {
-            ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_OUTBOUND_SYNC);
-        }
-        if (ret == DPS_OK) {
-            ret = CBOR_EncodeBoolean(&buf, remote->outbound.sync);
+            ret = CBOR_EncodeUint8(&buf, flags);
         }
         if (ret == DPS_OK) {
             ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_NEEDS);
@@ -322,8 +328,10 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote, DPS_BitVecto
 /*
  * Update the interests for a remote node
  */
-static DPS_Status UpdateInboundInterests(DPS_Node* node, RemoteNode* remote, DPS_BitVector* interests, DPS_BitVector* needs, int delta)
+static DPS_Status UpdateInboundInterests(DPS_Node* node, RemoteNode* remote, DPS_BitVector* interests, DPS_BitVector* needs, uint8_t flags)
 {
+    int delta = !(flags & DPS_SUB_FLAG_SYNC_INF);
+
     DPS_DBGTRACE();
 
     /*
@@ -380,7 +388,7 @@ static DPS_Status UpdateInboundInterests(DPS_Node* node, RemoteNode* remote, DPS
 DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuffer* buffer)
 {
     static const int32_t HeaderKeys[] = { DPS_CBOR_KEY_PORT, DPS_CBOR_KEY_MESH_ID };
-    static const int32_t BodyKeys[] = { DPS_CBOR_KEY_SEQ_NUM, DPS_CBOR_KEY_INBOUND_SYNC, DPS_CBOR_KEY_OUTBOUND_SYNC,
+    static const int32_t BodyKeys[] = { DPS_CBOR_KEY_SEQ_NUM, DPS_CBOR_KEY_SUB_FLAGS,
                                         DPS_CBOR_KEY_NEEDS, DPS_CBOR_KEY_INTERESTS };
     DPS_Status ret;
     DPS_BitVector* interests = NULL;
@@ -390,8 +398,7 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
     RemoteNode* remote = NULL;
     CBOR_MapState mapState;
     DPS_UUID* meshId = NULL;
-    int syncRequested = DPS_FALSE;
-    int syncReceived = DPS_FALSE;
+    uint8_t flags = 0;
 
     DPS_DBGTRACE();
 
@@ -445,6 +452,9 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
         if (remote) {
             DPS_DeleteRemoteNode(node, remote);
             DPS_UnlockNode(node);
+            /*
+             * Evaluate impact of losing the remote's interests
+             */
             DPS_UpdateSubs(node, NULL);
         } else {
             DPS_UnlockNode(node);
@@ -464,11 +474,8 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
         case DPS_CBOR_KEY_SEQ_NUM:
             ret = CBOR_DecodeUint32(buffer, &sequenceNum);
             break;
-        case DPS_CBOR_KEY_INBOUND_SYNC:
-            ret = CBOR_DecodeBoolean(buffer, &syncRequested);
-            break;
-        case DPS_CBOR_KEY_OUTBOUND_SYNC:
-            ret = CBOR_DecodeBoolean(buffer, &syncReceived);
+        case DPS_CBOR_KEY_SUB_FLAGS:
+            ret = CBOR_DecodeUint8(buffer, &flags);
             break;
         case DPS_CBOR_KEY_INTERESTS:
             if (interests) {
@@ -506,9 +513,10 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
             ret = DPS_OK;
         } else {
             /*
-             * The remote is new to us so we need to sync
+             * The remote is new to us so we need to sync to it
+             * even if it didn't request to synch.
              */
-            syncRequested = DPS_TRUE;
+            flags |= DPS_SUB_FLAG_SYNC_REQ;
         }
         DPS_UnlockNode(node);
     }
@@ -518,7 +526,7 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
         return ret;
     }
     DPS_LockNode(node);
-    if (syncRequested) {
+    if (flags & DPS_SUB_FLAG_SYNC_REQ) {
         remote->outbound.sync = DPS_TRUE;
     }
     /*
@@ -526,7 +534,7 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
      */
     if (sequenceNum != (remote->inbound.sequenceNum + 1)) {
         DPS_ERRPRINT("Mismatched sequence number %d != %d from %s\n", sequenceNum, remote->inbound.sequenceNum + 1, DESCRIBE(remote));
-        if (syncReceived) {
+        if (flags & DPS_SUB_FLAG_SYNC_INF) {
             if (sequenceNum > remote->inbound.sequenceNum) {
                 remote->inbound.sequenceNum = sequenceNum;
             }
@@ -538,7 +546,7 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
         ++remote->inbound.sequenceNum;
     }
     if (sequenceNum == remote->inbound.sequenceNum) {
-        DPS_DBGPRINT("Received mesh id %08x from %s\n", UUID_32(meshId), DESCRIBE(remote));
+        DPS_DBGPRINT("Node %d received mesh id %08x from %s\n", node->port, UUID_32(meshId), DESCRIBE(remote));
         /*
          * Check for a loop in the mesh. If there is a loop and the link was
          * formed by the sending remote we mute the link.
@@ -546,10 +554,11 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
         if (DPS_MeshHasLoop(node, remote, meshId)) {
             DPS_BitVectorFree(interests);
             DPS_BitVectorFree(needs);
+            DPS_DBGPRINT("Node %d muting %s\n", node->port, DESCRIBE(remote));
             ret = DPS_MuteRemoteNode(node, remote);
         } else {
             remote->inbound.meshId = *meshId;
-            ret = UpdateInboundInterests(node, remote, interests, needs, !syncReceived);
+            ret = UpdateInboundInterests(node, remote, interests, needs, flags);
         }
     }
     /*
