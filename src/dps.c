@@ -608,36 +608,20 @@ void DPS_OnSendComplete(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_bu
     DPS_NetFreeBufs(bufs, numBufs);
 }
 
-/*
- * Add this publication to the history record
- */
-static DPS_BitVector* PubSubMatch(DPS_Node* node, DPS_Publication* pub, RemoteNode* subscriber)
-{
-    DPS_BitVectorIntersection(node->scratch.interests, pub->bf, subscriber->inbound.interests);
-    DPS_BitVectorFuzzyHash(node->scratch.needs, node->scratch.interests);
-    if (DPS_BitVectorIncludes(node->scratch.needs, subscriber->inbound.needs)) {
-        /*
-         * If the publication will be retained we send the full publication Bloom
-         * filter otherwise we only send the intersection with the subscription interests.
-         * The reason for sending the full publication is that we don't know what the
-         * interests will be over the lifetime of the publication.
-         */
-        return (pub->flags & PUB_FLAG_RETAINED) ? pub->bf : node->scratch.interests;
-    } else {
-        return NULL;
-    }
-}
-
 static DPS_Status SendMatchingPubToSub(DPS_Node* node, DPS_Publication* pub, RemoteNode* subscriber)
 {
     /*
      * We don't send publications to remote nodes we have received them from.
      */
     if (!DPS_PublicationReceivedFrom(&node->history, &pub->pubId, pub->sequenceNum, &pub->sender, &subscriber->ep.addr)) {
-        DPS_BitVector* pubBV = PubSubMatch(node, pub, subscriber);
-        if (pubBV) {
+        /*
+         * This is the pub/sub matching code
+         */
+        DPS_BitVectorIntersection(node->scratch.interests, pub->bf, subscriber->inbound.interests);
+        DPS_BitVectorFuzzyHash(node->scratch.needs, node->scratch.interests);
+        if (DPS_BitVectorIncludes(node->scratch.needs, subscriber->inbound.needs)) {
             DPS_DBGPRINT("Sending pub %d to %s\n", pub->sequenceNum, DESCRIBE(subscriber));
-            return DPS_SendPublication(node, pub, pubBV, subscriber);
+            return DPS_SendPublication(node, pub, subscriber);
         }
         DPS_DBGPRINT("Rejected pub %d for %s\n", pub->sequenceNum, DESCRIBE(subscriber));
     }
@@ -685,7 +669,7 @@ static void SendPubsTask(DPS_Node* node)
              * If the node is a multicast sender local publications are always multicast
              */
             if (node->mcastSender && (pub->flags & PUB_FLAG_LOCAL)) {
-                ret = DPS_SendPublication(node, pub, pub->bf, NULL);
+                ret = DPS_SendPublication(node, pub, NULL);
                 if (ret != DPS_OK) {
                     DPS_ERRPRINT("SendPublication (multicast) returned %s\n", DPS_ErrTxt(ret));
                 }

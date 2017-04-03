@@ -81,7 +81,7 @@ void DPS_UpdatePubs(DPS_Node* node, DPS_Publication* pub);
 
 DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuffer* buffer, int multicast);
 
-DPS_Status DPS_SendPublication(DPS_Node* node, DPS_Publication* pub, DPS_BitVector* bf, RemoteNode* remote);
+DPS_Status DPS_SendPublication(DPS_Node* node, DPS_Publication* pub, RemoteNode* remote);
 
 void DPS_ExpirePub(DPS_Node* node, DPS_Publication* pub);
 

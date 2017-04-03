@@ -674,7 +674,7 @@ static void OnPubSendComplete(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep,
 /*
  * Multicast a publication or send it directly to a remote subscriber node
  */
-DPS_Status DPS_SendPublication(DPS_Node* node, DPS_Publication* pub, DPS_BitVector* bf, RemoteNode* remote)
+DPS_Status DPS_SendPublication(DPS_Node* node, DPS_Publication* pub, RemoteNode* remote)
 {
     DPS_Status ret;
     DPS_TxBuffer buf;
