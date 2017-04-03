@@ -91,11 +91,10 @@ void DPS_LockNode(DPS_Node* node)
     uv_thread_t self = uv_thread_self();
     if (!uv_thread_equal(&node->lockHolder, &self)) {
         uv_mutex_lock(&node->nodeMutex);
-        if (node->lockCount == 0) {
-            node->lockHolder = self;
-        }
+        assert(node->lockCount == 0);
+        node->lockHolder = self;
     }
-     ++node->lockCount;
+    ++node->lockCount;
 }
 
 void DPS_UnlockNode(DPS_Node* node)
@@ -103,8 +102,14 @@ void DPS_UnlockNode(DPS_Node* node)
     assert(node->lockCount);
     if (--node->lockCount == 0) {
         node->lockHolder = 0;
+        uv_mutex_unlock(&node->nodeMutex);
     }
-    uv_mutex_unlock(&node->nodeMutex);
+}
+
+int DPS_HasNodeLock(DPS_Node* node)
+{
+    uv_thread_t self = uv_thread_self();
+    return uv_thread_equal(&node->lockHolder, &self);
 }
 
 static void ScheduleBackgroundTask(DPS_Node* node, uint8_t task)
@@ -487,6 +492,8 @@ DPS_Status DPS_UnmuteRemoteNode(DPS_Node* node, RemoteNode* remote)
 {
     DPS_DBGTRACE();
 
+    assert(DPS_HasNodeLock(node));
+
     DPS_LinkMonitorStop(remote);
     /*
      * This will update the subscriptions for this remote
@@ -509,6 +516,7 @@ RemoteNode* DPS_LookupRemoteNode(DPS_Node* node, DPS_NodeAddress* addr)
 {
     RemoteNode* remote;
 
+    assert(DPS_HasNodeLock(node));
     for (remote = node->remoteNodes; remote != NULL; remote = remote->next) {
         if (DPS_SameAddr(&remote->ep.addr, addr)) {
             return remote;

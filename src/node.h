@@ -283,6 +283,14 @@ void DPS_LockNode(DPS_Node* node);
 void DPS_UnlockNode(DPS_Node* node);
 
 /**
+ * Check if the current thread is holding the node lock.
+ * This is intended for use in asserts.
+ *
+ * @param node The node to check
+ */
+int DPS_HasNodeLock(DPS_Node* node);
+
+/**
  * For debug output of mesh ids
  */
 #define UUID_32(n) (((n)->val[12]) | ((n)->val[13] << 8) | ((n)->val[14] << 16) | ((n)->val[15] << 24))
