@@ -30,6 +30,7 @@
 #include <dps/uuid.h>
 #include <stdlib.h>
 #include <string.h>
+#include <uv.h>
 #include "compat.h"
 
 /*
@@ -65,20 +66,27 @@ static struct {
     uint32_t seeds[4];
 } entropy;
 
+static struct {
+    uv_once_t once;
+    DPS_Status ret;
+    uv_mutex_t mutex;
+} context = { UV_ONCE_INIT, DPS_OK };
+
 #ifdef _WIN32
-DPS_Status DPS_InitUUID()
+static void InitUUID()
 {
     errno_t ret = 0;
     int i;
     uint32_t* n = (uint32_t*)&entropy;
 
+    uv_mutex_init(&context.mutex);
     for (i = 0; i < (sizeof(entropy) / sizeof(uint32_t)); ++i) {
         ret = rand_s(n++);
         if (ret) {
-            return DPS_ERR_FAILURE;
+            context.ret = DPS_ERR_FAILURE;
+            break;
         }
     }
-    return DPS_OK;
 }
 #else
 /*
@@ -86,24 +94,32 @@ DPS_Status DPS_InitUUID()
  */
 static const char* randPath = "/dev/urandom";
 
-DPS_Status DPS_InitUUID()
+static void InitUUID()
 {
+    uv_mutex_init(&context.mutex);
     while (!entropy.nonce[0]) {
         size_t sz;
         FILE* f = fopen(randPath, "r");
         if (!f) {
             DPS_ERRPRINT("fopen(\"%s\", \"r\") failed\n", randPath);
-            return DPS_ERR_READ;
+            context.ret = DPS_ERR_READ;
+            break;
         }
         sz = fread(&entropy, 1, sizeof(entropy), f);
         fclose(f);
         if (sz != sizeof(entropy)) {
-            return DPS_ERR_READ;
+            context.ret = DPS_ERR_READ;
+            break;
         }
     }
-    return DPS_OK;
 }
 #endif
+
+DPS_Status DPS_InitUUID()
+{
+    uv_once(&context.once, InitUUID);
+    return context.ret;
+}
 
 /*
  * Very simple linear congruational generator based PRNG (Lehmer/Park-Miller generator)
@@ -116,13 +132,17 @@ DPS_Status DPS_InitUUID()
 void DPS_GenerateUUID(DPS_UUID* uuid)
 {
     uint64_t* s = (uint64_t*)entropy.seeds;
-    uint32_t s0 = entropy.seeds[0];
+    uint32_t s0;
+
+    uv_mutex_lock(&context.mutex);
+    s0 = entropy.seeds[0];
     entropy.seeds[0] = LEPRNG(entropy.seeds[1]);
     entropy.seeds[1] = LEPRNG(entropy.seeds[2]);
     entropy.seeds[2] = LEPRNG(entropy.seeds[3]);
     entropy.seeds[3] = LEPRNG(s0);
     uuid->val64[0] = s[0] ^ entropy.nonce[0];
     uuid->val64[1] = s[1] ^ entropy.nonce[1];
+    uv_mutex_unlock(&context.mutex);
 }
 
 int DPS_UUIDCompare(const DPS_UUID* a, const DPS_UUID* b)
@@ -132,10 +152,15 @@ int DPS_UUIDCompare(const DPS_UUID* a, const DPS_UUID* b)
 
 uint32_t DPS_Rand()
 {
-    uint32_t s0 = entropy.seeds[0];
+    uint32_t s0;
+
+    uv_mutex_lock(&context.mutex);
+    s0 = entropy.seeds[0];
     entropy.seeds[0] = LEPRNG(entropy.seeds[1]);
     entropy.seeds[1] = LEPRNG(entropy.seeds[2]);
     entropy.seeds[2] = LEPRNG(entropy.seeds[3]);
     entropy.seeds[3] = LEPRNG(s0);
-    return entropy.seeds[0];
+    s0 = entropy.seeds[0];
+    uv_mutex_unlock(&context.mutex);
+    return s0;
 }
