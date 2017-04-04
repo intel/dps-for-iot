@@ -75,6 +75,7 @@ typedef struct _DPS_Node {
     uint16_t tasks;                       /* Background tasks that have been scheduled */
     uint16_t port;
     DPS_UUID meshId;                      /* Randomly allocated mesh id for this node */
+    DPS_UUID minMeshId;                   /* Minimum mesh id seen by this node */
     char separators[13];                  /* List of separator characters */
     DPS_KeyRequestCallback keyRequestCB;  /* Callback function for loading encryption keys */
     DPS_UUID keyId;                       /* Encryption key identifier */
@@ -119,10 +120,6 @@ typedef struct _DPS_Node {
 
 } DPS_Node;
 
-#define DPS_REMOTE_UNMUTED 0
-#define DPS_REMOTE_MUTING  1
-#define DPS_REMOTE_MUTED   2
-
 extern const DPS_UUID DPS_MaxMeshId;
 
 #define DPS_SUB_FLAG_SYNC_INF    1      /* Inform remote interests are being synched (not delta) */
@@ -133,8 +130,8 @@ typedef struct _RemoteNode {
     OnOpCompletion* completion;
     uint8_t linked;                    /* TRUE if this is a node that was explicitly linked */
     uint8_t unlink;                    /* TRUE if this node is about to be unlinked */
-    uint8_t muted;                     /* Non zero if this remote is muted or being muted */
     struct {
+        uint8_t muted;                 /* TRUE if the remote informed us the that link is muted */
         uint8_t sync;                  /* If TRUE request remote to synchronize interests */
         uint32_t sequenceNum;          /* Sequence number of last subscription received from this node */
         DPS_UUID meshId;               /* The mesh id received from this remote node */
@@ -142,6 +139,7 @@ typedef struct _RemoteNode {
         DPS_BitVector* interests;      /* Bit vector of interests received from  this remote node */
     } inbound;
     struct {
+        uint8_t muted;                 /* TRUE if we have informed the remote that the link is muted */
         uint8_t sync;                  /* If TRUE synchronize outbound interests with remote node (no deltas) */
         uint8_t checkForUpdates;       /* TRUE if there may be updated interests to send to this remote */
         uint32_t sequenceNum;          /* Sequence number of last subscription sent to this node */
@@ -293,7 +291,7 @@ int DPS_HasNodeLock(DPS_Node* node);
 /**
  * For debug output of mesh ids
  */
-#define UUID_32(n) (((n)->val[12]) | ((n)->val[13] << 8) | ((n)->val[14] << 16) | ((n)->val[15] << 24))
+#define UUID_32(n) (((n)->val[0] << 24) | ((n)->val[1] << 16) | ((n)->val[2] << 8) | ((n)->val[3] << 0))
 
 #ifdef __cplusplus
 }

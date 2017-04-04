@@ -190,7 +190,7 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote, DPS_BitVecto
     if (remote->inbound.sync) {
         flags |= DPS_SUB_FLAG_SYNC_REQ;
     }
-    if (remote->muted) {
+    if (remote->outbound.muted) {
         flags |= DPS_SUB_FLAG_MUTE_INF;
     }
     /*
@@ -334,29 +334,6 @@ static DPS_Status UpdateInboundInterests(DPS_Node* node, RemoteNode* remote, DPS
 
     DPS_DBGTRACE();
 
-    /*
-     * If the remote is muted or being muted we discard incoming interests
-     */
-    if (remote->muted) {
-        /*
-         * Tie-breaker for links that are muted on both sides:
-         *
-         * Loop detection is independent of which endpoint initiated the link
-         * but there is a race condition where both endpoints simultaneousy
-         * detect the loop. Fortunately we can detect this case because each
-         * endpoint sends a subscription with MaxMeshId and break the tie
-         * by unmuting one end. We arbitrarily choose to unmute the endpoint
-         * that originally initiated the link.
-         */
-        if (remote->linked && (DPS_UUIDCompare(&remote->inbound.meshId, &DPS_MaxMeshId) == 0)) {
-            DPS_DBGPRINT("Unmuting %s\n", DESCRIBE(remote));
-            remote->muted = DPS_REMOTE_UNMUTED;
-        }
-        DPS_ClearInboundInterests(node, remote);
-        DPS_BitVectorFree(interests);
-        DPS_BitVectorFree(needs);
-        return DPS_OK;
-    }
     if (remote->inbound.interests) {
         if (delta) {
             DPS_DBGPRINT("Received interests delta\n");
@@ -545,37 +522,81 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
     } else {
         ++remote->inbound.sequenceNum;
     }
-    if (sequenceNum == remote->inbound.sequenceNum) {
-        DPS_DBGPRINT("Node %d received mesh id %08x from %s\n", node->port, UUID_32(meshId), DESCRIBE(remote));
-        /*
-         * Check for a loop in the mesh. If there is a loop and the link was
-         * formed by the sending remote we mute the link.
-         */
-        if (DPS_MeshHasLoop(node, remote, meshId)) {
-            DPS_BitVectorFree(interests);
-            DPS_BitVectorFree(needs);
-            DPS_DBGPRINT("Node %d muting %s\n", node->port, DESCRIBE(remote));
-            ret = DPS_MuteRemoteNode(node, remote);
-        } else {
-            remote->inbound.meshId = *meshId;
-            ret = UpdateInboundInterests(node, remote, interests, needs, flags);
-        }
-    }
     /*
-     * Check if application waiting for a completion callback. Even if there was
-     * an error we are ok to complete because all we need is a response.
+     * Check if the application waiting for a completion callback.
+     * This is unconditional - all we are reporting is that we
+     * received a subscription from the remote.
      */
     if (remote->completion) {
         DPS_RemoteCompletion(node, remote, DPS_OK);
     }
-    DPS_UnlockNode(node);
-    /*
-     * Schedule background tasks
-     */
-    if (ret == DPS_OK) {
-        DPS_UpdatePubs(node, NULL);
-        DPS_UpdateSubs(node, NULL);
+    if (sequenceNum == remote->inbound.sequenceNum) {
+        DPS_DBGPRINT("Node %d received mesh id %08x from %s\n", node->port, UUID_32(meshId), DESCRIBE(remote));
+
+        /*
+         * Loops can be detected by either end of a link and corrective action is required
+         * to prevent interests from propagating around the loop. The corrective action is
+         * to mute the link by clearing all inbound and outbound interests from the remote.
+         *
+         * It is possible for nodes at both ends of a link simultaneously detect the loop
+         * so we need to handle various cases below. A link is not fully muted until both
+         * inbound and outbound muted flags are non zero.
+         */
+        if (remote->outbound.muted && (flags & DPS_SUB_FLAG_MUTE_INF)) {
+            /*
+             * Fully muted
+             */
+            remote->inbound.muted = DPS_TRUE;
+            DPS_DBGPRINT("Remote %s is fully muted\n", DESCRIBE(remote));
+        } else if (remote->outbound.muted && !remote->inbound.muted) {
+            /*
+             * Half muted state - nothing to do
+             */
+            DPS_DBGPRINT("Remote %s is half muted\n", DESCRIBE(remote));
+        } else if (!remote->outbound.muted && (flags & DPS_SUB_FLAG_MUTE_INF)) {
+            /*
+             * We are being muted by the remote
+             */
+            remote->inbound.muted = DPS_TRUE;
+            ret = DPS_MuteRemoteNode(node, remote);
+        } else if (remote->inbound.muted && !(flags & DPS_SUB_FLAG_MUTE_INF)) {
+            assert(remote->outbound.muted);
+            /*
+             * The remote has unmuted
+             */
+            remote->outbound.muted = DPS_FALSE;
+            remote->inbound.muted = DPS_FALSE;
+            remote->outbound.sync = DPS_TRUE;
+            DPS_DBGPRINT("Remote %s has unumuted\n", DESCRIBE(remote));
+        } else if (DPS_MeshHasLoop(node, remote, meshId)) {
+            /*
+             * We detected a loop and need to mute
+             */
+            ret = DPS_MuteRemoteNode(node, remote);
+        }
+        if (remote->outbound.muted) {
+            remote->inbound.meshId = DPS_MaxMeshId;
+            DPS_BitVectorFree(interests);
+            DPS_BitVectorFree(needs);
+        } else {
+            remote->inbound.meshId = *meshId;
+            ret = UpdateInboundInterests(node, remote, interests, needs, flags);
+            /*
+             * Evaluate impact of the change in interests
+             */
+            if (ret == DPS_OK) {
+                DPS_UpdatePubs(node, NULL);
+                DPS_UpdateSubs(node, NULL);
+            }
+        }
+        /*
+         * Track the minimum mesh id we have seen
+         */
+        if (DPS_UUIDCompare(meshId, &node->minMeshId) < 0) {
+            node->minMeshId = *meshId;
+        }
     }
+    DPS_UnlockNode(node);
     return ret;
 }
 

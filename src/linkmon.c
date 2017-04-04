@@ -212,7 +212,7 @@ DPS_Status DPS_LinkMonitorStart(DPS_Node* node, RemoteNode* remote)
     DPS_Status ret;
     LinkMonitor* monitor = NULL;
 
-    assert(remote->muted);
+    assert(remote->outbound.muted);
     assert(!remote->monitor);
     assert(!remote->linked);
 

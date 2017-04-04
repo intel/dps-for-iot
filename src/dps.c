@@ -310,7 +310,7 @@ static const DPS_UUID* MinMeshId(DPS_Node* node, RemoteNode* excluded)
     DPS_UUID* minMeshId = &node->meshId;
 
     for (remote = node->remoteNodes; remote != NULL; remote = remote->next) {
-        if (remote->muted || remote == excluded) {
+        if (remote->outbound.muted || remote->inbound.muted || remote == excluded) {
             continue;
         }
         if (DPS_UUIDCompare(&remote->inbound.meshId, minMeshId) < 0) {
@@ -330,7 +330,7 @@ static int UpdateOutboundMeshId(DPS_Node* node, RemoteNode* dest, DPS_BitVector*
 {
     const DPS_UUID* meshId = MinMeshId(node, dest);
 
-    assert(!dest->muted);
+    assert(!dest->outbound.muted);
 
     if (DPS_UUIDCompare(meshId, &dest->outbound.meshId) == 0) {
         return DPS_FALSE;
@@ -357,92 +357,72 @@ static DPS_Status UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, 
 
     DPS_DBGTRACE();
 
-    if (destNode->muted) {
-        /*
-         * A remote marked to be muted when a loop is detected. This completes
-         * the process by sending an empty interests vector to the remote.
-         */
-        if (destNode->muted == DPS_REMOTE_MUTING) {
-            destNode->muted = DPS_REMOTE_MUTED;
-
-            newInterests = DPS_BitVectorAlloc();
-            newNeeds = DPS_BitVectorAllocFH();
-            destNode->outbound.sync = DPS_TRUE;
-
-            DPS_DBGPRINT("%d muting outbound interests for %s\n", node->port, DESCRIBE(destNode));
-            *outboundInterests = newInterests;
-        } else {
-            *outboundInterests = NULL;
-        }
-        assert(!destNode->inbound.sync);
-    } else {
-        /*
-         * Inbound interests from the node we are updating are excluded from the
-         * recalculation of outbound interests
-         */
-        if (destNode->inbound.interests) {
-            ret = DPS_CountVectorDel(node->interests, destNode->inbound.interests);
-            if (ret != DPS_OK) {
-                goto ErrExit;
-            }
-            newInterests = DPS_CountVectorToUnion(node->interests);
-            ret = DPS_CountVectorAdd(node->interests, destNode->inbound.interests);
-            if (ret != DPS_OK) {
-                goto ErrExit;
-            }
-            ret = DPS_CountVectorDel(node->needs, destNode->inbound.needs);
-            if (ret != DPS_OK) {
-                goto ErrExit;
-            }
-            newNeeds = DPS_CountVectorToIntersection(node->needs);
-            ret = DPS_CountVectorAdd(node->needs, destNode->inbound.needs);
-            if (ret != DPS_OK) {
-                goto ErrExit;
-            }
-        } else {
-            assert(!destNode->inbound.needs);
-            newInterests = DPS_CountVectorToUnion(node->interests);
-            newNeeds = DPS_CountVectorToIntersection(node->needs);
-        }
-        if (!newNeeds || !newInterests) {
-            ret = DPS_ERR_RESOURCES;
+    /*
+     * Inbound interests from the node we are updating are excluded from the
+     * recalculation of outbound interests
+     */
+    if (destNode->inbound.interests) {
+        ret = DPS_CountVectorDel(node->interests, destNode->inbound.interests);
+        if (ret != DPS_OK) {
             goto ErrExit;
         }
-        newMeshId = UpdateOutboundMeshId(node, destNode, newInterests);
-        /*
-         * Try computing a delta if we have a previous outbound interests
-         * bit vector and we have not been asked to do a full synchronization.
-         *
-         * Since the needs vector is relatively small there is little
-         * advantage gained is computing the delta.
-         */
-        if (destNode->outbound.interests && !destNode->outbound.sync) {
-            int same = DPS_FALSE;
-            DPS_BitVector* delta = node->scratch.interests;
+        newInterests = DPS_CountVectorToUnion(node->interests);
+        ret = DPS_CountVectorAdd(node->interests, destNode->inbound.interests);
+        if (ret != DPS_OK) {
+            goto ErrExit;
+        }
+        ret = DPS_CountVectorDel(node->needs, destNode->inbound.needs);
+        if (ret != DPS_OK) {
+            goto ErrExit;
+        }
+        newNeeds = DPS_CountVectorToIntersection(node->needs);
+        ret = DPS_CountVectorAdd(node->needs, destNode->inbound.needs);
+        if (ret != DPS_OK) {
+            goto ErrExit;
+        }
+    } else {
+        assert(!destNode->inbound.needs);
+        newInterests = DPS_CountVectorToUnion(node->interests);
+        newNeeds = DPS_CountVectorToIntersection(node->needs);
+    }
+    if (!newNeeds || !newInterests) {
+        ret = DPS_ERR_RESOURCES;
+        goto ErrExit;
+    }
+    newMeshId = UpdateOutboundMeshId(node, destNode, newInterests);
+    /*
+     * Try computing a delta if we have a previous outbound interests
+     * bit vector and we have not been asked to do a full synchronization.
+     *
+     * Since the needs vector is relatively small there is little
+     * advantage gained is computing the delta.
+     */
+    if (destNode->outbound.interests && !destNode->outbound.sync) {
+        int same = DPS_FALSE;
+        DPS_BitVector* delta = node->scratch.interests;
 
-            DPS_BitVectorXor(delta, destNode->outbound.interests, newInterests, &same);
-            /*
-             * If there is no change there is nothing to send unless we are
-             * requesting synchronization from the remote or need to forward
-             * an updated mesh id.
-             */
-            if (same && DPS_BitVectorEquals(destNode->outbound.needs, newNeeds)) {
-                if (destNode->inbound.sync || newMeshId) {
-                    assert(DPS_BitVectorIsClear(delta));
-                    *outboundInterests = delta;
-                } else {
-                    *outboundInterests = NULL;
-                }
-            } else {
+        DPS_BitVectorXor(delta, destNode->outbound.interests, newInterests, &same);
+        /*
+         * If there is no change there is nothing to send unless we are
+         * requesting synchronization from the remote or need to forward
+         * an updated mesh id.
+         */
+        if (same && DPS_BitVectorEquals(destNode->outbound.needs, newNeeds)) {
+            if (destNode->inbound.sync || newMeshId) {
+                assert(DPS_BitVectorIsClear(delta));
                 *outboundInterests = delta;
+            } else {
+                *outboundInterests = NULL;
             }
         } else {
-            /*
-             * Full sychronization is required
-             */
-            destNode->outbound.sync = DPS_TRUE;
-            *outboundInterests = newInterests;
+            *outboundInterests = delta;
         }
+    } else {
+        /*
+         * Full sychronization is required
+         */
+        destNode->outbound.sync = DPS_TRUE;
+        *outboundInterests = newInterests;
     }
 
     FreeOutboundInterests(destNode);
@@ -451,8 +431,12 @@ static DPS_Status UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, 
 
     if (DPS_DEBUG_ENABLED()) {
         if (*outboundInterests) {
-            DPS_DBGPRINT("New outbound interests for %s: ", DESCRIBE(destNode));
-            DPS_DumpMatchingTopics(destNode->outbound.interests);
+            if (destNode->outbound.sync) {
+                DPS_DBGPRINT("New outbound interests for %s: ", DESCRIBE(destNode));
+                DPS_DumpMatchingTopics(destNode->outbound.interests);
+            } else {
+                DPS_DBGPRINT("Delta outbound interests for %s: ", DESCRIBE(destNode));
+            }
         }
     }
     return DPS_OK;
@@ -467,10 +451,18 @@ ErrExit:
 
 DPS_Status DPS_MuteRemoteNode(DPS_Node* node, RemoteNode* remote)
 {
+    DPS_Status ret;
+
+    assert(DPS_HasNodeLock(node));
+
     DPS_DBGPRINT("Loop detected by %d for %s\n", node->port, DESCRIBE(remote));
 
-    remote->muted = DPS_REMOTE_MUTING;
-    remote->inbound.meshId = DPS_MaxMeshId;
+    /*
+     * In case an update had been scheduled for this remote
+     */
+    remote->outbound.checkForUpdates = DPS_FALSE;
+
+    remote->outbound.muted = DPS_TRUE;
     remote->outbound.meshId = DPS_MaxMeshId;
     remote->inbound.meshId = DPS_MaxMeshId;
     /*
@@ -479,13 +471,26 @@ DPS_Status DPS_MuteRemoteNode(DPS_Node* node, RemoteNode* remote)
     DPS_ClearInboundInterests(node, remote);
     FreeOutboundInterests(remote);
     /*
-     * We only monitor a muted link from the passive side
+     * We send an empty interests vector to the remote.
      */
-    if (remote->linked) {
-        return DPS_OK;
+    remote->outbound.interests = DPS_BitVectorAlloc();
+    remote->outbound.needs = DPS_BitVectorAllocFH();
+    if (!remote->outbound.interests || !remote->outbound.needs) {
+        ret = DPS_ERR_RESOURCES;
     } else {
-        return DPS_LinkMonitorStart(node, remote);
+        remote->outbound.sync = DPS_TRUE;
+        ret = DPS_SendSubscription(node, remote, remote->outbound.interests);
+        FreeOutboundInterests(remote);
     }
+    if (ret == DPS_OK) {
+        /*
+         * We only monitor a muted link from the passive side
+         */
+        if (!remote->linked) {
+            ret =  DPS_LinkMonitorStart(node, remote);
+        }
+    }
+    return ret;
 }
 
 DPS_Status DPS_UnmuteRemoteNode(DPS_Node* node, RemoteNode* remote)
@@ -498,17 +503,26 @@ DPS_Status DPS_UnmuteRemoteNode(DPS_Node* node, RemoteNode* remote)
     /*
      * This will update the subscriptions for this remote
      */
-    remote->muted = DPS_REMOTE_UNMUTED;
+    remote->outbound.muted = DPS_FALSE;
+    remote->inbound.muted = DPS_FALSE;
     remote->outbound.sync = DPS_TRUE;
     remote->inbound.sync = DPS_TRUE;
+    /*
+     * We need a fresh mesh id that is less than any of the mesh id's
+     * we have already seen. If we were to send the same mesh id that
+     * was used to detected the loop it will look to the remaining
+     * nodes that there is still a loop.
+     */
+    do {
+        DPS_GenerateUUID(&node->meshId);
+    } while (DPS_UUIDCompare(&node->meshId, &node->minMeshId) >= 0);
+    node->minMeshId = node->meshId;
+
     return DPS_UpdateSubs(node, remote);
 }
 
 int DPS_MeshHasLoop(DPS_Node* node, RemoteNode* src, DPS_UUID* meshId)
 {
-    if (src->muted) {
-        return DPS_FALSE;
-    }
     return DPS_UUIDCompare(meshId, MinMeshId(node, src)) == 0;
 }
 
@@ -693,7 +707,7 @@ static void SendPubsTask(DPS_Node* node)
             }
             for (remote = node->remoteNodes; remote != NULL; remote = nextRemote) {
                 nextRemote = remote->next;
-                if (!remote->muted && remote->inbound.interests) {
+                if (!(remote->outbound.muted || remote->inbound.muted) && remote->inbound.interests) {
                     ret = SendMatchingPubToSub(node, pub, remote);
                     if (ret != DPS_OK) {
                         DPS_DeleteRemoteNode(node, remote);
@@ -801,6 +815,7 @@ int DPS_UpdateSubs(DPS_Node* node, RemoteNode* remote)
     DPS_LockNode(node);
     if (node->remoteNodes) {
         if (remote) {
+            assert(!remote->outbound.muted);
             remote->outbound.checkForUpdates = DPS_TRUE;
             ++count;
         } else {
@@ -810,8 +825,10 @@ int DPS_UpdateSubs(DPS_Node* node, RemoteNode* remote)
              * subscriptions to all remote nodes.
              */
             for (remote = node->remoteNodes; remote != NULL; remote = remote->next) {
-                remote->outbound.checkForUpdates = DPS_TRUE;
-                ++count;
+                if (!remote->outbound.muted) {
+                    remote->outbound.checkForUpdates = DPS_TRUE;
+                    ++count;
+                }
             }
         }
         if (count) {
@@ -1147,6 +1164,7 @@ DPS_Status DPS_StartNode(DPS_Node* node, int mcast, int rxPort)
 
     DPS_GenerateUUID(&node->meshId);
     DPS_DBGPRINT("Node mesh id for %d: %08x\n", node->port, UUID_32(&node->meshId));
+    node->minMeshId = node->meshId;
 
     node->interests = DPS_CountVectorAlloc();
     node->needs = DPS_CountVectorAllocFH();
@@ -1325,7 +1343,8 @@ DPS_Status DPS_Unlink(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnUnlinkComplet
     /*
      * We need to unmute the remote to send the unlink subscription
      */
-    remote->muted = DPS_REMOTE_UNMUTED;
+    remote->outbound.muted = DPS_FALSE;
+    remote->inbound.muted = DPS_FALSE;
     /*
      * Unlinking the remote node will cause it to be deleted after the
      * subscriptions are updated. When the remote node is removed
