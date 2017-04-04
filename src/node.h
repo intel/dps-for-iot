@@ -289,6 +289,14 @@ void DPS_UnlockNode(DPS_Node* node);
 int DPS_HasNodeLock(DPS_Node* node);
 
 /**
+ * Generates a random UUID that is less than the UUID passed in.
+ * Less in this context means DPS_UUIDCompare(&new, old) < 0
+ *
+ * @param uuid  The UUID to be updated.
+ */
+void DPS_RandUUIDLess(DPS_UUID* uuid);
+
+/**
  * For debug output of mesh ids
  */
 #define UUID_32(n) (((n)->val[0] << 24) | ((n)->val[1] << 16) | ((n)->val[2] << 8) | ((n)->val[3] << 0))

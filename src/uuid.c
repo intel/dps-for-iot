@@ -150,6 +150,23 @@ int DPS_UUIDCompare(const DPS_UUID* a, const DPS_UUID* b)
     return memcmp(&a->val, &b->val, sizeof(a->val));
 }
 
+void DPS_RandUUIDLess(DPS_UUID* uuid)
+{
+    DPS_UUID tmp;
+    int i;
+
+    DPS_GenerateUUID(&tmp);
+    /*
+     * All this does is subtract a random 64 bit uint from an 128 bit uint
+     */
+    for (i = 15; i >= 8; --i) {
+        if (tmp.val[i] > uuid->val[i]) {
+            --uuid->val[i - 1];
+        }
+        uuid->val[i] -= tmp.val[i];
+    }
+}
+
 uint32_t DPS_Rand()
 {
     uint32_t s0;

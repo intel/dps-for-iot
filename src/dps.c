@@ -513,10 +513,8 @@ DPS_Status DPS_UnmuteRemoteNode(DPS_Node* node, RemoteNode* remote)
      * was used to detected the loop it will look to the remaining
      * nodes that there is still a loop.
      */
-    do {
-        DPS_GenerateUUID(&node->meshId);
-    } while (DPS_UUIDCompare(&node->meshId, &node->minMeshId) >= 0);
-    node->minMeshId = node->meshId;
+    DPS_RandUUIDLess(&node->minMeshId);
+    node->meshId = node->minMeshId;
 
     return DPS_UpdateSubs(node, remote);
 }
