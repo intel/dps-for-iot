@@ -89,27 +89,32 @@ static void RunBackgroundTasks(uv_async_t* handle);
 void DPS_LockNode(DPS_Node* node)
 {
     uv_thread_t self = uv_thread_self();
-    if (!uv_thread_equal(&node->lockHolder, &self)) {
+    if (node->lockCount && uv_thread_equal(&node->lockHolder, &self)) {
+        ++node->lockCount;
+    } else {
         uv_mutex_lock(&node->nodeMutex);
         assert(node->lockCount == 0);
         node->lockHolder = self;
+        node->lockCount = 1;
     }
-    ++node->lockCount;
 }
 
 void DPS_UnlockNode(DPS_Node* node)
 {
     assert(node->lockCount);
     if (--node->lockCount == 0) {
-        node->lockHolder = 0;
         uv_mutex_unlock(&node->nodeMutex);
     }
 }
 
 int DPS_HasNodeLock(DPS_Node* node)
 {
-    uv_thread_t self = uv_thread_self();
-    return uv_thread_equal(&node->lockHolder, &self);
+    if (node->lockCount) {
+        uv_thread_t self = uv_thread_self();
+        return uv_thread_equal(&node->lockHolder, &self);
+    } else {
+        return DPS_FALSE;
+    }
 }
 
 static void ScheduleBackgroundTask(DPS_Node* node, uint8_t task)
