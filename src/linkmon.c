@@ -39,26 +39,11 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
 #define DESCRIBE(n)  DPS_NodeAddrToString(&(n)->ep.addr)
 
-/*
- * Time before sending the first probe
- */
-#define FIRST_TO  DPS_SECS_TO_MS(60)
-
-/*
- * Repeat rate for probes
- */
-#define PROBE_TO  DPS_SECS_TO_MS(120)
-
-/*
- * Timer for retries following a probe failure
- */
-#define RETRY_TO  DPS_SECS_TO_MS(5)
-
-/*
- * Maximum number of retries following a probe failure
- */
-#define MAX_PROBE_RETRIES  3
-
+const LinkMonitorConfig LinkMonitorConfigDefaults = {
+    .retries = 3,      /* Maximum number of retries following a probe failure */
+    .probeTO = 120000, /* Base repeat rate for probes */
+    .retryTO = 200     /* Repeat time for retries following a probe failure */
+};
 
 static void ProbePubHandler(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* data, size_t len)
 {
@@ -81,7 +66,7 @@ static void DestroyLinkMonitor(LinkMonitor* monitor)
     if (monitor->pub) {
         DPS_DestroyPublication(monitor->pub);
     }
-    if (monitor->pub) {
+    if (monitor->sub) {
         DPS_DestroySubscription(monitor->sub);
     }
     /*
@@ -99,74 +84,11 @@ static void DestroyLinkMonitor(LinkMonitor* monitor)
     }
 }
 
-void DPS_LinkMonitorStop(RemoteNode* remote)
-{
-    if (remote->monitor) {
-        DestroyLinkMonitor(remote->monitor);
-    }
-}
-
-static void OnProbeTimeout(uv_timer_t* handle)
-{
-    DPS_Status ret = DPS_ERR_TIMEOUT;
-    LinkMonitor* monitor = (LinkMonitor*)handle->data;
-
-    if (monitor->probeReceived) {
-        monitor->probeReceived = DPS_FALSE;
-        /*
-         * If in retry mode restore timer back to normal
-         */
-        if (monitor->retries != 0) {
-            DPS_DBGPRINT("Link probe recover after retry %d\n", monitor->retries);
-            uv_timer_set_repeat(handle, PROBE_TO);
-            monitor->retries = 0;
-        }
-        ret = DPS_OK;
-    } else if (monitor->retries < MAX_PROBE_RETRIES) {
-        /*
-         * Set shorter timeout for retries
-         */
-        if (monitor->retries++ == 0) {
-            uv_timer_set_repeat(handle, RETRY_TO);
-        }
-        DPS_DBGPRINT("Link probe failed retry %d\n", monitor->retries);
-        ret = DPS_OK;
-    }
-    /*
-     * Send a next probe
-     */
-    if (ret == DPS_OK) {
-        /*
-         * We need to send the publication directly to the muted remote
-         */
-        ret = DPS_Publish(monitor->pub, NULL, 0, 0);
-        if (ret == DPS_OK) {
-            DPS_DBGPRINT("Send link probe to %s\n", DESCRIBE(monitor->remote));
-            ret = DPS_SendPublication(monitor->node, monitor->pub, monitor->pub->bf, monitor->remote);
-            /*
-             * We have to delete the publication history for the probe otherwise
-             * it will look like a duplicate and will be discarded.
-             */
-            DPS_DeletePubHistory(&monitor->node->history, &monitor->pub->pubId);
-        }
-    }
-
-    if (ret != DPS_OK) {
-        DPS_DBGPRINT("Link probe failed on retry %d\n", monitor->retries);
-        DPS_UnmuteRemoteNode(monitor->node, monitor->remote);
-    }
-}
-
-DPS_Status DPS_LinkMonitorStart(DPS_Node* node, RemoteNode* remote)
+static DPS_Status LinkMonitorInit(DPS_Node* node, LinkMonitor* monitor)
 {
     DPS_Status ret;
-    LinkMonitor* monitor = NULL;
     char topic[25];
     const char* topics[1];
-
-    assert(remote->muted);
-    assert(!remote->monitor);
-    assert(!remote->linked);
 
     /*
      * Create a random topic string for the probe publication
@@ -174,12 +96,6 @@ DPS_Status DPS_LinkMonitorStart(DPS_Node* node, RemoteNode* remote)
     snprintf(topic, sizeof(topic), "%x%x%x", DPS_Rand(), DPS_Rand(), DPS_Rand());
     topics[0] = topic;
 
-    monitor = calloc(1, sizeof(LinkMonitor));
-    if (!monitor) {
-        ret = DPS_ERR_RESOURCES;
-        goto ErrorExit;
-    }
-    monitor->probeReceived = DPS_TRUE;
     monitor->pub = DPS_CreatePublication(node);
     if (!monitor->pub) {
         ret = DPS_ERR_RESOURCES;
@@ -209,6 +125,109 @@ DPS_Status DPS_LinkMonitorStart(DPS_Node* node, RemoteNode* remote)
      */
     DPS_SetSubscriptionData(monitor->sub, monitor);
     /*
+     * Assume we start out ok
+     */
+    monitor->probeReceived = DPS_TRUE;
+    return DPS_OK;
+
+ErrorExit:
+
+    DPS_ERRPRINT("Failed to initialize link monitor %s\n", DPS_ErrTxt(ret));
+    return ret;
+}
+
+void DPS_LinkMonitorStop(RemoteNode* remote)
+{
+    if (remote->monitor) {
+        DPS_DBGPRINT("Node %d no longer monitoring %s\n", remote->monitor->node->port, DESCRIBE(remote));
+        DestroyLinkMonitor(remote->monitor);
+    }
+}
+
+static void OnProbeTimeout(uv_timer_t* handle)
+{
+    DPS_Status ret = DPS_ERR_TIMEOUT;
+    LinkMonitor* monitor = (LinkMonitor*)handle->data;
+
+    DPS_DBGTRACE();
+
+    if (monitor->node->state != DPS_NODE_RUNNING) {
+        return;
+    }
+    DPS_LockNode(monitor->node);
+
+    if (monitor->probeReceived) {
+        monitor->probeReceived = DPS_FALSE;
+        /*
+         * If in retry mode restore timer back to normal
+         */
+        if (monitor->retries != 0) {
+            DPS_DBGPRINT("Link probe recover after retry %d\n", monitor->retries);
+            uv_timer_set_repeat(handle, monitor->node->linkMonitorConfig.probeTO);
+            monitor->retries = 0;
+        }
+        ret = DPS_OK;
+    } else if (monitor->retries < monitor->node->linkMonitorConfig.retries) {
+        /*
+         * Set shorter timeout for retries
+         */
+        if (monitor->retries++ == 0) {
+            uv_timer_set_repeat(handle, monitor->node->linkMonitorConfig.retryTO);
+        }
+        DPS_DBGPRINT("Link probe failed retry %d\n", monitor->retries);
+        ret = DPS_OK;
+    }
+    /*
+     * Send a next probe
+     */
+    if (ret == DPS_OK) {
+        /*
+         * Publications are not normally sent to muted noded so we have
+         * to call the lower layer APIs for force the probe publication
+         * to be sent.
+         */
+        ++monitor->pub->sequenceNum;
+        ret = DPS_SerializePub(monitor->node, monitor->pub, NULL, 0, 0);
+        if (ret == DPS_OK) {
+            DPS_DBGPRINT("Send link probe from %d to %s\n", monitor->node->port, DESCRIBE(monitor->remote));
+            ret = DPS_SendPublication(monitor->node, monitor->pub, monitor->remote);
+            /*
+             * We have to delete the publication history for the probe otherwise
+             * it will look like a duplicate and will be discarded.
+             */
+            DPS_DeletePubHistory(&monitor->node->history, &monitor->pub->pubId);
+        }
+    }
+
+    if (ret != DPS_OK) {
+        DPS_DBGPRINT("Link probe failed on retry %d\n", monitor->retries);
+        DPS_UnmuteRemoteNode(monitor->node, monitor->remote);
+    }
+
+    DPS_UnlockNode(monitor->node);
+}
+
+DPS_Status DPS_LinkMonitorStart(DPS_Node* node, RemoteNode* remote)
+{
+    DPS_Status ret;
+    LinkMonitor* monitor = NULL;
+
+    assert(remote->outbound.muted);
+    assert(!remote->monitor);
+    assert(!remote->linked);
+
+    DPS_DBGPRINT("Node %d is monitoring %s\n", node->port, DESCRIBE(remote));
+
+    monitor = calloc(1, sizeof(LinkMonitor));
+    if (!monitor) {
+        ret = DPS_ERR_RESOURCES;
+        goto ErrorExit;
+    }
+    ret = LinkMonitorInit(node, monitor);
+    if (ret != DPS_OK) {
+        goto ErrorExit;
+    }
+    /*
      * Create and start the mesh monitor timer
      */
     if (uv_timer_init(node->loop, &monitor->timer)) {
@@ -216,7 +235,7 @@ DPS_Status DPS_LinkMonitorStart(DPS_Node* node, RemoteNode* remote)
         goto ErrorExit;
     }
     monitor->timer.data = monitor;
-    if (uv_timer_start(&monitor->timer, OnProbeTimeout, FIRST_TO, PROBE_TO)) {
+    if (uv_timer_start(&monitor->timer, OnProbeTimeout, node->linkMonitorConfig.probeTO, node->linkMonitorConfig.probeTO)) {
         ret = DPS_ERR_FAILURE;
         goto ErrorExit;
     }

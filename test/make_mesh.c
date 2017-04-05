@@ -1,7 +1,7 @@
 /*
  *******************************************************************
  *
- * Copyright 2016 Intel Corporation All rights reserved.
+ * Copyright 2017 Intel Corporation All rights reserved.
  *
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  *
@@ -31,6 +31,21 @@
 #include <dps/synchronous.h>
 #include <dps/event.h>
 #include "../src/node.h"
+
+/*
+ * This is just test code so to make it easy port numbers maps 1:1 into this array
+ */
+static uint16_t PortMap[UINT16_MAX];
+
+/*
+ * Maps node id's to DPS nodes
+ */
+static DPS_Node* NodeMap[UINT16_MAX];
+
+/*
+ * List of node id's from the input file
+ */
+static uint16_t NodeList[UINT16_MAX];
 
 static void OnPubMatch(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* data, size_t len)
 {
@@ -120,15 +135,17 @@ static size_t NumArcs()
     return numArcs;
 }
 
-static void AddLink(uint16_t src, uint16_t dst)
+static LINK* AddLink(uint16_t src, uint16_t dst)
 {
-    if (!HasLink(src, dst)) {
-        LINK* newLink = calloc(1, sizeof(LINK));
-        newLink->next = links;
-        newLink->src = src;
-        newLink->dst = dst;
-        links = newLink;
+    LINK* l = HasLink(src, dst);
+    if (!l) {
+        l = calloc(1, sizeof(LINK));
+        l->next = links;
+        l->src = src;
+        l->dst = dst;
+        links = l;
     }
+    return l;
 }
 
 static int StrArg(char* opt, char*** argp, int* argcp, const char** val)
@@ -177,10 +194,6 @@ static int IntArg(char* opt, char*** argp, int* argcp, int* val, int min, int ma
     return 1;
 }
 
-#define BASE_PORT 60000
-#define PORT_NUM(n)  ((uint16_t)((n) + BASE_PORT))
-
-
 static uint16_t GetPort(DPS_NodeAddress* nodeAddr)
 {
     const struct sockaddr* addr = (const struct sockaddr*)&nodeAddr->inaddr;
@@ -191,77 +204,88 @@ static uint16_t GetPort(DPS_NodeAddress* nodeAddr)
     }
 }
 
-static size_t MuteLinks(DPS_Node* node)
+static size_t AddLinksForNode(DPS_Node* node)
 {
     size_t numMuted = 0;
     RemoteNode* remote;
+    uint16_t nodeId = PortMap[DPS_GetPortNumber(node)];
 
     for (remote = node->remoteNodes; remote != NULL; remote = remote->next) {
-        if (remote->muted) {
-            uint16_t port = GetPort(&remote->ep.addr);
-            LINK* link = HasLink(node->port, port);
-            if (!link) {
-                DPS_ERRPRINT("Missing link %d -> %d\n", node->port, port);
-            } else {
-                if (!link->muted) {
-                    ++numMuted;
-                }
-                ++link->muted;
-                assert(link->muted <= 2);
+        uint16_t port = GetPort(&remote->ep.addr);
+        uint16_t id = PortMap[port];
+        if (NodeMap[id]) {
+            LINK* link = AddLink(nodeId, id);
+            if (remote->outbound.muted) {
+                ++numMuted;
+                link->muted = 1;
             }
         }
     }
     return numMuted;
 }
 
-static void PrintGraph(DPS_Node** node, size_t numNodes, const char* outFn, int showMuted)
+static void MakeLinks(size_t* numNodes, size_t* numMuted)
 {
-    FILE* f = NULL;
-    size_t numMuted = 0;
+    size_t i;
+
+    *numMuted = 0;
+    *numNodes = 0;
+
+    /* Delete stale link info */
+    while (links) {
+        LINK* l = links;
+        links = links->next;
+        free(l);
+    }
+    for (i = 0; i < A_SIZEOF(NodeMap); ++i) {
+        if (NodeMap[i]) {
+            *numMuted += AddLinksForNode(NodeMap[i]);
+            *numNodes += 1;
+        }
+    }
+}
+
+static void PrintSubgraph(FILE* f, int showMuted, uint16_t* kills, size_t numKills)
+{
+    static int g = 0;
+    static int base = 0;
     static const char* style[] = {
-        "",
-        " [color=gray20, style=dotted]",
-        " [color=red, style=dotted]",
+        " [len=0.7]",
+        " [color=red, style=dotted, len=1.5]"
     };
     LINK* l;
     size_t i;
+    size_t numNodes = 0;
+    size_t numArcs = 0;
+    size_t numMuted = 0;
+    int maxN = 0;
 
-    for (i = 0; i < numNodes; ++i) {
-        numMuted += MuteLinks(node[i]);
-    }
-
-    if (outFn) {
-        f = fopen(outFn, "w");
-        if (!f) {
-            DPS_PRINT("Could not open %s for writing\n");
-            f = stdout;
-        }
-    }
-    if (!f) {
-        f = stdout;
+    MakeLinks(&numNodes, &numMuted);
+    if (numMuted & 1) {
+        DPS_ERRPRINT("Odd number of muted links - something went wrong\n");
     }
 
-    fprintf(f, "graph {\n");
-    fprintf(f, "  node[shape=circle, width=0.3, fontsize=10, margin=\"0.01,0.01\", fixedsize=true];\n");
-    if (showMuted) {
-        fprintf(f, "  epsilon=0.00005;\n");
-        fprintf(f, "  overlap=scale;\n");
-    } else {
-        fprintf(f, "  overlap=false;\n");
+    fprintf(f, "subgraph cluster_%d {\n", g++);
+    for (i = 0; i < numKills; ++i) {
+        fprintf(f, "  %d[style=filled, fillcolor=yellow];\n", kills[i] + base);
     }
-    fprintf(f, "  splines=true;\n");
     for (l = links; l != NULL; l = l->next) {
+        int src = l->src + base;
+        int dst = l->dst + base;
         if (showMuted || (l->muted == 0)) {
-            fprintf(f, "  %d -- %d%s;\n", l->src - BASE_PORT, l->dst - BASE_PORT, style[l->muted]);
+            fprintf(f, "  %d -- %d%s;\n", src, dst, style[l->muted]);
+            fprintf(f, "  %d[label=%d];\n", src, l->src);
+            fprintf(f, "  %d[label=%d];\n", dst, l->dst);
+            ++numArcs;
         }
+        maxN  = (src > maxN) ? src : maxN;
+        maxN  = (dst > maxN) ? dst : maxN;
     }
     fprintf(f, "  labelloc=t;\n");
-    fprintf(f, "  label=\"Nodes=%d arcs=%d muted=%d\";\n", (int)numNodes, (int)NumArcs(), (int)numMuted);
+    fprintf(f, "  label=\"Nodes=%d arcs=%d muted=%d\";\n", (int)numNodes, (int)NumArcs(), (int)(numMuted / 2));
     fprintf(f, "}\n");
 
-    if (f != stdout) {
-        fclose(f);
-    }
+    base += maxN + 1;
 }
 
 static void DumpLinks()
@@ -272,11 +296,9 @@ static void DumpLinks()
     }
 }
 
-#define MAX_NODES 1024
-
-static int ReadLinks(const char* fn, uint16_t* nodes)
+static int ReadLinks(const char* fn)
 {
-    int numNodes = 0;
+    int numIds = 0;
     FILE* f;
 
     f = fopen(fn, "r");
@@ -313,19 +335,17 @@ static int ReadLinks(const char* fn, uint16_t* nodes)
                 goto ErrExit;
 
             }
-            ep1 = PORT_NUM(ep1);
-            ep2 = PORT_NUM(ep2);
             if (IsNew(ep1)) {
-                nodes[numNodes++] = ep1;
+                NodeList[numIds++] = ep1;
             }
             if (IsNew(ep2)) {
-                nodes[numNodes++] = ep2;
+                NodeList[numIds++] = ep2;
             }
             AddLink(ep1, ep2);
         }
     }
     fclose(f);
-    return numNodes;
+    return numIds;
 
 ErrExit:
 
@@ -333,25 +353,58 @@ ErrExit:
     return 0;
 }
 
+static void DumpMeshIds(uint16_t numIds)
+{
+    size_t i;
+    for (i = 0; i < numIds; ++i) {
+        uint16_t id = NodeList[i];
+        DPS_Node* node = NodeMap[id];
+        if (node) {
+            DPS_PRINT("Node[%d] has meshId %08x (min=%08x)\n", id, UUID_32(&node->meshId), UUID_32(&node->minMeshId));
+        }
+    }
+}
+
+static void DumpPortMap(uint16_t numIds)
+{
+    size_t i;
+    for (i = 0; i < numIds; ++i) {
+        uint16_t id = NodeList[i];
+        DPS_Node* node = NodeMap[id];
+        DPS_PRINT("Node[%d] = %d\n", id, DPS_GetPortNumber(node));
+    }
+}
+
 static void OnNodeDestroyed(DPS_Node* node, void* data)
 {
+    if (data) {
+        DPS_PRINT("Node %d destroyed\n", *(uint16_t*)data);
+    }
 }
+
+const LinkMonitorConfig FastLinkProbe = {
+    .retries = 0,     /* Maximum number of retries following a probe failure */
+    .probeTO = 1000,  /* Repeat rate for probes */
+    .retryTO = 10     /* Repeat time for retries following a probe failure */
+};
+
+#define MAX_KILLS  16
 
 int main(int argc, char** argv)
 {
+    FILE* dotFile = NULL;
     DPS_Status ret;
     char** arg = argv + 1;
     LINK* l;
-    DPS_Node* node[MAX_NODES];
-    uint16_t nodePort[MAX_NODES];
     DPS_Event* sleeper;
-    int numNodes = 2;
+    int numIds = 0;
     int numLinks = 0;
-    int showMuted = 1;
     int maxSubs = 1;
     int numSubs = 0;
+    int numKills = 0;
     const char* inFn = NULL;
     const char* outFn = NULL;
+    uint16_t killList[MAX_KILLS];
     size_t i;
 
     DPS_Debug = 0;
@@ -366,7 +419,7 @@ int main(int argc, char** argv)
         if (IntArg("-s", &arg, &argc, &maxSubs, 0, 10000)) {
             continue;
         }
-        if (IntArg("-m", &arg, &argc, &showMuted, 0, 1)) {
+        if (IntArg("-k", &arg, &argc, &numKills, 0, MAX_KILLS)) {
             continue;
         }
         if (strcmp(*arg, "-d") == 0) {
@@ -374,33 +427,43 @@ int main(int argc, char** argv)
             DPS_Debug = 1;
             continue;
         }
-        if (IntArg("-n", &arg, &argc, &numNodes, 2, UINT16_MAX)) {
+        if (IntArg("-n", &arg, &argc, &numIds, 2, UINT16_MAX)) {
             continue;
         }
     }
     if (inFn) {
-        numNodes = ReadLinks(inFn, nodePort);
-        if (numNodes == 0) {
+        numIds = ReadLinks(inFn);
+        if (numIds == 0) {
             return 1;
         }
         DumpLinks();
     } else {
-        for (i = 0; i < numNodes; ++i) {
-            nodePort[i] = PORT_NUM(i);
-        }
+        /*
+         * TODO - do something useful here
+         */
+        DPS_PRINT("No input file\n");
+        return 1;
     }
-
     /*
      * Start the nodes
      */
-    for (i = 0; i < numNodes; ++i) {
-        node[i] = DPS_CreateNode("/.", NULL, NULL);
-        ret = DPS_StartNode(node[i], DPS_FALSE, nodePort[i]);
+    for (i = 0; i < numIds; ++i) {
+        DPS_Node* node = DPS_CreateNode("/.", NULL, NULL);
+        ret = DPS_StartNode(node, DPS_FALSE, 0);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
             return 1;
         }
+        PortMap[DPS_GetPortNumber(node)] = NodeList[i];
+        NodeMap[NodeList[i]] = node;
+        /*
+         * Set fast link monitor probes so we don't
+         * need to wait so long to detect disconnects.
+         */
+        node->linkMonitorConfig = FastLinkProbe;
     }
+    DumpPortMap(numIds);
+
     sleeper = DPS_CreateEvent();
     /*
      * Wait for a short time while before trying to link
@@ -411,13 +474,10 @@ int main(int argc, char** argv)
      */
     for (l = links; l != NULL; l = l->next) {
         DPS_NodeAddress* addr = DPS_CreateAddress();
-        for (i = 0; i < numNodes; ++i) {
-            if (DPS_GetPortNumber(node[i]) == l->src) {
-                break;
-            }
-        }
-        assert(i < numNodes);
-        ret = DPS_LinkTo(node[i], NULL, l->dst, addr);
+        DPS_Node* src = NodeMap[l->src];
+        DPS_Node* dst = NodeMap[l->dst];
+
+        ret = DPS_LinkTo(src, NULL, DPS_GetPortNumber(dst), addr);
         if (ret == DPS_OK) {
             DPS_PRINT("Node %d connected to node %d\n", l->src, l->dst);
             ++numLinks;
@@ -427,21 +487,22 @@ int main(int argc, char** argv)
         DPS_DestroyAddress(addr);
     }
 
-    DPS_PRINT("%d nodes created %d links \n", numNodes, numLinks);
+    DPS_PRINT("%d nodes created %d links \n", numIds, numLinks);
 
     DPS_TimedWaitForEvent(sleeper, 100);
     /*
      * Add some subscriptions
      */
     while (maxSubs > 0) {
-        for (i = 0; i < numNodes && numSubs < maxSubs; ++i) {
+        for (i = 0; i < numIds && numSubs < maxSubs; ++i) {
+            DPS_Node* node = NodeMap[NodeList[i]];
             if ((DPS_Rand() % 4) == 0) {
                 DPS_Subscription* sub;
                 char topic[] = "A";
                 const char* topicList[] = { topic };
 
                 topic[0] += DPS_Rand() % 26;
-                sub = DPS_CreateSubscription(node[i], topicList, 1);
+                sub = DPS_CreateSubscription(node, topicList, 1);
                 if (!sub) {
                     DPS_ERRPRINT("CreateSubscribe failed\n");
                     break;
@@ -452,7 +513,7 @@ int main(int argc, char** argv)
                 } else {
                     DPS_ERRPRINT("Subscribe failed %s\n", DPS_ErrTxt(ret));
                 }
-                DPS_TimedWaitForEvent(sleeper, DPS_Rand() % 100);
+                DPS_TimedWaitForEvent(sleeper, 1 + DPS_Rand() % 100);
             }
         }
         /*
@@ -463,14 +524,75 @@ int main(int argc, char** argv)
         }
     }
 
+    /*
+     * Decide which nodes we are going to kill
+     */
+    for (i = 0; i < numKills; ++i) {
+        uint16_t goner = NodeList[DPS_Rand() % numIds];
+        if (NodeMap[goner]) {
+            killList[i] = goner;
+        }
+    }
+
     DPS_TimedWaitForEvent(sleeper, 1000);
 
-    PrintGraph(node, numNodes, outFn, showMuted);
+    DumpMeshIds(numIds);
+
+    if (outFn) {
+        dotFile = fopen(outFn, "w");
+        if (!dotFile) {
+            DPS_PRINT("Could not open %s for writing\n");
+            dotFile = stdout;
+        }
+    }
+    if (!dotFile) {
+        dotFile = stdout;
+    }
+
+    fprintf(dotFile, "graph {\n");
+    fprintf(dotFile, "  node[shape=circle, width=0.3, fontsize=10, margin=\"0.01,0.01\", fixedsize=true];\n");
+    fprintf(dotFile, "  overlap=false;\n");
+    fprintf(dotFile, "  splines=true;\n");
+
+    fprintf(dotFile, "subgraph cluster_A {\n");
+    PrintSubgraph(dotFile, 1, killList, numKills);
+    PrintSubgraph(dotFile, 0, killList, numKills);
+    fprintf(dotFile, "}\n");
+
+    if (numKills > 0) {
+        /*
+         * Kill the nodes on the list
+         */
+        for (i = 0; i < numKills; ++i) {
+            uint16_t goner = killList[i];
+            if (NodeMap[goner]) {
+                DPS_PRINT("Killing node %d\n", goner);
+                DPS_DestroyNode(NodeMap[goner], OnNodeDestroyed, &killList[i]);
+                NodeMap[goner] = NULL;
+            }
+        }
+
+        DPS_TimedWaitForEvent(sleeper, 5000);
+
+        fprintf(dotFile, "subgraph cluster_B {\n");
+        PrintSubgraph(dotFile, 1, NULL, 0);
+        PrintSubgraph(dotFile, 0, NULL, 0);
+        fprintf(dotFile, "}\n");
+    }
+
+    fprintf(dotFile, "}\n");
+
+    if (dotFile != stdout) {
+        fclose(dotFile);
+    }
 
     DPS_DestroyEvent(sleeper);
 
-    for (i = 0; i < numNodes; ++i) {
-        DPS_DestroyNode(node[i], NULL, OnNodeDestroyed);
+    for (i = 0; i < A_SIZEOF(NodeMap); ++i) {
+        if (NodeMap[i]) {
+            DPS_DestroyNode(NodeMap[i], OnNodeDestroyed, NULL);
+            NodeMap[i] = NULL;
+        }
     }
 
     return 0;

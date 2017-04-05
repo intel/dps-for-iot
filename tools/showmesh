@@ -2,27 +2,27 @@
 
 OPTIND=1
 
-gcmd="neato"
-show_muted="1"
+engine="fdp"
 outfile=''
 logfile="log"
 num_subs=1
+num_kills=0
+debug=''
 
-while getopts "hm:dno:l:s:" opt; do
+while getopts "de:hk:l:o:s:" opt; do
     case "$opt" in
-    h)
-        echo "[-n|d] [-m] <mesh-file>"
+    d)  debug="-d"
+        ;;
+    e)  engine=$OPTARG
+        ;;
+    h)  echo "[-d] [-o <png file>] [-l <logfile>] [-k count] [-s <count>] [-e <engine>] <mesh-file>"
         exit 0
         ;;
-    d)  gcmd="dot"
-        ;;
-    n)  gcmd="neato"
-        ;;
-    m)  show_muted=$OPTARG
-        ;;
-    o)  outfile=$OPTARG
+    k)  num_kills=$OPTARG
         ;;
     l)  logfile=$OPTARG
+        ;;
+    o)  outfile=$OPTARG
         ;;
     s)  num_subs=$OPTARG
         ;;
@@ -32,8 +32,8 @@ done
 shift $((OPTIND-1))
 
 if [[ $outfile != '' ]]; then
-    build/test/bin/make_mesh -s $num_subs -m $show_muted -f $@ 2> $logfile | $gcmd -Tpng > $outfile
+    build/test/bin/make_mesh $debug -s $num_subs -k $num_kills -f $@ 2> $logfile | $engine -Tpng > $outfile
     display $outfile&
 else
-    build/test/bin/make_mesh -s $num_subs -m $show_muted -f $@ 2> $logfile | $gcmd -Tpng | display &
+    build/test/bin/make_mesh $debug -s $num_subs -k $num_kills -f $@ 2> $logfile | $engine -Tpng | display &
 fi

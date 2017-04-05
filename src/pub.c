@@ -675,7 +675,7 @@ static void OnPubSendComplete(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep,
 /*
  * Multicast a publication or send it directly to a remote subscriber node
  */
-DPS_Status DPS_SendPublication(DPS_Node* node, DPS_Publication* pub, DPS_BitVector* bf, RemoteNode* remote)
+DPS_Status DPS_SendPublication(DPS_Node* node, DPS_Publication* pub, RemoteNode* remote)
 {
     DPS_Status ret;
     DPS_TxBuffer buf;
@@ -883,7 +883,9 @@ DPS_Status DPS_InitPublication(DPS_Publication* pub,
         return DPS_ERR_ARGS;
     }
     DPS_DBGPRINT("Creating publication with %zu topics %s\n", numTopics, handler ? "and ACK handler" : "");
-    DPS_DumpTopics(topics, numTopics);
+    if (DPS_DEBUG_ENABLED()) {
+        DPS_DumpTopics(topics, numTopics);
+    }
 
     pub->bf = DPS_BitVectorAlloc();
     if (!pub->bf) {
@@ -989,7 +991,7 @@ DPS_Status DPS_InitPublication(DPS_Publication* pub,
  * The topic strings and bloom filter have already been serialized into buffers in
  * the publication structure,
  */
-static DPS_Status SerializePub(DPS_Node* node, DPS_Publication* pub, const uint8_t* data, size_t dataLen, int16_t ttl)
+DPS_Status DPS_SerializePub(DPS_Node* node, DPS_Publication* pub, const uint8_t* data, size_t dataLen, int16_t ttl)
 {
     DPS_Status ret;
     size_t len;
@@ -1154,7 +1156,7 @@ DPS_Status DPS_Publish(DPS_Publication* pub, const uint8_t* payload, size_t len,
     /*
      * Serialize the publication
      */
-    ret = SerializePub(node, pub, payload, len, ttl);
+    ret = DPS_SerializePub(node, pub, payload, len, ttl);
     if (ret != DPS_OK) {
         return ret;
     }

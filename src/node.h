@@ -58,6 +58,15 @@ typedef struct _OnOpCompletion OnOpCompletion;
 
 typedef struct _LinkMonitor LinkMonitor;
 
+/*
+ * Link monitor configuration values. All times are in milliseconds.
+ */
+typedef struct _LinkMonitorConfig {
+    uint16_t retries;  /* Number of probe retries after a timeout */
+    uint16_t retryTO;  /* Probe retry time */
+    uint32_t probeTO;  /* Probe repeat time */
+} LinkMonitorConfig;
+
 typedef struct _DPS_Node {
     void* userData;
 
@@ -66,6 +75,7 @@ typedef struct _DPS_Node {
     uint16_t tasks;                       /* Background tasks that have been scheduled */
     uint16_t port;
     DPS_UUID meshId;                      /* Randomly allocated mesh id for this node */
+    DPS_UUID minMeshId;                   /* Minimum mesh id seen by this node */
     char separators[13];                  /* List of separator characters */
     DPS_KeyStore *keyStore;               /* Functions for loading encryption keys */
     DPS_UUID keyId;                       /* Encryption key identifier */
@@ -106,20 +116,22 @@ typedef struct _DPS_Node {
     DPS_OnNodeDestroyed onDestroyed;      /* Function to call when the node is destroyed */
     void* onDestroyedData;                /* Context to pass to onDestroyed callback */
 
-} DPS_Node;
+    LinkMonitorConfig linkMonitorConfig;  /* Configuration parameters for mesh probe publications */
 
-#define DPS_REMOTE_UNMUTED 0
-#define DPS_REMOTE_MUTING  1
-#define DPS_REMOTE_MUTED   2
+} DPS_Node;
 
 extern const DPS_UUID DPS_MaxMeshId;
 
+#define DPS_SUB_FLAG_SYNC_INF    1      /* Inform remote interests are being synched (not delta) */
+#define DPS_SUB_FLAG_SYNC_REQ    2      /* Request remote to send synched interests */
+#define DPS_SUB_FLAG_MUTE_INF    4      /* Inform remote node sender is muted */
+
 typedef struct _RemoteNode {
     OnOpCompletion* completion;
-    uint8_t linked;                    /* True if this is a node that was explicitly linked */
-    uint8_t unlink;                    /* True if this node is about to be unlinked */
-    uint8_t muted;                     /* Non zero if this remote is muted or being muted */
+    uint8_t linked;                    /* TRUE if this is a node that was explicitly linked */
+    uint8_t unlink;                    /* TRUE if this node is about to be unlinked */
     struct {
+        uint8_t muted;                 /* TRUE if the remote informed us the that link is muted */
         uint8_t sync;                  /* If TRUE request remote to synchronize interests */
         uint32_t sequenceNum;          /* Sequence number of last subscription received from this node */
         DPS_UUID meshId;               /* The mesh id received from this remote node */
@@ -127,6 +139,7 @@ typedef struct _RemoteNode {
         DPS_BitVector* interests;      /* Bit vector of interests received from  this remote node */
     } inbound;
     struct {
+        uint8_t muted;                 /* TRUE if we have informed the remote that the link is muted */
         uint8_t sync;                  /* If TRUE synchronize outbound interests with remote node (no deltas) */
         uint8_t checkForUpdates;       /* TRUE if there may be updated interests to send to this remote */
         uint32_t sequenceNum;          /* Sequence number of last subscription sent to this node */
@@ -268,9 +281,17 @@ void DPS_LockNode(DPS_Node* node);
 void DPS_UnlockNode(DPS_Node* node);
 
 /**
+ * Check if the current thread is holding the node lock.
+ * This is intended for use in asserts.
+ *
+ * @param node The node to check
+ */
+int DPS_HasNodeLock(DPS_Node* node);
+
+/**
  * For debug output of mesh ids
  */
-#define UUID_32(n) (((n)->val[12]) | ((n)->val[13] << 8) | ((n)->val[14] << 16) | ((n)->val[15] << 24))
+#define UUID_32(n) (((n)->val[0] << 24) | ((n)->val[1] << 16) | ((n)->val[2] << 8) | ((n)->val[3] << 0))
 
 #ifdef __cplusplus
 }

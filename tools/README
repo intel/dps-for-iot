@@ -4,18 +4,18 @@ This is repository for useful tools
 
 showmesh
 
-Runs the make_mesh test on an input file and displays the resultant graph.
+Runs the make_mesh test on an input file and displays the resultant graphs.
 
-tools/showmesh [-o <png file>] [-l <logfile>] [-s <count>] [-m[0|1]] [-n|-d] <file>
+tools/showmesh [-d] [-o <png file>] [-l <logfile>] [-k count] [-s <count>] [-e <engine>] <file>
 
 Requires graphviz and imagemagick (or some other png viewer)
 
-    -m  -- 0 to hide muted arcs, 1 (default) to show them
-    -d  -- use dot for layout
-    -n  -- use neato for layout (default)
+    -d  -- debug
+    -e  -- graphviz engine (default is fdp)
     -o  -- Capture the png output file
     -l  -- Capture the log file from make_mesh
     -s  -- Maximum number of subscriptions to register (default=1)
+    -k  -- Maximum number of nodes to kill (default=0)
 
 There are some sample meshes in the ./meshes subdir.
 
