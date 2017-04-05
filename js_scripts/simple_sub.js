@@ -7,15 +7,11 @@ var simple_sub = (function(){
         ack = "Acking " + dps.PublicationGetSequenceNum(pub)
         dps.AckPublication(pub, ack);
     };
-    var onNode = function(node, kid, key, keylen) {
-        console.log("Key Request Callback");
-        return 0;
-    };
 
     /* Set to 1 to enable DPS debug output */
     dps.Debug = 1;
 
-    var node = dps.CreateNode("/", onNode, 0);
+    var node = dps.CreateNode("/", null, 0);
     dps.StartNode(node, dps.MCAST_PUB_ENABLE_RECV, 0);
     var sub = dps.CreateSubscription(node, ['a/b/c']);
     dps.Subscribe(sub, onPub);

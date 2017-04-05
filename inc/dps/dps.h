@@ -132,6 +132,8 @@ int DPS_PublicationIsAckRequested(const DPS_Publication* pub);
  */
 DPS_Node* DPS_PublicationGetNode(const DPS_Publication* pub);
 
+typedef struct _DPS_KeyStore DPS_KeyStore;
+
 /**
  * Function prototype for callback function for requesting the encryption key
  * for a specific key identifier. This function must not block
@@ -144,7 +146,19 @@ DPS_Node* DPS_PublicationGetNode(const DPS_Publication* pub);
  * @return  DPS_OK if a key matching the kid was returned
  *          DPS_ERR_MSSING if there is no matching key
  */
-typedef DPS_Status (*DPS_KeyRequestCallback)(DPS_Node* node, const DPS_UUID* kid, uint8_t* key, size_t keyLen);
+typedef DPS_Status (*DPS_ContentKeyCallback)(DPS_KeyStore* keyStore, const DPS_UUID* kid, uint8_t* key, size_t keyLen);
+
+struct _DPS_KeyStore {
+    /* TODO: Add version information to this exposed struct or make it opaque and add setters. */
+    void* userData;
+    DPS_ContentKeyCallback contentKeyCB;
+};
+
+typedef struct _DPS_MemoryKeyStore DPS_MemoryKeyStore;
+DPS_MemoryKeyStore* DPS_CreateMemoryKeyStore();
+void DPS_DestroyMemoryKeyStore(DPS_MemoryKeyStore* mks);
+DPS_Status DPS_SetContentKey(DPS_MemoryKeyStore* mks, const DPS_UUID* kid, uint8_t* key, size_t keyLen);
+DPS_KeyStore* DPS_MemoryKeyStoreHandle(DPS_MemoryKeyStore* mks);
 
 /**
  * Allocates space for a local DPS node.
@@ -155,7 +169,7 @@ typedef DPS_Status (*DPS_KeyRequestCallback)(DPS_Node* node, const DPS_UUID* kid
  *
  * @return A pointer to the uninitialized node or NULL if there were no resources for the node.
  */
-DPS_Node* DPS_CreateNode(const char* separators, DPS_KeyRequestCallback keyRequestCB, const DPS_UUID* keyId);
+DPS_Node* DPS_CreateNode(const char* separators, DPS_KeyStore* keyStore, const DPS_UUID* keyId);
 
 /**
  * Store a pointer to application data in a node.

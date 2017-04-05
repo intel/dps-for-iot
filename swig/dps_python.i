@@ -303,128 +303,6 @@ static void _ClearPubHandler(DPS_Subscription* sub)
     }
 }
 
-/*
- * node callback call into Python function
- */
-%{
-DPS_Status NodeHandler(DPS_Node* node, const DPS_UUID* kid, uint8_t* key, size_t keyLen)
-{
-    PyObject* cb = (PyObject*)DPS_GetNodeData(node);
-    PyObject* nodeObj;
-    PyObject* uuidObj;
-    PyObject* kidObj;
-    PyObject* ret;
-    PyGILState_STATE gilState;
-    DPS_Status retvalue = DPS_OK;
-    int i, j;
-
-    if (!cb) {
-        PyErr_SetString(PyExc_TypeError,"Callback is NULL");
-        return DPS_ERR_FAILURE;
-    }
-    if (!kid) {
-        return DPS_ERR_MISSING;
-    }
-    /*
-     * This callback was called from an external thread so we
-     * need to get the Global-Interpreter-Interlock before we
-     * can call into the Python interpreter.
-     */
-    gilState = PyGILState_Ensure();
-
-    kidObj = PyList_New(0);
-    uuidObj = PyList_New(0);
-    for (i = 0; i < sizeof(DPS_UUID); i++) {
-       PyList_Append(uuidObj, Py_BuildValue("i", kid->val[i]));
-    }
-
-    nodeObj = SWIG_NewPointerObj(SWIG_as_voidptr(node), SWIGTYPE_p__DPS_Node, 0);
-    ret = PyObject_CallFunction(cb, "OOOi", nodeObj, uuidObj, kidObj, keyLen);
-    for (i = 0, j = 0; j < PyList_Size(kidObj); ++j) {
-        PyObject *pValue = PyList_GetItem(kidObj, j);
-        if (PyInt_Check(pValue) && i < sizeof(DPS_UUID)) {
-            int32_t v = PyInt_AsLong(pValue);
-            if (v >= 0 && v <= 255) {
-                key[i++] = (uint8_t)v;
-            } else {
-                PyErr_SetString(PyExc_TypeError,"key values must be in range 0..255");
-                retvalue = DPS_ERR_INVALID;
-                break;
-            }
-        } else {
-            PyErr_SetString(PyExc_TypeError,"key is not int type or len > uuid");
-            retvalue = DPS_ERR_INVALID;
-            break;
-        }
-    }
-
-    if (PyInt_Check(ret)) {
-        if (retvalue == DPS_OK) {
-            retvalue = (DPS_Status)PyInt_AsLong(ret);
-        }
-    } else {
-        retvalue = DPS_ERR_MISSING;
-    }
-
-    Py_XDECREF(nodeObj);
-    Py_XDECREF(kidObj);
-    Py_XDECREF(uuidObj);
-    Py_XDECREF(ret);
-    /*
-     * All done we can release the lock
-     */
-    PyGILState_Release(gilState);
-
-    return retvalue;
-}
-%}
-
-/*
- * KeyRequest callback wrapper
- */
-%typemap(in) DPS_KeyRequestCallback {
-    if (!PyCallable_Check($input)) {
-        PyErr_SetString(PyExc_TypeError,"not a function");
-        SWIG_fail;
-    }
-    Py_INCREF($input);
-    $1 = NodeHandler;
-}
-
-%inline %{
-static void _SetNodeHandler(PyObject* cb, PyObject* val)
-{
-    void* argp = 0;
-    int res1;
-
-    res1 = SWIG_ConvertPtr(val, &argp, SWIGTYPE_p__DPS_Node, 0 |  0 );
-    if (SWIG_IsOK(res1)) {
-        DPS_SetNodeData((DPS_Node*)argp, cb);
-    } else {
-        PyErr_SetString(PyExc_ValueError,"invalid dps.Node");
-    }
-}
-%}
-
-%pythonappend DPS_CreateNode %{
-    _SetNodeHandler(args[1], val);
-%}
-
-%inline %{
-static void _ClearNodeHandler(DPS_Node* node)
-{
-    PyObject* cb = (PyObject*)DPS_GetNodeData(node);
-    Py_XDECREF(cb);
-}
-%}
-
-/*
- * Dereference the python callback function when freeing a node
- */
-%pythonappend DPS_DestroyNode %{
-   _ClearNodeHandler(args[0]);
-%}
-
 %{
 static PyObject* UUIDToPyString(const DPS_UUID* uuid)
 {
@@ -484,6 +362,53 @@ static PyObject* UUIDToPyString(const DPS_UUID* uuid)
 
 %typemap(out) const DPS_UUID* {
     $result = UUIDToPyString($1);
+}
+
+/*
+ * Used in DPS_SetContentKey.
+ */
+%typemap(in) (uint8_t* key, size_t keyLen) {
+    uint8_t* key = NULL;
+    size_t keyLen = 0;
+
+    if ($input != Py_None) {
+        if (!PyList_Check($input)) {
+            PyErr_SetString(PyExc_TypeError, "key should be a list\n");
+            SWIG_fail;
+        }
+        keyLen = PyList_Size($input);
+
+        key = calloc(keyLen, sizeof(uint8_t));
+        if (!key) {
+            SWIG_fail;
+        }
+
+        for (size_t i = 0; i < keyLen; ++i) {
+            PyObject *pValue = PyList_GetItem($input, i);
+            if (PyInt_Check(pValue)) {
+                int32_t v = PyInt_AsLong(pValue);
+                if (v >= 0 && v <= 255) {
+                    key[i] = (uint8_t)v;
+                } else {
+                    PyErr_SetString(PyExc_TypeError, "key values must be a list of int in range 0..255");
+                    free(key);
+                    SWIG_fail;
+                }
+            } else {
+                PyErr_SetString(PyExc_TypeError, "key is not list of ints");
+                free(key);
+                SWIG_fail;
+            }
+
+        }
+    }
+
+    $1 = key;
+    $2 = keyLen;
+}
+
+%typemap(freearg) (uint8_t* key, size_t keyLen) {
+    free($1);
 }
 
 /*

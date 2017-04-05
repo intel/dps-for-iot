@@ -59,19 +59,6 @@ static uint8_t keyData[NUM_KEYS][16] = {
     { 0x39,0x12,0x3e,0x7f,0x21,0xbc,0xa3,0x26,0x4e,0x6f,0x3a,0x21,0xa4,0xf1,0xb5,0x98 }
 };
 
-DPS_Status GetKey(DPS_Node* node, const DPS_UUID* kid, uint8_t* key, size_t keyLen)
-{
-    size_t i;
-
-    for (i = 0; i < NUM_KEYS; ++i) {
-        if (DPS_UUIDCompare(kid, &keyId[i]) == 0) {
-            memcpy(key, keyData[i], keyLen);
-            return DPS_OK;
-        }
-    }
-    return DPS_ERR_MISSING;
-}
-
 static void OnNodeDestroyed(DPS_Node* node, void* data)
 {
     DPS_SignalEvent(nodeDestroyed, DPS_OK);
@@ -243,6 +230,7 @@ int main(int argc, char** argv)
     char** arg = ++argv;
     const char* tenant = "anonymous_tenant";
     size_t numTopics = 0;
+    DPS_MemoryKeyStore* memoryKeyStore = NULL;
     DPS_Node* node;
     DPS_NodeAddress* remoteAddr;
     int mcastPub = DPS_MCAST_PUB_DISABLED;
@@ -309,7 +297,11 @@ int main(int argc, char** argv)
         goto Usage;
     }
 
-    node = DPS_CreateNode("/.", GetKey, &keyId[0]);
+    memoryKeyStore = DPS_CreateMemoryKeyStore();
+    for (size_t i = 0; i < NUM_KEYS; ++i) {
+        DPS_SetContentKey(memoryKeyStore, &keyId[i], keyData[i], 16);
+    }
+    node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore), &keyId[0]);
 
     ret = DPS_StartNode(node, mcastPub, 0);
     if (ret != DPS_OK) {
@@ -351,6 +343,7 @@ Exit:
     DPS_DestroyNode(node, OnNodeDestroyed, NULL);
     DPS_WaitForEvent(nodeDestroyed);
     DPS_DestroyEvent(nodeDestroyed);
+    DPS_DestroyMemoryKeyStore(memoryKeyStore);
     return 0;
 
 Usage:
