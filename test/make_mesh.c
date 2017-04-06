@@ -245,13 +245,13 @@ static void MakeLinks(size_t* numNodes, size_t* numMuted)
     }
 }
 
-static void PrintSubgraph(FILE* f, int showMuted, uint16_t* kills, size_t numKills)
+static void PrintSubgraph(FILE* f, int showMuted, uint16_t* kills, size_t numKills, const char* color, int* label)
 {
-    static int g = 0;
+    static int cluster = 0;
     static int base = 0;
     static const char* style[] = {
-        " [len=0.7]",
-        " [color=red, style=dotted, len=1.5]"
+        " [len=1]",
+        " [color=red, style=dotted, len=2, weight=2]"
     };
     LINK* l;
     size_t i;
@@ -264,10 +264,17 @@ static void PrintSubgraph(FILE* f, int showMuted, uint16_t* kills, size_t numKil
     if (numMuted & 1) {
         DPS_ERRPRINT("Odd number of muted links - something went wrong\n");
     }
+    DPS_PRINT("Nodes=%d, muted=%d\n", numNodes, numMuted / 2);
 
-    fprintf(f, "subgraph cluster_%d {\n", g++);
+    if (*label == 0) {
+        *label = base + 1000;
+        fprintf(f, "  %d[shape=none, width=1, style=bold, height=1, fontsize=12, label=\"nodes=%d\\narcs=%d\\nmuted=%d\"];\n", *label, (int)numNodes, (int)NumArcs(), (int)(numMuted / 2));
+    }
+
+    fprintf(f, "subgraph cluster%d {\n", ++cluster);
+    fprintf(f, "  node[style=filled, fillcolor=%s];\n", color);
     for (i = 0; i < numKills; ++i) {
-        fprintf(f, "  %d[style=filled, fillcolor=yellow];\n", kills[i] + base);
+        fprintf(f, "  %d[style=filled, fillcolor=azure2];\n", kills[i] + base);
     }
     for (l = links; l != NULL; l = l->next) {
         int src = l->src + base;
@@ -281,9 +288,8 @@ static void PrintSubgraph(FILE* f, int showMuted, uint16_t* kills, size_t numKil
         maxN  = (src > maxN) ? src : maxN;
         maxN  = (dst > maxN) ? dst : maxN;
     }
-    fprintf(f, "  labelloc=t;\n");
-    fprintf(f, "  label=\"Nodes=%d arcs=%d muted=%d\";\n", (int)numNodes, (int)NumArcs(), (int)(numMuted / 2));
     fprintf(f, "}\n");
+    fprintf(f, "  %d -- %d[style=invis];\n", maxN, *label);
 
     base += maxN + 1;
 }
@@ -360,7 +366,7 @@ static void DumpMeshIds(uint16_t numIds)
         uint16_t id = NodeList[i];
         DPS_Node* node = NodeMap[id];
         if (node) {
-            DPS_PRINT("Node[%d] has meshId %08x (min=%08x)\n", id, UUID_32(&node->meshId), UUID_32(&node->minMeshId));
+            DPS_PRINT("Node[%d] meshId %s\n", id, DPS_UUIDToString(&node->meshId));
         }
     }
 }
@@ -402,6 +408,9 @@ int main(int argc, char** argv)
     int maxSubs = 1;
     int numSubs = 0;
     int numKills = 0;
+    int showMuted = 1;
+    int l1 = 0;
+    int l2 = 0;
     const char* inFn = NULL;
     const char* outFn = NULL;
     uint16_t killList[MAX_KILLS];
@@ -420,6 +429,11 @@ int main(int argc, char** argv)
             continue;
         }
         if (IntArg("-k", &arg, &argc, &numKills, 0, MAX_KILLS)) {
+            continue;
+        }
+        if (strcmp(*arg, "-m") == 0) {
+            ++arg;
+            showMuted = 0;
             continue;
         }
         if (strcmp(*arg, "-d") == 0) {
@@ -513,7 +527,7 @@ int main(int argc, char** argv)
                 } else {
                     DPS_ERRPRINT("Subscribe failed %s\n", DPS_ErrTxt(ret));
                 }
-                DPS_TimedWaitForEvent(sleeper, 1 + DPS_Rand() % 100);
+                DPS_TimedWaitForEvent(sleeper, 1 + DPS_Rand() % 50);
             }
         }
         /*
@@ -554,9 +568,12 @@ int main(int argc, char** argv)
     fprintf(dotFile, "  overlap=false;\n");
     fprintf(dotFile, "  splines=true;\n");
 
-    fprintf(dotFile, "subgraph cluster_A {\n");
-    PrintSubgraph(dotFile, 1, killList, numKills);
-    PrintSubgraph(dotFile, 0, killList, numKills);
+    fprintf(dotFile, "subgraph cluster_1 {\n");
+    fprintf(dotFile, "style=invis;\n");
+    if (showMuted) {
+        PrintSubgraph(dotFile, 1, killList, numKills, "palegreen3", &l1);
+    }
+    PrintSubgraph(dotFile, 0, killList, numKills, "palegreen", &l1);
     fprintf(dotFile, "}\n");
 
     if (numKills > 0) {
@@ -574,9 +591,12 @@ int main(int argc, char** argv)
 
         DPS_TimedWaitForEvent(sleeper, 5000);
 
-        fprintf(dotFile, "subgraph cluster_B {\n");
-        PrintSubgraph(dotFile, 1, NULL, 0);
-        PrintSubgraph(dotFile, 0, NULL, 0);
+        fprintf(dotFile, "subgraph cluster_2 {\n");
+        fprintf(dotFile, "style=invis;\n");
+        if (showMuted) {
+            PrintSubgraph(dotFile, 1, NULL, 0, "cadetblue3", &l2);
+        }
+        PrintSubgraph(dotFile, 0, NULL, 0, "cadetblue1", &l2);
         fprintf(dotFile, "}\n");
     }
 
