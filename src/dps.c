@@ -339,18 +339,11 @@ static int UpdateOutboundMeshId(DPS_Node* node, RemoteNode* dest, DPS_BitVector*
 
     if (DPS_UUIDCompare(meshId, &dest->outbound.meshId) == 0) {
         return DPS_FALSE;
-    }
-    if (DPS_BitVectorIsClear(interests)) {
-        if (DPS_UUIDCompare(&dest->outbound.meshId, &DPS_MaxMeshId) == 0) {
-            return DPS_FALSE;
-        }
-        DPS_DBGPRINT("%d Reset mesh id for %s\n", node->port, DESCRIBE(dest));
-        dest->outbound.meshId = DPS_MaxMeshId;
-    } else {
+    }  else {
         DPS_DBGPRINT("%d Update mesh id: %08x for %s\n", node->port, UUID_32(meshId), DESCRIBE(dest));
         dest->outbound.meshId = *meshId;
+        return DPS_TRUE;
     }
-    return DPS_TRUE;
 }
 
 static DPS_Status UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, DPS_BitVector** outboundInterests)
@@ -412,15 +405,11 @@ static DPS_Status UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, 
          * requesting synchronization from the remote or need to forward
          * an updated mesh id.
          */
-        if (same && DPS_BitVectorEquals(destNode->outbound.needs, newNeeds)) {
-            if (destNode->inbound.sync || newMeshId) {
-                assert(DPS_BitVectorIsClear(delta));
-                *outboundInterests = delta;
-            } else {
-                *outboundInterests = NULL;
-            }
-        } else {
+        if (destNode->inbound.sync || newMeshId || !same) {
             *outboundInterests = delta;
+        } else {
+            assert(DPS_BitVectorEquals(destNode->outbound.needs, newNeeds));
+            *outboundInterests = NULL;
         }
     } else {
         /*
@@ -816,27 +805,26 @@ int DPS_UpdateSubs(DPS_Node* node, RemoteNode* remote)
     int count = 0;
     DPS_DBGTRACE();
     DPS_LockNode(node);
-    if (node->remoteNodes) {
-        if (remote) {
-            assert(!remote->outbound.muted);
+    if (remote) {
+        if (!remote->outbound.muted) {
             remote->outbound.checkForUpdates = DPS_TRUE;
             ++count;
-        } else {
-            /*
-             * TODO - when multi-tenancy is implemented subscriptions will only
-             * be sent to remotes that match the tenancy criteria. For now we flood
-             * subscriptions to all remote nodes.
-             */
-            for (remote = node->remoteNodes; remote != NULL; remote = remote->next) {
-                if (!remote->outbound.muted) {
-                    remote->outbound.checkForUpdates = DPS_TRUE;
-                    ++count;
-                }
+        }
+    } else {
+        /*
+         * TODO - when multi-tenancy is implemented subscriptions will only
+         * be sent to remotes that match the tenancy criteria. For now we flood
+         * subscriptions to all remote nodes.
+         */
+        for (remote = node->remoteNodes; remote != NULL; remote = remote->next) {
+            if (!remote->outbound.muted) {
+                remote->outbound.checkForUpdates = DPS_TRUE;
+                ++count;
             }
         }
-        if (count) {
-            ScheduleBackgroundTask(node, SEND_SUBS_TASK);
-        }
+    }
+    if (count) {
+        ScheduleBackgroundTask(node, SEND_SUBS_TASK);
     }
     DPS_UnlockNode(node);
     return count;
