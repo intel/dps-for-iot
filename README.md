@@ -47,6 +47,17 @@ libuv from source. [libuv source code on GitHub.](https://github.com/libuv)
 
 ---
 
+### Yocto
+- Yocto Project through the OpenEmbedded build system provides an open source development environment
+targeting the ARM, MIPS, PowerPC and x86 architectures for a variety of platforms
+including x86-64 and emulated ones. [Yocto git](https://git.yoctoproject.org/)
+
+[Yocto Project Quick Start](http://www.yoctoproject.org/docs/1.8/yocto-project-qs/yocto-project-qs.html)
+
+- [Yocto libuv](https://layers.openembedded.org/layerindex/recipe/32082/)
+
+---
+
 ## Documentation
 
 The C API documentation is generated using Doxygen. There is currently no support for generating API documentation for the Python or JS APIs.
@@ -57,6 +68,8 @@ Building the documentation requires the scons [DoxygenBuilder](https://bitbucket
 
 ---
 ## Build
+
+### Linux and Windows
 To build the DPS libraries, examples, bindings, and documentation run 'scons'.
 
 `$ scons [variant=debug|release] [transport=udp|tcp] [bindings=all|none]`
@@ -74,6 +87,22 @@ into the `./ext` directory. If necessary these projects can be populated manuall
 `git clone https://github.com/01org/safestringlib.git ext/safestring`
 
 > Note: the ext projects are populated the first time DPS is built. To update these projects you need to manually do a `git pull` or delete the project directory and rerun scons.
+
+---
+
+### Yocto
+Clone the poky repository and configure the Yocto environment.
+Refer to [Yocto Project Quick Start](http://www.yoctoproject.org/docs/1.8/yocto-project-qs/yocto-project-qs.html) for more information.
+
+Clone the libuv Yocto project and yocto/recipes-connectivity/dps to the Yocto Project directory.
+The Yocto Project directory needs to be included in BBLAYERS of conf/bblayers.conf.
+Refer to [Yocto Wiki](https://wiki.yoctoproject.org/wiki/How_do_I) for more information.
+
+From the root directory of the Yocto Project, initialize the Yocto environment, provide a meaningful build directory name and build Yocto DPS.
+`$ source oe-init-build-env mybuilds`
+`$ bitbake dps`
+
+---
 
 ## Examples
 
