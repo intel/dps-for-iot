@@ -337,13 +337,29 @@ static int UpdateOutboundMeshId(DPS_Node* node, RemoteNode* dest, DPS_BitVector*
 
     assert(!dest->outbound.muted);
 
+    /*
+     * First check is there is any change
+     */
     if (DPS_UUIDCompare(meshId, &dest->outbound.meshId) == 0) {
         return DPS_FALSE;
-    }  else {
+    }
+    /*
+     * A change but if there are no interests we send the max mesh id
+     */
+    if (DPS_BitVectorIsClear(interests)) {
+        /*
+         * If we previously sent the max mesh id we don't want to send it again.
+         */
+        if (DPS_UUIDCompare(&dest->outbound.meshId, &DPS_MaxMeshId) == 0) {
+            return DPS_FALSE;
+        }
+        DPS_DBGPRINT("%d Reset mesh id for %s\n", node->port, DESCRIBE(dest));
+        dest->outbound.meshId = DPS_MaxMeshId;
+    } else {
         DPS_DBGPRINT("%d Update mesh id: %08x for %s\n", node->port, UUID_32(meshId), DESCRIBE(dest));
         dest->outbound.meshId = *meshId;
-        return DPS_TRUE;
     }
+    return DPS_TRUE;
 }
 
 static DPS_Status UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, DPS_BitVector** outboundInterests)
@@ -515,7 +531,11 @@ DPS_Status DPS_UnmuteRemoteNode(DPS_Node* node, RemoteNode* remote)
 
 int DPS_MeshHasLoop(DPS_Node* node, RemoteNode* src, DPS_UUID* meshId)
 {
-    return DPS_UUIDCompare(meshId, MinMeshId(node, src)) == 0;
+    if (DPS_UUIDCompare(meshId, &src->inbound.meshId) == 0) {
+        return DPS_FALSE;
+    } else {
+        return DPS_UUIDCompare(meshId, MinMeshId(node, src)) == 0;
+    }
 }
 
 RemoteNode* DPS_LookupRemoteNode(DPS_Node* node, DPS_NodeAddress* addr)

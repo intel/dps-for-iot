@@ -328,7 +328,7 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote, DPS_BitVecto
 /*
  * Update the interests for a remote node
  */
-static DPS_Status UpdateInbound(DPS_Node* node, RemoteNode* remote, DPS_BitVector* interests, DPS_BitVector* needs, DPS_UUID* meshId, uint8_t flags)
+static DPS_Status UpdateInboundInterests(DPS_Node* node, RemoteNode* remote, DPS_BitVector* interests, DPS_BitVector* needs, uint8_t flags)
 {
     int delta = !(flags & DPS_SUB_FLAG_SYNC_INF);
 
@@ -344,13 +344,11 @@ static DPS_Status UpdateInbound(DPS_Node* node, RemoteNode* remote, DPS_BitVecto
     if (DPS_BitVectorIsClear(interests)) {
         DPS_BitVectorFree(interests);
         DPS_BitVectorFree(needs);
-        remote->inbound.meshId = DPS_MaxMeshId;
     } else {
         DPS_CountVectorAdd(node->interests, interests);
         DPS_CountVectorAdd(node->needs, needs);
         remote->inbound.interests = interests;
         remote->inbound.needs = needs;
-        remote->inbound.meshId = *meshId;
     }
 
     if (DPS_DEBUG_ENABLED()) {
@@ -571,7 +569,6 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
             remote->outbound.sync = DPS_TRUE;
             DPS_DBGPRINT("Remote %s has unumuted\n", DESCRIBE(remote));
         } else if (DPS_MeshHasLoop(node, remote, meshId)) {
-            assert(!remote->outbound.muted);
             /*
              * We detected a loop and need to mute
              */
@@ -583,13 +580,8 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
             DPS_BitVectorFree(interests);
             DPS_BitVectorFree(needs);
         } else {
-            /*
-             * Track the minimum mesh id we have seen
-             */
-            if (DPS_UUIDCompare(meshId, &node->minMeshId) < 0) {
-                node->minMeshId = *meshId;
-            }
-            ret = UpdateInbound(node, remote, interests, needs, meshId, flags);
+            remote->inbound.meshId = *meshId;
+            ret = UpdateInboundInterests(node, remote, interests, needs, flags);
             /*
              * Evaluate impact of the change in interests
              */
@@ -597,6 +589,12 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
                 DPS_UpdatePubs(node, NULL);
                 DPS_UpdateSubs(node, NULL);
             }
+        }
+        /*
+         * Track the minimum mesh id we have seen
+         */
+        if (DPS_UUIDCompare(meshId, &node->minMeshId) < 0) {
+            node->minMeshId = *meshId;
         }
     }
     DPS_UnlockNode(node);
