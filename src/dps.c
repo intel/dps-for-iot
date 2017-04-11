@@ -594,26 +594,16 @@ static OnOpCompletion* AllocCompletion(DPS_Node* node, RemoteNode* remote, OpTyp
         cpn->remote = remote;
         cpn->ttl = ttl;
         cpn->on.cb = cb;
-
-        if (uv_timer_init(node->loop, &cpn->timer)) {
-            free(cpn);
-            return NULL;
-        }
-        cpn->timer.data = cpn;
-        if (uv_timer_start(&cpn->timer, OnCompletionTimeout, ttl, 0)) {
-            uv_close((uv_handle_t*)&cpn->timer, OnTimerClosed);
-            return NULL;
-        }
         /*
          * We are holding the node lock so we can link the completion
          * after we have confirmed the async_send was successful.
          */
         if (uv_async_send(&node->completionAsync)) {
+            free(cpn);
+            cpn = NULL;
+        } else {
             cpn->next = node->completionList;
             node->completionList = cpn;
-        } else {
-            uv_close((uv_handle_t*)&cpn->timer, OnTimerClosed);
-            return NULL;
         }
     }
     return cpn;
