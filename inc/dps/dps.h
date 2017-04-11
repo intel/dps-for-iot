@@ -164,7 +164,7 @@ DPS_KeyStore* DPS_MemoryKeyStoreHandle(DPS_MemoryKeyStore* mks);
  * Allocates space for a local DPS node.
  *
  * @param separators    The separator characters to use for topic matching, if NULL defaults to "/"
- * @param keyRequestCB  Callback to request a decryption key
+ * @param keyStore      The key store to use for this node
  * @param keyId         Encryption key id to use for publications sent from this node
  *
  * @return A pointer to the uninitialized node or NULL if there were no resources for the node.

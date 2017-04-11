@@ -125,16 +125,6 @@ static int IsNew(uint16_t n)
     return 1;
 }
 
-static size_t NumArcs()
-{
-    size_t numArcs = 0;
-    LINK* l;
-    for (l = links; l != NULL; l = l->next) {
-        ++numArcs;
-    }
-    return numArcs;
-}
-
 static LINK* AddLink(uint16_t src, uint16_t dst)
 {
     LINK* l = HasLink(src, dst);
@@ -206,17 +196,20 @@ static uint16_t GetPort(DPS_NodeAddress* nodeAddr)
 
 static size_t AddLinksForNode(DPS_Node* node)
 {
-    size_t numMuted = 0;
     RemoteNode* remote;
+    size_t numMuted = 0;
     uint16_t nodeId = PortMap[DPS_GetPortNumber(node)];
 
     for (remote = node->remoteNodes; remote != NULL; remote = remote->next) {
         uint16_t port = GetPort(&remote->ep.addr);
         uint16_t id = PortMap[port];
+        /*
+         * Ignore dead nodes
+         */
         if (NodeMap[id]) {
             LINK* link = AddLink(nodeId, id);
             if (remote->outbound.muted) {
-                ++numMuted;
+                numMuted += 1;
                 link->muted = 1;
             }
         }
@@ -224,16 +217,18 @@ static size_t AddLinksForNode(DPS_Node* node)
     return numMuted;
 }
 
-static void MakeLinks(size_t* numNodes, size_t* numMuted)
+static size_t MakeLinks(size_t* numNodes, size_t* numMuted)
 {
     size_t i;
+    size_t numArcs = 0;
+    LINK* l;
 
     *numMuted = 0;
     *numNodes = 0;
 
     /* Delete stale link info */
     while (links) {
-        LINK* l = links;
+        l = links;
         links = links->next;
         free(l);
     }
@@ -243,6 +238,10 @@ static void MakeLinks(size_t* numNodes, size_t* numMuted)
             *numNodes += 1;
         }
     }
+    for (l = links; l != NULL; l = l->next) {
+        ++numArcs;
+    }
+    return numArcs;
 }
 
 static void PrintSubgraph(FILE* f, int showMuted, uint16_t* kills, size_t numKills, const char* color, int* label)
@@ -255,20 +254,20 @@ static void PrintSubgraph(FILE* f, int showMuted, uint16_t* kills, size_t numKil
     };
     LINK* l;
     size_t i;
-    size_t numNodes = 0;
-    size_t numArcs = 0;
-    size_t numMuted = 0;
+    size_t numNodes;
+    size_t numArcs;
+    size_t numMuted;
     int maxN = 0;
 
-    MakeLinks(&numNodes, &numMuted);
+    numArcs = MakeLinks(&numNodes, &numMuted);
     if (numMuted & 1) {
         DPS_ERRPRINT("Odd number of muted links - something went wrong\n");
     }
-    DPS_PRINT("Nodes=%d, muted=%d\n", numNodes, numMuted / 2);
+    DPS_PRINT("Nodes=%d, muted=%d\n", (int)numNodes, (int)(numMuted / 2));
 
     if (*label == 0) {
         *label = base + 1000;
-        fprintf(f, "  %d[shape=none, width=1, style=bold, height=1, fontsize=12, label=\"nodes=%d\\narcs=%d\\nmuted=%d\"];\n", *label, (int)numNodes, (int)NumArcs(), (int)(numMuted / 2));
+        fprintf(f, "  %d[shape=none, width=1, style=bold, height=1, fontsize=12, label=\"nodes=%d\\narcs=%d\\nmuted=%d\"];\n", *label, (int)numNodes, (int)numArcs, (int)(numMuted / 2));
     }
 
     fprintf(f, "subgraph cluster%d {\n", ++cluster);
@@ -283,7 +282,6 @@ static void PrintSubgraph(FILE* f, int showMuted, uint16_t* kills, size_t numKil
             fprintf(f, "  %d -- %d%s;\n", src, dst, style[l->muted]);
             fprintf(f, "  %d[label=%d];\n", src, l->src);
             fprintf(f, "  %d[label=%d];\n", dst, l->dst);
-            ++numArcs;
         }
         maxN  = (src > maxN) ? src : maxN;
         maxN  = (dst > maxN) ? dst : maxN;
@@ -294,6 +292,40 @@ static void PrintSubgraph(FILE* f, int showMuted, uint16_t* kills, size_t numKil
     base += maxN + 1;
 }
 
+static int CountMuted(DPS_Node* node)
+{
+    int numMuted = 0;
+    RemoteNode* remote;
+
+    DPS_LockNode(node);
+    for (remote = node->remoteNodes; remote != NULL; remote = remote->next) {
+        uint16_t port = GetPort(&remote->ep.addr);
+        uint16_t id = PortMap[port];
+        /*
+         * Ignore dead nodes
+         */
+        if (NodeMap[id] && remote->inbound.muted) {
+            ++numMuted;
+        }
+    }
+    DPS_UnlockNode(node);
+    return numMuted;
+}
+
+static int CountMutedLinks()
+{
+    int numMuted = 0;
+    size_t i;
+
+    for (i = 0; i < A_SIZEOF(NodeMap); ++i) {
+        DPS_Node* node = NodeMap[i];
+        if (node) {
+            numMuted += CountMuted(node);
+        }
+    }
+    return numMuted / 2;
+}
+
 static void DumpLinks()
 {
     LINK* l;
@@ -302,9 +334,9 @@ static void DumpLinks()
     }
 }
 
-static int ReadLinks(const char* fn)
+static size_t ReadLinks(const char* fn)
 {
-    int numIds = 0;
+    size_t numIds = 0;
     FILE* f;
 
     f = fopen(fn, "r");
@@ -388,6 +420,89 @@ static void OnNodeDestroyed(DPS_Node* node, void* data)
     }
 }
 
+/*
+ * This is a little tricky because during link recovery the number
+ * of muted links can go down and then go up again so we check that
+ * we get the same count mutiple times before we conclude that things
+ * have settled.
+ */
+static void WaitUntilSettled(DPS_Event* sleeper, int expMuted)
+{
+    size_t i;
+    int numMuted;
+    int repeats = 0;
+
+    /*
+     * Obviously we can never have a negative number of links muted
+     */
+    if (expMuted < 0) {
+        expMuted = 0;
+    }
+    DPS_PRINT("Expect %d links muted\n", expMuted);
+    for (i = 0; i < 500; ++i) {
+        DPS_TimedWaitForEvent(sleeper, 100);
+        numMuted = CountMutedLinks();
+        if (numMuted == expMuted) {
+            if (++repeats == 5) {
+                break;
+            }
+        } else {
+            repeats = 0;
+        }
+    }
+    if (numMuted != expMuted) {
+        DPS_PRINT("ERROR: expected %d muted but got %d\n", expMuted, numMuted);
+    }
+}
+
+static volatile int LinksUp;
+static volatile int LinksFailed;
+
+static uv_mutex_t lock;
+
+static void OnLinked(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, void* data)
+{
+    uv_mutex_lock(&lock);
+    if (status == DPS_OK) {
+        ++LinksUp;
+    } else {
+        DPS_ERRPRINT("Failed to Link to %d - %s\n", DPS_GetPortNumber((DPS_Node*)data), DPS_ErrTxt(status));
+        ++LinksFailed;
+    }
+    uv_mutex_unlock(&lock);
+}
+
+static void OnResolve(DPS_Node* node, DPS_NodeAddress* addr, void* data)
+{
+    uv_mutex_lock(&lock);
+    if (addr) {
+        DPS_Status ret = DPS_Link(node, addr, OnLinked, data);
+        if (ret != DPS_OK) {
+            DPS_ERRPRINT("DPS_Link for %d returned %s\n", DPS_GetPortNumber((DPS_Node*)data), DPS_ErrTxt(ret));
+            ++LinksFailed;
+        }
+    } else {
+        DPS_ERRPRINT("Failed to resolve address for %d\n", DPS_GetPortNumber((DPS_Node*)data));
+        ++LinksFailed;
+    }
+    uv_mutex_unlock(&lock);
+}
+
+static DPS_Status LinkNodes(DPS_Node* src, DPS_Node* dst)
+{
+    DPS_Status ret;
+    char port[8];
+    snprintf(port, sizeof(port), "%d", DPS_GetPortNumber(dst));
+
+    uv_mutex_lock(&lock);
+    ret = DPS_ResolveAddress(src, NULL, port, OnResolve, dst);
+    if (ret != DPS_OK) {
+        ++LinksFailed;
+    }
+    uv_mutex_unlock(&lock);
+    return ret;
+}
+
 const LinkMonitorConfig FastLinkProbe = {
     .retries = 0,     /* Maximum number of retries following a probe failure */
     .probeTO = 1000,  /* Repeat rate for probes */
@@ -403,12 +518,13 @@ int main(int argc, char** argv)
     char** arg = argv + 1;
     LINK* l;
     DPS_Event* sleeper;
-    int numIds = 0;
-    int numLinks = 0;
+    size_t numIds = 0;
+    size_t numLinks = 0;
     int maxSubs = 1;
     int numSubs = 0;
     int numKills = 0;
     int showMuted = 1;
+    int expMuted;
     int l1 = 0;
     int l2 = 0;
     const char* inFn = NULL;
@@ -441,9 +557,11 @@ int main(int argc, char** argv)
             DPS_Debug = 1;
             continue;
         }
-        if (IntArg("-n", &arg, &argc, &numIds, 2, UINT16_MAX)) {
-            continue;
+        if (*arg[0] == '-') {
+            DPS_PRINT("Unknown option %s\n", arg[0]);
+            return 1;
         }
+        inFn = *arg++;
     }
     if (inFn) {
         numIds = ReadLinks(inFn);
@@ -452,9 +570,6 @@ int main(int argc, char** argv)
         }
         DumpLinks();
     } else {
-        /*
-         * TODO - do something useful here
-         */
         DPS_PRINT("No input file\n");
         return 1;
     }
@@ -463,6 +578,18 @@ int main(int argc, char** argv)
      */
     for (i = 0; i < numIds; ++i) {
         DPS_Node* node = DPS_CreateNode("/.", NULL, NULL);
+        /*
+         * Set fast link monitor probes so we don't
+         * need to wait so long to detect disconnects.
+         */
+        node->linkMonitorConfig = FastLinkProbe;
+        /*
+         * Since we set a fast link probe we need to set
+         * a short subscription delay or link monitoring
+         * will thrash.
+         */
+        node->subsRate = FastLinkProbe.probeTO / 10;
+
         ret = DPS_StartNode(node, DPS_FALSE, 0);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
@@ -470,11 +597,6 @@ int main(int argc, char** argv)
         }
         PortMap[DPS_GetPortNumber(node)] = NodeList[i];
         NodeMap[NodeList[i]] = node;
-        /*
-         * Set fast link monitor probes so we don't
-         * need to wait so long to detect disconnects.
-         */
-        node->linkMonitorConfig = FastLinkProbe;
     }
     DumpPortMap(numIds);
 
@@ -482,28 +604,36 @@ int main(int argc, char** argv)
     /*
      * Wait for a short time while before trying to link
      */
-    DPS_TimedWaitForEvent(sleeper, 2000);
+    DPS_TimedWaitForEvent(sleeper, 1000);
     /*
-     * Link the nodes
+     * Link the nodes asynchronously
      */
+    LinksUp = 0;
+    LinksFailed = 0;
     for (l = links; l != NULL; l = l->next) {
-        DPS_NodeAddress* addr = DPS_CreateAddress();
-        DPS_Node* src = NodeMap[l->src];
-        DPS_Node* dst = NodeMap[l->dst];
-
-        ret = DPS_LinkTo(src, NULL, DPS_GetPortNumber(dst), addr);
-        if (ret == DPS_OK) {
-            DPS_PRINT("Node %d connected to node %d\n", l->src, l->dst);
-            ++numLinks;
-        } else {
-            DPS_ERRPRINT("Failed to link %d to %d returned %s\n", l->src, l->dst, DPS_ErrTxt(ret));
-        }
-        DPS_DestroyAddress(addr);
+        ret = LinkNodes(NodeMap[l->src], NodeMap[l->dst]);
+        ++numLinks;
     }
-
+    DPS_PRINT("%d nodes making %d links \n", numIds, numLinks);
+    /*
+     * Wait until all the links are up
+     */
+    while ((LinksUp + LinksFailed) < numLinks) {
+        DPS_TimedWaitForEvent(sleeper, 100);
+    }
+    DPS_PRINT("%d links up %d links failed\n", LinksUp, LinksFailed);
+    /*
+     * Brief delay to let things settle down
+     */
+    DPS_TimedWaitForEvent(sleeper, 1000);
+#ifndef NDEBUG
+    {
+        extern int _DPS_NumSubs;
+        DPS_PRINT("Sent %d subs\n", _DPS_NumSubs);
+        _DPS_NumSubs = 0;
+    }
+#endif
     DPS_PRINT("%d nodes created %d links \n", numIds, numLinks);
-
-    DPS_TimedWaitForEvent(sleeper, 100);
     /*
      * Add some subscriptions
      */
@@ -527,7 +657,6 @@ int main(int argc, char** argv)
                 } else {
                     DPS_ERRPRINT("Subscribe failed %s\n", DPS_ErrTxt(ret));
                 }
-                DPS_TimedWaitForEvent(sleeper, 1 + DPS_Rand() % 50);
             }
         }
         /*
@@ -537,7 +666,6 @@ int main(int argc, char** argv)
             maxSubs = 0;
         }
     }
-
     /*
      * Decide which nodes we are going to kill
      */
@@ -547,11 +675,9 @@ int main(int argc, char** argv)
             killList[i] = goner;
         }
     }
-
-    DPS_TimedWaitForEvent(sleeper, 1000);
-
-    DumpMeshIds(numIds);
-
+    if (DPS_Debug) {
+        DumpMeshIds(numIds);
+    }
     if (outFn) {
         dotFile = fopen(outFn, "w");
         if (!dotFile) {
@@ -562,6 +688,11 @@ int main(int argc, char** argv)
     if (!dotFile) {
         dotFile = stdout;
     }
+    /*
+     * This will wait while links are being muted
+     */
+    expMuted = numLinks + 1 - numIds;
+    WaitUntilSettled(sleeper, expMuted);
 
     fprintf(dotFile, "graph {\n");
     fprintf(dotFile, "  node[shape=circle, width=0.3, fontsize=10, margin=\"0.01,0.01\", fixedsize=true];\n");
@@ -577,6 +708,7 @@ int main(int argc, char** argv)
     fprintf(dotFile, "}\n");
 
     if (numKills > 0) {
+        size_t m;
         /*
          * Kill the nodes on the list
          */
@@ -584,13 +716,18 @@ int main(int argc, char** argv)
             uint16_t goner = killList[i];
             if (NodeMap[goner]) {
                 DPS_PRINT("Killing node %d\n", goner);
+                expMuted -= (2 + CountMuted(NodeMap[goner]));
                 DPS_DestroyNode(NodeMap[goner], OnNodeDestroyed, &killList[i]);
                 NodeMap[goner] = NULL;
             }
         }
+        numLinks = MakeLinks(&numIds, &m);
+        expMuted = numLinks + 1 - numIds;
 
-        DPS_TimedWaitForEvent(sleeper, 5000);
-
+        /*
+         * This will wait while links are being unmuted
+         */
+        WaitUntilSettled(sleeper, expMuted);
         fprintf(dotFile, "subgraph cluster_2 {\n");
         fprintf(dotFile, "style=invis;\n");
         if (showMuted) {

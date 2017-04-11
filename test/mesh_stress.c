@@ -94,7 +94,6 @@ static void OnPubMatch(DPS_Subscription* sub, const DPS_Publication* pub, uint8_
 typedef struct _LINK {
     uint16_t src;
     uint16_t dst;
-    int muted;
     struct _LINK* next;
 } LINK;
 
@@ -204,45 +203,23 @@ static uint16_t GetPort(DPS_NodeAddress* nodeAddr)
     }
 }
 
-static size_t AddLinksForNode(DPS_Node* node)
+static int CountMutedLinks()
 {
-    size_t numMuted = 0;
-    RemoteNode* remote;
-    uint16_t nodeId = PortMap[DPS_GetPortNumber(node)];
+    int numMuted = 0;
+    size_t i;
 
-    for (remote = node->remoteNodes; remote != NULL; remote = remote->next) {
-        uint16_t port = GetPort(&remote->ep.addr);
-        uint16_t id = PortMap[port];
-        if (NodeMap[id]) {
-            LINK* link = AddLink(nodeId, id);
-            if (remote->outbound.muted) {
-                ++numMuted;
-                link->muted = 1;
+    for (i = 0; i < A_SIZEOF(NodeMap); ++i) {
+        DPS_Node* node = NodeMap[i];
+        if (node) {
+            RemoteNode* remote;
+            for (remote = node->remoteNodes; remote != NULL; remote = remote->next) {
+                if (remote->outbound.muted && remote->linked) {
+                    ++numMuted;
+                }
             }
         }
     }
     return numMuted;
-}
-
-static void MakeLinks(size_t* numNodes, size_t* numMuted)
-{
-    size_t i;
-
-    *numMuted = 0;
-    *numNodes = 0;
-
-    /* Delete stale link info */
-    while (links) {
-        LINK* l = links;
-        links = links->next;
-        free(l);
-    }
-    for (i = 0; i < A_SIZEOF(NodeMap); ++i) {
-        if (NodeMap[i]) {
-            *numMuted += AddLinksForNode(NodeMap[i]);
-            *numNodes += 1;
-        }
-    }
 }
 
 static void DumpLinks()
@@ -345,7 +322,53 @@ const LinkMonitorConfig SlowLinkProbe = {
     .retryTO = 10        /* Repeat time for retries following a probe failure */
 };
 
-#define MAX_KILLS  16
+static volatile int LinksUp;
+static volatile int LinksFailed;
+
+static uv_mutex_t lock;
+
+static void OnLinked(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, void* data)
+{
+    uv_mutex_lock(&lock);
+    if (status == DPS_OK) {
+        ++LinksUp;
+    } else {
+        DPS_ERRPRINT("Failed to Link to %d - %s\n", DPS_GetPortNumber((DPS_Node*)data), DPS_ErrTxt(status));
+        ++LinksFailed;
+    }
+    uv_mutex_unlock(&lock);
+}
+
+static void OnResolve(DPS_Node* node, DPS_NodeAddress* addr, void* data)
+{
+    uv_mutex_lock(&lock);
+    if (addr) {
+        DPS_Status ret = DPS_Link(node, addr, OnLinked, data);
+        if (ret != DPS_OK) {
+            DPS_ERRPRINT("DPS_Link for %d returned %s\n", DPS_GetPortNumber((DPS_Node*)data), DPS_ErrTxt(ret));
+            ++LinksFailed;
+        }
+    } else {
+        DPS_ERRPRINT("Failed to resolve address for %d\n", DPS_GetPortNumber((DPS_Node*)data));
+        ++LinksFailed;
+    }
+    uv_mutex_unlock(&lock);
+}
+
+static DPS_Status LinkNodes(DPS_Node* src, DPS_Node* dst)
+{
+    DPS_Status ret;
+    char port[8];
+    snprintf(port, sizeof(port), "%d", DPS_GetPortNumber(dst));
+
+    uv_mutex_lock(&lock);
+    ret = DPS_ResolveAddress(src, NULL, port, OnResolve, dst);
+    if (ret != DPS_OK) {
+        ++LinksFailed;
+    }
+    uv_mutex_unlock(&lock);
+    return ret;
+}
 
 int main(int argc, char** argv)
 {
@@ -354,8 +377,10 @@ int main(int argc, char** argv)
     LINK* l;
     DPS_Event* sleeper;
     int t;
+    int maxSubs = 1;
     int numIds = 0;
     int numMuted = 0;
+    int expMuted;
     const char* inFn = NULL;
     size_t i;
 
@@ -370,13 +395,14 @@ int main(int argc, char** argv)
             DPS_Debug = 1;
             continue;
         }
-        if (IntArg("-m", &arg, &argc, &numMuted, 0, UINT16_MAX)) {
+        if (IntArg("-s", &arg, &argc, &maxSubs, 0, 32)) {
             continue;
         }
         if (*arg[0] == '-') {
             DPS_PRINT("Unknown option %s\n", arg[0]);
             return 1;
         }
+        inFn = *arg++;
     }
     if (inFn) {
         numIds = ReadLinks(inFn);
@@ -394,8 +420,9 @@ int main(int argc, char** argv)
      */
     sleeper = DPS_CreateEvent();
 
+    uv_mutex_init(&lock);
+
     for (t = 0; t < 1000; ++t) {
-        int linkError = DPS_FALSE;
         int numLinks = 0;
         DPS_PRINT("Iteration %d\n", t);
         DPS_NodeAddress* addr = DPS_CreateAddress();
@@ -404,6 +431,11 @@ int main(int argc, char** argv)
          */
         for (i = 0; i < numIds; ++i) {
             DPS_Node* node = DPS_CreateNode("/.", NULL, NULL);
+            /*
+             * For test purposes we only want a short subscription delay
+             */
+            node->subsRate = 300;
+
             ret = DPS_StartNode(node, DPS_FALSE, 0);
             if (ret != DPS_OK) {
                 DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
@@ -422,36 +454,43 @@ int main(int argc, char** argv)
          */
         DPS_TimedWaitForEvent(sleeper, 1000);
         /*
-         * Link the nodes
+         * Link the nodes asynchronously
          */
+        LinksUp = 0;
+        LinksFailed = 0;
         for (l = links; l != NULL; l = l->next) {
-            DPS_Node* src = NodeMap[l->src];
-            DPS_Node* dst = NodeMap[l->dst];
-
-            ret = DPS_LinkTo(src, NULL, DPS_GetPortNumber(dst), addr);
-            if (ret == DPS_OK) {
-                ++numLinks;
-            } else {
-                DPS_ERRPRINT("Failed to link %d to %d returned %s\n", l->src, l->dst, DPS_ErrTxt(ret));
-                /*
-                 * Skip this iteration
-                 */
-                DPS_PRINT("Skipping this iteration due to link failure\n");
-                --t;
-                goto CleanupNodes;
-            }
+            ret = LinkNodes(NodeMap[l->src], NodeMap[l->dst]);
+            ++numLinks;
         }
-
-        DPS_PRINT("%d nodes created %d links \n", numIds, numLinks);
-
-        DPS_TimedWaitForEvent(sleeper, 100);
+        DPS_PRINT("%d nodes making %d links \n", numIds, numLinks);
         /*
-         * Add a subscription to a random node
+         * Wait until all the links are up
          */
-        while (1) {
+        while ((LinksUp + LinksFailed) < numLinks) {
+            DPS_TimedWaitForEvent(sleeper, 100);
+        }
+        DPS_PRINT("%d links up %d links failed\n", LinksUp, LinksFailed);
+        /*
+         * Brief delay to let things settle down
+         */
+        DPS_TimedWaitForEvent(sleeper, 1000);
+#ifndef NDEBUG
+        {
+            extern int _DPS_NumSubs;
+            DPS_PRINT("Sent %d subs\n", _DPS_NumSubs);
+            _DPS_NumSubs = 0;
+        }
+#endif
+        /*
+         * Add subscriptions to a random node
+         */
+        for (i = 0; i < maxSubs; ++i) {
             DPS_Node* node = NodeMap[NodeList[DPS_Rand() %numIds]];
             DPS_Subscription* sub;
-            const char* topicList[] = { "A" };
+            char topic[2];
+            const char* topicList[] = { topic };
+            topic[0] = 'A' + i;
+            topic[1] = 0;
             sub = DPS_CreateSubscription(node, topicList, 1);
             if (!sub) {
                 DPS_ERRPRINT("CreateSubscribe failed\n");
@@ -464,22 +503,31 @@ int main(int argc, char** argv)
             return 1;
         }
         /*
-         * Let subscriptions propogate through the network
-         */
-        DPS_TimedWaitForEvent(sleeper, 1000);
-        /*
          * Check we got the result we expected
          */
-        {
-            size_t m;
-            size_t n;
-            MakeLinks(&n, &m);
-            if (m != (2 * numMuted)) {
-                DPS_ERRPRINT("Wrong number of muted nodes: Nodes=%d Muted=%d\n", (int)n, (int)(m / 2));
-                assert(!(numMuted & 1));
-                assert(m == 2 * numMuted);
+        expMuted = numLinks + 1 - numIds;
+        for (i = 0; i < 100; ++i) {
+            numMuted = CountMutedLinks();
+            if (numMuted >= expMuted) {
+                break;
             }
+            DPS_TimedWaitForEvent(sleeper, 100);
         }
+        /*
+         * Wait in case we missed some muted nodes
+         */
+        DPS_TimedWaitForEvent(sleeper, 1000);
+        if (numMuted != expMuted) {
+            DPS_ERRPRINT("Wrong number of muted nodes: Expected %d got %d\n", expMuted, numMuted);
+            assert(expMuted == numMuted);
+        }
+#ifndef NDEBUG
+        {
+            extern int _DPS_NumSubs;
+            DPS_PRINT("Sent %d subs\n", _DPS_NumSubs);
+            _DPS_NumSubs = 0;
+        }
+#endif
 
 CleanupNodes:
         /*

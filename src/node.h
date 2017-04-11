@@ -93,6 +93,7 @@ typedef struct _DPS_Node {
     uv_async_t stopAsync;                 /* Async for shutting down the node */
     uv_async_t subsAsync;                 /* Async for sending subscriptions */
 
+    uint32_t subsRate;                    /* Specifies time delay (in msecs) between subscription updates */
     uv_timer_t subsTimer;                 /* Timer for sending subscriptions */
 
     struct {

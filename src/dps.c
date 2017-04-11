@@ -772,7 +772,7 @@ static void SendPubsTask(uv_async_t* handle)
  *
  * TODO - this value needs to be tuned
  */
-#define SUBSCRIPTION_UPDATE_RATE 300
+#define SUBSCRIPTION_UPDATE_RATE 1000
 
 static void SendSubsTimer(uv_timer_t* handle)
 {
@@ -827,7 +827,7 @@ static void SendSubsTimer(uv_timer_t* handle)
      * before reevaluating subscription updates.
      */
     if (count) {
-        uv_timer_start(&node->subsTimer, SendSubsTimer, SUBSCRIPTION_UPDATE_RATE, 0);
+        uv_timer_start(&node->subsTimer, SendSubsTimer, node->subsRate, 0);
     } else {
         node->subsPending = DPS_FALSE;
     }
@@ -1191,9 +1191,10 @@ DPS_Node* DPS_CreateNode(const char* separators, DPS_KeyStore* keyStore, const D
     strncpy_s(node->separators, sizeof(node->separators), separators, sizeof(node->separators) - 1);
     node->keyStore = keyStore;
     /*
-     * Set default probe configuration parameters
+     * Set default probe configuration and subscription rate parameters
      */
     node->linkMonitorConfig = LinkMonitorConfigDefaults;
+    node->subsRate = SUBSCRIPTION_UPDATE_RATE;
     return node;
 }
 

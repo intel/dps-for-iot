@@ -171,6 +171,10 @@ DPS_Status DPS_DestroySubscription(DPS_Subscription* sub)
     return DPS_OK;
 }
 
+#ifndef NDEBUG
+int _DPS_NumSubs = 0;
+#endif
+
 DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote, DPS_BitVector* interests)
 {
     DPS_Status ret;
@@ -181,6 +185,9 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote, DPS_BitVecto
     if (!node->netCtx) {
         return DPS_ERR_NETWORK;
     }
+#ifndef NDEBUG
+    ++_DPS_NumSubs;
+#endif
     /*
      * Set flags
      */
