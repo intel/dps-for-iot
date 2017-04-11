@@ -128,6 +128,8 @@ typedef struct _DPS_Node {
 
     uv_async_t resolverAsync;             /* Async handler for address resolver */
     ResolverInfo* resolverList;           /* Linked list of address resolution requests */
+    uv_async_t completionAsync;           /* Async handler for link completion */
+    OnOpCompletion* completionList;       /* Linked list of completion requests */
 
 } DPS_Node;
 

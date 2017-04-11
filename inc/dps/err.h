@@ -59,6 +59,7 @@ typedef int DPS_Status;
 #define DPS_ERR_NOT_IMPLEMENTED   23 /**< Feature or function not implemented */
 #define DPS_ERR_SECURITY          24 /**< A security related error - failure to decrypt or authenticate */
 #define DPS_ERR_NOT_ENCRYPTED     25 /**< Payload does not appear to be encrypted */
+#define DPS_ERR_STOPPING          26 /**< The current node is stopping */
 
 const char* DPS_ErrTxt(DPS_Status s);
 

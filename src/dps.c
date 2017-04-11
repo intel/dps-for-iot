@@ -59,13 +59,14 @@ typedef struct _OnOpCompletion {
     void* data;
     DPS_Node* node;
     struct _RemoteNode* remote;
+    uint16_t ttl;
     uv_timer_t timer;
-    uv_mutex_t mutex;
     union {
         DPS_OnLinkComplete link;
         DPS_OnUnlinkComplete unlink;
         void* cb;
     } on;
+    struct _OnOpCompletion* next;
 } OnOpCompletion;
 
 /*
@@ -195,17 +196,24 @@ void DPS_RemoteCompletion(DPS_Node* node, RemoteNode* remote, DPS_Status status)
     OnOpCompletion* cpn = remote->completion;
     DPS_NodeAddress addr = remote->ep.addr;
 
-    uv_timer_stop(&cpn->timer);
-
+    /*
+     * See AllocCompletion() timer.data is only set if the timer handle
+     * was succesfully initialized
+     */
+    if (cpn->timer.data) {
+        uv_timer_stop(&cpn->timer);
+    }
     remote->completion = NULL;
-    DPS_UnlockNode(node);
     if (cpn->op == LINK_OP) {
         cpn->on.link(node, &addr, status, cpn->data);
     } else if (cpn->op == UNLINK_OP) {
         cpn->on.unlink(node, &addr, cpn->data);
     }
-    DPS_LockNode(node);
-    uv_close((uv_handle_t*)&cpn->timer, OnTimerClosed);
+    if (cpn->timer.data) {
+        uv_close((uv_handle_t*)&cpn->timer, OnTimerClosed);
+    } else {
+        free(cpn);
+    }
     if (status != DPS_OK) {
         DPS_DeleteRemoteNode(node, remote);
     }
@@ -538,9 +546,45 @@ static void OnCompletionTimeout(uv_timer_t* timer)
     DPS_UnlockNode(cpn->node);
 }
 
+static void AsyncCompletion(uv_async_t* async)
+{
+    DPS_Node* node = (DPS_Node*)async->data;
+
+    DPS_DBGTRACE();
+
+    DPS_LockNode(node);
+
+    while (node->completionList) {
+        OnOpCompletion* cpn = node->completionList;
+        node->completionList = cpn->next;
+
+        cpn->timer.data = NULL;
+        if (node->state != DPS_NODE_RUNNING) {
+            DPS_RemoteCompletion(node, cpn->remote, DPS_ERR_STOPPING);
+            continue;
+        }
+        if (uv_timer_init(node->loop, &cpn->timer)) {
+            DPS_RemoteCompletion(node, cpn->remote, DPS_ERR_FAILURE);
+            continue;
+        }
+        /*
+         * So cpn is freed when the timer handle is closed
+         */
+        cpn->timer.data = cpn;
+        if (uv_timer_start(&cpn->timer, OnCompletionTimeout, cpn->ttl, 0)) {
+            DPS_RemoteCompletion(node, cpn->remote, DPS_ERR_FAILURE);
+            continue;
+        }
+    }
+
+    DPS_UnlockNode(node);
+}
+
 static OnOpCompletion* AllocCompletion(DPS_Node* node, RemoteNode* remote, OpType op, void* data, uint16_t ttl, void* cb)
 {
     OnOpCompletion* cpn;
+
+    assert(DPS_HasNodeLock(node));
 
     cpn = calloc(1, sizeof(OnOpCompletion));
     if (cpn) {
@@ -548,6 +592,7 @@ static OnOpCompletion* AllocCompletion(DPS_Node* node, RemoteNode* remote, OpTyp
         cpn->data = data;
         cpn->node = node;
         cpn->remote = remote;
+        cpn->ttl = ttl;
         cpn->on.cb = cb;
 
         if (uv_timer_init(node->loop, &cpn->timer)) {
@@ -556,6 +601,17 @@ static OnOpCompletion* AllocCompletion(DPS_Node* node, RemoteNode* remote, OpTyp
         }
         cpn->timer.data = cpn;
         if (uv_timer_start(&cpn->timer, OnCompletionTimeout, ttl, 0)) {
+            uv_close((uv_handle_t*)&cpn->timer, OnTimerClosed);
+            return NULL;
+        }
+        /*
+         * We are holding the node lock so we can link the completion
+         * after we have confirmed the async_send was successful.
+         */
+        if (uv_async_send(&node->completionAsync)) {
+            cpn->next = node->completionList;
+            node->completionList = cpn;
+        } else {
             uv_close((uv_handle_t*)&cpn->timer, OnTimerClosed);
             return NULL;
         }
@@ -1038,6 +1094,11 @@ static void StopNode(DPS_Node* node)
     DPS_AsyncResolveAddress(&node->resolverAsync);
     uv_close((uv_handle_t*)&node->resolverAsync, NULL);
     /*
+     * Cancel any pending completions before closing the handle
+     */
+    AsyncCompletion(&node->completionAsync);
+    uv_close((uv_handle_t*)&node->completionAsync, NULL);
+    /*
      * Delete remote nodes and shutdown any connections.
      */
     while (node->remoteNodes) {
@@ -1213,6 +1274,10 @@ DPS_Status DPS_StartNode(DPS_Node* node, int mcast, int rxPort)
     r = uv_async_init(node->loop, &node->resolverAsync, DPS_AsyncResolveAddress);
     assert(!r);
 
+    node->completionAsync.data = node;
+    r = uv_async_init(node->loop, &node->completionAsync, AsyncCompletion);
+    assert(!r);
+
     node->subsTimer.data = node;
     r = uv_timer_init(node->loop, &node->subsTimer);
     assert(!r);
@@ -1344,20 +1409,15 @@ DPS_Status DPS_Link(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnLinkComplete cb
         return ret;
     }
     /*
-     * Remote may already exist due to incoming data
+     * Remote may already exist due to incoming data which is ok,
+     * but if we already linked it we return an error.
      */
     if (remote->linked) {
         DPS_ERRPRINT("Node at %s already linked\n", DPS_NodeAddrToString(addr));
         DPS_UnlockNode(node);
-        return ret;
+        return DPS_ERR_EXISTS;
     }
-    /*
-     * Operations must be serialized
-     */
-    if (remote->completion) {
-        DPS_UnlockNode(node);
-        return DPS_ERR_BUSY;
-    }
+    assert(!remote->completion);
     remote->linked = DPS_TRUE;
     remote->outbound.sync = DPS_TRUE;
     if (ret == DPS_OK) {
@@ -1370,6 +1430,9 @@ DPS_Status DPS_Link(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnLinkComplete cb
         return DPS_ERR_RESOURCES;
     }
     DPS_UnlockNode(node);
+    /*
+     * This will cause an initial subscription to be sent to the remote node
+     */
     DPS_UpdateSubs(node, remote);
     return DPS_OK;
 }
