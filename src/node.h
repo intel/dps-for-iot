@@ -74,7 +74,7 @@ typedef struct _DPS_Node {
 
     uint8_t isSecured;                    /* Indicates if this node is secured */
     uint8_t lockCount;                    /* Recursive lock counter */
-    uint16_t tasks;                       /* Background tasks that have been scheduled */
+    uint8_t subsPending;
     uint16_t port;
     DPS_UUID meshId;                      /* Randomly allocated mesh id for this node */
     DPS_UUID minMeshId;                   /* Minimum mesh id seen by this node */
@@ -87,7 +87,13 @@ typedef struct _DPS_Node {
     uv_loop_t* loop;                      /* uv lib event loop */
     uv_mutex_t nodeMutex;                 /* Mutex to protect this node */
     uv_mutex_t condMutex;                 /* Mutex for use wih condition variables */
-    uv_async_t bgHandler;                 /* Async handler for background tasks */
+
+    uv_async_t acksAsync;                 /* Async for sending acks */
+    uv_async_t pubsAsync;                 /* Async for sending publications */
+    uv_async_t stopAsync;                 /* Async for shutting down the node */
+    uv_async_t subsAsync;                 /* Async for sending subscriptions */
+
+    uv_timer_t subsTimer;                 /* Timer for sending subscriptions */
 
     struct {
         PublicationAck* first;

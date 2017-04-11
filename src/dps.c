@@ -68,12 +68,6 @@ typedef struct _OnOpCompletion {
     } on;
 } OnOpCompletion;
 
-#define SEND_SUBS_TASK  0x01
-#define SEND_PUBS_TASK  0x02
-#define SEND_ACKS_TASK  0x04
-#define STOP_NODE_TASK  0x08
-#define FIND_ADDR_TASK  0x10
-
 /*
  * How long (in milliseconds) to wait to received a response from a remote
  * node this node is linking with.
@@ -81,11 +75,6 @@ typedef struct _OnOpCompletion {
 #define LINK_RESPONSE_TIMEOUT  5000
 
 const DPS_UUID DPS_MaxMeshId = { .val64 = { UINT64_MAX, UINT64_MAX } };
-
-/*
- * Forward declaration
- */
-static void RunBackgroundTasks(uv_async_t* handle);
 
 void DPS_LockNode(DPS_Node* node)
 {
@@ -115,17 +104,6 @@ int DPS_HasNodeLock(DPS_Node* node)
         return uv_thread_equal(&node->lockHolder, &self);
     } else {
         return DPS_FALSE;
-    }
-}
-
-static void ScheduleBackgroundTask(DPS_Node* node, uint8_t task)
-{
-    if (node->state == DPS_NODE_RUNNING) {
-        DPS_DBGTRACE();
-        node->tasks |= task;
-        DPS_UnlockNode(node);
-        uv_async_send(&node->bgHandler);
-        DPS_LockNode(node);
     }
 }
 
@@ -672,12 +650,14 @@ static DPS_Status SendMatchingPubToSub(DPS_Node* node, DPS_Publication* pub, Rem
     return DPS_OK;
 }
 
-static void SendAcksTask(DPS_Node* node)
+static void SendAcksTask(uv_async_t* handle)
 {
+    DPS_Node* node = (DPS_Node*)handle->data;
     PublicationAck* ack;
 
     DPS_DBGTRACE();
 
+    DPS_LockNode(node);
     while ((ack = node->ackQueue.first) != NULL) {
         RemoteNode* ackNode;
         DPS_Status ret = DPS_AddRemoteNode(node, &ack->destAddr, NULL, &ackNode);
@@ -688,15 +668,18 @@ static void SendAcksTask(DPS_Node* node)
         DPS_DestroyAck(ack);
     }
     node->ackQueue.last = NULL;
+    DPS_UnlockNode(node);
 }
 
-static void SendPubsTask(DPS_Node* node)
+static void SendPubsTask(uv_async_t* handle)
 {
+    DPS_Node* node = (DPS_Node*)handle->data;
     DPS_Publication* pub;
     DPS_Publication* nextPub;
 
     DPS_DBGTRACE();
 
+    DPS_LockNode(node);
     /*
      * Check if any local or retained publications need to be forwarded to this subscriber
      */
@@ -735,16 +718,27 @@ static void SendPubsTask(DPS_Node* node)
         }
     }
     DPS_DumpPubs(node);
+    DPS_UnlockNode(node);
 }
 
-static void SendSubsTask(DPS_Node* node)
+/*
+ * Maximum rate in msecs to compute and send out subscription updates
+ *
+ * TODO - this value needs to be tuned
+ */
+#define SUBSCRIPTION_UPDATE_RATE 300
+
+static void SendSubsTimer(uv_timer_t* handle)
 {
+    DPS_Node* node = (DPS_Node*)handle->data;
     DPS_Status ret = DPS_OK;
     RemoteNode* remote;
     RemoteNode* remoteNext;
+    size_t count = 0;
 
     DPS_DBGTRACE();
 
+    DPS_LockNode(node);
     /*
      * Forward subscription to all remote nodes with interestss
      */
@@ -758,6 +752,7 @@ static void SendSubsTask(DPS_Node* node)
         }
         remote->outbound.checkForUpdates = DPS_FALSE;
         if (remote->unlink) {
+            ++count;
             DPS_SendSubscription(node, remote, NULL);
             DPS_DBGPRINT("Remote node has been unlinked - deleting\n");
             DPS_DeleteRemoteNode(node, remote);
@@ -768,6 +763,7 @@ static void SendSubsTask(DPS_Node* node)
             break;
         }
         if (newInterests) {
+            ++count;
             ret = DPS_SendSubscription(node, remote, newInterests);
             if (ret != DPS_OK) {
                 DPS_DeleteRemoteNode(node, remote);
@@ -780,6 +776,22 @@ static void SendSubsTask(DPS_Node* node)
     if (ret != DPS_OK) {
         DPS_ERRPRINT("SendSubsTask failed %s\n", DPS_ErrTxt(ret));
     }
+    /*
+     * If we sent at least one subscription hold off for some time
+     * before reevaluating subscription updates.
+     */
+    if (count) {
+        uv_timer_start(&node->subsTimer, SendSubsTimer, SUBSCRIPTION_UPDATE_RATE, 0);
+    } else {
+        node->subsPending = DPS_FALSE;
+    }
+    DPS_UnlockNode(node);
+}
+
+static void SendSubsTask(uv_async_t* handle)
+{
+    DPS_Node* node = (DPS_Node*)handle->data;
+    uv_timer_start(&node->subsTimer, SendSubsTimer, 0, 0);
 }
 
 /*
@@ -788,8 +800,8 @@ static void SendSubsTask(DPS_Node* node)
 void DPS_UpdatePubs(DPS_Node* node, DPS_Publication* pub)
 {
     int count = 0;
+    DPS_DBGTRACE();
     DPS_LockNode(node);
-
     if (pub) {
         pub->checkToSend = DPS_TRUE;
         ++count;
@@ -816,7 +828,7 @@ void DPS_UpdatePubs(DPS_Node* node, DPS_Publication* pub)
     }
     if (count) {
         DPS_DBGPRINT("DPS_UpdatePubs %d publications to send\n", count);
-        ScheduleBackgroundTask(node, SEND_PUBS_TASK);
+        uv_async_send(&node->pubsAsync);
     }
     DPS_UnlockNode(node);
 }
@@ -844,8 +856,9 @@ int DPS_UpdateSubs(DPS_Node* node, RemoteNode* remote)
             }
         }
     }
-    if (count) {
-        ScheduleBackgroundTask(node, SEND_SUBS_TASK);
+    if (count && !node->subsPending) {
+        node->subsPending = DPS_TRUE;
+        uv_async_send(&node->subsAsync);
     }
     DPS_UnlockNode(node);
     return count;
@@ -863,7 +876,7 @@ void DPS_QueuePublicationAck(DPS_Node* node, PublicationAck* ack)
     if (!node->ackQueue.first) {
         node->ackQueue.first = ack;
     }
-    ScheduleBackgroundTask(node, SEND_ACKS_TASK);
+    uv_async_send(&node->acksAsync);
     DPS_UnlockNode(node);
 }
 
@@ -1013,8 +1026,12 @@ static void StopNode(DPS_Node* node)
         DPS_NetStop(node->netCtx);
         node->netCtx = NULL;
     }
-    assert(!uv_is_closing((uv_handle_t*)&node->bgHandler));
-    uv_close((uv_handle_t*)&node->bgHandler, NULL);
+    assert(!uv_is_closing((uv_handle_t*)&node->stopAsync));
+    uv_close((uv_handle_t*)&node->stopAsync, NULL);
+    uv_close((uv_handle_t*)&node->pubsAsync, NULL);
+    uv_close((uv_handle_t*)&node->subsAsync, NULL);
+    uv_close((uv_handle_t*)&node->acksAsync, NULL);
+    uv_close((uv_handle_t*)&node->subsTimer, NULL);
     /*
      * Cleanup any unresolved resolvers before closing the handle
      */
@@ -1141,7 +1158,16 @@ DPS_Status DPS_SetNodeData(DPS_Node* node, void* data)
 
 void* DPS_GetNodeData(const DPS_Node* node)
 {
-    return node ?  node->userData : NULL;
+    return node ? node->userData : NULL;
+}
+
+static void StopNodeTask(uv_async_t* handle)
+{
+    DPS_DBGTRACE();
+    /*
+     * Stopping the loop will cleanly stop the node
+     */
+    uv_stop(handle->loop);
 }
 
 DPS_Status DPS_StartNode(DPS_Node* node, int mcast, int rxPort)
@@ -1165,14 +1191,30 @@ DPS_Status DPS_StartNode(DPS_Node* node, int mcast, int rxPort)
     }
     DPS_DBGPRINT("libuv version %s\n", uv_version_string());
     /*
-     * For triggering background tasks
+     * Setup the asyncs for running background tasks
      */
-    node->bgHandler.data = node;
-    r = uv_async_init(node->loop, &node->bgHandler, RunBackgroundTasks);
+    node->acksAsync.data = node;
+    r = uv_async_init(node->loop, &node->acksAsync, SendAcksTask);
+    assert(!r);
+
+    node->pubsAsync.data = node;
+    r = uv_async_init(node->loop, &node->pubsAsync, SendPubsTask);
+    assert(!r);
+
+    node->subsAsync.data = node;
+    r = uv_async_init(node->loop, &node->subsAsync, SendSubsTask);
+    assert(!r);
+
+    node->stopAsync.data = node;
+    r = uv_async_init(node->loop, &node->stopAsync, StopNodeTask);
     assert(!r);
 
     node->resolverAsync.data = node;
     r = uv_async_init(node->loop, &node->resolverAsync, DPS_AsyncResolveAddress);
+    assert(!r);
+
+    node->subsTimer.data = node;
+    r = uv_timer_init(node->loop, &node->subsTimer);
     assert(!r);
 
     /*
@@ -1256,15 +1298,6 @@ uint16_t DPS_GetPortNumber(DPS_Node* node)
 
 }
 
-static void StopNodeTask(DPS_Node* node)
-{
-    DPS_DBGTRACE();
-    /*
-     * Stopping the loop will cleanly stop the node
-     */
-    uv_stop(node->loop);
-}
-
 DPS_Status DPS_DestroyNode(DPS_Node* node, DPS_OnNodeDestroyed cb, void* data)
 {
     DPS_DBGTRACE();
@@ -1283,8 +1316,7 @@ DPS_Status DPS_DestroyNode(DPS_Node* node, DPS_OnNodeDestroyed cb, void* data)
             node->state = DPS_NODE_STOPPING;
             node->onDestroyed = cb;
             node->onDestroyedData = data;
-            node->tasks |= STOP_NODE_TASK;
-            uv_async_send(&node->bgHandler);
+            uv_async_send(&node->stopAsync);
             DPS_UnlockNode(node);
             return DPS_OK;
         }
@@ -1383,40 +1415,6 @@ DPS_Status DPS_Unlink(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnUnlinkComplet
     DPS_UnlockNode(node);
     DPS_UpdateSubs(node, remote);
     return DPS_OK;
-}
-
-static void RunBackgroundTasks(uv_async_t* handle)
-{
-    DPS_Node* node = (DPS_Node*)handle->data;
-
-    DPS_DBGTRACE();
-
-    /*
-     * TODO - may need to break some tasks into subtasks,
-     * for example limit the number of subs or pubs on each
-     * iteration so the node lock doesn't get held for too long.
-     */
-    DPS_LockNode(node);
-    /*
-     * The tasks are ordered according to priority
-     */
-    if (node->tasks & SEND_ACKS_TASK) {
-        node->tasks &= ~SEND_ACKS_TASK;
-        SendAcksTask(node);
-    } else if (node->tasks & SEND_PUBS_TASK) {
-        node->tasks &= ~SEND_PUBS_TASK;
-        SendPubsTask(node);
-    } else if (node->tasks & SEND_SUBS_TASK) {
-        node->tasks &= ~SEND_SUBS_TASK;
-        SendSubsTask(node);
-    } else if (node->tasks & STOP_NODE_TASK) {
-        node->tasks &= ~STOP_NODE_TASK;
-        StopNodeTask(node);
-    }
-    if (node->tasks) {
-        uv_async_send(&node->bgHandler);
-    }
-    DPS_UnlockNode(node);
 }
 
 const char* DPS_NodeAddrToString(DPS_NodeAddress* addr)
