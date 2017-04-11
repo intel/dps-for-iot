@@ -58,6 +58,8 @@ typedef struct _OnOpCompletion OnOpCompletion;
 
 typedef struct _LinkMonitor LinkMonitor;
 
+typedef struct _ResolverInfo ResolverInfo;
+
 /*
  * Link monitor configuration values. All times are in milliseconds.
  */
@@ -117,6 +119,9 @@ typedef struct _DPS_Node {
     void* onDestroyedData;                /* Context to pass to onDestroyed callback */
 
     LinkMonitorConfig linkMonitorConfig;  /* Configuration parameters for mesh probe publications */
+
+    uv_async_t resolverAsync;             /* Async handler for address resolver */
+    ResolverInfo* resolverList;           /* Linked list of address resolution requests */
 
 } DPS_Node;
 

@@ -40,6 +40,7 @@
 #include "ack.h"
 #include "topics.h"
 #include "linkmon.h"
+#include "resolver.h"
 #include "uv_extra.h"
 
 /*
@@ -1015,6 +1016,11 @@ static void StopNode(DPS_Node* node)
     assert(!uv_is_closing((uv_handle_t*)&node->bgHandler));
     uv_close((uv_handle_t*)&node->bgHandler, NULL);
     /*
+     * Cleanup any unresolved resolvers before closing the handle
+     */
+    DPS_AsyncResolveAddress(&node->resolverAsync);
+    uv_close((uv_handle_t*)&node->resolverAsync, NULL);
+    /*
      * Delete remote nodes and shutdown any connections.
      */
     while (node->remoteNodes) {
@@ -1164,6 +1170,11 @@ DPS_Status DPS_StartNode(DPS_Node* node, int mcast, int rxPort)
     node->bgHandler.data = node;
     r = uv_async_init(node->loop, &node->bgHandler, RunBackgroundTasks);
     assert(!r);
+
+    node->resolverAsync.data = node;
+    r = uv_async_init(node->loop, &node->resolverAsync, DPS_AsyncResolveAddress);
+    assert(!r);
+
     /*
      * Mutex for protecting the node
      */

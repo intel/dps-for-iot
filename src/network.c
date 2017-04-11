@@ -32,7 +32,7 @@
 /*
  * Debug control for this module
  */
-DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
+DPS_DEBUG_CONTROL(DPS_DEBUG_OFF);
 
 const char* DPS_NetAddrText(const struct sockaddr* addr)
 {
@@ -104,113 +104,6 @@ int DPS_SameAddr(DPS_NodeAddress* addr1, DPS_NodeAddress* addr2)
     }
 }
 
-#define MAX_HOST_LEN    256  /* Per RFC 1034/1035 */
-#define MAX_SERVICE_LEN  16  /* Per RFC 6335 section 5.1 */
-
-typedef struct {
-    DPS_Node* node;
-    uv_async_t async;
-    DPS_OnResolveAddressComplete cb;
-    void* data;
-    uv_getaddrinfo_t info;
-    char host[MAX_HOST_LEN + 1];
-    char service[MAX_SERVICE_LEN + 1];
-} ResolverInfo;
-
-static void FreeHandle(uv_handle_t* handle)
-{
-    if (handle->data) {
-        free(handle->data);
-    }
-}
-
-static void GetAddrInfoCB(uv_getaddrinfo_t* req, int status, struct addrinfo* res)
-{
-    ResolverInfo* resolver = (ResolverInfo*)req->data;
-    if (status == 0) {
-        DPS_NodeAddress addr;
-        if (res->ai_family == AF_INET6) {
-            memcpy_s(&addr.inaddr, sizeof(addr.inaddr), res->ai_addr, sizeof(struct sockaddr_in6));
-        } else {
-            memcpy_s(&addr.inaddr, sizeof(addr.inaddr), res->ai_addr, sizeof(struct sockaddr_in));
-        }
-        resolver->cb(resolver->node, &addr, resolver->data);
-        uv_freeaddrinfo(res);
-    } else {
-        DPS_ERRPRINT("uv_getaddrinfo failed %s\n", uv_err_name(status));
-        resolver->cb(resolver->node, NULL, resolver->data);
-    }
-    assert(resolver->async.data == resolver);
-    resolver->async.data = resolver;
-    uv_close((uv_handle_t*)&resolver->async, FreeHandle);
-}
-
-static void AsyncResolveAddress(uv_async_t* async)
-{
-    ResolverInfo* resolver = (ResolverInfo*)async->data;
-    int r;
-    struct addrinfo hints;
-
-    DPS_DBGTRACE();
-
-    memzero_s(&hints, sizeof(hints));
-    hints.ai_family = AF_UNSPEC;
-    hints.ai_socktype = SOCK_STREAM;
-    hints.ai_protocol = IPPROTO_TCP;
-
-    resolver->info.data = resolver;
-    r = uv_getaddrinfo(async->loop, &resolver->info, GetAddrInfoCB, resolver->host, resolver->service, &hints);
-    if (r) {
-        DPS_ERRPRINT("uv_getaddrinfo call error %s\n", uv_err_name(r));
-        resolver->cb(resolver->node, NULL, resolver->data);
-        uv_close((uv_handle_t*)async, FreeHandle);
-    }
-}
-
-DPS_Status DPS_ResolveAddress(DPS_Node* node, const char* host, const char* service, DPS_OnResolveAddressComplete cb, void* data)
-{
-    int r;
-    ResolverInfo* resolver;
-
-    DPS_DBGTRACE();
-
-    if (!node->loop) {
-        DPS_ERRPRINT("Cannot resolve address - node has not been started\n");
-        return DPS_ERR_INVALID;
-    }
-    if (!service || !cb) {
-        return DPS_ERR_NULL;
-    }
-    if (!host) {
-        host = "localhost";
-    }
-    resolver = calloc(1, sizeof(ResolverInfo));
-    if (!resolver) {
-        return DPS_ERR_RESOURCES;
-    }
-    strncpy_s(resolver->host, sizeof(resolver->host), host, sizeof(resolver->host) - 1);
-    strncpy_s(resolver->service, sizeof(resolver->service), service, sizeof(resolver->service) - 1);
-    resolver->node = node;
-    resolver->cb = cb;
-    resolver->data = data;
-    /*
-     * Async callback
-     */
-    r = uv_async_init(node->loop, &resolver->async, AsyncResolveAddress);
-    if (r) {
-        free(resolver);
-        return DPS_ERR_RESOURCES;
-    }
-    resolver->async.data = resolver;
-    r = uv_async_send(&resolver->async);
-    if (r) {
-        uv_close((uv_handle_t*)&resolver->async, FreeHandle);
-        return DPS_ERR_FAILURE;
-    } else {
-        return DPS_OK;
-    }
-}
-
 DPS_NodeAddress* DPS_SetAddress(DPS_NodeAddress* addr, const struct sockaddr* sa)
 {
     memzero_s(addr, sizeof(DPS_NodeAddress));
@@ -245,4 +138,3 @@ void DPS_NetFreeBufs(uv_buf_t* bufs, size_t numBufs)
         ++bufs;
     }
 }
-
