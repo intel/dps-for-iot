@@ -18,7 +18,7 @@ SRC_URI = "git://github.com/01org/dps-for-iot.git;name=dps \
            "
 inherit scons
 
-DEPENDS = "libuv nodejs"
+DEPENDS = "libuv nodejs python"
 
 INSANE_SKIP_${PN} += " ldflags"
 INSANE_SKIP_${PN}-dev += "ldflags"
@@ -39,8 +39,8 @@ do_compile_prepend() {
     export SYSROOT="${STAGING_DIR_TARGET}"
 }
 scons_do_compile() {
-        ${STAGING_BINDIR_NATIVE}/scons target=yocto ${PARALLEL_MAKE} ${EXTRA_OESCONS} || \
-        die "scons build execution failed."
+    scons target=yocto ${PARALLEL_MAKE} ${EXTRA_OESCONS} || \
+    die "scons build execution failed."
 }
 
 do_install() {
