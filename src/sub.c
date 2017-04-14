@@ -45,6 +45,31 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
 #define DESCRIBE(n)  DPS_NodeAddrToString(&(n)->ep.addr)
 
+#define DPS_SUB_FLAG_SYNC_IND   0x01      /* Indicate remote interests are being synched (not delta) */
+#define DPS_SUB_FLAG_SYNC_REQ   0x02      /* Request remote to send synched interests */
+#define DPS_SUB_FLAG_MUTE_IND   0x04      /* Mute has been indicated */
+
+#ifndef NDEBUG
+static void DumpFlags(DPS_Node* node, uint8_t flags, char direction)
+{
+    if (DPS_Debug && flags) {
+        DPS_PRINT("%d %cB flags: ", node->port, direction);
+        if (flags & DPS_SUB_FLAG_SYNC_IND) {
+            DPS_PRINT("SYNC_IND ");
+        }
+        if (flags & DPS_SUB_FLAG_SYNC_REQ) {
+            DPS_PRINT("SYNC_REQ ");
+        }
+        if (flags & DPS_SUB_FLAG_MUTE_IND) {
+            DPS_PRINT("MUTE_IND ");
+        }
+        DPS_PRINT("\n");
+    }
+}
+#else
+#define DumpFlags(n, f, d)
+#endif
+
 static int IsValidSub(const DPS_Subscription* sub)
 {
     DPS_Subscription* subList;
@@ -191,15 +216,16 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote, DPS_BitVecto
     /*
      * Set flags
      */
-    if (remote->outbound.sync) {
-        flags |= DPS_SUB_FLAG_SYNC_INF;
+    if (remote->outbound.syncInd) {
+        flags |= DPS_SUB_FLAG_SYNC_IND;
     }
-    if (remote->inbound.sync) {
+    if (remote->outbound.syncReq) {
         flags |= DPS_SUB_FLAG_SYNC_REQ;
     }
     if (remote->outbound.muted) {
-        flags |= DPS_SUB_FLAG_MUTE_INF;
+        flags |= DPS_SUB_FLAG_MUTE_IND;
     }
+    DumpFlags(node, flags, 'O');
     /*
      * Subscription is encoded as an array of 3 elements
      *  [
@@ -209,18 +235,18 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote, DPS_BitVecto
      *  ]
      */
     len = CBOR_SIZEOF_ARRAY(3) +
-          CBOR_SIZEOF(uint8_t) +
+        CBOR_SIZEOF(uint8_t) +
 
-          CBOR_SIZEOF_MAP(1) + 2 * CBOR_SIZEOF(uint8_t) +
-          CBOR_SIZEOF(uint16_t) +
-          CBOR_SIZEOF_BSTR(sizeof(DPS_UUID));
+        CBOR_SIZEOF_MAP(1) + 2 * CBOR_SIZEOF(uint8_t) +
+        CBOR_SIZEOF(uint16_t) +
+        CBOR_SIZEOF_BSTR(sizeof(DPS_UUID));
 
     if (interests) {
         len += CBOR_SIZEOF_MAP(4) + 4 * CBOR_SIZEOF(uint8_t) +
-               CBOR_SIZEOF_BOOL +
-               CBOR_SIZEOF_BOOL +
-               DPS_BitVectorSerializeMaxSize(interests) +
-               DPS_BitVectorSerializeMaxSize(remote->outbound.needs);
+            CBOR_SIZEOF_BOOL +
+            CBOR_SIZEOF_BOOL +
+            DPS_BitVectorSerializeMaxSize(interests) +
+            DPS_BitVectorSerializeMaxSize(remote->outbound.needs);
     } else {
         len += CBOR_SIZEOF_MAP(0);
     }
@@ -274,7 +300,10 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote, DPS_BitVecto
             ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_SEQ_NUM);
         }
         if (ret == DPS_OK) {
-            ++remote->outbound.sequenceNum;
+            /*
+             * See UpdateOutboundInterests() the outbound sequence number
+             * only changes if the subscription changes.
+             */
             ret = CBOR_EncodeUint32(&buf, remote->outbound.sequenceNum);
         }
         if (ret == DPS_OK) {
@@ -298,17 +327,21 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote, DPS_BitVecto
     } else {
         ret = CBOR_EncodeMap(&buf, 0);
     }
-
+    /*
+     * Clear the sync request if are sending full interests
+     */
+    if (remote->outbound.syncInd) {
+        remote->inbound.syncReq = DPS_FALSE;
+        remote->outbound.syncInd = DPS_FALSE;
+    }
 #ifdef SIMULATE_LOST_SUBSCRIPTION
     /*
      * Enable this code to simulate lost subscriptions to test
      * out the resynchronization code.
      */
-    if (!remote->outbound.sync && (DPS_Rand() & 0x8)) {
+    if (DPS_Rand() & 0x8) {
         DPS_ERRPRINT("Simulating lost subscription\n");
         DPS_TxBufferFree(&buf);
-        remote->inbound.sync = DPS_FALSE;
-        remote->outbound.sync = DPS_FALSE;
         return DPS_OK;
     }
 #endif
@@ -324,11 +357,6 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote, DPS_BitVecto
     } else {
         DPS_TxBufferFree(&buf);
     }
-    /*
-     * Done with these flags (even in case of failure)
-     */
-    remote->inbound.sync = DPS_FALSE;
-    remote->outbound.sync = DPS_FALSE;
     return ret;
 }
 
@@ -337,7 +365,7 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote, DPS_BitVecto
  */
 static DPS_Status UpdateInboundInterests(DPS_Node* node, RemoteNode* remote, DPS_BitVector* interests, DPS_BitVector* needs, uint8_t flags)
 {
-    int delta = !(flags & DPS_SUB_FLAG_SYNC_INF);
+    int delta = !(flags & DPS_SUB_FLAG_SYNC_IND);
 
     DPS_DBGTRACE();
 
@@ -373,7 +401,7 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
 {
     static const int32_t HeaderKeys[] = { DPS_CBOR_KEY_PORT, DPS_CBOR_KEY_MESH_ID };
     static const int32_t BodyKeys[] = { DPS_CBOR_KEY_SEQ_NUM, DPS_CBOR_KEY_SUB_FLAGS,
-                                        DPS_CBOR_KEY_NEEDS, DPS_CBOR_KEY_INTERESTS };
+        DPS_CBOR_KEY_NEEDS, DPS_CBOR_KEY_INTERESTS };
     DPS_Status ret;
     DPS_BitVector* interests = NULL;
     DPS_BitVector* needs = NULL;
@@ -490,44 +518,29 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
             break;
         }
     }
+    DPS_LockNode(node);
     if (ret == DPS_OK) {
-        DPS_LockNode(node);
         ret = DPS_AddRemoteNode(node, &ep->addr, ep->cn, &remote);
         if (ret == DPS_ERR_EXISTS) {
             ret = DPS_OK;
         } else {
             /*
              * The remote is new to us so we need to sync to it
-             * even if it didn't request to synch.
+             * even if it didn't request to sync.
              */
-            flags |= DPS_SUB_FLAG_SYNC_REQ;
+            remote->inbound.syncReq = DPS_TRUE;
         }
-        DPS_UnlockNode(node);
     }
     if (ret != DPS_OK) {
-        DPS_BitVectorFree(interests);
-        DPS_BitVectorFree(needs);
-        return ret;
+        goto RejectAndExit;
     }
-    DPS_LockNode(node);
-    if (flags & DPS_SUB_FLAG_SYNC_REQ) {
-        remote->outbound.sync = DPS_TRUE;
-    }
+    DumpFlags(node, flags, 'I');
     /*
-     * Check the sequence number to detect lost packets
+     * Unpack the flags
      */
-    if (sequenceNum != (remote->inbound.sequenceNum + 1)) {
-        DPS_ERRPRINT("Mismatched sequence number %d != %d from %s\n", sequenceNum, remote->inbound.sequenceNum + 1, DESCRIBE(remote));
-        if (flags & DPS_SUB_FLAG_SYNC_INF) {
-            if (sequenceNum > remote->inbound.sequenceNum) {
-                remote->inbound.sequenceNum = sequenceNum;
-            }
-        } else {
-            DPS_ERRPRINT("Ignore invalid delta and request resync\n");
-            remote->inbound.sync = DPS_TRUE;
-        }
-    } else {
-        ++remote->inbound.sequenceNum;
+    remote->inbound.syncInd = (flags & DPS_SUB_FLAG_SYNC_IND) != 0;
+    if (flags & DPS_SUB_FLAG_SYNC_REQ) {
+        remote->inbound.syncReq = DPS_TRUE;
     }
     /*
      * Check if the application waiting for a completion callback.
@@ -537,74 +550,112 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
     if (remote->completion) {
         DPS_RemoteCompletion(node, remote, DPS_OK);
     }
-    if (sequenceNum == remote->inbound.sequenceNum) {
-        DPS_DBGPRINT("Node %d received mesh id %08x from %s\n", node->port, UUID_32(meshId), DESCRIBE(remote));
-
-        /*
-         * Loops can be detected by either end of a link and corrective action is required
-         * to prevent interests from propagating around the loop. The corrective action is
-         * to mute the link by clearing all inbound and outbound interests from the remote.
-         *
-         * It is possible for nodes at both ends of a link simultaneously detect the loop
-         * so we need to handle various cases below. A link is not fully muted until both
-         * inbound and outbound muted flags are non zero.
-         */
-        if (remote->outbound.muted && (flags & DPS_SUB_FLAG_MUTE_INF)) {
+    /*
+     * If we sent a sync request check we didn't get a delta
+     */
+    if (remote->outbound.syncReq) {
+        if (!remote->inbound.syncInd) {
+            DPS_ERRPRINT("Requested sync but got a delta\n");
             /*
-             * Fully muted
+             * Discard this subscription and continue to
+             * request a full sync.
              */
-            remote->inbound.muted = DPS_TRUE;
-            DPS_DBGPRINT("Remote %s is fully muted\n", DESCRIBE(remote));
-        } else if (remote->outbound.muted && !remote->inbound.muted) {
-            /*
-             * Half muted state - nothing to do
-             */
-            DPS_DBGPRINT("Remote %s is half muted\n", DESCRIBE(remote));
-        } else if (!remote->outbound.muted && (flags & DPS_SUB_FLAG_MUTE_INF)) {
-            /*
-             * We are being muted by the remote
-             */
-            remote->inbound.muted = DPS_TRUE;
-            ret = DPS_MuteRemoteNode(node, remote);
-        } else if (remote->inbound.muted && !(flags & DPS_SUB_FLAG_MUTE_INF)) {
-            assert(remote->outbound.muted);
-            /*
-             * The remote has unmuted
-             */
-            remote->outbound.muted = DPS_FALSE;
-            remote->inbound.muted = DPS_FALSE;
-            remote->outbound.sync = DPS_TRUE;
-            DPS_DBGPRINT("Remote %s has unumuted\n", DESCRIBE(remote));
-        } else if (DPS_MeshHasLoop(node, remote, meshId)) {
-            /*
-             * We detected a loop and need to mute
-             */
-            ret = DPS_MuteRemoteNode(node, remote);
+            goto RejectAndExit;
         }
-        if (remote->outbound.muted) {
-            assert(DPS_UUIDCompare(&remote->inbound.meshId, &DPS_MaxMeshId) == 0);
-            assert(DPS_UUIDCompare(&remote->outbound.meshId, &DPS_MaxMeshId) == 0);
-            DPS_BitVectorFree(interests);
-            DPS_BitVectorFree(needs);
-        } else {
-            remote->inbound.meshId = *meshId;
-            ret = UpdateInboundInterests(node, remote, interests, needs, flags);
-            /*
-             * Evaluate impact of the change in interests
-             */
-            if (ret == DPS_OK) {
-                DPS_UpdatePubs(node, NULL);
-                DPS_UpdateSubs(node, NULL);
-            }
-        }
+        remote->outbound.syncReq = DPS_FALSE;
+    }
+    /*
+     * Check for lost subscriptions
+     */
+    if (sequenceNum > (remote->inbound.sequenceNum + 1)) {
+        DPS_ERRPRINT("Missing subscriptions %d from %s\n", sequenceNum - (remote->inbound.sequenceNum + 1), DESCRIBE(remote));
         /*
-         * Track the minimum mesh id we have seen
+         * We got a newer subscription that we were expecting which is ok
+         * so long as we didn't get a delta.
          */
-        if (DPS_UUIDCompare(meshId, &node->minMeshId) < 0) {
-            node->minMeshId = *meshId;
+        if (!(flags & DPS_SUB_FLAG_SYNC_IND)) {
+            DPS_ERRPRINT("Ignore invalid delta and request resync\n");
+            remote->outbound.syncReq = DPS_TRUE;
+            goto RejectAndExit;
         }
     }
+    remote->inbound.sequenceNum = sequenceNum;
+    DPS_DBGPRINT("Node %d received mesh id %08x from %s\n", node->port, UUID_32(meshId), DESCRIBE(remote));
+    /*
+     * Loops can be detected by either end of a link and corrective action is required
+     * to prevent interests from propagating around the loop. The corrective action is
+     * to mute the link by clearing all inbound and outbound interests from the remote.
+     *
+     * It is possible for nodes at both ends of a link simultaneously detect the loop
+     * so we need to handle various cases below. A link is not fully muted until both
+     * inbound and outbound muted flags are non zero.
+     */
+    if (remote->outbound.muted && (flags & DPS_SUB_FLAG_MUTE_IND)) {
+        /*
+         * Fully muted
+         */
+        remote->inbound.muted = DPS_TRUE;
+        DPS_DBGPRINT("Remote %s is fully muted\n", DESCRIBE(remote));
+    } else if (remote->outbound.muted && !remote->inbound.muted) {
+        /*
+         * Half muted state - nothing to do
+         */
+        DPS_DBGPRINT("Remote %s is half muted\n", DESCRIBE(remote));
+    } else if (!remote->outbound.muted && (flags & DPS_SUB_FLAG_MUTE_IND)) {
+        /*
+         * We are being muted by the remote
+         */
+        remote->inbound.muted = DPS_TRUE;
+        DPS_DBGPRINT("Received mute request from remote %s\n", DESCRIBE(remote));
+        ret = DPS_MuteRemoteNode(node, remote);
+    } else if (remote->inbound.muted && !(flags & DPS_SUB_FLAG_MUTE_IND)) {
+        assert(remote->outbound.muted);
+        /*
+         * The remote has unmuted
+         */
+        remote->outbound.muted = DPS_FALSE;
+        remote->inbound.muted = DPS_FALSE;
+        remote->outbound.syncReq = DPS_TRUE;
+        DPS_DBGPRINT("Remote %s has unumuted\n", DESCRIBE(remote));
+    } else if (DPS_MeshHasLoop(node, remote, meshId)) {
+        /*
+         * We detected a loop and need to mute
+         */
+        ret = DPS_MuteRemoteNode(node, remote);
+    }
+    if (remote->outbound.muted) {
+        assert(DPS_UUIDCompare(&remote->inbound.meshId, &DPS_MaxMeshId) == 0);
+        assert(DPS_UUIDCompare(&remote->outbound.meshId, &DPS_MaxMeshId) == 0);
+        DPS_BitVectorFree(interests);
+        DPS_BitVectorFree(needs);
+    } else {
+        remote->inbound.meshId = *meshId;
+        ret = UpdateInboundInterests(node, remote, interests, needs, flags);
+        /*
+         * Evaluate impact of the change in interests
+         */
+        if (ret == DPS_OK) {
+            DPS_UpdatePubs(node, NULL);
+            DPS_UpdateSubs(node, NULL);
+        }
+    }
+    /*
+     * Track the minimum mesh id we have seen
+     */
+    if (DPS_UUIDCompare(meshId, &node->minMeshId) < 0) {
+        node->minMeshId = *meshId;
+    }
     DPS_UnlockNode(node);
+    return ret;
+
+RejectAndExit:
+
+    DPS_UnlockNode(node);
+    if (ret != DPS_OK) {
+        DPS_ERRPRINT("Subscription was discarded %s\n", DPS_ErrTxt(ret));
+    }
+    DPS_BitVectorFree(interests);
+    DPS_BitVectorFree(needs);
     return ret;
 }
 

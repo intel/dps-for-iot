@@ -354,7 +354,7 @@ static DPS_Status UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, 
     DPS_Status ret;
     DPS_BitVector* newInterests = NULL;
     DPS_BitVector* newNeeds = NULL;
-    int newMeshId;
+    int updates = DPS_FALSE;
 
     DPS_DBGTRACE();
 
@@ -390,7 +390,7 @@ static DPS_Status UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, 
         ret = DPS_ERR_RESOURCES;
         goto ErrExit;
     }
-    newMeshId = UpdateOutboundMeshId(node, destNode, newInterests);
+    updates = UpdateOutboundMeshId(node, destNode, newInterests);
     /*
      * Try computing a delta if we have a previous outbound interests
      * bit vector and we have not been asked to do a full synchronization.
@@ -398,17 +398,21 @@ static DPS_Status UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, 
      * Since the needs vector is relatively small there is little
      * advantage gained is computing the delta.
      */
-    if (destNode->outbound.interests && !destNode->outbound.sync) {
+    if (destNode->outbound.interests && !destNode->inbound.syncReq) {
         int same = DPS_FALSE;
         DPS_BitVector* delta = node->scratch.interests;
 
         DPS_BitVectorXor(delta, destNode->outbound.interests, newInterests, &same);
+        updates |= !same;
         /*
-         * If there is no change there is nothing to send unless we are
-         * requesting synchronization from the remote or need to forward
-         * an updated mesh id.
+         * If there are no updates there is nothing to send unless we are
+         * requesting synchronization from the remote.
          */
-        if (destNode->inbound.sync || newMeshId || !same) {
+        if (updates || destNode->outbound.syncReq) {
+            /*
+             * This is a delta
+             */
+            destNode->outbound.syncInd = DPS_FALSE;
             *outboundInterests = delta;
         } else {
             assert(DPS_BitVectorEquals(destNode->outbound.needs, newNeeds));
@@ -416,19 +420,27 @@ static DPS_Status UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, 
         }
     } else {
         /*
-         * Full sychronization is required
+         * Indicate that this is a full synchronization not a delta
          */
-        destNode->outbound.sync = DPS_TRUE;
+        destNode->outbound.syncInd = DPS_TRUE;
         *outboundInterests = newInterests;
+        updates = DPS_TRUE;
     }
 
     FreeOutboundInterests(destNode);
     destNode->outbound.interests = newInterests;
     destNode->outbound.needs = newNeeds;
 
+    /*
+     * If there are updates we must increment the sequence number.
+     */
+    if (updates) {
+        ++destNode->outbound.sequenceNum;
+    }
+
     if (DPS_DEBUG_ENABLED()) {
         if (*outboundInterests) {
-            if (destNode->outbound.sync) {
+            if (destNode->outbound.syncInd) {
                 DPS_DBGPRINT("New outbound interests for %s: ", DESCRIBE(destNode));
                 DPS_DumpMatchingTopics(destNode->outbound.interests);
             } else {
@@ -475,7 +487,11 @@ DPS_Status DPS_MuteRemoteNode(DPS_Node* node, RemoteNode* remote)
     if (!remote->outbound.interests || !remote->outbound.needs) {
         ret = DPS_ERR_RESOURCES;
     } else {
-        remote->outbound.sync = DPS_TRUE;
+        /*
+         * We are explicitly sending zero interests so not a delta
+         */
+        remote->outbound.syncInd = DPS_TRUE;
+        remote->outbound.syncReq = DPS_TRUE;
         ret = DPS_SendSubscription(node, remote, remote->outbound.interests);
         FreeOutboundInterests(remote);
     }
@@ -498,12 +514,11 @@ DPS_Status DPS_UnmuteRemoteNode(DPS_Node* node, RemoteNode* remote)
 
     DPS_LinkMonitorStop(remote);
     /*
-     * This will update the subscriptions for this remote
+     * Set flags to ensure a clean synchronization with the remote
      */
     remote->outbound.muted = DPS_FALSE;
     remote->inbound.muted = DPS_FALSE;
-    remote->outbound.sync = DPS_TRUE;
-    remote->inbound.sync = DPS_TRUE;
+    remote->outbound.syncReq = DPS_TRUE;
     /*
      * We need a fresh mesh id that is less than any of the mesh id's
      * we have already seen. If we were to send the same mesh id that
@@ -837,7 +852,13 @@ static void SendSubsTimer(uv_timer_t* handle)
 static void SendSubsTask(uv_async_t* handle)
 {
     DPS_Node* node = (DPS_Node*)handle->data;
+
+    DPS_LockNode(node);
+    if (node->state == DPS_NODE_RUNNING) {
+        node->subsPending = DPS_TRUE;
     uv_timer_start(&node->subsTimer, SendSubsTimer, 0, 0);
+}
+    DPS_UnlockNode(node);
 }
 
 /*
@@ -903,7 +924,6 @@ int DPS_UpdateSubs(DPS_Node* node, RemoteNode* remote)
         }
     }
     if (count && !node->subsPending) {
-        node->subsPending = DPS_TRUE;
         uv_async_send(&node->subsAsync);
     }
     DPS_UnlockNode(node);
@@ -1002,9 +1022,12 @@ static DPS_Status OnMulticastReceive(DPS_Node* node, DPS_NetEndpoint* ep, DPS_St
     /*
      * Fail input that comes in when the node is no longer running
      */
+    DPS_LockNode(node);
     if (node->state != DPS_NODE_RUNNING) {
+        DPS_UnlockNode(node);
         return DPS_ERR_FAILURE;
     }
+    DPS_UnlockNode(node);
     ret = CoAP_Parse(COAP_OVER_UDP, data, len, &coap, &payload);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Discarding garbage multicast packet len=%zu\n", len);
@@ -1031,9 +1054,12 @@ static DPS_Status OnNetReceive(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Status s
     /*
      * Fail input that comes in when the node is no longer running
      */
+    DPS_LockNode(node);
     if (node->state != DPS_NODE_RUNNING) {
+        DPS_UnlockNode(node);
         return DPS_ERR_FAILURE;
     }
+    DPS_UnlockNode(node);
     /*
      * Delete the remote node if the received failed
      */
@@ -1410,10 +1436,12 @@ DPS_Status DPS_Link(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnLinkComplete cb
     }
     assert(!remote->completion);
     remote->linked = DPS_TRUE;
-    remote->outbound.sync = DPS_TRUE;
-    if (ret == DPS_OK) {
-        remote->inbound.sync = DPS_TRUE;
-    }
+    /*
+     * Do a full synchronization with the remote
+     */
+    remote->outbound.syncReq = DPS_TRUE;
+
+
     remote->completion = AllocCompletion(node, remote, LINK_OP, data, LINK_RESPONSE_TIMEOUT, cb);
     if (!remote->completion) {
         DPS_DeleteRemoteNode(node, remote);

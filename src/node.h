@@ -136,17 +136,15 @@ typedef struct _DPS_Node {
 
 extern const DPS_UUID DPS_MaxMeshId;
 
-#define DPS_SUB_FLAG_SYNC_INF    1      /* Inform remote interests are being synched (not delta) */
-#define DPS_SUB_FLAG_SYNC_REQ    2      /* Request remote to send synched interests */
-#define DPS_SUB_FLAG_MUTE_INF    4      /* Inform remote node sender is muted */
-
 typedef struct _RemoteNode {
     OnOpCompletion* completion;
     uint8_t linked;                    /* TRUE if this is a node that was explicitly linked */
     uint8_t unlink;                    /* TRUE if this node is about to be unlinked */
     struct {
         uint8_t muted;                 /* TRUE if the remote informed us the that link is muted */
-        uint8_t sync;                  /* If TRUE request remote to synchronize interests */
+        uint8_t syncReq;               /* TRUE if the remote requested interest synchronization */
+        uint8_t syncInd;               /* TRUE if the remote indicated interest synchronization */
+        uint8_t checkForUpdates;       /* TRUE if there may be updated interests to send to this remote */
         uint32_t sequenceNum;          /* Sequence number of last subscription received from this node */
         DPS_UUID meshId;               /* The mesh id received from this remote node */
         DPS_BitVector* needs;          /* Bit vector of needs received from  this remote node */
@@ -154,7 +152,8 @@ typedef struct _RemoteNode {
     } inbound;
     struct {
         uint8_t muted;                 /* TRUE if we have informed the remote that the link is muted */
-        uint8_t sync;                  /* If TRUE synchronize outbound interests with remote node (no deltas) */
+        uint8_t syncReq;               /* TRUE if we are requesting interest synchronization */
+        uint8_t syncInd;               /* TRUE if we are indicating interest synchronization */
         uint8_t checkForUpdates;       /* TRUE if there may be updated interests to send to this remote */
         uint32_t sequenceNum;          /* Sequence number of last subscription sent to this node */
         DPS_UUID meshId;               /* The mesh id sent to this remote node */
