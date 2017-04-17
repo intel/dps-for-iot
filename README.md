@@ -95,11 +95,15 @@ Clone the poky repository and configure the Yocto environment.
 Refer to [Yocto Project Quick Start](http://www.yoctoproject.org/docs/1.8/yocto-project-qs/yocto-project-qs.html) for more information.
 
 Clone the libuv Yocto project and yocto/recipes-connectivity/dps to the Yocto Project directory.
+Modify the value of SRCREV_dps in dps_git.bb to the last commit of dps.
+
 The Yocto Project directory needs to be included in BBLAYERS of conf/bblayers.conf.
 Refer to [Yocto Wiki](https://wiki.yoctoproject.org/wiki/How_do_I) for more information.
 
 From the root directory of the Yocto Project, initialize the Yocto environment, provide a meaningful build directory name and build Yocto DPS.
+
 `$ source oe-init-build-env mybuilds`
+
 `$ bitbake dps`
 
 ---

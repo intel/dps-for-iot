@@ -5,7 +5,7 @@ LICENSE = "Apache-2.0"
 LIC_FILES_CHKSUM = "file://LICENSE.md;md5=048191255019d4e1ee70aef53dbbec10"
 
 S = "${WORKDIR}/git"
-SRCREV_dps = "d2a7ffac13192df94f0dd860a88bec3471d4a7ec"
+SRCREV_dps = "59a3c33d64f2b3fc16cc5c52b5f4a7bec47640a7"
 SRCREV_tinycrypt = "e6cffb820b91578d9816fc0bcc8f72f32f6ee76b"
 SRCREV_safestring = "db404a9bba3a58d06adfdab4021e7b91265ac0f0"
 PV = "0.1+git${SRCPV}"
@@ -18,7 +18,7 @@ SRC_URI = "git://github.com/01org/dps-for-iot.git;name=dps \
            "
 inherit scons
 
-DEPENDS = "libuv nodejs python"
+DEPENDS = "libuv nodejs python-scons-native python"
 
 INSANE_SKIP_${PN} += " ldflags"
 INSANE_SKIP_${PN}-dev += "ldflags"
@@ -39,7 +39,7 @@ do_compile_prepend() {
     export SYSROOT="${STAGING_DIR_TARGET}"
 }
 scons_do_compile() {
-    scons target=yocto ${PARALLEL_MAKE} ${EXTRA_OESCONS} || \
+    ${STAGING_BINDIR_NATIVE}/scons target=yocto ${PARALLEL_MAKE} ${EXTRA_OESCONS} || \
     die "scons build execution failed."
 }
 

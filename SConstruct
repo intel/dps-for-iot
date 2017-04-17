@@ -40,21 +40,6 @@ except:
 extEnv = Environment(ENV = os.environ, variables=vars)
 env = Environment(CPPDEFINES=[], CPPPATH = ['#/inc', '#/ext/tinycrypt/lib/include', '#/ext/safestring/include'], variables=vars, tools=tools)
 
-if env['target'] == 'yocto':
-    env_options = ["SYSROOT", "CC", "AR", "ARFLAGS", "CCFLAGS", "CFLAGS", "CXX", "CXXFLAGS", "LINKFLAGS", "STRIP", "PKG_CONFIG", "CHRPATH", "LD", "TAR"]
-    for i in env_options:
-        if os.environ.has_key(i):
-            if i in ("CFLAGS", "CCFLAGS", "LINKFLAGS"):
-                env.Replace(**{i: Split(os.getenv(i))})
-                extEnv.Replace(**{i: Split(os.getenv(i))})
-            else:
-                env.Replace(**{i: os.getenv(i)})
-                extEnv.Replace(**{i: os.getenv(i)})
-    env.PrependENVPath('PATH', os.getenv('PATH'))
-    env.PrependENVPath('LDFLAGS', os.getenv('LDFLAGS'))
-    extEnv.PrependENVPath('PATH', os.getenv('PATH'))
-    extEnv.PrependENVPath('LDFLAGS', os.getenv('LDFLAGS'))
-
 Help(vars.GenerateHelpText(env))
 
 for key, val in ARGLIST:
@@ -70,9 +55,6 @@ if env['transport'] == 'udp':
     env['CPPDEFINES'].append('DPS_USE_UDP')
 
 print "Building for " + env['variant']
-
-# Build external dependencies
-ext_libs = SConscript('ext/SConscript', exports=['extEnv'])
 
 # Platform specific configuration
 
@@ -180,6 +162,24 @@ else:
 env.Append(LIBPATH=['./ext'])
 
 print env['CPPDEFINES']
+
+if env['target'] == 'yocto':
+    env_options = ["SYSROOT", "CC", "AR", "ARFLAGS", "CCFLAGS", "CFLAGS", "CXX", "CXXFLAGS", "LINKFLAGS", "STRIP", "PKG_CONFIG", "CHRPATH", "LD", "TAR"]
+    for i in env_options:
+        if os.environ.has_key(i):
+            if i in ("CFLAGS", "CCFLAGS", "LINKFLAGS"):
+                env.Replace(**{i: Split(os.getenv(i))})
+                extEnv.Replace(**{i: Split(os.getenv(i))})
+            else:
+                env.Replace(**{i: os.getenv(i)})
+                extEnv.Replace(**{i: os.getenv(i)})
+    env.PrependENVPath('PATH', os.getenv('PATH'))
+    env.PrependENVPath('LDFLAGS', os.getenv('LDFLAGS'))
+    extEnv.PrependENVPath('PATH', os.getenv('PATH'))
+    extEnv.PrependENVPath('LDFLAGS', os.getenv('LDFLAGS'))
+
+# Build external dependencies
+ext_libs = SConscript('ext/SConscript', exports=['extEnv'])
 
 SConscript('SConscript', src_dir='.', variant_dir='build/obj', duplicate=0, exports=['env', 'ext_libs'])
 
