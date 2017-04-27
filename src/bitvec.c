@@ -1022,7 +1022,7 @@ DPS_BitVector* DPS_CountVectorToUnion(DPS_CountVector* cv)
 DPS_BitVector* DPS_CountVectorToIntersection(DPS_CountVector* cv)
 {
     DPS_BitVector* bv = AllocBV(cv->len);
-    if (bv) {
+    if (bv && cv->entries) {
         size_t i;
         for (i = 0; i < NUM_CHUNKS(bv); ++i) {
             if (!cv->bvUnion || cv->bvUnion->bits[i]) {
