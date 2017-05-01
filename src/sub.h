@@ -54,7 +54,7 @@ typedef struct _DPS_Subscription {
  */
 void DPS_FreeSubscriptions(DPS_Node* node);
 
-DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote, DPS_BitVector* interests);
+DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote);
 
 DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuffer* buffer);
 

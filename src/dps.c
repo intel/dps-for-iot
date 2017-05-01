@@ -241,6 +241,26 @@ static void FreeOutboundInterests(RemoteNode* remote)
     remote->outbound.needs = NULL;
 }
 
+DPS_Status DPS_ClearOutboundInterests(RemoteNode* remote)
+{
+    if (remote->outbound.interests) {
+        DPS_BitVectorClear(remote->outbound.interests);
+    } else {
+        remote->outbound.interests = DPS_BitVectorAlloc();
+    }
+    if (remote->outbound.needs) {
+        DPS_BitVectorClear(remote->outbound.needs);
+    } else {
+        remote->outbound.needs = DPS_BitVectorAllocFH();
+    }
+    if (!remote->outbound.interests || !remote->outbound.needs) {
+        FreeOutboundInterests(remote);
+        return DPS_ERR_RESOURCES;
+    } else {
+        return DPS_OK;
+    }
+}
+
 void DPS_ClearInboundInterests(DPS_Node* node, RemoteNode* remote)
 {
     if (remote->inbound.interests) {
@@ -284,6 +304,7 @@ RemoteNode* DPS_DeleteRemoteNode(DPS_Node* node, RemoteNode* remote)
     }
     DPS_ClearInboundInterests(node, remote);
     FreeOutboundInterests(remote);
+    DPS_BitVectorFree(remote->outbound.delta);
 
     if (remote->completion) {
         DPS_RemoteCompletion(node, remote, DPS_ERR_FAILURE);
@@ -312,49 +333,11 @@ static const DPS_UUID* MinMeshId(DPS_Node* node, RemoteNode* excluded)
     return minMeshId;
 }
 
-/*
- * Returns TRUE is there was a change
- *
- * TODO - this can be optimized if there has been no change to
- * any of the inbound mesh ids since the function was last called
- */
-static int UpdateOutboundMeshId(DPS_Node* node, RemoteNode* dest, DPS_BitVector* interests)
-{
-    const DPS_UUID* meshId = MinMeshId(node, dest);
-
-    assert(!dest->outbound.muted);
-
-    /*
-     * First check is there is any change
-     */
-    if (DPS_UUIDCompare(meshId, &dest->outbound.meshId) == 0) {
-        return DPS_FALSE;
-    }
-    /*
-     * A change but if there are no interests we send the max mesh id
-     */
-    if (DPS_BitVectorIsClear(interests)) {
-        /*
-         * If we previously sent the max mesh id we don't want to send it again.
-         */
-        if (DPS_UUIDCompare(&dest->outbound.meshId, &DPS_MaxMeshId) == 0) {
-            return DPS_FALSE;
-        }
-        DPS_DBGPRINT("%d Reset mesh id for %s\n", node->port, DESCRIBE(dest));
-        dest->outbound.meshId = DPS_MaxMeshId;
-    } else {
-        DPS_DBGPRINT("%d Update mesh id: %08x for %s\n", node->port, UUID_32(meshId), DESCRIBE(dest));
-        dest->outbound.meshId = *meshId;
-    }
-    return DPS_TRUE;
-}
-
-static DPS_Status UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, DPS_BitVector** outboundInterests)
+static DPS_Status UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, int* send)
 {
     DPS_Status ret;
     DPS_BitVector* newInterests = NULL;
     DPS_BitVector* newNeeds = NULL;
-    int updates = DPS_FALSE;
 
     DPS_DBGTRACE();
 
@@ -390,7 +373,6 @@ static DPS_Status UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, 
         ret = DPS_ERR_RESOURCES;
         goto ErrExit;
     }
-    updates = UpdateOutboundMeshId(node, destNode, newInterests);
     /*
      * Try computing a delta if we have a previous outbound interests
      * bit vector and we have not been asked to do a full synchronization.
@@ -400,53 +382,51 @@ static DPS_Status UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, 
      */
     if (destNode->outbound.interests && !destNode->inbound.syncReq) {
         int same = DPS_FALSE;
-        DPS_BitVector* delta = node->scratch.interests;
-
-        DPS_BitVectorXor(delta, destNode->outbound.interests, newInterests, &same);
-        updates |= !same;
-        /*
-         * If there are no updates there is nothing to send unless we are
-         * requesting synchronization from the remote.
-         */
-        if (updates || destNode->outbound.syncReq) {
-            /*
-             * This is a delta
-             */
-            destNode->outbound.syncInd = DPS_FALSE;
-            *outboundInterests = delta;
-        } else {
-            assert(DPS_BitVectorEquals(destNode->outbound.needs, newNeeds));
-            *outboundInterests = NULL;
+        if (!destNode->outbound.delta) {
+            destNode->outbound.delta = DPS_BitVectorAlloc();
+            if (!destNode->outbound.delta) {
+                ret = DPS_ERR_RESOURCES;
+                goto ErrExit;
+            }
         }
+        DPS_BitVectorXor(destNode->outbound.delta, destNode->outbound.interests, newInterests, &same);
+        if (same) {
+            assert(DPS_BitVectorEquals(destNode->outbound.needs, newNeeds));
+            *send = DPS_FALSE;
+        } else {
+            *send = DPS_TRUE;
+        }
+        destNode->outbound.deltaInd = DPS_TRUE;
     } else {
         /*
-         * Indicate that this is a full synchronization not a delta
+         * This is not a delta
          */
-        destNode->outbound.syncInd = DPS_TRUE;
-        *outboundInterests = newInterests;
-        updates = DPS_TRUE;
+        destNode->outbound.deltaInd = DPS_FALSE;
+        *send = DPS_TRUE;
     }
-
     FreeOutboundInterests(destNode);
     destNode->outbound.interests = newInterests;
     destNode->outbound.needs = newNeeds;
-
     /*
-     * If there are updates we must increment the revision number.
+     * Increment the revision number if we are sending a subscription
      */
-    if (updates) {
+    if (*send) {
+        /*
+         * If there are interests we need to send our minimum
+         * mesh id to enable loop detection. A routing loop
+         * cannot exist without interests so we can just send
+         * the maximum mesh id.
+         */
+        if (DPS_BitVectorIsClear(newInterests)) {
+            destNode->outbound.meshId = DPS_MaxMeshId;
+        } else {
+            destNode->outbound.meshId = *(MinMeshId(node, destNode));
+        }
         ++destNode->outbound.revision;
     }
-
-    if (DPS_DEBUG_ENABLED()) {
-        if (*outboundInterests) {
-            if (destNode->outbound.syncInd) {
-                DPS_DBGPRINT("New outbound interests for %s: ", DESCRIBE(destNode));
-                DPS_DumpMatchingTopics(destNode->outbound.interests);
-            } else {
-                DPS_DBGPRINT("Delta outbound interests for %s: ", DESCRIBE(destNode));
-            }
-        }
+    if (DPS_DEBUG_ENABLED() && *send) {
+        DPS_DBGPRINT("New outbound interests for %s: ", DESCRIBE(destNode));
+        DPS_DumpMatchingTopics(destNode->outbound.interests);
     }
     return DPS_OK;
 
@@ -463,8 +443,9 @@ DPS_Status DPS_MuteRemoteNode(DPS_Node* node, RemoteNode* remote)
     DPS_Status ret;
 
     assert(DPS_HasNodeLock(node));
+    assert(!remote->outbound.muted);
 
-    DPS_DBGPRINT("Loop detected by %d for %s\n", node->port, DESCRIBE(remote));
+    DPS_DBGPRINT("%d muting %s\n", node->port, DESCRIBE(remote));
 
     /*
      * In case an update had been scheduled for this remote
@@ -478,21 +459,14 @@ DPS_Status DPS_MuteRemoteNode(DPS_Node* node, RemoteNode* remote)
      * Clear the inbound and outbound interests
      */
     DPS_ClearInboundInterests(node, remote);
-    FreeOutboundInterests(remote);
-    /*
-     * We send an empty interests vector to the remote.
-     */
-    remote->outbound.interests = DPS_BitVectorAlloc();
-    remote->outbound.needs = DPS_BitVectorAllocFH();
-    if (!remote->outbound.interests || !remote->outbound.needs) {
-        ret = DPS_ERR_RESOURCES;
-    } else {
+    ret = DPS_ClearOutboundInterests(remote);
+    if (ret == DPS_OK) {
         /*
          * We are explicitly sending zero interests so not a delta
          */
-        remote->outbound.syncInd = DPS_TRUE;
+        remote->outbound.deltaInd = DPS_FALSE;
         remote->outbound.syncReq = DPS_TRUE;
-        ret = DPS_SendSubscription(node, remote, remote->outbound.interests);
+        ret = DPS_SendSubscription(node, remote);
         FreeOutboundInterests(remote);
     }
     if (ret == DPS_OK) {
@@ -795,17 +769,16 @@ static void SendSubsTimer(uv_timer_t* handle)
     DPS_Status ret = DPS_OK;
     RemoteNode* remote;
     RemoteNode* remoteNext;
-    size_t count = 0;
+    int reschedule = DPS_FALSE;
 
     DPS_DBGTRACE();
 
     DPS_LockNode(node);
     /*
-     * Forward subscription to all remote nodes with interestss
+     * Forward subscription to all remote nodes with interests
      */
     for (remote = node->remoteNodes; remote != NULL; remote = remoteNext) {
-        DPS_BitVector* newInterests = NULL;
-
+        int send = DPS_FALSE;
         remoteNext = remote->next;
 
         if (!remote->outbound.checkForUpdates) {
@@ -813,35 +786,34 @@ static void SendSubsTimer(uv_timer_t* handle)
         }
         remote->outbound.checkForUpdates = DPS_FALSE;
         if (remote->unlink) {
-            ++count;
-            DPS_SendSubscription(node, remote, NULL);
+            reschedule = DPS_TRUE;
+            DPS_SendSubscription(node, remote);
             DPS_DBGPRINT("Remote node has been unlinked - deleting\n");
             DPS_DeleteRemoteNode(node, remote);
             continue;
         }
-        ret = UpdateOutboundInterests(node, remote, &newInterests);
+        ret = UpdateOutboundInterests(node, remote, &send);
         if (ret != DPS_OK) {
             break;
         }
-        if (newInterests) {
-            ++count;
-            ret = DPS_SendSubscription(node, remote, newInterests);
+        if (send) {
+            reschedule = DPS_TRUE;
+            ret = DPS_SendSubscription(node, remote);
             if (ret != DPS_OK) {
                 DPS_DeleteRemoteNode(node, remote);
                 DPS_ERRPRINT("Failed to send subscription request %s\n", DPS_ErrTxt(ret));
+                /*
+                 * Eat the error and continue
+                 */
                 ret = DPS_OK;
-                continue;
             }
         }
     }
     if (ret != DPS_OK) {
         DPS_ERRPRINT("SendSubsTask failed %s\n", DPS_ErrTxt(ret));
     }
-    /*
-     * If we sent at least one subscription hold off for some time
-     * before reevaluating subscription updates.
-     */
-    if (count) {
+    if (reschedule) {
+        node->subsPending = DPS_TRUE;
         uv_timer_start(&node->subsTimer, SendSubsTimer, node->subsRate, 0);
     } else {
         node->subsPending = DPS_FALSE;

@@ -144,7 +144,6 @@ typedef struct _RemoteNode {
     struct {
         uint8_t muted;                 /* TRUE if the remote informed us the that link is muted */
         uint8_t syncReq;               /* TRUE if the remote requested interest synchronization */
-        uint8_t syncInd;               /* TRUE if the remote indicated interest synchronization */
         uint8_t checkForUpdates;       /* TRUE if there may be updated interests to send to this remote */
         uint32_t revision;             /* Revision number of last subscription received from this node */
         DPS_UUID meshId;               /* The mesh id received from this remote node */
@@ -153,13 +152,14 @@ typedef struct _RemoteNode {
     } inbound;
     struct {
         uint8_t muted;                 /* TRUE if we have informed the remote that the link is muted */
+        uint8_t deltaInd;              /* TRUE if the interests info is a delta */
         uint8_t syncReq;               /* TRUE if we are requesting interest synchronization */
-        uint8_t syncInd;               /* TRUE if we are indicating interest synchronization */
         uint8_t checkForUpdates;       /* TRUE if there may be updated interests to send to this remote */
         uint32_t revision;             /* Revision number of last subscription sent to this node */
         DPS_UUID meshId;               /* The mesh id sent to this remote node */
         DPS_BitVector* needs;          /* Needs bit vector sent outbound to this remote node */
-        DPS_BitVector* interests;      /* Interests bit vector sent outbound to this remote node */
+        DPS_BitVector* interests;      /* Full outbound interests bit vector to this remote node */
+        DPS_BitVector* delta;          /* Delta outbound bit vector sent to this remote node */
     } outbound;
     LinkMonitor* monitor;              /* For monitoring muted links */
     DPS_NetEndpoint ep;

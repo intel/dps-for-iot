@@ -55,7 +55,7 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
 #define DESCRIBE(n)  DPS_NodeAddrToString(&(n)->ep.addr)
 
-#define DPS_SUB_FLAG_SYNC_IND   0x01      /* Indicate remote interests are being synched (not delta) */
+#define DPS_SUB_FLAG_DELTA_IND  0x01      /* Indicate interests is a delta) */
 #define DPS_SUB_FLAG_SYNC_REQ   0x02      /* Request remote to send synched interests */
 #define DPS_SUB_FLAG_MUTE_IND   0x04      /* Mute has been indicated */
 
@@ -189,12 +189,17 @@ DPS_Status DPS_DestroySubscription(DPS_Subscription* sub)
 int _DPS_NumSubs = 0;
 #endif
 
-DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote, DPS_BitVector* interests)
+DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote)
 {
     DPS_Status ret;
     DPS_TxBuffer buf;
+    DPS_BitVector* interests;
     size_t len;
     uint8_t flags = 0;
+
+    assert(DPS_HasNodeLock(node));
+
+    DPS_DBGTRACE();
 
     if (!node->netCtx) {
         return DPS_ERR_NETWORK;
@@ -205,8 +210,8 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote, DPS_BitVecto
     /*
      * Set flags
      */
-    if (remote->outbound.syncInd) {
-        flags |= DPS_SUB_FLAG_SYNC_IND;
+    if (remote->outbound.deltaInd) {
+        flags |= DPS_SUB_FLAG_DELTA_IND;
     }
     if (remote->outbound.syncReq) {
         flags |= DPS_SUB_FLAG_SYNC_REQ;
@@ -233,6 +238,7 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote, DPS_BitVecto
      * body
      */
     if (!remote->unlink) {
+        interests = remote->outbound.deltaInd ? remote->outbound.delta : remote->outbound.interests;
         len += CBOR_SIZEOF_MAP(4) + 4 * CBOR_SIZEOF(uint8_t) +
                CBOR_SIZEOF(uint8_t) +
                CBOR_SIZEOF_BSTR(sizeof(DPS_UUID)) +
@@ -320,11 +326,10 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote, DPS_BitVecto
         ret = CBOR_EncodeMap(&buf, 0);
     }
     /*
-     * Clear the sync request if are sending full interests
+     * Clear the sync request if are not sending delta interests
      */
-    if (remote->outbound.syncInd) {
+    if (!remote->outbound.deltaInd) {
         remote->inbound.syncReq = DPS_FALSE;
-        remote->outbound.syncInd = DPS_FALSE;
     }
 
     if (ret == DPS_OK) {
@@ -332,7 +337,7 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote, DPS_BitVecto
         CBOR_Dump("Sub out", (uint8_t*)uvBuf.base, uvBuf.len);
         ret = DPS_NetSend(node, NULL, &remote->ep, &uvBuf, 1, DPS_OnSendComplete);
         if (ret != DPS_OK) {
-            DPS_ERRPRINT("Failed to send subscription request %s\n", DPS_ErrTxt(ret));
+            DPS_ERRPRINT("Failed to send subscription %s\n", DPS_ErrTxt(ret));
             DPS_SendFailed(node, &remote->ep.addr, &uvBuf, 1, ret);
         }
     } else {
@@ -530,7 +535,6 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
     /*
      * Unpack the flags
      */
-    remote->inbound.syncInd = (flags & DPS_SUB_FLAG_SYNC_IND) != 0;
     if (flags & DPS_SUB_FLAG_SYNC_REQ) {
         remote->inbound.syncReq = DPS_TRUE;
     }
@@ -546,7 +550,7 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
      * If we sent a sync request check we didn't get a delta
      */
     if (remote->outbound.syncReq) {
-        if (!remote->inbound.syncInd) {
+        if (flags & DPS_SUB_FLAG_DELTA_IND) {
             DPS_ERRPRINT("Requested sync but got a delta\n");
             /*
              * Discard this subscription and continue to
@@ -565,7 +569,7 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
          * We got a newer subscription that we were expecting which is ok
          * so long as we didn't get a delta.
          */
-        if (!(flags & DPS_SUB_FLAG_SYNC_IND)) {
+        if (flags & DPS_SUB_FLAG_DELTA_IND) {
             DPS_ERRPRINT("Ignore invalid delta and request resync\n");
             remote->outbound.syncReq = DPS_TRUE;
             goto DiscardAndExit;
@@ -616,7 +620,7 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
         ret = DPS_MuteRemoteNode(node, remote);
     }
     if (!remote->outbound.muted) {
-        int isDelta = (flags & DPS_SUB_FLAG_SYNC_IND) == 0;
+        int isDelta = (flags & DPS_SUB_FLAG_DELTA_IND) != 0;
         remote->inbound.meshId = *meshId;
         ret = UpdateInboundInterests(node, remote, interests, needs, isDelta);
         /*
