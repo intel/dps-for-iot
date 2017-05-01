@@ -41,9 +41,10 @@ extern "C" {
 /*
  * DPS message types
  */
-#define DPS_MSG_TYPE_PUB  1
-#define DPS_MSG_TYPE_SUB  2
-#define DPS_MSG_TYPE_ACK  3
+#define DPS_MSG_TYPE_PUB  1   /* Publication */
+#define DPS_MSG_TYPE_SUB  2   /* Subscription */
+#define DPS_MSG_TYPE_ACK  3   /* End-to-end pubication acknowledgement */
+
 
 #define DPS_NODE_CREATED      0
 #define DPS_NODE_RUNNING      1
@@ -145,7 +146,7 @@ typedef struct _RemoteNode {
         uint8_t syncReq;               /* TRUE if the remote requested interest synchronization */
         uint8_t syncInd;               /* TRUE if the remote indicated interest synchronization */
         uint8_t checkForUpdates;       /* TRUE if there may be updated interests to send to this remote */
-        uint32_t sequenceNum;          /* Sequence number of last subscription received from this node */
+        uint32_t revision;             /* Revision number of last subscription received from this node */
         DPS_UUID meshId;               /* The mesh id received from this remote node */
         DPS_BitVector* needs;          /* Bit vector of needs received from  this remote node */
         DPS_BitVector* interests;      /* Bit vector of interests received from  this remote node */
@@ -155,7 +156,7 @@ typedef struct _RemoteNode {
         uint8_t syncReq;               /* TRUE if we are requesting interest synchronization */
         uint8_t syncInd;               /* TRUE if we are indicating interest synchronization */
         uint8_t checkForUpdates;       /* TRUE if there may be updated interests to send to this remote */
-        uint32_t sequenceNum;          /* Sequence number of last subscription sent to this node */
+        uint32_t revision;             /* Revision number of last subscription sent to this node */
         DPS_UUID meshId;               /* The mesh id sent to this remote node */
         DPS_BitVector* needs;          /* Needs bit vector sent outbound to this remote node */
         DPS_BitVector* interests;      /* Interests bit vector sent outbound to this remote node */

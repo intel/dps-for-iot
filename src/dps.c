@@ -432,10 +432,10 @@ static DPS_Status UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, 
     destNode->outbound.needs = newNeeds;
 
     /*
-     * If there are updates we must increment the sequence number.
+     * If there are updates we must increment the revision number.
      */
     if (updates) {
-        ++destNode->outbound.sequenceNum;
+        ++destNode->outbound.revision;
     }
 
     if (DPS_DEBUG_ENABLED()) {
