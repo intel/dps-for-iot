@@ -73,7 +73,7 @@ static struct {
 } context = { UV_ONCE_INIT, DPS_OK };
 
 #ifdef _WIN32
-static void InitUUID()
+static void InitUUID(void)
 {
     errno_t ret = 0;
     int i;

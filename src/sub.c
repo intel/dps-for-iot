@@ -775,6 +775,13 @@ DPS_Status DPS_Subscribe(DPS_Subscription* sub, DPS_PublicationHandler handler)
      * Protect the node while we update it
      */
     DPS_LockNode(node);
+    /*
+     * We don't need a mesh id for this node until we have local subscriptions
+     */
+    if (!node->subscriptions) {
+        DPS_GenerateUUID(&node->meshId);
+        DPS_DBGPRINT("Node mesh id for %d: %08x\n", node->port, UUID_32(&node->meshId));
+    }
     sub->next = node->subscriptions;
     node->subscriptions = sub;
     ret = DPS_CountVectorAdd(node->interests, sub->bf);

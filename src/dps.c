@@ -1291,9 +1291,8 @@ DPS_Status DPS_StartNode(DPS_Node* node, int mcast, int rxPort)
     r = uv_mutex_init(&node->history.lock);
     assert(!r);
 
-    DPS_GenerateUUID(&node->meshId);
-    DPS_DBGPRINT("Node mesh id for %d: %08x\n", node->port, UUID_32(&node->meshId));
-    node->minMeshId = node->meshId;
+    node->meshId = DPS_MaxMeshId;
+    node->minMeshId = DPS_MaxMeshId;
 
     node->interests = DPS_CountVectorAlloc();
     node->needs = DPS_CountVectorAllocFH();

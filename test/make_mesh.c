@@ -47,6 +47,8 @@ static DPS_Node* NodeMap[UINT16_MAX];
  */
 static uint16_t NodeList[UINT16_MAX];
 
+static uint8_t SubsList[UINT16_MAX];
+
 static void OnPubMatch(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* data, size_t len)
 {
     static uint8_t AckFmt[] = "This is an ACK from %d";
@@ -244,7 +246,7 @@ static size_t MakeLinks(size_t* numNodes, size_t* numMuted)
     return numArcs;
 }
 
-static void PrintSubgraph(FILE* f, int showMuted, uint16_t* kills, size_t numKills, int expMuted, const char* color, int* label)
+static void PrintSubgraph(FILE* f, int showMuted, uint16_t* kills, size_t numKills, size_t expMuted, const char* color, int* label)
 {
     static int cluster = 0;
     static int base = 0;
@@ -269,7 +271,7 @@ static void PrintSubgraph(FILE* f, int showMuted, uint16_t* kills, size_t numKil
         *label = base + 1000;
         fprintf(f, "  %d[shape=none, width=1, style=bold, height=1, fontsize=12, label=\"nodes=%d\\narcs=%d\\nmuted=%d", *label, (int)numNodes, (int)numArcs, (int)(numMuted / 2));
         if (expMuted != (numMuted / 2)) {
-            fprintf(f, "/%d\"];\n", expMuted);
+            fprintf(f, "/%d\"];\n", (int)expMuted);
         } else {
             fprintf(f, "\"];\n");
         }
@@ -285,8 +287,8 @@ static void PrintSubgraph(FILE* f, int showMuted, uint16_t* kills, size_t numKil
         int dst = l->dst + base;
         if (showMuted || (l->muted == 0)) {
             fprintf(f, "  %d -- %d%s;\n", src, dst, style[l->muted]);
-            fprintf(f, "  %d[label=%d];\n", src, l->src);
-            fprintf(f, "  %d[label=%d];\n", dst, l->dst);
+            fprintf(f, "  %d[label=%d%s];\n", src, l->src, SubsList[l->src] ? ",shape=Mcircle" : "");
+            fprintf(f, "  %d[label=%d%s];\n", dst, l->dst, SubsList[l->dst] ? ",shape=Mcircle" : "");
         }
         maxN  = (src > maxN) ? src : maxN;
         maxN  = (dst > maxN) ? dst : maxN;
@@ -396,7 +398,7 @@ ErrExit:
     return 0;
 }
 
-static void DumpMeshIds(uint16_t numIds)
+static void DumpMeshIds(size_t numIds)
 {
     size_t i;
     for (i = 0; i < numIds; ++i) {
@@ -404,11 +406,12 @@ static void DumpMeshIds(uint16_t numIds)
         DPS_Node* node = NodeMap[id];
         if (node) {
             DPS_PRINT("Node[%d] meshId %s\n", id, DPS_UUIDToString(&node->meshId));
+            DPS_PRINT("Node[%d] minMeshId %s\n", id, DPS_UUIDToString(&node->minMeshId));
         }
     }
 }
 
-static void DumpPortMap(uint16_t numIds)
+static void DumpPortMap(size_t numIds)
 {
     size_t i;
     for (i = 0; i < numIds; ++i) {
@@ -431,10 +434,10 @@ static void OnNodeDestroyed(DPS_Node* node, void* data)
  * we get the same count mutiple times before we conclude that things
  * have settled.
  */
-static void WaitUntilSettled(DPS_Event* sleeper, int expMuted)
+static void WaitUntilSettled(DPS_Event* sleeper, size_t expMuted)
 {
     size_t i;
-    int numMuted;
+    size_t numMuted;
     int repeats = 0;
 
     /*
@@ -531,7 +534,7 @@ int main(int argc, char** argv)
     int numSubs = 0;
     int numKills = 0;
     int showMuted = 1;
-    int expMuted;
+    size_t expMuted;
     int l1 = 0;
     int l2 = 0;
     const char* inFn = NULL;
@@ -669,6 +672,7 @@ int main(int argc, char** argv)
                 ret = DPS_Subscribe(sub, OnPubMatch);
                 if (ret == DPS_OK) {
                     DPS_PRINT("Node %d is subscribing to \"%s\"\n", NodeList[i], topic);
+                    SubsList[NodeList[i]] = 1;
                     ++numSubs;
                 } else {
                     DPS_ERRPRINT("Subscribe failed %s\n", DPS_ErrTxt(ret));
@@ -691,9 +695,6 @@ int main(int argc, char** argv)
             killList[i] = goner;
         }
     }
-    if (DPS_Debug) {
-        DumpMeshIds(numIds);
-    }
     if (outFn) {
         dotFile = fopen(outFn, "w");
         if (!dotFile) {
@@ -709,6 +710,10 @@ int main(int argc, char** argv)
      */
     expMuted = numLinks + 1 - numIds;
     WaitUntilSettled(sleeper, expMuted);
+
+    if (DPS_Debug) {
+        DumpMeshIds(numIds);
+    }
 
     fprintf(dotFile, "graph {\n");
     fprintf(dotFile, "  node[shape=circle, width=0.3, fontsize=10, margin=\"0.01,0.01\", fixedsize=true];\n");

@@ -498,7 +498,7 @@ int main(int argc, char** argv)
             DPS_Subscription* sub;
             char topic[2];
             const char* topicList[] = { topic };
-            topic[0] = 'A' + i;
+            topic[0] = (char)('A' + i);
             topic[1] = 0;
             sub = DPS_CreateSubscription(node, topicList, 1);
             if (!sub) {
@@ -539,8 +539,6 @@ int main(int argc, char** argv)
             _DPS_NumSubs = 0;
         }
 #endif
-
-CleanupNodes:
         /*
          * Cleanup the nodes
          */

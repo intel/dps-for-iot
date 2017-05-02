@@ -303,7 +303,7 @@ void DPS_DumpTopics(const char** topics, size_t numTopics)
 
 void DPS_DumpMatchingTopics(DPS_BitVector* bv)
 {
-    size_t i;
+    char i;
     int match = 0;
 
     DPS_PRINT("[");
