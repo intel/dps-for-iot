@@ -474,18 +474,20 @@ static void OnLinked(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, v
 
 static void OnResolve(DPS_Node* node, DPS_NodeAddress* addr, void* data)
 {
-    uv_mutex_lock(&lock);
     if (addr) {
         DPS_Status ret = DPS_Link(node, addr, OnLinked, data);
         if (ret != DPS_OK) {
+            uv_mutex_lock(&lock);
             DPS_ERRPRINT("DPS_Link for %d returned %s\n", DPS_GetPortNumber((DPS_Node*)data), DPS_ErrTxt(ret));
             ++LinksFailed;
+            uv_mutex_unlock(&lock);
         }
     } else {
         DPS_ERRPRINT("Failed to resolve address for %d\n", DPS_GetPortNumber((DPS_Node*)data));
+        uv_mutex_lock(&lock);
         ++LinksFailed;
+        uv_mutex_unlock(&lock);
     }
-    uv_mutex_unlock(&lock);
 }
 
 static DPS_Status LinkNodes(DPS_Node* src, DPS_Node* dst)
@@ -494,12 +496,12 @@ static DPS_Status LinkNodes(DPS_Node* src, DPS_Node* dst)
     char port[8];
     snprintf(port, sizeof(port), "%d", DPS_GetPortNumber(dst));
 
-    uv_mutex_lock(&lock);
     ret = DPS_ResolveAddress(src, NULL, port, OnResolve, dst);
     if (ret != DPS_OK) {
+        uv_mutex_lock(&lock);
         ++LinksFailed;
+        uv_mutex_unlock(&lock);
     }
-    uv_mutex_unlock(&lock);
     return ret;
 }
 
@@ -574,6 +576,10 @@ int main(int argc, char** argv)
         return 1;
     }
     /*
+     * Mutex for protecting the link succes/fail counters
+     */
+    uv_mutex_init(&lock);
+    /*
      * Start the nodes
      */
     for (i = 0; i < numIds; ++i) {
@@ -618,9 +624,13 @@ int main(int argc, char** argv)
     /*
      * Wait until all the links are up
      */
+    uv_mutex_lock(&lock);
     while ((LinksUp + LinksFailed) < numLinks) {
+        uv_mutex_unlock(&lock);
         DPS_TimedWaitForEvent(sleeper, 100);
+        uv_mutex_lock(&lock);
     }
+    uv_mutex_unlock(&lock);
     DPS_PRINT("%d links up %d links failed\n", LinksUp, LinksFailed);
     /*
      * Brief delay to let things settle down
