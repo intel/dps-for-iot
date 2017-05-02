@@ -32,6 +32,8 @@
 extern "C" {
 #endif
 
+#define DPS_MAX_SUBSCRIPTION_RETRIES  8
+
 /*
  * Struct to hold the state of a local subscription. We hold the topics so we can provide return the topic list when we
  * get a match. We compute the filter so we can forward to outbound subscribers.
@@ -57,6 +59,8 @@ void DPS_FreeSubscriptions(DPS_Node* node);
 DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote);
 
 DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuffer* buffer);
+
+DPS_Status DPS_DecodeSubscriptionAck(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuffer* buffer);
 
 #ifdef __cplusplus
 }

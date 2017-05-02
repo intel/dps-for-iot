@@ -343,6 +343,14 @@ static DPS_Status UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, 
     DPS_DBGTRACE();
 
     /*
+     * We don't update interests if we are muted but if we are
+     * half-muted we need to send a subscription.
+     */
+    if (destNode->outbound.muted) {
+        *send = !destNode->inbound.muted;
+        return DPS_OK;
+    }
+    /*
      * Inbound interests from the node we are updating are excluded from the
      * recalculation of outbound interests
      */
@@ -375,13 +383,10 @@ static DPS_Status UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, 
         goto ErrExit;
     }
     /*
-     * Try computing a delta if we have a previous outbound interests
-     * bit vector and we have not been asked to do a full synchronization.
-     *
-     * Since the needs vector is relatively small there is little
-     * advantage gained is computing the delta.
+     * Send a delta if we have previously sent interests. The needs vector
+     * is small so it is not worth computing a delta.
      */
-    if (destNode->outbound.interests && !destNode->inbound.syncReq) {
+    if (destNode->outbound.interests) {
         int same = DPS_FALSE;
         if (!destNode->outbound.delta) {
             destNode->outbound.delta = DPS_BitVectorAlloc();
@@ -461,17 +466,8 @@ DPS_Status DPS_MuteRemoteNode(DPS_Node* node, RemoteNode* remote)
          * We are explicitly sending zero interests so not a delta
          */
         remote->outbound.deltaInd = DPS_FALSE;
-        remote->outbound.syncReq = DPS_TRUE;
-        ret = DPS_SendSubscription(node, remote);
-        FreeOutboundInterests(remote);
-    }
-    if (ret == DPS_OK) {
-        /*
-         * We only monitor a muted link from the passive side
-         */
-        if (!remote->linked) {
-            ret =  DPS_LinkMonitorStart(node, remote);
-        }
+        remote->outbound.ackCountdown = 0;
+        ++remote->outbound.revision;
     }
     return ret;
 }
@@ -481,24 +477,31 @@ DPS_Status DPS_UnmuteRemoteNode(DPS_Node* node, RemoteNode* remote)
     DPS_DBGTRACE();
 
     assert(DPS_HasNodeLock(node));
+    assert(remote->outbound.muted);
 
-    DPS_LinkMonitorStop(remote);
-    /*
-     * Set flags to ensure a clean synchronization with the remote
-     */
+    DPS_DBGPRINT("%d unmuting %s\n", node->port, DESCRIBE(remote));
+
     remote->outbound.muted = DPS_FALSE;
     remote->inbound.muted = DPS_FALSE;
-    remote->outbound.syncReq = DPS_TRUE;
     /*
-     * We need a fresh mesh id that is less than any of the mesh id's
-     * we have already seen. If we were to send the same mesh id that
-     * was used to detected the loop it will look to the remaining
-     * nodes that there is still a loop.
+     * Free stale outbound interests. This also ensures
+     * that the first subscription sent after unmuting
+     * is not a delta.
      */
-    DPS_RandUUIDLess(&node->minMeshId);
-    node->meshId = node->minMeshId;
+    FreeOutboundInterests(remote);
 
-    DPS_UpdateSubs(node);
+    if (remote->monitor) {
+        DPS_LinkMonitorStop(remote);
+        /*
+         * We need a fresh mesh id that is less than any of the mesh id's
+         * we have already seen. If we were to send the same mesh id that
+         * was used to detected the loop it will look to the remaining
+         * nodes that there is still a loop.
+         */
+        DPS_RandUUIDLess(&node->minMeshId);
+        node->meshId = node->minMeshId;
+        DPS_UpdateSubs(node);
+    }
     return DPS_OK;
 }
 
@@ -785,9 +788,33 @@ static void SendSubsTimer(uv_timer_t* handle)
             DPS_DeleteRemoteNode(node, remote);
             continue;
         }
-        ret = UpdateOutboundInterests(node, remote, &send);
-        if (ret != DPS_OK) {
-            break;
+        /*
+         * Resend the previous subscription if it has not been ACK'd
+         */
+        if (remote->outbound.ackCountdown) {
+            if (remote->outbound.ackCountdown == 1) {
+                DPS_ERRPRINT("Reached retry limit - deleting unresponsive remote %s\n", DESCRIBE(remote));
+                DPS_DeleteRemoteNode(node, remote);
+                /*
+                 * Eat the error and continue
+                 */
+                ret = DPS_OK;
+                continue;
+            }
+            /*
+             * We don't start resending until we hit the retry threshold
+             */
+            if (remote->outbound.ackCountdown > DPS_MAX_SUBSCRIPTION_RETRIES) {
+                reschedule = DPS_TRUE;
+                --remote->outbound.ackCountdown;
+                continue;
+            }
+            send = DPS_TRUE;
+        } else {
+            ret = UpdateOutboundInterests(node, remote, &send);
+            if (ret != DPS_OK) {
+                break;
+            }
         }
         if (send) {
             reschedule = DPS_TRUE;
@@ -939,6 +966,17 @@ static DPS_Status DecodeRequest(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuffe
         ret = DPS_DecodeAcknowledgment(node, ep, buf);
         if (ret != DPS_OK) {
             DPS_DBGPRINT("DPS_DecodeAcknowledgment returned %s\n", DPS_ErrTxt(ret));
+        }
+        break;
+    case DPS_MSG_TYPE_SAK:
+        if (len != 2) {
+            DPS_ERRPRINT("Expected 2 element array\n");
+            break;
+        }
+        DPS_DBGPRINT("Received sub ack via %s\n", DPS_NodeAddrToString(&ep->addr));
+        ret = DPS_DecodeSubscriptionAck(node, ep, buf);
+        if (ret != DPS_OK) {
+            DPS_DBGPRINT("DPS_DecodeSubscriptionAck returned %s\n", DPS_ErrTxt(ret));
         }
         break;
     default:
@@ -1380,11 +1418,6 @@ DPS_Status DPS_Link(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnLinkComplete cb
     }
     assert(!remote->completion);
     remote->linked = DPS_TRUE;
-    /*
-     * Do a full synchronization with the remote
-     */
-    remote->outbound.syncReq = DPS_TRUE;
-
     remote->completion = AllocCompletion(node, remote, LINK_OP, data, LINK_RESPONSE_TIMEOUT, cb);
     if (!remote->completion) {
         DPS_DeleteRemoteNode(node, remote);

@@ -37,6 +37,7 @@
 #include "topics.h"
 #include "node.h"
 #include "compat.h"
+#include "linkmon.h"
 
 /*
  * Debug control for this module
@@ -49,15 +50,14 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
  *
  * Value N specifies rate of loss 1/N
  */
-#ifndef SIMULATE_LOST_PACKET
-#define SIMULATE_LOST_PACKET 0
+#ifndef SIMULATE_PACKET_LOSS
+#define SIMULATE_PACKET_LOSS 0
 #endif
 
 #define DESCRIBE(n)  DPS_NodeAddrToString(&(n)->ep.addr)
 
 #define DPS_SUB_FLAG_DELTA_IND  0x01      /* Indicate interests is a delta) */
-#define DPS_SUB_FLAG_SYNC_REQ   0x02      /* Request remote to send synched interests */
-#define DPS_SUB_FLAG_MUTE_IND   0x04      /* Mute has been indicated */
+#define DPS_SUB_FLAG_MUTE_IND   0x02      /* Mute has been indicated */
 
 static int IsValidSub(const DPS_Subscription* sub)
 {
@@ -213,9 +213,6 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote)
     if (remote->outbound.deltaInd) {
         flags |= DPS_SUB_FLAG_DELTA_IND;
     }
-    if (remote->outbound.syncReq) {
-        flags |= DPS_SUB_FLAG_SYNC_REQ;
-    }
     if (remote->outbound.muted) {
         flags |= DPS_SUB_FLAG_MUTE_IND;
     }
@@ -325,19 +322,88 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote)
     } else {
         ret = CBOR_EncodeMap(&buf, 0);
     }
-    /*
-     * Clear the sync request if are not sending delta interests
-     */
-    if (!remote->outbound.deltaInd) {
-        remote->inbound.syncReq = DPS_FALSE;
-    }
-
     if (ret == DPS_OK) {
         uv_buf_t uvBuf = uv_buf_init((char*)buf.base, DPS_TxBufferUsed(&buf));
         CBOR_Dump("Sub out", (uint8_t*)uvBuf.base, uvBuf.len);
         ret = DPS_NetSend(node, NULL, &remote->ep, &uvBuf, 1, DPS_OnSendComplete);
+        if (ret == DPS_OK) {
+            if (remote->outbound.ackCountdown) {
+                --remote->outbound.ackCountdown;
+            } else {
+                remote->outbound.ackCountdown = 1 + DPS_MAX_SUBSCRIPTION_RETRIES;
+            }
+            assert(remote->outbound.ackCountdown);
+        } else {
+            DPS_ERRPRINT("Failed to send subscription request %s\n", DPS_ErrTxt(ret));
+            DPS_SendFailed(node, &remote->ep.addr, &uvBuf, 1, ret);
+        }
+    } else {
+        DPS_TxBufferFree(&buf);
+    }
+    return ret;
+}
+
+static DPS_Status SendSubscriptionAck(DPS_Node* node, RemoteNode* remote, uint32_t revision)
+{
+    DPS_Status ret;
+    DPS_TxBuffer buf;
+    size_t len;
+
+    assert(DPS_HasNodeLock(node));
+
+    DPS_DBGTRACE();
+
+    /*
+     * Subscription ack is encoded as an array of 2 elements
+     *  [
+     *      type,
+     *      { headers }
+     *  ]
+     */
+    len = CBOR_SIZEOF_ARRAY(2) + CBOR_SIZEOF(uint8_t);
+    /*
+     * headers
+     */
+    len += CBOR_SIZEOF_MAP(2) + 2 * CBOR_SIZEOF(uint8_t) +
+           CBOR_SIZEOF(uint16_t) +
+           CBOR_SIZEOF(uint32_t);
+
+    ret = DPS_TxBufferInit(&buf, NULL, len);
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeArray(&buf, 2);
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeUint8(&buf, DPS_MSG_TYPE_SAK);
+    }
+    /*
+     * Header map
+     *  {
+     *      port: uint
+     *      meshId : uuid
+     *      revision : uint
+     *  }
+     */
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeMap(&buf, 2);
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_PORT);
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeInt16(&buf, node->port);
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_SEQ_NUM);
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeUint32(&buf, revision);
+    }
+    if (ret == DPS_OK) {
+        uv_buf_t uvBuf = uv_buf_init((char*)buf.base, DPS_TxBufferUsed(&buf));
+        CBOR_Dump("Sub ack out", (uint8_t*)uvBuf.base, uvBuf.len);
+        ret = DPS_NetSend(node, NULL, &remote->ep, &uvBuf, 1, DPS_OnSendComplete);
         if (ret != DPS_OK) {
-            DPS_ERRPRINT("Failed to send subscription %s\n", DPS_ErrTxt(ret));
+            DPS_ERRPRINT("Failed to send subscription ack %s\n", DPS_ErrTxt(ret));
             DPS_SendFailed(node, &remote->ep.addr, &uvBuf, 1, ret);
         }
     } else {
@@ -434,12 +500,12 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
         return ret;
     }
     DPS_EndpointSetPort(ep, port);
-#if SIMULATE_LOST_PACKET
+#if SIMULATE_PACKET_LOSS
     /*
      * Enable this code to simulate lost subscriptions to test
      * out the resynchronization code.
      */
-    if (((DPS_Rand() % SIMULATE_LOST_PACKET) == 1)) {
+    if (((DPS_Rand() % SIMULATE_PACKET_LOSS) == 1)) {
         DPS_PRINT("%d Simulating lost subscription from %s\n", node->port, DPS_NodeAddrToString(&ep->addr));
         return DPS_OK;
     }
@@ -451,6 +517,7 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
         DPS_LockNode(node);
         remote = DPS_LookupRemoteNode(node, &ep->addr);
         if (remote) {
+            SendSubscriptionAck(node, remote, revision);
             DPS_DeleteRemoteNode(node, remote);
             /*
              * Evaluate impact of losing the remote's interests
@@ -515,11 +582,7 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
         if (ret == DPS_ERR_EXISTS) {
             ret = DPS_OK;
         } else {
-            /*
-             * The remote is new to us so we need to sync to it
-             * even if it didn't request to sync.
-             */
-            remote->inbound.syncReq = DPS_TRUE;
+            ret = DPS_ClearOutboundInterests(remote);
         }
     }
     if (ret != DPS_OK) {
@@ -533,92 +596,36 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
         goto DiscardAndExit;
     }
     /*
-     * Unpack the flags
+     * Duplicate - presumably an ACK got lost
      */
-    if (flags & DPS_SUB_FLAG_SYNC_REQ) {
-        remote->inbound.syncReq = DPS_TRUE;
-    }
-    /*
-     * Check if the application is waiting for a completion callback.
-     * This is unconditional - all we are reporting is that we
-     * received a subscription from the remote.
-     */
-    if (remote->completion) {
-        DPS_RemoteCompletion(node, remote, DPS_OK);
-    }
-    /*
-     * If we sent a sync request check we didn't get a delta
-     */
-    if (remote->outbound.syncReq) {
-        if (flags & DPS_SUB_FLAG_DELTA_IND) {
-            DPS_ERRPRINT("Requested sync but got a delta\n");
-            /*
-             * Discard this subscription and continue to
-             * request a full sync.
-             */
-            goto DiscardAndExit;
-        }
-        remote->outbound.syncReq = DPS_FALSE;
-    }
-    /*
-     * Check for lost subscriptions
-     */
-    if (revision > (remote->inbound.revision + 1)) {
-        DPS_ERRPRINT("Missing subscriptions %d from %s\n", revision - (remote->inbound.revision + 1), DESCRIBE(remote));
-        /*
-         * We got a newer subscription that we were expecting which is ok
-         * so long as we didn't get a delta.
-         */
-        if (flags & DPS_SUB_FLAG_DELTA_IND) {
-            DPS_ERRPRINT("Ignore invalid delta and request resync\n");
-            remote->outbound.syncReq = DPS_TRUE;
-            goto DiscardAndExit;
-        }
+    if (revision == remote->inbound.revision) {
+        ret = SendSubscriptionAck(node, remote, revision);
+        goto DiscardAndExit;
     }
     remote->inbound.revision = revision;
+
     DPS_DBGPRINT("Node %d received mesh id %08x from %s\n", node->port, UUID_32(meshId), DESCRIBE(remote));
     /*
      * Loops can be detected by either end of a link and corrective action is required
      * to prevent interests from propagating around the loop. The corrective action is
      * to mute the link by clearing all inbound and outbound interests from the remote.
-     *
-     * It is possible for nodes at both ends of a link simultaneously detect the loop
-     * so we need to handle various cases below. A link is not fully muted until both
-     * inbound and outbound muted flags are non zero.
      */
-    if (remote->outbound.muted && (flags & DPS_SUB_FLAG_MUTE_IND)) {
-        /*
-         * Fully muted
-         */
+    if (flags & DPS_SUB_FLAG_MUTE_IND) {
         remote->inbound.muted = DPS_TRUE;
-        DPS_DBGPRINT("Remote %s is fully muted\n", DESCRIBE(remote));
-    } else if (remote->outbound.muted && !remote->inbound.muted) {
-        /*
-         * Half muted state - nothing to do
-         */
-        DPS_DBGPRINT("Remote %s is half muted\n", DESCRIBE(remote));
-    } else if (!remote->outbound.muted && (flags & DPS_SUB_FLAG_MUTE_IND)) {
-        /*
-         * We are being muted by the remote
-         */
-        remote->inbound.muted = DPS_TRUE;
-        DPS_DBGPRINT("Received mute request from remote %s\n", DESCRIBE(remote));
-        ret = DPS_MuteRemoteNode(node, remote);
-    } else if (remote->inbound.muted && !(flags & DPS_SUB_FLAG_MUTE_IND)) {
-        assert(remote->outbound.muted);
-        /*
-         * The remote has unmuted
-         */
-        remote->outbound.muted = DPS_FALSE;
-        remote->inbound.muted = DPS_FALSE;
-        remote->outbound.syncReq = DPS_TRUE;
+        if (!remote->outbound.muted) {
+            DPS_MuteRemoteNode(node, remote);
+            ret = DPS_LinkMonitorStart(node, remote);
+        }
+    } else if (remote->inbound.muted) {
         DPS_DBGPRINT("Remote %s has unumuted\n", DESCRIBE(remote));
+        ret = DPS_UnmuteRemoteNode(node, remote);
     } else if (DPS_MeshHasLoop(node, remote, meshId)) {
-        /*
-         * We detected a loop and need to mute
-         */
-        ret = DPS_MuteRemoteNode(node, remote);
+        DPS_DBGPRINT("Loop detected by %d for %s\n", node->port, DESCRIBE(remote));
+        if (!remote->outbound.muted) {
+            DPS_MuteRemoteNode(node, remote);
+        }
     }
+
     if (!remote->outbound.muted) {
         int isDelta = (flags & DPS_SUB_FLAG_DELTA_IND) != 0;
         remote->inbound.meshId = *meshId;
@@ -639,6 +646,12 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
     if (DPS_UUIDCompare(meshId, &node->minMeshId) < 0) {
         node->minMeshId = *meshId;
     }
+    /*
+     * All is good so send an ACK
+     */
+    if (ret == DPS_OK) {
+        ret = SendSubscriptionAck(node, remote, revision);
+    }
     DPS_UnlockNode(node);
     DPS_UpdateSubs(node);
     return ret;
@@ -652,6 +665,72 @@ DiscardAndExit:
     }
     DPS_BitVectorFree(interests);
     DPS_BitVectorFree(needs);
+    return ret;
+}
+
+DPS_Status DPS_DecodeSubscriptionAck(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuffer* buffer)
+{
+    static const int32_t HeaderKeys[] = { DPS_CBOR_KEY_PORT, DPS_CBOR_KEY_SEQ_NUM };
+    DPS_Status ret;
+    uint16_t port;
+    uint32_t revision = 0;
+    RemoteNode* remote = NULL;
+    CBOR_MapState mapState;
+
+    DPS_DBGTRACE();
+
+    /*
+     * Parse keys from header map
+     */
+    ret = DPS_ParseMapInit(&mapState, buffer, HeaderKeys, A_SIZEOF(HeaderKeys));
+    if (ret != DPS_OK) {
+        return ret;
+    }
+    while (!DPS_ParseMapDone(&mapState)) {
+        int32_t key;
+        ret = DPS_ParseMapNext(&mapState, &key);
+        if (ret != DPS_OK) {
+            break;
+        }
+        switch (key) {
+        case DPS_CBOR_KEY_PORT:
+            ret = CBOR_DecodeUint16(buffer, &port);
+            break;
+        case DPS_CBOR_KEY_SEQ_NUM:
+            ret = CBOR_DecodeUint32(buffer, &revision);
+            break;
+        }
+        if (ret != DPS_OK) {
+            break;
+        }
+    }
+    if (ret != DPS_OK) {
+        return ret;
+    }
+    DPS_EndpointSetPort(ep, port);
+#if SIMULATE_PACKET_LOSS
+    /*
+     * Enable this code to simulate lost subscriptions to test
+     * out the resynchronization code.
+     */
+    if (((DPS_Rand() % SIMULATE_PACKET_LOSS) == 1)) {
+        DPS_PRINT("%d Simulating lost sub ack from %s\n", node->port, DPS_NodeAddrToString(&ep->addr));
+        return DPS_OK;
+    }
+#endif
+    DPS_LockNode(node);
+    remote = DPS_LookupRemoteNode(node, &ep->addr);
+    if (remote && remote->outbound.revision == revision) {
+        remote->outbound.ackCountdown = 0;
+        if (remote->completion) {
+            DPS_RemoteCompletion(node, remote, DPS_OK);
+        }
+        if (remote->outbound.muted && !remote->monitor) {
+            remote->inbound.muted = DPS_TRUE;
+            ret = DPS_LinkMonitorStart(node, remote);
+        }
+    }
+    DPS_UnlockNode(node);
     return ret;
 }
 

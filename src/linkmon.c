@@ -212,9 +212,18 @@ DPS_Status DPS_LinkMonitorStart(DPS_Node* node, RemoteNode* remote)
     DPS_Status ret;
     LinkMonitor* monitor = NULL;
 
-    assert(remote->outbound.muted);
+    assert(remote->outbound.muted && remote->inbound.muted);
+
+    /*
+     * We only monitor a muted link from the passive side
+     *
+     * TODO - the linked flags may not be reliable - we
+     * need a different tie breaker if possible.
+     */
+    if (remote->linked) {
+        return DPS_OK;
+    }
     assert(!remote->monitor);
-    assert(!remote->linked);
 
     DPS_DBGPRINT("Node %d is monitoring %s\n", node->port, DESCRIBE(remote));
 

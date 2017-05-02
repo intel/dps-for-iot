@@ -44,7 +44,7 @@ extern "C" {
 #define DPS_MSG_TYPE_PUB  1   /* Publication */
 #define DPS_MSG_TYPE_SUB  2   /* Subscription */
 #define DPS_MSG_TYPE_ACK  3   /* End-to-end pubication acknowledgement */
-
+#define DPS_MSG_TYPE_SAK  4   /* One-hop subscription acknowledgement */
 
 #define DPS_NODE_CREATED      0
 #define DPS_NODE_RUNNING      1
@@ -143,7 +143,6 @@ typedef struct _RemoteNode {
     uint8_t unlink;                    /* TRUE if this node is about to be unlinked */
     struct {
         uint8_t muted;                 /* TRUE if the remote informed us the that link is muted */
-        uint8_t syncReq;               /* TRUE if the remote requested interest synchronization */
         uint32_t revision;             /* Revision number of last subscription received from this node */
         DPS_UUID meshId;               /* The mesh id received from this remote node */
         DPS_BitVector* needs;          /* Bit vector of needs received from  this remote node */
@@ -152,7 +151,7 @@ typedef struct _RemoteNode {
     struct {
         uint8_t muted;                 /* TRUE if we have informed the remote that the link is muted */
         uint8_t deltaInd;              /* TRUE if the interests info is a delta */
-        uint8_t syncReq;               /* TRUE if we are requesting interest synchronization */
+        uint8_t ackCountdown;          /* Number of remaining subscription send retries + 1 */
         uint32_t revision;             /* Revision number of last subscription sent to this node */
         DPS_UUID meshId;               /* The mesh id sent to this remote node */
         DPS_BitVector* needs;          /* Needs bit vector sent outbound to this remote node */

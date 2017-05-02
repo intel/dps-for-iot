@@ -457,7 +457,7 @@ int main(int argc, char** argv)
         /*
          * Wait for a short time while before trying to link
          */
-        DPS_TimedWaitForEvent(sleeper, 1000);
+        DPS_TimedWaitForEvent(sleeper, 500);
         /*
          * Link the nodes asynchronously
          */
@@ -526,6 +526,8 @@ int main(int argc, char** argv)
          * Wait in case we missed some muted nodes
          */
         DPS_TimedWaitForEvent(sleeper, 1000);
+        numMuted = CountMutedLinks();
+
         if (numMuted != expMuted) {
             DPS_ERRPRINT("Wrong number of muted nodes: Expected %d got %d\n", expMuted, numMuted);
             assert(expMuted == numMuted);

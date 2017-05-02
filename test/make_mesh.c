@@ -208,9 +208,9 @@ static size_t AddLinksForNode(DPS_Node* node)
          */
         if (NodeMap[id]) {
             LINK* link = AddLink(nodeId, id);
-            if (remote->outbound.muted) {
-                numMuted += 1;
+            if (remote->inbound.muted) {
                 link->muted = 1;
+                ++numMuted;
             }
         }
     }
@@ -244,7 +244,7 @@ static size_t MakeLinks(size_t* numNodes, size_t* numMuted)
     return numArcs;
 }
 
-static void PrintSubgraph(FILE* f, int showMuted, uint16_t* kills, size_t numKills, const char* color, int* label)
+static void PrintSubgraph(FILE* f, int showMuted, uint16_t* kills, size_t numKills, int expMuted, const char* color, int* label)
 {
     static int cluster = 0;
     static int base = 0;
@@ -267,7 +267,12 @@ static void PrintSubgraph(FILE* f, int showMuted, uint16_t* kills, size_t numKil
 
     if (*label == 0) {
         *label = base + 1000;
-        fprintf(f, "  %d[shape=none, width=1, style=bold, height=1, fontsize=12, label=\"nodes=%d\\narcs=%d\\nmuted=%d\"];\n", *label, (int)numNodes, (int)numArcs, (int)(numMuted / 2));
+        fprintf(f, "  %d[shape=none, width=1, style=bold, height=1, fontsize=12, label=\"nodes=%d\\narcs=%d\\nmuted=%d", *label, (int)numNodes, (int)numArcs, (int)(numMuted / 2));
+        if (expMuted != (numMuted / 2)) {
+            fprintf(f, "/%d\"];\n", expMuted);
+        } else {
+            fprintf(f, "\"];\n");
+        }
     }
 
     fprintf(f, "subgraph cluster%d {\n", ++cluster);
@@ -483,8 +488,8 @@ static void OnResolve(DPS_Node* node, DPS_NodeAddress* addr, void* data)
             uv_mutex_unlock(&lock);
         }
     } else {
-        DPS_ERRPRINT("Failed to resolve address for %d\n", DPS_GetPortNumber((DPS_Node*)data));
         uv_mutex_lock(&lock);
+        DPS_ERRPRINT("Failed to resolve address for %d\n", DPS_GetPortNumber((DPS_Node*)data));
         ++LinksFailed;
         uv_mutex_unlock(&lock);
     }
@@ -507,7 +512,7 @@ static DPS_Status LinkNodes(DPS_Node* src, DPS_Node* dst)
 
 const LinkMonitorConfig FastLinkProbe = {
     .retries = 0,     /* Maximum number of retries following a probe failure */
-    .probeTO = 1000,  /* Repeat rate for probes */
+    .probeTO = 500,   /* Repeat rate for probes */
     .retryTO = 10     /* Repeat time for retries following a probe failure */
 };
 
@@ -594,7 +599,7 @@ int main(int argc, char** argv)
          * a short subscription delay or link monitoring
          * will thrash.
          */
-        node->subsRate = FastLinkProbe.probeTO / 10;
+        node->subsRate = (FastLinkProbe.probeTO) / 4;
 
         ret = DPS_StartNode(node, DPS_FALSE, 0);
         if (ret != DPS_OK) {
@@ -663,6 +668,7 @@ int main(int argc, char** argv)
                 }
                 ret = DPS_Subscribe(sub, OnPubMatch);
                 if (ret == DPS_OK) {
+                    DPS_PRINT("Node %d is subscribing to \"%s\"\n", NodeList[i], topic);
                     ++numSubs;
                 } else {
                     DPS_ERRPRINT("Subscribe failed %s\n", DPS_ErrTxt(ret));
@@ -712,9 +718,9 @@ int main(int argc, char** argv)
     fprintf(dotFile, "subgraph cluster_1 {\n");
     fprintf(dotFile, "style=invis;\n");
     if (showMuted) {
-        PrintSubgraph(dotFile, 1, killList, numKills, "palegreen3", &l1);
+        PrintSubgraph(dotFile, 1, killList, numKills, expMuted, "palegreen3", &l1);
     }
-    PrintSubgraph(dotFile, 0, killList, numKills, "palegreen", &l1);
+    PrintSubgraph(dotFile, 0, killList, numKills, expMuted, "palegreen", &l1);
     fprintf(dotFile, "}\n");
 
     if (numKills > 0) {
@@ -724,10 +730,10 @@ int main(int argc, char** argv)
          */
         for (i = 0; i < numKills; ++i) {
             uint16_t goner = killList[i];
-            if (NodeMap[goner]) {
-                DPS_PRINT("Killing node %d\n", goner);
-                expMuted -= (2 + CountMuted(NodeMap[goner]));
-                DPS_DestroyNode(NodeMap[goner], OnNodeDestroyed, &killList[i]);
+            DPS_Node* n = NodeMap[goner];
+            if (n) {
+                DPS_PRINT("Killing node %d (%d)\n", goner, DPS_GetPortNumber(n));
+                DPS_DestroyNode(n, OnNodeDestroyed, &killList[i]);
                 NodeMap[goner] = NULL;
             }
         }
@@ -741,9 +747,9 @@ int main(int argc, char** argv)
         fprintf(dotFile, "subgraph cluster_2 {\n");
         fprintf(dotFile, "style=invis;\n");
         if (showMuted) {
-            PrintSubgraph(dotFile, 1, NULL, 0, "cadetblue3", &l2);
+            PrintSubgraph(dotFile, 1, NULL, 0, expMuted, "cadetblue3", &l2);
         }
-        PrintSubgraph(dotFile, 0, NULL, 0, "cadetblue1", &l2);
+        PrintSubgraph(dotFile, 0, NULL, 0, expMuted, "cadetblue1", &l2);
         fprintf(dotFile, "}\n");
     }
 
