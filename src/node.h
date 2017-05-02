@@ -144,7 +144,6 @@ typedef struct _RemoteNode {
     struct {
         uint8_t muted;                 /* TRUE if the remote informed us the that link is muted */
         uint8_t syncReq;               /* TRUE if the remote requested interest synchronization */
-        uint8_t checkForUpdates;       /* TRUE if there may be updated interests to send to this remote */
         uint32_t revision;             /* Revision number of last subscription received from this node */
         DPS_UUID meshId;               /* The mesh id received from this remote node */
         DPS_BitVector* needs;          /* Bit vector of needs received from  this remote node */
@@ -154,7 +153,6 @@ typedef struct _RemoteNode {
         uint8_t muted;                 /* TRUE if we have informed the remote that the link is muted */
         uint8_t deltaInd;              /* TRUE if the interests info is a delta */
         uint8_t syncReq;               /* TRUE if we are requesting interest synchronization */
-        uint8_t checkForUpdates;       /* TRUE if there may be updated interests to send to this remote */
         uint32_t revision;             /* Revision number of last subscription sent to this node */
         DPS_UUID meshId;               /* The mesh id sent to this remote node */
         DPS_BitVector* needs;          /* Needs bit vector sent outbound to this remote node */
@@ -170,9 +168,8 @@ typedef struct _RemoteNode {
  * Request to asynchronously updates subscriptions
  *
  * @param node    The node
- * @param remote  Remote node to check for updates or if NULL all remote nodes are checked
  */
-int DPS_UpdateSubs(DPS_Node* node, RemoteNode* remote);
+void DPS_UpdateSubs(DPS_Node* node);
 
 /**
  * Queue an acknowledgment to be sent asynchronously
@@ -279,6 +276,13 @@ DPS_Status DPS_UnmuteRemoteNode(DPS_Node* node, RemoteNode* remote);
  * @param remote  The remote node to clear
  */
 void DPS_ClearInboundInterests(DPS_Node* node, RemoteNode* remote);
+
+/**
+ * Set outbound interests and needs to an empty bit vector
+ *
+ * @param remote  The remote node to clear
+ */
+DPS_Status DPS_ClearOutboundInterests(RemoteNode* remote);
 
 /**
  * Lock the node

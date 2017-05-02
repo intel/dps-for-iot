@@ -196,6 +196,7 @@ void DPS_RemoteCompletion(DPS_Node* node, RemoteNode* remote, DPS_Status status)
     OnOpCompletion* cpn = remote->completion;
     DPS_NodeAddress addr = remote->ep.addr;
 
+    assert(DPS_HasNodeLock(node));
     /*
      * See AllocCompletion() timer.data is only set if the timer handle
      * was succesfully initialized
@@ -447,11 +448,6 @@ DPS_Status DPS_MuteRemoteNode(DPS_Node* node, RemoteNode* remote)
 
     DPS_DBGPRINT("%d muting %s\n", node->port, DESCRIBE(remote));
 
-    /*
-     * In case an update had been scheduled for this remote
-     */
-    remote->outbound.checkForUpdates = DPS_FALSE;
-
     remote->outbound.muted = DPS_TRUE;
     remote->outbound.meshId = DPS_MaxMeshId;
     remote->inbound.meshId = DPS_MaxMeshId;
@@ -502,7 +498,8 @@ DPS_Status DPS_UnmuteRemoteNode(DPS_Node* node, RemoteNode* remote)
     DPS_RandUUIDLess(&node->minMeshId);
     node->meshId = node->minMeshId;
 
-    return DPS_UpdateSubs(node, remote);
+    DPS_UpdateSubs(node);
+    return DPS_OK;
 }
 
 int DPS_MeshHasLoop(DPS_Node* node, RemoteNode* src, DPS_UUID* meshId)
@@ -781,10 +778,6 @@ static void SendSubsTimer(uv_timer_t* handle)
         int send = DPS_FALSE;
         remoteNext = remote->next;
 
-        if (!remote->outbound.checkForUpdates) {
-            continue;
-        }
-        remote->outbound.checkForUpdates = DPS_FALSE;
         if (remote->unlink) {
             reschedule = DPS_TRUE;
             DPS_SendSubscription(node, remote);
@@ -828,8 +821,8 @@ static void SendSubsTask(uv_async_t* handle)
     DPS_LockNode(node);
     if (node->state == DPS_NODE_RUNNING) {
         node->subsPending = DPS_TRUE;
-    uv_timer_start(&node->subsTimer, SendSubsTimer, 0, 0);
-}
+        uv_timer_start(&node->subsTimer, SendSubsTimer, 0, 0);
+    }
     DPS_UnlockNode(node);
 }
 
@@ -872,34 +865,13 @@ void DPS_UpdatePubs(DPS_Node* node, DPS_Publication* pub)
     DPS_UnlockNode(node);
 }
 
-int DPS_UpdateSubs(DPS_Node* node, RemoteNode* remote)
+void DPS_UpdateSubs(DPS_Node* node)
 {
-    int count = 0;
-    DPS_DBGTRACE();
     DPS_LockNode(node);
-    if (remote) {
-        if (!remote->outbound.muted) {
-            remote->outbound.checkForUpdates = DPS_TRUE;
-            ++count;
-        }
-    } else {
-        /*
-         * TODO - when multi-tenancy is implemented subscriptions will only
-         * be sent to remotes that match the tenancy criteria. For now we flood
-         * subscriptions to all remote nodes.
-         */
-        for (remote = node->remoteNodes; remote != NULL; remote = remote->next) {
-            if (!remote->outbound.muted) {
-                remote->outbound.checkForUpdates = DPS_TRUE;
-                ++count;
-            }
-        }
-    }
-    if (count && !node->subsPending) {
+    if (!node->subsPending) {
         uv_async_send(&node->subsAsync);
     }
     DPS_UnlockNode(node);
-    return count;
 }
 
 void DPS_QueuePublicationAck(DPS_Node* node, PublicationAck* ack)
@@ -1413,7 +1385,6 @@ DPS_Status DPS_Link(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnLinkComplete cb
      */
     remote->outbound.syncReq = DPS_TRUE;
 
-
     remote->completion = AllocCompletion(node, remote, LINK_OP, data, LINK_RESPONSE_TIMEOUT, cb);
     if (!remote->completion) {
         DPS_DeleteRemoteNode(node, remote);
@@ -1424,7 +1395,7 @@ DPS_Status DPS_Link(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnLinkComplete cb
     /*
      * This will cause an initial subscription to be sent to the remote node
      */
-    DPS_UpdateSubs(node, remote);
+    DPS_UpdateSubs(node);
     return DPS_OK;
 }
 
@@ -1467,7 +1438,7 @@ DPS_Status DPS_Unlink(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnUnlinkComplet
         return DPS_ERR_RESOURCES;
     }
     DPS_UnlockNode(node);
-    DPS_UpdateSubs(node, remote);
+    DPS_UpdateSubs(node);
     return DPS_OK;
 }
 

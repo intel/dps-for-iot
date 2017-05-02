@@ -180,7 +180,7 @@ DPS_Status DPS_DestroySubscription(DPS_Subscription* sub)
     DPS_DBGPRINT("Unsubscribing from %zu topics\n", sub->numTopics);
     FreeSubscription(sub);
 
-    DPS_UpdateSubs(node, NULL);
+    DPS_UpdateSubs(node);
 
     return DPS_OK;
 }
@@ -455,7 +455,7 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
             /*
              * Evaluate impact of losing the remote's interests
              */
-            DPS_UpdateSubs(node, NULL);
+            DPS_UpdateSubs(node);
         }
         DPS_UnlockNode(node);
         return DPS_OK;
@@ -640,11 +640,12 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
         node->minMeshId = *meshId;
     }
     DPS_UnlockNode(node);
-    DPS_UpdateSubs(node, NULL);
+    DPS_UpdateSubs(node);
     return ret;
 
 DiscardAndExit:
 
+    assert(DPS_HasNodeLock(node));
     DPS_UnlockNode(node);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Subscription was discarded %s\n", DPS_ErrTxt(ret));
@@ -703,7 +704,7 @@ DPS_Status DPS_Subscribe(DPS_Subscription* sub, DPS_PublicationHandler handler)
     }
     DPS_UnlockNode(node);
     if (ret == DPS_OK) {
-        DPS_UpdateSubs(node, NULL);
+        DPS_UpdateSubs(node);
     }
     return ret;
 }
