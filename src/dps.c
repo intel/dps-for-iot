@@ -860,7 +860,13 @@ void DPS_UpdatePubs(DPS_Node* node, DPS_Publication* pub)
 {
     int count = 0;
     DPS_DBGTRACE();
+
     DPS_LockNode(node);
+    if (node->state != DPS_NODE_RUNNING) {
+        DPS_UnlockNode(node);
+        return;
+    }
+
     if (pub) {
         pub->checkToSend = DPS_TRUE;
         ++count;
@@ -895,7 +901,7 @@ void DPS_UpdatePubs(DPS_Node* node, DPS_Publication* pub)
 void DPS_UpdateSubs(DPS_Node* node)
 {
     DPS_LockNode(node);
-    if (!node->subsPending) {
+    if ((node->state == DPS_NODE_RUNNING) && !node->subsPending) {
         uv_async_send(&node->subsAsync);
     }
     DPS_UnlockNode(node);
