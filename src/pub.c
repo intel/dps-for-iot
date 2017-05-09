@@ -501,10 +501,18 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
          * Retained publications can only be updated with newer revisions
          */
         if (sequenceNum <= pub->sequenceNum) {
-            DPS_ERRPRINT("Publication is stale");
+            DPS_DBGPRINT("Publication %s/%d is stale (/%d already retained)\n", DPS_UUIDToString(pubId), sequenceNum, pub->sequenceNum);
             return DPS_ERR_STALE;
         }
     } else {
+        /*
+         * A stale publication is a publication that has the same or older sequence number than the
+         * latest publication with the same pubId.
+         */
+        if (DPS_PublicationIsStale(&node->history, pubId, sequenceNum)) {
+            DPS_DBGPRINT("Publication %s/%d is stale\n", DPS_UUIDToString(pubId), sequenceNum);
+            return DPS_ERR_STALE;
+        }
         pub = calloc(1, sizeof(DPS_Publication));
         if (!pub) {
             return DPS_ERR_RESOURCES;
@@ -526,14 +534,6 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
     pub->ackRequested = ackRequested;
     pub->flags |= PUB_FLAG_PUBLISH;
     pub->sender = ep->addr;
-    /*
-     * A stale publication is a publication that has the same or older sequence number than the
-     * latest publication with the same pubId.
-     */
-    if (DPS_PublicationIsStale(&node->history, pubId, sequenceNum)) {
-        DPS_DBGPRINT("Publication %s/%d is stale\n", DPS_UUIDToString(pubId), sequenceNum);
-        goto Exit;
-    }
     /*
      * Free any existing body and payload buffers
      */
