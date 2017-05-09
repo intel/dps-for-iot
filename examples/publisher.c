@@ -239,6 +239,7 @@ int main(int argc, char** argv)
     int i;
     char* msg = NULL;
     int mcast = DPS_MCAST_PUB_ENABLE_SEND;
+    int listenPort = 0;
     DPS_NodeAddress* addr = NULL;
 
     DPS_Debug = 0;
@@ -263,6 +264,9 @@ int main(int argc, char** argv)
                 goto Usage;
             }
             msg = *arg++;
+            continue;
+        }
+        if (IntArg("-l", &arg, &argc, &listenPort, 1000, UINT16_MAX)) {
             continue;
         }
         if (IntArg("-w", &arg, &argc, &wait, 0, 30)) {
@@ -311,7 +315,7 @@ int main(int argc, char** argv)
 
     node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore), nodeKeyId);
 
-    ret = DPS_StartNode(node, mcast, 0);
+    ret = DPS_StartNode(node, mcast, listenPort);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("DPS_CreateNode failed: %s\n", DPS_ErrTxt(ret));
         return 1;
@@ -357,6 +361,10 @@ int main(int argc, char** argv)
             DPS_UnlinkFrom(node, addr);
             DPS_DestroyAddress(addr);
         }
+        if (listenPort) {
+            DPS_PRINT("Waiting for remote to link\n");
+            DPS_TimedWaitForEvent(nodeDestroyed, 60 * 1000);
+        }
         DPS_DestroyNode(node, OnNodeDestroyed, NULL);
     } else {
         DPS_PRINT("Running in interactive mode\n");
@@ -368,12 +376,13 @@ int main(int argc, char** argv)
     return 0;
 
 Usage:
-    DPS_PRINT("Usage %s [-d] [-x 0/1] [-a] [-w <seconds>] <seconds>] [-t <ttl>] [[-h <hostname>] -p <portnum>] [-m <message>] [topic1 topic2 ... topicN]\n", argv[0]);
+    DPS_PRINT("Usage %s [-d] [-x 0/1] [-a] [-w <seconds>] <seconds>] [-t <ttl>] [[-h <hostname>] -p <portnum>] [-l <portnum>] [-m <message>] [topic1 topic2 ... topicN]\n", argv[0]);
     DPS_PRINT("       -d: Enable debug ouput if built for debug.\n");
     DPS_PRINT("       -x: Enable or disable encryption. Default is encryption enabled.\n");
     DPS_PRINT("       -a: Request an acknowledgement\n");
     DPS_PRINT("       -t: Set a time-to-live on a publication\n");
     DPS_PRINT("       -w: Time to wait between linking to remote node and sending publication\n");
+    DPS_PRINT("       -l: Port number to listen on for incoming connections\n");
     DPS_PRINT("       -h: Specifies host (localhost is default). Mutiple -h options are permitted.\n");
     DPS_PRINT("       -p: port to link. Multiple -p options are permitted.\n");
     DPS_PRINT("       -m: A payload message to accompany the publication.\n\n");
