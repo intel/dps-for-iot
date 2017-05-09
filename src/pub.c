@@ -500,7 +500,7 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
         /*
          * Retained publications can only be updated with newer revisions
          */
-        if (sequenceNum < pub->sequenceNum) {
+        if (sequenceNum <= pub->sequenceNum) {
             DPS_ERRPRINT("Publication is stale");
             return DPS_ERR_STALE;
         }
