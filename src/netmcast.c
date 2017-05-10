@@ -32,7 +32,7 @@
 /*
  * Debug control for this module
  */
-DPS_DEBUG_CONTROL(DPS_DEBUG_OFF);
+DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
 
 #define USE_IPV4       0x10
@@ -388,10 +388,17 @@ DPS_Status DPS_MulticastSend(DPS_MulticastSender* sender, uv_buf_t* bufs, size_t
          * Synchronous send
          */
         ret = uv_udp_send(&sender->udpTx[i].req, &sender->udpTx[i].udp, bufs, (unsigned int)numBufs, (struct sockaddr*)&addr, MulticastSendComplete);
-        if (ret < 0) {
+        if (ret) {
             DPS_ERRPRINT("uv_udp_send to %s failed: %s\n", DPS_NetAddrText((struct sockaddr*)&addr), uv_err_name(ret));
         } else {
-            DPS_DBGPRINT("Sent %d bytes to %s\n", ret, DPS_NetAddrText((struct sockaddr*)&addr));
+#ifndef NDEBUG
+            size_t len = 0;
+            int j;
+            for (j = 0; j < numBufs; ++j) {
+                len += bufs[j].len;
+            }
+            DPS_DBGPRINT("DPS_MulitcastSend total %zu bytes to %s\n", len, DPS_NetAddrText((struct sockaddr*)&addr));
+#endif
         }
     }
     return DPS_OK;
