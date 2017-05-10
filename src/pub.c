@@ -765,7 +765,6 @@ DPS_Status DPS_SendPublication(DPS_Node* node, DPS_Publication* pub, RemoteNode*
                  * Prevent the publication from being freed until the send completes.
                  */
                 ++pub->refCount;
-                UpdatePubHistory(node, pub);
             } else {
                 /*
                  * Only the first buffer can be freed here - we don't own the others
@@ -781,6 +780,9 @@ DPS_Status DPS_SendPublication(DPS_Node* node, DPS_Publication* pub, RemoteNode*
              * Only the first two buffers can be freed - we don't own the others
              */
             DPS_NetFreeBufs(bufs, 2);
+        }
+        if (ret == DPS_OK) {
+            UpdatePubHistory(node, pub);
         }
     } else {
         DPS_TxBufferFree(&buf);
@@ -1142,6 +1144,9 @@ DPS_Status DPS_Publish(DPS_Publication* pub, const uint8_t* payload, size_t len,
         }
         ttl = 0;
         pub->flags |= PUB_FLAG_EXPIRED;
+    } else {
+        pub->flags &= ~PUB_FLAG_RETAINED;
+        pub->flags &= ~PUB_FLAG_EXPIRED;
     }
     /*
      * Update time before setting expiration because the loop only updates on each iteration and
