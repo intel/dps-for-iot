@@ -8,7 +8,7 @@ bindings = Split('python nodejs')
 # Generic build variables
 vars.AddVariables(
     EnumVariable('variant', 'Build variant', default='release', allowed_values=('debug', 'release'), ignorecase=2),
-    EnumVariable('transport', 'Transport protocol', default='udp', allowed_values=('udp', 'tcp'), ignorecase=2),
+    EnumVariable('transport', 'Transport protocol', default='udp', allowed_values=('udp', 'tcp', 'dtls'), ignorecase=2),
     EnumVariable('target', 'Build target', default='local', allowed_values=('local', 'yocto'), ignorecase=2),
     ListVariable('bindings', 'Bindings to build', bindings, bindings))
 
@@ -38,7 +38,21 @@ except:
     pass
 
 extEnv = Environment(ENV = os.environ, variables=vars)
-env = Environment(CPPDEFINES=[], CPPPATH = ['#/inc', '#/ext/tinycrypt/lib/include', '#/ext/safestring/include'], variables=vars, tools=tools)
+
+env = Environment(
+    CPPDEFINES=[
+        'MBEDTLS_USER_CONFIG_FILE=\\"mbedtls_config.h\\"',
+    ],
+    CPPPATH=[
+        '#/inc',
+        '#/ext/tinycrypt/lib/include',
+        '#/ext/safestring/include',
+        '#/ext',
+        '#/ext/mbedtls/include',
+    ],
+    variables=vars,
+    tools=tools,
+)
 
 Help(vars.GenerateHelpText(env))
 

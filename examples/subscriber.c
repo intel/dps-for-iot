@@ -223,6 +223,7 @@ int main(int argc, char** argv)
             DPS_SetContentKey(memoryKeyStore, &keyId[i], keyData[i], 16);
         }
         nodeKeyId = &keyId[0];
+        DPS_SetNetworkKey(memoryKeyStore, "test", 4);
     }
     node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore), nodeKeyId);
 

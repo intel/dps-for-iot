@@ -42,7 +42,27 @@ struct _DPS_MemoryKeyStore {
     DPS_MemoryKeyStoreEntry* entries;
     size_t entriesCount;
     size_t entriesCap;
+
+    uint8_t* networkKey;
+    size_t networkKeyLen;
 };
+
+static DPS_Status MemoryKeyStoreNetworkKeyCallback(DPS_KeyStore* keyStore, uint8_t* buffer, size_t bufferLen, size_t* keyLen)
+{
+    DPS_MemoryKeyStore* mks = keyStore->userData;
+    if (!mks->networkKey) {
+        return DPS_ERR_MISSING;
+    }
+
+    if (bufferLen < mks->networkKeyLen) {
+        return DPS_ERR_RESOURCES;
+    }
+
+    memcpy(buffer, mks->networkKey, mks->networkKeyLen);
+    *keyLen = mks->networkKeyLen;
+
+    return DPS_OK;
+}
 
 static DPS_Status MemoryKeyStoreContentKeyCallback(DPS_KeyStore* keyStore, const DPS_UUID* kid, uint8_t* key, size_t keyLen)
 {
@@ -66,7 +86,8 @@ DPS_MemoryKeyStore* DPS_CreateMemoryKeyStore()
 {
     DPS_MemoryKeyStore* mks = calloc(1, sizeof(DPS_MemoryKeyStore));
     mks->keyStore.userData = mks;
-    mks->keyStore.contentKeyCB= MemoryKeyStoreContentKeyCallback;
+    mks->keyStore.contentKeyCB = MemoryKeyStoreContentKeyCallback;
+    mks->keyStore.networkKeyCB = MemoryKeyStoreNetworkKeyCallback;
     return mks;
 }
 
@@ -81,10 +102,32 @@ void DPS_DestroyMemoryKeyStore(DPS_MemoryKeyStore* mks)
         free(entry->key);
     }
     free(mks->entries);
+    free(mks->networkKey);
     free(mks);
 }
 
-DPS_Status DPS_SetContentKey(DPS_MemoryKeyStore *mks, const DPS_UUID* kid, uint8_t* key, size_t keyLen)
+DPS_Status DPS_SetNetworkKey(DPS_MemoryKeyStore* mks, uint8_t* key, size_t keyLen)
+{
+    if ((!key && keyLen > 0) || (key && keyLen == 0)) {
+        return DPS_ERR_INVALID;
+    }
+
+    uint8_t* networkKey = NULL;
+    if (key) {
+        networkKey = calloc(1, keyLen);
+        if (!networkKey) {
+            return DPS_ERR_RESOURCES;
+        }
+        memcpy(networkKey, key, keyLen);
+    }
+
+    free(mks->networkKey);
+    mks->networkKey = networkKey;
+    mks->networkKeyLen = keyLen;
+    return DPS_OK;
+}
+
+DPS_Status DPS_SetContentKey(DPS_MemoryKeyStore* mks, const DPS_UUID* kid, uint8_t* key, size_t keyLen)
 {
     // Replace key if kid already exists.
     for (size_t i = 0; i < mks->entriesCount; i++) {
@@ -146,5 +189,6 @@ DPS_KeyStore* DPS_MemoryKeyStoreHandle(DPS_MemoryKeyStore *mks)
     }
     return &mks->keyStore;
 }
+
 
 /* TODO: Implement a FileKeyStore, that read the keys from a specified file. */
