@@ -56,7 +56,7 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
 #define DESCRIBE(n)  DPS_NodeAddrToString(&(n)->ep.addr)
 
-#define DPS_SUB_FLAG_DELTA_IND  0x01      /* Indicate interests is a delta) */
+#define DPS_SUB_FLAG_DELTA_IND  0x01      /* Indicate interests is a delta */
 #define DPS_SUB_FLAG_MUTE_IND   0x02      /* Mute has been indicated */
 
 static int IsValidSub(const DPS_Subscription* sub)
@@ -285,8 +285,8 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote)
     /*
      * Body map
      *      {
-     *          meshId : uuid
      *          flags: uint,
+     *          meshId : uuid,
      *          needs: bit-vector,
      *          interests: bit-vector
      *       }
@@ -379,7 +379,6 @@ static DPS_Status SendSubscriptionAck(DPS_Node* node, RemoteNode* remote, uint32
      * Header map
      *  {
      *      port: uint
-     *      meshId : uuid
      *      revision : uint
      *  }
      */
