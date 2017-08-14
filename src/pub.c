@@ -708,7 +708,7 @@ DPS_Status DPS_SendPublication(DPS_Node* node, DPS_Publication* pub, RemoteNode*
      *      type,
      *      { headers },
      *      { body }
-     *      payload (bstr)
+     *      payload [ topics, data ]
      *  ]
      */
     len = CBOR_SIZEOF_ARRAY(4) +
@@ -749,7 +749,6 @@ DPS_Status DPS_SendPublication(DPS_Node* node, DPS_Publication* pub, RemoteNode*
     }
     /*
      * Body and payload are already serialized
-     *
      */
     if (ret == DPS_OK) {
         uv_buf_t bufs[] = {
@@ -1245,4 +1244,3 @@ void DPS_DumpPubs(DPS_Node* node)
     }
 }
 #endif
-
