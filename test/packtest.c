@@ -24,7 +24,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <assert.h>
+#include "test.h"
 #include <dps/dbg.h>
 #include "topics.h"
 
@@ -126,7 +126,7 @@ static DPS_Status InitBitVector(DPS_BitVector* bf, size_t len, int testCase)
         ret |= DPS_AddTopic(bf, "razz/baz/x=5", "/=", DPS_SubTopic);
         break;
     }
-    assert(ret == DPS_OK);
+    ASSERT(ret == DPS_OK);
     free(data);
     DPS_BitVectorDump(bf, 1);
     return ret;
@@ -149,7 +149,7 @@ static void RunTests(DPS_BitVector* pubBf, size_t size)
         InitBitVector(pubBf, size, i);
 
         ret = DPS_BitVectorSerialize(pubBf, &txBuf);
-        assert(ret == DPS_OK);
+        ASSERT(ret == DPS_OK);
         /*
          * Switch over from writing to reading
          */
@@ -157,12 +157,12 @@ static void RunTests(DPS_BitVector* pubBf, size_t size)
 
         bf = DPS_BitVectorAlloc();
         ret = DPS_BitVectorDeserialize(bf, &rxBuf);
-        assert(ret == DPS_OK);
+        ASSERT(ret == DPS_OK);
 
         DPS_BitVectorDump(bf, 1);
 
         cmp = DPS_BitVectorEquals(bf, pubBf);
-        assert(cmp == 1);
+        ASSERT(cmp == 1);
 
         DPS_BitVectorFree(bf);
         DPS_BitVectorClear(pubBf);
@@ -178,17 +178,17 @@ int main(int argc, char** argv)
 
     if (filterBits <= 0) {
         printf("Usage %s: <filter-bits> [<num-hashes>]\n", argv[0]);
-        exit(0);
+        return EXIT_FAILURE;
     }
 
     ret = DPS_Configure(filterBits, numHashes);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Invalid configuration parameters\n");
-        return 1;
+        return EXIT_FAILURE;
     }
 
     bf = DPS_BitVectorAlloc();
     RunTests(bf, filterBits / 8);
     DPS_BitVectorFree(bf);
-    return 0;
+    return EXIT_SUCCESS;
 }

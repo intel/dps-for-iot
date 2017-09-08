@@ -5,8 +5,6 @@ dir="${BASH_SOURCE%/*}"
 if [[ ! -d "$dir" ]]; then dir="$PWD"; fi
 . "$dir/common.sh"
 
-cleanup
-
 sub -w 1 -l 40000 -s X -s A
 sub -w 1 -l 40001 -p 40000 -s X -s B
 sub -w 1 -l 40002 -p 40001 -s X -s C
@@ -19,7 +17,6 @@ sub -w 1 -l 40008 -p 40007 -s X -s I
 sub -w 1 -l 40009 -p 40008 -s X -s J
 sub -w 1 -l 40010 -p 40009 -s X -s K
 
-
 # Link to all nodes in chain
 
 sub -w 2 -l 40011 -p 40000 -p 40001 -p 40002 -p 40003 -p 40004 -p 40005 -p 40006 -p 40007 -p 40008 -p 40009 -p 40010 -s X -s L
@@ -27,9 +24,6 @@ sub -w 2 -l 39999 -p 40010 -p 40009 -p 40008 -p 40007 -p 40006 -p 40005 -p 40004
 sub -w 2 -l 40012 -p 40008 -p 40007 -p 40004 -p 40006 -p 40010 -p 40000 -p 40002 -p 40009 -p 40005 -p 40003 -p 40001 -s X -s N
 
 sleep 4
-
-echo "Errors"
-grep -r "ERROR" out | wc -l
 
 pub -p 39999 A B C D E F G H I J K L M N
 pub -p 40000 A B C D E F G H I J K L M N
@@ -48,9 +42,7 @@ pub -p 40012 A B C D E F G H I J K L M N
 
 sleep 1
 
-echo
-echo "Pubs received (expect 196)"
-grep "pub [A|B|C|D|E|F|G|H|I|J|K|L|M|N]" out/sub*.log | wc -l
+expect_pubs_received 196 A B C D E F G H I J K L M N
 
 # Reachability check
 
@@ -58,6 +50,5 @@ pub -p 40005 X
 
 sleep 1
 
-echo
-echo "Pubs received (expect 14)"
-grep "pub X" out/sub*.log | wc -l
+assert_no_errors
+expect_pubs_received 14 X

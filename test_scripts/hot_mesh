@@ -5,8 +5,6 @@ dir="${BASH_SOURCE%/*}"
 if [[ ! -d "$dir" ]]; then dir="$PWD"; fi
 . "$dir/common.sh"
 
-cleanup
-
 sub -w 3 -l 40000 -p 40001 -p 40002 -p 40003 -p 40004 -s X
 sub -w 3 -l 40001 -p 40011 -p 40012 -p 40013 -s X
 sub -w 3 -l 40002 -p 40012 -p 40038 -s X
@@ -58,9 +56,6 @@ sub -w 3 -l 40132 -p 40135 -p 40032 -s X
 sub -w 3 -l 40135 -p 40003 -p 40004 -s X
 
 sleep 4
-
-echo "Errors"
-grep -r "ERROR" out | wc -l
 
 # Routing check
 
@@ -116,9 +111,7 @@ pub -p 40135 A B C D E F G
 
 sleep 1
 
-echo
-echo "Pubs received (expect 343)"
-grep "pub [A|B|C|D|E|F]" out/sub*.log | wc -l
+expect_pubs_received 343 A B C D E F G
 
 # Reachability check
 
@@ -126,6 +119,5 @@ pub -p 40111 X
 
 sleep 1
 
-echo
-echo "Pubs received (expect 49)"
-grep "pub X" out/sub*.log | wc -l
+assert_no_errors
+expect_pubs_received 49 X

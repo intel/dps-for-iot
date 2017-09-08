@@ -24,7 +24,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <assert.h>
+#include "test.h"
 #include <dps/dbg.h>
 #include <dps/err.h>
 #include <dps/private/dps.h>
@@ -81,7 +81,7 @@ uint8_t config[] = {
 static DPS_Status GetKey(void* ctx, const DPS_UUID* kid, int8_t alg, uint8_t* k)
 {
     if (DPS_UUIDCompare(kid, &keyId) != 0) {
-        assert(0);
+        ASSERT(0);
         return DPS_ERR_MISSING;
     } else {
         memcpy(k, key, sizeof(key));
@@ -99,12 +99,12 @@ static void CCM_Raw()
     DPS_TxBufferInit(&plainText, NULL, 512);
 
     ret = Encrypt_CCM(key, 16, 2, nonce, (uint8_t*)msg, sizeof(msg), aad, sizeof(aad), &cipherText);
-    assert(ret == DPS_OK);
+    ASSERT(ret == DPS_OK);
     ret = Decrypt_CCM(key, 16, 2, nonce, cipherText.base, DPS_TxBufferUsed(&cipherText), aad, sizeof(aad), &plainText);
-    assert(ret == DPS_OK);
+    ASSERT(ret == DPS_OK);
 
-    assert(DPS_TxBufferUsed(&plainText) == sizeof(msg));
-    assert(memcmp(plainText.base, msg, sizeof(msg)) == 0);
+    ASSERT(DPS_TxBufferUsed(&plainText) == sizeof(msg));
+    ASSERT(memcmp(plainText.base, msg, sizeof(msg)) == 0);
 
     DPS_TxBufferFree(&cipherText);
     DPS_TxBufferFree(&plainText);
@@ -134,7 +134,7 @@ int main(int argc, char** argv)
         ret = COSE_Encrypt(alg, &keyId, nonce, &aadBuf, &msgBuf, GetKey, NULL, &cipherText);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("COSE_Encrypt failed: %s\n", DPS_ErrTxt(ret));
-            return 1;
+            return EXIT_FAILURE;
         }
         Dump("CipherText", cipherText.base, DPS_TxBufferUsed(&cipherText));
         /*
@@ -147,16 +147,16 @@ int main(int argc, char** argv)
         ret = COSE_Decrypt(nonce, &kid, &aadBuf, &input, GetKey, NULL, &plainText);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("COSE_Decrypt failed: %s\n", DPS_ErrTxt(ret));
-            return 1;
+            return EXIT_FAILURE;
         }
 
-        assert(DPS_TxBufferUsed(&plainText) == sizeof(msg));
-        assert(memcmp(plainText.base, msg, sizeof(msg)) == 0);
+        ASSERT(DPS_TxBufferUsed(&plainText) == sizeof(msg));
+        ASSERT(memcmp(plainText.base, msg, sizeof(msg)) == 0);
 
         DPS_TxBufferFree(&cipherText);
         DPS_TxBufferFree(&plainText);
     }
 
     DPS_PRINT("Passed\n");
-    return 0;
+    return EXIT_SUCCESS;
 }

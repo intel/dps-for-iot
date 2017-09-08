@@ -120,7 +120,7 @@ int main(int argc, char** argv)
     ret = DPS_MatchTopicList(pubs, numPubs, subs, numSubs, separators, noWildCard, &match);
     if (ret != DPS_OK) {
         DPS_PRINT("Error: %s\n", DPS_ErrTxt(ret));
-        return 1;
+        return EXIT_FAILURE;
     }
     if (match) {
         DPS_PRINT("Match\n");
@@ -130,10 +130,9 @@ int main(int argc, char** argv)
     if (BloomMatch(pubs, numPubs, subs, numSubs, noWildCard) != match) {
         DPS_PRINT("FAILURE: Different bloom filter match\n");
     }
-    return 0;
+    return EXIT_SUCCESS;
 
 Usage:
     DPS_PRINT("Usage %s: [-d] -p <pub topics> -s <sub topics>\n", argv[0]);
-    return 1;
-
+    return EXIT_FAILURE;
 }

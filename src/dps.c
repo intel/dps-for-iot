@@ -756,13 +756,6 @@ static void SendPubsTask(uv_async_t* handle)
     DPS_UnlockNode(node);
 }
 
-/*
- * Maximum rate in msecs to compute and send out subscription updates
- *
- * TODO - this value needs to be tuned
- */
-#define SUBSCRIPTION_UPDATE_RATE 1000
-
 static void SendSubsTimer(uv_timer_t* handle)
 {
     DPS_Node* node = (DPS_Node*)handle->data;
@@ -1208,7 +1201,7 @@ DPS_Node* DPS_CreateNode(const char* separators, DPS_KeyStore* keyStore, const D
      * Set default probe configuration and subscription rate parameters
      */
     node->linkMonitorConfig = LinkMonitorConfigDefaults;
-    node->subsRate = SUBSCRIPTION_UPDATE_RATE;
+    node->subsRate = DPS_SUBSCRIPTION_UPDATE_RATE;
     return node;
 }
 
@@ -1395,6 +1388,11 @@ DPS_Status DPS_DestroyNode(DPS_Node* node, DPS_OnNodeDestroyed cb, void* data)
     }
     free(node);
     return DPS_ERR_NODE_DESTROYED;
+}
+
+void DPS_SetNodeSubscriptionUpdateDelay(DPS_Node* node, uint32_t subsRateMsecs)
+{
+    node->subsRate = subsRateMsecs;
 }
 
 DPS_Status DPS_Link(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnLinkComplete cb, void* data)

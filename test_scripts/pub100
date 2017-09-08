@@ -18,4 +18,5 @@ done
 
 sleep 2
 
-cleanup
+assert_no_errors
+expect_pubs_received 300 "1.1.*"

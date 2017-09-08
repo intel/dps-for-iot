@@ -25,6 +25,7 @@
 #include <string.h>
 #include <dps/dbg.h>
 #include "bitvec.h"
+#include "test.h"
 
 #define BITLEN  64
 
@@ -35,9 +36,7 @@ static void SetBits(DPS_BitVector* bv, uint8_t n)
 
     memset(buf, n, sizeof(buf));
     ret = DPS_BitVectorSet(bv, buf, sizeof(buf));
-    if (ret != DPS_OK) {
-        DPS_PRINT("DPS_BitVectorSet returned %s\n", DPS_ErrTxt(ret));
-    }
+    ASSERT(ret == DPS_OK);
 }
 
 static void TestAdd(DPS_CountVector* cv, uint8_t n)
@@ -105,5 +104,5 @@ int main(int argc, char** argv)
     TestAdd(cv, 0x01);
     TestAdd(cv, 0x03);
 
-    return 0;
+    return EXIT_SUCCESS;
 }
