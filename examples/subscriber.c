@@ -91,6 +91,8 @@ static void OnPubMatch(DPS_Subscription* sub, const DPS_Publication* pub, uint8_
         char ackMsg[sizeof(AckFmt) + 8];
 
         sprintf(ackMsg, AckFmt, DPS_GetPortNumber(DPS_PublicationGetNode(pub)));
+        DPS_PRINT("Sending ack for pub UUID %s(%d)\n", DPS_UUIDToString(DPS_PublicationGetUUID(pub)), DPS_PublicationGetSequenceNum(pub));
+        DPS_PRINT("    %s\n", ackMsg);
 
         ret = DPS_AckPublication(pub, ackMsg, sizeof(ackMsg));
         if (ret != DPS_OK) {

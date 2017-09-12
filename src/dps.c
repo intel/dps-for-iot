@@ -786,7 +786,7 @@ static void SendSubsTimer(uv_timer_t* handle)
          */
         if (remote->outbound.ackCountdown) {
             if (remote->outbound.ackCountdown == 1) {
-                DPS_ERRPRINT("Reached retry limit - deleting unresponsive remote %s\n", DESCRIBE(remote));
+                DPS_WARNPRINT("Reached retry limit - deleting unresponsive remote %s\n", DESCRIBE(remote));
                 DPS_DeleteRemoteNode(node, remote);
                 /*
                  * Eat the error and continue

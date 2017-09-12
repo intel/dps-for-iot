@@ -37,6 +37,7 @@ extern int DPS_Debug;
 
 typedef enum {
     DPS_LOG_ERROR,
+    DPS_LOG_WARNING,
     DPS_LOG_PRINT,
     DPS_LOG_PRINTT,
     DPS_LOG_DBGTRACE,
@@ -63,9 +64,11 @@ void DPS_Log(DPS_LogLevel level, const char* file, int line, const char *functio
 #ifdef DPS_DEBUG
 #define DPS_DBGTRACE() (DPS_DEBUG_ENABLED() ? DPS_Log(DPS_LOG_DBGTRACE, __FILE__, __LINE__, __FUNCTION__, "\n") : 0)
 #define DPS_DBGPRINT(fmt, ...) (DPS_DEBUG_ENABLED() ? DPS_Log(DPS_LOG_DBGPRINT, __FILE__, __LINE__, __FUNCTION__, fmt, ##__VA_ARGS__) : 0)
+#define DPS_WARNPRINT(fmt, ...) (DPS_DEBUG_ENABLED() ? DPS_Log(DPS_LOG_WARNING, __FILE__, __LINE__, __FUNCTION__, fmt, ##__VA_ARGS__) : 0)
 #else
-#define DPS_DBGTRACE() 
-#define DPS_DBGPRINT(...) 
+#define DPS_DBGTRACE()
+#define DPS_DBGPRINT(...)
+#define DPS_WARNPRINT(...)
 #endif
 
 /*

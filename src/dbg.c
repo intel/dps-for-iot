@@ -36,6 +36,10 @@ void DPS_Log(DPS_LogLevel level, const char* file, int line, const char *functio
         fprintf(stderr, "%09u:%s@%d\t ERROR! ", DPS_DBG_TIME, file, line);
         vfprintf(stderr, fmt, ap);
         break;
+    case DPS_LOG_WARNING:
+        fprintf(stderr, "%09u:%s@%d\t WARNING! ", DPS_DBG_TIME, file, line);
+        vfprintf(stderr, fmt, ap);
+        break;
     case DPS_LOG_PRINTT:
         fprintf(stderr, "%09u:", DPS_DBG_TIME);
     case DPS_LOG_PRINT:
