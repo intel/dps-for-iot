@@ -70,6 +70,7 @@ header-field = (
 The encoding of a publication.
 ~~~~py
 pub = [
+  version: 1,
   type: 1,
   headers: { * header-field }, ; # port, ttl
   body: { * header-field },    ; # ttl, pub-id, seq-num, ack-req, bloom-filter
@@ -83,6 +84,7 @@ pub = [
 The encoding of a subscription.
 ~~~~py
 sub = [
+  version: 1,
   type: 2,
   headers: { * header-field }, ; # port, seq-num
   body: { * header-field }     ; # sub-flags, mesh-id, needs, interests or empty for unlink
@@ -92,6 +94,7 @@ sub = [
 The encoding of an acknowledgement message.
 ~~~~py
 ack = [
+  version: 1,
   type: 3,
   body: { * header-field },    ; # pub-id, seq-num
   payload: bstr
@@ -101,6 +104,7 @@ ack = [
 The encoding of a subscription acknowledgement message.
 ~~~~py
 sak = [
+  version: 1,
   type: 4,
   headers: { * header-field }  ; # port, seq-num
 ]

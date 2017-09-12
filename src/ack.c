@@ -111,14 +111,15 @@ static DPS_Status SerializeAck(const DPS_Publication* pub, PublicationAck* ack, 
     /*
      * Ack is encoded as an array of 3 elements
      *  [
+     *      version,
      *      type,
      *      { body }
      *      payload (bstr)
      *  ]
      */
-    len = CBOR_SIZEOF_ARRAY(3) +
+    len = CBOR_SIZEOF_ARRAY(4) +
           CBOR_SIZEOF(uint8_t) +
-
+          CBOR_SIZEOF(uint8_t) +
           CBOR_SIZEOF_MAP(2) + 2 * CBOR_SIZEOF(uint8_t) +
           CBOR_SIZEOF_BSTR(sizeof(DPS_UUID)) +
           CBOR_SIZEOF(uint32_t);
@@ -127,7 +128,10 @@ static DPS_Status SerializeAck(const DPS_Publication* pub, PublicationAck* ack, 
     if (ret != DPS_OK) {
         return ret;
     }
-    ret = CBOR_EncodeArray(&ack->headers, 3);
+    ret = CBOR_EncodeArray(&ack->headers, 4);
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeUint8(&ack->headers, DPS_MSG_VERSION);
+    }
     if (ret == DPS_OK) {
         ret = CBOR_EncodeUint8(&ack->headers, DPS_MSG_TYPE_ACK);
     }

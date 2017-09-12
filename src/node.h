@@ -38,6 +38,8 @@
 extern "C" {
 #endif
 
+#define DPS_MSG_VERSION 1
+
 /*
  * DPS message types
  */

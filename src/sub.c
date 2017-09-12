@@ -217,14 +217,17 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote)
         flags |= DPS_SUB_FLAG_MUTE_IND;
     }
     /*
-     * Subscription is encoded as an array of 3 elements
+     * Subscription is encoded as an array of 4 elements
      *  [
+     *      version,
      *      type,
      *      { headers },
      *      { body }
      *  ]
      */
-    len = CBOR_SIZEOF_ARRAY(3) + CBOR_SIZEOF(uint8_t);
+    len = CBOR_SIZEOF_ARRAY(4) +
+        CBOR_SIZEOF(uint8_t) +
+        CBOR_SIZEOF(uint8_t);
     /*
      * headers
      */
@@ -248,7 +251,10 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote)
 
     ret = DPS_TxBufferInit(&buf, NULL, len);
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeArray(&buf, 3);
+        ret = CBOR_EncodeArray(&buf, 4);
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeUint8(&buf, DPS_MSG_VERSION);
     }
     if (ret == DPS_OK) {
         ret = CBOR_EncodeUint8(&buf, DPS_MSG_TYPE_SUB);
@@ -354,13 +360,16 @@ static DPS_Status SendSubscriptionAck(DPS_Node* node, RemoteNode* remote, uint32
     DPS_DBGTRACE();
 
     /*
-     * Subscription ack is encoded as an array of 2 elements
+     * Subscription ack is encoded as an array of 3 elements
      *  [
+     *      version,
      *      type,
      *      { headers }
      *  ]
      */
-    len = CBOR_SIZEOF_ARRAY(2) + CBOR_SIZEOF(uint8_t);
+    len = CBOR_SIZEOF_ARRAY(3) +
+        CBOR_SIZEOF(uint8_t) +
+        CBOR_SIZEOF(uint8_t);
     /*
      * headers
      */
@@ -370,7 +379,10 @@ static DPS_Status SendSubscriptionAck(DPS_Node* node, RemoteNode* remote, uint32
 
     ret = DPS_TxBufferInit(&buf, NULL, len);
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeArray(&buf, 2);
+        ret = CBOR_EncodeArray(&buf, 3);
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeUint8(&buf, DPS_MSG_VERSION);
     }
     if (ret == DPS_OK) {
         ret = CBOR_EncodeUint8(&buf, DPS_MSG_TYPE_SAK);

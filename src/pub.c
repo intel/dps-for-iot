@@ -703,24 +703,28 @@ DPS_Status DPS_SendPublication(DPS_Node* node, DPS_Publication* pub, RemoteNode*
         }
     }
     /*
-     * Publication is encoded as an array of 4 elements
+     * Publication is encoded as an array of 5 elements
      *  [
+     *      version,
      *      type,
      *      { headers },
      *      { body }
      *      payload [ topics, data ]
      *  ]
      */
-    len = CBOR_SIZEOF_ARRAY(4) +
+    len = CBOR_SIZEOF_ARRAY(5) +
         CBOR_SIZEOF(uint8_t) +
-
+        CBOR_SIZEOF(uint8_t) +
         CBOR_SIZEOF_MAP(2) + 2 * CBOR_SIZEOF(uint8_t) +
         CBOR_SIZEOF(uint16_t) +
         CBOR_SIZEOF(int16_t);
 
     ret = DPS_TxBufferInit(&buf, NULL, len);
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeArray(&buf, 4);
+        ret = CBOR_EncodeArray(&buf, 5);
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeUint8(&buf, DPS_MSG_VERSION);
     }
     if (ret == DPS_OK) {
         ret = CBOR_EncodeUint8(&buf, DPS_MSG_TYPE_PUB);
