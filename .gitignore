@@ -4,3 +4,5 @@ build/*
 dps_ns3.pc
 ext
 core.*
+*~
+out
