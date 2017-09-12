@@ -193,7 +193,9 @@ void DPS_OnSendComplete(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_bu
 void DPS_MakeNonce(const DPS_UUID* uuid, uint32_t seqNum, uint8_t msgType, uint8_t nonce[DPS_COSE_NONCE_SIZE]);
 
 /**
- * Function to call when a network send operation fails. Must be called with the node lock held.
+ * Function to call when a network send operation fails.
+ *
+ * Must be called with the node lock held.
  *
  * @param node    The local node
  */
@@ -201,6 +203,8 @@ void DPS_SendFailed(DPS_Node* node, DPS_NodeAddress* addr, uv_buf_t* bufs, size_
 
 /**
  * Add an entry for new remote node or return a pointer to the existing remote node.
+ *
+ * Must be called with the node lock held.
  *
  * @param node      The local node
  * @param addr      The address of the remote node
