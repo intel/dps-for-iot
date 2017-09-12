@@ -51,10 +51,12 @@ static void SubscriptionCheck(DPS_BitVector* pubFilter, const char* subscription
             printf("Matched expected (false positive) topic %s: PASS\n", subscription);
         } else {
             printf("Matched unexpected topic %s: FAIL\n", subscription);
+            exit(EXIT_FAILURE);
         }
     } else {
         if (expect == EXPECT) {
             printf("No match for expected topic %s: FAIL\n", subscription);
+            exit(EXIT_FAILURE);
         } else if (expect == EXPECT_FALSE_POSITIVE) {
             printf("No match for expected (false positive) topic %s: FAIL\n", subscription);
         } else {
@@ -132,7 +134,6 @@ int main(int argc, char** argv)
     AddTopic(pubFilter, "x/y/z");
     AddTopic(pubFilter, "a/b/z");
 
-
     //DPS_BitVectorDump(pubFilter, 1);
     SubscriptionCheck(pubFilter, "foo/+/+.#", EXPECT);
     SubscriptionCheck(pubFilter, "foo/+/+/+/#", NOT_EXPECT);
@@ -164,9 +165,9 @@ int main(int argc, char** argv)
     SubscriptionCheck(pubFilter, "x/b/#", NOT_EXPECT);
     SubscriptionCheck(pubFilter, "+.+.c.5", NOT_EXPECT);
 
-    return 0;
+    return EXIT_SUCCESS;
 
 Usage:
     DPS_PRINT("Usage %s: [-r] [-b <filter-bits>] [-n <num-hashes>]\n", argv[0]);
-    return 1;
+    return EXIT_FAILURE;
 }

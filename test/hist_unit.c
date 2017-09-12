@@ -25,7 +25,6 @@
  *
  */
 #include <memory.h>
-#include <assert.h>
 #include <stdlib.h>
 #include <uv.h>
 #include <dps/dps.h>
@@ -63,7 +62,7 @@ int main()
     ret = DPS_InitUUID();
     if (ret != DPS_OK) {
         DPS_PRINT("DPS_InitUUID failed\n");
-        return 1;
+        return EXIT_FAILURE;
     }
 
     history.loop = uv_default_loop();
@@ -99,7 +98,7 @@ int main()
     for (i = 0; i < NUM_PUBS; ++i) {
         if (DPS_LookupPublisherForAck(&history, &uuid[i], &sn, &addrPtr) != DPS_OK) {
             DPS_PRINT("Pub history lookup failed\n");
-            return 1;
+            return EXIT_FAILURE;
         }
     }
     /*
@@ -109,7 +108,7 @@ int main()
     for (i = 0; i < NUM_PUBS / 4; ++i) {
         if (DPS_DeletePubHistory(&history, &uuid[i]) != DPS_OK) {
             DPS_PRINT("Pub history delete failed\n");
-            return 1;
+            return EXIT_FAILURE;
         }
     }
     /*
@@ -119,7 +118,7 @@ int main()
     for (i = NUM_PUBS / 4; i < NUM_PUBS; ++i) {
         if (DPS_LookupPublisherForAck(&history, &uuid[i], &sn, &addrPtr) != DPS_OK) {
             DPS_PRINT("Pub history lookup failed\n");
-            return 1;
+            return EXIT_FAILURE;
         }
     }
     /*
@@ -136,7 +135,7 @@ int main()
     for (i = 0; i < NUM_PUBS; ++i) {
         if (DPS_LookupPublisherForAck(&history, &uuid[i], &sn, &addrPtr) != DPS_OK) {
             DPS_PRINT("Pub history lookup failed\n");
-            return 1;
+            return EXIT_FAILURE;
         }
     }
     /*
@@ -162,12 +161,12 @@ int main()
         if (i >= NUM_PUBS / 4 &&  i < NUM_PUBS / 3) {
             if (ret != DPS_OK) {
                 DPS_PRINT("Pub history is missing\n");
-                return 1;
+                return EXIT_FAILURE;
             }
         } else {
             if (ret != DPS_ERR_MISSING) {
                 DPS_PRINT("Pub history was not expired\n");
-                return 1;
+                return EXIT_FAILURE;
             }
         }
     }
@@ -175,6 +174,6 @@ int main()
 
     DPS_PRINT("Unit test passed\n");
 
-    return 0;
+    return EXIT_SUCCESS;
 
 }

@@ -5,13 +5,10 @@ dir="${BASH_SOURCE%/*}"
 if [[ ! -d "$dir" ]]; then dir="$PWD"; fi
 . "$dir/common.sh"
 
-cleanup
-
 sub -w 1 -l 40000 -p 40001 A
 sub -w 1 -l 40001 -p 40002 B
 sub -w 1 -l 40002 -p 40000 C
 
 sleep 4
 
-echo "Errors"
-grep -r "ERROR" out | wc -l
+assert_no_errors

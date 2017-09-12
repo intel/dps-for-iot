@@ -236,6 +236,7 @@ int main(int argc, char** argv)
     int wait = 0;
     int encrypt = DPS_TRUE;
     int ttl = 0;
+    int subsRate = DPS_SUBSCRIPTION_UPDATE_RATE;
     int i;
     char* msg = NULL;
     int mcast = DPS_MCAST_PUB_ENABLE_SEND;
@@ -273,6 +274,9 @@ int main(int argc, char** argv)
             continue;
         }
         if (IntArg("-t", &arg, &argc, &ttl, 0, 2000)) {
+            continue;
+        }
+        if (IntArg("-r", &arg, &argc, &subsRate, 0, INT32_MAX)) {
             continue;
         }
         if (IntArg("-x", &arg, &argc, &encrypt, 0, 1)) {
@@ -315,6 +319,7 @@ int main(int argc, char** argv)
     }
 
     node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore), nodeKeyId);
+    DPS_SetNodeSubscriptionUpdateDelay(node, subsRate);
 
     ret = DPS_StartNode(node, mcast, listenPort);
     if (ret != DPS_OK) {
@@ -377,7 +382,7 @@ int main(int argc, char** argv)
     return 0;
 
 Usage:
-    DPS_PRINT("Usage %s [-d] [-x 0/1] [-a] [-w <seconds>] <seconds>] [-t <ttl>] [[-h <hostname>] -p <portnum>] [-l <portnum>] [-m <message>] [topic1 topic2 ... topicN]\n", argv[0]);
+    DPS_PRINT("Usage %s [-d] [-x 0/1] [-a] [-w <seconds>] <seconds>] [-t <ttl>] [[-h <hostname>] -p <portnum>] [-l <portnum>] [-m <message>] [-r <milliseconds>] [topic1 topic2 ... topicN]\n", argv[0]);
     DPS_PRINT("       -d: Enable debug ouput if built for debug.\n");
     DPS_PRINT("       -x: Enable or disable encryption. Default is encryption enabled.\n");
     DPS_PRINT("       -a: Request an acknowledgement\n");
@@ -387,6 +392,7 @@ Usage:
     DPS_PRINT("       -h: Specifies host (localhost is default). Mutiple -h options are permitted.\n");
     DPS_PRINT("       -p: port to link. Multiple -p options are permitted.\n");
     DPS_PRINT("       -m: A payload message to accompany the publication.\n\n");
+    DPS_PRINT("       -r: Time to delay between subscription updates.\n\n");
     DPS_PRINT("           Enters interactive mode if there are no topic strings on the command line.\n");
     DPS_PRINT("           In interactive mode type -h for commands.\n");
     return 1;

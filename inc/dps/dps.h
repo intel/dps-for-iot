@@ -230,6 +230,19 @@ typedef void (*DPS_OnNodeDestroyed)(DPS_Node* node, void* data);
 DPS_Status DPS_DestroyNode(DPS_Node* node, DPS_OnNodeDestroyed cb, void* data);
 
 /**
+ * The default maximum rate (in msecs) to compute and send out subscription updates.
+ */
+#define DPS_SUBSCRIPTION_UPDATE_RATE 1000
+
+/**
+ * Specify the time delay (in msecs) between subscription updates.
+ *
+ * @param node           The node
+ * @param subsRateMsecs  The time delay (in msecs) between updates
+ */
+void DPS_SetNodeSubscriptionUpdateDelay(DPS_Node* node, uint32_t subsRateMsecs);
+
+/**
  * Get the uv event loop for this node. The only thing that is safe to do with the node
  * is to create an async callback. Other libuv APIs can then be called from within the
  * async callback.

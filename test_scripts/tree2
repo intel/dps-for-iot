@@ -16,8 +16,6 @@ if [[ ! -d "$dir" ]]; then dir="$PWD"; fi
 #
 #
 
-cleanup
-
 sub -l 40000 E
 sleep 1
 

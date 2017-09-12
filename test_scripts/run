@@ -1,0 +1,50 @@
+#!/bin/sh
+
+TESTS="./build/test/bin/cbortest \
+       ./build/test/bin/cosetest \
+       ./build/test/bin/countvec \
+       ./build/test/bin/hist_unit \
+       ./build/test/bin/packtest \
+       ./build/test/bin/pubsub \
+       ./build/test/bin/rle_compression \
+       ./test_scripts/chain_test \
+       ./test_scripts/fanout \
+       ./test_scripts/hot_mesh \
+       ./test_scripts/loop25 \
+       ./test_scripts/loop3 \
+       ./test_scripts/pub100 \
+       ./test_scripts/simple_test \
+       ./test_scripts/tree0 \
+       ./test_scripts/tree1 \
+       ./test_scripts/tree2"
+
+DEFAULT="\e[0m"
+GREEN="\e[32m"
+RED="\e[31m"
+
+OK=0
+FAILED=0
+FAILED_TESTS=""
+
+for TEST in $TESTS; do
+    echo -e "$GREEN[ RUN      ]$DEFAULT $TEST"
+    $TEST
+    if [ $? -eq 0 ]; then
+	echo -e "$GREEN[       OK ]$DEFAULT $TEST"
+	((++OK))
+    else
+	echo -e "$RED[   FAILED ]$DEFAULT $TEST"
+	((++FAILED))
+	FAILED_TESTS="$FAILED_TESTS$RED[  FAILED  ]$DEFAULT $TEST\n"
+    fi
+done
+
+echo -e "$GREEN[==========]$DEFAULT $((OK + FAILED)) tests ran."
+if [ $OK -gt 0 ]; then
+    echo -e "$GREEN[  PASSED  ]$DEFAULT $OK tests."
+fi
+if [ $FAILED -gt 0 ]; then
+    echo -e "$RED[  FAILED  ]$DEFAULT $FAILED tests, listed below:"
+    echo -e -n "$FAILED_TESTS"
+    exit 1
+fi

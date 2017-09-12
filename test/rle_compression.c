@@ -102,10 +102,10 @@ int main(int argc, char** argv)
     DPS_PRINT("Added %d: ", (int)(i - base));
     DPS_BitVectorDump(bf, 0);
 
-    return 0;
+    return EXIT_SUCCESS;
 
 Usage:
 
     DPS_PRINT("Usage %s: [-d] [-b <filter-bits>] [-n <num-hashes>]\n", argv[0]);
-    return 1;
+    return EXIT_FAILURE;
 }

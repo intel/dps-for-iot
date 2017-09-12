@@ -140,6 +140,7 @@ int main(int argc, char** argv)
     int mcastPub = DPS_MCAST_PUB_DISABLED;
     const char* host = NULL;
     int encrypt = DPS_TRUE;
+    int subsRate = DPS_SUBSCRIPTION_UPDATE_RATE;
     int listenPort = 0;
     int numLinks = 0;
     int linkPort[MAX_LINKS];
@@ -181,6 +182,9 @@ int main(int argc, char** argv)
                 continue;
             }
             if (IntArg("-x", &arg, &argc, &encrypt, 0, 1)) {
+                continue;
+            }
+            if (IntArg("-r", &arg, &argc, &subsRate, 0, INT32_MAX)) {
                 continue;
             }
             if (strcmp(*arg, "-m") == 0) {
@@ -226,6 +230,7 @@ int main(int argc, char** argv)
         DPS_SetNetworkKey(memoryKeyStore, "test", 4);
     }
     node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore), nodeKeyId);
+    DPS_SetNodeSubscriptionUpdateDelay(node, subsRate);
 
     ret = DPS_StartNode(node, mcastPub, listenPort);
     if (ret != DPS_OK) {
@@ -289,7 +294,7 @@ int main(int argc, char** argv)
     return 0;
 
 Usage:
-    DPS_PRINT("Usage %s [-d] [-q] [-m] [-w <seconds>] [-x 0/1] [[-h <hostname>] -p <portnum>] [-l <listen port] [-m] [-d] [[-s] topic1 ... topicN]\n", argv[0]);
+    DPS_PRINT("Usage %s [-d] [-q] [-m] [-w <seconds>] [-x 0/1] [[-h <hostname>] -p <portnum>] [-l <listen port] [-m] [-d] [-r <milliseconds>] [[-s] topic1 ... topicN]\n", argv[0]);
     DPS_PRINT("       -d: Enable debug ouput if built for debug.\n");
     DPS_PRINT("       -q: Quiet - suppresses output about received publications.\n");
     DPS_PRINT("       -x: Enable or disable encryption. Default is encryption enabled.\n");
@@ -298,6 +303,7 @@ Usage:
     DPS_PRINT("       -p: A port to link. Multiple -p options are permitted.\n");
     DPS_PRINT("       -m: Enable multicast receive. Enabled by default is there are no -p options.\n");
     DPS_PRINT("       -l: port to listen on. Default is an ephemeral port.\n");
+    DPS_PRINT("       -r: Time to delay between subscription updates.\n\n");
     DPS_PRINT("       -s: list of subscription topic strings. Multiple -s options are permitted\n");
     return 1;
 }

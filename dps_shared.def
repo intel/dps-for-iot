@@ -33,6 +33,7 @@ DPS_Rand
 DPS_ResolveAddress
 DPS_SetAddress
 DPS_SetNodeData
+DPS_SetNodeSubscriptionUpdateDelay
 DPS_SetPublicationData
 DPS_SetSubscriptionData
 DPS_StartNode

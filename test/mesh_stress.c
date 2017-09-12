@@ -23,7 +23,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <assert.h>
+#include "test.h"
 #include <uv.h>
 #include <dps/private/network.h>
 #include <dps/dbg.h>
@@ -402,19 +402,19 @@ int main(int argc, char** argv)
         }
         if (*arg[0] == '-') {
             DPS_PRINT("Unknown option %s\n", arg[0]);
-            return 1;
+            return EXIT_FAILURE;
         }
         inFn = *arg++;
     }
     if (inFn) {
         numIds = ReadLinks(inFn);
         if (numIds == 0) {
-            return 1;
+            return EXIT_FAILURE;
         }
         DumpLinks();
     } else {
         DPS_PRINT("No input file\n");
-        return 1;
+        return EXIT_FAILURE;
     }
 
     /*
@@ -439,12 +439,12 @@ int main(int argc, char** argv)
             /*
              * For test purposes we only want a short subscription delay
              */
-            node->subsRate = 300;
+            DPS_SetNodeSubscriptionUpdateDelay(node, 300);
 
             ret = DPS_StartNode(node, DPS_FALSE, 0);
             if (ret != DPS_OK) {
                 DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
-                return 1;
+                return EXIT_FAILURE;
             }
             PortMap[DPS_GetPortNumber(node)] = NodeList[i];
             NodeMap[NodeList[i]] = node;
@@ -509,7 +509,7 @@ int main(int argc, char** argv)
                 break;
             }
             DPS_ERRPRINT("Subscribe failed %s\n", DPS_ErrTxt(ret));
-            return 1;
+            return EXIT_FAILURE;
         }
         /*
          * Check we got the result we expected
@@ -530,7 +530,7 @@ int main(int argc, char** argv)
 
         if (numMuted != expMuted) {
             DPS_ERRPRINT("Wrong number of muted nodes: Expected %d got %d\n", expMuted, numMuted);
-            assert(expMuted == numMuted);
+            ASSERT(expMuted == numMuted);
         }
 #ifndef NDEBUG
         {
@@ -553,5 +553,5 @@ int main(int argc, char** argv)
     }
     DPS_DestroyEvent(sleeper);
 
-    return 0;
+    return EXIT_SUCCESS;
 }
