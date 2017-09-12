@@ -1,0 +1,25 @@
+#!/bin/bash
+
+# Include common functions
+dir="${BASH_SOURCE%/*}"
+if [[ ! -d "$dir" ]]; then dir="$PWD"; fi
+. "$dir/common.sh"
+
+# Verify that all 4 packet types are sent/received with version property
+
+# Multicast
+sub -l 50000 A
+sleep 1
+
+pub -a A
+sleep 2
+
+# Unicast
+sub -p 50000 A
+sleep 1
+
+pub -p 50000 -a A
+sleep 2
+
+assert_no_errors
+expect_pubs_received 3 A

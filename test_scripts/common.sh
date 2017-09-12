@@ -48,7 +48,9 @@ function pub {
     sleep 0.1
     echo -e "=============================\npub$p $debug $subsRate $@" | tee $f
     echo "==============================" >> $f
-    msg=$(echo "Published topics: " $@)
+    # topic data (msg) is a string listing the topics
+    args="$*"
+    msg=$(echo "Published topics: ${args[@]//-* /}")
     build/dist/bin/publisher $debug $subsRate $@ -m "$msg" 2>> $f &
 }
 
