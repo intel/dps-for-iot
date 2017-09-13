@@ -196,7 +196,6 @@ void* DPS_GetNodeData(const DPS_Node* node);
 
 /**
  * Initialized and starts running a local node. Node can only be started once.
- * stopped.
  *
  * @param node         The node
  * @param mcastPub     Indicates if this node sends or listens for multicast publications

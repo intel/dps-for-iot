@@ -111,7 +111,7 @@ static DPS_Status SerializeAck(const DPS_Publication* pub, PublicationAck* ack, 
         return DPS_ERR_NETWORK;
     }
     /*
-     * Ack is encoded as an array of 3 elements
+     * Ack is encoded as an array of 4 elements
      *  [
      *      version,
      *      type,
