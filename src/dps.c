@@ -926,8 +926,8 @@ static DPS_Status DecodeRequest(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuffe
     DPS_DBGTRACE();
     CBOR_Dump("Request in", buf->rxPos, DPS_RxBufferAvail(buf));
     ret = CBOR_DecodeArray(buf, &len);
-    if (ret != DPS_OK || (len < 2)) {
-        DPS_ERRPRINT("Expected a CBOR array or 2 or more elements\n");
+    if (ret != DPS_OK || (len < 3)) {
+        DPS_ERRPRINT("Expected a CBOR array or 3 or more elements\n");
         return ret;
     }
     ret = CBOR_DecodeUint8(buf, &msgVersion);
