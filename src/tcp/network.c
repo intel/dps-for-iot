@@ -195,26 +195,26 @@ static void OnData(uv_stream_t* socket, ssize_t nread, const uv_buf_t* buf)
         DPS_RxBufferInit(&lenBuf, cn->lenBuf, cn->readLen);
         ret = CBOR_DecodeUint32(&lenBuf, &msgLen);
         if (ret == DPS_OK) {
-            cn->msgLen = msgLen;
             cn->msgBuf = malloc(msgLen);
-            if (!cn->msgBuf) {
-                ret = DPS_ERR_RESOURCES;
-            } else {
+            if (cn->msgBuf) {
+                cn->msgLen = msgLen;
                 /*
                  * Copy message bytes if any
                  */
                 cn->readLen = DPS_RxBufferAvail(&lenBuf);
                 memcpy_s(cn->msgBuf, msgLen, lenBuf.rxPos, cn->readLen);
+            } else {
+                ret = DPS_ERR_RESOURCES;
             }
         }
-        if (ret == DPS_OK) {
-            return;
+        if (ret != DPS_OK) {
+            /*
+             * Report error to receive callback
+             */
+            netCtx->receiveCB(cn->node, &cn->peerEp, ret, NULL, 0);
         }
-        /*
-         * Report error to receive callback
-         */
-        netCtx->receiveCB(cn->node, &cn->peerEp, ret, NULL, 0);
-    } else {
+    }
+    if (cn->msgLen) {
         /*
          * Keep reading if we don't have a complete message
          */
