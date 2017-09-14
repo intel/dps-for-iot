@@ -55,3 +55,14 @@ void DPS_Log(DPS_LogLevel level, const char* file, int line, const char *functio
     }
     va_end(ap);
 }
+
+void DPS_LogBytes(DPS_LogLevel level, const char* file, int line, const char *function, const uint8_t *bytes, size_t n)
+{
+    for (size_t i = 0; i < n; ++i) {
+        if ((i % 16) == 0) {
+            fprintf(stderr, "%s%09u:%s@%d\t ", i ? "\n" : "", DPS_DBG_TIME, file, line);
+        }
+        fprintf(stderr, "%02x ", bytes[i]);
+    }
+    fprintf(stderr, "\n");
+}

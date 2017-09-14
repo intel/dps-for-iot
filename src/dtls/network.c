@@ -145,7 +145,11 @@ static void AllocBuffer(uv_handle_t* handle, size_t suggestedSize, uv_buf_t* buf
 
 static void mbedtlsDebug(void *ctx, int level, const char *file, int line, const char *str)
 {
-    printf("mbedtls: %s:%04d: %s", file, line, str);
+#ifdef DPS_DEBUG
+    if (DPS_DEBUG_ENABLED()) {
+        DPS_Log(DPS_LOG_DBGPRINT, file, line, NULL, str);
+    }
+#endif
 }
 
 static bool TLSHandshake(DPS_NetConnection* cn);
@@ -570,14 +574,7 @@ static void TLSWrite(DPS_NetConnection* cn)
     }
 
     DPS_DBGPRINT("TLSWrite() writing %d bytes of plaintext via DTLS\n", total);
-
-#ifndef NDEBUG
-    for (int i = 0; i < total; i++) {
-        if ((i % 16) == 0) printf("\n"); else printf("  ");
-        printf("%02X", (uint8_t)base[i]);
-    }
-    printf("\n\n");
-#endif
+    DPS_DBGBYTES(base, total);
 
     // HERE: there's no data pointer to make a connection between this PendingWrite and whatever we
     // are going to write in the udp socket. Maybe it is implicit that after this call our udp
@@ -618,14 +615,7 @@ static void TLSRead(DPS_NetConnection* cn)
         DPS_UnlockNode(cn->node);
     } else {
         DPS_DBGPRINT("TLSRead() decrypted into %d bytes of plaintext\n", ret);
-
-#ifndef NDEBUG
-        for (int i = 0; i < ret; i++) {
-            if ((i % 16) == 0) printf("\n"); else printf("  ");
-            printf("%02X", (uint8_t)netCtx->plainBuffer[i]);
-        }
-        printf("\n\n");
-#endif
+        DPS_DBGBYTES((const uint8_t*)netCtx->plainBuffer, ret);
 
         netCtx->receiveCB(netCtx->node, &cn->peer, DPS_OK, (uint8_t*)netCtx->plainBuffer, ret);
     }
@@ -817,13 +807,13 @@ DPS_NetContext* DPS_NetStart(DPS_Node* node, int port, DPS_OnReceive cb)
     }
     ret = uv_udp_init(DPS_GetLoop(node), &netCtx->rxSocket);
     if (ret) {
-        DPS_ERRPRINT("uv_tcp_init error=%s\n", uv_err_name(ret));
+        DPS_ERRPRINT("uv_udp_init error=%s\n", uv_err_name(ret));
         free(netCtx);
         return NULL;
     }
     ret = uv_udp_init(DPS_GetLoop(node), &netCtx->tx4Socket);
     if (ret) {
-        DPS_ERRPRINT("uv_tcp_init error=%s\n", uv_err_name(ret));
+        DPS_ERRPRINT("uv_udp_init error=%s\n", uv_err_name(ret));
         uv_close((uv_handle_t*)&netCtx->rxSocket, RxHandleClosed);
         return NULL;
     }
@@ -936,7 +926,6 @@ DPS_Status DPS_NetSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf
         ep->cn->peer = *ep;
         DPS_NetConnectionAddRef(ep->cn);
     }
-
 
     cn = ep->cn;
 
