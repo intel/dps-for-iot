@@ -20,6 +20,13 @@
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  */
 
+/* These must be included in this order before uv.h */
+#ifdef _WIN32
+#include <winsock2.h>
+#include <ws2ipdef.h>
+#include <mstcpip.h>
+#endif
+
 #include <assert.h>
 #include <string.h>
 #include <malloc.h>
@@ -137,4 +144,20 @@ void DPS_NetFreeBufs(uv_buf_t* bufs, size_t numBufs)
         }
         ++bufs;
     }
+}
+
+void DPS_MapAddrToV6(struct sockaddr* addr)
+{
+#ifdef _WIN32
+    /* Windows requires that v4 addresses are mapped to v6 addresses for dual stack sockets */
+    if (addr->sa_family == AF_INET) {
+        struct in_addr inaddr = *(struct in_addr*)INETADDR_ADDRESS(addr);
+        SCOPE_ID scope = INETADDR_SCOPE_ID(addr);
+        USHORT port = INETADDR_PORT(addr);
+        memset(addr, 0, sizeof(struct sockaddr_storage));
+        IN6ADDR_SETV4MAPPED((struct sockaddr_in6 *)addr, &inaddr, scope, port);
+    }
+#else
+    /* Linux does not require mapping v4 addresses to v6 addresses for dual stack sockets */
+#endif
 }

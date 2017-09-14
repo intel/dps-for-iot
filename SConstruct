@@ -104,7 +104,7 @@ if env['PLATFORM'] == 'win32':
     env['PY_LIBPATH'] = [env['PYTHON_PATH'] + '\libs']
 
     # Where to find libuv and the libraries it needs
-    env['UV_LIBS'] = ['libuv', 'ws2_32','iphlpapi']
+    env['UV_LIBS'] = ['libuv', 'ws2_32', 'iphlpapi', 'advapi32']
     env.Append(LIBPATH=[env['UV_LIB']])
     env.Append(CPPPATH=[env['UV_INC']])
 

@@ -122,7 +122,6 @@ typedef struct _DPS_NetConnection {
 #define MAX_READ_LEN   4096
 
 struct _DPS_NetContext {
-    uv_udp_t tx4Socket;
     uv_udp_t rxSocket;
     DPS_Node* node;
     DPS_OnReceive receiveCB;
@@ -330,7 +329,11 @@ static int OnTLSSend(void* data, const unsigned char *buf, size_t len)
     sendReq->node = cn->node;
     sendReq->addr = cn->peer.addr;
 
-    int err = uv_udp_send(&sendReq->uvReq, cn->socket, &sendReq->buf, 1, (const struct sockaddr *)&cn->peer.addr.inaddr, OnTLSSendComplete);
+    struct sockaddr_storage inaddr;
+    memcpy_s(&inaddr, sizeof(inaddr), &cn->peer.addr.inaddr, sizeof(cn->peer.addr.inaddr));
+    DPS_MapAddrToV6((struct sockaddr *)&inaddr);
+
+    int err = uv_udp_send(&sendReq->uvReq, cn->socket, &sendReq->buf, 1, (const struct sockaddr *)&inaddr, OnTLSSendComplete);
     if (err) {
         DPS_ERRPRINT("ERROR: couldn't send UDP packet: %s\n", uv_err_name(err));
         goto error;
@@ -429,11 +432,7 @@ static DPS_NetConnection* CreateConnection(DPS_Node* node, const struct sockaddr
     uv_idle_init(DPS_GetLoop(node), &cn->idleForSendCallbacks);
     cn->idleForSendCallbacks.data = cn;
 
-    if (addr->sa_family == AF_INET) {
-        cn->socket = &node->netCtx->tx4Socket;
-    } else {
-        cn->socket = &node->netCtx->rxSocket;
-    }
+    cn->socket = &node->netCtx->rxSocket;
 
     mbedtls_ssl_init(&cn->ssl);
     mbedtls_ssl_config_init(&cn->conf);
@@ -641,7 +640,13 @@ static void TLSRead(DPS_NetConnection* cn)
         DPS_DBGPRINT("TLSRead() decrypted into %d bytes of plaintext\n", ret);
         DPS_DBGBYTES((const uint8_t*)netCtx->plainBuffer, ret);
 
-        netCtx->receiveCB(netCtx->node, &cn->peer, DPS_OK, (uint8_t*)netCtx->plainBuffer, ret);
+        ret = netCtx->receiveCB(netCtx->node, &cn->peer, DPS_OK, (uint8_t*)netCtx->plainBuffer, ret);
+        if (ret != DPS_OK) {
+            /*
+             * Release the connection if the upper layer didn't AddRef to keep it alive
+             */
+            DPS_NetConnectionDecRef(cn);
+        }
     }
 
     memset(netCtx->plainBuffer, 0, sizeof(netCtx->plainBuffer));
@@ -823,13 +828,6 @@ static void RxHandleClosed(uv_handle_t* handle)
     free(handle->data);
 }
 
-static void TxHandleClosed(uv_handle_t* handle)
-{
-    DPS_NetContext* netCtx = (DPS_NetContext*)handle->data;
-    DPS_DBGPRINT("Closed Tx handle %p\n", handle);
-    uv_close((uv_handle_t*)&netCtx->rxSocket, RxHandleClosed);
-}
-
 DPS_NetContext* DPS_NetStart(DPS_Node* node, int port, DPS_OnReceive cb)
 {
     int ret;
@@ -844,12 +842,6 @@ DPS_NetContext* DPS_NetStart(DPS_Node* node, int port, DPS_OnReceive cb)
     if (ret) {
         DPS_ERRPRINT("uv_udp_init error=%s\n", uv_err_name(ret));
         free(netCtx);
-        return NULL;
-    }
-    ret = uv_udp_init(DPS_GetLoop(node), &netCtx->tx4Socket);
-    if (ret) {
-        DPS_ERRPRINT("uv_udp_init error=%s\n", uv_err_name(ret));
-        uv_close((uv_handle_t*)&netCtx->rxSocket, RxHandleClosed);
         return NULL;
     }
     netCtx->node = node;
@@ -867,15 +859,6 @@ DPS_NetContext* DPS_NetStart(DPS_Node* node, int port, DPS_OnReceive cb)
     if (ret) {
         goto ErrorExit;
     }
-    ret = uv_ip4_addr("0.0.0.0", 0, (struct sockaddr_in*)&addr);
-    if (ret) {
-        goto ErrorExit;
-    }
-    netCtx->tx4Socket.data = netCtx;
-    ret = uv_udp_bind(&netCtx->tx4Socket, (const struct sockaddr*)&addr, 0);
-    if (ret) {
-        goto ErrorExit;
-    }
 
     mbedtls_debug_set_threshold(DEBUG_MBEDTLS_LEVEL);
 
@@ -884,7 +867,7 @@ DPS_NetContext* DPS_NetStart(DPS_Node* node, int port, DPS_OnReceive cb)
 ErrorExit:
 
     DPS_ERRPRINT("Failed to start net netCtx: error=%s\n", uv_err_name(ret));
-    uv_close((uv_handle_t*)&netCtx->tx4Socket, TxHandleClosed);
+    uv_close((uv_handle_t*)&netCtx->rxSocket, RxHandleClosed);
     return NULL;
 }
 
@@ -907,7 +890,7 @@ void DPS_NetStop(DPS_NetContext* netCtx)
 {
     if (netCtx) {
         uv_udp_recv_stop(&netCtx->rxSocket);
-        uv_close((uv_handle_t*)&netCtx->tx4Socket, TxHandleClosed);
+        uv_close((uv_handle_t*)&netCtx->rxSocket, RxHandleClosed);
     }
 }
 

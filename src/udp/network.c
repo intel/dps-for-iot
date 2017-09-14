@@ -38,7 +38,6 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 #define MAX_READ_LEN   4096
 
 struct _DPS_NetContext {
-    uv_udp_t tx4Socket;
     uv_udp_t rxSocket;
     DPS_Node* node;
     DPS_OnReceive receiveCB;
@@ -58,13 +57,6 @@ static void RxHandleClosed(uv_handle_t* handle)
 {
     DPS_DBGPRINT("Closed Rx handle %p\n", handle);
     free(handle->data);
-}
-
-static void TxHandleClosed(uv_handle_t* handle)
-{
-    DPS_NetContext* netCtx = (DPS_NetContext*)handle->data;
-    DPS_DBGPRINT("Closed Tx handle %p\n", handle);
-    uv_close((uv_handle_t*)&netCtx->rxSocket, RxHandleClosed);
 }
 
 static void OnData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, const struct sockaddr* addr, unsigned flags)
@@ -109,12 +101,6 @@ DPS_NetContext* DPS_NetStart(DPS_Node* node, int port, DPS_OnReceive cb)
         free(netCtx);
         return NULL;
     }
-    ret = uv_udp_init(DPS_GetLoop(node), &netCtx->tx4Socket);
-    if (ret) {
-        DPS_ERRPRINT("uv_tcp_init error=%s\n", uv_err_name(ret));
-        uv_close((uv_handle_t*)&netCtx->rxSocket, RxHandleClosed);
-        return NULL;
-    }
     netCtx->node = node;
     netCtx->receiveCB = cb;
     ret = uv_ip6_addr("::", port, (struct sockaddr_in6*)&addr);
@@ -130,22 +116,12 @@ DPS_NetContext* DPS_NetStart(DPS_Node* node, int port, DPS_OnReceive cb)
     if (ret) {
         goto ErrorExit;
     }
-    ret = uv_ip4_addr("0.0.0.0", 0, (struct sockaddr_in*)&addr);
-    if (ret) {
-        goto ErrorExit;
-    }
-    netCtx->tx4Socket.data = netCtx;
-    ret = uv_udp_bind(&netCtx->tx4Socket, (const struct sockaddr*)&addr, 0);
-    if (ret) {
-        goto ErrorExit;
-    }
     return netCtx;
 
 ErrorExit:
 
     DPS_ERRPRINT("Failed to start net netCtx: error=%s\n", uv_err_name(ret));
-    netCtx->tx4Socket.data = netCtx;
-    uv_close((uv_handle_t*)&netCtx->tx4Socket, TxHandleClosed);
+    uv_close((uv_handle_t*)&netCtx->rxSocket, RxHandleClosed);
     return NULL;
 }
 
@@ -168,7 +144,7 @@ void DPS_NetStop(DPS_NetContext* netCtx)
 {
     if (netCtx) {
         uv_udp_recv_stop(&netCtx->rxSocket);
-        uv_close((uv_handle_t*)&netCtx->tx4Socket, TxHandleClosed);
+        uv_close((uv_handle_t*)&netCtx->rxSocket, RxHandleClosed);
     }
 }
 
@@ -226,11 +202,11 @@ DPS_Status DPS_NetSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf
     memcpy_s(sender->bufs, numBufs * sizeof(uv_buf_t), bufs, numBufs * sizeof(uv_buf_t));
     sender->numBufs = numBufs;
 
-    if (ep->addr.inaddr.ss_family == AF_INET) {
-        ret = uv_udp_send(&sender->sendReq, &node->netCtx->tx4Socket, sender->bufs, (uint32_t)numBufs, (struct sockaddr*)&ep->addr.inaddr, OnSendComplete);
-    } else {
-        ret = uv_udp_send(&sender->sendReq, &node->netCtx->rxSocket, sender->bufs, (uint32_t)numBufs, (struct sockaddr*)&ep->addr.inaddr, OnSendComplete);
-    }
+    struct sockaddr_storage inaddr;
+    memcpy_s(&inaddr, sizeof(inaddr), &ep->addr.inaddr, sizeof(ep->addr.inaddr));
+    DPS_MapAddrToV6((struct sockaddr *)&inaddr);
+
+    ret = uv_udp_send(&sender->sendReq, &node->netCtx->rxSocket, sender->bufs, (uint32_t)numBufs, (const struct sockaddr *)&inaddr, OnSendComplete);
     if (ret) {
         DPS_ERRPRINT("DPS_NetSend status=%s\n", uv_err_name(ret));
         free(sender);
