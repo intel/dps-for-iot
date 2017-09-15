@@ -723,7 +723,7 @@ static void OnData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, const s
     // the network.
     if (netCtx->node->state == DPS_NODE_STOPPING) {
         DPS_DBGPRINT("OnData() ignoring data received while stopping the node\n");
-        return;
+        goto exit;
     }
 
     // TODO: Use a hashtable or similar in DPS_Node to limit the lookup times for remote nodes.
@@ -736,13 +736,13 @@ static void OnData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, const s
         cn = CreateConnection(netCtx->node, addr, MBEDTLS_SSL_IS_SERVER);
         if (!cn) {
             DPS_ERRPRINT("could not create server connection structure\n");
-            return;
+            goto exit;
         }
         ret = DPS_AddRemoteNode(netCtx->node, nodeAddr, cn, &remote);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("OnData error: Couldn't add remote node\n");
             DestroyConnection(cn);
-            return;
+            goto exit;
         }
         cn->peer = remote->ep;
     }
@@ -779,6 +779,7 @@ static void OnData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, const s
         TLSRead(cn);
     }
 
+ exit:
     DPS_UnlockNode(netCtx->node);
 }
 
