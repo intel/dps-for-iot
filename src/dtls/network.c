@@ -251,13 +251,17 @@ static int OnTLSRecv(void* data, unsigned char *buf, size_t len)
     if (pr->buf.len > len) {
         return MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL;
     }
+    if (pr->buf.len > INT_MAX) {
+        /* pr->buf.len will be truncated to an int return value */
+        return MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL;
+    }
 
     size_t dataLen = pr->buf.len;
     memcpy_s(buf, pr->buf.len, pr->buf.base, dataLen);
 
     free(pr->buf.base);
     free(pr);
-    return dataLen;
+    return (int) dataLen;
 }
 
 typedef struct _SendReq {
@@ -290,12 +294,18 @@ static void OnTLSSendComplete(uv_udp_send_t *req, int status)
 static int OnTLSSend(void* data, const unsigned char *buf, size_t len)
 {
     DPS_NetConnection* cn = data;
+    SendReq* sendReq = NULL;
 
     DPS_DBGPRINT("OnTLSSend want to write %zu bytes\n", len);
 
-    SendReq* sendReq = calloc(1, sizeof(SendReq));
+    if (len > INT_MAX) {
+        /* len will be truncated to an int return value */
+        goto error;
+    }
+
+    sendReq = calloc(1, sizeof(SendReq));
     if (!sendReq) {
-        return -1;
+        goto error;
     }
 
     DPS_DBGPRINT("OnTLSSend() created sendReq=%p\n", sendReq);
@@ -303,12 +313,19 @@ static int OnTLSSend(void* data, const unsigned char *buf, size_t len)
     // We don't own the buffer mbedtls passed us, need to copy for the UDP request that is async.
     sendReq->buf.base = malloc(len);
     if (!sendReq->buf.base) {
-        free(sendReq);
-        return -1;
+        goto error;
     }
 
     memcpy_s(sendReq->buf.base, len, buf, len);
+#ifdef _WIN32
+    /* Under Windows, sendReq->buf.len is a ULONG, not a size_t */
+    if (len > ULONG_MAX) {
+        goto error;
+    }
+    sendReq->buf.len = (ULONG) len;
+#else
     sendReq->buf.len = len;
+#endif
     sendReq->uvReq.data = sendReq;
     sendReq->node = cn->node;
     sendReq->addr = cn->peer.addr;
@@ -316,12 +333,19 @@ static int OnTLSSend(void* data, const unsigned char *buf, size_t len)
     int err = uv_udp_send(&sendReq->uvReq, cn->socket, &sendReq->buf, 1, (const struct sockaddr *)&cn->peer.addr.inaddr, OnTLSSendComplete);
     if (err) {
         DPS_ERRPRINT("ERROR: couldn't send UDP packet: %s\n", uv_err_name(err));
-        free(sendReq->buf.base);
-        free(sendReq);
-        return -1;
+        goto error;
     }
 
-    return len;
+    return (int) len;
+
+error:
+    if (sendReq) {
+        if (sendReq->buf.base) {
+            free(sendReq->buf.base);
+        }
+        free(sendReq);
+    }
+    return -1;
 }
 
 static void CancelPendingWrites(DPS_NetConnection* cn, PendingWrite* pw)
@@ -375,7 +399,7 @@ static DPS_NetConnection* CreateConnection(DPS_Node* node, const struct sockaddr
     // TODO: Add support for PKI instead (or in addition to) the network key.
     static const unsigned char id[] = "dps";
     static const size_t idLen = sizeof(id);
-    uint8_t key[256] = {};
+    uint8_t key[256] = { 0 };
     size_t keyLen = 0;
 
     DPS_KeyStore* keyStore = node->keyStore;
@@ -460,7 +484,7 @@ static DPS_NetConnection* CreateConnection(DPS_Node* node, const struct sockaddr
     }
 
     if (cn->type == MBEDTLS_SSL_IS_SERVER) {
-        char clientID[INET6_ADDRSTRLEN] = {};
+        char clientID[INET6_ADDRSTRLEN] = { 0 };
         if (addr->sa_family == AF_INET) {
             uv_ip4_name((const struct sockaddr_in*)addr, clientID, sizeof(clientID));
         } else {
@@ -477,7 +501,7 @@ static DPS_NetConnection* CreateConnection(DPS_Node* node, const struct sockaddr
 
 error:
     if (ret != 0) {
-        char errorBuf[128] = {};
+        char errorBuf[128] = { 0 };
         mbedtls_strerror(ret, errorBuf, sizeof(errorBuf)-1);
         DPS_ERRPRINT("CreateConnection() last mbedtls error was: %d - %s\n\n", ret, errorBuf);
     }
@@ -634,7 +658,7 @@ static bool TLSHandshake(DPS_NetConnection* cn)
         mbedtls_ssl_session_reset(&cn->ssl);
 
         if (cn->type == MBEDTLS_SSL_IS_SERVER) {
-            char clientID[128] = {};
+            char clientID[128] = { 0 };
             const struct sockaddr* addr = (const struct sockaddr*)&cn->peer.addr.inaddr;
             if (addr->sa_family == AF_INET) {
                 uv_ip4_name((const struct sockaddr_in*)addr, clientID, sizeof(clientID)-1);
@@ -662,7 +686,7 @@ static bool TLSHandshake(DPS_NetConnection* cn)
     }
 
     if (ret != 0) {
-        char buf[256] = {};
+        char buf[256] = { 0 };
         mbedtls_strerror(ret, buf, sizeof(buf)-1);
         DPS_ERRPRINT("TLSHandshake failed: %s\n", buf);
         return false;
@@ -710,6 +734,12 @@ static void OnData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, const s
         DPS_ERRPRINT("OnData no address\n");
         return;
     }
+#ifdef _WIN32
+    /* Under Windows, pr->buf.len is a ULONG, not a size_t */
+    if (nread > ULONG_MAX) {
+        goto exit;
+    }
+#endif
 
     DPS_DBGPRINT("OnData() received %zd bytes from network\n", nread);
 
@@ -756,7 +786,11 @@ static void OnData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, const s
     PendingRead* pr = calloc(1, sizeof(PendingRead));
     pr->buf = *buf;
     pr->buf.base = calloc(1, nread);
+#ifdef _WIN32
+    pr->buf.len = (ULONG) nread;
+#else
     pr->buf.len = nread;
+#endif
     memcpy_s(pr->buf.base, pr->buf.len, buf->base, nread);
 
     PendingRead* q = cn->readQueue;
