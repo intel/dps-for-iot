@@ -44,8 +44,6 @@
  */
 DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
-static const char DPS_PublicationURI[] = "dps/pub";
-
 #define RemoteNodeAddressText(n)  DPS_NodeAddrToString(&(n)->ep.addr)
 
 static DPS_Publication* FreePublication(DPS_Node* node, DPS_Publication* pub)
@@ -630,31 +628,6 @@ Exit:
         UpdatePubHistory(node, pub);
         FreePublication(node, pub);
         DPS_UnlockNode(node);
-    }
-    return ret;
-}
-/*
- * TODO - for now we use a CoAP envelope for multicast publications.
- */
-static DPS_Status CoAP_Wrap(uv_buf_t* bufs, size_t numBufs)
-{
-    DPS_Status ret;
-    DPS_TxBuffer coap;
-    size_t i;
-    size_t len = 0;
-    CoAP_Option opts[1];
-
-    opts[0].id = COAP_OPT_URI_PATH;
-    opts[0].val = (uint8_t*)DPS_PublicationURI;
-    opts[0].len = sizeof(DPS_PublicationURI);
-
-    for (i = 1; i < numBufs; ++i) {
-        len += bufs[i].len;
-    }
-    ret =  CoAP_Compose(COAP_OVER_UDP, COAP_CODE(COAP_REQUEST, COAP_PUT), opts, A_SIZEOF(opts), len, &coap);
-    if (ret == DPS_OK) {
-        bufs[0].base = (void*)coap.base;
-        bufs[0].len = DPS_TxBufferUsed(&coap);
     }
     return ret;
 }
