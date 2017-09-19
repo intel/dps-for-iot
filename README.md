@@ -72,15 +72,17 @@ Building the documentation requires the scons [DoxygenBuilder](https://bitbucket
 ### Linux and Windows
 To build the DPS libraries, examples, bindings, and documentation run 'scons'.
 
-`$ scons [variant=debug|release] [transport=udp|tcp] [bindings=all|none]`
+`$ scons [variant=debug|release] [transport=udp|tcp|dtls] [bindings=all|none]`
 
 To see the complete list of build options trune `scons --help`
 
 The default build configuration is `variant=release transport=udp bindings=all`.
 > *A limitation of the current implementation is that the transport must be configured at compile time.*
 
-The scons script pulls down source code from two external projects (tinycrypt and safestringlib)
+The scons script pulls down source code from three external projects (mbedtls, tinycrypt, and safestringlib)
 into the `./ext` directory. If necessary these projects can be populated manually:
+
+`git clone https://github.com/ARMmbed/mbedtls ext/mbedtls`
 
 `git clone https://github.com/01org/tinycrypt.git ext/tinycrypt`
 
@@ -119,7 +121,7 @@ There are currently six C samples:
 
     This application shows how to initialize a DPS node, create a publication and send it.
     It supports IP multicast or publication to a specific host and port number over the configured
-    transport (udp or tcp). Optionally the application will request acknowledgments
+    transport (udp, tcp, or dtls). Optionally the application will request acknowledgments
     from the receiving subscribers.
 ~~~~
     publisher a/b/c "hello world"
