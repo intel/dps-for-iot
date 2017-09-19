@@ -58,6 +58,8 @@ DPS_Status DPS_SendAcknowledgment(DPS_Node*node, PublicationAck* ack, RemoteNode
         uv_buf_init((char*)ack->payload.base, DPS_TxBufferUsed(&ack->payload))
     };
 
+    assert(DPS_HasNodeLock(node));
+
     DPS_DBGPRINT("SendAcknowledgement from %d\n", node->port);
     /*
      * Ownership of the buffers has been passed to the network
@@ -109,16 +111,17 @@ static DPS_Status SerializeAck(const DPS_Publication* pub, PublicationAck* ack, 
         return DPS_ERR_NETWORK;
     }
     /*
-     * Ack is encoded as an array of 3 elements
+     * Ack is encoded as an array of 4 elements
      *  [
+     *      version,
      *      type,
      *      { body }
      *      payload (bstr)
      *  ]
      */
-    len = CBOR_SIZEOF_ARRAY(3) +
+    len = CBOR_SIZEOF_ARRAY(4) +
           CBOR_SIZEOF(uint8_t) +
-
+          CBOR_SIZEOF(uint8_t) +
           CBOR_SIZEOF_MAP(2) + 2 * CBOR_SIZEOF(uint8_t) +
           CBOR_SIZEOF_BSTR(sizeof(DPS_UUID)) +
           CBOR_SIZEOF(uint32_t);
@@ -127,7 +130,10 @@ static DPS_Status SerializeAck(const DPS_Publication* pub, PublicationAck* ack, 
     if (ret != DPS_OK) {
         return ret;
     }
-    ret = CBOR_EncodeArray(&ack->headers, 3);
+    ret = CBOR_EncodeArray(&ack->headers, 4);
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeUint8(&ack->headers, DPS_MSG_VERSION);
+    }
     if (ret == DPS_OK) {
         ret = CBOR_EncodeUint8(&ack->headers, DPS_MSG_TYPE_ACK);
     }
@@ -296,6 +302,7 @@ DPS_Status DPS_DecodeAcknowledgment(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxB
     ret = DPS_LookupPublisherForAck(&node->history, pubId, &sn, &addr);
     if ((ret == DPS_OK) && (sequenceNum <= sn) && addr) {
         RemoteNode* ackNode;
+        DPS_LockNode(node);
         ret = DPS_AddRemoteNode(node, addr, NULL, &ackNode);
         if (ret == DPS_OK || ret == DPS_ERR_EXISTS) {
             uv_buf_t uvBuf;
@@ -315,6 +322,7 @@ DPS_Status DPS_DecodeAcknowledgment(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxB
                 ret = DPS_ERR_RESOURCES;
             }
         }
+        DPS_UnlockNode(node);
     }
     return ret;
 }

@@ -44,8 +44,6 @@
  */
 DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
-static const char DPS_PublicationURI[] = "dps/pub";
-
 #define RemoteNodeAddressText(n)  DPS_NodeAddrToString(&(n)->ep.addr)
 
 static DPS_Publication* FreePublication(DPS_Node* node, DPS_Publication* pub)
@@ -633,31 +631,6 @@ Exit:
     }
     return ret;
 }
-/*
- * TODO - for now we use a CoAP envelope for multicast publications.
- */
-static DPS_Status CoAP_Wrap(uv_buf_t* bufs, size_t numBufs)
-{
-    DPS_Status ret;
-    DPS_TxBuffer coap;
-    size_t i;
-    size_t len = 0;
-    CoAP_Option opts[1];
-
-    opts[0].id = COAP_OPT_URI_PATH;
-    opts[0].val = (uint8_t*)DPS_PublicationURI;
-    opts[0].len = sizeof(DPS_PublicationURI);
-
-    for (i = 1; i < numBufs; ++i) {
-        len += bufs[i].len;
-    }
-    ret =  CoAP_Compose(COAP_OVER_UDP, COAP_CODE(COAP_REQUEST, COAP_PUT), opts, A_SIZEOF(opts), len, &coap);
-    if (ret == DPS_OK) {
-        bufs[0].base = (void*)coap.base;
-        bufs[0].len = DPS_TxBufferUsed(&coap);
-    }
-    return ret;
-}
 
 static void OnPubSendComplete(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf_t* bufs, size_t numBufs, DPS_Status status)
 {
@@ -703,24 +676,28 @@ DPS_Status DPS_SendPublication(DPS_Node* node, DPS_Publication* pub, RemoteNode*
         }
     }
     /*
-     * Publication is encoded as an array of 4 elements
+     * Publication is encoded as an array of 5 elements
      *  [
+     *      version,
      *      type,
      *      { headers },
      *      { body }
      *      payload [ topics, data ]
      *  ]
      */
-    len = CBOR_SIZEOF_ARRAY(4) +
+    len = CBOR_SIZEOF_ARRAY(5) +
         CBOR_SIZEOF(uint8_t) +
-
+        CBOR_SIZEOF(uint8_t) +
         CBOR_SIZEOF_MAP(2) + 2 * CBOR_SIZEOF(uint8_t) +
         CBOR_SIZEOF(uint16_t) +
         CBOR_SIZEOF(int16_t);
 
     ret = DPS_TxBufferInit(&buf, NULL, len);
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeArray(&buf, 4);
+        ret = CBOR_EncodeArray(&buf, 5);
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeUint8(&buf, DPS_MSG_VERSION);
     }
     if (ret == DPS_OK) {
         ret = CBOR_EncodeUint8(&buf, DPS_MSG_TYPE_PUB);

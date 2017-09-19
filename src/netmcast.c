@@ -162,7 +162,7 @@ static DPS_Status MulticastRxInit(DPS_MulticastReceiver* receiver)
             ret = uv_udp_set_membership(&receiver->udp4Rx, COAP_MCAST_ALL_NODES_LINK_LOCAL_4, addr, UV_JOIN_GROUP);
         }
         if (ret) {
-            DPS_ERRPRINT("Join group failed %s: %s\n", ifn->name, uv_err_name(ret));
+            DPS_WARNPRINT("Join group failed %s: %s\n", ifn->name, uv_err_name(ret));
         }
     }
     uv_free_interface_addresses(ifsAddrs, numIfs);

@@ -1,7 +1,10 @@
 #!/bin/bash
 
-mkdir -p ./out
-rm -f ./out/*.log
+function reset_logs {
+    mkdir -p ./out
+    rm -f ./out/*.log
+}
+reset_logs
 
 debug=""
 subsRate="-r 100"
@@ -12,6 +15,7 @@ fi
 
 s=0
 p=0
+v=0
 rS=0
 rP=0
 
@@ -48,8 +52,19 @@ function pub {
     sleep 0.1
     echo -e "=============================\npub$p $debug $subsRate $@" | tee $f
     echo "==============================" >> $f
-    msg=$(echo "Published topics: " $@)
+    # topic data (msg) is a string listing the topics
+    args="$*"
+    msg=$(echo "Published topics: ${args[@]//-* /}")
     build/dist/bin/publisher $debug $subsRate $@ -m "$msg" 2>> $f &
+}
+
+function ver {
+    v=$((v+1))
+    f=./out/ver$v.log
+    sleep 0.1
+    echo -e "=============================\nver$v $debug $@" | tee $f
+    echo "==============================" >> $f
+    build/test/bin/version $debug $@ 2>> $f &
 }
 
 function assert_no_errors {
@@ -71,6 +86,15 @@ function expect_pubs_received {
     if [ $n -ne $expected ]; then
 	echo "Pubs received is not equal to expected ($n != $expected)"
 	grep "pub $topics\$" out/sub*.log
+	exit 1
+    fi
+}
+
+# expect_errors N ERROR
+function expect_errors {
+    n=$(grep -r "ERROR! $2" out | wc -l)
+    if [ $n -lt $1 ]; then
+	echo "Errors found is less than expected ($n != $1)"
 	exit 1
     fi
 }

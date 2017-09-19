@@ -52,6 +52,8 @@ DPS_Status DPS_DecodeAcknowledgment(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxB
 /*
  * Send an previously serialized acknowledgement
  *
+ * Must be called with the node lock held.
+ *
  * @param node    The local node
  * @param ack     The acknowledgment to send
  * @param ackNode The remote node to send the acknowledgment to

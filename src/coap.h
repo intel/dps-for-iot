@@ -159,6 +159,11 @@ DPS_Status CoAP_Compose(int protocol, uint8_t code, const CoAP_Option* opts, siz
  */
 void CoAP_DumpOpt(const CoAP_Option* opt);
 
+/*
+ * TODO - for now we use a CoAP envelope for multicast publications.
+ */
+DPS_Status CoAP_Wrap(uv_buf_t* bufs, size_t numBufs);
+
 #ifdef __cplusplus
 }
 #endif

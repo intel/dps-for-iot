@@ -122,7 +122,6 @@ typedef struct _DPS_NetConnection {
 #define MAX_READ_LEN   4096
 
 struct _DPS_NetContext {
-    uv_udp_t tx4Socket;
     uv_udp_t rxSocket;
     DPS_Node* node;
     DPS_OnReceive receiveCB;
@@ -145,7 +144,11 @@ static void AllocBuffer(uv_handle_t* handle, size_t suggestedSize, uv_buf_t* buf
 
 static void mbedtlsDebug(void *ctx, int level, const char *file, int line, const char *str)
 {
-    printf("mbedtls: %s:%04d: %s", file, line, str);
+#ifdef DPS_DEBUG
+    if (DPS_DEBUG_ENABLED()) {
+        DPS_Log(DPS_LOG_DBGPRINT, file, line, NULL, str);
+    }
+#endif
 }
 
 static bool TLSHandshake(DPS_NetConnection* cn);
@@ -247,13 +250,17 @@ static int OnTLSRecv(void* data, unsigned char *buf, size_t len)
     if (pr->buf.len > len) {
         return MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL;
     }
+    if (pr->buf.len > INT_MAX) {
+        /* pr->buf.len will be truncated to an int return value */
+        return MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL;
+    }
 
     size_t dataLen = pr->buf.len;
     memcpy_s(buf, pr->buf.len, pr->buf.base, dataLen);
 
     free(pr->buf.base);
     free(pr);
-    return dataLen;
+    return (int) dataLen;
 }
 
 typedef struct _SendReq {
@@ -286,12 +293,18 @@ static void OnTLSSendComplete(uv_udp_send_t *req, int status)
 static int OnTLSSend(void* data, const unsigned char *buf, size_t len)
 {
     DPS_NetConnection* cn = data;
+    SendReq* sendReq = NULL;
 
     DPS_DBGPRINT("OnTLSSend want to write %zu bytes\n", len);
 
-    SendReq* sendReq = calloc(1, sizeof(SendReq));
+    if (len > INT_MAX) {
+        /* len will be truncated to an int return value */
+        goto error;
+    }
+
+    sendReq = calloc(1, sizeof(SendReq));
     if (!sendReq) {
-        return -1;
+        goto error;
     }
 
     DPS_DBGPRINT("OnTLSSend() created sendReq=%p\n", sendReq);
@@ -299,25 +312,43 @@ static int OnTLSSend(void* data, const unsigned char *buf, size_t len)
     // We don't own the buffer mbedtls passed us, need to copy for the UDP request that is async.
     sendReq->buf.base = malloc(len);
     if (!sendReq->buf.base) {
-        free(sendReq);
-        return -1;
+        goto error;
     }
 
     memcpy_s(sendReq->buf.base, len, buf, len);
+#ifdef _WIN32
+    /* Under Windows, sendReq->buf.len is a ULONG, not a size_t */
+    if (len > ULONG_MAX) {
+        goto error;
+    }
+    sendReq->buf.len = (ULONG) len;
+#else
     sendReq->buf.len = len;
+#endif
     sendReq->uvReq.data = sendReq;
     sendReq->node = cn->node;
     sendReq->addr = cn->peer.addr;
 
-    int err = uv_udp_send(&sendReq->uvReq, cn->socket, &sendReq->buf, 1, (const struct sockaddr *)&cn->peer.addr.inaddr, OnTLSSendComplete);
+    struct sockaddr_storage inaddr;
+    memcpy_s(&inaddr, sizeof(inaddr), &cn->peer.addr.inaddr, sizeof(cn->peer.addr.inaddr));
+    DPS_MapAddrToV6((struct sockaddr *)&inaddr);
+
+    int err = uv_udp_send(&sendReq->uvReq, cn->socket, &sendReq->buf, 1, (const struct sockaddr *)&inaddr, OnTLSSendComplete);
     if (err) {
         DPS_ERRPRINT("ERROR: couldn't send UDP packet: %s\n", uv_err_name(err));
-        free(sendReq->buf.base);
-        free(sendReq);
-        return -1;
+        goto error;
     }
 
-    return len;
+    return (int) len;
+
+error:
+    if (sendReq) {
+        if (sendReq->buf.base) {
+            free(sendReq->buf.base);
+        }
+        free(sendReq);
+    }
+    return -1;
 }
 
 static void CancelPendingWrites(DPS_NetConnection* cn, PendingWrite* pw)
@@ -371,7 +402,7 @@ static DPS_NetConnection* CreateConnection(DPS_Node* node, const struct sockaddr
     // TODO: Add support for PKI instead (or in addition to) the network key.
     static const unsigned char id[] = "dps";
     static const size_t idLen = sizeof(id);
-    uint8_t key[256] = {};
+    uint8_t key[256] = { 0 };
     size_t keyLen = 0;
 
     DPS_KeyStore* keyStore = node->keyStore;
@@ -401,11 +432,7 @@ static DPS_NetConnection* CreateConnection(DPS_Node* node, const struct sockaddr
     uv_idle_init(DPS_GetLoop(node), &cn->idleForSendCallbacks);
     cn->idleForSendCallbacks.data = cn;
 
-    if (addr->sa_family == AF_INET) {
-        cn->socket = &node->netCtx->tx4Socket;
-    } else {
-        cn->socket = &node->netCtx->rxSocket;
-    }
+    cn->socket = &node->netCtx->rxSocket;
 
     mbedtls_ssl_init(&cn->ssl);
     mbedtls_ssl_config_init(&cn->conf);
@@ -456,7 +483,7 @@ static DPS_NetConnection* CreateConnection(DPS_Node* node, const struct sockaddr
     }
 
     if (cn->type == MBEDTLS_SSL_IS_SERVER) {
-        char clientID[INET6_ADDRSTRLEN] = {};
+        char clientID[INET6_ADDRSTRLEN] = { 0 };
         if (addr->sa_family == AF_INET) {
             uv_ip4_name((const struct sockaddr_in*)addr, clientID, sizeof(clientID));
         } else {
@@ -473,7 +500,7 @@ static DPS_NetConnection* CreateConnection(DPS_Node* node, const struct sockaddr
 
 error:
     if (ret != 0) {
-        char errorBuf[128] = {};
+        char errorBuf[128] = { 0 };
         mbedtls_strerror(ret, errorBuf, sizeof(errorBuf)-1);
         DPS_ERRPRINT("CreateConnection() last mbedtls error was: %d - %s\n\n", ret, errorBuf);
     }
@@ -570,14 +597,7 @@ static void TLSWrite(DPS_NetConnection* cn)
     }
 
     DPS_DBGPRINT("TLSWrite() writing %d bytes of plaintext via DTLS\n", total);
-
-#ifndef NDEBUG
-    for (int i = 0; i < total; i++) {
-        if ((i % 16) == 0) printf("\n"); else printf("  ");
-        printf("%02X", (uint8_t)base[i]);
-    }
-    printf("\n\n");
-#endif
+    DPS_DBGBYTES(base, total);
 
     // HERE: there's no data pointer to make a connection between this PendingWrite and whatever we
     // are going to write in the udp socket. Maybe it is implicit that after this call our udp
@@ -618,16 +638,15 @@ static void TLSRead(DPS_NetConnection* cn)
         DPS_UnlockNode(cn->node);
     } else {
         DPS_DBGPRINT("TLSRead() decrypted into %d bytes of plaintext\n", ret);
+        DPS_DBGBYTES((const uint8_t*)netCtx->plainBuffer, ret);
 
-#ifndef NDEBUG
-        for (int i = 0; i < ret; i++) {
-            if ((i % 16) == 0) printf("\n"); else printf("  ");
-            printf("%02X", (uint8_t)netCtx->plainBuffer[i]);
+        ret = netCtx->receiveCB(netCtx->node, &cn->peer, DPS_OK, (uint8_t*)netCtx->plainBuffer, ret);
+        if (ret != DPS_OK) {
+            /*
+             * Release the connection if the upper layer didn't AddRef to keep it alive
+             */
+            DPS_NetConnectionDecRef(cn);
         }
-        printf("\n\n");
-#endif
-
-        netCtx->receiveCB(netCtx->node, &cn->peer, DPS_OK, (uint8_t*)netCtx->plainBuffer, ret);
     }
 
     memset(netCtx->plainBuffer, 0, sizeof(netCtx->plainBuffer));
@@ -644,7 +663,7 @@ static bool TLSHandshake(DPS_NetConnection* cn)
         mbedtls_ssl_session_reset(&cn->ssl);
 
         if (cn->type == MBEDTLS_SSL_IS_SERVER) {
-            char clientID[128] = {};
+            char clientID[128] = { 0 };
             const struct sockaddr* addr = (const struct sockaddr*)&cn->peer.addr.inaddr;
             if (addr->sa_family == AF_INET) {
                 uv_ip4_name((const struct sockaddr_in*)addr, clientID, sizeof(clientID)-1);
@@ -672,7 +691,7 @@ static bool TLSHandshake(DPS_NetConnection* cn)
     }
 
     if (ret != 0) {
-        char buf[256] = {};
+        char buf[256] = { 0 };
         mbedtls_strerror(ret, buf, sizeof(buf)-1);
         DPS_ERRPRINT("TLSHandshake failed: %s\n", buf);
         return false;
@@ -720,6 +739,12 @@ static void OnData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, const s
         DPS_ERRPRINT("OnData no address\n");
         return;
     }
+#ifdef _WIN32
+    /* Under Windows, pr->buf.len is a ULONG, not a size_t */
+    if (nread > ULONG_MAX) {
+        goto exit;
+    }
+#endif
 
     DPS_DBGPRINT("OnData() received %zd bytes from network\n", nread);
 
@@ -733,7 +758,7 @@ static void OnData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, const s
     // the network.
     if (netCtx->node->state == DPS_NODE_STOPPING) {
         DPS_DBGPRINT("OnData() ignoring data received while stopping the node\n");
-        return;
+        goto exit;
     }
 
     // TODO: Use a hashtable or similar in DPS_Node to limit the lookup times for remote nodes.
@@ -746,13 +771,13 @@ static void OnData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, const s
         cn = CreateConnection(netCtx->node, addr, MBEDTLS_SSL_IS_SERVER);
         if (!cn) {
             DPS_ERRPRINT("could not create server connection structure\n");
-            return;
+            goto exit;
         }
         ret = DPS_AddRemoteNode(netCtx->node, nodeAddr, cn, &remote);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("OnData error: Couldn't add remote node\n");
             DestroyConnection(cn);
-            return;
+            goto exit;
         }
         cn->peer = remote->ep;
     }
@@ -766,7 +791,11 @@ static void OnData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, const s
     PendingRead* pr = calloc(1, sizeof(PendingRead));
     pr->buf = *buf;
     pr->buf.base = calloc(1, nread);
+#ifdef _WIN32
+    pr->buf.len = (ULONG) nread;
+#else
     pr->buf.len = nread;
+#endif
     memcpy_s(pr->buf.base, pr->buf.len, buf->base, nread);
 
     PendingRead* q = cn->readQueue;
@@ -789,6 +818,7 @@ static void OnData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, const s
         TLSRead(cn);
     }
 
+ exit:
     DPS_UnlockNode(netCtx->node);
 }
 
@@ -796,13 +826,6 @@ static void RxHandleClosed(uv_handle_t* handle)
 {
     DPS_DBGPRINT("Closed Rx handle %p\n", handle);
     free(handle->data);
-}
-
-static void TxHandleClosed(uv_handle_t* handle)
-{
-    DPS_NetContext* netCtx = (DPS_NetContext*)handle->data;
-    DPS_DBGPRINT("Closed Tx handle %p\n", handle);
-    uv_close((uv_handle_t*)&netCtx->rxSocket, RxHandleClosed);
 }
 
 DPS_NetContext* DPS_NetStart(DPS_Node* node, int port, DPS_OnReceive cb)
@@ -817,14 +840,8 @@ DPS_NetContext* DPS_NetStart(DPS_Node* node, int port, DPS_OnReceive cb)
     }
     ret = uv_udp_init(DPS_GetLoop(node), &netCtx->rxSocket);
     if (ret) {
-        DPS_ERRPRINT("uv_tcp_init error=%s\n", uv_err_name(ret));
+        DPS_ERRPRINT("uv_udp_init error=%s\n", uv_err_name(ret));
         free(netCtx);
-        return NULL;
-    }
-    ret = uv_udp_init(DPS_GetLoop(node), &netCtx->tx4Socket);
-    if (ret) {
-        DPS_ERRPRINT("uv_tcp_init error=%s\n", uv_err_name(ret));
-        uv_close((uv_handle_t*)&netCtx->rxSocket, RxHandleClosed);
         return NULL;
     }
     netCtx->node = node;
@@ -842,15 +859,6 @@ DPS_NetContext* DPS_NetStart(DPS_Node* node, int port, DPS_OnReceive cb)
     if (ret) {
         goto ErrorExit;
     }
-    ret = uv_ip4_addr("0.0.0.0", 0, (struct sockaddr_in*)&addr);
-    if (ret) {
-        goto ErrorExit;
-    }
-    netCtx->tx4Socket.data = netCtx;
-    ret = uv_udp_bind(&netCtx->tx4Socket, (const struct sockaddr*)&addr, 0);
-    if (ret) {
-        goto ErrorExit;
-    }
 
     mbedtls_debug_set_threshold(DEBUG_MBEDTLS_LEVEL);
 
@@ -859,7 +867,7 @@ DPS_NetContext* DPS_NetStart(DPS_Node* node, int port, DPS_OnReceive cb)
 ErrorExit:
 
     DPS_ERRPRINT("Failed to start net netCtx: error=%s\n", uv_err_name(ret));
-    uv_close((uv_handle_t*)&netCtx->tx4Socket, TxHandleClosed);
+    uv_close((uv_handle_t*)&netCtx->rxSocket, RxHandleClosed);
     return NULL;
 }
 
@@ -882,7 +890,7 @@ void DPS_NetStop(DPS_NetContext* netCtx)
 {
     if (netCtx) {
         uv_udp_recv_stop(&netCtx->rxSocket);
-        uv_close((uv_handle_t*)&netCtx->tx4Socket, TxHandleClosed);
+        uv_close((uv_handle_t*)&netCtx->rxSocket, RxHandleClosed);
     }
 }
 
@@ -936,7 +944,6 @@ DPS_Status DPS_NetSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf
         ep->cn->peer = *ep;
         DPS_NetConnectionAddRef(ep->cn);
     }
-
 
     cn = ep->cn;
 

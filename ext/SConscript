@@ -14,11 +14,11 @@ mbedtlsEnv.Append(
     ],
     CPPDEFINES = [
         'MBEDTLS_USER_CONFIG_FILE=\\"mbedtls_config.h\\"',
-    ],
-    CFLAGS = [
-        '-fPIC', "-g"
-    ],
+    ]
 )
+
+if mbedtlsEnv['PLATFORM'] == 'posix':
+   mbedtlsEnv.Append(CFLAGS = ['-fPIC', "-g"])
 
 mbedtlsSrcs = [
     './mbedtls/library/aes.c',
@@ -167,6 +167,6 @@ sclib = scEnv.Library('lib/safestring', scsrcs)
 
 Depends(scsrcs, scgit)
 
-# Return libraries 
+# Return libraries
 
 Return (['mbedtlsLib', 'tclib', 'sclib'])

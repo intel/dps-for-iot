@@ -16,7 +16,8 @@ TESTS="./build/test/bin/cbortest \
        ./test_scripts/simple_test \
        ./test_scripts/tree0 \
        ./test_scripts/tree1 \
-       ./test_scripts/tree2"
+       ./test_scripts/tree2 \
+       ./test_scripts/versioning"
 
 DEFAULT="\e[0m"
 GREEN="\e[32m"

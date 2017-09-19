@@ -66,7 +66,7 @@ void DPS_NetFreeBufs(uv_buf_t* bufs, size_t numBufs);
  * @param node      The node that received the data
  * @param endpoint  The endpoint that received the data
  * @param status    Indicates if the receive was successful or there was a network layer error
- * @param data      The raw data 
+ * @param data      The raw data
  * @param len       Length of the raw data
  *
  * @return  - DPS_OK if the message was correctly parsed
@@ -98,7 +98,7 @@ typedef struct _DPS_MulticastSender DPS_MulticastSender;
 /*
  * Setup to enable sending multicast data
  *
- * @param node     Opaque pointer to the DPS node 
+ * @param node     Opaque pointer to the DPS node
  *
  * @return   An opaque pointer to a struct holding the state of the multicast sender.
  */
@@ -107,7 +107,7 @@ DPS_MulticastSender* DPS_MulticastStartSend(DPS_Node* node);
 /*
  * Free resources used for sending multicast data
  *
- * @param node     Opaque pointer to the DPS node 
+ * @param node     Opaque pointer to the DPS node
  * @param sender   An opaque pointer to a struct holding the state of the multicast sender.
  *                 This will be free after this call and the pointer will no longer be valid.
  */
@@ -116,11 +116,11 @@ void DPS_MulticastStopSend(DPS_MulticastSender* sender);
 /*
  * Prototype for function called when a send completes .
  *
- * @param node     Opaque pointer to the DPS node 
+ * @param node     Opaque pointer to the DPS node
  * @param appCtx   Application context pointer that was passed into DPS_NetSend()
  * @param endpoint The endpoint for which the send was complete
  * @param bufs     Array holding pointers to the buffers passed in the send API call. The data in these buffers
- *                 can now be freed. 
+ *                 can now be freed.
  * @param          The length of the bufs array
  * @param status   Indicates if the send was successful or not
  */
@@ -129,7 +129,7 @@ typedef void (*DPS_NetSendComplete)(DPS_Node* node, void* appCtx, DPS_NetEndpoin
 /*
  * Multicast some data immediately. This is a synchronous API
  *
- * @param node     Opaque pointer to the DPS node 
+ * @param node     Opaque pointer to the DPS node
  * @param bufs     Data buffers to send
  * @param numBufs  Number of buffers to send
  */
@@ -138,7 +138,7 @@ DPS_Status DPS_MulticastSend(DPS_MulticastSender* sender, uv_buf_t* bufs, size_t
 /*
  * Start listening and receiving data
  *
- * @param node  Opaque pointer to the DPS node 
+ * @param node  Opaque pointer to the DPS node
  * @param port  If non-zero the port number to listen on, if zero use an ephemeral port
  * @param cb    Function to call when data is received
  *
@@ -209,6 +209,15 @@ int DPS_SameAddr(DPS_NodeAddress* addr1, DPS_NodeAddress* addr2);
  * This function uses a static string internally so is not thread-safe
  */
 const char* DPS_NetAddrText(const struct sockaddr* addr);
+
+/*
+ * Maps the supplied address to a v6 adddress if needed.
+ *
+ * This is necessary when using dual-stack sockets.
+ *
+ * @param addr  The address
+ */
+void DPS_MapAddrToV6(struct sockaddr* addr);
 
 #ifdef __cplusplus
 }

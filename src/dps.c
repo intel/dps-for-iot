@@ -786,7 +786,7 @@ static void SendSubsTimer(uv_timer_t* handle)
          */
         if (remote->outbound.ackCountdown) {
             if (remote->outbound.ackCountdown == 1) {
-                DPS_ERRPRINT("Reached retry limit - deleting unresponsive remote %s\n", DESCRIBE(remote));
+                DPS_WARNPRINT("Reached retry limit - deleting unresponsive remote %s\n", DESCRIBE(remote));
                 DPS_DeleteRemoteNode(node, remote);
                 /*
                  * Eat the error and continue
@@ -919,25 +919,36 @@ void DPS_QueuePublicationAck(DPS_Node* node, PublicationAck* ack)
 static DPS_Status DecodeRequest(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuffer* buf, int multicast)
 {
     DPS_Status ret;
+    uint8_t msgVersion;
     uint8_t msgType;
     size_t len;
 
     DPS_DBGTRACE();
     CBOR_Dump("Request in", buf->rxPos, DPS_RxBufferAvail(buf));
     ret = CBOR_DecodeArray(buf, &len);
-    if (ret != DPS_OK || (len < 2)) {
-        DPS_ERRPRINT("Expected a CBOR array or 2 or more elements\n");
+    if (ret != DPS_OK || (len < 3)) {
+        DPS_ERRPRINT("Expected a CBOR array or 3 or more elements\n");
         return ret;
+    }
+    ret = CBOR_DecodeUint8(buf, &msgVersion);
+    if (ret != DPS_OK) {
+        DPS_ERRPRINT("Expected a message type\n");
+        return ret;
+    }
+    if (msgVersion != DPS_MSG_VERSION) {
+        DPS_ERRPRINT("Expected message version %d, received %d\n", DPS_MSG_VERSION, msgVersion);
+        return DPS_ERR_NOT_IMPLEMENTED;
     }
     ret = CBOR_DecodeUint8(buf, &msgType);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Expected a message type\n");
         return ret;
     }
+    ret = DPS_ERR_INVALID;
     switch (msgType) {
     case DPS_MSG_TYPE_SUB:
-        if (len != 3) {
-            DPS_ERRPRINT("Expected 3 element array\n");
+        if (len != 4) {
+            DPS_ERRPRINT("Expected 4 element array\n");
             break;
         }
         ret = DPS_DecodeSubscription(node, ep, buf);
@@ -946,8 +957,8 @@ static DPS_Status DecodeRequest(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuffe
         }
         break;
     case DPS_MSG_TYPE_PUB:
-        if (len != 4) {
-            DPS_ERRPRINT("Expected 4 element array\n");
+        if (len != 5) {
+            DPS_ERRPRINT("Expected 5 element array\n");
             break;
         }
         DPS_DBGPRINT("Received publication via %s\n", DPS_NodeAddrToString(&ep->addr));
@@ -957,8 +968,8 @@ static DPS_Status DecodeRequest(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuffe
         }
         break;
     case DPS_MSG_TYPE_ACK:
-        if (len != 3) {
-            DPS_ERRPRINT("Expected 3 element array\n");
+        if (len != 4) {
+            DPS_ERRPRINT("Expected 4 element array\n");
             break;
         }
         DPS_DBGPRINT("Received acknowledgment via %s\n", DPS_NodeAddrToString(&ep->addr));
@@ -968,8 +979,8 @@ static DPS_Status DecodeRequest(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuffe
         }
         break;
     case DPS_MSG_TYPE_SAK:
-        if (len != 2) {
-            DPS_ERRPRINT("Expected 2 element array\n");
+        if (len != 3) {
+            DPS_ERRPRINT("Expected 3 element array\n");
             break;
         }
         DPS_DBGPRINT("Received sub ack via %s\n", DPS_NodeAddrToString(&ep->addr));
@@ -980,7 +991,6 @@ static DPS_Status DecodeRequest(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuffe
         break;
     default:
         DPS_ERRPRINT("Invalid message type\n");
-        ret = DPS_ERR_INVALID;
         break;
     }
     return ret;
