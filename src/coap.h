@@ -75,13 +75,19 @@ extern "C" {
 /*
  * Option identifiers
  */
-#define COAP_OPT_IF_MATCH    1
-#define COAP_OPT_URI_HOST    3
-#define COAP_OPT_URI_PORT    7
-#define COAP_OPT_URI_PATH   11
-#define COAP_OPT_URI_QUERY  15
+#define COAP_OPT_IF_MATCH         1
+#define COAP_OPT_URI_HOST         3
+#define COAP_OPT_URI_PORT         7
+#define COAP_OPT_URI_PATH         11
+#define COAP_OPT_CONTENT_FORMAT   12
+#define COAP_OPT_URI_QUERY        15
 
 #define COAP_END_OF_OPTS   0xFF
+
+/*
+ * Media types
+ */
+#define COAP_FORMAT_APPLICATION_CBOR 60
 
 typedef struct {
     uint8_t id;
