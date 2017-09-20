@@ -34,9 +34,10 @@
  */
 DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
-
 #define USE_IPV4       0x10
 #define USE_IPV6       0x01
+
+#define MAX_INTERFACE_NAME_LEN   64
 
 struct _DPS_MulticastReceiver {
     uint8_t ipVersions;
@@ -51,8 +52,6 @@ typedef struct {
     uv_udp_send_t req;
     int family;
 } TxSocket;
-
-#define MAX_BUFS  3
 
 struct _DPS_MulticastSender {
     uint8_t ipVersions;
@@ -143,7 +142,7 @@ static DPS_Status MulticastRxInit(DPS_MulticastReceiver* receiver)
     uv_interface_addresses(&ifsAddrs, &numIfs);
     for (i = 0; i < numIfs; ++i) {
         uv_interface_address_t* ifn = &ifsAddrs[i];
-        char addr[INET6_ADDRSTRLEN + 1];
+        char name[INET6_ADDRSTRLEN + 1];
         /*
          * Filter out interfaces we are not interested in
          */
@@ -151,15 +150,18 @@ static DPS_Status MulticastRxInit(DPS_MulticastReceiver* receiver)
             continue;
         }
         if (ifn->address.address4.sin_family == AF_INET6) {
-            ret = uv_ip6_name((struct sockaddr_in6*)&ifn->address, addr, sizeof(addr));
+            char ifaddr[INET6_ADDRSTRLEN + + MAX_INTERFACE_NAME_LEN + 2];
+            ret = uv_ip6_name((struct sockaddr_in6*)&ifn->address, name, sizeof(name));
             assert(ret == 0);
-            DPS_DBGPRINT("Joining IPv6 interface %s [%s]\n", ifn->name, addr);
-            ret = uv_udp_set_membership(&receiver->udp6Rx, COAP_MCAST_ALL_NODES_LINK_LOCAL_6, addr, UV_JOIN_GROUP);
+            name[sizeof(name) - 1] = 0;
+            snprintf(ifaddr, sizeof(ifaddr), "%s%%%s", name, ifn->name);
+            DPS_DBGPRINT("Joining IPv6 interface %s [%s]\n", ifn->name, ifaddr);
+            ret = uv_udp_set_membership(&receiver->udp6Rx, COAP_MCAST_ALL_NODES_LINK_LOCAL_6, ifaddr, UV_JOIN_GROUP);
         } else {
-            ret = uv_ip4_name((struct sockaddr_in*)&ifn->address, addr, sizeof(addr));
+            ret = uv_ip4_name((struct sockaddr_in*)&ifn->address, name, sizeof(name));
             assert(ret == 0);
-            DPS_DBGPRINT("Joining IPv4 interface %s [%s]\n", ifn->name, addr);
-            ret = uv_udp_set_membership(&receiver->udp4Rx, COAP_MCAST_ALL_NODES_LINK_LOCAL_4, addr, UV_JOIN_GROUP);
+            DPS_DBGPRINT("Joining IPv4 interface %s [%s]\n", ifn->name, name);
+            ret = uv_udp_set_membership(&receiver->udp4Rx, COAP_MCAST_ALL_NODES_LINK_LOCAL_4, name, UV_JOIN_GROUP);
         }
         if (ret) {
             DPS_WARNPRINT("Join group failed %s: %s\n", ifn->name, uv_err_name(ret));
@@ -231,8 +233,6 @@ void DPS_MulticastStopReceive(DPS_MulticastReceiver* receiver)
 /*****************************************************
  * Send path
  ****************************************************/
-
-#define MAX_INTERFACE_NAME_LEN   64
 
 static DPS_Status MulticastTxInit(DPS_MulticastSender* sender)
 {
