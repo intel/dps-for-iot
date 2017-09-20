@@ -20,10 +20,16 @@
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  */
 
+#include <assert.h>
+#include <ctype.h>
+#ifdef _WIN32
+#include <io.h>
+#else
+#include <unistd.h>
+#endif
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <assert.h>
 #include <dps/dbg.h>
 #include <dps/dps.h>
 #include <dps/synchronous.h>
@@ -35,7 +41,7 @@ static uint8_t AckFmt[] = "This is an ACK from %d";
 
 #define NUM_KEYS 2
 
-static DPS_UUID keyId[NUM_KEYS] = { 
+static DPS_UUID keyId[NUM_KEYS] = {
     { .val = { 0xed,0x54,0x14,0xa8,0x5c,0x4d,0x4d,0x15,0xb6,0x9f,0x0e,0x99,0x8a,0xb1,0x71,0xf2 } },
     { .val = { 0x53,0x4d,0x2a,0x4b,0x98,0x76,0x1f,0x25,0x6b,0x78,0x3c,0xc2,0xf8,0x12,0x90,0xcc } }
 };
@@ -101,6 +107,79 @@ static void OnPubMatch(DPS_Subscription* sub, const DPS_Publication* pub, uint8_
     }
 }
 
+#define MAX_TOPICS 64
+#define MAX_TOPIC_LEN 256
+
+static int IsInteractive()
+{
+#ifdef _WIN32
+    return _isatty(_fileno(stdin));
+#else
+    return isatty(fileno(stdin));
+#endif
+}
+
+static void ReadStdin(DPS_Node* node)
+{
+    char lineBuf[MAX_TOPIC_LEN + 1];
+
+    while (fgets(lineBuf, sizeof(lineBuf), stdin) != NULL) {
+        char* topics[MAX_TOPICS];
+        size_t numTopics = 0;
+        char* topicList;
+        DPS_Subscription* subscription;
+        DPS_Status ret;
+        size_t len;
+        size_t i;
+
+        len = strnlen(lineBuf, sizeof(lineBuf));
+        while (len && isspace(lineBuf[len - 1])) {
+            --len;
+        }
+        if (len) {
+            lineBuf[len] = 0;
+            DPS_PRINT("Sub: %s\n", lineBuf);
+
+            topicList = lineBuf;
+            numTopics = 0;
+            while (numTopics < MAX_TOPICS) {
+                size_t len = strcspn(topicList, " ");
+                if (!len) {
+                    len = strlen(topicList);
+                }
+                if (!len) {
+                    goto next;
+                }
+                topics[numTopics] = malloc(len + 1);
+                memcpy(topics[numTopics], topicList, len);
+                topics[numTopics][len] = 0;
+                ++numTopics;
+                if (!topicList[len]) {
+                    break;
+                }
+                topicList += len + 1;
+            }
+        }
+        if (numTopics) {
+            subscription = DPS_CreateSubscription(node, (const char**)topics, numTopics);
+            if (!subscription) {
+                ret = DPS_ERR_RESOURCES;
+                DPS_ERRPRINT("Failed to create subscription - error=%s\n", DPS_ErrTxt(ret));
+                break;
+            }
+            ret = DPS_Subscribe(subscription, OnPubMatch);
+            if (ret != DPS_OK) {
+                DPS_ERRPRINT("Failed to subscribe topics - error=%s\n", DPS_ErrTxt(ret));
+                break;
+            }
+        }
+    next:
+        for (i = 0; i < numTopics; ++i) {
+            free(topics[i]);
+        }
+    }
+}
+
 static int IntArg(char* opt, char*** argp, int* argcp, int* val, int min, int max)
 {
     char* p;
@@ -138,7 +217,7 @@ int main(int argc, char** argv)
     DPS_MemoryKeyStore* memoryKeyStore = NULL;
     const DPS_UUID* nodeKeyId = NULL;
     DPS_Node* node;
-    DPS_Event* nodeDestroyed;
+    DPS_Event* nodeDestroyed = NULL;
     int mcastPub = DPS_MCAST_PUB_DISABLED;
     const char* host = NULL;
     int encrypt = DPS_TRUE;
@@ -237,7 +316,7 @@ int main(int argc, char** argv)
     ret = DPS_StartNode(node, mcastPub, listenPort);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
-        return 1;
+        goto Exit;
     }
     DPS_PRINT("Subscriber is listening on port %d\n", DPS_GetPortNumber(node));
 
@@ -250,7 +329,7 @@ int main(int argc, char** argv)
         DPS_TimedWaitForEvent(nodeDestroyed, wait * 1000);
     }
 
-    if (numTopics > 0) {
+    if (numTopics) {
         char** topics = topicList;
         while (numTopics >= 0) {
             DPS_Subscription* subscription;
@@ -271,10 +350,7 @@ int main(int argc, char** argv)
         }
         if (ret != DPS_OK) {
             DPS_ERRPRINT("Failed to susbscribe topics - error=%s\n", DPS_ErrTxt(ret));
-            DPS_DestroyNode(node, OnNodeDestroyed, nodeDestroyed);
-            DPS_WaitForEvent(nodeDestroyed);
-            DPS_DestroyEvent(nodeDestroyed);
-            return 1;
+            goto Exit;
         }
     }
     if (numLinks) {
@@ -284,16 +360,33 @@ int main(int argc, char** argv)
             ret = DPS_LinkTo(node, linkHosts[i], linkPort[i], addr);
             if (ret != DPS_OK) {
                 DPS_ERRPRINT("DPS_LinkTo %d returned %s\n", linkPort[i], DPS_ErrTxt(ret));
-                DPS_DestroyNode(node, OnNodeDestroyed, nodeDestroyed);
                 break;
             }
         }
         DPS_DestroyAddress(addr);
+        if (ret != DPS_OK) {
+            goto Exit;
+        }
     }
-    DPS_WaitForEvent(nodeDestroyed);
-    DPS_DestroyEvent(nodeDestroyed);
-    DPS_DestroyMemoryKeyStore(memoryKeyStore);
-    return 0;
+    if (!numTopics && IsInteractive())
+    {
+        DPS_PRINT("Running in interactive mode\n");
+        ReadStdin(node);
+        DPS_DestroyNode(node, OnNodeDestroyed, nodeDestroyed);
+    }
+
+Exit:
+    if (nodeDestroyed) {
+        if (ret != DPS_OK) {
+            DPS_DestroyNode(node, OnNodeDestroyed, nodeDestroyed);
+        }
+        DPS_WaitForEvent(nodeDestroyed);
+        DPS_DestroyEvent(nodeDestroyed);
+    }
+    if (memoryKeyStore) {
+        DPS_DestroyMemoryKeyStore(memoryKeyStore);
+    }
+    return (ret == DPS_OK) ? EXIT_SUCCESS : EXIT_FAILURE;
 
 Usage:
     DPS_PRINT("Usage %s [-d] [-q] [-m] [-w <seconds>] [-x 0/1] [[-h <hostname>] -p <portnum>] [-l <listen port] [-m] [-r <milliseconds>] [[-s] topic1 ... topicN]\n", argv[0]);
@@ -307,5 +400,5 @@ Usage:
     DPS_PRINT("       -l: port to listen on. Default is an ephemeral port.\n");
     DPS_PRINT("       -r: Time to delay between subscription updates.\n\n");
     DPS_PRINT("       -s: list of subscription topic strings. Multiple -s options are permitted\n");
-    return 1;
+    return EXIT_FAILURE;
 }

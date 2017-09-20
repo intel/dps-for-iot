@@ -147,7 +147,7 @@ static void NetSend(DPS_Node* node, DPS_NetEndpoint* ep, int version)
     DPS_LockNode(node);
     status = DPS_AddRemoteNode(node, &ep->addr, NULL, &data->remote);
     if (status != DPS_OK) {
-        DPS_ERRPRINT("DPS_AddREmoteNode failed: %s\n", DPS_ErrTxt(ret));
+        DPS_ERRPRINT("DPS_AddRemoteNode failed: %s\n", DPS_ErrTxt(status));
         exit(EXIT_FAILURE);
     }
     DPS_UnlockNode(node);
