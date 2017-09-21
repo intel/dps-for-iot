@@ -76,29 +76,31 @@ static void NetSendTask(uv_async_t* handle)
     NetSendData* data = (NetSendData*)handle->data;
 
     /*
-     * Not including body and payload as the only point in this test is to
+     * Not including the entire message as the only point in this test is to
      * exercise the version handling.
-     *  [
-     *      version,
-     *      type,
-     *      { headers },
-     *      ...
-     *  ]
      */
-    size_t len = CBOR_SIZEOF_ARRAY(3) +
+    size_t len = CBOR_SIZEOF_ARRAY(5) +
         CBOR_SIZEOF(uint8_t) +
         CBOR_SIZEOF(uint8_t) +
+        CBOR_SIZEOF_MAP(0) +
+        CBOR_SIZEOF_MAP(0) +
         CBOR_SIZEOF_MAP(0);
     DPS_TxBuffer buf;
     int ret = DPS_TxBufferInit(&buf, NULL, len);
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeArray(&buf, 3);
+        ret = CBOR_EncodeArray(&buf, 5);
     }
     if (ret == DPS_OK) {
         ret = CBOR_EncodeUint8(&buf, data->version);
     }
     if (ret == DPS_OK) {
         ret = CBOR_EncodeUint8(&buf, DPS_MSG_TYPE_PUB);
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeMap(&buf, 0);
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeMap(&buf, 0);
     }
     if (ret == DPS_OK) {
         ret = CBOR_EncodeMap(&buf, 0);

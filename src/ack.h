@@ -37,8 +37,8 @@ extern "C" {
  * Acknowledgment packet queued to be sent on node loop
  */
 typedef struct _PublicationAck {
-    DPS_TxBuffer headers;
-    DPS_TxBuffer payload;
+    DPS_TxBuffer buf;               /* Headers, unprotected, and protected fields */
+    DPS_TxBuffer encryptedBuf;      /* Encrypted fields */
     DPS_NodeAddress destAddr;
     uint32_t sequenceNum;
     DPS_UUID pubId;
