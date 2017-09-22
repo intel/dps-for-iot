@@ -458,6 +458,7 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
     CBOR_MapState mapState;
     DPS_UUID* meshId = NULL;
     uint8_t flags = 0;
+    uint16_t keysMask;
 
     DPS_DBGTRACE();
 
@@ -509,25 +510,9 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
     }
 #endif
     /*
-     * If the protected map is empty this mean the remote has asked to unlink
-     */
-    if (mapState.entries == 0) {
-        DPS_LockNode(node);
-        remote = DPS_LookupRemoteNode(node, &ep->addr);
-        if (remote) {
-            SendSubscriptionAck(node, remote, revision);
-            DPS_DeleteRemoteNode(node, remote);
-            /*
-             * Evaluate impact of losing the remote's interests
-             */
-            DPS_UpdateSubs(node);
-        }
-        DPS_UnlockNode(node);
-        return DPS_OK;
-    }
-    /*
      * Parse out the protected fields
      */
+    keysMask = 0;
     while (!DPS_ParseMapDone(&mapState)) {
         int32_t key;
         size_t len;
@@ -537,15 +522,18 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
         }
         switch (key) {
         case DPS_CBOR_KEY_SUB_FLAGS:
+            keysMask |= (1 << key);
             ret = CBOR_DecodeUint8(buf, &flags);
             break;
         case DPS_CBOR_KEY_MESH_ID:
+            keysMask |= (1 << key);
             ret = CBOR_DecodeBytes(buf, (uint8_t**)&meshId, &len);
             if ((ret == DPS_OK) && (len != sizeof(DPS_UUID))) {
                 ret = DPS_ERR_INVALID;
             }
             break;
         case DPS_CBOR_KEY_INTERESTS:
+            keysMask |= (1 << key);
             if (interests) {
                 ret = DPS_ERR_INVALID;
             } else {
@@ -558,6 +546,7 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
             }
             break;
         case DPS_CBOR_KEY_NEEDS:
+            keysMask |= (1 << key);
             if (needs) {
                 ret = DPS_ERR_INVALID;
             } else {
@@ -573,6 +562,24 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
         if (ret != DPS_OK) {
             break;
         }
+    }
+    /*
+     * If the protected map is empty this mean the remote has asked to unlink
+     */
+    if (keysMask == 0) {
+        DPS_DBGPRINT("Received unlink\n");
+        DPS_LockNode(node);
+        remote = DPS_LookupRemoteNode(node, &ep->addr);
+        if (remote) {
+            SendSubscriptionAck(node, remote, revision);
+            DPS_DeleteRemoteNode(node, remote);
+            /*
+             * Evaluate impact of losing the remote's interests
+             */
+            DPS_UpdateSubs(node);
+        }
+        DPS_UnlockNode(node);
+        return DPS_OK;
     }
 
     DPS_LockNode(node);
