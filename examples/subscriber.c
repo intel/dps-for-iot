@@ -226,6 +226,8 @@ int main(int argc, char** argv)
     int numLinks = 0;
     int linkPort[MAX_LINKS];
     const char* linkHosts[MAX_LINKS];
+    int numAddrs = 0;
+    DPS_NodeAddress* addrs[MAX_LINKS];
 
     DPS_Debug = 0;
 
@@ -355,23 +357,28 @@ int main(int argc, char** argv)
     }
     if (numLinks) {
         int i;
-        DPS_NodeAddress* addr = DPS_CreateAddress();
-        for (i = 0; i < numLinks; ++i) {
-            ret = DPS_LinkTo(node, linkHosts[i], linkPort[i], addr);
+        for (i = 0; i < numLinks; ++i, ++numAddrs) {
+            addrs[i] = DPS_CreateAddress();
+            ret = DPS_LinkTo(node, linkHosts[i], linkPort[i], addrs[i]);
             if (ret != DPS_OK) {
+                DPS_DestroyAddress(addrs[i]);
                 DPS_ERRPRINT("DPS_LinkTo %d returned %s\n", linkPort[i], DPS_ErrTxt(ret));
-                break;
+                goto Exit;
             }
-        }
-        DPS_DestroyAddress(addr);
-        if (ret != DPS_OK) {
-            goto Exit;
         }
     }
     if (!numTopics && IsInteractive())
     {
         DPS_PRINT("Running in interactive mode\n");
         ReadStdin(node);
+        int i;
+        for (i = 0; i < numAddrs; ++i) {
+            DPS_Status unlinkRet = DPS_UnlinkFrom(node, addrs[i]);
+            DPS_DestroyAddress(addrs[i]);
+            if (unlinkRet != DPS_OK) {
+                DPS_ERRPRINT("DPS_UnlinkFrom %s returned %s\n", DPS_NodeAddrToString(addrs[i]), DPS_ErrTxt(unlinkRet));
+            }
+        }
         DPS_DestroyNode(node, OnNodeDestroyed, nodeDestroyed);
     }
 
