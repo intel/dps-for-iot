@@ -290,6 +290,7 @@ DPS_Status DPS_DecodeAcknowledgment(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxB
             ret = COSE_Decrypt(nonce, &keyId, &aadBuf, &cipherTextBuf, GetKey, node, &plainTextBuf);
             if (ret == DPS_OK) {
                 DPS_DBGPRINT("Ack was decrypted\n");
+                CBOR_Dump("plaintext", plainTextBuf.base, DPS_TxBufferUsed(&plainTextBuf));
                 DPS_TxBufferToRx(&plainTextBuf, &encryptedBuf);
             } else if (ret == DPS_ERR_NOT_ENCRYPTED) {
                 if (node->isSecured) {
