@@ -226,18 +226,14 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote)
     len += CBOR_SIZEOF_MAP(2) + 2 * CBOR_SIZEOF(uint8_t) +
            CBOR_SIZEOF(uint16_t) +
            CBOR_SIZEOF(uint32_t);
-    /*
-     * The protected map
-     */
     if (!remote->unlink) {
         interests = remote->outbound.deltaInd ? remote->outbound.delta : remote->outbound.interests;
-        len += CBOR_SIZEOF_MAP(4) + 4 * CBOR_SIZEOF(uint8_t) +
+        len += 4 * CBOR_SIZEOF(uint8_t) +
                CBOR_SIZEOF(uint8_t) +
                CBOR_SIZEOF_BSTR(sizeof(DPS_UUID)) +
                DPS_BitVectorSerializeMaxSize(interests) +
                DPS_BitVectorSerializeMaxSize(remote->outbound.needs);
     } else {
-        len += CBOR_SIZEOF_MAP(0);
         interests = NULL;
     }
 
@@ -255,7 +251,7 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote)
      * Encode the unprotected map
      */
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeMap(&buf, 2);
+        ret = CBOR_EncodeMap(&buf, remote->unlink ? 2 : 6);
     }
     if (ret == DPS_OK) {
         ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_PORT);
@@ -273,13 +269,7 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote)
          */
         ret = CBOR_EncodeUint32(&buf, remote->outbound.revision);
     }
-    /*
-     * Encode the protected map
-     */
     if (!remote->unlink) {
-        if (ret == DPS_OK) {
-            ret = CBOR_EncodeMap(&buf, 4);
-        }
         if (ret == DPS_OK) {
             ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_SUB_FLAGS);
         }
@@ -304,10 +294,12 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote)
         if (ret == DPS_OK) {
             ret = DPS_BitVectorSerialize(interests, &buf);
         }
-    } else {
-        if (ret == DPS_OK) {
-            ret = CBOR_EncodeMap(&buf, 0);
-        }
+    }
+    /*
+     * Encode the (empty) protected map
+     */
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeMap(&buf, 0);
     }
     /*
      * Encode the (empty) encrypted map
@@ -447,8 +439,8 @@ static DPS_Status UpdateInboundInterests(DPS_Node* node, RemoteNode* remote, DPS
  */
 DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuffer* buf)
 {
-    static const int32_t UnprotectedKeys[] = { DPS_CBOR_KEY_PORT, DPS_CBOR_KEY_SEQ_NUM };
-    static const int32_t ProtectedKeys[] = { DPS_CBOR_KEY_SUB_FLAGS, DPS_CBOR_KEY_MESH_ID, DPS_CBOR_KEY_NEEDS, DPS_CBOR_KEY_INTERESTS };
+    static const int32_t NeedKeys[] = { DPS_CBOR_KEY_PORT, DPS_CBOR_KEY_SEQ_NUM };
+    static const int32_t WantKeys[] = { DPS_CBOR_KEY_SUB_FLAGS, DPS_CBOR_KEY_MESH_ID, DPS_CBOR_KEY_NEEDS, DPS_CBOR_KEY_INTERESTS };
     DPS_Status ret;
     DPS_BitVector* interests = NULL;
     DPS_BitVector* needs = NULL;
@@ -466,12 +458,14 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
     /*
      * Parse keys from unprotected map
      */
-    ret = DPS_ParseMapInit(&mapState, buf, UnprotectedKeys, A_SIZEOF(UnprotectedKeys));
+    ret = DPS_ParseMapInit(&mapState, buf, NeedKeys, A_SIZEOF(NeedKeys), WantKeys, A_SIZEOF(WantKeys));
     if (ret != DPS_OK) {
         return ret;
     }
+    keysMask = 0;
     while (!DPS_ParseMapDone(&mapState)) {
-        int32_t key;
+        int32_t key = 0;
+        size_t len;
         ret = DPS_ParseMapNext(&mapState, &key);
         if (ret != DPS_OK) {
             break;
@@ -483,44 +477,6 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
         case DPS_CBOR_KEY_SEQ_NUM:
             ret = CBOR_DecodeUint32(buf, &revision);
             break;
-        }
-        if (ret != DPS_OK) {
-            break;
-        }
-    }
-    if (ret != DPS_OK) {
-        return ret;
-    }
-    /*
-     * Parse keys from protected map
-     */
-    ret = DPS_ParseMapInit(&mapState, buf, ProtectedKeys, A_SIZEOF(ProtectedKeys));
-    if (ret != DPS_OK) {
-        return ret;
-    }
-    DPS_EndpointSetPort(ep, port);
-#if SIMULATE_PACKET_LOSS
-    /*
-     * Enable this code to simulate lost subscriptions to test
-     * out the resynchronization code.
-     */
-    if (((DPS_Rand() % SIMULATE_PACKET_LOSS) == 1)) {
-        DPS_PRINT("%d Simulating lost subscription from %s\n", node->port, DPS_NodeAddrToString(&ep->addr));
-        return DPS_OK;
-    }
-#endif
-    /*
-     * Parse out the protected fields
-     */
-    keysMask = 0;
-    while (!DPS_ParseMapDone(&mapState)) {
-        int32_t key;
-        size_t len;
-        ret = DPS_ParseMapNext(&mapState, &key);
-        if (ret != DPS_OK) {
-            break;
-        }
-        switch (key) {
         case DPS_CBOR_KEY_SUB_FLAGS:
             keysMask |= (1 << key);
             ret = CBOR_DecodeUint8(buf, &flags);
@@ -563,8 +519,22 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
             break;
         }
     }
+    if (ret != DPS_OK) {
+        return ret;
+    }
+    DPS_EndpointSetPort(ep, port);
+#if SIMULATE_PACKET_LOSS
     /*
-     * If the protected map is empty this mean the remote has asked to unlink
+     * Enable this code to simulate lost subscriptions to test
+     * out the resynchronization code.
+     */
+    if (((DPS_Rand() % SIMULATE_PACKET_LOSS) == 1)) {
+        DPS_PRINT("%d Simulating lost subscription from %s\n", node->port, DPS_NodeAddrToString(&ep->addr));
+        return DPS_OK;
+    }
+#endif
+    /*
+     * If the regular subscription keys are empty this mean the remote has asked to unlink
      */
     if (keysMask == 0) {
         DPS_DBGPRINT("Received unlink\n");
@@ -688,7 +658,7 @@ DPS_Status DPS_DecodeSubscriptionAck(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Rx
     /*
      * Parse keys from unprotected map
      */
-    ret = DPS_ParseMapInit(&mapState, buf, UnprotectedKeys, A_SIZEOF(UnprotectedKeys));
+    ret = DPS_ParseMapInit(&mapState, buf, UnprotectedKeys, A_SIZEOF(UnprotectedKeys), NULL, 0);
     if (ret != DPS_OK) {
         return ret;
     }

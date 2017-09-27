@@ -289,7 +289,7 @@ static DPS_Status CallPubHandlers(DPS_Node* node, DPS_Publication* pub)
         DPS_ERRPRINT("Failed to decrypt publication - %s\n", DPS_ErrTxt(ret));
         goto Exit;
     }
-    ret = DPS_ParseMapInit(&mapState, &encryptedBuf, EncryptedKeys, A_SIZEOF(EncryptedKeys));
+    ret = DPS_ParseMapInit(&mapState, &encryptedBuf, EncryptedKeys, A_SIZEOF(EncryptedKeys), NULL, 0);
     if (ret != DPS_OK) {
         goto Exit;
     }
@@ -409,7 +409,7 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
     /*
      * Parse keys from unprotected map
      */
-    ret = DPS_ParseMapInit(&mapState, buf, UnprotectedKeys, A_SIZEOF(UnprotectedKeys));
+    ret = DPS_ParseMapInit(&mapState, buf, UnprotectedKeys, A_SIZEOF(UnprotectedKeys), NULL, 0);
     if (ret != DPS_OK) {
         return ret;
     }
@@ -441,7 +441,7 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
     /*
      * Parse keys from protected map
      */
-    ret = DPS_ParseMapInit(&mapState, buf, ProtectedKeys, A_SIZEOF(ProtectedKeys));
+    ret = DPS_ParseMapInit(&mapState, buf, ProtectedKeys, A_SIZEOF(ProtectedKeys), NULL, 0);
     if (ret != DPS_OK) {
         return ret;
     }

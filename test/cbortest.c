@@ -76,11 +76,11 @@ int main(int argc, char** argv)
     DPS_TxBufferInit(&txBuffer, buf, sizeof(buf));
 
     /*
-     * Encode same values twice
+     * Encode same values twice - one to test decode, one to test skip
      */
     for (n = 0; n < 2; ++n) {
 
-        ret = CBOR_EncodeArray(&txBuffer, 41);
+        ret = CBOR_EncodeArray(&txBuffer, 48);
         CHECK(ret);
 
         for (i = 0; i < sizeof(Uints) / sizeof(Uints[0]); ++i) {
@@ -107,6 +107,53 @@ int main(int argc, char** argv)
             ret = CBOR_EncodeString(&txBuffer, Maps[i].string);
             CHECK(ret);
         }
+
+        ret = CBOR_EncodeMap(&txBuffer, 0); /* { } */
+        CHECK(ret);
+        ret = CBOR_EncodeMap(&txBuffer, 0); /* { } */
+        CHECK(ret);
+        ret = CBOR_EncodeMap(&txBuffer, 3); /* { need, want, ignore } */
+        CHECK(ret);
+        for (i = 0; i < 3; ++i) {
+            ret = CBOR_EncodeInt(&txBuffer, Maps[i].key);
+            CHECK(ret);
+            ret = CBOR_EncodeString(&txBuffer, Maps[i].string);
+            CHECK(ret);
+        }
+        ret = CBOR_EncodeMap(&txBuffer, 1); /* { need } */
+        CHECK(ret);
+        for (i = 0; i < 1; ++i) {
+            ret = CBOR_EncodeInt(&txBuffer, Maps[i].key);
+            CHECK(ret);
+            ret = CBOR_EncodeString(&txBuffer, Maps[i].string);
+            CHECK(ret);
+        }
+        ret = CBOR_EncodeMap(&txBuffer, 1); /* { want } */
+        CHECK(ret);
+        for (i = 0; i < 1; ++i) {
+            ret = CBOR_EncodeInt(&txBuffer, Maps[i].key);
+            CHECK(ret);
+            ret = CBOR_EncodeString(&txBuffer, Maps[i].string);
+            CHECK(ret);
+        }
+        ret = CBOR_EncodeMap(&txBuffer, 1); /* { need } */
+        CHECK(ret);
+        for (i = 0; i < 1; ++i) {
+            ret = CBOR_EncodeInt(&txBuffer, Maps[i].key);
+            CHECK(ret);
+            ret = CBOR_EncodeString(&txBuffer, Maps[i].string);
+            CHECK(ret);
+        }
+        ret = CBOR_EncodeMap(&txBuffer, 2); /* { >need, need } */
+        CHECK(ret);
+        for (i = 0; i < 2; ++i) {
+            int j = A_SIZEOF(Maps) - 1 - i;
+            ret = CBOR_EncodeInt(&txBuffer, Maps[j].key);
+            CHECK(ret);
+            ret = CBOR_EncodeString(&txBuffer, Maps[j].string);
+            CHECK(ret);
+        }
+
         ret = CBOR_EncodeMap(&txBuffer, sizeof(Maps) / sizeof(Maps[0]));
         CHECK(ret);
         for (i = 0; i < sizeof(Maps) / sizeof(Maps[0]); ++i) {
@@ -128,7 +175,7 @@ int main(int argc, char** argv)
     DPS_TxBufferToRx(&txBuffer, &rxBuffer);
 
     ret = CBOR_DecodeArray(&rxBuffer, &size);
-    ASSERT(size == 41);
+    ASSERT(size == 48);
     CHECK(ret);
 
     /*
@@ -180,9 +227,133 @@ int main(int argc, char** argv)
         ASSERT(strlen(Maps[i].string) == len && !strncmp(str, Maps[i].string, len));
     }
 
+    {
+        /* { } */
+        CBOR_MapState map;
+        ret = DPS_ParseMapInit(&map, &rxBuffer, NULL, 0, NULL, 0);
+        CHECK(ret);
+        if (!DPS_ParseMapDone(&map)) {
+            CHECK(DPS_ERR_FAILURE);
+        }
+    }
+    {
+        /* { } - XFAIL missing needed key */
+        CBOR_MapState map;
+        int32_t needs[] = { 1 };
+        ret = DPS_ParseMapInit(&map, &rxBuffer, needs, A_SIZEOF(needs), NULL, 0);
+        CHECK(ret);
+        if (DPS_ParseMapDone(&map)) {
+            CHECK(DPS_ERR_FAILURE);
+        }
+        int32_t key = 0;
+        ret = DPS_ParseMapNext(&map, &key);
+        if (ret != DPS_ERR_MISSING) {
+            CHECK(DPS_ERR_FAILURE);
+        }
+    }
+    {
+        /* { need, want, ignore } */
+        CBOR_MapState map;
+        int32_t needs[] = { 1 };
+        int32_t wants[] = { 2 };
+        ret = DPS_ParseMapInit(&map, &rxBuffer, needs, A_SIZEOF(needs), wants, A_SIZEOF(wants));
+        CHECK(ret);
+        while (!DPS_ParseMapDone(&map)) {
+            int32_t key = 0;
+            char *str;
+            size_t len;
+            ret = DPS_ParseMapNext(&map, &key);
+            CHECK(ret);
+            switch (key) {
+            case 1:
+            case 2:
+                ret = CBOR_DecodeString(&rxBuffer, &str, &len);
+                CHECK(ret);
+                break;
+            default:
+                ASSERT(0);
+                break;
+            }
+        }
+    }
+    {
+        /* { need } - XFAIL missing needed key */
+        CBOR_MapState map;
+        int32_t needs[] = { 2 };
+        ret = DPS_ParseMapInit(&map, &rxBuffer, needs, A_SIZEOF(needs), NULL, 0);
+        CHECK(ret);
+        if (DPS_ParseMapDone(&map)) {
+            CHECK(DPS_ERR_FAILURE);
+        }
+        int32_t key = 0;
+        ret = DPS_ParseMapNext(&map, &key);
+        if (ret != DPS_ERR_MISSING) {
+            CHECK(DPS_ERR_FAILURE);
+        }
+    }
+    {
+        /* { want } - PASS missing wanted key */
+        CBOR_MapState map;
+        int32_t wants[] = { 2 };
+        ret = DPS_ParseMapInit(&map, &rxBuffer, NULL, 0, wants, A_SIZEOF(wants));
+        CHECK(ret);
+        while (!DPS_ParseMapDone(&map)) {
+            int32_t key = 0;
+            ret = DPS_ParseMapNext(&map, &key);
+            CHECK(ret);
+            if (key != 0) {
+                CHECK(DPS_ERR_FAILURE);
+            }
+        }
+    }
+    {
+        /* { need } */
+        CBOR_MapState map;
+        int32_t needs[] = { 1 };
+        ret = DPS_ParseMapInit(&map, &rxBuffer, needs, A_SIZEOF(needs), NULL, 0);
+        CHECK(ret);
+        while (!DPS_ParseMapDone(&map)) {
+            int32_t key = 0;
+            char *str;
+            size_t len;
+            ret = DPS_ParseMapNext(&map, &key);
+            CHECK(ret);
+            switch (key) {
+            case 1:
+                ret = CBOR_DecodeString(&rxBuffer, &str, &len);
+                CHECK(ret);
+                break;
+            default:
+                ASSERT(0);
+                break;
+            }
+        }
+    }
+    {
+        /* { >need, need } - XFAIL keys out of order */
+        CBOR_MapState map;
+        int32_t needs[] = { 3 };
+        ret = DPS_ParseMapInit(&map, &rxBuffer, needs, A_SIZEOF(needs), NULL, 0);
+        CHECK(ret);
+        if (DPS_ParseMapDone(&map)) {
+            CHECK(DPS_ERR_FAILURE);
+        }
+        int32_t key = 0;
+        ret = DPS_ParseMapNext(&map, &key);
+        if (ret != DPS_ERR_MISSING) {
+            CHECK(DPS_ERR_FAILURE);
+        }
+        ret = CBOR_Skip(&rxBuffer, NULL, NULL); /* "ghi" */
+        CHECK(ret);
+        ret = CBOR_Skip(&rxBuffer, NULL, NULL); /* 3 */
+        CHECK(ret);
+        ret = CBOR_Skip(&rxBuffer, NULL, NULL); /* "def" */
+        CHECK(ret);
+    }
+
     CBOR_MapState map;
     int32_t keys[] = {2, 3};
-    ret = DPS_ParseMapInit(&map, &rxBuffer, keys, A_SIZEOF(keys));
+    ret = DPS_ParseMapInit(&map, &rxBuffer, keys, A_SIZEOF(keys), NULL, 0);
     CHECK(ret);
 
     while (!DPS_ParseMapDone(&map)) {
@@ -215,9 +386,9 @@ int main(int argc, char** argv)
      */
     ret = CBOR_DecodeArray(&rxBuffer, &size);
     CHECK(ret);
-    ASSERT(size == 41);
+    ASSERT(size == 48);
 
-    for (n = 0; n < 41; ++n) {
+    for (n = 0; n < 48; ++n) {
         size_t sz;
         uint8_t maj;
         ret = CBOR_Skip(&rxBuffer, &maj, &sz);

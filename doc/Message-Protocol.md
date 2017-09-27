@@ -106,9 +106,10 @@ sub = 2
 
 *port* and *seq-num* are mandatory in the *unprotected* section.
 
-In a regular subscription message, *sub-flags*, *mesh-id*, *needs*
-and *interests* are mandatory in the *protected* section.  In an
-unlink subscription message those fields shall be absent.
+Additionally, in a regular subscription message, *sub-flags*,
+*mesh-id*, *needs* and *interests* are mandatory in the *unprotected*
+section.  In an unlink subscription message those fields shall be
+absent.
 
 ## Acknowledgement message
 

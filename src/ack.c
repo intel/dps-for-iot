@@ -225,7 +225,7 @@ DPS_Status DPS_DecodeAcknowledgment(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxB
      * Decode the protected map
      */
     aadPos = buf->rxPos;
-    ret = DPS_ParseMapInit(&mapState, buf, ProtectedKeys, A_SIZEOF(ProtectedKeys));
+    ret = DPS_ParseMapInit(&mapState, buf, ProtectedKeys, A_SIZEOF(ProtectedKeys), NULL, 0);
     if (ret != DPS_OK) {
         return ret;
     }
@@ -305,7 +305,7 @@ DPS_Status DPS_DecodeAcknowledgment(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxB
             if (ret == DPS_OK) {
                 uint8_t* data = NULL;
                 size_t dataLen = 0;
-                ret = DPS_ParseMapInit(&mapState, &encryptedBuf, EncryptedKeys, A_SIZEOF(EncryptedKeys));
+                ret = DPS_ParseMapInit(&mapState, &encryptedBuf, EncryptedKeys, A_SIZEOF(EncryptedKeys), NULL, 0);
                 if (ret == DPS_OK) {
                     while (!DPS_ParseMapDone(&mapState)) {
                         int32_t key;

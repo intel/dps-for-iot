@@ -581,11 +581,14 @@ size_t _CBOR_SizeOfString(const char* s)
     return len + CBOR_SIZEOF_LEN(len);
 }
 
-DPS_Status DPS_ParseMapInit(CBOR_MapState* mapState, DPS_RxBuffer* buffer, const int32_t* keys, size_t numKeys)
+DPS_Status DPS_ParseMapInit(CBOR_MapState* mapState, DPS_RxBuffer* buffer, const int32_t* keys, size_t numKeys,
+                            const int32_t* optKeys, size_t numOptKeys)
 {
     mapState->buffer = buffer;
-    mapState->keys = keys;
+    mapState->needs = keys;
     mapState->needKeys = numKeys;
+    mapState->wants = optKeys;
+    mapState->wantKeys = numOptKeys;
     mapState->result = CBOR_DecodeMap(buffer, &mapState->entries);
     return mapState->result;
 }
@@ -598,22 +601,28 @@ DPS_Status DPS_ParseMapNext(CBOR_MapState* mapState, int32_t* key)
         return mapState->result;
     }
     mapState->result = DPS_ERR_MISSING;
-    while (mapState->entries && mapState->needKeys) {
+    while (mapState->entries && (mapState->needKeys || mapState->wantKeys)) {
         --mapState->entries;
         mapState->result = CBOR_DecodeInt32(mapState->buffer, &k);
         if (mapState->result != DPS_OK) {
             break;
         }
-        if (k == mapState->keys[0]) {
-            ++mapState->keys;
+        if (mapState->needKeys && k == mapState->needs[0]) {
+            ++mapState->needs;
             --mapState->needKeys;
+            *key = k;
+            break;
+        }
+        if (mapState->wantKeys && k == mapState->wants[0]) {
+            ++mapState->wants;
+            --mapState->wantKeys;
             *key = k;
             break;
         }
         /*
          * Keys must be in ascending order
          */
-        if (k > mapState->keys[0]) {
+        if (mapState->needKeys && k > mapState->needs[0]) {
             mapState->result = DPS_ERR_MISSING;
             break;
         }
@@ -644,6 +653,8 @@ int DPS_ParseMapDone(CBOR_MapState* mapState)
     int32_t k;
 
     if (mapState->needKeys) {
+        return DPS_FALSE;
+    } else if (mapState->wantKeys && mapState->entries) {
         return DPS_FALSE;
     } else {
         while (mapState->entries) {
