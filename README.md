@@ -1,4 +1,4 @@
-# Introduction to Distributed Publish Subscribe for IoT {#mainpage}
+# Introduction to Distributed Publish Subscribe for IoT
 
 ***
 
