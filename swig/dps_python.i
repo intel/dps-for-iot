@@ -1,5 +1,6 @@
+%module(docstring="Distributed Publish Subscribe for IoT") dps
+%feature("autodoc", "1");
 
-%module dps
 %{
 #include <dps/dps.h>
 #include <dps/dbg.h>
