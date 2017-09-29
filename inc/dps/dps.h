@@ -136,18 +136,31 @@ typedef struct _DPS_KeyStore DPS_KeyStore;
 
 /**
  * Function prototype for callback function for requesting the encryption key
- * for a specific key identifier. This function must not block
+ * for a specific key identifier. This function must not block.
  *
- * @param node    The node that is requesting the key
- * @param kid     The key identifier
- * @param key     Buffer for returning the key.
- * @param keyLen  Size of the key buffer
+ * @param keyStore The key store to ues
+ * @param kid The key identifier
+ * @param key Buffer for returning the key
+ * @param keyLen Size of the key buffer
  *
  * @return  DPS_OK if a key matching the kid was returned
  *          DPS_ERR_MSSING if there is no matching key
  */
 typedef DPS_Status (*DPS_ContentKeyCallback)(DPS_KeyStore* keyStore, const DPS_UUID* kid, uint8_t* key, size_t keyLen);
 
+/**
+ * Function prototype for callback function for requesting the encryption key
+ * for the network. This function must not block.
+ *
+ * @param keyStore The key store to use
+ * @param kid The key identifier
+ * @param buffer Buffer for returning the key
+ * @param bufferLen Size of the buffer, in bytes
+ * @param keyLen Size of the returned key, in bytes
+ *
+ * @return  DPS_OK if a key matching the kid was returned
+ *          DPS_ERR_MSSING if there is no matching key
+ */
 typedef DPS_Status (*DPS_NetworkKeyCallback)(DPS_KeyStore* keyStore, uint8_t* buffer, size_t bufferLen, size_t* keyLen);
 
 struct _DPS_KeyStore {
@@ -158,10 +171,51 @@ struct _DPS_KeyStore {
 };
 
 typedef struct _DPS_MemoryKeyStore DPS_MemoryKeyStore;
+
+/**
+ * Creates an in-memory key store.
+ *
+ * @return A pointer to the key store or NULL if there were no resources.
+ */
 DPS_MemoryKeyStore* DPS_CreateMemoryKeyStore();
+
+/**
+ * Destroys a previously created in-memory key store.
+ */
 void DPS_DestroyMemoryKeyStore(DPS_MemoryKeyStore* mks);
+
+/**
+ * Create or replace a key with the specified key identifier in the key store.
+ *
+ * Specify a previously set key identifier and a NULL key to remove a key from the key store.
+ *
+ * @param mks An in-memory key store
+ * @param kid The identifier of the key to create, replace, or remove
+ * @param key The key
+ * @param keyLen The length of the key, in bytes
+ *
+ * @return DPS_OK or an error
+ */
 DPS_Status DPS_SetContentKey(DPS_MemoryKeyStore* mks, const DPS_UUID* kid, uint8_t* key, size_t keyLen);
+
+/**
+ * Create or replace the network key in the key store.
+ *
+ * @param mks An in-memory key store
+ * @param key The key
+ * @param keyLen The length of the key, in bytes
+ *
+ * @return DPS_OK or an error
+ */
 DPS_Status DPS_SetNetworkKey(DPS_MemoryKeyStore* mks, uint8_t* key, size_t keyLen);
+
+/**
+ * Returns the DPS_KeyStore* of an in-memory key store.
+ *
+ * @param mks An in-memory key store
+ *
+ * @return The DPS_KeyStore* or NULL
+ */
 DPS_KeyStore* DPS_MemoryKeyStoreHandle(DPS_MemoryKeyStore* mks);
 
 /**
@@ -181,7 +235,7 @@ DPS_Node* DPS_CreateNode(const char* separators, DPS_KeyStore* keyStore, const D
  * @param node   The node
  * @param data  The data pointer to store
  *
- * @return DPS_OK or and error
+ * @return DPS_OK or an error
  */
 DPS_Status DPS_SetNodeData(DPS_Node* node, void* data);
 
@@ -222,9 +276,10 @@ typedef void (*DPS_OnNodeDestroyed)(DPS_Node* node, void* data);
  * @param cb     Callback function to be called when the node is destroyed
  * @param data   Data to be passed to the callback function
  *
- * @return -DPS_OK if the node will be destroyed and the callback called
- *         -DPS_ERR_NULL node or cb was a null pointer
- *         -Or an error status code in which case the callback will not be called.
+ * @return
+ * - DPS_OK if the node will be destroyed and the callback called
+ * - DPS_ERR_NULL node or cb was a null pointer
+ * - Or an error status code in which case the callback will not be called.
  */
 DPS_Status DPS_DestroyNode(DPS_Node* node, DPS_OnNodeDestroyed cb, void* data);
 
@@ -375,9 +430,9 @@ DPS_Status DPS_DestroyPublication(DPS_Publication* pub);
 typedef void (*DPS_PublicationHandler)(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* payload, size_t len);
 
 /**
- * Aknowledge a publication. A publication should be acknowledged as soon as possible after receipt
+ * Acknowledge a publication. A publication should be acknowledged as soon as possible after receipt,
  * ideally from within the publication handler callback function. If the publication cannot be
- * acknowedged immediately in the publication handler callback, call DPS_CopyPublication() to make a
+ * acknowledged immediately in the publication handler callback, call DPS_CopyPublication() to make a
  * partial copy of the publication that can be passed to this function at a later time.
  *
  * @param pub           The publication to acknowledge
@@ -532,7 +587,7 @@ DPS_Status DPS_ResolveAddress(DPS_Node* node, const char* host, const char* serv
 const char* DPS_NodeAddrToString(DPS_NodeAddress* addr);
 
 /**
- * Creates an node address.
+ * Creates a node address.
  */
 DPS_NodeAddress* DPS_CreateAddress();
 
