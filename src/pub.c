@@ -84,8 +84,8 @@ static DPS_Publication* FreePublication(DPS_Node* node, DPS_Publication* pub)
      * called from OnPubSendComplete() when the ref count goes to zero.
      */
     if (pub->refCount == 0) {
-        DPS_TxBufferFree(&pub->body);
-        DPS_TxBufferFree(&pub->payload);
+        DPS_TxBufferFree(&pub->protectedBuf);
+        DPS_TxBufferFree(&pub->encryptedBuf);
         free(pub);
     }
     return next;
@@ -211,17 +211,18 @@ typedef struct _SubCandidate {
  */
 static DPS_Status CallPubHandlers(DPS_Node* node, DPS_Publication* pub)
 {
+    static const int32_t EncryptedKeys[] = { DPS_CBOR_KEY_TOPICS, DPS_CBOR_KEY_DATA };
     DPS_Status ret;
     uint8_t nonce[DPS_COSE_NONCE_SIZE];
     DPS_UUID keyId;
     DPS_Subscription* sub;
-    DPS_RxBuffer payload;
-    DPS_TxBuffer plainText;
-    DPS_RxBuffer aad;
-    DPS_RxBuffer cipherText;
-    uint8_t* pubPayload;
-    size_t pubPayloadLen;
-    size_t len;
+    DPS_RxBuffer encryptedBuf;
+    DPS_TxBuffer plainTextBuf;
+    DPS_RxBuffer aadBuf;
+    DPS_RxBuffer cipherTextBuf;
+    uint8_t* data = NULL;
+    size_t dataLen = 0;
+    CBOR_MapState mapState;
     size_t i;
     SubCandidate* candidates = NULL;
     SubCandidate* cdt = NULL;
@@ -256,14 +257,14 @@ static DPS_Status CallPubHandlers(DPS_Node* node, DPS_Publication* pub)
      */
     DPS_MakeNonce(&pub->pubId, pub->sequenceNum, DPS_MSG_TYPE_PUB, nonce);
 
-    DPS_TxBufferToRx(&pub->body, &aad);
-    DPS_TxBufferToRx(&pub->payload, &cipherText);
+    DPS_TxBufferToRx(&pub->protectedBuf, &aadBuf);
+    DPS_TxBufferToRx(&pub->encryptedBuf, &cipherTextBuf);
 
-    ret = COSE_Decrypt(nonce, &keyId, &aad, &cipherText, GetKey, node, &plainText);
+    ret = COSE_Decrypt(nonce, &keyId, &aadBuf, &cipherTextBuf, GetKey, node, &plainTextBuf);
     if (ret == DPS_OK) {
         DPS_DBGPRINT("Publication was decrypted\n");
-        CBOR_Dump("plaintext", plainText.base, DPS_TxBufferUsed(&plainText));
-        DPS_TxBufferToRx(&plainText, &payload);
+        CBOR_Dump("plaintext", plainTextBuf.base, DPS_TxBufferUsed(&plainTextBuf));
+        DPS_TxBufferToRx(&plainTextBuf, &encryptedBuf);
         /*
          * We will use the same key id when we encrypt the acknowledgement
          */
@@ -283,49 +284,62 @@ static DPS_Status CallPubHandlers(DPS_Node* node, DPS_Publication* pub)
         /*
          * The payload was not encrypted
          */
-        DPS_TxBufferToRx(&pub->payload, &payload);
+        DPS_TxBufferToRx(&pub->encryptedBuf, &encryptedBuf);
     } else {
         DPS_ERRPRINT("Failed to decrypt publication - %s\n", DPS_ErrTxt(ret));
         goto Exit;
     }
-    ret = CBOR_DecodeArray(&payload, &len);
+    ret = DPS_ParseMapInit(&mapState, &encryptedBuf, EncryptedKeys, A_SIZEOF(EncryptedKeys), NULL, 0);
     if (ret != DPS_OK) {
         goto Exit;
     }
-    if (len != 2) {
-        ret = DPS_ERR_INVALID;
-        goto Exit;
-    }
-    /*
-     * Deserialize the topic strings
-     */
-    ret = CBOR_DecodeArray(&payload, &pub->numTopics);
-    if (ret != DPS_OK) {
-        goto Exit;
-    }
-    if (pub->numTopics == 0) {
-        ret = DPS_ERR_INVALID;
-        goto Exit;
-    }
-    pub->topics = malloc(pub->numTopics * sizeof(char*));
-    if (!pub->topics) {
-        ret = DPS_ERR_RESOURCES;
-        goto Exit;
-    }
-    for (i = 0; i < pub->numTopics; ++i) {
-        size_t sz;
-        ret = CBOR_DecodeString(&payload, &pub->topics[i], &sz);
+    while (!DPS_ParseMapDone(&mapState)) {
+        int32_t key;
+        ret = DPS_ParseMapNext(&mapState, &key);
         if (ret != DPS_OK) {
             goto Exit;
         }
+        switch (key) {
+        case DPS_CBOR_KEY_TOPICS:
+            /*
+             * Deserialize the topic strings
+             */
+            ret = CBOR_DecodeArray(&encryptedBuf, &pub->numTopics);
+            if (ret != DPS_OK) {
+                break;
+            }
+            if (pub->numTopics == 0) {
+                ret = DPS_ERR_INVALID;
+                break;
+            }
+            pub->topics = malloc(pub->numTopics * sizeof(char*));
+            if (!pub->topics) {
+                ret = DPS_ERR_RESOURCES;
+                break;
+            }
+            for (i = 0; i < pub->numTopics; ++i) {
+                size_t sz;
+                ret = CBOR_DecodeString(&encryptedBuf, &pub->topics[i], &sz);
+                if (ret != DPS_OK) {
+                    break;
+                }
+            }
+            break;
+        case DPS_CBOR_KEY_DATA:
+            /*
+             * Get the pointer to the publication data
+             */
+            ret = CBOR_DecodeBytes(&encryptedBuf, &data, &dataLen);
+            break;
+        }
+        if (ret != DPS_OK) {
+            break;
+        }
     }
-    /*
-     * Get the pointer to the publication data
-     */
-    ret = CBOR_DecodeBytes(&payload, &pubPayload, &pubPayloadLen);
     if (ret != DPS_OK) {
         goto Exit;
     }
+
     DPS_LockNode(node);
     /*
      * Iterate over the candidates and check that the pub strings are a match
@@ -341,7 +355,7 @@ static DPS_Status CallPubHandlers(DPS_Node* node, DPS_Publication* pub)
             DPS_DBGPRINT("Matched subscription\n");
             UpdatePubHistory(node, pub);
             DPS_UnlockNode(node);
-            cdt->sub->handler(cdt->sub, pub, pubPayload, pubPayloadLen);
+            cdt->sub->handler(cdt->sub, pub, data, dataLen);
             DPS_LockNode(node);
         }
     }
@@ -354,9 +368,8 @@ Exit:
         candidates = candidates->next;
         free(cdt);
     }
-    DPS_TxBufferFree(&plainText);
+    DPS_TxBufferFree(&plainTextBuf);
     return ret;
-
 }
 
 static DPS_Publication* LookupRetained(DPS_Node* node, DPS_UUID* pubId)
@@ -371,18 +384,18 @@ static DPS_Publication* LookupRetained(DPS_Node* node, DPS_UUID* pubId)
     return NULL;
 }
 
-DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuffer* buffer, int multicast)
+DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuffer* buf, int multicast)
 {
-    static const int32_t HeaderKeys[] = { DPS_CBOR_KEY_PORT, DPS_CBOR_KEY_TTL };
-    static const int32_t BodyKeys[] = { DPS_CBOR_KEY_TTL, DPS_CBOR_KEY_PUB_ID, DPS_CBOR_KEY_SEQ_NUM,
-                                        DPS_CBOR_KEY_ACK_REQ, DPS_CBOR_KEY_BLOOM_FILTER };
+    static const int32_t UnprotectedKeys[] = { DPS_CBOR_KEY_PORT, DPS_CBOR_KEY_TTL };
+    static const int32_t ProtectedKeys[] = { DPS_CBOR_KEY_TTL, DPS_CBOR_KEY_PUB_ID, DPS_CBOR_KEY_SEQ_NUM,
+                                             DPS_CBOR_KEY_ACK_REQ, DPS_CBOR_KEY_BLOOM_FILTER };
     DPS_Status ret;
     RemoteNode* pubNode = NULL;
     uint16_t port;
     DPS_Publication* pub = NULL;
     DPS_UUID* pubId = NULL;
     DPS_RxBuffer bfBuf;
-    uint8_t* bodyPtr;
+    uint8_t* protectedPtr;
     CBOR_MapState mapState;
     uint32_t sequenceNum;
     int16_t ttl;
@@ -392,11 +405,11 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
 
     DPS_DBGTRACE();
 
-    CBOR_Dump("Pub in", buffer->rxPos, DPS_RxBufferAvail(buffer));
+    CBOR_Dump("Pub in", buf->rxPos, DPS_RxBufferAvail(buf));
     /*
-     * Parse keys from header map
+     * Parse keys from unprotected map
      */
-    ret = DPS_ParseMapInit(&mapState, buffer, HeaderKeys, A_SIZEOF(HeaderKeys));
+    ret = DPS_ParseMapInit(&mapState, buf, UnprotectedKeys, A_SIZEOF(UnprotectedKeys), NULL, 0);
     if (ret != DPS_OK) {
         return ret;
     }
@@ -408,10 +421,10 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
         }
         switch (key) {
         case DPS_CBOR_KEY_PORT:
-            ret = CBOR_DecodeUint16(buffer, &port);
+            ret = CBOR_DecodeUint16(buf, &port);
             break;
         case DPS_CBOR_KEY_TTL:
-            ret = CBOR_DecodeInt16(buffer, &ttl);
+            ret = CBOR_DecodeInt16(buf, &ttl);
             break;
         }
         if (ret != DPS_OK) {
@@ -422,18 +435,18 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
         return ret;
     }
     /*
-     * Start of publication body
+     * Start of publication protected map
      */
-    bodyPtr = buffer->rxPos;
+    protectedPtr = buf->rxPos;
     /*
-     * Parse keys from body map
+     * Parse keys from protected map
      */
-    ret = DPS_ParseMapInit(&mapState, buffer, BodyKeys, A_SIZEOF(BodyKeys));
+    ret = DPS_ParseMapInit(&mapState, buf, ProtectedKeys, A_SIZEOF(ProtectedKeys), NULL, 0);
     if (ret != DPS_OK) {
         return ret;
     }
     /*
-     * Parse out the body fields
+     * Parse out the protected fields
      */
     while (!DPS_ParseMapDone(&mapState)) {
         int32_t key;
@@ -443,7 +456,7 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
         }
         switch (key) {
         case DPS_CBOR_KEY_TTL:
-            ret = CBOR_DecodeInt16(buffer, &baseTTL);
+            ret = CBOR_DecodeInt16(buf, &baseTTL);
             /*
              * Validate the current TTL against the base TTL
              */
@@ -455,27 +468,27 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
             }
             break;
         case DPS_CBOR_KEY_PUB_ID:
-            ret = CBOR_DecodeBytes(buffer, (uint8_t**)&pubId, &len);
+            ret = CBOR_DecodeBytes(buf, (uint8_t**)&pubId, &len);
             if ((ret == DPS_OK) && (len != sizeof(DPS_UUID))) {
                 ret = DPS_ERR_INVALID;
             }
             break;
         case DPS_CBOR_KEY_SEQ_NUM:
-            ret = CBOR_DecodeUint32(buffer, &sequenceNum);
+            ret = CBOR_DecodeUint32(buf, &sequenceNum);
             if ((ret == DPS_OK) && (sequenceNum == 0)) {
                 ret = DPS_ERR_INVALID;
             }
             break;
         case DPS_CBOR_KEY_ACK_REQ:
-            ret = CBOR_DecodeBoolean(buffer, &ackRequested);
+            ret = CBOR_DecodeBoolean(buf, &ackRequested);
             break;
         case DPS_CBOR_KEY_BLOOM_FILTER:
             /*
              * Skip the bloom filter for now
              */
-            ret = CBOR_Skip(buffer, NULL, &len);
+            ret = CBOR_Skip(buf, NULL, &len);
             if (ret == DPS_OK) {
-                DPS_RxBufferInit(&bfBuf, buffer->rxPos - len, len);
+                DPS_RxBufferInit(&bfBuf, buf->rxPos - len, len);
             }
             break;
         }
@@ -533,12 +546,12 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
     pub->flags |= PUB_FLAG_PUBLISH;
     pub->sender = ep->addr;
     /*
-     * Free any existing body and payload buffers
+     * Free any existing protected and encrypted buffers
      */
-    DPS_TxBufferFree(&pub->body);
-    DPS_TxBufferFree(&pub->payload);
+    DPS_TxBufferFree(&pub->protectedBuf);
+    DPS_TxBufferFree(&pub->encryptedBuf);
     /*
-     * The topics array has pointers into pub->body which are now invalid
+     * The topics array has pointers into pub->protectedBuf which are now invalid
      */
     if (pub->topics) {
         free(pub->topics);
@@ -583,18 +596,18 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
             goto Exit;
         }
         /*
-         * Allocate the body and payload buffers
+         * Allocate the protected and encrypted buffers
          */
-        ret = DPS_TxBufferInit(&pub->body, NULL, buffer->rxPos - bodyPtr);
+        ret = DPS_TxBufferInit(&pub->protectedBuf, NULL, buf->rxPos - protectedPtr);
         if (ret != DPS_OK) {
             goto Exit;
         }
-        ret = DPS_TxBufferInit(&pub->payload, NULL, DPS_RxBufferAvail(buffer));
+        ret = DPS_TxBufferInit(&pub->encryptedBuf, NULL, DPS_RxBufferAvail(buf));
         if (ret != DPS_OK) {
             goto Exit;
         }
-        DPS_TxBufferAppend(&pub->body, bodyPtr, buffer->rxPos - bodyPtr);
-        DPS_TxBufferAppend(&pub->payload, buffer->rxPos, DPS_RxBufferAvail(buffer));
+        DPS_TxBufferAppend(&pub->protectedBuf, protectedPtr, buf->rxPos - protectedPtr);
+        DPS_TxBufferAppend(&pub->encryptedBuf, buf->rxPos, DPS_RxBufferAvail(buf));
         if (ttl > 0) {
             pub->flags |= PUB_FLAG_RETAINED;
         } else {
@@ -675,23 +688,13 @@ DPS_Status DPS_SendPublication(DPS_Node* node, DPS_Publication* pub, RemoteNode*
             }
         }
     }
-    /*
-     * Publication is encoded as an array of 5 elements
-     *  [
-     *      version,
-     *      type,
-     *      { headers },
-     *      { body }
-     *      payload [ topics, data ]
-     *  ]
-     */
+
     len = CBOR_SIZEOF_ARRAY(5) +
         CBOR_SIZEOF(uint8_t) +
         CBOR_SIZEOF(uint8_t) +
         CBOR_SIZEOF_MAP(2) + 2 * CBOR_SIZEOF(uint8_t) +
         CBOR_SIZEOF(uint16_t) +
         CBOR_SIZEOF(int16_t);
-
     ret = DPS_TxBufferInit(&buf, NULL, len);
     if (ret == DPS_OK) {
         ret = CBOR_EncodeArray(&buf, 5);
@@ -703,11 +706,7 @@ DPS_Status DPS_SendPublication(DPS_Node* node, DPS_Publication* pub, RemoteNode*
         ret = CBOR_EncodeUint8(&buf, DPS_MSG_TYPE_PUB);
     }
     /*
-     * Header map
-     *  {
-     *      port: uint
-     *      ttl: int
-     *  }
+     * Encode the unprotected map
      */
     if (ret == DPS_OK) {
         ret = CBOR_EncodeMap(&buf, 2);
@@ -725,14 +724,14 @@ DPS_Status DPS_SendPublication(DPS_Node* node, DPS_Publication* pub, RemoteNode*
         ret = CBOR_EncodeInt16(&buf, ttl);
     }
     /*
-     * Body and payload are already serialized
+     * Protected and encrypted maps are already serialized
      */
     if (ret == DPS_OK) {
         uv_buf_t bufs[] = {
             uv_buf_init(NULL, 0),
             uv_buf_init((char*)buf.base, DPS_TxBufferUsed(&buf)),
-            uv_buf_init((char*)pub->body.base, DPS_TxBufferUsed(&pub->body)),
-            uv_buf_init((char*)pub->payload.base, DPS_TxBufferUsed(&pub->payload)),
+            uv_buf_init((char*)pub->protectedBuf.base, DPS_TxBufferUsed(&pub->protectedBuf)),
+            uv_buf_init((char*)pub->encryptedBuf.base, DPS_TxBufferUsed(&pub->encryptedBuf)),
         };
         if (remote) {
             ret = DPS_NetSend(node, pub, &remote->ep, bufs + 1, A_SIZEOF(bufs) - 1, OnPubSendComplete);
@@ -975,102 +974,112 @@ DPS_Status DPS_SerializePub(DPS_Node* node, DPS_Publication* pub, const uint8_t*
     size_t len;
     size_t bfLen = DPS_TxBufferUsed(&pub->bfBuf);
     size_t topicsLen = DPS_TxBufferUsed(&pub->topicsBuf);
-    DPS_TxBuffer body;
-    DPS_TxBuffer payload;
+    DPS_TxBuffer protectedBuf;
+    DPS_TxBuffer encryptedBuf;
 
+    /*
+     * Encode the protected map
+     */
     len = CBOR_SIZEOF_MAP(5) + 5 * CBOR_SIZEOF(uint8_t) +
         CBOR_SIZEOF_BSTR(sizeof(DPS_UUID)) +
         CBOR_SIZEOF(uint32_t) +
         CBOR_SIZEOF_BOOL +
         CBOR_SIZEOF_BSTR(bfLen) +
         CBOR_SIZEOF(int16_t);
-
-    ret = DPS_TxBufferInit(&body, NULL, len);
+    ret = DPS_TxBufferInit(&protectedBuf, NULL, len);
     if (ret != DPS_OK) {
         return DPS_ERR_RESOURCES;
     }
+    ret = CBOR_EncodeMap(&protectedBuf, 5);
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeUint8(&protectedBuf, DPS_CBOR_KEY_TTL);
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeInt16(&protectedBuf, ttl);
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeUint8(&protectedBuf, DPS_CBOR_KEY_PUB_ID);
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeBytes(&protectedBuf, (uint8_t*)&pub->pubId, sizeof(pub->pubId));
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeUint8(&protectedBuf, DPS_CBOR_KEY_SEQ_NUM);
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeUint32(&protectedBuf, pub->sequenceNum);
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeUint8(&protectedBuf, DPS_CBOR_KEY_ACK_REQ);
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeBoolean(&protectedBuf, pub->ackRequested);
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeUint8(&protectedBuf, DPS_CBOR_KEY_BLOOM_FILTER);
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_Copy(&protectedBuf, pub->bfBuf.base, bfLen);
+    }
+
     /*
-     * Encode body fields - if encrypting these fields form the external AAD
+     * Encode the encrypted map
      */
-    ret = CBOR_EncodeMap(&body, 5);
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeUint8(&body, DPS_CBOR_KEY_TTL);
+        len = CBOR_SIZEOF_MAP(2) + 2 * CBOR_SIZEOF(uint8_t) +
+            topicsLen +
+            CBOR_SIZEOF_BSTR(dataLen);
+        ret = DPS_TxBufferInit(&encryptedBuf, NULL, len);
     }
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeInt16(&body, ttl);
+        ret = CBOR_EncodeMap(&encryptedBuf, 2);
     }
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeUint8(&body, DPS_CBOR_KEY_PUB_ID);
+        ret = CBOR_EncodeUint8(&encryptedBuf, DPS_CBOR_KEY_TOPICS);
     }
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeBytes(&body, (uint8_t*)&pub->pubId, sizeof(pub->pubId));
+        ret = DPS_TxBufferAppend(&encryptedBuf, pub->topicsBuf.base, topicsLen);
     }
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeUint8(&body, DPS_CBOR_KEY_SEQ_NUM);
+        ret = CBOR_EncodeUint8(&encryptedBuf, DPS_CBOR_KEY_DATA);
     }
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeUint32(&body, pub->sequenceNum);
-    }
-    if (ret == DPS_OK) {
-        ret = CBOR_EncodeUint8(&body, DPS_CBOR_KEY_ACK_REQ);
-    }
-    if (ret == DPS_OK) {
-        ret = CBOR_EncodeBoolean(&body, pub->ackRequested);
-    }
-    if (ret == DPS_OK) {
-        ret = CBOR_EncodeUint8(&body, DPS_CBOR_KEY_BLOOM_FILTER);
-    }
-    if (ret == DPS_OK) {
-        ret = CBOR_Copy(&body, pub->bfBuf.base, bfLen);
-    }
-    if (ret == DPS_OK) {
-        /*
-         * Encode the payload fields - if encrypting these fields are encrypted
-         */
-        len = CBOR_SIZEOF_ARRAY(2) + topicsLen + CBOR_SIZEOF_BSTR(dataLen);
-        ret = DPS_TxBufferInit(&payload, NULL, len);
-    }
-    if (ret == DPS_OK) {
-        ret = CBOR_EncodeArray(&payload, 2);
-    }
-    if (ret == DPS_OK) {
-        ret = DPS_TxBufferAppend(&payload, pub->topicsBuf.base, topicsLen);
-    }
-    if (ret == DPS_OK) {
-        ret = CBOR_EncodeBytes(&payload, data, dataLen);
+        ret = CBOR_EncodeBytes(&encryptedBuf, data, dataLen);
     }
     if (ret != DPS_OK) {
-        DPS_TxBufferFree(&body);
+        DPS_TxBufferFree(&protectedBuf);
         return ret;
     }
+
     if (node->isSecured) {
-        DPS_RxBuffer plainText;
-        DPS_RxBuffer aad;
+        DPS_RxBuffer plainTextBuf;
+        DPS_RxBuffer aadBuf;
         DPS_UUID* keyId = pub->keyId ? pub->keyId : &node->keyId;
         uint8_t nonce[DPS_COSE_NONCE_SIZE];
 
-        DPS_TxBufferToRx(&payload, &plainText);
-        DPS_TxBufferToRx(&body, &aad);
+        DPS_TxBufferToRx(&encryptedBuf, &plainTextBuf);
+        DPS_TxBufferToRx(&protectedBuf, &aadBuf);
         DPS_MakeNonce(&pub->pubId, pub->sequenceNum, DPS_MSG_TYPE_PUB, nonce);
-        ret = COSE_Encrypt(AES_CCM_16_128_128, keyId, nonce, &aad, &plainText, GetKey, node, &payload);
-        DPS_RxBufferFree(&plainText);
+        ret = COSE_Encrypt(AES_CCM_16_128_128, keyId, nonce, &aadBuf, &plainTextBuf, GetKey, node, &encryptedBuf);
+        DPS_RxBufferFree(&plainTextBuf);
         if (ret != DPS_OK) {
-            DPS_TxBufferFree(&body);
+            DPS_TxBufferFree(&protectedBuf);
             return ret;
         }
         DPS_DBGPRINT("Publication was encrypted\n");
-        CBOR_Dump("aad", aad.base, DPS_RxBufferAvail(&aad));
-        CBOR_Dump("cryptText", payload.base, DPS_TxBufferUsed(&payload));
+        CBOR_Dump("aad", aadBuf.base, DPS_RxBufferAvail(&aadBuf));
+        CBOR_Dump("cryptText", encryptedBuf.base, DPS_TxBufferUsed(&encryptedBuf));
     }
+
     /*
      * This publication may have been queued already so we
      * need to hold the node lock while we replace the buffers
      */
     DPS_LockNode(node);
-    DPS_TxBufferFree(&pub->body);
-    DPS_TxBufferFree(&pub->payload);
-    pub->body = body;
-    pub->payload = payload;
+    DPS_TxBufferFree(&pub->protectedBuf);
+    DPS_TxBufferFree(&pub->encryptedBuf);
+    pub->protectedBuf = protectedBuf;
+    pub->encryptedBuf = encryptedBuf;
     DPS_UnlockNode(node);
 
     return ret;
@@ -1147,7 +1156,6 @@ DPS_Status DPS_Publish(DPS_Publication* pub, const uint8_t* payload, size_t len,
     DPS_UpdatePubs(node, pub);
     return DPS_OK;
 }
-
 
 DPS_Status DPS_DestroyPublication(DPS_Publication* pub)
 {

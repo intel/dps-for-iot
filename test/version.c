@@ -56,6 +56,7 @@ typedef struct _NetSendData {
     DPS_Node* node;
     RemoteNode *remote;
     int version;
+    int type;
 } NetSendData;
 
 static void OnNetSendComplete(DPS_Node* node, void* appCtx, DPS_NetEndpoint* endpoint,
@@ -76,29 +77,31 @@ static void NetSendTask(uv_async_t* handle)
     NetSendData* data = (NetSendData*)handle->data;
 
     /*
-     * Not including body and payload as the only point in this test is to
+     * Not including the entire message as the only point in this test is to
      * exercise the version handling.
-     *  [
-     *      version,
-     *      type,
-     *      { headers },
-     *      ...
-     *  ]
      */
-    size_t len = CBOR_SIZEOF_ARRAY(3) +
+    size_t len = CBOR_SIZEOF_ARRAY(5) +
         CBOR_SIZEOF(uint8_t) +
         CBOR_SIZEOF(uint8_t) +
+        CBOR_SIZEOF_MAP(0) +
+        CBOR_SIZEOF_MAP(0) +
         CBOR_SIZEOF_MAP(0);
     DPS_TxBuffer buf;
     int ret = DPS_TxBufferInit(&buf, NULL, len);
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeArray(&buf, 3);
+        ret = CBOR_EncodeArray(&buf, 5);
     }
     if (ret == DPS_OK) {
         ret = CBOR_EncodeUint8(&buf, data->version);
     }
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeUint8(&buf, DPS_MSG_TYPE_PUB);
+        ret = CBOR_EncodeUint8(&buf, data->type);
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeMap(&buf, 0);
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeMap(&buf, 0);
     }
     if (ret == DPS_OK) {
         ret = CBOR_EncodeMap(&buf, 0);
@@ -131,7 +134,7 @@ static void NetSendTask(uv_async_t* handle)
     uv_close((uv_handle_t*)handle, NULL);
 }
 
-static void NetSend(DPS_Node* node, DPS_NetEndpoint* ep, int version)
+static void NetSend(DPS_Node* node, DPS_NetEndpoint* ep, int version, int type)
 {
     NetSendData* data;
     uv_async_t* async;
@@ -147,11 +150,12 @@ static void NetSend(DPS_Node* node, DPS_NetEndpoint* ep, int version)
     DPS_LockNode(node);
     status = DPS_AddRemoteNode(node, &ep->addr, NULL, &data->remote);
     if (status != DPS_OK) {
-        DPS_ERRPRINT("DPS_AddREmoteNode failed: %s\n", DPS_ErrTxt(ret));
+        DPS_ERRPRINT("DPS_AddRemoteNode failed: %s\n", DPS_ErrTxt(status));
         exit(EXIT_FAILURE);
     }
     DPS_UnlockNode(node);
     data->version = version;
+    data->type = type;
 
     async = malloc(sizeof(uv_async_t));
     if (!async) {
@@ -200,6 +204,7 @@ int main(int argc, char** argv)
 {
     char** arg = argv + 1;
     int version = 1;
+    int type = DPS_MSG_TYPE_PUB;
     int port = 0;
     int encrypt = DPS_TRUE;
     int mcast = DPS_MCAST_PUB_ENABLE_SEND;
@@ -214,6 +219,9 @@ int main(int argc, char** argv)
 
     while (--argc) {
         if (IntArg("-v", &arg, &argc, &version, 1, UINT16_MAX)) {
+            continue;
+        }
+        if (IntArg("-t", &arg, &argc, &type, 1, UINT8_MAX)) {
             continue;
         }
         if (IntArg("-p", &arg, &argc, &port, 1, UINT16_MAX)) {
@@ -257,7 +265,7 @@ int main(int argc, char** argv)
         DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
         return EXIT_FAILURE;
     }
-    NetSend(node, &ep, version);
+    NetSend(node, &ep, version, type);
 
     DPS_TimedWaitForEvent(nodeDestroyed, 2000);
 
@@ -268,10 +276,11 @@ int main(int argc, char** argv)
     return EXIT_SUCCESS;
 
 Usage:
-    DPS_PRINT("Usage %s [-d] [-x 0/1] [-p <portnum>] [-v version]\n", argv[0]);
+    DPS_PRINT("Usage %s [-d] [-x 0/1] [-p <portnum>] [-v version] [-t type]\n", argv[0]);
     DPS_PRINT("       -d: Enable debug ouput if built for debug.\n");
     DPS_PRINT("       -x: Enable or disable encryption. Default is encryption enabled.\n");
     DPS_PRINT("       -p: A port to send to.\n");
     DPS_PRINT("       -v: The version number to send.\n");
+    DPS_PRINT("       -t: The message type to send.\n");
     return EXIT_FAILURE;
 }

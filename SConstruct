@@ -68,7 +68,7 @@ if env['transport'] == 'udp':
     env['USE_UDP'] = 'true'
     env['CPPDEFINES'].append('DPS_USE_UDP')
 
-print "Building for " + env['variant']
+print("Building for " + env['variant'])
 
 # Platform specific configuration
 
@@ -170,12 +170,12 @@ elif env['PLATFORM'] == 'posix':
         env.Prepend(CPPPATH = env['UV_INC'])
 
 else:
-    print 'Unsupported system'
+    print('Unsupported system')
     exit()
 
 env.Append(LIBPATH=['./ext'])
 
-print env['CPPDEFINES']
+print(env['CPPDEFINES'])
 
 if env['target'] == 'yocto':
     env_options = ["SYSROOT", "CC", "AR", "ARFLAGS", "CCFLAGS", "CFLAGS", "CXX", "CXXFLAGS", "LINKFLAGS", "STRIP", "PKG_CONFIG", "CHRPATH", "LD", "TAR"]

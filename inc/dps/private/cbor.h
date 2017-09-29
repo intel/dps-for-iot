@@ -255,8 +255,10 @@ DPS_Status CBOR_Skip(DPS_RxBuffer* buffer, uint8_t* maj, size_t* skipped);
  */
 typedef struct {
     DPS_RxBuffer* buffer; /** receive buffer being parsed */
-    const int32_t* keys;  /** array of remaining keys to match */
-    size_t needKeys;      /** remaining number of unmatched keys */
+    const int32_t* needs; /** array of remaining mandatory keys to match */
+    size_t needKeys;      /** remaining number of unmatched mandatory keys */
+    const int32_t* wants; /** array of remaining optional keys to match */
+    size_t wantKeys;      /** remaining number of unmatched optional keys */
     size_t entries;       /** remaining entries in map */
     DPS_Status result;    /** result of parsing effort */
 } CBOR_MapState;
@@ -266,12 +268,15 @@ typedef struct {
  * fit in 32 bits. The keys must be in ascending order in the keys array and in the
  * map being parsed.
  *
- * @param mapState  Map state struct to initialize
- * @param buffer    Buffer to parse from
- * @param keys      Array of keys to be matched
- * @param numkeys   The number of keys to match
+ * @param mapState   Map state struct to initialize
+ * @param buffer     Buffer to parse from
+ * @param keys       Array of mandatory keys to be matched
+ * @param numkeys    The number of mandatory keys to match
+ * @param optKeys    Array of optional keys to be matched
+ * @param numOptKeys The number of optional keys to match
  */
-DPS_Status DPS_ParseMapInit(CBOR_MapState* mapState, DPS_RxBuffer* buffer, const int32_t* keys, size_t numKeys);
+DPS_Status DPS_ParseMapInit(CBOR_MapState* mapState, DPS_RxBuffer* buffer, const int32_t* keys, size_t numKeys,
+                            const int32_t* optKeys, size_t numOptKeys);
 
 /**
  * Find the next matching key and return it. The value for the key can be

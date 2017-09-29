@@ -92,7 +92,7 @@ function expect_pubs_received {
 
 # expect_errors N ERROR
 function expect_errors {
-    n=$(grep -r "ERROR! $2" out | wc -l)
+    n=$(grep -r "ERROR.*$2" out | wc -l)
     if [ $n -lt $1 ]; then
 	echo "Errors found is less than expected ($n != $1)"
 	exit 1

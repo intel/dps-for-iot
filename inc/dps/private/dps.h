@@ -42,6 +42,8 @@ extern "C" {
 #define DPS_CBOR_KEY_MESH_ID        8   /* bstr (UUID) */
 #define DPS_CBOR_KEY_NEEDS          9   /* bstr */
 #define DPS_CBOR_KEY_INTERESTS     10   /* bstr */
+#define DPS_CBOR_KEY_TOPICS        11   /* array (tstr) */
+#define DPS_CBOR_KEY_DATA          12   /* bstr */
 
 #define DPS_SECS_TO_MS(t)   ((uint64_t)(t) * 1000ull)
 #define DPS_MS_TO_SECS(t)   ((uint32_t)((t) / 1000ull))

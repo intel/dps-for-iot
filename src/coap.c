@@ -380,6 +380,7 @@ void CoAP_DumpOpt(const CoAP_Option* opt)
 }
 
 static const char DPS_PublicationURI[] = "dps/pub";
+static const uint8_t DPS_ContentFormat = COAP_FORMAT_APPLICATION_CBOR;
 
 DPS_Status CoAP_Wrap(uv_buf_t* bufs, size_t numBufs)
 {
@@ -387,11 +388,14 @@ DPS_Status CoAP_Wrap(uv_buf_t* bufs, size_t numBufs)
     DPS_TxBuffer coap;
     size_t i;
     size_t len = 0;
-    CoAP_Option opts[1];
+    CoAP_Option opts[2];
 
     opts[0].id = COAP_OPT_URI_PATH;
     opts[0].val = (uint8_t*)DPS_PublicationURI;
     opts[0].len = sizeof(DPS_PublicationURI);
+    opts[1].id = COAP_OPT_CONTENT_FORMAT;
+    opts[1].val = (uint8_t*)&DPS_ContentFormat;
+    opts[1].len = sizeof(DPS_ContentFormat);
 
     for (i = 1; i < numBufs; ++i) {
         len += bufs[i].len;

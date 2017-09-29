@@ -67,8 +67,8 @@ typedef struct _DPS_Publication {
     size_t numTopics;               /* Number of publication topics */
     DPS_TxBuffer topicsBuf;         /* Pre-serialized topic strings */
     DPS_TxBuffer bfBuf;             /* Pre-serialized bloom filter */
-    DPS_TxBuffer body;              /* Authenticated body fields */
-    DPS_TxBuffer payload;           /* Encrypted body fields */
+    DPS_TxBuffer protectedBuf;      /* Authenticated fields */
+    DPS_TxBuffer encryptedBuf;      /* Encrypted fields */
     DPS_Publication* next;
 } DPS_Publication;
 

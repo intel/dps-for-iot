@@ -926,8 +926,8 @@ static DPS_Status DecodeRequest(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuffe
     DPS_DBGTRACE();
     CBOR_Dump("Request in", buf->rxPos, DPS_RxBufferAvail(buf));
     ret = CBOR_DecodeArray(buf, &len);
-    if (ret != DPS_OK || (len < 3)) {
-        DPS_ERRPRINT("Expected a CBOR array or 3 or more elements\n");
+    if (ret != DPS_OK || (len != 5)) {
+        DPS_ERRPRINT("Expected a CBOR array of 5 elements\n");
         return ret;
     }
     ret = CBOR_DecodeUint8(buf, &msgVersion);
@@ -947,20 +947,12 @@ static DPS_Status DecodeRequest(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuffe
     ret = DPS_ERR_INVALID;
     switch (msgType) {
     case DPS_MSG_TYPE_SUB:
-        if (len != 4) {
-            DPS_ERRPRINT("Expected 4 element array\n");
-            break;
-        }
         ret = DPS_DecodeSubscription(node, ep, buf);
         if (ret != DPS_OK) {
             DPS_DBGPRINT("DecodeSubscription returned %s\n", DPS_ErrTxt(ret));
         }
         break;
     case DPS_MSG_TYPE_PUB:
-        if (len != 5) {
-            DPS_ERRPRINT("Expected 5 element array\n");
-            break;
-        }
         DPS_DBGPRINT("Received publication via %s\n", DPS_NodeAddrToString(&ep->addr));
         ret = DPS_DecodePublication(node, ep, buf, multicast);
         if (ret != DPS_OK) {
@@ -968,10 +960,6 @@ static DPS_Status DecodeRequest(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuffe
         }
         break;
     case DPS_MSG_TYPE_ACK:
-        if (len != 4) {
-            DPS_ERRPRINT("Expected 4 element array\n");
-            break;
-        }
         DPS_DBGPRINT("Received acknowledgment via %s\n", DPS_NodeAddrToString(&ep->addr));
         ret = DPS_DecodeAcknowledgment(node, ep, buf);
         if (ret != DPS_OK) {
@@ -979,10 +967,6 @@ static DPS_Status DecodeRequest(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuffe
         }
         break;
     case DPS_MSG_TYPE_SAK:
-        if (len != 3) {
-            DPS_ERRPRINT("Expected 3 element array\n");
-            break;
-        }
         DPS_DBGPRINT("Received sub ack via %s\n", DPS_NodeAddrToString(&ep->addr));
         ret = DPS_DecodeSubscriptionAck(node, ep, buf);
         if (ret != DPS_OK) {
