@@ -150,7 +150,7 @@ static DPS_Status MulticastRxInit(DPS_MulticastReceiver* receiver)
             continue;
         }
         if (ifn->address.address4.sin_family == AF_INET6) {
-            char ifaddr[INET6_ADDRSTRLEN + + MAX_INTERFACE_NAME_LEN + 2];
+            char ifaddr[INET6_ADDRSTRLEN + MAX_INTERFACE_NAME_LEN + 2];
             ret = uv_ip6_name((struct sockaddr_in6*)&ifn->address, name, sizeof(name));
             assert(ret == 0);
             name[sizeof(name) - 1] = 0;
