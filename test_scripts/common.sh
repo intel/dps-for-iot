@@ -1,5 +1,8 @@
 #!/bin/bash
 
+PYTHONPATH=./build/dist/py
+export PYTHONPATH
+
 function reset_logs {
     mkdir -p ./out
     rm -f ./out/*.log
@@ -65,6 +68,42 @@ function ver {
     echo -e "=============================\nver$v $debug $@" | tee $f
     echo "==============================" >> $f
     build/test/bin/version $debug $@ 2>> $f &
+}
+
+function py_sub {
+    s=$((s+1))
+    f=./out/sub$s.log
+    sleep 0.1
+    echo -e "=============================\nsub$s" | tee $f
+    echo "==============================" >> $f
+    python -u ./py_scripts/simple_sub.py 2>> $f 1>&2 &
+}
+
+function py_late_sub {
+    s=$((s+1))
+    f=./out/sub$s.log
+    sleep 0.1
+    echo -e "=============================\nsub$s" | tee $f
+    echo "==============================" >> $f
+    python -u ./py_scripts/late_sub.py 2>> $f 1>&2 &
+}
+
+function py_pub {
+    p=$((p+1))
+    f=./out/pub$p.log
+    sleep 0.1
+    echo -e "=============================\npub$p" | tee $f
+    echo "==============================" >> $f
+    python -u ./py_scripts/simple_pub.py 2>> $f 1>&2 &
+}
+
+function py_retained_pub {
+    p=$((p+1))
+    f=./out/pub$p.log
+    sleep 0.1
+    echo -e "=============================\npub$p" | tee $f
+    echo "==============================" >> $f
+    python -u ./py_scripts/retained_pub.py 2>> $f 1>&2 &
 }
 
 function assert_no_errors {

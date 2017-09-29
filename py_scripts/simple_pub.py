@@ -1,3 +1,4 @@
+#!/usr/bin/python
 import dps
 import time
 
@@ -17,8 +18,8 @@ for i in xrange(len(keyID)):
     dps.SetContentKey(keyStore, keyID[i], keyData[i])
 
 def OnAck(pub, payload):
-    print "PubAck %s/%d" % (dps.PublicationGetUUID(pub), dps.PublicationGetSequenceNum(pub))
-    print "Payload %s" % payload
+    print "Ack for pub UUID %s(%d)" % (dps.PublicationGetUUID(pub), dps.PublicationGetSequenceNum(pub))
+    print "    %s" % (payload)
 
 # Enable or disable (default) DPS debug output
 dps.cvar.Debug = False
@@ -29,8 +30,10 @@ pub = dps.CreatePublication(node)
 
 dps.InitPublication(pub, ['a/b/c'], False, None, OnAck)
 dps.Publish(pub, "hello")
+print "Pub UUID %s(%d)" % (dps.PublicationGetUUID(pub), dps.PublicationGetSequenceNum(pub))
 time.sleep(0.1)
 dps.Publish(pub, "world")
+print "Pub UUID %s(%d)" % (dps.PublicationGetUUID(pub), dps.PublicationGetSequenceNum(pub))
 time.sleep(0.1)
 
 dps.DestroyPublication(pub)

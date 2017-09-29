@@ -1,4 +1,7 @@
+#!/usr/bin/python
 import dps
+import sys
+import time
 
 keyID = [
     [0xed,0x54,0x14,0xa8,0x5c,0x4d,0x4d,0x15,0xb6,0x9f,0x0e,0x99,0x8a,0xb1,0x71,0xf2],
@@ -16,9 +19,15 @@ for i in xrange(len(keyID)):
     dps.SetContentKey(keyStore, keyID[i], keyData[i])
 
 def OnPub(sub, pub, payload):
-    print "Pub %s/%d" % (dps.PublicationGetUUID(pub), dps.PublicationGetSequenceNum(pub))
-    print "Payload %s" % payload
-    dps.AckPublication(pub, "Acking %d" % (dps.PublicationGetSequenceNum(pub)))
+    print "Pub %s(%d) matches:" % (dps.PublicationGetUUID(pub), dps.PublicationGetSequenceNum(pub))
+    print "  pub " + " | ".join([dps.PublicationGetTopic(pub, i) for i in xrange(dps.PublicationGetNumTopics(pub))])
+    print "  sub " + " | ".join([dps.SubscriptionGetTopic(sub, i) for i in xrange(dps.SubscriptionGetNumTopics(sub))])
+    print payload
+    if dps.PublicationIsAckRequested(pub):
+        ackMsg = "This is an ACK from %d" % (dps.GetPortNumber(dps.PublicationGetNode(pub)))
+        print "Sending ack for pub UUID %s(%d)" % (dps.PublicationGetUUID(pub), dps.PublicationGetSequenceNum(pub))
+        print "    %s" % (ackMsg)
+        dps.AckPublication(pub, ackMsg);
 
 # Enable or disable (default) DPS debug output
 dps.cvar.Debug = False
@@ -27,3 +36,7 @@ node = dps.CreateNode("/", dps.MemoryKeyStoreHandle(keyStore), keyID[0])
 dps.StartNode(node, dps.MCAST_PUB_ENABLE_RECV, 0)
 sub = dps.CreateSubscription(node, ['a/b/c']);
 dps.Subscribe(sub, OnPub)
+
+if not sys.flags.interactive:
+    while True:
+        time.sleep(1)
