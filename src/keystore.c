@@ -85,9 +85,11 @@ static DPS_Status MemoryKeyStoreContentKeyCallback(DPS_KeyStore* keyStore, const
 DPS_MemoryKeyStore* DPS_CreateMemoryKeyStore()
 {
     DPS_MemoryKeyStore* mks = calloc(1, sizeof(DPS_MemoryKeyStore));
-    mks->keyStore.userData = mks;
-    mks->keyStore.contentKeyCB = MemoryKeyStoreContentKeyCallback;
-    mks->keyStore.networkKeyCB = MemoryKeyStoreNetworkKeyCallback;
+    if (mks) {
+        mks->keyStore.userData = mks;
+        mks->keyStore.contentKeyCB = MemoryKeyStoreContentKeyCallback;
+        mks->keyStore.networkKeyCB = MemoryKeyStoreNetworkKeyCallback;
+    }
     return mks;
 }
 
