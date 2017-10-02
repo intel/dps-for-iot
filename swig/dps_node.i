@@ -36,6 +36,10 @@ extern "C" {
  */
 %typemap(in) uint8_t* = char*;
 %typemap(in) int16_t = int;
+%typemap(out) int16_t = int;
+%typemap(in) uint16_t = unsigned int;
+%typemap(out) uint16_t = unsigned int;
+%typemap(in) uint32_t = unsigned long;
 %typemap(out) uint32_t = unsigned long;
 
 /*
