@@ -100,7 +100,7 @@ static void OnPubMatch(DPS_Subscription* sub, const DPS_Publication* pub, uint8_
         DPS_PRINT("Sending ack for pub UUID %s(%d)\n", DPS_UUIDToString(DPS_PublicationGetUUID(pub)), DPS_PublicationGetSequenceNum(pub));
         DPS_PRINT("    %s\n", ackMsg);
 
-        ret = DPS_AckPublication(pub, ackMsg, sizeof(ackMsg));
+        ret = DPS_AckPublication(pub, ackMsg, strnlen(ackMsg, sizeof(ackMsg)));
         if (ret != DPS_OK) {
             DPS_PRINT("Failed to ack pub %s\n", DPS_ErrTxt(ret));
         }

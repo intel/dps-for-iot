@@ -670,7 +670,7 @@ static bool TLSHandshake(DPS_NetConnection* cn)
             } else {
                 uv_ip6_name((const struct sockaddr_in6*)addr, clientID, sizeof(clientID)-1);
             }
-            ret = mbedtls_ssl_set_client_transport_id(&cn->ssl, (const unsigned char*)clientID, strlen(clientID));
+            ret = mbedtls_ssl_set_client_transport_id(&cn->ssl, (const unsigned char*)clientID, sizeof(clientID));
             if (ret != 0) {
                 DPS_ERRPRINT("ERROR: couldn't set client transport id (%d)\n", ret);
             }

@@ -165,6 +165,7 @@ int main(int argc, char** argv)
     SubscriptionCheck(pubFilter, "x/b/#", NOT_EXPECT);
     SubscriptionCheck(pubFilter, "+.+.c.5", NOT_EXPECT);
 
+    DPS_BitVectorFree(pubFilter);
     return EXIT_SUCCESS;
 
 Usage:

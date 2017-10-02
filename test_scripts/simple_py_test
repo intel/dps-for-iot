@@ -7,7 +7,7 @@ if [[ ! -d "$dir" ]]; then dir="$PWD"; fi
 
 py_sub
 py_pub
-sleep 1
+sleep 2
 
 assert_no_errors
 expect_pubs_received 2 a/b/c

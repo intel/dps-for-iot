@@ -101,6 +101,7 @@ int main(int argc, char** argv)
 
     DPS_PRINT("Added %d: ", (int)(i - base));
     DPS_BitVectorDump(bf, 0);
+    DPS_BitVectorFree(bf);
 
     return EXIT_SUCCESS;
 

@@ -57,6 +57,7 @@ int main()
     DPS_NodeAddress* addrPtr;
 
     DPS_Debug = 1;
+    memset(&addr, 0, sizeof(addr));
     addr.inaddr.ss_family = AF_INET6;
 
     ret = DPS_InitUUID();
