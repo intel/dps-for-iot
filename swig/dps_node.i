@@ -1,5 +1,6 @@
+%module(docstring="Distributed Publish Subscribe for IoT") dps
+%feature("autodoc", "1");
 
-%module dps
 %{
 extern "C" {
 #include <dps/dps.h>
@@ -27,9 +28,17 @@ extern "C" {
 %ignore DPS_DestroyNode;
 
 /*
+ * Declarations that are not relevant in JavaScript
+ */
+%ignore DPS_TRUE;
+%ignore DPS_FALSE;
+
+/*
  * Module is called dps we don't need the DPS prefix on every function
  */
-%rename("%(strip:[DPS_])s") "";
+%rename("debug") DPS_Debug;
+%rename("%(regex:/DPS_(.*)/\\l\\1/)s", %$isfunction) "";
+%rename("%(strip:[DPS_])s", %$not %$isfunction) "";
 
 /*
  * Mapping for types from stdint.h
@@ -41,6 +50,24 @@ extern "C" {
 %typemap(out) uint16_t = unsigned int;
 %typemap(in) uint32_t = unsigned long;
 %typemap(out) uint32_t = unsigned long;
+
+/*
+ * Allow JavaScript true, false for DPS boolean (int)
+ */
+%typemap(in) int {
+    int b = 0;
+
+    if ($input->IsBoolean()) {
+        b = $input->BooleanValue() ? 1 : 0;
+    } else {
+        int ecode = SWIG_AsVal_int($input, &b);
+        if (!SWIG_IsOK(ecode)) {
+            SWIG_exception_fail(SWIG_ArgError(ecode), "in method '" "initPublication" "', argument of type '" "int""'");
+        }
+    }
+
+    $1 = b;
+}
 
 /*
  * This allows topic strings to be expressed as a list of strings
@@ -180,29 +207,29 @@ static void async_cb(uv_async_t* handle)
     }
 }
 
-DPS_Status DestroyPublication(DPS_Publication* pub)
+DPS_Status destroyPublication(DPS_Publication* pub)
 {
     Handler* handler = (Handler*)DPS_GetPublicationData(pub);
     delete handler;
     return DPS_DestroyPublication(pub);
 }
 
-DPS_Status DestroySubscription(DPS_Subscription* sub)
+DPS_Status destroySubscription(DPS_Subscription* sub)
 {
     Handler* handler = (Handler*)DPS_GetSubscriptionData(sub);
     delete handler;
     return DPS_DestroySubscription(sub);
 }
 
-DPS_Status DestroyNode(DPS_Node* node)
+DPS_Status destroyNode(DPS_Node* node)
 {
     return DPS_DestroyNode(node, NULL, NULL);
 }
 %}
 
-DPS_Status DestroyPublication(DPS_Publication* pub);
-DPS_Status DestroySubscription(DPS_Subscription* sub);
-DPS_Status DestroyNode(DPS_Node* node);
+DPS_Status destroyPublication(DPS_Publication* pub);
+DPS_Status destroySubscription(DPS_Subscription* sub);
+DPS_Status destroyNode(DPS_Node* node);
 
 /*
  * Publication acknowledgment function calls into JavaScript

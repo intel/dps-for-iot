@@ -1,26 +1,46 @@
-var dps = require('dps');
+"use strict";
+var dps = require("dps");
 
-var simple_pub = (function(){
-    var onAck = function(pub, payload) {
-        console.log("PubAck " + dps.PublicationGetUUID(pub) + "/" + dps.PublicationGetSequenceNum(pub));
-        console.log("Payload " + payload);
+(function () {
+    var keyID = [
+        [0xed, 0x54, 0x14, 0xa8, 0x5c, 0x4d, 0x4d, 0x15, 0xb6, 0x9f, 0x0e, 0x99, 0x8a, 0xb1, 0x71, 0xf2],
+        [0x53, 0x4d, 0x2a, 0x4b, 0x98, 0x76, 0x1f, 0x25, 0x6b, 0x78, 0x3c, 0xc2, 0xf8, 0x12, 0x90, 0xcc]
+    ];
+    /* Pre-shared keys for testing only. DO NOT USE THESE KEYS IN A REAL APPLICATION! */
+    var keyData = [
+        [0x77, 0x58, 0x22, 0xfc, 0x3d, 0xef, 0x48, 0x88, 0x91, 0x25, 0x78, 0xd0, 0xe2, 0x74, 0x5c, 0x10],
+        [0x39, 0x12, 0x3e, 0x7f, 0x21, 0xbc, 0xa3, 0x26, 0x4e, 0x6f, 0x3a, 0x21, 0xa4, 0xf1, 0xb5, 0x98]
+    ];
+    var keyStore;
+    var node;
+    var pub;
+    var i;
+    var onAck = function (pub, payload) {
+        console.log("Ack for pub UUID " + dps.publicationGetUUID(pub) + "(" + dps.publicationGetSequenceNum(pub) + ")");
+        console.log("    " + payload);
     };
-    var publish = function() {
-        dps.Publish(pub, "world", 0);
+    var stop = function () {
+        dps.destroyPublication(pub);
+        dps.destroyNode(node);
+        dps.destroyMemoryKeyStore(keyStore);
+    };
+    var publish = function () {
+        dps.publish(pub, "world", 0);
         setTimeout(stop, 100);
     };
-    var stop = function() {
-        dps.DestroyPublication(pub);
-        dps.DestroyNode(node);
-    }
     /* Set to 1 to enable DPS debug output */
-    dps.Debug = 1;
+    dps.debug = 1;
 
-    var node = dps.CreateNode("/", null, 0);
-    dps.StartNode(node, dps.MCAST_PUB_ENABLE_SEND, 0);
-    var pub = dps.CreatePublication(node);
+    keyStore = dps.createMemoryKeyStore();
+    for (i = 0; i < keyID.length; i += 1) {
+        dps.setContentKey(keyStore, keyID[i], keyData[i]);
+    }
 
-    dps.InitPublication(pub, ['a/b/c'], 0, 0, onAck);
-    dps.Publish(pub, "hello", 0);
+    node = dps.createNode("/", dps.memoryKeyStoreHandle(keyStore), keyID[0]);
+    dps.startNode(node, dps.MCAST_PUB_ENABLE_SEND, 0);
+    pub = dps.createPublication(node);
+
+    dps.initPublication(pub, ["a/b/c"], false, null, onAck);
+    dps.publish(pub, "hello", 0);
     setTimeout(publish, 100);
-})();
+}());
