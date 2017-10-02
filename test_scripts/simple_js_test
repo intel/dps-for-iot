@@ -1,0 +1,37 @@
+#!/bin/bash
+
+# Include common functions
+dir="${BASH_SOURCE%/*}"
+if [[ ! -d "$dir" ]]; then dir="$PWD"; fi
+. "$dir/common.sh"
+
+js_sub
+js_pub
+sleep 1
+
+assert_no_errors
+expect_pubs_received 2 a/b/c
+
+#
+# Verify interop between C sub and python pub
+#
+reset_logs
+
+sub a/b/c
+js_pub
+sleep 1
+
+assert_no_errors
+expect_pubs_received 2 a/b/c
+
+#
+# Verify interop between python pub and C sub
+#
+reset_logs
+
+js_sub
+pub a/b/c
+sleep 1
+
+assert_no_errors
+expect_pubs_received 1 a/b/c

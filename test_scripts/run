@@ -23,7 +23,8 @@ TESTS="./build/test/bin/cbortest \
        ./test_scripts/versioning \
        ./test_scripts/simple_py_test \
        ./test_scripts/retained_py \
-       ./py_scripts/subs_tree.py"
+       ./py_scripts/subs_tree.py \
+       ./test_scripts/simple_js_test"
 
 DEFAULT="\e[0m"
 GREEN="\e[32m"
