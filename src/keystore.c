@@ -84,6 +84,8 @@ static DPS_Status MemoryKeyStoreContentKeyCallback(DPS_KeyStore* keyStore, const
 
 DPS_MemoryKeyStore* DPS_CreateMemoryKeyStore()
 {
+    DPS_DBGTRACE();
+
     DPS_MemoryKeyStore* mks = calloc(1, sizeof(DPS_MemoryKeyStore));
     if (mks) {
         mks->keyStore.userData = mks;
@@ -95,7 +97,8 @@ DPS_MemoryKeyStore* DPS_CreateMemoryKeyStore()
 
 void DPS_DestroyMemoryKeyStore(DPS_MemoryKeyStore* mks)
 {
-    DPS_DBGPRINT("Destroying DPS_MemoryKeyStore %p\n", mks);
+    DPS_DBGTRACE();
+
     if (!mks) {
         return;
     }
@@ -110,6 +113,8 @@ void DPS_DestroyMemoryKeyStore(DPS_MemoryKeyStore* mks)
 
 DPS_Status DPS_SetNetworkKey(DPS_MemoryKeyStore* mks, uint8_t* key, size_t keyLen)
 {
+    DPS_DBGTRACE();
+
     if ((!key && keyLen > 0) || (key && keyLen == 0)) {
         return DPS_ERR_INVALID;
     }
@@ -131,6 +136,8 @@ DPS_Status DPS_SetNetworkKey(DPS_MemoryKeyStore* mks, uint8_t* key, size_t keyLe
 
 DPS_Status DPS_SetContentKey(DPS_MemoryKeyStore* mks, const DPS_UUID* kid, uint8_t* key, size_t keyLen)
 {
+    DPS_DBGTRACE();
+
     // Replace key if kid already exists.
     for (size_t i = 0; i < mks->entriesCount; i++) {
         DPS_MemoryKeyStoreEntry* entry = mks->entries + i;
@@ -186,6 +193,8 @@ DPS_Status DPS_SetContentKey(DPS_MemoryKeyStore* mks, const DPS_UUID* kid, uint8
 
 DPS_KeyStore* DPS_MemoryKeyStoreHandle(DPS_MemoryKeyStore *mks)
 {
+    DPS_DBGTRACE();
+
     if (!mks) {
         return NULL;
     }
