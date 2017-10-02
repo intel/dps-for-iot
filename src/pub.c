@@ -807,26 +807,56 @@ DPS_Publication* DPS_CopyPublication(const DPS_Publication* pub)
     if (pub->flags & PUB_FLAG_LOCAL) {
         return NULL;
     }
+    DPS_Status ret = DPS_ERR_RESOURCES;
     copy = calloc(1, sizeof(DPS_Publication));
     if (!copy) {
-        return NULL;
+        DPS_ERRPRINT("malloc failure: no memory\n");
+        goto Exit;
     }
     copy->pubId = pub->pubId;
     copy->sequenceNum = pub->sequenceNum;
     copy->node = pub->node;
     copy->ackRequested = pub->ackRequested;
+    if (pub->ackRequested) {
+        copy->keyId = malloc(sizeof(DPS_UUID));
+        if (!copy->keyId) {
+            DPS_ERRPRINT("malloc failure: no memory\n");
+            goto Exit;
+        }
+        memcpy_s(copy->keyId, sizeof(DPS_UUID), pub->keyId, sizeof(DPS_UUID));
+    }
     copy->numTopics = pub->numTopics;
     if (pub->numTopics > 0) {
-        copy->topics = malloc(pub->numTopics * sizeof(char*));
+        copy->topics = calloc(pub->numTopics, sizeof(char*));
         if (!copy->topics) {
             DPS_ERRPRINT("malloc failure: no memory\n");
-            return NULL;
+            goto Exit;
         }
         for (int i = 0; i < pub->numTopics; i++) {
             copy->topics[i] = strndup(pub->topics[i], DPS_MAX_TOPIC_STRLEN);
         }
     }
     copy->flags = PUB_FLAG_IS_COPY;
+    ret = DPS_OK;
+
+Exit:
+    if (ret != DPS_OK) {
+        if (copy) {
+            if (copy->topics) {
+                for (int i = 0; i < copy->numTopics; i++) {
+                    if (copy->topics[i]) {
+                        free(copy->topics[i]);
+                    }
+                }
+                free(copy->topics);
+            }
+            if (copy->keyId) {
+                free(copy->keyId);
+            }
+            free(copy);
+            copy = NULL;
+        }
+    }
     return copy;
 }
 
