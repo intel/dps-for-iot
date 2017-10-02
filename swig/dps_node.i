@@ -141,7 +141,6 @@ struct Callback {
     uint8_t* payload;
     size_t len;
 };
-static size_t numberTopics;
 static std::mutex mutex;
 static std::queue<Callback*> queue;
 static uv_async_t async;
@@ -278,36 +277,6 @@ static void PubHandler(DPS_Subscription* sub, const DPS_Publication* pub, uint8_
         }
         $1 = PubHandler;
     }
-}
-
-%typemap(in) char** {
-    v8::Handle<v8::Value> obj($input);
-    if (obj->IsArray()) {
-        char** topics;
-        v8::Local<v8::Array> arr= v8::Local<v8::Array>::Cast($input);
-        topics = (char**)calloc(arr->Length(), 1);
-        if (!topics) {
-            SWIG_exception_fail(SWIG_ERROR, "no memory");
-        }
-        numberTopics = arr->Length();
-        for (int i = 0; i < arr->Length(); i++) {
-            v8::String::Utf8Value Val(arr->Get(i));
-            char* item = *Val;
-            topics[i] = strndup(item, Val.length());
-        }
-        $1 = topics;
-    }
-}
-
-%typemap(freearg) char** {
-    if ($1) {
-        char** topics = $1;
-        for (int i = 0; i < numberTopics; i++) {
-            free(topics[i]);
-        }
-        free(topics);
-    }
-    numberTopics = 0;
 }
 
 %{
