@@ -20,8 +20,8 @@ for i in xrange(len(key_id)):
 
 def on_pub(sub, pub, payload):
     print "Pub %s(%d) matches:" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub))
-    print "  pub " + " | ".join([dps.publication_get_topic(pub, i) for i in xrange(dps.publication_get_num_topics(pub))])
-    print "  sub " + " | ".join([dps.subscription_get_topic(sub, i) for i in xrange(dps.subscription_get_num_topics(sub))])
+    print "  pub " + " | ".join(dps.publication_get_topics(pub))
+    print "  sub " + " | ".join(dps.subscription_get_topics(sub))
     print payload
     if dps.publication_is_ack_requested(pub):
         ack_msg = "This is an ACK from %d" % (dps.get_port_number(dps.publication_get_node(pub)))

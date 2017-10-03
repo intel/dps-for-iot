@@ -18,6 +18,10 @@ extern "C" {
 /*
  * Functions that must not be exposed
  */
+%ignore DPS_SubscriptionGetTopic;
+%ignore DPS_SubscriptionGetNumTopics;
+%ignore DPS_PublicationGetTopic;
+%ignore DPS_PublicationGetNumTopics;
 %ignore DPS_DestroyPublication;
 %ignore DPS_DestroySubscription;
 %ignore DPS_SetSubscriptionData;
@@ -62,7 +66,7 @@ extern "C" {
     } else {
         int ecode = SWIG_AsVal_int($input, &b);
         if (!SWIG_IsOK(ecode)) {
-            SWIG_exception_fail(SWIG_ArgError(ecode), "in method '" "initPublication" "', argument of type '" "int""'");
+            SWIG_exception_fail(SWIG_ArgError(ecode), "argument of type '" "int""'");
         }
     }
 
@@ -108,6 +112,51 @@ extern "C" {
         free($1[i]);
     free($1);
 }
+
+%typemap(in,numinputs=0,noblock=1) size_t* n  {
+  size_t sz;
+  $1 = &sz;
+}
+
+%typemap(out) const char** subscriptionGetTopics %{
+    $result = v8::Array::New(v8::Isolate::GetCurrent(), sz);
+    for (size_t i = 0; i < sz; ++i) {
+        v8::Local<v8::Array>::Cast($result)->Set(i, SWIG_FromCharPtr($1[i]));
+    }
+    free($1);
+%}
+
+%inline %{
+const char** subscriptionGetTopics(const DPS_Subscription* sub, size_t* n)
+{
+    *n = DPS_SubscriptionGetNumTopics(sub);
+    const char** topics = (const char**)calloc(*n, sizeof(const char *));
+    for (size_t i = 0; i < *n; ++i) {
+        topics[i] = DPS_SubscriptionGetTopic(sub, i);
+    }
+    return topics;
+}
+%}
+
+%typemap(out) const char** publicationGetTopics %{
+    $result = v8::Array::New(v8::Isolate::GetCurrent(), sz);
+    for (size_t i = 0; i < sz; ++i) {
+        v8::Local<v8::Array>::Cast($result)->Set(i, SWIG_FromCharPtr($1[i]));
+    }
+    free($1);
+%}
+
+%inline %{
+const char** publicationGetTopics(const DPS_Publication* pub, size_t* n)
+{
+    *n = DPS_PublicationGetNumTopics(pub);
+    const char** topics = (const char**)calloc(*n, sizeof(const char *));
+    for (size_t i = 0; i < *n; ++i) {
+        topics[i] = DPS_PublicationGetTopic(pub, i);
+    }
+    return topics;
+}
+%}
 
 /*
  * For now just allow strings as payloads.

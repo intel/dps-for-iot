@@ -20,6 +20,10 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 /*
  * Functions that must not be exposed in Python
  */
+%ignore DPS_SubscriptionGetTopic;
+%ignore DPS_SubscriptionGetNumTopics;
+%ignore DPS_PublicationGetTopic;
+%ignore DPS_PublicationGetNumTopics;
 %ignore DPS_SetSubscriptionData;
 %ignore DPS_GetSubscriptionData;
 %ignore DPS_SetPublicationData;
@@ -101,6 +105,51 @@ int DPS_Debug;
 %typemap(freearg) (const char** topics, size_t numTopics) {
     free($1);
 }
+
+%typemap(in,numinputs=0,noblock=1) size_t* n  {
+  size_t sz;
+  $1 = &sz;
+}
+
+%typemap(out) const char** subscription_get_topics %{
+    $result = PyList_New(sz);
+    for (int i = 0; i < sz; ++i) {
+        PyList_SetItem($result, i, PyUnicode_FromString($1[i]));
+    }
+    free($1);
+%}
+
+%inline %{
+const char** subscription_get_topics(const DPS_Subscription* sub, size_t* n)
+{
+    *n = DPS_SubscriptionGetNumTopics(sub);
+    const char** topics = calloc(*n, sizeof(const char *));
+    for (size_t i = 0; i < *n; ++i) {
+        topics[i] = DPS_SubscriptionGetTopic(sub, i);
+    }
+    return topics;
+}
+%}
+
+%typemap(out) const char** publication_get_topics %{
+    $result = PyList_New(sz);
+    for (int i = 0; i < sz; ++i) {
+        PyList_SetItem($result, i, PyUnicode_FromString($1[i]));
+    }
+    free($1);
+%}
+
+%inline %{
+const char** publication_get_topics(const DPS_Publication* pub, size_t* n)
+{
+    *n = DPS_PublicationGetNumTopics(pub);
+    const char** topics = calloc(*n, sizeof(const char *));
+    for (size_t i = 0; i < *n; ++i) {
+        topics[i] = DPS_PublicationGetTopic(pub, i);
+    }
+    return topics;
+}
+%}
 
 %{
 /*

@@ -16,23 +16,10 @@ var dps = require("dps");
     var sub;
     var i;
     var onPub = function (sub, pub, payload) {
-        var topics;
-        var n;
         var ackMsg;
         console.log("Pub " + dps.publicationGetUUID(pub) + "(" + dps.publicationGetSequenceNum(pub) + ") matches:");
-        topics = [];
-        n = dps.publicationGetNumTopics(pub);
-        for (i = 0; i < n; i += 1) {
-            topics.push(dps.publicationGetTopic(pub, i));
-        }
-        topics.join(" | ");
-        console.log("  pub " + topics.join(" | "));
-        topics = [];
-        n = dps.subscriptionGetNumTopics(sub);
-        for (i = 0; i < n; i += 1) {
-            topics.push(dps.subscriptionGetTopic(sub, i));
-        }
-        console.log("  sub " + topics.join(" | "));
+        console.log("  pub " + dps.publicationGetTopics(pub).join(" | "));
+        console.log("  sub " + dps.subscriptionGetTopics(sub).join(" | "));
         console.log(payload);
         if (dps.publicationIsAckRequested(pub)) {
             ackMsg = "This is an ACK from " + dps.getPortNumber(dps.publicationGetNode(pub));
