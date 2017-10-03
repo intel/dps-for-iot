@@ -40,9 +40,15 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 %ignore DPS_ResolveAddress;
 
 /*
- * Module is called dps we don't need the DPS prefix on every function
+ * Module is called dps we don't need the DPS prefix on every function.
+ * Note: can't combine strip and undercase, so regex instead.
  */
-%rename("%(strip:[DPS_])s") "";
+%rename("debug") DPS_Debug;
+%rename("%(regex:/DPS_([A-Z][a-z0-9]+|UUID)/\\L\\1/)s", %$isfunction) "";
+%rename("%(regex:/DPS_([A-Z][a-z0-9]+|UUID)([A-Z][a-z0-9]+|UUID)/\\L\\1_\\L\\2/)s", %$isfunction) "";
+%rename("%(regex:/DPS_([A-Z][a-z0-9]+|UUID)([A-Z][a-z0-9]+|UUID)([A-Z][a-z0-9]+|UUID)/\\L\\1_\\L\\2_\\L\\3/)s", %$isfunction) "";
+%rename("%(regex:/DPS_([A-Z][a-z0-9]+|UUID)([A-Z][a-z0-9]+|UUID)([A-Z][a-z0-9]+|UUID)([A-Z][a-z0-9]+|UUID)/\\L\\1_\\L\\2_\\L\\3_\\L\\4/)s", %$isfunction) "";
+%rename("%(strip:[DPS_])s", %$not %$isfunction) "";
 
 /*
  * Mapping for types from stdint.h
