@@ -138,7 +138,7 @@ typedef struct _DPS_KeyStore DPS_KeyStore;
  * Function prototype for callback function for requesting the encryption key
  * for a specific key identifier. This function must not block.
  *
- * @param keyStore The key store to ues
+ * @param keyStore The key store to use
  * @param kid The key identifier
  * @param key Buffer for returning the key
  * @param keyLen Size of the key buffer
