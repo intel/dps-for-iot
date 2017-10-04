@@ -30,6 +30,47 @@
 
 DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
+DPS_KeyStore* DPS_CreateKeyStore(DPS_ContentKeyHandler contentKeyHandler, DPS_NetworkKeyHandler networkKeyHandler)
+{
+    DPS_DBGTRACE();
+
+    DPS_KeyStore* keyStore = calloc(1, sizeof(DPS_KeyStore));
+    if (keyStore) {
+        keyStore->contentKeyHandler = contentKeyHandler;
+        keyStore->networkKeyHandler = networkKeyHandler;
+    }
+    return keyStore;
+}
+
+void DPS_DestroyKeyStore(DPS_KeyStore* keyStore)
+{
+    DPS_DBGTRACE();
+
+    if (!keyStore) {
+        return;
+    }
+    free(keyStore);
+}
+
+DPS_Status DPS_SetKeyStoreData(DPS_KeyStore* keyStore, void* data)
+{
+    DPS_DBGTRACE();
+
+    if (keyStore) {
+        keyStore->userData = data;
+        return DPS_OK;
+    } else {
+        return DPS_ERR_NULL;
+    }
+}
+
+void* DPS_GetKeyStoreData(const DPS_KeyStore* keyStore)
+{
+    DPS_DBGTRACE();
+
+    return keyStore ? keyStore->userData : NULL;
+}
+
 typedef struct _DPS_MemoryKeyStoreEntry {
     DPS_UUID kid;
     uint8_t* key;
@@ -47,7 +88,7 @@ struct _DPS_MemoryKeyStore {
     size_t networkKeyLen;
 };
 
-static DPS_Status MemoryKeyStoreNetworkKeyCallback(DPS_KeyStore* keyStore, uint8_t* buffer, size_t bufferLen, size_t* keyLen)
+static DPS_Status MemoryKeyStoreNetworkKeyHandler(DPS_KeyStore* keyStore, uint8_t* buffer, size_t bufferLen, size_t* keyLen)
 {
     DPS_MemoryKeyStore* mks = keyStore->userData;
     if (!mks->networkKey) {
@@ -64,7 +105,7 @@ static DPS_Status MemoryKeyStoreNetworkKeyCallback(DPS_KeyStore* keyStore, uint8
     return DPS_OK;
 }
 
-static DPS_Status MemoryKeyStoreContentKeyCallback(DPS_KeyStore* keyStore, const DPS_UUID* kid, uint8_t* key, size_t keyLen)
+static DPS_Status MemoryKeyStoreContentKeyHandler(DPS_KeyStore* keyStore, const DPS_UUID* kid, uint8_t* key, size_t keyLen)
 {
     DPS_MemoryKeyStore* mks = keyStore->userData;
     size_t i;
@@ -89,8 +130,8 @@ DPS_MemoryKeyStore* DPS_CreateMemoryKeyStore()
     DPS_MemoryKeyStore* mks = calloc(1, sizeof(DPS_MemoryKeyStore));
     if (mks) {
         mks->keyStore.userData = mks;
-        mks->keyStore.contentKeyCB = MemoryKeyStoreContentKeyCallback;
-        mks->keyStore.networkKeyCB = MemoryKeyStoreNetworkKeyCallback;
+        mks->keyStore.contentKeyHandler = MemoryKeyStoreContentKeyHandler;
+        mks->keyStore.networkKeyHandler = MemoryKeyStoreNetworkKeyHandler;
     }
     return mks;
 }

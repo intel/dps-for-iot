@@ -406,10 +406,10 @@ static DPS_NetConnection* CreateConnection(DPS_Node* node, const struct sockaddr
     size_t keyLen = 0;
 
     DPS_KeyStore* keyStore = node->keyStore;
-    if (!keyStore || !keyStore->networkKeyCB) {
+    if (!keyStore || !keyStore->networkKeyHandler) {
         return NULL;
     }
-    ret = keyStore->networkKeyCB(keyStore, key, sizeof(key), &keyLen);
+    ret = keyStore->networkKeyHandler(keyStore, key, sizeof(key), &keyLen);
     if (ret != DPS_OK) {
         return NULL;
     }

@@ -1180,12 +1180,12 @@ DPS_Node* DPS_CreateNode(const char* separators, DPS_KeyStore* keyStore, const D
     /*
      * Sanity check
      */
-    if (keyId && (!keyStore || !keyStore->contentKeyCB)) {
+    if (keyId && (!keyStore || !keyStore->contentKeyHandler)) {
         DPS_ERRPRINT("A content key request callback is required\n");
         free(node);
         return NULL;
     }
-    if (keyId || (keyStore && keyStore->contentKeyCB)) {
+    if (keyId || (keyStore && keyStore->contentKeyHandler)) {
         node->isSecured = DPS_TRUE;
         memcpy_s(&node->keyId, sizeof(DPS_UUID), keyId, sizeof(DPS_UUID));
     }

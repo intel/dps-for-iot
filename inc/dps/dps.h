@@ -47,7 +47,7 @@ extern "C" {
 
 
 /**
- * Opaque type for a node
+ * Opaque type for a node.
  */
 typedef struct _DPS_Node DPS_Node;
 
@@ -57,7 +57,7 @@ typedef struct _DPS_Node DPS_Node;
 typedef struct _DPS_NodeAddress DPS_NodeAddress;
 
 /**
- * Opaque type for a subscription
+ * Opaque type for a subscription.
  */
 typedef struct _DPS_Subscription DPS_Subscription;
 
@@ -132,25 +132,29 @@ int DPS_PublicationIsAckRequested(const DPS_Publication* pub);
  */
 DPS_Node* DPS_PublicationGetNode(const DPS_Publication* pub);
 
+/**
+ * Opaque type for a key store.
+ */
 typedef struct _DPS_KeyStore DPS_KeyStore;
 
 /**
- * Function prototype for callback function for requesting the encryption key
- * for a specific key identifier. This function must not block.
+ * Function prototype for requesting the encryption key for a specific
+ * key identifier. This function must not block.
  *
  * @param keyStore The key store to use
  * @param kid The key identifier
  * @param key Buffer for returning the key
  * @param keyLen Size of the key buffer
  *
- * @return  DPS_OK if a key matching the kid was returned
- *          DPS_ERR_MSSING if there is no matching key
+ * @return
+ * - DPS_OK if a key matching the kid was returned
+ * - DPS_ERR_MSSING if there is no matching key
  */
-typedef DPS_Status (*DPS_ContentKeyCallback)(DPS_KeyStore* keyStore, const DPS_UUID* kid, uint8_t* key, size_t keyLen);
+typedef DPS_Status (*DPS_ContentKeyHandler)(DPS_KeyStore* keyStore, const DPS_UUID* kid, uint8_t* key, size_t keyLen);
 
 /**
- * Function prototype for callback function for requesting the encryption key
- * for the network. This function must not block.
+ * Function prototype for requesting the encryption key for the
+ * network. This function must not block.
  *
  * @param keyStore The key store to use
  * @param kid The key identifier
@@ -158,18 +162,51 @@ typedef DPS_Status (*DPS_ContentKeyCallback)(DPS_KeyStore* keyStore, const DPS_U
  * @param bufferLen Size of the buffer, in bytes
  * @param keyLen Size of the returned key, in bytes
  *
- * @return  DPS_OK if a key matching the kid was returned
- *          DPS_ERR_MSSING if there is no matching key
+ * @return
+ * - DPS_OK if a key matching the kid was returned
+ * - DPS_ERR_MSSING if there is no matching key
  */
-typedef DPS_Status (*DPS_NetworkKeyCallback)(DPS_KeyStore* keyStore, uint8_t* buffer, size_t bufferLen, size_t* keyLen);
+typedef DPS_Status (*DPS_NetworkKeyHandler)(DPS_KeyStore* keyStore, uint8_t* buffer, size_t bufferLen, size_t* keyLen);
 
-struct _DPS_KeyStore {
-    /* TODO: Add version information to this exposed struct or make it opaque and add setters. */
-    void* userData;
-    DPS_ContentKeyCallback contentKeyCB;
-    DPS_NetworkKeyCallback networkKeyCB;
-};
+/**
+ * Creates a key store.
+ *
+ * @param contentKeyHandler Callback for requesting the encryption key for a specific key identifier
+ * @param networkKeyHandler Callback for requesting the encryption key for the network
+ *
+ * @return A pointer to the key store or NULL if there were no resources.
+ */
+DPS_KeyStore* DPS_CreateKeyStore(DPS_ContentKeyHandler contentKeyHandler, DPS_NetworkKeyHandler networkKeyHandler);
 
+/**
+ * Destroys a previously created key store.
+ *
+ * @param keyStore The key store
+ */
+void DPS_DestroyKeyStore(DPS_KeyStore* keyStore);
+
+/**
+ * Store a pointer to application data in a key store.
+ *
+ * @param keyStore The key store
+ * @param data The data pointer to store
+ *
+ * @return DPS_OK or an error
+ */
+DPS_Status DPS_SetKeyStoreData(DPS_KeyStore* keyStore, void* data);
+
+/**
+ * Get application data pointer previously set by DPS_SetKeyStoreData().
+ *
+ * @param keyStore The keyStore
+ *
+ * @return  A pointer to the data or NULL if the key store is invalid
+ */
+void* DPS_GetKeyStoreData(const DPS_KeyStore* keyStore);
+
+/**
+ * Opaque type for an in-memory key store.
+ */
 typedef struct _DPS_MemoryKeyStore DPS_MemoryKeyStore;
 
 /**

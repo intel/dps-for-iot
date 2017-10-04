@@ -170,6 +170,15 @@ void DPS_RxBufferToTx(DPS_RxBuffer* rxBuffer, DPS_TxBuffer* txBuffer);
  */
 void DPS_DumpSubscriptions(DPS_Node* node);
 
+/**
+ * A key store.
+ */
+struct _DPS_KeyStore {
+    void* userData;
+    DPS_ContentKeyHandler contentKeyHandler;
+    DPS_NetworkKeyHandler networkKeyHandler;
+};
+
 #ifdef __cplusplus
 }
 #endif
