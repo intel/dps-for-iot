@@ -48,11 +48,13 @@ libuv from source. [libuv source code on GitHub.](https://github.com/libuv)
 ---
 
 ### Yocto
-- Yocto Project through the OpenEmbedded build system provides an open source development environment
+Yocto Project through the OpenEmbedded build system provides an open source development environment
 targeting the ARM, MIPS, PowerPC and x86 architectures for a variety of platforms
-including x86-64 and emulated ones. [Yocto git](https://git.yoctoproject.org/)
+including x86-64 and emulated ones.
 
-[Yocto Project Quick Start](http://www.yoctoproject.org/docs/1.8/yocto-project-qs/yocto-project-qs.html)
+- [Yocto git](https://git.yoctoproject.org/)
+
+- [Yocto Project Quick Start](http://www.yoctoproject.org/docs/1.8/yocto-project-qs/yocto-project-qs.html)
 
 - [Yocto libuv](https://layers.openembedded.org/layerindex/recipe/32082/)
 

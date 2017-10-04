@@ -179,6 +179,11 @@ struct _DPS_KeyStore {
     DPS_NetworkKeyHandler networkKeyHandler;
 };
 
+/**
+ * Returns a non-secure random number
+ */
+uint32_t DPS_Rand();
+
 #ifdef __cplusplus
 }
 #endif

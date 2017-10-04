@@ -31,6 +31,12 @@ extern "C" {
 #endif
 
 /**
+ * @defgroup uuid UUID
+ * Create and compare UUIDs.
+ * @{
+ */
+
+/**
  * Type definition for a UUID
  */
 typedef struct _DPS_UUID {
@@ -51,7 +57,9 @@ DPS_Status DPS_InitUUID();
 void DPS_GenerateUUID(DPS_UUID* uuid);
 
 /**
- * Return a string representation of a UUID. Not this function uses a static string and is non-reentrant.
+ * Return a string representation of a UUID.
+ *
+ * @note This function uses a static string and is non-reentrant.
  */
 const char* DPS_UUIDToString(const DPS_UUID* uuid);
 
@@ -59,6 +67,8 @@ const char* DPS_UUIDToString(const DPS_UUID* uuid);
  * Numerical comparison of two UUIDs
  */
 int DPS_UUIDCompare(const DPS_UUID* a, const DPS_UUID* b);
+
+/** @} */
 
 #ifdef __cplusplus
 }

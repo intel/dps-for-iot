@@ -29,7 +29,6 @@ DPS_PublicationGetSequenceNum
 DPS_PublicationGetTopic
 DPS_PublicationGetUUID
 DPS_Publish
-DPS_Rand
 DPS_ResolveAddress
 DPS_SetAddress
 DPS_SetNodeData

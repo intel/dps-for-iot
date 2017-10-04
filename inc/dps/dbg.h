@@ -33,6 +33,12 @@
 extern "C" {
 #endif
 
+/**
+ * @defgroup debug Debug
+ * Debug and logging macros and functions.
+ * @{
+ */
+
 extern int DPS_Debug;
 
 typedef enum {
@@ -82,6 +88,8 @@ void DPS_LogBytes(DPS_LogLevel level, const char* file, int line, const char *fu
 #else
 #define DPS_DEBUG_CONTROL(dbg) __attribute__((__unused__))static int __DPS_DebugControl = dbg
 #endif
+
+/** @} */
 
 #ifdef __cplusplus
 }

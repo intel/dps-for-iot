@@ -27,11 +27,14 @@
 extern "C" {
 #endif
 
+/**
+ * @defgroup status Status
+ * Status codes.
+ * @{
+ */
+
 typedef int DPS_Status;
 
-/**
- * Return codes
- */
 #define DPS_OK                     0 /**< Function succeeded */
 #define DPS_ERR_OK                 0 /**< Alias for DPS_OK */
 #define DPS_ERR_FAILURE            1 /**< Non-specific failure */
@@ -62,6 +65,8 @@ typedef int DPS_Status;
 #define DPS_ERR_STOPPING          26 /**< The current node is stopping */
 
 const char* DPS_ErrTxt(DPS_Status s);
+
+/** @} */
 
 #ifdef __cplusplus
 }
