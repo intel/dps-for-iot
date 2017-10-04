@@ -129,8 +129,8 @@ function assert_no_errors {
     n=$(grep -r "ERROR" out | wc -l)
     if [ $n -gt 0 ]; then
         echo "Errors $n"
-	grep -Hr "ERROR" out
-	exit 1
+        grep -Hr "ERROR" out
+        exit 1
     fi
 }
 
@@ -142,9 +142,9 @@ function expect_pubs_received {
     topics=${topics// / | }
     n=$(grep "pub $topics\$" out/sub*.log | wc -l)
     if [ $n -ne $expected ]; then
-	echo "Pubs received is not equal to expected ($n != $expected)"
-	grep "pub $topics\$" out/sub*.log
-	exit 1
+        echo "Pubs received is not equal to expected ($n != $expected)"
+        grep "pub $topics\$" out/sub*.log
+        exit 1
     fi
 }
 
@@ -152,8 +152,8 @@ function expect_pubs_received {
 function expect_errors {
     n=$(grep -r "ERROR.*$2" out | wc -l)
     if [ $n -lt $1 ]; then
-	echo "Errors found is less than expected ($n != $1)"
-	exit 1
+        echo "Errors found is less than expected ($n != $1)"
+        exit 1
     fi
 }
 

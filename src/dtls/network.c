@@ -56,8 +56,8 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 #define DEBUG_MBEDTLS_LEVEL 0
 
 typedef struct _PendingRead {
-	uv_buf_t buf;
-	struct _PendingRead* next;
+    uv_buf_t buf;
+    struct _PendingRead* next;
 } PendingRead;
 
 typedef struct _PendingWrite {
