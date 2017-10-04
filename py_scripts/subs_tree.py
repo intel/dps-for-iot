@@ -22,9 +22,10 @@ dps.set_content_key(key_store, key_id, key_data)
 
 def on_pub(sub, pub, payload):
     print "Received on port %d" % dps.get_port_number(dps.subscription_get_node(sub))
-    print "Subscription ", dps.subscription_get_topic(sub, 0)
-    print "  Pub %s/%d" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub))
-    print "  Payload %s" % payload
+    print "Pub %s(%d) matches:" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub))
+    print "  pub " + " | ".join(dps.publication_get_topics(pub))
+    print "  sub " + " | ".join(dps.subscription_get_topics(sub))
+    print payload
 
 def subscriber(port, topic, connect_port):
     nodes[port] = dps.create_node("/", dps.memory_key_store_handle(key_store), key_id)
