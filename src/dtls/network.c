@@ -55,6 +55,9 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 // Controls debug output from the mbedtls library, ranges from 0 (no debug) to 4 (verbose).
 #define DEBUG_MBEDTLS_LEVEL 0
 
+// Personalization string for the DRBG
+#define PERSONALIZATION_STRING "DPS_DRBG"
+
 typedef struct _PendingRead {
     uv_buf_t buf;
     struct _PendingRead* next;
@@ -442,8 +445,8 @@ static DPS_NetConnection* CreateConnection(DPS_Node* node, const struct sockaddr
     // or /dev/urandom in Linux; and on CryptGenRandom() on Windows.
     mbedtls_entropy_init(&cn->entropy);
 
-    // TODO: Do we need personalization in initial CTR_DRBG seed?
-    ret = mbedtls_ctr_drbg_seed(&cn->randgen, mbedtls_entropy_func, &cn->entropy, NULL, 0);
+    ret = mbedtls_ctr_drbg_seed(&cn->randgen, mbedtls_entropy_func, &cn->entropy,
+                                (const unsigned char*)PERSONALIZATION_STRING, sizeof(PERSONALIZATION_STRING));
     if (ret != 0) {
         DPS_ERRPRINT("ERROR: seeding mbedtls random byte generator (%d)\n", ret);
         goto error;
@@ -761,7 +764,6 @@ static void OnData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, const s
         goto exit;
     }
 
-    // TODO: Use a hashtable or similar in DPS_Node to limit the lookup times for remote nodes.
     RemoteNode* remote = DPS_LookupRemoteNode(netCtx->node, nodeAddr);
 
     if (remote) {
