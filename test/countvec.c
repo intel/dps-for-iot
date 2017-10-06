@@ -104,5 +104,7 @@ int main(int argc, char** argv)
     TestAdd(cv, 0x01);
     TestAdd(cv, 0x03);
 
+    DPS_CountVectorFree(cv);
+
     return EXIT_SUCCESS;
 }

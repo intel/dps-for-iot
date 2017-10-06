@@ -74,7 +74,7 @@ print("Building for " + env['variant'])
 
 if env['PLATFORM'] == 'win32':
 
-    env.Append(CFLAGS = ['/J', '/W3', '/nologo'])
+    env.Append(CCFLAGS = ['/J', '/W3', '/nologo'])
     env.Append(CPPDEFINES = ['_CRT_SECURE_NO_WARNINGS'])
 
     # We are getting our secure memory and string functions for
@@ -82,17 +82,17 @@ if env['PLATFORM'] == 'win32':
     env.Append(CPPDEFINES = ['__STDC_WANT_SECURE_LIB__=0'])
 
     if env['variant'] == 'debug':
-        env.Append(CFLAGS = ['/Zi', '/MT', '/Od', '-DDPS_DEBUG'])
+        env.Append(CCFLAGS = ['/Zi', '/MT', '/Od', '-DDPS_DEBUG'])
         env.Append(LINKFLAGS = ['/DEBUG'])
     else:
-        env.Append(CFLAGS = ['/Gy', '/O2', '/GF', '/MT'])
+        env.Append(CCFLAGS = ['/Gy', '/O2', '/GF', '/MT'])
         env.Append(LINKFLAGS = ['/opt:ref'])
 
 
     # Stack-based Buffer Overrun Detection
-    env.Append(CFLAGS = ['/GS'])
+    env.Append(CCFLAGS = ['/GS'])
     # Compiler settings validation
-    env.Append(CFLAGS = ['/sdl'])
+    env.Append(CCFLAGS = ['/sdl'])
 
     # Data Execution Prevention
     env.Append(LINKFLAGS = ['/NXCompat'])
@@ -116,7 +116,7 @@ elif env['PLATFORM'] == 'posix':
 
     # Enable address sanitizer
     if env['asan'] == True:
-        env.Append(CFLAGS = ['-fno-omit-frame-pointer', '-fsanitize=address'])
+        env.Append(CCFLAGS = ['-fno-omit-frame-pointer', '-fsanitize=address'])
         env.Append(LIBS = ['asan'])
 
     # Stack execution protection:
@@ -126,32 +126,32 @@ elif env['PLATFORM'] == 'posix':
     env.Append(LDLFAGS= ['-z relro', '-z now'])
 
     # Stack-based Buffer Overrun Detection:
-    env.Append(CFLAGS = ['-fstack-protector-strong'])
+    env.Append(CCFLAGS = ['-fstack-protector-strong'])
 
     # Position Independent Execution (PIE)
-    env.Append(CFLAGS = ['-fPIE', '-fPIC'])
+    env.Append(CCFLAGS = ['-fPIE', '-fPIC'])
     env.Append(LDFLAGS = ['-pie']) # PIE for executables only
 
     # Fortify source:
     env.Append(CPPDEFINES = ['_FORTIFY_SOURCE=2'])
 
     # Format string vulnerabilities
-    env.Append(CFLAGS= ['-Wformat', '-Wformat-security'])
+    env.Append(CCFLAGS= ['-Wformat', '-Wformat-security'])
 
     # gcc option  -mmsse4.2 is to enble generation of popcountq instruction
-    env.Append(CFLAGS = ['-ggdb', '-msse4.2'])
+    env.Append(CCFLAGS = ['-ggdb', '-msse4.2'])
 
     # Treat warnings as errors
-    env.Append(CFLAGS = ['-Werror'])
+    env.Append(CCFLAGS = ['-Werror'])
 
     if env['profile'] == True:
-        env.Append(CFLAGS = ['-pg'])
+        env.Append(CCFLAGS = ['-pg'])
         env.Append(LINKFLAGS = ['-pg'])
 
     if env['variant'] == 'debug':
-        env.Append(CFLAGS = ['-O', '-DDPS_DEBUG'])
+        env.Append(CCFLAGS = ['-O', '-DDPS_DEBUG'])
     else:
-        env.Append(CFLAGS = ['-O3', '-DNDEBUG'])
+        env.Append(CCFLAGS = ['-O3', '-DNDEBUG'])
 
     # Where to find Python.h
     if env['target'] == 'yocto':

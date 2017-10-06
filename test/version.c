@@ -63,6 +63,7 @@ static void OnNetSendComplete(DPS_Node* node, void* appCtx, DPS_NetEndpoint* end
                               uv_buf_t* bufs, size_t numBufs, DPS_Status status)
 {
     DPS_PRINT("OnNetSendComplete(status=%s)\n", DPS_ErrTxt(status));
+    DPS_NetFreeBufs(bufs, numBufs);
 }
 
 static void NetSendTaskClose(uv_handle_t* handle)
@@ -131,7 +132,7 @@ static void NetSendTask(uv_async_t* handle)
         DPS_NetFreeBufs(bufs, 2);
     }
 
-    uv_close((uv_handle_t*)handle, NULL);
+    uv_close((uv_handle_t*)handle, NetSendTaskClose);
 }
 
 static void NetSend(DPS_Node* node, DPS_NetEndpoint* ep, int version, int type)

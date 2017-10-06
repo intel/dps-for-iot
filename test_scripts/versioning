@@ -39,6 +39,7 @@ ver -v 2
 
 # Unicast
 ver -p 50001 -v 2
+sleep 2
 
 expect_errors 3 "Expected message version 1, received 2"
 
@@ -55,5 +56,6 @@ ver -v 1 -t 5
 
 # Unicast
 ver -p 50002 -v 1 -t 5
+sleep 2
 
 expect_errors 3 "Invalid message type"

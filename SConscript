@@ -14,7 +14,7 @@ libenv = env.Clone()
 if platform == 'win32':
     libenv.Append(LIBS = env['UV_LIBS'])
 elif platform == 'posix':
-    libenv.Append(CFLAGS = ['-Wall', '-Wno-format-extra-args'])
+    libenv.Append(CCFLAGS = ['-Wall', '-Wno-format-extra-args'])
 
 libenv.Install('#/build/dist/inc/dps', libenv.Glob('#/inc/dps/*.h'))
 libenv.Install('#/build/dist/inc/dps/private', libenv.Glob('#/inc/dps/private/*.h'))

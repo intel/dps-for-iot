@@ -9,12 +9,12 @@ sub -w 1 -l 50000  T
 sub -w 1 -l 40000 -p 50000 A
 sub -w 1 -l 30000 -p 50000 B
 
-sleep 1
+sleep 2
 
 pub -w 2 -p 30000 A
 pub -w 2 -p 40000 B
 
-sleep 2
+sleep 4
 
 assert_no_errors
 expect_pubs_received 1 A

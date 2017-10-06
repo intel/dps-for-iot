@@ -1,5 +1,6 @@
+%module(docstring="Distributed Publish Subscribe for IoT") dps
+%feature("autodoc", "1");
 
-%module dps
 %{
 extern "C" {
 #include <dps/dps.h>
@@ -17,6 +18,10 @@ extern "C" {
 /*
  * Functions that must not be exposed
  */
+%ignore DPS_SubscriptionGetTopic;
+%ignore DPS_SubscriptionGetNumTopics;
+%ignore DPS_PublicationGetTopic;
+%ignore DPS_PublicationGetNumTopics;
 %ignore DPS_DestroyPublication;
 %ignore DPS_DestroySubscription;
 %ignore DPS_SetSubscriptionData;
@@ -27,16 +32,46 @@ extern "C" {
 %ignore DPS_DestroyNode;
 
 /*
+ * Declarations that are not relevant in JavaScript
+ */
+%ignore DPS_TRUE;
+%ignore DPS_FALSE;
+
+/*
  * Module is called dps we don't need the DPS prefix on every function
  */
-%rename("%(strip:[DPS_])s") "";
+%rename("debug") DPS_Debug;
+%rename("%(regex:/DPS_(.*)/\\l\\1/)s", %$isfunction) "";
+%rename("%(strip:[DPS_])s", %$not %$isfunction) "";
 
 /*
  * Mapping for types from stdint.h
  */
 %typemap(in) uint8_t* = char*;
 %typemap(in) int16_t = int;
+%typemap(out) int16_t = int;
+%typemap(in) uint16_t = unsigned int;
+%typemap(out) uint16_t = unsigned int;
+%typemap(in) uint32_t = unsigned long;
 %typemap(out) uint32_t = unsigned long;
+
+/*
+ * Allow JavaScript true, false for DPS boolean (int)
+ */
+%typemap(in) int {
+    int b = 0;
+
+    if ($input->IsBoolean()) {
+        b = $input->BooleanValue() ? 1 : 0;
+    } else {
+        int ecode = SWIG_AsVal_int($input, &b);
+        if (!SWIG_IsOK(ecode)) {
+            SWIG_exception_fail(SWIG_ArgError(ecode), "argument of type '" "int""'");
+        }
+    }
+
+    $1 = b;
+}
 
 /*
  * This allows topic strings to be expressed as a list of strings
@@ -77,6 +112,51 @@ extern "C" {
         free($1[i]);
     free($1);
 }
+
+%typemap(in,numinputs=0,noblock=1) size_t* n  {
+  size_t sz;
+  $1 = &sz;
+}
+
+%typemap(out) const char** subscriptionGetTopics %{
+    $result = v8::Array::New(v8::Isolate::GetCurrent(), sz);
+    for (size_t i = 0; i < sz; ++i) {
+        v8::Local<v8::Array>::Cast($result)->Set(i, SWIG_FromCharPtr($1[i]));
+    }
+    free($1);
+%}
+
+%inline %{
+const char** subscriptionGetTopics(const DPS_Subscription* sub, size_t* n)
+{
+    *n = DPS_SubscriptionGetNumTopics(sub);
+    const char** topics = (const char**)calloc(*n, sizeof(const char *));
+    for (size_t i = 0; i < *n; ++i) {
+        topics[i] = DPS_SubscriptionGetTopic(sub, i);
+    }
+    return topics;
+}
+%}
+
+%typemap(out) const char** publicationGetTopics %{
+    $result = v8::Array::New(v8::Isolate::GetCurrent(), sz);
+    for (size_t i = 0; i < sz; ++i) {
+        v8::Local<v8::Array>::Cast($result)->Set(i, SWIG_FromCharPtr($1[i]));
+    }
+    free($1);
+%}
+
+%inline %{
+const char** publicationGetTopics(const DPS_Publication* pub, size_t* n)
+{
+    *n = DPS_PublicationGetNumTopics(pub);
+    const char** topics = (const char**)calloc(*n, sizeof(const char *));
+    for (size_t i = 0; i < *n; ++i) {
+        topics[i] = DPS_PublicationGetTopic(pub, i);
+    }
+    return topics;
+}
+%}
 
 /*
  * For now just allow strings as payloads.
@@ -137,7 +217,6 @@ struct Callback {
     uint8_t* payload;
     size_t len;
 };
-static size_t numberTopics;
 static std::mutex mutex;
 static std::queue<Callback*> queue;
 static uv_async_t async;
@@ -177,29 +256,29 @@ static void async_cb(uv_async_t* handle)
     }
 }
 
-DPS_Status DestroyPublication(DPS_Publication* pub)
+DPS_Status destroyPublication(DPS_Publication* pub)
 {
     Handler* handler = (Handler*)DPS_GetPublicationData(pub);
     delete handler;
     return DPS_DestroyPublication(pub);
 }
 
-DPS_Status DestroySubscription(DPS_Subscription* sub)
+DPS_Status destroySubscription(DPS_Subscription* sub)
 {
     Handler* handler = (Handler*)DPS_GetSubscriptionData(sub);
     delete handler;
     return DPS_DestroySubscription(sub);
 }
 
-DPS_Status DestroyNode(DPS_Node* node)
+DPS_Status destroyNode(DPS_Node* node)
 {
     return DPS_DestroyNode(node, NULL, NULL);
 }
 %}
 
-DPS_Status DestroyPublication(DPS_Publication* pub);
-DPS_Status DestroySubscription(DPS_Subscription* sub);
-DPS_Status DestroyNode(DPS_Node* node);
+DPS_Status destroyPublication(DPS_Publication* pub);
+DPS_Status destroySubscription(DPS_Subscription* sub);
+DPS_Status destroyNode(DPS_Node* node);
 
 /*
  * Publication acknowledgment function calls into JavaScript
@@ -276,36 +355,6 @@ static void PubHandler(DPS_Subscription* sub, const DPS_Publication* pub, uint8_
     }
 }
 
-%typemap(in) char** {
-    v8::Handle<v8::Value> obj($input);
-    if (obj->IsArray()) {
-        char** topics;
-        v8::Local<v8::Array> arr= v8::Local<v8::Array>::Cast($input);
-        topics = (char**)calloc(arr->Length(), 1);
-        if (!topics) {
-            SWIG_exception_fail(SWIG_ERROR, "no memory");
-        }
-        numberTopics = arr->Length();
-        for (int i = 0; i < arr->Length(); i++) {
-            v8::String::Utf8Value Val(arr->Get(i));
-            char* item = *Val;
-            topics[i] = strndup(item, Val.length());
-        }
-        $1 = topics;
-    }
-}
-
-%typemap(freearg) char** {
-    if ($1) {
-        char** topics = $1;
-        for (int i = 0; i < numberTopics; i++) {
-            free(topics[i]);
-        }
-        free(topics);
-    }
-    numberTopics = 0;
-}
-
 %{
 static v8::Handle<v8::Value> UUIDToString(DPS_UUID* uuid)
 {
@@ -323,30 +372,99 @@ static v8::Handle<v8::Value> UUIDToString(DPS_UUID* uuid)
 }
 
 %typemap(in) DPS_UUID* {
+    DPS_UUID* uuid = NULL;
+
+    v8::Handle<v8::Value> obj($input);
+
+    if (obj->IsUint8Array()) {
+        v8::Local<v8::Uint8Array> arr = v8::Local<v8::Uint8Array>::Cast($input);
+        uuid = (DPS_UUID*)calloc(1, sizeof(DPS_UUID));
+        if (!uuid) {
+            SWIG_exception_fail(SWIG_ERROR, "no memory");
+        }
+        v8::Local<v8::ArrayBuffer> buf = arr->Buffer();
+        uint8_t* data = (uint8_t*)buf->GetContents().Data();
+        if (arr->ByteLength() <= 16) {
+            memcpy(uuid->val, data, arr->ByteLength());
+        } else {
+            memcpy(uuid->val, data, 16);
+        }
+    } else if (obj->IsArray()) {
+        v8::Local<v8::Array> arr = v8::Local<v8::Array>::Cast($input);
+        uint32_t n = arr->Length();
+        uuid = (DPS_UUID*)calloc(1, sizeof(DPS_UUID));
+        if (!uuid) {
+            SWIG_exception_fail(SWIG_ERROR, "no memory");
+        }
+        uint32_t i;
+        for (i = 0; (i < n) && (i < 16); ++i) {
+            v8::Local<v8::Value> valRef;
+            if (arr->Get(SWIGV8_CURRENT_CONTEXT(), i).ToLocal(&valRef)) {
+                uuid->val[i] = valRef->Uint32Value();
+            } else {
+                free(uuid);
+                SWIG_exception_fail(SWIG_TypeError, "argument of type '" "DPS_UUID""'");
+            }
+        }
+    } else if (!obj->IsNull()) {
+        SWIG_exception_fail(SWIG_TypeError, "argument of type '" "DPS_UUID""'");
+    }
+    $1 = uuid;
+}
+
+%typemap(freearg) DPS_UUID* {
+    free($1);
+}
+
+/*
+ * Used in DPS_SetContentKey.
+ */
+%typemap(in) (uint8_t* key, size_t keyLen) {
+    uint8_t* key = NULL;
+    size_t keyLen = 0;
+
     v8::Handle<v8::Value> obj($input);
 
     if (obj->IsUint8Array()) {
         uint8_t* data;
         v8::Local<v8::ArrayBuffer> buf;
         v8::Local<v8::Uint8Array> arr = v8::Local<v8::Uint8Array>::Cast($input);
-        DPS_UUID* uuid = (DPS_UUID*)calloc(1, sizeof(DPS_UUID));
-        if (!uuid) {
+
+        keyLen = arr->ByteLength();
+        key = (uint8_t*)calloc(keyLen, sizeof(uint8_t));
+        if (!key) {
             SWIG_exception_fail(SWIG_ERROR, "no memory");
         }
+
         buf = arr->Buffer();
         data = (uint8_t*)buf->GetContents().Data();
-        if (arr->ByteLength() <= 16) {
-            memcpy(uuid->val, data, arr->ByteLength());
-        } else {
-            memcpy(uuid->val, data, 16);
+        memcpy(key, data, keyLen);
+    } else if (obj->IsArray()) {
+        v8::Local<v8::Array> arr = v8::Local<v8::Array>::Cast($input);
+        keyLen = arr->Length();
+        key = (uint8_t*)calloc(keyLen, sizeof(uint8_t));
+        if (!key) {
+            SWIG_exception_fail(SWIG_ERROR, "no memory");
         }
-        $1 = uuid;
-    } else if (obj->IsNull()) {
-        SWIG_exception_fail(SWIG_TypeError, "argument of type '" "DPS_UUID""'");
+        size_t i;
+        for (i = 0; i < keyLen; ++i) {
+            v8::Local<v8::Value> valRef;
+            if (arr->Get(SWIGV8_CURRENT_CONTEXT(), i).ToLocal(&valRef)) {
+                key[i] = valRef->Uint32Value();
+            } else {
+                free(key);
+                SWIG_exception_fail(SWIG_TypeError, "argument of type '" "DPS_UUID""'");
+            }
+        }
+    } else if (!obj->IsNull()) {
+        SWIG_exception_fail(SWIG_TypeError, "argument of type '" "uint8_t *""'");
     }
+
+    $1 = key;
+    $2 = keyLen;
 }
 
-%typemap(freearg) DPS_UUID* {
+%typemap(freearg) (uint8_t* key, size_t keyLen) {
     free($1);
 }
 

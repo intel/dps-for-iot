@@ -1,5 +1,8 @@
 #!/bin/sh
 
+PYTHONPATH=./build/dist/py
+export PYTHONPATH
+
 TESTS="./build/test/bin/cbortest \
        ./build/test/bin/cosetest \
        ./build/test/bin/countvec \
@@ -17,7 +20,11 @@ TESTS="./build/test/bin/cbortest \
        ./test_scripts/tree0 \
        ./test_scripts/tree1 \
        ./test_scripts/tree2 \
-       ./test_scripts/versioning"
+       ./test_scripts/versioning \
+       ./test_scripts/simple_py_test \
+       ./test_scripts/retained_py \
+       ./py_scripts/subs_tree.py \
+       ./test_scripts/simple_js_test"
 
 DEFAULT="\e[0m"
 GREEN="\e[32m"
