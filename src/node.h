@@ -322,7 +322,7 @@ void DPS_RandUUIDLess(DPS_UUID* uuid);
 /**
  * For debug output of mesh ids
  */
-#define UUID_32(n) (((n)->val[0] << 24) | ((n)->val[1] << 16) | ((n)->val[2] << 8) | ((n)->val[3] << 0))
+#define UUID_32(n) (((unsigned)(n)->val[0] << 24) | ((n)->val[1] << 16) | ((n)->val[2] << 8) | ((n)->val[3] << 0))
 
 #ifdef __cplusplus
 }

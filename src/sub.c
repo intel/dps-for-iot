@@ -604,7 +604,7 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
 
     if (!remote->outbound.muted) {
         int isDelta = (flags & DPS_SUB_FLAG_DELTA_IND) != 0;
-        remote->inbound.meshId = *meshId;
+        memcpy(&remote->inbound.meshId, meshId, sizeof(DPS_UUID));
         ret = UpdateInboundInterests(node, remote, interests, needs, isDelta);
         /*
          * Evaluate impact of the change in interests
@@ -620,7 +620,7 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
      * Track the minimum mesh id we have seen
      */
     if (DPS_UUIDCompare(meshId, &node->minMeshId) < 0) {
-        node->minMeshId = *meshId;
+        memcpy(&node->minMeshId, meshId, sizeof(DPS_UUID));
     }
     /*
      * All is good so send an ACK

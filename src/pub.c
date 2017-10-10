@@ -533,7 +533,7 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
             free(pub);
             return DPS_ERR_RESOURCES;
         }
-        pub->pubId = *pubId;
+        memcpy(&pub->pubId, pubId, sizeof(DPS_UUID));
         /*
          * Link in the pub
          */
