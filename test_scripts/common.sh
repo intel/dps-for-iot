@@ -59,7 +59,7 @@ function pub {
     # topic data (msg) is a string listing the topics
     args="$*"
     msg=$(echo "Published topics: ${args[@]//-* /}")
-    build/dist/bin/publisher $debug $subsRate $@ -m "$msg" 2>> $f &
+    build/dist/bin/publisher $debug -w 1 $subsRate $@ -m "$msg" 2>> $f &
 }
 
 function ver {
@@ -142,7 +142,7 @@ function expect_pubs_received {
     topics=${topics// / | }
     n=$(grep "pub $topics\$" out/sub*.log | wc -l)
     if [ $n -ne $expected ]; then
-        echo "Pubs received is not equal to expected ($n != $expected)"
+        echo "Pubs ($topics) received is not equal to expected ($n != $expected)"
         grep "pub $topics\$" out/sub*.log
         exit 1
     fi

@@ -109,7 +109,7 @@ pub -p 40130 A B C D E F G
 pub -p 40132 A B C D E F G
 pub -p 40135 A B C D E F G
 
-sleep 1
+sleep 2
 
 expect_pubs_received 343 A B C D E F G
 
@@ -117,7 +117,7 @@ expect_pubs_received 343 A B C D E F G
 
 pub -p 40111 X
 
-sleep 1
+sleep 2
 
 assert_no_errors
 expect_pubs_received 49 X
