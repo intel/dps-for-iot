@@ -160,7 +160,25 @@ static DPS_NetConnection* LookupConnection(DPS_NetContext* netCtx, DPS_NodeAddre
     return NULL;
 }
 
-static void mbedtlsDebug(void *ctx, int level, const char *file, int line, const char *str)
+static const char *TLSErrTxt(int ret)
+{
+    static char buf[256] = { 0 };
+    mbedtls_strerror(ret, buf, sizeof(buf) - 1);
+    return buf;
+}
+
+static int TLSSetClientID(mbedtls_ssl_context* ssl, const struct sockaddr* addr)
+{
+    char clientID[INET6_ADDRSTRLEN] = { 0 };
+    if (addr->sa_family == AF_INET) {
+        uv_ip4_name((const struct sockaddr_in*)addr, clientID, sizeof(clientID));
+    } else {
+        uv_ip6_name((const struct sockaddr_in6*)addr, clientID, sizeof(clientID));
+    }
+    return mbedtls_ssl_set_client_transport_id(ssl, (const unsigned char*)clientID, strnlen(clientID, sizeof(clientID)));
+}
+
+static void OnTLSDebug(void *ctx, int level, const char *file, int line, const char *str)
 {
 #ifdef DPS_DEBUG
     if (DPS_DEBUG_ENABLED()) {
@@ -181,7 +199,7 @@ static bool TLSHandshake(DPS_NetConnection* cn);
 // responsibility of our code to trigger mbedtls if the timeout has passed.
 //
 
-static void OnTLSTimeout(uv_timer_t* timer)
+static void OnTimeout(uv_timer_t* timer)
 {
     DPS_DBGTRACE();
 
@@ -217,7 +235,7 @@ static void OnTLSTimerSet(void* data, uint32_t int_ms, uint32_t fin_ms)
     assert(int_ms < fin_ms);
 
     cn->timerStatus = 0;
-    uv_timer_start(&cn->timer, OnTLSTimeout, int_ms, fin_ms - int_ms);
+    uv_timer_start(&cn->timer, OnTimeout, int_ms, fin_ms - int_ms);
 }
 
 static int OnTLSTimerGet(void* data)
@@ -281,11 +299,11 @@ typedef struct _SendReq {
     DPS_NetConnection* cn;
 } SendReq;
 
-static void OnTLSSendComplete(uv_udp_send_t *req, int status)
+static void OnSendComplete(uv_udp_send_t *req, int status)
 {
     SendReq* sendReq = req->data;
 
-    DPS_DBGPRINT("OnTLSSendComplete() cleaning up for sendReq=%p\n", sendReq);
+    DPS_DBGPRINT("OnSendComplete() cleaning up for sendReq=%p\n", sendReq);
     if (status != 0) {
         DPS_ERRPRINT("ERROR: couldn't send asynchronously with status=%d: %s\n", status, uv_err_name(status));
     }
@@ -303,12 +321,12 @@ static int OnTLSSend(void* data, const unsigned char *buf, size_t len)
 
     if (len > INT_MAX) {
         /* len will be truncated to an int return value */
-        goto error;
+        goto ErrorExit;
     }
 
     sendReq = calloc(1, sizeof(SendReq));
     if (!sendReq) {
-        goto error;
+        goto ErrorExit;
     }
 
     DPS_DBGPRINT("OnTLSSend() created sendReq=%p\n", sendReq);
@@ -316,14 +334,14 @@ static int OnTLSSend(void* data, const unsigned char *buf, size_t len)
     // We don't own the buffer mbedtls passed us, need to copy for the UDP request that is async.
     sendReq->buf.base = malloc(len);
     if (!sendReq->buf.base) {
-        goto error;
+        goto ErrorExit;
     }
 
     memcpy_s(sendReq->buf.base, len, buf, len);
 #ifdef _WIN32
     /* Under Windows, sendReq->buf.len is a ULONG, not a size_t */
     if (len > ULONG_MAX) {
-        goto error;
+        goto ErrorExit;
     }
     sendReq->buf.len = (ULONG) len;
 #else
@@ -336,15 +354,15 @@ static int OnTLSSend(void* data, const unsigned char *buf, size_t len)
     memcpy_s(&inaddr, sizeof(inaddr), &cn->peer.addr.inaddr, sizeof(cn->peer.addr.inaddr));
     DPS_MapAddrToV6((struct sockaddr *)&inaddr);
 
-    int err = uv_udp_send(&sendReq->uvReq, cn->socket, &sendReq->buf, 1, (const struct sockaddr *)&inaddr, OnTLSSendComplete);
+    int err = uv_udp_send(&sendReq->uvReq, cn->socket, &sendReq->buf, 1, (const struct sockaddr *)&inaddr, OnSendComplete);
     if (err) {
         DPS_ERRPRINT("ERROR: couldn't send UDP packet: %s\n", uv_err_name(err));
-        goto error;
+        goto ErrorExit;
     }
 
     return (int) len;
 
-error:
+ ErrorExit:
     if (sendReq) {
         if (sendReq->buf.base) {
             free(sendReq->buf.base);
@@ -437,18 +455,18 @@ static DPS_NetConnection* CreateConnection(DPS_Node* node, const struct sockaddr
     // TODO: Add support for PKI instead (or in addition to) the network key.
     static const unsigned char id[] = "dps";
     static const size_t idLen = sizeof(id);
-    uint8_t key[256] = { 0 };
-    size_t keyLen = 0;
+    uint8_t psk[256] = { 0 };
+    size_t pskLen = 0;
 
     DPS_KeyStore* keyStore = node->keyStore;
     if (!keyStore || !keyStore->networkKeyHandler) {
         return NULL;
     }
-    ret = keyStore->networkKeyHandler(keyStore, key, sizeof(key), &keyLen);
+    ret = keyStore->networkKeyHandler(keyStore, psk, sizeof(psk), &pskLen);
     if (ret != DPS_OK) {
         return NULL;
     }
-    if (keyLen == 0) {
+    if (pskLen == 0) {
         return NULL;
     }
 
@@ -481,18 +499,18 @@ static DPS_NetConnection* CreateConnection(DPS_Node* node, const struct sockaddr
                                 (const unsigned char*)PERSONALIZATION_STRING, sizeof(PERSONALIZATION_STRING));
     if (ret != 0) {
         DPS_ERRPRINT("ERROR: seeding mbedtls random byte generator (%d)\n", ret);
-        goto error;
+        goto ErrorExit;
     }
 
     ret = mbedtls_ssl_config_defaults(&cn->conf, cn->type, MBEDTLS_SSL_TRANSPORT_DATAGRAM, MBEDTLS_SSL_PRESET_DEFAULT);
     if (ret != 0) {
         DPS_ERRPRINT("ERROR: setting mbedtls configuration defaults (%d)\n", ret);
-        goto error;
+        goto ErrorExit;
     }
 
-    mbedtls_ssl_conf_dbg(&cn->conf, mbedtlsDebug, NULL);
+    mbedtls_ssl_conf_dbg(&cn->conf, OnTLSDebug, NULL);
     mbedtls_ssl_conf_rng(&cn->conf, mbedtls_ctr_drbg_random, &cn->randgen);
-    mbedtls_ssl_conf_psk(&cn->conf, key, keyLen, id, idLen);
+    mbedtls_ssl_conf_psk(&cn->conf, psk, pskLen, id, idLen);
 
     if (cn->type == MBEDTLS_SSL_IS_SERVER) {
         mbedtls_ssl_cookie_init(&cn->cookieCtx);
@@ -502,7 +520,7 @@ static DPS_NetConnection* CreateConnection(DPS_Node* node, const struct sockaddr
         ret = mbedtls_ssl_cookie_setup(&cn->cookieCtx, mbedtls_ctr_drbg_random, &cn->randgen);
         if (ret != 0) {
             DPS_ERRPRINT("ERROR: setting up mbedtls cookie context (%d)\n", ret);
-            goto error;
+            goto ErrorExit;
         }
 
         mbedtls_ssl_conf_dtls_cookies(&cn->conf, mbedtls_ssl_cookie_write, mbedtls_ssl_cookie_check, &cn->cookieCtx);
@@ -514,20 +532,13 @@ static DPS_NetConnection* CreateConnection(DPS_Node* node, const struct sockaddr
     ret = mbedtls_ssl_setup(&cn->ssl, &cn->conf);
     if (ret != 0) {
         DPS_ERRPRINT("ERROR: setting up mbedtls ssl context (%d)\n", ret);
-        goto error;
+        goto ErrorExit;
     }
 
     if (cn->type == MBEDTLS_SSL_IS_SERVER) {
-        char clientID[INET6_ADDRSTRLEN] = { 0 };
-        if (addr->sa_family == AF_INET) {
-            uv_ip4_name((const struct sockaddr_in*)addr, clientID, sizeof(clientID));
-        } else {
-            uv_ip6_name((const struct sockaddr_in6*)addr, clientID, sizeof(clientID));
-        }
-        ret = mbedtls_ssl_set_client_transport_id(&cn->ssl, (const unsigned char*)clientID, strnlen(clientID, sizeof(clientID)));
+        ret = TLSSetClientID(&cn->ssl, addr);
         if (ret != 0) {
-            DPS_ERRPRINT("ERROR: setting client transport id (%d)\n", ret);
-            goto error;
+            goto ErrorExit;
         }
     }
 
@@ -535,11 +546,9 @@ static DPS_NetConnection* CreateConnection(DPS_Node* node, const struct sockaddr
     netCtx->cns = cn;
     return cn;
 
-error:
+ ErrorExit:
     if (ret != 0) {
-        char errorBuf[128] = { 0 };
-        mbedtls_strerror(ret, errorBuf, sizeof(errorBuf)-1);
-        DPS_ERRPRINT("CreateConnection() last mbedtls error was: %d - %s\n\n", ret, errorBuf);
+        DPS_ERRPRINT("CreateConnection() last mbedtls error was: %d - %s\n\n", ret, TLSErrTxt(ret));
     }
 
     DestroyConnection(cn);
@@ -580,7 +589,7 @@ static void OnIdleForSendCallbacks(uv_idle_t* idle)
 // handling our data structures.
 //
 
-static void TLSWrite(DPS_NetConnection* cn)
+static void TLSSend(DPS_NetConnection* cn)
 {
     int ret;
     uint8_t* base;
@@ -589,7 +598,7 @@ static void TLSWrite(DPS_NetConnection* cn)
 
     PendingWrite* pw = cn->writeQueue;
     if (!pw) {
-        DPS_DBGPRINT("TLSWrite() no pending writes\n");
+        DPS_DBGPRINT("TLSSend() no pending writes\n");
         return;
     }
 
@@ -610,7 +619,7 @@ static void TLSWrite(DPS_NetConnection* cn)
         DPS_NetConnectionAddRef(cn);
     }
 
-    DPS_DBGPRINT("TLSWrite() using pending write with %d bufs\n", pw->numBufs);
+    DPS_DBGPRINT("TLSSend() using pending write with %d bufs\n", pw->numBufs);
 
     if (pw->numBufs == 1) {
         total = pw->bufs[0].len;
@@ -635,7 +644,7 @@ static void TLSWrite(DPS_NetConnection* cn)
         base = txbuf.base;
     }
 
-    DPS_DBGPRINT("TLSWrite() writing %d bytes of plaintext via DTLS\n", total);
+    DPS_DBGPRINT("TLSSend() writing %d bytes of plaintext via DTLS\n", total);
     DPS_DBGBYTES(base, total);
 
     // HERE: there's no data pointer to make a connection between this PendingWrite and whatever we
@@ -650,12 +659,12 @@ static void TLSWrite(DPS_NetConnection* cn)
     // TODO: Need to handle short writes?
 
     if (ret < 0) {
-        DPS_ERRPRINT("TLSWrite() failure when writing to TLS\n");
+        DPS_ERRPRINT("TLSSend() failure when writing to TLS\n");
         pw->status = DPS_ERR_NETWORK;
     }
 }
 
-static void TLSRead(DPS_NetConnection* cn)
+static void TLSRecv(DPS_NetConnection* cn)
 {
     DPS_NetContext* netCtx = cn->node->netCtx;
     int ret;
@@ -663,12 +672,12 @@ static void TLSRead(DPS_NetConnection* cn)
     ret = mbedtls_ssl_read(&cn->ssl, (unsigned char*)netCtx->plainBuffer, sizeof(netCtx->plainBuffer)-1);
     if (ret < 0) {
         if (ret == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY) {
-            DPS_DBGPRINT("TLSRead() connection was closed gracefully\n");
+            DPS_DBGPRINT("TLSRecv() connection was closed gracefully\n");
         } else {
-            DPS_DBGPRINT("TLSRead() failed, mbedtls_ssl_read returned -0x%x\n\n", -ret);
+            DPS_DBGPRINT("TLSRecv() failed, mbedtls_ssl_read returned -0x%x\n\n", -ret);
         }
     } else {
-        DPS_DBGPRINT("TLSRead() decrypted into %d bytes of plaintext\n", ret);
+        DPS_DBGPRINT("TLSRecv() decrypted into %d bytes of plaintext\n", ret);
         DPS_DBGBYTES((const uint8_t*)netCtx->plainBuffer, ret);
 
         ret = netCtx->receiveCB(netCtx->node, &cn->peer, DPS_OK, (uint8_t*)netCtx->plainBuffer, ret);
@@ -694,14 +703,7 @@ static bool TLSHandshake(DPS_NetConnection* cn)
         mbedtls_ssl_session_reset(&cn->ssl);
 
         if (cn->type == MBEDTLS_SSL_IS_SERVER) {
-            char clientID[128] = { 0 };
-            const struct sockaddr* addr = (const struct sockaddr*)&cn->peer.addr.inaddr;
-            if (addr->sa_family == AF_INET) {
-                uv_ip4_name((const struct sockaddr_in*)addr, clientID, sizeof(clientID)-1);
-            } else {
-                uv_ip6_name((const struct sockaddr_in6*)addr, clientID, sizeof(clientID)-1);
-            }
-            ret = mbedtls_ssl_set_client_transport_id(&cn->ssl, (const unsigned char*)clientID, sizeof(clientID));
+            ret = TLSSetClientID(&cn->ssl, (const struct sockaddr*)&cn->peer.addr.inaddr);
             if (ret != 0) {
                 DPS_ERRPRINT("ERROR: couldn't set client transport id (%d)\n", ret);
             }
@@ -722,9 +724,7 @@ static bool TLSHandshake(DPS_NetConnection* cn)
     }
 
     if (ret != 0) {
-        char buf[256] = { 0 };
-        mbedtls_strerror(ret, buf, sizeof(buf)-1);
-        DPS_WARNPRINT("TLSHandshake failed: %s\n", buf);
+        DPS_WARNPRINT("TLSHandshake failed: %s\n", TLSErrTxt(ret));
         return false;
     }
 
@@ -740,10 +740,10 @@ static bool TLSHandshake(DPS_NetConnection* cn)
     cn->handshakeDone = 1;
     DPS_DBGPRINT("TLSHandshake() is done\n");
     while (cn->readQueue) {
-        TLSRead(cn);
+        TLSRecv(cn);
     }
     while (cn->writeQueue) {
-        TLSWrite(cn);
+        TLSSend(cn);
     }
     return true;
 }
@@ -772,7 +772,7 @@ static void OnData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, const s
 #ifdef _WIN32
     /* Under Windows, pr->buf.len is a ULONG, not a size_t */
     if (nread > ULONG_MAX) {
-        goto exit;
+        goto Exit;
     }
 #endif
 
@@ -786,7 +786,7 @@ static void OnData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, const s
     // the network.
     if (netCtx->node->state == DPS_NODE_STOPPING) {
         DPS_DBGPRINT("OnData() ignoring data received while stopping the node\n");
-        goto exit;
+        goto Exit;
     }
 
     cn = LookupConnection(netCtx, nodeAddr);
@@ -794,7 +794,7 @@ static void OnData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, const s
         cn = CreateConnection(netCtx->node, addr, MBEDTLS_SSL_IS_SERVER);
         if (!cn) {
             DPS_ERRPRINT("could not create server connection structure\n");
-            goto exit;
+            goto Exit;
         }
         cn->peer.addr = *nodeAddr;
         cn->peer.cn = cn;
@@ -830,10 +830,10 @@ static void OnData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, const s
             DestroyConnection(cn);
         }
     } else {
-        TLSRead(cn);
+        TLSRecv(cn);
     }
 
- exit:
+ Exit:
     DPS_DestroyAddress(nodeAddr);
 }
 
@@ -965,7 +965,7 @@ DPS_Status DPS_NetSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf
         }
         ep->cn->writeQueue = pw;
         if (ep->cn->handshakeDone) {
-            TLSWrite(ep->cn);
+            TLSSend(ep->cn);
         }
         return DPS_OK;
     }
