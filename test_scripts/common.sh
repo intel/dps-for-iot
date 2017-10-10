@@ -126,10 +126,10 @@ function js_pub {
 }
 
 function assert_no_errors {
-    n=$(grep -r "ERROR" out | wc -l)
+    n=$(grep -ir "ERROR" out | wc -l)
     if [ $n -gt 0 ]; then
         echo "Errors $n"
-        grep -Hr "ERROR" out
+        grep -iHr "ERROR" out
         exit 1
     fi
 }
