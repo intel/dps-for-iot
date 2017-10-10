@@ -977,6 +977,13 @@ static DPS_Status DecodeRequest(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuffe
         DPS_ERRPRINT("Invalid message type\n");
         break;
     }
+    /*
+     * Stale is not a network or invalid message error, so don't
+     * report an error to the transport.
+     */
+    if (ret == DPS_ERR_STALE) {
+        ret = DPS_OK;
+    }
     return ret;
 }
 

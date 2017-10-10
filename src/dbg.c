@@ -47,7 +47,8 @@ void DPS_Log(DPS_LogLevel level, const char* file, int line, const char *functio
         vfprintf(stderr, fmt, ap);
         break;
     case DPS_LOG_DBGTRACE:
-        fprintf(stderr, "%09u TRACE   %s@%d: %s()\n", DPS_DBG_TIME, file, line, function);
+        fprintf(stderr, "%09u TRACE   %s@%d: %s() ", DPS_DBG_TIME, file, line, function);
+        vfprintf(stderr, fmt, ap);
         break;
     case DPS_LOG_DBGPRINT:
         fprintf(stderr, "%09u DEBUG   %s@%d: ", DPS_DBG_TIME, file, line);
