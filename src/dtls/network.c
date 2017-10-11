@@ -262,11 +262,9 @@ static int OnTLSTimerGet(void* data)
 
 static int OnTLSRecv(void* data, unsigned char *buf, size_t len)
 {
-    DPS_DBGTRACE();
-
     DPS_NetConnection* cn = data;
 
-    DPS_DBGPRINT("OnTLSRecv() want to read using %zu bytes of buffer\n", len);
+    DPS_DBGTRACEA("len=%d,addr=%s\n", len, DPS_NodeAddrToString(&cn->peer.addr));
 
     PendingRead* pr = cn->readQueue;
     if (!pr) {
@@ -317,7 +315,6 @@ static int OnTLSSend(void* data, const unsigned char *buf, size_t len)
     SendReq* sendReq = NULL;
 
     DPS_DBGTRACEA("len=%d,addr=%s\n", len, DPS_NodeAddrToString(&cn->peer.addr));
-    DPS_DBGPRINT("OnTLSSend want to write %zu bytes\n", len);
 
     if (len > INT_MAX) {
         /* len will be truncated to an int return value */
@@ -650,13 +647,16 @@ static void TLSSend(DPS_NetConnection* cn)
     // HERE: there's no data pointer to make a connection between this PendingWrite and whatever we
     // are going to write in the udp socket. Maybe it is implicit that after this call our udp
     // callback was called, so we stitch things together after the call.
-    ret = mbedtls_ssl_write(&cn->ssl, base, total);
+    ret = 0;
+    do {
+        base = base + ret;
+        total = total - ret;
+        ret = mbedtls_ssl_write(&cn->ssl, base, total);
+    } while (0 < ret && ret < total);
 
     if (pw->numBufs != 1) {
         DPS_TxBufferFree(&txbuf);
     }
-
-    // TODO: Need to handle short writes?
 
     if (ret < 0) {
         DPS_ERRPRINT("TLSSend() failure when writing to TLS\n");
@@ -800,7 +800,7 @@ static void OnData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, const s
         cn->peer.cn = cn;
     }
 
-    // TODO: After the handshake is done, we don't need to use pending structure. It is being used
+    // After the handshake is done, we don't need to use pending structure. It is being used
     // because it is convenient to have one codepath for reading. To improve this must take in
     // consideration that sometimes a connection might be reset (so we need to use pending again).
 

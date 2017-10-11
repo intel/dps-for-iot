@@ -76,7 +76,7 @@ void DPS_LogBytes(DPS_LogLevel level, const char* file, int line, const char *fu
 #define DPS_DBGBYTES(bytes, n) (DPS_DEBUG_ENABLED() ? DPS_LogBytes(DPS_LOG_DBGPRINT, __FILE__, __LINE__, __FUNCTION__, bytes, n) : 0)
 #else
 #define DPS_DBGTRACE()
-#define DPS_DBGTRACEA()
+#define DPS_DBGTRACEA(...)
 #define DPS_DBGPRINT(...)
 #define DPS_WARNPRINT(...)
 #define DPS_DBGBYTES(bytes, n)
