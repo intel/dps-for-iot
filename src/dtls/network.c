@@ -91,10 +91,14 @@ typedef struct _DPS_NetConnection {
     // role in a connection.
     int type;
 
-    mbedtls_entropy_context entropy;
-    mbedtls_ctr_drbg_context randgen;
     mbedtls_ssl_context ssl;
     mbedtls_ssl_config conf;
+    mbedtls_x509_crt cacert;
+    mbedtls_x509_crt cert;
+    mbedtls_pk_context pkey;
+    mbedtls_ctr_drbg_context drbg;
+    mbedtls_entropy_context entropy;
+
     int handshakeDone;
 
     // Entries in the read queue are created from data received from the
@@ -160,35 +164,71 @@ static DPS_NetConnection* LookupConnection(DPS_NetContext* netCtx, DPS_NodeAddre
     return NULL;
 }
 
+static char errBuf[256] = { 0 };
+
 static const char *TLSErrTxt(int ret)
 {
-    static char buf[256] = { 0 };
-    mbedtls_strerror(ret, buf, sizeof(buf) - 1);
-    return buf;
+    mbedtls_strerror(ret, errBuf, sizeof(errBuf));
+    return errBuf;
 }
 
-static int TLSSetClientID(mbedtls_ssl_context* ssl, const struct sockaddr* addr)
+static const char *TLSVerifyTxt(uint32_t flags)
 {
-    char clientID[INET6_ADDRSTRLEN] = { 0 };
-    if (addr->sa_family == AF_INET) {
-        uv_ip4_name((const struct sockaddr_in*)addr, clientID, sizeof(clientID));
-    } else {
-        uv_ip6_name((const struct sockaddr_in6*)addr, clientID, sizeof(clientID));
-    }
-    return mbedtls_ssl_set_client_transport_id(ssl, (const unsigned char*)clientID, strnlen(clientID, sizeof(clientID)));
+    // We don't provide a prefix
+    mbedtls_x509_crt_verify_info(errBuf, sizeof(errBuf), "", flags);
+    return errBuf;
 }
 
 static void OnTLSDebug(void *ctx, int level, const char *file, int line, const char *str)
 {
 #ifdef DPS_DEBUG
     if (DPS_DEBUG_ENABLED()) {
-        DPS_Log(DPS_LOG_DBGPRINT, file, line, NULL, str);
+        DPS_Log(DPS_LOG_DBGPRINT, file, line, NULL, "%s", str);
     }
 #endif
 }
 
 static void DestroyConnection(DPS_NetConnection* cn);
 static bool TLSHandshake(DPS_NetConnection* cn);
+
+//
+// PSK
+//
+
+static DPS_Status TLSPSKSet(DPS_KeyStoreRequest* request, const unsigned char* key, size_t len)
+{
+    DPS_NetConnection* cn = request->data;
+    int ret = mbedtls_ssl_set_hs_psk(&cn->ssl, key, len);
+    if (ret != 0) {
+        DPS_ERRPRINT("Set PSK failed: %s\n", TLSErrTxt(ret));
+        return DPS_ERR_MISSING;
+    }
+    return DPS_OK;
+}
+
+static int OnTLSPSKGet(void *data, mbedtls_ssl_context* ssl, const unsigned char* id, size_t idLen)
+{
+    DPS_NetConnection* cn = data;
+    DPS_KeyStore* keyStore = cn->node->keyStore;
+    DPS_KeyStoreRequest request;
+    DPS_Status ret;
+
+    DPS_DBGTRACE();
+
+    if (!keyStore || !keyStore->keyHandler) {
+        DPS_ERRPRINT("Missing key store for PSK\n");
+        return MBEDTLS_ERR_SSL_UNKNOWN_IDENTITY;
+    }
+    request.keyStore = keyStore;
+    request.data = cn;
+    request.setKey = TLSPSKSet;
+    ret = keyStore->keyHandler(&request, id, idLen);
+    if (ret != DPS_OK) {
+        DPS_ERRPRINT("Get PSK failed: %s\n", DPS_ErrTxt(ret));
+        return MBEDTLS_ERR_SSL_UNKNOWN_IDENTITY;
+    }
+    return 0;
+}
 
 //
 // TIMER
@@ -303,7 +343,7 @@ static void OnSendComplete(uv_udp_send_t *req, int status)
 
     DPS_DBGPRINT("OnSendComplete() cleaning up for sendReq=%p\n", sendReq);
     if (status != 0) {
-        DPS_ERRPRINT("ERROR: couldn't send asynchronously with status=%d: %s\n", status, uv_err_name(status));
+        DPS_ERRPRINT("Send failed: %s\n", uv_err_name(status));
     }
     free(sendReq->buf.base);
     free(sendReq);
@@ -353,7 +393,7 @@ static int OnTLSSend(void* data, const unsigned char *buf, size_t len)
 
     int err = uv_udp_send(&sendReq->uvReq, cn->socket, &sendReq->buf, 1, (const struct sockaddr *)&inaddr, OnSendComplete);
     if (err) {
-        DPS_ERRPRINT("ERROR: couldn't send UDP packet: %s\n", uv_err_name(err));
+        DPS_ERRPRINT("Send failed: %s\n", uv_err_name(err));
         goto ErrorExit;
     }
 
@@ -382,19 +422,27 @@ static void CancelPendingWrites(DPS_NetConnection* cn, PendingWrite* pw)
     }
 }
 
+static void CloseConnection(DPS_NetConnection* cn)
+{
+
+    mbedtls_ssl_free(&cn->ssl);
+    mbedtls_ssl_config_free(&cn->conf);
+    mbedtls_pk_free(&cn->pkey);
+    mbedtls_x509_crt_free(&cn->cacert);
+    mbedtls_x509_crt_free(&cn->cert);
+    if (cn->type == MBEDTLS_SSL_IS_SERVER) {
+        mbedtls_ssl_cache_free(&cn->cacheCtx);
+        mbedtls_ssl_cookie_free(&cn->cookieCtx);
+    }
+    mbedtls_ctr_drbg_free(&cn->drbg);
+    mbedtls_entropy_free(&cn->entropy);
+}
+
 static void TimerClosed(uv_handle_t* handle)
 {
     DPS_NetConnection* cn = (DPS_NetConnection*)handle->data;
 
-    if (cn->type == MBEDTLS_SSL_IS_SERVER) {
-        mbedtls_ssl_cookie_free(&cn->cookieCtx);
-        mbedtls_ssl_cache_free(&cn->cacheCtx);
-    }
-
-    mbedtls_entropy_free(&cn->entropy);
-    mbedtls_ctr_drbg_free(&cn->randgen);
-    mbedtls_ssl_config_free(&cn->conf);
-    mbedtls_ssl_free(&cn->ssl);
+    CloseConnection(cn);
 
     PendingRead* pr = cn->readQueue;
     while (pr) {
@@ -410,7 +458,7 @@ static void TimerClosed(uv_handle_t* handle)
         DPS_NetConnection* next = cn->next;
         if (cn->node->netCtx->cns == cn) {
             cn->node->netCtx->cns = next;
-        } else {
+        } else if (cn->node->netCtx->cns) {
             DPS_NetConnection* prev = cn->node->netCtx->cns;
             while (prev->next != cn) {
                 prev = prev->next;
@@ -440,30 +488,74 @@ static void DestroyConnection(DPS_NetConnection* cn)
     uv_close((uv_handle_t*)&cn->idleForSendCallbacks, IdleForCallbacksClosed);
 }
 
+static int ResetConnection(DPS_NetConnection* cn, const struct sockaddr* addr)
+{
+    char clientID[INET6_ADDRSTRLEN] = { 0 };
+
+    /* Only called for servers with cookies enabled */
+    assert(cn->type == MBEDTLS_SSL_IS_SERVER);
+
+    mbedtls_ssl_session_reset(&cn->ssl);
+    if (addr->sa_family == AF_INET) {
+        uv_ip4_name((const struct sockaddr_in*)addr, clientID, sizeof(clientID));
+    } else {
+        uv_ip6_name((const struct sockaddr_in6*)addr, clientID, sizeof(clientID));
+    }
+    return mbedtls_ssl_set_client_transport_id(&cn->ssl, (const unsigned char*)clientID, strnlen(clientID, sizeof(clientID)));
+}
+
+static DPS_Status SetCA(DPS_KeyStoreRequest* request, const unsigned char* ca, size_t len)
+{
+    DPS_NetConnection* cn = request->data;
+    int ret = mbedtls_x509_crt_parse(&cn->cacert, ca, len);
+    if (ret != 0) {
+        DPS_WARNPRINT("Parsing trusted certificate(s) failed: %s\n", TLSErrTxt(ret));
+        return DPS_ERR_MISSING;
+    }
+    return DPS_OK;
+}
+
+static DPS_Status SetCert(DPS_KeyStoreRequest* request, const unsigned char* cert, size_t certLen, const unsigned char* key, size_t keyLen,
+                          const unsigned char* pwd, size_t pwdLen)
+{
+    DPS_NetConnection* cn = request->data;
+    int ret = mbedtls_x509_crt_parse(&cn->cert, cert, certLen);
+    if (ret != 0) {
+        DPS_WARNPRINT("Parsing certificate failed: %s\n", TLSErrTxt(ret));
+        return DPS_ERR_MISSING;
+    }
+    ret =  mbedtls_pk_parse_key(&cn->pkey, key, keyLen, pwd, pwdLen);
+    if (ret != 0) {
+        DPS_WARNPRINT("Parse private key failed: %s\n", TLSErrTxt(ret));
+        return DPS_ERR_MISSING;
+    }
+    return DPS_OK;
+}
+
+static DPS_Status SetKeyAndIdentity(DPS_KeyStoreRequest* request, const unsigned char* key, size_t keyLen, const unsigned char* id, size_t idLen)
+{
+    DPS_NetConnection* cn = request->data;
+    int ret = mbedtls_ssl_conf_psk(&cn->conf, key, keyLen, id, idLen);
+    if (ret != 0) {
+        DPS_WARNPRINT("Set PSK failed: %s\n", TLSErrTxt(ret));
+        return DPS_ERR_MISSING;
+    }
+    return DPS_OK;
+}
+
 static DPS_NetConnection* CreateConnection(DPS_Node* node, const struct sockaddr* addr, int type)
 {
     int ret;
     DPS_NetConnection* cn;
     DPS_NetContext* netCtx = node->netCtx;
+    DPS_KeyStore* keyStore = node->keyStore;
+    DPS_KeyStoreRequest request;
 
     DPS_DBGPRINT("CreateConnection() creating a %s DTLS context\n",
                  (type == MBEDTLS_SSL_IS_SERVER) ? "server" : "client");
 
-    // TODO: Add support for PKI instead (or in addition to) the network key.
-    static const unsigned char id[] = "dps";
-    static const size_t idLen = sizeof(id);
-    uint8_t psk[256] = { 0 };
-    size_t pskLen = 0;
-
-    DPS_KeyStore* keyStore = node->keyStore;
-    if (!keyStore || !keyStore->networkKeyHandler) {
-        return NULL;
-    }
-    ret = keyStore->networkKeyHandler(keyStore, psk, sizeof(psk), &pskLen);
-    if (ret != DPS_OK) {
-        return NULL;
-    }
-    if (pskLen == 0) {
+    if (!keyStore || !keyStore->keyAndIdentityHandler) {
+        DPS_ERRPRINT("Missing key store for PSK\n");
         return NULL;
     }
 
@@ -484,57 +576,86 @@ static DPS_NetConnection* CreateConnection(DPS_Node* node, const struct sockaddr
 
     cn->socket = &netCtx->rxSocket;
 
-    mbedtls_ssl_init(&cn->ssl);
-    mbedtls_ssl_config_init(&cn->conf);
-    mbedtls_ctr_drbg_init(&cn->randgen);
+    mbedtls_entropy_init(&cn->entropy);
 
     // The default implementation is in mbedtls_platform_entropy_poll() and will rely on getrandom
     // or /dev/urandom in Linux; and on CryptGenRandom() on Windows.
-    mbedtls_entropy_init(&cn->entropy);
-
-    ret = mbedtls_ctr_drbg_seed(&cn->randgen, mbedtls_entropy_func, &cn->entropy,
+    mbedtls_ctr_drbg_init(&cn->drbg);
+    ret = mbedtls_ctr_drbg_seed(&cn->drbg, mbedtls_entropy_func, &cn->entropy,
                                 (const unsigned char*)PERSONALIZATION_STRING, sizeof(PERSONALIZATION_STRING));
     if (ret != 0) {
-        DPS_ERRPRINT("ERROR: seeding mbedtls random byte generator (%d)\n", ret);
+        DPS_ERRPRINT("Seeding mbedtls random byte generator failed: %s\n", TLSErrTxt(ret));
         goto ErrorExit;
     }
-
-    ret = mbedtls_ssl_config_defaults(&cn->conf, cn->type, MBEDTLS_SSL_TRANSPORT_DATAGRAM, MBEDTLS_SSL_PRESET_DEFAULT);
-    if (ret != 0) {
-        DPS_ERRPRINT("ERROR: setting mbedtls configuration defaults (%d)\n", ret);
-        goto ErrorExit;
-    }
-
-    mbedtls_ssl_conf_dbg(&cn->conf, OnTLSDebug, NULL);
-    mbedtls_ssl_conf_rng(&cn->conf, mbedtls_ctr_drbg_random, &cn->randgen);
-    mbedtls_ssl_conf_psk(&cn->conf, psk, pskLen, id, idLen);
 
     if (cn->type == MBEDTLS_SSL_IS_SERVER) {
         mbedtls_ssl_cookie_init(&cn->cookieCtx);
-        mbedtls_ssl_cache_init(&cn->cacheCtx);
-        mbedtls_ssl_conf_session_cache(&cn->conf, &cn->cacheCtx, mbedtls_ssl_cache_get, mbedtls_ssl_cache_set );
-
-        ret = mbedtls_ssl_cookie_setup(&cn->cookieCtx, mbedtls_ctr_drbg_random, &cn->randgen);
+        ret = mbedtls_ssl_cookie_setup(&cn->cookieCtx, mbedtls_ctr_drbg_random, &cn->drbg);
         if (ret != 0) {
-            DPS_ERRPRINT("ERROR: setting up mbedtls cookie context (%d)\n", ret);
+            DPS_ERRPRINT("Setting up mbedtls cookie context failed: %s\n", TLSErrTxt(ret));
             goto ErrorExit;
         }
 
-        mbedtls_ssl_conf_dtls_cookies(&cn->conf, mbedtls_ssl_cookie_write, mbedtls_ssl_cookie_check, &cn->cookieCtx);
+        mbedtls_ssl_cache_init(&cn->cacheCtx);
     }
 
+    mbedtls_ssl_config_init(&cn->conf);
+    ret = mbedtls_ssl_config_defaults(&cn->conf, cn->type, MBEDTLS_SSL_TRANSPORT_DATAGRAM, MBEDTLS_SSL_PRESET_DEFAULT);
+    if (ret != 0) {
+        DPS_ERRPRINT("Setting mbedtls configuration defaults failed: %s\n", TLSErrTxt(ret));
+        goto ErrorExit;
+    }
+    mbedtls_ssl_conf_dbg(&cn->conf, OnTLSDebug, NULL);
+    mbedtls_ssl_conf_rng(&cn->conf, mbedtls_ctr_drbg_random, &cn->drbg);
+
+    request.keyStore = keyStore;
+    request.data = cn;
+
+    mbedtls_x509_crt_init(&cn->cacert);
+    request.setCA = SetCA;
+    ret = keyStore->caHandler(&request);
+    if (ret == 0) {
+        mbedtls_ssl_conf_ca_chain(&cn->conf, &cn->cacert, NULL);
+    } else {
+        DPS_WARNPRINT("Parsing trusted certificate(s) failed: %s\n", DPS_ErrTxt(ret));
+    }
+    mbedtls_x509_crt_init(&cn->cert);
+    mbedtls_pk_init(&cn->pkey);
+    request.setCert = SetCert;
+    ret = keyStore->certHandler(&request);
+    if (ret == 0) {
+        mbedtls_ssl_conf_own_cert(&cn->conf, &cn->cert, &cn->pkey);
+    } else {
+        DPS_WARNPRINT("Parsing certificate failed: %s\n", DPS_ErrTxt(ret));
+    }
+
+    if (cn->type == MBEDTLS_SSL_IS_SERVER) {
+        mbedtls_ssl_conf_session_cache(&cn->conf, &cn->cacheCtx, mbedtls_ssl_cache_get, mbedtls_ssl_cache_set);
+        mbedtls_ssl_conf_dtls_cookies(&cn->conf, mbedtls_ssl_cookie_write, mbedtls_ssl_cookie_check, &cn->cookieCtx);
+        mbedtls_ssl_conf_psk_cb(&cn->conf, OnTLSPSKGet, cn);
+    } else {
+        request.setKeyAndIdentity = SetKeyAndIdentity;
+        ret = keyStore->keyAndIdentityHandler(&request);
+        if (ret != DPS_OK) {
+            DPS_ERRPRINT("Get PSK failed: %s\n", DPS_ErrTxt(ret));
+            goto ErrorExit;
+        }
+    }
+    mbedtls_ssl_conf_authmode(&cn->conf, MBEDTLS_SSL_VERIFY_REQUIRED);
+
+    mbedtls_ssl_init(&cn->ssl);
     mbedtls_ssl_set_bio(&cn->ssl, cn, OnTLSSend, OnTLSRecv, NULL);
     mbedtls_ssl_set_timer_cb(&cn->ssl, cn, OnTLSTimerSet, OnTLSTimerGet);
-
     ret = mbedtls_ssl_setup(&cn->ssl, &cn->conf);
     if (ret != 0) {
-        DPS_ERRPRINT("ERROR: setting up mbedtls ssl context (%d)\n", ret);
+        DPS_ERRPRINT("Setting up mbedtls ssl context failed: %s\n", TLSErrTxt(ret));
         goto ErrorExit;
     }
 
     if (cn->type == MBEDTLS_SSL_IS_SERVER) {
-        ret = TLSSetClientID(&cn->ssl, addr);
+        ret = ResetConnection(cn, addr);
         if (ret != 0) {
+            DPS_ERRPRINT("Reset connection failed: %s\n", TLSErrTxt(ret));
             goto ErrorExit;
         }
     }
@@ -544,10 +665,6 @@ static DPS_NetConnection* CreateConnection(DPS_Node* node, const struct sockaddr
     return cn;
 
  ErrorExit:
-    if (ret != 0) {
-        DPS_ERRPRINT("CreateConnection() last mbedtls error was: %d - %s\n\n", ret, TLSErrTxt(ret));
-    }
-
     DestroyConnection(cn);
     return NULL;
 }
@@ -659,7 +776,7 @@ static void TLSSend(DPS_NetConnection* cn)
     }
 
     if (ret < 0) {
-        DPS_ERRPRINT("TLSSend() failure when writing to TLS\n");
+        DPS_ERRPRINT("TLS write failed: %s\n", TLSErrTxt(ret));
         pw->status = DPS_ERR_NETWORK;
     }
 }
@@ -700,15 +817,10 @@ static bool TLSHandshake(DPS_NetConnection* cn)
 
     if (ret == MBEDTLS_ERR_SSL_HELLO_VERIFY_REQUIRED) {
         DPS_DBGPRINT("TLSHandshake() hello verification required, resetting\n");
-        mbedtls_ssl_session_reset(&cn->ssl);
-
-        if (cn->type == MBEDTLS_SSL_IS_SERVER) {
-            ret = TLSSetClientID(&cn->ssl, (const struct sockaddr*)&cn->peer.addr.inaddr);
-            if (ret != 0) {
-                DPS_ERRPRINT("ERROR: couldn't set client transport id (%d)\n", ret);
-            }
+        ret = ResetConnection(cn, (const struct sockaddr*)&cn->peer.addr.inaddr);
+        if (ret != 0) {
+            DPS_ERRPRINT("Reset connection failed: %s\n", TLSErrTxt(ret));
         }
-
         return true;
     }
 
@@ -729,12 +841,13 @@ static bool TLSHandshake(DPS_NetConnection* cn)
     }
 
     uint32_t verifyFlags = mbedtls_ssl_get_verify_result(&cn->ssl);
-    if (verifyFlags != 0) {
-        DPS_ERRPRINT("TLSHandshake() failure when getting the verify result\n");
-        return false;
+    if (verifyFlags == 0) {
+        DPS_DBGPRINT("Peer verification succeeded\n");
+    } else if (verifyFlags & MBEDTLS_X509_BADCERT_SKIP_VERIFY) {
+        DPS_WARNPRINT("Peer verification skipped\n");
+    } else {
+        DPS_ERRPRINT("Peer verification failed - %s", TLSVerifyTxt(verifyFlags));
     }
-
-    // TODO: Actually verify the peer. Look at this when using PKI.
 
     // Handshake is done, consume anything pending.
     cn->handshakeDone = 1;
@@ -755,7 +868,7 @@ static void OnData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, const s
 
     DPS_DBGTRACEA("nread=%d,addr=%s\n", nread, DPS_NetAddrText(addr));
     if (nread < 0) {
-        DPS_ERRPRINT("OnData error %s\n", uv_err_name((int)nread));
+        DPS_ERRPRINT("OnData error: %s\n", uv_err_name((int)nread));
         return;
     }
     if (!nread) {
@@ -793,7 +906,7 @@ static void OnData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, const s
     if (!cn) {
         cn = CreateConnection(netCtx->node, addr, MBEDTLS_SSL_IS_SERVER);
         if (!cn) {
-            DPS_ERRPRINT("could not create server connection structure\n");
+            DPS_ERRPRINT("Create server connection structure failed\n");
             goto Exit;
         }
         cn->peer.addr = *nodeAddr;
@@ -849,13 +962,15 @@ DPS_NetContext* DPS_NetStart(DPS_Node* node, int port, DPS_OnReceive cb)
     DPS_NetContext* netCtx;
     struct sockaddr_storage addr;
 
+    DPS_DBGTRACE();
+
     netCtx = calloc(1, sizeof(*netCtx));
     if (!netCtx) {
         return NULL;
     }
     ret = uv_udp_init(DPS_GetLoop(node), &netCtx->rxSocket);
     if (ret) {
-        DPS_ERRPRINT("uv_udp_init error=%s\n", uv_err_name(ret));
+        DPS_ERRPRINT("UDP init failed: %s\n", uv_err_name(ret));
         free(netCtx);
         return NULL;
     }
@@ -876,12 +991,17 @@ DPS_NetContext* DPS_NetStart(DPS_Node* node, int port, DPS_OnReceive cb)
     }
 
     mbedtls_debug_set_threshold(DEBUG_MBEDTLS_LEVEL);
+    /* Enable this block to log the supported ciphersuites */
+#if 0
+    for (const int* cs = mbedtls_ssl_list_ciphersuites(); *cs; ++cs) {
+        DPS_DBGPRINT("  %s\n", mbedtls_ssl_get_ciphersuite_name(*cs));
+    }
+#endif
 
     return netCtx;
 
 ErrorExit:
-
-    DPS_ERRPRINT("Failed to start net netCtx: error=%s\n", uv_err_name(ret));
+    DPS_ERRPRINT("Net start failed: %s\n", uv_err_name(ret));
     uv_close((uv_handle_t*)&netCtx->rxSocket, RxHandleClosed);
     return NULL;
 }

@@ -1187,12 +1187,12 @@ DPS_Node* DPS_CreateNode(const char* separators, DPS_KeyStore* keyStore, const D
     /*
      * Sanity check
      */
-    if (keyId && (!keyStore || !keyStore->contentKeyHandler)) {
-        DPS_ERRPRINT("A content key request callback is required\n");
+    if (keyId && (!keyStore || !keyStore->keyHandler)) {
+        DPS_ERRPRINT("A key request callback is required\n");
         free(node);
         return NULL;
     }
-    if (keyId || (keyStore && keyStore->contentKeyHandler)) {
+    if (keyId || (keyStore && keyStore->keyHandler)) {
         node->isSecured = DPS_TRUE;
         memcpy_s(&node->keyId, sizeof(DPS_UUID), keyId, sizeof(DPS_UUID));
     }
@@ -1520,4 +1520,26 @@ void DPS_MakeNonce(const DPS_UUID* uuid, uint32_t seqNum, uint8_t msgType, uint8
     } else {
         p[0] |= 0x80;
     }
+}
+
+static DPS_Status SetKey(DPS_KeyStoreRequest* request, const unsigned char* key, size_t len)
+{
+    if (len > AES_128_KEY_LEN) {
+        DPS_ERRPRINT("Key has size %d, but only %d buffer\n", len, AES_128_KEY_LEN);
+        return DPS_ERR_MISSING;
+    }
+    memcpy(request->data, key, len);
+    return DPS_OK;
+}
+
+DPS_Status DPS_GetCOSEKey(void* ctx, const DPS_UUID* kid, int8_t alg, uint8_t key[AES_128_KEY_LEN])
+{
+    DPS_Node* node = (DPS_Node*)ctx;
+    DPS_KeyStore* keyStore = node->keyStore;
+    DPS_KeyStoreRequest request;
+
+    request.keyStore = keyStore;
+    request.data = key;
+    request.setKey = SetKey;
+    return keyStore->keyHandler(&request, (const unsigned char*)kid, sizeof(DPS_UUID));
 }

@@ -87,7 +87,8 @@ void DPS_DestroyAddress(DPS_NodeAddress* addr);
 
 /**
  * @defgroup keystore Key Store
- * Key stores provide key data for encrypted messages.
+ * Key stores provide key data for protecting messages and the
+ * network.
  * @{
  */
 
@@ -103,45 +104,156 @@ void DPS_DestroyAddress(DPS_NodeAddress* addr);
 typedef struct _DPS_KeyStore DPS_KeyStore;
 
 /**
- * Function prototype for requesting the encryption key for a specific
- * key identifier. This function must not block.
- *
- * @param keyStore The key store to use
- * @param kid The key identifier
- * @param key Buffer for returning the key
- * @param keyLen Size of the key buffer
- *
- * @return
- * - DPS_OK if a key matching the kid was returned
- * - DPS_ERR_MSSING if there is no matching key
+ * Opaque type for a key store request.
  */
-typedef DPS_Status (*DPS_ContentKeyHandler)(DPS_KeyStore* keyStore, const DPS_UUID* kid, uint8_t* key, size_t keyLen);
+typedef struct _DPS_KeyStoreRequest DPS_KeyStoreRequest;
 
 /**
- * Function prototype for requesting the encryption key for the
- * network. This function must not block.
+ * Function prototype for a key store handler called when a key and
+ * key identifier is requested.
  *
- * @param keyStore The key store to use
- * @param kid The key identifier
- * @param buffer Buffer for returning the key
- * @param bufferLen Size of the buffer, in bytes
- * @param keyLen Size of the returned key, in bytes
+ * DPS_SetKeyAndIdentity() should be called to provide the key and
+ * identifier to the caller.
+ *
+ * @param request The request, only valid with the body of this
+ *                callback function.
  *
  * @return
- * - DPS_OK if a key matching the kid was returned
- * - DPS_ERR_MSSING if there is no matching key
+ * - DPS_OK when DPS_SetKeyAndIdentity() succeeds
+ * - DPS_ERR_MISSING when no key is configured for this host
+ * - error otherwise
  */
-typedef DPS_Status (*DPS_NetworkKeyHandler)(DPS_KeyStore* keyStore, uint8_t* buffer, size_t bufferLen, size_t* keyLen);
+typedef DPS_Status (*DPS_KeyAndIdentityHandler)(DPS_KeyStoreRequest* request);
+
+/**
+ * Function prototype for a key store handler called when a key with the provided
+ * key identifier is requested.
+ *
+ * DPS_SetKey() should be called to provide the key to the caller.
+ *
+ * @param request The request, only valid with the body of this
+ *                callback function.
+ * @param id The identifier of the key to provide
+ * @param idLen The length of the identifier, in bytes
+ *
+ * @return
+ * - DPS_OK when DPS_SetKey() succeeds
+ * - DPS_ERR_MISSING when no key is located
+ * - error otherwise
+ */
+typedef DPS_Status (*DPS_KeyHandler)(DPS_KeyStoreRequest* request, const unsigned char* id, size_t len);
+
+/**
+ * Function prototype for a key store handler called when the trusted
+ * CA chain is requested.
+ *
+ * DPS_SetCA() should be called to provide the CA chain to the caller.
+ *
+ * @param request The request, only valid with the body of this
+ *                callback function.
+ *
+ * @return
+ * - DPS_OK when DPS_SetCA() succeeds
+ * - DPS_ERR_MISSING when no CA chain is configured
+ * - error otherwise
+ */
+typedef DPS_Status (*DPS_CAHandler)(DPS_KeyStoreRequest* request);
+
+/**
+ * Function prototype for a key store handler called when the
+ * certificate of this host is requested.
+ *
+ * DPS_SetCert() should be called to provide the certificate, private
+ * key, and private key password to the caller.
+ *
+ * @param request The request, only valid with the body of this
+ *                callback function.
+ *
+ * @return
+ * - DPS_OK when DPS_SetCert() succeeds
+ * - DPS_ERR_MISSING when no certificate is configured
+ * - error otherwise
+ */
+typedef DPS_Status (*DPS_CertHandler)(DPS_KeyStoreRequest* request);
+
+/**
+ * Provide a key and key identifier to a key store request.
+ *
+ * @param request The \p request parameter of the handler
+ * @param key The key
+ * @param keyLen The length of the key, in bytes
+ * @param id The identifier of the key to provide
+ * @param idLen The length of the identifier, in bytes
+ *
+ * @return DPS_OK or an error
+ */
+DPS_Status DPS_SetKeyAndIdentity(DPS_KeyStoreRequest* request, const unsigned char* key, size_t keyLen,
+                                 const unsigned char* id, size_t idLen);
+
+/**
+ * Provide a key to a key store request.
+ *
+ * @param request The \p request parameter of the handler
+ * @param key The key
+ * @param len The length of the key, in bytes
+ *
+ * @return DPS_OK or an error
+ */
+DPS_Status DPS_SetKey(DPS_KeyStoreRequest* request, const unsigned char* key, size_t len);
+
+/**
+ * Provide a trusted CA chain to a key store request.
+ *
+ * @param request The \p request parameter of the handler
+ * @param ca The CA chain in PEM format
+ * @param len The length of the CA chain including the terminating
+ *            NULL byte, in bytes
+ *
+ * @return DPS_OK or an error
+ */
+DPS_Status DPS_SetCA(DPS_KeyStoreRequest* request, const unsigned char* ca, size_t len);
+
+/**
+ * Provide a certificate to a key store request.
+ *
+ * @param request The \p request parameter of the handler
+ * @param cert The certificate in PEM format
+ * @param certLen The length of the certificate including the
+ *                terminating NULL byte, in bytes
+ * @param key The private key
+ * @param keyLen The length of the private key, in bytes
+ * @param password The optional password protecting the key, may be NULL
+ * @param passwordLen The length of the password, in bytes
+ *
+ * @return DPS_OK or an error
+ */
+DPS_Status DPS_SetCert(DPS_KeyStoreRequest* request, const unsigned char* cert, size_t certLen,
+                       const unsigned char* key, size_t keyLen,
+                       const unsigned char* password, size_t passwordLen);
+
+/**
+ * Returns the \p DPS_KeyStore* of a key store request.
+ *
+ * @param request A key store request
+ *
+ * @return The DPS_KeyStore* or NULL
+ */
+DPS_KeyStore* DPS_KeyStoreHandle(DPS_KeyStoreRequest* request);
 
 /**
  * Creates a key store.
  *
- * @param contentKeyHandler Callback for requesting the encryption key for a specific key identifier
- * @param networkKeyHandler Callback for requesting the encryption key for the network
+ * @param keyAndIdentityHandler Optional handler for receiving key and
+ *                              key identifier requests
+ * @param keyHandler Optional handler for receiving key requests
+ * @param caHandler Optional handler for receiving CA chain requests
+ * @param certHandler Optional handler for receiving certificate
+ *                    requests
  *
  * @return A pointer to the key store or NULL if there were no resources.
  */
-DPS_KeyStore* DPS_CreateKeyStore(DPS_ContentKeyHandler contentKeyHandler, DPS_NetworkKeyHandler networkKeyHandler);
+DPS_KeyStore* DPS_CreateKeyStore(DPS_KeyAndIdentityHandler keyAndIdentityHandler, DPS_KeyHandler keyHandler,
+                                 DPS_CAHandler caHandler, DPS_CertHandler certHandler);
 
 /**
  * Destroys a previously created key store.
@@ -206,18 +318,53 @@ void DPS_DestroyMemoryKeyStore(DPS_MemoryKeyStore* keyStore);
  *
  * @return DPS_OK or an error
  */
-DPS_Status DPS_SetContentKey(DPS_MemoryKeyStore* keyStore, const DPS_UUID* kid, uint8_t* key, size_t keyLen);
+DPS_Status DPS_SetContentKey(DPS_MemoryKeyStore* keyStore, const DPS_UUID* kid,
+                             const uint8_t* key, size_t keyLen);
 
 /**
  * Create or replace the network key in the key store.
  *
  * @param keyStore An in-memory key store
+ * @param id The identifier of the key to create
+ * @param idLen The length of the identifier, in bytes
  * @param key The key
  * @param keyLen The length of the key, in bytes
  *
  * @return DPS_OK or an error
  */
-DPS_Status DPS_SetNetworkKey(DPS_MemoryKeyStore* keyStore, uint8_t* key, size_t keyLen);
+DPS_Status DPS_SetNetworkKey(DPS_MemoryKeyStore* keyStore, const uint8_t* id, size_t idLen,
+                             const uint8_t* key, size_t keyLen);
+
+/**
+ * Create or replace the trusted CA(s) in the key store.
+ *
+ * @param mks An in-memory key store
+ * @param ca The CA chain in PEM format
+ * @param len The length of the CA chain including the terminating
+ *            NULL byte, in bytes
+ *
+ * @return DPS_OK or an error
+ */
+DPS_Status DPS_SetTrustedCA(DPS_MemoryKeyStore* mks, const char* ca, size_t len);
+
+/**
+ * Create or replace the certificate in the key store.
+ *
+ * @param mks An in-memory key store
+ * @param cert The certificate in PEM format
+ * @param certLen The length of the certificate including the
+ *                terminating NULL byte, in bytes
+ * @param key The private key
+ * @param keyLen The length of the private key, in bytes
+ * @param password The optional password protecting the key, may be NULL
+ * @param passwordLen The length of the password \em not including the
+ *                    terminating NULL byte, in bytes
+ *
+ * @return DPS_OK or an error
+ */
+DPS_Status DPS_SetCertificate(DPS_MemoryKeyStore* mks, const char* cert, size_t certLen,
+                              const char* key, size_t keyLen,
+                              const char* password, size_t passwordLen);
 
 /**
  * Returns the \p DPS_KeyStore* of an in-memory key store.

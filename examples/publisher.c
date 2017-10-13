@@ -45,9 +45,12 @@ static DPS_Event* nodeDestroyed;
 
 #define NUM_KEYS 2
 
-static DPS_UUID keyId[NUM_KEYS] = { 
+static DPS_UUID keyId[NUM_KEYS] = {
     { .val = { 0xed,0x54,0x14,0xa8,0x5c,0x4d,0x4d,0x15,0xb6,0x9f,0x0e,0x99,0x8a,0xb1,0x71,0xf2 } },
     { .val = { 0x53,0x4d,0x2a,0x4b,0x98,0x76,0x1f,0x25,0x6b,0x78,0x3c,0xc2,0xf8,0x12,0x90,0xcc } }
+};
+static DPS_UUID networkKeyId = {
+    0x4c,0xfc,0x6b,0x75,0x0f,0x80,0x95,0xb3,0x6c,0xb7,0xc1,0x2f,0x65,0x2d,0x38,0x26
 };
 
 /*
@@ -60,6 +63,82 @@ static uint8_t keyData[NUM_KEYS][16] = {
 static uint8_t networkKey[16] = {
     0xcd,0xfe,0x31,0x59,0x70,0x5f,0xe4,0xc8,0xcb,0x40,0xac,0x69,0x9c,0x06,0x3a,0x1d
 };
+
+/*
+ * Certificates for testing only - DO NOT USE THESE KEYS IN A REAL APPLICATION!!!!
+ */
+static const char trustedCAs[] =
+    "-----BEGIN CERTIFICATE-----\r\n"
+    "MIIDNTCCAh2gAwIBAgIJAOOE/gToCIERMA0GCSqGSIb3DQEBCwUAMDExCzAJBgNV\r\n"
+    "BAYTAlVTMQwwCgYDVQQKDANEUFMxFDASBgNVBAMMC0RQUyBUZXN0IENBMB4XDTE3\r\n"
+    "MTAxNjIyMTUzNFoXDTI3MTAxNDIyMTUzNFowMTELMAkGA1UEBhMCVVMxDDAKBgNV\r\n"
+    "BAoMA0RQUzEUMBIGA1UEAwwLRFBTIFRlc3QgQ0EwggEiMA0GCSqGSIb3DQEBAQUA\r\n"
+    "A4IBDwAwggEKAoIBAQC9EITpHdKwziyaKeYzAdevxlXYpJhSJY/et9jcReJObAJ+\r\n"
+    "mYV574RhmpJapQ/g0/aISu/KIIEXiDRIVluKUfm9CAkAqm8jWn7ARPL80ANeNhMs\r\n"
+    "SEiYfv0r+YQFl2f+pMLArQuh0sMm8KSM+zX3t5w35SVD5T764tsr77T1mZ++l6cq\r\n"
+    "cngNtFyRQLYYMXVymWxQWt4imtfCRmGgcCH/LpK8wzlzUm8ONfT4p5Im1UghhHCy\r\n"
+    "J0jDKBg+ytkIMB6I9FVvkjV1NAyrsikeanHN3C0vgzcQImAw2KitWLIlTcOmynWV\r\n"
+    "Xc7M1nVcIb6JWkf1AoQ/oVj2hWIIOZ/IN3IIv4r5AgMBAAGjUDBOMB0GA1UdDgQW\r\n"
+    "BBShvP2WS1iqkFItrDmmXVtCWYlCQzAfBgNVHSMEGDAWgBShvP2WS1iqkFItrDmm\r\n"
+    "XVtCWYlCQzAMBgNVHRMEBTADAQH/MA0GCSqGSIb3DQEBCwUAA4IBAQALL+aUabuo\r\n"
+    "gvIAwBKF08daYB9kkW1qwBJQOV50pxw/hRv7UOuUFMNC4Q3Z7ig8IvwmEMavtnys\r\n"
+    "Kmjfxi9jtYa2gUZUbeAfq4iQP3nlaUbcsK2RhkmJZcKZIKL14dQUTpJFrSMqe5lp\r\n"
+    "zF6BFcswePk5w064WIfLKtsLgckzlOhEBYtO3EZFAk/1pUGg2RAOoPJM915Xkrcz\r\n"
+    "Nn0O/QkUGCfgW8IQZMKCIPej/uGYCv5htTWwmm904gVTODEcBagzc9JdWxI6hKA6\r\n"
+    "n9tWPxx0iSC3qcgT++SrbDt6VtAtoh97N2v848L2X7wdRrxokgfncvfzsxbYp/DY\r\n"
+    "iwqVmHyLPIEZ\r\n"
+    "-----END CERTIFICATE-----\r\n";
+static const char cert[] =
+    "-----BEGIN CERTIFICATE-----\r\n"
+    "MIIC5TCCAc0CCQD24JFU+B9ZOjANBgkqhkiG9w0BAQsFADAxMQswCQYDVQQGEwJV\r\n"
+    "UzEMMAoGA1UECgwDRFBTMRQwEgYDVQQDDAtEUFMgVGVzdCBDQTAeFw0xNzEwMTYy\r\n"
+    "MjI1MjlaFw0yNzEwMTQyMjI1MjlaMDgxCzAJBgNVBAYTAlVTMQwwCgYDVQQKDANE\r\n"
+    "UFMxGzAZBgNVBAMMEkRQUyBUZXN0IFB1Ymxpc2hlcjCCASIwDQYJKoZIhvcNAQEB\r\n"
+    "BQADggEPADCCAQoCggEBAK4EZtIHhpWa45EgmUVYEpckgfN9ODcSrX012vF6APCd\r\n"
+    "GZ1Esxm6/QsLYxtyWLKUTDxR1hmpTgS8q0RH3ZUXq1Rn4Y/wHN8ROvT01C9lkKbI\r\n"
+    "XGrOIBLjyqsAGMfRTB26bP6Tgy9/UOhPDMiYGQIp7WdnBhdCZ8/l+6fmbWdjsVXK\r\n"
+    "IMgMDwMvaxXRcfxH+n8IT4QF/FqufqvbNHlPuaWA5ShjcHLucHeR315AAYMqRgRn\r\n"
+    "vWr6f8L9PoWze6pVsV9e8qnCo2JmkP23XOXvGegcuN7U8jU+jgUVcYbU+43vHKJn\r\n"
+    "XS9qsOO+t7/fqfB+i3KHyMnkxSaLaQi9Fvxlc7+LYEcCAwEAATANBgkqhkiG9w0B\r\n"
+    "AQsFAAOCAQEACzVVeSEynb84zXe0qofx9hTf/oGtaDrDDdLJ+glXVhNBDS77hNYg\r\n"
+    "dXFjKhrucDbidv/HqXgayU8G3djqpYCfxCOECEOxc+T0I9yuXKZpOldX/Jc58v29\r\n"
+    "d7W+I3gwtWiSwwxrHgXuewzKqZAjjHIQWGQT0hkPwJwYgbceNl0bzke4oYZ5aXfD\r\n"
+    "RA48Bib0nW81jiGNoZKEIeELo1+cBUImk2NcQf5jO59UTeNLNaJTRO2ndTa+Tj8N\r\n"
+    "VGmppeCvcTUaE0JR43jZSIpSuQaJf6mLehI5y/p2GfTPVOXgc2vlhnU7gjQgaskY\r\n"
+    "70PEIZinT6jZ5fn14OAeuOLHc8EdS+gwEA==\r\n"
+    "-----END CERTIFICATE-----\r\n";
+static const char privateKey[] =
+    "-----BEGIN RSA PRIVATE KEY-----\r\n"
+    "Proc-Type: 4,ENCRYPTED\r\n"
+    "DEK-Info: AES-256-CBC,E71AAF9E14492B8BEDEE1A044DE88B42\r\n"
+    "\r\n"
+    "1Y2jQ8Sy/Y9WUsoupIxjp5KIFG17RVNVE2+1FTL06SXqyCherjfytonCaf6ZH43A\r\n"
+    "TNnrCPxZvf3c47N63My54BvGbd4a0m7pUuSQY/DBzdOMKiE3oqtBKS7f8Sg59NIp\r\n"
+    "wXBX7GMsfBXxuESktYN2QTSQOoMQiXBt51J+DYxmRkPPdKAn0Medj/QGtDV7ud/O\r\n"
+    "B9m/4KQ0cgxtR2DHSPDjHqP4foCojEYqwUtRbo/YVQiPP9zEu0e4Wn3Dpz5bqhl3\r\n"
+    "Mt1bNZ7ZVBAoiTh3/UKs5nFYAvo0G9vSdpL3jhAdKfJYMbZQi6WMMB8gQC+NiULW\r\n"
+    "P6BU0OVyw91A2FrqZPyNQBxA/E3xHgOg2grDIoQWMnoZZIY+aUn8x3ApmxeU1F08\r\n"
+    "POe+UHj04dcKm2SEO2nibuk8jg9wImhBHjifA2ENaC6ALPH21L2akw2jKet3YpjN\r\n"
+    "Q6bEJbrJ8f48e2TeOllJciKNgxiJKKKQChwClwMtPg0iqQPQDAJzAq+DS1wOWFuo\r\n"
+    "V8iKJaUNcH3KDfP/Djdz8/mgDjkpKEnXwhjUWN0tZyrFSbzi09+6iNM+BOB7ohSj\r\n"
+    "fuMG/xw6laBBPtfZ7NOnqlSO4rTmTHdkTU89US2SpltYRDxCsoHQRCVjg3lsTY54\r\n"
+    "ibnwFR+JHU9Wn2/id/t7gMK1TZviiMRAFVZ/12cQ1/5/h6TIgSeLN5kq5V3XdirO\r\n"
+    "A8GW5fmW0i7dcl7C6zOBTPED4/CnM5JOcHvJPQ0IuXcwaqWWABBdz51GHJ2eSZbD\r\n"
+    "uSAoiT2iXJgjUma0klnPQNkqpI2lM/5vyw6MieN4whbh0SAhLuu/DeFuA9FLizjD\r\n"
+    "swqM0enPuSJx4rPiNuhLqUM/De4VSxf9Lv+lcXfMdnTckoUREJia6lLbIXHVEgpp\r\n"
+    "EAihvd+Xh0Q9pI6BzXkpg5UKQwhZx4zGUtEDsc7sj+k3Mm/FNVd10hfaGD167rAE\r\n"
+    "c+uOk804PDPrfX5HpOnXnZ47UdzDJYc98ZBqM2Qdvq2UtvPSMuaBf9/7RkPPzN6Q\r\n"
+    "5d2Q8i6fsjW0y26rVP11cAjH4LCQ1VmqSi9ng1u5q+6tKv7EsKd9K2f467XhrFfH\r\n"
+    "t3k86i1echU0J4Cl6pJIhuPHYB4/YHOwjmQbCxA8k3GVuMg8Z+rPnRb7weeiA3uL\r\n"
+    "81wtC5zmZD+MGoA4PV7+TpUHvXTya34KKJtHrE89WKw10NbgbJ9bf5M3BsJtpLws\r\n"
+    "VJeiavBAjB1gYHqZII/AL1kEJBcZvmN3UV82MwbtmVhq+IguxerROZhG4gLgEuSh\r\n"
+    "n3X4xKJDyN1FR0vX8VxQ/DrF0kcDxvHPtALUdLrcDnjBXVzLOmKfNYGpDAUGqhy5\r\n"
+    "6cTRzgFvcVoovrfahl8NvzBWv5B+C+E0/zUV9zFGdeZQQGZ2efaVv58YPmt6vEj3\r\n"
+    "afR8qAIbpx1fGKUNBk5LhcUeqp9rlhY/tGNcoGgHFfzdLAv3M+7jGXfjDjNu/vFR\r\n"
+    "QDmGBzl4xNTxCULy4vHGOR8tnNd87SB++DgayHiKJM1k+Kmo5jV2tUVWu8dfLp+r\r\n"
+    "Ee6ppjZXd4ClR9qcnKNzSDY4P9qJ0xvwUXfms0plpChNfj08FOadS8HL2lmo+ZZE\r\n"
+    "-----END RSA PRIVATE KEY-----\r\n";
+static const char* password = "DPS Test Publisher";
 
 static void OnNodeDestroyed(DPS_Node* node, void* data)
 {
@@ -318,7 +397,9 @@ int main(int argc, char** argv)
             DPS_SetContentKey(memoryKeyStore, &keyId[i], keyData[i], 16);
         }
         nodeKeyId = &keyId[0];
-        DPS_SetNetworkKey(memoryKeyStore, networkKey, 16);
+        DPS_SetNetworkKey(memoryKeyStore, (const uint8_t*)&networkKeyId, sizeof(DPS_UUID), networkKey, 16);
+        DPS_SetTrustedCA(memoryKeyStore, trustedCAs, sizeof(trustedCAs));
+        DPS_SetCertificate(memoryKeyStore, cert, sizeof(cert), privateKey, sizeof(privateKey), password, strlen(password));
     }
 
     node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore), nodeKeyId);

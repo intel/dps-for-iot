@@ -23,12 +23,22 @@
 #include "test.h"
 #include <dps/dps.h>
 
-static DPS_Status ContentKeyHandler(DPS_KeyStore* keyStore, const DPS_UUID* kid, uint8_t* key, size_t keyLen)
+static DPS_Status GetKeyAndIdentity(DPS_KeyStoreRequest* request)
 {
     return DPS_ERR_MISSING;
 }
 
-static  DPS_Status NetworkKeyHandler(DPS_KeyStore* keyStore, uint8_t* buffer, size_t bufferLen, size_t* keyLen)
+static DPS_Status GetKey(DPS_KeyStoreRequest* request, const unsigned char* id, size_t len)
+{
+    return DPS_ERR_MISSING;
+}
+
+static DPS_Status GetCA(DPS_KeyStoreRequest* request)
+{
+    return DPS_ERR_MISSING;
+}
+
+static DPS_Status GetCertAndPrivateKey(DPS_KeyStoreRequest* request)
 {
     return DPS_ERR_MISSING;
 }
@@ -40,7 +50,7 @@ int main(int argc, char** argv)
     void* userData;
 
     /* Create and destroy */
-    keyStore = DPS_CreateKeyStore(ContentKeyHandler, NetworkKeyHandler);
+    keyStore = DPS_CreateKeyStore(GetKeyAndIdentity, GetKey, GetCA, GetCertAndPrivateKey);
     ASSERT(keyStore);
     DPS_DestroyKeyStore(keyStore);
     keyStore = NULL;
@@ -50,7 +60,7 @@ int main(int argc, char** argv)
     keyStore = NULL;
 
     /* Set and get user data */
-    keyStore = DPS_CreateKeyStore(ContentKeyHandler, NetworkKeyHandler);
+    keyStore = DPS_CreateKeyStore(GetKeyAndIdentity, GetKey, GetCA, GetCertAndPrivateKey);
     ASSERT(keyStore);
     ret = DPS_SetKeyStoreData(keyStore, (void*)1);
     ASSERT(ret == DPS_OK);

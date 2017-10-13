@@ -324,6 +324,16 @@ void DPS_RandUUIDLess(DPS_UUID* uuid);
  */
 #define UUID_32(n) (((unsigned)(n)->val[0] << 24) | ((n)->val[1] << 16) | ((n)->val[2] << 8) | ((n)->val[3] << 0))
 
+/**
+ * Get the key needed by COSE encryption and decription.
+ *
+ * @param node the node
+ * @param kid The identifier of the key
+ * @param alg AES_CCM_16_64_128 or AES_CCM_16_128_128
+ * @param key The key
+ */
+DPS_Status DPS_GetCOSEKey(void* node, const DPS_UUID* kid, int8_t alg, uint8_t key[AES_128_KEY_LEN]);
+
 #ifdef __cplusplus
 }
 #endif
