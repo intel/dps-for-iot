@@ -93,10 +93,11 @@ mbedtlsSrcs = [
     './mbedtls/library/xtea.c',
 ]
 
-mbedtlsLib = mbedtlsEnv.Library('lib/libmbedtls', mbedtlsSrcs)
+mbedtlsObj = mbedtlsEnv.Object(mbedtlsSrcs)
+mbedtlsLib = mbedtlsEnv.Library('lib/libmbedtls', mbedtlsObj)
 
 Depends(mbedtlsSrcs, mbedtlsGit)
-
+Depends(mbedtlsObj, './mbedtls_config.h')
 
 # Pull down tinycrypt from github and build the library
 
