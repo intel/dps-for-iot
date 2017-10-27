@@ -322,7 +322,7 @@ void DPS_RandUUIDLess(DPS_UUID* uuid);
 /**
  * For debug output of mesh ids
  */
-#define UUID_32(n) (((unsigned)(n)->val[0] << 24) | ((n)->val[1] << 16) | ((n)->val[2] << 8) | ((n)->val[3] << 0))
+#define UUID_32(n) (((unsigned)((uint8_t*)(n))[0] << 24) | (((uint8_t*)(n))[1] << 16) | (((uint8_t*)(n))[2] << 8) | (((uint8_t*)(n))[3] << 0))
 
 /**
  * Get the key needed by COSE encryption and decription.
