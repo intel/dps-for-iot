@@ -651,9 +651,13 @@ static int ResetConnection(DPS_NetConnection* cn, const struct sockaddr* addr)
         goto Exit;
     }
     if (addr->sa_family == AF_INET) {
-        uv_ip4_name((const struct sockaddr_in*)addr, clientID, sizeof(clientID));
+        ret = uv_ip4_name((const struct sockaddr_in*)addr, clientID, sizeof(clientID));
     } else {
-        uv_ip6_name((const struct sockaddr_in6*)addr, clientID, sizeof(clientID));
+        ret = uv_ip6_name((const struct sockaddr_in6*)addr, clientID, sizeof(clientID));
+    }
+    if (ret) {
+        DPS_ERRPRINT("Convert addr to string failed: %s\n", uv_err_name(ret));
+        return MBEDTLS_ERR_SSL_INTERNAL_ERROR;
     }
     ret = mbedtls_ssl_set_client_transport_id(&cn->ssl, (const unsigned char*)clientID, strnlen(clientID, sizeof(clientID)));
     if (ret) {
