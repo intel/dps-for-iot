@@ -310,18 +310,10 @@ static void CancelPending(DPS_NetConnection* cn)
     }
 }
 
-static char errBuf[256] = { 0 };
-
 static const char *TLSErrTxt(int ret)
 {
+    static char errBuf[256] = { 0 };
     mbedtls_strerror(ret, errBuf, sizeof(errBuf));
-    return errBuf;
-}
-
-static const char *TLSVerifyTxt(uint32_t flags)
-{
-    /* We don't provide a prefix */
-    mbedtls_x509_crt_verify_info(errBuf, sizeof(errBuf), "", flags);
     return errBuf;
 }
 
@@ -371,7 +363,7 @@ static int OnTLSPSKGet(void *data, mbedtls_ssl_context* ssl, const unsigned char
     request.setKey = TLSPSKSet;
     ret = keyStore->keyHandler(&request, id, idLen);
     if (ret != DPS_OK) {
-        DPS_ERRPRINT("Get PSK failed: %s\n", DPS_ErrTxt(ret));
+        DPS_WARNPRINT("Get PSK failed: %s\n", DPS_ErrTxt(ret));
         return MBEDTLS_ERR_SSL_UNKNOWN_IDENTITY;
     }
     return 0;
@@ -745,7 +737,7 @@ static DPS_NetConnection* CreateConnection(DPS_Node* node, const struct sockaddr
     DPS_KeyStore* keyStore = node->keyStore;
     DPS_KeyStoreRequest request;
 
-    if (!keyStore || !keyStore->keyAndIdentityHandler) {
+    if (!keyStore) {
         DPS_ERRPRINT("Missing key store for PSK\n");
         return NULL;
     }
@@ -808,33 +800,36 @@ static DPS_NetConnection* CreateConnection(DPS_Node* node, const struct sockaddr
     request.data = cn;
 
     mbedtls_x509_crt_init(&cn->cacert);
-    request.setCA = SetCA;
-    ret = keyStore->caHandler(&request);
-    if (ret == 0) {
-        mbedtls_ssl_conf_ca_chain(&cn->conf, &cn->cacert, NULL);
-    } else {
-        DPS_WARNPRINT("Parsing trusted certificate(s) failed: %s\n", DPS_ErrTxt(ret));
+    if (keyStore->caHandler) {
+        request.setCA = SetCA;
+        ret = keyStore->caHandler(&request);
+        if (ret == 0) {
+            mbedtls_ssl_conf_ca_chain(&cn->conf, &cn->cacert, NULL);
+        } else {
+            DPS_WARNPRINT("Parsing trusted certificate(s) failed: %s\n", DPS_ErrTxt(ret));
+        }
     }
     mbedtls_x509_crt_init(&cn->cert);
     mbedtls_pk_init(&cn->pkey);
-    request.setCert = SetCert;
-    ret = keyStore->certHandler(&request);
-    if (ret == 0) {
-        mbedtls_ssl_conf_own_cert(&cn->conf, &cn->cert, &cn->pkey);
-    } else {
-        DPS_WARNPRINT("Parsing certificate failed: %s\n", DPS_ErrTxt(ret));
+    if (keyStore->certHandler) {
+        request.setCert = SetCert;
+        ret = keyStore->certHandler(&request);
+        if (ret == 0) {
+            mbedtls_ssl_conf_own_cert(&cn->conf, &cn->cert, &cn->pkey);
+        } else {
+            DPS_WARNPRINT("Parsing certificate failed: %s\n", DPS_ErrTxt(ret));
+        }
     }
 
     if (cn->type == MBEDTLS_SSL_IS_SERVER) {
         mbedtls_ssl_conf_session_cache(&cn->conf, &cn->cacheCtx, mbedtls_ssl_cache_get, mbedtls_ssl_cache_set);
         mbedtls_ssl_conf_dtls_cookies(&cn->conf, mbedtls_ssl_cookie_write, mbedtls_ssl_cookie_check, &cn->cookieCtx);
         mbedtls_ssl_conf_psk_cb(&cn->conf, OnTLSPSKGet, cn);
-    } else {
+    } else if (keyStore->keyAndIdentityHandler) {
         request.setKeyAndIdentity = SetKeyAndIdentity;
         ret = keyStore->keyAndIdentityHandler(&request);
         if (ret != DPS_OK) {
-            DPS_ERRPRINT("Get PSK failed: %s\n", DPS_ErrTxt(ret));
-            goto ErrorExit;
+            DPS_WARNPRINT("Get PSK failed: %s\n", DPS_ErrTxt(ret));
         }
     }
     mbedtls_ssl_conf_authmode(&cn->conf, MBEDTLS_SSL_VERIFY_REQUIRED);
@@ -1084,18 +1079,14 @@ static int TLSHandshake(DPS_NetConnection* cn)
         goto Exit;
     }
 
+    /*
+     * The configured authmode (verify required) will result in
+     * hitting this block on any credential verification failures:
+     * there is no need for us to do the verification as well.
+     */
     if (ret != 0) {
         DPS_WARNPRINT("TLSHandshake failed: %s\n", TLSErrTxt(ret));
         goto Exit;
-    }
-
-    uint32_t verifyFlags = mbedtls_ssl_get_verify_result(&cn->ssl);
-    if (verifyFlags == 0) {
-        DPS_DBGPRINT("Peer verification succeeded\n");
-    } else if (verifyFlags & MBEDTLS_X509_BADCERT_SKIP_VERIFY) {
-        DPS_WARNPRINT("Peer verification skipped\n");
-    } else {
-        DPS_ERRPRINT("Peer verification failed - %s", TLSVerifyTxt(verifyFlags));
     }
 
     /* Handshake is done, consume anything pending. */
