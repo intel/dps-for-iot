@@ -167,21 +167,9 @@ struct _DPS_NetContext {
     DPS_OnReceive receiveCB;
     DPS_NetConnection* cns;
 
-    /* Scratch buffer used to store data read from the network. */
-    char buffer[MAX_READ_LEN];
-
     /* Scratch buffer used to store the decrypted content. */
     char plainBuffer[MAX_READ_LEN];
 };
-
-static void AllocBuffer(uv_handle_t* handle, size_t suggestedSize, uv_buf_t* buf)
-{
-    DPS_NetContext* netCtx = handle->data;
-
-    DPS_DBGTRACE();
-    buf->len = MAX_READ_LEN;
-    buf->base = netCtx->buffer;
-}
 
 static DPS_NetConnection* LookupConnection(DPS_NetContext* netCtx, DPS_NodeAddress* addr)
 {
@@ -203,17 +191,13 @@ static PendingRead* CreatePendingRead(ssize_t nread, const uv_buf_t* buf)
     if (!pr) {
         return NULL;
     }
+    /* buf was allocated already via AllocBuffer. */
     pr->buf = *buf;
-    pr->buf.base = calloc(1, nread);
-    if (!pr->buf.base) {
-        return NULL;
-    }
 #ifdef _WIN32
     pr->buf.len = (ULONG) nread;
 #else
     pr->buf.len = nread;
 #endif
-    memcpy_s(pr->buf.base, pr->buf.len, buf->base, nread);
     return pr;
 }
 
@@ -1129,26 +1113,42 @@ static void ConsumePending(DPS_NetConnection* cn)
     }
 }
 
+static void AllocBuffer(uv_handle_t* handle, size_t suggestedSize, uv_buf_t* buf)
+{
+    DPS_DBGTRACE();
+    buf->base = calloc(MAX_READ_LEN, sizeof(uint8_t));
+    if (buf->base) {
+        buf->len = MAX_READ_LEN;
+    } else {
+        buf->len = 0;
+    }
+}
+
 static void OnData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, const struct sockaddr* addr, unsigned flags)
 {
-    DPS_NetConnection* cn;
     DPS_NetContext* netCtx = socket->data;
+    PendingRead* pr = NULL;
+    DPS_NodeAddress* nodeAddr = NULL;
+    DPS_NetConnection* cn;
 
     DPS_DBGTRACEA("nread=%d,addr=%s\n", nread, DPS_NetAddrText(addr));
+
+    assert(buf);
+    pr = CreatePendingRead(nread, buf);
+    if (!pr) {
+        goto Exit;
+    }
+
     if (nread < 0) {
         DPS_ERRPRINT("OnData error: %s\n", uv_err_name((int)nread));
-        return;
+        goto Exit;
     }
     if (!nread) {
-        return;
-    }
-    if (!buf) {
-        DPS_ERRPRINT("OnData no buffer\n");
-        return;
+        goto Exit;
     }
     if (!addr) {
         DPS_ERRPRINT("OnData no address\n");
-        return;
+        goto Exit;
     }
 #ifdef _WIN32
     /* Under Windows, pr->buf.len is a ULONG, not a size_t */
@@ -1159,7 +1159,7 @@ static void OnData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, const s
 
     DPS_DBGPRINT("OnData() received %zd bytes from network\n", nread);
 
-    DPS_NodeAddress* nodeAddr = DPS_CreateAddress();
+    nodeAddr = DPS_CreateAddress();
     DPS_SetAddress(nodeAddr, addr);
 
     /*
@@ -1192,10 +1192,6 @@ static void OnData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, const s
      * need to use pending again).
      */
 
-    PendingRead* pr = CreatePendingRead(nread, buf);
-    if (!pr) {
-        goto Exit;
-    }
     PendingRead* q = cn->readQueue;
     if (!q) {
         cn->readQueue = pr;
