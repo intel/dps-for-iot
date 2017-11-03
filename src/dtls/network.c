@@ -754,7 +754,7 @@ static DPS_NetConnection* CreateConnection(DPS_Node* node, const struct sockaddr
      */
     mbedtls_ctr_drbg_init(&cn->drbg);
     ret = mbedtls_ctr_drbg_seed(&cn->drbg, mbedtls_entropy_func, &cn->entropy,
-                                (const unsigned char*)PERSONALIZATION_STRING, sizeof(PERSONALIZATION_STRING));
+                                (const unsigned char*)PERSONALIZATION_STRING, strlen(PERSONALIZATION_STRING));
     if (ret != 0) {
         DPS_ERRPRINT("Seeding mbedtls random byte generator failed: %s\n", TLSErrTxt(ret));
         goto ErrorExit;
