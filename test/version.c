@@ -261,7 +261,7 @@ int main(int argc, char** argv)
             DPS_SetContentKey(memoryKeyStore, &keyId[i], keyData[i], 16);
         }
         nodeKeyId = &keyId[0];
-        DPS_SetNetworkKey(memoryKeyStore, (const uint8_t*)&networkKeyId, sizeof(DPS_UUID), networkKey, 16);
+        DPS_SetNetworkKey(memoryKeyStore, (const uint8_t*)&networkKeyId, sizeof(DPS_UUID), networkKey, sizeof(networkKey));
     }
 
     nodeDestroyed = DPS_CreateEvent();
