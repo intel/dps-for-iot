@@ -40,7 +40,7 @@ pub -p 40010 A B C D E F G H I J K L M N
 pub -p 40011 A B C D E F G H I J K L M N
 pub -p 40012 A B C D E F G H I J K L M N
 
-sleep 1
+sleep 2
 
 expect_pubs_received 196 A B C D E F G H I J K L M N
 
@@ -48,7 +48,7 @@ expect_pubs_received 196 A B C D E F G H I J K L M N
 
 pub -p 40005 X
 
-sleep 1
+sleep 2
 
 assert_no_errors
 expect_pubs_received 14 X

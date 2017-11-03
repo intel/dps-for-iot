@@ -27,7 +27,9 @@ if platform.system() == 'Linux':
         PathVariable('UV_INC', 'Path where libuv includes are installed', '', PathVariable.PathAccept),
         PathVariable('UV_LIB', 'Path where libuv libraries are installed', '', PathVariable.PathAccept),
         BoolVariable('profile', 'Build for profiling?', False),
-        BoolVariable('asan', 'Enable address sanitizer?', False))
+        BoolVariable('asan', 'Enable address sanitizer?', False),
+        BoolVariable('tsan', 'Enable thread sanitizer?', False),
+        BoolVariable('ubsan', 'Enable undefined behavior sanitizer?', False))
 
 tools=['default', 'textfile']
 # Doxygen is optional
@@ -118,6 +120,16 @@ elif env['PLATFORM'] == 'posix':
     if env['asan'] == True:
         env.Append(CCFLAGS = ['-fno-omit-frame-pointer', '-fsanitize=address'])
         env.Append(LIBS = ['asan'])
+
+    # Enable thread sanitizer
+    if env['tsan'] == True:
+        env.Append(CCFLAGS = ['-fsanitize=thread'])
+        env.Append(LIBS = ['tsan'])
+
+    # Enable undefined behavior sanitizer
+    if env['ubsan'] == True:
+        env.Append(CCFLAGS = ['-fsanitize=undefined'])
+        env.Append(LIBS = ['ubsan'])
 
     # Stack execution protection:
     env.Append(LDFLAGS = ['-z noexecstack'])

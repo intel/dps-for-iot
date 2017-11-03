@@ -32,6 +32,12 @@ extern "C" {
 #endif
 
 /**
+ * @defgroup event Event
+ * Signal and wait on application-created events.
+ * @{
+ */
+
+/**
  * Opaque type for an event
  */
 typedef struct _DPS_Event DPS_Event;
@@ -89,6 +95,8 @@ DPS_Status DPS_WaitForEvent(DPS_Event* event);
  * @return  The status passed to DPS_SignalEvent() or DPS_ERR_TIMEOUT if the call timed out.
  */
 DPS_Status DPS_TimedWaitForEvent(DPS_Event* event, uint16_t timeout);
+
+/** @} */
 
 #ifdef __cplusplus
 }

@@ -84,18 +84,6 @@ static PublicationAck* AllocPubAck(const DPS_UUID* pubId, uint32_t sequenceNum)
     return ack;
 }
 
-static DPS_Status GetKey(void* ctx, const DPS_UUID* kid, int8_t alg, uint8_t key[AES_128_KEY_LEN])
-{
-    DPS_Node* node = (DPS_Node*)ctx;
-    DPS_KeyStore* keyStore = node->keyStore;
-
-    if (keyStore && keyStore->contentKeyCB) {
-        return keyStore->contentKeyCB(keyStore, kid, key, AES_128_KEY_LEN);
-    } else {
-        return DPS_ERR_MISSING;
-    }
-}
-
 static DPS_Status SerializeAck(const DPS_Publication* pub, PublicationAck* ack, const uint8_t* data, size_t dataLen)
 {
     DPS_Node* node = pub->node;
@@ -186,7 +174,7 @@ static DPS_Status SerializeAck(const DPS_Publication* pub, PublicationAck* ack, 
         DPS_TxBufferToRx(&ack->encryptedBuf, &plainTextBuf);
 
         DPS_MakeNonce(&ack->pubId, ack->sequenceNum, DPS_MSG_TYPE_ACK, nonce);
-        ret = COSE_Encrypt(AES_CCM_16_128_128, pub->keyId, nonce, &aadBuf, &plainTextBuf, GetKey, node, &cipherTextBuf);
+        ret = COSE_Encrypt(AES_CCM_16_128_128, pub->keyId, nonce, &aadBuf, &plainTextBuf, DPS_GetCOSEKey, node, &cipherTextBuf);
         DPS_TxBufferFree(&ack->encryptedBuf);
         ack->encryptedBuf = cipherTextBuf;
     }
@@ -287,7 +275,7 @@ DPS_Status DPS_DecodeAcknowledgment(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxB
             DPS_MakeNonce(pubId, sequenceNum, DPS_MSG_TYPE_ACK, nonce);
             DPS_RxBufferInit(&aadBuf, aadPos, buf->rxPos - aadPos);
             DPS_RxBufferInit(&cipherTextBuf, buf->rxPos, DPS_RxBufferAvail(buf));
-            ret = COSE_Decrypt(nonce, &keyId, &aadBuf, &cipherTextBuf, GetKey, node, &plainTextBuf);
+            ret = COSE_Decrypt(nonce, &keyId, &aadBuf, &cipherTextBuf, DPS_GetCOSEKey, node, &plainTextBuf);
             if (ret == DPS_OK) {
                 DPS_DBGPRINT("Ack was decrypted\n");
                 CBOR_Dump("plaintext", plainTextBuf.base, DPS_TxBufferUsed(&plainTextBuf));

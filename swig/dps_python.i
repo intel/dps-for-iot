@@ -423,7 +423,7 @@ static PyObject* UUIDToPyString(const DPS_UUID* uuid)
 /*
  * Used in DPS_SetContentKey.
  */
-%typemap(in) (uint8_t* key, size_t keyLen) {
+%typemap(in) (const uint8_t* key, size_t keyLen) {
     uint8_t* key = NULL;
     size_t keyLen = 0;
 
@@ -463,8 +463,56 @@ static PyObject* UUIDToPyString(const DPS_UUID* uuid)
     $2 = keyLen;
 }
 
-%typemap(freearg) (uint8_t* key, size_t keyLen) {
-    free($1);
+%typemap(freearg) (const uint8_t* key, size_t keyLen) {
+    if ($1) {
+        free($1);
+    }
+}
+
+%typemap(in) (const uint8_t* id, size_t idLen) {
+    uint8_t* id = NULL;
+    size_t idLen = 0;
+
+    if ($input != Py_None) {
+        if (!PyList_Check($input)) {
+            PyErr_SetString(PyExc_TypeError, "id should be a list\n");
+            SWIG_fail;
+        }
+        idLen = PyList_Size($input);
+
+        id = calloc(idLen, sizeof(uint8_t));
+        if (!id) {
+            SWIG_fail;
+        }
+
+        for (size_t i = 0; i < idLen; ++i) {
+            PyObject *pValue = PyList_GetItem($input, i);
+            if (PyInt_Check(pValue)) {
+                int32_t v = PyInt_AsLong(pValue);
+                if (v >= 0 && v <= 255) {
+                    id[i] = (uint8_t)v;
+                } else {
+                    PyErr_SetString(PyExc_TypeError, "id values must be a list of int in range 0..255");
+                    free(id);
+                    SWIG_fail;
+                }
+            } else {
+                PyErr_SetString(PyExc_TypeError, "id is not list of ints");
+                free(id);
+                SWIG_fail;
+            }
+
+        }
+    }
+
+    $1 = id;
+    $2 = idLen;
+}
+
+%typemap(freearg) (const uint8_t* id, size_t idLen) {
+    if ($1) {
+        free($1);
+    }
 }
 
 /*

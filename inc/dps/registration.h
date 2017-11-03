@@ -30,16 +30,24 @@ extern "C" {
 #endif
 
 /**
- * APIs for interacting with a registration service
+ * @defgroup services Services
+ * Services built upon DPS.
+ * @{
+ */
+
+/**
+ * @defgroup registration Registration
+ * A registration service.
+ * @{
  */
 
 extern const char* DPS_RegistryTopicString;
 
-#define DPS_CANDIDATE_TRYING   0x01  /** An attempt is being made link to a candidate */
-#define DPS_CANDIDATE_FAILED   0x02  /** An attempt to link to a candidate was attempted but failed */
-#define DPS_CANDIDATE_LINKED   0x04  /** Registration is currently linked */
-#define DPS_CANDIDATE_UNLINKED 0x08  /** Registration was linked but is currently not linked */
-#define DPS_CANDIDATE_INVALID  0x10  /** This is a invalid candidate address for linking */
+#define DPS_CANDIDATE_TRYING   0x01  /**< An attempt is being made link to a candidate */
+#define DPS_CANDIDATE_FAILED   0x02  /**< An attempt to link to a candidate was attempted but failed */
+#define DPS_CANDIDATE_LINKED   0x04  /**< Registration is currently linked */
+#define DPS_CANDIDATE_UNLINKED 0x08  /**< Registration was linked but is currently not linked */
+#define DPS_CANDIDATE_INVALID  0x10  /**< This is a invalid candidate address for linking */
 
 /**
  * Registration entry
@@ -193,6 +201,10 @@ DPS_Status DPS_Registration_LinkTo(DPS_Node* node, DPS_RegistrationList* regs, D
  *          - Other error status codes
  */
 DPS_Status DPS_Registration_LinkToSyn(DPS_Node* node, DPS_RegistrationList* regs, DPS_NodeAddress* addr);
+
+/** @} */ // end of registration group
+
+/** @} */ // end of services group
 
 #ifdef __cplusplus
 }

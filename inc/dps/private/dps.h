@@ -170,6 +170,35 @@ void DPS_RxBufferToTx(DPS_RxBuffer* rxBuffer, DPS_TxBuffer* txBuffer);
  */
 void DPS_DumpSubscriptions(DPS_Node* node);
 
+/**
+ * A key store request.
+ */
+struct _DPS_KeyStoreRequest {
+    DPS_KeyStore* keyStore;
+    void* data;
+    DPS_Status (*setKeyAndIdentity)(DPS_KeyStoreRequest* request, const unsigned char* key, size_t keyLen, const unsigned char* id, size_t idLen);
+    DPS_Status (*setKey)(DPS_KeyStoreRequest* request, const unsigned char* key, size_t len);
+    DPS_Status (*setCA)(DPS_KeyStoreRequest* request, const unsigned char* ca, size_t len);
+    DPS_Status (*setCert)(DPS_KeyStoreRequest* request, const unsigned char* cert, size_t certLen, const unsigned char* key, size_t keyLen,
+                          const unsigned char* pwd, size_t pwdLen);
+};
+
+/**
+ * A key store.
+ */
+struct _DPS_KeyStore {
+    void* userData;
+    DPS_KeyAndIdentityHandler keyAndIdentityHandler;
+    DPS_KeyHandler keyHandler;
+    DPS_CAHandler caHandler;
+    DPS_CertHandler certHandler;
+};
+
+/**
+ * Returns a non-secure random number
+ */
+uint32_t DPS_Rand();
+
 #ifdef __cplusplus
 }
 #endif

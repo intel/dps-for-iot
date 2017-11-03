@@ -33,6 +33,12 @@
 extern "C" {
 #endif
 
+/**
+ * @defgroup debug Debug
+ * Debug and logging macros and functions.
+ * @{
+ */
+
 extern int DPS_Debug;
 
 typedef enum {
@@ -64,11 +70,13 @@ void DPS_LogBytes(DPS_LogLevel level, const char* file, int line, const char *fu
 
 #ifdef DPS_DEBUG
 #define DPS_DBGTRACE() (DPS_DEBUG_ENABLED() ? DPS_Log(DPS_LOG_DBGTRACE, __FILE__, __LINE__, __FUNCTION__, "\n") : 0)
+#define DPS_DBGTRACEA(fmt, ...) (DPS_DEBUG_ENABLED() ? DPS_Log(DPS_LOG_DBGTRACE, __FILE__, __LINE__, __FUNCTION__, fmt, ##__VA_ARGS__) : 0)
 #define DPS_DBGPRINT(fmt, ...) (DPS_DEBUG_ENABLED() ? DPS_Log(DPS_LOG_DBGPRINT, __FILE__, __LINE__, __FUNCTION__, fmt, ##__VA_ARGS__) : 0)
 #define DPS_WARNPRINT(fmt, ...) (DPS_DEBUG_ENABLED() ? DPS_Log(DPS_LOG_WARNING, __FILE__, __LINE__, __FUNCTION__, fmt, ##__VA_ARGS__) : 0)
 #define DPS_DBGBYTES(bytes, n) (DPS_DEBUG_ENABLED() ? DPS_LogBytes(DPS_LOG_DBGPRINT, __FILE__, __LINE__, __FUNCTION__, bytes, n) : 0)
 #else
 #define DPS_DBGTRACE()
+#define DPS_DBGTRACEA(...)
 #define DPS_DBGPRINT(...)
 #define DPS_WARNPRINT(...)
 #define DPS_DBGBYTES(bytes, n)
@@ -82,6 +90,8 @@ void DPS_LogBytes(DPS_LogLevel level, const char* file, int line, const char *fu
 #else
 #define DPS_DEBUG_CONTROL(dbg) __attribute__((__unused__))static int __DPS_DebugControl = dbg
 #endif
+
+/** @} */
 
 #ifdef __cplusplus
 }

@@ -182,18 +182,6 @@ DPS_Node* DPS_PublicationGetNode(const DPS_Publication* pub)
     }
 }
 
-static DPS_Status GetKey(void* ctx, const DPS_UUID* kid, int8_t alg, uint8_t key[AES_128_KEY_LEN])
-{
-    DPS_Node* node = (DPS_Node*)ctx;
-    DPS_KeyStore* keyStore = node->keyStore;
-
-    if (keyStore && keyStore->contentKeyCB) {
-        return keyStore->contentKeyCB(keyStore, kid, key, AES_128_KEY_LEN);
-    } else {
-        return DPS_ERR_MISSING;
-    }
-}
-
 static DPS_Status UpdatePubHistory(DPS_Node* node, DPS_Publication* pub)
 {
     return DPS_UpdatePubHistory(&node->history, &pub->pubId, pub->sequenceNum, pub->ackRequested, PUB_TTL(node, pub), &pub->sender);
@@ -260,7 +248,7 @@ static DPS_Status CallPubHandlers(DPS_Node* node, DPS_Publication* pub)
     DPS_TxBufferToRx(&pub->protectedBuf, &aadBuf);
     DPS_TxBufferToRx(&pub->encryptedBuf, &cipherTextBuf);
 
-    ret = COSE_Decrypt(nonce, &keyId, &aadBuf, &cipherTextBuf, GetKey, node, &plainTextBuf);
+    ret = COSE_Decrypt(nonce, &keyId, &aadBuf, &cipherTextBuf, DPS_GetCOSEKey, node, &plainTextBuf);
     if (ret == DPS_OK) {
         DPS_DBGPRINT("Publication was decrypted\n");
         CBOR_Dump("plaintext", plainTextBuf.base, DPS_TxBufferUsed(&plainTextBuf));
@@ -533,7 +521,7 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
             free(pub);
             return DPS_ERR_RESOURCES;
         }
-        pub->pubId = *pubId;
+        memcpy(&pub->pubId, pubId, sizeof(DPS_UUID));
         /*
          * Link in the pub
          */
@@ -1090,7 +1078,7 @@ DPS_Status DPS_SerializePub(DPS_Node* node, DPS_Publication* pub, const uint8_t*
         DPS_TxBufferToRx(&encryptedBuf, &plainTextBuf);
         DPS_TxBufferToRx(&protectedBuf, &aadBuf);
         DPS_MakeNonce(&pub->pubId, pub->sequenceNum, DPS_MSG_TYPE_PUB, nonce);
-        ret = COSE_Encrypt(AES_CCM_16_128_128, keyId, nonce, &aadBuf, &plainTextBuf, GetKey, node, &encryptedBuf);
+        ret = COSE_Encrypt(AES_CCM_16_128_128, keyId, nonce, &aadBuf, &plainTextBuf, DPS_GetCOSEKey, node, &encryptedBuf);
         DPS_RxBufferFree(&plainTextBuf);
         if (ret != DPS_OK) {
             DPS_TxBufferFree(&protectedBuf);

@@ -10,6 +10,7 @@ TESTS="./build/test/bin/cbortest \
        ./build/test/bin/packtest \
        ./build/test/bin/pubsub \
        ./build/test/bin/rle_compression \
+       ./build/test/bin/keystoretest \
        ./test_scripts/chain_test \
        ./test_scripts/fanout \
        ./test_scripts/hot_mesh \
@@ -38,12 +39,12 @@ for TEST in $TESTS; do
     echo -e "$GREEN[ RUN      ]$DEFAULT $TEST"
     $TEST
     if [ $? -eq 0 ]; then
-	echo -e "$GREEN[       OK ]$DEFAULT $TEST"
-	((++OK))
+        echo -e "$GREEN[       OK ]$DEFAULT $TEST"
+        ((++OK))
     else
-	echo -e "$RED[   FAILED ]$DEFAULT $TEST"
-	((++FAILED))
-	FAILED_TESTS="$FAILED_TESTS$RED[  FAILED  ]$DEFAULT $TEST\n"
+        echo -e "$RED[   FAILED ]$DEFAULT $TEST"
+        ((++FAILED))
+        FAILED_TESTS="$FAILED_TESTS$RED[  FAILED  ]$DEFAULT $TEST\n"
     fi
 done
 
