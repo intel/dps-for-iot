@@ -973,6 +973,9 @@ static void TLSRecv(DPS_NetConnection* cn)
 {
     DPS_NetContext* netCtx = cn->node->netCtx;
     int ret;
+    uint8_t* data = NULL;
+    size_t len = 0;
+    DPS_Status status;
 
     /*
      * Protect cn since mbedtls_ssl_read may consume all the
@@ -984,26 +987,35 @@ static void TLSRecv(DPS_NetConnection* cn)
     if (ret < 0) {
         if (ret == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY) {
             DPS_DBGPRINT("TLSRecv() connection was closed gracefully\n");
+            status = DPS_ERR_EOF;
         } else if (ret == MBEDTLS_ERR_SSL_WANT_READ) {
             DPS_DBGPRINT("TLSRecv() want read cn=%p\n", cn);
+            goto Exit;
         } else if (ret == MBEDTLS_ERR_SSL_WANT_WRITE) {
             DPS_DBGPRINT("TLSRecv() want write cn=%p\n", cn);
+            goto Exit;
         } else {
-            DPS_DBGPRINT("TLSRecv() failed: %s\n", TLSErrTxt(ret));
+            DPS_WARNPRINT("TLSRecv() failed: %s\n", TLSErrTxt(ret));
+            status = DPS_ERR_NETWORK;
         }
     } else {
         DPS_DBGPRINT("TLSRecv() decrypted into %d bytes of plaintext\n", ret);
         DPS_DBGBYTES((const uint8_t*)netCtx->plainBuffer, ret);
 
-        ret = netCtx->receiveCB(netCtx->node, &cn->peer, DPS_OK, (uint8_t*)netCtx->plainBuffer, ret);
-
-        if (cn->handshake == MBEDTLS_ERR_SSL_WANT_READ) {
-            assert(cn->refCount > 1);
-            DPS_NetConnectionDecRef(cn);
-            cn->handshake = 0;
-        }
+        status = DPS_OK;
+        data = (uint8_t*)netCtx->plainBuffer;
+        len = ret;
     }
 
+    ret = netCtx->receiveCB(netCtx->node, &cn->peer, status, data, len);
+
+    if (cn->handshake == MBEDTLS_ERR_SSL_WANT_READ) {
+        assert(cn->refCount > 1);
+        DPS_NetConnectionDecRef(cn);
+        cn->handshake = 0;
+    }
+
+Exit:
     memset(netCtx->plainBuffer, 0, sizeof(netCtx->plainBuffer));
 
     DPS_NetConnectionDecRef(cn);
