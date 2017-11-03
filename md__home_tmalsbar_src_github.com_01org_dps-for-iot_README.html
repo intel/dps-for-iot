@@ -47,6 +47,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
     <ul class="tablist">
       <li><a href="index.html"><span>Main&#160;Page</span></a></li>
       <li class="current"><a href="pages.html"><span>Related&#160;Pages</span></a></li>
+      <li><a href="modules.html"><span>Modules</span></a></li>
       <li><a href="annotated.html"><span>Data&#160;Structures</span></a></li>
       <li><a href="files.html"><span>Files</span></a></li>
       <li>
@@ -127,11 +128,10 @@ $(document).ready(function(){initNavTree('md__home_tmalsbar_src_github.com_01org
 </li>
 </ul>
 <h3>Yocto</h3>
+<p>Yocto Project through the OpenEmbedded build system provides an open source development environment targeting the ARM, MIPS, PowerPC and x86 architectures for a variety of platforms including x86-64 and emulated ones.</p>
 <ul>
-<li>Yocto Project through the OpenEmbedded build system provides an open source development environment targeting the ARM, MIPS, PowerPC and x86 architectures for a variety of platforms including x86-64 and emulated ones. <a href="https://git.yoctoproject.org/">Yocto git</a></li>
-</ul>
-<p><a href="http://www.yoctoproject.org/docs/1.8/yocto-project-qs/yocto-project-qs.html">Yocto Project Quick Start</a></p>
-<ul>
+<li><a href="https://git.yoctoproject.org/">Yocto git</a></li>
+<li><a href="http://www.yoctoproject.org/docs/1.8/yocto-project-qs/yocto-project-qs.html">Yocto Project Quick Start</a></li>
 <li><a href="https://layers.openembedded.org/layerindex/recipe/32082/">Yocto libuv</a> <hr/>
 </li>
 </ul>
@@ -142,12 +142,13 @@ $(document).ready(function(){initNavTree('md__home_tmalsbar_src_github.com_01org
  <h2>Build</h2>
 <h3>Linux and Windows</h3>
 <p>To build the DPS libraries, examples, bindings, and documentation run 'scons'.</p>
-<p><code>$ scons [variant=debug|release] [transport=udp|tcp] [bindings=all|none]</code></p>
+<p><code>$ scons [variant=debug|release] [transport=udp|tcp|dtls] [bindings=all|none]</code></p>
 <p>To see the complete list of build options trune <code>scons --help</code></p>
 <p>The default build configuration is <code>variant=release transport=udp bindings=all</code>. </p><blockquote class="doxtable">
 <p><em>A limitation of the current implementation is that the transport must be configured at compile time.</em> </p>
 </blockquote>
-<p>The scons script pulls down source code from two external projects (tinycrypt and safestringlib) into the <code>./ext</code> directory. If necessary these projects can be populated manually:</p>
+<p>The scons script pulls down source code from three external projects (mbedtls, tinycrypt, and safestringlib) into the <code>./ext</code> directory. If necessary these projects can be populated manually:</p>
+<p><code>git clone <a href="https://github.com/ARMmbed/mbedtls">https://github.com/ARMmbed/mbedtls</a> ext/mbedtls</code></p>
 <p><code>git clone <a href="https://github.com/01org/tinycrypt.git">https://github.com/01org/tinycrypt.git</a> ext/tinycrypt</code></p>
 <p><code>git clone <a href="https://github.com/01org/safestringlib.git">https://github.com/01org/safestringlib.git</a> ext/safestring</code></p>
 <blockquote class="doxtable">
@@ -166,7 +167,7 @@ $(document).ready(function(){initNavTree('md__home_tmalsbar_src_github.com_01org
 <p>The C examples are found in <code>./examples</code>, the Python examples are in <code>./py_scripts</code> and the JS examples are in <code>./js_scripts</code>. There are currently six C samples:</p>
 <ul>
 <li><p class="startli"><b>publisher.c</b></p>
-<p class="startli">This application shows how to initialize a DPS node, create a publication and send it. It supports IP multicast or publication to a specific host and port number over the configured transport (udp or tcp). Optionally the application will request acknowledgments from the receiving subscribers. </p><div class="fragment"><div class="line"><a name="l00001"></a><span class="lineno">    1</span>&#160;publisher a/b/c &quot;hello world&quot;</div></div><!-- fragment --><p> sends a single publication to the topic string <b>a/b/c</b> and exits.</p>
+<p class="startli">This application shows how to initialize a DPS node, create a publication and send it. It supports IP multicast or publication to a specific host and port number over the configured transport (udp, tcp, or dtls). Optionally the application will request acknowledgments from the receiving subscribers. </p><div class="fragment"><div class="line"><a name="l00001"></a><span class="lineno">    1</span>&#160;publisher a/b/c &quot;hello world&quot;</div></div><!-- fragment --><p> sends a single publication to the topic string <b>a/b/c</b> and exits.</p>
 </li>
 <li><p class="startli"><b>subscriber.c</b></p>
 <p class="startli">This application is the subscription counterpart to publisher.c, it creates a subscription and either listens for multicast publications or links another node to form a subscriber mesh. With the following commands the subscriber application listens for multicast subscriptions that match the specified topic string. </p><div class="fragment"><div class="line"><a name="l00001"></a><span class="lineno">    1</span>&#160;subscriber a/b/c</div><div class="line"><a name="l00002"></a><span class="lineno">    2</span>&#160;subscriber a/+/c</div><div class="line"><a name="l00003"></a><span class="lineno">    3</span>&#160;subscriber a/#</div></div><!-- fragment --><p> In the examples above the subscriptions all match <b>a/b/c</b>. On receiving a matching publication the application prints out the subscription topic string that was matched and all the topic strings that were in the publication, if the publication had a payload that is printed also.</p>
@@ -189,7 +190,7 @@ $(document).ready(function(){initNavTree('md__home_tmalsbar_src_github.com_01org
 </div><!-- doc-content -->
 <div class="navpath" id="nav-path">
   <ul>
-    <li class="footer" style="float:left"><b>Distributed PubSub Manual</b></li> <li class="footer">Generated Thu Sep 7 2017 15:03:30</li>
+    <li class="footer" style="float:left"><b>Distributed PubSub Manual</b></li> <li class="footer">Generated Fri Nov 3 2017 14:13:18</li>
   </ul>
 </div>
 </body>

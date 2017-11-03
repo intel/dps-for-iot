@@ -47,6 +47,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
     <ul class="tablist">
       <li><a href="index.html"><span>Main&#160;Page</span></a></li>
       <li><a href="pages.html"><span>Related&#160;Pages</span></a></li>
+      <li><a href="modules.html"><span>Modules</span></a></li>
       <li><a href="annotated.html"><span>Data&#160;Structures</span></a></li>
       <li class="current"><a href="files.html"><span>Files</span></a></li>
       <li>
@@ -104,7 +105,6 @@ $(document).ready(function(){initNavTree('dps_8h.html','');});
 
 <div class="header">
   <div class="summary">
-<a href="#nested-classes">Data Structures</a> &#124;
 <a href="#define-members">Macros</a> &#124;
 <a href="#typedef-members">Typedefs</a> &#124;
 <a href="#func-members">Functions</a>  </div>
@@ -115,197 +115,258 @@ $(document).ready(function(){initNavTree('dps_8h.html','');});
 
 <p><a href="dps_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="nested-classes"></a>
-Data Structures</h2></td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct___d_p_s___key_store.html">_DPS_KeyStore</a></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="define-members"></a>
 Macros</h2></td></tr>
 <tr class="memitem:a44b270f60457e96de08275cffdcfaffb"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#a44b270f60457e96de08275cffdcfaffb">A_SIZEOF</a>(a)&#160;&#160;&#160;(sizeof(a) / sizeof((a)[0]))</td></tr>
 <tr class="separator:a44b270f60457e96de08275cffdcfaffb"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4a173ed2665cea74e58558d99b377ab3"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#a4a173ed2665cea74e58558d99b377ab3">DPS_TRUE</a>&#160;&#160;&#160;1</td></tr>
-<tr class="separator:a4a173ed2665cea74e58558d99b377ab3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad8b397975a479b996ef223367d8835a9"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#ad8b397975a479b996ef223367d8835a9">DPS_FALSE</a>&#160;&#160;&#160;0</td></tr>
 <tr class="separator:ad8b397975a479b996ef223367d8835a9"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac939c83361ed89086f37c78d9c9009dd"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#ac939c83361ed89086f37c78d9c9009dd">DPS_MCAST_PUB_DISABLED</a>&#160;&#160;&#160;0</td></tr>
-<tr class="separator:ac939c83361ed89086f37c78d9c9009dd"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a178a3a6450eeff450820fa34fd82049c"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#a178a3a6450eeff450820fa34fd82049c">DPS_MCAST_PUB_ENABLE_SEND</a>&#160;&#160;&#160;1</td></tr>
-<tr class="separator:a178a3a6450eeff450820fa34fd82049c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae493573fb2e02b87258952223eb4fcd7"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#ae493573fb2e02b87258952223eb4fcd7">DPS_MCAST_PUB_ENABLE_RECV</a>&#160;&#160;&#160;2</td></tr>
-<tr class="separator:ae493573fb2e02b87258952223eb4fcd7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gac939c83361ed89086f37c78d9c9009dd"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#gac939c83361ed89086f37c78d9c9009dd">DPS_MCAST_PUB_DISABLED</a>&#160;&#160;&#160;0</td></tr>
+<tr class="memdesc:gac939c83361ed89086f37c78d9c9009dd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Disable multicast send and receive on the node.  <a href="group__node.html#gac939c83361ed89086f37c78d9c9009dd">More...</a><br /></td></tr>
+<tr class="separator:gac939c83361ed89086f37c78d9c9009dd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gae493573fb2e02b87258952223eb4fcd7"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#gae493573fb2e02b87258952223eb4fcd7">DPS_MCAST_PUB_ENABLE_RECV</a>&#160;&#160;&#160;2</td></tr>
+<tr class="memdesc:gae493573fb2e02b87258952223eb4fcd7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Enable multicast receive on the node.  <a href="group__node.html#gae493573fb2e02b87258952223eb4fcd7">More...</a><br /></td></tr>
+<tr class="separator:gae493573fb2e02b87258952223eb4fcd7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga178a3a6450eeff450820fa34fd82049c"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#ga178a3a6450eeff450820fa34fd82049c">DPS_MCAST_PUB_ENABLE_SEND</a>&#160;&#160;&#160;1</td></tr>
+<tr class="memdesc:ga178a3a6450eeff450820fa34fd82049c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Enable multicast send on the node.  <a href="group__node.html#ga178a3a6450eeff450820fa34fd82049c">More...</a><br /></td></tr>
+<tr class="separator:ga178a3a6450eeff450820fa34fd82049c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga89df880f9650da5730fa152642c0be9f"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#ga89df880f9650da5730fa152642c0be9f">DPS_SUBSCRIPTION_UPDATE_RATE</a>&#160;&#160;&#160;1000</td></tr>
+<tr class="memdesc:ga89df880f9650da5730fa152642c0be9f"><td class="mdescLeft">&#160;</td><td class="mdescRight">The default maximum rate (in msecs) to compute and send out subscription updates.  <a href="group__node.html#ga89df880f9650da5730fa152642c0be9f">More...</a><br /></td></tr>
+<tr class="separator:ga89df880f9650da5730fa152642c0be9f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4a173ed2665cea74e58558d99b377ab3"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#a4a173ed2665cea74e58558d99b377ab3">DPS_TRUE</a>&#160;&#160;&#160;1</td></tr>
+<tr class="separator:a4a173ed2665cea74e58558d99b377ab3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="typedef-members"></a>
 Typedefs</h2></td></tr>
-<tr class="memitem:a4dd612ab965134321bb57fdb065f121c"><td class="memItemLeft" align="right" valign="top">typedef struct _DPS_Node&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#a4dd612ab965134321bb57fdb065f121c">DPS_Node</a></td></tr>
-<tr class="memdesc:a4dd612ab965134321bb57fdb065f121c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Opaque type for a node.  <a href="#a4dd612ab965134321bb57fdb065f121c">More...</a><br /></td></tr>
-<tr class="separator:a4dd612ab965134321bb57fdb065f121c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9e9f56aa38e82b4edcef7eb81e9f5bd2"><td class="memItemLeft" align="right" valign="top">typedef struct _DPS_NodeAddress&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#a9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a></td></tr>
-<tr class="memdesc:a9e9f56aa38e82b4edcef7eb81e9f5bd2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Opaque type for a remote node address.  <a href="#a9e9f56aa38e82b4edcef7eb81e9f5bd2">More...</a><br /></td></tr>
-<tr class="separator:a9e9f56aa38e82b4edcef7eb81e9f5bd2"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:adb927c4c1b7306867a75fc4288b54af7"><td class="memItemLeft" align="right" valign="top">typedef struct _DPS_Subscription&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#adb927c4c1b7306867a75fc4288b54af7">DPS_Subscription</a></td></tr>
-<tr class="memdesc:adb927c4c1b7306867a75fc4288b54af7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Opaque type for a subscription.  <a href="#adb927c4c1b7306867a75fc4288b54af7">More...</a><br /></td></tr>
-<tr class="separator:adb927c4c1b7306867a75fc4288b54af7"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0d439693474aa54e27f3d45a054696ac"><td class="memItemLeft" align="right" valign="top">typedef struct _DPS_Publication&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#a0d439693474aa54e27f3d45a054696ac">DPS_Publication</a></td></tr>
-<tr class="memdesc:a0d439693474aa54e27f3d45a054696ac"><td class="mdescLeft">&#160;</td><td class="mdescRight">Opaque type for a publication.  <a href="#a0d439693474aa54e27f3d45a054696ac">More...</a><br /></td></tr>
-<tr class="separator:a0d439693474aa54e27f3d45a054696ac"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af3833cfe48f848f698514bc5daa075fa"><td class="memItemLeft" align="right" valign="top">typedef struct <a class="el" href="struct___d_p_s___key_store.html">_DPS_KeyStore</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#af3833cfe48f848f698514bc5daa075fa">DPS_KeyStore</a></td></tr>
-<tr class="separator:af3833cfe48f848f698514bc5daa075fa"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af2b9641c0401a392873bb32f7ade4f65"><td class="memItemLeft" align="right" valign="top">typedef <a class="el" href="err_8h.html#a30395a84d3cad9d4ec29848106415038">DPS_Status</a>(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#af2b9641c0401a392873bb32f7ade4f65">DPS_ContentKeyCallback</a>) (<a class="el" href="dps_8h.html#af3833cfe48f848f698514bc5daa075fa">DPS_KeyStore</a> *keyStore, const <a class="el" href="uuid_8h.html#aef1d03afcc6410602ade1d48f24c3997">DPS_UUID</a> *kid, uint8_t *key, size_t keyLen)</td></tr>
-<tr class="memdesc:af2b9641c0401a392873bb32f7ade4f65"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function prototype for callback function for requesting the encryption key for a specific key identifier.  <a href="#af2b9641c0401a392873bb32f7ade4f65">More...</a><br /></td></tr>
-<tr class="separator:af2b9641c0401a392873bb32f7ade4f65"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a6cf026e0213c22482c4e914a651aebd9"><td class="memItemLeft" align="right" valign="top">typedef <a class="el" href="err_8h.html#a30395a84d3cad9d4ec29848106415038">DPS_Status</a>(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#a6cf026e0213c22482c4e914a651aebd9">DPS_NetworkKeyCallback</a>) (<a class="el" href="dps_8h.html#af3833cfe48f848f698514bc5daa075fa">DPS_KeyStore</a> *keyStore, uint8_t *buffer, size_t bufferLen, size_t *keyLen)</td></tr>
-<tr class="separator:a6cf026e0213c22482c4e914a651aebd9"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a57f11410b3ef6a686594b60836dc8c99"><td class="memItemLeft" align="right" valign="top">typedef struct _DPS_MemoryKeyStore&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#a57f11410b3ef6a686594b60836dc8c99">DPS_MemoryKeyStore</a></td></tr>
-<tr class="separator:a57f11410b3ef6a686594b60836dc8c99"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1e88cc9ca744782e36d58a022fe026c5"><td class="memItemLeft" align="right" valign="top">typedef void(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#a1e88cc9ca744782e36d58a022fe026c5">DPS_OnNodeDestroyed</a>) (<a class="el" href="dps_8h.html#a4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, void *data)</td></tr>
-<tr class="memdesc:a1e88cc9ca744782e36d58a022fe026c5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function prototype for callback function called when a node is destroyed.  <a href="#a1e88cc9ca744782e36d58a022fe026c5">More...</a><br /></td></tr>
-<tr class="separator:a1e88cc9ca744782e36d58a022fe026c5"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af8615f0bcd3d95859cd7f2cdbf772e23"><td class="memItemLeft" align="right" valign="top">typedef void(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#af8615f0bcd3d95859cd7f2cdbf772e23">DPS_AcknowledgementHandler</a>) (<a class="el" href="dps_8h.html#a0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub, uint8_t *payload, size_t len)</td></tr>
-<tr class="memdesc:af8615f0bcd3d95859cd7f2cdbf772e23"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function prototype for a publication acknowledgment handler called when an acknowledgement for a publication is received from a remote subscriber.  <a href="#af8615f0bcd3d95859cd7f2cdbf772e23">More...</a><br /></td></tr>
-<tr class="separator:af8615f0bcd3d95859cd7f2cdbf772e23"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab95ef1762636ad505c940744b8dce83f"><td class="memItemLeft" align="right" valign="top">typedef void(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#ab95ef1762636ad505c940744b8dce83f">DPS_PublicationHandler</a>) (<a class="el" href="dps_8h.html#adb927c4c1b7306867a75fc4288b54af7">DPS_Subscription</a> *sub, const <a class="el" href="dps_8h.html#a0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub, uint8_t *payload, size_t len)</td></tr>
-<tr class="memdesc:ab95ef1762636ad505c940744b8dce83f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function prototype for a publication handler called when a publication is received that matches a subscription.  <a href="#ab95ef1762636ad505c940744b8dce83f">More...</a><br /></td></tr>
-<tr class="separator:ab95ef1762636ad505c940744b8dce83f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aaf70ac42acab8a67693947871e97600f"><td class="memItemLeft" align="right" valign="top">typedef void(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#aaf70ac42acab8a67693947871e97600f">DPS_OnLinkComplete</a>) (<a class="el" href="dps_8h.html#a4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, <a class="el" href="dps_8h.html#a9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *addr, <a class="el" href="err_8h.html#a30395a84d3cad9d4ec29848106415038">DPS_Status</a> status, void *data)</td></tr>
-<tr class="memdesc:aaf70ac42acab8a67693947871e97600f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function prototype for function called when a <a class="el" href="dps_8h.html#a5064c63b8ce76bf34402e0c80183234b" title="Link the local node to a remote node. ">DPS_Link()</a> completes.  <a href="#aaf70ac42acab8a67693947871e97600f">More...</a><br /></td></tr>
-<tr class="separator:aaf70ac42acab8a67693947871e97600f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a70b98e7cc39f0dccdba41f0984de82f6"><td class="memItemLeft" align="right" valign="top">typedef void(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#a70b98e7cc39f0dccdba41f0984de82f6">DPS_OnUnlinkComplete</a>) (<a class="el" href="dps_8h.html#a4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, <a class="el" href="dps_8h.html#a9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *addr, void *data)</td></tr>
-<tr class="memdesc:a70b98e7cc39f0dccdba41f0984de82f6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function prototype for function called when a <a class="el" href="dps_8h.html#a79c86c3c0c5d6438b953a9acaab0ab0b" title="Unlink the local node from a remote node. ">DPS_Unlink()</a> completes.  <a href="#a70b98e7cc39f0dccdba41f0984de82f6">More...</a><br /></td></tr>
-<tr class="separator:a70b98e7cc39f0dccdba41f0984de82f6"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac1c96ed1ff9a92e7421ae1c428acb904"><td class="memItemLeft" align="right" valign="top">typedef void(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#ac1c96ed1ff9a92e7421ae1c428acb904">DPS_OnResolveAddressComplete</a>) (<a class="el" href="dps_8h.html#a4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, <a class="el" href="dps_8h.html#a9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *addr, void *data)</td></tr>
-<tr class="memdesc:ac1c96ed1ff9a92e7421ae1c428acb904"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function prototype for function called when a <a class="el" href="dps_8h.html#ab78df7f4498b847ddb32fdd33d39ef0f" title="Resolve a host name or IP address and service name or port number. ">DPS_ResolveAddress()</a> completes.  <a href="#ac1c96ed1ff9a92e7421ae1c428acb904">More...</a><br /></td></tr>
-<tr class="separator:ac1c96ed1ff9a92e7421ae1c428acb904"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gaf8615f0bcd3d95859cd7f2cdbf772e23"><td class="memItemLeft" align="right" valign="top">typedef void(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#gaf8615f0bcd3d95859cd7f2cdbf772e23">DPS_AcknowledgementHandler</a>) (<a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub, uint8_t *payload, size_t len)</td></tr>
+<tr class="memdesc:gaf8615f0bcd3d95859cd7f2cdbf772e23"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function prototype for a publication acknowledgment handler called when an acknowledgement for a publication is received from a remote subscriber.  <a href="group__publication.html#gaf8615f0bcd3d95859cd7f2cdbf772e23">More...</a><br /></td></tr>
+<tr class="separator:gaf8615f0bcd3d95859cd7f2cdbf772e23"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga4dd612ab965134321bb57fdb065f121c"><td class="memItemLeft" align="right" valign="top">typedef struct _DPS_Node&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a></td></tr>
+<tr class="memdesc:ga4dd612ab965134321bb57fdb065f121c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Opaque type for a node.  <a href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">More...</a><br /></td></tr>
+<tr class="separator:ga4dd612ab965134321bb57fdb065f121c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga9e9f56aa38e82b4edcef7eb81e9f5bd2"><td class="memItemLeft" align="right" valign="top">typedef struct _DPS_NodeAddress&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__nodeaddress.html#ga9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a></td></tr>
+<tr class="memdesc:ga9e9f56aa38e82b4edcef7eb81e9f5bd2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Opaque type for a remote node address.  <a href="group__nodeaddress.html#ga9e9f56aa38e82b4edcef7eb81e9f5bd2">More...</a><br /></td></tr>
+<tr class="separator:ga9e9f56aa38e82b4edcef7eb81e9f5bd2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gaaf70ac42acab8a67693947871e97600f"><td class="memItemLeft" align="right" valign="top">typedef void(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#gaaf70ac42acab8a67693947871e97600f">DPS_OnLinkComplete</a>) (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, <a class="el" href="group__nodeaddress.html#ga9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *addr, <a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a> status, void *data)</td></tr>
+<tr class="memdesc:gaaf70ac42acab8a67693947871e97600f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function prototype for function called when a <a class="el" href="group__node.html#ga5064c63b8ce76bf34402e0c80183234b" title="Link the local node to a remote node. ">DPS_Link()</a> completes.  <a href="group__node.html#gaaf70ac42acab8a67693947871e97600f">More...</a><br /></td></tr>
+<tr class="separator:gaaf70ac42acab8a67693947871e97600f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga1e88cc9ca744782e36d58a022fe026c5"><td class="memItemLeft" align="right" valign="top">typedef void(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#ga1e88cc9ca744782e36d58a022fe026c5">DPS_OnNodeDestroyed</a>) (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, void *data)</td></tr>
+<tr class="memdesc:ga1e88cc9ca744782e36d58a022fe026c5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function prototype for callback function called when a node is destroyed.  <a href="group__node.html#ga1e88cc9ca744782e36d58a022fe026c5">More...</a><br /></td></tr>
+<tr class="separator:ga1e88cc9ca744782e36d58a022fe026c5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gac1c96ed1ff9a92e7421ae1c428acb904"><td class="memItemLeft" align="right" valign="top">typedef void(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#gac1c96ed1ff9a92e7421ae1c428acb904">DPS_OnResolveAddressComplete</a>) (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, <a class="el" href="group__nodeaddress.html#ga9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *addr, void *data)</td></tr>
+<tr class="memdesc:gac1c96ed1ff9a92e7421ae1c428acb904"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function prototype for function called when a <a class="el" href="group__node.html#gab78df7f4498b847ddb32fdd33d39ef0f" title="Resolve a host name or IP address and service name or port number. ">DPS_ResolveAddress()</a> completes.  <a href="group__node.html#gac1c96ed1ff9a92e7421ae1c428acb904">More...</a><br /></td></tr>
+<tr class="separator:gac1c96ed1ff9a92e7421ae1c428acb904"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga70b98e7cc39f0dccdba41f0984de82f6"><td class="memItemLeft" align="right" valign="top">typedef void(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#ga70b98e7cc39f0dccdba41f0984de82f6">DPS_OnUnlinkComplete</a>) (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, <a class="el" href="group__nodeaddress.html#ga9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *addr, void *data)</td></tr>
+<tr class="memdesc:ga70b98e7cc39f0dccdba41f0984de82f6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function prototype for function called when a <a class="el" href="group__node.html#ga79c86c3c0c5d6438b953a9acaab0ab0b" title="Unlink the local node from a remote node. ">DPS_Unlink()</a> completes.  <a href="group__node.html#ga70b98e7cc39f0dccdba41f0984de82f6">More...</a><br /></td></tr>
+<tr class="separator:ga70b98e7cc39f0dccdba41f0984de82f6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga0d439693474aa54e27f3d45a054696ac"><td class="memItemLeft" align="right" valign="top">typedef struct _DPS_Publication&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a></td></tr>
+<tr class="memdesc:ga0d439693474aa54e27f3d45a054696ac"><td class="mdescLeft">&#160;</td><td class="mdescRight">Opaque type for a publication.  <a href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">More...</a><br /></td></tr>
+<tr class="separator:ga0d439693474aa54e27f3d45a054696ac"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gab95ef1762636ad505c940744b8dce83f"><td class="memItemLeft" align="right" valign="top">typedef void(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__subscription.html#gab95ef1762636ad505c940744b8dce83f">DPS_PublicationHandler</a>) (<a class="el" href="group__subscription.html#gadb927c4c1b7306867a75fc4288b54af7">DPS_Subscription</a> *sub, const <a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub, uint8_t *payload, size_t len)</td></tr>
+<tr class="memdesc:gab95ef1762636ad505c940744b8dce83f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function prototype for a publication handler called when a publication is received that matches a subscription.  <a href="group__subscription.html#gab95ef1762636ad505c940744b8dce83f">More...</a><br /></td></tr>
+<tr class="separator:gab95ef1762636ad505c940744b8dce83f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gadb927c4c1b7306867a75fc4288b54af7"><td class="memItemLeft" align="right" valign="top">typedef struct _DPS_Subscription&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__subscription.html#gadb927c4c1b7306867a75fc4288b54af7">DPS_Subscription</a></td></tr>
+<tr class="memdesc:gadb927c4c1b7306867a75fc4288b54af7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Opaque type for a subscription.  <a href="group__subscription.html#gadb927c4c1b7306867a75fc4288b54af7">More...</a><br /></td></tr>
+<tr class="separator:gadb927c4c1b7306867a75fc4288b54af7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:aacc63deda2f2d97cf3f44ca84784b2f6"><td class="memItemLeft" align="right" valign="top">const char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#aacc63deda2f2d97cf3f44ca84784b2f6">DPS_SubscriptionGetTopic</a> (const <a class="el" href="dps_8h.html#adb927c4c1b7306867a75fc4288b54af7">DPS_Subscription</a> *sub, size_t index)</td></tr>
-<tr class="memdesc:aacc63deda2f2d97cf3f44ca84784b2f6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get a topic for an active subscription.  <a href="#aacc63deda2f2d97cf3f44ca84784b2f6">More...</a><br /></td></tr>
-<tr class="separator:aacc63deda2f2d97cf3f44ca84784b2f6"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab0ad2c6806f8f44f27c70fff915b7e9a"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#ab0ad2c6806f8f44f27c70fff915b7e9a">DPS_SubscriptionGetNumTopics</a> (const <a class="el" href="dps_8h.html#adb927c4c1b7306867a75fc4288b54af7">DPS_Subscription</a> *sub)</td></tr>
-<tr class="memdesc:ab0ad2c6806f8f44f27c70fff915b7e9a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the number of topics registered with an active subscription.  <a href="#ab0ad2c6806f8f44f27c70fff915b7e9a">More...</a><br /></td></tr>
-<tr class="separator:ab0ad2c6806f8f44f27c70fff915b7e9a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aba1ad3ee807b75a1281d334be06a12f7"><td class="memItemLeft" align="right" valign="top">const <a class="el" href="uuid_8h.html#aef1d03afcc6410602ade1d48f24c3997">DPS_UUID</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#aba1ad3ee807b75a1281d334be06a12f7">DPS_PublicationGetUUID</a> (const <a class="el" href="dps_8h.html#a0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub)</td></tr>
-<tr class="memdesc:aba1ad3ee807b75a1281d334be06a12f7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the UUID for a publication.  <a href="#aba1ad3ee807b75a1281d334be06a12f7">More...</a><br /></td></tr>
-<tr class="separator:aba1ad3ee807b75a1281d334be06a12f7"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a875b48217d861d4a9fa5471419d354e9"><td class="memItemLeft" align="right" valign="top">uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#a875b48217d861d4a9fa5471419d354e9">DPS_PublicationGetSequenceNum</a> (const <a class="el" href="dps_8h.html#a0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub)</td></tr>
-<tr class="memdesc:a875b48217d861d4a9fa5471419d354e9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the sequence number for a publication.  <a href="#a875b48217d861d4a9fa5471419d354e9">More...</a><br /></td></tr>
-<tr class="separator:a875b48217d861d4a9fa5471419d354e9"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a143a5c6fbe0bdf1725e841f122582432"><td class="memItemLeft" align="right" valign="top">const char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#a143a5c6fbe0bdf1725e841f122582432">DPS_PublicationGetTopic</a> (const <a class="el" href="dps_8h.html#a0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub, size_t index)</td></tr>
-<tr class="memdesc:a143a5c6fbe0bdf1725e841f122582432"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get a topic for a publication.  <a href="#a143a5c6fbe0bdf1725e841f122582432">More...</a><br /></td></tr>
-<tr class="separator:a143a5c6fbe0bdf1725e841f122582432"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aee6fc3b13484faacff0d26646778f777"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#aee6fc3b13484faacff0d26646778f777">DPS_PublicationGetNumTopics</a> (const <a class="el" href="dps_8h.html#a0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub)</td></tr>
-<tr class="memdesc:aee6fc3b13484faacff0d26646778f777"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the number of topics in a publication.  <a href="#aee6fc3b13484faacff0d26646778f777">More...</a><br /></td></tr>
-<tr class="separator:aee6fc3b13484faacff0d26646778f777"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a516f7f314c7b95210751d00285758b9b"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#a516f7f314c7b95210751d00285758b9b">DPS_PublicationIsAckRequested</a> (const <a class="el" href="dps_8h.html#a0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub)</td></tr>
-<tr class="memdesc:a516f7f314c7b95210751d00285758b9b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Check if an acknowledgement was requested for a publication.  <a href="#a516f7f314c7b95210751d00285758b9b">More...</a><br /></td></tr>
-<tr class="separator:a516f7f314c7b95210751d00285758b9b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad2a37d52f12c93434b431eefd732f363"><td class="memItemLeft" align="right" valign="top"><a class="el" href="dps_8h.html#a4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#ad2a37d52f12c93434b431eefd732f363">DPS_PublicationGetNode</a> (const <a class="el" href="dps_8h.html#a0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub)</td></tr>
-<tr class="memdesc:ad2a37d52f12c93434b431eefd732f363"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the local node associated with a publication.  <a href="#ad2a37d52f12c93434b431eefd732f363">More...</a><br /></td></tr>
-<tr class="separator:ad2a37d52f12c93434b431eefd732f363"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2da4c5f9b7ab5ff6b65d1c8f4d6c30bc"><td class="memItemLeft" align="right" valign="top"><a class="el" href="dps_8h.html#a57f11410b3ef6a686594b60836dc8c99">DPS_MemoryKeyStore</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#a2da4c5f9b7ab5ff6b65d1c8f4d6c30bc">DPS_CreateMemoryKeyStore</a> ()</td></tr>
-<tr class="separator:a2da4c5f9b7ab5ff6b65d1c8f4d6c30bc"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0e4ca4dcdeeebfe543c99b749e641940"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#a0e4ca4dcdeeebfe543c99b749e641940">DPS_DestroyMemoryKeyStore</a> (<a class="el" href="dps_8h.html#a57f11410b3ef6a686594b60836dc8c99">DPS_MemoryKeyStore</a> *mks)</td></tr>
-<tr class="separator:a0e4ca4dcdeeebfe543c99b749e641940"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad3a038a93097eab32b969b4a1f9ccfcb"><td class="memItemLeft" align="right" valign="top"><a class="el" href="err_8h.html#a30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#ad3a038a93097eab32b969b4a1f9ccfcb">DPS_SetContentKey</a> (<a class="el" href="dps_8h.html#a57f11410b3ef6a686594b60836dc8c99">DPS_MemoryKeyStore</a> *mks, const <a class="el" href="uuid_8h.html#aef1d03afcc6410602ade1d48f24c3997">DPS_UUID</a> *kid, uint8_t *key, size_t keyLen)</td></tr>
-<tr class="separator:ad3a038a93097eab32b969b4a1f9ccfcb"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae81123ed40d00de665faa4e59efd8574"><td class="memItemLeft" align="right" valign="top"><a class="el" href="err_8h.html#a30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#ae81123ed40d00de665faa4e59efd8574">DPS_SetNetworkKey</a> (<a class="el" href="dps_8h.html#a57f11410b3ef6a686594b60836dc8c99">DPS_MemoryKeyStore</a> *mks, uint8_t *key, size_t keyLen)</td></tr>
-<tr class="separator:ae81123ed40d00de665faa4e59efd8574"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a55377719a88bf2fff6d72779d4b4ca57"><td class="memItemLeft" align="right" valign="top"><a class="el" href="dps_8h.html#af3833cfe48f848f698514bc5daa075fa">DPS_KeyStore</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#a55377719a88bf2fff6d72779d4b4ca57">DPS_MemoryKeyStoreHandle</a> (<a class="el" href="dps_8h.html#a57f11410b3ef6a686594b60836dc8c99">DPS_MemoryKeyStore</a> *mks)</td></tr>
-<tr class="separator:a55377719a88bf2fff6d72779d4b4ca57"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae8a024fed66337c7f28f820a6bd010ea"><td class="memItemLeft" align="right" valign="top"><a class="el" href="dps_8h.html#a4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#ae8a024fed66337c7f28f820a6bd010ea">DPS_CreateNode</a> (const char *separators, <a class="el" href="dps_8h.html#af3833cfe48f848f698514bc5daa075fa">DPS_KeyStore</a> *keyStore, const <a class="el" href="uuid_8h.html#aef1d03afcc6410602ade1d48f24c3997">DPS_UUID</a> *keyId)</td></tr>
-<tr class="memdesc:ae8a024fed66337c7f28f820a6bd010ea"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allocates space for a local DPS node.  <a href="#ae8a024fed66337c7f28f820a6bd010ea">More...</a><br /></td></tr>
-<tr class="separator:ae8a024fed66337c7f28f820a6bd010ea"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad19cf4272ba11e935654175c83db2ce1"><td class="memItemLeft" align="right" valign="top"><a class="el" href="err_8h.html#a30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#ad19cf4272ba11e935654175c83db2ce1">DPS_SetNodeData</a> (<a class="el" href="dps_8h.html#a4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, void *data)</td></tr>
-<tr class="memdesc:ad19cf4272ba11e935654175c83db2ce1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Store a pointer to application data in a node.  <a href="#ad19cf4272ba11e935654175c83db2ce1">More...</a><br /></td></tr>
-<tr class="separator:ad19cf4272ba11e935654175c83db2ce1"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a65bba7bcfe5e940b153fcced4e2e8880"><td class="memItemLeft" align="right" valign="top">void *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#a65bba7bcfe5e940b153fcced4e2e8880">DPS_GetNodeData</a> (const <a class="el" href="dps_8h.html#a4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node)</td></tr>
-<tr class="memdesc:a65bba7bcfe5e940b153fcced4e2e8880"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get application data pointer previously set by <a class="el" href="dps_8h.html#ad19cf4272ba11e935654175c83db2ce1" title="Store a pointer to application data in a node. ">DPS_SetNodeData()</a>  <a href="#a65bba7bcfe5e940b153fcced4e2e8880">More...</a><br /></td></tr>
-<tr class="separator:a65bba7bcfe5e940b153fcced4e2e8880"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a31994ad569ee589760efac037a0cbc8a"><td class="memItemLeft" align="right" valign="top"><a class="el" href="err_8h.html#a30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#a31994ad569ee589760efac037a0cbc8a">DPS_StartNode</a> (<a class="el" href="dps_8h.html#a4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, int mcastPub, int listenPort)</td></tr>
-<tr class="memdesc:a31994ad569ee589760efac037a0cbc8a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initialized and starts running a local node.  <a href="#a31994ad569ee589760efac037a0cbc8a">More...</a><br /></td></tr>
-<tr class="separator:a31994ad569ee589760efac037a0cbc8a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a85f5121f80411f5ab82449efe20b68dd"><td class="memItemLeft" align="right" valign="top"><a class="el" href="err_8h.html#a30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#a85f5121f80411f5ab82449efe20b68dd">DPS_DestroyNode</a> (<a class="el" href="dps_8h.html#a4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, <a class="el" href="dps_8h.html#a1e88cc9ca744782e36d58a022fe026c5">DPS_OnNodeDestroyed</a> cb, void *data)</td></tr>
-<tr class="memdesc:a85f5121f80411f5ab82449efe20b68dd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Destroys a node and free any resources.  <a href="#a85f5121f80411f5ab82449efe20b68dd">More...</a><br /></td></tr>
-<tr class="separator:a85f5121f80411f5ab82449efe20b68dd"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7dacebc6533305fba12335b3b8c817dc"><td class="memItemLeft" align="right" valign="top">uv_loop_t *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#a7dacebc6533305fba12335b3b8c817dc">DPS_GetLoop</a> (<a class="el" href="dps_8h.html#a4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node)</td></tr>
-<tr class="memdesc:a7dacebc6533305fba12335b3b8c817dc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the uv event loop for this node.  <a href="#a7dacebc6533305fba12335b3b8c817dc">More...</a><br /></td></tr>
-<tr class="separator:a7dacebc6533305fba12335b3b8c817dc"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aca070a96a6374e99a05d647c10737962"><td class="memItemLeft" align="right" valign="top"><a class="el" href="dps_8h.html#a0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#aca070a96a6374e99a05d647c10737962">DPS_CreatePublication</a> (<a class="el" href="dps_8h.html#a4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node)</td></tr>
-<tr class="memdesc:aca070a96a6374e99a05d647c10737962"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allocates storage for a publication.  <a href="#aca070a96a6374e99a05d647c10737962">More...</a><br /></td></tr>
-<tr class="separator:aca070a96a6374e99a05d647c10737962"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a41f31a8b63558e13d73d96de6086e5c4"><td class="memItemLeft" align="right" valign="top"><a class="el" href="dps_8h.html#a0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#a41f31a8b63558e13d73d96de6086e5c4">DPS_CopyPublication</a> (const <a class="el" href="dps_8h.html#a0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub)</td></tr>
-<tr class="memdesc:a41f31a8b63558e13d73d96de6086e5c4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a partial copy of a publication that can be used to acknowledge the publication.  <a href="#a41f31a8b63558e13d73d96de6086e5c4">More...</a><br /></td></tr>
-<tr class="separator:a41f31a8b63558e13d73d96de6086e5c4"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a91c46ccb6df7f4bb99ca5d9d35cc5a4a"><td class="memItemLeft" align="right" valign="top"><a class="el" href="err_8h.html#a30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#a91c46ccb6df7f4bb99ca5d9d35cc5a4a">DPS_SetPublicationData</a> (<a class="el" href="dps_8h.html#a0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub, void *data)</td></tr>
-<tr class="memdesc:a91c46ccb6df7f4bb99ca5d9d35cc5a4a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Store a pointer to application data in a publication.  <a href="#a91c46ccb6df7f4bb99ca5d9d35cc5a4a">More...</a><br /></td></tr>
-<tr class="separator:a91c46ccb6df7f4bb99ca5d9d35cc5a4a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa8bee35089ac62289c9ba0e6a0568ca0"><td class="memItemLeft" align="right" valign="top">void *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#aa8bee35089ac62289c9ba0e6a0568ca0">DPS_GetPublicationData</a> (const <a class="el" href="dps_8h.html#a0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub)</td></tr>
-<tr class="memdesc:aa8bee35089ac62289c9ba0e6a0568ca0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get application data pointer previously set by <a class="el" href="dps_8h.html#a91c46ccb6df7f4bb99ca5d9d35cc5a4a" title="Store a pointer to application data in a publication. ">DPS_SetPublicationData()</a>  <a href="#aa8bee35089ac62289c9ba0e6a0568ca0">More...</a><br /></td></tr>
-<tr class="separator:aa8bee35089ac62289c9ba0e6a0568ca0"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3d819ccd11604f2bdb76d2f6c831e64a"><td class="memItemLeft" align="right" valign="top"><a class="el" href="err_8h.html#a30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#a3d819ccd11604f2bdb76d2f6c831e64a">DPS_InitPublication</a> (<a class="el" href="dps_8h.html#a0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub, const char **topics, size_t numTopics, int noWildCard, const <a class="el" href="uuid_8h.html#aef1d03afcc6410602ade1d48f24c3997">DPS_UUID</a> *keyId, <a class="el" href="dps_8h.html#af8615f0bcd3d95859cd7f2cdbf772e23">DPS_AcknowledgementHandler</a> handler)</td></tr>
-<tr class="memdesc:a3d819ccd11604f2bdb76d2f6c831e64a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initializes a newly created publication with a set of topics.  <a href="#a3d819ccd11604f2bdb76d2f6c831e64a">More...</a><br /></td></tr>
-<tr class="separator:a3d819ccd11604f2bdb76d2f6c831e64a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a828a4efc5c235c48a81f6460cc3fe416"><td class="memItemLeft" align="right" valign="top"><a class="el" href="err_8h.html#a30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#a828a4efc5c235c48a81f6460cc3fe416">DPS_Publish</a> (<a class="el" href="dps_8h.html#a0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub, const uint8_t *pubPayload, size_t len, int16_t ttl)</td></tr>
-<tr class="memdesc:a828a4efc5c235c48a81f6460cc3fe416"><td class="mdescLeft">&#160;</td><td class="mdescRight">Publish a set of topics along with an optional payload.  <a href="#a828a4efc5c235c48a81f6460cc3fe416">More...</a><br /></td></tr>
-<tr class="separator:a828a4efc5c235c48a81f6460cc3fe416"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a17bb01c949aaaf3bafd53323c9effd5f"><td class="memItemLeft" align="right" valign="top"><a class="el" href="err_8h.html#a30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#a17bb01c949aaaf3bafd53323c9effd5f">DPS_DestroyPublication</a> (<a class="el" href="dps_8h.html#a0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub)</td></tr>
-<tr class="memdesc:a17bb01c949aaaf3bafd53323c9effd5f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Delete a publication and frees any resources allocated.  <a href="#a17bb01c949aaaf3bafd53323c9effd5f">More...</a><br /></td></tr>
-<tr class="separator:a17bb01c949aaaf3bafd53323c9effd5f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a308074429a566ffb8d04d55bae520b04"><td class="memItemLeft" align="right" valign="top"><a class="el" href="err_8h.html#a30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#a308074429a566ffb8d04d55bae520b04">DPS_AckPublication</a> (const <a class="el" href="dps_8h.html#a0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub, const uint8_t *ackPayload, size_t len)</td></tr>
-<tr class="memdesc:a308074429a566ffb8d04d55bae520b04"><td class="mdescLeft">&#160;</td><td class="mdescRight">Aknowledge a publication.  <a href="#a308074429a566ffb8d04d55bae520b04">More...</a><br /></td></tr>
-<tr class="separator:a308074429a566ffb8d04d55bae520b04"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a6c77e29b0891cb4ce6463c8fea1f5d7b"><td class="memItemLeft" align="right" valign="top"><a class="el" href="dps_8h.html#a4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#a6c77e29b0891cb4ce6463c8fea1f5d7b">DPS_GetPublicationNode</a> (const <a class="el" href="dps_8h.html#a0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub)</td></tr>
-<tr class="memdesc:a6c77e29b0891cb4ce6463c8fea1f5d7b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the local node associated with a publication.  <a href="#a6c77e29b0891cb4ce6463c8fea1f5d7b">More...</a><br /></td></tr>
-<tr class="separator:a6c77e29b0891cb4ce6463c8fea1f5d7b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4095bb00bd0ca7fa9614ebbc2c28199f"><td class="memItemLeft" align="right" valign="top"><a class="el" href="dps_8h.html#adb927c4c1b7306867a75fc4288b54af7">DPS_Subscription</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#a4095bb00bd0ca7fa9614ebbc2c28199f">DPS_CreateSubscription</a> (<a class="el" href="dps_8h.html#a4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, const char **topics, size_t numTopics)</td></tr>
-<tr class="memdesc:a4095bb00bd0ca7fa9614ebbc2c28199f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allocate memory for a subscription and initialize topics.  <a href="#a4095bb00bd0ca7fa9614ebbc2c28199f">More...</a><br /></td></tr>
-<tr class="separator:a4095bb00bd0ca7fa9614ebbc2c28199f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad581d341003e20c714061e44b57c2009"><td class="memItemLeft" align="right" valign="top"><a class="el" href="err_8h.html#a30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#ad581d341003e20c714061e44b57c2009">DPS_SetSubscriptionData</a> (<a class="el" href="dps_8h.html#adb927c4c1b7306867a75fc4288b54af7">DPS_Subscription</a> *sub, void *data)</td></tr>
-<tr class="memdesc:ad581d341003e20c714061e44b57c2009"><td class="mdescLeft">&#160;</td><td class="mdescRight">Store a pointer to application data in a subscription.  <a href="#ad581d341003e20c714061e44b57c2009">More...</a><br /></td></tr>
-<tr class="separator:ad581d341003e20c714061e44b57c2009"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a88ab2284734f099ef67bcc60997142b3"><td class="memItemLeft" align="right" valign="top">void *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#a88ab2284734f099ef67bcc60997142b3">DPS_GetSubscriptionData</a> (<a class="el" href="dps_8h.html#adb927c4c1b7306867a75fc4288b54af7">DPS_Subscription</a> *sub)</td></tr>
-<tr class="memdesc:a88ab2284734f099ef67bcc60997142b3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get application data pointer previously set by <a class="el" href="dps_8h.html#ad581d341003e20c714061e44b57c2009" title="Store a pointer to application data in a subscription. ">DPS_SetSubscriptionData()</a>  <a href="#a88ab2284734f099ef67bcc60997142b3">More...</a><br /></td></tr>
-<tr class="separator:a88ab2284734f099ef67bcc60997142b3"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:afea65751c811555736c8c65fcb3a9480"><td class="memItemLeft" align="right" valign="top"><a class="el" href="dps_8h.html#a4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#afea65751c811555736c8c65fcb3a9480">DPS_SubscriptionGetNode</a> (const <a class="el" href="dps_8h.html#adb927c4c1b7306867a75fc4288b54af7">DPS_Subscription</a> *sub)</td></tr>
-<tr class="memdesc:afea65751c811555736c8c65fcb3a9480"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the local node associated with a subscription.  <a href="#afea65751c811555736c8c65fcb3a9480">More...</a><br /></td></tr>
-<tr class="separator:afea65751c811555736c8c65fcb3a9480"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a83234ea82a91e07e3f5894a4dcf5267e"><td class="memItemLeft" align="right" valign="top"><a class="el" href="err_8h.html#a30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#a83234ea82a91e07e3f5894a4dcf5267e">DPS_Subscribe</a> (<a class="el" href="dps_8h.html#adb927c4c1b7306867a75fc4288b54af7">DPS_Subscription</a> *sub, <a class="el" href="dps_8h.html#ab95ef1762636ad505c940744b8dce83f">DPS_PublicationHandler</a> handler)</td></tr>
-<tr class="memdesc:a83234ea82a91e07e3f5894a4dcf5267e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Start subscribing to a set of topics.  <a href="#a83234ea82a91e07e3f5894a4dcf5267e">More...</a><br /></td></tr>
-<tr class="separator:a83234ea82a91e07e3f5894a4dcf5267e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aac78b5690aa31eec642b2a706faac510"><td class="memItemLeft" align="right" valign="top"><a class="el" href="err_8h.html#a30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#aac78b5690aa31eec642b2a706faac510">DPS_DestroySubscription</a> (<a class="el" href="dps_8h.html#adb927c4c1b7306867a75fc4288b54af7">DPS_Subscription</a> *sub)</td></tr>
-<tr class="memdesc:aac78b5690aa31eec642b2a706faac510"><td class="mdescLeft">&#160;</td><td class="mdescRight">Stop subscribing to the subscription topic and free resources allocated for the subscription.  <a href="#aac78b5690aa31eec642b2a706faac510">More...</a><br /></td></tr>
-<tr class="separator:aac78b5690aa31eec642b2a706faac510"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5064c63b8ce76bf34402e0c80183234b"><td class="memItemLeft" align="right" valign="top"><a class="el" href="err_8h.html#a30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#a5064c63b8ce76bf34402e0c80183234b">DPS_Link</a> (<a class="el" href="dps_8h.html#a4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, <a class="el" href="dps_8h.html#a9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *addr, <a class="el" href="dps_8h.html#aaf70ac42acab8a67693947871e97600f">DPS_OnLinkComplete</a> cb, void *data)</td></tr>
-<tr class="memdesc:a5064c63b8ce76bf34402e0c80183234b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Link the local node to a remote node.  <a href="#a5064c63b8ce76bf34402e0c80183234b">More...</a><br /></td></tr>
-<tr class="separator:a5064c63b8ce76bf34402e0c80183234b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a79c86c3c0c5d6438b953a9acaab0ab0b"><td class="memItemLeft" align="right" valign="top"><a class="el" href="err_8h.html#a30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#a79c86c3c0c5d6438b953a9acaab0ab0b">DPS_Unlink</a> (<a class="el" href="dps_8h.html#a4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, <a class="el" href="dps_8h.html#a9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *addr, <a class="el" href="dps_8h.html#a70b98e7cc39f0dccdba41f0984de82f6">DPS_OnUnlinkComplete</a> cb, void *data)</td></tr>
-<tr class="memdesc:a79c86c3c0c5d6438b953a9acaab0ab0b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Unlink the local node from a remote node.  <a href="#a79c86c3c0c5d6438b953a9acaab0ab0b">More...</a><br /></td></tr>
-<tr class="separator:a79c86c3c0c5d6438b953a9acaab0ab0b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af920b28fe0721a7f97b11673494d7b36"><td class="memItemLeft" align="right" valign="top">uint16_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#af920b28fe0721a7f97b11673494d7b36">DPS_GetPortNumber</a> (<a class="el" href="dps_8h.html#a4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node)</td></tr>
-<tr class="memdesc:af920b28fe0721a7f97b11673494d7b36"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the port number this node is listening for connections on.  <a href="#af920b28fe0721a7f97b11673494d7b36">More...</a><br /></td></tr>
-<tr class="separator:af920b28fe0721a7f97b11673494d7b36"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab78df7f4498b847ddb32fdd33d39ef0f"><td class="memItemLeft" align="right" valign="top"><a class="el" href="err_8h.html#a30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#ab78df7f4498b847ddb32fdd33d39ef0f">DPS_ResolveAddress</a> (<a class="el" href="dps_8h.html#a4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, const char *host, const char *service, <a class="el" href="dps_8h.html#ac1c96ed1ff9a92e7421ae1c428acb904">DPS_OnResolveAddressComplete</a> cb, void *data)</td></tr>
-<tr class="memdesc:ab78df7f4498b847ddb32fdd33d39ef0f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Resolve a host name or IP address and service name or port number.  <a href="#ab78df7f4498b847ddb32fdd33d39ef0f">More...</a><br /></td></tr>
-<tr class="separator:ab78df7f4498b847ddb32fdd33d39ef0f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab8f34b8393b49a1d0cfc7626a85147e2"><td class="memItemLeft" align="right" valign="top">const char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#ab8f34b8393b49a1d0cfc7626a85147e2">DPS_NodeAddrToString</a> (<a class="el" href="dps_8h.html#a9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *addr)</td></tr>
-<tr class="memdesc:ab8f34b8393b49a1d0cfc7626a85147e2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get text representation of an address.  <a href="#ab8f34b8393b49a1d0cfc7626a85147e2">More...</a><br /></td></tr>
-<tr class="separator:ab8f34b8393b49a1d0cfc7626a85147e2"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a6bed18a4b0ad533ec88c7a0d376de818"><td class="memItemLeft" align="right" valign="top"><a class="el" href="dps_8h.html#a9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#a6bed18a4b0ad533ec88c7a0d376de818">DPS_CreateAddress</a> ()</td></tr>
-<tr class="memdesc:a6bed18a4b0ad533ec88c7a0d376de818"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates an node address.  <a href="#a6bed18a4b0ad533ec88c7a0d376de818">More...</a><br /></td></tr>
-<tr class="separator:a6bed18a4b0ad533ec88c7a0d376de818"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a6231c243c483bd2d282f7df734a98946"><td class="memItemLeft" align="right" valign="top"><a class="el" href="dps_8h.html#a9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#a6231c243c483bd2d282f7df734a98946">DPS_SetAddress</a> (<a class="el" href="dps_8h.html#a9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *addr, const struct sockaddr *sa)</td></tr>
-<tr class="memdesc:a6231c243c483bd2d282f7df734a98946"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set a node address.  <a href="#a6231c243c483bd2d282f7df734a98946">More...</a><br /></td></tr>
-<tr class="separator:a6231c243c483bd2d282f7df734a98946"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ace91591af9bf2a99bad07deda1b9176c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#ace91591af9bf2a99bad07deda1b9176c">DPS_CopyAddress</a> (<a class="el" href="dps_8h.html#a9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *dest, const <a class="el" href="dps_8h.html#a9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *src)</td></tr>
-<tr class="memdesc:ace91591af9bf2a99bad07deda1b9176c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Copy a node address.  <a href="#ace91591af9bf2a99bad07deda1b9176c">More...</a><br /></td></tr>
-<tr class="separator:ace91591af9bf2a99bad07deda1b9176c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1f373831e8009ff5959ccb02b8c3fb14"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#a1f373831e8009ff5959ccb02b8c3fb14">DPS_DestroyAddress</a> (<a class="el" href="dps_8h.html#a9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *addr)</td></tr>
-<tr class="memdesc:a1f373831e8009ff5959ccb02b8c3fb14"><td class="mdescLeft">&#160;</td><td class="mdescRight">Frees resources associated with an address.  <a href="#a1f373831e8009ff5959ccb02b8c3fb14">More...</a><br /></td></tr>
-<tr class="separator:a1f373831e8009ff5959ccb02b8c3fb14"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5f9c4a9e5c5f83707e01b0700cc2692c"><td class="memItemLeft" align="right" valign="top">uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#a5f9c4a9e5c5f83707e01b0700cc2692c">DPS_Rand</a> ()</td></tr>
-<tr class="memdesc:a5f9c4a9e5c5f83707e01b0700cc2692c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns a non-secure random number.  <a href="#a5f9c4a9e5c5f83707e01b0700cc2692c">More...</a><br /></td></tr>
-<tr class="separator:a5f9c4a9e5c5f83707e01b0700cc2692c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga308074429a566ffb8d04d55bae520b04"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#ga308074429a566ffb8d04d55bae520b04">DPS_AckPublication</a> (const <a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub, const uint8_t *ackPayload, size_t len)</td></tr>
+<tr class="memdesc:ga308074429a566ffb8d04d55bae520b04"><td class="mdescLeft">&#160;</td><td class="mdescRight">Acknowledge a publication.  <a href="group__publication.html#ga308074429a566ffb8d04d55bae520b04">More...</a><br /></td></tr>
+<tr class="separator:ga308074429a566ffb8d04d55bae520b04"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gace91591af9bf2a99bad07deda1b9176c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__nodeaddress.html#gace91591af9bf2a99bad07deda1b9176c">DPS_CopyAddress</a> (<a class="el" href="group__nodeaddress.html#ga9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *dest, const <a class="el" href="group__nodeaddress.html#ga9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *src)</td></tr>
+<tr class="memdesc:gace91591af9bf2a99bad07deda1b9176c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Copy a node address.  <a href="group__nodeaddress.html#gace91591af9bf2a99bad07deda1b9176c">More...</a><br /></td></tr>
+<tr class="separator:gace91591af9bf2a99bad07deda1b9176c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga41f31a8b63558e13d73d96de6086e5c4"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#ga41f31a8b63558e13d73d96de6086e5c4">DPS_CopyPublication</a> (const <a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub)</td></tr>
+<tr class="memdesc:ga41f31a8b63558e13d73d96de6086e5c4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a partial copy of a publication that can be used to acknowledge the publication.  <a href="group__publication.html#ga41f31a8b63558e13d73d96de6086e5c4">More...</a><br /></td></tr>
+<tr class="separator:ga41f31a8b63558e13d73d96de6086e5c4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga6bed18a4b0ad533ec88c7a0d376de818"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__nodeaddress.html#ga9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__nodeaddress.html#ga6bed18a4b0ad533ec88c7a0d376de818">DPS_CreateAddress</a> ()</td></tr>
+<tr class="memdesc:ga6bed18a4b0ad533ec88c7a0d376de818"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a node address.  <a href="group__nodeaddress.html#ga6bed18a4b0ad533ec88c7a0d376de818">More...</a><br /></td></tr>
+<tr class="separator:ga6bed18a4b0ad533ec88c7a0d376de818"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gae8a024fed66337c7f28f820a6bd010ea"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#gae8a024fed66337c7f28f820a6bd010ea">DPS_CreateNode</a> (const char *separators, <a class="el" href="group__keystore.html#gaf3833cfe48f848f698514bc5daa075fa">DPS_KeyStore</a> *keyStore, const <a class="el" href="group__uuid.html#gaef1d03afcc6410602ade1d48f24c3997">DPS_UUID</a> *keyId)</td></tr>
+<tr class="memdesc:gae8a024fed66337c7f28f820a6bd010ea"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allocates space for a local DPS node.  <a href="group__node.html#gae8a024fed66337c7f28f820a6bd010ea">More...</a><br /></td></tr>
+<tr class="separator:gae8a024fed66337c7f28f820a6bd010ea"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gaca070a96a6374e99a05d647c10737962"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#gaca070a96a6374e99a05d647c10737962">DPS_CreatePublication</a> (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node)</td></tr>
+<tr class="memdesc:gaca070a96a6374e99a05d647c10737962"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allocates storage for a publication.  <a href="group__publication.html#gaca070a96a6374e99a05d647c10737962">More...</a><br /></td></tr>
+<tr class="separator:gaca070a96a6374e99a05d647c10737962"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga4095bb00bd0ca7fa9614ebbc2c28199f"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__subscription.html#gadb927c4c1b7306867a75fc4288b54af7">DPS_Subscription</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__subscription.html#ga4095bb00bd0ca7fa9614ebbc2c28199f">DPS_CreateSubscription</a> (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, const char **topics, size_t numTopics)</td></tr>
+<tr class="memdesc:ga4095bb00bd0ca7fa9614ebbc2c28199f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allocate memory for a subscription and initialize topics.  <a href="group__subscription.html#ga4095bb00bd0ca7fa9614ebbc2c28199f">More...</a><br /></td></tr>
+<tr class="separator:ga4095bb00bd0ca7fa9614ebbc2c28199f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga1f373831e8009ff5959ccb02b8c3fb14"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__nodeaddress.html#ga1f373831e8009ff5959ccb02b8c3fb14">DPS_DestroyAddress</a> (<a class="el" href="group__nodeaddress.html#ga9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *addr)</td></tr>
+<tr class="memdesc:ga1f373831e8009ff5959ccb02b8c3fb14"><td class="mdescLeft">&#160;</td><td class="mdescRight">Frees resources associated with an address.  <a href="group__nodeaddress.html#ga1f373831e8009ff5959ccb02b8c3fb14">More...</a><br /></td></tr>
+<tr class="separator:ga1f373831e8009ff5959ccb02b8c3fb14"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga85f5121f80411f5ab82449efe20b68dd"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#ga85f5121f80411f5ab82449efe20b68dd">DPS_DestroyNode</a> (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, <a class="el" href="group__node.html#ga1e88cc9ca744782e36d58a022fe026c5">DPS_OnNodeDestroyed</a> cb, void *data)</td></tr>
+<tr class="memdesc:ga85f5121f80411f5ab82449efe20b68dd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Destroys a node and free any resources.  <a href="group__node.html#ga85f5121f80411f5ab82449efe20b68dd">More...</a><br /></td></tr>
+<tr class="separator:ga85f5121f80411f5ab82449efe20b68dd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga17bb01c949aaaf3bafd53323c9effd5f"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#ga17bb01c949aaaf3bafd53323c9effd5f">DPS_DestroyPublication</a> (<a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub)</td></tr>
+<tr class="memdesc:ga17bb01c949aaaf3bafd53323c9effd5f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Delete a publication and frees any resources allocated.  <a href="group__publication.html#ga17bb01c949aaaf3bafd53323c9effd5f">More...</a><br /></td></tr>
+<tr class="separator:ga17bb01c949aaaf3bafd53323c9effd5f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gaac78b5690aa31eec642b2a706faac510"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__subscription.html#gaac78b5690aa31eec642b2a706faac510">DPS_DestroySubscription</a> (<a class="el" href="group__subscription.html#gadb927c4c1b7306867a75fc4288b54af7">DPS_Subscription</a> *sub)</td></tr>
+<tr class="memdesc:gaac78b5690aa31eec642b2a706faac510"><td class="mdescLeft">&#160;</td><td class="mdescRight">Stop subscribing to the subscription topic and free resources allocated for the subscription.  <a href="group__subscription.html#gaac78b5690aa31eec642b2a706faac510">More...</a><br /></td></tr>
+<tr class="separator:gaac78b5690aa31eec642b2a706faac510"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga7dacebc6533305fba12335b3b8c817dc"><td class="memItemLeft" align="right" valign="top">uv_loop_t *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#ga7dacebc6533305fba12335b3b8c817dc">DPS_GetLoop</a> (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node)</td></tr>
+<tr class="memdesc:ga7dacebc6533305fba12335b3b8c817dc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the uv event loop for this node.  <a href="group__node.html#ga7dacebc6533305fba12335b3b8c817dc">More...</a><br /></td></tr>
+<tr class="separator:ga7dacebc6533305fba12335b3b8c817dc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga65bba7bcfe5e940b153fcced4e2e8880"><td class="memItemLeft" align="right" valign="top">void *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#ga65bba7bcfe5e940b153fcced4e2e8880">DPS_GetNodeData</a> (const <a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node)</td></tr>
+<tr class="memdesc:ga65bba7bcfe5e940b153fcced4e2e8880"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get application data pointer previously set by <a class="el" href="group__node.html#gad19cf4272ba11e935654175c83db2ce1" title="Store a pointer to application data in a node. ">DPS_SetNodeData()</a>  <a href="group__node.html#ga65bba7bcfe5e940b153fcced4e2e8880">More...</a><br /></td></tr>
+<tr class="separator:ga65bba7bcfe5e940b153fcced4e2e8880"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gaf920b28fe0721a7f97b11673494d7b36"><td class="memItemLeft" align="right" valign="top">uint16_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#gaf920b28fe0721a7f97b11673494d7b36">DPS_GetPortNumber</a> (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node)</td></tr>
+<tr class="memdesc:gaf920b28fe0721a7f97b11673494d7b36"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the port number this node is listening for connections on.  <a href="group__node.html#gaf920b28fe0721a7f97b11673494d7b36">More...</a><br /></td></tr>
+<tr class="separator:gaf920b28fe0721a7f97b11673494d7b36"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gaa8bee35089ac62289c9ba0e6a0568ca0"><td class="memItemLeft" align="right" valign="top">void *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#gaa8bee35089ac62289c9ba0e6a0568ca0">DPS_GetPublicationData</a> (const <a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub)</td></tr>
+<tr class="memdesc:gaa8bee35089ac62289c9ba0e6a0568ca0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get application data pointer previously set by <a class="el" href="group__publication.html#ga91c46ccb6df7f4bb99ca5d9d35cc5a4a" title="Store a pointer to application data in a publication. ">DPS_SetPublicationData()</a>  <a href="group__publication.html#gaa8bee35089ac62289c9ba0e6a0568ca0">More...</a><br /></td></tr>
+<tr class="separator:gaa8bee35089ac62289c9ba0e6a0568ca0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga6c77e29b0891cb4ce6463c8fea1f5d7b"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#ga6c77e29b0891cb4ce6463c8fea1f5d7b">DPS_GetPublicationNode</a> (const <a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub)</td></tr>
+<tr class="memdesc:ga6c77e29b0891cb4ce6463c8fea1f5d7b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the local node associated with a publication.  <a href="group__publication.html#ga6c77e29b0891cb4ce6463c8fea1f5d7b">More...</a><br /></td></tr>
+<tr class="separator:ga6c77e29b0891cb4ce6463c8fea1f5d7b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga88ab2284734f099ef67bcc60997142b3"><td class="memItemLeft" align="right" valign="top">void *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__subscription.html#ga88ab2284734f099ef67bcc60997142b3">DPS_GetSubscriptionData</a> (<a class="el" href="group__subscription.html#gadb927c4c1b7306867a75fc4288b54af7">DPS_Subscription</a> *sub)</td></tr>
+<tr class="memdesc:ga88ab2284734f099ef67bcc60997142b3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get application data pointer previously set by <a class="el" href="group__subscription.html#gad581d341003e20c714061e44b57c2009" title="Store a pointer to application data in a subscription. ">DPS_SetSubscriptionData()</a>  <a href="group__subscription.html#ga88ab2284734f099ef67bcc60997142b3">More...</a><br /></td></tr>
+<tr class="separator:ga88ab2284734f099ef67bcc60997142b3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga3d819ccd11604f2bdb76d2f6c831e64a"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#ga3d819ccd11604f2bdb76d2f6c831e64a">DPS_InitPublication</a> (<a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub, const char **topics, size_t numTopics, int noWildCard, const <a class="el" href="group__uuid.html#gaef1d03afcc6410602ade1d48f24c3997">DPS_UUID</a> *keyId, <a class="el" href="group__publication.html#gaf8615f0bcd3d95859cd7f2cdbf772e23">DPS_AcknowledgementHandler</a> handler)</td></tr>
+<tr class="memdesc:ga3d819ccd11604f2bdb76d2f6c831e64a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initializes a newly created publication with a set of topics.  <a href="group__publication.html#ga3d819ccd11604f2bdb76d2f6c831e64a">More...</a><br /></td></tr>
+<tr class="separator:ga3d819ccd11604f2bdb76d2f6c831e64a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga5064c63b8ce76bf34402e0c80183234b"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#ga5064c63b8ce76bf34402e0c80183234b">DPS_Link</a> (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, <a class="el" href="group__nodeaddress.html#ga9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *addr, <a class="el" href="group__node.html#gaaf70ac42acab8a67693947871e97600f">DPS_OnLinkComplete</a> cb, void *data)</td></tr>
+<tr class="memdesc:ga5064c63b8ce76bf34402e0c80183234b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Link the local node to a remote node.  <a href="group__node.html#ga5064c63b8ce76bf34402e0c80183234b">More...</a><br /></td></tr>
+<tr class="separator:ga5064c63b8ce76bf34402e0c80183234b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gab8f34b8393b49a1d0cfc7626a85147e2"><td class="memItemLeft" align="right" valign="top">const char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__nodeaddress.html#gab8f34b8393b49a1d0cfc7626a85147e2">DPS_NodeAddrToString</a> (<a class="el" href="group__nodeaddress.html#ga9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *addr)</td></tr>
+<tr class="memdesc:gab8f34b8393b49a1d0cfc7626a85147e2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get text representation of an address.  <a href="group__nodeaddress.html#gab8f34b8393b49a1d0cfc7626a85147e2">More...</a><br /></td></tr>
+<tr class="separator:gab8f34b8393b49a1d0cfc7626a85147e2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gad2a37d52f12c93434b431eefd732f363"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#gad2a37d52f12c93434b431eefd732f363">DPS_PublicationGetNode</a> (const <a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub)</td></tr>
+<tr class="memdesc:gad2a37d52f12c93434b431eefd732f363"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the local node associated with a publication.  <a href="group__publication.html#gad2a37d52f12c93434b431eefd732f363">More...</a><br /></td></tr>
+<tr class="separator:gad2a37d52f12c93434b431eefd732f363"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gaee6fc3b13484faacff0d26646778f777"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#gaee6fc3b13484faacff0d26646778f777">DPS_PublicationGetNumTopics</a> (const <a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub)</td></tr>
+<tr class="memdesc:gaee6fc3b13484faacff0d26646778f777"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the number of topics in a publication.  <a href="group__publication.html#gaee6fc3b13484faacff0d26646778f777">More...</a><br /></td></tr>
+<tr class="separator:gaee6fc3b13484faacff0d26646778f777"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga875b48217d861d4a9fa5471419d354e9"><td class="memItemLeft" align="right" valign="top">uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#ga875b48217d861d4a9fa5471419d354e9">DPS_PublicationGetSequenceNum</a> (const <a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub)</td></tr>
+<tr class="memdesc:ga875b48217d861d4a9fa5471419d354e9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the sequence number for a publication.  <a href="group__publication.html#ga875b48217d861d4a9fa5471419d354e9">More...</a><br /></td></tr>
+<tr class="separator:ga875b48217d861d4a9fa5471419d354e9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga143a5c6fbe0bdf1725e841f122582432"><td class="memItemLeft" align="right" valign="top">const char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#ga143a5c6fbe0bdf1725e841f122582432">DPS_PublicationGetTopic</a> (const <a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub, size_t index)</td></tr>
+<tr class="memdesc:ga143a5c6fbe0bdf1725e841f122582432"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get a topic for a publication.  <a href="group__publication.html#ga143a5c6fbe0bdf1725e841f122582432">More...</a><br /></td></tr>
+<tr class="separator:ga143a5c6fbe0bdf1725e841f122582432"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gaba1ad3ee807b75a1281d334be06a12f7"><td class="memItemLeft" align="right" valign="top">const <a class="el" href="group__uuid.html#gaef1d03afcc6410602ade1d48f24c3997">DPS_UUID</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#gaba1ad3ee807b75a1281d334be06a12f7">DPS_PublicationGetUUID</a> (const <a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub)</td></tr>
+<tr class="memdesc:gaba1ad3ee807b75a1281d334be06a12f7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the UUID for a publication.  <a href="group__publication.html#gaba1ad3ee807b75a1281d334be06a12f7">More...</a><br /></td></tr>
+<tr class="separator:gaba1ad3ee807b75a1281d334be06a12f7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga516f7f314c7b95210751d00285758b9b"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#ga516f7f314c7b95210751d00285758b9b">DPS_PublicationIsAckRequested</a> (const <a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub)</td></tr>
+<tr class="memdesc:ga516f7f314c7b95210751d00285758b9b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Check if an acknowledgement was requested for a publication.  <a href="group__publication.html#ga516f7f314c7b95210751d00285758b9b">More...</a><br /></td></tr>
+<tr class="separator:ga516f7f314c7b95210751d00285758b9b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga828a4efc5c235c48a81f6460cc3fe416"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#ga828a4efc5c235c48a81f6460cc3fe416">DPS_Publish</a> (<a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub, const uint8_t *pubPayload, size_t len, int16_t ttl)</td></tr>
+<tr class="memdesc:ga828a4efc5c235c48a81f6460cc3fe416"><td class="mdescLeft">&#160;</td><td class="mdescRight">Publish a set of topics along with an optional payload.  <a href="group__publication.html#ga828a4efc5c235c48a81f6460cc3fe416">More...</a><br /></td></tr>
+<tr class="separator:ga828a4efc5c235c48a81f6460cc3fe416"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gab78df7f4498b847ddb32fdd33d39ef0f"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#gab78df7f4498b847ddb32fdd33d39ef0f">DPS_ResolveAddress</a> (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, const char *host, const char *service, <a class="el" href="group__node.html#gac1c96ed1ff9a92e7421ae1c428acb904">DPS_OnResolveAddressComplete</a> cb, void *data)</td></tr>
+<tr class="memdesc:gab78df7f4498b847ddb32fdd33d39ef0f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Resolve a host name or IP address and service name or port number.  <a href="group__node.html#gab78df7f4498b847ddb32fdd33d39ef0f">More...</a><br /></td></tr>
+<tr class="separator:gab78df7f4498b847ddb32fdd33d39ef0f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga6231c243c483bd2d282f7df734a98946"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__nodeaddress.html#ga9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__nodeaddress.html#ga6231c243c483bd2d282f7df734a98946">DPS_SetAddress</a> (<a class="el" href="group__nodeaddress.html#ga9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *addr, const struct sockaddr *sa)</td></tr>
+<tr class="memdesc:ga6231c243c483bd2d282f7df734a98946"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set a node address.  <a href="group__nodeaddress.html#ga6231c243c483bd2d282f7df734a98946">More...</a><br /></td></tr>
+<tr class="separator:ga6231c243c483bd2d282f7df734a98946"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gad19cf4272ba11e935654175c83db2ce1"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#gad19cf4272ba11e935654175c83db2ce1">DPS_SetNodeData</a> (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, void *data)</td></tr>
+<tr class="memdesc:gad19cf4272ba11e935654175c83db2ce1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Store a pointer to application data in a node.  <a href="group__node.html#gad19cf4272ba11e935654175c83db2ce1">More...</a><br /></td></tr>
+<tr class="separator:gad19cf4272ba11e935654175c83db2ce1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gac7e33476c06009ed42a6ea6f3c53380a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#gac7e33476c06009ed42a6ea6f3c53380a">DPS_SetNodeSubscriptionUpdateDelay</a> (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, uint32_t subsRateMsecs)</td></tr>
+<tr class="memdesc:gac7e33476c06009ed42a6ea6f3c53380a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Specify the time delay (in msecs) between subscription updates.  <a href="group__node.html#gac7e33476c06009ed42a6ea6f3c53380a">More...</a><br /></td></tr>
+<tr class="separator:gac7e33476c06009ed42a6ea6f3c53380a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga91c46ccb6df7f4bb99ca5d9d35cc5a4a"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#ga91c46ccb6df7f4bb99ca5d9d35cc5a4a">DPS_SetPublicationData</a> (<a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub, void *data)</td></tr>
+<tr class="memdesc:ga91c46ccb6df7f4bb99ca5d9d35cc5a4a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Store a pointer to application data in a publication.  <a href="group__publication.html#ga91c46ccb6df7f4bb99ca5d9d35cc5a4a">More...</a><br /></td></tr>
+<tr class="separator:ga91c46ccb6df7f4bb99ca5d9d35cc5a4a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gad581d341003e20c714061e44b57c2009"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__subscription.html#gad581d341003e20c714061e44b57c2009">DPS_SetSubscriptionData</a> (<a class="el" href="group__subscription.html#gadb927c4c1b7306867a75fc4288b54af7">DPS_Subscription</a> *sub, void *data)</td></tr>
+<tr class="memdesc:gad581d341003e20c714061e44b57c2009"><td class="mdescLeft">&#160;</td><td class="mdescRight">Store a pointer to application data in a subscription.  <a href="group__subscription.html#gad581d341003e20c714061e44b57c2009">More...</a><br /></td></tr>
+<tr class="separator:gad581d341003e20c714061e44b57c2009"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga31994ad569ee589760efac037a0cbc8a"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#ga31994ad569ee589760efac037a0cbc8a">DPS_StartNode</a> (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, int mcastPub, int listenPort)</td></tr>
+<tr class="memdesc:ga31994ad569ee589760efac037a0cbc8a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initialized and starts running a local node.  <a href="group__node.html#ga31994ad569ee589760efac037a0cbc8a">More...</a><br /></td></tr>
+<tr class="separator:ga31994ad569ee589760efac037a0cbc8a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga83234ea82a91e07e3f5894a4dcf5267e"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__subscription.html#ga83234ea82a91e07e3f5894a4dcf5267e">DPS_Subscribe</a> (<a class="el" href="group__subscription.html#gadb927c4c1b7306867a75fc4288b54af7">DPS_Subscription</a> *sub, <a class="el" href="group__subscription.html#gab95ef1762636ad505c940744b8dce83f">DPS_PublicationHandler</a> handler)</td></tr>
+<tr class="memdesc:ga83234ea82a91e07e3f5894a4dcf5267e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Start subscribing to a set of topics.  <a href="group__subscription.html#ga83234ea82a91e07e3f5894a4dcf5267e">More...</a><br /></td></tr>
+<tr class="separator:ga83234ea82a91e07e3f5894a4dcf5267e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gafea65751c811555736c8c65fcb3a9480"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__subscription.html#gafea65751c811555736c8c65fcb3a9480">DPS_SubscriptionGetNode</a> (const <a class="el" href="group__subscription.html#gadb927c4c1b7306867a75fc4288b54af7">DPS_Subscription</a> *sub)</td></tr>
+<tr class="memdesc:gafea65751c811555736c8c65fcb3a9480"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the local node associated with a subscription.  <a href="group__subscription.html#gafea65751c811555736c8c65fcb3a9480">More...</a><br /></td></tr>
+<tr class="separator:gafea65751c811555736c8c65fcb3a9480"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gab0ad2c6806f8f44f27c70fff915b7e9a"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__subscription.html#gab0ad2c6806f8f44f27c70fff915b7e9a">DPS_SubscriptionGetNumTopics</a> (const <a class="el" href="group__subscription.html#gadb927c4c1b7306867a75fc4288b54af7">DPS_Subscription</a> *sub)</td></tr>
+<tr class="memdesc:gab0ad2c6806f8f44f27c70fff915b7e9a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the number of topics registered with an active subscription.  <a href="group__subscription.html#gab0ad2c6806f8f44f27c70fff915b7e9a">More...</a><br /></td></tr>
+<tr class="separator:gab0ad2c6806f8f44f27c70fff915b7e9a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gaacc63deda2f2d97cf3f44ca84784b2f6"><td class="memItemLeft" align="right" valign="top">const char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__subscription.html#gaacc63deda2f2d97cf3f44ca84784b2f6">DPS_SubscriptionGetTopic</a> (const <a class="el" href="group__subscription.html#gadb927c4c1b7306867a75fc4288b54af7">DPS_Subscription</a> *sub, size_t index)</td></tr>
+<tr class="memdesc:gaacc63deda2f2d97cf3f44ca84784b2f6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get a topic for an active subscription.  <a href="group__subscription.html#gaacc63deda2f2d97cf3f44ca84784b2f6">More...</a><br /></td></tr>
+<tr class="separator:gaacc63deda2f2d97cf3f44ca84784b2f6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga79c86c3c0c5d6438b953a9acaab0ab0b"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#ga79c86c3c0c5d6438b953a9acaab0ab0b">DPS_Unlink</a> (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, <a class="el" href="group__nodeaddress.html#ga9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *addr, <a class="el" href="group__node.html#ga70b98e7cc39f0dccdba41f0984de82f6">DPS_OnUnlinkComplete</a> cb, void *data)</td></tr>
+<tr class="memdesc:ga79c86c3c0c5d6438b953a9acaab0ab0b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Unlink the local node from a remote node.  <a href="group__node.html#ga79c86c3c0c5d6438b953a9acaab0ab0b">More...</a><br /></td></tr>
+<tr class="separator:ga79c86c3c0c5d6438b953a9acaab0ab0b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="member-group"></a>
+KeyStore</h2></td></tr>
+<tr><td class="ititle" colspan="2"><p><a class="anchor" id="amgrp4b5eecef069e79f508e3949bf0ecf75b"></a>Hooks for implementating an application-defined key store. </p>
+</td></tr>
+<tr class="memitem:gaf3833cfe48f848f698514bc5daa075fa"><td class="memItemLeft" align="right" valign="top">typedef struct _DPS_KeyStore&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__keystore.html#gaf3833cfe48f848f698514bc5daa075fa">DPS_KeyStore</a></td></tr>
+<tr class="memdesc:gaf3833cfe48f848f698514bc5daa075fa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Opaque type for a key store.  <a href="group__keystore.html#gaf3833cfe48f848f698514bc5daa075fa">More...</a><br /></td></tr>
+<tr class="separator:gaf3833cfe48f848f698514bc5daa075fa"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga7c3e50965b65334e9791780fa855ed16"><td class="memItemLeft" align="right" valign="top">typedef struct _DPS_KeyStoreRequest&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__keystore.html#ga7c3e50965b65334e9791780fa855ed16">DPS_KeyStoreRequest</a></td></tr>
+<tr class="memdesc:ga7c3e50965b65334e9791780fa855ed16"><td class="mdescLeft">&#160;</td><td class="mdescRight">Opaque type for a key store request.  <a href="group__keystore.html#ga7c3e50965b65334e9791780fa855ed16">More...</a><br /></td></tr>
+<tr class="separator:ga7c3e50965b65334e9791780fa855ed16"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga412f5544ea82a01deae34048cb870cdf"><td class="memItemLeft" align="right" valign="top">typedef <a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__keystore.html#ga412f5544ea82a01deae34048cb870cdf">DPS_KeyAndIdentityHandler</a>) (<a class="el" href="group__keystore.html#ga7c3e50965b65334e9791780fa855ed16">DPS_KeyStoreRequest</a> *request)</td></tr>
+<tr class="memdesc:ga412f5544ea82a01deae34048cb870cdf"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function prototype for a key store handler called when a key and key identifier is requested.  <a href="group__keystore.html#ga412f5544ea82a01deae34048cb870cdf">More...</a><br /></td></tr>
+<tr class="separator:ga412f5544ea82a01deae34048cb870cdf"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga4d81296213091a7781619b1f2cf6161e"><td class="memItemLeft" align="right" valign="top">typedef <a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__keystore.html#ga4d81296213091a7781619b1f2cf6161e">DPS_KeyHandler</a>) (<a class="el" href="group__keystore.html#ga7c3e50965b65334e9791780fa855ed16">DPS_KeyStoreRequest</a> *request, const unsigned char *id, size_t len)</td></tr>
+<tr class="memdesc:ga4d81296213091a7781619b1f2cf6161e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function prototype for a key store handler called when a key with the provided key identifier is requested.  <a href="group__keystore.html#ga4d81296213091a7781619b1f2cf6161e">More...</a><br /></td></tr>
+<tr class="separator:ga4d81296213091a7781619b1f2cf6161e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga0acd005f34bca4fcbe1c460e2305ddae"><td class="memItemLeft" align="right" valign="top">typedef <a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__keystore.html#ga0acd005f34bca4fcbe1c460e2305ddae">DPS_CAHandler</a>) (<a class="el" href="group__keystore.html#ga7c3e50965b65334e9791780fa855ed16">DPS_KeyStoreRequest</a> *request)</td></tr>
+<tr class="memdesc:ga0acd005f34bca4fcbe1c460e2305ddae"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function prototype for a key store handler called when the trusted CA chain is requested.  <a href="group__keystore.html#ga0acd005f34bca4fcbe1c460e2305ddae">More...</a><br /></td></tr>
+<tr class="separator:ga0acd005f34bca4fcbe1c460e2305ddae"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga94fa68d1b2d0e69640e02430c2f334af"><td class="memItemLeft" align="right" valign="top">typedef <a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__keystore.html#ga94fa68d1b2d0e69640e02430c2f334af">DPS_CertHandler</a>) (<a class="el" href="group__keystore.html#ga7c3e50965b65334e9791780fa855ed16">DPS_KeyStoreRequest</a> *request)</td></tr>
+<tr class="memdesc:ga94fa68d1b2d0e69640e02430c2f334af"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function prototype for a key store handler called when the certificate of this host is requested.  <a href="group__keystore.html#ga94fa68d1b2d0e69640e02430c2f334af">More...</a><br /></td></tr>
+<tr class="separator:ga94fa68d1b2d0e69640e02430c2f334af"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga10f00b24d74ab8ecea43a2642e86e358"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__keystore.html#ga10f00b24d74ab8ecea43a2642e86e358">DPS_SetKeyAndIdentity</a> (<a class="el" href="group__keystore.html#ga7c3e50965b65334e9791780fa855ed16">DPS_KeyStoreRequest</a> *request, const unsigned char *key, size_t keyLen, const unsigned char *id, size_t idLen)</td></tr>
+<tr class="memdesc:ga10f00b24d74ab8ecea43a2642e86e358"><td class="mdescLeft">&#160;</td><td class="mdescRight">Provide a key and key identifier to a key store request.  <a href="group__keystore.html#ga10f00b24d74ab8ecea43a2642e86e358">More...</a><br /></td></tr>
+<tr class="separator:ga10f00b24d74ab8ecea43a2642e86e358"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga864dea245d50d4148b8ea66d6c6dcd6a"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__keystore.html#ga864dea245d50d4148b8ea66d6c6dcd6a">DPS_SetKey</a> (<a class="el" href="group__keystore.html#ga7c3e50965b65334e9791780fa855ed16">DPS_KeyStoreRequest</a> *request, const unsigned char *key, size_t len)</td></tr>
+<tr class="memdesc:ga864dea245d50d4148b8ea66d6c6dcd6a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Provide a key to a key store request.  <a href="group__keystore.html#ga864dea245d50d4148b8ea66d6c6dcd6a">More...</a><br /></td></tr>
+<tr class="separator:ga864dea245d50d4148b8ea66d6c6dcd6a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga64c077fe7dd94a6bd5954079abb36877"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__keystore.html#ga64c077fe7dd94a6bd5954079abb36877">DPS_SetCA</a> (<a class="el" href="group__keystore.html#ga7c3e50965b65334e9791780fa855ed16">DPS_KeyStoreRequest</a> *request, const unsigned char *ca, size_t len)</td></tr>
+<tr class="memdesc:ga64c077fe7dd94a6bd5954079abb36877"><td class="mdescLeft">&#160;</td><td class="mdescRight">Provide a trusted CA chain to a key store request.  <a href="group__keystore.html#ga64c077fe7dd94a6bd5954079abb36877">More...</a><br /></td></tr>
+<tr class="separator:ga64c077fe7dd94a6bd5954079abb36877"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga2cb1646131ee5662356032d585295411"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__keystore.html#ga2cb1646131ee5662356032d585295411">DPS_SetCert</a> (<a class="el" href="group__keystore.html#ga7c3e50965b65334e9791780fa855ed16">DPS_KeyStoreRequest</a> *request, const unsigned char *cert, size_t certLen, const unsigned char *key, size_t keyLen, const unsigned char *password, size_t passwordLen)</td></tr>
+<tr class="memdesc:ga2cb1646131ee5662356032d585295411"><td class="mdescLeft">&#160;</td><td class="mdescRight">Provide a certificate to a key store request.  <a href="group__keystore.html#ga2cb1646131ee5662356032d585295411">More...</a><br /></td></tr>
+<tr class="separator:ga2cb1646131ee5662356032d585295411"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga088b3dc5eff10ab334d1e2aa0a329c26"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__keystore.html#gaf3833cfe48f848f698514bc5daa075fa">DPS_KeyStore</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__keystore.html#ga088b3dc5eff10ab334d1e2aa0a329c26">DPS_KeyStoreHandle</a> (<a class="el" href="group__keystore.html#ga7c3e50965b65334e9791780fa855ed16">DPS_KeyStoreRequest</a> *request)</td></tr>
+<tr class="memdesc:ga088b3dc5eff10ab334d1e2aa0a329c26"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the <code>DPS_KeyStore*</code> of a key store request.  <a href="group__keystore.html#ga088b3dc5eff10ab334d1e2aa0a329c26">More...</a><br /></td></tr>
+<tr class="separator:ga088b3dc5eff10ab334d1e2aa0a329c26"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga50f3c738e41d4f154e4519c1ee95b5a2"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__keystore.html#gaf3833cfe48f848f698514bc5daa075fa">DPS_KeyStore</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__keystore.html#ga50f3c738e41d4f154e4519c1ee95b5a2">DPS_CreateKeyStore</a> (<a class="el" href="group__keystore.html#ga412f5544ea82a01deae34048cb870cdf">DPS_KeyAndIdentityHandler</a> keyAndIdentityHandler, <a class="el" href="group__keystore.html#ga4d81296213091a7781619b1f2cf6161e">DPS_KeyHandler</a> keyHandler, <a class="el" href="group__keystore.html#ga0acd005f34bca4fcbe1c460e2305ddae">DPS_CAHandler</a> caHandler, <a class="el" href="group__keystore.html#ga94fa68d1b2d0e69640e02430c2f334af">DPS_CertHandler</a> certHandler)</td></tr>
+<tr class="memdesc:ga50f3c738e41d4f154e4519c1ee95b5a2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a key store.  <a href="group__keystore.html#ga50f3c738e41d4f154e4519c1ee95b5a2">More...</a><br /></td></tr>
+<tr class="separator:ga50f3c738e41d4f154e4519c1ee95b5a2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga40bea030ef0ba65ec332880ae2bbfee1"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__keystore.html#ga40bea030ef0ba65ec332880ae2bbfee1">DPS_DestroyKeyStore</a> (<a class="el" href="group__keystore.html#gaf3833cfe48f848f698514bc5daa075fa">DPS_KeyStore</a> *keyStore)</td></tr>
+<tr class="memdesc:ga40bea030ef0ba65ec332880ae2bbfee1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Destroys a previously created key store.  <a href="group__keystore.html#ga40bea030ef0ba65ec332880ae2bbfee1">More...</a><br /></td></tr>
+<tr class="separator:ga40bea030ef0ba65ec332880ae2bbfee1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gaf8062875af6cab5caabc3f13bf995807"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__keystore.html#gaf8062875af6cab5caabc3f13bf995807">DPS_SetKeyStoreData</a> (<a class="el" href="group__keystore.html#gaf3833cfe48f848f698514bc5daa075fa">DPS_KeyStore</a> *keyStore, void *data)</td></tr>
+<tr class="memdesc:gaf8062875af6cab5caabc3f13bf995807"><td class="mdescLeft">&#160;</td><td class="mdescRight">Store a pointer to application data in a key store.  <a href="group__keystore.html#gaf8062875af6cab5caabc3f13bf995807">More...</a><br /></td></tr>
+<tr class="separator:gaf8062875af6cab5caabc3f13bf995807"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga3b67d7dde74267ee9342dc3efd33812b"><td class="memItemLeft" align="right" valign="top">void *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__keystore.html#ga3b67d7dde74267ee9342dc3efd33812b">DPS_GetKeyStoreData</a> (const <a class="el" href="group__keystore.html#gaf3833cfe48f848f698514bc5daa075fa">DPS_KeyStore</a> *keyStore)</td></tr>
+<tr class="memdesc:ga3b67d7dde74267ee9342dc3efd33812b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get application data pointer previously set by <a class="el" href="group__keystore.html#gaf8062875af6cab5caabc3f13bf995807" title="Store a pointer to application data in a key store. ">DPS_SetKeyStoreData()</a>.  <a href="group__keystore.html#ga3b67d7dde74267ee9342dc3efd33812b">More...</a><br /></td></tr>
+<tr class="separator:ga3b67d7dde74267ee9342dc3efd33812b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="member-group"></a>
+In-memory Key Store</h2></td></tr>
+<tr><td class="ititle" colspan="2"><p><a class="anchor" id="amgrp68c1df9ad4ec9d94325f55864c7d7170"></a>The implementation of an in-memory key store. </p>
+</td></tr>
+<tr class="memitem:ga57f11410b3ef6a686594b60836dc8c99"><td class="memItemLeft" align="right" valign="top">typedef struct _DPS_MemoryKeyStore&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__keystore.html#ga57f11410b3ef6a686594b60836dc8c99">DPS_MemoryKeyStore</a></td></tr>
+<tr class="memdesc:ga57f11410b3ef6a686594b60836dc8c99"><td class="mdescLeft">&#160;</td><td class="mdescRight">Opaque type for an in-memory key store.  <a href="group__keystore.html#ga57f11410b3ef6a686594b60836dc8c99">More...</a><br /></td></tr>
+<tr class="separator:ga57f11410b3ef6a686594b60836dc8c99"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga2da4c5f9b7ab5ff6b65d1c8f4d6c30bc"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__keystore.html#ga57f11410b3ef6a686594b60836dc8c99">DPS_MemoryKeyStore</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__keystore.html#ga2da4c5f9b7ab5ff6b65d1c8f4d6c30bc">DPS_CreateMemoryKeyStore</a> ()</td></tr>
+<tr class="memdesc:ga2da4c5f9b7ab5ff6b65d1c8f4d6c30bc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates an in-memory key store.  <a href="group__keystore.html#ga2da4c5f9b7ab5ff6b65d1c8f4d6c30bc">More...</a><br /></td></tr>
+<tr class="separator:ga2da4c5f9b7ab5ff6b65d1c8f4d6c30bc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga2f9f4aeff872ca74d5735a8727f4dbae"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__keystore.html#ga2f9f4aeff872ca74d5735a8727f4dbae">DPS_DestroyMemoryKeyStore</a> (<a class="el" href="group__keystore.html#ga57f11410b3ef6a686594b60836dc8c99">DPS_MemoryKeyStore</a> *keyStore)</td></tr>
+<tr class="memdesc:ga2f9f4aeff872ca74d5735a8727f4dbae"><td class="mdescLeft">&#160;</td><td class="mdescRight">Destroys a previously created in-memory key store.  <a href="group__keystore.html#ga2f9f4aeff872ca74d5735a8727f4dbae">More...</a><br /></td></tr>
+<tr class="separator:ga2f9f4aeff872ca74d5735a8727f4dbae"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gad328ecb716cdecee5d78d7cd2038c8f9"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__keystore.html#gad328ecb716cdecee5d78d7cd2038c8f9">DPS_SetContentKey</a> (<a class="el" href="group__keystore.html#ga57f11410b3ef6a686594b60836dc8c99">DPS_MemoryKeyStore</a> *keyStore, const <a class="el" href="group__uuid.html#gaef1d03afcc6410602ade1d48f24c3997">DPS_UUID</a> *kid, const uint8_t *key, size_t keyLen)</td></tr>
+<tr class="memdesc:gad328ecb716cdecee5d78d7cd2038c8f9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Create or replace a key with the specified key identifier in the key store.  <a href="group__keystore.html#gad328ecb716cdecee5d78d7cd2038c8f9">More...</a><br /></td></tr>
+<tr class="separator:gad328ecb716cdecee5d78d7cd2038c8f9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga8cc1a676e2f8a033c4116d1a426ab06a"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__keystore.html#ga8cc1a676e2f8a033c4116d1a426ab06a">DPS_SetNetworkKey</a> (<a class="el" href="group__keystore.html#ga57f11410b3ef6a686594b60836dc8c99">DPS_MemoryKeyStore</a> *keyStore, const uint8_t *id, size_t idLen, const uint8_t *key, size_t keyLen)</td></tr>
+<tr class="memdesc:ga8cc1a676e2f8a033c4116d1a426ab06a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Create or replace the network key in the key store.  <a href="group__keystore.html#ga8cc1a676e2f8a033c4116d1a426ab06a">More...</a><br /></td></tr>
+<tr class="separator:ga8cc1a676e2f8a033c4116d1a426ab06a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gad6d8febae7135adb229184ef4caeac59"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__keystore.html#gad6d8febae7135adb229184ef4caeac59">DPS_SetTrustedCA</a> (<a class="el" href="group__keystore.html#ga57f11410b3ef6a686594b60836dc8c99">DPS_MemoryKeyStore</a> *mks, const char *ca, size_t len)</td></tr>
+<tr class="memdesc:gad6d8febae7135adb229184ef4caeac59"><td class="mdescLeft">&#160;</td><td class="mdescRight">Create or replace the trusted CA(s) in the key store.  <a href="group__keystore.html#gad6d8febae7135adb229184ef4caeac59">More...</a><br /></td></tr>
+<tr class="separator:gad6d8febae7135adb229184ef4caeac59"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gab8348bad5fde4b5b9285c1d6b3fb1f6c"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__keystore.html#gab8348bad5fde4b5b9285c1d6b3fb1f6c">DPS_SetCertificate</a> (<a class="el" href="group__keystore.html#ga57f11410b3ef6a686594b60836dc8c99">DPS_MemoryKeyStore</a> *mks, const char *cert, size_t certLen, const char *key, size_t keyLen, const char *password, size_t passwordLen)</td></tr>
+<tr class="memdesc:gab8348bad5fde4b5b9285c1d6b3fb1f6c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Create or replace the certificate in the key store.  <a href="group__keystore.html#gab8348bad5fde4b5b9285c1d6b3fb1f6c">More...</a><br /></td></tr>
+<tr class="separator:gab8348bad5fde4b5b9285c1d6b3fb1f6c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga2811c4ffff51bd75a72dd0a9c8796616"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__keystore.html#gaf3833cfe48f848f698514bc5daa075fa">DPS_KeyStore</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__keystore.html#ga2811c4ffff51bd75a72dd0a9c8796616">DPS_MemoryKeyStoreHandle</a> (<a class="el" href="group__keystore.html#ga57f11410b3ef6a686594b60836dc8c99">DPS_MemoryKeyStore</a> *keyStore)</td></tr>
+<tr class="memdesc:ga2811c4ffff51bd75a72dd0a9c8796616"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the <code>DPS_KeyStore*</code> of an in-memory key store.  <a href="group__keystore.html#ga2811c4ffff51bd75a72dd0a9c8796616">More...</a><br /></td></tr>
+<tr class="separator:ga2811c4ffff51bd75a72dd0a9c8796616"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Macro Definition Documentation</h2>
 <a class="anchor" id="a44b270f60457e96de08275cffdcfaffb"></a>
@@ -336,42 +397,6 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a class="anchor" id="ac939c83361ed89086f37c78d9c9009dd"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define DPS_MCAST_PUB_DISABLED&#160;&#160;&#160;0</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a class="anchor" id="ae493573fb2e02b87258952223eb4fcd7"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define DPS_MCAST_PUB_ENABLE_RECV&#160;&#160;&#160;2</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a class="anchor" id="a178a3a6450eeff450820fa34fd82049c"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define DPS_MCAST_PUB_ENABLE_SEND&#160;&#160;&#160;1</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
 <a class="anchor" id="a4a173ed2665cea74e58558d99b377ab3"></a>
 <div class="memitem">
 <div class="memproto">
@@ -384,1649 +409,11 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<h2 class="groupheader">Typedef Documentation</h2>
-<a class="anchor" id="af8615f0bcd3d95859cd7f2cdbf772e23"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">typedef void(* DPS_AcknowledgementHandler) (<a class="el" href="dps_8h.html#a0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub, uint8_t *payload, size_t len)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Function prototype for a publication acknowledgment handler called when an acknowledgement for a publication is received from a remote subscriber. </p>
-<p>The handler is called for each subscriber that generates an acknowledgement so may be called numerous times for same publication.</p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">pub</td><td>Opaque handle for the publication that was received </td></tr>
-    <tr><td class="paramname">payload</td><td>Payload accompanying the acknowledgement if any </td></tr>
-    <tr><td class="paramname">len</td><td>Length of the payload </td></tr>
-  </table>
-  </dd>
-</dl>
-
-</div>
-</div>
-<a class="anchor" id="af2b9641c0401a392873bb32f7ade4f65"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">typedef <a class="el" href="err_8h.html#a30395a84d3cad9d4ec29848106415038">DPS_Status</a>(* DPS_ContentKeyCallback) (<a class="el" href="dps_8h.html#af3833cfe48f848f698514bc5daa075fa">DPS_KeyStore</a> *keyStore, const <a class="el" href="uuid_8h.html#aef1d03afcc6410602ade1d48f24c3997">DPS_UUID</a> *kid, uint8_t *key, size_t keyLen)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Function prototype for callback function for requesting the encryption key for a specific key identifier. </p>
-<p>This function must not block</p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">node</td><td>The node that is requesting the key </td></tr>
-    <tr><td class="paramname">kid</td><td>The key identifier </td></tr>
-    <tr><td class="paramname">key</td><td>Buffer for returning the key. </td></tr>
-    <tr><td class="paramname">keyLen</td><td>Size of the key buffer</td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>DPS_OK if a key matching the kid was returned DPS_ERR_MSSING if there is no matching key </dd></dl>
-
-</div>
-</div>
-<a class="anchor" id="af3833cfe48f848f698514bc5daa075fa"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">typedef struct <a class="el" href="struct___d_p_s___key_store.html">_DPS_KeyStore</a> <a class="el" href="dps_8h.html#af3833cfe48f848f698514bc5daa075fa">DPS_KeyStore</a></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a class="anchor" id="a57f11410b3ef6a686594b60836dc8c99"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">typedef struct _DPS_MemoryKeyStore <a class="el" href="dps_8h.html#a57f11410b3ef6a686594b60836dc8c99">DPS_MemoryKeyStore</a></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a class="anchor" id="a6cf026e0213c22482c4e914a651aebd9"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">typedef <a class="el" href="err_8h.html#a30395a84d3cad9d4ec29848106415038">DPS_Status</a>(* DPS_NetworkKeyCallback) (<a class="el" href="dps_8h.html#af3833cfe48f848f698514bc5daa075fa">DPS_KeyStore</a> *keyStore, uint8_t *buffer, size_t bufferLen, size_t *keyLen)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a class="anchor" id="a4dd612ab965134321bb57fdb065f121c"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">typedef struct _DPS_Node <a class="el" href="dps_8h.html#a4dd612ab965134321bb57fdb065f121c">DPS_Node</a></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Opaque type for a node. </p>
-
-</div>
-</div>
-<a class="anchor" id="a9e9f56aa38e82b4edcef7eb81e9f5bd2"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">typedef struct _DPS_NodeAddress <a class="el" href="dps_8h.html#a9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Opaque type for a remote node address. </p>
-
-</div>
-</div>
-<a class="anchor" id="aaf70ac42acab8a67693947871e97600f"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">typedef void(* DPS_OnLinkComplete) (<a class="el" href="dps_8h.html#a4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, <a class="el" href="dps_8h.html#a9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *addr, <a class="el" href="err_8h.html#a30395a84d3cad9d4ec29848106415038">DPS_Status</a> status, void *data)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Function prototype for function called when a <a class="el" href="dps_8h.html#a5064c63b8ce76bf34402e0c80183234b" title="Link the local node to a remote node. ">DPS_Link()</a> completes. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">node</td><td>The local node to use </td></tr>
-    <tr><td class="paramname">addr</td><td>The address of the remote node that was linked </td></tr>
-    <tr><td class="paramname">status</td><td>Indicates if the link completed or failed </td></tr>
-    <tr><td class="paramname">data</td><td>Application data passed in the call to <a class="el" href="dps_8h.html#a5064c63b8ce76bf34402e0c80183234b" title="Link the local node to a remote node. ">DPS_Link()</a> </td></tr>
-  </table>
-  </dd>
-</dl>
-
-</div>
-</div>
-<a class="anchor" id="a1e88cc9ca744782e36d58a022fe026c5"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">typedef void(* DPS_OnNodeDestroyed) (<a class="el" href="dps_8h.html#a4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, void *data)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Function prototype for callback function called when a node is destroyed. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">node</td><td>The node that was destroyed. This pointer is valid during the callback. </td></tr>
-    <tr><td class="paramname">data</td><td>Data pointer passed to <a class="el" href="dps_8h.html#a85f5121f80411f5ab82449efe20b68dd" title="Destroys a node and free any resources. ">DPS_DestroyNode()</a> </td></tr>
-  </table>
-  </dd>
-</dl>
-
-</div>
-</div>
-<a class="anchor" id="ac1c96ed1ff9a92e7421ae1c428acb904"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">typedef void(* DPS_OnResolveAddressComplete) (<a class="el" href="dps_8h.html#a4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, <a class="el" href="dps_8h.html#a9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *addr, void *data)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Function prototype for function called when a <a class="el" href="dps_8h.html#ab78df7f4498b847ddb32fdd33d39ef0f" title="Resolve a host name or IP address and service name or port number. ">DPS_ResolveAddress()</a> completes. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">node</td><td>The local node to use </td></tr>
-    <tr><td class="paramname">addr</td><td>The resolved address or NULL if the address could not be resolved </td></tr>
-    <tr><td class="paramname">data</td><td>Application data passed in the call to <a class="el" href="dps_8h.html#ab78df7f4498b847ddb32fdd33d39ef0f" title="Resolve a host name or IP address and service name or port number. ">DPS_ResolveAddress()</a> </td></tr>
-  </table>
-  </dd>
-</dl>
-
-</div>
-</div>
-<a class="anchor" id="a70b98e7cc39f0dccdba41f0984de82f6"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">typedef void(* DPS_OnUnlinkComplete) (<a class="el" href="dps_8h.html#a4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, <a class="el" href="dps_8h.html#a9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *addr, void *data)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Function prototype for function called when a <a class="el" href="dps_8h.html#a79c86c3c0c5d6438b953a9acaab0ab0b" title="Unlink the local node from a remote node. ">DPS_Unlink()</a> completes. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">node</td><td>The local node to use </td></tr>
-    <tr><td class="paramname">addr</td><td>The address of the remote node that was unlinked </td></tr>
-    <tr><td class="paramname">data</td><td>Application data passed in the call to <a class="el" href="dps_8h.html#a5064c63b8ce76bf34402e0c80183234b" title="Link the local node to a remote node. ">DPS_Link()</a> </td></tr>
-  </table>
-  </dd>
-</dl>
-
-</div>
-</div>
-<a class="anchor" id="a0d439693474aa54e27f3d45a054696ac"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">typedef struct _DPS_Publication <a class="el" href="dps_8h.html#a0d439693474aa54e27f3d45a054696ac">DPS_Publication</a></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Opaque type for a publication. </p>
-
-</div>
-</div>
-<a class="anchor" id="ab95ef1762636ad505c940744b8dce83f"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">typedef void(* DPS_PublicationHandler) (<a class="el" href="dps_8h.html#adb927c4c1b7306867a75fc4288b54af7">DPS_Subscription</a> *sub, const <a class="el" href="dps_8h.html#a0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub, uint8_t *payload, size_t len)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Function prototype for a publication handler called when a publication is received that matches a subscription. </p>
-<p>Note that there is a possibilitly of false-positive matches.</p>
-<p>The publication handle is only valid within the body of this callback function. <a class="el" href="dps_8h.html#a41f31a8b63558e13d73d96de6086e5c4" title="Creates a partial copy of a publication that can be used to acknowledge the publication. ">DPS_CopyPublication()</a> will make a partial copy of the publication that can be used later for example to call <a class="el" href="dps_8h.html#a308074429a566ffb8d04d55bae520b04" title="Aknowledge a publication. ">DPS_AckPublication()</a>.</p>
-<p>The accessor functions <a class="el" href="dps_8h.html#aba1ad3ee807b75a1281d334be06a12f7" title="Get the UUID for a publication. ">DPS_PublicationGetUUID()</a> and <a class="el" href="dps_8h.html#a875b48217d861d4a9fa5471419d354e9" title="Get the sequence number for a publication. ">DPS_PublicationGetSequenceNum()</a> return information about the received publication.</p>
-<p>The accessor functions <a class="el" href="dps_8h.html#ab0ad2c6806f8f44f27c70fff915b7e9a" title="Get the number of topics registered with an active subscription. ">DPS_SubscriptionGetNumTopics()</a> and <a class="el" href="dps_8h.html#aacc63deda2f2d97cf3f44ca84784b2f6" title="Get a topic for an active subscription. ">DPS_SubscriptionGetTopic()</a> return information about the subscription that was matched.</p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">sub</td><td>Opaque handle for the subscription that was matched </td></tr>
-    <tr><td class="paramname">pub</td><td>Opaque handle for the publication that was received </td></tr>
-    <tr><td class="paramname">payload</td><td>Payload from the publication if any </td></tr>
-    <tr><td class="paramname">len</td><td>Length of the payload </td></tr>
-  </table>
-  </dd>
-</dl>
-
-</div>
-</div>
-<a class="anchor" id="adb927c4c1b7306867a75fc4288b54af7"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">typedef struct _DPS_Subscription <a class="el" href="dps_8h.html#adb927c4c1b7306867a75fc4288b54af7">DPS_Subscription</a></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Opaque type for a subscription. </p>
-
-</div>
-</div>
-<h2 class="groupheader">Function Documentation</h2>
-<a class="anchor" id="a308074429a566ffb8d04d55bae520b04"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="err_8h.html#a30395a84d3cad9d4ec29848106415038">DPS_Status</a> DPS_AckPublication </td>
-          <td>(</td>
-          <td class="paramtype">const <a class="el" href="dps_8h.html#a0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *&#160;</td>
-          <td class="paramname"><em>pub</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const uint8_t *&#160;</td>
-          <td class="paramname"><em>ackPayload</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">size_t&#160;</td>
-          <td class="paramname"><em>len</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Aknowledge a publication. </p>
-<p>A publication should be acknowledged as soon as possible after receipt ideally from within the publication handler callback function. If the publication cannot be acknowedged immediately in the publication handler callback, call <a class="el" href="dps_8h.html#a41f31a8b63558e13d73d96de6086e5c4" title="Creates a partial copy of a publication that can be used to acknowledge the publication. ">DPS_CopyPublication()</a> to make a partial copy of the publication that can be passed to this function at a later time.</p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">pub</td><td>The publication to acknowledge </td></tr>
-    <tr><td class="paramname">ackPayload</td><td>Optional payload to accompany the aknowledgment </td></tr>
-    <tr><td class="paramname">len</td><td>The length of the payload </td></tr>
-  </table>
-  </dd>
-</dl>
-
-</div>
-</div>
-<a class="anchor" id="ace91591af9bf2a99bad07deda1b9176c"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void DPS_CopyAddress </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="dps_8h.html#a9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *&#160;</td>
-          <td class="paramname"><em>dest</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const <a class="el" href="dps_8h.html#a9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *&#160;</td>
-          <td class="paramname"><em>src</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Copy a node address. </p>
-
-</div>
-</div>
-<a class="anchor" id="a41f31a8b63558e13d73d96de6086e5c4"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="dps_8h.html#a0d439693474aa54e27f3d45a054696ac">DPS_Publication</a>* DPS_CopyPublication </td>
-          <td>(</td>
-          <td class="paramtype">const <a class="el" href="dps_8h.html#a0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *&#160;</td>
-          <td class="paramname"><em>pub</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Creates a partial copy of a publication that can be used to acknowledge the publication. </p>
-<p>The copy is not useful for anything other than in a call to <a class="el" href="dps_8h.html#a308074429a566ffb8d04d55bae520b04" title="Aknowledge a publication. ">DPS_AckPublication()</a> and should be freed by calling DPS_DestroyPublcation() when no longer needed.</p>
-<p>The partial copy can be used with <a class="el" href="dps_8h.html#aba1ad3ee807b75a1281d334be06a12f7" title="Get the UUID for a publication. ">DPS_PublicationGetUUID()</a> and <a class="el" href="dps_8h.html#a875b48217d861d4a9fa5471419d354e9" title="Get the sequence number for a publication. ">DPS_PublicationGetSequenceNum()</a></p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">pub</td><td>The publication to copy</td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>A partial copy of the publication or NULL if the publication could not be copied. </dd></dl>
-
-</div>
-</div>
-<a class="anchor" id="a6bed18a4b0ad533ec88c7a0d376de818"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="dps_8h.html#a9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a>* DPS_CreateAddress </td>
-          <td>(</td>
-          <td class="paramname"></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Creates an node address. </p>
-
-</div>
-</div>
-<a class="anchor" id="a2da4c5f9b7ab5ff6b65d1c8f4d6c30bc"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="dps_8h.html#a57f11410b3ef6a686594b60836dc8c99">DPS_MemoryKeyStore</a>* DPS_CreateMemoryKeyStore </td>
-          <td>(</td>
-          <td class="paramname"></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a class="anchor" id="ae8a024fed66337c7f28f820a6bd010ea"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="dps_8h.html#a4dd612ab965134321bb57fdb065f121c">DPS_Node</a>* DPS_CreateNode </td>
-          <td>(</td>
-          <td class="paramtype">const char *&#160;</td>
-          <td class="paramname"><em>separators</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="dps_8h.html#af3833cfe48f848f698514bc5daa075fa">DPS_KeyStore</a> *&#160;</td>
-          <td class="paramname"><em>keyStore</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const <a class="el" href="uuid_8h.html#aef1d03afcc6410602ade1d48f24c3997">DPS_UUID</a> *&#160;</td>
-          <td class="paramname"><em>keyId</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Allocates space for a local DPS node. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">separators</td><td>The separator characters to use for topic matching, if NULL defaults to "/" </td></tr>
-    <tr><td class="paramname">keyStore</td><td>The key store to use for this node </td></tr>
-    <tr><td class="paramname">keyId</td><td>Encryption key id to use for publications sent from this node</td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>A pointer to the uninitialized node or NULL if there were no resources for the node. </dd></dl>
-
-</div>
-</div>
-<a class="anchor" id="aca070a96a6374e99a05d647c10737962"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="dps_8h.html#a0d439693474aa54e27f3d45a054696ac">DPS_Publication</a>* DPS_CreatePublication </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="dps_8h.html#a4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *&#160;</td>
-          <td class="paramname"><em>node</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Allocates storage for a publication. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">node</td><td>The local node to use </td></tr>
-  </table>
-  </dd>
-</dl>
-
-</div>
-</div>
-<a class="anchor" id="a4095bb00bd0ca7fa9614ebbc2c28199f"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="dps_8h.html#adb927c4c1b7306867a75fc4288b54af7">DPS_Subscription</a>* DPS_CreateSubscription </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="dps_8h.html#a4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *&#160;</td>
-          <td class="paramname"><em>node</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const char **&#160;</td>
-          <td class="paramname"><em>topics</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">size_t&#160;</td>
-          <td class="paramname"><em>numTopics</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Allocate memory for a subscription and initialize topics. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">node</td><td>The local node to use </td></tr>
-    <tr><td class="paramname">topics</td><td>The topic strings to match </td></tr>
-    <tr><td class="paramname">numTopics</td><td>The number of topic strings to match - must be &gt;= 1</td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>Returns a pointer to the newly created subscription or NULL if resources could not be allocated or the arguments were invalid </dd></dl>
-
-</div>
-</div>
-<a class="anchor" id="a1f373831e8009ff5959ccb02b8c3fb14"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void DPS_DestroyAddress </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="dps_8h.html#a9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *&#160;</td>
-          <td class="paramname"><em>addr</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Frees resources associated with an address. </p>
-
-</div>
-</div>
-<a class="anchor" id="a0e4ca4dcdeeebfe543c99b749e641940"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void DPS_DestroyMemoryKeyStore </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="dps_8h.html#a57f11410b3ef6a686594b60836dc8c99">DPS_MemoryKeyStore</a> *&#160;</td>
-          <td class="paramname"><em>mks</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a class="anchor" id="a85f5121f80411f5ab82449efe20b68dd"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="err_8h.html#a30395a84d3cad9d4ec29848106415038">DPS_Status</a> DPS_DestroyNode </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="dps_8h.html#a4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *&#160;</td>
-          <td class="paramname"><em>node</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="dps_8h.html#a1e88cc9ca744782e36d58a022fe026c5">DPS_OnNodeDestroyed</a>&#160;</td>
-          <td class="paramname"><em>cb</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">void *&#160;</td>
-          <td class="paramname"><em>data</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Destroys a node and free any resources. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">node</td><td>The node to destroy </td></tr>
-    <tr><td class="paramname">cb</td><td>Callback function to be called when the node is destroyed </td></tr>
-    <tr><td class="paramname">data</td><td>Data to be passed to the callback function</td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>-DPS_OK if the node will be destroyed and the callback called -DPS_ERR_NULL node or cb was a null pointer -Or an error status code in which case the callback will not be called. </dd></dl>
-
-</div>
-</div>
-<a class="anchor" id="a17bb01c949aaaf3bafd53323c9effd5f"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="err_8h.html#a30395a84d3cad9d4ec29848106415038">DPS_Status</a> DPS_DestroyPublication </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="dps_8h.html#a0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *&#160;</td>
-          <td class="paramname"><em>pub</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Delete a publication and frees any resources allocated. </p>
-<p>This does not cancel retained publications that have an unexpired TTL. To expire a retained publication call <a class="el" href="dps_8h.html#a828a4efc5c235c48a81f6460cc3fe416" title="Publish a set of topics along with an optional payload. ">DPS_Publish()</a> with a zero TTL.</p>
-<p>This function should only be called for publications created by <a class="el" href="dps_8h.html#aca070a96a6374e99a05d647c10737962" title="Allocates storage for a publication. ">DPS_CreatePublication()</a> or <a class="el" href="dps_8h.html#a41f31a8b63558e13d73d96de6086e5c4" title="Creates a partial copy of a publication that can be used to acknowledge the publication. ">DPS_CopyPublication()</a>.</p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">pub</td><td>The publication to destroy </td></tr>
-  </table>
-  </dd>
-</dl>
-
-</div>
-</div>
-<a class="anchor" id="aac78b5690aa31eec642b2a706faac510"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="err_8h.html#a30395a84d3cad9d4ec29848106415038">DPS_Status</a> DPS_DestroySubscription </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="dps_8h.html#adb927c4c1b7306867a75fc4288b54af7">DPS_Subscription</a> *&#160;</td>
-          <td class="paramname"><em>sub</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Stop subscribing to the subscription topic and free resources allocated for the subscription. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">sub</td><td>The subscription to cancel </td></tr>
-  </table>
-  </dd>
-</dl>
-
-</div>
-</div>
-<a class="anchor" id="a7dacebc6533305fba12335b3b8c817dc"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">uv_loop_t* DPS_GetLoop </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="dps_8h.html#a4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *&#160;</td>
-          <td class="paramname"><em>node</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Get the uv event loop for this node. </p>
-<p>The only thing that is safe to do with the node is to create an async callback. Other libuv APIs can then be called from within the async callback.</p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">node</td><td>The local node to use </td></tr>
-  </table>
-  </dd>
-</dl>
-
-</div>
-</div>
-<a class="anchor" id="a65bba7bcfe5e940b153fcced4e2e8880"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void* DPS_GetNodeData </td>
-          <td>(</td>
-          <td class="paramtype">const <a class="el" href="dps_8h.html#a4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *&#160;</td>
-          <td class="paramname"><em>node</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Get application data pointer previously set by <a class="el" href="dps_8h.html#ad19cf4272ba11e935654175c83db2ce1" title="Store a pointer to application data in a node. ">DPS_SetNodeData()</a> </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">node</td><td>The node</td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>A pointer to the data or NULL if the node is invalid </dd></dl>
-
-</div>
-</div>
-<a class="anchor" id="af920b28fe0721a7f97b11673494d7b36"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">uint16_t DPS_GetPortNumber </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="dps_8h.html#a4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *&#160;</td>
-          <td class="paramname"><em>node</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Get the port number this node is listening for connections on. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">node</td><td>The local node to use </td></tr>
-  </table>
-  </dd>
-</dl>
-
-</div>
-</div>
-<a class="anchor" id="aa8bee35089ac62289c9ba0e6a0568ca0"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void* DPS_GetPublicationData </td>
-          <td>(</td>
-          <td class="paramtype">const <a class="el" href="dps_8h.html#a0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *&#160;</td>
-          <td class="paramname"><em>pub</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Get application data pointer previously set by <a class="el" href="dps_8h.html#a91c46ccb6df7f4bb99ca5d9d35cc5a4a" title="Store a pointer to application data in a publication. ">DPS_SetPublicationData()</a> </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">pub</td><td>The publication</td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>A pointer to the data or NULL if the publication is invalid </dd></dl>
-
-</div>
-</div>
-<a class="anchor" id="a6c77e29b0891cb4ce6463c8fea1f5d7b"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="dps_8h.html#a4dd612ab965134321bb57fdb065f121c">DPS_Node</a>* DPS_GetPublicationNode </td>
-          <td>(</td>
-          <td class="paramtype">const <a class="el" href="dps_8h.html#a0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *&#160;</td>
-          <td class="paramname"><em>pub</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Get the local node associated with a publication. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">pub</td><td>A publication</td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>Returns the local node associated with a publication </dd></dl>
-
-</div>
-</div>
-<a class="anchor" id="a88ab2284734f099ef67bcc60997142b3"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void* DPS_GetSubscriptionData </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="dps_8h.html#adb927c4c1b7306867a75fc4288b54af7">DPS_Subscription</a> *&#160;</td>
-          <td class="paramname"><em>sub</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Get application data pointer previously set by <a class="el" href="dps_8h.html#ad581d341003e20c714061e44b57c2009" title="Store a pointer to application data in a subscription. ">DPS_SetSubscriptionData()</a> </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">sub</td><td>The subscription</td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>A pointer to the data or NULL if the subscription is invalid </dd></dl>
-
-</div>
-</div>
-<a class="anchor" id="a3d819ccd11604f2bdb76d2f6c831e64a"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="err_8h.html#a30395a84d3cad9d4ec29848106415038">DPS_Status</a> DPS_InitPublication </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="dps_8h.html#a0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *&#160;</td>
-          <td class="paramname"><em>pub</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const char **&#160;</td>
-          <td class="paramname"><em>topics</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">size_t&#160;</td>
-          <td class="paramname"><em>numTopics</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">int&#160;</td>
-          <td class="paramname"><em>noWildCard</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const <a class="el" href="uuid_8h.html#aef1d03afcc6410602ade1d48f24c3997">DPS_UUID</a> *&#160;</td>
-          <td class="paramname"><em>keyId</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="dps_8h.html#af8615f0bcd3d95859cd7f2cdbf772e23">DPS_AcknowledgementHandler</a>&#160;</td>
-          <td class="paramname"><em>handler</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Initializes a newly created publication with a set of topics. </p>
-<p>Each publication has a UUID and a sequence number. The sequence number is incremented each time the publication is published. This allows subscriber to determine that publications received form a series. The acknowledgment handler is optional, if present the publication is marked as requesting acknowledgment and that information is provided to the subscribers.</p>
-<p>Call the accessor function <a class="el" href="dps_8h.html#aba1ad3ee807b75a1281d334be06a12f7" title="Get the UUID for a publication. ">DPS_PublicationGetUUID()</a> to get the UUID for this publication.</p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">pub</td><td>The the publication to initialize </td></tr>
-    <tr><td class="paramname">topics</td><td>The topic strings to publish </td></tr>
-    <tr><td class="paramname">numTopics</td><td>The number of topic strings to publish - must be &gt;= 1 </td></tr>
-    <tr><td class="paramname">noWildCard</td><td>If TRUE the publication will not match wildcard subscriptions </td></tr>
-    <tr><td class="paramname">keyId</td><td>Optional key identifier to use for encrypted publications </td></tr>
-    <tr><td class="paramname">handler</td><td>Optional handler for receiving acknowledgments </td></tr>
-  </table>
-  </dd>
-</dl>
-
-</div>
-</div>
-<a class="anchor" id="a5064c63b8ce76bf34402e0c80183234b"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="err_8h.html#a30395a84d3cad9d4ec29848106415038">DPS_Status</a> DPS_Link </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="dps_8h.html#a4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *&#160;</td>
-          <td class="paramname"><em>node</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="dps_8h.html#a9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *&#160;</td>
-          <td class="paramname"><em>addr</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="dps_8h.html#aaf70ac42acab8a67693947871e97600f">DPS_OnLinkComplete</a>&#160;</td>
-          <td class="paramname"><em>cb</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">void *&#160;</td>
-          <td class="paramname"><em>data</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Link the local node to a remote node. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">node</td><td>The local node to use </td></tr>
-    <tr><td class="paramname">addr</td><td>The address of the remote node to link to </td></tr>
-    <tr><td class="paramname">cb</td><td>The callback function to call on completion, can be NULL which case the function is synchronous </td></tr>
-    <tr><td class="paramname">data</td><td>Application data to be passed to the callback</td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>DPS_OK or an error status. If an error status is returned the callback function will not be called. </dd></dl>
-
-</div>
-</div>
-<a class="anchor" id="a55377719a88bf2fff6d72779d4b4ca57"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="dps_8h.html#af3833cfe48f848f698514bc5daa075fa">DPS_KeyStore</a>* DPS_MemoryKeyStoreHandle </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="dps_8h.html#a57f11410b3ef6a686594b60836dc8c99">DPS_MemoryKeyStore</a> *&#160;</td>
-          <td class="paramname"><em>mks</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a class="anchor" id="ab8f34b8393b49a1d0cfc7626a85147e2"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">const char* DPS_NodeAddrToString </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="dps_8h.html#a9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *&#160;</td>
-          <td class="paramname"><em>addr</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Get text representation of an address. </p>
-<p>This function uses a static string buffer so is not thread safe.</p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">addr</td><td>to get the text for</td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>A text string for the address </dd></dl>
-
-</div>
-</div>
-<a class="anchor" id="ad2a37d52f12c93434b431eefd732f363"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="dps_8h.html#a4dd612ab965134321bb57fdb065f121c">DPS_Node</a>* DPS_PublicationGetNode </td>
-          <td>(</td>
-          <td class="paramtype">const <a class="el" href="dps_8h.html#a0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *&#160;</td>
-          <td class="paramname"><em>pub</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Get the local node associated with a publication. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">pub</td><td>The publication</td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>A pointer to the node or NULL if the publication is invalid </dd></dl>
-
-</div>
-</div>
-<a class="anchor" id="aee6fc3b13484faacff0d26646778f777"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">size_t DPS_PublicationGetNumTopics </td>
-          <td>(</td>
-          <td class="paramtype">const <a class="el" href="dps_8h.html#a0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *&#160;</td>
-          <td class="paramname"><em>pub</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Get the number of topics in a publication. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">pub</td><td>The publication </td></tr>
-  </table>
-  </dd>
-</dl>
-
-</div>
-</div>
-<a class="anchor" id="a875b48217d861d4a9fa5471419d354e9"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">uint32_t DPS_PublicationGetSequenceNum </td>
-          <td>(</td>
-          <td class="paramtype">const <a class="el" href="dps_8h.html#a0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *&#160;</td>
-          <td class="paramname"><em>pub</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Get the sequence number for a publication. </p>
-<p>Serial numbers are always &gt; 0.</p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">pub</td><td>The publication</td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>The sequence number or zero if the publication is invalid. </dd></dl>
-
-</div>
-</div>
-<a class="anchor" id="a143a5c6fbe0bdf1725e841f122582432"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">const char* DPS_PublicationGetTopic </td>
-          <td>(</td>
-          <td class="paramtype">const <a class="el" href="dps_8h.html#a0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *&#160;</td>
-          <td class="paramname"><em>pub</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">size_t&#160;</td>
-          <td class="paramname"><em>index</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Get a topic for a publication. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">pub</td><td>The publication </td></tr>
-    <tr><td class="paramname">index</td><td>The topic index</td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>The topic string or NULL if the publication or index is invalid. </dd></dl>
-
-</div>
-</div>
-<a class="anchor" id="aba1ad3ee807b75a1281d334be06a12f7"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">const <a class="el" href="uuid_8h.html#aef1d03afcc6410602ade1d48f24c3997">DPS_UUID</a>* DPS_PublicationGetUUID </td>
-          <td>(</td>
-          <td class="paramtype">const <a class="el" href="dps_8h.html#a0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *&#160;</td>
-          <td class="paramname"><em>pub</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Get the UUID for a publication. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">pub</td><td>The publication </td></tr>
-  </table>
-  </dd>
-</dl>
-
-</div>
-</div>
-<a class="anchor" id="a516f7f314c7b95210751d00285758b9b"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">int DPS_PublicationIsAckRequested </td>
-          <td>(</td>
-          <td class="paramtype">const <a class="el" href="dps_8h.html#a0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *&#160;</td>
-          <td class="paramname"><em>pub</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Check if an acknowledgement was requested for a publication. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">pub</td><td>The publication</td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>Returns 1 if an acknowledgement was requested, otherwise 0. </dd></dl>
-
-</div>
-</div>
-<a class="anchor" id="a828a4efc5c235c48a81f6460cc3fe416"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="err_8h.html#a30395a84d3cad9d4ec29848106415038">DPS_Status</a> DPS_Publish </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="dps_8h.html#a0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *&#160;</td>
-          <td class="paramname"><em>pub</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const uint8_t *&#160;</td>
-          <td class="paramname"><em>pubPayload</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">size_t&#160;</td>
-          <td class="paramname"><em>len</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">int16_t&#160;</td>
-          <td class="paramname"><em>ttl</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Publish a set of topics along with an optional payload. </p>
-<p>The topics will be published immediately to matching subscribers and then re-published whenever a new matching subscription is received.</p>
-<p>Call the accessor function <a class="el" href="dps_8h.html#aba1ad3ee807b75a1281d334be06a12f7" title="Get the UUID for a publication. ">DPS_PublicationGetUUID()</a> to get the UUID for this publication. Call the accessor function <a class="el" href="dps_8h.html#a875b48217d861d4a9fa5471419d354e9" title="Get the sequence number for a publication. ">DPS_PublicationGetSequenceNum()</a> to get the current sequence number for this publication. The sequence number is incremented each time <a class="el" href="dps_8h.html#a828a4efc5c235c48a81f6460cc3fe416" title="Publish a set of topics along with an optional payload. ">DPS_Publish()</a> is called for the same publication.</p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">pub</td><td>The publication to send </td></tr>
-    <tr><td class="paramname">pubPayload</td><td>Optional payload </td></tr>
-    <tr><td class="paramname">len</td><td>Length of the payload </td></tr>
-    <tr><td class="paramname">ttl</td><td>Time to live in seconds - maximum TTL is about 9 hours</td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>- DPS_OK if the topics were succesfully published </dd></dl>
-
-</div>
-</div>
-<a class="anchor" id="a5f9c4a9e5c5f83707e01b0700cc2692c"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">uint32_t DPS_Rand </td>
-          <td>(</td>
-          <td class="paramname"></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Returns a non-secure random number. </p>
-
-</div>
-</div>
-<a class="anchor" id="ab78df7f4498b847ddb32fdd33d39ef0f"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="err_8h.html#a30395a84d3cad9d4ec29848106415038">DPS_Status</a> DPS_ResolveAddress </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="dps_8h.html#a4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *&#160;</td>
-          <td class="paramname"><em>node</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const char *&#160;</td>
-          <td class="paramname"><em>host</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const char *&#160;</td>
-          <td class="paramname"><em>service</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="dps_8h.html#ac1c96ed1ff9a92e7421ae1c428acb904">DPS_OnResolveAddressComplete</a>&#160;</td>
-          <td class="paramname"><em>cb</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">void *&#160;</td>
-          <td class="paramname"><em>data</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Resolve a host name or IP address and service name or port number. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">node</td><td>The local node to use </td></tr>
-    <tr><td class="paramname">host</td><td>The host name or IP address to resolve </td></tr>
-    <tr><td class="paramname">service</td><td>The port or service name to resolve </td></tr>
-    <tr><td class="paramname">cb</td><td>The callback function to call on completion </td></tr>
-    <tr><td class="paramname">data</td><td>Application data to be passed to the callback</td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>DPS_OK or an error status. If an error status is returned the callback function will not be called. </dd></dl>
-
-</div>
-</div>
-<a class="anchor" id="a6231c243c483bd2d282f7df734a98946"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="dps_8h.html#a9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a>* DPS_SetAddress </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="dps_8h.html#a9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *&#160;</td>
-          <td class="paramname"><em>addr</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const struct sockaddr *&#160;</td>
-          <td class="paramname"><em>sa</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Set a node address. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">addr</td><td>The address to set </td></tr>
-    <tr><td class="paramname">sa</td><td>The value to set</td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>The addr passed in. </dd></dl>
-
-</div>
-</div>
-<a class="anchor" id="ad3a038a93097eab32b969b4a1f9ccfcb"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="err_8h.html#a30395a84d3cad9d4ec29848106415038">DPS_Status</a> DPS_SetContentKey </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="dps_8h.html#a57f11410b3ef6a686594b60836dc8c99">DPS_MemoryKeyStore</a> *&#160;</td>
-          <td class="paramname"><em>mks</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const <a class="el" href="uuid_8h.html#aef1d03afcc6410602ade1d48f24c3997">DPS_UUID</a> *&#160;</td>
-          <td class="paramname"><em>kid</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">uint8_t *&#160;</td>
-          <td class="paramname"><em>key</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">size_t&#160;</td>
-          <td class="paramname"><em>keyLen</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a class="anchor" id="ae81123ed40d00de665faa4e59efd8574"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="err_8h.html#a30395a84d3cad9d4ec29848106415038">DPS_Status</a> DPS_SetNetworkKey </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="dps_8h.html#a57f11410b3ef6a686594b60836dc8c99">DPS_MemoryKeyStore</a> *&#160;</td>
-          <td class="paramname"><em>mks</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">uint8_t *&#160;</td>
-          <td class="paramname"><em>key</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">size_t&#160;</td>
-          <td class="paramname"><em>keyLen</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a class="anchor" id="ad19cf4272ba11e935654175c83db2ce1"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="err_8h.html#a30395a84d3cad9d4ec29848106415038">DPS_Status</a> DPS_SetNodeData </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="dps_8h.html#a4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *&#160;</td>
-          <td class="paramname"><em>node</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">void *&#160;</td>
-          <td class="paramname"><em>data</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Store a pointer to application data in a node. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">node</td><td>The node </td></tr>
-    <tr><td class="paramname">data</td><td>The data pointer to store</td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>DPS_OK or and error </dd></dl>
-
-</div>
-</div>
-<a class="anchor" id="a91c46ccb6df7f4bb99ca5d9d35cc5a4a"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="err_8h.html#a30395a84d3cad9d4ec29848106415038">DPS_Status</a> DPS_SetPublicationData </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="dps_8h.html#a0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *&#160;</td>
-          <td class="paramname"><em>pub</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">void *&#160;</td>
-          <td class="paramname"><em>data</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Store a pointer to application data in a publication. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">pub</td><td>The publication </td></tr>
-    <tr><td class="paramname">data</td><td>The data pointer to store</td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>DPS_OK or and error </dd></dl>
-
-</div>
-</div>
-<a class="anchor" id="ad581d341003e20c714061e44b57c2009"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="err_8h.html#a30395a84d3cad9d4ec29848106415038">DPS_Status</a> DPS_SetSubscriptionData </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="dps_8h.html#adb927c4c1b7306867a75fc4288b54af7">DPS_Subscription</a> *&#160;</td>
-          <td class="paramname"><em>sub</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">void *&#160;</td>
-          <td class="paramname"><em>data</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Store a pointer to application data in a subscription. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">sub</td><td>The subscription </td></tr>
-    <tr><td class="paramname">data</td><td>The data pointer to store</td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>DPS_OK or an error </dd></dl>
-
-</div>
-</div>
-<a class="anchor" id="a31994ad569ee589760efac037a0cbc8a"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="err_8h.html#a30395a84d3cad9d4ec29848106415038">DPS_Status</a> DPS_StartNode </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="dps_8h.html#a4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *&#160;</td>
-          <td class="paramname"><em>node</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">int&#160;</td>
-          <td class="paramname"><em>mcastPub</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">int&#160;</td>
-          <td class="paramname"><em>listenPort</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Initialized and starts running a local node. </p>
-<p>Node can only be started once. stopped.</p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">node</td><td>The node </td></tr>
-    <tr><td class="paramname">mcastPub</td><td>Indicates if this node sends or listens for multicast publications </td></tr>
-    <tr><td class="paramname">listenPort</td><td>If non-zero identifies specific port to listen on</td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>DPS_OK or various error status codes </dd></dl>
-
-</div>
-</div>
-<a class="anchor" id="a83234ea82a91e07e3f5894a4dcf5267e"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="err_8h.html#a30395a84d3cad9d4ec29848106415038">DPS_Status</a> DPS_Subscribe </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="dps_8h.html#adb927c4c1b7306867a75fc4288b54af7">DPS_Subscription</a> *&#160;</td>
-          <td class="paramname"><em>sub</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="dps_8h.html#ab95ef1762636ad505c940744b8dce83f">DPS_PublicationHandler</a>&#160;</td>
-          <td class="paramname"><em>handler</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Start subscribing to a set of topics. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">sub</td><td>The subscription to start </td></tr>
-    <tr><td class="paramname">handler</td><td>Callback function to be called with topic matches </td></tr>
-  </table>
-  </dd>
-</dl>
-
-</div>
-</div>
-<a class="anchor" id="afea65751c811555736c8c65fcb3a9480"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="dps_8h.html#a4dd612ab965134321bb57fdb065f121c">DPS_Node</a>* DPS_SubscriptionGetNode </td>
-          <td>(</td>
-          <td class="paramtype">const <a class="el" href="dps_8h.html#adb927c4c1b7306867a75fc4288b54af7">DPS_Subscription</a> *&#160;</td>
-          <td class="paramname"><em>sub</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Get the local node associated with a subscription. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">sub</td><td>The subscription</td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>A pointer to the node or NULL if the subscription is invalid </dd></dl>
-
-</div>
-</div>
-<a class="anchor" id="ab0ad2c6806f8f44f27c70fff915b7e9a"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">size_t DPS_SubscriptionGetNumTopics </td>
-          <td>(</td>
-          <td class="paramtype">const <a class="el" href="dps_8h.html#adb927c4c1b7306867a75fc4288b54af7">DPS_Subscription</a> *&#160;</td>
-          <td class="paramname"><em>sub</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Get the number of topics registered with an active subscription. </p>
-
-</div>
-</div>
-<a class="anchor" id="aacc63deda2f2d97cf3f44ca84784b2f6"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">const char* DPS_SubscriptionGetTopic </td>
-          <td>(</td>
-          <td class="paramtype">const <a class="el" href="dps_8h.html#adb927c4c1b7306867a75fc4288b54af7">DPS_Subscription</a> *&#160;</td>
-          <td class="paramname"><em>sub</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">size_t&#160;</td>
-          <td class="paramname"><em>index</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Get a topic for an active subscription. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">sub</td><td>The subscription </td></tr>
-    <tr><td class="paramname">index</td><td>The topic index</td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>The topic string or NULL if the subscription or index is invalid. </dd></dl>
-
-</div>
-</div>
-<a class="anchor" id="a79c86c3c0c5d6438b953a9acaab0ab0b"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="err_8h.html#a30395a84d3cad9d4ec29848106415038">DPS_Status</a> DPS_Unlink </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="dps_8h.html#a4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *&#160;</td>
-          <td class="paramname"><em>node</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="dps_8h.html#a9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *&#160;</td>
-          <td class="paramname"><em>addr</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="dps_8h.html#a70b98e7cc39f0dccdba41f0984de82f6">DPS_OnUnlinkComplete</a>&#160;</td>
-          <td class="paramname"><em>cb</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">void *&#160;</td>
-          <td class="paramname"><em>data</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Unlink the local node from a remote node. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">node</td><td>The local node to use </td></tr>
-    <tr><td class="paramname">addr</td><td>The address of the remote node to unlink from </td></tr>
-    <tr><td class="paramname">cb</td><td>The callback function to call on completion, can be NULL which case the function is synchronous </td></tr>
-    <tr><td class="paramname">data</td><td>Application data to be passed to the callback</td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>DPS_OK or an error status. If an error status is returned the callback function will not be called. </dd></dl>
-
-</div>
-</div>
 </div><!-- contents -->
 </div><!-- doc-content -->
 <div class="navpath" id="nav-path">
   <ul>
-    <li class="footer" style="float:left"><b>Distributed PubSub Manual</b></li> <li class="footer">Generated Thu Sep 7 2017 15:03:30</li>
+    <li class="footer" style="float:left"><b>Distributed PubSub Manual</b></li> <li class="footer">Generated Fri Nov 3 2017 14:13:18</li>
   </ul>
 </div>
 </body>

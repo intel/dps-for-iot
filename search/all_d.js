@@ -1,5 +1,6 @@
 var searchData=
 [
-  ['size',['size',['../struct___d_p_s___registration_list.html#a9aeb3177f17c29a6af6a702d3994b39d',1,'_DPS_RegistrationList']]],
-  ['synchronous_2eh',['synchronous.h',['../synchronous_8h.html',1,'']]]
+  ['readme_2emd',['README.md',['../_r_e_a_d_m_e_8md.html',1,'']]],
+  ['registration',['Registration',['../group__registration.html',1,'']]],
+  ['registration_2eh',['registration.h',['../registration_8h.html',1,'']]]
 ];

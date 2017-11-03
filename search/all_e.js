@@ -1,5 +1,8 @@
 var searchData=
 [
-  ['userdata',['userData',['../struct___d_p_s___key_store.html#a8e88f08906a9f6ca036258a1198d394c',1,'_DPS_KeyStore']]],
-  ['uuid_2eh',['uuid.h',['../uuid_8h.html',1,'']]]
+  ['services',['Services',['../group__services.html',1,'']]],
+  ['size',['size',['../struct___d_p_s___registration_list.html#a9aeb3177f17c29a6af6a702d3994b39d',1,'_DPS_RegistrationList']]],
+  ['status',['Status',['../group__status.html',1,'']]],
+  ['subscription',['Subscription',['../group__subscription.html',1,'']]],
+  ['synchronous_2eh',['synchronous.h',['../synchronous_8h.html',1,'']]]
 ];

@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['networkkeycb',['networkKeyCB',['../struct___d_p_s___key_store.html#a0c3737358e5249760fa1e8ddf0eec25b',1,'_DPS_KeyStore']]]
+  ['message_20protocol',['Message Protocol',['../md__home_tmalsbar_src_github.com_01org_dps-for-iot_doc_Message-Protocol.html',1,'']]],
+  ['message_2dprotocol_2emd',['Message-Protocol.md',['../_message-_protocol_8md.html',1,'']]]
 ];

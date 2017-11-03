@@ -47,6 +47,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
     <ul class="tablist">
       <li><a href="index.html"><span>Main&#160;Page</span></a></li>
       <li><a href="pages.html"><span>Related&#160;Pages</span></a></li>
+      <li><a href="modules.html"><span>Modules</span></a></li>
       <li><a href="annotated.html"><span>Data&#160;Structures</span></a></li>
       <li class="current"><a href="files.html"><span>Files</span></a></li>
       <li>
@@ -117,321 +118,64 @@ $(document).ready(function(){initNavTree('dbg_8h.html','');});
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="define-members"></a>
 Macros</h2></td></tr>
-<tr class="memitem:ac69225c4b8e73b27204a2963d4ca0633"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dbg_8h.html#ac69225c4b8e73b27204a2963d4ca0633">DPS_ERRPRINT</a>(fmt, ...)&#160;&#160;&#160;<a class="el" href="dbg_8h.html#a174fef61dca16376546e570c9b831502">DPS_Log</a>(<a class="el" href="dbg_8h.html#ad06c0421a8226b0a95be1d722ca05612ad8adeef2745368cf04dbb19b224df53c">DPS_LOG_ERROR</a>, __FILE__, __LINE__, __FUNCTION__, fmt, ##__VA_ARGS__)</td></tr>
-<tr class="separator:ac69225c4b8e73b27204a2963d4ca0633"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af1d25cc7f1d2d92f96ba620217af28fd"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dbg_8h.html#af1d25cc7f1d2d92f96ba620217af28fd">DPS_PRINT</a>(fmt, ...)&#160;&#160;&#160;<a class="el" href="dbg_8h.html#a174fef61dca16376546e570c9b831502">DPS_Log</a>(<a class="el" href="dbg_8h.html#ad06c0421a8226b0a95be1d722ca05612a2811f744e315eb851568f7707f226b42">DPS_LOG_PRINT</a>, __FILE__, __LINE__, __FUNCTION__, fmt, ##__VA_ARGS__)</td></tr>
-<tr class="separator:af1d25cc7f1d2d92f96ba620217af28fd"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad9a3f4ae1ed318b313434a82132c4044"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dbg_8h.html#ad9a3f4ae1ed318b313434a82132c4044">DPS_PRINTT</a>(fmt, ...)&#160;&#160;&#160;<a class="el" href="dbg_8h.html#a174fef61dca16376546e570c9b831502">DPS_Log</a>(<a class="el" href="dbg_8h.html#ad06c0421a8226b0a95be1d722ca05612a1cc419e9ddddde8e3be43ca3fdb30dda">DPS_LOG_PRINTT</a>, __FILE__, __LINE__, __FUNCTION__, fmt, ##__VA_ARGS__)</td></tr>
-<tr class="separator:ad9a3f4ae1ed318b313434a82132c4044"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a39adc166f2ce05fb751212c1db9a6ce9"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dbg_8h.html#a39adc166f2ce05fb751212c1db9a6ce9">DPS_DEBUG_OFF</a>&#160;&#160;&#160;0</td></tr>
-<tr class="separator:a39adc166f2ce05fb751212c1db9a6ce9"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a777427dcd2750d5006024ce1a54daaac"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dbg_8h.html#a777427dcd2750d5006024ce1a54daaac">DPS_DEBUG_ON</a>&#160;&#160;&#160;1</td></tr>
-<tr class="separator:a777427dcd2750d5006024ce1a54daaac"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a6eb8eb8c3804ebd6f51fe2d7a7625ed8"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dbg_8h.html#a6eb8eb8c3804ebd6f51fe2d7a7625ed8">DPS_DEBUG_FORCE</a>&#160;&#160;&#160;2</td></tr>
-<tr class="separator:a6eb8eb8c3804ebd6f51fe2d7a7625ed8"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aeca5ec86966717c8dd2d1ffda4be2b3b"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dbg_8h.html#aeca5ec86966717c8dd2d1ffda4be2b3b">DPS_DEBUG_ENABLED</a>()&#160;&#160;&#160;((<a class="el" href="dbg_8h.html#a6f4bedbcc8b3bd12cea20b5ce3a8abba">DPS_Debug</a> &amp;&amp; (__DPS_DebugControl == <a class="el" href="dbg_8h.html#a777427dcd2750d5006024ce1a54daaac">DPS_DEBUG_ON</a>)) || (__DPS_DebugControl == <a class="el" href="dbg_8h.html#a6eb8eb8c3804ebd6f51fe2d7a7625ed8">DPS_DEBUG_FORCE</a>))</td></tr>
-<tr class="separator:aeca5ec86966717c8dd2d1ffda4be2b3b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0a4156dc81e39b0cf2fb251e37bda307"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dbg_8h.html#a0a4156dc81e39b0cf2fb251e37bda307">DPS_DBGTRACE</a>()</td></tr>
-<tr class="separator:a0a4156dc81e39b0cf2fb251e37bda307"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1fc1068557eeb62f8a4810362f51b881"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dbg_8h.html#a1fc1068557eeb62f8a4810362f51b881">DPS_DBGPRINT</a>(...)</td></tr>
-<tr class="separator:a1fc1068557eeb62f8a4810362f51b881"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a6990490017f384ce2d462e1b5c0963b8"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dbg_8h.html#a6990490017f384ce2d462e1b5c0963b8">DPS_DEBUG_CONTROL</a>(dbg)&#160;&#160;&#160;__attribute__((__unused__))static int __DPS_DebugControl = dbg</td></tr>
-<tr class="separator:a6990490017f384ce2d462e1b5c0963b8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga170843b022fc7bc00bf871eb5189fe52"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__debug.html#ga170843b022fc7bc00bf871eb5189fe52">DPS_DBGBYTES</a>(bytes,  n)</td></tr>
+<tr class="separator:ga170843b022fc7bc00bf871eb5189fe52"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga1fc1068557eeb62f8a4810362f51b881"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__debug.html#ga1fc1068557eeb62f8a4810362f51b881">DPS_DBGPRINT</a>(...)</td></tr>
+<tr class="separator:ga1fc1068557eeb62f8a4810362f51b881"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga0a4156dc81e39b0cf2fb251e37bda307"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__debug.html#ga0a4156dc81e39b0cf2fb251e37bda307">DPS_DBGTRACE</a>()</td></tr>
+<tr class="separator:ga0a4156dc81e39b0cf2fb251e37bda307"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga2868213e2587bfe300cf887dc3568b02"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__debug.html#ga2868213e2587bfe300cf887dc3568b02">DPS_DBGTRACEA</a>(...)</td></tr>
+<tr class="separator:ga2868213e2587bfe300cf887dc3568b02"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga6990490017f384ce2d462e1b5c0963b8"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__debug.html#ga6990490017f384ce2d462e1b5c0963b8">DPS_DEBUG_CONTROL</a>(dbg)&#160;&#160;&#160;__attribute__((__unused__))static int __DPS_DebugControl = dbg</td></tr>
+<tr class="separator:ga6990490017f384ce2d462e1b5c0963b8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gaeca5ec86966717c8dd2d1ffda4be2b3b"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__debug.html#gaeca5ec86966717c8dd2d1ffda4be2b3b">DPS_DEBUG_ENABLED</a>()&#160;&#160;&#160;((<a class="el" href="group__debug.html#ga6f4bedbcc8b3bd12cea20b5ce3a8abba">DPS_Debug</a> &amp;&amp; (__DPS_DebugControl == <a class="el" href="group__debug.html#ga777427dcd2750d5006024ce1a54daaac">DPS_DEBUG_ON</a>)) || (__DPS_DebugControl == <a class="el" href="group__debug.html#ga6eb8eb8c3804ebd6f51fe2d7a7625ed8">DPS_DEBUG_FORCE</a>))</td></tr>
+<tr class="separator:gaeca5ec86966717c8dd2d1ffda4be2b3b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga6eb8eb8c3804ebd6f51fe2d7a7625ed8"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__debug.html#ga6eb8eb8c3804ebd6f51fe2d7a7625ed8">DPS_DEBUG_FORCE</a>&#160;&#160;&#160;2</td></tr>
+<tr class="separator:ga6eb8eb8c3804ebd6f51fe2d7a7625ed8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga39adc166f2ce05fb751212c1db9a6ce9"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__debug.html#ga39adc166f2ce05fb751212c1db9a6ce9">DPS_DEBUG_OFF</a>&#160;&#160;&#160;0</td></tr>
+<tr class="separator:ga39adc166f2ce05fb751212c1db9a6ce9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga777427dcd2750d5006024ce1a54daaac"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__debug.html#ga777427dcd2750d5006024ce1a54daaac">DPS_DEBUG_ON</a>&#160;&#160;&#160;1</td></tr>
+<tr class="separator:ga777427dcd2750d5006024ce1a54daaac"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gac69225c4b8e73b27204a2963d4ca0633"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__debug.html#gac69225c4b8e73b27204a2963d4ca0633">DPS_ERRPRINT</a>(fmt, ...)&#160;&#160;&#160;<a class="el" href="group__debug.html#ga174fef61dca16376546e570c9b831502">DPS_Log</a>(<a class="el" href="group__debug.html#ggad06c0421a8226b0a95be1d722ca05612ad8adeef2745368cf04dbb19b224df53c">DPS_LOG_ERROR</a>, __FILE__, __LINE__, __FUNCTION__, fmt, ##__VA_ARGS__)</td></tr>
+<tr class="separator:gac69225c4b8e73b27204a2963d4ca0633"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gaf1d25cc7f1d2d92f96ba620217af28fd"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__debug.html#gaf1d25cc7f1d2d92f96ba620217af28fd">DPS_PRINT</a>(fmt, ...)&#160;&#160;&#160;<a class="el" href="group__debug.html#ga174fef61dca16376546e570c9b831502">DPS_Log</a>(<a class="el" href="group__debug.html#ggad06c0421a8226b0a95be1d722ca05612a2811f744e315eb851568f7707f226b42">DPS_LOG_PRINT</a>, __FILE__, __LINE__, __FUNCTION__, fmt, ##__VA_ARGS__)</td></tr>
+<tr class="separator:gaf1d25cc7f1d2d92f96ba620217af28fd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gad9a3f4ae1ed318b313434a82132c4044"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__debug.html#gad9a3f4ae1ed318b313434a82132c4044">DPS_PRINTT</a>(fmt, ...)&#160;&#160;&#160;<a class="el" href="group__debug.html#ga174fef61dca16376546e570c9b831502">DPS_Log</a>(<a class="el" href="group__debug.html#ggad06c0421a8226b0a95be1d722ca05612a1cc419e9ddddde8e3be43ca3fdb30dda">DPS_LOG_PRINTT</a>, __FILE__, __LINE__, __FUNCTION__, fmt, ##__VA_ARGS__)</td></tr>
+<tr class="separator:gad9a3f4ae1ed318b313434a82132c4044"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga21f274f347bd5f51827bd9193b8dc829"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__debug.html#ga21f274f347bd5f51827bd9193b8dc829">DPS_WARNPRINT</a>(...)</td></tr>
+<tr class="separator:ga21f274f347bd5f51827bd9193b8dc829"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="enum-members"></a>
 Enumerations</h2></td></tr>
-<tr class="memitem:ad06c0421a8226b0a95be1d722ca05612"><td class="memItemLeft" align="right" valign="top">enum &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dbg_8h.html#ad06c0421a8226b0a95be1d722ca05612">DPS_LogLevel</a> { <br />
-&#160;&#160;<a class="el" href="dbg_8h.html#ad06c0421a8226b0a95be1d722ca05612ad8adeef2745368cf04dbb19b224df53c">DPS_LOG_ERROR</a>, 
-<a class="el" href="dbg_8h.html#ad06c0421a8226b0a95be1d722ca05612a2811f744e315eb851568f7707f226b42">DPS_LOG_PRINT</a>, 
-<a class="el" href="dbg_8h.html#ad06c0421a8226b0a95be1d722ca05612a1cc419e9ddddde8e3be43ca3fdb30dda">DPS_LOG_PRINTT</a>, 
-<a class="el" href="dbg_8h.html#ad06c0421a8226b0a95be1d722ca05612a0f174e3b850ad53207c2ca8f1fbd9692">DPS_LOG_DBGTRACE</a>, 
+<tr class="memitem:gad06c0421a8226b0a95be1d722ca05612"><td class="memItemLeft" align="right" valign="top">enum &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__debug.html#gad06c0421a8226b0a95be1d722ca05612">DPS_LogLevel</a> { <br />
+&#160;&#160;<a class="el" href="group__debug.html#ggad06c0421a8226b0a95be1d722ca05612ad8adeef2745368cf04dbb19b224df53c">DPS_LOG_ERROR</a>, 
+<a class="el" href="group__debug.html#ggad06c0421a8226b0a95be1d722ca05612a2f7bd5c9db9df8d4f413767c289ee393">DPS_LOG_WARNING</a>, 
+<a class="el" href="group__debug.html#ggad06c0421a8226b0a95be1d722ca05612a2811f744e315eb851568f7707f226b42">DPS_LOG_PRINT</a>, 
+<a class="el" href="group__debug.html#ggad06c0421a8226b0a95be1d722ca05612a1cc419e9ddddde8e3be43ca3fdb30dda">DPS_LOG_PRINTT</a>, 
 <br />
-&#160;&#160;<a class="el" href="dbg_8h.html#ad06c0421a8226b0a95be1d722ca05612aa2db99dadba3b9117142682254168366">DPS_LOG_DBGPRINT</a>
+&#160;&#160;<a class="el" href="group__debug.html#ggad06c0421a8226b0a95be1d722ca05612a0f174e3b850ad53207c2ca8f1fbd9692">DPS_LOG_DBGTRACE</a>, 
+<a class="el" href="group__debug.html#ggad06c0421a8226b0a95be1d722ca05612aa2db99dadba3b9117142682254168366">DPS_LOG_DBGPRINT</a>
 <br />
  }</td></tr>
-<tr class="separator:ad06c0421a8226b0a95be1d722ca05612"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="separator:gad06c0421a8226b0a95be1d722ca05612"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a174fef61dca16376546e570c9b831502"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dbg_8h.html#a174fef61dca16376546e570c9b831502">DPS_Log</a> (<a class="el" href="dbg_8h.html#ad06c0421a8226b0a95be1d722ca05612">DPS_LogLevel</a> level, const char *file, int line, const char *function, const char *fmt,...)</td></tr>
-<tr class="separator:a174fef61dca16376546e570c9b831502"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga174fef61dca16376546e570c9b831502"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__debug.html#ga174fef61dca16376546e570c9b831502">DPS_Log</a> (<a class="el" href="group__debug.html#gad06c0421a8226b0a95be1d722ca05612">DPS_LogLevel</a> level, const char *file, int line, const char *function, const char *fmt,...)</td></tr>
+<tr class="separator:ga174fef61dca16376546e570c9b831502"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga7cc66c1e82ef557238c122b067f5337a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__debug.html#ga7cc66c1e82ef557238c122b067f5337a">DPS_LogBytes</a> (<a class="el" href="group__debug.html#gad06c0421a8226b0a95be1d722ca05612">DPS_LogLevel</a> level, const char *file, int line, const char *function, const uint8_t *bytes, size_t n)</td></tr>
+<tr class="separator:ga7cc66c1e82ef557238c122b067f5337a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="var-members"></a>
 Variables</h2></td></tr>
-<tr class="memitem:a6f4bedbcc8b3bd12cea20b5ce3a8abba"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dbg_8h.html#a6f4bedbcc8b3bd12cea20b5ce3a8abba">DPS_Debug</a></td></tr>
-<tr class="separator:a6f4bedbcc8b3bd12cea20b5ce3a8abba"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga6f4bedbcc8b3bd12cea20b5ce3a8abba"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__debug.html#ga6f4bedbcc8b3bd12cea20b5ce3a8abba">DPS_Debug</a></td></tr>
+<tr class="separator:ga6f4bedbcc8b3bd12cea20b5ce3a8abba"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
-<h2 class="groupheader">Macro Definition Documentation</h2>
-<a class="anchor" id="a1fc1068557eeb62f8a4810362f51b881"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define DPS_DBGPRINT</td>
-          <td>(</td>
-          <td class="paramtype">&#160;</td>
-          <td class="paramname"><em>...</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a class="anchor" id="a0a4156dc81e39b0cf2fb251e37bda307"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define DPS_DBGTRACE</td>
-          <td>(</td>
-          <td class="paramname"></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a class="anchor" id="a6990490017f384ce2d462e1b5c0963b8"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define DPS_DEBUG_CONTROL</td>
-          <td>(</td>
-          <td class="paramtype">&#160;</td>
-          <td class="paramname">dbg</td><td>)</td>
-          <td>&#160;&#160;&#160;__attribute__((__unused__))static int __DPS_DebugControl = dbg</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a class="anchor" id="aeca5ec86966717c8dd2d1ffda4be2b3b"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define DPS_DEBUG_ENABLED</td>
-          <td>(</td>
-          <td class="paramname"></td><td>)</td>
-          <td>&#160;&#160;&#160;((<a class="el" href="dbg_8h.html#a6f4bedbcc8b3bd12cea20b5ce3a8abba">DPS_Debug</a> &amp;&amp; (__DPS_DebugControl == <a class="el" href="dbg_8h.html#a777427dcd2750d5006024ce1a54daaac">DPS_DEBUG_ON</a>)) || (__DPS_DebugControl == <a class="el" href="dbg_8h.html#a6eb8eb8c3804ebd6f51fe2d7a7625ed8">DPS_DEBUG_FORCE</a>))</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a class="anchor" id="a6eb8eb8c3804ebd6f51fe2d7a7625ed8"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define DPS_DEBUG_FORCE&#160;&#160;&#160;2</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a class="anchor" id="a39adc166f2ce05fb751212c1db9a6ce9"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define DPS_DEBUG_OFF&#160;&#160;&#160;0</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a class="anchor" id="a777427dcd2750d5006024ce1a54daaac"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define DPS_DEBUG_ON&#160;&#160;&#160;1</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a class="anchor" id="ac69225c4b8e73b27204a2963d4ca0633"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define DPS_ERRPRINT</td>
-          <td>(</td>
-          <td class="paramtype">&#160;</td>
-          <td class="paramname">fmt, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">&#160;</td>
-          <td class="paramname"><em>...</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td>&#160;&#160;&#160;<a class="el" href="dbg_8h.html#a174fef61dca16376546e570c9b831502">DPS_Log</a>(<a class="el" href="dbg_8h.html#ad06c0421a8226b0a95be1d722ca05612ad8adeef2745368cf04dbb19b224df53c">DPS_LOG_ERROR</a>, __FILE__, __LINE__, __FUNCTION__, fmt, ##__VA_ARGS__)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a class="anchor" id="af1d25cc7f1d2d92f96ba620217af28fd"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define DPS_PRINT</td>
-          <td>(</td>
-          <td class="paramtype">&#160;</td>
-          <td class="paramname">fmt, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">&#160;</td>
-          <td class="paramname"><em>...</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td>&#160;&#160;&#160;<a class="el" href="dbg_8h.html#a174fef61dca16376546e570c9b831502">DPS_Log</a>(<a class="el" href="dbg_8h.html#ad06c0421a8226b0a95be1d722ca05612a2811f744e315eb851568f7707f226b42">DPS_LOG_PRINT</a>, __FILE__, __LINE__, __FUNCTION__, fmt, ##__VA_ARGS__)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a class="anchor" id="ad9a3f4ae1ed318b313434a82132c4044"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define DPS_PRINTT</td>
-          <td>(</td>
-          <td class="paramtype">&#160;</td>
-          <td class="paramname">fmt, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">&#160;</td>
-          <td class="paramname"><em>...</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td>&#160;&#160;&#160;<a class="el" href="dbg_8h.html#a174fef61dca16376546e570c9b831502">DPS_Log</a>(<a class="el" href="dbg_8h.html#ad06c0421a8226b0a95be1d722ca05612a1cc419e9ddddde8e3be43ca3fdb30dda">DPS_LOG_PRINTT</a>, __FILE__, __LINE__, __FUNCTION__, fmt, ##__VA_ARGS__)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<h2 class="groupheader">Enumeration Type Documentation</h2>
-<a class="anchor" id="ad06c0421a8226b0a95be1d722ca05612"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">enum <a class="el" href="dbg_8h.html#ad06c0421a8226b0a95be1d722ca05612">DPS_LogLevel</a></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<table class="fieldtable">
-<tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a class="anchor" id="ad06c0421a8226b0a95be1d722ca05612ad8adeef2745368cf04dbb19b224df53c"></a>DPS_LOG_ERROR&#160;</td><td class="fielddoc">
-</td></tr>
-<tr><td class="fieldname"><a class="anchor" id="ad06c0421a8226b0a95be1d722ca05612a2811f744e315eb851568f7707f226b42"></a>DPS_LOG_PRINT&#160;</td><td class="fielddoc">
-</td></tr>
-<tr><td class="fieldname"><a class="anchor" id="ad06c0421a8226b0a95be1d722ca05612a1cc419e9ddddde8e3be43ca3fdb30dda"></a>DPS_LOG_PRINTT&#160;</td><td class="fielddoc">
-</td></tr>
-<tr><td class="fieldname"><a class="anchor" id="ad06c0421a8226b0a95be1d722ca05612a0f174e3b850ad53207c2ca8f1fbd9692"></a>DPS_LOG_DBGTRACE&#160;</td><td class="fielddoc">
-</td></tr>
-<tr><td class="fieldname"><a class="anchor" id="ad06c0421a8226b0a95be1d722ca05612aa2db99dadba3b9117142682254168366"></a>DPS_LOG_DBGPRINT&#160;</td><td class="fielddoc">
-</td></tr>
-</table>
-
-</div>
-</div>
-<h2 class="groupheader">Function Documentation</h2>
-<a class="anchor" id="a174fef61dca16376546e570c9b831502"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void DPS_Log </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="dbg_8h.html#ad06c0421a8226b0a95be1d722ca05612">DPS_LogLevel</a>&#160;</td>
-          <td class="paramname"><em>level</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const char *&#160;</td>
-          <td class="paramname"><em>file</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">int&#160;</td>
-          <td class="paramname"><em>line</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const char *&#160;</td>
-          <td class="paramname"><em>function</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const char *&#160;</td>
-          <td class="paramname"><em>fmt</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">&#160;</td>
-          <td class="paramname"><em>...</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<h2 class="groupheader">Variable Documentation</h2>
-<a class="anchor" id="a6f4bedbcc8b3bd12cea20b5ce3a8abba"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">int DPS_Debug</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
 </div><!-- contents -->
 </div><!-- doc-content -->
 <div class="navpath" id="nav-path">
   <ul>
-    <li class="footer" style="float:left"><b>Distributed PubSub Manual</b></li> <li class="footer">Generated Thu Sep 7 2017 15:03:30</li>
+    <li class="footer" style="float:left"><b>Distributed PubSub Manual</b></li> <li class="footer">Generated Fri Nov 3 2017 14:13:18</li>
   </ul>
 </div>
 </body>

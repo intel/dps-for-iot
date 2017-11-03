@@ -47,6 +47,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
     <ul class="tablist">
       <li><a href="index.html"><span>Main&#160;Page</span></a></li>
       <li><a href="pages.html"><span>Related&#160;Pages</span></a></li>
+      <li><a href="modules.html"><span>Modules</span></a></li>
       <li><a href="annotated.html"><span>Data&#160;Structures</span></a></li>
       <li class="current"><a href="files.html"><span>Files</span></a></li>
       <li>
@@ -114,104 +115,18 @@ $(document).ready(function(){initNavTree('synchronous_8h.html','');});
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a0bd13b2bd395bbc7807ecc899a8862f1"><td class="memItemLeft" align="right" valign="top"><a class="el" href="err_8h.html#a30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="synchronous_8h.html#a0bd13b2bd395bbc7807ecc899a8862f1">DPS_LinkTo</a> (<a class="el" href="dps_8h.html#a4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, const char *host, uint16_t port, <a class="el" href="dps_8h.html#a9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *addr)</td></tr>
-<tr class="memdesc:a0bd13b2bd395bbc7807ecc899a8862f1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Synchronous helper APIs that wrap the asynchronous versions.  <a href="#a0bd13b2bd395bbc7807ecc899a8862f1">More...</a><br /></td></tr>
-<tr class="separator:a0bd13b2bd395bbc7807ecc899a8862f1"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2d5bb0528c2a171991ad6355cbadac69"><td class="memItemLeft" align="right" valign="top"><a class="el" href="err_8h.html#a30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="synchronous_8h.html#a2d5bb0528c2a171991ad6355cbadac69">DPS_UnlinkFrom</a> (<a class="el" href="dps_8h.html#a4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, <a class="el" href="dps_8h.html#a9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *addr)</td></tr>
-<tr class="memdesc:a2d5bb0528c2a171991ad6355cbadac69"><td class="mdescLeft">&#160;</td><td class="mdescRight">Unlink from a previously linked remote node.  <a href="#a2d5bb0528c2a171991ad6355cbadac69">More...</a><br /></td></tr>
-<tr class="separator:a2d5bb0528c2a171991ad6355cbadac69"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga0bd13b2bd395bbc7807ecc899a8862f1"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#ga0bd13b2bd395bbc7807ecc899a8862f1">DPS_LinkTo</a> (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, const char *host, uint16_t port, <a class="el" href="group__nodeaddress.html#ga9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *addr)</td></tr>
+<tr class="memdesc:ga0bd13b2bd395bbc7807ecc899a8862f1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Synchronous helper that wraps <a class="el" href="group__node.html#ga5064c63b8ce76bf34402e0c80183234b" title="Link the local node to a remote node. ">DPS_Link()</a>.  <a href="group__node.html#ga0bd13b2bd395bbc7807ecc899a8862f1">More...</a><br /></td></tr>
+<tr class="separator:ga0bd13b2bd395bbc7807ecc899a8862f1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga2d5bb0528c2a171991ad6355cbadac69"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#ga2d5bb0528c2a171991ad6355cbadac69">DPS_UnlinkFrom</a> (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, <a class="el" href="group__nodeaddress.html#ga9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *addr)</td></tr>
+<tr class="memdesc:ga2d5bb0528c2a171991ad6355cbadac69"><td class="mdescLeft">&#160;</td><td class="mdescRight">Synchronous helper that wraps <a class="el" href="group__node.html#ga79c86c3c0c5d6438b953a9acaab0ab0b" title="Unlink the local node from a remote node. ">DPS_Unlink()</a>.  <a href="group__node.html#ga2d5bb0528c2a171991ad6355cbadac69">More...</a><br /></td></tr>
+<tr class="separator:ga2d5bb0528c2a171991ad6355cbadac69"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
-<h2 class="groupheader">Function Documentation</h2>
-<a class="anchor" id="a0bd13b2bd395bbc7807ecc899a8862f1"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="err_8h.html#a30395a84d3cad9d4ec29848106415038">DPS_Status</a> DPS_LinkTo </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="dps_8h.html#a4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *&#160;</td>
-          <td class="paramname"><em>node</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const char *&#160;</td>
-          <td class="paramname"><em>host</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">uint16_t&#160;</td>
-          <td class="paramname"><em>port</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="dps_8h.html#a9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *&#160;</td>
-          <td class="paramname"><em>addr</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Synchronous helper APIs that wrap the asynchronous versions. </p>
-<p>Resolve a host and port and establish a link to a remote node.</p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">node</td><td>The local node to link from </td></tr>
-    <tr><td class="paramname">host</td><td>The host name or IP address to link to </td></tr>
-    <tr><td class="paramname">port</td><td>The port number </td></tr>
-    <tr><td class="paramname">addr</td><td>Returns the resolved address for the remote node </td></tr>
-  </table>
-  </dd>
-</dl>
-
-</div>
-</div>
-<a class="anchor" id="a2d5bb0528c2a171991ad6355cbadac69"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="err_8h.html#a30395a84d3cad9d4ec29848106415038">DPS_Status</a> DPS_UnlinkFrom </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="dps_8h.html#a4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *&#160;</td>
-          <td class="paramname"><em>node</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="dps_8h.html#a9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *&#160;</td>
-          <td class="paramname"><em>addr</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Unlink from a previously linked remote node. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">node</td><td>The local node to unlink from </td></tr>
-    <tr><td class="paramname">addr</td><td>The address of the remote node to unlink </td></tr>
-  </table>
-  </dd>
-</dl>
-
-</div>
-</div>
 </div><!-- contents -->
 </div><!-- doc-content -->
 <div class="navpath" id="nav-path">
   <ul>
-    <li class="footer" style="float:left"><b>Distributed PubSub Manual</b></li> <li class="footer">Generated Thu Sep 7 2017 15:03:30</li>
+    <li class="footer" style="float:left"><b>Distributed PubSub Manual</b></li> <li class="footer">Generated Fri Nov 3 2017 14:13:18</li>
   </ul>
 </div>
 </body>
