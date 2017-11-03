@@ -342,6 +342,7 @@ static int OnTLSPSKGet(void *data, mbedtls_ssl_context* ssl, const unsigned char
         DPS_ERRPRINT("Missing key store for PSK\n");
         return MBEDTLS_ERR_SSL_UNKNOWN_IDENTITY;
     }
+    memset(&request, 0, sizeof(request));
     request.keyStore = keyStore;
     request.data = cn;
     request.setKey = TLSPSKSet;
@@ -780,6 +781,7 @@ static DPS_NetConnection* CreateConnection(DPS_Node* node, const struct sockaddr
     mbedtls_ssl_conf_dbg(&cn->conf, OnTLSDebug, NULL);
     mbedtls_ssl_conf_rng(&cn->conf, mbedtls_ctr_drbg_random, &cn->drbg);
 
+    memset(&request, 0, sizeof(request));
     request.keyStore = keyStore;
     request.data = cn;
 
@@ -792,6 +794,7 @@ static DPS_NetConnection* CreateConnection(DPS_Node* node, const struct sockaddr
         } else {
             DPS_WARNPRINT("Parsing trusted certificate(s) failed: %s\n", DPS_ErrTxt(ret));
         }
+        request.setCA = NULL;
     }
     mbedtls_x509_crt_init(&cn->cert);
     mbedtls_pk_init(&cn->pkey);
@@ -803,6 +806,7 @@ static DPS_NetConnection* CreateConnection(DPS_Node* node, const struct sockaddr
         } else {
             DPS_WARNPRINT("Parsing certificate failed: %s\n", DPS_ErrTxt(ret));
         }
+        request.setCert = NULL;
     }
 
     if (cn->type == MBEDTLS_SSL_IS_SERVER) {
@@ -815,6 +819,7 @@ static DPS_NetConnection* CreateConnection(DPS_Node* node, const struct sockaddr
         if (ret != DPS_OK) {
             DPS_WARNPRINT("Get PSK failed: %s\n", DPS_ErrTxt(ret));
         }
+        request.setKeyAndIdentity = NULL;
     }
     mbedtls_ssl_conf_authmode(&cn->conf, MBEDTLS_SSL_VERIFY_REQUIRED);
 

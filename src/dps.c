@@ -1538,6 +1538,7 @@ DPS_Status DPS_GetCOSEKey(void* ctx, const DPS_UUID* kid, int8_t alg, uint8_t ke
     DPS_KeyStore* keyStore = node->keyStore;
     DPS_KeyStoreRequest request;
 
+    memset(&request, 0, sizeof(request));
     request.keyStore = keyStore;
     request.data = key;
     request.setKey = SetKey;
