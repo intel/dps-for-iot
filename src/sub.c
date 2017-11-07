@@ -520,6 +520,8 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
         }
     }
     if (ret != DPS_OK) {
+        DPS_BitVectorFree(interests);
+        DPS_BitVectorFree(needs);
         return ret;
     }
     DPS_EndpointSetPort(ep, port);
