@@ -32,7 +32,8 @@ if platform.system() == 'Linux':
         BoolVariable('asan', 'Enable address sanitizer?', False),
         BoolVariable('tsan', 'Enable thread sanitizer?', False),
         BoolVariable('ubsan', 'Enable undefined behavior sanitizer?', False),
-        BoolVariable('fsan', 'Enable fuzzer sanitizer?', False))
+        BoolVariable('fsan', 'Enable fuzzer sanitizer?', False),
+        BoolVariable('cov', 'Enable code coverage?', False))
 
 tools=['default', 'textfile']
 # Doxygen is optional
@@ -155,6 +156,15 @@ elif env['PLATFORM'] == 'posix':
     if env['fsan'] == True:
         if env['CC'].endswith('clang'):
             env.Append(CCFLAGS = ['-fsanitize=fuzzer-no-link'])
+        else:
+            print('Unsupported compiler')
+            exit();
+
+    # Enable code coverage
+    if env['cov'] == True:
+        if env['CC'].endswith('clang'):
+            env.Append(CCFLAGS = ['-fprofile-instr-generate', '-fcoverage-mapping'])
+            env.Append(LINKFLAGS = ['-fprofile-instr-generate', '-fcoverage-mapping'])
         else:
             print('Unsupported compiler')
             exit();
