@@ -642,8 +642,8 @@ void DPS_SendFailed(DPS_Node* node, DPS_NodeAddress* addr, uv_buf_t* bufs, size_
     DPS_DBGPRINT("NetSendFailed %s\n", DPS_ErrTxt(status));
     remote = DPS_LookupRemoteNode(node, addr);
     if (remote) {
+        DPS_DBGPRINT("Removing node %s\n", DPS_NodeAddrToString(addr));
         DPS_DeleteRemoteNode(node, remote);
-        DPS_DBGPRINT("Removed node %s\n", DPS_NodeAddrToString(addr));
     }
     DPS_NetFreeBufs(bufs, numBufs);
 }
