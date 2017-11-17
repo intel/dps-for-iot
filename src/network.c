@@ -77,36 +77,36 @@ const char* DPS_NetAddrText(const struct sockaddr* addr)
 
 static const uint8_t IP4as6[16] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 0, 0, 0, 0 };
 
-int DPS_SameAddr(DPS_NodeAddress* addr1, DPS_NodeAddress* addr2)
+int DPS_SameAddr(const DPS_NodeAddress* addr1, const DPS_NodeAddress* addr2)
 {
-    struct sockaddr* a = (struct sockaddr*)&addr1->inaddr;
-    struct sockaddr* b = (struct sockaddr*)&addr2->inaddr;
+    const struct sockaddr* a = (const struct sockaddr*)&addr1->inaddr;
+    const struct sockaddr* b = (const struct sockaddr*)&addr2->inaddr;
     struct sockaddr_in6 tmp;
 
     if (a->sa_family != b->sa_family) {
         uint32_t ip;
         if (a->sa_family == AF_INET6) {
-            struct sockaddr_in* ipb = (struct sockaddr_in*)b;
+            const struct sockaddr_in* ipb = (const struct sockaddr_in*)b;
             ip = ipb->sin_addr.s_addr;
             tmp.sin6_port = ipb->sin_port;
-            b = (struct sockaddr*)&tmp;
+            b = (const struct sockaddr*)&tmp;
         } else {
-            struct sockaddr_in* ipa = (struct sockaddr_in*)a;
+            const struct sockaddr_in* ipa = (const struct sockaddr_in*)a;
             ip = ipa->sin_addr.s_addr;
             tmp.sin6_port = ipa->sin_port;
-            a = (struct sockaddr*)&tmp;
+            a = (const struct sockaddr*)&tmp;
         }
         memcpy_s(&tmp.sin6_addr, sizeof(tmp.sin6_addr), IP4as6, 12);
         memcpy_s((uint8_t*)&tmp.sin6_addr + 12, sizeof(tmp.sin6_addr) - 12, &ip, 4);
         tmp.sin6_family = AF_INET6;
     }
     if (a->sa_family == AF_INET6) {
-        struct sockaddr_in6* ip6a = (struct sockaddr_in6*)a;
-        struct sockaddr_in6* ip6b = (struct sockaddr_in6*)b;
+        const struct sockaddr_in6* ip6a = (const struct sockaddr_in6*)a;
+        const struct sockaddr_in6* ip6b = (const struct sockaddr_in6*)b;
         return (ip6a->sin6_port == ip6b->sin6_port) && (memcmp(&ip6a->sin6_addr, &ip6b->sin6_addr, 16) == 0);
     } else {
-        struct sockaddr_in* ipa = (struct sockaddr_in*)a;
-        struct sockaddr_in* ipb = (struct sockaddr_in*)b;
+        const struct sockaddr_in* ipa = (const struct sockaddr_in*)a;
+        const struct sockaddr_in* ipb = (const struct sockaddr_in*)b;
         return (ipa->sin_port == ipb->sin_port) && (ipa->sin_addr.s_addr == ipb->sin_addr.s_addr);
     }
 }

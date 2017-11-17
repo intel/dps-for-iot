@@ -56,7 +56,7 @@ typedef struct _DPS_NodeAddress DPS_NodeAddress;
  *
  * @return  A text string for the address
  */
-const char* DPS_NodeAddrToString(DPS_NodeAddress* addr);
+const char* DPS_NodeAddrToString(const DPS_NodeAddress* addr);
 
 /**
  * Creates a node address.

@@ -1555,9 +1555,9 @@ DPS_Status DPS_Unlink(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnUnlinkComplet
     return DPS_OK;
 }
 
-const char* DPS_NodeAddrToString(DPS_NodeAddress* addr)
+const char* DPS_NodeAddrToString(const DPS_NodeAddress* addr)
 {
-    return DPS_NetAddrText((struct sockaddr*)&addr->inaddr);
+    return DPS_NetAddrText((const struct sockaddr*)&addr->inaddr);
 }
 
 DPS_NodeAddress* DPS_CreateAddress()
