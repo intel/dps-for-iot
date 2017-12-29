@@ -28,6 +28,10 @@
 #include <dps/err.h>
 #include <dps/private/dps.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define AES_128_KEY_LENGTH   16
 
 /*
@@ -97,5 +101,8 @@ DPS_Status Decrypt_CCM(const uint8_t key[AES_128_KEY_LENGTH],
                        size_t aadLen,
                        DPS_TxBuffer* plainText);
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif
