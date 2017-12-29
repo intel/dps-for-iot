@@ -44,6 +44,7 @@ srcs = ['src/bitvec.c',
         'src/sha2.c',
         'src/ccm.c',
         'src/ec.c',
+        'src/hkdf.c',
         'src/mbedtls.c']
 
 if env['transport'] == 'udp':
