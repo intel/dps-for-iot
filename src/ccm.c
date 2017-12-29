@@ -27,10 +27,10 @@
 #include "mbedtls/cipher.h"
 #include "mbedtls/error.h"
 
-DPS_Status Encrypt_CCM(const uint8_t key[AES_128_KEY_LENGTH],
+DPS_Status Encrypt_CCM(const uint8_t key[AES_128_KEY_LEN],
                        uint8_t M,
                        uint8_t L,
-                       const uint8_t nonce[DPS_CCM_NONCE_SIZE],
+                       const uint8_t nonce[AES_CCM_NONCE_LEN],
                        const uint8_t* plainText,
                        size_t ptLen,
                        const uint8_t* aad,
@@ -53,13 +53,13 @@ DPS_Status Encrypt_CCM(const uint8_t key[AES_128_KEY_LENGTH],
         DPS_ERRPRINT("Cipher setup failed: %s\n", TLSErrTxt(ret));
         goto Exit;
     }
-    ret = mbedtls_cipher_setkey(&ctx, key, AES_128_KEY_LENGTH * 8, MBEDTLS_ENCRYPT);
+    ret = mbedtls_cipher_setkey(&ctx, key, AES_128_KEY_LEN * 8, MBEDTLS_ENCRYPT);
     if (ret != 0) {
         DPS_ERRPRINT("Cipher set key failed: %s\n", TLSErrTxt(ret));
         goto Exit;
     }
     outLen = DPS_TxBufferSpace(cipherText) - M;
-    ret = mbedtls_cipher_auth_encrypt(&ctx, nonce, DPS_CCM_NONCE_SIZE, aad, aadLen, plainText, ptLen,
+    ret = mbedtls_cipher_auth_encrypt(&ctx, nonce, AES_CCM_NONCE_LEN, aad, aadLen, plainText, ptLen,
                                       cipherText->txPos, &outLen, cipherText->txPos + ptLen, M);
     if (ret != 0) {
         DPS_ERRPRINT("Cipher auth encrypt failed: %s\n", TLSErrTxt(ret));
@@ -76,10 +76,10 @@ Exit:
     }
 }
 
-DPS_Status Decrypt_CCM(const uint8_t key[AES_128_KEY_LENGTH],
+DPS_Status Decrypt_CCM(const uint8_t key[AES_128_KEY_LEN],
                        uint8_t M,
                        uint8_t L,
-                       const uint8_t nonce[DPS_CCM_NONCE_SIZE],
+                       const uint8_t nonce[AES_CCM_NONCE_LEN],
                        const uint8_t* cipherText,
                        size_t ctLen,
                        const uint8_t* aad,
@@ -103,13 +103,13 @@ DPS_Status Decrypt_CCM(const uint8_t key[AES_128_KEY_LENGTH],
         DPS_ERRPRINT("Cipher setup failed: %s\n", TLSErrTxt(ret));
         goto Exit;
     }
-    ret = mbedtls_cipher_setkey(&ctx, key, AES_128_KEY_LENGTH * 8, MBEDTLS_DECRYPT);
+    ret = mbedtls_cipher_setkey(&ctx, key, AES_128_KEY_LEN * 8, MBEDTLS_DECRYPT);
     if (ret != 0) {
         DPS_ERRPRINT("Cipher set key failed: %s\n", TLSErrTxt(ret));
         goto Exit;
     }
     outLen = DPS_TxBufferSpace(plainText);
-    ret = mbedtls_cipher_auth_decrypt(&ctx, nonce, DPS_CCM_NONCE_SIZE, aad, aadLen, cipherText, ptLen,
+    ret = mbedtls_cipher_auth_decrypt(&ctx, nonce, AES_CCM_NONCE_LEN, aad, aadLen, cipherText, ptLen,
                                       plainText->base, &outLen, cipherText + ptLen, M);
     if (ret != 0) {
         DPS_ERRPRINT("Cipher auth decrypt failed: %s\n", TLSErrTxt(ret));

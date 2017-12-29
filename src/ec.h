@@ -24,15 +24,11 @@
 #define _EC_H
 
 #include <dps/private/dps.h>
+#include "crypto.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#define EC_MAX_COORD_LEN 66 /**< Maximum length of an EC coordinate (x, y, or d) */
-#define EC_CURVE_P256 1 /**< NIST P-256 also known as secp256r1 */
-#define EC_CURVE_P384 2 /**< NIST P-384 also known as secp384r1 */
-#define EC_CURVE_P521 3 /**< NIST P-521 also known as secp521r1 */
 
 /**
  * Maxmium length of the ECDH shared secret, in bytes

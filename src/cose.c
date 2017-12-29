@@ -173,7 +173,7 @@ DPS_Status COSE_Encrypt(int8_t alg,
 {
     DPS_Status ret;
     DPS_TxBuffer AAD;
-    uint8_t key[AES_128_KEY_LENGTH];
+    uint8_t key[AES_128_KEY_LEN];
     uint8_t L;
     uint8_t M;
     size_t ptLen;
@@ -355,7 +355,7 @@ DPS_Status COSE_Decrypt(const uint8_t nonce[DPS_COSE_NONCE_SIZE],
 {
     DPS_Status ret;
     DPS_TxBuffer AAD;
-    uint8_t key[AES_128_KEY_LENGTH];
+    uint8_t key[AES_128_KEY_LEN];
     uint8_t L;
     uint8_t M;
     size_t sz;

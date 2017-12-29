@@ -20,33 +20,19 @@
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  */
 
-#ifndef _HKDF_H
-#define _HKDF_H
-
-#include <dps/private/dps.h>
-#include "crypto.h"
+#ifndef _CRYPTO_H
+#define _CRYPTO_H
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/**
- * Applies an HMAC-based extract-and-expand Key Derivation Function to
- * generate a key.
- *
- * @param secret the secret
- * @param secretLen the size of the secret, in bytes
- * @param context the context for the hash function
- * @param contextLen the size of the hash context, in bytes
- * @param key returns the generated key
- *
- * @return
- *         - DPS_OK if the key is generated
- *         - DPS_ERR_INVALID if the key cannot be generated
- */
-DPS_Status HKDF_SHA256(const uint8_t* secret, size_t secretLen,
-                       const uint8_t* context, size_t contextLen,
-                       uint8_t key[AES_128_KEY_LEN]);
+#define AES_128_KEY_LEN 16 /**< AES 128 key length, in bytes */
+
+#define EC_MAX_COORD_LEN 66 /**< Maximum length of an EC coordinate (x, y, or d) */
+#define EC_CURVE_P256 1 /**< NIST P-256 also known as secp256r1 */
+#define EC_CURVE_P384 2 /**< NIST P-384 also known as secp384r1 */
+#define EC_CURVE_P521 3 /**< NIST P-521 also known as secp521r1 */
 
 #ifdef __cplusplus
 }

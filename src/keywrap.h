@@ -24,12 +24,12 @@
 #define _KEYWRAP_H
 
 #include <dps/err.h>
+#include "crypto.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define AES_128_KEY_LEN 16
 #define AES_128_KEY_WRAP_LEN 24
 
 /*

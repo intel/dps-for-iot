@@ -26,6 +26,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <dps/private/dps.h>
+#include "crypto.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -35,11 +36,6 @@ extern "C" {
  * Size of the nonce
  */
 #define DPS_COSE_NONCE_SIZE        13
-
-/**
- * Key length
- */
-#define AES_128_KEY_LEN       16
 
 /*
  * Symmetric cipher modes and configurations currently supported by this implementation
