@@ -47,7 +47,6 @@ env = Environment(
     ],
     CPPPATH=[
         '#/inc',
-        '#/ext/tinycrypt/lib/include',
         '#/ext/safestring/include',
         '#/ext',
         '#/ext/mbedtls/include',

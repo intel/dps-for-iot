@@ -6,14 +6,12 @@ LIC_FILES_CHKSUM = "file://LICENSE.md;md5=048191255019d4e1ee70aef53dbbec10"
 
 S = "${WORKDIR}/git"
 SRCREV_dps = "59a3c33d64f2b3fc16cc5c52b5f4a7bec47640a7"
-SRCREV_tinycrypt = "e6cffb820b91578d9816fc0bcc8f72f32f6ee76b"
 SRCREV_safestring = "db404a9bba3a58d06adfdab4021e7b91265ac0f0"
 PV = "0.1+git${SRCPV}"
 PR = "r0"
 
 SRCREV_FORMAT = "dps"
 SRC_URI = "git://github.com/01org/dps-for-iot.git;name=dps \
-           git://github.com/01org/tinycrypt.git;protocol=https;name=tinycrypt;destsuffix=git/ext/tinycrypt \
            git://github.com/01org/safestringlib.git;protocol=https;name=safestring;destsuffix=git/ext/safestring \
            "
 inherit scons

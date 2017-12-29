@@ -81,12 +81,10 @@ To see the complete list of build options trune `scons --help`
 The default build configuration is `variant=release transport=udp bindings=all`.
 > *A limitation of the current implementation is that the transport must be configured at compile time.*
 
-The scons script pulls down source code from three external projects (mbedtls, tinycrypt, and safestringlib)
+The scons script pulls down source code from two external projects (mbedtls, and safestringlib)
 into the `./ext` directory. If necessary these projects can be populated manually:
 
 `git clone https://github.com/ARMmbed/mbedtls ext/mbedtls`
-
-`git clone https://github.com/01org/tinycrypt.git ext/tinycrypt`
 
 `git clone https://github.com/01org/safestringlib.git ext/safestring`
 

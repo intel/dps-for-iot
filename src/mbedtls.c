@@ -1,7 +1,7 @@
 /*
  *******************************************************************
  *
- * Copyright 2016 Intel Corporation All rights reserved.
+ * Copyright 2017 Intel Corporation All rights reserved.
  *
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  *
@@ -20,13 +20,12 @@
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  */
 
-#include <string.h>
-#include <memory.h>
-#include "sha2.h"
-#include "mbedtls/md.h"
+#include "mbedtls.h"
+#include "mbedtls/error.h"
 
-void DPS_Sha2(uint8_t digest[DPS_SHA2_DIGEST_LEN], const uint8_t* data, size_t len)
+const char *TLSErrTxt(int ret)
 {
-    const mbedtls_md_info_t* info = mbedtls_md_info_from_type(MBEDTLS_MD_SHA256);
-    mbedtls_md(info, data, len, digest);
+    static char errBuf[256] = { 0 };
+    mbedtls_strerror(ret, errBuf, sizeof(errBuf));
+    return errBuf;
 }

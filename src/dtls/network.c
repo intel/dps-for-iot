@@ -27,6 +27,7 @@
 #include <dps/dbg.h>
 #include <dps/dps.h>
 #include <dps/private/network.h>
+#include "../mbedtls.h"
 #include "../node.h"
 
 #include "mbedtls/config.h"
@@ -292,13 +293,6 @@ static void CancelPending(DPS_NetConnection* cn)
     default:
         break;
     }
-}
-
-static const char *TLSErrTxt(int ret)
-{
-    static char errBuf[256] = { 0 };
-    mbedtls_strerror(ret, errBuf, sizeof(errBuf));
-    return errBuf;
 }
 
 static void OnTLSDebug(void *ctx, int level, const char *file, int line, const char *str)

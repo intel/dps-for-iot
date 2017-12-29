@@ -99,37 +99,6 @@ mbedtlsLib = mbedtlsEnv.Library('lib/libmbedtls', mbedtlsObj)
 Depends(mbedtlsSrcs, mbedtlsGit)
 Depends(mbedtlsObj, './mbedtls_config.h')
 
-# Pull down tinycrypt from github and build the library
-
-tcEnv = extEnv.Clone()
-tcgit = tcEnv.Command('./tinycrypt/.git', None, 'git clone https://github.com/01org/tinycrypt.git ext/tinycrypt')
-
-tcEnv['CFLAGS'] = ''
-
-if platform == 'win32':
-    tcEnv.Append(CPPDEFINES = ['_CRT_SECURE_NO_WARNINGS'])
-    tcEnv.Append(CFLAGS = ['/J', '/W3', '/nologo'])
-    tcEnv.Append(CFLAGS = ['/Gy', '/O2', '/GF', '/MT'])
-    # Suppress specific warnings
-    tcEnv.Append(CFLAGS = ['/wd4244', '/wd4267'])
-
-elif tcEnv['PLATFORM'] == 'posix':
-    tcEnv.Append(CFLAGS = ['-Os', '-fPIC', '-std=c99', '-Wall', '-Wextra',  '-D_ISOC99_SOURCE', '-MMD'])
-else:
-    print('Unsupported system')
-    exit()
-
-tcEnv['CPPPATH'] = './tinycrypt/lib/include'
-
-tcsrcs = ['./tinycrypt/lib/source/aes_encrypt.c',
-          './tinycrypt/lib/source/ccm_mode.c',
-          './tinycrypt/lib/source/sha256.c',
-          './tinycrypt/lib/source/utils.c']
-
-tclib = tcEnv.Library('lib/libtinycrypt', tcsrcs)
-
-Depends(tcsrcs, tcgit)
-
 # Pull down safestringlib from github and build the library
 
 scEnv = extEnv.Clone()
@@ -170,4 +139,4 @@ Depends(scsrcs, scgit)
 
 # Return libraries
 
-Return (['mbedtlsLib', 'tclib', 'sclib'])
+Return (['mbedtlsLib', 'sclib'])

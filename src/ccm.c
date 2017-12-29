@@ -23,19 +23,9 @@
 #include <string.h>
 #include <memory.h>
 #include "ccm.h"
-#include <tinycrypt/aes.h>
-#include <tinycrypt/ccm_mode.h>
-
-#ifndef _WIN32
-static volatile void* SecureZeroMemory(volatile void* m, size_t l)
-{
-    volatile uint8_t* p = m;
-    while (l--) {
-        *p++ = 0;
-    }
-    return m;
-}
-#endif
+#include "mbedtls.h"
+#include "mbedtls/cipher.h"
+#include "mbedtls/error.h"
 
 DPS_Status Encrypt_CCM(const uint8_t key[AES_128_KEY_LENGTH],
                        uint8_t M,
@@ -47,26 +37,43 @@ DPS_Status Encrypt_CCM(const uint8_t key[AES_128_KEY_LENGTH],
                        size_t aadLen,
                        DPS_TxBuffer* cipherText)
 {
-    int32_t r;
-    struct tc_aes_key_sched_struct sched;
-    struct tc_ccm_mode_struct ctx;
+    const mbedtls_cipher_info_t* info;
+    mbedtls_cipher_context_t ctx;
+    int ret;
+    size_t outLen;
 
     if (DPS_TxBufferSpace(cipherText) < (ptLen + M)) {
         return DPS_ERR_OVERFLOW;
     }
-    tc_aes128_set_encrypt_key(&sched, key);
 
-    r = tc_ccm_config(&ctx, &sched, (uint8_t*)nonce, DPS_CCM_NONCE_SIZE, M);
-    if (!r) {
-        return DPS_ERR_INVALID;
+    info = mbedtls_cipher_info_from_type(MBEDTLS_CIPHER_AES_128_CCM);
+    mbedtls_cipher_init(&ctx);
+    ret = mbedtls_cipher_setup(&ctx, info);
+    if (ret != 0) {
+        DPS_ERRPRINT("Cipher setup failed: %s\n", TLSErrTxt(ret));
+        goto Exit;
     }
-    r = tc_ccm_generation_encryption(cipherText->txPos, DPS_TxBufferSpace(cipherText), aad, (uint32_t)aadLen, plainText, (uint32_t)ptLen, &ctx);
-    if (!r) {
-        return DPS_ERR_INVALID;
+    ret = mbedtls_cipher_setkey(&ctx, key, AES_128_KEY_LENGTH * 8, MBEDTLS_ENCRYPT);
+    if (ret != 0) {
+        DPS_ERRPRINT("Cipher set key failed: %s\n", TLSErrTxt(ret));
+        goto Exit;
     }
-    SecureZeroMemory(&sched, sizeof(sched));
+    outLen = DPS_TxBufferSpace(cipherText) - M;
+    ret = mbedtls_cipher_auth_encrypt(&ctx, nonce, DPS_CCM_NONCE_SIZE, aad, aadLen, plainText, ptLen,
+                                      cipherText->txPos, &outLen, cipherText->txPos + ptLen, M);
+    if (ret != 0) {
+        DPS_ERRPRINT("Cipher auth encrypt failed: %s\n", TLSErrTxt(ret));
+        goto Exit;
+    }
     cipherText->txPos += ptLen + M;
-    return DPS_OK;
+
+Exit:
+    mbedtls_cipher_free(&ctx);
+    if (ret == 0) {
+        return DPS_OK;
+    } else {
+        return DPS_ERR_INVALID;
+    }
 }
 
 DPS_Status Decrypt_CCM(const uint8_t key[AES_128_KEY_LENGTH],
@@ -79,24 +86,42 @@ DPS_Status Decrypt_CCM(const uint8_t key[AES_128_KEY_LENGTH],
                        size_t aadLen,
                        DPS_TxBuffer* plainText)
 {
-    int32_t r;
+    const mbedtls_cipher_info_t* info;
+    mbedtls_cipher_context_t ctx;
     size_t ptLen = ctLen - M;
-    struct tc_aes_key_sched_struct sched;
-    struct tc_ccm_mode_struct ctx;
+    int ret;
+    size_t outLen;
 
     if (DPS_TxBufferSpace(plainText) < ptLen) {
         return DPS_ERR_OVERFLOW;
     }
-    tc_aes128_set_encrypt_key(&sched, key);
-    r = tc_ccm_config(&ctx, &sched, (uint8_t*)nonce, DPS_CCM_NONCE_SIZE, M);
-    if (!r) {
+
+    info = mbedtls_cipher_info_from_type(MBEDTLS_CIPHER_AES_128_CCM);
+    mbedtls_cipher_init(&ctx);
+    ret = mbedtls_cipher_setup(&ctx, info);
+    if (ret != 0) {
+        DPS_ERRPRINT("Cipher setup failed: %s\n", TLSErrTxt(ret));
+        goto Exit;
+    }
+    ret = mbedtls_cipher_setkey(&ctx, key, AES_128_KEY_LENGTH * 8, MBEDTLS_DECRYPT);
+    if (ret != 0) {
+        DPS_ERRPRINT("Cipher set key failed: %s\n", TLSErrTxt(ret));
+        goto Exit;
+    }
+    outLen = DPS_TxBufferSpace(plainText);
+    ret = mbedtls_cipher_auth_decrypt(&ctx, nonce, DPS_CCM_NONCE_SIZE, aad, aadLen, cipherText, ptLen,
+                                      plainText->base, &outLen, cipherText + ptLen, M);
+    if (ret != 0) {
+        DPS_ERRPRINT("Cipher auth decrypt failed: %s\n", TLSErrTxt(ret));
+        goto Exit;
+    }
+    plainText->txPos += ptLen;
+
+Exit:
+    mbedtls_cipher_free(&ctx);
+    if (ret == 0) {
+        return DPS_OK;
+    } else {
         return DPS_ERR_INVALID;
     }
-    r = tc_ccm_decryption_verification(plainText->base, DPS_TxBufferSpace(plainText), aad, (uint32_t)aadLen, cipherText, (uint32_t)ctLen, &ctx);
-    if (!r) {
-        return DPS_ERR_SECURITY;
-    }
-    SecureZeroMemory(&sched, sizeof(sched));
-    plainText->txPos += ptLen;
-    return DPS_OK;
 }

@@ -42,7 +42,8 @@ srcs = ['src/bitvec.c',
         'src/topics.c',
         'src/uv_extra.c',
         'src/sha2.c',
-        'src/ccm.c']
+        'src/ccm.c',
+        'src/mbedtls.c']
 
 if env['transport'] == 'udp':
     srcs.append('src/udp/network.c')
