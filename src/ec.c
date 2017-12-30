@@ -328,7 +328,7 @@ DPS_Status ECDH(int curve, const uint8_t* x, const uint8_t* y, const uint8_t* d,
     if (ret != 0) {
         goto Exit;
     }
-    *secretLen = mbedtls_mpi_size(&sec);
+    *secretLen = len;
     ret = mbedtls_mpi_write_binary(&sec, secret, *secretLen);
     if (ret != 0) {
         goto Exit;

@@ -302,6 +302,15 @@ DPS_Status CBOR_EncodeTag(DPS_TxBuffer* buffer, uint64_t n)
     return EncodeUint(buffer, n, CBOR_TAG);
 }
 
+DPS_Status CBOR_EncodeNull(DPS_TxBuffer* buffer)
+{
+    if (DPS_TxBufferSpace(buffer) < 1) {
+        return DPS_ERR_OVERFLOW;
+    }
+    *(buffer->txPos++) = CBOR_NULL;
+    return DPS_OK;
+}
+
 DPS_Status CBOR_DecodeUint(DPS_RxBuffer* buffer, uint64_t* n)
 {
     uint8_t maj;
@@ -502,6 +511,18 @@ DPS_Status CBOR_DecodeTag(DPS_RxBuffer* buffer, uint64_t* n)
         ret = DPS_ERR_INVALID;
     }
     return ret;
+}
+
+DPS_Status CBOR_Peek(DPS_RxBuffer* buffer, uint8_t* majOut)
+{
+    if (DPS_RxBufferAvail(buffer) < 1) {
+        return DPS_ERR_EOD;
+    }
+    if (!majOut) {
+        return DPS_ERR_ARGS;
+    }
+    *majOut = buffer->rxPos[0] & 0xE0;
+    return DPS_OK;
 }
 
 DPS_Status CBOR_Skip(DPS_RxBuffer* buffer, uint8_t* majOut, size_t* skipped)

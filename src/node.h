@@ -190,7 +190,7 @@ void DPS_OnSendComplete(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_bu
 /*
  * Make a nonce for a specific message type
  */
-void DPS_MakeNonce(const DPS_UUID* uuid, uint32_t seqNum, uint8_t msgType, uint8_t nonce[DPS_COSE_NONCE_SIZE]);
+void DPS_MakeNonce(const DPS_UUID* uuid, uint32_t seqNum, uint8_t msgType, uint8_t nonce[COSE_NONCE_LEN]);
 
 /**
  * Function to call when a network send operation fails.
@@ -327,12 +327,13 @@ void DPS_RandUUIDLess(DPS_UUID* uuid);
 /**
  * Get the key needed by COSE encryption and decription.
  *
- * @param node the node
- * @param kid The identifier of the key
- * @param alg AES_CCM_16_64_128 or AES_CCM_16_128_128
- * @param key The key
+ * @param node    The node
+ * @param alg     The crypto algorithm to use
+ * @param kid     The key identifier, NULL to request a random key
+ * @param kidLen  The size of the key identifier in bytes, 0 to request a random key
+ * @param key     Buffer for returning the key.
  */
-DPS_Status DPS_GetCOSEKey(void* node, const DPS_UUID* kid, int8_t alg, uint8_t key[AES_128_KEY_LEN]);
+DPS_Status DPS_GetCOSEKey(void* node, int8_t alg, const uint8_t* kid, size_t kidLen, COSE_Key* key);
 
 #ifdef __cplusplus
 }

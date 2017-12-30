@@ -75,14 +75,14 @@ DPS_KeyStore* DPS_KeyStoreHandle(DPS_KeyStoreRequest* request)
     return request ? request->keyStore : NULL;
 }
 
-DPS_Status DPS_SetKeyAndIdentity(DPS_KeyStoreRequest* request, const unsigned char* key, size_t keyLen, const unsigned char* id, size_t idLen)
+DPS_Status DPS_SetKeyAndIdentity(DPS_KeyStoreRequest* request, const DPS_Key* key, const unsigned char* id, size_t idLen)
 {
-    return request->setKeyAndIdentity ? request->setKeyAndIdentity(request, key, keyLen, id, idLen) : DPS_ERR_MISSING;
+    return request->setKeyAndIdentity ? request->setKeyAndIdentity(request, key, id, idLen) : DPS_ERR_MISSING;
 }
 
-DPS_Status DPS_SetKey(DPS_KeyStoreRequest* request, const unsigned char* key, size_t len)
+DPS_Status DPS_SetKey(DPS_KeyStoreRequest* request, const DPS_Key* key)
 {
-    return request->setKey ? request->setKey(request, key, len) : DPS_ERR_MISSING;
+    return request->setKey ? request->setKey(request, key) : DPS_ERR_MISSING;
 }
 
 DPS_Status DPS_SetCA(DPS_KeyStoreRequest* request, const unsigned char* ca, size_t len)
@@ -90,9 +90,9 @@ DPS_Status DPS_SetCA(DPS_KeyStoreRequest* request, const unsigned char* ca, size
     return request->setCA ? request->setCA(request, ca, len): DPS_ERR_MISSING;
 }
 
-DPS_Status DPS_SetCert(DPS_KeyStoreRequest* request, const unsigned char* cert, size_t certLen, const unsigned char* key, size_t keyLen, const unsigned char* password, size_t passwordLen)
+DPS_Status DPS_SetCert(DPS_KeyStoreRequest* request, const unsigned char* cert, size_t certLen, const DPS_Key* key, const unsigned char* password, size_t passwordLen)
 {
-    return request->setCert ? request->setCert(request, cert, certLen, key, keyLen, password, passwordLen) : DPS_ERR_MISSING;
+    return request->setCert ? request->setCert(request, cert, certLen, key, password, passwordLen) : DPS_ERR_MISSING;
 }
 
 typedef struct _DPS_MemoryKeyStoreEntry {
@@ -127,30 +127,40 @@ struct _DPS_MemoryKeyStore {
 static DPS_Status MemoryKeyStoreKeyAndIdentityHandler(DPS_KeyStoreRequest* request)
 {
     DPS_MemoryKeyStore* mks = (DPS_MemoryKeyStore*)DPS_KeyStoreHandle(request);
+    DPS_Key k;
     if (!mks->networkId || !mks->networkKey) {
         return DPS_ERR_MISSING;
     }
-    return DPS_SetKeyAndIdentity(request, mks->networkKey, mks->networkKeyLen,
-                                 mks->networkId, mks->networkIdLen);
+    k.type = DPS_KEY_SYMMETRIC;
+    k.symmetric.key = mks->networkKey;
+    k.symmetric.len = mks->networkKeyLen;
+    return DPS_SetKeyAndIdentity(request, &k, mks->networkId, mks->networkIdLen);
 }
 
 static DPS_Status MemoryKeyStoreKeyHandler(DPS_KeyStoreRequest* request, const unsigned char* id, size_t len)
 {
     DPS_MemoryKeyStore* mks = (DPS_MemoryKeyStore*)DPS_KeyStoreHandle(request);
+    DPS_Key k;
     size_t i;
 
     if (len == sizeof(DPS_UUID)) {
         for (i = 0; i < mks->entriesCount; ++i) {
             DPS_MemoryKeyStoreEntry* entry = mks->entries + i;
             if (DPS_UUIDCompare((const DPS_UUID*)id, &entry->kid) == 0) {
-                return DPS_SetKey(request, entry->key, entry->keyLen);
+                k.type = DPS_KEY_SYMMETRIC;
+                k.symmetric.key = entry->key;
+                k.symmetric.len = entry->keyLen;
+                return DPS_SetKey(request, &k);
             }
         }
     }
 
     if (len == mks->networkIdLen) {
         if (memcmp(id, mks->networkId, mks->networkIdLen) == 0) {
-            return DPS_SetKey(request, mks->networkKey, mks->networkKeyLen);
+            k.type = DPS_KEY_SYMMETRIC;
+            k.symmetric.key = mks->networkKey;
+            k.symmetric.len = mks->networkKeyLen;
+            return DPS_SetKey(request, &k);
         }
     }
 
@@ -166,8 +176,11 @@ static DPS_Status MemoryKeyStoreCAHandler(DPS_KeyStoreRequest* request)
 static DPS_Status MemoryKeyStoreCertHandler(DPS_KeyStoreRequest* request)
 {
     DPS_MemoryKeyStore* mks = (DPS_MemoryKeyStore*)DPS_KeyStoreHandle(request);
-    return DPS_SetCert(request, mks->cert, mks->certLen, mks->privateKey, mks->privateKeyLen,
-                       mks->password, mks->passwordLen);
+    DPS_Key k;
+    k.type = DPS_KEY_SYMMETRIC;
+    k.symmetric.key = mks->privateKey;
+    k.symmetric.len = mks->privateKeyLen;
+    return DPS_SetCert(request, mks->cert, mks->certLen, &k, mks->password, mks->passwordLen);
 }
 
 DPS_MemoryKeyStore* DPS_CreateMemoryKeyStore()

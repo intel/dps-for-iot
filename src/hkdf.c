@@ -25,8 +25,8 @@
 #include <dps/dbg.h>
 #include "mbedtls/md.h"
 #include "mbedtls/error.h"
-#include "mbedtls.h"
 #include "hkdf.h"
+#include "mbedtls.h"
 
 /*
  * Debug control for this module

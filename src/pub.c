@@ -201,8 +201,8 @@ static DPS_Status CallPubHandlers(DPS_Node* node, DPS_Publication* pub)
 {
     static const int32_t EncryptedKeys[] = { DPS_CBOR_KEY_TOPICS, DPS_CBOR_KEY_DATA };
     DPS_Status ret;
-    uint8_t nonce[DPS_COSE_NONCE_SIZE];
-    DPS_UUID keyId;
+    uint8_t nonce[COSE_NONCE_LEN];
+    COSE_Entity recipient;
     DPS_Subscription* sub;
     DPS_RxBuffer encryptedBuf;
     DPS_TxBuffer plainTextBuf;
@@ -248,7 +248,7 @@ static DPS_Status CallPubHandlers(DPS_Node* node, DPS_Publication* pub)
     DPS_TxBufferToRx(&pub->protectedBuf, &aadBuf);
     DPS_TxBufferToRx(&pub->encryptedBuf, &cipherTextBuf);
 
-    ret = COSE_Decrypt(nonce, &keyId, &aadBuf, &cipherTextBuf, DPS_GetCOSEKey, node, &plainTextBuf);
+    ret = COSE_Decrypt(nonce, &recipient, &aadBuf, &cipherTextBuf, DPS_GetCOSEKey, node, NULL, &plainTextBuf);
     if (ret == DPS_OK) {
         DPS_DBGPRINT("Publication was decrypted\n");
         CBOR_Dump("plaintext", plainTextBuf.base, DPS_TxBufferUsed(&plainTextBuf));
@@ -257,12 +257,16 @@ static DPS_Status CallPubHandlers(DPS_Node* node, DPS_Publication* pub)
          * We will use the same key id when we encrypt the acknowledgement
          */
         if (pub->ackRequested) {
+            if (recipient.kidLen != sizeof(DPS_UUID)) {
+                ret = DPS_ERR_INVALID;
+                goto Exit;
+            }
             pub->keyId = malloc(sizeof(DPS_UUID));
             if (!pub->keyId) {
                 ret = DPS_ERR_RESOURCES;
                 goto Exit;
             }
-            memcpy_s(pub->keyId, sizeof(DPS_UUID), &keyId, sizeof(DPS_UUID));
+            memcpy_s(pub->keyId, sizeof(DPS_UUID), recipient.kid, sizeof(DPS_UUID));
         }
     } else if (ret == DPS_ERR_NOT_ENCRYPTED) {
         if (node->isSecured) {
@@ -1072,13 +1076,17 @@ DPS_Status DPS_SerializePub(DPS_Node* node, DPS_Publication* pub, const uint8_t*
     if (node->isSecured) {
         DPS_RxBuffer plainTextBuf;
         DPS_RxBuffer aadBuf;
-        DPS_UUID* keyId = pub->keyId ? pub->keyId : &node->keyId;
-        uint8_t nonce[DPS_COSE_NONCE_SIZE];
+        uint8_t nonce[COSE_NONCE_LEN];
+        COSE_Entity recipient;
 
         DPS_TxBufferToRx(&encryptedBuf, &plainTextBuf);
         DPS_TxBufferToRx(&protectedBuf, &aadBuf);
         DPS_MakeNonce(&pub->pubId, pub->sequenceNum, DPS_MSG_TYPE_PUB, nonce);
-        ret = COSE_Encrypt(AES_CCM_16_128_128, keyId, nonce, &aadBuf, &plainTextBuf, DPS_GetCOSEKey, node, &encryptedBuf);
+        recipient.alg = COSE_ALG_DIRECT;
+        recipient.kid = (const uint8_t*)(pub->keyId ? pub->keyId : &node->keyId);
+        recipient.kidLen = sizeof(DPS_UUID);
+        ret = COSE_Encrypt(COSE_ALG_AES_CCM_16_128_128, nonce, NULL, &recipient, 1,
+                           &aadBuf, &plainTextBuf, DPS_GetCOSEKey, node, &encryptedBuf);
         DPS_RxBufferFree(&plainTextBuf);
         if (ret != DPS_OK) {
             DPS_TxBufferFree(&protectedBuf);

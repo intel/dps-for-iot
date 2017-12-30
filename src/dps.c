@@ -1503,7 +1503,7 @@ void DPS_DestroyAddress(DPS_NodeAddress* addr)
     }
 }
 
-void DPS_MakeNonce(const DPS_UUID* uuid, uint32_t seqNum, uint8_t msgType, uint8_t nonce[DPS_COSE_NONCE_SIZE])
+void DPS_MakeNonce(const DPS_UUID* uuid, uint32_t seqNum, uint8_t msgType, uint8_t nonce[COSE_NONCE_LEN])
 {
     uint8_t* p = nonce;
 
@@ -1511,7 +1511,7 @@ void DPS_MakeNonce(const DPS_UUID* uuid, uint32_t seqNum, uint8_t msgType, uint8
     *p++ = (uint8_t)(seqNum >> 8);
     *p++ = (uint8_t)(seqNum >> 16);
     *p++ = (uint8_t)(seqNum >> 24);
-    memcpy_s(p, DPS_COSE_NONCE_SIZE - sizeof(uint32_t), uuid, DPS_COSE_NONCE_SIZE - sizeof(uint32_t));
+    memcpy_s(p, COSE_NONCE_LEN - sizeof(uint32_t), uuid, COSE_NONCE_LEN - sizeof(uint32_t));
     /*
      * Adjust one bit so nonce for PUB's and ACK's for same pub id and sequence number are different
      */
@@ -1522,25 +1522,67 @@ void DPS_MakeNonce(const DPS_UUID* uuid, uint32_t seqNum, uint8_t msgType, uint8
     }
 }
 
-static DPS_Status SetKey(DPS_KeyStoreRequest* request, const unsigned char* key, size_t len)
+static DPS_Status SetKey(DPS_KeyStoreRequest* request, const DPS_Key* key)
 {
-    if (len > AES_128_KEY_LEN) {
-        DPS_ERRPRINT("Key has size %d, but only %d buffer\n", len, AES_128_KEY_LEN);
+    COSE_Key* ckey = request->data;
+    size_t len;
+
+    switch (key->type) {
+    case DPS_KEY_SYMMETRIC:
+        if (ckey->type != COSE_KEY_SYMMETRIC) {
+            DPS_ERRPRINT("Provided key has invalid type %d\n", key->type);
+            return DPS_ERR_MISSING;
+        }
+        if (key->symmetric.len != AES_128_KEY_LEN) {
+            DPS_ERRPRINT("Provided key has invalid size %d\n", key->symmetric.len);
+            return DPS_ERR_MISSING;
+        }
+        memcpy(ckey->symmetric.key, key->symmetric.key, key->symmetric.len);
+        break;
+    case DPS_KEY_EC:
+        if (ckey->type != COSE_KEY_EC) {
+            DPS_ERRPRINT("Provided key has invalid type %d\n", key->type);
+            return DPS_ERR_MISSING;
+        }
+        switch (key->ec.curve) {
+        case DPS_EC_CURVE_P256: len = 32; break;
+        case DPS_EC_CURVE_P384: len = 48; break;
+        case DPS_EC_CURVE_P521: len = 66; break;
+        default:
+            DPS_ERRPRINT("Provided key has unsupported curve %d\n", key->ec.curve);
+            return DPS_ERR_MISSING;
+        }
+        memset(&ckey->ec, 0, sizeof(ckey->ec));
+        ckey->ec.curve = key->ec.curve;
+        if (key->ec.x) {
+            memcpy(ckey->ec.x, key->ec.x, len);
+        }
+        if (key->ec.y) {
+            memcpy(ckey->ec.y, key->ec.y, len);
+        }
+        if (key->ec.d) {
+            memcpy(ckey->ec.d, key->ec.d, len);
+        }
+        break;
+    default:
+        DPS_ERRPRINT("Unsupported key type %d\n", key->type);
         return DPS_ERR_MISSING;
     }
-    memcpy(request->data, key, len);
     return DPS_OK;
 }
 
-DPS_Status DPS_GetCOSEKey(void* ctx, const DPS_UUID* kid, int8_t alg, uint8_t key[AES_128_KEY_LEN])
+DPS_Status DPS_GetCOSEKey(void* ctx, int8_t alg, const uint8_t* kid, size_t kidLen, COSE_Key* key)
 {
     DPS_Node* node = (DPS_Node*)ctx;
     DPS_KeyStore* keyStore = node->keyStore;
     DPS_KeyStoreRequest request;
 
+    if (!keyStore || !keyStore->keyHandler) {
+        return DPS_ERR_MISSING;
+    }
     memset(&request, 0, sizeof(request));
     request.keyStore = keyStore;
     request.data = key;
     request.setKey = SetKey;
-    return keyStore->keyHandler(&request, (const unsigned char*)kid, sizeof(DPS_UUID));
+    return keyStore->keyHandler(&request, kid, kidLen);
 }

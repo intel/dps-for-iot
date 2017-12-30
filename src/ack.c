@@ -168,13 +168,17 @@ static DPS_Status SerializeAck(const DPS_Publication* pub, PublicationAck* ack, 
         DPS_RxBuffer aadBuf;
         DPS_RxBuffer plainTextBuf;
         DPS_TxBuffer cipherTextBuf;
-        uint8_t nonce[DPS_COSE_NONCE_SIZE];
+        uint8_t nonce[COSE_NONCE_LEN];
+        COSE_Entity recipient;
 
         DPS_RxBufferInit(&aadBuf, aadPos, ack->buf.txPos - aadPos);
         DPS_TxBufferToRx(&ack->encryptedBuf, &plainTextBuf);
-
         DPS_MakeNonce(&ack->pubId, ack->sequenceNum, DPS_MSG_TYPE_ACK, nonce);
-        ret = COSE_Encrypt(AES_CCM_16_128_128, pub->keyId, nonce, &aadBuf, &plainTextBuf, DPS_GetCOSEKey, node, &cipherTextBuf);
+        recipient.alg = COSE_ALG_DIRECT;
+        recipient.kid = (const uint8_t*)pub->keyId;
+        recipient.kidLen = sizeof(DPS_UUID);
+        ret = COSE_Encrypt(COSE_ALG_AES_CCM_16_128_128, nonce, NULL, &recipient, 1,
+                           &aadBuf, &plainTextBuf, DPS_GetCOSEKey, node, &cipherTextBuf);
         DPS_TxBufferFree(&ack->encryptedBuf);
         ack->encryptedBuf = cipherTextBuf;
     }
@@ -263,8 +267,8 @@ DPS_Status DPS_DecodeAcknowledgment(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxB
         DPS_PublicationIncRef(pub);
         DPS_UnlockNode(node);
         if (pub->handler) {
-            uint8_t nonce[DPS_COSE_NONCE_SIZE];
-            DPS_UUID keyId;
+            uint8_t nonce[COSE_NONCE_LEN];
+            COSE_Entity recipient;
             DPS_RxBuffer encryptedBuf;
             DPS_RxBuffer aadBuf;
             DPS_RxBuffer cipherTextBuf;
@@ -275,7 +279,8 @@ DPS_Status DPS_DecodeAcknowledgment(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxB
             DPS_MakeNonce(pubId, sequenceNum, DPS_MSG_TYPE_ACK, nonce);
             DPS_RxBufferInit(&aadBuf, aadPos, buf->rxPos - aadPos);
             DPS_RxBufferInit(&cipherTextBuf, buf->rxPos, DPS_RxBufferAvail(buf));
-            ret = COSE_Decrypt(nonce, &keyId, &aadBuf, &cipherTextBuf, DPS_GetCOSEKey, node, &plainTextBuf);
+            ret = COSE_Decrypt(nonce, &recipient, &aadBuf, &cipherTextBuf, DPS_GetCOSEKey, node,
+                               NULL, &plainTextBuf);
             if (ret == DPS_OK) {
                 DPS_DBGPRINT("Ack was decrypted\n");
                 CBOR_Dump("plaintext", plainTextBuf.base, DPS_TxBufferUsed(&plainTextBuf));

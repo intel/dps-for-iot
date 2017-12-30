@@ -176,10 +176,10 @@ void DPS_DumpSubscriptions(DPS_Node* node);
 struct _DPS_KeyStoreRequest {
     DPS_KeyStore* keyStore;
     void* data;
-    DPS_Status (*setKeyAndIdentity)(DPS_KeyStoreRequest* request, const unsigned char* key, size_t keyLen, const unsigned char* id, size_t idLen);
-    DPS_Status (*setKey)(DPS_KeyStoreRequest* request, const unsigned char* key, size_t len);
+    DPS_Status (*setKeyAndIdentity)(DPS_KeyStoreRequest* request, const DPS_Key* key, const unsigned char* id, size_t idLen);
+    DPS_Status (*setKey)(DPS_KeyStoreRequest* request, const DPS_Key* key);
     DPS_Status (*setCA)(DPS_KeyStoreRequest* request, const unsigned char* ca, size_t len);
-    DPS_Status (*setCert)(DPS_KeyStoreRequest* request, const unsigned char* cert, size_t certLen, const unsigned char* key, size_t keyLen,
+    DPS_Status (*setCert)(DPS_KeyStoreRequest* request, const unsigned char* cert, size_t certLen, const DPS_Key* key,
                           const unsigned char* pwd, size_t pwdLen);
 };
 

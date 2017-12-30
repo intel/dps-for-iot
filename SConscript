@@ -101,6 +101,7 @@ if env['python']:
         pyenv['SHLIBSUFFIX'] = '.pyd'
 
     pyenv.Append(SWIGFLAGS = ['-python', '-Werror', '-v', '-O'], SWIGPATH = '#/inc')
+    pyenv.Append(CPPFLAGS = ['-Wno-strict-aliasing'])
     # Build python module library
     pylib = pyenv.SharedLibrary('./py/dps', shobjs + ['swig/dps_python.i'])
     pyenv.Install('#/build/dist/py', pylib)
@@ -108,11 +109,18 @@ if env['python']:
 
 if env['nodejs']:
     # Use SWIG to build the node.js wrapper
+    #
+    # Some shenanigans are needed here to get SWIG to correctly handle
+    # the DPS_Key union: SWIGFLAGS must not include "-c++" and we then
+    # need to tell the env to compile the genereated .c file as a cpp
+    # file.
+    #
     if platform == 'posix':
         nodeenv = libenv.Clone();
-        nodeenv.Append(SWIGFLAGS = ['-javascript', '-node', '-c++', '-DV8_VERSION=0x04059937', '-Wall', '-Werror', '-v', '-O'], SWIGPATH = '#/inc')
+        nodeenv.Append(SWIGFLAGS = ['-javascript', '-node', '-DV8_VERSION=0x04059937', '-Wall', '-Werror', '-v', '-O'], SWIGPATH = '#/inc')
         # There may be a bug with the SWIG builder - add -O to CPPFLAGS to get it passed on to the compiler
         nodeenv.Append(CPPFLAGS = ['-DBUILDING_NODE_EXTENSION', '-std=c++11', '-O'])
+        nodeenv['CC'] = '$CXX'
         if env['target'] == 'yocto':
             nodeenv.Append(CPPPATH = [os.getenv('SYSROOT') + '/usr/include/node'])
         else:

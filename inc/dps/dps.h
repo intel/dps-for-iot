@@ -99,6 +99,49 @@ void DPS_DestroyAddress(DPS_NodeAddress* addr);
  */
 
 /**
+ * Symmetric key data
+ *
+ * @note need to define this outside of DPS_Key to satisfy SWIG.
+ */
+struct _DPS_KeySymmetric {
+    const unsigned char* key;   /**< Key data */
+    size_t len;                 /**< Size of key data */
+};
+
+/**
+ * Elliptic curve key data.
+ *
+ * Only @p x and @p y are needed for a public key.  Similarly, only @p
+ * d is needed for a private key.
+ *
+ * @note need to define this outside of DPS_Key to satisfy SWIG.
+ */
+struct _DPS_KeyEC {
+    enum {
+        DPS_EC_CURVE_P256 = 1, /**< NIST P-256 also known as secp256r1 */
+        DPS_EC_CURVE_P384 = 2, /**< NIST P-384 also known as secp384r1 */
+        DPS_EC_CURVE_P521 = 3  /**< NIST P-521 also known as secp521r1 */
+    } curve; /**< EC curve */
+    const uint8_t* x; /**< X coordinate */
+    const uint8_t* y; /**< Y coordinate */
+    const uint8_t* d; /**< D coordinate */
+};
+
+/**
+ * Union of supported key types.
+ */
+typedef struct _DPS_Key {
+    enum {
+        DPS_KEY_SYMMETRIC,
+        DPS_KEY_EC
+    } type; /**< Type of key */
+    union {
+        struct _DPS_KeySymmetric symmetric; /**< DPS_KEY_SYMMETRIC */
+        struct _DPS_KeyEC ec;               /**< DPS_KEY_EC */
+    };
+} DPS_Key;
+
+/**
  * Opaque type for a key store.
  */
 typedef struct _DPS_KeyStore DPS_KeyStore;
@@ -133,15 +176,16 @@ typedef DPS_Status (*DPS_KeyAndIdentityHandler)(DPS_KeyStoreRequest* request);
  *
  * @param request The request, only valid with the body of this
  *                callback function.
- * @param id The identifier of the key to provide
- * @param idLen The length of the identifier, in bytes
+ * @param id The identifier of the key to provide, may be NULL to
+ *           request a random / ephemeral key.
+ * @param idLen The length of the identifier, in bytes.
  *
  * @return
  * - DPS_OK when DPS_SetKey() succeeds
  * - DPS_ERR_MISSING when no key is located
  * - error otherwise
  */
-typedef DPS_Status (*DPS_KeyHandler)(DPS_KeyStoreRequest* request, const unsigned char* id, size_t len);
+typedef DPS_Status (*DPS_KeyHandler)(DPS_KeyStoreRequest* request, const unsigned char* id, size_t idLen);
 
 /**
  * Function prototype for a key store handler called when the trusted
@@ -179,32 +223,30 @@ typedef DPS_Status (*DPS_CertHandler)(DPS_KeyStoreRequest* request);
 /**
  * Provide a key and key identifier to a key store request.
  *
- * @param request The \p request parameter of the handler
+ * @param request The @p request parameter of the handler
  * @param key The key
- * @param keyLen The length of the key, in bytes
  * @param id The identifier of the key to provide
  * @param idLen The length of the identifier, in bytes
  *
  * @return DPS_OK or an error
  */
-DPS_Status DPS_SetKeyAndIdentity(DPS_KeyStoreRequest* request, const unsigned char* key, size_t keyLen,
+DPS_Status DPS_SetKeyAndIdentity(DPS_KeyStoreRequest* request, const DPS_Key* key,
                                  const unsigned char* id, size_t idLen);
 
 /**
  * Provide a key to a key store request.
  *
- * @param request The \p request parameter of the handler
+ * @param request The @p request parameter of the handler
  * @param key The key
- * @param len The length of the key, in bytes
  *
  * @return DPS_OK or an error
  */
-DPS_Status DPS_SetKey(DPS_KeyStoreRequest* request, const unsigned char* key, size_t len);
+DPS_Status DPS_SetKey(DPS_KeyStoreRequest* request, const DPS_Key* key);
 
 /**
  * Provide a trusted CA chain to a key store request.
  *
- * @param request The \p request parameter of the handler
+ * @param request The @p request parameter of the handler
  * @param ca The CA chain in PEM format
  * @param len The length of the CA chain including the terminating
  *            NULL byte, in bytes
@@ -216,23 +258,21 @@ DPS_Status DPS_SetCA(DPS_KeyStoreRequest* request, const unsigned char* ca, size
 /**
  * Provide a certificate to a key store request.
  *
- * @param request The \p request parameter of the handler
+ * @param request The @p request parameter of the handler
  * @param cert The certificate in PEM format
  * @param certLen The length of the certificate including the
  *                terminating NULL byte, in bytes
  * @param key The private key
- * @param keyLen The length of the private key, in bytes
  * @param password The optional password protecting the key, may be NULL
  * @param passwordLen The length of the password, in bytes
  *
  * @return DPS_OK or an error
  */
 DPS_Status DPS_SetCert(DPS_KeyStoreRequest* request, const unsigned char* cert, size_t certLen,
-                       const unsigned char* key, size_t keyLen,
-                       const unsigned char* password, size_t passwordLen);
+                       const DPS_Key* key, const unsigned char* password, size_t passwordLen);
 
 /**
- * Returns the \p DPS_KeyStore* of a key store request.
+ * Returns the @p DPS_KeyStore* of a key store request.
  *
  * @param request A key store request
  *
@@ -367,7 +407,7 @@ DPS_Status DPS_SetCertificate(DPS_MemoryKeyStore* mks, const char* cert, size_t 
                               const char* password, size_t passwordLen);
 
 /**
- * Returns the \p DPS_KeyStore* of an in-memory key store.
+ * Returns the @p DPS_KeyStore* of an in-memory key store.
  *
  * @param keyStore An in-memory key store
  *
@@ -421,17 +461,17 @@ DPS_Status DPS_SetNodeData(DPS_Node* node, void* data);
 void* DPS_GetNodeData(const DPS_Node* node);
 
 /**
- * Disable multicast send and receive on the node.  See \p mcastPub of DPS_StartNode().
+ * Disable multicast send and receive on the node.  See @p mcastPub of DPS_StartNode().
  */
 #define DPS_MCAST_PUB_DISABLED       0
 
 /**
- * Enable multicast send on the node.  See \p mcastPub of DPS_StartNode().
+ * Enable multicast send on the node.  See @p mcastPub of DPS_StartNode().
  */
 #define DPS_MCAST_PUB_ENABLE_SEND    1
 
 /**
- * Enable multicast receive on the node.  See \p mcastPub of DPS_StartNode().
+ * Enable multicast receive on the node.  See @p mcastPub of DPS_StartNode().
  */
 #define DPS_MCAST_PUB_ENABLE_RECV    2
 

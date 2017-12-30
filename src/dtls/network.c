@@ -312,10 +312,10 @@ static void ConsumePending(DPS_NetConnection* cn);
  * PSK
  */
 
-static DPS_Status TLSPSKSet(DPS_KeyStoreRequest* request, const unsigned char* key, size_t len)
+static DPS_Status TLSPSKSet(DPS_KeyStoreRequest* request, const DPS_Key* key)
 {
     DPS_NetConnection* cn = request->data;
-    int ret = mbedtls_ssl_set_hs_psk(&cn->ssl, key, len);
+    int ret = mbedtls_ssl_set_hs_psk(&cn->ssl, key->symmetric.key, key->symmetric.len);
     if (ret != 0) {
         DPS_ERRPRINT("Set PSK failed: %s\n", TLSErrTxt(ret));
         return DPS_ERR_MISSING;
@@ -680,8 +680,8 @@ static DPS_Status SetCA(DPS_KeyStoreRequest* request, const unsigned char* ca, s
     return DPS_OK;
 }
 
-static DPS_Status SetCert(DPS_KeyStoreRequest* request, const unsigned char* cert, size_t certLen, const unsigned char* key, size_t keyLen,
-                          const unsigned char* pwd, size_t pwdLen)
+static DPS_Status SetCert(DPS_KeyStoreRequest* request, const unsigned char* cert, size_t certLen,
+                          const DPS_Key* key, const unsigned char* pwd, size_t pwdLen)
 {
     DPS_NetConnection* cn = request->data;
     int ret = mbedtls_x509_crt_parse(&cn->cert, cert, certLen);
@@ -689,7 +689,7 @@ static DPS_Status SetCert(DPS_KeyStoreRequest* request, const unsigned char* cer
         DPS_WARNPRINT("Parsing certificate failed: %s\n", TLSErrTxt(ret));
         return DPS_ERR_MISSING;
     }
-    ret =  mbedtls_pk_parse_key(&cn->pkey, key, keyLen, pwd, pwdLen);
+    ret =  mbedtls_pk_parse_key(&cn->pkey, key->symmetric.key, key->symmetric.len, pwd, pwdLen);
     if (ret != 0) {
         DPS_WARNPRINT("Parse private key failed: %s\n", TLSErrTxt(ret));
         return DPS_ERR_MISSING;
@@ -697,10 +697,11 @@ static DPS_Status SetCert(DPS_KeyStoreRequest* request, const unsigned char* cer
     return DPS_OK;
 }
 
-static DPS_Status SetKeyAndIdentity(DPS_KeyStoreRequest* request, const unsigned char* key, size_t keyLen, const unsigned char* id, size_t idLen)
+static DPS_Status SetKeyAndIdentity(DPS_KeyStoreRequest* request, const DPS_Key* key,
+                                    const unsigned char* id, size_t idLen)
 {
     DPS_NetConnection* cn = request->data;
-    int ret = mbedtls_ssl_conf_psk(&cn->conf, key, keyLen, id, idLen);
+    int ret = mbedtls_ssl_conf_psk(&cn->conf, key->symmetric.key, key->symmetric.len, id, idLen);
     if (ret != 0) {
         DPS_WARNPRINT("Set PSK failed: %s\n", TLSErrTxt(ret));
         return DPS_ERR_MISSING;
