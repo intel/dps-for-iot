@@ -49,7 +49,35 @@ extern "C" {
  *
  * @return the coordinate size, in bytes
  */
-size_t CoordinateSize_EC(int curve);
+size_t CoordinateSize_EC(int8_t curve);
+
+/*
+ * Parse the public key from a PEM encoded certificate.
+ *
+ * @param cert the certificate in PEM format
+ * @param certLen the length of the certificate including the
+ *                terminating NULL byte, in bytes
+ * @param curve the elliptic curve ID
+ * @param x the X coordinate
+ * @param y the Y coordinate
+ */
+DPS_Status ParseCertificate_ECDSA(const char* cert, size_t certLen,
+                                  int8_t* curve, uint8_t x[EC_MAX_COORD_LEN], uint8_t y[EC_MAX_COORD_LEN]);
+
+/*
+ * Parse the private key from a PEM encoded private key.
+ *
+ * @param privatekey the optional private key in PEM format
+ * @param privateKeyLen the length of the private key including the
+ *                      terminating NULL byte, in bytes
+ * @param password the optional password protecting the key, may be NULL
+ * @param passwordLen the length of the password, in bytes
+ * @param curve the elliptic curve ID
+ * @param d the D coordinate
+ */
+DPS_Status ParsePrivateKey_ECDSA(const char* privateKey, size_t privateKeyLen,
+                                 const char* password, size_t passwordLen,
+                                 int8_t* curve, uint8_t d[EC_MAX_COORD_LEN]);
 
 /**
  * Verify an Elliptic Curve Digital Signature Algorithm signature.
@@ -81,7 +109,7 @@ size_t CoordinateSize_EC(int curve);
  *         - DPS_OK if the signature is verified
  *         - DPS_ERR_INVALID if the signature is not verified
  */
-DPS_Status Verify_ECDSA(int curve, const uint8_t* x, const uint8_t* y,
+DPS_Status Verify_ECDSA(int8_t curve, const uint8_t* x, const uint8_t* y,
                         const uint8_t* data, size_t dataLen,
                         const uint8_t* sig, size_t sigLen);
 
@@ -100,7 +128,7 @@ DPS_Status Verify_ECDSA(int curve, const uint8_t* x, const uint8_t* y,
  *         - DPS_OK if the signature is computed
  *         - DPS_ERR_INVALID if the signature cannot be computed
  */
-DPS_Status Sign_ECDSA(int curve, const uint8_t* d,
+DPS_Status Sign_ECDSA(int8_t curve, const uint8_t* d,
                       const uint8_t* data, size_t dataLen,
                       DPS_TxBuffer* sig);
 
@@ -121,7 +149,7 @@ DPS_Status Sign_ECDSA(int curve, const uint8_t* d,
  *         - DPS_OK if the secret is computed
  *         - DPS_ERR_INVALID if the secret cannot be computed
  */
-DPS_Status ECDH(int curve, const uint8_t* x, const uint8_t* y, const uint8_t* d,
+DPS_Status ECDH(int8_t curve, const uint8_t* x, const uint8_t* y, const uint8_t* d,
                 uint8_t secret[ECDH_MAX_SHARED_SECRET_LEN], size_t* secretLen);
 
 #ifdef __cplusplus

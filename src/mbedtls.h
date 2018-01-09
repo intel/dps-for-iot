@@ -23,11 +23,20 @@
 #ifndef _MBEDTLS_H
 #define _MBEDTLS_H
 
+#include "mbedtls/ecdh.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 const char *TLSErrTxt(int ret);
+
+/*
+ * @param curve the elliptic curve ID
+ * @param id the mbedtls elliptic curve ID
+ * @param len the size of a coordinate, in bytes
+ */
+int TLSGetCurveParams(int8_t curve, mbedtls_ecp_group_id* id, size_t* len);
 
 #ifdef __cplusplus
 }

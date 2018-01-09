@@ -24,6 +24,8 @@
 #include "mbedtls/ecdsa.h"
 #include "mbedtls/ecdh.h"
 #include "mbedtls/error.h"
+#include "mbedtls/pk.h"
+#include "mbedtls/x509_crt.h"
 #include "ec.h"
 #include "mbedtls.h"
 
@@ -32,7 +34,7 @@
  */
 DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
-size_t CoordinateSize_EC(int curve)
+size_t CoordinateSize_EC(int8_t curve)
 {
     switch (curve) {
     case EC_CURVE_P521:
@@ -46,31 +48,25 @@ size_t CoordinateSize_EC(int curve)
     }
 }
 
-/*
- * @param curve the elliptic curve ID
- * @param id the mbedtls elliptic curve ID
- * @param len the size of a coordinate, in bytes
- * @param md the hash function to use for ECDSA
- */
-static int GetCurveParams(int curve, mbedtls_ecp_group_id* id, size_t* len)
+static int GetGroupParams(const mbedtls_ecp_group* group, int8_t* curve, size_t* len)
 {
     int ret = 0;
 
-    switch (curve) {
-    case EC_CURVE_P521:
-        *id = MBEDTLS_ECP_DP_SECP521R1;
+    switch (group->id) {
+    case MBEDTLS_ECP_DP_SECP521R1:
+        *curve = EC_CURVE_P521;
         break;
-    case EC_CURVE_P384:
-        *id = MBEDTLS_ECP_DP_SECP384R1;
+    case MBEDTLS_ECP_DP_SECP384R1:
+        *curve = EC_CURVE_P384;
         break;
-    case EC_CURVE_P256:
-        *id = MBEDTLS_ECP_DP_SECP256R1;
+    case MBEDTLS_ECP_DP_SECP256R1:
+        *curve = EC_CURVE_P256;
         break;
     default:
         ret = MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE;
         break;
     }
-    *len = CoordinateSize_EC(curve);
+    *len = (group->nbits + 7) / 8;
     return ret;
 }
 
@@ -146,7 +142,7 @@ static int SetKeypair(mbedtls_ecp_keypair* keypair, mbedtls_ecp_group_id id, siz
     return ret;
 }
 
-DPS_Status Verify_ECDSA(int curve, const uint8_t* x, const uint8_t* y,
+DPS_Status Verify_ECDSA(int8_t curve, const uint8_t* x, const uint8_t* y,
                         const uint8_t* data, size_t dataLen,
                         const uint8_t* sig, size_t sigLen)
 {
@@ -163,7 +159,7 @@ DPS_Status Verify_ECDSA(int curve, const uint8_t* x, const uint8_t* y,
     mbedtls_mpi_init(&r);
     mbedtls_mpi_init(&s);
 
-    ret = GetCurveParams(curve, &id, &len);
+    ret = TLSGetCurveParams(curve, &id, &len);
     if (ret != 0) {
         DPS_ERRPRINT("Get curve size failed: %s\n", TLSErrTxt(ret));
         goto Exit;
@@ -219,7 +215,7 @@ Exit:
     }
 }
 
-DPS_Status Sign_ECDSA(int curve, const uint8_t* d,
+DPS_Status Sign_ECDSA(int8_t curve, const uint8_t* d,
                       const uint8_t* data, size_t dataLen,
                       DPS_TxBuffer* sig)
 {
@@ -236,7 +232,7 @@ DPS_Status Sign_ECDSA(int curve, const uint8_t* d,
     mbedtls_mpi_init(&r);
     mbedtls_mpi_init(&s);
 
-    ret = GetCurveParams(curve, &id, &len);
+    ret = TLSGetCurveParams(curve, &id, &len);
     if (ret != 0) {
         DPS_ERRPRINT("Get curve size failed: %s\n", TLSErrTxt(ret));
         goto Exit;
@@ -294,7 +290,7 @@ Exit:
     }
 }
 
-DPS_Status ECDH(int curve, const uint8_t* x, const uint8_t* y, const uint8_t* d,
+DPS_Status ECDH(int8_t curve, const uint8_t* x, const uint8_t* y, const uint8_t* d,
                 uint8_t secret[ECDH_MAX_SHARED_SECRET_LEN], size_t* secretLen)
 {
     mbedtls_ecp_keypair sender;
@@ -310,7 +306,7 @@ DPS_Status ECDH(int curve, const uint8_t* x, const uint8_t* y, const uint8_t* d,
     mbedtls_ecdh_init(&ecdh);
     mbedtls_mpi_init(&sec);
 
-    ret = GetCurveParams(curve, &id, &len);
+    ret = TLSGetCurveParams(curve, &id, &len);
     if (ret != 0) {
         DPS_ERRPRINT("Get curve size failed: %s\n", TLSErrTxt(ret));
         goto Exit;
@@ -339,6 +335,88 @@ Exit:
     mbedtls_ecp_keypair_free(&recipient);
     mbedtls_ecdh_free(&ecdh);
     mbedtls_mpi_free(&sec);
+    if (ret == 0) {
+        return DPS_OK;
+    } else {
+        return DPS_ERR_INVALID;
+    }
+}
+
+DPS_Status ParseCertificate_ECDSA(const char* cert, size_t certLen,
+                                  int8_t* curve, uint8_t x[EC_MAX_COORD_LEN], uint8_t y[EC_MAX_COORD_LEN])
+{
+    mbedtls_x509_crt crt;
+    mbedtls_ecp_keypair* keypair;
+    size_t len;
+    int ret;
+
+    mbedtls_x509_crt_init(&crt);
+
+    ret = mbedtls_x509_crt_parse(&crt, (const unsigned char*)cert, certLen);
+    if (ret != 0) {
+        goto Exit;
+    }
+    if (!mbedtls_pk_can_do(&crt.pk, MBEDTLS_PK_ECDSA)) {
+        ret = MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE;
+        goto Exit;
+    }
+    keypair = mbedtls_pk_ec(crt.pk);
+
+    ret = GetGroupParams(&keypair->grp, curve, &len);
+    if (ret != 0) {
+        goto Exit;
+    }
+    ret = mbedtls_mpi_write_binary(&keypair->Q.X, x, len);
+    if (ret != 0) {
+        goto Exit;
+    }
+    ret = mbedtls_mpi_write_binary(&keypair->Q.Y, y, len);
+    if (ret != 0) {
+        goto Exit;
+    }
+
+Exit:
+    mbedtls_x509_crt_free(&crt);
+    if (ret == 0) {
+        return DPS_OK;
+    } else {
+        return DPS_ERR_INVALID;
+    }
+}
+
+DPS_Status ParsePrivateKey_ECDSA(const char* privateKey, size_t privateKeyLen,
+                                 const char* password, size_t passwordLen,
+                                 int8_t* curve, uint8_t d[EC_MAX_COORD_LEN])
+{
+    mbedtls_pk_context pk;
+    mbedtls_ecp_keypair* keypair;
+    size_t len;
+    int ret;
+
+    mbedtls_pk_init(&pk);
+
+    ret = mbedtls_pk_parse_key(&pk, (const unsigned char*)privateKey, privateKeyLen,
+                               (const unsigned char*)password, passwordLen);
+    if (ret != 0) {
+        goto Exit;
+    }
+    if (!mbedtls_pk_can_do(&pk, MBEDTLS_PK_ECDSA)) {
+        ret = MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE;
+        goto Exit;
+    }
+    keypair = mbedtls_pk_ec(pk);
+
+    ret = GetGroupParams(&keypair->grp, curve, &len);
+    if (ret != 0) {
+        goto Exit;
+    }
+    ret = mbedtls_mpi_write_binary(&keypair->d, d, len);
+    if (ret != 0) {
+        goto Exit;
+    }
+
+Exit:
+    mbedtls_pk_free(&pk);
     if (ret == 0) {
         return DPS_OK;
     } else {
