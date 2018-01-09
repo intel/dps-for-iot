@@ -323,7 +323,7 @@ static DPS_Status TLSPSKSet(DPS_KeyStoreRequest* request, const DPS_Key* key)
     return DPS_OK;
 }
 
-static int OnTLSPSKGet(void *data, mbedtls_ssl_context* ssl, const unsigned char* id, size_t idLen)
+static int OnTLSPSKGet(void *data, mbedtls_ssl_context* ssl, const uint8_t* id, size_t idLen)
 {
     DPS_NetConnection* cn = data;
     DPS_KeyStore* keyStore = cn->node->keyStore;
@@ -669,10 +669,10 @@ static int ResetConnection(DPS_NetConnection* cn, const struct sockaddr* addr)
     return ret;
 }
 
-static DPS_Status SetCA(DPS_KeyStoreRequest* request, const unsigned char* ca, size_t len)
+static DPS_Status SetCA(DPS_KeyStoreRequest* request, const char* ca, size_t len)
 {
     DPS_NetConnection* cn = request->data;
-    int ret = mbedtls_x509_crt_parse(&cn->cacert, ca, len);
+    int ret = mbedtls_x509_crt_parse(&cn->cacert, (const unsigned char*)ca, len);
     if (ret != 0) {
         DPS_WARNPRINT("Parsing trusted certificate(s) failed: %s\n", TLSErrTxt(ret));
         return DPS_ERR_MISSING;
@@ -680,16 +680,21 @@ static DPS_Status SetCA(DPS_KeyStoreRequest* request, const unsigned char* ca, s
     return DPS_OK;
 }
 
-static DPS_Status SetCert(DPS_KeyStoreRequest* request, const unsigned char* cert, size_t certLen,
-                          const DPS_Key* key, const unsigned char* pwd, size_t pwdLen)
+static DPS_Status SetCert(DPS_KeyStoreRequest* request, const DPS_Key* key)
 {
     DPS_NetConnection* cn = request->data;
-    int ret = mbedtls_x509_crt_parse(&cn->cert, cert, certLen);
+    int ret;
+
+    if (key->type != DPS_KEY_EC_CERT) {
+        return DPS_ERR_MISSING;
+    }
+    ret = mbedtls_x509_crt_parse(&cn->cert, (const unsigned char*)key->cert.cert, key->cert.certLen);
     if (ret != 0) {
         DPS_WARNPRINT("Parsing certificate failed: %s\n", TLSErrTxt(ret));
         return DPS_ERR_MISSING;
     }
-    ret =  mbedtls_pk_parse_key(&cn->pkey, key->symmetric.key, key->symmetric.len, pwd, pwdLen);
+    ret =  mbedtls_pk_parse_key(&cn->pkey, (const unsigned char*)key->cert.privateKey, key->cert.privateKeyLen,
+                                (const unsigned char*)key->cert.password, key->cert.passwordLen);
     if (ret != 0) {
         DPS_WARNPRINT("Parse private key failed: %s\n", TLSErrTxt(ret));
         return DPS_ERR_MISSING;
@@ -698,7 +703,7 @@ static DPS_Status SetCert(DPS_KeyStoreRequest* request, const unsigned char* cer
 }
 
 static DPS_Status SetKeyAndIdentity(DPS_KeyStoreRequest* request, const DPS_Key* key,
-                                    const unsigned char* id, size_t idLen)
+                                    const uint8_t* id, size_t idLen)
 {
     DPS_NetConnection* cn = request->data;
     int ret = mbedtls_ssl_conf_psk(&cn->conf, key->symmetric.key, key->symmetric.len, id, idLen);
@@ -793,15 +798,15 @@ static DPS_NetConnection* CreateConnection(DPS_Node* node, const struct sockaddr
     }
     mbedtls_x509_crt_init(&cn->cert);
     mbedtls_pk_init(&cn->pkey);
-    if (keyStore->certHandler) {
-        request.setCert = SetCert;
-        ret = keyStore->certHandler(&request);
+    if (keyStore->keyHandler) {
+        request.setKey = SetCert;
+        ret = keyStore->keyHandler(&request, node->signer.kid, node->signer.kidLen);
         if (ret == 0) {
             mbedtls_ssl_conf_own_cert(&cn->conf, &cn->cert, &cn->pkey);
         } else {
             DPS_WARNPRINT("Parsing certificate failed: %s\n", DPS_ErrTxt(ret));
         }
-        request.setCert = NULL;
+        request.setKey = NULL;
     }
 
     if (cn->type == MBEDTLS_SSL_IS_SERVER) {

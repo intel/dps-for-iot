@@ -43,11 +43,11 @@ var dps = require("dps");
     }
     dps.setNetworkKey(keyStore, networkKeyID, networkKey);
 
-    node = dps.createNode("/", dps.memoryKeyStoreHandle(keyStore), keyID[0]);
+    node = dps.createNode("/", dps.memoryKeyStoreHandle(keyStore), null);
     dps.startNode(node, dps.MCAST_PUB_ENABLE_SEND, 0);
     pub = dps.createPublication(node);
 
-    dps.initPublication(pub, ["a/b/c"], false, null, onAck);
+    dps.initPublication(pub, ["a/b/c"], false, keyID[0], onAck);
     dps.publish(pub, "hello", 0);
     setTimeout(publish, 100);
 }());

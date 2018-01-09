@@ -33,6 +33,7 @@
 #include "bitvec.h"
 #include <dps/private/cbor.h>
 #include "coap.h"
+#include "ec.h"
 #include "history.h"
 #include "node.h"
 #include "pub.h"
@@ -1130,6 +1131,14 @@ static void StopNode(DPS_Node* node)
     node->loop = NULL;
 }
 
+static void FreeNode(DPS_Node* node)
+{
+    if (node->signer.kid) {
+        free(node->signer.kid);
+    }
+    free(node);
+}
+
 static void NodeRun(void* arg)
 {
     int r;
@@ -1150,7 +1159,7 @@ static void NodeRun(void* arg)
         DPS_UnlockNode(node);
         node->onDestroyed(node, node->onDestroyedData);
         uv_mutex_destroy(&node->nodeMutex);
-        free(node);
+        FreeNode(node);
     } else {
         DPS_UnlockNode(node);
     }
@@ -1166,10 +1175,66 @@ static void NodeRun(void* arg)
     }
 }
 
+static DPS_Status SetCurve(DPS_KeyStoreRequest* request, const DPS_Key* key)
+{
+    int8_t* curve = request->data;
+    uint8_t d[EC_MAX_COORD_LEN];
 
-DPS_Node* DPS_CreateNode(const char* separators, DPS_KeyStore* keyStore, const DPS_UUID* keyId)
+    switch (key->type) {
+    case DPS_KEY_EC:
+        *curve = key->ec.curve;
+        return DPS_OK;
+    case DPS_KEY_EC_CERT:
+        if (key->cert.privateKey) {
+            return ParsePrivateKey_ECDSA(key->cert.privateKey, key->cert.privateKeyLen,
+                                         key->cert.password, key->cert.passwordLen,
+                                         curve, d);
+        }
+        /* FALLTHROUGH */
+    default:
+        return DPS_ERR_MISSING;
+    }
+}
+
+static DPS_Status GetSignatureAlgorithm(DPS_KeyStore* keyStore, const uint8_t* id, size_t idLen, int8_t* alg)
+{
+    DPS_KeyStoreRequest request;
+    int8_t curve = 0;
+    DPS_Status ret;
+
+    if (!keyStore || !keyStore->keyHandler) {
+        return DPS_ERR_MISSING;
+    }
+
+    memset(&request, 0, sizeof(request));
+    request.keyStore = keyStore;
+    request.data = &curve;
+    request.setKey = SetCurve;
+    ret = keyStore->keyHandler(&request, id, idLen);
+    if (ret != DPS_OK) {
+        return ret;
+    }
+    switch (curve) {
+    case EC_CURVE_P256:
+        *alg = COSE_ALG_ES256;
+        break;
+    case EC_CURVE_P384:
+        *alg = COSE_ALG_ES384;
+        break;
+    case EC_CURVE_P521:
+        *alg = COSE_ALG_ES512;
+        break;
+    default:
+        ret = DPS_ERR_MISSING;
+        break;
+    }
+    return ret;
+}
+
+DPS_Node* DPS_CreateNode(const char* separators, DPS_KeyStore* keyStore, const uint8_t* id, size_t idLen)
 {
     DPS_Node* node = calloc(1, sizeof(DPS_Node));
+    DPS_Status ret;
 
     if (!node) {
         return NULL;
@@ -1178,7 +1243,7 @@ DPS_Node* DPS_CreateNode(const char* separators, DPS_KeyStore* keyStore, const D
      * One time initilization required
      */
     if (DPS_InitUUID() != DPS_OK) {
-        free(node);
+        FreeNode(node);
         return NULL;
     }
     if (!separators) {
@@ -1187,14 +1252,25 @@ DPS_Node* DPS_CreateNode(const char* separators, DPS_KeyStore* keyStore, const D
     /*
      * Sanity check
      */
-    if (keyId && (!keyStore || !keyStore->keyHandler)) {
+    if (id && (!keyStore || !keyStore->keyHandler)) {
         DPS_ERRPRINT("A key request callback is required\n");
-        free(node);
+        FreeNode(node);
         return NULL;
     }
-    if (keyId || (keyStore && keyStore->keyHandler)) {
-        node->isSecured = DPS_TRUE;
-        memcpy_s(&node->keyId, sizeof(DPS_UUID), keyId, sizeof(DPS_UUID));
+    if (id) {
+        ret = GetSignatureAlgorithm(keyStore, id, idLen, &node->signer.alg);
+        if (ret != DPS_OK) {
+            DPS_WARNPRINT("Node ID not suitable for signing\n");
+            ret = DPS_OK;
+        }
+        node->signer.kid = malloc(idLen);
+        if (!node->signer.kid) {
+            DPS_ERRPRINT("Allocate ID failed\n");
+            FreeNode(node);
+            return NULL;
+        }
+        node->signer.kidLen = idLen;
+        memcpy_s(node->signer.kid, node->signer.kidLen, id, idLen);
     }
     strncpy_s(node->separators, sizeof(node->separators), separators, sizeof(node->separators) - 1);
     node->keyStore = keyStore;
@@ -1387,7 +1463,7 @@ DPS_Status DPS_DestroyNode(DPS_Node* node, DPS_OnNodeDestroyed cb, void* data)
         assert(node->state == DPS_NODE_STOPPED);
         uv_mutex_destroy(&node->nodeMutex);
     }
-    free(node);
+    FreeNode(node);
     return DPS_ERR_NODE_DESTROYED;
 }
 
@@ -1520,69 +1596,4 @@ void DPS_MakeNonce(const DPS_UUID* uuid, uint32_t seqNum, uint8_t msgType, uint8
     } else {
         p[0] |= 0x80;
     }
-}
-
-static DPS_Status SetKey(DPS_KeyStoreRequest* request, const DPS_Key* key)
-{
-    COSE_Key* ckey = request->data;
-    size_t len;
-
-    switch (key->type) {
-    case DPS_KEY_SYMMETRIC:
-        if (ckey->type != COSE_KEY_SYMMETRIC) {
-            DPS_ERRPRINT("Provided key has invalid type %d\n", key->type);
-            return DPS_ERR_MISSING;
-        }
-        if (key->symmetric.len != AES_128_KEY_LEN) {
-            DPS_ERRPRINT("Provided key has invalid size %d\n", key->symmetric.len);
-            return DPS_ERR_MISSING;
-        }
-        memcpy(ckey->symmetric.key, key->symmetric.key, key->symmetric.len);
-        break;
-    case DPS_KEY_EC:
-        if (ckey->type != COSE_KEY_EC) {
-            DPS_ERRPRINT("Provided key has invalid type %d\n", key->type);
-            return DPS_ERR_MISSING;
-        }
-        switch (key->ec.curve) {
-        case DPS_EC_CURVE_P256: len = 32; break;
-        case DPS_EC_CURVE_P384: len = 48; break;
-        case DPS_EC_CURVE_P521: len = 66; break;
-        default:
-            DPS_ERRPRINT("Provided key has unsupported curve %d\n", key->ec.curve);
-            return DPS_ERR_MISSING;
-        }
-        memset(&ckey->ec, 0, sizeof(ckey->ec));
-        ckey->ec.curve = key->ec.curve;
-        if (key->ec.x) {
-            memcpy(ckey->ec.x, key->ec.x, len);
-        }
-        if (key->ec.y) {
-            memcpy(ckey->ec.y, key->ec.y, len);
-        }
-        if (key->ec.d) {
-            memcpy(ckey->ec.d, key->ec.d, len);
-        }
-        break;
-    default:
-        DPS_ERRPRINT("Unsupported key type %d\n", key->type);
-        return DPS_ERR_MISSING;
-    }
-    return DPS_OK;
-}
-
-DPS_Status DPS_GetCOSEKey(void* ctx, int8_t alg, const uint8_t* kid, size_t kidLen, COSE_Key* key)
-{
-    DPS_Node* node = (DPS_Node*)ctx;
-    DPS_KeyStore* keyStore = node->keyStore;
-    DPS_KeyStoreRequest request;
-
-    if (!keyStore || !keyStore->keyHandler) {
-        return DPS_ERR_MISSING;
-    }
-    memset(&request, 0, sizeof(request));
-    request.keyStore = keyStore;
-    request.data = key;
-    request.setKey = SetKey;
-    return keyStore->keyHandler(&request, kid, kidLen);
 }

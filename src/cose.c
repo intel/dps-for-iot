@@ -110,6 +110,27 @@ static const uint8_t ENCRYPT[] = { 'E', 'n', 'c', 'r', 'y', 'p', 't' };
 static const uint8_t COUNTER_SIGNATURE[] = { 'C', 'o', 'u', 'n', 't', 'e', 'r', 'S', 'i', 'g', 'n', 'a', 't', 'u', 'r', 'e' };
 
 /*
+ * Union of supported key types.
+ */
+typedef struct _COSE_Key {
+    enum {
+        COSE_KEY_SYMMETRIC,
+        COSE_KEY_EC
+    } type; /**< Type of key */
+    union {
+        struct {
+            uint8_t key[AES_128_KEY_LEN];   /**< Key data */
+        } symmetric; /**< Symmetric key */
+        struct {
+            int8_t curve; /**< EC curve */
+            uint8_t x[EC_MAX_COORD_LEN]; /**< X coordinate */
+            uint8_t y[EC_MAX_COORD_LEN]; /**< Y coordinate */
+            uint8_t d[EC_MAX_COORD_LEN]; /**< D coordinate */
+        } ec; /**< Elliptic curve key */
+    };
+} COSE_Key;
+
+/*
  * COSE_Signature
  */
 typedef struct _Signature {
@@ -514,11 +535,118 @@ static DPS_Status EncodeKDFContext(DPS_TxBuffer* buf, int8_t alg, uint8_t keyLen
     return ret;
 }
 
-static DPS_Status GetSignatureKey(const Signature* sig, COSE_KeyRequest keyCB, void* ctx, COSE_Key* key)
+static DPS_Status SetKey(DPS_KeyStoreRequest* request, const DPS_Key* key)
+{
+    COSE_Key* ckey = request->data;
+    size_t len;
+
+    switch (key->type) {
+    case DPS_KEY_SYMMETRIC:
+        if (ckey->type != COSE_KEY_SYMMETRIC) {
+            DPS_ERRPRINT("Provided key has invalid type %d\n", key->type);
+            return DPS_ERR_MISSING;
+        }
+        if (key->symmetric.len != AES_128_KEY_LEN) {
+            DPS_ERRPRINT("Provided key has invalid size %d\n", key->symmetric.len);
+            return DPS_ERR_MISSING;
+        }
+        memcpy_s(ckey->symmetric.key, sizeof(ckey->symmetric.key), key->symmetric.key, key->symmetric.len);
+        break;
+    case DPS_KEY_EC:
+        if (ckey->type != COSE_KEY_EC) {
+            DPS_ERRPRINT("Provided key has invalid type %d\n", key->type);
+            return DPS_ERR_MISSING;
+        }
+        switch (key->ec.curve) {
+        case DPS_EC_CURVE_P256: len = 32; break;
+        case DPS_EC_CURVE_P384: len = 48; break;
+        case DPS_EC_CURVE_P521: len = 66; break;
+        default:
+            DPS_ERRPRINT("Provided key has unsupported curve %d\n", key->ec.curve);
+            return DPS_ERR_MISSING;
+        }
+        memset(&ckey->ec, 0, sizeof(ckey->ec));
+        ckey->ec.curve = key->ec.curve;
+        if (key->ec.x) {
+            memcpy_s(ckey->ec.x, sizeof(ckey->ec.x), key->ec.x, len);
+        }
+        if (key->ec.y) {
+            memcpy_s(ckey->ec.y, sizeof(ckey->ec.y), key->ec.y, len);
+        }
+        if (key->ec.d) {
+            memcpy_s(ckey->ec.d, sizeof(ckey->ec.d), key->ec.d, len);
+        }
+        break;
+    case DPS_KEY_EC_CERT:
+        if (ckey->type != COSE_KEY_EC) {
+            DPS_ERRPRINT("Provided key has invalid type %d\n", key->type);
+            return DPS_ERR_MISSING;
+        }
+        if (key->cert.privateKey) {
+            return ParsePrivateKey_ECDSA(key->cert.privateKey, key->cert.privateKeyLen,
+                                         key->cert.password, key->cert.passwordLen,
+                                         &ckey->ec.curve, ckey->ec.d);
+        } else {
+            return ParseCertificate_ECDSA(key->cert.cert, key->cert.certLen,
+                                          &ckey->ec.curve, ckey->ec.x, ckey->ec.y);
+        }
+        break;
+    default:
+        DPS_ERRPRINT("Unsupported key type %d\n", key->type);
+        return DPS_ERR_MISSING;
+    }
+    return DPS_OK;
+}
+
+static DPS_Status GetKey(DPS_KeyStore* keyStore, const unsigned char* kid, size_t kidLen, COSE_Key* key)
+{
+    DPS_KeyStoreRequest request;
+
+    if (!keyStore || !keyStore->keyHandler) {
+        return DPS_ERR_MISSING;
+    }
+    memset(&request, 0, sizeof(request));
+    request.keyStore = keyStore;
+    request.data = key;
+    request.setKey = SetKey;
+    return keyStore->keyHandler(&request, kid, kidLen);
+}
+
+static DPS_Status GetEphemeralKey(DPS_KeyStore* keyStore, COSE_Key* key)
+{
+    DPS_KeyStoreRequest request;
+    DPS_Key k;
+
+    if (!keyStore || !keyStore->ephemeralKeyHandler) {
+        return DPS_ERR_MISSING;
+    }
+    memset(&request, 0, sizeof(request));
+    request.keyStore = keyStore;
+    request.data = key;
+    request.setKey = SetKey;
+    switch (key->type) {
+    case COSE_KEY_SYMMETRIC:
+        k.type = DPS_KEY_SYMMETRIC;
+        break;
+    case COSE_KEY_EC:
+        k.type = DPS_KEY_EC;
+        k.ec.curve = key->ec.curve;
+        break;
+    default:
+        return DPS_ERR_MISSING;
+    }
+    return keyStore->ephemeralKeyHandler(&request, &k);
+}
+
+static DPS_Status GetSignatureKey(DPS_KeyStore* keyStore, const Signature* sig, COSE_Key* key)
 {
     DPS_Status ret;
     int8_t curve;
+    DPS_KeyStoreRequest request;
 
+    if (!keyStore || !keyStore->keyHandler) {
+        return DPS_ERR_MISSING;
+    }
     switch (sig->alg) {
     case COSE_ALG_ES256:
         curve = EC_CURVE_P256;
@@ -533,7 +661,11 @@ static DPS_Status GetSignatureKey(const Signature* sig, COSE_KeyRequest keyCB, v
         return DPS_ERR_NOT_IMPLEMENTED;
     }
     key->type = COSE_KEY_EC;
-    ret = keyCB(ctx, sig->alg, sig->kid, sig->kidLen, key);
+    memset(&request, 0, sizeof(request));
+    request.keyStore = keyStore;
+    request.data = key;
+    request.setKey = SetKey;
+    ret = keyStore->keyHandler(&request, sig->kid, sig->kidLen);
     if (ret != DPS_OK) {
         return ret;
     }
@@ -545,7 +677,7 @@ static DPS_Status GetSignatureKey(const Signature* sig, COSE_KeyRequest keyCB, v
 
 DPS_Status COSE_Encrypt(int8_t alg, const uint8_t nonce[COSE_NONCE_LEN], const COSE_Entity* signer,
                         const COSE_Entity* recipient, size_t recipientLen, DPS_RxBuffer* aad,
-                        DPS_RxBuffer* plainText, COSE_KeyRequest keyCB, void* ctx, DPS_TxBuffer* cipherText)
+                        DPS_RxBuffer* plainText, DPS_KeyStore* keyStore, DPS_TxBuffer* cipherText)
 {
     DPS_Status ret;
     uint8_t tag;
@@ -572,7 +704,7 @@ DPS_Status COSE_Encrypt(int8_t alg, const uint8_t nonce[COSE_NONCE_LEN], const C
 
     DPS_DBGTRACE();
 
-    if (!recipient || !recipientLen || !aad || !plainText || !keyCB) {
+    if (!recipient || !recipientLen || !aad || !plainText) {
         return DPS_ERR_ARGS;
     }
 
@@ -625,7 +757,7 @@ DPS_Status COSE_Encrypt(int8_t alg, const uint8_t nonce[COSE_NONCE_LEN], const C
             goto Exit;
         }
         cek.type = COSE_KEY_SYMMETRIC;
-        ret = keyCB(ctx, alg, recipient[0].kid, recipient[0].kidLen, &cek);
+        ret = GetKey(keyStore, recipient[0].kid, recipient[0].kidLen, &cek);
         if (ret != DPS_OK) {
             goto Exit;
         }
@@ -636,14 +768,14 @@ DPS_Status COSE_Encrypt(int8_t alg, const uint8_t nonce[COSE_NONCE_LEN], const C
             goto Exit;
         }
         cek.type = COSE_KEY_SYMMETRIC;
-        ret = keyCB(ctx, recipient[0].alg, recipient[0].kid, recipient[0].kidLen, &cek);
+        ret = GetKey(keyStore, recipient[0].kid, recipient[0].kidLen, &cek);
         if (ret != DPS_OK) {
             goto Exit;
         }
         break;
     case COSE_ALG_A128KW:
         cek.type = COSE_KEY_SYMMETRIC;
-        ret = keyCB(ctx, recipient[0].alg, NULL, 0, &cek);
+        ret = GetEphemeralKey(keyStore, &cek);
         if (ret != DPS_OK) {
             goto Exit;
         }
@@ -653,7 +785,7 @@ DPS_Status COSE_Encrypt(int8_t alg, const uint8_t nonce[COSE_NONCE_LEN], const C
          * Request the random content key
          */
         cek.type = COSE_KEY_SYMMETRIC;
-        ret = keyCB(ctx, COSE_ALG_A128KW, NULL, 0, &cek);
+        ret = GetEphemeralKey(keyStore, &cek);
         if (ret != DPS_OK) {
             goto Exit;
         }
@@ -667,13 +799,13 @@ DPS_Status COSE_Encrypt(int8_t alg, const uint8_t nonce[COSE_NONCE_LEN], const C
          * Request the static recipient public key and ephemeral sender private key
          */
         staticKey.type = COSE_KEY_EC;
-        ret = keyCB(ctx, recipient[0].alg, recipient[0].kid, recipient[0].kidLen, &staticKey);
+        ret = GetKey(keyStore, recipient[0].kid, recipient[0].kidLen, &staticKey);
         if (ret != DPS_OK) {
             goto Exit;
         }
         ephemeralKey.type = COSE_KEY_EC;
         ephemeralKey.ec.curve = staticKey.ec.curve;
-        ret = keyCB(ctx, recipient[0].alg, NULL, 0, &ephemeralKey);
+        ret = GetEphemeralKey(keyStore, &ephemeralKey);
         if (ret != DPS_OK) {
             goto Exit;
         }
@@ -726,7 +858,7 @@ DPS_Status COSE_Encrypt(int8_t alg, const uint8_t nonce[COSE_NONCE_LEN], const C
         if (ret != DPS_OK) {
             goto Exit;
         }
-        ret = GetSignatureKey(&sig, keyCB, ctx, &k);
+        ret = GetSignatureKey(keyStore, &sig, &k);
         if (ret != DPS_OK) {
             goto Exit;
         }
@@ -823,7 +955,7 @@ DPS_Status COSE_Encrypt(int8_t alg, const uint8_t nonce[COSE_NONCE_LEN], const C
                 break;
             case COSE_ALG_A128KW:
                 k.type = COSE_KEY_SYMMETRIC;
-                ret = keyCB(ctx, recipient[i].alg, recipient[i].kid, recipient[i].kidLen, &k);
+                ret = GetKey(keyStore, recipient[i].kid, recipient[i].kidLen, &k);
                 if (ret != DPS_OK) {
                     goto Exit;
                 }
@@ -852,14 +984,14 @@ DPS_Status COSE_Encrypt(int8_t alg, const uint8_t nonce[COSE_NONCE_LEN], const C
                  * request only one ephemeral key per message.
                  */
                 staticKey.type = COSE_KEY_EC;
-                ret = keyCB(ctx, recipient[i].alg, recipient[i].kid, recipient[i].kidLen, &staticKey);
+                ret = GetKey(keyStore, recipient[i].kid, recipient[i].kidLen, &staticKey);
                 if (ret != DPS_OK) {
                     goto Exit;
                 }
                 if (ephemeralKey.ec.curve != staticKey.ec.curve) {
                     ephemeralKey.type = COSE_KEY_EC;
                     ephemeralKey.ec.curve = staticKey.ec.curve;
-                    ret = keyCB(ctx, recipient[0].alg, NULL, 0, &ephemeralKey);
+                    ret = GetEphemeralKey(keyStore, &ephemeralKey);
                     if (ret != DPS_OK) {
                         goto Exit;
                     }
@@ -882,6 +1014,7 @@ DPS_Status COSE_Encrypt(int8_t alg, const uint8_t nonce[COSE_NONCE_LEN], const C
                 if (ret != DPS_OK) {
                     goto Exit;
                 }
+                DPS_TxBufferFree(&kdfContext);
                 /*
                  * Wrap the content encryption key
                  */
@@ -1204,8 +1337,8 @@ static DPS_Status DecodeRecipient(DPS_RxBuffer* buf, int8_t* alg, uint8_t** kid,
 }
 
 DPS_Status COSE_Decrypt(const uint8_t* nonce, COSE_Entity* recipient, DPS_RxBuffer* aad,
-                        DPS_RxBuffer* cipherText, COSE_KeyRequest keyCB, void* ctx,
-                        COSE_Entity* signer, DPS_TxBuffer* plainText)
+                        DPS_RxBuffer* cipherText, DPS_KeyStore* keyStore, COSE_Entity* signer,
+                        DPS_TxBuffer* plainText)
 {
     DPS_Status ret;
     DPS_TxBuffer AAD;
@@ -1235,7 +1368,7 @@ DPS_Status COSE_Decrypt(const uint8_t* nonce, COSE_Entity* recipient, DPS_RxBuff
 
     DPS_DBGTRACE();
 
-    if (!aad || !cipherText || !keyCB || !plainText) {
+    if (!aad || !cipherText || !plainText) {
         return DPS_ERR_ARGS;
     }
 
@@ -1297,23 +1430,29 @@ DPS_Status COSE_Decrypt(const uint8_t* nonce, COSE_Entity* recipient, DPS_RxBuff
     /*
      * Verify signature of encrypted content
      */
+    if (signer) {
+        memset(signer, 0, sizeof(*signer));
+    }
     if (sig.sigLen) {
+        DPS_Status verify;
         ret = EncodeSig(&toBeSigned, alg, sig.alg, NULL, 0, content, contentLen);
         if (ret != DPS_OK) {
             goto Exit;
         }
-        ret = GetSignatureKey(&sig, keyCB, ctx, &k);
-        if (ret != DPS_OK) {
-            goto Exit;
+        verify = GetSignatureKey(keyStore, &sig, &k);
+        if (verify == DPS_OK) {
+            verify = Verify_ECDSA(k.ec.curve, k.ec.x, k.ec.y, toBeSigned.base, DPS_TxBufferUsed(&toBeSigned),
+                                  sig.sig, sig.sigLen);
         }
-        ret = Verify_ECDSA(k.ec.curve, k.ec.x, k.ec.y, toBeSigned.base, DPS_TxBufferUsed(&toBeSigned),
-                           sig.sig, sig.sigLen);
-        if (ret != DPS_OK) {
-            goto Exit;
+        if (verify == DPS_OK) {
+            if (signer) {
+                signer->alg = sig.alg;
+                signer->kid = sig.kid;
+                signer->kidLen = sig.kidLen;
+            }
+        } else {
+            DPS_WARNPRINT("Failed to verify signature: %s\n", DPS_ErrTxt(verify));
         }
-        signer->alg = sig.alg;
-        signer->kid = sig.kid;
-        signer->kidLen = sig.kidLen;
     }
     /*
      * Create and encode the AAD
@@ -1346,21 +1485,21 @@ DPS_Status COSE_Decrypt(const uint8_t* nonce, COSE_Entity* recipient, DPS_RxBuff
         switch (recipient->alg) {
         case COSE_ALG_RESERVED:
             cek.type = COSE_KEY_SYMMETRIC;
-            ret = keyCB(ctx, alg, recipient->kid, recipient->kidLen, &cek);
+            ret = GetKey(keyStore, recipient->kid, recipient->kidLen, &cek);
             if (ret != DPS_OK) {
                 continue;
             }
             break;
         case COSE_ALG_DIRECT:
             cek.type = COSE_KEY_SYMMETRIC;
-            ret = keyCB(ctx, recipient->alg, recipient->kid, recipient->kidLen, &cek);
+            ret = GetKey(keyStore, recipient->kid, recipient->kidLen, &cek);
             if (ret != DPS_OK) {
                 continue;
             }
             break;
         case COSE_ALG_A128KW:
             kek.type = COSE_KEY_SYMMETRIC;
-            ret = keyCB(ctx, recipient->alg, recipient->kid, recipient->kidLen, &kek);
+            ret = GetKey(keyStore, recipient->kid, recipient->kidLen, &kek);
             if (ret != DPS_OK) {
                 continue;
             }
@@ -1379,7 +1518,7 @@ DPS_Status COSE_Decrypt(const uint8_t* nonce, COSE_Entity* recipient, DPS_RxBuff
              * Request the static recipient private key
              */
             staticKey.type = COSE_KEY_EC;
-            ret = keyCB(ctx, recipient->alg, recipient->kid, recipient->kidLen, &staticKey);
+            ret = GetKey(keyStore, recipient->kid, recipient->kidLen, &staticKey);
             if (ret != DPS_OK) {
                 continue;
             }
@@ -1410,7 +1549,7 @@ DPS_Status COSE_Decrypt(const uint8_t* nonce, COSE_Entity* recipient, DPS_RxBuff
              * Request the static recipient private key
              */
             staticKey.type = COSE_KEY_EC;
-            ret = keyCB(ctx, recipient->alg, recipient->kid, recipient->kidLen, &staticKey);
+            ret = GetKey(keyStore, recipient->kid, recipient->kidLen, &staticKey);
             if (ret != DPS_OK) {
                 continue;
             }

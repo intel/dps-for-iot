@@ -39,7 +39,7 @@ def on_pub(sub, pub, payload):
 # Enable or disable (default) DPS debug output
 dps.cvar.debug = False
 
-node = dps.create_node("/", dps.memory_key_store_handle(key_store), key_id[0])
+node = dps.create_node("/", dps.memory_key_store_handle(key_store), None)
 dps.start_node(node, dps.MCAST_PUB_ENABLE_RECV, 0)
 sub = dps.create_subscription(node, ['a/b/c']);
 dps.subscribe(sub, on_pub)

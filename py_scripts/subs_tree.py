@@ -31,7 +31,7 @@ def on_pub(sub, pub, payload):
     print payload
 
 def subscriber(port, topic, connect_port):
-    nodes[port] = dps.create_node("/", dps.memory_key_store_handle(key_store), key_id)
+    nodes[port] = dps.create_node("/", dps.memory_key_store_handle(key_store), None)
     dps.start_node(nodes[port], 0, port)
     subs[port] = dps.create_subscription(nodes[port], [topic])
     dps.subscribe(subs[port], on_pub)

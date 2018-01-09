@@ -40,6 +40,15 @@ extern "C" {
 
 #define DPS_MSG_VERSION 1
 
+/**
+ * Maximum length for a node key ID excluding NUL terminator
+ */
+#define DPS_MAX_KEY_ID_STRLEN 2048
+
+#if DPS_MAX_KEY_ID_STRLEN >= RSIZE_MAX_STR
+#error DPS_MAX_KEY_ID_STRLEN must be less than RSIZE_MAX_STR (see safe_str_lib.h)
+#endif
+
 /*
  * DPS message types
  */
@@ -75,7 +84,6 @@ typedef struct _LinkMonitorConfig {
 typedef struct _DPS_Node {
     void* userData;
 
-    uint8_t isSecured;                    /* Indicates if this node is secured */
     uint8_t lockCount;                    /* Recursive lock counter */
     uint8_t subsPending;
     uint16_t port;
@@ -83,7 +91,7 @@ typedef struct _DPS_Node {
     DPS_UUID minMeshId;                   /* Minimum mesh id seen by this node */
     char separators[13];                  /* List of separator characters */
     DPS_KeyStore *keyStore;               /* Functions for loading encryption keys */
-    DPS_UUID keyId;                       /* Encryption key identifier */
+    COSE_Entity signer;                   /* Sign messages with this entity */
 
     uv_thread_t lockHolder;               /* Thread currently holding the node lock */
     uv_thread_t thread;                   /* Thread for the event loop */
@@ -323,17 +331,6 @@ void DPS_RandUUIDLess(DPS_UUID* uuid);
  * For debug output of mesh ids
  */
 #define UUID_32(n) (((unsigned)((uint8_t*)(n))[0] << 24) | (((uint8_t*)(n))[1] << 16) | (((uint8_t*)(n))[2] << 8) | (((uint8_t*)(n))[3] << 0))
-
-/**
- * Get the key needed by COSE encryption and decription.
- *
- * @param node    The node
- * @param alg     The crypto algorithm to use
- * @param kid     The key identifier, NULL to request a random key
- * @param kidLen  The size of the key identifier in bytes, 0 to request a random key
- * @param key     Buffer for returning the key.
- */
-DPS_Status DPS_GetCOSEKey(void* node, int8_t alg, const uint8_t* kid, size_t kidLen, COSE_Key* key);
 
 #ifdef __cplusplus
 }

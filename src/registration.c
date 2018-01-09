@@ -137,7 +137,7 @@ static void OnLinkedPut(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status ret, v
             topics[1] = regPut->tenant;
 
             DPS_SetPublicationData(regPut->pub, regPut);
-            DPS_InitPublication(regPut->pub, topics, 2, DPS_TRUE, NULL, OnPutAck);
+            DPS_InitPublication(regPut->pub, topics, 2, DPS_TRUE, NULL, 0, OnPutAck);
             ret = DPS_Publish(regPut->pub, regPut->payload.base, DPS_TxBufferUsed(&regPut->payload), REGISTRATION_TTL);
             /*
              * Start a timer
@@ -241,7 +241,7 @@ DPS_Status DPS_Registration_Put(DPS_Node* node, const char* host, uint16_t port,
         ret = DPS_ERR_RESOURCES;
         goto Exit;
     }
-    regPut->node = DPS_CreateNode("/", NULL, NULL);
+    regPut->node = DPS_CreateNode("/", NULL, NULL, 0);
     if (!regPut->node || !regPut->tenant) {
         ret = DPS_ERR_RESOURCES;
         goto Exit;
@@ -467,7 +467,7 @@ DPS_Status DPS_Registration_Get(DPS_Node* node, const char* host, uint16_t port,
         ret = DPS_ERR_RESOURCES;
         goto Exit;
     }
-    regGet->node = DPS_CreateNode("/", NULL, NULL);
+    regGet->node = DPS_CreateNode("/", NULL, NULL, 0);
     if (!regGet->node) {
         ret = DPS_ERR_RESOURCES;
         goto Exit;

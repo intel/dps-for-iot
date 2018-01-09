@@ -156,7 +156,8 @@ static void ReadStdin(DPS_Node* node)
         if (!keep) {
             DPS_DestroyPublication(currentPub);
             currentPub = DPS_CreatePublication(node);
-            ret = DPS_InitPublication(currentPub, (const char**)topics, numTopics, DPS_FALSE, NULL, requestAck ? OnAck : NULL);
+            ret = DPS_InitPublication(currentPub, (const char**)topics, numTopics, DPS_FALSE, NULL, 0,
+                                      requestAck ? OnAck : NULL);
             if (ret != DPS_OK) {
                 DPS_ERRPRINT("Failed to create publication - error=%d\n", ret);
                 return;
@@ -301,7 +302,8 @@ int main(int argc, char** argv)
     for (size_t i = 0; i < NUM_KEYS; ++i) {
         DPS_SetContentKey(memoryKeyStore, &keyId[i], keyData[i], 16);
     }
-    node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore), &keyId[0]);
+    node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore),
+                          (const unsigned char*)&keyId[0], sizeof(keyId[0]));
 
     ret = DPS_StartNode(node, mcastPub, 0);
     if (ret != DPS_OK) {
@@ -321,7 +323,8 @@ int main(int argc, char** argv)
 
     if (numTopics) {
         currentPub = DPS_CreatePublication(node);
-        ret = DPS_InitPublication(currentPub, (const char**)topics, numTopics, DPS_FALSE, NULL, requestAck ? OnAck : NULL);
+        ret = DPS_InitPublication(currentPub, (const char**)topics, numTopics, DPS_FALSE, NULL, 0,
+                                  requestAck ? OnAck : NULL);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("Failed to create publication - error=%d\n", ret);
             goto Exit;

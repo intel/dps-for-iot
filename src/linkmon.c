@@ -104,7 +104,7 @@ static DPS_Status LinkMonitorInit(DPS_Node* node, LinkMonitor* monitor)
     /*
      * Initialize the publication - wildcard matching is not required.
      */
-    ret = DPS_InitPublication(monitor->pub, topics, A_SIZEOF(topics), DPS_TRUE, NULL, NULL);
+    ret = DPS_InitPublication(monitor->pub, topics, A_SIZEOF(topics), DPS_TRUE, NULL, 0, NULL);
     if (ret != DPS_OK) {
         goto ErrorExit;
     }

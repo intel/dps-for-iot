@@ -31,11 +31,11 @@ def on_ack(pub, payload):
 # Enable or disable (default) DPS debug output
 dps.cvar.debug = False
 
-node = dps.create_node("/", dps.memory_key_store_handle(key_store), key_id[0])
+node = dps.create_node("/", dps.memory_key_store_handle(key_store), None)
 dps.start_node(node, dps.MCAST_PUB_ENABLE_SEND, 0)
 pub = dps.create_publication(node)
 
-dps.init_publication(pub, ['a/b/c'], False, None, on_ack)
+dps.init_publication(pub, ['a/b/c'], False, key_id[0], on_ack)
 dps.publish(pub, "hello")
 print "Pub UUID %s(%d)" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub))
 time.sleep(0.1)

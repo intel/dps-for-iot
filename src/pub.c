@@ -46,6 +46,141 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
 #define RemoteNodeAddressText(n)  DPS_NodeAddrToString(&(n)->ep.addr)
 
+static DPS_Status SetKey(DPS_KeyStoreRequest* request, const DPS_Key* key)
+{
+    int8_t* alg = request->data;
+
+    switch (key->type) {
+    case DPS_KEY_SYMMETRIC:
+        *alg = COSE_ALG_A128KW;
+        break;
+    case DPS_KEY_EC:
+    case DPS_KEY_EC_CERT:
+        *alg = COSE_ALG_ECDH_ES_A128KW;
+        break;
+    default:
+        return DPS_ERR_MISSING;
+    }
+    return DPS_OK;
+}
+
+static DPS_Status GetRecipientAlgorithm(DPS_KeyStore* keyStore, const uint8_t* kid, size_t kidLen, int8_t* alg)
+{
+    DPS_KeyStoreRequest request;
+
+    *alg = COSE_ALG_RESERVED;
+    if (!keyStore || !keyStore->keyHandler) {
+        return DPS_ERR_MISSING;
+    }
+
+    memset(&request, 0, sizeof(request));
+    request.keyStore = keyStore;
+    request.data = alg;
+    request.setKey = SetKey;
+    return keyStore->keyHandler(&request, kid, kidLen);
+}
+
+static COSE_Entity* AddRecipient(DPS_Publication* pub, int8_t alg, const uint8_t* kid, size_t kidLen)
+{
+    COSE_Entity* newRecipients;
+    size_t newCap;
+    uint8_t* newKid;
+    COSE_Entity* recipient;
+
+    if (pub->recipientsCount == pub->recipientsCap) {
+        newCap = 1;
+        if (pub->recipientsCap) {
+            newCap = pub->recipientsCap * 2;
+        }
+        newRecipients = realloc(pub->recipients, newCap * sizeof(COSE_Entity));
+        if (!newRecipients) {
+            return NULL;
+        }
+        pub->recipients = newRecipients;
+        pub->recipientsCap = newCap;
+    }
+    newKid = malloc(kidLen);
+    if (!newKid) {
+        return NULL;
+    }
+    memcpy_s(newKid, kidLen, kid, kidLen);
+
+    recipient = &pub->recipients[pub->recipientsCount];
+    recipient->alg = alg;
+    recipient->kid = newKid;
+    recipient->kidLen = kidLen;
+    ++pub->recipientsCount;
+    return recipient;
+}
+
+static void RemoveRecipient(DPS_Publication* pub, const uint8_t* kid, size_t kidLen)
+{
+    size_t i;
+
+    for (i = 0; i < pub->recipientsCount; ++i) {
+        if ((pub->recipients[i].kidLen == kidLen) && (memcmp(pub->recipients[i].kid, kid, kidLen) == 0)) {
+            free(pub->recipients[i].kid);
+            for (; i < pub->recipientsCount - 1; ++i) {
+                pub->recipients[i] = pub->recipients[i + 1];
+            }
+            memset(&pub->recipients[i], 0, sizeof(pub->recipients[i]));
+            --pub->recipientsCount;
+            break;
+        }
+    }
+}
+
+static void FreeRecipients(DPS_Publication* pub)
+{
+    size_t i;
+
+    for (i = 0; i < pub->recipientsCount; ++i) {
+        free(pub->recipients[i].kid);
+    }
+    free(pub->recipients);
+    pub->recipients = NULL;
+    pub->recipientsCount = 0;
+    pub->recipientsCap = 0;
+}
+
+static COSE_Entity* CopyRecipients(DPS_Publication* dst, const DPS_Publication* src)
+{
+    COSE_Entity* newRecipients = NULL;
+    size_t newCount = 0;
+    size_t i;
+
+    newRecipients = malloc(src->recipientsCap * sizeof(COSE_Entity));
+    if (!newRecipients) {
+        goto ErrorExit;
+    }
+    for (i = 0; i < src->recipientsCount; ++i) {
+        newRecipients[i].alg = src->recipients[i].alg;
+        newRecipients[i].kid = malloc(src->recipients[i].kidLen);
+        if (!newRecipients[i].kid) {
+            goto ErrorExit;
+        }
+        newRecipients[i].kidLen = src->recipients[i].kidLen;
+        memcpy_s(newRecipients[i].kid, newRecipients[i].kidLen,
+                 src->recipients[i].kid, src->recipients[i].kidLen);
+        ++newCount;
+    }
+
+    FreeRecipients(dst);
+    dst->recipients = newRecipients;
+    dst->recipientsCount = newCount;
+    dst->recipientsCap = src->recipientsCap;
+    return dst->recipients;
+
+ ErrorExit:
+    if (newRecipients) {
+        for (i = 0; i < newCount; ++i) {
+            free(newRecipients[i].kid);
+        }
+        free(newRecipients);
+    }
+    return NULL;
+}
+
 static DPS_Publication* FreePublication(DPS_Node* node, DPS_Publication* pub)
 {
     DPS_Publication* next = pub->next;
@@ -61,10 +196,7 @@ static DPS_Publication* FreePublication(DPS_Node* node, DPS_Publication* pub)
             }
             prev->next = next;
         }
-        if (pub->keyId) {
-            free(pub->keyId);
-            pub->keyId = NULL;
-        }
+        FreeRecipients(pub);
         if (pub->bf) {
             DPS_BitVectorFree(pub->bf);
             pub->bf = NULL;
@@ -203,6 +335,7 @@ static DPS_Status CallPubHandlers(DPS_Node* node, DPS_Publication* pub)
     DPS_Status ret;
     uint8_t nonce[COSE_NONCE_LEN];
     COSE_Entity recipient;
+    COSE_Entity sender;
     DPS_Subscription* sub;
     DPS_RxBuffer encryptedBuf;
     DPS_TxBuffer plainTextBuf;
@@ -248,7 +381,7 @@ static DPS_Status CallPubHandlers(DPS_Node* node, DPS_Publication* pub)
     DPS_TxBufferToRx(&pub->protectedBuf, &aadBuf);
     DPS_TxBufferToRx(&pub->encryptedBuf, &cipherTextBuf);
 
-    ret = COSE_Decrypt(nonce, &recipient, &aadBuf, &cipherTextBuf, DPS_GetCOSEKey, node, NULL, &plainTextBuf);
+    ret = COSE_Decrypt(nonce, &recipient, &aadBuf, &cipherTextBuf, node->keyStore, &sender, &plainTextBuf);
     if (ret == DPS_OK) {
         DPS_DBGPRINT("Publication was decrypted\n");
         CBOR_Dump("plaintext", plainTextBuf.base, DPS_TxBufferUsed(&plainTextBuf));
@@ -257,28 +390,43 @@ static DPS_Status CallPubHandlers(DPS_Node* node, DPS_Publication* pub)
          * We will use the same key id when we encrypt the acknowledgement
          */
         if (pub->ackRequested) {
-            if (recipient.kidLen != sizeof(DPS_UUID)) {
-                ret = DPS_ERR_INVALID;
-                goto Exit;
+            /*
+             * Symmetric keys can use the recipient directly.
+             * Asymmetric keys must use the sender info if provided.
+             */
+            switch (recipient.alg) {
+            case COSE_ALG_DIRECT:
+            case COSE_ALG_A128KW:
+                if (AddRecipient(pub, recipient.alg, recipient.kid, recipient.kidLen)) {
+                    ret = DPS_OK;
+                } else {
+                    ret = DPS_ERR_RESOURCES;
+                }
+                break;
+            case COSE_ALG_ECDH_ES_HKDF_256:
+            case COSE_ALG_ECDH_ES_A128KW:
+                if (AddRecipient(pub, recipient.alg, sender.kid, sender.kidLen)) {
+                    ret = DPS_OK;
+                } else {
+                    ret = DPS_ERR_RESOURCES;
+                }
+                break;
+            default:
+                ret = DPS_ERR_MISSING;
+                break;
             }
-            pub->keyId = malloc(sizeof(DPS_UUID));
-            if (!pub->keyId) {
-                ret = DPS_ERR_RESOURCES;
-                goto Exit;
+            if (ret != DPS_OK) {
+                DPS_WARNPRINT("Ack requested, but missing sender ID\n");
             }
-            memcpy_s(pub->keyId, sizeof(DPS_UUID), recipient.kid, sizeof(DPS_UUID));
         }
     } else if (ret == DPS_ERR_NOT_ENCRYPTED) {
-        if (node->isSecured) {
-            DPS_ERRPRINT("Publication was not encrypted - discarding\n");
-            goto Exit;
-        }
+        DPS_DBGPRINT("Publication was not encrypted\n");
         /*
          * The payload was not encrypted
          */
         DPS_TxBufferToRx(&pub->encryptedBuf, &encryptedBuf);
     } else {
-        DPS_ERRPRINT("Failed to decrypt publication - %s\n", DPS_ErrTxt(ret));
+        DPS_WARNPRINT("Failed to decrypt publication - %s\n", DPS_ErrTxt(ret));
         goto Exit;
     }
     ret = DPS_ParseMapInit(&mapState, &encryptedBuf, EncryptedKeys, A_SIZEOF(EncryptedKeys), NULL, 0);
@@ -525,7 +673,7 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
             free(pub);
             return DPS_ERR_RESOURCES;
         }
-        memcpy(&pub->pubId, pubId, sizeof(DPS_UUID));
+        memcpy_s(&pub->pubId, sizeof(pub->pubId), pubId, sizeof(DPS_UUID));
         /*
          * Link in the pub
          */
@@ -810,12 +958,10 @@ DPS_Publication* DPS_CopyPublication(const DPS_Publication* pub)
     copy->node = pub->node;
     copy->ackRequested = pub->ackRequested;
     if (pub->ackRequested) {
-        copy->keyId = malloc(sizeof(DPS_UUID));
-        if (!copy->keyId) {
+        if (!CopyRecipients(copy, pub)) {
             DPS_ERRPRINT("malloc failure: no memory\n");
             goto Exit;
         }
-        memcpy_s(copy->keyId, sizeof(DPS_UUID), pub->keyId, sizeof(DPS_UUID));
     }
     copy->numTopics = pub->numTopics;
     if (pub->numTopics > 0) {
@@ -842,9 +988,7 @@ Exit:
                 }
                 free(copy->topics);
             }
-            if (copy->keyId) {
-                free(copy->keyId);
-            }
+            FreeRecipients(copy);
             free(copy);
             copy = NULL;
         }
@@ -856,12 +1000,13 @@ DPS_Status DPS_InitPublication(DPS_Publication* pub,
                                const char** topics,
                                size_t numTopics,
                                int noWildCard,
-                               const DPS_UUID* keyId,
+                               const uint8_t* id, size_t idLen,
                                DPS_AcknowledgementHandler handler)
 {
-    size_t i;
     DPS_Node* node = pub ? pub->node : NULL;
     DPS_Status ret = DPS_OK;
+    int8_t alg;
+    size_t i;
 
     if (!node) {
         return DPS_ERR_NULL;
@@ -898,16 +1043,11 @@ DPS_Status DPS_InitPublication(DPS_Publication* pub,
     /*
      * Copy key identifier
      */
-    if (keyId) {
+    if (id) {
         DPS_DBGPRINT("Publication has a keyId\n");
-        if (!pub->node->isSecured) {
-            DPS_ERRPRINT("Node was not enabled for security\n");
-            ret = DPS_ERR_SECURITY;
-        } else {
-            pub->keyId = malloc(sizeof(DPS_UUID));
-            if (pub->keyId) {
-                memcpy_s(pub->keyId, sizeof(DPS_UUID), keyId, sizeof(DPS_UUID));
-            } else {
+        ret = GetRecipientAlgorithm(node->keyStore, id, idLen, &alg);
+        if (ret == DPS_OK) {
+            if (!AddRecipient(pub, alg, id, idLen)) {
                 ret = DPS_ERR_RESOURCES;
             }
         }
@@ -982,6 +1122,32 @@ DPS_Status DPS_InitPublication(DPS_Publication* pub,
         DPS_TxBufferFree(&pub->bfBuf);
     }
     return ret;
+}
+
+DPS_Status DPS_PublicationAddKeyId(DPS_Publication* pub, const uint8_t* id, size_t idLen)
+{
+    DPS_Status ret;
+    int8_t alg;
+
+    if (IsValidPub(pub)) {
+        ret = GetRecipientAlgorithm(pub->node->keyStore, id, idLen, &alg);
+        if (ret != DPS_OK) {
+            return ret;
+        }
+        if (!AddRecipient(pub, alg, id, idLen)) {
+            return DPS_ERR_RESOURCES;
+        }
+        return DPS_OK;
+    } else {
+        return DPS_ERR_ARGS;
+    }
+}
+
+void DPS_PublicationRemoveKeyId(DPS_Publication* pub, const uint8_t* id, size_t idLen)
+{
+    if (IsValidPub(pub)) {
+        RemoveRecipient(pub, id, idLen);
+    }
 }
 
 /*
@@ -1073,20 +1239,17 @@ DPS_Status DPS_SerializePub(DPS_Node* node, DPS_Publication* pub, const uint8_t*
         return ret;
     }
 
-    if (node->isSecured) {
+    if (pub->recipients) {
         DPS_RxBuffer plainTextBuf;
         DPS_RxBuffer aadBuf;
         uint8_t nonce[COSE_NONCE_LEN];
-        COSE_Entity recipient;
 
         DPS_TxBufferToRx(&encryptedBuf, &plainTextBuf);
         DPS_TxBufferToRx(&protectedBuf, &aadBuf);
         DPS_MakeNonce(&pub->pubId, pub->sequenceNum, DPS_MSG_TYPE_PUB, nonce);
-        recipient.alg = COSE_ALG_DIRECT;
-        recipient.kid = (const uint8_t*)(pub->keyId ? pub->keyId : &node->keyId);
-        recipient.kidLen = sizeof(DPS_UUID);
-        ret = COSE_Encrypt(COSE_ALG_AES_CCM_16_128_128, nonce, NULL, &recipient, 1,
-                           &aadBuf, &plainTextBuf, DPS_GetCOSEKey, node, &encryptedBuf);
+        ret = COSE_Encrypt(COSE_ALG_AES_CCM_16_128_128, nonce, node->signer.alg ? &node->signer : NULL,
+                           pub->recipients, pub->recipientsCount, &aadBuf, &plainTextBuf, node->keyStore,
+                           &encryptedBuf);
         DPS_RxBufferFree(&plainTextBuf);
         if (ret != DPS_OK) {
             DPS_TxBufferFree(&protectedBuf);
@@ -1204,9 +1367,7 @@ DPS_Status DPS_DestroyPublication(DPS_Publication* pub)
             }
             free(pub->topics);
         }
-        if (pub->keyId) {
-            free(pub->keyId);
-        }
+        FreeRecipients(pub);
         free(pub);
         return DPS_OK;
     }

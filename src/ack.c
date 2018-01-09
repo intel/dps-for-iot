@@ -164,21 +164,18 @@ static DPS_Status SerializeAck(const DPS_Publication* pub, PublicationAck* ack, 
     /*
      * If the publication was encrypted the ack must be too
      */
-    if (pub->keyId) {
+    if (pub->recipients) {
         DPS_RxBuffer aadBuf;
         DPS_RxBuffer plainTextBuf;
         DPS_TxBuffer cipherTextBuf;
         uint8_t nonce[COSE_NONCE_LEN];
-        COSE_Entity recipient;
 
         DPS_RxBufferInit(&aadBuf, aadPos, ack->buf.txPos - aadPos);
         DPS_TxBufferToRx(&ack->encryptedBuf, &plainTextBuf);
         DPS_MakeNonce(&ack->pubId, ack->sequenceNum, DPS_MSG_TYPE_ACK, nonce);
-        recipient.alg = COSE_ALG_DIRECT;
-        recipient.kid = (const uint8_t*)pub->keyId;
-        recipient.kidLen = sizeof(DPS_UUID);
-        ret = COSE_Encrypt(COSE_ALG_AES_CCM_16_128_128, nonce, NULL, &recipient, 1,
-                           &aadBuf, &plainTextBuf, DPS_GetCOSEKey, node, &cipherTextBuf);
+        ret = COSE_Encrypt(COSE_ALG_AES_CCM_16_128_128, nonce, node->signer.alg ? &node->signer : NULL,
+                           pub->recipients, pub->recipientsCount, &aadBuf, &plainTextBuf, node->keyStore,
+                           &cipherTextBuf);
         DPS_TxBufferFree(&ack->encryptedBuf);
         ack->encryptedBuf = cipherTextBuf;
     }
@@ -279,19 +276,16 @@ DPS_Status DPS_DecodeAcknowledgment(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxB
             DPS_MakeNonce(pubId, sequenceNum, DPS_MSG_TYPE_ACK, nonce);
             DPS_RxBufferInit(&aadBuf, aadPos, buf->rxPos - aadPos);
             DPS_RxBufferInit(&cipherTextBuf, buf->rxPos, DPS_RxBufferAvail(buf));
-            ret = COSE_Decrypt(nonce, &recipient, &aadBuf, &cipherTextBuf, DPS_GetCOSEKey, node,
+            ret = COSE_Decrypt(nonce, &recipient, &aadBuf, &cipherTextBuf, node->keyStore,
                                NULL, &plainTextBuf);
             if (ret == DPS_OK) {
                 DPS_DBGPRINT("Ack was decrypted\n");
                 CBOR_Dump("plaintext", plainTextBuf.base, DPS_TxBufferUsed(&plainTextBuf));
                 DPS_TxBufferToRx(&plainTextBuf, &encryptedBuf);
             } else if (ret == DPS_ERR_NOT_ENCRYPTED) {
-                if (node->isSecured) {
-                    DPS_ERRPRINT("Ack was not encrypted - discarding\n");
-                } else {
-                    encryptedBuf = cipherTextBuf;
-                    ret = DPS_OK;
-                }
+                DPS_DBGPRINT("Ack was not encrypted\n");
+                encryptedBuf = cipherTextBuf;
+                ret = DPS_OK;
             } else {
                 DPS_ERRPRINT("Failed to decrypt Ack - %s\n", DPS_ErrTxt(ret));
             }

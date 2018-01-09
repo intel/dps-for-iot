@@ -59,45 +59,9 @@ extern "C" {
  */
 typedef struct _COSE_Entity {
     int8_t alg;         /**< Recipient or signature algorithm */
-    const uint8_t* kid; /**< Key identifier */
+    uint8_t* kid;       /**< Key identifier */
     size_t kidLen;      /**< Size of key identifier, in bytes */
 } COSE_Entity;
-
-/**
- * Union of supported key types.
- */
-typedef struct _COSE_Key {
-    enum {
-        COSE_KEY_SYMMETRIC,
-        COSE_KEY_EC
-    } type; /**< Type of key */
-    union {
-        struct {
-            uint8_t key[AES_128_KEY_LEN];   /**< Key data */
-        } symmetric; /**< Symmetric key */
-        struct {
-            int8_t curve; /**< EC curve */
-            uint8_t x[EC_MAX_COORD_LEN]; /**< X coordinate */
-            uint8_t y[EC_MAX_COORD_LEN]; /**< Y coordinate */
-            uint8_t d[EC_MAX_COORD_LEN]; /**< D coordinate */
-        } ec; /**< Elliptic curve key */
-    };
-} COSE_Key;
-
-/**
- * Function prototype for callback function for requesting the encryption key
- * for a specific key identifier.  This function must not block.
- *
- * @param ctx     Caller provided context
- * @param alg     The crypto algorithm to use
- * @param kid     The key identifier, NULL to request a random key
- * @param kidLen  The size of the key identifier in bytes, 0 to request a random key
- * @param key     Buffer for returning the key.
- *
- * @return  DPS_OK if a key matching the kid was returned
- *          DPS_ERR_MSSING if there is no matchin key
- */
-typedef DPS_Status (*COSE_KeyRequest)(void* ctx, int8_t alg, const uint8_t* kid, size_t kidLen, COSE_Key* key);
 
 /**
  * COSE Encryption
@@ -109,8 +73,7 @@ typedef DPS_Status (*COSE_KeyRequest)(void* ctx, int8_t alg, const uint8_t* kid,
  * @param recipientLen   The number of recipients
  * @param aad            Buffer containing the external auxiliary authenticated data
  * @param plainText      Buffer containing the plain text payload to be encrypted
- * @param keyCB          Callback function called to request the encryption key
- * @param ctx            Context to be passed to the key request callback
+ * @param keyStore       Request handler for encryption keys
  * @param cipherText     Buffer for returning the authenticated and encrypted output. The storage for this
  *                       buffer is allocated by this function and must be freed by the caller.
  *
@@ -123,8 +86,7 @@ DPS_Status COSE_Encrypt(int8_t alg,
                         const COSE_Entity* recipient, size_t recipientLen,
                         DPS_RxBuffer* aad,
                         DPS_RxBuffer* plainText,
-                        COSE_KeyRequest keyCB,
-                        void* ctx,
+                        DPS_KeyStore* keyStore,
                         DPS_TxBuffer* cipherText);
 
 /**
@@ -136,11 +98,11 @@ DPS_Status COSE_Encrypt(int8_t alg,
  *                   referencing freed memory.
  * @param aad        Buffer containing the external auxiliary authenticated data.
  * @param cipherText Buffer containing the authenticated and encrypted input data
- * @param keyCB      Callback function called to request the encryption key
+ * @param keyStore   Request handler for encryption keys
  * @param ctx        Context to be passed to the key request callback
- * @param recipient  Returns the recipient information used to succesfully verify the signed cipherText.
+ * @param signer     Returns the recipient information used to succesfully verify the signed cipherText.
  *                   Note that this points into cipherText so care must be taken to avoid
- *                   referencing freed memory.
+ *                   referencing freed memory.  This will be memset to 0 if not verified.
  * @param plainText  Buffer for returning the decrypted payload. The storage for this
  *                   buffer is allocated by this function and must be freed by the caller.
  *
@@ -154,8 +116,7 @@ DPS_Status COSE_Decrypt(const uint8_t* nonce,
                         COSE_Entity* recipient,
                         DPS_RxBuffer* aad,
                         DPS_RxBuffer* cipherText,
-                        COSE_KeyRequest keyCB,
-                        void* ctx,
+                        DPS_KeyStore* keyStore,
                         COSE_Entity* signer,
                         DPS_TxBuffer* plainText);
 

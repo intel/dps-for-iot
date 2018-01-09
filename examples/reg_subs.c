@@ -197,7 +197,8 @@ int main(int argc, char** argv)
     for (size_t i = 0; i < NUM_KEYS; ++i) {
         DPS_SetContentKey(memoryKeyStore, &keyId[i], keyData[i], 16);
     }
-    node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore), &keyId[0]);
+    node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore),
+                          (const unsigned char*)&keyId[0], sizeof(keyId[0]));
 
     ret = DPS_StartNode(node, DPS_MCAST_PUB_DISABLED, listen);
     if (ret != DPS_OK) {

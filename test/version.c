@@ -216,7 +216,6 @@ int main(int argc, char** argv)
     int encrypt = DPS_TRUE;
     int mcast = DPS_MCAST_PUB_ENABLE_SEND;
     DPS_MemoryKeyStore* memoryKeyStore = NULL;
-    const DPS_UUID* nodeKeyId = NULL;
     DPS_NetEndpoint ep;
     DPS_Node *node = NULL;
     DPS_Event* nodeDestroyed = NULL;
@@ -260,13 +259,12 @@ int main(int argc, char** argv)
         for (size_t i = 0; i < NUM_KEYS; ++i) {
             DPS_SetContentKey(memoryKeyStore, &keyId[i], keyData[i], 16);
         }
-        nodeKeyId = &keyId[0];
         DPS_SetNetworkKey(memoryKeyStore, (const uint8_t*)&networkKeyId, sizeof(DPS_UUID), networkKey, sizeof(networkKey));
     }
 
     nodeDestroyed = DPS_CreateEvent();
 
-    node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore), nodeKeyId);
+    node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore), NULL, 0);
     ret = DPS_StartNode(node, mcast, 0);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));

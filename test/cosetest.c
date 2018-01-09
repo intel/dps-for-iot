@@ -28,10 +28,9 @@
 #include <dps/dbg.h>
 #include <dps/err.h>
 #include <dps/private/dps.h>
-#include "mbedtls/ctr_drbg.h"
-#include "mbedtls/entropy.h"
 #include "ccm.h"
 #include "cose.h"
+#include "crypto.h"
 #include "ec.h"
 
 /*
@@ -81,64 +80,48 @@ uint8_t config[] = {
     COSE_ALG_AES_CCM_16_128_128
 };
 
+static DPS_RBG* rbg = NULL;
 
-#define PERSONALIZATION_STRING "DPS_DRBG"
-
-static mbedtls_entropy_context entropy;
-static mbedtls_ctr_drbg_context drbg;
-
-static void InitDRBG()
+static DPS_Status KeyHandler(DPS_KeyStoreRequest* request, const unsigned char* id, size_t len)
 {
-    mbedtls_entropy_init(&entropy);
-    mbedtls_ctr_drbg_init(&drbg);
-    if (mbedtls_ctr_drbg_seed(&drbg, mbedtls_entropy_func, &entropy, (const unsigned char*)PERSONALIZATION_STRING,
-                              strlen(PERSONALIZATION_STRING)) != 0) {
-        exit(EXIT_FAILURE);
-    }
-}
+    DPS_Key k;
 
-static void FreeDRBG()
-{
-    mbedtls_ctr_drbg_free(&drbg);
-    mbedtls_entropy_free(&entropy);
-}
-
-static void RandBytes(uint8_t* bytes, size_t len)
-{
-    if (mbedtls_ctr_drbg_random(&drbg, bytes, len) != 0) {
-        exit(EXIT_FAILURE);
-    }
-}
-
-static DPS_Status GetKey(void* ctx, int8_t alg, const uint8_t* kid, size_t kidLen, COSE_Key* k)
-{
-    if (!kid && !kidLen) {
-        switch (alg) {
-        case COSE_ALG_AES_CCM_16_64_128:
-        case COSE_ALG_AES_CCM_16_128_128:
-        case COSE_ALG_A128KW:
-            RandBytes(k->symmetric.key, AES_128_KEY_LEN);
-            return DPS_OK;
-        default:
-            ASSERT(0);
-            return DPS_ERR_NOT_IMPLEMENTED;
+    if (!id) {
+        uint8_t key[AES_128_KEY_LEN];
+        DPS_Status ret = DPS_RandomKey(rbg, key);
+        if (ret != DPS_OK) {
+            return ret;
         }
+        k.type = DPS_KEY_SYMMETRIC;
+        k.symmetric.key = key;
+        k.symmetric.len = AES_128_KEY_LEN;
+        return DPS_SetKey(request, &k);
     } else {
-        switch (alg) {
-        case COSE_ALG_AES_CCM_16_64_128:
-        case COSE_ALG_AES_CCM_16_128_128:
-        case COSE_ALG_A128KW:
-            if ((kidLen != sizeof(DPS_UUID)) || (memcmp(kid, &keyId, kidLen) != 0)) {
-                return DPS_ERR_MISSING;
-            } else {
-                memcpy(k->symmetric.key, key, sizeof(key));
-                return DPS_OK;
-            }
-        default:
-            ASSERT(0);
-            return DPS_ERR_NOT_IMPLEMENTED;
+        if ((len != sizeof(DPS_UUID)) || (memcmp(id, &keyId, len) != 0)) {
+            return DPS_ERR_MISSING;
+        } else {
+            k.type = DPS_KEY_SYMMETRIC;
+            k.symmetric.key = key;
+            k.symmetric.len = AES_128_KEY_LEN;
+            return DPS_SetKey(request, &k);
         }
     }
+}
+
+static DPS_Status EphemeralKeyHandler(DPS_KeyStoreRequest* request, const DPS_Key* key)
+{
+    DPS_Key k;
+    uint8_t aes[AES_128_KEY_LEN];
+    DPS_Status ret;
+
+    ret = DPS_RandomKey(rbg, aes);
+    if (ret != DPS_OK) {
+        return ret;
+    }
+    k.type = DPS_KEY_SYMMETRIC;
+    k.symmetric.key = aes;
+    k.symmetric.len = AES_128_KEY_LEN;
+    return DPS_SetKey(request, &k);
 }
 
 static void CCM_Raw()
@@ -267,10 +250,12 @@ static void ECDSA_Raw()
 int main(int argc, char** argv)
 {
     DPS_Status ret;
+    DPS_KeyStore* keyStore;
     int i;
 
     DPS_Debug = 1;
-    InitDRBG();
+    rbg = DPS_CreateRBG();
+    keyStore = DPS_CreateKeyStore(NULL, KeyHandler, EphemeralKeyHandler, NULL);
 
     CCM_Raw();
     ECDSA_Raw();
@@ -287,10 +272,10 @@ int main(int argc, char** argv)
         DPS_RxBufferInit(&aadBuf, (uint8_t*)aad, sizeof(aad));
         DPS_RxBufferInit(&msgBuf, (uint8_t*)msg, sizeof(msg));
         recipient.alg = COSE_ALG_A128KW;
-        recipient.kid = (const uint8_t*)&keyId;
+        recipient.kid = (uint8_t*)&keyId;
         recipient.kidLen = sizeof(DPS_UUID);
 
-        ret = COSE_Encrypt(alg, nonce, NULL, &recipient, 1, &aadBuf, &msgBuf, GetKey, NULL, &cipherText);
+        ret = COSE_Encrypt(alg, nonce, NULL, &recipient, 1, &aadBuf, &msgBuf, keyStore, &cipherText);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("COSE_Encrypt failed: %s\n", DPS_ErrTxt(ret));
             return EXIT_FAILURE;
@@ -303,7 +288,7 @@ int main(int argc, char** argv)
 
         DPS_RxBufferInit(&aadBuf, (uint8_t*)aad, sizeof(aad));
 
-        ret = COSE_Decrypt(nonce, &recipient, &aadBuf, &input, GetKey, NULL, NULL, &plainText);
+        ret = COSE_Decrypt(nonce, &recipient, &aadBuf, &input, keyStore, NULL, &plainText);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("COSE_Decrypt failed: %s\n", DPS_ErrTxt(ret));
             return EXIT_FAILURE;
@@ -317,6 +302,7 @@ int main(int argc, char** argv)
     }
 
     DPS_PRINT("Passed\n");
-    FreeDRBG();
+    DPS_DestroyKeyStore(keyStore);
+    DPS_DestroyRBG(rbg);
     return EXIT_SUCCESS;
 }
