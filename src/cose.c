@@ -358,7 +358,7 @@ static DPS_Status EncodeRecipient(DPS_TxBuffer* buf, int8_t alg, const DPS_KeyId
  */
 static DPS_Status EncodeSig(DPS_TxBuffer* buf, int8_t alg, int8_t sigAlg,
                             uint8_t* aad, size_t aadLen,
-                            uint8_t* payload, size_t payloadLen)
+                            const uint8_t* payload, size_t payloadLen)
 {
     DPS_Status ret;
     size_t bufLen;
@@ -537,6 +537,7 @@ static DPS_Status EncodeKDFContext(DPS_TxBuffer* buf, int8_t alg, uint8_t keyLen
 static DPS_Status SetKey(DPS_KeyStoreRequest* request, const DPS_Key* key)
 {
     COSE_Key* ckey = request->data;
+    DPS_Status ret;
     size_t len;
 
     switch (key->type) {
@@ -582,11 +583,18 @@ static DPS_Status SetKey(DPS_KeyStoreRequest* request, const DPS_Key* key)
             return DPS_ERR_MISSING;
         }
         if (key->cert.privateKey) {
-            return ParsePrivateKey_ECDSA(key->cert.privateKey, key->cert.password,
-                                         &ckey->ec.curve, ckey->ec.d);
-        } else {
-            return ParseCertificate_ECDSA(key->cert.cert,
-                                          &ckey->ec.curve, ckey->ec.x, ckey->ec.y);
+            ret = ParsePrivateKey_ECDSA(key->cert.privateKey, key->cert.password,
+                                        &ckey->ec.curve, ckey->ec.d);
+            if (ret != DPS_OK) {
+                return ret;
+            }
+        }
+        if (key->cert.cert) {
+            ret = ParseCertificate_ECDSA(key->cert.cert,
+                                         &ckey->ec.curve, ckey->ec.x, ckey->ec.y);
+            if (ret != DPS_OK) {
+                return ret;
+            }
         }
         break;
     default:
@@ -1312,6 +1320,54 @@ static DPS_Status DecodeUnprotectedMap(DPS_RxBuffer* buf, int8_t* alg, DPS_KeyId
     return ret;
 }
 
+/*
+ * Decoding of COSE_Encrypt and COSE_Encrypt0 messages common to both
+ * verification and decryption.
+ */
+static DPS_Status DecodeEncryptMessage(DPS_RxBuffer* cipherText, uint64_t* tag, int8_t* alg,
+                                       uint8_t iv[COSE_NONCE_LEN], Signature* sig, uint8_t** content,
+                                       size_t* contentLen)
+{
+    DPS_Status ret;
+    size_t sz;
+
+    /*
+     * Check this is a COSE payload
+     */
+    ret = CBOR_DecodeTag(cipherText, tag);
+    if ((ret != DPS_OK) || ((*tag != COSE_TAG_ENCRYPT0) && (*tag != COSE_TAG_ENCRYPT))) {
+        return DPS_ERR_NOT_ENCRYPTED;
+    }
+    /*
+     * Input is a CBOR array of 3 or 4 elements
+     */
+    ret = CBOR_DecodeArray(cipherText, &sz);
+    if (ret != DPS_OK) {
+        return ret;
+    }
+    if ((*tag == COSE_TAG_ENCRYPT0 && sz != 3) || (*tag == COSE_TAG_ENCRYPT && sz != 4)) {
+        return DPS_ERR_INVALID;
+    }
+    /*
+     * [1] Protected headers
+     */
+    ret = DecodeProtectedMap(cipherText, alg);
+    if ((ret != DPS_OK) || (*alg == COSE_ALG_RESERVED)) {
+        return DPS_ERR_INVALID;
+    }
+    /*
+     * [2] Unprotected map
+     */
+    ret = DecodeUnprotectedMap(cipherText, NULL, NULL, iv, sig, NULL);
+    if (ret != DPS_OK) {
+        return ret;
+    }
+    /*
+     * [3] Encrypted content
+     */
+    return CBOR_DecodeBytes(cipherText, content, contentLen);
+}
+
 static DPS_Status DecodeRecipient(DPS_RxBuffer* buf, int8_t* alg, DPS_KeyId* kid,
                                   COSE_Key* key, uint8_t** content, size_t *contentLen)
 {
@@ -1340,6 +1396,72 @@ static DPS_Status DecodeRecipient(DPS_RxBuffer* buf, int8_t* alg, DPS_KeyId* kid
     return ret;
 }
 
+static DPS_Status Verify(DPS_KeyStore* keyStore, COSE_Entity* signer,
+                         int8_t alg, const Signature* sig, const uint8_t* content, size_t contentLen)
+{
+    DPS_Status ret;
+    DPS_TxBuffer toBeSigned;
+    COSE_Key k;
+
+    DPS_TxBufferClear(&toBeSigned);
+    memset(&k, 0, sizeof(k));
+    if (signer) {
+        memset(signer, 0, sizeof(*signer));
+    }
+
+    if (!sig->sigLen) {
+        ret = DPS_ERR_NOT_SIGNED;
+        goto Exit;
+    }
+    ret = EncodeSig(&toBeSigned, alg, sig->alg, NULL, 0, content, contentLen);
+    if (ret != DPS_OK) {
+        goto Exit;
+    }
+    ret = GetSignatureKey(keyStore, sig, &k);
+    if (ret != DPS_OK) {
+        goto Exit;
+    }
+    ret = Verify_ECDSA(k.ec.curve, k.ec.x, k.ec.y, toBeSigned.base, DPS_TxBufferUsed(&toBeSigned),
+                       sig->sig, sig->sigLen);
+    if (ret != DPS_OK) {
+        goto Exit;
+    }
+    if (signer) {
+        signer->alg = sig->alg;
+        signer->kid = sig->kid;
+    }
+
+Exit:
+    SecureZeroMemory(&k, sizeof(k));
+    DPS_TxBufferFree(&toBeSigned);
+    return ret;
+}
+
+DPS_Status COSE_Verify(DPS_RxBuffer* cipherText, DPS_KeyStore* keyStore, COSE_Entity* signer)
+{
+    DPS_Status ret;
+    uint64_t tag;
+    int8_t alg;
+    uint8_t iv[COSE_NONCE_LEN];
+    Signature sig;
+    uint8_t* content;
+    size_t contentLen;
+
+    DPS_DBGTRACE();
+
+    if (!cipherText) {
+        return DPS_ERR_ARGS;
+    }
+
+    memset(&sig, 0, sizeof(sig));
+
+    ret = DecodeEncryptMessage(cipherText, &tag, &alg, iv, &sig, &content, &contentLen);
+    if (ret == DPS_OK) {
+        ret = Verify(keyStore, signer, alg, &sig, content, contentLen);
+    }
+    return ret;
+}
+
 DPS_Status COSE_Decrypt(const uint8_t* nonce, COSE_Entity* recipient, DPS_RxBuffer* aad,
                         DPS_RxBuffer* cipherText, DPS_KeyStore* keyStore, COSE_Entity* signer,
                         DPS_TxBuffer* plainText)
@@ -1353,12 +1475,10 @@ DPS_Status COSE_Decrypt(const uint8_t* nonce, COSE_Entity* recipient, DPS_RxBuff
     uint8_t L;
     uint8_t M;
     uint8_t iv[COSE_NONCE_LEN];
-    size_t ivLen;
+    size_t unused;
     Signature sig;
     uint8_t* content;
     size_t contentLen;
-    DPS_TxBuffer toBeSigned;
-    COSE_Key k;
     uint8_t* kw;
     size_t kwLen;
     COSE_Key kek;
@@ -1378,82 +1498,21 @@ DPS_Status COSE_Decrypt(const uint8_t* nonce, COSE_Entity* recipient, DPS_RxBuff
 
     DPS_TxBufferClear(plainText);
     DPS_TxBufferClear(&AAD);
-    DPS_TxBufferClear(&toBeSigned);
     DPS_TxBufferClear(&kdfContext);
     memset(&sig, 0, sizeof(sig));
-    memset(&k, 0, sizeof(k));
-    if (signer) {
-        memset(signer, 0, sizeof(*signer));
-    }
 
-    /*
-     * Check this is a COSE payload
-     */
-    ret = CBOR_DecodeTag(cipherText, &tag);
-    if ((ret != DPS_OK) || ((tag != COSE_TAG_ENCRYPT0) && (tag != COSE_TAG_ENCRYPT))) {
-        ret = DPS_ERR_NOT_ENCRYPTED;
-        goto Exit;
-    }
-    /*
-     * Input is a CBOR array of 3 or 4 elements
-     */
-    ret = CBOR_DecodeArray(cipherText, &sz);
-    if (ret != DPS_OK) {
-        goto Exit;
-    }
-    if ((tag == COSE_TAG_ENCRYPT0 && sz != 3) || (tag == COSE_TAG_ENCRYPT && sz != 4)) {
-        ret = DPS_ERR_INVALID;
-        goto Exit;
-    }
-    /*
-     * [1] Protected headers
-     */
-    ret = DecodeProtectedMap(cipherText, &alg);
-    if ((ret != DPS_OK) || (alg == COSE_ALG_RESERVED)) {
-        ret = DPS_ERR_INVALID;
-        goto Exit;
-    }
-    ret = SetCryptoParams(alg, &L, &M, &ivLen);
-    if (ret != DPS_OK) {
-        goto Exit;
-    }
-    /*
-     * [2] Unprotected map
-     */
-    ret = DecodeUnprotectedMap(cipherText, NULL, NULL, iv, &sig, NULL);
-    if (ret != DPS_OK) {
-        goto Exit;
-    }
-    /*
-     * [3] Encrypted content
-     */
-    ret = CBOR_DecodeBytes(cipherText, &content, &contentLen);
+    ret = DecodeEncryptMessage(cipherText, &tag, &alg, iv, &sig, &content, &contentLen);
     if (ret != DPS_OK) {
         goto Exit;
     }
     /*
      * Verify signature of encrypted content
      */
-    if (sig.sigLen) {
-        DPS_Status verify;
-        ret = EncodeSig(&toBeSigned, alg, sig.alg, NULL, 0, content, contentLen);
-        if (ret != DPS_OK) {
-            goto Exit;
-        }
-        verify = GetSignatureKey(keyStore, &sig, &k);
-        if (verify == DPS_OK) {
-            verify = Verify_ECDSA(k.ec.curve, k.ec.x, k.ec.y, toBeSigned.base, DPS_TxBufferUsed(&toBeSigned),
-                                  sig.sig, sig.sigLen);
-        }
-        if (verify == DPS_OK) {
-            if (signer) {
-                signer->alg = sig.alg;
-                signer->kid = sig.kid;
-            }
-        } else {
-            DPS_WARNPRINT("Failed to verify signature: %s\n", DPS_ErrTxt(verify));
-        }
+    DPS_Status verify = Verify(keyStore, signer, alg, &sig, content, contentLen);
+    if (verify != DPS_OK) {
+        DPS_WARNPRINT("Failed to verify signature: %s\n", DPS_ErrTxt(verify));
     }
+
     /*
      * Create and encode the AAD
      */
@@ -1464,6 +1523,13 @@ DPS_Status COSE_Decrypt(const uint8_t* nonce, COSE_Entity* recipient, DPS_RxBuff
     aadLen = DPS_TxBufferUsed(&AAD);
     /*
      * Determine the content encryption key (CEK)
+     */
+    ret = SetCryptoParams(alg, &L, &M, &unused);
+    if (ret != DPS_OK) {
+        goto Exit;
+    }
+    /*
+     * [4] Recipients array
      */
     if (tag == COSE_TAG_ENCRYPT0) {
         sz = 1;
@@ -1602,10 +1668,8 @@ Exit:
     SecureZeroMemory(&ephemeralKey, sizeof(ephemeralKey));
     SecureZeroMemory(&staticKey, sizeof(staticKey));
     SecureZeroMemory(&kek, sizeof(kek));
-    SecureZeroMemory(&k, sizeof(k));
     SecureZeroMemory(&cek, sizeof(cek));
     DPS_TxBufferFree(&kdfContext);
-    DPS_TxBufferFree(&toBeSigned);
     DPS_TxBufferFree(&AAD);
     if (ret != DPS_OK) {
         DPS_TxBufferFree(plainText);

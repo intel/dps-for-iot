@@ -192,6 +192,7 @@ static DPS_Publication* FreePublication(DPS_Node* node, DPS_Publication* pub)
             prev->next = next;
         }
         FreeRecipients(pub);
+        DPS_ClearKeyId(&pub->netId);
         if (pub->bf) {
             DPS_BitVectorFree(pub->bf);
             pub->bf = NULL;
@@ -311,7 +312,7 @@ DPS_Node* DPS_PublicationGetNode(const DPS_Publication* pub)
 
 static DPS_Status UpdatePubHistory(DPS_Node* node, DPS_Publication* pub)
 {
-    return DPS_UpdatePubHistory(&node->history, &pub->pubId, pub->sequenceNum, pub->ackRequested, PUB_TTL(node, pub), &pub->sender);
+    return DPS_UpdatePubHistory(&node->history, &pub->pubId, pub->sequenceNum, pub->ackRequested, PUB_TTL(node, pub), &pub->netAddr);
 }
 
 
@@ -679,7 +680,8 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
     pub->sequenceNum = sequenceNum;
     pub->ackRequested = ackRequested;
     pub->flags |= PUB_FLAG_PUBLISH;
-    pub->sender = ep->addr;
+    pub->netAddr = ep->addr;
+    DPS_CopyNetId(&pub->netId, ep);
     /*
      * Free any existing protected and encrypted buffers
      */

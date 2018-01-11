@@ -19,6 +19,7 @@ dps.cvar.debug = False
 
 node = dps.create_node("/")
 dps.start_node(node, dps.MCAST_PUB_ENABLE_SEND + dps.MCAST_PUB_ENABLE_RECV, 0)
+dps.set_permission(node, dps.WILDCARD_ID, dps.PERM_PUB | dps.PERM_SUB | dps.PERM_ACK)
 
 pub = dps.create_publication(node)
 dps.init_publication(pub, ['a/b/c'], False, None)

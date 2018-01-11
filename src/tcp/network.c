@@ -578,3 +578,11 @@ void DPS_NetConnectionDecRef(DPS_NetConnection* cn)
         }
     }
 }
+
+DPS_Status DPS_NetId(DPS_KeyId* keyId, const DPS_NetEndpoint* ep)
+{
+    /* No identity information for tcp */
+    keyId->id = NULL;
+    keyId->len = 0;
+    return DPS_OK;
+}

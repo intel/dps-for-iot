@@ -978,7 +978,7 @@ DPS_Status DPS_CountVectorDel(DPS_CountVector* cv, DPS_BitVector* bv)
         return DPS_ERR_NULL;
     }
     if (cv->entries == 0) {
-        return DPS_ERR_ARGS;
+        return DPS_OK; /* TODO DPS_ERR_ARGS; */
     }
     if (bv->popCount != 0) {
         for (i = 0; i < NUM_CHUNKS(bv); ++i) {

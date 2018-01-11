@@ -207,6 +207,7 @@ int main(int argc, char** argv)
     int mcastPub = DPS_MCAST_PUB_DISABLED;
     const char* host = NULL;
     int encrypt = 1;
+    int user = 1;
     int subsRate = DPS_SUBSCRIPTION_UPDATE_RATE;
     int listenPort = 0;
     int numLinks = 0;
@@ -214,6 +215,7 @@ int main(int argc, char** argv)
     const char* linkHosts[MAX_LINKS];
     int numAddrs = 0;
     DPS_NodeAddress* addrs[MAX_LINKS];
+    int perm = DPS_PERM_PUB | DPS_PERM_SUB | DPS_PERM_ACK;
 
     DPS_Debug = 0;
 
@@ -253,6 +255,9 @@ int main(int argc, char** argv)
             if (IntArg("-x", &arg, &argc, &encrypt, 0, 2)) {
                 continue;
             }
+            if (IntArg("-u", &arg, &argc, &user, 1, 2)) {
+                continue;
+            }
             if (IntArg("-r", &arg, &argc, &subsRate, 0, INT32_MAX)) {
                 continue;
             }
@@ -264,6 +269,9 @@ int main(int argc, char** argv)
             if (strcmp(*arg, "-d") == 0) {
                 ++arg;
                 DPS_Debug = 1;
+                continue;
+            }
+            if (IntArg("-e", &arg, &argc, &perm, 0, perm)) {
                 continue;
             }
         }
@@ -298,12 +306,14 @@ int main(int argc, char** argv)
         }
     } else if (encrypt == 2) {
         DPS_SetTrustedCA(memoryKeyStore, TrustedCAs);
-        nodeKeyId = &SubscriberId;
-        DPS_SetCertificate(memoryKeyStore, SubscriberCert, SubscriberPrivateKey, SubscriberPassword);
-        DPS_SetCertificate(memoryKeyStore, PublisherCert, NULL, NULL);
+        nodeKeyId = &Ids[user].keyId;
+        DPS_SetCertificate(memoryKeyStore, Ids[user].cert, Ids[user].privateKey, Ids[user].password);
+        DPS_SetCertificate(memoryKeyStore, Ids[PUB].cert, NULL, NULL);
+        DPS_SetCertificate(memoryKeyStore, Ids[ID_MAX - user].cert, NULL, NULL);
     }
     node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore), nodeKeyId);
     DPS_SetNodeSubscriptionUpdateDelay(node, subsRate);
+    DPS_SetPermission(node, DPS_WILDCARD_ID, perm);
 
     ret = DPS_StartNode(node, mcastPub, listenPort);
     if (ret != DPS_OK) {
@@ -386,16 +396,18 @@ Exit:
     return (ret == DPS_OK) ? EXIT_SUCCESS : EXIT_FAILURE;
 
 Usage:
-    DPS_PRINT("Usage %s [-d] [-q] [-m] [-w <seconds>] [-x 0|1|2] [[-h <hostname>] -p <portnum>] [-l <listen port] [-m] [-r <milliseconds>] [[-s] topic1 ... topicN]\n", argv[0]);
+    DPS_PRINT("Usage %s [-d] [-q] [-m] [-w <seconds>] [-x 0|1|2] [-u 1|2] [[-h <hostname>] -p <portnum>] [-l <listen port] [-m] [-r <milliseconds>] [-e <permissions>] [[-s] topic1 ... topicN]\n", argv[0]);
     DPS_PRINT("       -d: Enable debug ouput if built for debug.\n");
     DPS_PRINT("       -q: Quiet - suppresses output about received publications.\n");
     DPS_PRINT("       -x: Disable (0) or enable symmetric (1) or asymmetric(2) encryption. Default is symmetric encryption enabled.\n");
+    DPS_PRINT("       -u: Identity when using asymmetric encryption. Default is 1.\n");
     DPS_PRINT("       -h: Specifies host (localhost is default). Mutiple -h options are permitted.\n");
     DPS_PRINT("       -w: Time to wait before establishing links\n");
     DPS_PRINT("       -p: A port to link. Multiple -p options are permitted.\n");
     DPS_PRINT("       -m: Enable multicast receive. Enabled by default is there are no -p options.\n");
     DPS_PRINT("       -l: port to listen on. Default is an ephemeral port.\n");
     DPS_PRINT("       -r: Time to delay between subscription updates.\n");
+    DPS_PRINT("       -e: Default permissions\n");
     DPS_PRINT("       -s: list of subscription topic strings. Multiple -s options are permitted\n");
     return EXIT_FAILURE;
 }

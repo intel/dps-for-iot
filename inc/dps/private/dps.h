@@ -182,6 +182,16 @@ DPS_KeyId* DPS_CopyKeyId(DPS_KeyId* dest, const DPS_KeyId* src);
  */
 void DPS_ClearKeyId(DPS_KeyId* keyId);
 
+/*
+ * Compare two key IDs.
+ *
+ * @param a  The ID to compare against
+ * @param b  The ID to compare with b
+ *
+ * @return Returns zero if the addresses are different non-zero if they are the same
+ */
+int DPS_SameKeyId(const DPS_KeyId* a, const DPS_KeyId* b);
+
 /**
  * A key store request.
  */
@@ -205,6 +215,20 @@ struct _DPS_KeyStore {
     DPS_EphemeralKeyHandler ephemeralKeyHandler;
     DPS_CAHandler caHandler;
 };
+
+/**
+ * Returns true if the message sender identified by either the network
+ * layer ID or message signature is authorized with the provided
+ * permissions.
+ *
+ * @param node The node containing the permissions to check
+ * @param netId The network layer ID
+ * @param buf The encrypted field of a DPS message
+ * @param perm The permissions to check
+ *
+ * @return DPS_TRUE if authorized, DPS_FALSE otherwise
+ */
+int DPS_IsAuthorized(DPS_Node* node, const DPS_KeyId* netId, const DPS_RxBuffer* buf, int perm);
 
 /**
  * Returns a non-secure random number

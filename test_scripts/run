@@ -26,7 +26,9 @@ TESTS="./build/test/bin/cbortest \
        ./test_scripts/simple_py_test \
        ./test_scripts/retained_py \
        ./py_scripts/subs_tree.py \
-       ./test_scripts/simple_js_test"
+       ./test_scripts/simple_js_test \
+       ./test_scripts/auth \
+       ./test_scripts/e2eauth"
 
 DEFAULT="\e[0m"
 GREEN="\e[32m"

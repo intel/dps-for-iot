@@ -599,6 +599,50 @@ typedef void (*DPS_OnResolveAddressComplete)(DPS_Node* node, DPS_NodeAddress* ad
  */
 DPS_Status DPS_ResolveAddress(DPS_Node* node, const char* host, const char* service, DPS_OnResolveAddressComplete cb, void* data);
 
+/**
+ * Publication permission bit
+ */
+#define DPS_PERM_PUB  (1<<0)
+
+/**
+ * Subscription permission bit
+ */
+#define DPS_PERM_SUB  (1<<1)
+
+/**
+ * End-to-end pubication acknowledgement permission bit
+ */
+#define DPS_PERM_ACK  (1<<2)
+
+/**
+ * Use to support wildcard matches in DPS_GetPermission() and
+ * DPS_SetPermission().
+ */
+extern const DPS_KeyId* const DPS_WILDCARD_ID;
+
+/**
+ * Get the permission bits for an address.
+ *
+ * @param node the node to search
+ * @param keyId the ID to search for
+ *
+ * @return the permission bits for the address
+ */
+int DPS_GetPermission(const DPS_Node* node, const DPS_KeyId* keyId);
+
+/**
+ * Set the permission bits for an address.
+ *
+ * Use @ref DPS_WILDCARD_ID to set the default permission bits.
+ *
+ * @param node the node to update
+ * @param keyId the address to update
+ * @param bits the new permission bits
+ *
+ * @return DPS_OK or an error
+ */
+DPS_Status DPS_SetPermission(DPS_Node* node, const DPS_KeyId* keyId, uint8_t bits);
+
 /** @} */ // end of node group
 
 /**

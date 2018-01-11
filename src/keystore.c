@@ -111,11 +111,6 @@ struct _DPS_MemoryKeyStore {
     char *ca;
 };
 
-static int SameKeyId(const DPS_KeyId* a, const DPS_KeyId* b)
-{
-    return a && b && (a->len == b->len) && (memcmp(a->id, b->id, b->len) == 0);
-}
-
 static DPS_MemoryKeyStoreEntry* MemoryKeyStoreLookup(DPS_MemoryKeyStore* mks, const DPS_KeyId* keyId)
 {
     DPS_MemoryKeyStoreEntry* entry;
@@ -123,7 +118,7 @@ static DPS_MemoryKeyStoreEntry* MemoryKeyStoreLookup(DPS_MemoryKeyStore* mks, co
 
     for (i = 0; i < mks->entriesCount; ++i) {
         entry = mks->entries + i;
-        if (SameKeyId(&entry->keyId, keyId)) {
+        if (DPS_SameKeyId(&entry->keyId, keyId)) {
             return entry;
         }
     }
@@ -243,7 +238,7 @@ static DPS_Status MemoryKeyStoreKeyHandler(DPS_KeyStoreRequest* request, const D
         return DPS_SetKey(request, &entry->key);
     }
 
-    if (SameKeyId(&mks->networkId, keyId)) {
+    if (DPS_SameKeyId(&mks->networkId, keyId)) {
         return DPS_SetKey(request, &mks->networkKey);
     }
 

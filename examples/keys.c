@@ -62,52 +62,76 @@ const char TrustedCAs[] =
     "Wu+a8mdVTg4CIHXjJbMxosMAruzdFtf9Ik0bKfhFoXfr6XfFVsVxcU9l\r\n"
     "-----END CERTIFICATE-----\r\n";
 
-#define PUBLISHER_ID "DPS Test Publisher"
-const DPS_KeyId PublisherId = { PUBLISHER_ID, sizeof(PUBLISHER_ID) - 1 };
-const char PublisherCert[] =
-    "-----BEGIN CERTIFICATE-----\r\n"
-    "MIIBiDCCAS0CCQCzbzjgbS2buTAKBggqhkjOPQQDAjBIMQswCQYDVQQGEwJVUzEV\r\n"
-    "MBMGA1UEBwwMRGVmYXVsdCBDaXR5MQwwCgYDVQQKDANEUFMxFDASBgNVBAMMC0RQ\r\n"
-    "UyBUZXN0IENBMB4XDTE4MDEwNTE3NDIyNVoXDTI4MDEwMzE3NDIyNVowTzELMAkG\r\n"
-    "A1UEBhMCVVMxFTATBgNVBAcMDERlZmF1bHQgQ2l0eTEMMAoGA1UECgwDRFBTMRsw\r\n"
-    "GQYDVQQDDBJEUFMgVGVzdCBQdWJsaXNoZXIwWTATBgcqhkjOPQIBBggqhkjOPQMB\r\n"
-    "BwNCAAT9zFcF+A/Hp8mD4DZSUrbmbyQlj81LjGm7o7IBqF4mjlV7sgNtyAFvQYI7\r\n"
-    "3BJYbcR15byhqNYT7oM6i4WvPCH0MAoGCCqGSM49BAMCA0kAMEYCIQCX7IHcB54O\r\n"
-    "VBD7MQwf6aoKDHrLBA2oAk60Stxcfx5RdAIhAL3Dwkrz9BTjK7YbUPScMBUPO/8k\r\n"
-    "68kLmXJncgz0HCAl\r\n"
-    "-----END CERTIFICATE-----\r\n";
-const char PublisherPrivateKey[] =
-    "-----BEGIN EC PRIVATE KEY-----\r\n"
-    "Proc-Type: 4,ENCRYPTED\r\n"
-    "DEK-Info: AES-256-CBC,1015081BA68E2CFF939DD7F15415B0A8\r\n"
-    "\r\n"
-    "Fqu58/SuC8tFL5gpje6JI+Raq9DiCo/xWu32RzHastU20xie/8xO5ts+aLXQHPO+\r\n"
-    "y/mogXxVnkfLBelgz3BhxitMOM2jEm3P8BwXzDWvm3BK5AneUaQMROHTMzU/pDlD\r\n"
-    "DFcbIyQqLTFp0QLrvzplZWsFBAKXLs2bxcuyqRv4+h4=\r\n"
-    "-----END EC PRIVATE KEY-----\r\n";
-const char PublisherPassword[] = "DPS Test Publisher";
+#define PUB_ID "DPS Test Publisher"
+#define SUB1_ID "DPS Test Subscriber1"
+#define SUB2_ID "DPS Test Subscriber2"
 
-#define SUBSCRIBER_ID "DPS Test Subscriber"
-const DPS_KeyId SubscriberId = { SUBSCRIBER_ID, sizeof(SUBSCRIBER_ID) - 1 };
-const char SubscriberCert[] =
-    "-----BEGIN CERTIFICATE-----\r\n"
-    "MIIBiTCCAS4CCQCzbzjgbS2bujAKBggqhkjOPQQDAjBIMQswCQYDVQQGEwJVUzEV\r\n"
-    "MBMGA1UEBwwMRGVmYXVsdCBDaXR5MQwwCgYDVQQKDANEUFMxFDASBgNVBAMMC0RQ\r\n"
-    "UyBUZXN0IENBMB4XDTE4MDEwNTE3NDI0NloXDTI4MDEwMzE3NDI0NlowUDELMAkG\r\n"
-    "A1UEBhMCVVMxFTATBgNVBAcMDERlZmF1bHQgQ2l0eTEMMAoGA1UECgwDRFBTMRww\r\n"
-    "GgYDVQQDDBNEUFMgVGVzdCBTdWJzY3JpYmVyMFkwEwYHKoZIzj0CAQYIKoZIzj0D\r\n"
-    "AQcDQgAEbrDkznbJynaPPfKnnkx14nLX782a2SiPZHYFrDseHwoLOqWe6TI2bcIm\r\n"
-    "rPEDasOnc8fywObXDwEKyRgIR1gqLDAKBggqhkjOPQQDAgNJADBGAiEAj7V5KV3y\r\n"
-    "SwVLhWGC4tey6zs7G+IQMNPQF0A/+Ic1hLICIQD7TumHocAG2SG42IE4WcwllrBG\r\n"
-    "LmXKOg4TBaBxS5GrDg==\r\n"
-    "-----END CERTIFICATE-----\r\n";
-const char SubscriberPrivateKey[] =
-    "-----BEGIN EC PRIVATE KEY-----\r\n"
-    "Proc-Type: 4,ENCRYPTED\r\n"
-    "DEK-Info: AES-256-CBC,7F349D976187178514F51358734287B2\r\n"
-    "\r\n"
-    "uc2MV05GoQf5WKC62U1n5dX9O11OehzpxKVKQiiMoqB+PnkyFR8+eS/CLdhtHPC9\r\n"
-    "cU6HJDaPdUFZlV0L+Dhl3L1vm0zBvRpIZUivZGzB3h6RMptvhoZ5rey1f1Kyq7oj\r\n"
-    "1rEBHuMR4LT4PCrDQ4DpvOvAiJGpPMEaEovKhy+IneQ=\r\n"
-    "-----END EC PRIVATE KEY-----\r\n";
-const char SubscriberPassword[] = "DPS Test Subscriber";
+const Id Ids[ID_MAX] = {
+    {
+        { PUB_ID, sizeof(PUB_ID) - 1 },
+        "-----BEGIN CERTIFICATE-----\r\n"
+        "MIIBiDCCAS0CCQCzbzjgbS2buTAKBggqhkjOPQQDAjBIMQswCQYDVQQGEwJVUzEV\r\n"
+        "MBMGA1UEBwwMRGVmYXVsdCBDaXR5MQwwCgYDVQQKDANEUFMxFDASBgNVBAMMC0RQ\r\n"
+        "UyBUZXN0IENBMB4XDTE4MDEwNTE3NDIyNVoXDTI4MDEwMzE3NDIyNVowTzELMAkG\r\n"
+        "A1UEBhMCVVMxFTATBgNVBAcMDERlZmF1bHQgQ2l0eTEMMAoGA1UECgwDRFBTMRsw\r\n"
+        "GQYDVQQDDBJEUFMgVGVzdCBQdWJsaXNoZXIwWTATBgcqhkjOPQIBBggqhkjOPQMB\r\n"
+        "BwNCAAT9zFcF+A/Hp8mD4DZSUrbmbyQlj81LjGm7o7IBqF4mjlV7sgNtyAFvQYI7\r\n"
+        "3BJYbcR15byhqNYT7oM6i4WvPCH0MAoGCCqGSM49BAMCA0kAMEYCIQCX7IHcB54O\r\n"
+        "VBD7MQwf6aoKDHrLBA2oAk60Stxcfx5RdAIhAL3Dwkrz9BTjK7YbUPScMBUPO/8k\r\n"
+        "68kLmXJncgz0HCAl\r\n"
+        "-----END CERTIFICATE-----\r\n",
+        "-----BEGIN EC PRIVATE KEY-----\r\n"
+        "Proc-Type: 4,ENCRYPTED\r\n"
+        "DEK-Info: AES-256-CBC,1015081BA68E2CFF939DD7F15415B0A8\r\n"
+        "\r\n"
+        "Fqu58/SuC8tFL5gpje6JI+Raq9DiCo/xWu32RzHastU20xie/8xO5ts+aLXQHPO+\r\n"
+        "y/mogXxVnkfLBelgz3BhxitMOM2jEm3P8BwXzDWvm3BK5AneUaQMROHTMzU/pDlD\r\n"
+        "DFcbIyQqLTFp0QLrvzplZWsFBAKXLs2bxcuyqRv4+h4=\r\n"
+        "-----END EC PRIVATE KEY-----\r\n",
+        "DPS Test Publisher"
+    },
+    {
+        { SUB1_ID, sizeof(SUB1_ID) - 1 },
+        "-----BEGIN CERTIFICATE-----\r\n"
+        "MIIBczCCARgCCQCzbzjgbS2b2jAKBggqhkjOPQQDAjBIMQswCQYDVQQGEwJVUzEV\r\n"
+        "MBMGA1UEBwwMRGVmYXVsdCBDaXR5MQwwCgYDVQQKDANEUFMxFDASBgNVBAMMC0RQ\r\n"
+        "UyBUZXN0IENBMB4XDTE4MDExOTIyMzY1OFoXDTI4MDExNzIyMzY1OFowOjELMAkG\r\n"
+        "A1UEBhMCVVMxDDAKBgNVBAoMA0RQUzEdMBsGA1UEAwwURFBTIFRlc3QgU3Vic2Ny\r\n"
+        "aWJlcjEwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAR7BByLwNDLOMgMN/eNc1dO\r\n"
+        "DdrF4ORuD23+6P69ZebAacoitDE1f8HXrum5JlIPeXPsI5W/uficO5ntaJbtuhF1\r\n"
+        "MAoGCCqGSM49BAMCA0kAMEYCIQDD30ZrLlGHqftQytzjqhRs78qvnkh1iDWuo6e0\r\n"
+        "Ypr3yQIhAKtYWwXfJMWj9f/47NXqwDVZE26dXIjIaprEShLk8seJ\r\n"
+        "-----END CERTIFICATE-----\r\n",
+        "-----BEGIN EC PRIVATE KEY-----\r\n"
+        "Proc-Type: 4,ENCRYPTED\r\n"
+        "DEK-Info: AES-256-CBC,FEA9341014E72E83E7E124E96C6688B2\r\n"
+        "\r\n"
+        "0Wn5jL+5QgOPmYxXyGPRO1YpuZ38vOvt+PsMb//a8Ui32NqG5+GWqCut4z11vqRF\r\n"
+        "O/eWA9g3ldNU5kupHa/ecSOnIY6+qXlLGISyQKRrtaf2mQPcuNf7KGrzNRziY17e\r\n"
+        "ZVk8AnM9vLERm7NXSgz+oh7liNW4az5dqMXTSdXsT3U=\r\n"
+        "-----END EC PRIVATE KEY-----\r\n",
+        "DPS Test Subscriber1"
+    },
+    {
+        { SUB2_ID, sizeof(SUB2_ID) - 1 },
+        "-----BEGIN CERTIFICATE-----\r\n"
+        "MIIBcjCCARgCCQCzbzjgbS2b2zAKBggqhkjOPQQDAjBIMQswCQYDVQQGEwJVUzEV\r\n"
+        "MBMGA1UEBwwMRGVmYXVsdCBDaXR5MQwwCgYDVQQKDANEUFMxFDASBgNVBAMMC0RQ\r\n"
+        "UyBUZXN0IENBMB4XDTE4MDExOTIyMzcwMloXDTI4MDExNzIyMzcwMlowOjELMAkG\r\n"
+        "A1UEBhMCVVMxDDAKBgNVBAoMA0RQUzEdMBsGA1UEAwwURFBTIFRlc3QgU3Vic2Ny\r\n"
+        "aWJlcjIwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAATi3Ba4eCejMuiqInWF78dW\r\n"
+        "eT2QvlFeQMG6av64xNXJvW2Dxjce0qdSYNhiSRKYcRotB8lf93CnkcZ971Rrhf1n\r\n"
+        "MAoGCCqGSM49BAMCA0gAMEUCIQCkpdtENhw077JyQF/IxEK+E9vy7TO+yQA720tE\r\n"
+        "kTkIdQIgOqswPluYbzOshUJ0+kUY4FHGqaeIdzYi9mNLJJ6t180=\r\n"
+        "-----END CERTIFICATE-----\r\n",
+        "-----BEGIN EC PRIVATE KEY-----\r\n"
+        "Proc-Type: 4,ENCRYPTED\r\n"
+        "DEK-Info: AES-256-CBC,E063C98AF0114B57B3F5FE657CF94A87\r\n"
+        "\r\n"
+        "UpU6uxwua50gfhbal6k/8SMwmB+ugzi+K3ZZFucmy08bUBKAaNli5RftQ/pyfTH/\r\n"
+        "DmiS8yrjAaYgTEnk1cAsPXmGNejRoqQZX3CaFDY6YZGTjdZd9HsWXUjt8ygTiQdR\r\n"
+        "l+ejFYs6vFjZv2IizXsb7DUngZ2ohYlm+rKIfT9S9TM=\r\n"
+        "-----END EC PRIVATE KEY-----\r\n",
+        "DPS Test Subscriber2"
+    },
+};

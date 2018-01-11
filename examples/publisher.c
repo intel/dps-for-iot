@@ -237,6 +237,7 @@ int main(int argc, char** argv)
     int mcast = DPS_MCAST_PUB_ENABLE_SEND;
     int listenPort = 0;
     DPS_NodeAddress* addr = NULL;
+    int perm = DPS_PERM_PUB | DPS_PERM_SUB | DPS_PERM_ACK;
 
     DPS_Debug = 0;
 
@@ -287,6 +288,9 @@ int main(int argc, char** argv)
             DPS_Debug = 1;
             continue;
         }
+        if (IntArg("-e", &arg, &argc, &perm, 0, perm)) {
+            continue;
+        }
         if (*arg[0] == '-') {
             goto Usage;
         }
@@ -312,13 +316,15 @@ int main(int argc, char** argv)
         }
     } else if (encrypt == 2) {
         DPS_SetTrustedCA(memoryKeyStore, TrustedCAs);
-        nodeKeyId = &PublisherId;
-        DPS_SetCertificate(memoryKeyStore, PublisherCert, PublisherPrivateKey, PublisherPassword);
-        DPS_SetCertificate(memoryKeyStore, SubscriberCert, NULL, NULL);
+        nodeKeyId = &Ids[PUB].keyId;
+        DPS_SetCertificate(memoryKeyStore, Ids[PUB].cert, Ids[PUB].privateKey, Ids[PUB].password);
+        DPS_SetCertificate(memoryKeyStore, Ids[SUB1].cert, NULL, NULL);
+        DPS_SetCertificate(memoryKeyStore, Ids[SUB2].cert, NULL, NULL);
     }
 
     node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore), nodeKeyId);
     DPS_SetNodeSubscriptionUpdateDelay(node, subsRate);
+    DPS_SetPermission(node, DPS_WILDCARD_ID, perm);
 
     ret = DPS_StartNode(node, mcast, listenPort);
     if (ret != DPS_OK) {
@@ -345,7 +351,10 @@ int main(int argc, char** argv)
             return 1;
         }
         if (encrypt == 2)  {
-            ret = DPS_PublicationAddKeyId(currentPub, &SubscriberId);
+            ret = DPS_PublicationAddKeyId(currentPub, &Ids[SUB1].keyId);
+            if (ret == DPS_OK) {
+                ret = DPS_PublicationAddKeyId(currentPub, &Ids[SUB2].keyId);
+            }
         } else if (encrypt == 1) {
             ret = DPS_PublicationAddKeyId(currentPub, &PskId[1]);
         }
@@ -391,7 +400,7 @@ int main(int argc, char** argv)
     return 0;
 
 Usage:
-    DPS_PRINT("Usage %s [-d] [-x 0|1|2] [-a] [-w <seconds>] <seconds>] [-t <ttl>] [[-h <hostname>] -p <portnum>] [-l <portnum>] [-m <message>] [-r <milliseconds>] [topic1 topic2 ... topicN]\n", argv[0]);
+    DPS_PRINT("Usage %s [-d] [-x 0|1|2] [-a] [-w <seconds>] <seconds>] [-t <ttl>] [[-h <hostname>] -p <portnum>] [-l <portnum>] [-m <message>] [-r <milliseconds>] [-e <permissions>] [topic1 topic2 ... topicN]\n", argv[0]);
     DPS_PRINT("       -d: Enable debug ouput if built for debug.\n");
     DPS_PRINT("       -x: Disable (0) or enable symmetric (1) or asymmetric(2) encryption. Default is symmetric encryption enabled.\n");
     DPS_PRINT("       -a: Request an acknowledgement\n");
@@ -402,6 +411,7 @@ Usage:
     DPS_PRINT("       -p: port to link. Multiple -p options are permitted.\n");
     DPS_PRINT("       -m: A payload message to accompany the publication.\n");
     DPS_PRINT("       -r: Time to delay between subscription updates.\n");
+    DPS_PRINT("       -e: Default permissions\n");
     DPS_PRINT("           Enters interactive mode if there are no topic strings on the command line.\n");
     DPS_PRINT("           In interactive mode type -h for commands.\n");
     return 1;

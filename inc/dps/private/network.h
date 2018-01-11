@@ -219,6 +219,25 @@ const char* DPS_NetAddrText(const struct sockaddr* addr);
  */
 void DPS_MapAddrToV6(struct sockaddr* addr);
 
+/*
+ * Gets the network layer endpoint identifier.
+ *
+ * @note The lifetime of the identifier is coupled to the lifetime of
+ * the endpoint's underlying DPS_NetConnection.
+ *
+ * @param keyId The destination identifier
+ * @param endpoint The endpoint to return the identifier of
+ */
+DPS_Status DPS_NetId(DPS_KeyId* keyId, const DPS_NetEndpoint* endpoint);
+
+/*
+ * Copies the network layer endpoint identifier.
+ *
+ * @param keyId The destination identifier
+ * @param endpoint The endpoint to return the identifier of
+ */
+void DPS_CopyNetId(DPS_KeyId* keyId, const DPS_NetEndpoint* endpoint);
+
 #ifdef __cplusplus
 }
 #endif

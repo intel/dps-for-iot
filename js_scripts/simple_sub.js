@@ -50,27 +50,26 @@ var dps = require("dps");
         "DFcbIyQqLTFp0QLrvzplZWsFBAKXLs2bxcuyqRv4+h4=\r\n" +
         "-----END EC PRIVATE KEY-----\r\n";
     var publisherPassword = "DPS Test Publisher";
-    var subscriberId = "DPS Test Subscriber";
+    var subscriberId = "DPS Test Subscriber1";
     var subscriberCert = "-----BEGIN CERTIFICATE-----\r\n" +
-        "MIIBiTCCAS4CCQCzbzjgbS2bujAKBggqhkjOPQQDAjBIMQswCQYDVQQGEwJVUzEV\r\n" +
+        "MIIBczCCARgCCQCzbzjgbS2b2jAKBggqhkjOPQQDAjBIMQswCQYDVQQGEwJVUzEV\r\n" +
         "MBMGA1UEBwwMRGVmYXVsdCBDaXR5MQwwCgYDVQQKDANEUFMxFDASBgNVBAMMC0RQ\r\n" +
-        "UyBUZXN0IENBMB4XDTE4MDEwNTE3NDI0NloXDTI4MDEwMzE3NDI0NlowUDELMAkG\r\n" +
-        "A1UEBhMCVVMxFTATBgNVBAcMDERlZmF1bHQgQ2l0eTEMMAoGA1UECgwDRFBTMRww\r\n" +
-        "GgYDVQQDDBNEUFMgVGVzdCBTdWJzY3JpYmVyMFkwEwYHKoZIzj0CAQYIKoZIzj0D\r\n" +
-        "AQcDQgAEbrDkznbJynaPPfKnnkx14nLX782a2SiPZHYFrDseHwoLOqWe6TI2bcIm\r\n" +
-        "rPEDasOnc8fywObXDwEKyRgIR1gqLDAKBggqhkjOPQQDAgNJADBGAiEAj7V5KV3y\r\n" +
-        "SwVLhWGC4tey6zs7G+IQMNPQF0A/+Ic1hLICIQD7TumHocAG2SG42IE4WcwllrBG\r\n" +
-        "LmXKOg4TBaBxS5GrDg==\r\n" +
+        "UyBUZXN0IENBMB4XDTE4MDExOTIyMzY1OFoXDTI4MDExNzIyMzY1OFowOjELMAkG\r\n" +
+        "A1UEBhMCVVMxDDAKBgNVBAoMA0RQUzEdMBsGA1UEAwwURFBTIFRlc3QgU3Vic2Ny\r\n" +
+        "aWJlcjEwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAR7BByLwNDLOMgMN/eNc1dO\r\n" +
+        "DdrF4ORuD23+6P69ZebAacoitDE1f8HXrum5JlIPeXPsI5W/uficO5ntaJbtuhF1\r\n" +
+        "MAoGCCqGSM49BAMCA0kAMEYCIQDD30ZrLlGHqftQytzjqhRs78qvnkh1iDWuo6e0\r\n" +
+        "Ypr3yQIhAKtYWwXfJMWj9f/47NXqwDVZE26dXIjIaprEShLk8seJ\r\n" +
         "-----END CERTIFICATE-----\r\n";
     var subscriberPrivateKey = "-----BEGIN EC PRIVATE KEY-----\r\n" +
         "Proc-Type: 4,ENCRYPTED\r\n" +
-        "DEK-Info: AES-256-CBC,7F349D976187178514F51358734287B2\r\n" +
+        "DEK-Info: AES-256-CBC,FEA9341014E72E83E7E124E96C6688B2\r\n" +
         "\r\n" +
-        "uc2MV05GoQf5WKC62U1n5dX9O11OehzpxKVKQiiMoqB+PnkyFR8+eS/CLdhtHPC9\r\n" +
-        "cU6HJDaPdUFZlV0L+Dhl3L1vm0zBvRpIZUivZGzB3h6RMptvhoZ5rey1f1Kyq7oj\r\n" +
-        "1rEBHuMR4LT4PCrDQ4DpvOvAiJGpPMEaEovKhy+IneQ=\r\n" +
+        "0Wn5jL+5QgOPmYxXyGPRO1YpuZ38vOvt+PsMb//a8Ui32NqG5+GWqCut4z11vqRF\r\n" +
+        "O/eWA9g3ldNU5kupHa/ecSOnIY6+qXlLGISyQKRrtaf2mQPcuNf7KGrzNRziY17e\r\n" +
+        "ZVk8AnM9vLERm7NXSgz+oh7liNW4az5dqMXTSdXsT3U=\r\n" +
         "-----END EC PRIVATE KEY-----\r\n";
-    var subscriberPassword = "DPS Test Subscriber";
+    var subscriberPassword = "DPS Test Subscriber1";
     var keyStore;
     var nodeId;
     var node;
@@ -120,6 +119,7 @@ var dps = require("dps");
 
     node = dps.createNode("/", dps.memoryKeyStoreHandle(keyStore), nodeId);
     dps.startNode(node, dps.MCAST_PUB_ENABLE_RECV, 0);
+    dps.setPermission(node, dps.WILDCARD_ID, dps.PERM_PUB | dps.PERM_SUB | dps.PERM_ACK);
     sub = dps.createSubscription(node, ["a/b/c"]);
     dps.subscribe(sub, onPub);
 }());

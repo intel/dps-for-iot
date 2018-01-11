@@ -198,6 +198,7 @@ DPS_Status DPS_DecodeAcknowledgment(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxB
     uint8_t* aadPos;
     uint8_t maj;
     size_t len;
+    DPS_KeyId keyId;
 
     DPS_DBGTRACE();
 
@@ -327,6 +328,14 @@ DPS_Status DPS_DecodeAcknowledgment(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxB
         return ret;
     }
     DPS_UnlockNode(node);
+    /*
+     * Verify that sender is authorized to forward ACKs
+     */
+    DPS_NetId(&keyId, ep);
+    if (!DPS_IsAuthorized(node, &keyId, buf, DPS_PERM_ACK)) {
+        DPS_ERRPRINT("Unauthorized request, not forwarding\n");
+        return DPS_ERR_UNAUTHORIZED;
+    }
     /*
      * Search the history record for somewhere to forward the ACK
      */

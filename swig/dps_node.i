@@ -52,6 +52,7 @@ extern "C" {
 /*
  * Mapping for types from stdint.h
  */
+%typemap(in) uint8_t = int;
 %typemap(in) uint8_t* = char*;
 %typemap(in) int16_t = int;
 %typemap(out) int16_t = int;
@@ -489,72 +490,64 @@ static v8::Handle<v8::Value> UUIDToString(DPS_UUID* uuid)
 
 %typemap(in) (const DPS_KeyId* keyId) {
     DPS_KeyId* kid = NULL;
+    void *argp = NULL;
+    int alloc = SWIG_NEWOBJ;
 
     v8::Handle<v8::Value> obj($input);
 
-    if (obj->IsUint8Array()) {
-        uint8_t* data;
-        v8::Local<v8::ArrayBuffer> buf;
-        v8::Local<v8::Uint8Array> arr = v8::Local<v8::Uint8Array>::Cast($input);
+    if (!obj->IsNull()) {
         kid = (DPS_KeyId*)malloc(sizeof(DPS_KeyId));
         if (!kid) {
             SWIG_exception_fail(SWIG_ERROR, "no memory");
         }
-        kid->len = arr->ByteLength();
-        kid->id = (uint8_t*)malloc(kid->len);
-        if (!kid->id) {
-            free(kid);
-            SWIG_exception_fail(SWIG_ERROR, "no memory");
-        }
-
-        buf = arr->Buffer();
-        data = (uint8_t*)buf->GetContents().Data();
-        memcpy((uint8_t*)kid->id, data, kid->len);
-    } else if (obj->IsArray()) {
-        v8::Local<v8::Array> arr = v8::Local<v8::Array>::Cast($input);
-        kid = (DPS_KeyId*)malloc(sizeof(DPS_KeyId));
-        if (!kid) {
-            SWIG_exception_fail(SWIG_ERROR, "no memory");
-        }
-        kid->len = arr->Length();
-        kid->id = (uint8_t*)malloc(kid->len);
-        if (!kid->id) {
-            free(kid);
-            SWIG_exception_fail(SWIG_ERROR, "no memory");
-        }
-        size_t i;
-        for (i = 0; i < kid->len; ++i) {
-            v8::Local<v8::Value> valRef;
-            if (arr->Get(SWIGV8_CURRENT_CONTEXT(), i).ToLocal(&valRef)) {
-                ((uint8_t*)kid->id)[i] = valRef->Uint32Value();
-            } else {
-                free((uint8_t*)kid->id);
+        if (obj->IsUint8Array()) {
+            uint8_t* data;
+            v8::Local<v8::ArrayBuffer> buf;
+            v8::Local<v8::Uint8Array> arr = v8::Local<v8::Uint8Array>::Cast($input);
+            kid->len = arr->ByteLength();
+            kid->id = (uint8_t*)malloc(kid->len);
+            if (!kid->id) {
                 free(kid);
-                SWIG_exception_fail(SWIG_TypeError, "argument of type '" "uint8_t*""'");
+                SWIG_exception_fail(SWIG_ERROR, "no memory");
             }
-        }
-    } else if (obj->IsString()) {
-        v8::Local<v8::String> str = v8::Local<v8::String>::Cast(obj);
-        kid = (DPS_KeyId*)malloc(sizeof(DPS_KeyId));
-        if (!kid) {
-            SWIG_exception_fail(SWIG_ERROR, "no memory");
-        }
-        kid->len = str->Utf8Length();
-        kid->id = (uint8_t*)malloc(kid->len + 1);
-        if (!kid->id) {
+            buf = arr->Buffer();
+            data = (uint8_t*)buf->GetContents().Data();
+            memcpy((uint8_t*)kid->id, data, kid->len);
+        } else if (obj->IsArray()) {
+            v8::Local<v8::Array> arr = v8::Local<v8::Array>::Cast($input);
+            kid->len = arr->Length();
+            kid->id = (uint8_t*)malloc(kid->len);
+            if (!kid->id) {
+                free(kid);
+                SWIG_exception_fail(SWIG_ERROR, "no memory");
+            }
+            size_t i;
+            for (i = 0; i < kid->len; ++i) {
+                v8::Local<v8::Value> valRef;
+                if (arr->Get(SWIGV8_CURRENT_CONTEXT(), i).ToLocal(&valRef)) {
+                    ((uint8_t*)kid->id)[i] = valRef->Uint32Value();
+                } else {
+                    free((uint8_t*)kid->id);
+                    free(kid);
+                    SWIG_exception_fail(SWIG_TypeError, "argument of type '" "uint8_t*""'");
+                }
+            }
+        } else if (SWIG_IsOK(SWIG_AsCharPtrAndSize(obj, (char**)&kid->id, &kid->len, &alloc))) {
+            /* SWIG_AsCharPtrAndSize includes NUL terminator in size */
+            --kid->len;
+        } else if (SWIG_IsOK(SWIG_ConvertPtr(obj, &argp, SWIGTYPE_p__DPS_KeyId, 0))) {
+            kid = (DPS_KeyId*)argp;
+        } else {
             free(kid);
-            SWIG_exception_fail(SWIG_ERROR, "no memory");
+            SWIG_exception_fail(SWIG_TypeError, "keyId should be a list, string, or WILDCARD_ID\n");
         }
-        str->WriteUtf8((char*)kid->id);
-    } else if (!obj->IsNull()) {
-        SWIG_exception_fail(SWIG_TypeError, "argument of type '" "DPS_KeyId *""'");
     }
 
     $1 = kid;
 }
 
 %typemap(freearg) (const DPS_KeyId* keyId) {
-    if ($1) {
+    if ($1 && ($1 != DPS_WILDCARD_ID)) {
         if ($1->id) {
             free((uint8_t*)$1->id);
         }

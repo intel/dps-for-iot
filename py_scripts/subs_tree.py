@@ -33,6 +33,7 @@ def on_pub(sub, pub, payload):
 def subscriber(port, topic, connect_port):
     nodes[port] = dps.create_node("/", dps.memory_key_store_handle(key_store), None)
     dps.start_node(nodes[port], 0, port)
+    dps.set_permission(nodes[port], dps.WILDCARD_ID, dps.PERM_PUB | dps.PERM_SUB | dps.PERM_ACK)
     subs[port] = dps.create_subscription(nodes[port], [topic])
     dps.subscribe(subs[port], on_pub)
     if (connect_port != 0):

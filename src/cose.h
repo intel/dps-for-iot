@@ -99,7 +99,6 @@ DPS_Status COSE_Encrypt(int8_t alg,
  * @param aad        Buffer containing the external auxiliary authenticated data.
  * @param cipherText Buffer containing the authenticated and encrypted input data
  * @param keyStore   Request handler for encryption keys
- * @param ctx        Context to be passed to the key request callback
  * @param signer     Returns the recipient information used to succesfully verify the signed cipherText.
  *                   Note that this points into cipherText so care must be taken to avoid
  *                   referencing freed memory.  This will be memset to 0 if not verified.
@@ -119,6 +118,25 @@ DPS_Status COSE_Decrypt(const uint8_t* nonce,
                         DPS_KeyStore* keyStore,
                         COSE_Entity* signer,
                         DPS_TxBuffer* plainText);
+
+/**
+ * COSE Verification
+ *
+ * @param cipherText Buffer containing the authenticated and encrypted input data
+ * @param keyStore   Request handler for encryption keys
+ * @param signer     Returns the recipient information used to succesfully verify the signed cipherText.
+ *                   Note that this points into cipherText so care must be taken to avoid
+ *                   referencing freed memory.  This will be memset to 0 if not verified.
+ *
+ * @return  - DPS_OK if the payload was succesfully verified
+ *          - DPS_ERR_NOT_ENCRYPTED if the payload is not a COSE payload (no COSE tag)
+ *          - DPS_ERR_NOT_SIGNED if the payload does not include a signature
+ *          - DPS_ERR_INVALID if the payload is badly formed
+ *          - Other error codes
+ */
+DPS_Status COSE_Verify(DPS_RxBuffer* cipherText,
+                       DPS_KeyStore* keyStore,
+                       COSE_Entity* signer);
 
 #ifdef __cplusplus
 }

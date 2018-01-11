@@ -63,6 +63,8 @@ typedef int DPS_Status;
 #define DPS_ERR_SECURITY          24 /**< A security related error - failure to decrypt or authenticate */
 #define DPS_ERR_NOT_ENCRYPTED     25 /**< Payload does not appear to be encrypted */
 #define DPS_ERR_STOPPING          26 /**< The current node is stopping */
+#define DPS_ERR_UNAUTHORIZED      27 /**< Request is unauthorized */
+#define DPS_ERR_NOT_SIGNED        28 /**< Payload is not signed */
 
 const char* DPS_ErrTxt(DPS_Status s);
 

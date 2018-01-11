@@ -44,15 +44,20 @@ extern const DPS_Key Psk[NUM_KEYS];
 
 extern const char TrustedCAs[];
 
-extern const DPS_KeyId PublisherId;
-extern const char PublisherCert[];
-extern const char PublisherPrivateKey[];
-extern const char PublisherPassword[];
+typedef struct _Id {
+    DPS_KeyId keyId;
+    const char* cert;
+    const char* privateKey;
+    const char* password;
+} Id;
 
-extern const DPS_KeyId SubscriberId;
-extern const char SubscriberCert[];
-extern const char SubscriberPrivateKey[];
-extern const char SubscriberPassword[];
+enum {
+    PUB = 0,
+    SUB1 = 1,
+    SUB2 = 2,
+    ID_MAX = 3
+};
+extern const Id Ids[ID_MAX];
 
 #ifdef __cplusplus
 }

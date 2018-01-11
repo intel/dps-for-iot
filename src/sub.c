@@ -420,8 +420,17 @@ static DPS_Status UpdateInboundInterests(DPS_Node* node, RemoteNode* remote, DPS
         DPS_BitVectorFree(interests);
         DPS_BitVectorFree(needs);
     } else {
-        DPS_CountVectorAdd(node->interests, interests);
-        DPS_CountVectorAdd(node->needs, needs);
+        /*
+         * Only the permission of the network layer identity is
+         * checked as the application layer message does not include
+         * an identity.
+         */
+        if (DPS_IsAuthorized(node, &remote->id, NULL, DPS_PERM_SUB)) {
+            DPS_CountVectorAdd(node->interests, interests);
+            DPS_CountVectorAdd(node->needs, needs);
+        } else {
+            DPS_ERRPRINT("Unauthorized request, not forwarding\n");
+        }
         remote->inbound.interests = interests;
         remote->inbound.needs = needs;
     }

@@ -1,0 +1,113 @@
+#!/bin/bash
+
+# Include common functions
+dir="${BASH_SOURCE%/*}"
+if [[ ! -d "$dir" ]]; then dir="$PWD"; fi
+. "$dir/common.sh"
+
+#
+# Verify that unauthorized publication messages are not forwarded
+#
+
+sub -l 50000 A
+sleep 1
+
+sub -l 50001 -p 50000 -e 2
+sleep 1
+
+pub -p 50001 A
+sleep 2
+
+expect_errors 1 "Unauthorized request"
+
+#
+# Verify that unauthorized publication messages are received, but not forwarded
+#
+reset_logs
+
+sub -l 51000 A
+sleep 1
+
+sub -l 51001 -p 51000 -e 6 A
+sleep 1
+
+pub -p 51001 A
+sleep 2
+
+expect_pubs_received 1 A
+expect_errors 1 "Unauthorized request"
+
+#
+# Verify that unauthorized multicast publication messages are received, but not forwarded
+#
+reset_logs
+
+sub -l 52000 -e 2 A
+sleep 1
+
+sub -l 52001 -p 52000 A
+sleep 1
+
+pub A
+sleep 2
+
+expect_pubs_received 1 A
+expect_errors 1 "Unauthorized request"
+
+#
+# Verify that unauthorized ack messages are not forwarded
+#
+reset_logs
+
+sub -l 53000 A
+sleep 1
+
+sub -l 53001 -p 53000 -e 3
+sleep 1
+
+pub -p 53001 -a A
+sleep 2
+
+expect_pubs_received 1 A
+expect_errors 1 "Unauthorized request"
+
+#
+# Verify that unauthorized sub messages are not forwarded
+# (1) Upstream pubs will not send messages.
+#
+reset_logs
+
+sub -l 54000 A
+sleep 1
+
+sub -l 54001 -p 54000 -e 1
+sleep 1
+
+pub -p 54001 -a A
+sleep 2
+
+expect_pubs_received 0 A
+expect_errors 1 "Unauthorized request"
+
+#
+# Verify that unauthorized sub messages are not forwarded
+# (2) This publisher and downstream will send messages.
+#
+reset_logs
+
+sub -l 56000 A
+sleep 1
+
+pub -l 56001 -p 56000 -e 1 -w 1 -a A
+sleep 2
+
+pub -p 56001 -w 1 -a A
+sleep 2
+
+expect_pubs_received 1 A
+expect_errors 1 "Unauthorized request"
+
+#
+# No test for sak messages as
+# (1) sak messages are not forwarded
+#

@@ -78,6 +78,54 @@ typedef struct _OnOpCompletion {
 
 const DPS_UUID DPS_MaxMeshId = { .val64 = { UINT64_MAX, UINT64_MAX } };
 
+static const DPS_UUID _WildcardId = {
+    .val = { 0x67, 0xa2, 0x46, 0x46, 0xd8, 0x7b, 0x4d, 0x7c, 0x9e, 0x7b, 0x12, 0xbb, 0x8d, 0x50, 0x13, 0x42 }
+};
+static const DPS_KeyId WildcardId = { _WildcardId.val, sizeof(_WildcardId.val) };
+const DPS_KeyId* const DPS_WILDCARD_ID = &WildcardId;
+
+int DPS_GetPermission(const DPS_Node* node, const DPS_KeyId* keyId)
+{
+    const DPS_Permission* permission;
+
+    DPS_DBGTRACEA("node=%p,keyId={id=%p,len=%d}\n", node, keyId ? keyId->id : NULL, keyId ? keyId->len : 0);
+
+    for (permission = node->permissions; permission; permission = permission->next) {
+        if (DPS_SameKeyId(&permission->keyId, keyId) ||
+            DPS_SameKeyId(&permission->keyId, DPS_WILDCARD_ID)) {
+            return permission->bits;
+        }
+    }
+    return 0;
+}
+
+DPS_Status DPS_SetPermission(DPS_Node* node, const DPS_KeyId* keyId, uint8_t bits)
+{
+    DPS_Permission** permission;
+
+    DPS_DBGTRACEA("node=%p,keyId={id=%p,len=%d},bits=0x%x\n",
+                  node, keyId ? keyId->id : NULL, keyId ? keyId->len : 0, bits);
+
+    for (permission = &node->permissions; (*permission); permission = &(*permission)->next) {
+        if (DPS_SameKeyId(&(*permission)->keyId, keyId)) {
+            (*permission)->bits = bits;
+            return DPS_OK;
+        }
+    }
+    (*permission) = malloc(sizeof(DPS_Permission));
+    if (!(*permission)) {
+        return DPS_ERR_RESOURCES;
+    }
+    if (!DPS_CopyKeyId(&(*permission)->keyId, keyId)) {
+        free (*permission);
+        (*permission) = NULL;
+        return DPS_ERR_RESOURCES;
+    }
+    (*permission)->bits = bits;
+    (*permission)->next = NULL;
+    return DPS_OK;
+}
+
 void DPS_LockNode(DPS_Node* node)
 {
     uv_thread_t self = uv_thread_self();
@@ -307,6 +355,7 @@ RemoteNode* DPS_DeleteRemoteNode(DPS_Node* node, RemoteNode* remote)
     DPS_ClearInboundInterests(node, remote);
     FreeOutboundInterests(remote);
     DPS_BitVectorFree(remote->outbound.delta);
+    DPS_ClearKeyId(&remote->id);
 
     if (remote->completion) {
         DPS_RemoteCompletion(node, remote, DPS_ERR_FAILURE);
@@ -338,6 +387,7 @@ static const DPS_UUID* MinMeshId(DPS_Node* node, RemoteNode* excluded)
 static DPS_Status UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, int* send)
 {
     DPS_Status ret;
+    int authorized;
     DPS_BitVector* newInterests = NULL;
     DPS_BitVector* newNeeds = NULL;
 
@@ -356,23 +406,33 @@ static DPS_Status UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, 
      * recalculation of outbound interests
      */
     if (destNode->inbound.interests) {
+        /*
+         * Only the permission of the network layer identity is
+         * checked as the application layer message does not include
+         * a signature.
+         */
+        authorized = DPS_IsAuthorized(node, &destNode->id, NULL, DPS_PERM_SUB);
         ret = DPS_CountVectorDel(node->interests, destNode->inbound.interests);
         if (ret != DPS_OK) {
             goto ErrExit;
         }
         newInterests = DPS_CountVectorToUnion(node->interests);
-        ret = DPS_CountVectorAdd(node->interests, destNode->inbound.interests);
-        if (ret != DPS_OK) {
-            goto ErrExit;
+        if (authorized) {
+            ret = DPS_CountVectorAdd(node->interests, destNode->inbound.interests);
+            if (ret != DPS_OK) {
+                goto ErrExit;
+            }
         }
         ret = DPS_CountVectorDel(node->needs, destNode->inbound.needs);
         if (ret != DPS_OK) {
             goto ErrExit;
         }
         newNeeds = DPS_CountVectorToIntersection(node->needs);
-        ret = DPS_CountVectorAdd(node->needs, destNode->inbound.needs);
-        if (ret != DPS_OK) {
-            goto ErrExit;
+        if (authorized) {
+            ret = DPS_CountVectorAdd(node->needs, destNode->inbound.needs);
+            if (ret != DPS_OK) {
+                goto ErrExit;
+            }
         }
     } else {
         assert(!destNode->inbound.needs);
@@ -613,6 +673,7 @@ DPS_Status DPS_AddRemoteNode(DPS_Node* node, DPS_NodeAddress* addr, DPS_NetConne
         if (cn && !remote->ep.cn) {
             DPS_NetConnectionAddRef(cn);
             remote->ep.cn = cn;
+            DPS_CopyNetId(&remote->id, &remote->ep);
         }
         return DPS_ERR_EXISTS;
     }
@@ -624,6 +685,7 @@ DPS_Status DPS_AddRemoteNode(DPS_Node* node, DPS_NodeAddress* addr, DPS_NetConne
     DPS_DBGPRINT("Adding new remote node %s\n", DPS_NodeAddrToString(addr));
     remote->ep.addr = *addr;
     remote->ep.cn = cn;
+    DPS_CopyNetId(&remote->id, &remote->ep);
     remote->next = node->remoteNodes;
     node->remoteNodes = remote;
     remote->inbound.meshId = DPS_MaxMeshId;
@@ -671,7 +733,7 @@ static DPS_Status SendMatchingPubToSub(DPS_Node* node, DPS_Publication* pub, Rem
     /*
      * We don't send publications to remote nodes we have received them from.
      */
-    if (!DPS_PublicationReceivedFrom(&node->history, &pub->pubId, pub->sequenceNum, &pub->sender, &subscriber->ep.addr)) {
+    if (!DPS_PublicationReceivedFrom(&node->history, &pub->pubId, pub->sequenceNum, &pub->netAddr, &subscriber->ep.addr)) {
         /*
          * This is the pub/sub matching code
          */
@@ -862,8 +924,15 @@ void DPS_UpdatePubs(DPS_Node* node, DPS_Publication* pub)
     }
 
     if (pub) {
-        pub->checkToSend = DPS_TRUE;
-        ++count;
+        DPS_RxBuffer cipherTextBuf;
+        DPS_TxBufferToRx(&pub->encryptedBuf, &cipherTextBuf);
+        if (DPS_IsAuthorized(node, &pub->netId, &cipherTextBuf, DPS_PERM_PUB)) {
+            DPS_DBGPRINT("Authorized request, forwarding\n");
+            pub->checkToSend = DPS_TRUE;
+            ++count;
+        } else {
+            DPS_ERRPRINT("Unauthorized request, not forwarding\n");
+        }
     } else {
         DPS_Publication* pubNext;
         for (pub = node->publications; pub != NULL; pub = pubNext) {
@@ -1118,6 +1187,12 @@ static void StopNode(DPS_Node* node)
     DPS_BitVectorFree(node->scratch.interests);
     DPS_BitVectorFree(node->scratch.needs);
     DPS_HistoryFree(&node->history);
+    while (node->permissions) {
+        DPS_Permission* next = node->permissions->next;
+        DPS_ClearKeyId(&node->permissions->keyId);
+        free(node->permissions);
+        node->permissions = next;
+    }
     /*
      * Cleanup mutexes etc.
      */
@@ -1265,6 +1340,17 @@ DPS_Node* DPS_CreateNode(const char* separators, DPS_KeyStore* keyStore, const D
             FreeNode(node);
             return NULL;
         }
+    } else {
+        DPS_UUID uuid;
+        DPS_KeyId kid;
+        DPS_GenerateUUID(&uuid);
+        kid.id = uuid.val;
+        kid.len = sizeof(uuid.val);
+        if (!DPS_CopyKeyId(&node->signer.kid, &kid)) {
+            DPS_ERRPRINT("Allocate ID failed\n");
+            FreeNode(node);
+            return NULL;
+        }
     }
     strncpy_s(node->separators, sizeof(node->separators), separators, sizeof(node->separators) - 1);
     node->keyStore = keyStore;
@@ -1273,6 +1359,13 @@ DPS_Node* DPS_CreateNode(const char* separators, DPS_KeyStore* keyStore, const D
      */
     node->linkMonitorConfig = LinkMonitorConfigDefaults;
     node->subsRate = DPS_SUBSCRIPTION_UPDATE_RATE;
+    /*
+     * Set default permissions for this node
+     */
+    if (DPS_SetPermission(node, &node->signer.kid, DPS_PERM_PUB | DPS_PERM_SUB | DPS_PERM_ACK) != DPS_OK) {
+        FreeNode(node);
+        return NULL;
+    }
     return node;
 }
 
@@ -1594,12 +1687,19 @@ void DPS_MakeNonce(const DPS_UUID* uuid, uint32_t seqNum, uint8_t msgType, uint8
 
 DPS_KeyId* DPS_CopyKeyId(DPS_KeyId* dest, const DPS_KeyId* src)
 {
-    dest->id = malloc(src->len);
-    if (!dest->id) {
-        return NULL;
+    if (dest) {
+        if (src) {
+            dest->id = malloc(src->len);
+            if (!dest->id) {
+                return NULL;
+            }
+            dest->len = src->len;
+            memcpy_s((uint8_t*)dest->id, dest->len, src->id, src->len);
+        } else {
+            dest->id = NULL;
+            dest->len = 0;
+        }
     }
-    dest->len = src->len;
-    memcpy_s((uint8_t*)dest->id, dest->len, src->id, src->len);
     return dest;
 }
 
@@ -1610,4 +1710,37 @@ void DPS_ClearKeyId(DPS_KeyId* keyId)
         free((uint8_t*)keyId->id);
         keyId->id = NULL;
     }
+}
+
+int DPS_SameKeyId(const DPS_KeyId* a, const DPS_KeyId* b)
+{
+    return a && b && (a->len == b->len) && (memcmp(a->id, b->id, b->len) == 0);
+}
+
+int DPS_IsAuthorized(DPS_Node* node, const DPS_KeyId* netId, const DPS_RxBuffer* buf, int perm)
+{
+    COSE_Entity sender;
+    DPS_RxBuffer cipherTextBuf;
+    DPS_Status ret;
+
+    if (netId) {
+        if ((DPS_GetPermission(node, netId) & perm) == perm) {
+            DPS_DBGPRINT("Network ID authorized\n");
+            return DPS_TRUE;
+        }
+    }
+
+    if (buf) {
+        DPS_RxBufferInit(&cipherTextBuf, buf->rxPos, DPS_RxBufferAvail(buf));
+        ret = COSE_Verify(&cipherTextBuf, node->keyStore, &sender);
+        if ((ret == DPS_OK) && ((DPS_GetPermission(node, &sender.kid) & perm) == perm)) {
+            return DPS_TRUE;
+        }
+        if (((ret == DPS_ERR_NOT_ENCRYPTED) || (ret == DPS_ERR_NOT_SIGNED)) &&
+            ((DPS_GetPermission(node, DPS_WILDCARD_ID) & perm) == perm)) {
+            return DPS_TRUE;
+        }
+    }
+
+    return DPS_FALSE;
 }

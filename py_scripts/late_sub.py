@@ -19,6 +19,7 @@ dps.cvar.debug = False
 
 node = dps.create_node("/")
 dps.start_node(node, dps.MCAST_PUB_ENABLE_RECV + dps.MCAST_PUB_ENABLE_SEND, 0)
+dps.set_permission(node, dps.WILDCARD_ID, dps.PERM_PUB | dps.PERM_SUB | dps.PERM_ACK)
 sub = dps.create_subscription(node, ['a/b/c']);
 dps.subscribe(sub, on_pub)
 

@@ -1,0 +1,78 @@
+#!/bin/bash
+
+# Include common functions
+dir="${BASH_SOURCE%/*}"
+if [[ ! -d "$dir" ]]; then dir="$PWD"; fi
+. "$dir/common.sh"
+
+#
+# Verify that unauthorized publication messages are not forwarded
+#
+
+sub -l 50000 -x 2 -u 1 A
+sleep 1
+
+sub -l 50001 -p 50000 -x 2 -u 2 -e 2
+sleep 1
+
+pub -p 50001 -x 2 A
+sleep 2
+
+expect_errors 1 "Unauthorized request"
+
+#
+# Verify that unauthorized publication messages are received, but not forwarded
+#
+reset_logs
+
+sub -l 51000 -x 2 -u 1 A
+sleep 1
+
+sub -l 51001 -p 51000 -x 2 -u 2 -e 6 A
+sleep 1
+
+pub -p 51001 -x 2 A
+sleep 2
+
+expect_pubs_received 1 A
+expect_errors 1 "Unauthorized request"
+
+#
+# Verify that unauthorized multicast publication messages are received, but not forwarded
+#
+reset_logs
+
+sub -l 52000 -x 2 -u 1 -e 2 A
+sleep 1
+
+sub -l 52001 -p 52000 -x 2 -u 2 A
+sleep 1
+
+pub -x 2 A
+sleep 2
+
+expect_pubs_received 1 A
+expect_errors 1 "Unauthorized request"
+
+#
+# Verify that unauthorized ack messages are not forwarded
+#
+reset_logs
+
+sub -l 53000 -x 2 -u 1 A
+sleep 1
+
+sub -l 53001 -p 53000 -x 2 -u 2 -e 3
+sleep 1
+
+pub -p 53001 -x 2 -a A
+sleep 2
+
+expect_pubs_received 1 A
+expect_errors 1 "Unauthorized request"
+
+#
+# No test for sub or sak messages as
+# (1) sub messages do not include an identity
+# (2) sak messages are not forwarded
+#

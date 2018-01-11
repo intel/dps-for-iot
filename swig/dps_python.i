@@ -64,6 +64,7 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 /*
  * Mapping for types from stdint.h
  */
+%typemap(in) uint8_t = int;
 %typemap(in) uint8_t* = char*;
 %typemap(in) int16_t = int;
 %typemap(out) int16_t = int;
@@ -491,6 +492,7 @@ static PyObject* UUIDToPyString(const DPS_UUID* uuid)
 
 %typemap(in) (const DPS_KeyId* keyId) {
     DPS_KeyId* kid = NULL;
+    void *argp = NULL;
 
     if ($input != Py_None) {
         int alloc = SWIG_NEWOBJ;
@@ -525,8 +527,13 @@ static PyObject* UUIDToPyString(const DPS_UUID* uuid)
                     SWIG_fail;
                 }
             }
-        } else if (SWIG_AsCharPtrAndSize($input, (char**)&kid->id, &kid->len, &alloc) != SWIG_OK) {
-            PyErr_SetString(PyExc_TypeError, "keyId should be a list or string\n");
+        } else if (SWIG_IsOK(SWIG_AsCharPtrAndSize($input, (char**)&kid->id, &kid->len, &alloc))) {
+            /* SWIG_AsCharPtrAndSize includes NUL terminator in size */
+            --kid->len;
+        } else if (SWIG_IsOK(SWIG_ConvertPtr($input, &argp, SWIGTYPE_p__DPS_KeyId, 0))) {
+            kid = (DPS_KeyId*)argp;
+        } else {
+            PyErr_SetString(PyExc_TypeError, "keyId should be a list, string, or WILDCARD_ID\n");
             free(kid);
             SWIG_fail;
         }
@@ -536,7 +543,7 @@ static PyObject* UUIDToPyString(const DPS_UUID* uuid)
 }
 
 %typemap(freearg) (const DPS_KeyId* keyId) {
-    if ($1) {
+    if ($1 && ($1 != DPS_WILDCARD_ID)) {
         if ($1->id) {
             free((uint8_t*)$1->id);
         }

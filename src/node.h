@@ -72,6 +72,12 @@ typedef struct _LinkMonitorConfig {
     uint32_t probeTO;  /* Probe repeat time */
 } LinkMonitorConfig;
 
+typedef struct _DPS_Permission {
+    DPS_KeyId keyId;
+    uint8_t bits;
+    struct _DPS_Permission* next;
+} DPS_Permission;
+
 typedef struct _DPS_Node {
     void* userData;
 
@@ -134,6 +140,8 @@ typedef struct _DPS_Node {
     uv_async_t completionAsync;           /* Async handler for link completion */
     OnOpCompletion* completionList;       /* Linked list of completion requests */
 
+    DPS_Permission* permissions;          /* Linked list of allowed permissions */
+
 } DPS_Node;
 
 extern const DPS_UUID DPS_MaxMeshId;
@@ -161,6 +169,7 @@ typedef struct _RemoteNode {
     } outbound;
     LinkMonitor* monitor;              /* For monitoring muted links */
     DPS_NetEndpoint ep;
+    DPS_KeyId id;
     RemoteNode* next;                  /* Remotes are a linked list attached to the local node */
 } RemoteNode;
 
