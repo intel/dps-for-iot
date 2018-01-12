@@ -11,7 +11,7 @@
 
 ### Linux
 
-- gcc
+- gcc or clang
 
 - [SCons](http://scons.org/pages/download.html)
 
@@ -76,9 +76,13 @@ To build the DPS libraries, examples, bindings, and documentation run 'scons'.
 
 `$ scons [variant=debug|release] [transport=udp|tcp|dtls] [bindings=all|none]`
 
-To see the complete list of build options trune `scons --help`
+To build with a different compiler use the `CC` and `CXX` build options.
 
-The default build configuration is `variant=release transport=udp bindings=all`.
+`$ scons CC=clang CXX=clang++`
+
+To see the complete list of build options run `scons --help`.  The default build configuration is
+`variant=release transport=udp bindings=all`.
+
 > *A limitation of the current implementation is that the transport must be configured at compile time.*
 
 The scons script pulls down source code from three external projects (mbedtls, tinycrypt, and safestringlib)
