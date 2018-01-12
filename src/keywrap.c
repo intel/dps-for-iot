@@ -31,6 +31,9 @@
  */
 DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
+/*
+ * The default IV defined in RFC 3394.
+ */
 static const uint64_t IV = 0xa6a6a6a6a6a6a6a6;
 
 DPS_Status KeyWrap(const uint8_t cek[AES_128_KEY_LEN], const uint8_t kek[AES_128_KEY_LEN],
