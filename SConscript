@@ -1,4 +1,5 @@
 import os
+import string
 Import(['env', 'ext_libs'])
 
 platform = env['PLATFORM']
