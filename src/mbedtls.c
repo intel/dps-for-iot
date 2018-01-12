@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <dps/dbg.h>
+#include <dps/dps.h>
 #include "mbedtls/ctr_drbg.h"
 #include "mbedtls/entropy.h"
 #include "mbedtls/error.h"
@@ -48,18 +49,18 @@ const char *TLSErrTxt(int ret)
  * @param len the size of a coordinate, in bytes
  * @param md the hash function to use for ECDSA
  */
-int TLSGetCurveParams(int8_t curve, mbedtls_ecp_group_id* id, size_t* len)
+int TLSGetCurveParams(DPS_ECCurve curve, mbedtls_ecp_group_id* id, size_t* len)
 {
     int ret = 0;
 
     switch (curve) {
-    case EC_CURVE_P521:
+    case DPS_EC_CURVE_P521:
         *id = MBEDTLS_ECP_DP_SECP521R1;
         break;
-    case EC_CURVE_P384:
+    case DPS_EC_CURVE_P384:
         *id = MBEDTLS_ECP_DP_SECP384R1;
         break;
-    case EC_CURVE_P256:
+    case DPS_EC_CURVE_P256:
         *id = MBEDTLS_ECP_DP_SECP256R1;
         break;
     default:
@@ -122,7 +123,7 @@ DPS_Status DPS_RandomKey(DPS_RBG* rbg, uint8_t key[AES_128_KEY_LEN])
     return DPS_OK;
 }
 
-DPS_Status DPS_EphemeralKey(DPS_RBG* rbg, int8_t curve,
+DPS_Status DPS_EphemeralKey(DPS_RBG* rbg, DPS_ECCurve curve,
                             uint8_t x[EC_MAX_COORD_LEN], uint8_t y[EC_MAX_COORD_LEN],
                             uint8_t d[EC_MAX_COORD_LEN])
 {

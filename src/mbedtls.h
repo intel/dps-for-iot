@@ -36,7 +36,7 @@ const char *TLSErrTxt(int ret);
  * @param id the mbedtls elliptic curve ID
  * @param len the size of a coordinate, in bytes
  */
-int TLSGetCurveParams(int8_t curve, mbedtls_ecp_group_id* id, size_t* len);
+int TLSGetCurveParams(DPS_ECCurve curve, mbedtls_ecp_group_id* id, size_t* len);
 
 #ifdef __cplusplus
 }

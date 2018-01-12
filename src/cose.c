@@ -122,7 +122,7 @@ typedef struct _COSE_Key {
             uint8_t key[AES_128_KEY_LEN];   /**< Key data */
         } symmetric; /**< Symmetric key */
         struct {
-            int8_t curve; /**< EC curve */
+            DPS_ECCurve curve; /**< EC curve */
             uint8_t x[EC_MAX_COORD_LEN]; /**< X coordinate */
             uint8_t y[EC_MAX_COORD_LEN]; /**< Y coordinate */
             uint8_t d[EC_MAX_COORD_LEN]; /**< D coordinate */
@@ -641,7 +641,7 @@ static DPS_Status GetEphemeralKey(DPS_KeyStore* keyStore, COSE_Key* key)
 static DPS_Status GetSignatureKey(DPS_KeyStore* keyStore, const Signature* sig, COSE_Key* key)
 {
     DPS_Status ret;
-    int8_t curve;
+    DPS_ECCurve curve;
     DPS_KeyStoreRequest request;
 
     if (!keyStore || !keyStore->keyHandler) {
@@ -649,13 +649,13 @@ static DPS_Status GetSignatureKey(DPS_KeyStore* keyStore, const Signature* sig, 
     }
     switch (sig->alg) {
     case COSE_ALG_ES256:
-        curve = EC_CURVE_P256;
+        curve = DPS_EC_CURVE_P256;
         break;
     case COSE_ALG_ES384:
-        curve = EC_CURVE_P384;
+        curve = DPS_EC_CURVE_P384;
         break;
     case COSE_ALG_ES512:
-        curve = EC_CURVE_P521;
+        curve = DPS_EC_CURVE_P521;
         break;
     default:
         return DPS_ERR_NOT_IMPLEMENTED;
@@ -1111,7 +1111,14 @@ static DPS_Status DecodeKey(DPS_RxBuffer* buf, COSE_Key* key)
                 if (maj == CBOR_STRING) {
                     ret = DPS_ERR_NOT_IMPLEMENTED;
                 } else {
-                    ret = CBOR_DecodeInt8(buf, &key->ec.curve);
+                    int8_t crv;
+                    ret = CBOR_DecodeInt8(buf, &crv);
+                    if ((ret == DPS_OK) && ((crv < DPS_EC_CURVE_P256) || (DPS_EC_CURVE_P521 < crv))) {
+                        ret = DPS_ERR_NOT_IMPLEMENTED;
+                    }
+                    if (ret == DPS_OK) {
+                        key->ec.curve = crv;
+                    }
                 }
                 if (ret != DPS_OK) {
                     return ret;

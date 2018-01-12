@@ -115,6 +115,16 @@ struct _DPS_KeySymmetric {
 };
 
 /**
+ * Allowed elliptic curves
+ */
+typedef enum {
+    DPS_EC_CURVE_RESERVED = 0,
+    DPS_EC_CURVE_P256 = 1, /**< NIST P-256 also known as secp256r1 */
+    DPS_EC_CURVE_P384 = 2, /**< NIST P-384 also known as secp384r1 */
+    DPS_EC_CURVE_P521 = 3  /**< NIST P-521 also known as secp521r1 */
+} DPS_ECCurve;
+
+/**
  * Elliptic curve key data.
  *
  * Only @p x and @p y are needed for a public key.  Similarly, only @p
@@ -123,11 +133,7 @@ struct _DPS_KeySymmetric {
  * @note need to define this outside of DPS_Key to satisfy SWIG.
  */
 struct _DPS_KeyEC {
-    enum {
-        DPS_EC_CURVE_P256 = 1, /**< NIST P-256 also known as secp256r1 */
-        DPS_EC_CURVE_P384 = 2, /**< NIST P-384 also known as secp384r1 */
-        DPS_EC_CURVE_P521 = 3  /**< NIST P-521 also known as secp521r1 */
-    } curve; /**< EC curve */
+    DPS_ECCurve curve; /**< The named curve */
     const uint8_t* x; /**< X coordinate */
     const uint8_t* y; /**< Y coordinate */
     const uint8_t* d; /**< D coordinate */

@@ -1177,7 +1177,7 @@ static void NodeRun(void* arg)
 
 static DPS_Status SetCurve(DPS_KeyStoreRequest* request, const DPS_Key* key)
 {
-    int8_t* curve = request->data;
+    DPS_ECCurve* curve = request->data;
     uint8_t d[EC_MAX_COORD_LEN];
 
     switch (key->type) {
@@ -1199,7 +1199,7 @@ static DPS_Status SetCurve(DPS_KeyStoreRequest* request, const DPS_Key* key)
 static DPS_Status GetSignatureAlgorithm(DPS_KeyStore* keyStore, const uint8_t* id, size_t idLen, int8_t* alg)
 {
     DPS_KeyStoreRequest request;
-    int8_t curve = 0;
+    DPS_ECCurve curve = DPS_EC_CURVE_RESERVED;
     DPS_Status ret;
 
     if (!keyStore || !keyStore->keyHandler) {
@@ -1215,13 +1215,13 @@ static DPS_Status GetSignatureAlgorithm(DPS_KeyStore* keyStore, const uint8_t* i
         return ret;
     }
     switch (curve) {
-    case EC_CURVE_P256:
+    case DPS_EC_CURVE_P256:
         *alg = COSE_ALG_ES256;
         break;
-    case EC_CURVE_P384:
+    case DPS_EC_CURVE_P384:
         *alg = COSE_ALG_ES384;
         break;
-    case EC_CURVE_P521:
+    case DPS_EC_CURVE_P521:
         *alg = COSE_ALG_ES512;
         break;
     default:

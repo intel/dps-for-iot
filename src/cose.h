@@ -26,6 +26,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <dps/private/dps.h>
+#include "ccm.h"
 #include "crypto.h"
 
 #ifdef __cplusplus
@@ -35,7 +36,7 @@ extern "C" {
 /**
  * Size of the nonce
  */
-#define COSE_NONCE_LEN        13
+#define COSE_NONCE_LEN        AES_CCM_NONCE_LEN
 
 /*
  * Algorithms currently supported by this implementation.

@@ -32,9 +32,6 @@ extern "C" {
 #define AES_128_KEY_LEN 16 /**< AES 128 key length, in bytes */
 
 #define EC_MAX_COORD_LEN 66 /**< Maximum length of an EC coordinate (x, y, or d) */
-#define EC_CURVE_P256 1 /**< NIST P-256 also known as secp256r1 */
-#define EC_CURVE_P384 2 /**< NIST P-384 also known as secp384r1 */
-#define EC_CURVE_P521 3 /**< NIST P-521 also known as secp521r1 */
 
 typedef struct _DPS_RBG DPS_RBG;
 
@@ -43,7 +40,7 @@ DPS_RBG* DPS_CreateRBG();
 void DPS_DestroyRBG(DPS_RBG* rbg);
 
 DPS_Status DPS_RandomKey(DPS_RBG *rbg, uint8_t key[AES_128_KEY_LEN]);
-DPS_Status DPS_EphemeralKey(DPS_RBG* rbg, int8_t curve,
+DPS_Status DPS_EphemeralKey(DPS_RBG* rbg, DPS_ECCurve curve,
                             uint8_t x[EC_MAX_COORD_LEN], uint8_t y[EC_MAX_COORD_LEN],
                             uint8_t d[EC_MAX_COORD_LEN]);
 
