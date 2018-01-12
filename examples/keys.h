@@ -20,8 +20,8 @@
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  */
 
-#ifndef _CERTIFICATES_H
-#define _CERTIFICATES_H
+#ifndef _KEYS_H
+#define _KEYS_H
 
 #include <dps/uuid.h>
 
