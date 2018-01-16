@@ -1,7 +1,7 @@
 /*
  *******************************************************************
  *
- * Copyright 2016 Intel Corporation All rights reserved.
+ * Copyright 2018 Intel Corporation All rights reserved.
  *
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  *
@@ -20,27 +20,38 @@
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  */
 
-#ifndef _SHA2_H
-#define _SHA2_H
+#ifndef _KEYS_H
+#define _KEYS_H
 
-#include <stdint.h>
-#include <dps/dbg.h>
-#include <dps/err.h>
+#include <dps/uuid.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define DPS_SHA2_DIGEST_LEN 32
-
-/**
- * Compute the SHA2 hash of some data
- *
- * @param digest  The result
- * @param data    The data to hash
- * @param len     The length of the data to hash
+/*
+ * Preshared keys and certificates for testing only - DO NOT USE THESE KEYS IN A REAL APPLICATION!!!!
  */
-void DPS_Sha2(uint8_t digest[DPS_SHA2_DIGEST_LEN], const uint8_t* data, size_t len);
+
+extern DPS_UUID NetworkKeyId;
+extern uint8_t NetworkKey[16];
+
+#define NUM_KEYS 2
+
+extern DPS_UUID PskId[NUM_KEYS];
+extern uint8_t PskData[NUM_KEYS][16];
+
+extern const char TrustedCAs[];
+
+extern const char PublisherId[];
+extern const char PublisherCert[];
+extern const char PublisherPrivateKey[];
+extern const char PublisherPassword[];
+
+extern const char SubscriberId[];
+extern const char SubscriberCert[];
+extern const char SubscriberPrivateKey[];
+extern const char SubscriberPassword[];
 
 #ifdef __cplusplus
 }

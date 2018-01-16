@@ -1,7 +1,7 @@
 /*
  *******************************************************************
  *
- * Copyright 2016 Intel Corporation All rights reserved.
+ * Copyright 2017 Intel Corporation All rights reserved.
  *
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  *
@@ -20,13 +20,34 @@
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  */
 
-#include <string.h>
-#include <memory.h>
-#include "sha2.h"
-#include "mbedtls/md.h"
+#ifndef _CRYPTO_H
+#define _CRYPTO_H
 
-void DPS_Sha2(uint8_t digest[DPS_SHA2_DIGEST_LEN], const uint8_t* data, size_t len)
-{
-    const mbedtls_md_info_t* info = mbedtls_md_info_from_type(MBEDTLS_MD_SHA256);
-    mbedtls_md(info, data, len, digest);
+#include <dps/dps.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#define AES_128_KEY_LEN 16 /**< AES 128 key length, in bytes */
+
+#define EC_MAX_COORD_LEN 66 /**< Maximum length of an EC coordinate (x, y, or d) */
+
+typedef struct _DPS_RBG DPS_RBG;
+
+DPS_RBG* DPS_CreateRBG();
+
+void DPS_DestroyRBG(DPS_RBG* rbg);
+
+DPS_Status DPS_RandomKey(DPS_RBG *rbg, uint8_t key[AES_128_KEY_LEN]);
+DPS_Status DPS_EphemeralKey(DPS_RBG* rbg, DPS_ECCurve curve,
+                            uint8_t x[EC_MAX_COORD_LEN], uint8_t y[EC_MAX_COORD_LEN],
+                            uint8_t d[EC_MAX_COORD_LEN]);
+
+char* DPS_CertificateCN(const char* cert, size_t certLen);
+
+#ifdef __cplusplus
 }
+#endif
+
+#endif

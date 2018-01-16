@@ -18,6 +18,11 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 %include "typemaps.i"
 
 /*
+ * This warning is not relevant
+ */
+%warnfilter(451) _DPS_KeyCert;
+
+/*
  * Functions that must not be exposed in Python
  */
 %ignore DPS_SubscriptionGetTopic;
@@ -48,6 +53,7 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
  * Note: can't combine strip and undercase, so regex instead.
  */
 %rename("debug") DPS_Debug;
+%rename("set_ca") DPS_SetCA;
 %rename("%(regex:/DPS_([A-Z][a-z0-9]+|UUID)/\\L\\1/)s", %$isfunction) "";
 %rename("%(regex:/DPS_([A-Z][a-z0-9]+|UUID)([A-Z][a-z0-9]+|UUID)/\\L\\1_\\L\\2/)s", %$isfunction) "";
 %rename("%(regex:/DPS_([A-Z][a-z0-9]+|UUID)([A-Z][a-z0-9]+|UUID)([A-Z][a-z0-9]+|UUID)/\\L\\1_\\L\\2_\\L\\3/)s", %$isfunction) "";

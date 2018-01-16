@@ -590,7 +590,7 @@ int main(int argc, char** argv)
      * Start the nodes
      */
     for (i = 0; i < numIds; ++i) {
-        DPS_Node* node = DPS_CreateNode("/.", NULL, NULL);
+        DPS_Node* node = DPS_CreateNode("/.", NULL, NULL, 0);
         /*
          * Set fast link monitor probes so we don't
          * need to wait so long to detect disconnects.

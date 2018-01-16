@@ -32,7 +32,7 @@ extern "C" {
 #endif
 
 /**
- * Maximum length for a topic string exluding NUL terminator
+ * Maximum length for a topic string excluding NUL terminator
  */
 #define DPS_MAX_TOPIC_STRLEN 2048
 

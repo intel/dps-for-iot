@@ -1,7 +1,7 @@
 /*
  *******************************************************************
  *
- * Copyright 2016 Intel Corporation All rights reserved.
+ * Copyright 2017 Intel Corporation All rights reserved.
  *
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  *
@@ -20,27 +20,33 @@
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  */
 
-#ifndef _SHA2_H
-#define _SHA2_H
+#ifndef _HKDF_H
+#define _HKDF_H
 
-#include <stdint.h>
-#include <dps/dbg.h>
-#include <dps/err.h>
+#include <dps/private/dps.h>
+#include "crypto.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define DPS_SHA2_DIGEST_LEN 32
-
 /**
- * Compute the SHA2 hash of some data
+ * Applies an HMAC-based extract-and-expand Key Derivation Function to
+ * generate a key.
  *
- * @param digest  The result
- * @param data    The data to hash
- * @param len     The length of the data to hash
+ * @param secret the secret
+ * @param secretLen the size of the secret, in bytes
+ * @param context the context for the hash function
+ * @param contextLen the size of the hash context, in bytes
+ * @param key returns the generated key
+ *
+ * @return
+ *         - DPS_OK if the key is generated
+ *         - DPS_ERR_INVALID if the key cannot be generated
  */
-void DPS_Sha2(uint8_t digest[DPS_SHA2_DIGEST_LEN], const uint8_t* data, size_t len);
+DPS_Status HKDF_SHA256(const uint8_t* secret, size_t secretLen,
+                       const uint8_t* context, size_t contextLen,
+                       uint8_t key[AES_128_KEY_LEN]);
 
 #ifdef __cplusplus
 }

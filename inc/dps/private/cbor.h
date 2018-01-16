@@ -122,6 +122,8 @@ DPS_Status CBOR_EncodeTag(DPS_TxBuffer* buffer, uint64_t n);
 
 DPS_Status CBOR_EncodeBoolean(DPS_TxBuffer* buffer, int b);
 
+DPS_Status CBOR_EncodeNull(DPS_TxBuffer* buffer);
+
 DPS_Status CBOR_DecodeUint8(DPS_RxBuffer* buffer, uint8_t* n);
 
 DPS_Status CBOR_DecodeUint16(DPS_RxBuffer* buffer, uint16_t* n);
@@ -239,16 +241,23 @@ DPS_Status CBOR_DecodeString(DPS_RxBuffer* buffer, char** data, size_t* size);
 DPS_Status CBOR_DecodeArray(DPS_RxBuffer* buffer, size_t* size);
 
 /**
- *
  * @param buffer  Buffer to decode from
  * @param maj     Returns the major type of the value skipped
  * @param skipped Returns number of bytes skipped
  *
- * @return - DPS_OK if the array was decoded
+ * @return - DPS_OK if the buffer was decoded
  *         - DPS_ERR_EOD if there was insufficient data in the buffer
- *
  */
 DPS_Status CBOR_Skip(DPS_RxBuffer* buffer, uint8_t* maj, size_t* skipped);
+
+/**
+ * @param buffer  Buffer to decode from
+ * @param maj     Returns the major type of the next value
+ *
+ * @return - DPS_OK if the buffer was decoded
+ *         - DPS_ERR_EOD if there was insufficient data in the buffer
+ */
+DPS_Status CBOR_Peek(DPS_RxBuffer* buffer, uint8_t* maj);
 
 /**
  * Structure for holding state while parsing a map

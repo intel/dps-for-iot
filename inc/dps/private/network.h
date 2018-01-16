@@ -199,7 +199,7 @@ void DPS_NetConnectionDecRef(DPS_NetConnection* cn);
  *
  * @return Returns zero if the addresses are different non-zero if they are the same
  */
-int DPS_SameAddr(DPS_NodeAddress* addr1, DPS_NodeAddress* addr2);
+int DPS_SameAddr(const DPS_NodeAddress* addr1, const DPS_NodeAddress* addr2);
 
 /*
  * Generates text for an address

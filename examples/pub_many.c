@@ -158,7 +158,7 @@ int main(int argc, char** argv)
         mcast = DPS_MCAST_PUB_DISABLED;
     }
 
-    node = DPS_CreateNode("/.", NULL, NULL);
+    node = DPS_CreateNode("/.", NULL, NULL, 0);
     ret = DPS_StartNode(node, mcast, 0);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("DPS_CreateNode failed: %s\n", DPS_ErrTxt(ret));
@@ -175,7 +175,7 @@ int main(int argc, char** argv)
     }
 
     pub = DPS_CreatePublication(node);
-    ret = DPS_InitPublication(pub, topics, numTopics, DPS_FALSE, NULL, OnAck);
+    ret = DPS_InitPublication(pub, topics, numTopics, DPS_FALSE, NULL, 0, OnAck);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to create publication - error=%d\n", ret);
         return 1;

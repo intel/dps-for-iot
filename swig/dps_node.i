@@ -16,6 +16,11 @@ extern "C" {
 %include "typemaps.i"
 
 /*
+ * This warning is not relevant
+ */
+%warnfilter(451) _DPS_KeyCert;
+
+/*
  * Functions that must not be exposed
  */
 %ignore DPS_SubscriptionGetTopic;

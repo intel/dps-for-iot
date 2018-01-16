@@ -33,12 +33,12 @@ static DPS_Status GetKey(DPS_KeyStoreRequest* request, const unsigned char* id, 
     return DPS_ERR_MISSING;
 }
 
-static DPS_Status GetCA(DPS_KeyStoreRequest* request)
+static DPS_Status GetEphemeralKey(DPS_KeyStoreRequest* request, const DPS_Key* key)
 {
     return DPS_ERR_MISSING;
 }
 
-static DPS_Status GetCertAndPrivateKey(DPS_KeyStoreRequest* request)
+static DPS_Status GetCA(DPS_KeyStoreRequest* request)
 {
     return DPS_ERR_MISSING;
 }
@@ -50,7 +50,7 @@ int main(int argc, char** argv)
     void* userData;
 
     /* Create and destroy */
-    keyStore = DPS_CreateKeyStore(GetKeyAndIdentity, GetKey, GetCA, GetCertAndPrivateKey);
+    keyStore = DPS_CreateKeyStore(GetKeyAndIdentity, GetKey, GetEphemeralKey, GetCA);
     ASSERT(keyStore);
     DPS_DestroyKeyStore(keyStore);
     keyStore = NULL;
@@ -60,7 +60,7 @@ int main(int argc, char** argv)
     keyStore = NULL;
 
     /* Set and get user data */
-    keyStore = DPS_CreateKeyStore(GetKeyAndIdentity, GetKey, GetCA, GetCertAndPrivateKey);
+    keyStore = DPS_CreateKeyStore(GetKeyAndIdentity, GetKey, GetEphemeralKey, GetCA);
     ASSERT(keyStore);
     ret = DPS_SetKeyStoreData(keyStore, (void*)1);
     ASSERT(ret == DPS_OK);

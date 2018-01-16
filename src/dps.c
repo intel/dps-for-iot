@@ -33,6 +33,7 @@
 #include "bitvec.h"
 #include <dps/private/cbor.h>
 #include "coap.h"
+#include "ec.h"
 #include "history.h"
 #include "node.h"
 #include "pub.h"
@@ -1130,6 +1131,14 @@ static void StopNode(DPS_Node* node)
     node->loop = NULL;
 }
 
+static void FreeNode(DPS_Node* node)
+{
+    if (node->signer.kid) {
+        free(node->signer.kid);
+    }
+    free(node);
+}
+
 static void NodeRun(void* arg)
 {
     int r;
@@ -1150,7 +1159,7 @@ static void NodeRun(void* arg)
         DPS_UnlockNode(node);
         node->onDestroyed(node, node->onDestroyedData);
         uv_mutex_destroy(&node->nodeMutex);
-        free(node);
+        FreeNode(node);
     } else {
         DPS_UnlockNode(node);
     }
@@ -1166,10 +1175,66 @@ static void NodeRun(void* arg)
     }
 }
 
+static DPS_Status SetCurve(DPS_KeyStoreRequest* request, const DPS_Key* key)
+{
+    DPS_ECCurve* curve = request->data;
+    uint8_t d[EC_MAX_COORD_LEN];
 
-DPS_Node* DPS_CreateNode(const char* separators, DPS_KeyStore* keyStore, const DPS_UUID* keyId)
+    switch (key->type) {
+    case DPS_KEY_EC:
+        *curve = key->ec.curve;
+        return DPS_OK;
+    case DPS_KEY_EC_CERT:
+        if (key->cert.privateKey) {
+            return ParsePrivateKey_ECDSA(key->cert.privateKey, key->cert.privateKeyLen,
+                                         key->cert.password, key->cert.passwordLen,
+                                         curve, d);
+        }
+        /* FALLTHROUGH */
+    default:
+        return DPS_ERR_MISSING;
+    }
+}
+
+static DPS_Status GetSignatureAlgorithm(DPS_KeyStore* keyStore, const uint8_t* id, size_t idLen, int8_t* alg)
+{
+    DPS_KeyStoreRequest request;
+    DPS_ECCurve curve = DPS_EC_CURVE_RESERVED;
+    DPS_Status ret;
+
+    if (!keyStore || !keyStore->keyHandler) {
+        return DPS_ERR_MISSING;
+    }
+
+    memset(&request, 0, sizeof(request));
+    request.keyStore = keyStore;
+    request.data = &curve;
+    request.setKey = SetCurve;
+    ret = keyStore->keyHandler(&request, id, idLen);
+    if (ret != DPS_OK) {
+        return ret;
+    }
+    switch (curve) {
+    case DPS_EC_CURVE_P256:
+        *alg = COSE_ALG_ES256;
+        break;
+    case DPS_EC_CURVE_P384:
+        *alg = COSE_ALG_ES384;
+        break;
+    case DPS_EC_CURVE_P521:
+        *alg = COSE_ALG_ES512;
+        break;
+    default:
+        ret = DPS_ERR_MISSING;
+        break;
+    }
+    return ret;
+}
+
+DPS_Node* DPS_CreateNode(const char* separators, DPS_KeyStore* keyStore, const uint8_t* id, size_t idLen)
 {
     DPS_Node* node = calloc(1, sizeof(DPS_Node));
+    DPS_Status ret;
 
     if (!node) {
         return NULL;
@@ -1178,7 +1243,7 @@ DPS_Node* DPS_CreateNode(const char* separators, DPS_KeyStore* keyStore, const D
      * One time initilization required
      */
     if (DPS_InitUUID() != DPS_OK) {
-        free(node);
+        FreeNode(node);
         return NULL;
     }
     if (!separators) {
@@ -1187,14 +1252,25 @@ DPS_Node* DPS_CreateNode(const char* separators, DPS_KeyStore* keyStore, const D
     /*
      * Sanity check
      */
-    if (keyId && (!keyStore || !keyStore->keyHandler)) {
+    if (id && (!keyStore || !keyStore->keyHandler)) {
         DPS_ERRPRINT("A key request callback is required\n");
-        free(node);
+        FreeNode(node);
         return NULL;
     }
-    if (keyId || (keyStore && keyStore->keyHandler)) {
-        node->isSecured = DPS_TRUE;
-        memcpy_s(&node->keyId, sizeof(DPS_UUID), keyId, sizeof(DPS_UUID));
+    if (id) {
+        ret = GetSignatureAlgorithm(keyStore, id, idLen, &node->signer.alg);
+        if (ret != DPS_OK) {
+            DPS_WARNPRINT("Node ID not suitable for signing\n");
+            ret = DPS_OK;
+        }
+        node->signer.kid = malloc(idLen);
+        if (!node->signer.kid) {
+            DPS_ERRPRINT("Allocate ID failed\n");
+            FreeNode(node);
+            return NULL;
+        }
+        node->signer.kidLen = idLen;
+        memcpy_s(node->signer.kid, node->signer.kidLen, id, idLen);
     }
     strncpy_s(node->separators, sizeof(node->separators), separators, sizeof(node->separators) - 1);
     node->keyStore = keyStore;
@@ -1387,7 +1463,7 @@ DPS_Status DPS_DestroyNode(DPS_Node* node, DPS_OnNodeDestroyed cb, void* data)
         assert(node->state == DPS_NODE_STOPPED);
         uv_mutex_destroy(&node->nodeMutex);
     }
-    free(node);
+    FreeNode(node);
     return DPS_ERR_NODE_DESTROYED;
 }
 
@@ -1479,9 +1555,9 @@ DPS_Status DPS_Unlink(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnUnlinkComplet
     return DPS_OK;
 }
 
-const char* DPS_NodeAddrToString(DPS_NodeAddress* addr)
+const char* DPS_NodeAddrToString(const DPS_NodeAddress* addr)
 {
-    return DPS_NetAddrText((struct sockaddr*)&addr->inaddr);
+    return DPS_NetAddrText((const struct sockaddr*)&addr->inaddr);
 }
 
 DPS_NodeAddress* DPS_CreateAddress()
@@ -1503,7 +1579,7 @@ void DPS_DestroyAddress(DPS_NodeAddress* addr)
     }
 }
 
-void DPS_MakeNonce(const DPS_UUID* uuid, uint32_t seqNum, uint8_t msgType, uint8_t nonce[DPS_COSE_NONCE_SIZE])
+void DPS_MakeNonce(const DPS_UUID* uuid, uint32_t seqNum, uint8_t msgType, uint8_t nonce[COSE_NONCE_LEN])
 {
     uint8_t* p = nonce;
 
@@ -1511,7 +1587,7 @@ void DPS_MakeNonce(const DPS_UUID* uuid, uint32_t seqNum, uint8_t msgType, uint8
     *p++ = (uint8_t)(seqNum >> 8);
     *p++ = (uint8_t)(seqNum >> 16);
     *p++ = (uint8_t)(seqNum >> 24);
-    memcpy_s(p, DPS_COSE_NONCE_SIZE - sizeof(uint32_t), uuid, DPS_COSE_NONCE_SIZE - sizeof(uint32_t));
+    memcpy_s(p, COSE_NONCE_LEN - sizeof(uint32_t), uuid, COSE_NONCE_LEN - sizeof(uint32_t));
     /*
      * Adjust one bit so nonce for PUB's and ACK's for same pub id and sequence number are different
      */
@@ -1520,27 +1596,4 @@ void DPS_MakeNonce(const DPS_UUID* uuid, uint32_t seqNum, uint8_t msgType, uint8
     } else {
         p[0] |= 0x80;
     }
-}
-
-static DPS_Status SetKey(DPS_KeyStoreRequest* request, const unsigned char* key, size_t len)
-{
-    if (len > AES_128_KEY_LEN) {
-        DPS_ERRPRINT("Key has size %d, but only %d buffer\n", len, AES_128_KEY_LEN);
-        return DPS_ERR_MISSING;
-    }
-    memcpy(request->data, key, len);
-    return DPS_OK;
-}
-
-DPS_Status DPS_GetCOSEKey(void* ctx, const DPS_UUID* kid, int8_t alg, uint8_t key[AES_128_KEY_LEN])
-{
-    DPS_Node* node = (DPS_Node*)ctx;
-    DPS_KeyStore* keyStore = node->keyStore;
-    DPS_KeyStoreRequest request;
-
-    memset(&request, 0, sizeof(request));
-    request.keyStore = keyStore;
-    request.data = key;
-    request.setKey = SetKey;
-    return keyStore->keyHandler(&request, (const unsigned char*)kid, sizeof(DPS_UUID));
 }

@@ -42,7 +42,11 @@ srcs = ['src/bitvec.c',
         'src/topics.c',
         'src/uv_extra.c',
         'src/sha2.c',
-        'src/ccm.c']
+        'src/ccm.c',
+        'src/ec.c',
+        'src/hkdf.c',
+        'src/keywrap.c',
+        'src/mbedtls.c']
 
 if env['transport'] == 'udp':
     srcs.append('src/udp/network.c')
@@ -96,7 +100,8 @@ if env['python']:
     if platform == 'win32':
         pyenv['SHLIBSUFFIX'] = '.pyd'
 
-    pyenv.Append(SWIGFLAGS = ['-python', '-Werror', '-v', '-O'], SWIGPATH = '#/inc')
+    pyenv.Append(SWIGFLAGS = ['-python', '-Wextra', '-Werror', '-v', '-O'], SWIGPATH = '#/inc')
+    pyenv.Append(CPPFLAGS = ['-Wno-strict-aliasing'])
     # Build python module library
     pylib = pyenv.SharedLibrary('./py/dps', shobjs + ['swig/dps_python.i'])
     pyenv.Install('#/build/dist/py', pylib)
@@ -104,11 +109,18 @@ if env['python']:
 
 if env['nodejs']:
     # Use SWIG to build the node.js wrapper
+    #
+    # Some shenanigans are needed here to get SWIG to correctly handle
+    # the DPS_Key union: SWIGFLAGS must not include "-c++" and we then
+    # need to tell the env to compile the genereated .c file as a cpp
+    # file.
+    #
     if platform == 'posix':
         nodeenv = libenv.Clone();
-        nodeenv.Append(SWIGFLAGS = ['-javascript', '-node', '-c++', '-DV8_VERSION=0x04059937', '-Wall', '-Werror', '-v', '-O'], SWIGPATH = '#/inc')
+        nodeenv.Append(SWIGFLAGS = ['-javascript', '-node', '-DV8_VERSION=0x04059937', '-Wextra', '-Werror', '-v', '-O'], SWIGPATH = '#/inc')
         # There may be a bug with the SWIG builder - add -O to CPPFLAGS to get it passed on to the compiler
         nodeenv.Append(CPPFLAGS = ['-DBUILDING_NODE_EXTENSION', '-std=c++11', '-O'])
+        nodeenv['CC'] = '$CXX'
         if env['target'] == 'yocto':
             nodeenv.Append(CPPPATH = [os.getenv('SYSROOT') + '/usr/include/node'])
         else:
@@ -151,15 +163,27 @@ exampleenv.Append(LIBS = [lib, env['UV_LIBS']])
 examplesrcs = ['examples/registry.c',
                'examples/reg_subs.c',
                'examples/reg_pubs.c',
-               'examples/publisher.c',
-               'examples/pub_many.c',
-               'examples/subscriber.c']
+               'examples/pub_many.c']
 
 Depends(examplesrcs, ext_libs)
 
 exampleprogs = []
 for example in examplesrcs:
     exampleprogs.append(exampleenv.Program(example))
+
+publishersrcs = ['examples/publisher.c',
+                 'examples/keys.c']
+
+Depends(publishersrcs, ext_libs)
+
+exampleprogs.append(exampleenv.Program(publishersrcs))
+
+subscribersrcs = ['examples/subscriber.c',
+                  'examples/keys.c']
+
+Depends(subscribersrcs, ext_libs)
+
+exampleprogs.append(exampleenv.Program(subscribersrcs))
 
 exampleenv.Install('#/build/dist/bin', exampleprogs)
 

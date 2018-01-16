@@ -12,6 +12,7 @@ TESTS="./build/test/bin/cbortest \
        ./build/test/bin/rle_compression \
        ./build/test/bin/keystoretest \
        ./test_scripts/chain_test \
+       ./test_scripts/e2esec \
        ./test_scripts/fanout \
        ./test_scripts/hot_mesh \
        ./test_scripts/loop25 \

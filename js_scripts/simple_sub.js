@@ -44,7 +44,7 @@ var dps = require("dps");
     }
     dps.setNetworkKey(keyStore, networkKeyID, networkKey);
 
-    node = dps.createNode("/", dps.memoryKeyStoreHandle(keyStore), keyID[0]);
+    node = dps.createNode("/", dps.memoryKeyStoreHandle(keyStore), null);
     dps.startNode(node, dps.MCAST_PUB_ENABLE_RECV, 0);
     sub = dps.createSubscription(node, ["a/b/c"]);
     dps.subscribe(sub, onPub);

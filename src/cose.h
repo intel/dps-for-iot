@@ -26,6 +26,8 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <dps/private/dps.h>
+#include "ccm.h"
+#include "crypto.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -34,69 +36,74 @@ extern "C" {
 /**
  * Size of the nonce
  */
-#define DPS_COSE_NONCE_SIZE        13
-
-/**
- * Key length
- */
-#define AES_128_KEY_LEN       16
+#define COSE_NONCE_LEN        AES_CCM_NONCE_LEN
 
 /*
- * Symmetric cipher modes and configurations currently supported by this implementation
+ * Algorithms currently supported by this implementation.
  *
- * These values are defined in the COSE specification
+ * These values are defined in the COSE specification.
  */
-#define AES_CCM_16_64_128     10    /**< AES-CCM mode 128-bit key, L=16, M=64,  13-byte nonce, 8 byte auth tag */
-#define AES_CCM_16_128_128    30    /**< AES-CCM mode 128-bit key, L=16, M=128, 13-byte nonce, 16 byte auth tag*/
+#define COSE_ALG_RESERVED               0
+#define COSE_ALG_AES_CCM_16_64_128     10    /**< AES-CCM mode 128-bit key, L=16, M=64,  13-byte nonce, 8 byte auth tag */
+#define COSE_ALG_AES_CCM_16_128_128    30    /**< AES-CCM mode 128-bit key, L=16, M=128, 13-byte nonce, 16 byte auth tag */
+#define COSE_ALG_A128KW                -3    /**< AES Key Wrap w/ 128-bit key */
+#define COSE_ALG_DIRECT                -6    /**< Direct use of CEK */
+#define COSE_ALG_ES256                 -7    /**< ECDSA w/ SHA-256 */
+#define COSE_ALG_ECDH_ES_HKDF_256     -25    /**< ECDH ES w/ HKDF */
+#define COSE_ALG_ECDH_ES_A128KW       -29    /**< ECDH ES w/ Concat KDF and AES Key Wrap w/ 128-bit key */
+#define COSE_ALG_ES384                -35    /**< ECDSA w/ SHA-384 */
+#define COSE_ALG_ES512                -36    /**< ECDSA w/ SHA-512 */
 
 /**
- * Function prototype for callback function for requesting the encryption key
- * for a specific key identifier. This function must not block
- *
- * @param ctx   Caller provided context
- * @param alg   The symmetric crypto algorithm variant to use
- * @param kid   The key identifier
- * @param key   Buffer for returning the key.
- *
- * @return  DPS_OK if a key matching the kid was returned
- *          DPS_ERR_MSSING if there is no matchin key
+ * COSE recipient or signer information used in message encryption,
+ * decryption, and key requests.
  */
-typedef DPS_Status (*COSE_KeyRequest)(void* ctx, const DPS_UUID* kid, int8_t alg, uint8_t key[AES_128_KEY_LEN]);
+typedef struct _COSE_Entity {
+    int8_t alg;         /**< Recipient or signature algorithm */
+    uint8_t* kid;       /**< Key identifier */
+    size_t kidLen;      /**< Size of key identifier, in bytes */
+} COSE_Entity;
 
 /**
  * COSE Encryption
  *
- * @param alg        The symmetric crypto algorithm variant to use
- * @param kid        The key identifier
- * @param nonce      The nonce
- * @param aad        Buffer containing the external auxiliary authenticated data
- * @param plainText  Buffer containing the plain text payload to be encrypted
- * @param keyCB      Callback function called to request the encryption key
- * @param ctx        Context to be passed to the key request callback
- * @param cipherText Buffer for returning the authenticated and encrypted output. The storage for this
- *                   buffer is allocated by this function and must be freed by the caller.
+ * @param alg            The symmetric crypto algorithm variant to use
+ * @param nonce          The nonce
+ * @param signer         The signer information, may be NULL
+ * @param recipient      The recipient information
+ * @param recipientLen   The number of recipients
+ * @param aad            Buffer containing the external auxiliary authenticated data
+ * @param plainText      Buffer containing the plain text payload to be encrypted
+ * @param keyStore       Request handler for encryption keys
+ * @param cipherText     Buffer for returning the authenticated and encrypted output. The storage for this
+ *                       buffer is allocated by this function and must be freed by the caller.
  *
  * @return  - DPS_OK if the plaintext was succesfully encrypted
  *          - Other error codes
  */
 DPS_Status COSE_Encrypt(int8_t alg,
-                        const DPS_UUID* kid,
-                        const uint8_t nonce[DPS_COSE_NONCE_SIZE],
+                        const uint8_t nonce[COSE_NONCE_LEN],
+                        const COSE_Entity* signer,
+                        const COSE_Entity* recipient, size_t recipientLen,
                         DPS_RxBuffer* aad,
                         DPS_RxBuffer* plainText,
-                        COSE_KeyRequest keyCB,
-                        void* ctx,
+                        DPS_KeyStore* keyStore,
                         DPS_TxBuffer* cipherText);
 
 /**
  * COSE Decryption
  *
- * @param nonce      The nonce
- * @param kid        Returns the key identifier used to lookup the decryption key.
+ * @param nonce      The nonce.  May be NULL if the nonce is contained in the payload.
+ * @param recipient  Returns the recipient information used to succesfully lookup the decryption key.
+ *                   Note that this points into cipherText so care must be taken to avoid
+ *                   referencing freed memory.
  * @param aad        Buffer containing the external auxiliary authenticated data.
  * @param cipherText Buffer containing the authenticated and encrypted input data
- * @param keyCB      Callback function called to request the encryption key
+ * @param keyStore   Request handler for encryption keys
  * @param ctx        Context to be passed to the key request callback
+ * @param signer     Returns the recipient information used to succesfully verify the signed cipherText.
+ *                   Note that this points into cipherText so care must be taken to avoid
+ *                   referencing freed memory.  This will be memset to 0 if not verified.
  * @param plainText  Buffer for returning the decrypted payload. The storage for this
  *                   buffer is allocated by this function and must be freed by the caller.
  *
@@ -106,14 +113,13 @@ DPS_Status COSE_Encrypt(int8_t alg,
  *          - DPS_ERR_SECURITY if the payload failed to decrypt
  *          - Other error codes
  */
-DPS_Status COSE_Decrypt(const uint8_t nonce[DPS_COSE_NONCE_SIZE],
-                        DPS_UUID* kid,
+DPS_Status COSE_Decrypt(const uint8_t* nonce,
+                        COSE_Entity* recipient,
                         DPS_RxBuffer* aad,
                         DPS_RxBuffer* cipherText,
-                        COSE_KeyRequest keyCB,
-                        void* ctx,
+                        DPS_KeyStore* keyStore,
+                        COSE_Entity* signer,
                         DPS_TxBuffer* plainText);
-
 
 #ifdef __cplusplus
 }

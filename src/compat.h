@@ -27,6 +27,10 @@
 #include <stdint.h>
 #include <safe_lib.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
  * Code required for platform compatibility
  */
@@ -61,6 +65,10 @@ inline char* strndup(const char* str, size_t maxLen)
 #define BSWAP_32(n)  __builtin_bswap32(n)
 #define BSWAP_64(n)  __builtin_bswap64(n)
 
+#endif
+
+#ifdef __cplusplus
+}
 #endif
 
 #endif

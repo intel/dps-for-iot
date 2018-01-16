@@ -435,7 +435,7 @@ int main(int argc, char** argv)
          * Start the nodes
          */
         for (i = 0; i < numIds; ++i) {
-            DPS_Node* node = DPS_CreateNode("/.", NULL, NULL);
+            DPS_Node* node = DPS_CreateNode("/.", NULL, NULL, 0);
             /*
              * For test purposes we only want a short subscription delay
              */

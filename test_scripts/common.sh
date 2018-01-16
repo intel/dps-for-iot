@@ -148,6 +148,17 @@ function expect_pubs_received {
     fi
 }
 
+# expect_acks_received N
+function expect_acks_received {
+    expected=$1
+    n=$(grep "Ack for pub" out/pub*.log | wc -l)
+    if [ $n -ne $expected ]; then
+        echo "Acks received is not equal to expected ($n != $expected)"
+        grep "Ack for pub" out/pub*.log
+        exit 1
+    fi
+}
+
 # expect_errors N ERROR
 function expect_errors {
     n=$(grep -r "ERROR.*$2" out | wc -l)

@@ -25,6 +25,14 @@
 
 #include <uv.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 int uv_thread_detach(uv_thread_t* tid);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
