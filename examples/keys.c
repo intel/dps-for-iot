@@ -22,20 +22,30 @@
 
 #include "keys.h"
 
-DPS_UUID NetworkKeyId = {
+static const DPS_UUID _NetworkKeyId = {
     0x4c,0xfc,0x6b,0x75,0x0f,0x80,0x95,0xb3,0x6c,0xb7,0xc1,0x2f,0x65,0x2d,0x38,0x26
 };
-uint8_t NetworkKey[16] = {
+static const uint8_t _NetworkKey[16] = {
     0xcd,0xfe,0x31,0x59,0x70,0x5f,0xe4,0xc8,0xcb,0x40,0xac,0x69,0x9c,0x06,0x3a,0x1d
 };
+const DPS_KeyId NetworkKeyId = { _NetworkKeyId.val, sizeof(_NetworkKeyId.val) };
+const DPS_Key NetworkKey = { DPS_KEY_SYMMETRIC, .symmetric = { _NetworkKey, sizeof(_NetworkKey) } };
 
-DPS_UUID PskId[NUM_KEYS] = {
+static const DPS_UUID _PskId[NUM_KEYS] = {
     { .val = { 0xed,0x54,0x14,0xa8,0x5c,0x4d,0x4d,0x15,0xb6,0x9f,0x0e,0x99,0x8a,0xb1,0x71,0xf2 } },
     { .val = { 0x53,0x4d,0x2a,0x4b,0x98,0x76,0x1f,0x25,0x6b,0x78,0x3c,0xc2,0xf8,0x12,0x90,0xcc } }
 };
-uint8_t PskData[NUM_KEYS][16] = {
+static const uint8_t _Psk[NUM_KEYS][16] = {
     { 0x77,0x58,0x22,0xfc,0x3d,0xef,0x48,0x88,0x91,0x25,0x78,0xd0,0xe2,0x74,0x5c,0x10 },
     { 0x39,0x12,0x3e,0x7f,0x21,0xbc,0xa3,0x26,0x4e,0x6f,0x3a,0x21,0xa4,0xf1,0xb5,0x98 }
+};
+const DPS_KeyId PskId[NUM_KEYS] = {
+    { _PskId[0].val, sizeof(_PskId[0].val) },
+    { _PskId[1].val, sizeof(_PskId[1].val) },
+};
+const DPS_Key Psk[NUM_KEYS] = {
+    { DPS_KEY_SYMMETRIC, .symmetric = { _Psk[0], sizeof(_Psk[0]) } },
+    { DPS_KEY_SYMMETRIC, .symmetric = { _Psk[1], sizeof(_Psk[1]) } }
 };
 
 const char TrustedCAs[] =
@@ -52,7 +62,8 @@ const char TrustedCAs[] =
     "Wu+a8mdVTg4CIHXjJbMxosMAruzdFtf9Ik0bKfhFoXfr6XfFVsVxcU9l\r\n"
     "-----END CERTIFICATE-----\r\n";
 
-const char PublisherId[] = "DPS Test Publisher";
+#define PUBLISHER_ID "DPS Test Publisher"
+const DPS_KeyId PublisherId = { PUBLISHER_ID, sizeof(PUBLISHER_ID) - 1 };
 const char PublisherCert[] =
     "-----BEGIN CERTIFICATE-----\r\n"
     "MIIBiDCCAS0CCQCzbzjgbS2buTAKBggqhkjOPQQDAjBIMQswCQYDVQQGEwJVUzEV\r\n"
@@ -76,7 +87,8 @@ const char PublisherPrivateKey[] =
     "-----END EC PRIVATE KEY-----\r\n";
 const char PublisherPassword[] = "DPS Test Publisher";
 
-const char SubscriberId[] = "DPS Test Subscriber";
+#define SUBSCRIBER_ID "DPS Test Subscriber"
+const DPS_KeyId SubscriberId = { SUBSCRIBER_ID, sizeof(SUBSCRIBER_ID) - 1 };
 const char SubscriberCert[] =
     "-----BEGIN CERTIFICATE-----\r\n"
     "MIIBiTCCAS4CCQCzbzjgbS2bujAKBggqhkjOPQQDAjBIMQswCQYDVQQGEwJVUzEV\r\n"

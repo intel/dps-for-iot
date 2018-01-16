@@ -176,7 +176,7 @@ void DPS_DumpSubscriptions(DPS_Node* node);
 struct _DPS_KeyStoreRequest {
     DPS_KeyStore* keyStore;
     void* data;
-    DPS_Status (*setKeyAndIdentity)(DPS_KeyStoreRequest* request, const DPS_Key* key, const uint8_t* id, size_t idLen);
+    DPS_Status (*setKeyAndIdentity)(DPS_KeyStoreRequest* request, const DPS_Key* key, const DPS_KeyId* keyId);
     DPS_Status (*setKey)(DPS_KeyStoreRequest* request, const DPS_Key* key);
     DPS_Status (*setCA)(DPS_KeyStoreRequest* request, const char* ca, size_t len);
     DPS_Status (*setCert)(DPS_KeyStoreRequest* request, const char* cert, size_t certLen,

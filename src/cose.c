@@ -135,8 +135,7 @@ typedef struct _COSE_Key {
  */
 typedef struct _Signature {
     int8_t alg;
-    uint8_t* kid;
-    size_t kidLen;
+    DPS_KeyId kid;
     uint8_t* sig;
     size_t sigLen;
 } Signature;
@@ -239,7 +238,7 @@ static DPS_Status EncodeUnprotectedMap(DPS_TxBuffer* buf, const uint8_t* kid, si
             ret = EncodeProtectedMap(buf, sig->alg);
         }
         if (ret == DPS_OK) {
-            ret = EncodeUnprotectedMap(buf, sig->kid, sig->kidLen, NULL, 0, NULL);
+            ret = EncodeUnprotectedMap(buf, sig->kid.id, sig->kid.len, NULL, 0, NULL);
         }
         if (ret == DPS_OK) {
             ret = CBOR_EncodeBytes(buf, sig->sig, sig->sigLen);
@@ -248,7 +247,7 @@ static DPS_Status EncodeUnprotectedMap(DPS_TxBuffer* buf, const uint8_t* kid, si
     return ret;
 }
 
-static DPS_Status EncodeRecipient(DPS_TxBuffer* buf, int8_t alg, const uint8_t* kid, size_t kidLen,
+static DPS_Status EncodeRecipient(DPS_TxBuffer* buf, int8_t alg, const DPS_KeyId* kid,
                                   COSE_Key* key, const uint8_t* content, size_t contentLen)
 {
     DPS_Status ret;
@@ -334,7 +333,7 @@ static DPS_Status EncodeRecipient(DPS_TxBuffer* buf, int8_t alg, const uint8_t* 
         ret = CBOR_EncodeInt8(buf, COSE_HDR_KID);
     }
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeBytes(buf, kid, kidLen);
+        ret = CBOR_EncodeBytes(buf, kid->id, kid->len);
     }
     /*
      * [3] Encrypted byte string
@@ -598,7 +597,7 @@ static DPS_Status SetKey(DPS_KeyStoreRequest* request, const DPS_Key* key)
     return DPS_OK;
 }
 
-static DPS_Status GetKey(DPS_KeyStore* keyStore, const unsigned char* kid, size_t kidLen, COSE_Key* key)
+static DPS_Status GetKey(DPS_KeyStore* keyStore, const DPS_KeyId* kid, COSE_Key* key)
 {
     DPS_KeyStoreRequest request;
 
@@ -609,7 +608,7 @@ static DPS_Status GetKey(DPS_KeyStore* keyStore, const unsigned char* kid, size_
     request.keyStore = keyStore;
     request.data = key;
     request.setKey = SetKey;
-    return keyStore->keyHandler(&request, kid, kidLen);
+    return keyStore->keyHandler(&request, kid);
 }
 
 static DPS_Status GetEphemeralKey(DPS_KeyStore* keyStore, COSE_Key* key)
@@ -665,7 +664,7 @@ static DPS_Status GetSignatureKey(DPS_KeyStore* keyStore, const Signature* sig, 
     request.keyStore = keyStore;
     request.data = key;
     request.setKey = SetKey;
-    ret = keyStore->keyHandler(&request, sig->kid, sig->kidLen);
+    ret = keyStore->keyHandler(&request, &sig->kid);
     if (ret != DPS_OK) {
         return ret;
     }
@@ -710,7 +709,7 @@ DPS_Status COSE_Encrypt(int8_t alg, const uint8_t nonce[COSE_NONCE_LEN], const C
 
     recipientBytes = 0;
     for (i = 0; i < recipientLen; ++i) {
-        recipientBytes += SIZEOF_RECIPIENT(recipient[i].kidLen);
+        recipientBytes += SIZEOF_RECIPIENT(recipient[i].kid.len);
         /*
          * Recipient algorithms must agree as the content key shared
          * between the recipients depends on the algorithm
@@ -757,7 +756,7 @@ DPS_Status COSE_Encrypt(int8_t alg, const uint8_t nonce[COSE_NONCE_LEN], const C
             goto Exit;
         }
         cek.type = COSE_KEY_SYMMETRIC;
-        ret = GetKey(keyStore, recipient[0].kid, recipient[0].kidLen, &cek);
+        ret = GetKey(keyStore, &recipient[0].kid, &cek);
         if (ret != DPS_OK) {
             goto Exit;
         }
@@ -768,7 +767,7 @@ DPS_Status COSE_Encrypt(int8_t alg, const uint8_t nonce[COSE_NONCE_LEN], const C
             goto Exit;
         }
         cek.type = COSE_KEY_SYMMETRIC;
-        ret = GetKey(keyStore, recipient[0].kid, recipient[0].kidLen, &cek);
+        ret = GetKey(keyStore, &recipient[0].kid, &cek);
         if (ret != DPS_OK) {
             goto Exit;
         }
@@ -799,7 +798,7 @@ DPS_Status COSE_Encrypt(int8_t alg, const uint8_t nonce[COSE_NONCE_LEN], const C
          * Request the static recipient public key and ephemeral sender private key
          */
         staticKey.type = COSE_KEY_EC;
-        ret = GetKey(keyStore, recipient[0].kid, recipient[0].kidLen, &staticKey);
+        ret = GetKey(keyStore, &recipient[0].kid, &staticKey);
         if (ret != DPS_OK) {
             goto Exit;
         }
@@ -852,8 +851,7 @@ DPS_Status COSE_Encrypt(int8_t alg, const uint8_t nonce[COSE_NONCE_LEN], const C
             goto Exit;
         }
         sig.alg = signer->alg;
-        sig.kid = (uint8_t*)signer->kid;
-        sig.kidLen = signer->kidLen;
+        sig.kid = signer->kid;
         ret = EncodeSig(&toBeSigned, alg, sig.alg, NULL, 0, content.base, DPS_TxBufferUsed(&content));
         if (ret != DPS_OK) {
             goto Exit;
@@ -879,7 +877,7 @@ DPS_Status COSE_Encrypt(int8_t alg, const uint8_t nonce[COSE_NONCE_LEN], const C
         /* iv */ CBOR_SIZEOF(int8_t) + CBOR_SIZEOF_BSTR(COSE_NONCE_LEN) +
         CBOR_SIZEOF_BSTR(DPS_TxBufferUsed(&content));
     if (signer) {
-        ctLen += /* counter signature */ CBOR_SIZEOF(int8_t) + SIZEOF_COUNTER_SIGNATURE(sig.kidLen);
+        ctLen += /* counter signature */ CBOR_SIZEOF(int8_t) + SIZEOF_COUNTER_SIGNATURE(sig.kid.len);
     }
     if (tag == COSE_TAG_ENCRYPT) {
         ctLen += CBOR_SIZEOF_ARRAY(recipientLen) + recipientBytes;
@@ -947,7 +945,7 @@ DPS_Status COSE_Encrypt(int8_t alg, const uint8_t nonce[COSE_NONCE_LEN], const C
                 assert(tag == COSE_TAG_ENCRYPT0);
                 break;
             case COSE_ALG_DIRECT:
-                ret = EncodeRecipient(cipherText, recipient[i].alg, recipient[i].kid, recipient[i].kidLen,
+                ret = EncodeRecipient(cipherText, recipient[i].alg, &recipient[i].kid,
                                       NULL, NULL, 0);
                 if (ret != DPS_OK) {
                     goto Exit;
@@ -955,7 +953,7 @@ DPS_Status COSE_Encrypt(int8_t alg, const uint8_t nonce[COSE_NONCE_LEN], const C
                 break;
             case COSE_ALG_A128KW:
                 k.type = COSE_KEY_SYMMETRIC;
-                ret = GetKey(keyStore, recipient[i].kid, recipient[i].kidLen, &k);
+                ret = GetKey(keyStore, &recipient[i].kid, &k);
                 if (ret != DPS_OK) {
                     goto Exit;
                 }
@@ -963,14 +961,14 @@ DPS_Status COSE_Encrypt(int8_t alg, const uint8_t nonce[COSE_NONCE_LEN], const C
                 if (ret != DPS_OK) {
                     goto Exit;
                 }
-                ret = EncodeRecipient(cipherText, recipient[i].alg, recipient[i].kid, recipient[i].kidLen,
+                ret = EncodeRecipient(cipherText, recipient[i].alg, &recipient[i].kid,
                                       NULL, kw, sizeof(kw));
                 if (ret != DPS_OK) {
                     goto Exit;
                 }
                 break;
             case COSE_ALG_ECDH_ES_HKDF_256:
-                ret = EncodeRecipient(cipherText, recipient[i].alg, recipient[i].kid, recipient[i].kidLen,
+                ret = EncodeRecipient(cipherText, recipient[i].alg, &recipient[i].kid,
                                       &ephemeralKey, NULL, 0);
                 if (ret != DPS_OK) {
                     goto Exit;
@@ -984,7 +982,7 @@ DPS_Status COSE_Encrypt(int8_t alg, const uint8_t nonce[COSE_NONCE_LEN], const C
                  * request only one ephemeral key per message.
                  */
                 staticKey.type = COSE_KEY_EC;
-                ret = GetKey(keyStore, recipient[i].kid, recipient[i].kidLen, &staticKey);
+                ret = GetKey(keyStore, &recipient[i].kid, &staticKey);
                 if (ret != DPS_OK) {
                     goto Exit;
                 }
@@ -1022,7 +1020,7 @@ DPS_Status COSE_Encrypt(int8_t alg, const uint8_t nonce[COSE_NONCE_LEN], const C
                 if (ret != DPS_OK) {
                     goto Exit;
                 }
-                ret = EncodeRecipient(cipherText, recipient[i].alg, recipient[i].kid, recipient[i].kidLen,
+                ret = EncodeRecipient(cipherText, recipient[i].alg, &recipient[i].kid,
                                       &ephemeralKey, kw, sizeof(kw));
                 if (ret != DPS_OK) {
                     goto Exit;
@@ -1225,7 +1223,7 @@ static DPS_Status DecodeProtectedMap(DPS_RxBuffer* buf, int8_t* alg)
     return ret;
 }
 
-static DPS_Status DecodeUnprotectedMap(DPS_RxBuffer* buf, int8_t* alg, uint8_t** kid, size_t* kidLen,
+static DPS_Status DecodeUnprotectedMap(DPS_RxBuffer* buf, int8_t* alg, DPS_KeyId* kid,
                                        uint8_t* nonce, Signature* sig, COSE_Key* key)
 {
     DPS_Status ret;
@@ -1255,10 +1253,10 @@ static DPS_Status DecodeUnprotectedMap(DPS_RxBuffer* buf, int8_t* alg, uint8_t**
             }
             break;
         case COSE_HDR_KID:
-            if (!kid || !kidLen) {
+            if (!kid) {
                 return DPS_ERR_INVALID;
             }
-            ret = CBOR_DecodeBytes(buf, kid, kidLen);
+            ret = CBOR_DecodeBytes(buf, (uint8_t**)&kid->id, &kid->len);
             if (ret != DPS_OK) {
                 return ret;
             }
@@ -1290,7 +1288,7 @@ static DPS_Status DecodeUnprotectedMap(DPS_RxBuffer* buf, int8_t* alg, uint8_t**
             if ((ret != DPS_OK) || (sig->alg == COSE_ALG_RESERVED)) {
                 return DPS_ERR_INVALID;
             }
-            ret = DecodeUnprotectedMap(buf, NULL, &sig->kid, &sig->kidLen, NULL, NULL, NULL);
+            ret = DecodeUnprotectedMap(buf, NULL, &sig->kid, NULL, NULL, NULL);
             if (ret != DPS_OK) {
                 return ret;
             }
@@ -1315,7 +1313,7 @@ static DPS_Status DecodeUnprotectedMap(DPS_RxBuffer* buf, int8_t* alg, uint8_t**
     return ret;
 }
 
-static DPS_Status DecodeRecipient(DPS_RxBuffer* buf, int8_t* alg, uint8_t** kid, size_t* kidLen,
+static DPS_Status DecodeRecipient(DPS_RxBuffer* buf, int8_t* alg, DPS_KeyId* kid,
                                   COSE_Key* key, uint8_t** content, size_t *contentLen)
 {
     DPS_Status ret;
@@ -1332,7 +1330,7 @@ static DPS_Status DecodeRecipient(DPS_RxBuffer* buf, int8_t* alg, uint8_t** kid,
     if (ret != DPS_OK) {
         return ret;
     }
-    ret = DecodeUnprotectedMap(buf, alg, kid, kidLen, NULL, NULL, key);
+    ret = DecodeUnprotectedMap(buf, alg, kid, NULL, NULL, key);
     if (ret != DPS_OK) {
         return ret;
     }
@@ -1423,7 +1421,7 @@ DPS_Status COSE_Decrypt(const uint8_t* nonce, COSE_Entity* recipient, DPS_RxBuff
     /*
      * [2] Unprotected map
      */
-    ret = DecodeUnprotectedMap(cipherText, NULL, NULL, NULL, iv, &sig, NULL);
+    ret = DecodeUnprotectedMap(cipherText, NULL, NULL, iv, &sig, NULL);
     if (ret != DPS_OK) {
         goto Exit;
     }
@@ -1455,7 +1453,6 @@ DPS_Status COSE_Decrypt(const uint8_t* nonce, COSE_Entity* recipient, DPS_RxBuff
             if (signer) {
                 signer->alg = sig.alg;
                 signer->kid = sig.kid;
-                signer->kidLen = sig.kidLen;
             }
         } else {
             DPS_WARNPRINT("Failed to verify signature: %s\n", DPS_ErrTxt(verify));
@@ -1483,7 +1480,7 @@ DPS_Status COSE_Decrypt(const uint8_t* nonce, COSE_Entity* recipient, DPS_RxBuff
     }
     for (i = 0; i < sz; ++i) {
         if (tag == COSE_TAG_ENCRYPT) {
-            ret = DecodeRecipient(cipherText, &recipient->alg, (uint8_t**)&recipient->kid, &recipient->kidLen,
+            ret = DecodeRecipient(cipherText, &recipient->alg, &recipient->kid,
                                   &ephemeralKey, &kw, &kwLen);
             if (ret != DPS_OK) {
                 goto Exit;
@@ -1492,21 +1489,21 @@ DPS_Status COSE_Decrypt(const uint8_t* nonce, COSE_Entity* recipient, DPS_RxBuff
         switch (recipient->alg) {
         case COSE_ALG_RESERVED:
             cek.type = COSE_KEY_SYMMETRIC;
-            ret = GetKey(keyStore, recipient->kid, recipient->kidLen, &cek);
+            ret = GetKey(keyStore, &recipient->kid, &cek);
             if (ret != DPS_OK) {
                 continue;
             }
             break;
         case COSE_ALG_DIRECT:
             cek.type = COSE_KEY_SYMMETRIC;
-            ret = GetKey(keyStore, recipient->kid, recipient->kidLen, &cek);
+            ret = GetKey(keyStore, &recipient->kid, &cek);
             if (ret != DPS_OK) {
                 continue;
             }
             break;
         case COSE_ALG_A128KW:
             kek.type = COSE_KEY_SYMMETRIC;
-            ret = GetKey(keyStore, recipient->kid, recipient->kidLen, &kek);
+            ret = GetKey(keyStore, &recipient->kid, &kek);
             if (ret != DPS_OK) {
                 continue;
             }
@@ -1525,7 +1522,7 @@ DPS_Status COSE_Decrypt(const uint8_t* nonce, COSE_Entity* recipient, DPS_RxBuff
              * Request the static recipient private key
              */
             staticKey.type = COSE_KEY_EC;
-            ret = GetKey(keyStore, recipient->kid, recipient->kidLen, &staticKey);
+            ret = GetKey(keyStore, &recipient->kid, &staticKey);
             if (ret != DPS_OK) {
                 continue;
             }
@@ -1556,7 +1553,7 @@ DPS_Status COSE_Decrypt(const uint8_t* nonce, COSE_Entity* recipient, DPS_RxBuff
              * Request the static recipient private key
              */
             staticKey.type = COSE_KEY_EC;
-            ret = GetKey(keyStore, recipient->kid, recipient->kidLen, &staticKey);
+            ret = GetKey(keyStore, &recipient->kid, &staticKey);
             if (ret != DPS_OK) {
                 continue;
             }

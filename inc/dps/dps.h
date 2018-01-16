@@ -166,6 +166,14 @@ typedef struct _DPS_Key {
 } DPS_Key;
 
 /**
+ * An identifier of a key in a key store.
+ */
+typedef struct _DPS_KeyId {
+    const uint8_t* id; /**< the identifier of the key */
+    size_t len; /**< the length of the identifier, in bytes */
+} DPS_KeyId;
+
+/**
  * Opaque type for a key store.
  */
 typedef struct _DPS_KeyStore DPS_KeyStore;
@@ -200,16 +208,14 @@ typedef DPS_Status (*DPS_KeyAndIdentityHandler)(DPS_KeyStoreRequest* request);
  *
  * @param request The request, only valid with the body of this
  *                callback function.
- * @param id The identifier of the key to provide, may be NULL to
- *           request a random / ephemeral key.
- * @param idLen The length of the identifier, in bytes.
+ * @param keyId The identifier of the key to provide.
  *
  * @return
  * - DPS_OK when DPS_SetKey() succeeds
  * - DPS_ERR_MISSING when no key is located
  * - error otherwise
  */
-typedef DPS_Status (*DPS_KeyHandler)(DPS_KeyStoreRequest* request, const uint8_t* id, size_t idLen);
+typedef DPS_Status (*DPS_KeyHandler)(DPS_KeyStoreRequest* request, const DPS_KeyId* keyId);
 
 /**
  * Function prototype for a key store handler called when an ephemeral key with the
@@ -250,13 +256,11 @@ typedef DPS_Status (*DPS_CAHandler)(DPS_KeyStoreRequest* request);
  *
  * @param request The @p request parameter of the handler
  * @param key The key
- * @param id The identifier of the key to provide
- * @param idLen The length of the identifier, in bytes
+ * @param keyId The identifier of the key to provide
  *
  * @return DPS_OK or an error
  */
-DPS_Status DPS_SetKeyAndIdentity(DPS_KeyStoreRequest* request, const DPS_Key* key,
-                                 const uint8_t* id, size_t idLen);
+DPS_Status DPS_SetKeyAndIdentity(DPS_KeyStoreRequest* request, const DPS_Key* key, const DPS_KeyId* keyId);
 
 /**
  * Provide a key to a key store request.
@@ -360,28 +364,23 @@ void DPS_DestroyMemoryKeyStore(DPS_MemoryKeyStore* keyStore);
  * Specify a previously set key identifier and a NULL key to remove a key from the key store.
  *
  * @param keyStore An in-memory key store
- * @param kid The identifier of the key to create, replace, or remove
+ * @param keyId The identifier of the key to create, replace, or remove
  * @param key The key
- * @param keyLen The length of the key, in bytes
  *
  * @return DPS_OK or an error
  */
-DPS_Status DPS_SetContentKey(DPS_MemoryKeyStore* keyStore, const DPS_UUID* kid,
-                             const uint8_t* key, size_t keyLen);
+DPS_Status DPS_SetContentKey(DPS_MemoryKeyStore* keyStore, const DPS_KeyId* keyId, const DPS_Key* key);
 
 /**
  * Create or replace the network key in the key store.
  *
  * @param keyStore An in-memory key store
- * @param id The identifier of the key to create
- * @param idLen The length of the identifier, in bytes
+ * @param keyId The identifier of the key to create
  * @param key The key
- * @param keyLen The length of the key, in bytes
  *
  * @return DPS_OK or an error
  */
-DPS_Status DPS_SetNetworkKey(DPS_MemoryKeyStore* keyStore, const uint8_t* id, size_t idLen,
-                             const uint8_t* key, size_t keyLen);
+DPS_Status DPS_SetNetworkKey(DPS_MemoryKeyStore* keyStore, const DPS_KeyId* keyId, const DPS_Key* key);
 
 /**
  * Create or replace the trusted CA(s) in the key store.
@@ -445,14 +444,11 @@ typedef struct _DPS_Node DPS_Node;
  *
  * @param separators    The separator characters to use for topic matching, if NULL defaults to "/"
  * @param keyStore      The key store to use for this node
- * @param id            The key identifier of this node
- * @param idLen         Size of the key identifier, in bytes
+ * @param keyId         The key identifier of this node
  *
  * @return A pointer to the uninitialized node or NULL if there were no resources for the node.
  */
-DPS_Node* DPS_CreateNode(const char* separators,
-                         DPS_KeyStore* keyStore,
-                         const uint8_t* id, size_t idLen);
+DPS_Node* DPS_CreateNode(const char* separators, DPS_KeyStore* keyStore, const DPS_KeyId* keyId);
 
 /**
  * Store a pointer to application data in a node.
@@ -745,34 +741,31 @@ typedef void (*DPS_AcknowledgementHandler)(DPS_Publication* pub, uint8_t* payloa
  * @param topics      The topic strings to publish
  * @param numTopics   The number of topic strings to publish - must be >= 1
  * @param noWildCard  If TRUE the publication will not match wildcard subscriptions
- * @param id          Optional key identifier to use for encrypted publications
- * @param idLen       Size of optional key identifier, in bytes
+ * @param keyId       Optional key identifier to use for encrypted publications
  * @param handler     Optional handler for receiving acknowledgments
  */
 DPS_Status DPS_InitPublication(DPS_Publication* pub,
                                const char** topics,
                                size_t numTopics,
                                int noWildCard,
-                               const uint8_t* id, size_t idLen,
+                               const DPS_KeyId* keyId,
                                DPS_AcknowledgementHandler handler);
 
 /**
  * Adds a key identifier to use for encrypted publications.
  *
  * @param pub         The the publication to initialize
- * @param id          Key identifier to use for encrypted publications
- * @param idLen       The length of the key identifier, in bytes
+ * @param keyId       Key identifier to use for encrypted publications
  */
-DPS_Status DPS_PublicationAddKeyId(DPS_Publication* pub, const uint8_t* id, size_t idLen);
+DPS_Status DPS_PublicationAddKeyId(DPS_Publication* pub, const DPS_KeyId* keyId);
 
 /**
  * Removes a key identifier to use for encrypted publications.
  *
  * @param pub         The the publication to initialize
- * @param id          Key identifier to remove
- * @param idLen       The length of the key identifier, in bytes
+ * @param keyId       Key identifier to remove
  */
-void DPS_PublicationRemoveKeyId(DPS_Publication* pub, const uint8_t* id, size_t idLen);
+void DPS_PublicationRemoveKeyId(DPS_Publication* pub, const DPS_KeyId* keyId);
 
 /**
  * Publish a set of topics along with an optional payload. The topics will be published immediately

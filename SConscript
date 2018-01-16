@@ -161,30 +161,18 @@ testenv.Install('#/build/test/bin', testprogs)
 exampleenv = env.Clone()
 exampleenv.Append(LIBS = [lib, env['UV_LIBS']])
 
-examplesrcs = ['examples/registry.c',
-               'examples/reg_subs.c',
+examplesrcs = ['examples/pub_many.c',
+               'examples/publisher.c',
                'examples/reg_pubs.c',
-               'examples/pub_many.c']
+               'examples/reg_subs.c',
+               'examples/subscriber.c',
+               'examples/registry.c']
 
 Depends(examplesrcs, ext_libs)
 
 exampleprogs = []
 for example in examplesrcs:
-    exampleprogs.append(exampleenv.Program(example))
-
-publishersrcs = ['examples/publisher.c',
-                 'examples/keys.c']
-
-Depends(publishersrcs, ext_libs)
-
-exampleprogs.append(exampleenv.Program(publishersrcs))
-
-subscribersrcs = ['examples/subscriber.c',
-                  'examples/keys.c']
-
-Depends(subscribersrcs, ext_libs)
-
-exampleprogs.append(exampleenv.Program(subscribersrcs))
+    exampleprogs.append(exampleenv.Program([example, 'examples/keys.c']))
 
 exampleenv.Install('#/build/dist/bin', exampleprogs)
 

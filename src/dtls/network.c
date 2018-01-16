@@ -327,6 +327,7 @@ static int OnTLSPSKGet(void *data, mbedtls_ssl_context* ssl, const uint8_t* id, 
 {
     DPS_NetConnection* cn = data;
     DPS_KeyStore* keyStore = cn->node->keyStore;
+    DPS_KeyId keyId = { id, idLen };
     DPS_KeyStoreRequest request;
     DPS_Status ret;
 
@@ -340,7 +341,7 @@ static int OnTLSPSKGet(void *data, mbedtls_ssl_context* ssl, const uint8_t* id, 
     request.keyStore = keyStore;
     request.data = cn;
     request.setKey = TLSPSKSet;
-    ret = keyStore->keyHandler(&request, id, idLen);
+    ret = keyStore->keyHandler(&request, &keyId);
     if (ret != DPS_OK) {
         DPS_WARNPRINT("Get PSK failed: %s\n", DPS_ErrTxt(ret));
         return MBEDTLS_ERR_SSL_UNKNOWN_IDENTITY;
@@ -703,10 +704,10 @@ static DPS_Status SetCert(DPS_KeyStoreRequest* request, const DPS_Key* key)
 }
 
 static DPS_Status SetKeyAndIdentity(DPS_KeyStoreRequest* request, const DPS_Key* key,
-                                    const uint8_t* id, size_t idLen)
+                                    const DPS_KeyId* keyId)
 {
     DPS_NetConnection* cn = request->data;
-    int ret = mbedtls_ssl_conf_psk(&cn->conf, key->symmetric.key, key->symmetric.len, id, idLen);
+    int ret = mbedtls_ssl_conf_psk(&cn->conf, key->symmetric.key, key->symmetric.len, keyId->id, keyId->len);
     if (ret != 0) {
         DPS_WARNPRINT("Set PSK failed: %s\n", TLSErrTxt(ret));
         return DPS_ERR_MISSING;
@@ -800,7 +801,7 @@ static DPS_NetConnection* CreateConnection(DPS_Node* node, const struct sockaddr
     mbedtls_pk_init(&cn->pkey);
     if (keyStore->keyHandler) {
         request.setKey = SetCert;
-        ret = keyStore->keyHandler(&request, node->signer.kid, node->signer.kidLen);
+        ret = keyStore->keyHandler(&request, &node->signer.kid);
         if (ret == 0) {
             mbedtls_ssl_conf_own_cert(&cn->conf, &cn->cert, &cn->pkey);
         } else {
