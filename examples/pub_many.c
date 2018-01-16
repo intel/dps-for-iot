@@ -183,7 +183,7 @@ int main(int argc, char** argv)
 
     nodeDestroyed = DPS_CreateEvent();
 
-    ret = DPS_Publish(pub, msg, msg ? strnlen(msg, MAX_MSG_LEN) + 1 : 0, ttl);
+    ret = DPS_Publish(pub, (uint8_t*)msg, msg ? strnlen(msg, MAX_MSG_LEN) + 1 : 0, ttl);
     if (ret == DPS_OK) {
         DPS_PRINT("Pub UUID %s\n", DPS_UUIDToString(DPS_PublicationGetUUID(pub)));
     } else {

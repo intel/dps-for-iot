@@ -240,7 +240,7 @@ static void async_cb(uv_async_t* handle)
             argv[0] = SWIG_NewPointerObj(SWIG_as_voidptr(cb->sub), SWIGTYPE_p__DPS_Subscription, 0);
             argv[1] = SWIG_NewPointerObj(SWIG_as_voidptr(cb->pub), SWIGTYPE_p__DPS_Publication, 0);
             argv[2] = SWIGV8_STRING_NEW2((const char*)cb->payload, cb->len); /* For now just allow strings as payloads */
-            fn->Call(SWIGV8_CURRENT_CONTEXT(), SWIGV8_CURRENT_CONTEXT()->Global(),
+            (void)fn->Call(SWIGV8_CURRENT_CONTEXT(), SWIGV8_CURRENT_CONTEXT()->Global(),
                      argc, argv);
             DPS_DestroyPublication((DPS_Publication*)cb->pub);
         } else {
@@ -250,7 +250,7 @@ static void async_cb(uv_async_t* handle)
             v8::Local<v8::Value> argv[argc];
             argv[0] = SWIG_NewPointerObj(SWIG_as_voidptr(cb->pub), SWIGTYPE_p__DPS_Publication, 0);
             argv[1] = SWIGV8_STRING_NEW2((const char*)cb->payload, cb->len); /* For now just allow strings as payloads */
-            fn->Call(SWIGV8_CURRENT_CONTEXT(), SWIGV8_CURRENT_CONTEXT()->Global(),
+            (void)fn->Call(SWIGV8_CURRENT_CONTEXT(), SWIGV8_CURRENT_CONTEXT()->Global(),
                      argc, argv);
         }
         if (cb->payload) {

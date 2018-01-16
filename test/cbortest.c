@@ -375,7 +375,7 @@ int main(int argc, char** argv)
     }
 
     for (i = 0; i < sizeof(Tags) / sizeof(Tags[0]); ++i) {
-        int64_t n;
+        uint64_t n;
         ret = CBOR_DecodeTag(&rxBuffer, &n);
         ASSERT(n == Tags[i]);
         CHECK(ret);

@@ -178,7 +178,7 @@ static void ReadStdin(DPS_Node* node)
                 }
             }
         }
-        ret = DPS_Publish(currentPub, msg, msg ? strnlen(msg, MAX_MSG_LEN) : 0, ttl);
+        ret = DPS_Publish(currentPub, (uint8_t*)msg, msg ? strnlen(msg, MAX_MSG_LEN) : 0, ttl);
         if (ret == DPS_OK) {
             DPS_PRINT("Pub UUID %s(%d)\n", DPS_UUIDToString(DPS_PublicationGetUUID(currentPub)),
                       DPS_PublicationGetSequenceNum(currentPub));
@@ -363,7 +363,7 @@ int main(int argc, char** argv)
             DPS_TimedWaitForEvent(nodeDestroyed, wait * 1000);
         }
 
-        ret = DPS_Publish(currentPub, msg, msg ? strnlen(msg, MAX_MSG_LEN) + 1 : 0, ttl);
+        ret = DPS_Publish(currentPub, (uint8_t*)msg, msg ? strnlen(msg, MAX_MSG_LEN) + 1 : 0, ttl);
         if (ret == DPS_OK) {
             DPS_PRINT("Pub UUID %s\n", DPS_UUIDToString(DPS_PublicationGetUUID(currentPub)));
         } else {

@@ -10,7 +10,9 @@ vars.AddVariables(
     EnumVariable('variant', 'Build variant', default='release', allowed_values=('debug', 'release'), ignorecase=2),
     EnumVariable('transport', 'Transport protocol', default='udp', allowed_values=('udp', 'tcp', 'dtls'), ignorecase=2),
     EnumVariable('target', 'Build target', default='local', allowed_values=('local', 'yocto'), ignorecase=2),
-    ListVariable('bindings', 'Bindings to build', bindings, bindings))
+    ListVariable('bindings', 'Bindings to build', bindings, bindings),
+    ('CC', 'C compiler to use'),
+    ('CXX', 'C++ compiler to use'))
 
 # Windows-specific command line variables
 if platform.system() == 'Windows':
@@ -29,7 +31,9 @@ if platform.system() == 'Linux':
         BoolVariable('profile', 'Build for profiling?', False),
         BoolVariable('asan', 'Enable address sanitizer?', False),
         BoolVariable('tsan', 'Enable thread sanitizer?', False),
-        BoolVariable('ubsan', 'Enable undefined behavior sanitizer?', False))
+        BoolVariable('ubsan', 'Enable undefined behavior sanitizer?', False),
+        BoolVariable('fsan', 'Enable fuzzer sanitizer?', False),
+        BoolVariable('cov', 'Enable code coverage?', False))
 
 tools=['default', 'textfile']
 # Doxygen is optional
@@ -89,7 +93,6 @@ if env['PLATFORM'] == 'win32':
         env.Append(CCFLAGS = ['/Gy', '/O2', '/GF', '/MT'])
         env.Append(LINKFLAGS = ['/opt:ref'])
 
-
     # Stack-based Buffer Overrun Detection
     env.Append(CCFLAGS = ['/GS'])
     # Compiler settings validation
@@ -118,17 +121,52 @@ elif env['PLATFORM'] == 'posix':
     # Enable address sanitizer
     if env['asan'] == True:
         env.Append(CCFLAGS = ['-fno-omit-frame-pointer', '-fsanitize=address'])
-        env.Append(LIBS = ['asan'])
+        if env['CC'].endswith('gcc'):
+            env.Append(LIBS = ['asan'])
+        elif env['CC'].endswith('clang'):
+            env.Append(LINKFLAGS = ['-fsanitize=address'])
+        else:
+            print('Unsupported compiler')
+            exit();
 
     # Enable thread sanitizer
     if env['tsan'] == True:
         env.Append(CCFLAGS = ['-fsanitize=thread'])
-        env.Append(LIBS = ['tsan'])
+        if env['CC'].endswith('gcc'):
+            env.Append(LIBS = ['tsan'])
+        elif env['CC'].endswith('clang'):
+            env.Append(LINKFLAGS = ['-fsanitize=thread'])
+        else:
+            print('Unsupported compiler')
+            exit();
 
     # Enable undefined behavior sanitizer
     if env['ubsan'] == True:
         env.Append(CCFLAGS = ['-fsanitize=undefined'])
-        env.Append(LIBS = ['ubsan'])
+        if env['CC'].endswith('gcc'):
+            env.Append(LIBS = ['ubsan'])
+        elif env['CC'].endswith('clang'):
+            env.Append(LINKFLAGS = ['-fsanitize=undefined'])
+        else:
+            print('Unsupported compiler')
+            exit();
+
+    # Enable fuzzer sanitizer
+    if env['fsan'] == True:
+        if env['CC'].endswith('clang'):
+            env.Append(CCFLAGS = ['-fsanitize=fuzzer-no-link'])
+        else:
+            print('Unsupported compiler')
+            exit();
+
+    # Enable code coverage
+    if env['cov'] == True:
+        if env['CC'].endswith('clang'):
+            env.Append(CCFLAGS = ['-fprofile-instr-generate', '-fcoverage-mapping'])
+            env.Append(LINKFLAGS = ['-fprofile-instr-generate', '-fcoverage-mapping'])
+        else:
+            print('Unsupported compiler')
+            exit();
 
     # Stack execution protection:
     env.Append(LDFLAGS = ['-z noexecstack'])

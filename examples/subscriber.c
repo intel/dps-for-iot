@@ -38,7 +38,7 @@
 
 static int quiet = DPS_FALSE;
 
-static uint8_t AckFmt[] = "This is an ACK from %d";
+static const char AckFmt[] = "This is an ACK from %d";
 
 static void OnNodeDestroyed(DPS_Node* node, void* data)
 {
@@ -86,7 +86,7 @@ static void OnPubMatch(DPS_Subscription* sub, const DPS_Publication* pub, uint8_
         DPS_PRINT("Sending ack for pub UUID %s(%d)\n", DPS_UUIDToString(DPS_PublicationGetUUID(pub)), DPS_PublicationGetSequenceNum(pub));
         DPS_PRINT("    %s\n", ackMsg);
 
-        ret = DPS_AckPublication(pub, ackMsg, strnlen(ackMsg, sizeof(ackMsg)));
+        ret = DPS_AckPublication(pub, (uint8_t*)ackMsg, strnlen(ackMsg, sizeof(ackMsg)));
         if (ret != DPS_OK) {
             DPS_PRINT("Failed to ack pub %s\n", DPS_ErrTxt(ret));
         }

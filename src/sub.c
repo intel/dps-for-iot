@@ -441,6 +441,7 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
 {
     static const int32_t NeedKeys[] = { DPS_CBOR_KEY_PORT, DPS_CBOR_KEY_SEQ_NUM };
     static const int32_t WantKeys[] = { DPS_CBOR_KEY_SUB_FLAGS, DPS_CBOR_KEY_MESH_ID, DPS_CBOR_KEY_NEEDS, DPS_CBOR_KEY_INTERESTS };
+    static const int32_t WantKeysMask = (1 << DPS_CBOR_KEY_SUB_FLAGS) | (1 << DPS_CBOR_KEY_MESH_ID) | (1 << DPS_CBOR_KEY_NEEDS) | (1 << DPS_CBOR_KEY_INTERESTS);
     DPS_Status ret;
     DPS_BitVector* interests = NULL;
     DPS_BitVector* needs = NULL;
@@ -520,6 +521,8 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
         }
     }
     if (ret != DPS_OK) {
+        DPS_BitVectorFree(interests);
+        DPS_BitVectorFree(needs);
         return ret;
     }
     DPS_EndpointSetPort(ep, port);
@@ -553,6 +556,11 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
     }
 
     DPS_LockNode(node);
+    if ((keysMask & WantKeysMask) != WantKeysMask) {
+        DPS_WARNPRINT("Missing required subscription key\n");
+        ret = DPS_ERR_INVALID;
+        goto DiscardAndExit;
+    }
     if (ret == DPS_OK) {
         ret = DPS_AddRemoteNode(node, &ep->addr, ep->cn, &remote);
         if (ret == DPS_ERR_EXISTS) {
