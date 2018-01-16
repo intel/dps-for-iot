@@ -1186,8 +1186,7 @@ static DPS_Status SetCurve(DPS_KeyStoreRequest* request, const DPS_Key* key)
         return DPS_OK;
     case DPS_KEY_EC_CERT:
         if (key->cert.privateKey) {
-            return ParsePrivateKey_ECDSA(key->cert.privateKey, key->cert.privateKeyLen,
-                                         key->cert.password, key->cert.passwordLen,
+            return ParsePrivateKey_ECDSA(key->cert.privateKey, key->cert.password,
                                          curve, d);
         }
         /* FALLTHROUGH */

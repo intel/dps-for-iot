@@ -87,9 +87,9 @@ DPS_Status DPS_SetKey(DPS_KeyStoreRequest* request, const DPS_Key* key)
     return request->setKey ? request->setKey(request, key) : DPS_ERR_MISSING;
 }
 
-DPS_Status DPS_SetCA(DPS_KeyStoreRequest* request, const char* ca, size_t len)
+DPS_Status DPS_SetCA(DPS_KeyStoreRequest* request, const char* ca)
 {
-    return request->setCA ? request->setCA(request, ca, len): DPS_ERR_MISSING;
+    return request->setCA ? request->setCA(request, ca): DPS_ERR_MISSING;
 }
 
 typedef struct _DPS_MemoryKeyStoreEntry {
@@ -109,7 +109,6 @@ struct _DPS_MemoryKeyStore {
     DPS_Key networkKey;
 
     char *ca;
-    size_t caLen;
 };
 
 static int SameKeyId(const DPS_KeyId* a, const DPS_KeyId* b)
@@ -173,49 +172,42 @@ static DPS_Status MemoryKeyStoreSetKey(DPS_MemoryKeyStoreEntry* entry, const DPS
     return DPS_OK;
 }
 
-static DPS_Status MemoryKeyStoreSetCertificate(DPS_MemoryKeyStoreEntry* entry, const char* cert, size_t certLen,
-                                               const char* key, size_t keyLen,
-                                               const char* password, size_t passwordLen)
+static DPS_Status MemoryKeyStoreSetCertificate(DPS_MemoryKeyStoreEntry* entry, const char* cert,
+                                               const char* key, const char* password)
 {
     char *newCert = NULL;
     char *newKey = NULL;
     char *newPassword = NULL;
 
-    newCert = malloc(certLen);
+    newCert = strndup(cert, RSIZE_MAX_STR);
     if (!newCert) {
         goto ErrorExit;
     }
-    memcpy_s(newCert, certLen, cert, certLen);
-    if (key && keyLen) {
-        newKey = malloc(keyLen);
+    if (key) {
+        newKey = strndup(key, RSIZE_MAX_STR);
         if (!newKey) {
             goto ErrorExit;
         }
-        memcpy_s(newKey, keyLen, key, keyLen);
     }
-    if (password && passwordLen) {
-        newPassword = malloc(passwordLen);
+    if (password) {
+        newPassword = strndup(password, RSIZE_MAX_STR);
         if (!newPassword) {
             goto ErrorExit;
         }
-        memcpy_s(newPassword, passwordLen, password, passwordLen);
     }
     entry->key.type = DPS_KEY_EC_CERT;
     if (entry->key.cert.cert) {
         free((char*)entry->key.cert.cert);
     }
     entry->key.cert.cert = newCert;
-    entry->key.cert.certLen = certLen;
     if (entry->key.cert.privateKey) {
         free((char*)entry->key.cert.privateKey);
     }
     entry->key.cert.privateKey = newKey;
-    entry->key.cert.privateKeyLen = keyLen;
     if (entry->key.cert.password) {
         free((char*)entry->key.cert.password);
     }
     entry->key.cert.password = newPassword;
-    entry->key.cert.passwordLen = passwordLen;
     return DPS_OK;
 
 ErrorExit:
@@ -299,7 +291,7 @@ static DPS_Status MemoryKeyStoreEphemeralKeyHandler(DPS_KeyStoreRequest* request
 static DPS_Status MemoryKeyStoreCAHandler(DPS_KeyStoreRequest* request)
 {
     DPS_MemoryKeyStore* mks = (DPS_MemoryKeyStore*)DPS_KeyStoreHandle(request);
-    return DPS_SetCA(request, mks->ca, mks->caLen);
+    return DPS_SetCA(request, mks->ca);
 }
 
 DPS_MemoryKeyStore* DPS_CreateMemoryKeyStore()
@@ -450,26 +442,23 @@ DPS_Status DPS_SetContentKey(DPS_MemoryKeyStore* mks, const DPS_KeyId* keyId, co
     return DPS_OK;
 }
 
-DPS_Status DPS_SetTrustedCA(DPS_MemoryKeyStore* mks, const char* ca, size_t len)
+DPS_Status DPS_SetTrustedCA(DPS_MemoryKeyStore* mks, const char* ca)
 {
     DPS_DBGTRACE();
 
-    char *newCA = malloc(len);
+    char *newCA = strndup(ca, RSIZE_MAX_STR);
     if (!newCA) {
         return DPS_ERR_RESOURCES;
     }
-    memcpy_s(newCA, len, ca, len);
     if (mks->ca) {
         free(mks->ca);
     }
     mks->ca = newCA;
-    mks->caLen = len;
     return DPS_OK;
 }
 
-DPS_Status DPS_SetCertificate(DPS_MemoryKeyStore* mks, const char* cert, size_t certLen,
-                              const char* key, size_t keyLen,
-                              const char* password, size_t passwordLen)
+DPS_Status DPS_SetCertificate(DPS_MemoryKeyStore* mks, const char* cert, const char* key,
+                              const char* password)
 {
     char* cn = NULL;
     DPS_KeyId keyId;
@@ -477,21 +466,24 @@ DPS_Status DPS_SetCertificate(DPS_MemoryKeyStore* mks, const char* cert, size_t 
 
     DPS_DBGTRACE();
 
-    if (!cert || !certLen) {
+    if (!cert) {
         return DPS_ERR_ARGS;
     }
 
-    cn = DPS_CertificateCN(cert, certLen);
+    cn = DPS_CertificateCN(cert);
     if (!cn) {
         goto ErrorExit;
     }
     keyId.id = (const uint8_t*)cn;
-    keyId.len = strlen(cn);
+    keyId.len = strnlen_s(cn, RSIZE_MAX_STR);
+    if (keyId.len == RSIZE_MAX_STR) {
+        goto ErrorExit;
+    }
 
     /* Replace cert if id already exists. */
     entry = MemoryKeyStoreLookup(mks, &keyId);
     if (entry) {
-        if (MemoryKeyStoreSetCertificate(entry, cert, certLen, key, keyLen, password, passwordLen) != DPS_OK) {
+        if (MemoryKeyStoreSetCertificate(entry, cert, key, password) != DPS_OK) {
             goto ErrorExit;
         }
         return DPS_OK;
@@ -504,7 +496,7 @@ DPS_Status DPS_SetCertificate(DPS_MemoryKeyStore* mks, const char* cert, size_t 
 
     /* Add the new entry. */
     entry = mks->entries + mks->entriesCount;
-    if (MemoryKeyStoreSetCertificate(entry, cert, certLen, key, keyLen, password, passwordLen) != DPS_OK) {
+    if (MemoryKeyStoreSetCertificate(entry, cert, key, password) != DPS_OK) {
         goto ErrorExit;
     }
     entry->keyId = keyId;

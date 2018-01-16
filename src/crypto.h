@@ -44,7 +44,7 @@ DPS_Status DPS_EphemeralKey(DPS_RBG* rbg, DPS_ECCurve curve,
                             uint8_t x[EC_MAX_COORD_LEN], uint8_t y[EC_MAX_COORD_LEN],
                             uint8_t d[EC_MAX_COORD_LEN]);
 
-char* DPS_CertificateCN(const char* cert, size_t certLen);
+char* DPS_CertificateCN(const char* cert);
 
 #ifdef __cplusplus
 }

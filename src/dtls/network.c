@@ -670,10 +670,18 @@ static int ResetConnection(DPS_NetConnection* cn, const struct sockaddr* addr)
     return ret;
 }
 
-static DPS_Status SetCA(DPS_KeyStoreRequest* request, const char* ca, size_t len)
+static DPS_Status SetCA(DPS_KeyStoreRequest* request, const char* ca)
 {
     DPS_NetConnection* cn = request->data;
-    int ret = mbedtls_x509_crt_parse(&cn->cacert, (const unsigned char*)ca, len);
+    size_t len;
+    int ret;
+
+    len = ca ? strnlen_s(ca, RSIZE_MAX_STR) + 1 : 0;
+    if (len == RSIZE_MAX_STR) {
+        DPS_ERRPRINT("Invalid CA\n");
+        return DPS_ERR_MISSING;
+    }
+    ret = mbedtls_x509_crt_parse(&cn->cacert, (const unsigned char*)ca, len);
     if (ret != 0) {
         DPS_WARNPRINT("Parsing trusted certificate(s) failed: %s\n", TLSErrTxt(ret));
         return DPS_ERR_MISSING;
@@ -684,18 +692,32 @@ static DPS_Status SetCA(DPS_KeyStoreRequest* request, const char* ca, size_t len
 static DPS_Status SetCert(DPS_KeyStoreRequest* request, const DPS_Key* key)
 {
     DPS_NetConnection* cn = request->data;
+    size_t len;
+    size_t pwLen;
     int ret;
 
     if (key->type != DPS_KEY_EC_CERT) {
         return DPS_ERR_MISSING;
     }
-    ret = mbedtls_x509_crt_parse(&cn->cert, (const unsigned char*)key->cert.cert, key->cert.certLen);
+    len = key->cert.cert ? strnlen_s(key->cert.cert, RSIZE_MAX_STR) + 1 : 0;
+    if (len == RSIZE_MAX_STR) {
+        return DPS_ERR_MISSING;
+    }
+    ret = mbedtls_x509_crt_parse(&cn->cert, (const unsigned char*)key->cert.cert, len);
     if (ret != 0) {
         DPS_WARNPRINT("Parsing certificate failed: %s\n", TLSErrTxt(ret));
         return DPS_ERR_MISSING;
     }
-    ret =  mbedtls_pk_parse_key(&cn->pkey, (const unsigned char*)key->cert.privateKey, key->cert.privateKeyLen,
-                                (const unsigned char*)key->cert.password, key->cert.passwordLen);
+    len = key->cert.privateKey ? strnlen_s(key->cert.privateKey, RSIZE_MAX_STR) + 1 : 0;
+    if (len == RSIZE_MAX_STR) {
+        return DPS_ERR_MISSING;
+    }
+    pwLen = key->cert.password ? strnlen_s(key->cert.password, RSIZE_MAX_STR) : 0;
+    if (pwLen == RSIZE_MAX_STR) {
+        return DPS_ERR_MISSING;
+    }
+    ret =  mbedtls_pk_parse_key(&cn->pkey, (const unsigned char*)key->cert.privateKey, len,
+                                (const unsigned char*)key->cert.password, pwLen);
     if (ret != 0) {
         DPS_WARNPRINT("Parse private key failed: %s\n", TLSErrTxt(ret));
         return DPS_ERR_MISSING;
@@ -756,7 +778,7 @@ static DPS_NetConnection* CreateConnection(DPS_Node* node, const struct sockaddr
      */
     mbedtls_ctr_drbg_init(&cn->drbg);
     ret = mbedtls_ctr_drbg_seed(&cn->drbg, mbedtls_entropy_func, &cn->entropy,
-                                (const unsigned char*)PERSONALIZATION_STRING, strlen(PERSONALIZATION_STRING));
+                                (const unsigned char*)PERSONALIZATION_STRING, sizeof(PERSONALIZATION_STRING) - 1);
     if (ret != 0) {
         DPS_ERRPRINT("Seeding mbedtls random byte generator failed: %s\n", TLSErrTxt(ret));
         goto ErrorExit;

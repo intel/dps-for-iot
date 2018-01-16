@@ -21,6 +21,7 @@
  */
 
 #include <dps/dbg.h>
+#include <safe_lib.h>
 #include "mbedtls/ecdsa.h"
 #include "mbedtls/ecdh.h"
 #include "mbedtls/error.h"
@@ -342,7 +343,7 @@ Exit:
     }
 }
 
-DPS_Status ParseCertificate_ECDSA(const char* cert, size_t certLen,
+DPS_Status ParseCertificate_ECDSA(const char* cert,
                                   DPS_ECCurve* curve, uint8_t x[EC_MAX_COORD_LEN], uint8_t y[EC_MAX_COORD_LEN])
 {
     mbedtls_x509_crt crt;
@@ -350,9 +351,14 @@ DPS_Status ParseCertificate_ECDSA(const char* cert, size_t certLen,
     size_t len;
     int ret;
 
-    mbedtls_x509_crt_init(&crt);
+    len = cert ? strnlen_s(cert, RSIZE_MAX_STR) + 1 : 0;
+    if (len == RSIZE_MAX_STR) {
+        DPS_ERRPRINT("Invalid certificate\n");
+        return DPS_ERR_ARGS;
+    }
 
-    ret = mbedtls_x509_crt_parse(&crt, (const unsigned char*)cert, certLen);
+    mbedtls_x509_crt_init(&crt);
+    ret = mbedtls_x509_crt_parse(&crt, (const unsigned char*)cert, len);
     if (ret != 0) {
         goto Exit;
     }
@@ -384,19 +390,29 @@ Exit:
     }
 }
 
-DPS_Status ParsePrivateKey_ECDSA(const char* privateKey, size_t privateKeyLen,
-                                 const char* password, size_t passwordLen,
+DPS_Status ParsePrivateKey_ECDSA(const char* privateKey, const char* password,
                                  DPS_ECCurve* curve, uint8_t d[EC_MAX_COORD_LEN])
 {
     mbedtls_pk_context pk;
     mbedtls_ecp_keypair* keypair;
     size_t len;
+    size_t pwLen;
     int ret;
 
-    mbedtls_pk_init(&pk);
+    len = privateKey ? strnlen_s(privateKey, RSIZE_MAX_STR) + 1 : 0;
+    if (len == RSIZE_MAX_STR) {
+        DPS_ERRPRINT("Invalid private key\n");
+        return DPS_ERR_ARGS;
+    }
+    pwLen = password ? strnlen_s(password, RSIZE_MAX_STR) : 0;
+    if (pwLen == RSIZE_MAX_STR) {
+        DPS_ERRPRINT("Invalid password\n");
+        return DPS_ERR_ARGS;
+    }
 
-    ret = mbedtls_pk_parse_key(&pk, (const unsigned char*)privateKey, privateKeyLen,
-                               (const unsigned char*)password, passwordLen);
+    mbedtls_pk_init(&pk);
+    ret = mbedtls_pk_parse_key(&pk, (const unsigned char*)privateKey, len,
+                               (const unsigned char*)password, pwLen);
     if (ret != 0) {
         goto Exit;
     }

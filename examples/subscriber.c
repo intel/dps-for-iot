@@ -297,12 +297,10 @@ int main(int argc, char** argv)
             DPS_SetContentKey(memoryKeyStore, &PskId[i], &Psk[i]);
         }
     } else if (encrypt == 2) {
-        DPS_SetTrustedCA(memoryKeyStore, TrustedCAs, strlen(TrustedCAs) + 1);
+        DPS_SetTrustedCA(memoryKeyStore, TrustedCAs);
         nodeKeyId = &SubscriberId;
-        DPS_SetCertificate(memoryKeyStore, SubscriberCert, strlen(SubscriberCert) + 1,
-                           SubscriberPrivateKey, strlen(SubscriberPrivateKey) + 1,
-                           SubscriberPassword, strlen(SubscriberPassword));
-        DPS_SetCertificate(memoryKeyStore, PublisherCert, strlen(PublisherCert) + 1, NULL, 0, NULL, 0);
+        DPS_SetCertificate(memoryKeyStore, SubscriberCert, SubscriberPrivateKey, SubscriberPassword);
+        DPS_SetCertificate(memoryKeyStore, PublisherCert, NULL, NULL);
     }
     node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore), nodeKeyId);
     DPS_SetNodeSubscriptionUpdateDelay(node, subsRate);

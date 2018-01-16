@@ -582,11 +582,10 @@ static DPS_Status SetKey(DPS_KeyStoreRequest* request, const DPS_Key* key)
             return DPS_ERR_MISSING;
         }
         if (key->cert.privateKey) {
-            return ParsePrivateKey_ECDSA(key->cert.privateKey, key->cert.privateKeyLen,
-                                         key->cert.password, key->cert.passwordLen,
+            return ParsePrivateKey_ECDSA(key->cert.privateKey, key->cert.password,
                                          &ckey->ec.curve, ckey->ec.d);
         } else {
-            return ParseCertificate_ECDSA(key->cert.cert, key->cert.certLen,
+            return ParseCertificate_ECDSA(key->cert.cert,
                                           &ckey->ec.curve, ckey->ec.x, ckey->ec.y);
         }
         break;

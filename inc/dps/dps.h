@@ -146,11 +146,8 @@ struct _DPS_KeyEC {
  */
 struct _DPS_KeyCert {
     const char *cert;           /**< The certificate in PEM format */
-    size_t certLen;             /**< The length of the certificate including the terminating NULL byte, in bytes */
     const char *privateKey;     /**< The optional private key in PEM format */
-    size_t privateKeyLen;       /**< The length of the private key including the terminating NULL byte, in bytes */
     const char *password;       /**< The optional password protecting the key */
-    size_t passwordLen;         /**< The length of the password \em not including the terminating NULL byte, in bytes */
 };
 
 /**
@@ -277,12 +274,10 @@ DPS_Status DPS_SetKey(DPS_KeyStoreRequest* request, const DPS_Key* key);
  *
  * @param request The @p request parameter of the handler
  * @param ca The CA chain in PEM format
- * @param len The length of the CA chain including the terminating
- *            NULL byte, in bytes
  *
  * @return DPS_OK or an error
  */
-DPS_Status DPS_SetCA(DPS_KeyStoreRequest* request, const char* ca, size_t len);
+DPS_Status DPS_SetCA(DPS_KeyStoreRequest* request, const char* ca);
 
 /**
  * Returns the @p DPS_KeyStore* of a key store request.
@@ -387,33 +382,24 @@ DPS_Status DPS_SetNetworkKey(DPS_MemoryKeyStore* keyStore, const DPS_KeyId* keyI
  *
  * @param mks An in-memory key store
  * @param ca The CA chain in PEM format
- * @param len The length of the CA chain including the terminating
- *            NULL byte, in bytes
  *
  * @return DPS_OK or an error
  */
-DPS_Status DPS_SetTrustedCA(DPS_MemoryKeyStore* mks, const char* ca, size_t len);
+DPS_Status DPS_SetTrustedCA(DPS_MemoryKeyStore* mks, const char* ca);
 
 /**
  * Create or replace a certificate in the key store.
  *
  * @param mks An in-memory key store
  * @param cert The certificate in PEM format
- * @param certLen The length of the certificate including the
- *                terminating NULL byte, in bytes
  * @param key The optional private key in PEM format
- * @param keyLen The length of the private key including the
- *               terminating NULL byte, in bytes
  * @param password The optional password protecting the key, may be
  *                 NULL
- * @param passwordLen The length of the password \em not including the
- *                    terminating NULL byte, in bytes
  *
  * @return DPS_OK or an error
  */
-DPS_Status DPS_SetCertificate(DPS_MemoryKeyStore* mks, const char* cert, size_t certLen,
-                              const char* key, size_t keyLen,
-                              const char* password, size_t passwordLen);
+DPS_Status DPS_SetCertificate(DPS_MemoryKeyStore* mks, const char* cert, const char* key,
+                              const char* password);
 
 /**
  * Returns the @p DPS_KeyStore* of an in-memory key store.
