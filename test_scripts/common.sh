@@ -75,9 +75,9 @@ function py_sub {
     s=$((s+1))
     f=./out/sub$s.log
     sleep 0.1
-    echo -e "=============================\nsub$s" | tee $f
+    echo -e "=============================\nsub$s $@" | tee $f
     echo "==============================" >> $f
-    python -u ./py_scripts/simple_sub.py 2>> $f 1>&2 &
+    python -u ./py_scripts/simple_sub.py $@ 2>> $f 1>&2 &
 }
 
 function py_late_sub {
@@ -93,9 +93,9 @@ function py_pub {
     p=$((p+1))
     f=./out/pub$p.log
     sleep 0.1
-    echo -e "=============================\npub$p" | tee $f
+    echo -e "=============================\npub$p $@" | tee $f
     echo "==============================" >> $f
-    python -u ./py_scripts/simple_pub.py 2>> $f 1>&2 &
+    python -u ./py_scripts/simple_pub.py $@ 2>> $f 1>&2 &
 }
 
 function py_retained_pub {
@@ -111,18 +111,18 @@ function js_sub {
     s=$((s+1))
     f=./out/sub$s.log
     sleep 0.1
-    echo -e "=============================\nsub$s" | tee $f
+    echo -e "=============================\nsub$s $@" | tee $f
     echo "==============================" >> $f
-    node ./js_scripts/simple_sub.js 2>> $f 1>&2 &
+    node ./js_scripts/simple_sub.js $@ 2>> $f 1>&2 &
 }
 
 function js_pub {
     p=$((p+1))
     f=./out/pub$p.log
     sleep 0.1
-    echo -e "=============================\npub$p" | tee $f
+    echo -e "=============================\npub$p $@" | tee $f
     echo "==============================" >> $f
-    node ./js_scripts/simple_pub.js 2>> $f 1>&2 &
+    node ./js_scripts/simple_pub.js $@ 2>> $f 1>&2 &
 }
 
 function assert_no_errors {
