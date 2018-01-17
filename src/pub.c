@@ -143,33 +143,35 @@ static void FreeRecipients(DPS_Publication* pub)
     pub->recipientsCap = 0;
 }
 
-static COSE_Entity* CopyRecipients(DPS_Publication* dst, const DPS_Publication* src)
+static DPS_Status CopyRecipients(DPS_Publication* dst, const DPS_Publication* src)
 {
     COSE_Entity* newRecipients = NULL;
     size_t newCount = 0;
     size_t i;
 
-    newRecipients = malloc(src->recipientsCap * sizeof(COSE_Entity));
-    if (!newRecipients) {
-        goto ErrorExit;
-    }
-    for (i = 0; i < src->recipientsCount; ++i) {
-        newRecipients[i].alg = src->recipients[i].alg;
-        newRecipients[i].kid.id = malloc(src->recipients[i].kid.len);
-        if (!newRecipients[i].kid.id) {
+    if (src->recipients) {
+        newRecipients = malloc(src->recipientsCap * sizeof(COSE_Entity));
+        if (!newRecipients) {
             goto ErrorExit;
         }
-        newRecipients[i].kid.len = src->recipients[i].kid.len;
-        memcpy_s((uint8_t*)newRecipients[i].kid.id, newRecipients[i].kid.len,
-                 src->recipients[i].kid.id, src->recipients[i].kid.len);
-        ++newCount;
+        for (i = 0; i < src->recipientsCount; ++i) {
+            newRecipients[i].alg = src->recipients[i].alg;
+            newRecipients[i].kid.id = malloc(src->recipients[i].kid.len);
+            if (!newRecipients[i].kid.id) {
+                goto ErrorExit;
+            }
+            newRecipients[i].kid.len = src->recipients[i].kid.len;
+            memcpy_s((uint8_t*)newRecipients[i].kid.id, newRecipients[i].kid.len,
+                     src->recipients[i].kid.id, src->recipients[i].kid.len);
+            ++newCount;
+        }
     }
 
     FreeRecipients(dst);
     dst->recipients = newRecipients;
     dst->recipientsCount = newCount;
     dst->recipientsCap = src->recipientsCap;
-    return dst->recipients;
+    return DPS_OK;
 
  ErrorExit:
     if (newRecipients) {
@@ -178,7 +180,7 @@ static COSE_Entity* CopyRecipients(DPS_Publication* dst, const DPS_Publication* 
         }
         free(newRecipients);
     }
-    return NULL;
+    return DPS_ERR_RESOURCES;
 }
 
 static DPS_Publication* FreePublication(DPS_Node* node, DPS_Publication* pub)
@@ -958,8 +960,9 @@ DPS_Publication* DPS_CopyPublication(const DPS_Publication* pub)
     copy->node = pub->node;
     copy->ackRequested = pub->ackRequested;
     if (pub->ackRequested) {
-        if (!CopyRecipients(copy, pub)) {
-            DPS_ERRPRINT("malloc failure: no memory\n");
+        ret = CopyRecipients(copy, pub);
+        if (ret != DPS_OK) {
+            DPS_ERRPRINT("CopyRecipients failed: %s\n", DPS_ErrTxt(ret));
             goto Exit;
         }
     }

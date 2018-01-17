@@ -113,7 +113,7 @@ struct _DPS_MemoryKeyStore {
 
 static int SameKeyId(const DPS_KeyId* a, const DPS_KeyId* b)
 {
-    return (a->len == b->len) && (memcmp(a->id, b->id, b->len) == 0);
+    return a && b && (a->len == b->len) && (memcmp(a->id, b->id, b->len) == 0);
 }
 
 static DPS_MemoryKeyStoreEntry* MemoryKeyStoreLookup(DPS_MemoryKeyStore* mks, const DPS_KeyId* keyId)
