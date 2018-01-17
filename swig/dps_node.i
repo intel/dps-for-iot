@@ -92,7 +92,7 @@ extern "C" {
             v8::Local<v8::Value> valRef;
             if (arr->Get(SWIGV8_CURRENT_CONTEXT(), i).ToLocal(&valRef)) {
                 v8::Local<v8::String> str = v8::Local<v8::String>::Cast(valRef);
-                $1[i] = (char*)malloc(str->Utf8Length());
+                $1[i] = (char*)malloc(str->Utf8Length() + 1);
                 str->WriteUtf8($1[i]);
             } else {
                 for (uint32_t j = 0; j < i; ++j)
@@ -256,7 +256,7 @@ static void async_cb(uv_async_t* handle)
         if (cb->payload) {
             free(cb->payload);
         }
-        delete cb;
+        free(cb);
         queue.pop();
     }
 }
@@ -496,7 +496,6 @@ static v8::Handle<v8::Value> UUIDToString(DPS_UUID* uuid)
         uint8_t* data;
         v8::Local<v8::ArrayBuffer> buf;
         v8::Local<v8::Uint8Array> arr = v8::Local<v8::Uint8Array>::Cast($input);
-
         kid = (DPS_KeyId*)calloc(1, sizeof(DPS_KeyId));
         if (!kid) {
             SWIG_exception_fail(SWIG_ERROR, "no memory");
@@ -534,6 +533,19 @@ static v8::Handle<v8::Value> UUIDToString(DPS_UUID* uuid)
                 SWIG_exception_fail(SWIG_TypeError, "argument of type '" "uint8_t*""'");
             }
         }
+    } else if (obj->IsString()) {
+        v8::Local<v8::String> str = v8::Local<v8::String>::Cast(obj);
+        kid = (DPS_KeyId*)calloc(1, sizeof(DPS_KeyId));
+        if (!kid) {
+            SWIG_exception_fail(SWIG_ERROR, "no memory");
+        }
+        kid->len = str->Utf8Length();
+        kid->id = (uint8_t*)malloc(kid->len + 1);
+        if (!kid->id) {
+            free(kid);
+            SWIG_exception_fail(SWIG_ERROR, "no memory");
+        }
+        str->WriteUtf8((char*)kid->id);
     } else if (!obj->IsNull()) {
         SWIG_exception_fail(SWIG_TypeError, "argument of type '" "DPS_KeyId *""'");
     }
@@ -546,6 +558,48 @@ static v8::Handle<v8::Value> UUIDToString(DPS_UUID* uuid)
         if ($1->id) {
             free((uint8_t*)$1->id);
         }
+        free($1);
+    }
+}
+
+%typemap(in) (const char* key) {
+    int res;
+    char *buf = NULL;
+    int alloc = SWIG_NEWOBJ;
+
+    if (!$input->IsNull()) {
+        res = SWIG_AsCharPtrAndSize($input, &buf, NULL, &alloc);
+        if (!SWIG_IsOK(res)) {
+            SWIG_exception_fail(SWIG_ArgError(res), "in method '" "setCertificate" "', argument of type '" "char const *""'");
+        }
+    }
+
+    $1 = buf;
+}
+
+%typemap(freearg) (const char* key) {
+    if ($1) {
+        free($1);
+    }
+}
+
+%typemap(in) (const char* password) {
+    int res;
+    char *buf = NULL;
+    int alloc = SWIG_NEWOBJ;
+
+    if (!$input->IsNull()) {
+        res = SWIG_AsCharPtrAndSize($input, &buf, NULL, &alloc);
+        if (!SWIG_IsOK(res)) {
+            SWIG_exception_fail(SWIG_ArgError(res), "in method '" "setCertificate" "', argument of type '" "char const *""'");
+        }
+    }
+
+    $1 = buf;
+}
+
+%typemap(freearg) (const char* password) {
+    if ($1) {
         free($1);
     }
 }

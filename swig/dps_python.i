@@ -54,6 +54,7 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
  */
 %rename("debug") DPS_Debug;
 %rename("set_ca") DPS_SetCA;
+%rename("set_trusted_ca") DPS_SetTrustedCA;
 %rename("%(regex:/DPS_([A-Z][a-z0-9]+|UUID)/\\L\\1/)s", %$isfunction) "";
 %rename("%(regex:/DPS_([A-Z][a-z0-9]+|UUID)([A-Z][a-z0-9]+|UUID)/\\L\\1_\\L\\2/)s", %$isfunction) "";
 %rename("%(regex:/DPS_([A-Z][a-z0-9]+|UUID)([A-Z][a-z0-9]+|UUID)([A-Z][a-z0-9]+|UUID)/\\L\\1_\\L\\2_\\L\\3/)s", %$isfunction) "";
@@ -224,6 +225,11 @@ static uint8_t* AllocPayload(PyObject* py, size_t* len)
 }
 
 %typemap(default) (DPS_OnNodeDestroyed cb, void* data) {
+    $1 = NULL;
+    $2 = NULL;
+}
+
+%typemap(default) (const char* key, const char* password) {
     $1 = NULL;
     $2 = NULL;
 }
@@ -487,40 +493,43 @@ static PyObject* UUIDToPyString(const DPS_UUID* uuid)
     DPS_KeyId* kid = NULL;
 
     if ($input != Py_None) {
-        if (!PyList_Check($input)) {
-            PyErr_SetString(PyExc_TypeError, "keyId should be a list\n");
-            SWIG_fail;
-        }
+        int alloc = SWIG_NEWOBJ;
         kid = calloc(1, sizeof(DPS_KeyId));
         if (!kid) {
             SWIG_fail;
         }
-        kid->len = PyList_Size($input);
-        kid->id = calloc(kid->len, sizeof(uint8_t));
-        if (!kid->id) {
-            free(kid);
-            SWIG_fail;
-        }
-
-        for (size_t i = 0; i < kid->len; ++i) {
-            PyObject *pValue = PyList_GetItem($input, i);
-            if (PyInt_Check(pValue)) {
-                int32_t v = PyInt_AsLong(pValue);
-                if (v >= 0 && v <= 255) {
-                    ((uint8_t*)kid->id)[i] = (uint8_t)v;
-                } else {
-                    PyErr_SetString(PyExc_TypeError, "keyId values must be a list of int in range 0..255");
-                    free((uint8_t*)kid->id);
-                    free(kid);
-                    SWIG_fail;
-                }
-            } else {
-                PyErr_SetString(PyExc_TypeError, "keyId is not list of ints");
-                free((uint8_t*)kid->id);
+        if (PyList_Check($input)) {
+            kid->len = PyList_Size($input);
+            kid->id = calloc(kid->len, sizeof(uint8_t));
+            if (!kid->id) {
                 free(kid);
                 SWIG_fail;
             }
 
+            for (size_t i = 0; i < kid->len; ++i) {
+                PyObject *pValue = PyList_GetItem($input, i);
+                if (PyInt_Check(pValue)) {
+                    int32_t v = PyInt_AsLong(pValue);
+                    if (v >= 0 && v <= 255) {
+                        ((uint8_t*)kid->id)[i] = (uint8_t)v;
+                    } else {
+                        PyErr_SetString(PyExc_TypeError, "keyId values must be a list of int in range 0..255");
+                        free((uint8_t*)kid->id);
+                        free(kid);
+                        SWIG_fail;
+                    }
+                } else {
+                    PyErr_SetString(PyExc_TypeError, "keyId is not list of ints");
+                    free((uint8_t*)kid->id);
+                    free(kid);
+                    SWIG_fail;
+                }
+
+            }
+        } else if (SWIG_AsCharPtrAndSize($input, (char**)&kid->id, &kid->len, &alloc) != SWIG_OK) {
+            PyErr_SetString(PyExc_TypeError, "keyId should be a list or string\n");
+            free(kid);
+            SWIG_fail;
         }
     }
 
