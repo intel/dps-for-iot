@@ -82,13 +82,15 @@ var dps = require("dps");
     var onAck = function (pub, payload) {
         console.log("Ack for pub UUID " + dps.publicationGetUUID(pub) + "(" + dps.publicationGetSequenceNum(pub) + ")");
         console.log("    " + payload);
-        dps.publish(pub, "world", 0);
-        setTimeout(stop, 100);
     };
     var stop = function () {
         dps.destroyPublication(pub);
         dps.destroyNode(node);
         dps.destroyMemoryKeyStore(keyStore);
+    };
+    var publish = function () {
+        dps.publish(pub, "world", 0);
+        setTimeout(stop, 100);
     };
 
     /* Set to 1 to enable DPS debug output */
@@ -127,4 +129,5 @@ var dps = require("dps");
     dps.initPublication(pub, ["a/b/c"], false, null, onAck);
     dps.publicationAddKeyId(pub, pubKeyId);
     dps.publish(pub, "hello", 0);
+    setTimeout(publish, 100);
 }());
