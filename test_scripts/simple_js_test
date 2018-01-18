@@ -15,7 +15,7 @@ assert_no_errors
 expect_pubs_received 2 a/b/c
 
 #
-# Verify interop between C sub and python pub
+# Verify interop between C sub and javascript pub
 #
 reset_logs
 
@@ -28,8 +28,19 @@ sleep 1
 assert_no_errors
 expect_pubs_received 2 a/b/c
 
+reset_logs
+
+sub -x 2 a/b/c
+sleep 1
+
+js_pub -x 2
+sleep 1
+
+assert_no_errors
+expect_pubs_received 2 a/b/c
+
 #
-# Verify interop between python pub and C sub
+# Verify interop between javascript pub and C sub
 #
 reset_logs
 
@@ -37,6 +48,17 @@ js_sub
 sleep 1
 
 pub a/b/c
+sleep 2
+
+assert_no_errors
+expect_pubs_received 1 a/b/c
+
+reset_logs
+
+js_sub -x 2
+sleep 1
+
+pub -x 2 a/b/c
 sleep 2
 
 assert_no_errors

@@ -60,8 +60,7 @@ extern "C" {
  */
 typedef struct _COSE_Entity {
     int8_t alg;         /**< Recipient or signature algorithm */
-    uint8_t* kid;       /**< Key identifier */
-    size_t kidLen;      /**< Size of key identifier, in bytes */
+    DPS_KeyId kid;      /**< Key identifier */
 } COSE_Entity;
 
 /**

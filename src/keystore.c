@@ -77,9 +77,9 @@ DPS_KeyStore* DPS_KeyStoreHandle(DPS_KeyStoreRequest* request)
     return request ? request->keyStore : NULL;
 }
 
-DPS_Status DPS_SetKeyAndIdentity(DPS_KeyStoreRequest* request, const DPS_Key* key, const uint8_t* id, size_t idLen)
+DPS_Status DPS_SetKeyAndIdentity(DPS_KeyStoreRequest* request, const DPS_Key* key, const DPS_KeyId* keyId)
 {
-    return request->setKeyAndIdentity ? request->setKeyAndIdentity(request, key, id, idLen) : DPS_ERR_MISSING;
+    return request->setKeyAndIdentity ? request->setKeyAndIdentity(request, key, keyId) : DPS_ERR_MISSING;
 }
 
 DPS_Status DPS_SetKey(DPS_KeyStoreRequest* request, const DPS_Key* key)
@@ -87,14 +87,13 @@ DPS_Status DPS_SetKey(DPS_KeyStoreRequest* request, const DPS_Key* key)
     return request->setKey ? request->setKey(request, key) : DPS_ERR_MISSING;
 }
 
-DPS_Status DPS_SetCA(DPS_KeyStoreRequest* request, const char* ca, size_t len)
+DPS_Status DPS_SetCA(DPS_KeyStoreRequest* request, const char* ca)
 {
-    return request->setCA ? request->setCA(request, ca, len): DPS_ERR_MISSING;
+    return request->setCA ? request->setCA(request, ca): DPS_ERR_MISSING;
 }
 
 typedef struct _DPS_MemoryKeyStoreEntry {
-    uint8_t* id;
-    size_t idLen;
+    DPS_KeyId keyId;
     DPS_Key key;
 } DPS_MemoryKeyStoreEntry;
 
@@ -106,23 +105,25 @@ struct _DPS_MemoryKeyStore {
     size_t entriesCount;
     size_t entriesCap;
 
-    uint8_t* networkId;
-    size_t networkIdLen;
-    uint8_t* networkKey;
-    size_t networkKeyLen;
+    DPS_KeyId networkId;
+    DPS_Key networkKey;
 
     char *ca;
-    size_t caLen;
 };
 
-static DPS_MemoryKeyStoreEntry* MemoryKeyStoreLookup(DPS_MemoryKeyStore* mks, const uint8_t* id, size_t len)
+static int SameKeyId(const DPS_KeyId* a, const DPS_KeyId* b)
+{
+    return a && b && (a->len == b->len) && (memcmp(a->id, b->id, b->len) == 0);
+}
+
+static DPS_MemoryKeyStoreEntry* MemoryKeyStoreLookup(DPS_MemoryKeyStore* mks, const DPS_KeyId* keyId)
 {
     DPS_MemoryKeyStoreEntry* entry;
     size_t i;
 
     for (i = 0; i < mks->entriesCount; ++i) {
         entry = mks->entries + i;
-        if ((entry->idLen == len) && (memcmp(entry->id, id, len) == 0)) {
+        if (SameKeyId(&entry->keyId, keyId)) {
             return entry;
         }
     }
@@ -147,68 +148,66 @@ static DPS_Status MemoryKeyStoreGrow(DPS_MemoryKeyStore* mks)
     return DPS_OK;
 }
 
-static DPS_Status MemoryKeyStoreSetKey(DPS_MemoryKeyStoreEntry* entry, const uint8_t* key, size_t keyLen)
+static DPS_Status MemoryKeyStoreSetKey(DPS_MemoryKeyStoreEntry* entry, const DPS_Key* key)
 {
     uint8_t* newKey = NULL;
+    size_t newLen = 0;
+    if (key->type != DPS_KEY_SYMMETRIC) {
+        return DPS_ERR_ARGS;
+    }
     if (key) {
-        newKey = malloc(keyLen);
+        newKey = malloc(key->symmetric.len);
         if (!newKey) {
             return DPS_ERR_RESOURCES;
         }
-        memcpy_s(newKey, keyLen, key, keyLen);
+        newLen = key->symmetric.len;
+        memcpy_s(newKey, newLen, key->symmetric.key, key->symmetric.len);
     }
     entry->key.type = DPS_KEY_SYMMETRIC;
     if (entry->key.symmetric.key) {
         free((uint8_t*)entry->key.symmetric.key);
     }
     entry->key.symmetric.key = newKey;
-    entry->key.symmetric.len = keyLen;
+    entry->key.symmetric.len = newLen;
     return DPS_OK;
 }
 
-static DPS_Status MemoryKeyStoreSetCertificate(DPS_MemoryKeyStoreEntry* entry, const char* cert, size_t certLen,
-                                               const char* key, size_t keyLen,
-                                               const char* password, size_t passwordLen)
+static DPS_Status MemoryKeyStoreSetCertificate(DPS_MemoryKeyStoreEntry* entry, const char* cert,
+                                               const char* key, const char* password)
 {
     char *newCert = NULL;
     char *newKey = NULL;
     char *newPassword = NULL;
 
-    newCert = malloc(certLen);
+    newCert = strndup(cert, RSIZE_MAX_STR);
     if (!newCert) {
         goto ErrorExit;
     }
-    memcpy_s(newCert, certLen, cert, certLen);
-    if (key && keyLen) {
-        newKey = malloc(keyLen);
+    if (key) {
+        newKey = strndup(key, RSIZE_MAX_STR);
         if (!newKey) {
             goto ErrorExit;
         }
-        memcpy_s(newKey, keyLen, key, keyLen);
     }
-    if (password && passwordLen) {
-        newPassword = malloc(passwordLen);
+    if (password) {
+        newPassword = strndup(password, RSIZE_MAX_STR);
         if (!newPassword) {
             goto ErrorExit;
         }
-        memcpy_s(newPassword, passwordLen, password, passwordLen);
     }
     entry->key.type = DPS_KEY_EC_CERT;
     if (entry->key.cert.cert) {
         free((char*)entry->key.cert.cert);
     }
     entry->key.cert.cert = newCert;
-    entry->key.cert.certLen = certLen;
     if (entry->key.cert.privateKey) {
         free((char*)entry->key.cert.privateKey);
     }
     entry->key.cert.privateKey = newKey;
-    entry->key.cert.privateKeyLen = keyLen;
     if (entry->key.cert.password) {
         free((char*)entry->key.cert.password);
     }
     entry->key.cert.password = newPassword;
-    entry->key.cert.passwordLen = passwordLen;
     return DPS_OK;
 
 ErrorExit:
@@ -227,34 +226,25 @@ ErrorExit:
 static DPS_Status MemoryKeyStoreKeyAndIdentityHandler(DPS_KeyStoreRequest* request)
 {
     DPS_MemoryKeyStore* mks = (DPS_MemoryKeyStore*)DPS_KeyStoreHandle(request);
-    DPS_Key k;
-    if (!mks->networkId || !mks->networkKey) {
+
+    if (!mks->networkId.id || !mks->networkKey.symmetric.key) {
         return DPS_ERR_MISSING;
     }
-    k.type = DPS_KEY_SYMMETRIC;
-    k.symmetric.key = mks->networkKey;
-    k.symmetric.len = mks->networkKeyLen;
-    return DPS_SetKeyAndIdentity(request, &k, mks->networkId, mks->networkIdLen);
+    return DPS_SetKeyAndIdentity(request, &mks->networkKey, &mks->networkId);
 }
 
-static DPS_Status MemoryKeyStoreKeyHandler(DPS_KeyStoreRequest* request, const uint8_t* id, size_t len)
+static DPS_Status MemoryKeyStoreKeyHandler(DPS_KeyStoreRequest* request, const DPS_KeyId* keyId)
 {
     DPS_MemoryKeyStore* mks = (DPS_MemoryKeyStore*)DPS_KeyStoreHandle(request);
     DPS_MemoryKeyStoreEntry* entry;
-    DPS_Key k;
 
-    entry = MemoryKeyStoreLookup(mks, id, len);
+    entry = MemoryKeyStoreLookup(mks, keyId);
     if (entry) {
         return DPS_SetKey(request, &entry->key);
     }
 
-    if (len == mks->networkIdLen) {
-        if (memcmp(id, mks->networkId, mks->networkIdLen) == 0) {
-            k.type = DPS_KEY_SYMMETRIC;
-            k.symmetric.key = mks->networkKey;
-            k.symmetric.len = mks->networkKeyLen;
-            return DPS_SetKey(request, &k);
-        }
+    if (SameKeyId(&mks->networkId, keyId)) {
+        return DPS_SetKey(request, &mks->networkKey);
     }
 
     return DPS_ERR_MISSING;
@@ -301,7 +291,7 @@ static DPS_Status MemoryKeyStoreEphemeralKeyHandler(DPS_KeyStoreRequest* request
 static DPS_Status MemoryKeyStoreCAHandler(DPS_KeyStoreRequest* request)
 {
     DPS_MemoryKeyStore* mks = (DPS_MemoryKeyStore*)DPS_KeyStoreHandle(request);
-    return DPS_SetCA(request, mks->ca, mks->caLen);
+    return DPS_SetCA(request, mks->ca);
 }
 
 DPS_MemoryKeyStore* DPS_CreateMemoryKeyStore()
@@ -342,7 +332,7 @@ void DPS_DestroyMemoryKeyStore(DPS_MemoryKeyStore* mks)
     }
     for (size_t i = 0; i < mks->entriesCount; i++) {
         DPS_MemoryKeyStoreEntry* entry = mks->entries + i;
-        free(entry->id);
+        DPS_ClearKeyId(&entry->keyId);
         if (entry->key.type == DPS_KEY_SYMMETRIC) {
             free((uint8_t*)entry->key.symmetric.key);
         } else if (entry->key.type == DPS_KEY_EC_CERT) {
@@ -358,11 +348,9 @@ void DPS_DestroyMemoryKeyStore(DPS_MemoryKeyStore* mks)
     if (mks->entries) {
         free(mks->entries);
     }
-    if (mks->networkId) {
-        free(mks->networkId);
-    }
-    if (mks->networkKey) {
-        free(mks->networkKey);
+    DPS_ClearKeyId(&mks->networkId);
+    if (mks->networkKey.symmetric.key) {
+        free((uint8_t*)mks->networkKey.symmetric.key);
     }
     if (mks->ca) {
         free(mks->ca);
@@ -370,60 +358,59 @@ void DPS_DestroyMemoryKeyStore(DPS_MemoryKeyStore* mks)
     free(mks);
 }
 
-DPS_Status DPS_SetNetworkKey(DPS_MemoryKeyStore* mks, const uint8_t* id, size_t idLen, const uint8_t* key, size_t keyLen)
+DPS_Status DPS_SetNetworkKey(DPS_MemoryKeyStore* mks, const DPS_KeyId* keyId, const DPS_Key* key)
 {
+    DPS_KeyId id;
+
     DPS_DBGTRACE();
 
-    if (!id || (idLen == 0) || (!key && keyLen > 0) || (key && keyLen == 0)) {
+    if (!keyId || (keyId->len == 0) || (key && (key->type != DPS_KEY_SYMMETRIC))) {
         return DPS_ERR_INVALID;
     }
 
-    uint8_t* networkId = networkId = calloc(1, idLen);
-    if (!networkId) {
+    if (!DPS_CopyKeyId(&id, keyId)) {
         return DPS_ERR_RESOURCES;
     }
-    memcpy_s(networkId, idLen, id, idLen);
 
-    uint8_t* networkKey = NULL;
+    uint8_t* k = NULL;
+    size_t len = 0;
     if (key) {
-        networkKey = calloc(1, keyLen);
-        if (!networkKey) {
-            free(mks->networkId);
+        k = malloc(key->symmetric.len);
+        if (!k) {
+            DPS_ClearKeyId(&id);
             return DPS_ERR_RESOURCES;
         }
-        memcpy_s(networkKey, keyLen, key, keyLen);
+        len = key->symmetric.len;
+        memcpy_s(k, len, key->symmetric.key, key->symmetric.len);
     }
 
-    if (mks->networkId) {
-        free(mks->networkId);
+    DPS_ClearKeyId(&mks->networkId);
+    mks->networkId = id;
+    if (mks->networkKey.symmetric.key) {
+        free((uint8_t*)mks->networkKey.symmetric.key);
     }
-    mks->networkId = networkId;
-    mks->networkIdLen = idLen;
-    if (mks->networkKey) {
-        free(mks->networkKey);
-    }
-    mks->networkKey = networkKey;
-    mks->networkKeyLen = keyLen;
+    mks->networkKey.symmetric.key = k;
+    mks->networkKey.symmetric.len = len;
 
     return DPS_OK;
 }
 
-DPS_Status DPS_SetContentKey(DPS_MemoryKeyStore* mks, const DPS_UUID* id, const uint8_t* key, size_t keyLen)
+DPS_Status DPS_SetContentKey(DPS_MemoryKeyStore* mks, const DPS_KeyId* keyId, const DPS_Key* key)
 {
     DPS_MemoryKeyStoreEntry* entry;
 
     DPS_DBGTRACE();
 
-    /* Replace key if kid already exists. */
-    entry = MemoryKeyStoreLookup(mks, (const uint8_t*)id, sizeof(DPS_UUID));
+    /* Replace key if key ID already exists. */
+    entry = MemoryKeyStoreLookup(mks, keyId);
     if (entry) {
-        if (MemoryKeyStoreSetKey(entry, key, keyLen) != DPS_OK) {
+        if (MemoryKeyStoreSetKey(entry, key) != DPS_OK) {
             return DPS_ERR_RESOURCES;
         }
         return DPS_OK;
     }
 
-    /* If kid doesn't exist, don't add a NULL key. */
+    /* If key ID doesn't exist, don't add a NULL key. */
     if (!key) {
         return DPS_OK;
     }
@@ -435,62 +422,61 @@ DPS_Status DPS_SetContentKey(DPS_MemoryKeyStore* mks, const DPS_UUID* id, const 
 
     /* Add the new entry. */
     entry = mks->entries + mks->entriesCount;
-    uint8_t* newId = malloc(sizeof(DPS_UUID));
-    if (!newId) {
+    DPS_KeyId id;
+    if (!DPS_CopyKeyId(&id, keyId)) {
         return DPS_ERR_RESOURCES;
     }
-    memcpy_s(newId, sizeof(DPS_UUID), id, sizeof(DPS_UUID));
-    if (MemoryKeyStoreSetKey(entry, key, keyLen) != DPS_OK) {
-        free(newId);
+    if (MemoryKeyStoreSetKey(entry, key) != DPS_OK) {
+        DPS_ClearKeyId(&id);
         return DPS_ERR_RESOURCES;
     }
-    entry->id = newId;
-    entry->idLen = sizeof(DPS_UUID);
+    entry->keyId = id;
     mks->entriesCount++;
     return DPS_OK;
 }
 
-DPS_Status DPS_SetTrustedCA(DPS_MemoryKeyStore* mks, const char* ca, size_t len)
+DPS_Status DPS_SetTrustedCA(DPS_MemoryKeyStore* mks, const char* ca)
 {
     DPS_DBGTRACE();
 
-    char *newCA = malloc(len);
+    char *newCA = strndup(ca, RSIZE_MAX_STR);
     if (!newCA) {
         return DPS_ERR_RESOURCES;
     }
-    memcpy_s(newCA, len, ca, len);
     if (mks->ca) {
         free(mks->ca);
     }
     mks->ca = newCA;
-    mks->caLen = len;
     return DPS_OK;
 }
 
-DPS_Status DPS_SetCertificate(DPS_MemoryKeyStore* mks, const char* cert, size_t certLen,
-                              const char* key, size_t keyLen,
-                              const char* password, size_t passwordLen)
+DPS_Status DPS_SetCertificate(DPS_MemoryKeyStore* mks, const char* cert, const char* key,
+                              const char* password)
 {
-    char* newId = NULL;
-    size_t newIdLen;
+    char* cn = NULL;
+    DPS_KeyId keyId;
     DPS_MemoryKeyStoreEntry* entry;
 
     DPS_DBGTRACE();
 
-    if (!cert || !certLen) {
+    if (!cert) {
         return DPS_ERR_ARGS;
     }
 
-    newId = DPS_CertificateCN(cert, certLen);
-    if (!newId) {
+    cn = DPS_CertificateCN(cert);
+    if (!cn) {
         goto ErrorExit;
     }
-    newIdLen = strlen(newId);
+    keyId.id = (const uint8_t*)cn;
+    keyId.len = strnlen_s(cn, RSIZE_MAX_STR);
+    if (keyId.len == RSIZE_MAX_STR) {
+        goto ErrorExit;
+    }
 
     /* Replace cert if id already exists. */
-    entry = MemoryKeyStoreLookup(mks, (const uint8_t*)newId, newIdLen);
+    entry = MemoryKeyStoreLookup(mks, &keyId);
     if (entry) {
-        if (MemoryKeyStoreSetCertificate(entry, cert, certLen, key, keyLen, password, passwordLen) != DPS_OK) {
+        if (MemoryKeyStoreSetCertificate(entry, cert, key, password) != DPS_OK) {
             goto ErrorExit;
         }
         return DPS_OK;
@@ -503,17 +489,16 @@ DPS_Status DPS_SetCertificate(DPS_MemoryKeyStore* mks, const char* cert, size_t 
 
     /* Add the new entry. */
     entry = mks->entries + mks->entriesCount;
-    if (MemoryKeyStoreSetCertificate(entry, cert, certLen, key, keyLen, password, passwordLen) != DPS_OK) {
+    if (MemoryKeyStoreSetCertificate(entry, cert, key, password) != DPS_OK) {
         goto ErrorExit;
     }
-    entry->id = (uint8_t*)newId;
-    entry->idLen = newIdLen;
+    entry->keyId = keyId;
     mks->entriesCount++;
     return DPS_OK;
 
 ErrorExit:
-    if (newId) {
-        free(newId);
+    if (cn) {
+        free(cn);
     }
     return DPS_ERR_RESOURCES;
 }

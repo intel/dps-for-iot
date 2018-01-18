@@ -54,6 +54,7 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
  */
 %rename("debug") DPS_Debug;
 %rename("set_ca") DPS_SetCA;
+%rename("set_trusted_ca") DPS_SetTrustedCA;
 %rename("%(regex:/DPS_([A-Z][a-z0-9]+|UUID)/\\L\\1/)s", %$isfunction) "";
 %rename("%(regex:/DPS_([A-Z][a-z0-9]+|UUID)([A-Z][a-z0-9]+|UUID)/\\L\\1_\\L\\2/)s", %$isfunction) "";
 %rename("%(regex:/DPS_([A-Z][a-z0-9]+|UUID)([A-Z][a-z0-9]+|UUID)([A-Z][a-z0-9]+|UUID)/\\L\\1_\\L\\2_\\L\\3/)s", %$isfunction) "";
@@ -105,7 +106,7 @@ int DPS_Debug;
     }
 }
 
-/* 
+/*
  * Post function call cleanup for topic strings
  */
 %typemap(freearg) (const char** topics, size_t numTopics) {
@@ -223,7 +224,12 @@ static uint8_t* AllocPayload(PyObject* py, size_t* len)
     $1 = 0;
 }
 
-%typemap(default) (DPS_OnNodeDestroyed cb, void* data) { 
+%typemap(default) (DPS_OnNodeDestroyed cb, void* data) {
+    $1 = NULL;
+    $2 = NULL;
+}
+
+%typemap(default) (const char* key, const char* password) {
     $1 = NULL;
     $2 = NULL;
 }
@@ -429,94 +435,111 @@ static PyObject* UUIDToPyString(const DPS_UUID* uuid)
 /*
  * Used in DPS_SetContentKey.
  */
-%typemap(in) (const uint8_t* key, size_t keyLen) {
-    uint8_t* key = NULL;
-    size_t keyLen = 0;
+%typemap(in) (const DPS_Key* key) {
+    DPS_Key* k = NULL;
 
     if ($input != Py_None) {
         if (!PyList_Check($input)) {
             PyErr_SetString(PyExc_TypeError, "key should be a list\n");
             SWIG_fail;
         }
-        keyLen = PyList_Size($input);
-
-        key = calloc(keyLen, sizeof(uint8_t));
-        if (!key) {
+        k = calloc(1, sizeof(DPS_Key));
+        if (!k) {
+            SWIG_fail;
+        }
+        k->type = DPS_KEY_SYMMETRIC;
+        k->symmetric.len = PyList_Size($input);
+        k->symmetric.key = calloc(k->symmetric.len, sizeof(uint8_t));
+        if (!k->symmetric.key) {
+            free(k);
             SWIG_fail;
         }
 
-        for (size_t i = 0; i < keyLen; ++i) {
+        for (size_t i = 0; i < k->symmetric.len; ++i) {
             PyObject *pValue = PyList_GetItem($input, i);
             if (PyInt_Check(pValue)) {
                 int32_t v = PyInt_AsLong(pValue);
                 if (v >= 0 && v <= 255) {
-                    key[i] = (uint8_t)v;
+                    ((uint8_t*)k->symmetric.key)[i] = (uint8_t)v;
                 } else {
                     PyErr_SetString(PyExc_TypeError, "key values must be a list of int in range 0..255");
-                    free(key);
+                    free((uint8_t*)k->symmetric.key);
+                    free(k);
                     SWIG_fail;
                 }
             } else {
                 PyErr_SetString(PyExc_TypeError, "key is not list of ints");
-                free(key);
+                free((uint8_t*)k->symmetric.key);
+                free(k);
                 SWIG_fail;
             }
 
         }
     }
 
-    $1 = key;
-    $2 = keyLen;
+    $1 = k;
 }
 
-%typemap(freearg) (const uint8_t* key, size_t keyLen) {
+%typemap(freearg) (const DPS_Key* key) {
     if ($1) {
+        if ($1->symmetric.key) {
+            free((uint8_t*)$1->symmetric.key);
+        }
         free($1);
     }
 }
 
-%typemap(in) (const uint8_t* id, size_t idLen) {
-    uint8_t* id = NULL;
-    size_t idLen = 0;
+%typemap(in) (const DPS_KeyId* keyId) {
+    DPS_KeyId* kid = NULL;
 
     if ($input != Py_None) {
-        if (!PyList_Check($input)) {
-            PyErr_SetString(PyExc_TypeError, "id should be a list\n");
+        int alloc = SWIG_NEWOBJ;
+        kid = malloc(sizeof(DPS_KeyId));
+        if (!kid) {
             SWIG_fail;
         }
-        idLen = PyList_Size($input);
-
-        id = calloc(idLen, sizeof(uint8_t));
-        if (!id) {
-            SWIG_fail;
-        }
-
-        for (size_t i = 0; i < idLen; ++i) {
-            PyObject *pValue = PyList_GetItem($input, i);
-            if (PyInt_Check(pValue)) {
-                int32_t v = PyInt_AsLong(pValue);
-                if (v >= 0 && v <= 255) {
-                    id[i] = (uint8_t)v;
-                } else {
-                    PyErr_SetString(PyExc_TypeError, "id values must be a list of int in range 0..255");
-                    free(id);
-                    SWIG_fail;
-                }
-            } else {
-                PyErr_SetString(PyExc_TypeError, "id is not list of ints");
-                free(id);
+        if (PyList_Check($input)) {
+            kid->len = PyList_Size($input);
+            kid->id = malloc(kid->len);
+            if (!kid->id) {
+                free(kid);
                 SWIG_fail;
             }
 
+            for (size_t i = 0; i < kid->len; ++i) {
+                PyObject *pValue = PyList_GetItem($input, i);
+                if (PyInt_Check(pValue)) {
+                    int32_t v = PyInt_AsLong(pValue);
+                    if (v >= 0 && v <= 255) {
+                        ((uint8_t*)kid->id)[i] = (uint8_t)v;
+                    } else {
+                        PyErr_SetString(PyExc_TypeError, "keyId values must be a list of int in range 0..255");
+                        free((uint8_t*)kid->id);
+                        free(kid);
+                        SWIG_fail;
+                    }
+                } else {
+                    PyErr_SetString(PyExc_TypeError, "keyId is not list of ints");
+                    free((uint8_t*)kid->id);
+                    free(kid);
+                    SWIG_fail;
+                }
+            }
+        } else if (SWIG_AsCharPtrAndSize($input, (char**)&kid->id, &kid->len, &alloc) != SWIG_OK) {
+            PyErr_SetString(PyExc_TypeError, "keyId should be a list or string\n");
+            free(kid);
+            SWIG_fail;
         }
     }
 
-    $1 = id;
-    $2 = idLen;
+    $1 = kid;
 }
 
-%typemap(freearg) (const uint8_t* id, size_t idLen) {
+%typemap(freearg) (const DPS_KeyId* keyId) {
     if ($1) {
+        if ($1->id) {
+            free((uint8_t*)$1->id);
+        }
         free($1);
     }
 }

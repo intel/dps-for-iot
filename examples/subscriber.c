@@ -201,7 +201,7 @@ int main(int argc, char** argv)
     int numTopics = 0;
     int wait = 0;
     DPS_MemoryKeyStore* memoryKeyStore = NULL;
-    const char* nodeKeyId = NULL;
+    const DPS_KeyId* nodeKeyId = NULL;
     DPS_Node* node;
     DPS_Event* nodeDestroyed = NULL;
     int mcastPub = DPS_MCAST_PUB_DISABLED;
@@ -291,20 +291,18 @@ int main(int argc, char** argv)
         mcastPub = DPS_MCAST_PUB_ENABLE_RECV;
     }
     memoryKeyStore = DPS_CreateMemoryKeyStore();
-    DPS_SetNetworkKey(memoryKeyStore, (const uint8_t*)&NetworkKeyId, sizeof(DPS_UUID), NetworkKey, sizeof(NetworkKey));
+    DPS_SetNetworkKey(memoryKeyStore, &NetworkKeyId, &NetworkKey);
     if (encrypt == 1) {
         for (size_t i = 0; i < NUM_KEYS; ++i) {
-            DPS_SetContentKey(memoryKeyStore, &PskId[i], PskData[i], 16);
+            DPS_SetContentKey(memoryKeyStore, &PskId[i], &Psk[i]);
         }
     } else if (encrypt == 2) {
-        DPS_SetTrustedCA(memoryKeyStore, TrustedCAs, strlen(TrustedCAs) + 1);
-        nodeKeyId = SubscriberId;
-        DPS_SetCertificate(memoryKeyStore, SubscriberCert, strlen(SubscriberCert) + 1,
-                           SubscriberPrivateKey, strlen(SubscriberPrivateKey) + 1,
-                           SubscriberPassword, strlen(SubscriberPassword));
-        DPS_SetCertificate(memoryKeyStore, PublisherCert, strlen(PublisherCert) + 1, NULL, 0, NULL, 0);
+        DPS_SetTrustedCA(memoryKeyStore, TrustedCAs);
+        nodeKeyId = &SubscriberId;
+        DPS_SetCertificate(memoryKeyStore, SubscriberCert, SubscriberPrivateKey, SubscriberPassword);
+        DPS_SetCertificate(memoryKeyStore, PublisherCert, NULL, NULL);
     }
-    node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore), nodeKeyId, nodeKeyId ? strlen(nodeKeyId) : 0);
+    node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore), nodeKeyId);
     DPS_SetNodeSubscriptionUpdateDelay(node, subsRate);
 
     ret = DPS_StartNode(node, mcastPub, listenPort);

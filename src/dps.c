@@ -1133,9 +1133,7 @@ static void StopNode(DPS_Node* node)
 
 static void FreeNode(DPS_Node* node)
 {
-    if (node->signer.kid) {
-        free(node->signer.kid);
-    }
+    DPS_ClearKeyId(&node->signer.kid);
     free(node);
 }
 
@@ -1186,8 +1184,7 @@ static DPS_Status SetCurve(DPS_KeyStoreRequest* request, const DPS_Key* key)
         return DPS_OK;
     case DPS_KEY_EC_CERT:
         if (key->cert.privateKey) {
-            return ParsePrivateKey_ECDSA(key->cert.privateKey, key->cert.privateKeyLen,
-                                         key->cert.password, key->cert.passwordLen,
+            return ParsePrivateKey_ECDSA(key->cert.privateKey, key->cert.password,
                                          curve, d);
         }
         /* FALLTHROUGH */
@@ -1196,7 +1193,7 @@ static DPS_Status SetCurve(DPS_KeyStoreRequest* request, const DPS_Key* key)
     }
 }
 
-static DPS_Status GetSignatureAlgorithm(DPS_KeyStore* keyStore, const uint8_t* id, size_t idLen, int8_t* alg)
+static DPS_Status GetSignatureAlgorithm(DPS_KeyStore* keyStore, const DPS_KeyId* keyId, int8_t* alg)
 {
     DPS_KeyStoreRequest request;
     DPS_ECCurve curve = DPS_EC_CURVE_RESERVED;
@@ -1210,7 +1207,7 @@ static DPS_Status GetSignatureAlgorithm(DPS_KeyStore* keyStore, const uint8_t* i
     request.keyStore = keyStore;
     request.data = &curve;
     request.setKey = SetCurve;
-    ret = keyStore->keyHandler(&request, id, idLen);
+    ret = keyStore->keyHandler(&request, keyId);
     if (ret != DPS_OK) {
         return ret;
     }
@@ -1231,7 +1228,7 @@ static DPS_Status GetSignatureAlgorithm(DPS_KeyStore* keyStore, const uint8_t* i
     return ret;
 }
 
-DPS_Node* DPS_CreateNode(const char* separators, DPS_KeyStore* keyStore, const uint8_t* id, size_t idLen)
+DPS_Node* DPS_CreateNode(const char* separators, DPS_KeyStore* keyStore, const DPS_KeyId* keyId)
 {
     DPS_Node* node = calloc(1, sizeof(DPS_Node));
     DPS_Status ret;
@@ -1252,25 +1249,22 @@ DPS_Node* DPS_CreateNode(const char* separators, DPS_KeyStore* keyStore, const u
     /*
      * Sanity check
      */
-    if (id && (!keyStore || !keyStore->keyHandler)) {
+    if (keyId && (!keyStore || !keyStore->keyHandler)) {
         DPS_ERRPRINT("A key request callback is required\n");
         FreeNode(node);
         return NULL;
     }
-    if (id) {
-        ret = GetSignatureAlgorithm(keyStore, id, idLen, &node->signer.alg);
+    if (keyId) {
+        ret = GetSignatureAlgorithm(keyStore, keyId, &node->signer.alg);
         if (ret != DPS_OK) {
             DPS_WARNPRINT("Node ID not suitable for signing\n");
             ret = DPS_OK;
         }
-        node->signer.kid = malloc(idLen);
-        if (!node->signer.kid) {
+        if (!DPS_CopyKeyId(&node->signer.kid, keyId)) {
             DPS_ERRPRINT("Allocate ID failed\n");
             FreeNode(node);
             return NULL;
         }
-        node->signer.kidLen = idLen;
-        memcpy_s(node->signer.kid, node->signer.kidLen, id, idLen);
     }
     strncpy_s(node->separators, sizeof(node->separators), separators, sizeof(node->separators) - 1);
     node->keyStore = keyStore;
@@ -1595,5 +1589,25 @@ void DPS_MakeNonce(const DPS_UUID* uuid, uint32_t seqNum, uint8_t msgType, uint8
         p[0] &= 0x7F;
     } else {
         p[0] |= 0x80;
+    }
+}
+
+DPS_KeyId* DPS_CopyKeyId(DPS_KeyId* dest, const DPS_KeyId* src)
+{
+    dest->id = malloc(src->len);
+    if (!dest->id) {
+        return NULL;
+    }
+    dest->len = src->len;
+    memcpy_s((uint8_t*)dest->id, dest->len, src->id, src->len);
+    return dest;
+}
+
+void DPS_ClearKeyId(DPS_KeyId* keyId)
+{
+    assert(keyId);
+    if (keyId->id) {
+        free((uint8_t*)keyId->id);
+        keyId->id = NULL;
     }
 }

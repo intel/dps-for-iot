@@ -177,7 +177,9 @@ static DPS_Status SerializeAck(const DPS_Publication* pub, PublicationAck* ack, 
                            pub->recipients, pub->recipientsCount, &aadBuf, &plainTextBuf, node->keyStore,
                            &cipherTextBuf);
         DPS_TxBufferFree(&ack->encryptedBuf);
-        ack->encryptedBuf = cipherTextBuf;
+        if (ret == DPS_OK) {
+            ack->encryptedBuf = cipherTextBuf;
+        }
     }
     return ret;
 }

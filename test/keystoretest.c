@@ -28,7 +28,7 @@ static DPS_Status GetKeyAndIdentity(DPS_KeyStoreRequest* request)
     return DPS_ERR_MISSING;
 }
 
-static DPS_Status GetKey(DPS_KeyStoreRequest* request, const unsigned char* id, size_t len)
+static DPS_Status GetKey(DPS_KeyStoreRequest* request, const DPS_KeyId* id)
 {
     return DPS_ERR_MISSING;
 }

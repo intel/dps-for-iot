@@ -54,13 +54,14 @@ static const uint8_t nonce[] = {
     0x01,0x00,0x00,0x00,0x38,0x5e,0x9a,0xdd,0xd5,0x55,0x88,0xc4,0x57
 };
 
-static const uint8_t key[] = {
+static const DPS_UUID _keyId = {
+    0xed,0x54,0x14,0xa8,0x5c,0x4d,0x4d,0x15,0xb6,0x9f,0x0e,0x99,0x8a,0xb1,0x71,0xf2
+};
+static const uint8_t _key[] = {
     0x77,0x58,0x22,0xfc,0x3d,0xef,0x48,0x88,0x91,0x25,0x78,0xd0,0xe2,0x74,0x5c,0x10
 };
-
-static DPS_UUID keyId = {
-    .val= { 0xed,0x54,0x14,0xa8,0x5c,0x4d,0x4d,0x15,0xb6,0x9f,0x0e,0x99,0x8a,0xb1,0x71,0xf2 }
-};
+const DPS_KeyId keyId = { _keyId.val, sizeof(_keyId.val) };
+const DPS_Key key = { DPS_KEY_SYMMETRIC, .symmetric = { _key, sizeof(_key) } };
 
 static void Dump(const char* tag, const uint8_t* data, size_t len)
 {
@@ -82,29 +83,14 @@ uint8_t config[] = {
 
 static DPS_RBG* rbg = NULL;
 
-static DPS_Status KeyHandler(DPS_KeyStoreRequest* request, const unsigned char* id, size_t len)
+static DPS_Status KeyHandler(DPS_KeyStoreRequest* request, const DPS_KeyId* id)
 {
     DPS_Key k;
 
-    if (!id) {
-        uint8_t key[AES_128_KEY_LEN];
-        DPS_Status ret = DPS_RandomKey(rbg, key);
-        if (ret != DPS_OK) {
-            return ret;
-        }
-        k.type = DPS_KEY_SYMMETRIC;
-        k.symmetric.key = key;
-        k.symmetric.len = AES_128_KEY_LEN;
-        return DPS_SetKey(request, &k);
+    if ((id->len != keyId.len) || (memcmp(id->id, keyId.id, keyId.len) != 0)) {
+        return DPS_ERR_MISSING;
     } else {
-        if ((len != sizeof(DPS_UUID)) || (memcmp(id, &keyId, len) != 0)) {
-            return DPS_ERR_MISSING;
-        } else {
-            k.type = DPS_KEY_SYMMETRIC;
-            k.symmetric.key = key;
-            k.symmetric.len = AES_128_KEY_LEN;
-            return DPS_SetKey(request, &k);
-        }
+        return DPS_SetKey(request, &key);
     }
 }
 
@@ -133,9 +119,9 @@ static void CCM_Raw()
     DPS_TxBufferInit(&cipherText, NULL, 512);
     DPS_TxBufferInit(&plainText, NULL, 512);
 
-    ret = Encrypt_CCM(key, 16, 2, nonce, (uint8_t*)msg, sizeof(msg), aad, sizeof(aad), &cipherText);
+    ret = Encrypt_CCM(key.symmetric.key, 16, 2, nonce, (uint8_t*)msg, sizeof(msg), aad, sizeof(aad), &cipherText);
     ASSERT(ret == DPS_OK);
-    ret = Decrypt_CCM(key, 16, 2, nonce, cipherText.base, DPS_TxBufferUsed(&cipherText), aad, sizeof(aad), &plainText);
+    ret = Decrypt_CCM(key.symmetric.key, 16, 2, nonce, cipherText.base, DPS_TxBufferUsed(&cipherText), aad, sizeof(aad), &plainText);
     ASSERT(ret == DPS_OK);
 
     ASSERT(DPS_TxBufferUsed(&plainText) == sizeof(msg));
@@ -272,8 +258,7 @@ int main(int argc, char** argv)
         DPS_RxBufferInit(&aadBuf, (uint8_t*)aad, sizeof(aad));
         DPS_RxBufferInit(&msgBuf, (uint8_t*)msg, sizeof(msg));
         recipient.alg = COSE_ALG_A128KW;
-        recipient.kid = (uint8_t*)&keyId;
-        recipient.kidLen = sizeof(DPS_UUID);
+        recipient.kid = keyId;
 
         ret = COSE_Encrypt(alg, nonce, NULL, &recipient, 1, &aadBuf, &msgBuf, keyStore, &cipherText);
         if (ret != DPS_OK) {

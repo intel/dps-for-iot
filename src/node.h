@@ -40,15 +40,6 @@ extern "C" {
 
 #define DPS_MSG_VERSION 1
 
-/**
- * Maximum length for a node key ID excluding NUL terminator
- */
-#define DPS_MAX_KEY_ID_STRLEN 2048
-
-#if DPS_MAX_KEY_ID_STRLEN >= RSIZE_MAX_STR
-#error DPS_MAX_KEY_ID_STRLEN must be less than RSIZE_MAX_STR (see safe_str_lib.h)
-#endif
-
 /*
  * DPS message types
  */

@@ -165,13 +165,13 @@ static void ReadStdin(DPS_Node* node)
             DPS_DestroyPublication(currentPub);
             currentPub = DPS_CreatePublication(node);
             ret = DPS_InitPublication(currentPub, (const char**)topics, numTopics, DPS_FALSE,
-                                      NULL, 0, requestAck ? OnAck : NULL);
+                                      NULL, requestAck ? OnAck : NULL);
             if (ret != DPS_OK) {
                 DPS_ERRPRINT("Failed to create publication - error=%s\n", DPS_ErrTxt(ret));
                 break;
             }
             if (encrypt) {
-                ret = DPS_PublicationAddKeyId(currentPub, (const uint8_t*)&PskId[0], sizeof(DPS_UUID));
+                ret = DPS_PublicationAddKeyId(currentPub, &PskId[0]);
                 if (ret != DPS_OK) {
                     DPS_ERRPRINT("Failed to add key ID - error=%s\n", DPS_ErrTxt(ret));
                     break;
@@ -221,7 +221,7 @@ int main(int argc, char** argv)
 {
     DPS_Status ret;
     DPS_MemoryKeyStore* memoryKeyStore = NULL;
-    const char* nodeKeyId = NULL;
+    const DPS_KeyId* nodeKeyId = NULL;
     DPS_Node* node;
     char** arg = argv + 1;
     const char* host = NULL;
@@ -305,21 +305,19 @@ int main(int argc, char** argv)
     }
 
     memoryKeyStore = DPS_CreateMemoryKeyStore();
-    DPS_SetNetworkKey(memoryKeyStore, (const uint8_t*)&NetworkKeyId, sizeof(DPS_UUID), NetworkKey, sizeof(NetworkKey));
+    DPS_SetNetworkKey(memoryKeyStore, &NetworkKeyId, &NetworkKey);
     if (encrypt == 1) {
         for (size_t i = 0; i < NUM_KEYS; ++i) {
-            DPS_SetContentKey(memoryKeyStore, &PskId[i], PskData[i], 16);
+            DPS_SetContentKey(memoryKeyStore, &PskId[i], &Psk[i]);
         }
     } else if (encrypt == 2) {
-        DPS_SetTrustedCA(memoryKeyStore, TrustedCAs, strlen(TrustedCAs) + 1);
-        nodeKeyId = PublisherId;
-        DPS_SetCertificate(memoryKeyStore, PublisherCert, strlen(PublisherCert) + 1,
-                           PublisherPrivateKey, strlen(PublisherPrivateKey) + 1,
-                           PublisherPassword, strlen(PublisherPassword));
-        DPS_SetCertificate(memoryKeyStore, SubscriberCert, strlen(SubscriberCert) + 1, NULL, 0, NULL, 0);
+        DPS_SetTrustedCA(memoryKeyStore, TrustedCAs);
+        nodeKeyId = &PublisherId;
+        DPS_SetCertificate(memoryKeyStore, PublisherCert, PublisherPrivateKey, PublisherPassword);
+        DPS_SetCertificate(memoryKeyStore, SubscriberCert, NULL, NULL);
     }
 
-    node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore), nodeKeyId, nodeKeyId ? strlen(nodeKeyId) : 0);
+    node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore), nodeKeyId);
     DPS_SetNodeSubscriptionUpdateDelay(node, subsRate);
 
     ret = DPS_StartNode(node, mcast, listenPort);
@@ -341,15 +339,15 @@ int main(int argc, char** argv)
         currentPub = DPS_CreatePublication(node);
 
         ret = DPS_InitPublication(currentPub, (const char**)topics, numTopics, DPS_FALSE,
-                                  NULL, 0, requestAck ? OnAck : NULL);
+                                  NULL, requestAck ? OnAck : NULL);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("Failed to create publication - error=%s\n", DPS_ErrTxt(ret));
             return 1;
         }
         if (encrypt == 2)  {
-            ret = DPS_PublicationAddKeyId(currentPub, SubscriberId, strlen(SubscriberId));
+            ret = DPS_PublicationAddKeyId(currentPub, &SubscriberId);
         } else if (encrypt == 1) {
-            ret = DPS_PublicationAddKeyId(currentPub, (const uint8_t*)&PskId[1], sizeof(DPS_UUID));
+            ret = DPS_PublicationAddKeyId(currentPub, &PskId[1]);
         }
         if (ret != DPS_OK) {
             DPS_ERRPRINT("Failed to add key ID - error=%s\n", DPS_ErrTxt(ret));

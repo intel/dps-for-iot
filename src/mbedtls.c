@@ -90,7 +90,7 @@ DPS_RBG* DPS_CreateRBG()
     mbedtls_entropy_init(&rbg->entropy);
     mbedtls_ctr_drbg_init(&rbg->drbg);
     ret = mbedtls_ctr_drbg_seed(&rbg->drbg, mbedtls_entropy_func, &rbg->entropy,
-                                (const unsigned char*)PERSONALIZATION_STRING, strlen(PERSONALIZATION_STRING));
+                                (const unsigned char*)PERSONALIZATION_STRING, sizeof(PERSONALIZATION_STRING) - 1);
     if (ret != 0) {
         DPS_ERRPRINT("Seed RBG failed: %s\n", TLSErrTxt(ret));
         DPS_DestroyRBG(rbg);
@@ -169,30 +169,38 @@ Exit:
     }
 }
 
-char* DPS_CertificateCN(const char* cert, size_t certLen)
+char* DPS_CertificateCN(const char* cert)
 {
     mbedtls_x509_crt crt;
     mbedtls_x509_name *name;
     char* cn = NULL;
+    size_t len;
     int ret;
 
+    len = cert ? strnlen_s(cert, RSIZE_MAX_STR) + 1 : 0;
+    if (len == RSIZE_MAX_STR) {
+        DPS_ERRPRINT("Invalid certificate\n");
+        return NULL;
+    }
+
     mbedtls_x509_crt_init(&crt);
-    ret = mbedtls_x509_crt_parse(&crt, (const unsigned char*)cert, certLen);
+    ret = mbedtls_x509_crt_parse(&crt, (const unsigned char*)cert, len);
     if (ret != 0) {
         DPS_WARNPRINT("Parse certificate failed: %s\n", TLSErrTxt(ret));
-        return NULL;
+        goto Exit;
     }
     for (name = &crt.subject; name; name = name->next) {
         if (MBEDTLS_OID_CMP(MBEDTLS_OID_AT_CN, &name->oid) == 0) {
             cn = malloc(name->val.len + 1);
             if (!cn) {
-                return NULL;
+                goto Exit;
             }
             memcpy_s(cn, name->val.len + 1, name->val.p, name->val.len);
             cn[name->val.len] = '\0';
             break;
         }
     }
+Exit:
     mbedtls_x509_crt_free(&crt);
     return cn;
 }

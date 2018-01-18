@@ -64,7 +64,7 @@ static DPS_Status SetKey(DPS_KeyStoreRequest* request, const DPS_Key* key)
     return DPS_OK;
 }
 
-static DPS_Status GetRecipientAlgorithm(DPS_KeyStore* keyStore, const uint8_t* kid, size_t kidLen, int8_t* alg)
+static DPS_Status GetRecipientAlgorithm(DPS_KeyStore* keyStore, const DPS_KeyId* kid, int8_t* alg)
 {
     DPS_KeyStoreRequest request;
 
@@ -77,14 +77,14 @@ static DPS_Status GetRecipientAlgorithm(DPS_KeyStore* keyStore, const uint8_t* k
     request.keyStore = keyStore;
     request.data = alg;
     request.setKey = SetKey;
-    return keyStore->keyHandler(&request, kid, kidLen);
+    return keyStore->keyHandler(&request, kid);
 }
 
-static COSE_Entity* AddRecipient(DPS_Publication* pub, int8_t alg, const uint8_t* kid, size_t kidLen)
+static COSE_Entity* AddRecipient(DPS_Publication* pub, int8_t alg, const DPS_KeyId* kid)
 {
     COSE_Entity* newRecipients;
     size_t newCap;
-    uint8_t* newKid;
+    DPS_KeyId newId;
     COSE_Entity* recipient;
 
     if (pub->recipientsCount == pub->recipientsCap) {
@@ -99,27 +99,24 @@ static COSE_Entity* AddRecipient(DPS_Publication* pub, int8_t alg, const uint8_t
         pub->recipients = newRecipients;
         pub->recipientsCap = newCap;
     }
-    newKid = malloc(kidLen);
-    if (!newKid) {
+    if (!DPS_CopyKeyId(&newId, kid)) {
         return NULL;
     }
-    memcpy_s(newKid, kidLen, kid, kidLen);
 
     recipient = &pub->recipients[pub->recipientsCount];
     recipient->alg = alg;
-    recipient->kid = newKid;
-    recipient->kidLen = kidLen;
+    recipient->kid = newId;
     ++pub->recipientsCount;
     return recipient;
 }
 
-static void RemoveRecipient(DPS_Publication* pub, const uint8_t* kid, size_t kidLen)
+static void RemoveRecipient(DPS_Publication* pub, const DPS_KeyId* kid)
 {
     size_t i;
 
     for (i = 0; i < pub->recipientsCount; ++i) {
-        if ((pub->recipients[i].kidLen == kidLen) && (memcmp(pub->recipients[i].kid, kid, kidLen) == 0)) {
-            free(pub->recipients[i].kid);
+        if ((pub->recipients[i].kid.len == kid->len) && (memcmp(pub->recipients[i].kid.id, kid->id, kid->len) == 0)) {
+            DPS_ClearKeyId(&pub->recipients[i].kid);
             for (; i < pub->recipientsCount - 1; ++i) {
                 pub->recipients[i] = pub->recipients[i + 1];
             }
@@ -135,7 +132,7 @@ static void FreeRecipients(DPS_Publication* pub)
     size_t i;
 
     for (i = 0; i < pub->recipientsCount; ++i) {
-        free(pub->recipients[i].kid);
+        free((uint8_t*)pub->recipients[i].kid.id);
     }
     free(pub->recipients);
     pub->recipients = NULL;
@@ -143,42 +140,40 @@ static void FreeRecipients(DPS_Publication* pub)
     pub->recipientsCap = 0;
 }
 
-static COSE_Entity* CopyRecipients(DPS_Publication* dst, const DPS_Publication* src)
+static DPS_Status CopyRecipients(DPS_Publication* dst, const DPS_Publication* src)
 {
     COSE_Entity* newRecipients = NULL;
     size_t newCount = 0;
     size_t i;
 
-    newRecipients = malloc(src->recipientsCap * sizeof(COSE_Entity));
-    if (!newRecipients) {
-        goto ErrorExit;
-    }
-    for (i = 0; i < src->recipientsCount; ++i) {
-        newRecipients[i].alg = src->recipients[i].alg;
-        newRecipients[i].kid = malloc(src->recipients[i].kidLen);
-        if (!newRecipients[i].kid) {
+    if (src->recipients) {
+        newRecipients = malloc(src->recipientsCap * sizeof(COSE_Entity));
+        if (!newRecipients) {
             goto ErrorExit;
         }
-        newRecipients[i].kidLen = src->recipients[i].kidLen;
-        memcpy_s(newRecipients[i].kid, newRecipients[i].kidLen,
-                 src->recipients[i].kid, src->recipients[i].kidLen);
-        ++newCount;
+        for (i = 0; i < src->recipientsCount; ++i) {
+            newRecipients[i].alg = src->recipients[i].alg;
+            if (!DPS_CopyKeyId(&newRecipients[i].kid, &src->recipients[i].kid)) {
+                goto ErrorExit;
+            }
+            ++newCount;
+        }
     }
 
     FreeRecipients(dst);
     dst->recipients = newRecipients;
     dst->recipientsCount = newCount;
     dst->recipientsCap = src->recipientsCap;
-    return dst->recipients;
+    return DPS_OK;
 
  ErrorExit:
     if (newRecipients) {
         for (i = 0; i < newCount; ++i) {
-            free(newRecipients[i].kid);
+            DPS_ClearKeyId(&newRecipients[i].kid);
         }
         free(newRecipients);
     }
-    return NULL;
+    return DPS_ERR_RESOURCES;
 }
 
 static DPS_Publication* FreePublication(DPS_Node* node, DPS_Publication* pub)
@@ -397,7 +392,7 @@ static DPS_Status CallPubHandlers(DPS_Node* node, DPS_Publication* pub)
             switch (recipient.alg) {
             case COSE_ALG_DIRECT:
             case COSE_ALG_A128KW:
-                if (AddRecipient(pub, recipient.alg, recipient.kid, recipient.kidLen)) {
+                if (AddRecipient(pub, recipient.alg, &recipient.kid)) {
                     ret = DPS_OK;
                 } else {
                     ret = DPS_ERR_RESOURCES;
@@ -405,7 +400,7 @@ static DPS_Status CallPubHandlers(DPS_Node* node, DPS_Publication* pub)
                 break;
             case COSE_ALG_ECDH_ES_HKDF_256:
             case COSE_ALG_ECDH_ES_A128KW:
-                if (AddRecipient(pub, recipient.alg, sender.kid, sender.kidLen)) {
+                if (AddRecipient(pub, recipient.alg, &sender.kid)) {
                     ret = DPS_OK;
                 } else {
                     ret = DPS_ERR_RESOURCES;
@@ -958,8 +953,9 @@ DPS_Publication* DPS_CopyPublication(const DPS_Publication* pub)
     copy->node = pub->node;
     copy->ackRequested = pub->ackRequested;
     if (pub->ackRequested) {
-        if (!CopyRecipients(copy, pub)) {
-            DPS_ERRPRINT("malloc failure: no memory\n");
+        ret = CopyRecipients(copy, pub);
+        if (ret != DPS_OK) {
+            DPS_ERRPRINT("CopyRecipients failed: %s\n", DPS_ErrTxt(ret));
             goto Exit;
         }
     }
@@ -1000,7 +996,7 @@ DPS_Status DPS_InitPublication(DPS_Publication* pub,
                                const char** topics,
                                size_t numTopics,
                                int noWildCard,
-                               const uint8_t* id, size_t idLen,
+                               const DPS_KeyId* keyId,
                                DPS_AcknowledgementHandler handler)
 {
     DPS_Node* node = pub ? pub->node : NULL;
@@ -1043,11 +1039,11 @@ DPS_Status DPS_InitPublication(DPS_Publication* pub,
     /*
      * Copy key identifier
      */
-    if (id) {
+    if (keyId) {
         DPS_DBGPRINT("Publication has a keyId\n");
-        ret = GetRecipientAlgorithm(node->keyStore, id, idLen, &alg);
+        ret = GetRecipientAlgorithm(node->keyStore, keyId, &alg);
         if (ret == DPS_OK) {
-            if (!AddRecipient(pub, alg, id, idLen)) {
+            if (!AddRecipient(pub, alg, keyId)) {
                 ret = DPS_ERR_RESOURCES;
             }
         }
@@ -1124,17 +1120,17 @@ DPS_Status DPS_InitPublication(DPS_Publication* pub,
     return ret;
 }
 
-DPS_Status DPS_PublicationAddKeyId(DPS_Publication* pub, const uint8_t* id, size_t idLen)
+DPS_Status DPS_PublicationAddKeyId(DPS_Publication* pub, const DPS_KeyId* keyId)
 {
     DPS_Status ret;
     int8_t alg;
 
     if (IsValidPub(pub)) {
-        ret = GetRecipientAlgorithm(pub->node->keyStore, id, idLen, &alg);
+        ret = GetRecipientAlgorithm(pub->node->keyStore, keyId, &alg);
         if (ret != DPS_OK) {
             return ret;
         }
-        if (!AddRecipient(pub, alg, id, idLen)) {
+        if (!AddRecipient(pub, alg, keyId)) {
             return DPS_ERR_RESOURCES;
         }
         return DPS_OK;
@@ -1143,10 +1139,10 @@ DPS_Status DPS_PublicationAddKeyId(DPS_Publication* pub, const uint8_t* id, size
     }
 }
 
-void DPS_PublicationRemoveKeyId(DPS_Publication* pub, const uint8_t* id, size_t idLen)
+void DPS_PublicationRemoveKeyId(DPS_Publication* pub, const DPS_KeyId* keyId)
 {
     if (IsValidPub(pub)) {
-        RemoveRecipient(pub, id, idLen);
+        RemoveRecipient(pub, keyId);
     }
 }
 

@@ -7,25 +7,11 @@
 #include <dps/synchronous.h>
 #include <dps/registration.h>
 #include <dps/event.h>
+#include "keys.h"
 
 static int quiet = DPS_FALSE;
 
 static uint8_t AckMsg[] = "This is an ACK";
-
-#define NUM_KEYS 2
-
-static DPS_UUID keyId[NUM_KEYS] = { 
-    { .val = { 0xed,0x54,0x14,0xa8,0x5c,0x4d,0x4d,0x15,0xb6,0x9f,0x0e,0x99,0x8a,0xb1,0x71,0xf2 } },
-    { .val = { 0x53,0x4d,0x2a,0x4b,0x98,0x76,0x1f,0x25,0x6b,0x78,0x3c,0xc2,0xf8,0x12,0x90,0xcc } }
-};
-
-/*
- * Preshared keys for testing only - DO NOT USE THESE KEYS IN A REAL APPLICATION!!!!
- */
-static uint8_t keyData[NUM_KEYS][16] = {
-    { 0x77,0x58,0x22,0xfc,0x3d,0xef,0x48,0x88,0x91,0x25,0x78,0xd0,0xe2,0x74,0x5c,0x10 },
-    { 0x39,0x12,0x3e,0x7f,0x21,0xbc,0xa3,0x26,0x4e,0x6f,0x3a,0x21,0xa4,0xf1,0xb5,0x98 }
-};
 
 static void OnNodeDestroyed(DPS_Node* node, void* data)
 {
@@ -195,10 +181,9 @@ int main(int argc, char** argv)
 
     memoryKeyStore = DPS_CreateMemoryKeyStore();
     for (size_t i = 0; i < NUM_KEYS; ++i) {
-        DPS_SetContentKey(memoryKeyStore, &keyId[i], keyData[i], 16);
+        DPS_SetContentKey(memoryKeyStore, &PskId[i], &Psk[i]);
     }
-    node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore),
-                          (const unsigned char*)&keyId[0], sizeof(keyId[0]));
+    node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore), &PskId[0]);
 
     ret = DPS_StartNode(node, DPS_MCAST_PUB_DISABLED, listen);
     if (ret != DPS_OK) {
