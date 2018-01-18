@@ -494,13 +494,13 @@ static PyObject* UUIDToPyString(const DPS_UUID* uuid)
 
     if ($input != Py_None) {
         int alloc = SWIG_NEWOBJ;
-        kid = calloc(1, sizeof(DPS_KeyId));
+        kid = malloc(sizeof(DPS_KeyId));
         if (!kid) {
             SWIG_fail;
         }
         if (PyList_Check($input)) {
             kid->len = PyList_Size($input);
-            kid->id = calloc(kid->len, sizeof(uint8_t));
+            kid->id = malloc(kid->len);
             if (!kid->id) {
                 free(kid);
                 SWIG_fail;
@@ -524,7 +524,6 @@ static PyObject* UUIDToPyString(const DPS_UUID* uuid)
                     free(kid);
                     SWIG_fail;
                 }
-
             }
         } else if (SWIG_AsCharPtrAndSize($input, (char**)&kid->id, &kid->len, &alloc) != SWIG_OK) {
             PyErr_SetString(PyExc_TypeError, "keyId should be a list or string\n");

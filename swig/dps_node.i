@@ -496,12 +496,12 @@ static v8::Handle<v8::Value> UUIDToString(DPS_UUID* uuid)
         uint8_t* data;
         v8::Local<v8::ArrayBuffer> buf;
         v8::Local<v8::Uint8Array> arr = v8::Local<v8::Uint8Array>::Cast($input);
-        kid = (DPS_KeyId*)calloc(1, sizeof(DPS_KeyId));
+        kid = (DPS_KeyId*)malloc(sizeof(DPS_KeyId));
         if (!kid) {
             SWIG_exception_fail(SWIG_ERROR, "no memory");
         }
         kid->len = arr->ByteLength();
-        kid->id = (uint8_t*)calloc(kid->len, sizeof(uint8_t));
+        kid->id = (uint8_t*)malloc(kid->len);
         if (!kid->id) {
             free(kid);
             SWIG_exception_fail(SWIG_ERROR, "no memory");
@@ -512,12 +512,12 @@ static v8::Handle<v8::Value> UUIDToString(DPS_UUID* uuid)
         memcpy((uint8_t*)kid->id, data, kid->len);
     } else if (obj->IsArray()) {
         v8::Local<v8::Array> arr = v8::Local<v8::Array>::Cast($input);
-        kid = (DPS_KeyId*)calloc(1, sizeof(DPS_KeyId));
+        kid = (DPS_KeyId*)malloc(sizeof(DPS_KeyId));
         if (!kid) {
             SWIG_exception_fail(SWIG_ERROR, "no memory");
         }
         kid->len = arr->Length();
-        kid->id = (uint8_t*)calloc(kid->len, sizeof(uint8_t));
+        kid->id = (uint8_t*)malloc(kid->len);
         if (!kid->id) {
             free(kid);
             SWIG_exception_fail(SWIG_ERROR, "no memory");
@@ -535,7 +535,7 @@ static v8::Handle<v8::Value> UUIDToString(DPS_UUID* uuid)
         }
     } else if (obj->IsString()) {
         v8::Local<v8::String> str = v8::Local<v8::String>::Cast(obj);
-        kid = (DPS_KeyId*)calloc(1, sizeof(DPS_KeyId));
+        kid = (DPS_KeyId*)malloc(sizeof(DPS_KeyId));
         if (!kid) {
             SWIG_exception_fail(SWIG_ERROR, "no memory");
         }
