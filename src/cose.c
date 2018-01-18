@@ -1434,9 +1434,6 @@ DPS_Status COSE_Decrypt(const uint8_t* nonce, COSE_Entity* recipient, DPS_RxBuff
     /*
      * Verify signature of encrypted content
      */
-    if (signer) {
-        memset(signer, 0, sizeof(*signer));
-    }
     if (sig.sigLen) {
         DPS_Status verify;
         ret = EncodeSig(&toBeSigned, alg, sig.alg, NULL, 0, content, contentLen);
