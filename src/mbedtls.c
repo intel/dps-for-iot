@@ -169,10 +169,26 @@ Exit:
     }
 }
 
+const mbedtls_x509_name* TLSCertificateCN(const mbedtls_x509_crt* crt)
+{
+    const mbedtls_x509_name *name;
+
+    if (!crt) {
+        return NULL;
+    }
+
+    for (name = &crt->subject; name; name = name->next) {
+        if (MBEDTLS_OID_CMP(MBEDTLS_OID_AT_CN, &name->oid) == 0) {
+            return name;
+        }
+    }
+    return NULL;
+}
+
 char* DPS_CertificateCN(const char* cert)
 {
     mbedtls_x509_crt crt;
-    mbedtls_x509_name *name;
+    const mbedtls_x509_name *name;
     char* cn = NULL;
     size_t len;
     int ret;
@@ -189,16 +205,14 @@ char* DPS_CertificateCN(const char* cert)
         DPS_WARNPRINT("Parse certificate failed: %s\n", TLSErrTxt(ret));
         goto Exit;
     }
-    for (name = &crt.subject; name; name = name->next) {
-        if (MBEDTLS_OID_CMP(MBEDTLS_OID_AT_CN, &name->oid) == 0) {
-            cn = malloc(name->val.len + 1);
-            if (!cn) {
-                goto Exit;
-            }
-            memcpy_s(cn, name->val.len + 1, name->val.p, name->val.len);
-            cn[name->val.len] = '\0';
-            break;
+    name = TLSCertificateCN(&crt);
+    if (name) {
+        cn = malloc(name->val.len + 1);
+        if (!cn) {
+            goto Exit;
         }
+        memcpy_s(cn, name->val.len + 1, name->val.p, name->val.len);
+        cn[name->val.len] = '\0';
     }
 Exit:
     mbedtls_x509_crt_free(&crt);
