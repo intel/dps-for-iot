@@ -332,7 +332,7 @@ void DPS_DestroyMemoryKeyStore(DPS_MemoryKeyStore* mks)
     }
     for (size_t i = 0; i < mks->entriesCount; i++) {
         DPS_MemoryKeyStoreEntry* entry = mks->entries + i;
-        free((uint8_t*)entry->keyId.id);
+        DPS_ClearKeyId(&entry->keyId);
         if (entry->key.type == DPS_KEY_SYMMETRIC) {
             free((uint8_t*)entry->key.symmetric.key);
         } else if (entry->key.type == DPS_KEY_EC_CERT) {
@@ -348,9 +348,7 @@ void DPS_DestroyMemoryKeyStore(DPS_MemoryKeyStore* mks)
     if (mks->entries) {
         free(mks->entries);
     }
-    if (mks->networkId.id) {
-        free((uint8_t*)mks->networkId.id);
-    }
+    DPS_ClearKeyId(&mks->networkId);
     if (mks->networkKey.symmetric.key) {
         free((uint8_t*)mks->networkKey.symmetric.key);
     }
@@ -362,35 +360,32 @@ void DPS_DestroyMemoryKeyStore(DPS_MemoryKeyStore* mks)
 
 DPS_Status DPS_SetNetworkKey(DPS_MemoryKeyStore* mks, const DPS_KeyId* keyId, const DPS_Key* key)
 {
+    DPS_KeyId id;
+
     DPS_DBGTRACE();
 
     if (!keyId || (keyId->len == 0) || (key && (key->type != DPS_KEY_SYMMETRIC))) {
         return DPS_ERR_INVALID;
     }
 
-    uint8_t* id = calloc(1, keyId->len);
-    if (!id) {
+    if (!DPS_CopyKeyId(&id, keyId)) {
         return DPS_ERR_RESOURCES;
     }
-    memcpy_s(id, keyId->len, keyId->id, keyId->len);
 
     uint8_t* k = NULL;
     size_t len = 0;
     if (key) {
         k = malloc(key->symmetric.len);
         if (!k) {
-            free(id);
+            DPS_ClearKeyId(&id);
             return DPS_ERR_RESOURCES;
         }
         len = key->symmetric.len;
         memcpy_s(k, len, key->symmetric.key, key->symmetric.len);
     }
 
-    if (mks->networkId.id) {
-        free((uint8_t*)mks->networkId.id);
-    }
-    mks->networkId.id = id;
-    mks->networkId.len = keyId->len;
+    DPS_ClearKeyId(&mks->networkId);
+    mks->networkId = id;
     if (mks->networkKey.symmetric.key) {
         free((uint8_t*)mks->networkKey.symmetric.key);
     }
@@ -427,17 +422,15 @@ DPS_Status DPS_SetContentKey(DPS_MemoryKeyStore* mks, const DPS_KeyId* keyId, co
 
     /* Add the new entry. */
     entry = mks->entries + mks->entriesCount;
-    uint8_t* id = malloc(keyId->len);
-    if (!id) {
+    DPS_KeyId id;
+    if (!DPS_CopyKeyId(&id, keyId)) {
         return DPS_ERR_RESOURCES;
     }
-    memcpy_s(id, keyId->len, keyId->id, keyId->len);
     if (MemoryKeyStoreSetKey(entry, key) != DPS_OK) {
-        free(id);
+        DPS_ClearKeyId(&id);
         return DPS_ERR_RESOURCES;
     }
-    entry->keyId.id = id;
-    entry->keyId.len = keyId->len;
+    entry->keyId = id;
     mks->entriesCount++;
     return DPS_OK;
 }

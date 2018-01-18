@@ -1133,9 +1133,7 @@ static void StopNode(DPS_Node* node)
 
 static void FreeNode(DPS_Node* node)
 {
-    if (node->signer.kid.id) {
-        free((uint8_t*)node->signer.kid.id);
-    }
+    DPS_ClearKeyId(&node->signer.kid);
     free(node);
 }
 
@@ -1233,7 +1231,6 @@ static DPS_Status GetSignatureAlgorithm(DPS_KeyStore* keyStore, const DPS_KeyId*
 DPS_Node* DPS_CreateNode(const char* separators, DPS_KeyStore* keyStore, const DPS_KeyId* keyId)
 {
     DPS_Node* node = calloc(1, sizeof(DPS_Node));
-    uint8_t *id;
     DPS_Status ret;
 
     if (!node) {
@@ -1263,15 +1260,11 @@ DPS_Node* DPS_CreateNode(const char* separators, DPS_KeyStore* keyStore, const D
             DPS_WARNPRINT("Node ID not suitable for signing\n");
             ret = DPS_OK;
         }
-        id = malloc(keyId->len);
-        if (!id) {
+        if (!DPS_CopyKeyId(&node->signer.kid, keyId)) {
             DPS_ERRPRINT("Allocate ID failed\n");
             FreeNode(node);
             return NULL;
         }
-        memcpy_s(id, keyId->len, keyId->id, keyId->len);
-        node->signer.kid.id = id;
-        node->signer.kid.len = keyId->len;
     }
     strncpy_s(node->separators, sizeof(node->separators), separators, sizeof(node->separators) - 1);
     node->keyStore = keyStore;
@@ -1596,5 +1589,25 @@ void DPS_MakeNonce(const DPS_UUID* uuid, uint32_t seqNum, uint8_t msgType, uint8
         p[0] &= 0x7F;
     } else {
         p[0] |= 0x80;
+    }
+}
+
+DPS_KeyId* DPS_CopyKeyId(DPS_KeyId* dest, const DPS_KeyId* src)
+{
+    dest->id = malloc(src->len);
+    if (!dest->id) {
+        return NULL;
+    }
+    dest->len = src->len;
+    memcpy_s((uint8_t*)dest->id, dest->len, src->id, src->len);
+    return dest;
+}
+
+void DPS_ClearKeyId(DPS_KeyId* keyId)
+{
+    assert(keyId);
+    if (keyId->id) {
+        free((uint8_t*)keyId->id);
+        keyId->id = NULL;
     }
 }

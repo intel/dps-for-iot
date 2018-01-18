@@ -84,7 +84,7 @@ static COSE_Entity* AddRecipient(DPS_Publication* pub, int8_t alg, const DPS_Key
 {
     COSE_Entity* newRecipients;
     size_t newCap;
-    uint8_t* newId;
+    DPS_KeyId newId;
     COSE_Entity* recipient;
 
     if (pub->recipientsCount == pub->recipientsCap) {
@@ -99,16 +99,13 @@ static COSE_Entity* AddRecipient(DPS_Publication* pub, int8_t alg, const DPS_Key
         pub->recipients = newRecipients;
         pub->recipientsCap = newCap;
     }
-    newId = malloc(kid->len);
-    if (!newId) {
+    if (!DPS_CopyKeyId(&newId, kid)) {
         return NULL;
     }
-    memcpy_s(newId, kid->len, kid->id, kid->len);
 
     recipient = &pub->recipients[pub->recipientsCount];
     recipient->alg = alg;
-    recipient->kid.id = newId;
-    recipient->kid.len = kid->len;
+    recipient->kid = newId;
     ++pub->recipientsCount;
     return recipient;
 }
@@ -119,7 +116,7 @@ static void RemoveRecipient(DPS_Publication* pub, const DPS_KeyId* kid)
 
     for (i = 0; i < pub->recipientsCount; ++i) {
         if ((pub->recipients[i].kid.len == kid->len) && (memcmp(pub->recipients[i].kid.id, kid->id, kid->len) == 0)) {
-            free((uint8_t*)pub->recipients[i].kid.id);
+            DPS_ClearKeyId(&pub->recipients[i].kid);
             for (; i < pub->recipientsCount - 1; ++i) {
                 pub->recipients[i] = pub->recipients[i + 1];
             }
@@ -156,13 +153,9 @@ static DPS_Status CopyRecipients(DPS_Publication* dst, const DPS_Publication* sr
         }
         for (i = 0; i < src->recipientsCount; ++i) {
             newRecipients[i].alg = src->recipients[i].alg;
-            newRecipients[i].kid.id = malloc(src->recipients[i].kid.len);
-            if (!newRecipients[i].kid.id) {
+            if (!DPS_CopyKeyId(&newRecipients[i].kid, &src->recipients[i].kid)) {
                 goto ErrorExit;
             }
-            newRecipients[i].kid.len = src->recipients[i].kid.len;
-            memcpy_s((uint8_t*)newRecipients[i].kid.id, newRecipients[i].kid.len,
-                     src->recipients[i].kid.id, src->recipients[i].kid.len);
             ++newCount;
         }
     }
@@ -176,7 +169,7 @@ static DPS_Status CopyRecipients(DPS_Publication* dst, const DPS_Publication* sr
  ErrorExit:
     if (newRecipients) {
         for (i = 0; i < newCount; ++i) {
-            free((uint8_t*)newRecipients[i].kid.id);
+            DPS_ClearKeyId(&newRecipients[i].kid);
         }
         free(newRecipients);
     }

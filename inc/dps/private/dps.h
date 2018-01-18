@@ -171,6 +171,18 @@ void DPS_RxBufferToTx(DPS_RxBuffer* rxBuffer, DPS_TxBuffer* txBuffer);
 void DPS_DumpSubscriptions(DPS_Node* node);
 
 /**
+ * Copy a DPS_KeyId
+ *
+ * @return dest on success or NULL on failure
+ */
+DPS_KeyId* DPS_CopyKeyId(DPS_KeyId* dest, const DPS_KeyId* src);
+
+/**
+ * Release memory used by the key ID.
+ */
+void DPS_ClearKeyId(DPS_KeyId* keyId);
+
+/**
  * A key store request.
  */
 struct _DPS_KeyStoreRequest {
