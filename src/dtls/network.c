@@ -1113,7 +1113,7 @@ static int TLSHandshake(DPS_NetConnection* cn)
     }
 
     /* Handshake is done, consume anything pending. */
-    cn->handshakeDone = 1;
+    cn->handshakeDone = DPS_TRUE;
     DPS_DBGPRINT("TLSHandshake() is done\n");
 
     /*

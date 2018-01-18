@@ -24,6 +24,7 @@
 #define _MBEDTLS_H
 
 #include "mbedtls/ecdh.h"
+#include "mbedtls/x509_crt.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -37,6 +38,8 @@ const char *TLSErrTxt(int ret);
  * @param len the size of a coordinate, in bytes
  */
 int TLSGetCurveParams(DPS_ECCurve curve, mbedtls_ecp_group_id* id, size_t* len);
+
+const mbedtls_x509_name* TLSCertificateCN(const mbedtls_x509_crt* crt);
 
 #ifdef __cplusplus
 }
