@@ -28,6 +28,7 @@ DPS_GetEventData
 DPS_GetKeyStoreData
 DPS_GetLoop
 DPS_GetNodeData
+DPS_GetPermission
 DPS_GetPortNumber
 DPS_GetPublicationData
 DPS_GetPublicationNode
@@ -69,6 +70,7 @@ DPS_SetKeyStoreData
 DPS_SetNetworkKey
 DPS_SetNodeData
 DPS_SetNodeSubscriptionUpdateDelay
+DPS_SetPermission
 DPS_SetPublicationData
 DPS_SetSubscriptionData
 DPS_SetTrustedCA
@@ -84,3 +86,4 @@ DPS_UnlinkFrom
 DPS_UUIDCompare
 DPS_UUIDToString
 DPS_WaitForEvent
+DPS_WILDCARD_ID
