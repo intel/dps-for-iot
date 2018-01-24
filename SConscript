@@ -102,8 +102,6 @@ if env['python']:
         pyenv['SHLIBSUFFIX'] = '.pyd'
 
     pyenv.Append(SWIGFLAGS = ['-python', '-Wextra', '-Werror', '-v', '-O'], SWIGPATH = '#/inc')
-    if platform == 'posix':
-        pyenv.Append(CPPFLAGS = ['-Wno-strict-aliasing'])
     # Build python module library
     pylib = pyenv.SharedLibrary('./py/dps', shobjs + ['swig/dps_python.i'])
     pyenv.Install('#/build/dist/py', pylib)
