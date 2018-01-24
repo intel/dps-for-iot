@@ -23,7 +23,6 @@
 #ifndef _DPS_EVENT_H
 #define _DPS_EVENT_H
 
-#include <uv.h>
 #include <dps/err.h>
 #include <dps/dps.h>
 

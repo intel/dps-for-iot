@@ -79,8 +79,7 @@ print("Building for " + env['variant'])
 
 if env['PLATFORM'] == 'win32':
 
-    env.Append(CCFLAGS = ['/J', '/W3', '/nologo'])
-    env.Append(CPPDEFINES = ['_CRT_SECURE_NO_WARNINGS'])
+    env.Append(CCFLAGS = ['/J', '/W3', '/WX', '/nologo'])
 
     # We are getting our secure memory and string functions for
     # SafeStringLib so need to disable the Windows supplied versions

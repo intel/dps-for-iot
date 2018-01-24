@@ -85,8 +85,6 @@ static DPS_RBG* rbg = NULL;
 
 static DPS_Status KeyHandler(DPS_KeyStoreRequest* request, const DPS_KeyId* id)
 {
-    DPS_Key k;
-
     if ((id->len != keyId.len) || (memcmp(id->id, keyId.id, keyId.len) != 0)) {
         return DPS_ERR_MISSING;
     } else {

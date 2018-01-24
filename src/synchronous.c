@@ -20,7 +20,6 @@
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  */
 
-#include <uv.h>
 #include <dps/dps.h>
 #include <dps/dbg.h>
 #include <dps/synchronous.h>

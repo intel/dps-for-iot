@@ -23,7 +23,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <uv.h>
 #include <dps/private/network.h>
 #include <dps/dbg.h>
 #include <dps/dps.h>
