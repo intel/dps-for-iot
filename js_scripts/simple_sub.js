@@ -92,13 +92,12 @@ var dps = require("dps");
         }
     };
 
-    /* Set to 1 to enable DPS debug output */
-    dps.debug = 1;
-
     encryption = 1;
     for (i = 0; i < process.argv.length; ++i) {
         if (process.argv[i] == "-x") {
             encryption = process.argv[++i];
+        } else if (process.argv[i] == "-d") {
+            dps.debug = 1;
         }
     }
 
@@ -118,7 +117,7 @@ var dps = require("dps");
         nodeId = subscriberId;
     }
 
-    node = dps.createNode("/", dps.memoryKeyStoreHandle(keyStore), nodeId);
+    node = dps.createNode("/", keyStore, nodeId);
     dps.startNode(node, dps.MCAST_PUB_ENABLE_RECV, 0);
     sub = dps.createSubscription(node, ["a/b/c"]);
     dps.subscribe(sub, onPub);

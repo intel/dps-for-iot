@@ -1,5 +1,6 @@
 "use strict";
 var dps = require("dps");
+var crypto = require("crypto");
 
 (function () {
     /* Pre-shared keys for testing only. DO NOT USE THESE KEYS IN A REAL APPLICATION! */
@@ -79,6 +80,85 @@ var dps = require("dps");
     var i;
     var encryption;
 
+    var compare = function(a, b) {
+        var i;
+
+        if (a.length != b.length) {
+            return false;
+        }
+        if (typeof a == "string") {
+            for (i = 0; i < a.length; ++i) {
+                if (a.charCodeAt(i) != b[i]) {
+                    return false;
+                }
+            }
+        } else {
+            for (i = 0; i < a.length; ++i) {
+                if (a[i] != b[i]) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+    var onKeyAndIdentity = function(request) {
+        return dps.setKeyAndIdentity(request, new dps.SymmetricKey(networkKey), networkKeyID);
+    }
+    var onKey = function(request, id) {
+        var i, j;
+
+        for (i = 0; i < keyID.length; ++i) {
+            if (compare(keyID[i], id)) {
+                return dps.setKey(request, new dps.SymmetricKey(keyData[i]));
+            }
+        }
+        if (compare(networkKeyID, id)) {
+            return dps.setKey(request, new dps.SymmetricKey(networkKey));
+        }
+        if (compare(publisherId, id)) {
+            return dps.setKey(request, new dps.CertKey(publisherCert, publisherPrivateKey, publisherPassword));
+        }
+        if (compare(subscriberId, id)) {
+            return dps.setKey(request, new dps.CertKey(subscriberCert));
+        }
+        return dps.ERR_MISSING;
+    };
+    var onEphemeralKey = function(request, key) {
+        var ecdh;
+        var n;
+        var x, y, d;
+
+        switch (key.type) {
+        case dps.KEY_SYMMETRIC:
+            return dps.setKey(request, new dps.SymmetricKey(crypto.randomBytes(16)));
+        case dps.KEY_EC:
+            switch (key.curve) {
+            case dps.EC_CURVE_P256:
+                ecdh = crypto.createECDH("prime256v1");
+                n = 32;
+                break;
+            case dps.EC_CURVE_P384:
+                ecdh = crypto.createECDH("secp384r1");
+                n = 48;
+                break;
+            case dps.EC_CURVE_P521:
+                ecdh = crypto.createECDH("secp521r1");
+                n = 66;
+                break;
+            };
+            ecdh.generateKeys();
+            x = ecdh.getPublicKey().slice(1, n + 1);
+            y = ecdh.getPublicKey().slice(n + 1, (2 * n) + 1);
+            d = ecdh.getPrivateKey();
+            return dps.setKey(request, new dps.ECKey(key.curve, x, y, d));
+        default:
+            return dps.ERR_MISSING;
+        }
+    };
+    var onCA = function(request) {
+        return dps.setCA(request, ca);
+    };
+
     var onAck = function (pub, payload) {
         console.log("Ack for pub UUID " + dps.publicationGetUUID(pub) + "(" + dps.publicationGetSequenceNum(pub) + ")");
         console.log("    " + payload);
@@ -86,7 +166,7 @@ var dps = require("dps");
     var stop = function () {
         dps.destroyPublication(pub);
         dps.destroyNode(node);
-        dps.destroyMemoryKeyStore(keyStore);
+        dps.destroyKeyStore(keyStore);
     };
     var publish = function () {
         dps.publish(pub, "world", 0);
@@ -102,21 +182,16 @@ var dps = require("dps");
         }
     }
 
-    keyStore = dps.createMemoryKeyStore();
-    dps.setNetworkKey(keyStore, networkKeyID, networkKey);
     if (encryption == 0) {
+        keyStore = dps.createKeyStore(onKeyAndIdentity, onKey, onEphemeralKey, null);
         nodeId = null;
         pubKeyId = null;
     } else if (encryption == 1) {
-        for (i = 0; i < keyID.length; i += 1) {
-            dps.setContentKey(keyStore, keyID[i], keyData[i]);
-        }
+        keyStore = dps.createKeyStore(onKeyAndIdentity, onKey, onEphemeralKey, null);
         nodeId = null;
         pubKeyId = keyID[0];
     } else if (encryption == 2) {
-        dps.setTrustedCA(keyStore, ca);
-        dps.setCertificate(keyStore, publisherCert, publisherPrivateKey, publisherPassword);
-        dps.setCertificate(keyStore, subscriberCert, null, null);
+        keyStore = dps.createKeyStore(onKeyAndIdentity, onKey, onEphemeralKey, onCA);
         nodeId = publisherId;
         pubKeyId = subscriberId;
     }

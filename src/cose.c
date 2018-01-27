@@ -622,6 +622,7 @@ static DPS_Status GetEphemeralKey(DPS_KeyStore* keyStore, COSE_Key* key)
     request.keyStore = keyStore;
     request.data = key;
     request.setKey = SetKey;
+    memset(&k, 0, sizeof(k));
     switch (key->type) {
     case COSE_KEY_SYMMETRIC:
         k.type = DPS_KEY_SYMMETRIC;

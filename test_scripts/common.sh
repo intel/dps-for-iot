@@ -125,6 +125,24 @@ function js_pub {
     node ./js_scripts/simple_pub.js $@ 2>> $f 1>&2 &
 }
 
+function js_sub_ks {
+    s=$((s+1))
+    f=./out/sub$s.log
+    sleep 0.1
+    echo -e "=============================\nsub$s $@" | tee $f
+    echo "==============================" >> $f
+    node ./js_scripts/simple_sub_ks.js $@ 2>> $f 1>&2 &
+}
+
+function js_pub_ks {
+    p=$((p+1))
+    f=./out/pub$p.log
+    sleep 0.1
+    echo -e "=============================\npub$p $@" | tee $f
+    echo "==============================" >> $f
+    node ./js_scripts/simple_pub_ks.js $@ 2>> $f 1>&2 &
+}
+
 function assert_no_errors {
     n=$(grep -ir "ERROR" out | wc -l)
     if [ $n -gt 0 ]; then

@@ -109,24 +109,18 @@ if env['python']:
 
 if env['nodejs']:
     # Use SWIG to build the node.js wrapper
-    #
-    # Some shenanigans are needed here to get SWIG to correctly handle
-    # the DPS_Key union: SWIGFLAGS must not include "-c++" and we then
-    # need to tell the env to compile the genereated .c file as a cpp
-    # file.
-    #
     if platform == 'posix':
         nodeenv = libenv.Clone();
-        nodeenv.Append(SWIGFLAGS = ['-javascript', '-node', '-DV8_VERSION=0x04059937', '-Wextra', '-Werror', '-v', '-O'], SWIGPATH = '#/inc')
+        nodeenv.Append(SWIGFLAGS = ['-javascript', '-node', '-c++', '-DV8_VERSION=0x04059937', '-Wextra', '-Werror', '-v', '-O'], SWIGPATH = '#/inc')
         # There may be a bug with the SWIG builder - add -O to CPPFLAGS to get it passed on to the compiler
         nodeenv.Append(CPPFLAGS = ['-DBUILDING_NODE_EXTENSION', '-std=c++11', '-O', '-Wno-unused-result'])
-        nodeenv['CC'] = '$CXX'
+        nodeenv.Append(CPPPATH = ['swig'])
         if env['target'] == 'yocto':
             nodeenv.Append(CPPPATH = [os.getenv('SYSROOT') + '/usr/include/node'])
         else:
             nodeenv.Append(CPPPATH = ['/usr/include/node'])
         nodeenv.Append(LIBS = [lib, env['UV_LIBS']])
-        nodedps = nodeenv.SharedLibrary('lib/nodedps', shobjs + ['swig/dps_node.i'])
+        nodedps = nodeenv.SharedLibrary('lib/nodedps', shobjs + ['swig/dps_node.i', 'swig/dps.cc'])
         nodeenv.InstallAs('#/build/dist/js/dps.node', nodedps)
 
 # Unit tests
