@@ -27,7 +27,8 @@ BINDINGS_TESTS="./py_scripts/subs_tree.py \
                 ./test_scripts/retained_py \
                 ./test_scripts/simple_js_ks_test \
                 ./test_scripts/simple_js_test \
-                ./test_scripts/simple_py_test"
+                ./test_scripts/simple_py_test \
+                ./test_scripts/simple_py_ks_test"
 
 DEFAULT="\e[0m"
 GREEN="\e[32m"

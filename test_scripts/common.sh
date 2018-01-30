@@ -80,15 +80,6 @@ function py_sub {
     python -u ./py_scripts/simple_sub.py $@ 2>> $f 1>&2 &
 }
 
-function py_late_sub {
-    s=$((s+1))
-    f=./out/sub$s.log
-    sleep 0.1
-    echo -e "=============================\nsub$s" | tee $f
-    echo "==============================" >> $f
-    python -u ./py_scripts/late_sub.py 2>> $f 1>&2 &
-}
-
 function py_pub {
     p=$((p+1))
     f=./out/pub$p.log
@@ -98,6 +89,15 @@ function py_pub {
     python -u ./py_scripts/simple_pub.py $@ 2>> $f 1>&2 &
 }
 
+function py_late_sub {
+    s=$((s+1))
+    f=./out/sub$s.log
+    sleep 0.1
+    echo -e "=============================\nsub$s" | tee $f
+    echo "==============================" >> $f
+    python -u ./py_scripts/late_sub.py 2>> $f 1>&2 &
+}
+
 function py_retained_pub {
     p=$((p+1))
     f=./out/pub$p.log
@@ -105,6 +105,24 @@ function py_retained_pub {
     echo -e "=============================\npub$p" | tee $f
     echo "==============================" >> $f
     python -u ./py_scripts/retained_pub.py 2>> $f 1>&2 &
+}
+
+function py_sub_ks {
+    s=$((s+1))
+    f=./out/sub$s.log
+    sleep 0.1
+    echo -e "=============================\nsub$s $@" | tee $f
+    echo "==============================" >> $f
+    python -u ./py_scripts/simple_sub_ks.py $@ 2>> $f 1>&2 &
+}
+
+function py_pub_ks {
+    p=$((p+1))
+    f=./out/pub$p.log
+    sleep 0.1
+    echo -e "=============================\npub$p $@" | tee $f
+    echo "==============================" >> $f
+    python -u ./py_scripts/simple_pub_ks.py $@ 2>> $f 1>&2 &
 }
 
 function js_sub {

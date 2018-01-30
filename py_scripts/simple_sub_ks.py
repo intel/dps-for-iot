@@ -1,9 +1,12 @@
 #!/usr/bin/python
 import dps
+import os
+import sys
 import time
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.asymmetric import ec
 
 # Pre-shared keys for testing only. DO NOT USE THESE KEYS IN A REAL APPLICATION!
-
 network_key_id = [
     0x4c,0xfc,0x6b,0x75,0x0f,0x80,0x95,0xb3,0x6c,0xb7,0xc1,0x2f,0x65,0x2d,0x38,0x26
 ]
@@ -87,43 +90,81 @@ parser.add_argument("-x", "--encryption", type=int, choices=[0,1,2], default=1,
 args = parser.parse_args()
 dps.cvar.debug = args.debug
 
-key_store = dps.create_memory_key_store()
-dps.set_network_key(key_store, network_key_id, network_key)
+def compare(a, b):
+    if a == None or b == None:
+        return False
+    if len(a) != len(b):
+        return False
+    if type(a) == type(b):
+        return a == b
+    elif type(b) is bytearray:
+        return bytearray(a) == b
+    elif type(b) is str:
+        return "".join(str(c) for c in a) == b
+def int_to_bytes(b):
+    s = "%x" % b
+    if len(s) & 1:
+        s = "0" + s
+    return s.decode("hex")
+def on_key_and_identity(request):
+    return dps.set_key_and_identity(request, dps.SymmetricKey(network_key), network_key_id);
+def on_key(request, id):
+    for i in range(0, len(key_id)):
+        if compare(key_id[i], id):
+            return dps.set_key(request, dps.SymmetricKey(key_data[i]))
+    if compare(network_key_id, id):
+        return dps.set_key(request, dps.SymmetricKey(network_key))
+    if compare(publisher_id, id):
+        return dps.set_key(request, dps.CertKey(publisher_cert));
+    if compare(subscriber_id, id):
+        return dps.set_key(request, dps.CertKey(subscriber_cert, subscriber_private_key, subscriber_password));
+    return dps.ERR_MISSING
+def on_ephemeral_key(request, key):
+    if key.type == dps.KEY_SYMMETRIC:
+        return dps.set_key(request, dps.SymmetricKey(os.urandom(16)))
+    elif key.type == dps.KEY_EC:
+        if key.curve == dps.EC_CURVE_P256:
+            curve = ec.SECP256R1()
+        elif key.curve == dps.EC_CURVE_P384:
+            curve = ec.SECP384R1()
+        elif key.curve == dps.EC_CURVE_P521:
+            curve = ec.SECP521R1()
+        k = ec.generate_private_key(curve, default_backend())
+        x = int_to_bytes(k.public_key().public_numbers().x)
+        y = int_to_bytes(k.public_key().public_numbers().y)
+        d = int_to_bytes(k.private_numbers().private_value)
+        return dps.set_key(request, dps.ECKey(key.curve, x, y, d))
+    else:
+        return dps.ERR_MISSING
+def on_ca(request):
+    return dps.set_ca(request, ca)
+
 if args.encryption == 0:
+    key_store = dps.create_key_store(on_key_and_identity, on_key, on_ephemeral_key, None)
     node_id = None
-    pub_key_id = None
 elif args.encryption == 1:
-    for i in xrange(len(key_id)):
-        dps.set_content_key(key_store, key_id[i], key_data[i])
+    key_store = dps.create_key_store(on_key_and_identity, on_key, on_ephemeral_key, None)
     node_id = None
-    pub_key_id = key_id[0]
 elif args.encryption == 2:
-    dps.set_trusted_ca(key_store, ca)
-    dps.set_certificate(key_store, publisher_cert, publisher_private_key, publisher_password)
-    dps.set_certificate(key_store, subscriber_cert)
-    node_id = publisher_id
-    pub_key_id = subscriber_id
+    key_store = dps.create_key_store(on_key_and_identity, on_key, on_ephemeral_key, on_ca)
+    node_id = subscriber_id
 
-def on_ack(pub, payload):
-    print "Ack for pub UUID %s(%d)" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub))
-    print "    %s" % (payload)
-
-# Enable or disable (default) DPS debug output
-dps.cvar.debug = False
+def on_pub(sub, pub, payload):
+    print "Pub %s(%d) matches:" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub))
+    print "  pub " + " | ".join(dps.publication_get_topics(pub))
+    print "  sub " + " | ".join(dps.subscription_get_topics(sub))
+    print payload
+    if dps.publication_is_ack_requested(pub):
+        ack_msg = "This is an ACK from %d" % (dps.get_port_number(dps.publication_get_node(pub)))
+        print "Sending ack for pub UUID %s(%d)" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub))
+        print "    %s" % (ack_msg)
+        dps.ack_publication(pub, ack_msg);
 
 node = dps.create_node("/", key_store, node_id)
-dps.start_node(node, dps.MCAST_PUB_ENABLE_SEND, 0)
-pub = dps.create_publication(node)
+dps.start_node(node, dps.MCAST_PUB_ENABLE_RECV, 0)
+sub = dps.create_subscription(node, ['a/b/c']);
+dps.subscribe(sub, on_pub)
 
-dps.init_publication(pub, ['a/b/c'], False, None, on_ack)
-dps.publication_add_key_id(pub, pub_key_id)
-dps.publish(pub, "hello")
-print "Pub UUID %s(%d)" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub))
-time.sleep(0.1)
-dps.publish(pub, "world")
-print "Pub UUID %s(%d)" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub))
-time.sleep(0.1)
-
-dps.destroy_publication(pub)
-dps.destroy_node(node)
-dps.destroy_memory_key_store(key_store)
+if not sys.flags.interactive:
+    while True:
+        time.sleep(1)

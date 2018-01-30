@@ -80,9 +80,12 @@ subscriber_password = "DPS Test Subscriber"
 
 import argparse
 parser = argparse.ArgumentParser()
+parser.add_argument("-d", "--debug", action='store_true',
+                    help="Enable debug ouput if built for debug.")
 parser.add_argument("-x", "--encryption", type=int, choices=[0,1,2], default=1,
                     help="Disable (0) or enable symmetric (1) or asymmetric(2) encryption. Default is symmetric encryption enabled.")
 args = parser.parse_args()
+dps.cvar.debug = args.debug
 
 key_store = dps.create_memory_key_store()
 dps.set_network_key(key_store, network_key_id, network_key)
@@ -112,7 +115,7 @@ def on_pub(sub, pub, payload):
 # Enable or disable (default) DPS debug output
 dps.cvar.debug = False
 
-node = dps.create_node("/", dps.memory_key_store_handle(key_store), node_id)
+node = dps.create_node("/", key_store, node_id)
 dps.start_node(node, dps.MCAST_PUB_ENABLE_RECV, 0)
 sub = dps.create_subscription(node, ['a/b/c']);
 dps.subscribe(sub, on_pub)

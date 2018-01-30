@@ -93,6 +93,7 @@ if platform == 'posix':
 if env['python']:
     # Using SWIG to build the python wrapper
     pyenv = libenv.Clone()
+    pyenv.VariantDir('swig/py', 'swig')
     pyenv.Append(LIBPATH = env['PY_LIBPATH'])
     pyenv.Append(CPPPATH = env['PY_CPPPATH'])
     pyenv.Append(LIBS = [lib, env['UV_LIBS']])
@@ -101,27 +102,30 @@ if env['python']:
     if platform == 'win32':
         pyenv['SHLIBSUFFIX'] = '.pyd'
 
-    pyenv.Append(SWIGFLAGS = ['-python', '-Wextra', '-Werror', '-v', '-O'], SWIGPATH = '#/inc')
+    pyenv.Append(SWIGFLAGS = ['-python', '-c++', '-Wextra', '-Werror', '-v', '-O'], SWIGPATH = '#/inc')
+    pyenv.Append(CPPPATH = ['swig'])
     # Build python module library
-    pylib = pyenv.SharedLibrary('./py/dps', shobjs + ['swig/dps_python.i'])
+    pyobjs = pyenv.SharedObject(['swig/dps_python.i', 'swig/py/dps.cc'])
+    pylib = pyenv.SharedLibrary('./py/dps', shobjs + pyobjs)
     pyenv.Install('#/build/dist/py', pylib)
     pyenv.InstallAs('#/build/dist/py/dps.py', './swig/dps.py')
 
-if env['nodejs']:
+if env['nodejs'] and platform == 'posix':
     # Use SWIG to build the node.js wrapper
-    if platform == 'posix':
-        nodeenv = libenv.Clone();
-        nodeenv.Append(SWIGFLAGS = ['-javascript', '-node', '-c++', '-DV8_VERSION=0x04059937', '-Wextra', '-Werror', '-v', '-O'], SWIGPATH = '#/inc')
-        # There may be a bug with the SWIG builder - add -O to CPPFLAGS to get it passed on to the compiler
-        nodeenv.Append(CPPFLAGS = ['-DBUILDING_NODE_EXTENSION', '-std=c++11', '-O', '-Wno-unused-result'])
-        nodeenv.Append(CPPPATH = ['swig'])
-        if env['target'] == 'yocto':
-            nodeenv.Append(CPPPATH = [os.getenv('SYSROOT') + '/usr/include/node'])
-        else:
-            nodeenv.Append(CPPPATH = ['/usr/include/node'])
-        nodeenv.Append(LIBS = [lib, env['UV_LIBS']])
-        nodedps = nodeenv.SharedLibrary('lib/nodedps', shobjs + ['swig/dps_node.i', 'swig/dps.cc'])
-        nodeenv.InstallAs('#/build/dist/js/dps.node', nodedps)
+    nodeenv = libenv.Clone();
+    nodeenv.VariantDir('swig/js', 'swig')
+    nodeenv.Append(SWIGFLAGS = ['-javascript', '-node', '-c++', '-DV8_VERSION=0x04059937', '-Wextra', '-Werror', '-v', '-O'], SWIGPATH = '#/inc')
+    # There may be a bug with the SWIG builder - add -O to CPPFLAGS to get it passed on to the compiler
+    nodeenv.Append(CPPFLAGS = ['-DBUILDING_NODE_EXTENSION', '-std=c++11', '-O', '-Wno-unused-result'])
+    nodeenv.Append(CPPPATH = ['swig'])
+    if env['target'] == 'yocto':
+        nodeenv.Append(CPPPATH = [os.getenv('SYSROOT') + '/usr/include/node'])
+    else:
+        nodeenv.Append(CPPPATH = ['/usr/include/node'])
+    nodeenv.Append(LIBS = [lib, env['UV_LIBS']])
+    nodeobjs = nodeenv.SharedObject(['swig/dps_node.i', 'swig/js/dps.cc'])
+    nodedps = nodeenv.SharedLibrary('lib/nodedps', shobjs + nodeobjs)
+    nodeenv.InstallAs('#/build/dist/js/dps.node', nodedps)
 
 # Unit tests
 testenv = env.Clone()
