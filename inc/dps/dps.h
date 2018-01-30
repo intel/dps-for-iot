@@ -25,9 +25,10 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include <uv.h>
 #include <dps/err.h>
 #include <dps/uuid.h>
+#include <safe_lib.h>
+#include <uv.h>
 
 #ifdef __cplusplus
 extern "C" {

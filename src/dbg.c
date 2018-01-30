@@ -21,6 +21,8 @@
  */
 
 #include <dps/dbg.h>
+#include <safe_lib.h>
+#include <uv.h>
 #include <stdarg.h>
 
 int DPS_Debug = 1;

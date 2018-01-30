@@ -24,7 +24,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "test.h"
-#include <uv.h>
 #include <dps/private/network.h>
 #include <dps/dbg.h>
 #include <dps/dps.h>

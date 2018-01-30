@@ -147,7 +147,7 @@ int main(int argc, char** argv)
         ret = CBOR_EncodeMap(&txBuffer, 2); /* { >need, need } */
         CHECK(ret);
         for (i = 0; i < 2; ++i) {
-            int j = A_SIZEOF(Maps) - 1 - i;
+            size_t j = A_SIZEOF(Maps) - 1 - i;
             ret = CBOR_EncodeInt(&txBuffer, Maps[j].key);
             CHECK(ret);
             ret = CBOR_EncodeString(&txBuffer, Maps[j].string);

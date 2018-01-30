@@ -27,7 +27,6 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <assert.h>
-#include <uv.h>
 
 #ifdef __cplusplus
 extern "C" {

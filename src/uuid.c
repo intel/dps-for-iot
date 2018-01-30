@@ -30,6 +30,7 @@
 #include <dps/uuid.h>
 #include <stdlib.h>
 #include <string.h>
+#include <safe_lib.h>
 #include <uv.h>
 #include "compat.h"
 

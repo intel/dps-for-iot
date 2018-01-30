@@ -74,7 +74,4 @@ int main(int argc, char** argv)
     ASSERT(ret != DPS_OK);
 
     return EXIT_SUCCESS;
-
-Failed:
-    return EXIT_FAILURE;
 }
