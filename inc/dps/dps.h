@@ -416,6 +416,135 @@ DPS_KeyStore* DPS_MemoryKeyStoreHandle(DPS_MemoryKeyStore* keyStore);
 /** @} */ // end of keystore group
 
 /**
+ * @defgroup permstore Permission Store
+ * Permission stores provide access control for sending and receiving
+ * messages.
+ * @{
+ */
+
+/**
+ * @name PermissionStore
+ * Hooks for implementating an application-defined permission store.
+ * @{
+ */
+
+typedef enum {
+    DPS_PERM_PUB = (1 << 0), /**< Publication permission bit */
+    DPS_PERM_SUB = (1 << 1), /**< Subscription permission bit */
+    DPS_PERM_ACK = (1 << 2)  /**< End-to-end pubication acknowledgement permission bit */
+} DPS_Permissions;
+
+/**
+ * Use to support wildcard matches in DPS_GetPermissionsHandler() and
+ * DPS_SetPermissions().
+ */
+extern const DPS_KeyId* const DPS_WILDCARD_ID;
+
+/**
+ * Opaque type for a permission store.
+ */
+typedef struct _DPS_PermissionStore DPS_PermissionStore;
+
+/**
+ * Get the permission bits for an ID.
+ *
+ * @param permStore the permission store
+ * @param keyId the ID to search for or @ref DPS_WILDCARD_ID to get
+ *              the default permission bits.
+ *
+ * @return the permission bits for the ID
+ */
+typedef DPS_Permissions (*DPS_GetPermissionsHandler)(const DPS_PermissionStore* permStore,
+                                                     const DPS_KeyId* keyId);
+
+/**
+ * Creates a permission store.
+ *
+ * @param getHandler handler for permission requests
+ *
+ * @return A pointer to the permission store or NULL if there were no resources.
+ */
+DPS_PermissionStore* DPS_CreatePermissionStore(DPS_GetPermissionsHandler getHandler);
+
+/**
+ * Destroys a previously created permission store.
+ *
+ * @param permStore The permission store
+ */
+void DPS_DestroyPermissionStore(DPS_PermissionStore* permStore);
+
+/**
+ * Store a pointer to application data in a permission store.
+ *
+ * @param permStore The permission store
+ * @param data The data pointer to store
+ *
+ * @return DPS_OK or an error
+ */
+DPS_Status DPS_SetPermissionStoreData(DPS_PermissionStore* permStore, void* data);
+
+/**
+ * Get application data pointer previously set by DPS_SetPermissionStoreData().
+ *
+ * @param permStore The permission store
+ *
+ * @return  A pointer to the data or NULL if the permission store is invalid
+ */
+void* DPS_GetPermissionStoreData(const DPS_PermissionStore* permStore);
+
+/** @} */ // end of PermissionStore subgroup
+
+/**
+ * @name In-memory Permission Store
+ * The implementation of an in-memory permission store.
+ * @{
+ */
+
+/**
+ * Opaque type for an in-memory permission store.
+ */
+typedef struct _DPS_MemoryPermissionStore DPS_MemoryPermissionStore;
+
+/**
+ * Creates an in-memory permission store.
+ *
+ * @return A pointer to the permission store or NULL if there were no resources.
+ */
+DPS_MemoryPermissionStore* DPS_CreateMemoryPermissionStore();
+
+/**
+ * Destroys a previously created in-memory permission store.
+ */
+void DPS_DestroyMemoryPermissionStore(DPS_MemoryPermissionStore* permStore);
+
+/**
+ * Set the permission bits for an ID.
+ *
+ * Use @ref DPS_WILDCARD_ID to set the default permission bits.
+ *
+ * @param permStore the permission store
+ * @param keyId the ID to update
+ * @param bits the new permission bits
+ *
+ * @return DPS_OK or an error
+ */
+DPS_Status DPS_SetPermissions(DPS_MemoryPermissionStore* permStore,
+                              const DPS_KeyId* keyId, DPS_Permissions bits);
+
+/**
+ * Returns the @p DPS_PermissionStore* of an in-memory permission store.
+ *
+ * @param permStore An in-memory permission store
+ *
+ * @return The DPS_PermissionStore* or NULL
+ */
+DPS_PermissionStore* DPS_MemoryPermissionStoreHandle(DPS_MemoryPermissionStore* permStore);
+
+/** @} */ // end of MemoryPermissionStore subgroup
+
+/** @} */ // end of permstore group
+
+/**
  * @defgroup node Node
  * Entities in the DPS network.
  * @{
@@ -436,6 +565,23 @@ typedef struct _DPS_Node DPS_Node;
  * @return A pointer to the uninitialized node or NULL if there were no resources for the node.
  */
 DPS_Node* DPS_CreateNode(const char* separators, DPS_KeyStore* keyStore, const DPS_KeyId* keyId);
+
+/**
+ * Get the key identifier for a node
+ *
+ * @param node   The node
+ */
+const DPS_KeyId* DPS_NodeGetKeyID(const DPS_Node* node);
+
+/**
+ * Set the permission store to use for this node.
+ *
+ * @param node       The node
+ * @param permStore  The permission store
+ *
+ * @return DPS_OK or an error
+ */
+DPS_Status DPS_SetPermissionStore(DPS_Node* node, DPS_PermissionStore* permStore);
 
 /**
  * Store a pointer to application data in a node.
@@ -599,50 +745,6 @@ typedef void (*DPS_OnResolveAddressComplete)(DPS_Node* node, DPS_NodeAddress* ad
  * @return DPS_OK or an error status. If an error status is returned the callback function will not be called.
  */
 DPS_Status DPS_ResolveAddress(DPS_Node* node, const char* host, const char* service, DPS_OnResolveAddressComplete cb, void* data);
-
-/**
- * Publication permission bit
- */
-#define DPS_PERM_PUB  (1<<0)
-
-/**
- * Subscription permission bit
- */
-#define DPS_PERM_SUB  (1<<1)
-
-/**
- * End-to-end pubication acknowledgement permission bit
- */
-#define DPS_PERM_ACK  (1<<2)
-
-/**
- * Use to support wildcard matches in DPS_GetPermission() and
- * DPS_SetPermission().
- */
-extern const DPS_KeyId* const DPS_WILDCARD_ID;
-
-/**
- * Get the permission bits for an address.
- *
- * @param node the node to search
- * @param keyId the ID to search for
- *
- * @return the permission bits for the address
- */
-int DPS_GetPermission(const DPS_Node* node, const DPS_KeyId* keyId);
-
-/**
- * Set the permission bits for an address.
- *
- * Use @ref DPS_WILDCARD_ID to set the default permission bits.
- *
- * @param node the node to update
- * @param keyId the address to update
- * @param bits the new permission bits
- *
- * @return DPS_OK or an error
- */
-DPS_Status DPS_SetPermission(DPS_Node* node, const DPS_KeyId* keyId, uint8_t bits);
 
 /** @} */ // end of node group
 

@@ -71,6 +71,7 @@ var dps = require("dps");
         "-----END EC PRIVATE KEY-----\r\n";
     var subscriberPassword = "DPS Test Subscriber1";
     var keyStore;
+    var permissionStore;
     var nodeId;
     var node;
     var sub;
@@ -119,7 +120,9 @@ var dps = require("dps");
 
     node = dps.createNode("/", dps.memoryKeyStoreHandle(keyStore), nodeId);
     dps.startNode(node, dps.MCAST_PUB_ENABLE_RECV, 0);
-    dps.setPermission(node, dps.WILDCARD_ID, dps.PERM_PUB | dps.PERM_SUB | dps.PERM_ACK);
+    permissionStore = dps.createMemoryPermissionStore();
+    dps.setPermissions(permissionStore, dps.WILDCARD_ID, dps.PERM_PUB | dps.PERM_SUB | dps.PERM_ACK);
+    dps.setPermissionStore(node, dps.memoryPermissionStoreHandle(permissionStore));
     sub = dps.createSubscription(node, ["a/b/c"]);
     dps.subscribe(sub, onPub);
 }());

@@ -72,12 +72,6 @@ typedef struct _LinkMonitorConfig {
     uint32_t probeTO;  /* Probe repeat time */
 } LinkMonitorConfig;
 
-typedef struct _DPS_Permission {
-    DPS_KeyId keyId;
-    uint8_t bits;
-    struct _DPS_Permission* next;
-} DPS_Permission;
-
 typedef struct _DPS_Node {
     void* userData;
 
@@ -88,6 +82,7 @@ typedef struct _DPS_Node {
     DPS_UUID minMeshId;                   /* Minimum mesh id seen by this node */
     char separators[13];                  /* List of separator characters */
     DPS_KeyStore *keyStore;               /* Functions for loading encryption keys */
+    DPS_PermissionStore* permStore;       /* Functions for getting allowed permissions */
     COSE_Entity signer;                   /* Sign messages with this entity */
 
     uv_thread_t lockHolder;               /* Thread currently holding the node lock */
@@ -139,8 +134,6 @@ typedef struct _DPS_Node {
     ResolverInfo* resolverList;           /* Linked list of address resolution requests */
     uv_async_t completionAsync;           /* Async handler for link completion */
     OnOpCompletion* completionList;       /* Linked list of completion requests */
-
-    DPS_Permission* permissions;          /* Linked list of allowed permissions */
 
 } DPS_Node;
 

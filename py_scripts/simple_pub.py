@@ -108,7 +108,9 @@ def on_ack(pub, payload):
 dps.cvar.debug = False
 
 node = dps.create_node("/", dps.memory_key_store_handle(key_store), node_id)
-dps.set_permission(node, dps.WILDCARD_ID, dps.PERM_PUB | dps.PERM_SUB | dps.PERM_ACK)
+permission_store = dps.create_memory_permission_store()
+dps.set_permissions(permission_store, dps.WILDCARD_ID, dps.PERM_PUB | dps.PERM_SUB | dps.PERM_ACK)
+dps.set_permission_store(node, dps.memory_permission_store_handle(permission_store))
 dps.start_node(node, dps.MCAST_PUB_ENABLE_SEND, 0)
 pub = dps.create_publication(node)
 

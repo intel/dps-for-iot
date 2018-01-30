@@ -200,7 +200,8 @@ int main(int argc, char** argv)
     char** arg = argv + 1;
     int numTopics = 0;
     int wait = 0;
-    DPS_MemoryKeyStore* memoryKeyStore = NULL;
+    DPS_MemoryKeyStore* keyStore = NULL;
+    DPS_MemoryPermissionStore* permissionStore = NULL;
     const DPS_KeyId* nodeKeyId = NULL;
     DPS_Node* node;
     DPS_Event* nodeDestroyed = NULL;
@@ -215,7 +216,7 @@ int main(int argc, char** argv)
     const char* linkHosts[MAX_LINKS];
     int numAddrs = 0;
     DPS_NodeAddress* addrs[MAX_LINKS];
-    int perm = DPS_PERM_PUB | DPS_PERM_SUB | DPS_PERM_ACK;
+    int perms = DPS_PERM_PUB | DPS_PERM_SUB | DPS_PERM_ACK;
 
     DPS_Debug = 0;
 
@@ -271,7 +272,7 @@ int main(int argc, char** argv)
                 DPS_Debug = 1;
                 continue;
             }
-            if (IntArg("-e", &arg, &argc, &perm, 0, perm)) {
+            if (IntArg("-e", &arg, &argc, &perms, 0, perms)) {
                 continue;
             }
         }
@@ -298,22 +299,26 @@ int main(int argc, char** argv)
     if (!numLinks) {
         mcastPub = DPS_MCAST_PUB_ENABLE_RECV;
     }
-    memoryKeyStore = DPS_CreateMemoryKeyStore();
-    DPS_SetNetworkKey(memoryKeyStore, &NetworkKeyId, &NetworkKey);
+    keyStore = DPS_CreateMemoryKeyStore();
+    DPS_SetNetworkKey(keyStore, &NetworkKeyId, &NetworkKey);
     if (encrypt == 1) {
         for (size_t i = 0; i < NUM_KEYS; ++i) {
-            DPS_SetContentKey(memoryKeyStore, &PskId[i], &Psk[i]);
+            DPS_SetContentKey(keyStore, &PskId[i], &Psk[i]);
         }
     } else if (encrypt == 2) {
-        DPS_SetTrustedCA(memoryKeyStore, TrustedCAs);
+        DPS_SetTrustedCA(keyStore, TrustedCAs);
         nodeKeyId = &Ids[user].keyId;
-        DPS_SetCertificate(memoryKeyStore, Ids[user].cert, Ids[user].privateKey, Ids[user].password);
-        DPS_SetCertificate(memoryKeyStore, Ids[PUB].cert, NULL, NULL);
-        DPS_SetCertificate(memoryKeyStore, Ids[ID_MAX - user].cert, NULL, NULL);
+        DPS_SetCertificate(keyStore, Ids[user].cert, Ids[user].privateKey, Ids[user].password);
+        DPS_SetCertificate(keyStore, Ids[PUB].cert, NULL, NULL);
+        DPS_SetCertificate(keyStore, Ids[ID_MAX - user].cert, NULL, NULL);
     }
-    node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore), nodeKeyId);
+    permissionStore = DPS_CreateMemoryPermissionStore();
+    DPS_SetPermissions(permissionStore, DPS_WILDCARD_ID, perms);
+
+    node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(keyStore), nodeKeyId);
+    DPS_SetPermissions(permissionStore, DPS_NodeGetKeyID(node), DPS_PERM_PUB | DPS_PERM_SUB | DPS_PERM_ACK);
+    DPS_SetPermissionStore(node, DPS_MemoryPermissionStoreHandle(permissionStore));
     DPS_SetNodeSubscriptionUpdateDelay(node, subsRate);
-    DPS_SetPermission(node, DPS_WILDCARD_ID, perm);
 
     ret = DPS_StartNode(node, mcastPub, listenPort);
     if (ret != DPS_OK) {
@@ -390,8 +395,11 @@ Exit:
         DPS_WaitForEvent(nodeDestroyed);
         DPS_DestroyEvent(nodeDestroyed);
     }
-    if (memoryKeyStore) {
-        DPS_DestroyMemoryKeyStore(memoryKeyStore);
+    if (permissionStore) {
+        DPS_DestroyMemoryPermissionStore(permissionStore);
+    }
+    if (keyStore) {
+        DPS_DestroyMemoryKeyStore(keyStore);
     }
     return (ret == DPS_OK) ? EXIT_SUCCESS : EXIT_FAILURE;
 

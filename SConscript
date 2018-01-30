@@ -33,6 +33,7 @@ srcs = ['src/bitvec.c',
         'src/event.c',
         'src/history.c',
         'src/keystore.c',
+        'src/permstore.c',
         'src/synchronous.c',
         'src/uuid.c',
         'src/linkmon.c',
@@ -147,7 +148,8 @@ testsrcs = ['test/hist_unit.c',
             'test/cbortest.c',
             'test/cosetest.c',
             'test/version.c',
-            'test/keystoretest.c']
+            'test/keystoretest.c',
+            'test/permstoretest.c']
 
 Depends(testsrcs, ext_libs)
 
@@ -156,7 +158,6 @@ for test in testsrcs:
     testprogs.append(testenv.Program(test))
 
 testenv.Install('#/build/test/bin', testprogs)
-
 
 # Examples
 exampleenv = env.Clone()

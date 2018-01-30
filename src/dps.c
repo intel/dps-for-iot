@@ -77,54 +77,6 @@ typedef struct _OnOpCompletion {
 
 const DPS_UUID DPS_MaxMeshId = { .val64 = { UINT64_MAX, UINT64_MAX } };
 
-static const DPS_UUID _WildcardId = {
-    .val = { 0x67, 0xa2, 0x46, 0x46, 0xd8, 0x7b, 0x4d, 0x7c, 0x9e, 0x7b, 0x12, 0xbb, 0x8d, 0x50, 0x13, 0x42 }
-};
-static const DPS_KeyId WildcardId = { _WildcardId.val, sizeof(_WildcardId.val) };
-const DPS_KeyId* const DPS_WILDCARD_ID = &WildcardId;
-
-int DPS_GetPermission(const DPS_Node* node, const DPS_KeyId* keyId)
-{
-    const DPS_Permission* permission;
-
-    DPS_DBGTRACEA("node=%p,keyId={id=%p,len=%d}\n", node, keyId ? keyId->id : NULL, keyId ? keyId->len : 0);
-
-    for (permission = node->permissions; permission; permission = permission->next) {
-        if (DPS_SameKeyId(&permission->keyId, keyId) ||
-            DPS_SameKeyId(&permission->keyId, DPS_WILDCARD_ID)) {
-            return permission->bits;
-        }
-    }
-    return 0;
-}
-
-DPS_Status DPS_SetPermission(DPS_Node* node, const DPS_KeyId* keyId, uint8_t bits)
-{
-    DPS_Permission** permission;
-
-    DPS_DBGTRACEA("node=%p,keyId={id=%p,len=%d},bits=0x%x\n",
-                  node, keyId ? keyId->id : NULL, keyId ? keyId->len : 0, bits);
-
-    for (permission = &node->permissions; (*permission); permission = &(*permission)->next) {
-        if (DPS_SameKeyId(&(*permission)->keyId, keyId)) {
-            (*permission)->bits = bits;
-            return DPS_OK;
-        }
-    }
-    (*permission) = malloc(sizeof(DPS_Permission));
-    if (!(*permission)) {
-        return DPS_ERR_RESOURCES;
-    }
-    if (!DPS_CopyKeyId(&(*permission)->keyId, keyId)) {
-        free (*permission);
-        (*permission) = NULL;
-        return DPS_ERR_RESOURCES;
-    }
-    (*permission)->bits = bits;
-    (*permission)->next = NULL;
-    return DPS_OK;
-}
-
 void DPS_LockNode(DPS_Node* node)
 {
     uv_thread_t self = uv_thread_self();
@@ -1186,12 +1138,6 @@ static void StopNode(DPS_Node* node)
     DPS_BitVectorFree(node->scratch.interests);
     DPS_BitVectorFree(node->scratch.needs);
     DPS_HistoryFree(&node->history);
-    while (node->permissions) {
-        DPS_Permission* next = node->permissions->next;
-        DPS_ClearKeyId(&node->permissions->keyId);
-        free(node->permissions);
-        node->permissions = next;
-    }
     /*
      * Cleanup mutexes etc.
      */
@@ -1358,14 +1304,22 @@ DPS_Node* DPS_CreateNode(const char* separators, DPS_KeyStore* keyStore, const D
      */
     node->linkMonitorConfig = LinkMonitorConfigDefaults;
     node->subsRate = DPS_SUBSCRIPTION_UPDATE_RATE;
-    /*
-     * Set default permissions for this node
-     */
-    if (DPS_SetPermission(node, &node->signer.kid, DPS_PERM_PUB | DPS_PERM_SUB | DPS_PERM_ACK) != DPS_OK) {
-        FreeNode(node);
-        return NULL;
-    }
     return node;
+}
+
+const DPS_KeyId* DPS_NodeGetKeyID(const DPS_Node* node)
+{
+    return node ? &node->signer.kid : NULL;
+}
+
+DPS_Status DPS_SetPermissionStore(DPS_Node* node, DPS_PermissionStore* permStore)
+{
+    if (node) {
+        node->permStore = permStore;
+        return DPS_OK;
+    } else {
+        return DPS_ERR_NULL;
+    }
 }
 
 DPS_Status DPS_SetNodeData(DPS_Node* node, void* data)
@@ -1718,12 +1672,18 @@ int DPS_SameKeyId(const DPS_KeyId* a, const DPS_KeyId* b)
 
 int DPS_IsAuthorized(DPS_Node* node, const DPS_KeyId* netId, const DPS_RxBuffer* buf, int perm)
 {
+    DPS_PermissionStore* permStore;
     COSE_Entity sender;
     DPS_RxBuffer cipherTextBuf;
     DPS_Status ret;
 
+    if (!node->permStore) {
+        return DPS_FALSE;
+    }
+    permStore = node->permStore;
+
     if (netId) {
-        if ((DPS_GetPermission(node, netId) & perm) == perm) {
+        if ((permStore->getHandler(permStore, netId) & perm) == perm) {
             DPS_DBGPRINT("Network ID authorized\n");
             return DPS_TRUE;
         }
@@ -1732,11 +1692,11 @@ int DPS_IsAuthorized(DPS_Node* node, const DPS_KeyId* netId, const DPS_RxBuffer*
     if (buf) {
         DPS_RxBufferInit(&cipherTextBuf, buf->rxPos, DPS_RxBufferAvail(buf));
         ret = COSE_Verify(&cipherTextBuf, node->keyStore, &sender);
-        if ((ret == DPS_OK) && ((DPS_GetPermission(node, &sender.kid) & perm) == perm)) {
+        if ((ret == DPS_OK) && ((permStore->getHandler(permStore, &sender.kid) & perm) == perm)) {
             return DPS_TRUE;
         }
         if (((ret == DPS_ERR_NOT_ENCRYPTED) || (ret == DPS_ERR_NOT_SIGNED)) &&
-            ((DPS_GetPermission(node, DPS_WILDCARD_ID) & perm) == perm)) {
+            ((permStore->getHandler(permStore, DPS_WILDCARD_ID) & perm) == perm)) {
             return DPS_TRUE;
         }
     }

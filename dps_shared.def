@@ -9,7 +9,9 @@ DPS_CreateAddress
 DPS_CreateEvent
 DPS_CreateKeyStore
 DPS_CreateMemoryKeyStore
+DPS_CreateMemoryPermissionStore
 DPS_CreateNode
+DPS_CreatePermissionStore
 DPS_CreatePublication
 DPS_CreateRegistrationList
 DPS_CreateSubscription
@@ -18,7 +20,9 @@ DPS_DestroyAddress
 DPS_DestroyEvent
 DPS_DestroyKeyStore
 DPS_DestroyMemoryKeyStore
+DPS_DestroyMemoryPermissionStore
 DPS_DestroyNode
+DPS_DestroyPermissionStore
 DPS_DestroyPublication
 DPS_DestroyRegistrationList
 DPS_DestroySubscription
@@ -28,7 +32,7 @@ DPS_GetEventData
 DPS_GetKeyStoreData
 DPS_GetLoop
 DPS_GetNodeData
-DPS_GetPermission
+DPS_GetPermissionStoreData
 DPS_GetPortNumber
 DPS_GetPublicationData
 DPS_GetPublicationNode
@@ -41,7 +45,9 @@ DPS_LinkTo
 DPS_Log
 DPS_LogBytes
 DPS_MemoryKeyStoreHandle
+DPS_MemoryPermissionStoreHandle
 DPS_NodeAddrToString
+DPS_NodeGetKeyID
 DPS_PublicationAddKeyId
 DPS_PublicationGetNode
 DPS_PublicationGetNumTopics
@@ -70,7 +76,9 @@ DPS_SetKeyStoreData
 DPS_SetNetworkKey
 DPS_SetNodeData
 DPS_SetNodeSubscriptionUpdateDelay
-DPS_SetPermission
+DPS_SetPermissions
+DPS_SetPermissionStore
+DPS_SetPermissionStoreData
 DPS_SetPublicationData
 DPS_SetSubscriptionData
 DPS_SetTrustedCA

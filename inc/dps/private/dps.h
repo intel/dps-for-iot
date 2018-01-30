@@ -217,6 +217,14 @@ struct _DPS_KeyStore {
 };
 
 /**
+ * A permission store.
+ */
+struct _DPS_PermissionStore {
+    void* userData;
+    DPS_GetPermissionsHandler getHandler;
+};
+
+/**
  * Returns true if the message sender identified by either the network
  * layer ID or message signature is authorized with the provided
  * permissions.
