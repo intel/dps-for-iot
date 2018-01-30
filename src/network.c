@@ -21,6 +21,7 @@
  */
 
 /* These must be included in this order before uv.h */
+#include <safe_lib.h>
 #ifdef _WIN32
 #include <winsock2.h>
 #include <ws2ipdef.h>
@@ -30,7 +31,6 @@
 #include <assert.h>
 #include <string.h>
 #include <malloc.h>
-#include <uv.h>
 #include <dps/dbg.h>
 #include <dps/dps.h>
 #include <dps/private/network.h>
@@ -52,13 +52,13 @@ const char* DPS_NetAddrText(const struct sockaddr* addr)
             ret = uv_ip6_name((const struct sockaddr_in6*)addr, name, sizeof(name));
             port = ((const struct sockaddr_in6*)addr)->sin6_port;
             if (strcmp(name, "::ffff:127.0.0.1") == 0 || strcmp(name, "::1") == 0) {
-                strncpy(name, "<localhost>", sizeof(name));
+                strncpy_s(name, INET6_ADDRSTRLEN, "<localhost>", sizeof(name));
             }
         } else {
             ret = uv_ip4_name((const struct sockaddr_in*)addr, name, sizeof(name));
             port = ((const struct sockaddr_in*)addr)->sin_port;
             if (strcmp(name, "127.0.0.1") == 0) {
-                strncpy(name, "<localhost>", sizeof(name));
+                strncpy_s(name, INET6_ADDRSTRLEN, "<localhost>", sizeof(name));
             }
         }
         if (ret) {

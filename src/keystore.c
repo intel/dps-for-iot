@@ -24,6 +24,7 @@
 #include <dps/dps.h>
 #include <dps/uuid.h>
 #include <dps/private/dps.h>
+#include "compat.h"
 #include "crypto.h"
 #include "node.h"
 

@@ -24,7 +24,6 @@
 #include <string.h>
 #include <malloc.h>
 #include <math.h>
-#include <uv.h>
 #include <dps/dbg.h>
 #include <dps/dps.h>
 #include <dps/uuid.h>

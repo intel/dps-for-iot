@@ -1,6 +1,8 @@
 # Message Protocol
 This section descbribes the DPS message protocol encodings. DPS
-messages are encoded in CBOR.
+messages are encoded in [CBOR](https://tools.ietf.org/html/rfc7049),
+described below in
+[CDDL](https://tools.ietf.org/html/draft-ietf-cbor-cddl-00).
 
 ## Messages
 Each message has the same form.

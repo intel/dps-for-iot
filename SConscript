@@ -102,7 +102,6 @@ if env['python']:
         pyenv['SHLIBSUFFIX'] = '.pyd'
 
     pyenv.Append(SWIGFLAGS = ['-python', '-Wextra', '-Werror', '-v', '-O'], SWIGPATH = '#/inc')
-    pyenv.Append(CPPFLAGS = ['-Wno-strict-aliasing'])
     # Build python module library
     pylib = pyenv.SharedLibrary('./py/dps', shobjs + ['swig/dps_python.i'])
     pyenv.Install('#/build/dist/py', pylib)
@@ -132,6 +131,8 @@ if env['nodejs']:
 
 # Unit tests
 testenv = env.Clone()
+if testenv['PLATFORM'] == 'win32':
+    testenv.Append(CPPDEFINES = ['_CRT_SECURE_NO_WARNINGS'])
 testenv.Append(CPPPATH = ['src'])
 testenv.Append(LIBS = [lib, env['UV_LIBS']])
 
@@ -159,6 +160,8 @@ testenv.Install('#/build/test/bin', testprogs)
 
 # Examples
 exampleenv = env.Clone()
+if exampleenv['PLATFORM'] == 'win32':
+    exampleenv.Append(CPPDEFINES = ['_CRT_SECURE_NO_WARNINGS'])
 exampleenv.Append(LIBS = [lib, env['UV_LIBS']])
 
 examplesrcs = ['examples/pub_many.c',

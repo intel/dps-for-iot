@@ -1479,8 +1479,8 @@ DPS_Status COSE_Decrypt(const uint8_t* nonce, COSE_Entity* recipient, DPS_RxBuff
     Signature sig;
     uint8_t* content;
     size_t contentLen;
-    uint8_t* kw;
-    size_t kwLen;
+    uint8_t* kw = NULL;
+    size_t kwLen = 0;
     COSE_Key kek;
     DPS_TxBuffer kdfContext;
     COSE_Key ephemeralKey;
@@ -1516,7 +1516,7 @@ DPS_Status COSE_Decrypt(const uint8_t* nonce, COSE_Entity* recipient, DPS_RxBuff
     /*
      * Create and encode the AAD
      */
-    ret = EncodeAAD(&AAD, tag, alg, aad->base, DPS_RxBufferAvail(aad));
+    ret = EncodeAAD(&AAD, (uint8_t)tag, alg, aad->base, DPS_RxBufferAvail(aad));
     if (ret != DPS_OK) {
         goto Exit;
     }
