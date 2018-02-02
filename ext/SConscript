@@ -115,7 +115,7 @@ if scEnv['PLATFORM'] == 'win32':
     scEnv.Append(CFLAGS = ['/wd4267', '/wd4244'])
 elif scEnv['PLATFORM'] == 'posix':
     scEnv.Append(CPPDEFINES = ['_ISCO99_SOURCE'])
-    scEnv.Append(CFLAGS = ['-Os', '-fPIC', '-std=c99', '-Wall', '-Wextra', '-Wno-unused-parameter', '-MMD'])
+    scEnv.Append(CFLAGS = ['-Os', '-fPIC', '-std=c99', '-Wall', '-Wextra', '-Wno-unused-parameter', '-Wno-implicit-fallthrough', '-MMD'])
 else:
     print('Unsupported system')
     exit()
