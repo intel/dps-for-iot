@@ -120,7 +120,7 @@ if env['nodejs']:
         nodeenv = libenv.Clone();
         nodeenv.Append(SWIGFLAGS = ['-javascript', '-node', '-DV8_VERSION=0x04059937', '-Wextra', '-Werror', '-v', '-O'], SWIGPATH = '#/inc')
         # There may be a bug with the SWIG builder - add -O to CPPFLAGS to get it passed on to the compiler
-        nodeenv.Append(CPPFLAGS = ['-DBUILDING_NODE_EXTENSION', '-std=c++11', '-O'])
+        nodeenv.Append(CPPFLAGS = ['-DBUILDING_NODE_EXTENSION', '-std=c++11', '-O', '-Wno-unused-result'])
         nodeenv['CC'] = '$CXX'
         if env['target'] == 'yocto':
             nodeenv.Append(CPPPATH = [os.getenv('SYSROOT') + '/usr/include/node'])
