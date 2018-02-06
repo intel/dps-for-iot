@@ -75,7 +75,6 @@ typedef struct _LinkMonitorConfig {
 typedef struct _DPS_Node {
     void* userData;
 
-    uint8_t lockCount;                    /* Recursive lock counter */
     uint8_t subsPending;
     uint16_t port;
     DPS_UUID meshId;                      /* Randomly allocated mesh id for this node */
@@ -85,7 +84,6 @@ typedef struct _DPS_Node {
     DPS_PermissionStore* permStore;       /* Functions for getting allowed permissions */
     COSE_Entity signer;                   /* Sign messages with this entity */
 
-    uv_thread_t lockHolder;               /* Thread currently holding the node lock */
     uv_thread_t thread;                   /* Thread for the event loop */
     uv_loop_t* loop;                      /* uv lib event loop */
     uv_mutex_t nodeMutex;                 /* Mutex to protect this node */
@@ -303,14 +301,6 @@ void DPS_LockNode(DPS_Node* node);
  * @param node The node to unlock
  */
 void DPS_UnlockNode(DPS_Node* node);
-
-/**
- * Check if the current thread is holding the node lock.
- * This is intended for use in asserts.
- *
- * @param node The node to check
- */
-int DPS_HasNodeLock(DPS_Node* node);
 
 /**
  * Generates a random UUID that is less than the UUID passed in.

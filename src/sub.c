@@ -196,8 +196,6 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote)
     size_t len;
     uint8_t flags = 0;
 
-    assert(DPS_HasNodeLock(node));
-
     DPS_DBGTRACE();
 
     if (!node->netCtx) {
@@ -333,8 +331,6 @@ static DPS_Status SendSubscriptionAck(DPS_Node* node, RemoteNode* remote, uint32
     DPS_Status ret;
     DPS_TxBuffer buf;
     size_t len;
-
-    assert(DPS_HasNodeLock(node));
 
     DPS_DBGTRACE();
 
@@ -650,7 +646,6 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
 
 DiscardAndExit:
 
-    assert(DPS_HasNodeLock(node));
     DPS_UnlockNode(node);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Subscription was discarded %s\n", DPS_ErrTxt(ret));

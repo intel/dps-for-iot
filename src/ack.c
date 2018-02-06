@@ -57,8 +57,6 @@ DPS_Status DPS_SendAcknowledgment(DPS_Node*node, PublicationAck* ack, RemoteNode
         uv_buf_init((char*)ack->encryptedBuf.base, DPS_TxBufferUsed(&ack->encryptedBuf))
     };
 
-    assert(DPS_HasNodeLock(node));
-
     DPS_DBGPRINT("SendAcknowledgement from %d\n", node->port);
     /*
      * Ownership of the buffers has been passed to the network

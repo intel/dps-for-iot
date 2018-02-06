@@ -79,33 +79,12 @@ const DPS_UUID DPS_MaxMeshId = { .val64 = { UINT64_MAX, UINT64_MAX } };
 
 void DPS_LockNode(DPS_Node* node)
 {
-    uv_thread_t self = uv_thread_self();
-    if (node->lockCount && uv_thread_equal(&node->lockHolder, &self)) {
-        ++node->lockCount;
-    } else {
-        uv_mutex_lock(&node->nodeMutex);
-        assert(node->lockCount == 0);
-        node->lockHolder = self;
-        node->lockCount = 1;
-    }
+    uv_mutex_lock(&node->nodeMutex);
 }
 
 void DPS_UnlockNode(DPS_Node* node)
 {
-    assert(node->lockCount);
-    if (--node->lockCount == 0) {
-        uv_mutex_unlock(&node->nodeMutex);
-    }
-}
-
-int DPS_HasNodeLock(DPS_Node* node)
-{
-    if (node->lockCount) {
-        uv_thread_t self = uv_thread_self();
-        return uv_thread_equal(&node->lockHolder, &self);
-    } else {
-        return DPS_FALSE;
-    }
+    uv_mutex_unlock(&node->nodeMutex);
 }
 
 #define DESCRIBE(n)  DPS_NodeAddrToString(&(n)->ep.addr)
@@ -196,7 +175,6 @@ void DPS_RemoteCompletion(DPS_Node* node, RemoteNode* remote, DPS_Status status)
     OnOpCompletion* cpn = remote->completion;
     DPS_NodeAddress addr = remote->ep.addr;
 
-    assert(DPS_HasNodeLock(node));
     /*
      * See AllocCompletion() timer.data is only set if the timer handle
      * was succesfully initialized
@@ -460,7 +438,6 @@ DPS_Status DPS_MuteRemoteNode(DPS_Node* node, RemoteNode* remote)
 {
     DPS_Status ret;
 
-    assert(DPS_HasNodeLock(node));
     assert(!remote->outbound.muted);
 
     DPS_DBGPRINT("%d muting %s\n", node->port, DESCRIBE(remote));
@@ -488,7 +465,6 @@ DPS_Status DPS_UnmuteRemoteNode(DPS_Node* node, RemoteNode* remote)
 {
     DPS_DBGTRACE();
 
-    assert(DPS_HasNodeLock(node));
     assert(remote->outbound.muted);
 
     DPS_DBGPRINT("%d unmuting %s\n", node->port, DESCRIBE(remote));
@@ -530,7 +506,6 @@ RemoteNode* DPS_LookupRemoteNode(DPS_Node* node, DPS_NodeAddress* addr)
 {
     RemoteNode* remote;
 
-    assert(DPS_HasNodeLock(node));
     for (remote = node->remoteNodes; remote != NULL; remote = remote->next) {
         if (DPS_SameAddr(&remote->ep.addr, addr)) {
             return remote;
@@ -584,8 +559,6 @@ static void AsyncCompletion(uv_async_t* async)
 static OnOpCompletion* AllocCompletion(DPS_Node* node, RemoteNode* remote, OpType op, void* data, uint16_t ttl, void* cb)
 {
     OnOpCompletion* cpn;
-
-    assert(DPS_HasNodeLock(node));
 
     cpn = calloc(1, sizeof(OnOpCompletion));
     if (cpn) {
@@ -1402,7 +1375,7 @@ DPS_Status DPS_StartNode(DPS_Node* node, int mcast, int rxPort)
      */
     r = uv_mutex_init(&node->condMutex);
     assert(!r);
-    r = uv_mutex_init(&node->nodeMutex);
+    r = uv_mutex_init_recursive(&node->nodeMutex);
     assert(!r);
     r = uv_mutex_init(&node->history.lock);
     assert(!r);
