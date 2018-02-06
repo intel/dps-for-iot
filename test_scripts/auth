@@ -5,109 +5,136 @@ dir="${BASH_SOURCE%/*}"
 if [[ ! -d "$dir" ]]; then dir="$PWD"; fi
 . "$dir/common.sh"
 
-#
-# Verify that unauthorized publication messages are not forwarded
-#
-
-sub -l 50000 A
-sleep 1
-
-sub -l 50001 -p 50000 -e 2
-sleep 1
-
-pub -p 50001 A
-sleep 2
-
-expect_errors 1 "Unauthorized request"
+PORT=50000
 
 #
-# Verify that unauthorized publication messages are received, but not forwarded
+# Participants
+# - Alice :: authorized to publish data on topic T
+# - Bob :: authorized to subscribe to data on topic T
+# - Eve :: eavesdropper who is not authorized to subscribe
+# - Trudy :: intruder who is not authorized to publish or acknowledge
+# - Trent :: trusted relay
 #
+
+#
+# The tests are done for both the in-app permission store and in-memory permission store
+#
+for PERMSTORE in "-m" ""; do
+
+#
+# Unauthorized subscription
+# - To protect against Eve, Alice must encrypt for Bob to prevent Eve from eavesdropping.
+#
+
+# Variant 1: Eve receives the publication but can't decrypt it.
 reset_logs
 
-sub -l 51000 A
+test_node $PERMSTORE -u bob -s T
+test_node $PERMSTORE -u eve -s T
+sleep 1
+test_node $PERMSTORE -u alice -p T -r bob
 sleep 1
 
-sub -l 51001 -p 51000 -e 6 A
-sleep 1
+expect_pubs_received 1 T
 
-pub -p 51001 A
-sleep 2
+# Variant 2: Eve doesn't receive the message because Trent doesn't forward unauthorized subscription.
+if [ "$TRANSPORT" == "dtls" ]; then
+    # DTLS must be enabled to auth subscriptions
+    reset_logs
 
-expect_pubs_received 1 A
-expect_errors 1 "Unauthorized request"
+    test_node $PERMSTORE -u trent -l $PORT
+    sleep 1
+    test_node $PERMSTORE -u bob -s T -c $PORT
+    test_node $PERMSTORE -u eve -s T -c $PORT
+    sleep 2
+    test_node $PERMSTORE -u alice -p T -r bob -c $PORT
+    sleep 2
+
+    expect_pubs_received 1 T
+    expect_errors 1 "Unauthorized request"
+fi
 
 #
-# Verify that unauthorized multicast publication messages are received, but not forwarded
+# Unauthorized publication
+# - To protect against Trudy, Bob, and Trent must know that Alice is not the originator.
 #
+
+# Variant 1
 reset_logs
 
-sub -l 52000 -e 2 A
+test_node $PERMSTORE -u bob -s T
+sleep 1
+test_node $PERMSTORE -u trudy -p T -r bob
 sleep 1
 
-sub -l 52001 -p 52000 A
-sleep 1
+expect_pubs_received 0 T
+expect_errors 1 "Unauthorized request"
 
-pub A
+# Variant 2
+reset_logs
+let PORT=PORT+1000
+
+test_node $PERMSTORE -u trent -l $PORT
+sleep 1
+test_node $PERMSTORE -u bob -s T -c $PORT
+sleep 2
+test_node $PERMSTORE -u trudy -p T -r bob -c $PORT
 sleep 2
 
-expect_pubs_received 1 A
+expect_pubs_received 0 T
 expect_errors 1 "Unauthorized request"
 
 #
-# Verify that unauthorized ack messages are not forwarded
+# Unauthorized access to data
+# - Trent needs to validate data, but not see it.
 #
 reset_logs
+let PORT=PORT+1000
 
-sub -l 53000 A
+test_node $PERMSTORE -u trent -s T -l $PORT
 sleep 1
-
-sub -l 53001 -p 53000 -e 3
-sleep 1
-
-pub -p 53001 -a A
+test_node $PERMSTORE -u bob -s T -c $PORT
+sleep 2
+test_node $PERMSTORE -u alice -p T -r bob -c $PORT
 sleep 2
 
-expect_pubs_received 1 A
-expect_errors 1 "Unauthorized request"
+expect_pubs_received 1 T
+assert_no_errors
 
 #
-# Verify that unauthorized sub messages are not forwarded
-# (1) Upstream pubs will not send messages.
+# Unauthorized acknowledgement
+# - To protect against Trudy, Alice, and Trent must know that Bob is not the originator.
 #
+
+# Variant 1
 reset_logs
 
-sub -l 54000 A
+test_node $PERMSTORE -u bob -s T
+test_node $PERMSTORE -u trudy -s T
 sleep 1
-
-sub -l 54001 -p 54000 -e 1
-sleep 1
-
-pub -p 54001 -a A
+test_node $PERMSTORE -u alice -p T -r bob -r trudy
 sleep 2
 
-expect_pubs_received 0 A
+expect_pubs_received 2 T
 expect_errors 1 "Unauthorized request"
 
-#
-# Verify that unauthorized sub messages are not forwarded
-# (2) This publisher and downstream will send messages.
-#
+# Variant 2
 reset_logs
+let PORT=PORT+1000
 
-sub -l 56000 A
+test_node $PERMSTORE -u trent -l $PORT
 sleep 1
-
-pub -l 56001 -p 56000 -e 1 -w 1 -a A
+test_node $PERMSTORE -u bob -s T -c $PORT
+test_node $PERMSTORE -u trudy -s T -c $PORT
+sleep 2
+test_node $PERMSTORE -u alice -p T -r bob -r trudy -c $PORT
 sleep 2
 
-pub -p 56001 -w 1 -a A
-sleep 2
-
-expect_pubs_received 1 A
+expect_pubs_received 2 T
 expect_errors 1 "Unauthorized request"
 
 #
-# No test for sak messages as
-# (1) sak messages are not forwarded
+# No test for subscription acknowledgement messages as they are not forwarded
 #
+
+done

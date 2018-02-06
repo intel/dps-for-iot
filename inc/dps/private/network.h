@@ -226,6 +226,10 @@ void DPS_MapAddrToV6(struct sockaddr* addr);
  *
  * @param keyId The destination identifier
  * @param endpoint The endpoint to return the identifier of
+ *
+ * @return
+ * - DPS_OK if identity exists
+ * - DPS_ERR_FAILURE if no identity
  */
 DPS_Status DPS_NetId(DPS_KeyId* keyId, const DPS_NetEndpoint* endpoint);
 

@@ -429,16 +429,16 @@ DPS_KeyStore* DPS_MemoryKeyStoreHandle(DPS_MemoryKeyStore* keyStore);
  */
 
 typedef enum {
-    DPS_PERM_PUB = (1 << 0), /**< Publication permission bit */
-    DPS_PERM_SUB = (1 << 1), /**< Subscription permission bit */
-    DPS_PERM_ACK = (1 << 2)  /**< End-to-end pubication acknowledgement permission bit */
-} DPS_Permissions;
-
-/**
- * Use to support wildcard matches in DPS_GetPermissionsHandler() and
- * DPS_SetPermissions().
- */
-extern const DPS_KeyId* const DPS_WILDCARD_ID;
+    DPS_PERM_PUB = (1 << 0),    /**< Publication permission bit */
+    DPS_PERM_SUB = (1 << 1),    /**< Subscription permission bit */
+    DPS_PERM_ACK = (1 << 2),    /**< End-to-end publication acknowledgement permission bit */
+    /**
+     * Forward other permission bits.  This is never requested by DPS
+     * but is available to be used by applications to indicate whether
+     * the network or end-to-end ID should be checked.
+     */
+    DPS_PERM_FORWARD = (1 << 3)
+} DPS_Permission;
 
 /**
  * Opaque type for a permission store.
@@ -446,25 +446,84 @@ extern const DPS_KeyId* const DPS_WILDCARD_ID;
 typedef struct _DPS_PermissionStore DPS_PermissionStore;
 
 /**
- * Get the permission bits for an ID.
- *
- * @param permStore the permission store
- * @param keyId the ID to search for or @ref DPS_WILDCARD_ID to get
- *              the default permission bits.
- *
- * @return the permission bits for the ID
+ * Opaque type for a permission store request.
  */
-typedef DPS_Permissions (*DPS_GetPermissionsHandler)(const DPS_PermissionStore* permStore,
-                                                     const DPS_KeyId* keyId);
+typedef struct _DPS_PermissionStoreRequest DPS_PermissionStoreRequest;
+
+/**
+ * Returns the network ID of a permission request
+ *
+ * @param request The @p request parameter of the handler
+ *
+ * @return the ID of the request or NULL if unknown
+ */
+const DPS_KeyId* DPS_GetNetworkId(DPS_PermissionStoreRequest* request);
+
+/**
+ * Returns the end-to-end ID of a permission request
+ *
+ * @param request The @p request parameter of the handler
+ *
+ * @return the ID of the request or NULL if unknown
+ */
+const DPS_KeyId* DPS_GetEndToEndId(DPS_PermissionStoreRequest* request);
+
+/**
+ * Returns the requested permission(s)
+ *
+ * @param request The @p request parameter of the handler
+ *
+ * @return the permission(s) requested
+ */
+DPS_Permission DPS_GetPermission(DPS_PermissionStoreRequest* request);
+
+/**
+ * Indicates whether the permission request includes the provided
+ * topics.
+ *
+ * @param request The @p request parameter of the handler
+ * @param topics The topic strings to check
+ * @param numTopics The number of topic strings to check - must be >= 1
+ *
+ * @return
+ * - DPS_OK if the request includes topic information and the provided
+ *          topics are present
+ * - DPS_ERR_FAILURE if the request includes topic information and the
+ *                   provided topics are not present
+ * - DPS_ERR_MISSING if request does not include topic information
+ */
+DPS_Status DPS_IncludesTopics(DPS_PermissionStoreRequest* request, const char** topics, size_t numTopics);
+
+/**
+ * Returns the @p DPS_PermissionStore* of a permission store request.
+ *
+ * @param request A permission store request
+ *
+ * @return The DPS_PermissionStore* or NULL
+ */
+DPS_PermissionStore* DPS_PermissionStoreHandle(DPS_PermissionStoreRequest* request);
+
+/**
+ * Function prototype for a permission store handler called when
+ * permission is requested.
+ *
+ * @param request The request, only valid with the body of this
+ *                callback function.
+ *
+ * @return
+ * - DPS_TRUE if permission is granted
+ * - DPS_FALSE if permission is denied
+ */
+typedef int (*DPS_PermissionHandler)(DPS_PermissionStoreRequest* request);
 
 /**
  * Creates a permission store.
  *
- * @param getHandler handler for permission requests
+ * @param handler handler for permission requests
  *
  * @return A pointer to the permission store or NULL if there were no resources.
  */
-DPS_PermissionStore* DPS_CreatePermissionStore(DPS_GetPermissionsHandler getHandler);
+DPS_PermissionStore* DPS_CreatePermissionStore(DPS_PermissionHandler handler);
 
 /**
  * Destroys a previously created permission store.
@@ -518,18 +577,22 @@ DPS_MemoryPermissionStore* DPS_CreateMemoryPermissionStore();
 void DPS_DestroyMemoryPermissionStore(DPS_MemoryPermissionStore* permStore);
 
 /**
- * Set the permission bits for an ID.
+ * Create or replace permissions in the permission store.
  *
- * Use @ref DPS_WILDCARD_ID to set the default permission bits.
+ * When NULL or 0 is provided as a parameter, that indicates wildcard
+ * matching.
  *
- * @param permStore the permission store
- * @param keyId the ID to update
- * @param bits the new permission bits
+ * @param permStore An in-memory permission store
+ * @param topics The topic strings to check, may be NULL
+ * @param numTopics The number of topic strings to check, may be 0
+ * @param keyId The key identifier to check, may be NULL
+ * @param perms A combination of DPS_Permission flags or 0
  *
- * @return DPS_OK or an error
+ * @return DPS_OK if permission entry was succesfully created or
+ * replaced, error otherwise
  */
-DPS_Status DPS_SetPermissions(DPS_MemoryPermissionStore* permStore,
-                              const DPS_KeyId* keyId, DPS_Permissions bits);
+DPS_Status DPS_SetPermission(DPS_MemoryPermissionStore* permStore, const char** topics, size_t numTopics,
+                             const DPS_KeyId* keyId, DPS_Permission perms);
 
 /**
  * Returns the @p DPS_PermissionStore* of an in-memory permission store.

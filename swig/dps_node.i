@@ -104,6 +104,9 @@ extern "C" {
         }
         $1[i] = NULL;
         $2 = arr->Length();
+    } else if ($input->IsNull()) {
+        $1 = NULL;
+        $2 = 0;
     } else {
         SWIG_exception_fail(SWIG_TypeError, "argument " "2"" of type '" "char *const *""'");
     }
@@ -116,7 +119,9 @@ extern "C" {
     /* Freeing a list of strings */
     for (uint32_t i = 0; i < $2; ++i)
         free($1[i]);
-    free($1);
+    if ($1) {
+        free($1);
+    }
 }
 
 %typemap(in,numinputs=0,noblock=1) size_t* n  {
@@ -539,7 +544,7 @@ static v8::Handle<v8::Value> UUIDToString(DPS_UUID* uuid)
             kid = (DPS_KeyId*)argp;
         } else {
             free(kid);
-            SWIG_exception_fail(SWIG_TypeError, "keyId should be a list, string, or WILDCARD_ID\n");
+            SWIG_exception_fail(SWIG_TypeError, "keyId should be a list or string\n");
         }
     }
 
@@ -547,7 +552,7 @@ static v8::Handle<v8::Value> UUIDToString(DPS_UUID* uuid)
 }
 
 %typemap(freearg) (const DPS_KeyId* keyId) {
-    if ($1 && ($1 != DPS_WILDCARD_ID)) {
+    if ($1) {
         if ($1->id) {
             free((uint8_t*)$1->id);
         }

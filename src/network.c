@@ -168,9 +168,8 @@ void DPS_CopyNetId(DPS_KeyId* keyId, const DPS_NetEndpoint* ep)
 {
     DPS_KeyId id;
 
-    DPS_NetId(&id, ep);
     DPS_ClearKeyId(keyId);
-    if (!DPS_CopyKeyId(keyId, &id)) {
+    if ((DPS_NetId(&id, ep) == DPS_OK) && !DPS_CopyKeyId(keyId, &id)) {
         DPS_WARNPRINT("Copy key ID failed\n");
     }
 }

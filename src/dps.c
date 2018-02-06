@@ -149,7 +149,7 @@ DPS_Status DPS_TxBufferAppend(DPS_TxBuffer* buffer, const uint8_t* data, size_t 
     return DPS_OK;
 }
 
-void DPS_TxBufferToRx(DPS_TxBuffer* txBuffer, DPS_RxBuffer* rxBuffer)
+void DPS_TxBufferToRx(const DPS_TxBuffer* txBuffer, DPS_RxBuffer* rxBuffer)
 {
     assert(txBuffer && rxBuffer);
     rxBuffer->base = txBuffer->base;
@@ -157,7 +157,7 @@ void DPS_TxBufferToRx(DPS_TxBuffer* txBuffer, DPS_RxBuffer* rxBuffer)
     rxBuffer->rxPos = txBuffer->base;
 }
 
-void DPS_RxBufferToTx(DPS_RxBuffer* rxBuffer, DPS_TxBuffer* txBuffer)
+void DPS_RxBufferToTx(const DPS_RxBuffer* rxBuffer, DPS_TxBuffer* txBuffer)
 {
     assert(rxBuffer && txBuffer);
     txBuffer->base = rxBuffer->base;
@@ -243,15 +243,19 @@ DPS_Status DPS_ClearOutboundInterests(RemoteNode* remote)
 void DPS_ClearInboundInterests(DPS_Node* node, RemoteNode* remote)
 {
     if (remote->inbound.interests) {
-        if (DPS_CountVectorDel(node->interests, remote->inbound.interests) != DPS_OK) {
-            assert(!"Count error");
+        if (remote->inbound.authorized) {
+            if (DPS_CountVectorDel(node->interests, remote->inbound.interests) != DPS_OK) {
+                assert(!"Count error");
+            }
         }
         DPS_BitVectorFree(remote->inbound.interests);
         remote->inbound.interests = NULL;
     }
     if (remote->inbound.needs) {
-        if (DPS_CountVectorDel(node->needs, remote->inbound.needs) != DPS_OK) {
-            assert(!"Count error");
+        if (remote->inbound.authorized) {
+            if (DPS_CountVectorDel(node->needs, remote->inbound.needs) != DPS_OK) {
+                assert(!"Count error");
+            }
         }
         DPS_BitVectorFree(remote->inbound.needs);
         remote->inbound.needs = NULL;
@@ -284,7 +288,6 @@ RemoteNode* DPS_DeleteRemoteNode(DPS_Node* node, RemoteNode* remote)
     DPS_ClearInboundInterests(node, remote);
     FreeOutboundInterests(remote);
     DPS_BitVectorFree(remote->outbound.delta);
-    DPS_ClearKeyId(&remote->id);
 
     if (remote->completion) {
         DPS_RemoteCompletion(node, remote, DPS_ERR_FAILURE);
@@ -316,7 +319,6 @@ static const DPS_UUID* MinMeshId(DPS_Node* node, RemoteNode* excluded)
 static DPS_Status UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, int* send)
 {
     DPS_Status ret;
-    int authorized;
     DPS_BitVector* newInterests = NULL;
     DPS_BitVector* newNeeds = NULL;
 
@@ -334,37 +336,26 @@ static DPS_Status UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, 
      * Inbound interests from the node we are updating are excluded from the
      * recalculation of outbound interests
      */
-    if (destNode->inbound.interests) {
-        /*
-         * Only the permission of the network layer identity is
-         * checked as the application layer message does not include
-         * a signature.
-         */
-        authorized = DPS_IsAuthorized(node, &destNode->id, NULL, DPS_PERM_SUB);
+    if (destNode->inbound.interests && destNode->inbound.authorized) {
         ret = DPS_CountVectorDel(node->interests, destNode->inbound.interests);
         if (ret != DPS_OK) {
             goto ErrExit;
         }
         newInterests = DPS_CountVectorToUnion(node->interests);
-        if (authorized) {
-            ret = DPS_CountVectorAdd(node->interests, destNode->inbound.interests);
-            if (ret != DPS_OK) {
-                goto ErrExit;
-            }
+        ret = DPS_CountVectorAdd(node->interests, destNode->inbound.interests);
+        if (ret != DPS_OK) {
+            goto ErrExit;
         }
         ret = DPS_CountVectorDel(node->needs, destNode->inbound.needs);
         if (ret != DPS_OK) {
             goto ErrExit;
         }
         newNeeds = DPS_CountVectorToIntersection(node->needs);
-        if (authorized) {
-            ret = DPS_CountVectorAdd(node->needs, destNode->inbound.needs);
-            if (ret != DPS_OK) {
-                goto ErrExit;
-            }
+        ret = DPS_CountVectorAdd(node->needs, destNode->inbound.needs);
+        if (ret != DPS_OK) {
+            goto ErrExit;
         }
     } else {
-        assert(!destNode->inbound.needs);
         newInterests = DPS_CountVectorToUnion(node->interests);
         newNeeds = DPS_CountVectorToIntersection(node->needs);
     }
@@ -597,7 +588,6 @@ DPS_Status DPS_AddRemoteNode(DPS_Node* node, DPS_NodeAddress* addr, DPS_NetConne
         if (cn && !remote->ep.cn) {
             DPS_NetConnectionAddRef(cn);
             remote->ep.cn = cn;
-            DPS_CopyNetId(&remote->id, &remote->ep);
         }
         return DPS_ERR_EXISTS;
     }
@@ -609,7 +599,6 @@ DPS_Status DPS_AddRemoteNode(DPS_Node* node, DPS_NodeAddress* addr, DPS_NetConne
     DPS_DBGPRINT("Adding new remote node %s\n", DPS_NodeAddrToString(addr));
     remote->ep.addr = *addr;
     remote->ep.cn = cn;
-    DPS_CopyNetId(&remote->id, &remote->ep);
     remote->next = node->remoteNodes;
     node->remoteNodes = remote;
     remote->inbound.meshId = DPS_MaxMeshId;
@@ -655,20 +644,28 @@ void DPS_OnSendComplete(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_bu
 static DPS_Status SendMatchingPubToSub(DPS_Node* node, DPS_Publication* pub, RemoteNode* subscriber)
 {
     /*
+     * We don't send publications to remote nodes not authorized to receive them.
+     */
+    if (!subscriber->inbound.authorized) {
+        DPS_DBGPRINT("Rejected pub %d for %s\n", pub->sequenceNum, DESCRIBE(subscriber));
+        return DPS_OK;
+    }
+    /*
      * We don't send publications to remote nodes we have received them from.
      */
-    if (!DPS_PublicationReceivedFrom(&node->history, &pub->pubId, pub->sequenceNum, &pub->netAddr, &subscriber->ep.addr)) {
-        /*
-         * This is the pub/sub matching code
-         */
-        DPS_BitVectorIntersection(node->scratch.interests, pub->bf, subscriber->inbound.interests);
-        DPS_BitVectorFuzzyHash(node->scratch.needs, node->scratch.interests);
-        if (DPS_BitVectorIncludes(node->scratch.needs, subscriber->inbound.needs)) {
-            DPS_DBGPRINT("Sending pub %d to %s\n", pub->sequenceNum, DESCRIBE(subscriber));
-            return DPS_SendPublication(node, pub, subscriber);
-        }
-        DPS_DBGPRINT("Rejected pub %d for %s\n", pub->sequenceNum, DESCRIBE(subscriber));
+    if (DPS_PublicationReceivedFrom(&node->history, &pub->pubId, pub->sequenceNum, &pub->netAddr, &subscriber->ep.addr)) {
+        return DPS_OK;
     }
+    /*
+     * This is the pub/sub matching code
+     */
+    DPS_BitVectorIntersection(node->scratch.interests, pub->bf, subscriber->inbound.interests);
+    DPS_BitVectorFuzzyHash(node->scratch.needs, node->scratch.interests);
+    if (DPS_BitVectorIncludes(node->scratch.needs, subscriber->inbound.needs)) {
+        DPS_DBGPRINT("Sending pub %d to %s\n", pub->sequenceNum, DESCRIBE(subscriber));
+        return DPS_SendPublication(node, pub, subscriber);
+    }
+    DPS_DBGPRINT("Rejected pub %d for %s\n", pub->sequenceNum, DESCRIBE(subscriber));
     return DPS_OK;
 }
 
@@ -848,15 +845,8 @@ void DPS_UpdatePubs(DPS_Node* node, DPS_Publication* pub)
     }
 
     if (pub) {
-        DPS_RxBuffer cipherTextBuf;
-        DPS_TxBufferToRx(&pub->encryptedBuf, &cipherTextBuf);
-        if (DPS_IsAuthorized(node, &pub->netId, &cipherTextBuf, DPS_PERM_PUB)) {
-            DPS_DBGPRINT("Authorized request, forwarding\n");
-            pub->checkToSend = DPS_TRUE;
-            ++count;
-        } else {
-            DPS_ERRPRINT("Unauthorized request, not forwarding\n");
-        }
+        pub->checkToSend = DPS_TRUE;
+        ++count;
     } else {
         DPS_Publication* pubNext;
         for (pub = node->publications; pub != NULL; pub = pubNext) {
@@ -1641,38 +1631,4 @@ void DPS_ClearKeyId(DPS_KeyId* keyId)
 int DPS_SameKeyId(const DPS_KeyId* a, const DPS_KeyId* b)
 {
     return a && b && (a->len == b->len) && (memcmp(a->id, b->id, b->len) == 0);
-}
-
-int DPS_IsAuthorized(DPS_Node* node, const DPS_KeyId* netId, const DPS_RxBuffer* buf, int perm)
-{
-    DPS_PermissionStore* permStore;
-    COSE_Entity sender;
-    DPS_RxBuffer cipherTextBuf;
-    DPS_Status ret;
-
-    if (!node->permStore) {
-        return DPS_FALSE;
-    }
-    permStore = node->permStore;
-
-    if (netId) {
-        if ((permStore->getHandler(permStore, netId) & perm) == perm) {
-            DPS_DBGPRINT("Network ID authorized\n");
-            return DPS_TRUE;
-        }
-    }
-
-    if (buf) {
-        DPS_RxBufferInit(&cipherTextBuf, buf->rxPos, DPS_RxBufferAvail(buf));
-        ret = COSE_Verify(&cipherTextBuf, node->keyStore, &sender);
-        if ((ret == DPS_OK) && ((permStore->getHandler(permStore, &sender.kid) & perm) == perm)) {
-            return DPS_TRUE;
-        }
-        if (((ret == DPS_ERR_NOT_ENCRYPTED) || (ret == DPS_ERR_NOT_SIGNED)) &&
-            ((permStore->getHandler(permStore, DPS_WILDCARD_ID) & perm) == perm)) {
-            return DPS_TRUE;
-        }
-    }
-
-    return DPS_FALSE;
 }

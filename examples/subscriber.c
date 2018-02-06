@@ -201,7 +201,6 @@ int main(int argc, char** argv)
     int numTopics = 0;
     int wait = 0;
     DPS_MemoryKeyStore* keyStore = NULL;
-    DPS_MemoryPermissionStore* permissionStore = NULL;
     const DPS_KeyId* nodeKeyId = NULL;
     DPS_Node* node;
     DPS_Event* nodeDestroyed = NULL;
@@ -312,12 +311,8 @@ int main(int argc, char** argv)
         DPS_SetCertificate(keyStore, Ids[PUB].cert, NULL, NULL);
         DPS_SetCertificate(keyStore, Ids[ID_MAX - user].cert, NULL, NULL);
     }
-    permissionStore = DPS_CreateMemoryPermissionStore();
-    DPS_SetPermissions(permissionStore, DPS_WILDCARD_ID, perms);
 
     node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(keyStore), nodeKeyId);
-    DPS_SetPermissions(permissionStore, DPS_NodeGetKeyID(node), DPS_PERM_PUB | DPS_PERM_SUB | DPS_PERM_ACK);
-    DPS_SetPermissionStore(node, DPS_MemoryPermissionStoreHandle(permissionStore));
     DPS_SetNodeSubscriptionUpdateDelay(node, subsRate);
 
     ret = DPS_StartNode(node, mcastPub, listenPort);
@@ -394,9 +389,6 @@ Exit:
         }
         DPS_WaitForEvent(nodeDestroyed);
         DPS_DestroyEvent(nodeDestroyed);
-    }
-    if (permissionStore) {
-        DPS_DestroyMemoryPermissionStore(permissionStore);
     }
     if (keyStore) {
         DPS_DestroyMemoryKeyStore(keyStore);

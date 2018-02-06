@@ -20,6 +20,7 @@ fi
 s=0
 p=0
 v=0
+n_=0
 rS=0
 rP=0
 
@@ -69,6 +70,15 @@ function ver {
     echo -e "=============================\nver$v $debug $@" | tee $f
     echo "==============================" >> $f
     build/test/bin/version $debug $@ 2>> $f &
+}
+
+function test_node {
+    n_=$((n_+1))
+    f=./out/node$n_.log
+    sleep 0.1
+    echo -e "=============================\nnode$n_ $debug $@" | tee $f
+    echo "==============================" >> $f
+    build/test/bin/node $debug $@ 2>> $f &
 }
 
 function py_sub {
@@ -126,10 +136,10 @@ function js_pub {
 }
 
 function assert_no_errors {
-    n=$(grep -ir "ERROR" out | wc -l)
+    n=$(grep -s -ir "ERROR" out | wc -l)
     if [ $n -gt 0 ]; then
         echo "Errors $n"
-        grep -iHr "ERROR" out
+        grep -s -iHr "ERROR" out
         exit 1
     fi
 }
@@ -140,10 +150,10 @@ function expect_pubs_received {
     shift
     topics=$*
     topics=${topics// / | }
-    n=$(grep "pub $topics\$" out/sub*.log | wc -l)
+    n=$(grep -s "pub $topics\$" out/{sub,node}*.log | wc -l)
     if [ $n -ne $expected ]; then
         echo "Pubs ($topics) received is not equal to expected ($n != $expected)"
-        grep "pub $topics\$" out/sub*.log
+        grep -s "pub $topics\$" out/sub*.log
         exit 1
     fi
 }
@@ -151,17 +161,17 @@ function expect_pubs_received {
 # expect_acks_received N
 function expect_acks_received {
     expected=$1
-    n=$(grep "Ack for pub" out/pub*.log | wc -l)
+    n=$(grep -s "Ack for pub" out/pub*.log | wc -l)
     if [ $n -ne $expected ]; then
         echo "Acks received is not equal to expected ($n != $expected)"
-        grep "Ack for pub" out/pub*.log
+        grep -s "Ack for pub" out/pub*.log
         exit 1
     fi
 }
 
 # expect_errors N ERROR
 function expect_errors {
-    n=$(grep -r "ERROR.*$2" out | wc -l)
+    n=$(grep -s -r "ERROR.*$2" out | wc -l)
     if [ $n -lt $1 ]; then
         echo "Errors found is less than expected ($n != $1)"
         exit 1

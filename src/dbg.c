@@ -29,17 +29,17 @@ int DPS_Debug = 1;
 
 #define DPS_DBG_TIME   ((uint32_t)((uv_hrtime() / 1000000) & 0xFFFFFFF))
 
+static const char* LevelTxt[] = { "ERROR", "WARNING", "" /* PRINT */, "" /* PRINTT */, "TRACE", "DEBUG" };
+
 void DPS_Log(DPS_LogLevel level, const char* file, int line, const char *function, const char *fmt, ...)
 {
     va_list ap;
     va_start(ap, fmt);
     switch (level) {
     case DPS_LOG_ERROR:
-        fprintf(stderr, "%09u ERROR   %s@%d: ", DPS_DBG_TIME, file, line);
-        vfprintf(stderr, fmt, ap);
-        break;
     case DPS_LOG_WARNING:
-        fprintf(stderr, "%09u WARNING %s@%d: ", DPS_DBG_TIME, file, line);
+    case DPS_LOG_DBGPRINT:
+        fprintf(stderr, "%09u %-7s %s@%d: ", DPS_DBG_TIME, LevelTxt[level], file, line);
         vfprintf(stderr, fmt, ap);
         break;
     case DPS_LOG_PRINTT:
@@ -49,11 +49,7 @@ void DPS_Log(DPS_LogLevel level, const char* file, int line, const char *functio
         vfprintf(stderr, fmt, ap);
         break;
     case DPS_LOG_DBGTRACE:
-        fprintf(stderr, "%09u TRACE   %s@%d: %s() ", DPS_DBG_TIME, file, line, function);
-        vfprintf(stderr, fmt, ap);
-        break;
-    case DPS_LOG_DBGPRINT:
-        fprintf(stderr, "%09u DEBUG   %s@%d: ", DPS_DBG_TIME, file, line);
+        fprintf(stderr, "%09u %-7s %s@%d: %s() ", DPS_DBG_TIME, LevelTxt[level], file, line, function);
         vfprintf(stderr, fmt, ap);
         break;
     }
@@ -64,7 +60,7 @@ void DPS_LogBytes(DPS_LogLevel level, const char* file, int line, const char *fu
 {
     for (size_t i = 0; i < n; ++i) {
         if ((i % 16) == 0) {
-            fprintf(stderr, "%s%09u %s@%d: ", i ? "\n" : "", DPS_DBG_TIME, file, line);
+            fprintf(stderr, "%s%09u %-7s %s@%d: ", i ? "\n" : "", DPS_DBG_TIME, LevelTxt[level], file, line);
         }
         fprintf(stderr, "%02x ", bytes[i]);
     }

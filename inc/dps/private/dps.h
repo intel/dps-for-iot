@@ -48,6 +48,10 @@ extern "C" {
 #define DPS_SECS_TO_MS(t)   ((uint64_t)(t) * 1000ull)
 #define DPS_MS_TO_SECS(t)   ((uint32_t)((t) / 1000ull))
 
+/* Forward declarations */
+typedef struct _DPS_BitVector DPS_BitVector;
+typedef struct _DPS_NetEndpoint DPS_NetEndpoint;
+
 /**
  * Address type
  */
@@ -153,7 +157,7 @@ DPS_Status DPS_TxBufferAppend(DPS_TxBuffer* buffer, const uint8_t* data, size_t 
  * @param txBuffer   A buffer containing data
  * @param rxBuffer   Receive buffer struct to be initialized
  */
-void DPS_TxBufferToRx(DPS_TxBuffer* txBuffer, DPS_RxBuffer* rxBuffer);
+void DPS_TxBufferToRx(const DPS_TxBuffer* txBuffer, DPS_RxBuffer* rxBuffer);
 
 /**
  * Convert a receive buffer into a transmit buffer. Note that this
@@ -163,7 +167,7 @@ void DPS_TxBufferToRx(DPS_TxBuffer* txBuffer, DPS_RxBuffer* rxBuffer);
  * @param rxBuffer   A buffer containing data
  * @param txBuffer   Transmit buffer struct to be initialized
  */
-void DPS_RxBufferToTx(DPS_RxBuffer* rxBuffer, DPS_TxBuffer* txBuffer);
+void DPS_RxBufferToTx(const DPS_RxBuffer* rxBuffer, DPS_TxBuffer* txBuffer);
 
 /**
  * Print the current subscriptions
@@ -217,26 +221,34 @@ struct _DPS_KeyStore {
 };
 
 /**
+ * A permission store request.
+ */
+struct _DPS_PermissionStoreRequest {
+    DPS_PermissionStore* permStore;
+    DPS_KeyId* netId;
+    DPS_KeyId* signerId;
+    DPS_Permission perm;
+    const char* separators;
+    DPS_BitVector* bf;
+};
+
+/**
  * A permission store.
  */
 struct _DPS_PermissionStore {
     void* userData;
-    DPS_GetPermissionsHandler getHandler;
+    DPS_PermissionHandler handler;
 };
 
 /**
- * Returns true if the message sender identified by either the network
- * layer ID or message signature is authorized with the provided
- * permissions.
+ * Provide a wrapper around permission requests for easy logging.
  *
- * @param node The node containing the permissions to check
- * @param netId The network layer ID
- * @param buf The encrypted field of a DPS message
- * @param perm The permissions to check
- *
- * @return DPS_TRUE if authorized, DPS_FALSE otherwise
+ * @return
+ * - DPS_TRUE if permission is granted
+ * - DPS_FALSE if permission is denied
  */
-int DPS_IsAuthorized(DPS_Node* node, const DPS_KeyId* netId, const DPS_RxBuffer* buf, int perm);
+int DPS_RequestPermission(DPS_Node* node, DPS_NetEndpoint* ep, uint8_t* encryptedBytes, size_t numBytes,
+                          DPS_Permission perm, DPS_BitVector* bf);
 
 /**
  * Returns a non-secure random number

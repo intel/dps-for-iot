@@ -191,7 +191,6 @@ static DPS_Publication* FreePublication(DPS_Node* node, DPS_Publication* pub)
             prev->next = next;
         }
         FreeRecipients(pub);
-        DPS_ClearKeyId(&pub->netId);
         if (pub->bf) {
             DPS_BitVectorFree(pub->bf);
             pub->bf = NULL;
@@ -422,6 +421,11 @@ static DPS_Status CallPubHandlers(DPS_Node* node, DPS_Publication* pub)
         DPS_TxBufferToRx(&pub->encryptedBuf, &encryptedBuf);
     } else {
         DPS_WARNPRINT("Failed to decrypt publication - %s\n", DPS_ErrTxt(ret));
+        /*
+         * This doesn't indicate an error with the message, it may be
+         * that the message is not encrypted for this node
+         */
+        ret = DPS_OK;
         goto Exit;
     }
     ret = DPS_ParseMapInit(&mapState, &encryptedBuf, EncryptedKeys, A_SIZEOF(EncryptedKeys), NULL, 0);
@@ -504,6 +508,9 @@ Exit:
         free(cdt);
     }
     DPS_TxBufferFree(&plainTextBuf);
+    /* Publication topics will be invalid now if the publication was encrypted */
+    pub->numTopics = 0;
+    pub->topics = NULL;
     return ret;
 }
 
@@ -680,7 +687,6 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
     pub->ackRequested = ackRequested;
     pub->flags |= PUB_FLAG_PUBLISH;
     pub->netAddr = ep->addr;
-    DPS_CopyNetId(&pub->netId, ep);
     /*
      * Free any existing protected and encrypted buffers
      */
@@ -710,8 +716,27 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
         }
     }
     /*
-     * A negative TTL is a forced expiration. We don't care about payloads and
-     * we don't call local handlers.
+     * Now we can deserialize the bloom filter
+     */
+    ret = DPS_BitVectorDeserialize(pub->bf, &bfBuf);
+    if (ret != DPS_OK) {
+        goto Exit;
+    }
+    /*
+     * Allocate the protected and encrypted buffers
+     */
+    ret = DPS_TxBufferInit(&pub->protectedBuf, NULL, buf->rxPos - protectedPtr);
+    if (ret != DPS_OK) {
+        goto Exit;
+    }
+    ret = DPS_TxBufferInit(&pub->encryptedBuf, NULL, DPS_RxBufferAvail(buf));
+    if (ret != DPS_OK) {
+        goto Exit;
+    }
+    DPS_TxBufferAppend(&pub->protectedBuf, protectedPtr, buf->rxPos - protectedPtr);
+    DPS_TxBufferAppend(&pub->encryptedBuf, buf->rxPos, DPS_RxBufferAvail(buf));
+    /*
+     * A negative TTL is a forced expiration.
      */
     if (ttl < 0) {
         /*
@@ -723,32 +748,33 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
         }
         pub->flags |= PUB_FLAG_EXPIRED;
         ttl = 0;
+    } else if (ttl > 0) {
+        pub->flags |= PUB_FLAG_RETAINED;
     } else {
-        /*
-         * Now we can deserialize the bloom filter
-         */
-        ret = DPS_BitVectorDeserialize(pub->bf, &bfBuf);
-        if (ret != DPS_OK) {
+        pub->flags &= ~PUB_FLAG_RETAINED;
+    }
+    /*
+     * Check for authorization before calling local handlers or
+     * forwarding.
+     *
+     * A special case is made for expired publications: they are
+     * always forwarded so that upstream nodes can expire them as
+     * well.  We don't want an intermediate node to adjust its
+     * permissions such that expired publications remain alive
+     * upstream.
+     */
+    if (!(pub->flags & PUB_FLAG_EXPIRED)) {
+        if (!DPS_RequestPermission(node, ep, pub->encryptedBuf.base, DPS_TxBufferUsed(&pub->encryptedBuf),
+                                   DPS_PERM_PUB, pub->bf)) {
+            DPS_ERRPRINT("Unauthorized request\n");
+            ret = DPS_ERR_SECURITY;
             goto Exit;
         }
-        /*
-         * Allocate the protected and encrypted buffers
-         */
-        ret = DPS_TxBufferInit(&pub->protectedBuf, NULL, buf->rxPos - protectedPtr);
-        if (ret != DPS_OK) {
-            goto Exit;
-        }
-        ret = DPS_TxBufferInit(&pub->encryptedBuf, NULL, DPS_RxBufferAvail(buf));
-        if (ret != DPS_OK) {
-            goto Exit;
-        }
-        DPS_TxBufferAppend(&pub->protectedBuf, protectedPtr, buf->rxPos - protectedPtr);
-        DPS_TxBufferAppend(&pub->encryptedBuf, buf->rxPos, DPS_RxBufferAvail(buf));
-        if (ttl > 0) {
-            pub->flags |= PUB_FLAG_RETAINED;
-        } else {
-            pub->flags &= ~PUB_FLAG_RETAINED;
-        }
+    }
+    /*
+     * We don't call local handlers for expired publications.
+     */
+    if (!(pub->flags & PUB_FLAG_EXPIRED)) {
         ret = CallPubHandlers(node, pub);
         if (ret != DPS_OK) {
             goto Exit;
@@ -764,7 +790,7 @@ Exit:
      * Delete the publisher node if it is sending bad data
      */
     if (ret == DPS_ERR_INVALID || ret == DPS_ERR_SECURITY) {
-        DPS_ERRPRINT("Deleting bad publisher\n");
+        DPS_WARNPRINT("Deleting bad publisher\n");
         DPS_LockNode(node);
         DPS_DeleteRemoteNode(node, pubNode);
         DPS_UnlockNode(node);

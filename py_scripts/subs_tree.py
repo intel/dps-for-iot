@@ -34,7 +34,7 @@ def subscriber(port, topic, connect_port):
     nodes[port] = dps.create_node("/", dps.memory_key_store_handle(key_store), None)
     dps.start_node(nodes[port], 0, port)
     permission_store = dps.create_memory_permission_store()
-    dps.set_permissions(permission_store, dps.WILDCARD_ID, dps.PERM_PUB | dps.PERM_SUB | dps.PERM_ACK)
+    dps.set_permission(permission_store, None, None, dps.PERM_PUB | dps.PERM_SUB | dps.PERM_ACK)
     dps.set_permission_store(nodes[port], dps.memory_permission_store_handle(permission_store))
     subs[port] = dps.create_subscription(nodes[port], [topic])
     dps.subscribe(subs[port], on_pub)

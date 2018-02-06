@@ -195,7 +195,6 @@ DPS_Status DPS_DecodeAcknowledgment(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxB
     uint8_t* aadPos;
     uint8_t maj;
     size_t len;
-    DPS_KeyId keyId;
 
     DPS_DBGTRACE();
 
@@ -259,79 +258,84 @@ DPS_Status DPS_DecodeAcknowledgment(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxB
     if (pub) {
         /*
          * Increase the refcount to prevent the publication from being
-         * freed from inside the callback function
+         * freed from inside the local handler
          */
         DPS_PublicationIncRef(pub);
-        DPS_UnlockNode(node);
-        if (pub->handler) {
-            uint8_t nonce[COSE_NONCE_LEN];
-            COSE_Entity recipient;
-            DPS_RxBuffer encryptedBuf;
-            DPS_RxBuffer aadBuf;
-            DPS_RxBuffer cipherTextBuf;
-            DPS_TxBuffer plainTextBuf;
-            /*
-             * Try to decrypt the acknowledgement
-             */
-            DPS_MakeNonce(pubId, sequenceNum, DPS_MSG_TYPE_ACK, nonce);
-            DPS_RxBufferInit(&aadBuf, aadPos, buf->rxPos - aadPos);
-            DPS_RxBufferInit(&cipherTextBuf, buf->rxPos, DPS_RxBufferAvail(buf));
-            ret = COSE_Decrypt(nonce, &recipient, &aadBuf, &cipherTextBuf, node->keyStore,
-                               NULL, &plainTextBuf);
+    }
+    DPS_UnlockNode(node);
+    /*
+     * Check for authorization before calling the local handler or
+     * forwarding.
+     */
+    if (!DPS_RequestPermission(node, ep, buf->rxPos, DPS_RxBufferAvail(buf), DPS_PERM_ACK,
+                               pub ? pub->bf : NULL)) {
+        DPS_ERRPRINT("Unauthorized request\n");
+        return DPS_ERR_SECURITY;
+    }
+    /*
+     * Call the local handler
+     */
+    if (pub && pub->handler) {
+        uint8_t nonce[COSE_NONCE_LEN];
+        COSE_Entity recipient;
+        DPS_RxBuffer aadBuf;
+        DPS_RxBuffer cipherTextBuf;
+        DPS_RxBuffer encryptedBuf;
+        DPS_TxBuffer plainTextBuf;
+        /*
+         * Try to decrypt the acknowledgement
+         */
+        DPS_MakeNonce(pubId, sequenceNum, DPS_MSG_TYPE_ACK, nonce);
+        DPS_RxBufferInit(&aadBuf, aadPos, buf->rxPos - aadPos);
+        DPS_RxBufferInit(&cipherTextBuf, buf->rxPos, DPS_RxBufferAvail(buf));
+        ret = COSE_Decrypt(nonce, &recipient, &aadBuf, &cipherTextBuf, node->keyStore,
+                           NULL, &plainTextBuf);
+        if (ret == DPS_OK) {
+            DPS_DBGPRINT("Ack was decrypted\n");
+            CBOR_Dump("plaintext", plainTextBuf.base, DPS_TxBufferUsed(&plainTextBuf));
+            DPS_TxBufferToRx(&plainTextBuf, &encryptedBuf);
+        } else if (ret == DPS_ERR_NOT_ENCRYPTED) {
+            DPS_DBGPRINT("Ack was not encrypted\n");
+            encryptedBuf = cipherTextBuf;
+            ret = DPS_OK;
+        } else {
+            DPS_ERRPRINT("Failed to decrypt Ack - %s\n", DPS_ErrTxt(ret));
+        }
+        if (ret == DPS_OK) {
+            uint8_t* data = NULL;
+            size_t dataLen = 0;
+            ret = DPS_ParseMapInit(&mapState, &encryptedBuf, EncryptedKeys, A_SIZEOF(EncryptedKeys), NULL, 0);
             if (ret == DPS_OK) {
-                DPS_DBGPRINT("Ack was decrypted\n");
-                CBOR_Dump("plaintext", plainTextBuf.base, DPS_TxBufferUsed(&plainTextBuf));
-                DPS_TxBufferToRx(&plainTextBuf, &encryptedBuf);
-            } else if (ret == DPS_ERR_NOT_ENCRYPTED) {
-                DPS_DBGPRINT("Ack was not encrypted\n");
-                encryptedBuf = cipherTextBuf;
-                ret = DPS_OK;
-            } else {
-                DPS_ERRPRINT("Failed to decrypt Ack - %s\n", DPS_ErrTxt(ret));
-            }
-            if (ret == DPS_OK) {
-                uint8_t* data = NULL;
-                size_t dataLen = 0;
-                ret = DPS_ParseMapInit(&mapState, &encryptedBuf, EncryptedKeys, A_SIZEOF(EncryptedKeys), NULL, 0);
-                if (ret == DPS_OK) {
-                    while (!DPS_ParseMapDone(&mapState)) {
-                        int32_t key;
-                        ret = DPS_ParseMapNext(&mapState, &key);
-                        if (ret != DPS_OK) {
-                            break;
-                        }
-                        switch (key) {
-                        case DPS_CBOR_KEY_DATA:
-                            /*
-                             * Get the pointer to the ack data
-                             */
-                            ret = CBOR_DecodeBytes(&encryptedBuf, &data, &dataLen);
-                            break;
-                        }
-                        if (ret != DPS_OK) {
-                            break;
-                        }
+                while (!DPS_ParseMapDone(&mapState)) {
+                    int32_t key;
+                    ret = DPS_ParseMapNext(&mapState, &key);
+                    if (ret != DPS_OK) {
+                        break;
                     }
-                    if (ret == DPS_OK) {
-                        pub->handler(pub, data, dataLen);
+                    switch (key) {
+                    case DPS_CBOR_KEY_DATA:
+                        /*
+                         * Get the pointer to the ack data
+                         */
+                        ret = CBOR_DecodeBytes(&encryptedBuf, &data, &dataLen);
+                        break;
+                    }
+                    if (ret != DPS_OK) {
+                        break;
                     }
                 }
+                if (ret == DPS_OK) {
+                    pub->handler(pub, data, dataLen);
+                }
             }
-            DPS_TxBufferFree(&plainTextBuf);
         }
+        DPS_TxBufferFree(&plainTextBuf);
+    }
+    if (pub) {
         DPS_LockNode(node);
         DPS_PublicationDecRef(pub);
         DPS_UnlockNode(node);
         return ret;
-    }
-    DPS_UnlockNode(node);
-    /*
-     * Verify that sender is authorized to forward ACKs
-     */
-    DPS_NetId(&keyId, ep);
-    if (!DPS_IsAuthorized(node, &keyId, buf, DPS_PERM_ACK)) {
-        DPS_ERRPRINT("Unauthorized request, not forwarding\n");
-        return DPS_ERR_UNAUTHORIZED;
     }
     /*
      * Search the history record for somewhere to forward the ACK

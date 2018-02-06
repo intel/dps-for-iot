@@ -28,15 +28,19 @@ DPS_DestroyRegistrationList
 DPS_DestroySubscription
 DPS_ErrTxt
 DPS_GenerateUUID
+DPS_GetEndToEndId
 DPS_GetEventData
 DPS_GetKeyStoreData
 DPS_GetLoop
+DPS_GetNetworkId
 DPS_GetNodeData
+DPS_GetPermission
 DPS_GetPermissionStoreData
 DPS_GetPortNumber
 DPS_GetPublicationData
 DPS_GetPublicationNode
 DPS_GetSubscriptionData
+DPS_IncludesTopics
 DPS_InitPublication
 DPS_InitUUID
 DPS_KeyStoreHandle
@@ -48,6 +52,7 @@ DPS_MemoryKeyStoreHandle
 DPS_MemoryPermissionStoreHandle
 DPS_NodeAddrToString
 DPS_NodeGetKeyID
+DPS_PermissionStoreHandle
 DPS_PublicationAddKeyId
 DPS_PublicationGetNode
 DPS_PublicationGetNumTopics
@@ -76,7 +81,7 @@ DPS_SetKeyStoreData
 DPS_SetNetworkKey
 DPS_SetNodeData
 DPS_SetNodeSubscriptionUpdateDelay
-DPS_SetPermissions
+DPS_SetPermission
 DPS_SetPermissionStore
 DPS_SetPermissionStoreData
 DPS_SetPublicationData
@@ -94,4 +99,3 @@ DPS_UnlinkFrom
 DPS_UUIDCompare
 DPS_UUIDToString
 DPS_WaitForEvent
-DPS_WILDCARD_ID

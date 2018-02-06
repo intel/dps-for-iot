@@ -146,9 +146,10 @@ DPS_Status DPS_BitVectorFuzzyHash(DPS_BitVector* hash, DPS_BitVector* bv);
  * @param bv1   An initialized bit vector
  * @param bv2   The bit vector to test for inclusion
  *
- * @return  - 1  if the bv2 is included in bv1.
- *          - 0  if the bv2 is not included in bv1.
- *          - -1 if the two bit vectors cannot be compared.
+ * @return
+ * - DPS_TRUE  if the bv2 is included in bv1.
+ * - DPS_FALSE if the bv2 is not included in bv1 or if the two bit
+ *             vectors cannot be compared.
  */
 int DPS_BitVectorIncludes(const DPS_BitVector* bv1, const DPS_BitVector* bv2);
 
@@ -158,9 +159,10 @@ int DPS_BitVectorIncludes(const DPS_BitVector* bv1, const DPS_BitVector* bv2);
  * @param bv1   An initialized bit vector
  * @param bv2   An initialized bit vector
  *
- * @return  - 1  if the two bit vectors are identical
- *          - 0  if the two bit vectors are different
- *          - -1 if the two bit vectors cannot be compared.
+ * @return
+ * - DPS_TRUE  if the two bit vectors are identical
+ * - DPS_FALSE if the two bit vectors are different or if the two bit
+ *             vectors cannot be compared.
  */
 int DPS_BitVectorEquals(const DPS_BitVector* bv1, const DPS_BitVector* bv2);
 

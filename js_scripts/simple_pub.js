@@ -125,7 +125,7 @@ var dps = require("dps");
     node = dps.createNode("/", dps.memoryKeyStoreHandle(keyStore), nodeId);
     dps.startNode(node, dps.MCAST_PUB_ENABLE_SEND, 0);
     permissionStore = dps.createMemoryPermissionStore();
-    dps.setPermissions(permissionStore, dps.WILDCARD_ID, dps.PERM_PUB | dps.PERM_SUB | dps.PERM_ACK);
+    dps.setPermission(permissionStore, null, null, dps.PERM_PUB | dps.PERM_SUB | dps.PERM_ACK);
     dps.setPermissionStore(node, dps.memoryPermissionStoreHandle(permissionStore));
     pub = dps.createPublication(node);
 

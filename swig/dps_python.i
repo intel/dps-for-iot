@@ -101,6 +101,9 @@ int DPS_Debug;
         }
         $1[i] = 0;
         $2 = sz;
+    } else if ($input == Py_None) {
+        $1 = NULL;
+        $2 = 0;
     } else {
         PyErr_SetString(PyExc_TypeError,"not a list");
         SWIG_fail;
@@ -111,7 +114,9 @@ int DPS_Debug;
  * Post function call cleanup for topic strings
  */
 %typemap(freearg) (const char** topics, size_t numTopics) {
-    free($1);
+    if ($1) {
+        free($1);
+    }
 }
 
 %typemap(in,numinputs=0,noblock=1) size_t* n  {
@@ -533,7 +538,7 @@ static PyObject* UUIDToPyString(const DPS_UUID* uuid)
         } else if (SWIG_IsOK(SWIG_ConvertPtr($input, &argp, SWIGTYPE_p__DPS_KeyId, 0))) {
             kid = (DPS_KeyId*)argp;
         } else {
-            PyErr_SetString(PyExc_TypeError, "keyId should be a list, string, or WILDCARD_ID\n");
+            PyErr_SetString(PyExc_TypeError, "keyId should be a list or string\n");
             free(kid);
             SWIG_fail;
         }
@@ -543,7 +548,7 @@ static PyObject* UUIDToPyString(const DPS_UUID* uuid)
 }
 
 %typemap(freearg) (const DPS_KeyId* keyId) {
-    if ($1 && ($1 != DPS_WILDCARD_ID)) {
+    if ($1) {
         if ($1->id) {
             free((uint8_t*)$1->id);
         }

@@ -1,5 +1,9 @@
 #!/bin/sh
 
+VARIANT=${variant:-release}
+TRANSPORT=${transport:-udp}
+export VARIANT TRANSPORT
+
 PYTHONPATH=./build/dist/py
 export PYTHONPATH
 
@@ -7,11 +11,12 @@ TESTS="./build/test/bin/cbortest \
        ./build/test/bin/cosetest \
        ./build/test/bin/countvec \
        ./build/test/bin/hist_unit \
+       ./build/test/bin/keystoretest \
        ./build/test/bin/packtest \
+       ./build/test/bin/permstoretest \
        ./build/test/bin/pubsub \
        ./build/test/bin/rle_compression \
-       ./build/test/bin/keystoretest \
-       ./build/test/bin/permstoretest \
+       ./test_scripts/auth \
        ./test_scripts/chain_test \
        ./test_scripts/e2esec \
        ./test_scripts/fanout \
@@ -23,13 +28,11 @@ TESTS="./build/test/bin/cbortest \
        ./test_scripts/tree0 \
        ./test_scripts/tree1 \
        ./test_scripts/tree2 \
-       ./test_scripts/versioning \
-       ./test_scripts/simple_py_test \
-       ./test_scripts/retained_py \
-       ./py_scripts/subs_tree.py \
-       ./test_scripts/simple_js_test \
-       ./test_scripts/auth \
-       ./test_scripts/e2eauth"
+       ./test_scripts/versioning"
+BINDINGS_TESTS="./py_scripts/subs_tree.py \
+                ./test_scripts/retained_py \
+                ./test_scripts/simple_js_test \
+                ./test_scripts/simple_py_test"
 
 DEFAULT="\e[0m"
 GREEN="\e[32m"
@@ -39,7 +42,7 @@ OK=0
 FAILED=0
 FAILED_TESTS=""
 
-for TEST in $TESTS; do
+for TEST in $TESTS $BINDINGS_TESTS; do
     echo -e "$GREEN[ RUN      ]$DEFAULT $TEST"
     $TEST
     if [ $? -eq 0 ]; then

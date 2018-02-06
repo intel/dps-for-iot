@@ -227,7 +227,5 @@ void DPS_NetConnectionDecRef(DPS_NetConnection* cn)
 DPS_Status DPS_NetId(DPS_KeyId* keyId, const DPS_NetEndpoint* ep)
 {
     /* No identity information for udp */
-    keyId->id = NULL;
-    keyId->len = 0;
-    return DPS_OK;
+    return DPS_ERR_FAILURE;
 }

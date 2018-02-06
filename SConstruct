@@ -69,10 +69,6 @@ for key, val in ARGLIST:
 for b in bindings:
     env[b] = b in env['bindings']
 
-if env['transport'] == 'udp':
-    env['USE_UDP'] = 'true'
-    env['CPPDEFINES'].append('DPS_USE_UDP')
-
 print("Building for " + env['variant'])
 
 # Platform specific configuration

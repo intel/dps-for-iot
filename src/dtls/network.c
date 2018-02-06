@@ -1466,10 +1466,8 @@ DPS_Status DPS_NetId(DPS_KeyId* keyId, const DPS_NetEndpoint* ep)
     if (cn) {
         keyId->id = cn->val.p;
         keyId->len = cn->val.len;
+        return DPS_OK;
     } else {
-        keyId->id = NULL;
-        keyId->len = 0;
+        return DPS_ERR_FAILURE;
     }
-
-    return DPS_OK;
 }

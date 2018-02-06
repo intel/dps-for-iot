@@ -68,7 +68,7 @@ const char TrustedCAs[] =
 
 const Id Ids[ID_MAX] = {
     {
-        { PUB_ID, sizeof(PUB_ID) - 1 },
+        { (const uint8_t*)PUB_ID, sizeof(PUB_ID) - 1 },
         "-----BEGIN CERTIFICATE-----\r\n"
         "MIIBiDCCAS0CCQCzbzjgbS2buTAKBggqhkjOPQQDAjBIMQswCQYDVQQGEwJVUzEV\r\n"
         "MBMGA1UEBwwMRGVmYXVsdCBDaXR5MQwwCgYDVQQKDANEUFMxFDASBgNVBAMMC0RQ\r\n"
@@ -91,7 +91,7 @@ const Id Ids[ID_MAX] = {
         "DPS Test Publisher"
     },
     {
-        { SUB1_ID, sizeof(SUB1_ID) - 1 },
+        { (const uint8_t*)SUB1_ID, sizeof(SUB1_ID) - 1 },
         "-----BEGIN CERTIFICATE-----\r\n"
         "MIIBczCCARgCCQCzbzjgbS2b2jAKBggqhkjOPQQDAjBIMQswCQYDVQQGEwJVUzEV\r\n"
         "MBMGA1UEBwwMRGVmYXVsdCBDaXR5MQwwCgYDVQQKDANEUFMxFDASBgNVBAMMC0RQ\r\n"
@@ -113,7 +113,7 @@ const Id Ids[ID_MAX] = {
         "DPS Test Subscriber1"
     },
     {
-        { SUB2_ID, sizeof(SUB2_ID) - 1 },
+        { (const uint8_t*)SUB2_ID, sizeof(SUB2_ID) - 1 },
         "-----BEGIN CERTIFICATE-----\r\n"
         "MIIBcjCCARgCCQCzbzjgbS2b2zAKBggqhkjOPQQDAjBIMQswCQYDVQQGEwJVUzEV\r\n"
         "MBMGA1UEBwwMRGVmYXVsdCBDaXR5MQwwCgYDVQQKDANEUFMxFDASBgNVBAMMC0RQ\r\n"

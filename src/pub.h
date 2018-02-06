@@ -62,7 +62,6 @@ typedef struct _DPS_Publication {
     size_t recipientsCount;         /* Number of valid elements in recipients array */
     size_t recipientsCap;           /* Capacity of recipients array */
     DPS_NodeAddress netAddr;        /* For retained messages - the sender address */
-    DPS_KeyId netId;                /* For retained messages - the sender network layer ID */
     DPS_BitVector* bf;              /* The Bloom filter bit vector for the topics for this publication */
     DPS_Node* node;                 /* Node for this publication */
 

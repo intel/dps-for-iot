@@ -51,10 +51,13 @@ srcs = ['src/bitvec.c',
         'src/mbedtls.c']
 
 if env['transport'] == 'udp':
+    env['CPPDEFINES'].append('DPS_USE_UDP')
     srcs.append('src/udp/network.c')
 elif env['transport'] == 'dtls':
+    env['CPPDEFINES'].append('DPS_USE_DTLS')
     srcs.append('src/dtls/network.c')
 else:
+    env['CPPDEFINES'].append('DPS_USE_TCP')
     srcs.append('src/tcp/network.c')
 
 Depends(srcs, ext_libs)
@@ -120,7 +123,7 @@ if env['nodejs']:
         nodeenv = libenv.Clone();
         nodeenv.Append(SWIGFLAGS = ['-javascript', '-node', '-DV8_VERSION=0x04059937', '-Wextra', '-Werror', '-v', '-O'], SWIGPATH = '#/inc')
         # There may be a bug with the SWIG builder - add -O to CPPFLAGS to get it passed on to the compiler
-        nodeenv.Append(CPPFLAGS = ['-DBUILDING_NODE_EXTENSION', '-std=c++11', '-O', '-Wno-unused-result'])
+        nodeenv.Append(CPPFLAGS = ['-DBUILDING_NODE_EXTENSION', '-std=c++11', '-O', '-Wno-unused-result', '-Wno-deprecated'])
         nodeenv['CC'] = '$CXX'
         if env['target'] == 'yocto':
             nodeenv.Append(CPPPATH = [os.getenv('SYSROOT') + '/usr/include/node'])
@@ -156,6 +159,8 @@ Depends(testsrcs, ext_libs)
 testprogs = []
 for test in testsrcs:
     testprogs.append(testenv.Program(test))
+
+testprogs.append(testenv.Program(['test/node.c', 'test/keys.c']))
 
 testenv.Install('#/build/test/bin', testprogs)
 

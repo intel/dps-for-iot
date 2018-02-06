@@ -23,9 +23,15 @@
 #include "test.h"
 #include <dps/dps.h>
 
-static DPS_Permissions GetPermissions(const DPS_PermissionStore* permStore, const DPS_KeyId* keyId)
+static int PermissionHandler(DPS_PermissionStoreRequest* request)
 {
-    return 0;
+    return DPS_FALSE;
+}
+
+static int PublicationAuthorized(const DPS_PermissionStore* permStore,
+                                 const DPS_KeyId* publisher, const DPS_Publication* pub)
+{
+    return DPS_FALSE;
 }
 
 int main(int argc, char** argv)
@@ -35,7 +41,7 @@ int main(int argc, char** argv)
     void* userData;
 
     /* Create and destroy */
-    permStore = DPS_CreatePermissionStore(GetPermissions);
+    permStore = DPS_CreatePermissionStore(PermissionHandler);
     ASSERT(permStore);
     DPS_DestroyPermissionStore(permStore);
     permStore = NULL;
@@ -45,7 +51,7 @@ int main(int argc, char** argv)
     permStore = NULL;
 
     /* Set and get user data */
-    permStore = DPS_CreatePermissionStore(GetPermissions);
+    permStore = DPS_CreatePermissionStore(PermissionHandler);
     ASSERT(permStore);
     ret = DPS_SetPermissionStoreData(permStore, (void*)1);
     ASSERT(ret == DPS_OK);
