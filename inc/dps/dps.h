@@ -630,13 +630,6 @@ typedef struct _DPS_Node DPS_Node;
 DPS_Node* DPS_CreateNode(const char* separators, DPS_KeyStore* keyStore, const DPS_KeyId* keyId);
 
 /**
- * Get the key identifier for a node
- *
- * @param node   The node
- */
-const DPS_KeyId* DPS_NodeGetKeyID(const DPS_Node* node);
-
-/**
  * Set the permission store to use for this node.
  *
  * @param node       The node

@@ -1270,11 +1270,6 @@ DPS_Node* DPS_CreateNode(const char* separators, DPS_KeyStore* keyStore, const D
     return node;
 }
 
-const DPS_KeyId* DPS_NodeGetKeyID(const DPS_Node* node)
-{
-    return node ? &node->signer.kid : NULL;
-}
-
 DPS_Status DPS_SetPermissionStore(DPS_Node* node, DPS_PermissionStore* permStore)
 {
     if (node) {
