@@ -537,6 +537,7 @@ static DPS_Status EncodeKDFContext(DPS_TxBuffer* buf, int8_t alg, uint8_t keyLen
 static DPS_Status SetKey(DPS_KeyStoreRequest* request, const DPS_Key* key)
 {
     COSE_Key* ckey = request->data;
+    DPS_Status ret;
     size_t len;
 
     switch (key->type) {
@@ -582,11 +583,18 @@ static DPS_Status SetKey(DPS_KeyStoreRequest* request, const DPS_Key* key)
             return DPS_ERR_MISSING;
         }
         if (key->cert.privateKey) {
-            return ParsePrivateKey_ECDSA(key->cert.privateKey, key->cert.password,
-                                         &ckey->ec.curve, ckey->ec.d);
-        } else {
-            return ParseCertificate_ECDSA(key->cert.cert,
-                                          &ckey->ec.curve, ckey->ec.x, ckey->ec.y);
+            ret = ParsePrivateKey_ECDSA(key->cert.privateKey, key->cert.password,
+                                        &ckey->ec.curve, ckey->ec.d);
+            if (ret != DPS_OK) {
+                return ret;
+            }
+        }
+        if (key->cert.cert) {
+            ret = ParseCertificate_ECDSA(key->cert.cert,
+                                         &ckey->ec.curve, ckey->ec.x, ckey->ec.y);
+            if (ret != DPS_OK) {
+                return ret;
+            }
         }
         break;
     default:
