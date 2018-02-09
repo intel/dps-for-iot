@@ -55,7 +55,7 @@ typedef struct _DPS_NodeAddress DPS_NodeAddress;
  *
  * @param addr to get the text for
  *
- * @return  A text string for the address
+ * @return A text string for the address
  */
 const char* DPS_NodeAddrToString(const DPS_NodeAddress* addr);
 
@@ -325,7 +325,7 @@ DPS_Status DPS_SetKeyStoreData(DPS_KeyStore* keyStore, void* data);
  *
  * @param keyStore The keyStore
  *
- * @return  A pointer to the data or NULL if the key store is invalid
+ * @return A pointer to the data or NULL if the key store is invalid
  */
 void* DPS_GetKeyStoreData(const DPS_KeyStore* keyStore);
 
@@ -452,7 +452,7 @@ DPS_Status DPS_SetNodeData(DPS_Node* node, void* data);
  *
  * @param node   The node
  *
- * @return  A pointer to the data or NULL if the node is invalid
+ * @return A pointer to the data or NULL if the node is invalid
  */
 void* DPS_GetNodeData(const DPS_Node* node);
 
@@ -651,7 +651,7 @@ size_t DPS_PublicationGetNumTopics(const DPS_Publication* pub);
  *
  * @param pub   The publication
  *
- * @return Returns 1 if an acknowledgement was requested, otherwise 0.
+ * @return 1 if an acknowledgement was requested, otherwise 0.
  */
 int DPS_PublicationIsAckRequested(const DPS_Publication* pub);
 
@@ -660,7 +660,7 @@ int DPS_PublicationIsAckRequested(const DPS_Publication* pub);
  *
  * @param pub   The publication
  *
- * @return  A pointer to the node or NULL if the publication is invalid
+ * @return A pointer to the node or NULL if the publication is invalid
  */
 DPS_Node* DPS_PublicationGetNode(const DPS_Publication* pub);
 
@@ -699,7 +699,7 @@ DPS_Status DPS_SetPublicationData(DPS_Publication* pub, void* data);
  *
  * @param pub   The publication
  *
- * @return  A pointer to the data or NULL if the publication is invalid
+ * @return A pointer to the data or NULL if the publication is invalid
  */
 void* DPS_GetPublicationData(const DPS_Publication* pub);
 
@@ -830,8 +830,8 @@ size_t DPS_SubscriptionGetNumTopics(const DPS_Subscription* sub);
  * @param topics       The topic strings to match
  * @param numTopics    The number of topic strings to match - must be >= 1
  *
- * @return   Returns a pointer to the newly created subscription or NULL if resources
- *           could not be allocated or the arguments were invalid
+ * @return A pointer to the newly created subscription or NULL if resources
+ *         could not be allocated or the arguments were invalid
  */
 DPS_Subscription* DPS_CreateSubscription(DPS_Node* node, const char** topics, size_t numTopics);
 
@@ -850,7 +850,7 @@ DPS_Status DPS_SetSubscriptionData(DPS_Subscription* sub, void* data);
  *
  * @param sub   The subscription
  *
- * @return  A pointer to the data or NULL if the subscription is invalid
+ * @return A pointer to the data or NULL if the subscription is invalid
  */
 void* DPS_GetSubscriptionData(DPS_Subscription* sub);
 
@@ -859,7 +859,7 @@ void* DPS_GetSubscriptionData(DPS_Subscription* sub);
  *
  * @param sub   The subscription
  *
- * @return  A pointer to the node or NULL if the subscription is invalid
+ * @return A pointer to the node or NULL if the subscription is invalid
  */
 DPS_Node* DPS_SubscriptionGetNode(const DPS_Subscription* sub);
 

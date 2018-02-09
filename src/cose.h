@@ -99,7 +99,6 @@ DPS_Status COSE_Encrypt(int8_t alg,
  * @param aad        Buffer containing the external auxiliary authenticated data.
  * @param cipherText Buffer containing the authenticated and encrypted input data
  * @param keyStore   Request handler for encryption keys
- * @param ctx        Context to be passed to the key request callback
  * @param signer     Returns the recipient information used to succesfully verify the signed cipherText.
  *                   Note that this points into cipherText so care must be taken to avoid
  *                   referencing freed memory.  This will be memset to 0 if not verified.
