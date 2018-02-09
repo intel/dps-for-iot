@@ -63,7 +63,7 @@ const char TrustedCAs[] =
     "-----END CERTIFICATE-----\r\n";
 
 #define PUBLISHER_ID "DPS Test Publisher"
-const DPS_KeyId PublisherId = { PUBLISHER_ID, sizeof(PUBLISHER_ID) - 1 };
+const DPS_KeyId PublisherId = { (const uint8_t*)PUBLISHER_ID, sizeof(PUBLISHER_ID) - 1 };
 const char PublisherCert[] =
     "-----BEGIN CERTIFICATE-----\r\n"
     "MIIBiDCCAS0CCQCzbzjgbS2buTAKBggqhkjOPQQDAjBIMQswCQYDVQQGEwJVUzEV\r\n"
@@ -88,7 +88,7 @@ const char PublisherPrivateKey[] =
 const char PublisherPassword[] = "DPS Test Publisher";
 
 #define SUBSCRIBER_ID "DPS Test Subscriber"
-const DPS_KeyId SubscriberId = { SUBSCRIBER_ID, sizeof(SUBSCRIBER_ID) - 1 };
+const DPS_KeyId SubscriberId = { (const uint8_t*)SUBSCRIBER_ID, sizeof(SUBSCRIBER_ID) - 1 };
 const char SubscriberCert[] =
     "-----BEGIN CERTIFICATE-----\r\n"
     "MIIBiTCCAS4CCQCzbzjgbS2bujAKBggqhkjOPQQDAjBIMQswCQYDVQQGEwJVUzEV\r\n"
