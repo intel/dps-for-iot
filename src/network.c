@@ -100,14 +100,16 @@ int DPS_SameAddr(const DPS_NodeAddress* addr1, const DPS_NodeAddress* addr2)
         memcpy_s((uint8_t*)&tmp.sin6_addr + 12, sizeof(tmp.sin6_addr) - 12, &ip, 4);
         tmp.sin6_family = AF_INET6;
     }
-    if (a->sa_family == AF_INET6) {
+    if (a->sa_family == AF_INET6 && b->sa_family == AF_INET6) {
         const struct sockaddr_in6* ip6a = (const struct sockaddr_in6*)a;
         const struct sockaddr_in6* ip6b = (const struct sockaddr_in6*)b;
         return (ip6a->sin6_port == ip6b->sin6_port) && (memcmp(&ip6a->sin6_addr, &ip6b->sin6_addr, 16) == 0);
-    } else {
+    } else if (a->sa_family == AF_INET && b->sa_family == AF_INET) {
         const struct sockaddr_in* ipa = (const struct sockaddr_in*)a;
         const struct sockaddr_in* ipb = (const struct sockaddr_in*)b;
         return (ipa->sin_port == ipb->sin_port) && (ipa->sin_addr.s_addr == ipb->sin_addr.s_addr);
+    } else {
+        return DPS_FALSE;
     }
 }
 
