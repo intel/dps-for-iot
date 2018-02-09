@@ -503,6 +503,9 @@ Exit:
         free(cdt);
     }
     DPS_TxBufferFree(&plainTextBuf);
+    /* Publication topics will be invalid now if the publication was encrypted */
+    pub->numTopics = 0;
+    pub->topics = NULL;
     return ret;
 }
 
