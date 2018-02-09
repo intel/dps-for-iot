@@ -93,8 +93,8 @@ To see the complete list of build options run `scons --help`.  The
 default build configuration is `variant=release transport=udp
 bindings=all`.
 
-> *A limitation of the current implementation is that the transport
-> must be configured at compile time.*
+> A limitation of the current implementation is that the transport
+> must be configured at compile time.
 
 The scons script pulls down source code from two external projects
 (mbedtls, and safestringlib) into the `./ext` directory. If necessary
@@ -103,7 +103,7 @@ these projects can be populated manually:
 	git clone https://github.com/ARMmbed/mbedtls ext/mbedtls
 	git clone https://github.com/01org/safestringlib.git ext/safestring
 
-> Note: the ext projects are populated the first time DPS is built. To
+> The ext projects are populated the first time DPS is built. To
 > update these projects you need to manually do a `git pull` or delete
 > the project directory and rerun scons.
 
