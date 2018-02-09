@@ -1119,7 +1119,7 @@ DPS_Status DPS_InitPublication(DPS_Publication* pub,
     return ret;
 }
 
-DPS_Status DPS_PublicationAddKeyId(DPS_Publication* pub, const DPS_KeyId* keyId)
+DPS_Status DPS_PublicationAddSubId(DPS_Publication* pub, const DPS_KeyId* keyId)
 {
     DPS_Status ret;
     int8_t alg;
@@ -1138,7 +1138,7 @@ DPS_Status DPS_PublicationAddKeyId(DPS_Publication* pub, const DPS_KeyId* keyId)
     }
 }
 
-void DPS_PublicationRemoveKeyId(DPS_Publication* pub, const DPS_KeyId* keyId)
+void DPS_PublicationRemoveSubId(DPS_Publication* pub, const DPS_KeyId* keyId)
 {
     if (IsValidPub(pub)) {
         RemoveRecipient(pub, keyId);

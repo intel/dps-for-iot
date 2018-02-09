@@ -40,14 +40,14 @@ DPS_Log
 DPS_LogBytes
 DPS_MemoryKeyStoreHandle
 DPS_NodeAddrToString
-DPS_PublicationAddKeyId
+DPS_PublicationAddSubId
 DPS_PublicationGetNode
 DPS_PublicationGetNumTopics
 DPS_PublicationGetSequenceNum
 DPS_PublicationGetTopic
 DPS_PublicationGetUUID
 DPS_PublicationIsAckRequested
-DPS_PublicationRemoveKeyId
+DPS_PublicationRemoveSubId
 DPS_Publish
 DPS_Registration_Get
 DPS_Registration_GetSyn

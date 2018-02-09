@@ -744,7 +744,7 @@ DPS_Status DPS_InitPublication(DPS_Publication* pub,
  * @param pub         The the publication to initialize
  * @param keyId       Key identifier to use for encrypted publications
  */
-DPS_Status DPS_PublicationAddKeyId(DPS_Publication* pub, const DPS_KeyId* keyId);
+DPS_Status DPS_PublicationAddSubId(DPS_Publication* pub, const DPS_KeyId* keyId);
 
 /**
  * Removes a key identifier to use for encrypted publications.
@@ -752,7 +752,7 @@ DPS_Status DPS_PublicationAddKeyId(DPS_Publication* pub, const DPS_KeyId* keyId)
  * @param pub         The the publication to initialize
  * @param keyId       Key identifier to remove
  */
-void DPS_PublicationRemoveKeyId(DPS_Publication* pub, const DPS_KeyId* keyId);
+void DPS_PublicationRemoveSubId(DPS_Publication* pub, const DPS_KeyId* keyId);
 
 /**
  * Publish a set of topics along with an optional payload. The topics will be published immediately

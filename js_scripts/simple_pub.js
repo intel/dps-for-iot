@@ -126,7 +126,7 @@ var dps = require("dps");
     pub = dps.createPublication(node);
 
     dps.initPublication(pub, ["a/b/c"], false, null, onAck);
-    dps.publicationAddKeyId(pub, pubKeyId);
+    dps.publicationAddSubId(pub, pubKeyId);
     dps.publish(pub, "hello", 0);
     setTimeout(publish, 200);
 }());

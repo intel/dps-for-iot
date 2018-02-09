@@ -171,7 +171,7 @@ static void ReadStdin(DPS_Node* node)
                 break;
             }
             if (encrypt) {
-                ret = DPS_PublicationAddKeyId(currentPub, &PskId[0]);
+                ret = DPS_PublicationAddSubId(currentPub, &PskId[0]);
                 if (ret != DPS_OK) {
                     DPS_ERRPRINT("Failed to add key ID - error=%s\n", DPS_ErrTxt(ret));
                     break;
@@ -345,9 +345,9 @@ int main(int argc, char** argv)
             return 1;
         }
         if (encrypt == 2)  {
-            ret = DPS_PublicationAddKeyId(currentPub, &SubscriberId);
+            ret = DPS_PublicationAddSubId(currentPub, &SubscriberId);
         } else if (encrypt == 1) {
-            ret = DPS_PublicationAddKeyId(currentPub, &PskId[1]);
+            ret = DPS_PublicationAddSubId(currentPub, &PskId[1]);
         }
         if (ret != DPS_OK) {
             DPS_ERRPRINT("Failed to add key ID - error=%s\n", DPS_ErrTxt(ret));
