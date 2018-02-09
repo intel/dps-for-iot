@@ -358,7 +358,7 @@ static DPS_Status EncodeRecipient(DPS_TxBuffer* buf, int8_t alg, const DPS_KeyId
  */
 static DPS_Status EncodeSig(DPS_TxBuffer* buf, int8_t alg, int8_t sigAlg,
                             uint8_t* aad, size_t aadLen,
-                            uint8_t* payload, size_t payloadLen)
+                            const uint8_t* payload, size_t payloadLen)
 {
     DPS_Status ret;
     size_t bufLen;
