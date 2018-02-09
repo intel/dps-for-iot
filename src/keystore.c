@@ -93,16 +93,16 @@ DPS_Status DPS_SetCA(DPS_KeyStoreRequest* request, const char* ca)
     return request->setCA ? request->setCA(request, ca): DPS_ERR_MISSING;
 }
 
-typedef struct _DPS_MemoryKeyStoreEntry {
+typedef struct _MemoryKeyStoreEntry {
     DPS_KeyId keyId;
     DPS_Key key;
-} DPS_MemoryKeyStoreEntry;
+} MemoryKeyStoreEntry;
 
 struct _DPS_MemoryKeyStore {
     DPS_KeyStore keyStore;
     DPS_RBG* rbg;
 
-    DPS_MemoryKeyStoreEntry* entries;
+    MemoryKeyStoreEntry* entries;
     size_t entriesCount;
     size_t entriesCap;
 
@@ -117,9 +117,9 @@ static int SameKeyId(const DPS_KeyId* a, const DPS_KeyId* b)
     return a && b && (a->len == b->len) && (memcmp(a->id, b->id, b->len) == 0);
 }
 
-static DPS_MemoryKeyStoreEntry* MemoryKeyStoreLookup(DPS_MemoryKeyStore* mks, const DPS_KeyId* keyId)
+static MemoryKeyStoreEntry* MemoryKeyStoreLookup(DPS_MemoryKeyStore* mks, const DPS_KeyId* keyId)
 {
-    DPS_MemoryKeyStoreEntry* entry;
+    MemoryKeyStoreEntry* entry;
     size_t i;
 
     for (i = 0; i < mks->entriesCount; ++i) {
@@ -138,18 +138,18 @@ static DPS_Status MemoryKeyStoreGrow(DPS_MemoryKeyStore* mks)
         if (mks->entriesCap) {
             newCap = mks->entriesCap * 2;
         }
-        DPS_MemoryKeyStoreEntry *newEntries = realloc(mks->entries, newCap * sizeof(DPS_MemoryKeyStoreEntry));
+        MemoryKeyStoreEntry *newEntries = realloc(mks->entries, newCap * sizeof(MemoryKeyStoreEntry));
         if (!newEntries) {
             return DPS_ERR_RESOURCES;
         }
-        memset(newEntries + mks->entriesCap, 0, (newCap - mks->entriesCap) * sizeof(DPS_MemoryKeyStoreEntry));
+        memset(newEntries + mks->entriesCap, 0, (newCap - mks->entriesCap) * sizeof(MemoryKeyStoreEntry));
         mks->entries = newEntries;
         mks->entriesCap = newCap;
     }
     return DPS_OK;
 }
 
-static DPS_Status MemoryKeyStoreSetKey(DPS_MemoryKeyStoreEntry* entry, const DPS_Key* key)
+static DPS_Status MemoryKeyStoreSetKey(MemoryKeyStoreEntry* entry, const DPS_Key* key)
 {
     uint8_t* newKey = NULL;
     size_t newLen = 0;
@@ -173,7 +173,7 @@ static DPS_Status MemoryKeyStoreSetKey(DPS_MemoryKeyStoreEntry* entry, const DPS
     return DPS_OK;
 }
 
-static DPS_Status MemoryKeyStoreSetCertificate(DPS_MemoryKeyStoreEntry* entry, const char* cert,
+static DPS_Status MemoryKeyStoreSetCertificate(MemoryKeyStoreEntry* entry, const char* cert,
                                                const char* key, const char* password)
 {
     char *newCert = NULL;
@@ -237,7 +237,7 @@ static DPS_Status MemoryKeyStoreKeyAndIdentityHandler(DPS_KeyStoreRequest* reque
 static DPS_Status MemoryKeyStoreKeyHandler(DPS_KeyStoreRequest* request, const DPS_KeyId* keyId)
 {
     DPS_MemoryKeyStore* mks = (DPS_MemoryKeyStore*)DPS_KeyStoreHandle(request);
-    DPS_MemoryKeyStoreEntry* entry;
+    MemoryKeyStoreEntry* entry;
 
     entry = MemoryKeyStoreLookup(mks, keyId);
     if (entry) {
@@ -332,7 +332,7 @@ void DPS_DestroyMemoryKeyStore(DPS_MemoryKeyStore* mks)
         DPS_DestroyRBG(mks->rbg);
     }
     for (size_t i = 0; i < mks->entriesCount; i++) {
-        DPS_MemoryKeyStoreEntry* entry = mks->entries + i;
+        MemoryKeyStoreEntry* entry = mks->entries + i;
         DPS_ClearKeyId(&entry->keyId);
         if (entry->key.type == DPS_KEY_SYMMETRIC) {
             free((uint8_t*)entry->key.symmetric.key);
@@ -398,7 +398,7 @@ DPS_Status DPS_SetNetworkKey(DPS_MemoryKeyStore* mks, const DPS_KeyId* keyId, co
 
 DPS_Status DPS_SetContentKey(DPS_MemoryKeyStore* mks, const DPS_KeyId* keyId, const DPS_Key* key)
 {
-    DPS_MemoryKeyStoreEntry* entry;
+    MemoryKeyStoreEntry* entry;
 
     DPS_DBGTRACE();
 
@@ -456,7 +456,7 @@ DPS_Status DPS_SetCertificate(DPS_MemoryKeyStore* mks, const char* cert, const c
 {
     char* cn = NULL;
     DPS_KeyId keyId;
-    DPS_MemoryKeyStoreEntry* entry;
+    MemoryKeyStoreEntry* entry;
 
     DPS_DBGTRACE();
 
