@@ -149,7 +149,7 @@ DPS_Status DPS_TxBufferAppend(DPS_TxBuffer* buffer, const uint8_t* data, size_t 
     return DPS_OK;
 }
 
-void DPS_TxBufferToRx(DPS_TxBuffer* txBuffer, DPS_RxBuffer* rxBuffer)
+void DPS_TxBufferToRx(const DPS_TxBuffer* txBuffer, DPS_RxBuffer* rxBuffer)
 {
     assert(txBuffer && rxBuffer);
     rxBuffer->base = txBuffer->base;
@@ -157,7 +157,7 @@ void DPS_TxBufferToRx(DPS_TxBuffer* txBuffer, DPS_RxBuffer* rxBuffer)
     rxBuffer->rxPos = txBuffer->base;
 }
 
-void DPS_RxBufferToTx(DPS_RxBuffer* rxBuffer, DPS_TxBuffer* txBuffer)
+void DPS_RxBufferToTx(const DPS_RxBuffer* rxBuffer, DPS_TxBuffer* txBuffer)
 {
     assert(rxBuffer && txBuffer);
     txBuffer->base = rxBuffer->base;

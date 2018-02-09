@@ -153,7 +153,7 @@ DPS_Status DPS_TxBufferAppend(DPS_TxBuffer* buffer, const uint8_t* data, size_t 
  * @param txBuffer   A buffer containing data
  * @param rxBuffer   Receive buffer struct to be initialized
  */
-void DPS_TxBufferToRx(DPS_TxBuffer* txBuffer, DPS_RxBuffer* rxBuffer);
+void DPS_TxBufferToRx(const DPS_TxBuffer* txBuffer, DPS_RxBuffer* rxBuffer);
 
 /**
  * Convert a receive buffer into a transmit buffer. Note that this
@@ -163,7 +163,7 @@ void DPS_TxBufferToRx(DPS_TxBuffer* txBuffer, DPS_RxBuffer* rxBuffer);
  * @param rxBuffer   A buffer containing data
  * @param txBuffer   Transmit buffer struct to be initialized
  */
-void DPS_RxBufferToTx(DPS_RxBuffer* rxBuffer, DPS_TxBuffer* txBuffer);
+void DPS_RxBufferToTx(const DPS_RxBuffer* rxBuffer, DPS_TxBuffer* txBuffer);
 
 /**
  * Print the current subscriptions
