@@ -46,7 +46,7 @@ static void OnNodeDestroyed(DPS_Node* node, void* data)
 
 static void OnAck(DPS_Publication* pub, uint8_t* data, size_t len)
 {
-    DPS_Node* node = DPS_GetPublicationNode(pub);
+    DPS_Node* node = DPS_PublicationGetNode(pub);
 
     if (!quiet) {
         DPS_PRINT("Ack for pub UUID %s(%d)\n", DPS_UUIDToString(DPS_PublicationGetUUID(pub)), DPS_PublicationGetSequenceNum(pub));

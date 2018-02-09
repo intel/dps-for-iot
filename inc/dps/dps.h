@@ -795,15 +795,6 @@ DPS_Status DPS_DestroyPublication(DPS_Publication* pub);
  */
 DPS_Status DPS_AckPublication(const DPS_Publication* pub, const uint8_t* ackPayload, size_t len);
 
-/**
- * Get the local node associated with a publication
- *
- * @param pub   A publication
- *
- * @return  Returns the local node associated with a publication
- */
-DPS_Node* DPS_GetPublicationNode(const DPS_Publication* pub);
-
 /** @} */ // end of publication group
 
 /**

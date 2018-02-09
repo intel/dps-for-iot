@@ -30,7 +30,6 @@ DPS_GetLoop
 DPS_GetNodeData
 DPS_GetPortNumber
 DPS_GetPublicationData
-DPS_GetPublicationNode
 DPS_GetSubscriptionData
 DPS_InitPublication
 DPS_InitUUID

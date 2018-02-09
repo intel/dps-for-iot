@@ -1393,11 +1393,6 @@ void* DPS_GetPublicationData(const DPS_Publication* pub)
     return pub ?  pub->userData : NULL;
 }
 
-DPS_Node* DPS_GetPublicationNode(const DPS_Publication* pub)
-{
-    return pub ? pub->node : NULL;
-}
-
 #ifndef NDEBUG
 void DPS_DumpPubs(DPS_Node* node)
 {
