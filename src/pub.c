@@ -421,6 +421,11 @@ static DPS_Status CallPubHandlers(DPS_Node* node, DPS_Publication* pub)
         DPS_TxBufferToRx(&pub->encryptedBuf, &encryptedBuf);
     } else {
         DPS_WARNPRINT("Failed to decrypt publication - %s\n", DPS_ErrTxt(ret));
+        /*
+         * This doesn't indicate an error with the message, it may be
+         * that the message is not encrypted for this node
+         */
+        ret = DPS_OK;
         goto Exit;
     }
     ret = DPS_ParseMapInit(&mapState, &encryptedBuf, EncryptedKeys, A_SIZEOF(EncryptedKeys), NULL, 0);
