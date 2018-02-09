@@ -170,12 +170,16 @@ static void ReadStdin(DPS_Node* node)
                 DPS_ERRPRINT("Failed to create publication - error=%s\n", DPS_ErrTxt(ret));
                 break;
             }
-            if (encrypt) {
-                ret = DPS_PublicationAddSubId(currentPub, &PskId[0]);
-                if (ret != DPS_OK) {
-                    DPS_ERRPRINT("Failed to add key ID - error=%s\n", DPS_ErrTxt(ret));
-                    break;
-                }
+            if (encrypt == 2)  {
+                ret = DPS_PublicationAddSubId(currentPub, &SubscriberId);
+            } else if (encrypt == 1) {
+                ret = DPS_PublicationAddSubId(currentPub, &PskId[1]);
+            } else {
+                ret = DPS_OK;
+            }
+            if (ret != DPS_OK) {
+                DPS_ERRPRINT("Failed to add key ID - error=%s\n", DPS_ErrTxt(ret));
+                break;
             }
         }
         ret = DPS_Publish(currentPub, (uint8_t*)msg, msg ? strnlen(msg, MAX_MSG_LEN) : 0, ttl);
