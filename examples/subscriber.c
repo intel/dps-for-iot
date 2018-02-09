@@ -52,11 +52,12 @@ static void OnPubMatch(DPS_Subscription* sub, const DPS_Publication* pub, uint8_
     DPS_Status ret;
     const DPS_UUID* pubId = DPS_PublicationGetUUID(pub);
     uint32_t sn = DPS_PublicationGetSequenceNum(pub);
+    const DPS_KeyId* senderId = DPS_PublicationGetId(pub);
     size_t i;
     size_t numTopics;
 
     if (!quiet) {
-        DPS_PRINT("Pub %s(%d) matches:\n", DPS_UUIDToString(pubId), sn);
+        DPS_PRINT("Pub %s(%d) [%s] matches:\n", DPS_UUIDToString(pubId), sn, KeyIdToString(senderId));
         DPS_PRINT("  pub ");
         numTopics = DPS_PublicationGetNumTopics(pub);
         for (i = 0; i < numTopics; ++i) {

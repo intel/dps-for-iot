@@ -58,12 +58,14 @@ typedef struct _DPS_Publication {
     uint64_t expires;               /* Time (in milliseconds) that this publication expires */
     DPS_AcknowledgementHandler handler;
     DPS_UUID pubId;                 /* Publication identifier */
-    COSE_Entity* recipients;        /* Publication-specific recipient encryption key ids */
+    COSE_Entity sender;             /* Publication sender ID */
+    COSE_Entity* recipients;        /* Publication recipient IDs */
     size_t recipientsCount;         /* Number of valid elements in recipients array */
     size_t recipientsCap;           /* Capacity of recipients array */
-    DPS_NodeAddress sender;         /* for retained messages - the sender address */
+    DPS_NodeAddress addr;           /* For retained messages - the sender address */
     DPS_BitVector* bf;              /* The Bloom filter bit vector for the topics for this publication */
     DPS_Node* node;                 /* Node for this publication */
+    COSE_Entity ack;                /* For ack messages - the ack sender ID */
 
     char** topics;                  /* Publication topics - pointers into topicsBuf */
     size_t numTopics;               /* Number of publication topics */

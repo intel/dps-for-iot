@@ -276,7 +276,7 @@ DPS_Status DPS_DecodeAcknowledgment(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxB
             DPS_RxBufferInit(&aadBuf, aadPos, buf->rxPos - aadPos);
             DPS_RxBufferInit(&cipherTextBuf, buf->rxPos, DPS_RxBufferAvail(buf));
             ret = COSE_Decrypt(nonce, &recipient, &aadBuf, &cipherTextBuf, node->keyStore,
-                               NULL, &plainTextBuf);
+                               &pub->ack, &plainTextBuf);
             if (ret == DPS_OK) {
                 DPS_DBGPRINT("Ack was decrypted\n");
                 CBOR_Dump("plaintext", plainTextBuf.base, DPS_TxBufferUsed(&plainTextBuf));
@@ -317,6 +317,8 @@ DPS_Status DPS_DecodeAcknowledgment(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxB
                 }
             }
             DPS_TxBufferFree(&plainTextBuf);
+            /* Ack identity will be invalid now */
+            memset(&pub->ack, 0, sizeof(pub->ack));
         }
         DPS_LockNode(node);
         DPS_PublicationDecRef(pub);

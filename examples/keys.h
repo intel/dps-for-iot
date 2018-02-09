@@ -54,6 +54,8 @@ extern const char SubscriberCert[];
 extern const char SubscriberPrivateKey[];
 extern const char SubscriberPassword[];
 
+const char* KeyIdToString(const DPS_KeyId* keyId);
+
 #ifdef __cplusplus
 }
 #endif

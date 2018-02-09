@@ -656,6 +656,15 @@ size_t DPS_PublicationGetNumTopics(const DPS_Publication* pub);
 int DPS_PublicationIsAckRequested(const DPS_Publication* pub);
 
 /**
+ * Get the key identifier of a publication
+ *
+ * @param pub   The publication
+ *
+ * @return The key identifier of the publisher, may be NULL
+ */
+const DPS_KeyId* DPS_PublicationGetId(const DPS_Publication* pub);
+
+/**
  * Get the local node associated with a publication
  *
  * @param pub   The publication
@@ -794,6 +803,16 @@ DPS_Status DPS_DestroyPublication(DPS_Publication* pub);
  * @param len           The length of the payload
  */
 DPS_Status DPS_AckPublication(const DPS_Publication* pub, const uint8_t* ackPayload, size_t len);
+
+/**
+ * Get the key identifier of an acknowledgement, only valid with the
+ * body of the DPS_AcknowledgementHandler function.
+ *
+ * @param pub   The pub parameter of DPS_AcknowledgementHandler
+ *
+ * @return The key identifier of the subscriber, may be NULL
+ */
+const DPS_KeyId* DPS_AckGetId(const DPS_Publication* pub);
 
 /** @} */ // end of publication group
 

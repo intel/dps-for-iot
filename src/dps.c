@@ -643,7 +643,7 @@ static DPS_Status SendMatchingPubToSub(DPS_Node* node, DPS_Publication* pub, Rem
     /*
      * We don't send publications to remote nodes we have received them from.
      */
-    if (!DPS_PublicationReceivedFrom(&node->history, &pub->pubId, pub->sequenceNum, &pub->sender, &subscriber->ep.addr)) {
+    if (!DPS_PublicationReceivedFrom(&node->history, &pub->pubId, pub->sequenceNum, &pub->addr, &subscriber->ep.addr)) {
         /*
          * This is the pub/sub matching code
          */

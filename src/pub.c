@@ -290,6 +290,26 @@ const char* DPS_PublicationGetTopic(const DPS_Publication* pub, size_t index)
     }
 }
 
+const DPS_KeyId* DPS_PublicationGetId(const DPS_Publication* pub)
+{
+    if ((IsValidPub(pub) || (pub && (pub->flags & PUB_FLAG_IS_COPY))) &&
+        (pub->sender.alg != COSE_ALG_RESERVED)) {
+        return &pub->sender.kid;
+    } else {
+        return NULL;
+    }
+}
+
+const DPS_KeyId* DPS_AckGetId(const DPS_Publication* pub)
+{
+    if ((IsValidPub(pub) || (pub && (pub->flags & PUB_FLAG_IS_COPY))) &&
+        (pub->ack.alg != COSE_ALG_RESERVED)) {
+        return &pub->ack.kid;
+    } else {
+        return NULL;
+    }
+}
+
 int DPS_PublicationIsAckRequested(const DPS_Publication* pub)
 {
     if (IsValidPub(pub) || (pub && (pub->flags & PUB_FLAG_IS_COPY))) {
@@ -310,7 +330,7 @@ DPS_Node* DPS_PublicationGetNode(const DPS_Publication* pub)
 
 static DPS_Status UpdatePubHistory(DPS_Node* node, DPS_Publication* pub)
 {
-    return DPS_UpdatePubHistory(&node->history, &pub->pubId, pub->sequenceNum, pub->ackRequested, PUB_TTL(node, pub), &pub->sender);
+    return DPS_UpdatePubHistory(&node->history, &pub->pubId, pub->sequenceNum, pub->ackRequested, PUB_TTL(node, pub), &pub->addr);
 }
 
 
@@ -329,7 +349,6 @@ static DPS_Status CallPubHandlers(DPS_Node* node, DPS_Publication* pub)
     DPS_Status ret;
     uint8_t nonce[COSE_NONCE_LEN];
     COSE_Entity recipient;
-    COSE_Entity sender;
     DPS_Subscription* sub;
     DPS_RxBuffer encryptedBuf;
     DPS_TxBuffer plainTextBuf;
@@ -375,7 +394,7 @@ static DPS_Status CallPubHandlers(DPS_Node* node, DPS_Publication* pub)
     DPS_TxBufferToRx(&pub->protectedBuf, &aadBuf);
     DPS_TxBufferToRx(&pub->encryptedBuf, &cipherTextBuf);
 
-    ret = COSE_Decrypt(nonce, &recipient, &aadBuf, &cipherTextBuf, node->keyStore, &sender, &plainTextBuf);
+    ret = COSE_Decrypt(nonce, &recipient, &aadBuf, &cipherTextBuf, node->keyStore, &pub->sender, &plainTextBuf);
     if (ret == DPS_OK) {
         DPS_DBGPRINT("Publication was decrypted\n");
         CBOR_Dump("plaintext", plainTextBuf.base, DPS_TxBufferUsed(&plainTextBuf));
@@ -399,7 +418,7 @@ static DPS_Status CallPubHandlers(DPS_Node* node, DPS_Publication* pub)
                 break;
             case COSE_ALG_ECDH_ES_HKDF_256:
             case COSE_ALG_ECDH_ES_A128KW:
-                if (AddRecipient(pub, recipient.alg, &sender.kid)) {
+                if (AddRecipient(pub, recipient.alg, &pub->sender.kid)) {
                     ret = DPS_OK;
                 } else {
                     ret = DPS_ERR_RESOURCES;
@@ -686,7 +705,7 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
     pub->sequenceNum = sequenceNum;
     pub->ackRequested = ackRequested;
     pub->flags |= PUB_FLAG_PUBLISH;
-    pub->sender = ep->addr;
+    pub->addr = ep->addr;
     /*
      * Free any existing protected and encrypted buffers
      */
