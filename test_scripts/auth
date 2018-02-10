@@ -1,0 +1,57 @@
+#!/bin/bash
+
+# Include common functions
+dir="${BASH_SOURCE%/*}"
+if [[ ! -d "$dir" ]]; then dir="$PWD"; fi
+. "$dir/common.sh"
+
+#
+# Participants
+# - Alice :: authorized to publish data on topic T
+# - Bob :: authorized to subscribe to data on topic T
+# - Eve :: eavesdropper who is not authorized to subscribe
+# - Trudy :: intruder who is not authorized to publish or acknowledge
+#
+
+#
+# Unauthorized subscription
+# - To protect against Eve, Alice must encrypt for Bob to prevent Eve from eavesdropping.
+#
+reset_logs
+
+test_node -u bob -s T
+test_node -u eve -s T
+sleep 1
+test_node -u alice -p T
+sleep 1
+
+expect_pubs_received 1 T
+
+#
+# Unauthorized publication
+# - To protect against Trudy, Bob must know that Alice is not the originator.
+#
+reset_logs
+
+test_node -u bob -s T
+sleep 1
+test_node -u trudy -p T
+sleep 1
+
+expect_pubs_received 0 T
+expect_errors 1 "Unauthorized pub"
+
+#
+# Unauthorized acknowledgement
+# - To protect against Trudy, Alice must know that Bob is not the originator.
+#
+reset_logs
+
+test_node -u bob -s T
+test_node -u trudy -s T
+sleep 1
+test_node -u alice -p T
+sleep 2
+
+expect_pubs_received 2 T
+expect_errors 1 "Unauthorized ack"

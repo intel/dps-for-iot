@@ -153,8 +153,9 @@ testprogs = []
 for test in testsrcs:
     testprogs.append(testenv.Program(test))
 
-testenv.Install('#/build/test/bin', testprogs)
+testprogs.append(testenv.Program(['test/node.c', 'test/keys.c']))
 
+testenv.Install('#/build/test/bin', testprogs)
 
 # Examples
 exampleenv = env.Clone()
