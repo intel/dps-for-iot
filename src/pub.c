@@ -417,7 +417,6 @@ static DPS_Status CallPubHandlers(DPS_Node* node, DPS_Publication* pub)
                     ret = DPS_ERR_RESOURCES;
                 }
                 break;
-            case COSE_ALG_ECDH_ES_HKDF_256:
             case COSE_ALG_ECDH_ES_A128KW:
                 if (AddRecipient(pub, recipient.alg, &pub->sender.kid)) {
                     ret = DPS_OK;

@@ -259,7 +259,6 @@ static DPS_Status EncodeRecipient(DPS_TxBuffer* buf, int8_t alg, const DPS_KeyId
         case COSE_ALG_DIRECT:
             ret = CBOR_EncodeBytes(buf, NULL, 0);
             break;
-        case COSE_ALG_ECDH_ES_HKDF_256:
         case COSE_ALG_ECDH_ES_A128KW:
             ret = EncodeProtectedMap(buf, alg);
             break;
@@ -283,7 +282,6 @@ static DPS_Status EncodeRecipient(DPS_TxBuffer* buf, int8_t alg, const DPS_KeyId
                 ret = CBOR_EncodeInt8(buf, alg);
             }
             break;
-        case COSE_ALG_ECDH_ES_HKDF_256:
         case COSE_ALG_ECDH_ES_A128KW:
             if (!key || key->type != COSE_KEY_EC) {
                 ret = DPS_ERR_INVALID;
@@ -793,44 +791,6 @@ DPS_Status COSE_Encrypt(int8_t alg, const uint8_t nonce[COSE_NONCE_LEN], const C
             goto Exit;
         }
         break;
-    case COSE_ALG_ECDH_ES_HKDF_256:
-        if (recipientLen > 1) {
-            ret = DPS_ERR_ARGS;
-            goto Exit;
-        }
-        /*
-         * Request the static recipient public key and ephemeral sender private key
-         */
-        staticKey.type = COSE_KEY_EC;
-        ret = GetKey(keyStore, &recipient[0].kid, &staticKey);
-        if (ret != DPS_OK) {
-            goto Exit;
-        }
-        ephemeralKey.type = COSE_KEY_EC;
-        ephemeralKey.ec.curve = staticKey.ec.curve;
-        ret = GetEphemeralKey(keyStore, &ephemeralKey);
-        if (ret != DPS_OK) {
-            goto Exit;
-        }
-        /*
-         * Create the content encryption key using ECDH + HKDF
-         */
-        ret = ECDH(staticKey.ec.curve, staticKey.ec.x, staticKey.ec.y,
-                   ephemeralKey.ec.d, secret, &secretLen);
-        if (ret != DPS_OK) {
-            goto Exit;
-        }
-        ret = EncodeKDFContext(&kdfContext, alg, M, recipient[0].alg);
-        if (ret != DPS_OK) {
-            goto Exit;
-        }
-        cek.type = COSE_KEY_SYMMETRIC;
-        ret = HKDF_SHA256(secret, secretLen, kdfContext.base, DPS_TxBufferUsed(&kdfContext),
-                          cek.symmetric.key);
-        if (ret != DPS_OK) {
-            goto Exit;
-        }
-        break;
     default:
         ret = DPS_ERR_NOT_IMPLEMENTED;
         goto Exit;
@@ -967,13 +927,6 @@ DPS_Status COSE_Encrypt(int8_t alg, const uint8_t nonce[COSE_NONCE_LEN], const C
                 }
                 ret = EncodeRecipient(cipherText, recipient[i].alg, &recipient[i].kid,
                                       NULL, kw, sizeof(kw));
-                if (ret != DPS_OK) {
-                    goto Exit;
-                }
-                break;
-            case COSE_ALG_ECDH_ES_HKDF_256:
-                ret = EncodeRecipient(cipherText, recipient[i].alg, &recipient[i].kid,
-                                      &ephemeralKey, NULL, 0);
                 if (ret != DPS_OK) {
                     goto Exit;
                 }
@@ -1515,33 +1468,6 @@ DPS_Status COSE_Decrypt(const uint8_t* nonce, COSE_Entity* recipient, DPS_RxBuff
             }
             cek.type = COSE_KEY_SYMMETRIC;
             ret = KeyUnwrap(kw, kek.symmetric.key, cek.symmetric.key);
-            if (ret != DPS_OK) {
-                continue;
-            }
-            break;
-        case COSE_ALG_ECDH_ES_HKDF_256:
-            /*
-             * Request the static recipient private key
-             */
-            staticKey.type = COSE_KEY_EC;
-            ret = GetKey(keyStore, &recipient->kid, &staticKey);
-            if (ret != DPS_OK) {
-                continue;
-            }
-            /*
-             * Create the content encryption key using ECDH + HKDF
-             */
-            ret = ECDH(ephemeralKey.ec.curve, ephemeralKey.ec.x, ephemeralKey.ec.y,
-                       staticKey.ec.d, secret, &secretLen);
-            if (ret != DPS_OK) {
-                continue;
-            }
-            ret = EncodeKDFContext(&kdfContext, alg, M, recipient->alg);
-            if (ret != DPS_OK) {
-                continue;
-            }
-            ret = HKDF_SHA256(secret, secretLen, kdfContext.base, DPS_TxBufferUsed(&kdfContext),
-                              cek.symmetric.key);
             if (ret != DPS_OK) {
                 continue;
             }

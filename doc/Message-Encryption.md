@@ -18,8 +18,8 @@ The implemented content encryption algorithm is *A128GCM*.
 
 ## Content Key Distribution
 The encryption key is determined by the recipient algorithm.  DPS
-supports the *direct*, *A128KW*, *ECDH-ES + HKDF-256*, and *ECDH-ES +
-A128KW* recipient algorithms.
+supports the *direct*, *A128KW*, and *ECDH-ES + A128KW* recipient
+algorithms.
 
 The use of the key wrap variants allows multiple recipients to be
 included in a message.
