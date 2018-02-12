@@ -60,6 +60,7 @@ static int GetGroupParams(const mbedtls_ecp_group* group, DPS_ECCurve* curve, si
         break;
     default:
         ret = MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE;
+        DPS_ERRPRINT("Unsupported group: %s\n", TLSErrTxt(ret));
         break;
     }
     *len = (group->nbits + 7) / 8;
@@ -83,6 +84,7 @@ static int GetHashFunction(DPS_ECCurve curve, mbedtls_md_type_t* md)
         break;
     default:
         ret = MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE;
+        DPS_ERRPRINT("Unsupported hash function: %s\n", TLSErrTxt(ret));
         break;
     }
     return ret;
@@ -315,11 +317,13 @@ DPS_Status ECDH(DPS_ECCurve curve, const uint8_t* x, const uint8_t* y, const uin
 
     ret = mbedtls_ecdh_compute_shared(&sender.grp, &sec, &sender.Q, &recipient.d, NULL, NULL);
     if (ret != 0) {
+        DPS_ERRPRINT("ECDH compute shared secret failed: %s\n", TLSErrTxt(ret));
         goto Exit;
     }
     *secretLen = len;
     ret = mbedtls_mpi_write_binary(&sec, secret, *secretLen);
     if (ret != 0) {
+        DPS_ERRPRINT("Write bignum failed: %s\n", TLSErrTxt(ret));
         goto Exit;
     }
 
@@ -352,10 +356,12 @@ DPS_Status ParseCertificate_ECDSA(const char* cert,
     mbedtls_x509_crt_init(&crt);
     ret = mbedtls_x509_crt_parse(&crt, (const unsigned char*)cert, len);
     if (ret != 0) {
+        DPS_ERRPRINT("X.509 parse failed: %s\n", TLSErrTxt(ret));
         goto Exit;
     }
     if (!mbedtls_pk_can_do(&crt.pk, MBEDTLS_PK_ECDSA)) {
         ret = MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE;
+        DPS_ERRPRINT("X.509 parse failed: %s\n", TLSErrTxt(ret));
         goto Exit;
     }
     keypair = mbedtls_pk_ec(crt.pk);
@@ -366,10 +372,12 @@ DPS_Status ParseCertificate_ECDSA(const char* cert,
     }
     ret = mbedtls_mpi_write_binary(&keypair->Q.X, x, len);
     if (ret != 0) {
+        DPS_ERRPRINT("Write bignum failed: %s\n", TLSErrTxt(ret));
         goto Exit;
     }
     ret = mbedtls_mpi_write_binary(&keypair->Q.Y, y, len);
     if (ret != 0) {
+        DPS_ERRPRINT("Write bignum failed: %s\n", TLSErrTxt(ret));
         goto Exit;
     }
 
@@ -406,6 +414,7 @@ DPS_Status ParsePrivateKey_ECDSA(const char* privateKey, const char* password,
     ret = mbedtls_pk_parse_key(&pk, (const unsigned char*)privateKey, len,
                                (const unsigned char*)password, pwLen);
     if (ret != 0) {
+        DPS_ERRPRINT("Parse private key failed: %s\n", TLSErrTxt(ret));
         goto Exit;
     }
     if (!mbedtls_pk_can_do(&pk, MBEDTLS_PK_ECDSA)) {
@@ -420,6 +429,7 @@ DPS_Status ParsePrivateKey_ECDSA(const char* privateKey, const char* password,
     }
     ret = mbedtls_mpi_write_binary(&keypair->d, d, len);
     if (ret != 0) {
+        DPS_ERRPRINT("Write bignum failed: %s\n", TLSErrTxt(ret));
         goto Exit;
     }
 
