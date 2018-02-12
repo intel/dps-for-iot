@@ -28,7 +28,7 @@
 #include <dps/dbg.h>
 #include <dps/err.h>
 #include <dps/private/dps.h>
-#include "ccm.h"
+#include "gcm.h"
 #include "cose.h"
 #include "crypto.h"
 #include "ec.h"
@@ -76,11 +76,6 @@ static void Dump(const char* tag, const uint8_t* data, size_t len)
     printf("\n");
 }
 
-uint8_t config[] = {
-    COSE_ALG_AES_CCM_16_64_128,
-    COSE_ALG_AES_CCM_16_128_128
-};
-
 static DPS_RBG* rbg = NULL;
 
 static DPS_Status KeyHandler(DPS_KeyStoreRequest* request, const DPS_KeyId* id)
@@ -108,7 +103,7 @@ static DPS_Status EphemeralKeyHandler(DPS_KeyStoreRequest* request, const DPS_Ke
     return DPS_SetKey(request, &k);
 }
 
-static void CCM_Raw()
+static void GCM_Raw()
 {
     DPS_Status ret;
     DPS_TxBuffer cipherText;
@@ -117,9 +112,9 @@ static void CCM_Raw()
     DPS_TxBufferInit(&cipherText, NULL, 512);
     DPS_TxBufferInit(&plainText, NULL, 512);
 
-    ret = Encrypt_CCM(key.symmetric.key, 16, 2, nonce, (uint8_t*)msg, sizeof(msg), aad, sizeof(aad), &cipherText);
+    ret = Encrypt_GCM(key.symmetric.key, nonce, (uint8_t*)msg, sizeof(msg), aad, sizeof(aad), &cipherText);
     ASSERT(ret == DPS_OK);
-    ret = Decrypt_CCM(key.symmetric.key, 16, 2, nonce, cipherText.base, DPS_TxBufferUsed(&cipherText), aad, sizeof(aad), &plainText);
+    ret = Decrypt_GCM(key.symmetric.key, nonce, cipherText.base, DPS_TxBufferUsed(&cipherText), aad, sizeof(aad), &plainText);
     ASSERT(ret == DPS_OK);
 
     ASSERT(DPS_TxBufferUsed(&plainText) == sizeof(msg));
@@ -241,48 +236,46 @@ int main(int argc, char** argv)
     rbg = DPS_CreateRBG();
     keyStore = DPS_CreateKeyStore(NULL, KeyHandler, EphemeralKeyHandler, NULL);
 
-    CCM_Raw();
+    GCM_Raw();
     ECDSA_Raw();
 
-    for (i = 0; i < sizeof(config); ++i) {
-        uint8_t alg = config[i];
-        COSE_Entity recipient;
-        DPS_RxBuffer aadBuf;
-        DPS_RxBuffer msgBuf;
-        DPS_TxBuffer cipherText;
-        DPS_TxBuffer plainText;
-        DPS_RxBuffer input;
+    uint8_t alg = COSE_ALG_A128GCM;
+    COSE_Entity recipient;
+    DPS_RxBuffer aadBuf;
+    DPS_RxBuffer msgBuf;
+    DPS_TxBuffer cipherText;
+    DPS_TxBuffer plainText;
+    DPS_RxBuffer input;
 
-        DPS_RxBufferInit(&aadBuf, (uint8_t*)aad, sizeof(aad));
-        DPS_RxBufferInit(&msgBuf, (uint8_t*)msg, sizeof(msg));
-        recipient.alg = COSE_ALG_A128KW;
-        recipient.kid = keyId;
+    DPS_RxBufferInit(&aadBuf, (uint8_t*)aad, sizeof(aad));
+    DPS_RxBufferInit(&msgBuf, (uint8_t*)msg, sizeof(msg));
+    recipient.alg = COSE_ALG_A128KW;
+    recipient.kid = keyId;
 
-        ret = COSE_Encrypt(alg, nonce, NULL, &recipient, 1, &aadBuf, &msgBuf, keyStore, &cipherText);
-        if (ret != DPS_OK) {
-            DPS_ERRPRINT("COSE_Encrypt failed: %s\n", DPS_ErrTxt(ret));
-            return EXIT_FAILURE;
-        }
-        Dump("CipherText", cipherText.base, DPS_TxBufferUsed(&cipherText));
-        /*
-         * Turn output buffers into input buffers
-         */
-        DPS_TxBufferToRx(&cipherText, &input);
-
-        DPS_RxBufferInit(&aadBuf, (uint8_t*)aad, sizeof(aad));
-
-        ret = COSE_Decrypt(nonce, &recipient, &aadBuf, &input, keyStore, NULL, &plainText);
-        if (ret != DPS_OK) {
-            DPS_ERRPRINT("COSE_Decrypt failed: %s\n", DPS_ErrTxt(ret));
-            return EXIT_FAILURE;
-        }
-
-        ASSERT(DPS_TxBufferUsed(&plainText) == sizeof(msg));
-        ASSERT(memcmp(plainText.base, msg, sizeof(msg)) == 0);
-
-        DPS_TxBufferFree(&cipherText);
-        DPS_TxBufferFree(&plainText);
+    ret = COSE_Encrypt(alg, nonce, NULL, &recipient, 1, &aadBuf, &msgBuf, keyStore, &cipherText);
+    if (ret != DPS_OK) {
+        DPS_ERRPRINT("COSE_Encrypt failed: %s\n", DPS_ErrTxt(ret));
+        return EXIT_FAILURE;
     }
+    Dump("CipherText", cipherText.base, DPS_TxBufferUsed(&cipherText));
+    /*
+     * Turn output buffers into input buffers
+     */
+    DPS_TxBufferToRx(&cipherText, &input);
+
+    DPS_RxBufferInit(&aadBuf, (uint8_t*)aad, sizeof(aad));
+
+    ret = COSE_Decrypt(nonce, &recipient, &aadBuf, &input, keyStore, NULL, &plainText);
+    if (ret != DPS_OK) {
+        DPS_ERRPRINT("COSE_Decrypt failed: %s\n", DPS_ErrTxt(ret));
+        return EXIT_FAILURE;
+    }
+
+    ASSERT(DPS_TxBufferUsed(&plainText) == sizeof(msg));
+    ASSERT(memcmp(plainText.base, msg, sizeof(msg)) == 0);
+
+    DPS_TxBufferFree(&cipherText);
+    DPS_TxBufferFree(&plainText);
 
     DPS_PRINT("Passed\n");
     DPS_DestroyKeyStore(keyStore);

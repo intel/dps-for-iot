@@ -14,8 +14,7 @@ attributes from the application as identified in COSE.  The
 content encryption algorithm and is replaced by a COSE object,
 either a *COSE_Encrypt_Tagged* or *COSE_Encrypt0_Tagged* object.
 
-The implemented content encryption algorithms are *AES-CCM-16-128-128*
-and *AES-CCM-16-64-128*.
+The implemented content encryption algorithm is *A128GCM*.
 
 ## Content Key Distribution
 The encryption key is determined by the recipient algorithm.  DPS
@@ -52,43 +51,44 @@ decrypting the contents of the message.
 DPS supports the *ES256*, *ES384*, and *ES512* signature algorithms.
 
 ## Examples
-An example encrypted publication message, using *AES-CCM-16-128-128*
-for the content, *ECDH-ES+A128KW* for the key distribution, and
-*ES256* for signing, will look like:
+
+An example encrypted publication message, using *A128GCM* for the
+content, *ECDH-ES+A128KW* for the key distribution, and *ES256* for
+signing, will look like:
 
 ~~~
 message = [
   / version / 1,
   / type / 1,
-  /unprotected / {
-    / port / 1: 42446,
+  / unprotected / {
+    / port / 1: 41950,
     / ttl / 2: 0
   },
   / protected (aad) / {
     / ttl / 2: 0,
-    / pub-id / 3: h'17003AE54085EE56F735764C7631CE61',
+    / pub-id / 3: h'7B2C11676389F49D5DE30507927F3F4F',
     / seq-num / 4: 1,
     / ack-req / 5: false,
-    / bloom-filter / 6: [1, 8192, h'002817805F00982A']
+    / bloom-filter / 6: [1, 8192, h'00340600CF0C6077']
   },
   / encrypted (COSE_Encrypt_Tagged) / 96(
     [
-      / protected / h'A101181E' / {
-          \ alg \ 1: 30 \ AES-CCM-16-128-128 \
+      / protected / h'A10101' / {
+          \ alg \ 1: 1 \ A128GCM \
         } /,
       / unprotected / {
-        / iv / 5: h'0100000017003AE54085EE56F7',
+        / iv / 5: h'010000007B2C11676389F49D',
         / countersign / 7: [
-          / protected / h'A10126' /
+          / protected / h'A10126' / {
               \ alg \ 1: -7 \ ECDSA 256 \
             } /,
           / unprotected / {
             / kid / 4: h'4450532054657374205075626C6973686572'
           },
-          / signature / h'1F14BDB559BB24A50B1C1ECA91938C445CFF64C4A24F075A6105B4679D19AEE439413AD30BE4C6C402031B2B04E7D6C2E4B2BA6A4C788E5C7DDE805654CA38CE'
+          / signature / h'73EEFD38E07F2EAD476E8D5CF28A86F2A57DC01B2E07E114634A0246132713648BAD1BB380DB8C6101AE45046A1B56E4476439B59A0F4AE50B965827BE376DDF'
         ]
       },
-      / ciphertext / h'457C20BF6EB818AD98C4D820EFD2B017CACE97C47144E3D6',
+      / ciphertext / h'581C6E4641FDC8970644BAA5305AF84C9D3887F95F808C49',
       / recipients / [
         [
           / protected / h'A101381C' / {
@@ -98,12 +98,12 @@ message = [
             / ephemeral / -1: {
               / kty / 1: 2,
               / crv / -1: 1,
-              / x / -2: h'B34D696D855245BB79FCC8F0A328F37B7CC935803DAEC9EBAB97F061A68444E1',
-              / y / -3: h'CDF27464CDC3A65DA7EC37139C354940E219A5E55D1A28265A015B2D0A47F72F'
+              / x / -2: h'7855C03075F337DB8EFD30FD6FD49AFA8852C0B753A5E4E145B023B42FA253F6',
+              / y / -3: h'1D4961E5B66068461BB542BAC46F302C750B38C19A4B2A6B46EE79208F800CFA'
             },
             / kid / 4: h'44505320546573742053756273637269626572'
           },
-          / ciphertext / h'CF83EEA4B372FC210A374E44F040EEFA345C569C2D74A322'
+          / ciphertext / h'E45108B6207517C8EC300FA0D69241E814CD8FEF8D396686'
         ]
       ]
     ]

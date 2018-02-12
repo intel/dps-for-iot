@@ -1,7 +1,7 @@
 /*
  *******************************************************************
  *
- * Copyright 2016 Intel Corporation All rights reserved.
+ * Copyright 2017 Intel Corporation All rights reserved.
  *
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  *
@@ -22,15 +22,15 @@
 
 #include <string.h>
 #include <memory.h>
-#include "ccm.h"
+#include "gcm.h"
 #include "mbedtls.h"
 #include "mbedtls/cipher.h"
 #include "mbedtls/error.h"
 
-DPS_Status Encrypt_CCM(const uint8_t key[AES_128_KEY_LEN],
-                       uint8_t M,
-                       uint8_t L,
-                       const uint8_t nonce[AES_CCM_NONCE_LEN],
+#define M 16 /* Tag length, in bytes */
+
+DPS_Status Encrypt_GCM(const uint8_t key[AES_128_KEY_LEN],
+                       const uint8_t nonce[AES_GCM_NONCE_LEN],
                        const uint8_t* plainText,
                        size_t ptLen,
                        const uint8_t* aad,
@@ -46,7 +46,7 @@ DPS_Status Encrypt_CCM(const uint8_t key[AES_128_KEY_LEN],
         return DPS_ERR_OVERFLOW;
     }
 
-    info = mbedtls_cipher_info_from_type(MBEDTLS_CIPHER_AES_128_CCM);
+    info = mbedtls_cipher_info_from_type(MBEDTLS_CIPHER_AES_128_GCM);
     mbedtls_cipher_init(&ctx);
     ret = mbedtls_cipher_setup(&ctx, info);
     if (ret != 0) {
@@ -59,7 +59,7 @@ DPS_Status Encrypt_CCM(const uint8_t key[AES_128_KEY_LEN],
         goto Exit;
     }
     outLen = DPS_TxBufferSpace(cipherText) - M;
-    ret = mbedtls_cipher_auth_encrypt(&ctx, nonce, AES_CCM_NONCE_LEN, aad, aadLen, plainText, ptLen,
+    ret = mbedtls_cipher_auth_encrypt(&ctx, nonce, AES_GCM_NONCE_LEN, aad, aadLen, plainText, ptLen,
                                       cipherText->txPos, &outLen, cipherText->txPos + ptLen, M);
     if (ret != 0) {
         DPS_ERRPRINT("Cipher auth encrypt failed: %s\n", TLSErrTxt(ret));
@@ -76,10 +76,8 @@ Exit:
     }
 }
 
-DPS_Status Decrypt_CCM(const uint8_t key[AES_128_KEY_LEN],
-                       uint8_t M,
-                       uint8_t L,
-                       const uint8_t nonce[AES_CCM_NONCE_LEN],
+DPS_Status Decrypt_GCM(const uint8_t key[AES_128_KEY_LEN],
+                       const uint8_t nonce[AES_GCM_NONCE_LEN],
                        const uint8_t* cipherText,
                        size_t ctLen,
                        const uint8_t* aad,
@@ -96,7 +94,7 @@ DPS_Status Decrypt_CCM(const uint8_t key[AES_128_KEY_LEN],
         return DPS_ERR_OVERFLOW;
     }
 
-    info = mbedtls_cipher_info_from_type(MBEDTLS_CIPHER_AES_128_CCM);
+    info = mbedtls_cipher_info_from_type(MBEDTLS_CIPHER_AES_128_GCM);
     mbedtls_cipher_init(&ctx);
     ret = mbedtls_cipher_setup(&ctx, info);
     if (ret != 0) {
@@ -109,7 +107,7 @@ DPS_Status Decrypt_CCM(const uint8_t key[AES_128_KEY_LEN],
         goto Exit;
     }
     outLen = DPS_TxBufferSpace(plainText);
-    ret = mbedtls_cipher_auth_decrypt(&ctx, nonce, AES_CCM_NONCE_LEN, aad, aadLen, cipherText, ptLen,
+    ret = mbedtls_cipher_auth_decrypt(&ctx, nonce, AES_GCM_NONCE_LEN, aad, aadLen, cipherText, ptLen,
                                       plainText->base, &outLen, cipherText + ptLen, M);
     if (ret != 0) {
         DPS_ERRPRINT("Cipher auth decrypt failed: %s\n", TLSErrTxt(ret));

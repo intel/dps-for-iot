@@ -1258,7 +1258,7 @@ DPS_Status DPS_SerializePub(DPS_Node* node, DPS_Publication* pub, const uint8_t*
         DPS_TxBufferToRx(&encryptedBuf, &plainTextBuf);
         DPS_TxBufferToRx(&protectedBuf, &aadBuf);
         DPS_MakeNonce(&pub->pubId, pub->sequenceNum, DPS_MSG_TYPE_PUB, nonce);
-        ret = COSE_Encrypt(COSE_ALG_AES_CCM_16_128_128, nonce, node->signer.alg ? &node->signer : NULL,
+        ret = COSE_Encrypt(COSE_ALG_A128GCM, nonce, node->signer.alg ? &node->signer : NULL,
                            pub->recipients, pub->recipientsCount, &aadBuf, &plainTextBuf, node->keyStore,
                            &encryptedBuf);
         DPS_RxBufferFree(&plainTextBuf);

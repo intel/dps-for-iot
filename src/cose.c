@@ -28,8 +28,9 @@
 #include <dps/err.h>
 #include "cose.h"
 #include <dps/private/cbor.h>
-#include "ccm.h"
+#include "gcm.h"
 #include "ec.h"
+#include "gcm.h"
 #include "hkdf.h"
 #include "keywrap.h"
 
@@ -154,15 +155,10 @@ static volatile void* SecureZeroMemory(volatile void* m, size_t l)
 static DPS_Status SetCryptoParams(int8_t alg, uint8_t* L, uint8_t* M, size_t* nonceLen)
 {
     switch (alg) {
-    case COSE_ALG_AES_CCM_16_64_128:
-        *L = 16 / 8;
-        *M = 64 / 8;
-        *nonceLen = AES_CCM_NONCE_LEN;
-        break;
-    case COSE_ALG_AES_CCM_16_128_128:
+    case COSE_ALG_A128GCM:
         *L = 16 / 8;
         *M = 128 / 8;
-        *nonceLen = AES_CCM_NONCE_LEN;
+        *nonceLen = AES_GCM_NONCE_LEN;
         break;
     default:
         return DPS_ERR_NOT_IMPLEMENTED;
@@ -846,7 +842,7 @@ DPS_Status COSE_Encrypt(int8_t alg, const uint8_t nonce[COSE_NONCE_LEN], const C
     if (ret != DPS_OK) {
         goto Exit;
     }
-    ret = Encrypt_CCM(cek.symmetric.key, M, L, nonce, plainText->base, ptLen, AAD.base, aadLen, &content);
+    ret = Encrypt_GCM(cek.symmetric.key, nonce, plainText->base, ptLen, AAD.base, aadLen, &content);
     if (ret != DPS_OK) {
         goto Exit;
     }
@@ -1601,7 +1597,7 @@ DPS_Status COSE_Decrypt(const uint8_t* nonce, COSE_Entity* recipient, DPS_RxBuff
         if (ret != DPS_OK) {
             goto Exit;
         }
-        ret = Decrypt_CCM(cek.symmetric.key, M, L, nonce ? nonce: iv, content, contentLen,
+        ret = Decrypt_GCM(cek.symmetric.key, nonce ? nonce : iv, content, contentLen,
                           AAD.base, aadLen, plainText);
         if (ret == DPS_OK) {
             break;
