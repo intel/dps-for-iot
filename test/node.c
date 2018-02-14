@@ -104,7 +104,7 @@ static void PublicationHandler(DPS_Subscription* sub, const DPS_Publication* pub
 {
     const DPS_UUID* pubId = DPS_PublicationGetUUID(pub);
     uint32_t sn = DPS_PublicationGetSequenceNum(pub);
-    const DPS_KeyId* keyId = DPS_PublicationGetId(pub);
+    const DPS_KeyId* keyId = DPS_PublicationGetSenderKeyId(pub);
     size_t numTopics;
     size_t i;
     DPS_Status ret;
@@ -137,7 +137,7 @@ static void AcknowledgementHandler(DPS_Publication* pub, uint8_t* payload, size_
 {
     const DPS_UUID* pubId = DPS_PublicationGetUUID(pub);
     uint32_t sn = DPS_PublicationGetSequenceNum(pub);
-    const DPS_KeyId* keyId = DPS_AckGetId(pub);
+    const DPS_KeyId* keyId = DPS_AckGetSenderKeyId(pub);
 
     if (!IsAllowed(keyId, ACK, pub)) {
         DPS_ERRPRINT("Unauthorized acknowledgement\n");

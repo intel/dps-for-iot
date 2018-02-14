@@ -290,7 +290,7 @@ const char* DPS_PublicationGetTopic(const DPS_Publication* pub, size_t index)
     }
 }
 
-const DPS_KeyId* DPS_PublicationGetId(const DPS_Publication* pub)
+const DPS_KeyId* DPS_PublicationGetSenderKeyId(const DPS_Publication* pub)
 {
     if ((IsValidPub(pub) || (pub && (pub->flags & PUB_FLAG_IS_COPY))) &&
         (pub->sender.alg != COSE_ALG_RESERVED)) {
@@ -300,7 +300,7 @@ const DPS_KeyId* DPS_PublicationGetId(const DPS_Publication* pub)
     }
 }
 
-const DPS_KeyId* DPS_AckGetId(const DPS_Publication* pub)
+const DPS_KeyId* DPS_AckGetSenderKeyId(const DPS_Publication* pub)
 {
     if ((IsValidPub(pub) || (pub && (pub->flags & PUB_FLAG_IS_COPY))) &&
         (pub->ack.alg != COSE_ALG_RESERVED)) {
@@ -330,7 +330,8 @@ DPS_Node* DPS_PublicationGetNode(const DPS_Publication* pub)
 
 static DPS_Status UpdatePubHistory(DPS_Node* node, DPS_Publication* pub)
 {
-    return DPS_UpdatePubHistory(&node->history, &pub->pubId, pub->sequenceNum, pub->ackRequested, PUB_TTL(node, pub), &pub->addr);
+    return DPS_UpdatePubHistory(&node->history, &pub->pubId, pub->sequenceNum, pub->ackRequested,
+                                PUB_TTL(node, pub), &pub->senderAddr);
 }
 
 
@@ -705,7 +706,7 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
     pub->sequenceNum = sequenceNum;
     pub->ackRequested = ackRequested;
     pub->flags |= PUB_FLAG_PUBLISH;
-    pub->addr = ep->addr;
+    pub->senderAddr = ep->addr;
     /*
      * Free any existing protected and encrypted buffers
      */

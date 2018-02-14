@@ -317,7 +317,7 @@ DPS_Status DPS_DecodeAcknowledgment(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxB
                 }
             }
             DPS_TxBufferFree(&plainTextBuf);
-            /* Ack identity will be invalid now */
+            /* Ack ID will be invalid now */
             memset(&pub->ack, 0, sizeof(pub->ack));
         }
         DPS_LockNode(node);

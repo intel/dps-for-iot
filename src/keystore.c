@@ -33,14 +33,14 @@
 
 DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
-DPS_KeyStore* DPS_CreateKeyStore(DPS_KeyAndIdentityHandler keyAndIdentityHandler, DPS_KeyHandler keyHandler,
+DPS_KeyStore* DPS_CreateKeyStore(DPS_KeyAndIdHandler keyAndIdHandler, DPS_KeyHandler keyHandler,
                                  DPS_EphemeralKeyHandler ephemeralKeyHandler, DPS_CAHandler caHandler)
 {
     DPS_DBGTRACE();
 
     DPS_KeyStore* keyStore = calloc(1, sizeof(DPS_KeyStore));
     if (keyStore) {
-        keyStore->keyAndIdentityHandler = keyAndIdentityHandler;
+        keyStore->keyAndIdHandler = keyAndIdHandler;
         keyStore->keyHandler = keyHandler;
         keyStore->ephemeralKeyHandler = ephemeralKeyHandler;
         keyStore->caHandler = caHandler;
@@ -78,9 +78,9 @@ DPS_KeyStore* DPS_KeyStoreHandle(DPS_KeyStoreRequest* request)
     return request ? request->keyStore : NULL;
 }
 
-DPS_Status DPS_SetKeyAndIdentity(DPS_KeyStoreRequest* request, const DPS_Key* key, const DPS_KeyId* keyId)
+DPS_Status DPS_SetKeyAndId(DPS_KeyStoreRequest* request, const DPS_Key* key, const DPS_KeyId* keyId)
 {
-    return request->setKeyAndIdentity ? request->setKeyAndIdentity(request, key, keyId) : DPS_ERR_MISSING;
+    return request->setKeyAndId ? request->setKeyAndId(request, key, keyId) : DPS_ERR_MISSING;
 }
 
 DPS_Status DPS_SetKey(DPS_KeyStoreRequest* request, const DPS_Key* key)
@@ -224,14 +224,14 @@ ErrorExit:
     return DPS_ERR_RESOURCES;
 }
 
-static DPS_Status MemoryKeyStoreKeyAndIdentityHandler(DPS_KeyStoreRequest* request)
+static DPS_Status MemoryKeyStoreKeyAndIdHandler(DPS_KeyStoreRequest* request)
 {
     DPS_MemoryKeyStore* mks = (DPS_MemoryKeyStore*)DPS_KeyStoreHandle(request);
 
     if (!mks->networkId.id || !mks->networkKey.symmetric.key) {
         return DPS_ERR_MISSING;
     }
-    return DPS_SetKeyAndIdentity(request, &mks->networkKey, &mks->networkId);
+    return DPS_SetKeyAndId(request, &mks->networkKey, &mks->networkId);
 }
 
 static DPS_Status MemoryKeyStoreKeyHandler(DPS_KeyStoreRequest* request, const DPS_KeyId* keyId)
@@ -314,7 +314,7 @@ DPS_MemoryKeyStore* DPS_CreateMemoryKeyStore()
 
     mks->rbg = rbg;
     mks->keyStore.userData = mks;
-    mks->keyStore.keyAndIdentityHandler = MemoryKeyStoreKeyAndIdentityHandler;
+    mks->keyStore.keyAndIdHandler = MemoryKeyStoreKeyAndIdHandler;
     mks->keyStore.keyHandler = MemoryKeyStoreKeyHandler;
     mks->keyStore.ephemeralKeyHandler = MemoryKeyStoreEphemeralKeyHandler;
     mks->keyStore.caHandler = MemoryKeyStoreCAHandler;

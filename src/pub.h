@@ -62,7 +62,7 @@ typedef struct _DPS_Publication {
     COSE_Entity* recipients;        /* Publication recipient IDs */
     size_t recipientsCount;         /* Number of valid elements in recipients array */
     size_t recipientsCap;           /* Capacity of recipients array */
-    DPS_NodeAddress addr;           /* For retained messages - the sender address */
+    DPS_NodeAddress senderAddr;     /* For retained messages - the sender address */
     DPS_BitVector* bf;              /* The Bloom filter bit vector for the topics for this publication */
     DPS_Node* node;                 /* Node for this publication */
     COSE_Entity ack;                /* For ack messages - the ack sender ID */

@@ -126,7 +126,7 @@ static int AddTopics(char* topicList, char** msg, int* keep, int* ttl, int* encr
 static void OnAck(DPS_Publication* pub, uint8_t* data, size_t len)
 {
     DPS_PRINT("Ack for pub UUID %s(%d) [%s]\n", DPS_UUIDToString(DPS_PublicationGetUUID(pub)),
-              DPS_PublicationGetSequenceNum(pub), KeyIdToString(DPS_AckGetId(pub)));
+              DPS_PublicationGetSequenceNum(pub), KeyIdToString(DPS_AckGetSenderKeyId(pub)));
     if (len) {
         DPS_PRINT("    %.*s\n", (int)len, data);
     }

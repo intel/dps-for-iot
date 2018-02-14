@@ -101,8 +101,8 @@ var crypto = require("crypto");
         }
         return true;
     }
-    var onKeyAndIdentity = function(request) {
-        return dps.setKeyAndIdentity(request, new dps.SymmetricKey(networkKey), networkKeyID);
+    var onKeyAndId = function(request) {
+        return dps.setKeyAndId(request, new dps.SymmetricKey(networkKey), networkKeyID);
     }
     var onKey = function(request, id) {
         var i, j;
@@ -183,15 +183,15 @@ var crypto = require("crypto");
     }
 
     if (encryption == 0) {
-        keyStore = dps.createKeyStore(onKeyAndIdentity, onKey, onEphemeralKey, null);
+        keyStore = dps.createKeyStore(onKeyAndId, onKey, onEphemeralKey, null);
         nodeId = null;
         pubKeyId = null;
     } else if (encryption == 1) {
-        keyStore = dps.createKeyStore(onKeyAndIdentity, onKey, onEphemeralKey, null);
+        keyStore = dps.createKeyStore(onKeyAndId, onKey, onEphemeralKey, null);
         nodeId = null;
         pubKeyId = keyID[0];
     } else if (encryption == 2) {
-        keyStore = dps.createKeyStore(onKeyAndIdentity, onKey, onEphemeralKey, onCA);
+        keyStore = dps.createKeyStore(onKeyAndId, onKey, onEphemeralKey, onCA);
         nodeId = publisherId;
         pubKeyId = subscriberId;
     }

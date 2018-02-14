@@ -52,7 +52,7 @@ static void OnPubMatch(DPS_Subscription* sub, const DPS_Publication* pub, uint8_
     DPS_Status ret;
     const DPS_UUID* pubId = DPS_PublicationGetUUID(pub);
     uint32_t sn = DPS_PublicationGetSequenceNum(pub);
-    const DPS_KeyId* senderId = DPS_PublicationGetId(pub);
+    const DPS_KeyId* senderId = DPS_PublicationGetSenderKeyId(pub);
     size_t i;
     size_t numTopics;
 

@@ -23,7 +23,7 @@
 #include "test.h"
 #include <dps/dps.h>
 
-static DPS_Status GetKeyAndIdentity(DPS_KeyStoreRequest* request)
+static DPS_Status GetKeyAndId(DPS_KeyStoreRequest* request)
 {
     return DPS_ERR_MISSING;
 }
@@ -50,7 +50,7 @@ int main(int argc, char** argv)
     void* userData;
 
     /* Create and destroy */
-    keyStore = DPS_CreateKeyStore(GetKeyAndIdentity, GetKey, GetEphemeralKey, GetCA);
+    keyStore = DPS_CreateKeyStore(GetKeyAndId, GetKey, GetEphemeralKey, GetCA);
     ASSERT(keyStore);
     DPS_DestroyKeyStore(keyStore);
     keyStore = NULL;
@@ -60,7 +60,7 @@ int main(int argc, char** argv)
     keyStore = NULL;
 
     /* Set and get user data */
-    keyStore = DPS_CreateKeyStore(GetKeyAndIdentity, GetKey, GetEphemeralKey, GetCA);
+    keyStore = DPS_CreateKeyStore(GetKeyAndId, GetKey, GetEphemeralKey, GetCA);
     ASSERT(keyStore);
     ret = DPS_SetKeyStoreData(keyStore, (void*)1);
     ASSERT(ret == DPS_OK);
