@@ -113,7 +113,7 @@ var dps = require("dps");
     } else if (encryption == 2) {
         dps.setTrustedCA(keyStore, ca);
         dps.setCertificate(keyStore, subscriberCert, subscriberPrivateKey, subscriberPassword);
-        dps.setCertificate(keyStore, publisherCert, null, null);
+        dps.setCertificate(keyStore, publisherCert);
         nodeId = subscriberId;
     }
 

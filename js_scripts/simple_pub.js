@@ -83,13 +83,16 @@ var dps = require("dps");
         console.log("Ack for pub UUID " + dps.publicationGetUUID(pub) + "(" + dps.publicationGetSequenceNum(pub) + ")");
         console.log("    " + payload);
     };
+    var onDestroy = function (node) {
+        dps.destroyMemoryKeyStore(keyStore);
+    };
     var stop = function () {
         dps.destroyPublication(pub);
-        dps.destroyNode(node);
-        dps.destroyMemoryKeyStore(keyStore);
+        dps.destroyNode(node, onDestroy);
     };
     var publish = function () {
         dps.publish(pub, "world", 0);
+        console.log("Pub UUID " + dps.publicationGetUUID(pub) + "(" + dps.publicationGetSequenceNum(pub) + ")");
         setTimeout(stop, 200);
     };
 
@@ -116,7 +119,7 @@ var dps = require("dps");
     } else if (encryption == 2) {
         dps.setTrustedCA(keyStore, ca);
         dps.setCertificate(keyStore, publisherCert, publisherPrivateKey, publisherPassword);
-        dps.setCertificate(keyStore, subscriberCert, null, null);
+        dps.setCertificate(keyStore, subscriberCert);
         nodeId = publisherId;
         pubKeyId = subscriberId;
     }
@@ -128,5 +131,6 @@ var dps = require("dps");
     dps.initPublication(pub, ["a/b/c"], false, null, onAck);
     dps.publicationAddSubId(pub, pubKeyId);
     dps.publish(pub, "hello", 0);
+    console.log("Pub UUID " + dps.publicationGetUUID(pub) + "(" + dps.publicationGetSequenceNum(pub) + ")");
     setTimeout(publish, 200);
 }());

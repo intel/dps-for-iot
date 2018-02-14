@@ -101,24 +101,24 @@ var crypto = require("crypto");
         return true;
     }
     var onKeyAndId = function(request) {
-        return dps.setKeyAndId(request, new dps.SymmetricKey(networkKey), networkKeyID);
+        return dps.setKeyAndId(request, new dps.KeySymmetric(networkKey), networkKeyID);
     }
     var onKey = function(request, id) {
         var i, j;
 
         for (i = 0; i < keyID.length; ++i) {
             if (compare(keyID[i], id)) {
-                return dps.setKey(request, new dps.SymmetricKey(keyData[i]));
+                return dps.setKey(request, new dps.KeySymmetric(keyData[i]));
             }
         }
         if (compare(networkKeyID, id)) {
-            return dps.setKey(request, new dps.SymmetricKey(networkKey));
+            return dps.setKey(request, new dps.KeySymmetric(networkKey));
         }
         if (compare(publisherId, id)) {
-            return dps.setKey(request, new dps.CertKey(publisherCert));
+            return dps.setKey(request, new dps.KeyCert(publisherCert));
         }
         if (compare(subscriberId, id)) {
-            return dps.setKey(request, new dps.CertKey(subscriberCert, subscriberPrivateKey, subscriberPassword));
+            return dps.setKey(request, new dps.KeyCert(subscriberCert, subscriberPrivateKey, subscriberPassword));
         }
         return dps.ERR_MISSING;
     };
@@ -129,7 +129,7 @@ var crypto = require("crypto");
 
         switch (key.type) {
         case dps.KEY_SYMMETRIC:
-            return dps.setKey(request, new dps.SymmetricKey(crypto.randomBytes(16)));
+            return dps.setKey(request, new dps.KeySymmetric(crypto.randomBytes(16)));
         case dps.KEY_EC:
             switch (key.curve) {
             case dps.EC_CURVE_P256:
@@ -149,7 +149,7 @@ var crypto = require("crypto");
             x = ecdh.getPublicKey().slice(1, n + 1);
             y = ecdh.getPublicKey().slice(n + 1, (2 * n) + 1);
             d = ecdh.getPrivateKey();
-            return dps.setKey(request, new dps.ECKey(key.curve, x, y, d));
+            return dps.setKey(request, new dps.KeyEC(key.curve, x, y, d));
         default:
             return dps.ERR_MISSING;
         }

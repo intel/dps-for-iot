@@ -102,28 +102,28 @@ if env['python']:
     if platform == 'win32':
         pyenv['SHLIBSUFFIX'] = '.pyd'
 
-    pyenv.Append(SWIGFLAGS = ['-python', '-c++', '-Wextra', '-Werror', '-v', '-O'], SWIGPATH = '#/inc')
-    pyenv.Append(CPPPATH = ['swig'])
+    pyenv.Append(SWIGFLAGS = ['-python', '-c++', '-Wextra', '-Werror', '-v', '-O'], SWIGPATH = ['#/inc', './swig/py'])
+    pyenv.Append(CPPPATH = ['swig', 'swig/py'])
     # Build python module library
-    pyobjs = pyenv.SharedObject(['swig/dps_python.i', 'swig/py/dps.cc'])
+    pyobjs = pyenv.SharedObject(['swig/py/dps.i'])
     pylib = pyenv.SharedLibrary('./py/dps', shobjs + pyobjs)
     pyenv.Install('#/build/dist/py', pylib)
-    pyenv.InstallAs('#/build/dist/py/dps.py', './swig/dps.py')
+    pyenv.InstallAs('#/build/dist/py/dps.py', './swig/py/dps.py')
 
 if env['nodejs'] and platform == 'posix':
     # Use SWIG to build the node.js wrapper
     nodeenv = libenv.Clone();
     nodeenv.VariantDir('swig/js', 'swig')
-    nodeenv.Append(SWIGFLAGS = ['-javascript', '-node', '-c++', '-DV8_VERSION=0x04059937', '-Wextra', '-Werror', '-v', '-O'], SWIGPATH = '#/inc')
+    nodeenv.Append(SWIGFLAGS = ['-javascript', '-node', '-c++', '-DV8_VERSION=0x04059937', '-Wextra', '-Werror', '-v', '-O'], SWIGPATH = ['#/inc', './swig/js'])
     # There may be a bug with the SWIG builder - add -O to CPPFLAGS to get it passed on to the compiler
     nodeenv.Append(CPPFLAGS = ['-DBUILDING_NODE_EXTENSION', '-std=c++11', '-O', '-Wno-unused-result'])
-    nodeenv.Append(CPPPATH = ['swig'])
+    nodeenv.Append(CPPPATH = ['swig', 'swig/js'])
     if env['target'] == 'yocto':
         nodeenv.Append(CPPPATH = [os.getenv('SYSROOT') + '/usr/include/node'])
     else:
         nodeenv.Append(CPPPATH = ['/usr/include/node'])
     nodeenv.Append(LIBS = [lib, env['UV_LIBS']])
-    nodeobjs = nodeenv.SharedObject(['swig/dps_node.i', 'swig/js/dps.cc'])
+    nodeobjs = nodeenv.SharedObject(['swig/js/dps.i'])
     nodedps = nodeenv.SharedLibrary('lib/nodedps', shobjs + nodeobjs)
     nodeenv.InstallAs('#/build/dist/js/dps.node', nodedps)
 

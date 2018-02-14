@@ -14,6 +14,9 @@ def on_pub(sub, new_sub_pub, payload):
         dps.ack_publication(new_sub_pub, ack_msg);
     dps.publish(pub, "hello")
 
+def on_destroy(node):
+    print "Destroyed"
+
 # Enable or disable (default) DPS debug output
 dps.cvar.debug = False
 
@@ -31,4 +34,4 @@ dps.subscribe(sub, on_pub)
 time.sleep(60)
 
 dps.destroy_publication(pub)
-dps.destroy_node(node)
+dps.destroy_node(node, on_destroy)

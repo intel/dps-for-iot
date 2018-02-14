@@ -107,21 +107,21 @@ def int_to_bytes(b):
         s = "0" + s
     return s.decode("hex")
 def on_key_and_id(request):
-    return dps.set_key_and_id(request, dps.SymmetricKey(network_key), network_key_id);
+    return dps.set_key_and_id(request, dps.KeySymmetric(network_key), network_key_id);
 def on_key(request, id):
     for i in range(0, len(key_id)):
         if compare(key_id[i], id):
-            return dps.set_key(request, dps.SymmetricKey(key_data[i]))
+            return dps.set_key(request, dps.KeySymmetric(key_data[i]))
     if compare(network_key_id, id):
-        return dps.set_key(request, dps.SymmetricKey(network_key))
+        return dps.set_key(request, dps.KeySymmetric(network_key))
     if compare(publisher_id, id):
-        return dps.set_key(request, dps.CertKey(publisher_cert));
+        return dps.set_key(request, dps.KeyCert(publisher_cert));
     if compare(subscriber_id, id):
-        return dps.set_key(request, dps.CertKey(subscriber_cert, subscriber_private_key, subscriber_password));
+        return dps.set_key(request, dps.KeyCert(subscriber_cert, subscriber_private_key, subscriber_password));
     return dps.ERR_MISSING
 def on_ephemeral_key(request, key):
     if key.type == dps.KEY_SYMMETRIC:
-        return dps.set_key(request, dps.SymmetricKey(os.urandom(16)))
+        return dps.set_key(request, dps.KeySymmetric(os.urandom(16)))
     elif key.type == dps.KEY_EC:
         if key.curve == dps.EC_CURVE_P256:
             curve = ec.SECP256R1()
@@ -133,7 +133,7 @@ def on_ephemeral_key(request, key):
         x = int_to_bytes(k.public_key().public_numbers().x)
         y = int_to_bytes(k.public_key().public_numbers().y)
         d = int_to_bytes(k.private_numbers().private_value)
-        return dps.set_key(request, dps.ECKey(key.curve, x, y, d))
+        return dps.set_key(request, dps.KeyEC(key.curve, x, y, d))
     else:
         return dps.ERR_MISSING
 def on_ca(request):

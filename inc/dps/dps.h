@@ -110,10 +110,10 @@ typedef enum {
  *
  * @note need to define this outside of DPS_Key to satisfy SWIG.
  */
-struct _DPS_KeySymmetric {
+typedef struct _DPS_KeySymmetric {
     const uint8_t* key;         /**< Key data */
     size_t len;                 /**< Size of key data */
-};
+} DPS_KeySymmetric;
 
 /**
  * Allowed elliptic curves
@@ -133,23 +133,23 @@ typedef enum {
  *
  * @note need to define this outside of DPS_Key to satisfy SWIG.
  */
-struct _DPS_KeyEC {
+typedef struct _DPS_KeyEC {
     DPS_ECCurve curve; /**< The named curve */
     const uint8_t* x; /**< X coordinate */
     const uint8_t* y; /**< Y coordinate */
     const uint8_t* d; /**< D coordinate */
-};
+} DPS_KeyEC;
 
 /**
  * Certificate key data.
  *
  * @note need to define this outside of DPS_Key to satisfy SWIG.
  */
-struct _DPS_KeyCert {
+typedef struct _DPS_KeyCert {
     const char *cert;           /**< The certificate in PEM format */
     const char *privateKey;     /**< The optional private key in PEM format */
     const char *password;       /**< The optional password protecting the key */
-};
+} DPS_KeyCert;
 
 /**
  * Union of supported key types.
@@ -157,9 +157,9 @@ struct _DPS_KeyCert {
 typedef struct _DPS_Key {
     DPS_KeyType type; /**< Type of key */
     union {
-        struct _DPS_KeySymmetric symmetric; /**< DPS_KEY_SYMMETRIC */
-        struct _DPS_KeyEC ec;               /**< DPS_KEY_EC */
-        struct _DPS_KeyCert cert;           /**< DPS_KEY_EC_CERT */
+        DPS_KeySymmetric symmetric; /**< DPS_KEY_SYMMETRIC */
+        DPS_KeyEC ec;               /**< DPS_KEY_EC */
+        DPS_KeyCert cert;           /**< DPS_KEY_EC_CERT */
     };
 } DPS_Key;
 

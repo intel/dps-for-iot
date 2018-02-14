@@ -102,24 +102,24 @@ var crypto = require("crypto");
         return true;
     }
     var onKeyAndId = function(request) {
-        return dps.setKeyAndId(request, new dps.SymmetricKey(networkKey), networkKeyID);
+        return dps.setKeyAndId(request, new dps.KeySymmetric(networkKey), networkKeyID);
     }
     var onKey = function(request, id) {
         var i, j;
 
         for (i = 0; i < keyID.length; ++i) {
             if (compare(keyID[i], id)) {
-                return dps.setKey(request, new dps.SymmetricKey(keyData[i]));
+                return dps.setKey(request, new dps.KeySymmetric(keyData[i]));
             }
         }
         if (compare(networkKeyID, id)) {
-            return dps.setKey(request, new dps.SymmetricKey(networkKey));
+            return dps.setKey(request, new dps.KeySymmetric(networkKey));
         }
         if (compare(publisherId, id)) {
-            return dps.setKey(request, new dps.CertKey(publisherCert, publisherPrivateKey, publisherPassword));
+            return dps.setKey(request, new dps.KeyCert(publisherCert, publisherPrivateKey, publisherPassword));
         }
         if (compare(subscriberId, id)) {
-            return dps.setKey(request, new dps.CertKey(subscriberCert));
+            return dps.setKey(request, new dps.KeyCert(subscriberCert));
         }
         return dps.ERR_MISSING;
     };
@@ -130,7 +130,7 @@ var crypto = require("crypto");
 
         switch (key.type) {
         case dps.KEY_SYMMETRIC:
-            return dps.setKey(request, new dps.SymmetricKey(crypto.randomBytes(16)));
+            return dps.setKey(request, new dps.KeySymmetric(crypto.randomBytes(16)));
         case dps.KEY_EC:
             switch (key.curve) {
             case dps.EC_CURVE_P256:
@@ -150,7 +150,7 @@ var crypto = require("crypto");
             x = ecdh.getPublicKey().slice(1, n + 1);
             y = ecdh.getPublicKey().slice(n + 1, (2 * n) + 1);
             d = ecdh.getPrivateKey();
-            return dps.setKey(request, new dps.ECKey(key.curve, x, y, d));
+            return dps.setKey(request, new dps.KeyEC(key.curve, x, y, d));
         default:
             return dps.ERR_MISSING;
         }
@@ -163,13 +163,16 @@ var crypto = require("crypto");
         console.log("Ack for pub UUID " + dps.publicationGetUUID(pub) + "(" + dps.publicationGetSequenceNum(pub) + ")");
         console.log("    " + payload);
     };
+    var onDestroy = function (node) {
+        dps.destroyKeyStore(keyStore);
+    };
     var stop = function () {
         dps.destroyPublication(pub);
-        dps.destroyNode(node);
-        dps.destroyKeyStore(keyStore);
+        dps.destroyNode(node, onDestroy);
     };
     var publish = function () {
         dps.publish(pub, "world", 0);
+        console.log("Pub UUID " + dps.publicationGetUUID(pub) + "(" + dps.publicationGetSequenceNum(pub) + ")");
         setTimeout(stop, 200);
     };
 
@@ -203,5 +206,6 @@ var crypto = require("crypto");
     dps.initPublication(pub, ["a/b/c"], false, null, onAck);
     dps.publicationAddSubId(pub, pubKeyId);
     dps.publish(pub, "hello", 0);
+    console.log("Pub UUID " + dps.publicationGetUUID(pub) + "(" + dps.publicationGetSequenceNum(pub) + ")");
     setTimeout(publish, 200);
 }());

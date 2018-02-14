@@ -108,6 +108,10 @@ def on_ack(pub, payload):
     print "Ack for pub UUID %s(%d)" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub))
     print "    %s" % (payload)
 
+def on_destroy(node):
+    print "Destroyed"
+    dps.destroy_key_store(key_store)
+
 # Enable or disable (default) DPS debug output
 dps.cvar.debug = False
 
@@ -125,5 +129,4 @@ print "Pub UUID %s(%d)" % (dps.publication_get_uuid(pub), dps.publication_get_se
 time.sleep(0.1)
 
 dps.destroy_publication(pub)
-dps.destroy_node(node)
-dps.destroy_memory_key_store(key_store)
+dps.destroy_node(node, on_destroy)
