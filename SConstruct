@@ -168,17 +168,17 @@ elif env['PLATFORM'] == 'posix':
             exit();
 
     # Stack execution protection:
-    env.Append(LDFLAGS = ['-z noexecstack'])
+    env.Append(LINKFLAGS = ['-z', 'noexecstack'])
 
     # Data relocation and protection (RELRO):
-    env.Append(LDLFAGS= ['-z relro', '-z now'])
+    env.Append(LINKFLAGS = ['-z', 'relro', '-z', 'now'])
 
     # Stack-based Buffer Overrun Detection:
     env.Append(CCFLAGS = ['-fstack-protector-strong'])
 
     # Position Independent Execution (PIE)
     env.Append(CCFLAGS = ['-fPIE', '-fPIC'])
-    env.Append(LDFLAGS = ['-pie']) # PIE for executables only
+    env.Append(LINKFLAGS = ['-pie']) # PIE for executables only
 
     # Fortify source:
     env.Append(CPPDEFINES = ['_FORTIFY_SOURCE=2'])
