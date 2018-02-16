@@ -106,8 +106,8 @@ def int_to_bytes(b):
     if len(s) & 1:
         s = "0" + s
     return s.decode("hex")
-def on_key_and_identity(request):
-    return dps.set_key_and_identity(request, dps.SymmetricKey(network_key), network_key_id);
+def on_key_and_id(request):
+    return dps.set_key_and_id(request, dps.SymmetricKey(network_key), network_key_id);
 def on_key(request, id):
     for i in range(0, len(key_id)):
         if compare(key_id[i], id):
@@ -140,13 +140,13 @@ def on_ca(request):
     return dps.set_ca(request, ca)
 
 if args.encryption == 0:
-    key_store = dps.create_key_store(on_key_and_identity, on_key, on_ephemeral_key, None)
+    key_store = dps.create_key_store(on_key_and_id, on_key, on_ephemeral_key, None)
     node_id = None
 elif args.encryption == 1:
-    key_store = dps.create_key_store(on_key_and_identity, on_key, on_ephemeral_key, None)
+    key_store = dps.create_key_store(on_key_and_id, on_key, on_ephemeral_key, None)
     node_id = None
 elif args.encryption == 2:
-    key_store = dps.create_key_store(on_key_and_identity, on_key, on_ephemeral_key, on_ca)
+    key_store = dps.create_key_store(on_key_and_id, on_key, on_ephemeral_key, on_ca)
     node_id = subscriber_id
 
 def on_pub(sub, pub, payload):

@@ -185,18 +185,18 @@ typedef struct _DPS_KeyStoreRequest DPS_KeyStoreRequest;
  * Function prototype for a key store handler called when a key and
  * key identifier is requested.
  *
- * DPS_SetKeyAndIdentity() should be called to provide the key and
+ * DPS_SetKeyAndId() should be called to provide the key and
  * identifier to the caller.
  *
  * @param request The request, only valid with the body of this
  *                callback function.
  *
  * @return
- * - DPS_OK when DPS_SetKeyAndIdentity() succeeds
+ * - DPS_OK when DPS_SetKeyAndId() succeeds
  * - DPS_ERR_MISSING when no key is configured for this host
  * - error otherwise
  */
-typedef DPS_Status (*DPS_KeyAndIdentityHandler)(DPS_KeyStoreRequest* request);
+typedef DPS_Status (*DPS_KeyAndIdHandler)(DPS_KeyStoreRequest* request);
 
 /**
  * Function prototype for a key store handler called when a key with the provided
@@ -258,7 +258,7 @@ typedef DPS_Status (*DPS_CAHandler)(DPS_KeyStoreRequest* request);
  *
  * @return DPS_OK or an error
  */
-DPS_Status DPS_SetKeyAndIdentity(DPS_KeyStoreRequest* request, const DPS_Key* key, const DPS_KeyId* keyId);
+DPS_Status DPS_SetKeyAndId(DPS_KeyStoreRequest* request, const DPS_Key* key, const DPS_KeyId* keyId);
 
 /**
  * Provide a key to a key store request.
@@ -292,15 +292,16 @@ DPS_KeyStore* DPS_KeyStoreHandle(DPS_KeyStoreRequest* request);
 /**
  * Creates a key store.
  *
- * @param keyAndIdentityHandler Optional handler for receiving key and
- *                              key identifier requests
+ * @param keyAndIdHandler Optional handler for receiving key and key
+ *                        identifier requests
  * @param keyHandler Optional handler for receiving key requests
- * @param ephemeralKeyHandler Optional handler for receiving ephemeral key requests
+ * @param ephemeralKeyHandler Optional handler for receiving ephemeral
+ *                            key requests
  * @param caHandler Optional handler for receiving CA chain requests
  *
  * @return A pointer to the key store or NULL if there were no resources.
  */
-DPS_KeyStore* DPS_CreateKeyStore(DPS_KeyAndIdentityHandler keyAndIdentityHandler, DPS_KeyHandler keyHandler,
+DPS_KeyStore* DPS_CreateKeyStore(DPS_KeyAndIdHandler keyAndIdHandler, DPS_KeyHandler keyHandler,
                                  DPS_EphemeralKeyHandler ephemeralKeyHandler, DPS_CAHandler caHandler);
 
 /**
@@ -656,6 +657,15 @@ size_t DPS_PublicationGetNumTopics(const DPS_Publication* pub);
 int DPS_PublicationIsAckRequested(const DPS_Publication* pub);
 
 /**
+ * Get the key identifier of a publication
+ *
+ * @param pub   The publication
+ *
+ * @return The key identifier of the publisher, may be NULL
+ */
+const DPS_KeyId* DPS_PublicationGetSenderKeyId(const DPS_Publication* pub);
+
+/**
  * Get the local node associated with a publication
  *
  * @param pub   The publication
@@ -794,6 +804,16 @@ DPS_Status DPS_DestroyPublication(DPS_Publication* pub);
  * @param len           The length of the payload
  */
 DPS_Status DPS_AckPublication(const DPS_Publication* pub, const uint8_t* ackPayload, size_t len);
+
+/**
+ * Get the key identifier of an acknowledgement, only valid with the
+ * body of the DPS_AcknowledgementHandler function.
+ *
+ * @param pub   The pub parameter of DPS_AcknowledgementHandler
+ *
+ * @return The key identifier of the subscriber, may be NULL
+ */
+const DPS_KeyId* DPS_AckGetSenderKeyId(const DPS_Publication* pub);
 
 /** @} */ // end of publication group
 

@@ -188,7 +188,7 @@ void DPS_ClearKeyId(DPS_KeyId* keyId);
 struct _DPS_KeyStoreRequest {
     DPS_KeyStore* keyStore;
     void* data;
-    DPS_Status (*setKeyAndIdentity)(DPS_KeyStoreRequest* request, const DPS_Key* key, const DPS_KeyId* keyId);
+    DPS_Status (*setKeyAndId)(DPS_KeyStoreRequest* request, const DPS_Key* key, const DPS_KeyId* keyId);
     DPS_Status (*setKey)(DPS_KeyStoreRequest* request, const DPS_Key* key);
     DPS_Status (*setCA)(DPS_KeyStoreRequest* request, const char* ca);
     DPS_Status (*setCert)(DPS_KeyStoreRequest* request, const char* cert, size_t certLen,
@@ -200,7 +200,7 @@ struct _DPS_KeyStoreRequest {
  */
 struct _DPS_KeyStore {
     void* userData;
-    DPS_KeyAndIdentityHandler keyAndIdentityHandler;
+    DPS_KeyAndIdHandler keyAndIdHandler;
     DPS_KeyHandler keyHandler;
     DPS_EphemeralKeyHandler ephemeralKeyHandler;
     DPS_CAHandler caHandler;

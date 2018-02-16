@@ -536,22 +536,22 @@ DPS_Status destroySubscription(DPS_Subscription* sub);
  */
 %{
 struct KeyStoreFunctions {
-    v8::Persistent<v8::Function> keyAndIdentity;
+    v8::Persistent<v8::Function> keyAndId;
     v8::Persistent<v8::Function> key;
     v8::Persistent<v8::Function> ephemeralKey;
     v8::Persistent<v8::Function> ca;
 };
 
-class KeyAndIdentityCallback : public Callback {
+class KeyAndIdCallback : public Callback {
 public:
     DPS_KeyStoreRequest* m_request;
     DPS_Status* m_ret;
-    KeyAndIdentityCallback(DPS_KeyStoreRequest* request, DPS_Status* ret)
+    KeyAndIdCallback(DPS_KeyStoreRequest* request, DPS_Status* ret)
          : m_request(request), m_ret(ret) { }
     void Call() {
         DPS_KeyStore* keyStore = DPS_KeyStoreHandle(m_request);
         KeyStoreFunctions* functions = (KeyStoreFunctions*)DPS_GetKeyStoreData(keyStore);
-        v8::Local<v8::Function> fn = v8::Local<v8::Function>::New(v8::Isolate::GetCurrent(), functions->keyAndIdentity);
+        v8::Local<v8::Function> fn = v8::Local<v8::Function>::New(v8::Isolate::GetCurrent(), functions->keyAndId);
         int argc = 1;
         v8::Local<v8::Value> argv[argc];
         argv[0] = SWIG_NewPointerObj(SWIG_as_voidptr(m_request), SWIGTYPE_p__DPS_KeyStoreRequest, 0);
@@ -565,7 +565,7 @@ public:
     }
     static DPS_Status Handler(DPS_KeyStoreRequest* request) {
         DPS_Status ret;
-        sync_send(new KeyAndIdentityCallback(request, &ret));
+        sync_send(new KeyAndIdCallback(request, &ret));
         return ret;
     }
 };
@@ -691,12 +691,12 @@ public:
 /*
  * Key callback wrapper
  */
-%typemap(in) DPS_KeyAndIdentityHandler (v8::Local<v8::Function> fn) {
+%typemap(in) DPS_KeyAndIdHandler (v8::Local<v8::Function> fn) {
     if($input->IsNull()) {
         $1 = NULL;
     } else if ($input->IsFunction()) {
         fn = v8::Local<v8::Function>::Cast($input);
-        $1 = KeyAndIdentityCallback::Handler;
+        $1 = KeyAndIdCallback::Handler;
     } else {
         SWIG_exception_fail(SWIG_TypeError, "in method '" "$symname" "', argument " "$argnum"" of type '" "$1_type""'");
     }
@@ -737,7 +737,7 @@ public:
 
 %typemap(out) DPS_KeyStore* {
     KeyStoreFunctions* functions = new KeyStoreFunctions();
-    functions->keyAndIdentity.Reset(v8::Isolate::GetCurrent(), fn1);
+    functions->keyAndId.Reset(v8::Isolate::GetCurrent(), fn1);
     functions->key.Reset(v8::Isolate::GetCurrent(), fn2);
     functions->ephemeralKey.Reset(v8::Isolate::GetCurrent(), fn3);
     functions->ca.Reset(v8::Isolate::GetCurrent(), fn4);

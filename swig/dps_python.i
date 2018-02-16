@@ -451,13 +451,13 @@ static void FreeBytes(uint8_t* bytes) {
 }
 
 typedef struct _KeyStoreFunctions {
-    PyObject* keyAndIdentity;
+    PyObject* keyAndId;
     PyObject* key;
     PyObject* ephemeralKey;
     PyObject* ca;
 } KeyStoreFunctions;
 
-static DPS_Status KeyAndIdentityHandler(DPS_KeyStoreRequest* request)
+static DPS_Status KeyAndIdHandler(DPS_KeyStoreRequest* request)
 {
     DPS_Status status = DPS_ERR_MISSING;
     DPS_KeyStore* keyStore = DPS_KeyStoreHandle(request);
@@ -474,7 +474,7 @@ static DPS_Status KeyAndIdentityHandler(DPS_KeyStoreRequest* request)
     gilState = PyGILState_Ensure();
 
     requestObj = SWIG_NewPointerObj(SWIG_as_voidptr(request), SWIGTYPE_p__DPS_KeyStoreRequest, 0);
-    ret = PyObject_CallFunction(functions->keyAndIdentity, (char*)"O", requestObj);
+    ret = PyObject_CallFunction(functions->keyAndId, (char*)"O", requestObj);
     if (ret) {
         SWIG_AsVal_int(ret, &status);
     }
@@ -609,11 +609,11 @@ static DPS_Status CAHandler(DPS_KeyStoreRequest* request)
 /*
  * Key callback wrapper
  */
-%typemap(in) DPS_KeyAndIdentityHandler (PyObject* obj) {
+%typemap(in) DPS_KeyAndIdHandler (PyObject* obj) {
     if (PyCallable_Check($input)) {
         obj = $input;
         Py_INCREF(obj);
-        $1 = KeyAndIdentityHandler;
+        $1 = KeyAndIdHandler;
     } else {
         obj = Py_None;
         $1 = NULL;
@@ -659,7 +659,7 @@ static DPS_Status CAHandler(DPS_KeyStoreRequest* request)
         PyErr_SetString(PyExc_MemoryError,"Allocation of key store functions failed");
         SWIG_fail;
     }
-    functions->keyAndIdentity = obj1;
+    functions->keyAndId = obj1;
     functions->key = obj2;
     functions->ephemeralKey = obj3;
     functions->ca = obj4;
@@ -671,7 +671,7 @@ static DPS_Status CAHandler(DPS_KeyStoreRequest* request)
 void destroy_key_store(DPS_KeyStore* keyStore)
 {
     KeyStoreFunctions* functions = (KeyStoreFunctions*)DPS_GetKeyStoreData(keyStore);
-    Py_XDECREF(functions->keyAndIdentity);
+    Py_XDECREF(functions->keyAndId);
     Py_XDECREF(functions->key);
     Py_XDECREF(functions->ephemeralKey);
     Py_XDECREF(functions->ca);

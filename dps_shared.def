@@ -63,7 +63,7 @@ DPS_SetCertificate
 DPS_SetContentKey
 DPS_SetEventData
 DPS_SetKey
-DPS_SetKeyAndIdentity
+DPS_SetKeyAndId
 DPS_SetKeyStoreData
 DPS_SetNetworkKey
 DPS_SetNodeData

@@ -24,7 +24,6 @@
 #define _KEYS_H
 
 #include <dps/dps.h>
-#include <dps/uuid.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -34,27 +33,16 @@ extern "C" {
  * Preshared keys and certificates for testing only - DO NOT USE THESE KEYS IN A REAL APPLICATION!!!!
  */
 
-extern const DPS_KeyId NetworkKeyId;
-extern const DPS_Key NetworkKey;
-
-#define NUM_KEYS 2
-
-extern const DPS_KeyId PskId[NUM_KEYS];
-extern const DPS_Key Psk[NUM_KEYS];
-
 extern const char TrustedCAs[];
 
-extern const DPS_KeyId PublisherId;
-extern const char PublisherCert[];
-extern const char PublisherPrivateKey[];
-extern const char PublisherPassword[];
+typedef struct _Id {
+    DPS_KeyId keyId;
+    const char* cert;
+    const char* privateKey;
+    const char* password;
+} Id;
 
-extern const DPS_KeyId SubscriberId;
-extern const char SubscriberCert[];
-extern const char SubscriberPrivateKey[];
-extern const char SubscriberPassword[];
-
-const char* KeyIdToString(const DPS_KeyId* keyId);
+extern const Id Ids[];
 
 #ifdef __cplusplus
 }

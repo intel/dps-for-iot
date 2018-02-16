@@ -724,8 +724,8 @@ static DPS_Status SetCert(DPS_KeyStoreRequest* request, const DPS_Key* key)
     return DPS_OK;
 }
 
-static DPS_Status SetKeyAndIdentity(DPS_KeyStoreRequest* request, const DPS_Key* key,
-                                    const DPS_KeyId* keyId)
+static DPS_Status SetKeyAndId(DPS_KeyStoreRequest* request, const DPS_Key* key,
+                              const DPS_KeyId* keyId)
 {
     DPS_NetConnection* cn = request->data;
     int ret = mbedtls_ssl_conf_psk(&cn->conf, key->symmetric.key, key->symmetric.len, keyId->id, keyId->len);
@@ -835,13 +835,13 @@ static DPS_NetConnection* CreateConnection(DPS_Node* node, const struct sockaddr
         mbedtls_ssl_conf_session_cache(&cn->conf, &cn->cacheCtx, mbedtls_ssl_cache_get, mbedtls_ssl_cache_set);
         mbedtls_ssl_conf_dtls_cookies(&cn->conf, mbedtls_ssl_cookie_write, mbedtls_ssl_cookie_check, &cn->cookieCtx);
         mbedtls_ssl_conf_psk_cb(&cn->conf, OnTLSPSKGet, cn);
-    } else if (keyStore->keyAndIdentityHandler) {
-        request.setKeyAndIdentity = SetKeyAndIdentity;
-        ret = keyStore->keyAndIdentityHandler(&request);
+    } else if (keyStore->keyAndIdHandler) {
+        request.setKeyAndId = SetKeyAndId;
+        ret = keyStore->keyAndIdHandler(&request);
         if (ret != DPS_OK) {
             DPS_WARNPRINT("Get PSK failed: %s\n", DPS_ErrTxt(ret));
         }
-        request.setKeyAndIdentity = NULL;
+        request.setKeyAndId = NULL;
     }
     mbedtls_ssl_conf_authmode(&cn->conf, MBEDTLS_SSL_VERIFY_REQUIRED);
 

@@ -1444,23 +1444,24 @@ DPS_Status COSE_Decrypt(const uint8_t* nonce, COSE_Entity* recipient, DPS_RxBuff
      * Verify signature of encrypted content
      */
     if (sig.sigLen) {
-        DPS_Status verify;
         ret = EncodeSig(&toBeSigned, alg, sig.alg, NULL, 0, content, contentLen);
         if (ret != DPS_OK) {
             goto Exit;
         }
-        verify = GetSignatureKey(keyStore, &sig, &k);
-        if (verify == DPS_OK) {
-            verify = Verify_ECDSA(k.ec.curve, k.ec.x, k.ec.y, toBeSigned.base, DPS_TxBufferUsed(&toBeSigned),
-                                  sig.sig, sig.sigLen);
+        ret = GetSignatureKey(keyStore, &sig, &k);
+        if (ret != DPS_OK) {
+            DPS_WARNPRINT("Failed to get signature key: %s\n", DPS_ErrTxt(ret));
+            goto Exit;
         }
-        if (verify == DPS_OK) {
-            if (signer) {
-                signer->alg = sig.alg;
-                signer->kid = sig.kid;
-            }
-        } else {
-            DPS_WARNPRINT("Failed to verify signature: %s\n", DPS_ErrTxt(verify));
+        ret = Verify_ECDSA(k.ec.curve, k.ec.x, k.ec.y, toBeSigned.base, DPS_TxBufferUsed(&toBeSigned),
+                           sig.sig, sig.sigLen);
+        if (ret != DPS_OK) {
+            DPS_WARNPRINT("Failed to verify signature: %s\n", DPS_ErrTxt(ret));
+            goto Exit;
+        }
+        if (signer) {
+            signer->alg = sig.alg;
+            signer->kid = sig.kid;
         }
     }
     /*
