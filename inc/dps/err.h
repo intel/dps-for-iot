@@ -1,3 +1,8 @@
+/**
+ * @file
+ * Status codes
+ */
+
 /*
  *******************************************************************
  *
@@ -33,7 +38,7 @@ extern "C" {
  * @{
  */
 
-typedef int DPS_Status;
+typedef int DPS_Status; /**< The status code type */
 
 #define DPS_OK                     0 /**< Function succeeded */
 #define DPS_ERR_OK                 0 /**< Alias for DPS_OK */
@@ -64,6 +69,13 @@ typedef int DPS_Status;
 #define DPS_ERR_NOT_ENCRYPTED     25 /**< Payload does not appear to be encrypted */
 #define DPS_ERR_STOPPING          26 /**< The current node is stopping */
 
+/**
+ * The text string representation of the status code.
+ *
+ * @param s the status code
+ *
+ * @return the text string representation
+ */
 const char* DPS_ErrTxt(DPS_Status s);
 
 /** @} */

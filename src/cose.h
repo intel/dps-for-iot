@@ -1,3 +1,8 @@
+/**
+ * @file
+ * Encrypt and decrypt COSE messages
+ */
+
 /*
  *******************************************************************
  *
@@ -43,7 +48,7 @@ extern "C" {
  *
  * These values are defined in the COSE specification.
  */
-#define COSE_ALG_RESERVED               0
+#define COSE_ALG_RESERVED               0    /**< Reserved algorithm value */
 #define COSE_ALG_AES_CCM_16_64_128     10    /**< AES-CCM mode 128-bit key, L=16, M=64,  13-byte nonce, 8 byte auth tag */
 #define COSE_ALG_AES_CCM_16_128_128    30    /**< AES-CCM mode 128-bit key, L=16, M=128, 13-byte nonce, 16 byte auth tag */
 #define COSE_ALG_A128KW                -3    /**< AES Key Wrap w/ 128-bit key */

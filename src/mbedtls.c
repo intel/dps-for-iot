@@ -43,12 +43,6 @@ const char *TLSErrTxt(int ret)
     return errBuf;
 }
 
-/*
- * @param curve the elliptic curve ID
- * @param id the mbedtls elliptic curve ID
- * @param len the size of a coordinate, in bytes
- * @param md the hash function to use for ECDSA
- */
 int TLSGetCurveParams(DPS_ECCurve curve, mbedtls_ecp_group_id* id, size_t* len)
 {
     int ret = 0;

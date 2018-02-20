@@ -1,3 +1,8 @@
+/**
+ * @file
+ * A registration service
+ */
+
 /*
  *******************************************************************
  *
@@ -41,8 +46,12 @@ extern "C" {
  * @{
  */
 
+/** The registry topic string */
 extern const char* DPS_RegistryTopicString;
 
+/*
+ * Registration entry flags
+ */
 #define DPS_CANDIDATE_TRYING   0x01  /**< An attempt is being made link to a candidate */
 #define DPS_CANDIDATE_FAILED   0x02  /**< An attempt to link to a candidate was attempted but failed */
 #define DPS_CANDIDATE_LINKED   0x04  /**< Registration is currently linked */
@@ -53,27 +62,33 @@ extern const char* DPS_RegistryTopicString;
  * Registration entry
  */
 typedef struct _DPS_Registration {
-    uint8_t flags;
-    uint16_t port;
-    char* host;
+    uint8_t flags; /**< Registration entry flags */
+    uint16_t port; /**< The registered port */
+    char* host; /**< The registered host name or IP address */
 } DPS_Registration;
 
 /**
  * For returning a list of candidate remote nodes
  */
 typedef struct _DPS_RegistrationList {
-    uint8_t size;     /* Size of the list */
-    uint8_t count;    /* number of entries currently in the list */
-    DPS_Registration list[1];
+    uint8_t size;     /**< Size of the list */
+    uint8_t count;    /**< Number of entries currently in the list */
+    DPS_Registration list[1]; /**< The list */
 } DPS_RegistrationList;
 
 /**
- * Create an empty regisration list of the specified size
+ * Create an empty registration list of the specified size
+ *
+ * @param size The desired size of the list
+ *
+ * @return The newly created registration list or NULL if an error occurred
  */
 DPS_RegistrationList* DPS_CreateRegistrationList(uint8_t size);
 
 /**
  * Destroy a regisration list and free resources
+ *
+ * @param regs A previously created registration list
  */
 void DPS_DestroyRegistrationList(DPS_RegistrationList* regs);
 

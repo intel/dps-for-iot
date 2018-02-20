@@ -184,6 +184,7 @@ exampleenv.Install('#/build/dist/bin', exampleprogs)
 # Documentation
 try:
     libenv.Doxygen('doc/Doxyfile')
+    libenv.Doxygen('doc/Doxyfile_dev')
 except:
     # Doxygen may not be installed
     pass

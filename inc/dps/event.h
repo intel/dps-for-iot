@@ -1,3 +1,8 @@
+/**
+ * @file
+ * Signal and wait on application-created events
+ */
+
 /*
  *******************************************************************
  *
@@ -43,6 +48,8 @@ typedef struct _DPS_Event DPS_Event;
 
 /**
  * Create and initialize an event
+ *
+ * @return The created event, or NULL if creation failed
  */
 DPS_Event* DPS_CreateEvent();
 

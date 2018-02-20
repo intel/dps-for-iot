@@ -1,3 +1,8 @@
+/**
+ * @file
+ * Synchronous helpers
+ */
+
 /*
  *******************************************************************
  *
@@ -42,6 +47,7 @@ extern "C" {
  * @param port  The port number
  * @param addr  Returns the resolved address for the remote node
  *
+ * @return DPS_OK if the link is succesful, an error otherwise
  */
 DPS_Status DPS_LinkTo(DPS_Node* node, const char* host, uint16_t port, DPS_NodeAddress* addr);
 
@@ -50,6 +56,8 @@ DPS_Status DPS_LinkTo(DPS_Node* node, const char* host, uint16_t port, DPS_NodeA
  *
  * @param node  The local node to unlink from
  * @param addr  The address of the remote node to unlink
+ *
+ * @return DPS_OK if the unlink is succesful, an error otherwise
  */
 DPS_Status DPS_UnlinkFrom(DPS_Node* node, DPS_NodeAddress* addr);
 

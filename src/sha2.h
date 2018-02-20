@@ -1,3 +1,8 @@
+/**
+ * @file
+ * SHA-256 algorithm
+ */
+
 /*
  *******************************************************************
  *
@@ -31,7 +36,7 @@
 extern "C" {
 #endif
 
-#define DPS_SHA2_DIGEST_LEN 32
+#define DPS_SHA2_DIGEST_LEN 32 /**< Size of SHA-256 hash in bytes */
 
 /**
  * Compute the SHA2 hash of some data

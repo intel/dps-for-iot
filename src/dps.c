@@ -258,14 +258,14 @@ void DPS_ClearInboundInterests(DPS_Node* node, RemoteNode* remote)
     }
 }
 
-RemoteNode* DPS_DeleteRemoteNode(DPS_Node* node, RemoteNode* remote)
+void DPS_DeleteRemoteNode(DPS_Node* node, RemoteNode* remote)
 {
     RemoteNode* next;
 
     DPS_DBGTRACE();
 
     if (!IsValidRemoteNode(node, remote)) {
-        return NULL;
+        return;
     }
     if (remote->monitor) {
         DPS_LinkMonitorStop(remote);
@@ -293,7 +293,6 @@ RemoteNode* DPS_DeleteRemoteNode(DPS_Node* node, RemoteNode* remote)
      */
     DPS_NetConnectionDecRef(remote->ep.cn);
     free(remote);
-    return next;
 }
 
 static const DPS_UUID* MinMeshId(DPS_Node* node, RemoteNode* excluded)

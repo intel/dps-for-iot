@@ -1,3 +1,8 @@
+/**
+ * @file
+ * Common cryptographic macros and functions
+ */
+
 /*
  *******************************************************************
  *
@@ -33,17 +38,57 @@ extern "C" {
 
 #define EC_MAX_COORD_LEN 66 /**< Maximum length of an EC coordinate (x, y, or d) */
 
+/**
+ * Opaque type of random byte generator
+ */
 typedef struct _DPS_RBG DPS_RBG;
 
+/**
+ * Create an instance of a random byte generator
+ *
+ * @return the random byte generator
+ */
 DPS_RBG* DPS_CreateRBG();
 
+/**
+ * Destroy a previously-created instance of a random byte generator
+ *
+ * @param rbg the random byte generator
+ */
 void DPS_DestroyRBG(DPS_RBG* rbg);
 
+/**
+ * Create a random AES key
+ *
+ * @param rbg a random byte generator
+ * @param key the created key
+ *
+ * @return DPS_OK if creation is succesful, an error otherwise
+ */
 DPS_Status DPS_RandomKey(DPS_RBG *rbg, uint8_t key[AES_128_KEY_LEN]);
+
+/**
+ * Create an ephemeral elliptic curve key
+ *
+ * @param rbg a random byte generator
+ * @param curve a named curve
+ * @param x the created key's x coordinate
+ * @param y the created key's y coordinate
+ * @param d the created key's d coordinate
+ *
+ * @return DPS_OK if creation is succesful, an error otherwise
+ */
 DPS_Status DPS_EphemeralKey(DPS_RBG* rbg, DPS_ECCurve curve,
                             uint8_t x[EC_MAX_COORD_LEN], uint8_t y[EC_MAX_COORD_LEN],
                             uint8_t d[EC_MAX_COORD_LEN]);
 
+/**
+ * Decode the common name (CN) attribute of an X.509 certificate.
+ *
+ * @param cert the X.509 certificate
+ *
+ * @return the CN value, must be freed by the caller.
+ */
 char* DPS_CertificateCN(const char* cert);
 
 #ifdef __cplusplus
