@@ -1,8 +1,9 @@
 var NAVTREE =
 [
   [ "Distributed Publish Subscribe for IoT", "index.html", [
-    [ "Introduction to Distributed Publish Subscribe for IoT", "md__home_tmalsbar_src_github.com_01org_dps-for-iot_README.html", null ],
-    [ "Message Protocol", "md__home_tmalsbar_src_github.com_01org_dps-for-iot_doc_Message-Protocol.html", null ],
+    [ "Introduction to Distributed Publish Subscribe for IoT", "md__home_tmalsbar_src_github_8com_01org_dps-for-iot__r_e_a_d_m_e.html", null ],
+    [ "Message Encryption", "md__home_tmalsbar_src_github_8com_01org_dps-for-iot_doc__message-_encryption.html", null ],
+    [ "Message Protocol", "md__home_tmalsbar_src_github_8com_01org_dps-for-iot_doc__message-_protocol.html", null ],
     [ "Modules", "modules.html", "modules" ],
     [ "Data Structures", "annotated.html", [
       [ "Data Structures", "annotated.html", "annotated_dup" ],
@@ -23,14 +24,15 @@ var NAVTREE =
         [ "Enumerator", "globals_eval.html", null ],
         [ "Macros", "globals_defs.html", null ]
       ] ]
-    ] ]
+    ] ],
+    [ "Examples", "examples.html", "examples" ]
   ] ]
 ];
 
 var NAVTREEINDEX =
 [
 "annotated.html",
-"group__registration.html#ga8f1d316de08b7dea7dfe55ae814e0219"
+"group__publication.html#gaba1ad3ee807b75a1281d334be06a12f7"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronisation';

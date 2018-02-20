@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['val',['val',['../struct___d_p_s___u_u_i_d.html#a5f642859395d3916ea96804c6bf16880',1,'_DPS_UUID']]],
-  ['val64',['val64',['../struct___d_p_s___u_u_i_d.html#aee3748c444033b543f494e8bf6d64645',1,'_DPS_UUID']]]
+  ['len',['len',['../struct___d_p_s___key_symmetric.html#ad12194a41f7828b7b7098608bf7d5fd0',1,'_DPS_KeySymmetric::len()'],['../struct___d_p_s___key_id.html#ad656ed0567e09b47f95776e8af0f29df',1,'_DPS_KeyId::len()']]],
+  ['list',['list',['../struct___d_p_s___registration_list.html#a7090074f00b35189ff64c21d5bc40535',1,'_DPS_RegistrationList']]]
 ];

@@ -9,7 +9,7 @@ var group__node =
     [ "DPS_OnNodeDestroyed", "group__node.html#ga1e88cc9ca744782e36d58a022fe026c5", null ],
     [ "DPS_OnResolveAddressComplete", "group__node.html#gac1c96ed1ff9a92e7421ae1c428acb904", null ],
     [ "DPS_OnUnlinkComplete", "group__node.html#ga70b98e7cc39f0dccdba41f0984de82f6", null ],
-    [ "DPS_CreateNode", "group__node.html#gae8a024fed66337c7f28f820a6bd010ea", null ],
+    [ "DPS_CreateNode", "group__node.html#gaf6641b5bbf27b2c45ac7f926b0ce4efe", null ],
     [ "DPS_DestroyNode", "group__node.html#ga85f5121f80411f5ab82449efe20b68dd", null ],
     [ "DPS_GetLoop", "group__node.html#ga7dacebc6533305fba12335b3b8c817dc", null ],
     [ "DPS_GetNodeData", "group__node.html#ga65bba7bcfe5e940b153fcced4e2e8880", null ],
