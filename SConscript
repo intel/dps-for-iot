@@ -101,6 +101,9 @@ if env['python']:
     pyenv['SHLIBPREFIX'] = '_'
     if platform == 'win32':
         pyenv['SHLIBSUFFIX'] = '.pyd'
+        pyenv.Append(CCFLAGS = ['/EHsc'])
+        # Ignore warnings in generated code
+        pyenv.Append(CCFLAGS = ['/wd4244'])
 
     pyenv.Append(SWIGFLAGS = ['-python', '-c++', '-Wextra', '-Werror', '-v', '-O'], SWIGPATH = ['#/inc', './swig/py'])
     pyenv.Append(CPPPATH = ['swig', 'swig/py'])

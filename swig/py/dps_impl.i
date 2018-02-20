@@ -42,7 +42,7 @@ static int AsVal_bytes(Handle obj, uint8_t** bytes, size_t* len)
                 } else if ((v < 0) || (UINT8_MAX < v)) {
                     return SWIG_OverflowError;
                 } else {
-                    (*bytes)[i] = v;
+                    (*bytes)[i] = (uint8_t)v;
                 }
             }
             *len = sz;

@@ -82,7 +82,7 @@ public:
         if (!SWIG_IsOK(res)) {
             SWIG_exception_fail(SWIG_ArgError(res), "in method '" "$symname" "', argument " "$argnum"" of type '" "$1_type""'");
         }
-        if (inet_pton(AF_INET, addr, &in->sin_addr) != 1) {
+        if (uv_inet_pton(AF_INET, addr, &in->sin_addr) != 0) {
             SWIG_exception_fail(SWIG_ArgError(SWIG_ValueError), "in method '" "$symname" "', argument " "$argnum"" of type '" "$1_type""'");
         }
         if (alloc == SWIG_NEWOBJ) delete[] addr;
@@ -124,7 +124,7 @@ public:
         if (!SWIG_IsOK(res)) {
             SWIG_exception_fail(SWIG_ArgError(res), "in method '" "$symname" "', argument " "$argnum"" of type '" "$1_type""'");
         }
-        if (inet_pton(AF_INET6, addr, &in->sin6_addr) != 1) {
+        if (uv_inet_pton(AF_INET6, addr, &in->sin6_addr) != 0) {
             SWIG_exception_fail(SWIG_ArgError(SWIG_ValueError), "in method '" "$symname" "', argument " "$argnum"" of type '" "$1_type""'");
         }
         if (alloc == SWIG_NEWOBJ) delete[] addr;

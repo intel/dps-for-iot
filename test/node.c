@@ -193,7 +193,7 @@ int main(int argc, char** argv)
 {
     char** arg = argv + 1;
     int mcast = DPS_MCAST_PUB_ENABLE_SEND | DPS_MCAST_PUB_ENABLE_RECV;
-    const char* user;
+    const char* user = NULL;
     char* subs[MAX_TOPICS];
     size_t numSubs = 0;
     char* pubs[MAX_TOPICS];
