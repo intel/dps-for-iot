@@ -49,7 +49,7 @@ void DPS_DestroyAck(PublicationAck* ack)
     free(ack);
 }
 
-DPS_Status DPS_SendAcknowledgment(DPS_Node*node, PublicationAck* ack, RemoteNode* ackNode)
+DPS_Status DPS_SendAcknowledgement(DPS_Node*node, PublicationAck* ack, RemoteNode* ackNode)
 {
     DPS_Status ret;
     uv_buf_t uvBufs[] = {
@@ -181,7 +181,7 @@ static DPS_Status SerializeAck(const DPS_Publication* pub, PublicationAck* ack, 
     return ret;
 }
 
-DPS_Status DPS_DecodeAcknowledgment(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuffer* buf)
+DPS_Status DPS_DecodeAcknowledgement(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuffer* buf)
 {
     static const int32_t ProtectedKeys[] = { DPS_CBOR_KEY_PUB_ID, DPS_CBOR_KEY_SEQ_NUM };
     static const int32_t EncryptedKeys[] = { DPS_CBOR_KEY_DATA };

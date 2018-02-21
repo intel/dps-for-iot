@@ -73,7 +73,7 @@ void DPS_FreeSubscriptions(DPS_Node* node);
  * @param node    The local node
  * @param remote  The remote node to send the subscription to
  *
- * @return DPS_OK if sending is succesful, an error otherwise
+ * @return DPS_OK if sending is successful, an error otherwise
  */
 DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote);
 
@@ -84,7 +84,7 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote);
  * @param ep         The endpoint the subscription was received on
  * @param buffer     The encoded subscription
  *
- * @return DPS_OK if decoding and processing is succesful, an error otherwise
+ * @return DPS_OK if decoding and processing is successful, an error otherwise
  */
 DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuffer* buffer);
 
@@ -95,7 +95,7 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
  * @param ep         The endpoint the subscription acknowledgement was received on
  * @param buffer     The encoded subscription acknowledgement
  *
- * @return DPS_OK if decoding and processing is succesful, an error otherwise
+ * @return DPS_OK if decoding and processing is successful, an error otherwise
  */
 DPS_Status DPS_DecodeSubscriptionAck(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuffer* buffer);
 

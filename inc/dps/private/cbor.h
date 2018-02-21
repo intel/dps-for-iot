@@ -118,7 +118,7 @@ size_t _CBOR_SizeOfString(const char* s);
  * @param len      The length
  * @param maj      The major type
  *
- * @return DPS_OK if succesful, an error otherwise
+ * @return DPS_OK if successful, an error otherwise
  */
 DPS_Status CBOR_EncodeLength(DPS_TxBuffer* buffer, uint64_t len, uint8_t maj);
 
@@ -129,7 +129,7 @@ DPS_Status CBOR_EncodeLength(DPS_TxBuffer* buffer, uint64_t len, uint8_t maj);
  * @param data     The bytes to append
  * @param len      The number of bytes to append
  *
- * @return DPS_OK if succesful, an error otherwise
+ * @return DPS_OK if successful, an error otherwise
  */
 DPS_Status CBOR_Copy(DPS_TxBuffer* buffer, const uint8_t* data, size_t len);
 
@@ -139,7 +139,7 @@ DPS_Status CBOR_Copy(DPS_TxBuffer* buffer, const uint8_t* data, size_t len);
  * @param buffer   Buffer to append to
  * @param n        The unsigned integer
  *
- * @return DPS_OK if succesful, an error otherwise
+ * @return DPS_OK if successful, an error otherwise
  */
 DPS_Status CBOR_EncodeUint(DPS_TxBuffer* buffer, uint64_t n);
 
@@ -149,7 +149,7 @@ DPS_Status CBOR_EncodeUint(DPS_TxBuffer* buffer, uint64_t n);
  * @param buffer   Buffer to append to
  * @param i        The signed integer
  *
- * @return DPS_OK if succesful, an error otherwise
+ * @return DPS_OK if successful, an error otherwise
  */
 DPS_Status CBOR_EncodeInt(DPS_TxBuffer* buffer, int64_t i);
 
@@ -160,7 +160,7 @@ DPS_Status CBOR_EncodeInt(DPS_TxBuffer* buffer, int64_t i);
  * @param data     The byte string to append
  * @param len      The number of bytes to append
  *
- * @return DPS_OK if succesful, an error otherwise
+ * @return DPS_OK if successful, an error otherwise
  */
 DPS_Status CBOR_EncodeBytes(DPS_TxBuffer* buffer, const uint8_t* data, size_t len);
 
@@ -177,7 +177,7 @@ DPS_Status CBOR_EncodeBytes(DPS_TxBuffer* buffer, const uint8_t* data, size_t le
  * @param buffer   Buffer to append to
  * @param str      The text string to append
  *
- * @return DPS_OK if succesful, an error otherwise
+ * @return DPS_OK if successful, an error otherwise
  */
 DPS_Status CBOR_EncodeString(DPS_TxBuffer* buffer, const char* str);
 
@@ -187,7 +187,7 @@ DPS_Status CBOR_EncodeString(DPS_TxBuffer* buffer, const char* str);
  * @param buffer   Buffer to append to
  * @param len      The number of data items
  *
- * @return DPS_OK if succesful, an error otherwise
+ * @return DPS_OK if successful, an error otherwise
  */
 DPS_Status CBOR_EncodeArray(DPS_TxBuffer* buffer, size_t len);
 
@@ -197,7 +197,7 @@ DPS_Status CBOR_EncodeArray(DPS_TxBuffer* buffer, size_t len);
  * @param buffer   Buffer to append to
  * @param len      The number of pairs of data items
  *
- * @return DPS_OK if succesful, an error otherwise
+ * @return DPS_OK if successful, an error otherwise
  */
 DPS_Status CBOR_EncodeMap(DPS_TxBuffer* buffer, size_t len);
 
@@ -207,7 +207,7 @@ DPS_Status CBOR_EncodeMap(DPS_TxBuffer* buffer, size_t len);
  * @param buffer   Buffer to append to
  * @param n        The tag
  *
- * @return DPS_OK if succesful, an error otherwise
+ * @return DPS_OK if successful, an error otherwise
  */
 DPS_Status CBOR_EncodeTag(DPS_TxBuffer* buffer, uint64_t n);
 
@@ -217,7 +217,7 @@ DPS_Status CBOR_EncodeTag(DPS_TxBuffer* buffer, uint64_t n);
  * @param buffer   Buffer to append to
  * @param b        The boolean value
  *
- * @return DPS_OK if succesful, an error otherwise
+ * @return DPS_OK if successful, an error otherwise
  */
 DPS_Status CBOR_EncodeBoolean(DPS_TxBuffer* buffer, int b);
 
@@ -226,7 +226,7 @@ DPS_Status CBOR_EncodeBoolean(DPS_TxBuffer* buffer, int b);
  *
  * @param buffer   Buffer to append to
  *
- * @return DPS_OK if succesful, an error otherwise
+ * @return DPS_OK if successful, an error otherwise
  */
 DPS_Status CBOR_EncodeNull(DPS_TxBuffer* buffer);
 
@@ -236,7 +236,7 @@ DPS_Status CBOR_EncodeNull(DPS_TxBuffer* buffer);
  * @param buffer   Buffer to decode from
  * @param n        The unsigned integer
  *
- * @return DPS_OK if succesful, an error otherwise
+ * @return DPS_OK if successful, an error otherwise
  */
 DPS_Status CBOR_DecodeUint8(DPS_RxBuffer* buffer, uint8_t* n);
 
@@ -246,7 +246,7 @@ DPS_Status CBOR_DecodeUint8(DPS_RxBuffer* buffer, uint8_t* n);
  * @param buffer   Buffer to decode from
  * @param n        The unsigned integer
  *
- * @return DPS_OK if succesful, an error otherwise
+ * @return DPS_OK if successful, an error otherwise
  */
 DPS_Status CBOR_DecodeUint16(DPS_RxBuffer* buffer, uint16_t* n);
 
@@ -256,7 +256,7 @@ DPS_Status CBOR_DecodeUint16(DPS_RxBuffer* buffer, uint16_t* n);
  * @param buffer   Buffer to decode from
  * @param n        The unsigned integer
  *
- * @return DPS_OK if succesful, an error otherwise
+ * @return DPS_OK if successful, an error otherwise
  */
 DPS_Status CBOR_DecodeUint32(DPS_RxBuffer* buffer, uint32_t* n);
 
@@ -266,7 +266,7 @@ DPS_Status CBOR_DecodeUint32(DPS_RxBuffer* buffer, uint32_t* n);
  * @param buffer   Buffer to decode from
  * @param n        The unsigned integer
  *
- * @return DPS_OK if succesful, an error otherwise
+ * @return DPS_OK if successful, an error otherwise
  */
 DPS_Status CBOR_DecodeUint(DPS_RxBuffer* buffer, uint64_t* n);
 
@@ -276,7 +276,7 @@ DPS_Status CBOR_DecodeUint(DPS_RxBuffer* buffer, uint64_t* n);
  * @param buffer   Buffer to decode from
  * @param i        The signed integer
  *
- * @return DPS_OK if succesful, an error otherwise
+ * @return DPS_OK if successful, an error otherwise
  */
 DPS_Status CBOR_DecodeInt(DPS_RxBuffer* buffer, int64_t* i);
 
@@ -286,7 +286,7 @@ DPS_Status CBOR_DecodeInt(DPS_RxBuffer* buffer, int64_t* i);
  * @param buffer   Buffer to decode from
  * @param i        The signed integer
  *
- * @return DPS_OK if succesful, an error otherwise
+ * @return DPS_OK if successful, an error otherwise
  */
 DPS_Status CBOR_DecodeInt8(DPS_RxBuffer* buffer, int8_t* i);
 
@@ -296,7 +296,7 @@ DPS_Status CBOR_DecodeInt8(DPS_RxBuffer* buffer, int8_t* i);
  * @param buffer   Buffer to decode from
  * @param i        The signed integer
  *
- * @return DPS_OK if succesful, an error otherwise
+ * @return DPS_OK if successful, an error otherwise
  */
 DPS_Status CBOR_DecodeInt16(DPS_RxBuffer* buffer, int16_t* i);
 
@@ -306,7 +306,7 @@ DPS_Status CBOR_DecodeInt16(DPS_RxBuffer* buffer, int16_t* i);
  * @param buffer   Buffer to decode from
  * @param i        The signed integer
  *
- * @return DPS_OK if succesful, an error otherwise
+ * @return DPS_OK if successful, an error otherwise
  */
 DPS_Status CBOR_DecodeInt32(DPS_RxBuffer* buffer, int32_t* i);
 
@@ -316,7 +316,7 @@ DPS_Status CBOR_DecodeInt32(DPS_RxBuffer* buffer, int32_t* i);
  * @param buffer   Buffer to decode from
  * @param size     The number of pairs of data items
  *
- * @return DPS_OK if succesful, an error otherwise
+ * @return DPS_OK if successful, an error otherwise
  */
 DPS_Status CBOR_DecodeMap(DPS_RxBuffer* buffer, size_t* size);
 
@@ -326,7 +326,7 @@ DPS_Status CBOR_DecodeMap(DPS_RxBuffer* buffer, size_t* size);
  * @param buffer   Buffer to decode from
  * @param n        The semantic tag
  *
- * @return DPS_OK if succesful, an error otherwise
+ * @return DPS_OK if successful, an error otherwise
  */
 DPS_Status CBOR_DecodeTag(DPS_RxBuffer* buffer, uint64_t* n);
 
@@ -336,7 +336,7 @@ DPS_Status CBOR_DecodeTag(DPS_RxBuffer* buffer, uint64_t* n);
  * @param buffer   Buffer to decode from
  * @param b        The boolean value
  *
- * @return DPS_OK if succesful, an error otherwise
+ * @return DPS_OK if successful, an error otherwise
  */
 DPS_Status CBOR_DecodeBoolean(DPS_RxBuffer* buffer, int* b);
 
@@ -350,7 +350,7 @@ DPS_Status CBOR_DecodeBoolean(DPS_RxBuffer* buffer, int* b);
  * @param len      The length of the byte string
  * @param ptr      The start of where the bytes are to be written
  *
- * @return DPS_OK if succesful, an error otherwise
+ * @return DPS_OK if successful, an error otherwise
  */
 DPS_Status CBOR_ReserveBytes(DPS_TxBuffer* buffer, size_t len, uint8_t** ptr);
 
@@ -363,7 +363,7 @@ DPS_Status CBOR_ReserveBytes(DPS_TxBuffer* buffer, size_t len, uint8_t** ptr);
  * @param hintLen  Estimated size of the bytes to be wrapped
  * @param wrapPtr  Returns pointer to start of the byte stream
  *
- * @return DPS_OK if succesful, an error otherwise
+ * @return DPS_OK if successful, an error otherwise
  */
 DPS_Status CBOR_StartWrapBytes(DPS_TxBuffer* buffer, size_t hintLen, uint8_t** wrapPtr);
 
@@ -374,7 +374,7 @@ DPS_Status CBOR_StartWrapBytes(DPS_TxBuffer* buffer, size_t hintLen, uint8_t** w
  * @param buffer   The buffer to encode into
  * @param wrapPtr  The pointer that was returned by CBOR_StartWrapBytes
  *
- * @return DPS_OK if succesful, an error otherwise
+ * @return DPS_OK if successful, an error otherwise
  */
 DPS_Status CBOR_EndWrapBytes(DPS_TxBuffer* buffer, uint8_t* wrapPtr);
 
@@ -499,7 +499,7 @@ typedef struct {
  * @param optKeys    Array of optional keys to be matched
  * @param numOptKeys The number of optional keys to match
  *
- * @return DPS_OK if parsing the map is succesful, an error otherwise
+ * @return DPS_OK if parsing the map is successful, an error otherwise
  */
 DPS_Status DPS_ParseMapInit(CBOR_MapState* mapState, DPS_RxBuffer* buffer, const int32_t* keys, size_t numKeys,
                             const int32_t* optKeys, size_t numOptKeys);

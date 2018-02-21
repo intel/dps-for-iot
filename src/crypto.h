@@ -63,7 +63,7 @@ void DPS_DestroyRBG(DPS_RBG* rbg);
  * @param rbg a random byte generator
  * @param key the created key
  *
- * @return DPS_OK if creation is succesful, an error otherwise
+ * @return DPS_OK if creation is successful, an error otherwise
  */
 DPS_Status DPS_RandomKey(DPS_RBG *rbg, uint8_t key[AES_128_KEY_LEN]);
 
@@ -76,7 +76,7 @@ DPS_Status DPS_RandomKey(DPS_RBG *rbg, uint8_t key[AES_128_KEY_LEN]);
  * @param y the created key's y coordinate
  * @param d the created key's d coordinate
  *
- * @return DPS_OK if creation is succesful, an error otherwise
+ * @return DPS_OK if creation is successful, an error otherwise
  */
 DPS_Status DPS_EphemeralKey(DPS_RBG* rbg, DPS_ECCurve curve,
                             uint8_t x[EC_MAX_COORD_LEN], uint8_t y[EC_MAX_COORD_LEN],

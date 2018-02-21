@@ -92,7 +92,7 @@ void DPS_LogBytes(DPS_LogLevel level, const char* file, int line, const char *fu
 #define DPS_PRINT(fmt, ...) DPS_Log(DPS_LOG_PRINT, __FILE__, __LINE__, __FUNCTION__, fmt, ##__VA_ARGS__)
 
 /**
- * Same a DPS_PRINT but prepends a sytem timestamp
+ * Same as DPS_PRINT but prepends a system timestamp
  */
 #define DPS_PRINTT(fmt, ...) DPS_Log(DPS_LOG_PRINTT, __FILE__, __LINE__, __FUNCTION__, fmt, ##__VA_ARGS__)
 

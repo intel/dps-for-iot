@@ -149,7 +149,7 @@ typedef void (*DPS_NetSendComplete)(DPS_Node* node, void* appCtx, DPS_NetEndpoin
  * @param bufs     Data buffers to send
  * @param numBufs  Number of buffers to send
  *
- * @return DPS_OK if send is succesful, an error otherwise
+ * @return DPS_OK if send is successful, an error otherwise
  */
 DPS_Status DPS_MulticastSend(DPS_MulticastSender* sender, uv_buf_t* bufs, size_t numBufs);
 
@@ -190,14 +190,14 @@ void DPS_NetStop(DPS_NetContext* netCtx);
  *                        information.
  * @param bufs            Data buffers to send, the data in the buffers must be live until the send completes.
  * @param numBufs         Number of buffers to send
- * @param sendCompleteCB  Function called when the send is completeso the content of the data buffers can be freed.
+ * @param sendCompleteCB  Function called when the send is complete so the content of the data buffers can be freed.
  *
- * @return DPS_OK if the send is succesful, an error otherwise
+ * @return DPS_OK if the send is successful, an error otherwise
  */
 DPS_Status DPS_NetSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* endpoint, uv_buf_t* bufs, size_t numBufs, DPS_NetSendComplete sendCompleteCB);
 
 /**
- * Increment the reference count to potentialy keeping a underlying connection alive. This is only
+ * Increment the reference count to potentially keeping a underlying connection alive. This is only
  * meaningful for connection-oriented transports.
  *
  * @param cn    Connection to be add'refd
@@ -234,7 +234,7 @@ int DPS_SameAddr(const DPS_NodeAddress* addr1, const DPS_NodeAddress* addr2);
 const char* DPS_NetAddrText(const struct sockaddr* addr);
 
 /**
- * Maps the supplied address to a v6 adddress if needed.
+ * Maps the supplied address to a v6 address if needed.
  *
  * This is necessary when using dual-stack sockets.
  *

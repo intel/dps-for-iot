@@ -130,7 +130,7 @@ typedef struct {
  * @param pktLen    Returns the length of the packet
  *
  * @return   - DPS_OK if the packet size is known
- *           - DPS_ERR_EOD if there is not enought data in the buffer to determine the packet size
+ *           - DPS_ERR_EOD if there is not enough data in the buffer to determine the packet size
  */
 DPS_Status CoAP_GetPktLen(int protocol, const uint8_t* buf, size_t bufLen, size_t* pktLen);
 
@@ -145,8 +145,8 @@ DPS_Status CoAP_GetPktLen(int protocol, const uint8_t* buf, size_t bufLen, size_
  * @param coap      Data structure to return the parsed CoAP packet
  * @param payload   Returns the CoAP payload
  *
- * @return  Returns DPS_OK if the packet was succesfully parsed or an error
- *          code if the packet was not succesfully parsed.
+ * @return  Returns DPS_OK if the packet was successfully parsed or an error
+ *          code if the packet was not successfully parsed.
  */
 DPS_Status CoAP_Parse(int protocol, const uint8_t* buf, size_t bufLen, CoAP_Parsed* coap,
                       DPS_RxBuffer* payload);

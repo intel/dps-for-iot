@@ -36,7 +36,7 @@ extern "C" {
 #endif
 
 /**
- * Maxmium length of the ECDH shared secret, in bytes
+ * Maximum length of the ECDH shared secret, in bytes
  */
 #define ECDH_MAX_SHARED_SECRET_LEN 66
 
@@ -64,7 +64,7 @@ size_t CoordinateSize_EC(DPS_ECCurve curve);
  * @param x the X coordinate
  * @param y the Y coordinate
  *
- * @return DPS_OK if parse is succesful, an error otherwise
+ * @return DPS_OK if parse is successful, an error otherwise
  */
 DPS_Status ParseCertificate_ECDSA(const char* cert,
                                   DPS_ECCurve* curve, uint8_t x[EC_MAX_COORD_LEN], uint8_t y[EC_MAX_COORD_LEN]);
@@ -77,7 +77,7 @@ DPS_Status ParseCertificate_ECDSA(const char* cert,
  * @param curve the elliptic curve ID
  * @param d the D coordinate
  *
- * @return DPS_OK if parse is succesful, an error otherwise
+ * @return DPS_OK if parse is successful, an error otherwise
  */
 DPS_Status ParsePrivateKey_ECDSA(const char* privateKey, const char* password,
                                  DPS_ECCurve* curve, uint8_t d[EC_MAX_COORD_LEN]);

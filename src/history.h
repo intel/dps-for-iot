@@ -101,9 +101,9 @@ void DPS_HistoryFree(DPS_History* history);
  * @param ackRequested  TRUE if an ack was requested by the publisher
  * @param ttl           The ttl for the publication
  * @param addr          Optional address of the node that sent or forwarded this publication. This should
- *                      only be set for publications that are requesting an acknowledgment.
+ *                      only be set for publications that are requesting an acknowledgement.
  *
- * @return DPS_OK if update is succesful, an error otherwise
+ * @return DPS_OK if update is successful, an error otherwise
  */
 DPS_Status DPS_UpdatePubHistory(DPS_History* history, DPS_UUID* pubId, uint32_t sequenceNum, uint8_t ackRequested, uint16_t ttl, DPS_NodeAddress* addr);
 
@@ -129,7 +129,7 @@ int DPS_PublicationIsStale(DPS_History* history, DPS_UUID* pubId, uint32_t seque
 DPS_Status DPS_DeletePubHistory(DPS_History* history, DPS_UUID* pubId);
 
 /**
- * Lookup a publisher address in the publication history to match an acknowledgment. This is the
+ * Lookup a publisher address in the publication history to match an acknowledgement. This is the
  * address of the sender not necessarily the original publisher.
  *
  * @param history       The history from a local node

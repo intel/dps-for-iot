@@ -104,7 +104,7 @@ void DPS_UpdatePubs(DPS_Node* node, DPS_Publication* pub);
  * @param buffer     The encoded publication
  * @param multicast  DPS_TRUE if publication was multicast, DPS_FALSE if unicast
  *
- * @return DPS_OK if decoding and processing is succesful, an error otherwise
+ * @return DPS_OK if decoding and processing is successful, an error otherwise
  */
 DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuffer* buffer, int multicast);
 
@@ -115,7 +115,7 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
  * @param pub     The publication to send
  * @param remote  The remote node to send the publication to
  *
- * @return DPS_OK if sending is succesful, an error otherwise
+ * @return DPS_OK if sending is successful, an error otherwise
  */
 DPS_Status DPS_SendPublication(DPS_Node* node, DPS_Publication* pub, RemoteNode* remote);
 
@@ -140,7 +140,7 @@ void DPS_ExpirePub(DPS_Node* node, DPS_Publication* pub);
  * @param dataLen The number of payload bytes
  * @param ttl The time-to-live of the publication
  *
- * @return DPS_OK if the serialization is succesful, an error otherwise
+ * @return DPS_OK if the serialization is successful, an error otherwise
  */
 DPS_Status DPS_SerializePub(DPS_Node* node, DPS_Publication* pub, const uint8_t* data, size_t dataLen, int16_t ttl);
 

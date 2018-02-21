@@ -86,7 +86,7 @@ typedef struct _DPS_RegistrationList {
 DPS_RegistrationList* DPS_CreateRegistrationList(uint8_t size);
 
 /**
- * Destroy a regisration list and free resources
+ * Destroy a registration list and free resources
  *
  * @param regs A previously created registration list
  */
@@ -110,11 +110,11 @@ typedef void (*DPS_OnRegPutComplete)(DPS_Status status, void* data);
  * @param node          The local node to register
  * @param host          The host name or IP address to register with
  * @param port          The port number
- * @param tenantString  Topic string indentifying the tenant
+ * @param tenantString  Topic string identifying the tenant
  * @param cb            Callback called when the registration completes.
  * @param data          Caller provided data to be passed to the callback function
  *
- * @return DPS_OK if the registration put reequest was succesfully initiated, otherwise returns an
+ * @return DPS_OK if the registration put request was successfully initiated, otherwise returns an
  *         error status and the callback function will not be called.
  */
 DPS_Status DPS_Registration_Put(DPS_Node* node, const char* host, uint16_t port, const char* tenantString, DPS_OnRegPutComplete cb, void* data);
@@ -126,7 +126,7 @@ DPS_Status DPS_Registration_Put(DPS_Node* node, const char* host, uint16_t port,
  * @param node          The local node to register
  * @param host          The host name or IP address to register with
  * @param port          The port number
- * @param tenantString  Topic string indentifying the tenant
+ * @param tenantString  Topic string identifying the tenant
  *
  * @return DPS_OK if the put request succeeded or and error status for the failure.
  */
@@ -136,7 +136,7 @@ DPS_Status DPS_Registration_PutSyn(DPS_Node* node, const char* host, uint16_t po
  * Function prototype for callback called when DPS_Registration_Get() completes
  *
  * @param regs   Struct containing the list of candidate passed in to DPS_Registration_Get()
- * @param status DPS_OK if the get completed succesfully - the registration list might be empty,
+ * @param status DPS_OK if the get completed successfully - the registration list might be empty,
  * @param data   Caller supplied data passed into the DPS_Registration_Get()
  */
 typedef void (*DPS_OnRegGetComplete)(DPS_RegistrationList* regs, DPS_Status status, void* data);
@@ -148,14 +148,14 @@ typedef void (*DPS_OnRegGetComplete)(DPS_RegistrationList* regs, DPS_Status stat
  * @param node          The node
  * @param host          The host name or IP address to register with
  * @param port          The port number
- * @param tenantString  Topic string indentifying the tenant
+ * @param tenantString  Topic string identifying the tenant
  * @param regs          Registration list for accumulating the results. The count field must be
  *                      initialized with the maximum number of registrations to be returned. The
- *                      candidate list pointer must remanin valid until the callback is called.
+ *                      candidate list pointer must remain valid until the callback is called.
  * @param cb            The callback to call with the result
  * @param data          Caller supplied data to be passed to the callback
  *
- * @return DPS_OK if the registration get request was succesfully initiated, otherwise returns an
+ * @return DPS_OK if the registration get request was successfully initiated, otherwise returns an
  *         error status and the callback function will not be called.
  */
 DPS_Status DPS_Registration_Get(DPS_Node* node, const char* host, uint16_t port, const char* tenantString, DPS_RegistrationList* regs, DPS_OnRegGetComplete cb, void* data);
@@ -167,7 +167,7 @@ DPS_Status DPS_Registration_Get(DPS_Node* node, const char* host, uint16_t port,
  * @param node          The node
  * @param host          The host name or IP address to register with
  * @param port          The port number
- * @param tenantString  Topic string indentifying the tenant
+ * @param tenantString  Topic string identifying the tenant
  * @param regs          Registration list for accumulating the results.
  *
  * @return DPS_OK if the get request succeeded or and error status for the failure.
@@ -177,10 +177,10 @@ DPS_Status DPS_Registration_GetSyn(DPS_Node* node, const char* host, uint16_t po
 /**
  * Function prototype for callback called when DPS_Registration_LinkTo() completes
  *
- * @param regs    The list of registrations addressess passed in to DPS_Registration_LinkTo().
+ * @param regs    The list of registrations addresses passed in to DPS_Registration_LinkTo().
  * @param addr    The address if the remote if status == DPS_OK
  * @param status  Status code indicating success or failure
- *                - DPS_OK if a link was sucessfully established
+ *                - DPS_OK if a link was successfully established
  *                - DPS_ERR_NO_ROUTE if a link could not be established
  *                - Other error status codes
  * @param data    Caller supplied data passed into the DPS_Registration_LinkTo()

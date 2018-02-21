@@ -60,7 +60,7 @@ typedef struct _LinkMonitor {
  *
  * Knowing that we have a loop we periodically send out a publication
  * on the muted connection and start a timer. Link lost is detected if
- * N consective publications are not received within the timeout
+ * N consecutive publications are not received within the timeout
  * period and the link is unmuted to restore connectivity over the
  * redundant path. Note that ordinarily publications are not permitted
  * on a muted remote so this is handled as a special case.
@@ -68,7 +68,7 @@ typedef struct _LinkMonitor {
  * @param node    The local node
  * @param remote  A remote node that has been muted
  *
- * @return DPS_OK if start is succesful, an error otherwise
+ * @return DPS_OK if start is successful, an error otherwise
  */
 DPS_Status DPS_LinkMonitorStart(DPS_Node* node, RemoteNode* remote);
 

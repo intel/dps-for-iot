@@ -5,7 +5,7 @@
  * publication and send it.  It supports IP multicast or publication
  * to a specific host and port number over the configured transport
  * (udp, tcp, or dtls). Optionally the application will request
- * acknowledgments from the receiving subscribers.
+ * acknowledgements from the receiving subscribers.
  * @code
  * publisher a/b/c "hello world"
  * @endcode

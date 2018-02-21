@@ -50,7 +50,7 @@ extern "C" {
  */
 #define DPS_MSG_TYPE_PUB  1   /**< Publication */
 #define DPS_MSG_TYPE_SUB  2   /**< Subscription */
-#define DPS_MSG_TYPE_ACK  3   /**< End-to-end pubication acknowledgement */
+#define DPS_MSG_TYPE_ACK  3   /**< End-to-end publication acknowledgement */
 #define DPS_MSG_TYPE_SAK  4   /**< One-hop subscription acknowledgement */
 
 #define DPS_NODE_CREATED      0 /**< Node is created */
@@ -100,7 +100,7 @@ typedef struct _DPS_Node {
     uv_thread_t thread;                   /**< Thread for the event loop */
     uv_loop_t* loop;                      /**< uv lib event loop */
     uv_mutex_t nodeMutex;                 /**< Mutex to protect this node */
-    uv_mutex_t condMutex;                 /**< Mutex for use wih condition variables */
+    uv_mutex_t condMutex;                 /**< Mutex for use with condition variables */
 
     uv_async_t acksAsync;                 /**< Async for sending acks */
     uv_async_t pubsAsync;                 /**< Async for sending publications */
@@ -111,9 +111,9 @@ typedef struct _DPS_Node {
     uv_timer_t subsTimer;                 /**< Timer for sending subscriptions */
 
     struct {
-        PublicationAck* first;            /**< First queued acknowledgment packet */
-        PublicationAck* last;             /**< Last queued acknowledgment packet */
-    } ackQueue;                           /**< Queued acknowledgment packets */
+        PublicationAck* first;            /**< First queued acknowledgement packet */
+        PublicationAck* last;             /**< Last queued acknowledgement packet */
+    } ackQueue;                           /**< Queued acknowledgement packets */
 
     RemoteNode* remoteNodes;              /**< Linked list of remote nodes */
 
@@ -192,10 +192,10 @@ typedef struct _RemoteNode {
 void DPS_UpdateSubs(DPS_Node* node);
 
 /**
- * Queue an acknowledgment to be sent asynchronously
+ * Queue an acknowledgement to be sent asynchronously
  *
  * @param node    The node
- * @param ack     The acknowledgment to queue
+ * @param ack     The acknowledgement to queue
  */
 void DPS_QueuePublicationAck(DPS_Node* node, PublicationAck* ack);
 
@@ -285,7 +285,7 @@ int DPS_MeshHasLoop(DPS_Node* node, RemoteNode* src, DPS_UUID* meshId);
 void DPS_DeleteRemoteNode(DPS_Node* node, RemoteNode* remote);
 
 /**
- * Complete an asychronous operation on a remote node
+ * Complete an asynchronous operation on a remote node
  *
  * @param node    The local node
  * @param remote  The remote node to complete
@@ -300,7 +300,7 @@ void DPS_RemoteCompletion(DPS_Node* node, RemoteNode* remote, DPS_Status status)
  * @param node    The local node
  * @param remote  The remote node to mute
  *
- * @return DPS_OK if mute is succesful, an error otherwise
+ * @return DPS_OK if mute is successful, an error otherwise
  */
 DPS_Status DPS_MuteRemoteNode(DPS_Node* node, RemoteNode* remote);
 
@@ -310,7 +310,7 @@ DPS_Status DPS_MuteRemoteNode(DPS_Node* node, RemoteNode* remote);
  * @param node    The local node
  * @param remote  The remote node to unmute
  *
- * @return DPS_OK if unmute is succesful, an error otherwise
+ * @return DPS_OK if unmute is successful, an error otherwise
  */
 DPS_Status DPS_UnmuteRemoteNode(DPS_Node* node, RemoteNode* remote);
 
@@ -328,7 +328,7 @@ void DPS_ClearInboundInterests(DPS_Node* node, RemoteNode* remote);
  *
  * @param remote  The remote node to clear
  *
- * @return DPS_OK if clear is succesful, an error otherwise
+ * @return DPS_OK if clear is successful, an error otherwise
  */
 DPS_Status DPS_ClearOutboundInterests(RemoteNode* remote);
 

@@ -64,7 +64,7 @@ DPS_Status DPS_Configure(size_t bitLen, size_t numHashes);
 /**
  * Bloom Filter insertion operation.
  *
- * @param bv        An intialized bit vector
+ * @param bv        An initialized bit vector
  * @param data      Data for the item to add
  * @param len       Length of the data to add
  */
@@ -73,7 +73,7 @@ void DPS_BitVectorBloomInsert(DPS_BitVector* bv, const uint8_t* data, size_t len
 /**
  * Bloom Filter existence check operation.
  *
- * @param bv    An intialized bit vector
+ * @param bv    An initialized bit vector
  * @param data  Data for the item to check for
  * @param len   Length of the data to check
  *
@@ -98,7 +98,7 @@ DPS_BitVector* DPS_BitVectorAllocFH();
 /**
  * Clone a bit vector
  *
- * @param bv An intialized bit vector
+ * @param bv An initialized bit vector
  *
  * @return  An initialized context structure or NULL if the allocation failed.
  */
@@ -115,7 +115,7 @@ void DPS_BitVectorDup(DPS_BitVector* dst, DPS_BitVector* src);
 /**
  * Free resources for a bit vector
  *
- * @param bv   An intialized bit vector
+ * @param bv   An initialized bit vector
  */
 void DPS_BitVectorFree(DPS_BitVector* bv);
 
@@ -124,7 +124,7 @@ void DPS_BitVectorFree(DPS_BitVector* bv);
  * the range 0.0..100.0 and is the percentage of bits set in the bit
  * vector.
  *
- * @param bv   An intialized bit vector
+ * @param bv   An initialized bit vector
  *
  * @return the load factor
  */
@@ -133,7 +133,7 @@ float DPS_BitVectorLoadFactor(DPS_BitVector* bv);
 /**
  * Compute the population count (number of bits set) of the bit vector.
  *
- * @param bv   An intialized bit vector
+ * @param bv   An initialized bit vector
  *
  * @return the population count
  */
@@ -146,10 +146,10 @@ size_t DPS_BitVectorPopCount(DPS_BitVector* bv);
  * FH(A) will be a superset of FH(B).
  *
  * To have the correct size the hash bit vector must has been
- * allocated by calling DPS_BitVecotrAllocFH().
+ * allocated by calling DPS_BitVectorAllocFH().
  *
  * @param hash  Returns the fuzzy hash of the input bit vector
- * @param bv    An intialized bit vector
+ * @param bv    An initialized bit vector
  *
  * @return  The population count (number of bits set) of the bit vector.
  */
@@ -191,7 +191,7 @@ int DPS_BitVectorEquals(const DPS_BitVector* bv1, const DPS_BitVector* bv2);
  * @param bv1     A bit vector
  * @param bv2     A bit vector
  *
- * @return DPS_OK if computing the intersection is succesful, an error
+ * @return DPS_OK if computing the intersection is successful, an error
  *         otherwise
  */
 DPS_Status DPS_BitVectorIntersection(DPS_BitVector* bvOut, DPS_BitVector* bv1, DPS_BitVector* bv2);
@@ -206,7 +206,7 @@ DPS_Status DPS_BitVectorIntersection(DPS_BitVector* bvOut, DPS_BitVector* bv1, D
  * @param equal   Returns non-zero if the two bit input vectors are identical in which case
  *                the output vector will be cleared. Can be NULL.
  *
- * @return DPS_OK if computing the xor is succesful, an error
+ * @return DPS_OK if computing the xor is successful, an error
  *         otherwise
  */
 DPS_Status DPS_BitVectorXor(DPS_BitVector* bvOut, DPS_BitVector* bv1, DPS_BitVector* bv2, int* equal);
@@ -217,7 +217,7 @@ DPS_Status DPS_BitVectorXor(DPS_BitVector* bvOut, DPS_BitVector* bv1, DPS_BitVec
  * @param bvOut  The bit vector to form a union with
  * @param bv     A bit vector
  *
- * @return DPS_OK if computing the union is succesful, an error
+ * @return DPS_OK if computing the union is successful, an error
  *         otherwise
  */
 DPS_Status DPS_BitVectorUnion(DPS_BitVector* bvOut, DPS_BitVector* bv);
@@ -289,7 +289,7 @@ void DPS_BitVectorComplement(DPS_BitVector* bv);
  * @param data    The data to set in the bit vector
  * @param len     The length of the data to set. This must match the bit size of the bit vector.
  *
- * @return DPS_OK if the set is succesful, an error otherwise
+ * @return DPS_OK if the set is successful, an error otherwise
  */
 DPS_Status DPS_BitVectorSet(DPS_BitVector* bv, uint8_t* data, size_t len);
 
@@ -318,15 +318,15 @@ DPS_CountVector* DPS_CountVectorAllocFH();
 /**
  * Free resources for a count vector
  *
- * @param cv   An intialized count vector
+ * @param cv   An initialized count vector
  */
 void DPS_CountVectorFree(DPS_CountVector* cv);
 
 /**
  * Adds a bit vector to a count vector.
  *
- * @param cv An intialized count vector
- * @param bv An intialized bit vector
+ * @param cv An initialized count vector
+ * @param bv An initialized bit vector
  *
  * @return
  * - DPS_OK
@@ -336,12 +336,12 @@ DPS_Status DPS_CountVectorAdd(DPS_CountVector* cv, DPS_BitVector* bv);
 
 /**
  * Deletes a bit vector from a count vector. The bit vector should be the
- * same as one that was previously added or the results are unpredicable.
+ * same as one that was previously added or the results are unpredictable.
  *
- * @param cv An intialized count vector
- * @param bv An intialized bit vector
+ * @param cv An initialized count vector
+ * @param bv An initialized bit vector
  *
- * @return DPS_OK if the delete is succesful, an error otherwise
+ * @return DPS_OK if the delete is successful, an error otherwise
  */
 DPS_Status DPS_CountVectorDel(DPS_CountVector* cv, DPS_BitVector* bv);
 
@@ -349,7 +349,7 @@ DPS_Status DPS_CountVectorDel(DPS_CountVector* cv, DPS_BitVector* bv);
  * Allocates and returns a bit vector that represents the union of the
  * bit vectors added to the count vector.
  *
- * @param cv An intialized count vector
+ * @param cv An initialized count vector
  *
  * @return  A bit vector or NULL if the resource could not be allocated
  */
@@ -359,7 +359,7 @@ DPS_BitVector* DPS_CountVectorToUnion(DPS_CountVector* cv);
  * Allocates and returns a bit vector that represents the intersection of the
  * bit vectors added to the count vector.
  *
- * @param cv An intialized count vector
+ * @param cv An initialized count vector
  *
  * @return  A bit vector or NULL if the resource could not be allocated
  */
@@ -368,7 +368,7 @@ DPS_BitVector* DPS_CountVectorToIntersection(DPS_CountVector* cv);
 /**
  * Print a count vector.
  *
- * @param cv An intialized count vector
+ * @param cv An initialized count vector
  */
 void DPS_CountVectorDump(DPS_CountVector* cv);
 
