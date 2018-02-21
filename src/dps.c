@@ -983,7 +983,7 @@ static DPS_Status OnMulticastReceive(DPS_Node* node, DPS_NetEndpoint* ep, DPS_St
         return DPS_ERR_FAILURE;
     }
     DPS_UnlockNode(node);
-    ret = CoAP_Parse(COAP_OVER_UDP, data, len, &coap, &payload);
+    ret = CoAP_Parse(data, len, &coap, &payload);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Discarding garbage multicast packet len=%zu\n", len);
         return ret;

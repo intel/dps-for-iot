@@ -80,43 +80,6 @@ static int ParseOpt(const uint8_t* buf, size_t bufLen, int prevOpt, CoAP_Option*
     return (int)(opt->len + (buf - head));
 }
 
-static size_t ParseLengthsTCP(const uint8_t* buffer, size_t* extLen, size_t* tokLen)
-{
-    uint8_t l = buffer[0] >> 4;
-
-    *tokLen = buffer[0] & 0x0F;
-    if (l == 13) {
-        *extLen = 13 + buffer[1];
-        return 2;
-    }
-    if (l == 14) {
-        *extLen = 269 + (buffer[1] << 8 | buffer[2]);
-        return 3;
-    }
-    if (l == 15) {
-        *extLen = 65805ul + (uint32_t)(buffer[1] << 24 | buffer[2] << 16 | buffer[3] << 8 | buffer[4]);
-        return 4;
-    }
-    *extLen = l;
-    return 1;
-}
-
-DPS_Status CoAP_GetPktLen(int protocol, const uint8_t* buffer, size_t bufLen, size_t* pktLen)
-{
-    if (bufLen < 5) {
-        return DPS_ERR_EOD;
-    }
-    if (protocol == COAP_OVER_UDP) {
-        *pktLen = bufLen;
-    } else {
-        size_t tokLen;
-        size_t extLen;
-        size_t lenLen = ParseLengthsTCP(buffer, &extLen, &tokLen);
-        *pktLen = lenLen + extLen + tokLen + 1;
-    }
-    return DPS_OK;
-}
-
 void CoAP_Free(CoAP_Parsed* coap)
 {
     if (coap) {
@@ -124,7 +87,7 @@ void CoAP_Free(CoAP_Parsed* coap)
     }
 }
 
-DPS_Status CoAP_Parse(int protocol, const uint8_t* buffer, size_t bufLen, CoAP_Parsed* coap, DPS_RxBuffer* payload)
+DPS_Status CoAP_Parse(const uint8_t* buffer, size_t bufLen, CoAP_Parsed* coap, DPS_RxBuffer* payload)
 {
     const uint8_t* p;
     size_t len;
@@ -133,26 +96,13 @@ DPS_Status CoAP_Parse(int protocol, const uint8_t* buffer, size_t bufLen, CoAP_P
     if (bufLen < 5) {
         return DPS_ERR_RESOURCES;
     }
-    if (protocol == COAP_OVER_UDP) {
-        coap->version = buffer[0] >> 6;
-        coap->type = buffer[0] >> 4 & 0x3;
-        coap->tokenLen = buffer[0] & 0xF;
-        coap->code = buffer[1];
-        coap->msgId = buffer[2] << 8 | buffer[3];
-        bufLen -= 4;
-        buffer += 4;
-    } else {
-        size_t extLen;
-        size_t lenLen = ParseLengthsTCP(buffer, &extLen, &coap->tokenLen);
-        bufLen -= lenLen;
-        buffer += lenLen;
-        coap->version = 1;
-        coap->type = COAP_REQUEST;
-        coap->code = buffer[0];
-        coap->msgId = 0;
-        bufLen -= 1;
-        buffer += 1;
-    }
+    coap->version = buffer[0] >> 6;
+    coap->type = buffer[0] >> 4 & 0x3;
+    coap->tokenLen = buffer[0] & 0xF;
+    coap->code = buffer[1];
+    coap->msgId = buffer[2] << 8 | buffer[3];
+    bufLen -= 4;
+    buffer += 4;
     if (coap->tokenLen) {
         if (memcpy_s(coap->token, sizeof(coap->token), buffer, coap->tokenLen) != EOK) {
             return DPS_ERR_INVALID;
@@ -220,7 +170,7 @@ DPS_Status CoAP_Parse(int protocol, const uint8_t* buffer, size_t bufLen, CoAP_P
     return DPS_OK;
 }
 
-DPS_Status CoAP_Compose(int protocol, uint8_t code, const CoAP_Option* opts, size_t numOpts, size_t payloadLen, DPS_TxBuffer* buf)
+DPS_Status CoAP_Compose(uint8_t code, const CoAP_Option* opts, size_t numOpts, size_t payloadLen, DPS_TxBuffer* buf)
 {
     static uint16_t msgId = 1;
     size_t i;
@@ -265,35 +215,11 @@ DPS_Status CoAP_Compose(int protocol, uint8_t code, const CoAP_Option* opts, siz
     /*
      * Compose the header
      */
-    if (protocol == COAP_OVER_UDP) {
-        *buf->txPos++ = COAP_VERSION << 6 | (COAP_TYPE_NON_CONFIRMABLE << 4) | tokenLen;
-        *buf->txPos++ = code;
-        *buf->txPos++ = msgId >> 8;
-        *buf->txPos++ = msgId & 0xFF;
-        ++msgId;
-    } else {
-        size_t extLen = optLen + payloadLen;
-        if (extLen < 13) {
-            *buf->txPos++ = (uint8_t)(extLen << 4 | tokenLen);
-        } else if (extLen < 269) {
-            extLen -= 13;
-            *buf->txPos++ = (uint8_t)((13 << 4) | tokenLen);
-            *buf->txPos++ = (uint8_t)(extLen);
-        } else if (extLen < 65805) {
-            extLen -= 269;
-            *buf->txPos++ = (uint8_t)((14 << 4) | tokenLen);
-            *buf->txPos++ = (uint8_t)(extLen >> 8);
-            *buf->txPos++ = (uint8_t)(extLen);
-        } else {
-            extLen -= 65805;
-            *buf->txPos++ = (uint8_t)((15 << 4) | tokenLen);
-            *buf->txPos++ = (uint8_t)(extLen >> 24);
-            *buf->txPos++ = (uint8_t)(extLen >> 16);
-            *buf->txPos++ = (uint8_t)(extLen >> 8);
-            *buf->txPos++ = (uint8_t)(extLen);
-        }
-        *buf->txPos++ = code;
-    }
+    *buf->txPos++ = COAP_VERSION << 6 | (COAP_TYPE_NON_CONFIRMABLE << 4) | tokenLen;
+    *buf->txPos++ = code;
+    *buf->txPos++ = msgId >> 8;
+    *buf->txPos++ = msgId & 0xFF;
+    ++msgId;
     /*
      * Write the token if there is one
      */
@@ -400,7 +326,7 @@ DPS_Status CoAP_Wrap(uv_buf_t* bufs, size_t numBufs)
     for (i = 1; i < numBufs; ++i) {
         len += bufs[i].len;
     }
-    ret =  CoAP_Compose(COAP_OVER_UDP, COAP_CODE(COAP_REQUEST, COAP_PUT), opts, A_SIZEOF(opts), len, &coap);
+    ret =  CoAP_Compose(COAP_CODE(COAP_REQUEST, COAP_PUT), opts, A_SIZEOF(opts), len, &coap);
     if (ret == DPS_OK) {
         bufs[0].base = (void*)coap.base;
         bufs[0].len = DPS_TxBufferUsed(&coap);
