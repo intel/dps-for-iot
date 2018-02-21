@@ -82,8 +82,9 @@ typedef struct _COSE_Entity {
  * @param cipherText     Buffer for returning the authenticated and encrypted output. The storage for this
  *                       buffer is allocated by this function and must be freed by the caller.
  *
- * @return  - DPS_OK if the plaintext was successfully encrypted
- *          - Other error codes
+ * @return
+ * - DPS_OK if the plaintext was successfully encrypted
+ * - Other error codes
  */
 DPS_Status COSE_Encrypt(int8_t alg,
                         const uint8_t nonce[COSE_NONCE_LEN],
@@ -110,11 +111,12 @@ DPS_Status COSE_Encrypt(int8_t alg,
  * @param plainText  Buffer for returning the decrypted payload. The storage for this
  *                   buffer is allocated by this function and must be freed by the caller.
  *
- * @return  - DPS_OK if the payload was successfully decrypted
- *          - DPS_ERR_NOT_ENCRYPTED if the payload is not a COSE payload (no COSE tag)
- *          - DPS_ERR_INVALID if the payload is badly formed
- *          - DPS_ERR_SECURITY if the payload failed to decrypt
- *          - Other error codes
+ * @return
+ * - DPS_OK if the payload was successfully decrypted
+ * - DPS_ERR_NOT_ENCRYPTED if the payload is not a COSE payload (no COSE tag)
+ * - DPS_ERR_INVALID if the payload is badly formed
+ * - DPS_ERR_SECURITY if the payload failed to decrypt
+ * - Other error codes
  */
 DPS_Status COSE_Decrypt(const uint8_t* nonce,
                         COSE_Entity* recipient,

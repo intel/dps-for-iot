@@ -129,8 +129,9 @@ typedef struct {
  * @param bufLen    The length of data in the buffer
  * @param pktLen    Returns the length of the packet
  *
- * @return   - DPS_OK if the packet size is known
- *           - DPS_ERR_EOD if there is not enough data in the buffer to determine the packet size
+ * @return
+ * - DPS_OK if the packet size is known
+ * - DPS_ERR_EOD if there is not enough data in the buffer to determine the packet size
  */
 DPS_Status CoAP_GetPktLen(int protocol, const uint8_t* buf, size_t bufLen, size_t* pktLen);
 

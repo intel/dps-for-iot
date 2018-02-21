@@ -511,9 +511,10 @@ DPS_Status DPS_ParseMapInit(CBOR_MapState* mapState, DPS_RxBuffer* buffer, const
  * @param mapState  Map state struct
  * @param key       Returns the key that was matched
  *
- * @return - DPS_OK if the required key was matched
- *         - DPS_ERR_MISSING if a required key was not found
- *         - other errors if the CBOR was invalid
+ * @return
+ * - DPS_OK if the required key was matched
+ * - DPS_ERR_MISSING if a required key was not found
+ * - other errors if the CBOR was invalid
  */
 DPS_Status DPS_ParseMapNext(CBOR_MapState* mapState, int32_t* key);
 

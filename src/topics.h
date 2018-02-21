@@ -75,7 +75,7 @@ DPS_Status DPS_AddTopic(DPS_BitVector* bf, const char* topic, const char* separa
  * @param topic       The topic to match
  * @param separators  The separator strings for the topic
  *
- * @return - DPS_TRUE is there was match, DPS_FALSE is there was not a match.
+ * @return DPS_TRUE is there was match, DPS_FALSE is there was not a match.
  */
 int DPS_MatchTopic(DPS_BitVector* bf, const char* topic, const char* separators);
 
