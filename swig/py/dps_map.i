@@ -19,6 +19,10 @@
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  */
 
+#ifdef INCLUDE_DOC
+%include "dps_doc.i"
+#endif
+
 /*
  * Module is called dps we don't need the DPS prefix on every function.
  * Note: can't combine strip and undercase, so regex instead.
