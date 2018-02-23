@@ -196,7 +196,7 @@ exampleenv.Install('#/build/dist/bin', exampleprogs)
 try:
     docs = libenv.Doxygen('doc/Doxyfile')
     libenv.Doxygen('doc/Doxyfile_dev')
-    libenv.Foo(swig_docs, docs)
+    libenv.SwigDox(swig_docs, docs)
     if env['nodejs'] and platform == 'posix':
         libenv.InstallAs('#/build/dist/js/dps.jsdoc', 'swig/js/dps.jsdoc')
 except:

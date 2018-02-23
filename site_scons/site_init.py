@@ -1,6 +1,6 @@
 def DPS(env):
     bld = Builder(action=build_function)
-    env.Append(BUILDERS = {'Foo' : bld})
+    env.Append(BUILDERS = {'SwigDox' : bld})
 
 import swig_doc
 def build_function(target, source, env):
