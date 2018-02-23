@@ -123,7 +123,7 @@ typedef enum {
 /**
  * Symmetric key data
  *
- * @note need to define this outside of DPS_Key to satisfy SWIG.
+ * @note Need to define this outside of DPS_Key to satisfy SWIG.
  */
 typedef struct _DPS_KeySymmetric {
     const uint8_t* key;         /**< Key data */
@@ -146,7 +146,7 @@ typedef enum {
  * Only @p x and @p y are needed for a public key.  Similarly, only @p
  * d is needed for a private key.
  *
- * @note need to define this outside of DPS_Key to satisfy SWIG.
+ * @note Need to define this outside of DPS_Key to satisfy SWIG.
  */
 typedef struct _DPS_KeyEC {
     DPS_ECCurve curve; /**< The named curve */
@@ -158,7 +158,7 @@ typedef struct _DPS_KeyEC {
 /**
  * Certificate key data.
  *
- * @note need to define this outside of DPS_Key to satisfy SWIG.
+ * @note Need to define this outside of DPS_Key to satisfy SWIG.
  */
 typedef struct _DPS_KeyCert {
     const char *cert;           /**< The certificate in PEM format */
@@ -315,7 +315,7 @@ DPS_KeyStore* DPS_KeyStoreHandle(DPS_KeyStoreRequest* request);
  *                            key requests
  * @param caHandler Optional handler for receiving CA chain requests
  *
- * @return A pointer to the key store or NULL if there were no resources.
+ * @return The key store or NULL if there were no resources.
  */
 DPS_KeyStore* DPS_CreateKeyStore(DPS_KeyAndIdHandler keyAndIdHandler, DPS_KeyHandler keyHandler,
                                  DPS_EphemeralKeyHandler ephemeralKeyHandler, DPS_CAHandler caHandler);
@@ -362,12 +362,14 @@ typedef struct _DPS_MemoryKeyStore DPS_MemoryKeyStore;
 /**
  * Creates an in-memory key store.
  *
- * @return A pointer to the key store or NULL if there were no resources.
+ * @return The key store or NULL if there were no resources.
  */
 DPS_MemoryKeyStore* DPS_CreateMemoryKeyStore();
 
 /**
  * Destroys a previously created in-memory key store.
+ *
+ * @param keyStore An in-memory key store
  */
 void DPS_DestroyMemoryKeyStore(DPS_MemoryKeyStore* keyStore);
 
@@ -450,7 +452,7 @@ typedef struct _DPS_Node DPS_Node;
  * @param keyStore      The key store to use for this node
  * @param keyId         The key identifier of this node
  *
- * @return A pointer to the uninitialized node or NULL if there were no resources for the node.
+ * @return The uninitialized node or NULL if there were no resources for the node.
  */
 DPS_Node* DPS_CreateNode(const char* separators, DPS_KeyStore* keyStore, const DPS_KeyId* keyId);
 
@@ -502,9 +504,9 @@ DPS_Status DPS_StartNode(DPS_Node* node, int mcastPub, int listenPort);
 /**
  * Function prototype for callback function called when a node is destroyed.
  *
- * @param node   The node that was destroyed. This pointer is valid during
+ * @param node   The node that was destroyed. This node is valid during
  *               the callback.
- * @param data   Data pointer passed to DPS_DestroyNode()
+ * @param data   Data passed to DPS_DestroyNode()
  *
  */
 typedef void (*DPS_OnNodeDestroyed)(DPS_Node* node, void* data);
@@ -518,7 +520,7 @@ typedef void (*DPS_OnNodeDestroyed)(DPS_Node* node, void* data);
  *
  * @return
  * - DPS_OK if the node will be destroyed and the callback called
- * - DPS_ERR_NULL node or cb was a null pointer
+ * - DPS_ERR_NULL node or cb was null
  * - Or an error status code in which case the callback will not be called.
  */
 DPS_Status DPS_DestroyNode(DPS_Node* node, DPS_OnNodeDestroyed cb, void* data);
@@ -583,7 +585,7 @@ DPS_Status DPS_Link(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnLinkComplete cb
  *
  * @param node   The local node to use
  * @param addr   The address of the remote node that was unlinked
- * @param data   Application data passed in the call to DPS_Link()
+ * @param data   Application data passed in the call to DPS_Unlink()
  */
 typedef void (*DPS_OnUnlinkComplete)(DPS_Node* node, DPS_NodeAddress* addr, void* data);
 
@@ -694,7 +696,7 @@ const DPS_KeyId* DPS_PublicationGetSenderKeyId(const DPS_Publication* pub);
  *
  * @param pub   The publication
  *
- * @return A pointer to the node or NULL if the publication is invalid
+ * @return The node or NULL if the publication is invalid
  */
 DPS_Node* DPS_PublicationGetNode(const DPS_Publication* pub);
 
@@ -888,7 +890,7 @@ size_t DPS_SubscriptionGetNumTopics(const DPS_Subscription* sub);
  * @param topics       The topic strings to match
  * @param numTopics    The number of topic strings to match - must be >= 1
  *
- * @return A pointer to the newly created subscription or NULL if resources
+ * @return The newly created subscription or NULL if resources
  *         could not be allocated or the arguments were invalid
  */
 DPS_Subscription* DPS_CreateSubscription(DPS_Node* node, const char** topics, size_t numTopics);
@@ -917,7 +919,7 @@ void* DPS_GetSubscriptionData(DPS_Subscription* sub);
  *
  * @param sub   The subscription
  *
- * @return A pointer to the node or NULL if the subscription is invalid
+ * @return The node or NULL if the subscription is invalid
  */
 DPS_Node* DPS_SubscriptionGetNode(const DPS_Subscription* sub);
 

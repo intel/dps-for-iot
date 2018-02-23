@@ -66,6 +66,7 @@ typedef enum {
  * @param line the file line of the message
  * @param function the function name of the message
  * @param fmt the printf style format of the message
+ * @param ... the format parameters
  */
 void DPS_Log(DPS_LogLevel level, const char* file, int line, const char *function, const char *fmt, ...);
 
