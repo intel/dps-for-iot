@@ -1,5 +1,5 @@
 # Message Protocol
-This section descbribes the DPS message protocol encodings. DPS
+This section describes the DPS message protocol encodings. DPS
 messages are encoded in [CBOR](https://tools.ietf.org/html/rfc7049),
 described below in
 [CDDL](https://tools.ietf.org/html/draft-ietf-cbor-cddl-00).
@@ -25,7 +25,7 @@ below.
 field = (
   ? 1 => uint,               ; # port number sender is listening on
   ? 2 => int,                ; # ttl - time to live in seconds
-  ? 3 => uuid,               ; # pub-id - unique indentifier for a publication
+  ? 3 => uuid,               ; # pub-id - unique identifier for a publication
   ? 4 => uint,               ; # seq-num - sequence number for a publication
   ? 5 => bool,               ; # ack-req - indicates if an publisher is requesting an acknowledgement
   ? 6 => bit-vector,         ; # bloom-filter -the bloom filter for a publication
