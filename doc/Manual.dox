@@ -3,5 +3,6 @@
  *
  * DPS API tutorials
  *
- * @subpage hello-world The DPS hello world
+ * - @subpage hello-world
+ * - @subpage link
  */

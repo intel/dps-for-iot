@@ -553,7 +553,7 @@ typedef void (*DPS_OnLinkComplete)(DPS_Node* node, DPS_NodeAddress* addr, DPS_St
  * @param addr   The address of the remote node to link to
  * @param cb     The callback function to call on completion, can be NULL which case the function is synchronous
  * @param data   Application data to be passed to the callback
-
+ *
  * @return DPS_OK or an error status. If an error status is returned the callback function will not be called.
  */
 DPS_Status DPS_Link(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnLinkComplete cb, void* data);

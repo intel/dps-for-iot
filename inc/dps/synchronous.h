@@ -38,7 +38,7 @@ extern "C" {
  * Synchronous helper that wraps DPS_Link().
  *
  * @param node  The local node to link from
- * @param host  The host name or IP address to link to
+ * @param host  The host name or IP address to link to.  A NULL host indicates localhost.
  * @param port  The port number
  * @param addr  Returns the resolved address for the remote node
  *

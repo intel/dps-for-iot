@@ -1,0 +1,50 @@
+#!/bin/bash
+
+# Include common functions
+dir="${BASH_SOURCE%/*}"
+if [[ ! -d "$dir" ]]; then dir="$PWD"; fi
+. "$dir/common.sh"
+
+#
+# Hello world
+#
+reset_logs
+
+tutorial subscribe
+sleep 1
+tutorial publish ack
+sleep 1
+
+n=$(grep -s "payload=Hello\$" out/tutorial1.log | wc -l)
+if [ $n -ne 1 ]; then
+    echo "Subscriber did not receive publication"
+    exit 1
+fi
+n=$(grep -s "payload=World\$" out/tutorial2.log | wc -l)
+if [ $n -ne 1 ]; then
+    echo "Publisher did not receive acknowledgement"
+    exit 1
+fi
+
+#
+# Building a DPS network
+#
+reset_logs
+
+tutorial -l 60001
+sleep 1
+tutorial -p 60001 subscribe
+sleep 1
+tutorial -p 60001 publish ack
+sleep 1
+
+n=$(grep -s "payload=Hello\$" out/tutorial2.log | wc -l)
+if [ $n -ne 1 ]; then
+    echo "Subscriber did not receive publication"
+    exit 1
+fi
+n=$(grep -s "payload=World\$" out/tutorial3.log | wc -l)
+if [ $n -ne 1 ]; then
+    echo "Publisher did not receive acknowledgement"
+    exit 1
+fi

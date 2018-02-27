@@ -187,7 +187,7 @@ if tutorialenv['PLATFORM'] == 'win32':
     tutorialenv.Append(CPPDEFINES = ['_CRT_SECURE_NO_WARNINGS'])
 tutorialenv.Append(LIBS = [lib, env['UV_LIBS']])
 
-tutorialsrcs = ['doc/tutorial/hello_world.c']
+tutorialsrcs = ['doc/tutorial/tutorial.c']
 
 Depends(tutorialsrcs, ext_libs)
 

@@ -5,6 +5,13 @@ NODE_PATH=./build/dist/js
 export PYTHONPATH NODE_PATH
 
 function reset_logs {
+    s=0
+    p=0
+    v=0
+    t=0
+    n_=0
+    rS=0
+    rP=0
     mkdir -p ./out
     rm -f ./out/*.log
 }
@@ -16,13 +23,6 @@ subsRate="-r 100"
 if [ "$1" == '-d' ]; then
     debug=-d
 fi
-
-s=0
-p=0
-v=0
-n_=0
-rS=0
-rP=0
 
 function reg_subs {
     rS=$((rS+1))
@@ -70,6 +70,15 @@ function ver {
     echo -e "=============================\nver$v $debug $@" | tee $f
     echo "==============================" >> $f
     build/test/bin/version $debug $@ 2>> $f &
+}
+
+function tutorial {
+    t=$((t+1))
+    f=./out/tutorial$t.log
+    sleep 0.1
+    echo -e "=============================\ntutorial$t $debug $@" | tee $f
+    echo "==============================" >> $f
+    build/dist/bin/tutorial $debug $@ 2>> $f &
 }
 
 function test_node {
