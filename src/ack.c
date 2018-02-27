@@ -176,6 +176,8 @@ static DPS_Status SerializeAck(const DPS_Publication* pub, PublicationAck* ack, 
         DPS_TxBufferFree(&ack->encryptedBuf);
         if (ret == DPS_OK) {
             ack->encryptedBuf = cipherTextBuf;
+        } else {
+            DPS_WARNPRINT("COSE_Encrypt failed: %s\n", DPS_ErrTxt(ret));
         }
     }
     return ret;

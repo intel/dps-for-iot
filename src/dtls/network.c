@@ -745,7 +745,7 @@ static DPS_NetConnection* CreateConnection(DPS_Node* node, const struct sockaddr
     DPS_KeyStoreRequest request;
 
     if (!keyStore) {
-        DPS_ERRPRINT("Missing key store for PSK\n");
+        DPS_ERRPRINT("Missing key store\n");
         return NULL;
     }
 

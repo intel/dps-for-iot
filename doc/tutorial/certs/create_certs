@@ -1,0 +1,75 @@
+#!/bin/bash
+#
+# The output of this script is a C source file containing the
+# certificates needed for the tutorial.
+#
+
+CURVE=secp521r1
+SHA=sha512
+
+#
+# Create the certificate authority.
+#
+CA_N="Tutorial Certificate Authority"
+CA_NAME=${CA_N// /_}
+openssl ecparam -name $CURVE -genkey -out $CA_NAME-key.pem
+openssl req -new -x509 -key $CA_NAME-key.pem -nodes -subj "/C=US/O=DPS/CN=$CA_N" -out $CA_NAME-cert.pem -days 3650
+
+echo "const char* CA_CERTIFICATE ="
+cat $CA_NAME-cert.pem | sed 's/^/    "/' | sed 's/$/\\r\\n"/' | sed '$s/$/;/'
+
+#
+# Create a certificate, signed by the certificate authority, for each
+# name specified on the command line.
+#
+echo "const Certificate CERTIFICATES[] = {"
+
+for N in "$@"; do
+    NAME=${N// /_}
+
+    openssl ecparam -name $CURVE -genkey -out $NAME-key.pem
+    openssl req -new -key $NAME-key.pem -nodes -subj "/C=US/O=DPS/CN=$N" -out $NAME.csr
+    openssl x509 -req -in $NAME.csr -CA $CA_NAME-cert.pem -CAkey $CA_NAME-key.pem -CAcreateserial -out $NAME-cert.pem -days 3650 -$SHA
+    openssl ec -aes-256-cbc -in $NAME-key.pem -passout "pass:$N Password" -out $NAME-key.pem
+
+    echo "    {"
+    echo "        BYTE_STR(\"$N\"),"
+    echo "        {"
+    echo "            DPS_KEY_EC_CERT,"
+    echo "            {"
+    echo "                .cert = {"
+    cat $NAME-cert.pem | sed 's/^/                    "/' | sed 's/$/\\r\\n"/' | sed '$s/$/,/'
+    cat $NAME-key.pem  | sed 's/^/                    "/' | sed 's/$/\\r\\n"/' | sed '$s/$/,/'
+    echo "                    \"$N Password\""
+    echo "                }"
+    echo "            }"
+    echo "        }"
+    echo "    },"
+done
+
+echo "    {"
+echo "        { NULL, 0 }, { DPS_KEY_EC_CERT, { .cert = { NULL, NULL, NULL } } }"
+echo "    }"
+echo "};"
+
+#
+# Create a certificate for protecting the payload.
+#
+N="Tutorial Asymmetric Key"
+NAME=${N// /_}
+
+openssl ecparam -name $CURVE -genkey -out $NAME-key.pem
+openssl req -new -key $NAME-key.pem -nodes -subj "/C=US/O=DPS/CN=$N" -out $NAME.csr
+openssl x509 -req -in $NAME.csr -CA $CA_NAME-cert.pem -CAkey $CA_NAME-key.pem -CAcreateserial -out $NAME-cert.pem -days 3650 -$SHA
+openssl ec -aes-256-cbc -in $NAME-key.pem -passout "pass:$N Password" -out $NAME-key.pem
+
+echo "const DPS_Key ASYMMETRIC_KEY = {"
+echo "    DPS_KEY_EC_CERT,"
+echo "    {"
+echo "        .cert = {"
+cat $NAME-cert.pem | sed 's/^/            "/' | sed 's/$/\\r\\n"/' | sed '$s/$/,/'
+cat $NAME-key.pem | sed 's/^/            "/' | sed 's/$/\\r\\n"/' | sed '$s/$/,/'
+echo "            \"$N Password\""
+echo "        }"
+echo "    }"
+echo "};"

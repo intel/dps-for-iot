@@ -1,8 +1,7 @@
 /**
- * @page Tutorials
- *
- * DPS API tutorials
+ * @page tutorials Tutorials
  *
  * - @subpage hello-world
  * - @subpage link
+ * - @subpage security
  */

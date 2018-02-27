@@ -1153,6 +1153,7 @@ DPS_Status DPS_PublicationAddSubId(DPS_Publication* pub, const DPS_KeyId* keyId)
     int8_t alg;
 
     if (IsValidPub(pub)) {
+        DPS_DBGPRINT("Publication has a keyId\n");
         ret = GetRecipientAlgorithm(pub->node->keyStore, keyId, &alg);
         if (ret != DPS_OK) {
             return ret;
@@ -1275,6 +1276,7 @@ DPS_Status DPS_SerializePub(DPS_Node* node, DPS_Publication* pub, const uint8_t*
                            &encryptedBuf);
         DPS_RxBufferFree(&plainTextBuf);
         if (ret != DPS_OK) {
+            DPS_WARNPRINT("COSE_Encrypt failed: %s\n", DPS_ErrTxt(ret));
             DPS_TxBufferFree(&protectedBuf);
             return ret;
         }
