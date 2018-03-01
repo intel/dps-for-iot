@@ -35,7 +35,7 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
 DPS_Status HKDF_SHA256(const uint8_t* secret, size_t secretLen,
                        const uint8_t* context, size_t contextLen,
-                       uint8_t key[AES_128_KEY_LEN])
+                       uint8_t key[AES_256_KEY_LEN])
 {
     mbedtls_md_context_t md;
     const mbedtls_md_info_t* info;
@@ -86,7 +86,7 @@ DPS_Status HKDF_SHA256(const uint8_t* secret, size_t secretLen,
     if (ret != 0) {
         goto Exit;
     }
-    memcpy_s(key, AES_128_KEY_LEN, digest, AES_128_KEY_LEN);
+    memcpy_s(key, AES_256_KEY_LEN, digest, AES_256_KEY_LEN);
 
 Exit:
     mbedtls_md_free(&md);

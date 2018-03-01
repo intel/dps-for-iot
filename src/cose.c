@@ -43,7 +43,7 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
  * Define maximum sizes to be used when allocating storage for messages
  */
 
-#define A128KW_LEN 24
+#define A256KW_LEN 40
 
 #define SIZEOF_PROTECTED_MAP CBOR_SIZEOF_BSTR(CBOR_SIZEOF_MAP(1) +      \
     /* alg */ CBOR_SIZEOF(int8_t) + CBOR_SIZEOF(int8_t))
@@ -67,7 +67,7 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
     /* alg */ CBOR_SIZEOF(int8_t) + CBOR_SIZEOF(int8_t) +               \
     /* ephemeral key */ CBOR_SIZEOF(int8_t) + SIZEOF_EPHEMERAL_KEY +    \
     /* kid */ CBOR_SIZEOF(int8_t) + CBOR_SIZEOF_BSTR(kidLen) +          \
-    /* content */ CBOR_SIZEOF_BSTR(A128KW_LEN)
+    /* content */ CBOR_SIZEOF_BSTR(A256KW_LEN)
 
 #define SIZEOF_PARTY_INFO CBOR_SIZEOF_ARRAY(3) +        \
     /* null */ 1 +                                      \
@@ -120,7 +120,7 @@ typedef struct _COSE_Key {
     } type; /**< Type of key */
     union {
         struct {
-            uint8_t key[AES_128_KEY_LEN];   /**< Key data */
+            uint8_t key[AES_256_KEY_LEN];   /**< Key data */
         } symmetric; /**< Symmetric key */
         struct {
             DPS_ECCurve curve; /**< EC curve */
@@ -152,11 +152,10 @@ static volatile void* SecureZeroMemory(volatile void* m, size_t l)
 }
 #endif
 
-static DPS_Status SetCryptoParams(int8_t alg, uint8_t* L, uint8_t* M, size_t* nonceLen)
+static DPS_Status SetCryptoParams(int8_t alg, uint8_t* M, size_t* nonceLen)
 {
     switch (alg) {
-    case COSE_ALG_A128GCM:
-        *L = 16 / 8;
+    case COSE_ALG_A256GCM:
         *M = 128 / 8;
         *nonceLen = AES_GCM_NONCE_LEN;
         break;
@@ -255,11 +254,11 @@ static DPS_Status EncodeRecipient(DPS_TxBuffer* buf, int8_t alg, const DPS_KeyId
      */
     if (ret == DPS_OK) {
         switch (alg) {
-        case COSE_ALG_A128KW:
+        case COSE_ALG_A256KW:
         case COSE_ALG_DIRECT:
             ret = CBOR_EncodeBytes(buf, NULL, 0);
             break;
-        case COSE_ALG_ECDH_ES_A128KW:
+        case COSE_ALG_ECDH_ES_A256KW:
             ret = EncodeProtectedMap(buf, alg);
             break;
         default:
@@ -275,14 +274,14 @@ static DPS_Status EncodeRecipient(DPS_TxBuffer* buf, int8_t alg, const DPS_KeyId
     }
     if (ret == DPS_OK) {
         switch (alg) {
-        case COSE_ALG_A128KW:
+        case COSE_ALG_A256KW:
         case COSE_ALG_DIRECT:
             ret = CBOR_EncodeInt8(buf, COSE_HDR_ALG);
             if (ret == DPS_OK) {
                 ret = CBOR_EncodeInt8(buf, alg);
             }
             break;
-        case COSE_ALG_ECDH_ES_A128KW:
+        case COSE_ALG_ECDH_ES_A256KW:
             if (!key || key->type != COSE_KEY_EC) {
                 ret = DPS_ERR_INVALID;
             }
@@ -540,7 +539,7 @@ static DPS_Status SetKey(DPS_KeyStoreRequest* request, const DPS_Key* key)
             DPS_ERRPRINT("Provided key has invalid type %d\n", key->type);
             return DPS_ERR_MISSING;
         }
-        if (key->symmetric.len != AES_128_KEY_LEN) {
+        if (key->symmetric.len != AES_256_KEY_LEN) {
             DPS_ERRPRINT("Provided key has invalid size %d\n", key->symmetric.len);
             return DPS_ERR_MISSING;
         }
@@ -692,7 +691,6 @@ DPS_Status COSE_Encrypt(int8_t alg, const uint8_t nonce[COSE_NONCE_LEN], const C
     DPS_TxBuffer kdfContext;
     COSE_Key cek;
     COSE_Key k;
-    uint8_t L;
     uint8_t M;
     size_t nonceLen;
     DPS_TxBuffer content;
@@ -731,7 +729,7 @@ DPS_Status COSE_Encrypt(int8_t alg, const uint8_t nonce[COSE_NONCE_LEN], const C
         tag = COSE_TAG_ENCRYPT;
     }
 
-    ret = SetCryptoParams(alg, &L, &M, &nonceLen);
+    ret = SetCryptoParams(alg, &M, &nonceLen);
     if (ret != DPS_OK) {
         goto Exit;
     }
@@ -770,14 +768,14 @@ DPS_Status COSE_Encrypt(int8_t alg, const uint8_t nonce[COSE_NONCE_LEN], const C
             goto Exit;
         }
         break;
-    case COSE_ALG_A128KW:
+    case COSE_ALG_A256KW:
         cek.type = COSE_KEY_SYMMETRIC;
         ret = GetEphemeralKey(keyStore, &cek);
         if (ret != DPS_OK) {
             goto Exit;
         }
         break;
-    case COSE_ALG_ECDH_ES_A128KW:
+    case COSE_ALG_ECDH_ES_A256KW:
         /*
          * Request the random content key
          */
@@ -899,7 +897,7 @@ DPS_Status COSE_Encrypt(int8_t alg, const uint8_t nonce[COSE_NONCE_LEN], const C
          * plaintext.
          */
         for (i = 0; i < recipientLen; ++i) {
-            uint8_t kw[AES_128_KEY_WRAP_LEN];
+            uint8_t kw[AES_256_KEY_WRAP_LEN];
             switch (recipient[i].alg) {
             case COSE_ALG_RESERVED:
                 assert(tag == COSE_TAG_ENCRYPT0);
@@ -911,7 +909,7 @@ DPS_Status COSE_Encrypt(int8_t alg, const uint8_t nonce[COSE_NONCE_LEN], const C
                     goto Exit;
                 }
                 break;
-            case COSE_ALG_A128KW:
+            case COSE_ALG_A256KW:
                 k.type = COSE_KEY_SYMMETRIC;
                 ret = GetKey(keyStore, &recipient[i].kid, &k);
                 if (ret != DPS_OK) {
@@ -927,7 +925,7 @@ DPS_Status COSE_Encrypt(int8_t alg, const uint8_t nonce[COSE_NONCE_LEN], const C
                     goto Exit;
                 }
                 break;
-            case COSE_ALG_ECDH_ES_A128KW:
+            case COSE_ALG_ECDH_ES_A256KW:
                 /*
                  * Request the static recipient public key and ephemeral sender private key
                  *
@@ -955,7 +953,7 @@ DPS_Status COSE_Encrypt(int8_t alg, const uint8_t nonce[COSE_NONCE_LEN], const C
                 if (ret != DPS_OK) {
                     goto Exit;
                 }
-                ret = EncodeKDFContext(&kdfContext, COSE_ALG_A128KW, M, recipient[i].alg);
+                ret = EncodeKDFContext(&kdfContext, COSE_ALG_A256KW, AES_256_KEY_LEN, recipient[i].alg);
                 if (ret != DPS_OK) {
                     goto Exit;
                 }
@@ -1304,7 +1302,6 @@ DPS_Status COSE_Decrypt(const uint8_t* nonce, COSE_Entity* recipient, DPS_RxBuff
     uint64_t tag;
     size_t sz;
     int8_t alg;
-    uint8_t L;
     uint8_t M;
     uint8_t iv[COSE_NONCE_LEN];
     size_t ivLen;
@@ -1367,7 +1364,7 @@ DPS_Status COSE_Decrypt(const uint8_t* nonce, COSE_Entity* recipient, DPS_RxBuff
         ret = DPS_ERR_INVALID;
         goto Exit;
     }
-    ret = SetCryptoParams(alg, &L, &M, &ivLen);
+    ret = SetCryptoParams(alg, &M, &ivLen);
     if (ret != DPS_OK) {
         goto Exit;
     }
@@ -1452,13 +1449,13 @@ DPS_Status COSE_Decrypt(const uint8_t* nonce, COSE_Entity* recipient, DPS_RxBuff
                 continue;
             }
             break;
-        case COSE_ALG_A128KW:
+        case COSE_ALG_A256KW:
             kek.type = COSE_KEY_SYMMETRIC;
             ret = GetKey(keyStore, &recipient->kid, &kek);
             if (ret != DPS_OK) {
                 continue;
             }
-            if (!kw || (kwLen != AES_128_KEY_WRAP_LEN)) {
+            if (!kw || (kwLen != AES_256_KEY_WRAP_LEN)) {
                 ret = DPS_ERR_INVALID;
                 continue;
             }
@@ -1468,8 +1465,8 @@ DPS_Status COSE_Decrypt(const uint8_t* nonce, COSE_Entity* recipient, DPS_RxBuff
                 continue;
             }
             break;
-        case COSE_ALG_ECDH_ES_A128KW:
-            if (!kw || (kwLen != AES_128_KEY_WRAP_LEN)) {
+        case COSE_ALG_ECDH_ES_A256KW:
+            if (!kw || (kwLen != AES_256_KEY_WRAP_LEN)) {
                 ret = DPS_ERR_INVALID;
                 continue;
             }
@@ -1489,7 +1486,7 @@ DPS_Status COSE_Decrypt(const uint8_t* nonce, COSE_Entity* recipient, DPS_RxBuff
             if (ret != DPS_OK) {
                 continue;
             }
-            ret = EncodeKDFContext(&kdfContext, COSE_ALG_A128KW, M, recipient->alg);
+            ret = EncodeKDFContext(&kdfContext, COSE_ALG_A256KW, AES_256_KEY_LEN, recipient->alg);
             if (ret != DPS_OK) {
                 continue;
             }

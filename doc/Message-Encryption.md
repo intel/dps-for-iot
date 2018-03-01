@@ -14,11 +14,11 @@ attributes from the application as identified in COSE.  The
 content encryption algorithm and is replaced by a COSE object,
 either a *COSE_Encrypt_Tagged* or *COSE_Encrypt0_Tagged* object.
 
-The implemented content encryption algorithm is *A128GCM*.
+The implemented content encryption algorithm is *A256GCM*.
 
 ## Content Key Distribution
 The encryption key is determined by the recipient algorithm.  DPS
-supports the *direct*, *A128KW*, and *ECDH-ES + A128KW* recipient
+supports the *direct*, *A256KW*, and *ECDH-ES + A256KW* recipient
 algorithms.
 
 The use of the key wrap variants allows multiple recipients to be

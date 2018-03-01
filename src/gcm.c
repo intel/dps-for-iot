@@ -29,7 +29,7 @@
 
 #define M 16 /* Tag length, in bytes */
 
-DPS_Status Encrypt_GCM(const uint8_t key[AES_128_KEY_LEN],
+DPS_Status Encrypt_GCM(const uint8_t key[AES_256_KEY_LEN],
                        const uint8_t nonce[AES_GCM_NONCE_LEN],
                        const uint8_t* plainText,
                        size_t ptLen,
@@ -46,14 +46,14 @@ DPS_Status Encrypt_GCM(const uint8_t key[AES_128_KEY_LEN],
         return DPS_ERR_OVERFLOW;
     }
 
-    info = mbedtls_cipher_info_from_type(MBEDTLS_CIPHER_AES_128_GCM);
+    info = mbedtls_cipher_info_from_type(MBEDTLS_CIPHER_AES_256_GCM);
     mbedtls_cipher_init(&ctx);
     ret = mbedtls_cipher_setup(&ctx, info);
     if (ret != 0) {
         DPS_ERRPRINT("Cipher setup failed: %s\n", TLSErrTxt(ret));
         goto Exit;
     }
-    ret = mbedtls_cipher_setkey(&ctx, key, AES_128_KEY_LEN * 8, MBEDTLS_ENCRYPT);
+    ret = mbedtls_cipher_setkey(&ctx, key, AES_256_KEY_LEN * 8, MBEDTLS_ENCRYPT);
     if (ret != 0) {
         DPS_ERRPRINT("Cipher set key failed: %s\n", TLSErrTxt(ret));
         goto Exit;
@@ -76,7 +76,7 @@ Exit:
     }
 }
 
-DPS_Status Decrypt_GCM(const uint8_t key[AES_128_KEY_LEN],
+DPS_Status Decrypt_GCM(const uint8_t key[AES_256_KEY_LEN],
                        const uint8_t nonce[AES_GCM_NONCE_LEN],
                        const uint8_t* cipherText,
                        size_t ctLen,
@@ -94,14 +94,14 @@ DPS_Status Decrypt_GCM(const uint8_t key[AES_128_KEY_LEN],
         return DPS_ERR_OVERFLOW;
     }
 
-    info = mbedtls_cipher_info_from_type(MBEDTLS_CIPHER_AES_128_GCM);
+    info = mbedtls_cipher_info_from_type(MBEDTLS_CIPHER_AES_256_GCM);
     mbedtls_cipher_init(&ctx);
     ret = mbedtls_cipher_setup(&ctx, info);
     if (ret != 0) {
         DPS_ERRPRINT("Cipher setup failed: %s\n", TLSErrTxt(ret));
         goto Exit;
     }
-    ret = mbedtls_cipher_setkey(&ctx, key, AES_128_KEY_LEN * 8, MBEDTLS_DECRYPT);
+    ret = mbedtls_cipher_setkey(&ctx, key, AES_256_KEY_LEN * 8, MBEDTLS_DECRYPT);
     if (ret != 0) {
         DPS_ERRPRINT("Cipher set key failed: %s\n", TLSErrTxt(ret));
         goto Exit;

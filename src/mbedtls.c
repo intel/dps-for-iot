@@ -99,14 +99,14 @@ void DPS_DestroyRBG(DPS_RBG* rbg)
     }
 }
 
-DPS_Status DPS_RandomKey(DPS_RBG* rbg, uint8_t key[AES_128_KEY_LEN])
+DPS_Status DPS_RandomKey(DPS_RBG* rbg, uint8_t key[AES_256_KEY_LEN])
 {
     int ret;
 
     if (!rbg) {
         return DPS_ERR_ARGS;
     }
-    ret = mbedtls_ctr_drbg_random(&rbg->drbg, key, AES_128_KEY_LEN);
+    ret = mbedtls_ctr_drbg_random(&rbg->drbg, key, AES_256_KEY_LEN);
     if (ret != 0) {
         DPS_ERRPRINT("Generate random bytes failed: %s\n", TLSErrTxt(ret));
         return DPS_ERR_FAILURE;

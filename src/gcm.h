@@ -48,7 +48,7 @@ extern "C" {
  * Implements AES-GCM (Galois/Counter Mode) encryption. The message is
  * encrypted in place.
  *
- * @param key        The AES-128 encryption key
+ * @param key        The AES-256 encryption key
  * @param nonce      The nonce (must be 12 bytes in this implementation)
  * @param plainText  Plaintext to be encrypted,
  * @param ptLen      The length of the plaintext
@@ -61,7 +61,7 @@ extern "C" {
  * - DPS_OK if the GCM context is initialized
  * - DPS_ERR_RESOURCES if the resources required are not available.
  */
-DPS_Status Encrypt_GCM(const uint8_t key[AES_128_KEY_LEN],
+DPS_Status Encrypt_GCM(const uint8_t key[AES_256_KEY_LEN],
                        const uint8_t nonce[AES_GCM_NONCE_LEN],
                        const uint8_t* plainText,
                        size_t ptLen,
@@ -73,7 +73,7 @@ DPS_Status Encrypt_GCM(const uint8_t key[AES_128_KEY_LEN],
  * Implements AES-GCM (Galois/Counter Mode) decryption. The message is
  * decrypted in place.
  *
- * @param key        The AES-128 encryption key
+ * @param key        The AES-256 encryption key
  * @param nonce      The nonce (must be 12 bytes in this implementation)
  * @param cipherText The cipher text to be decrypted
  * @param ctLen      The length of the cipher text
@@ -87,7 +87,7 @@ DPS_Status Encrypt_GCM(const uint8_t key[AES_128_KEY_LEN],
  * - DPS_ERR_RESOURCES if the resources required are not available.
  * - DPS_ERR_SECURITY if the decryption failed
  */
-DPS_Status Decrypt_GCM(const uint8_t key[AES_128_KEY_LEN],
+DPS_Status Decrypt_GCM(const uint8_t key[AES_256_KEY_LEN],
                        const uint8_t nonce[AES_GCM_NONCE_LEN],
                        const uint8_t* cipherText,
                        size_t ctLen,

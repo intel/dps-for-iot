@@ -54,10 +54,11 @@ extern const Certificate CERTIFICATES[];
 /** [Certificates] */
 
 /** [Symmetric key] */
-static const uint8_t AES_128_KEY[16] = {
-    0x27, 0xbd, 0xa7, 0x4f, 0xd7, 0x60, 0xff, 0x48, 0x10, 0x59, 0x56, 0xde, 0x8f, 0x4b, 0x45, 0x70
+static const uint8_t AES_256_KEY[32] = {
+    0x37, 0xf9, 0x6f, 0x85, 0x72, 0x0c, 0xa0, 0x1b, 0x85, 0x51, 0x50, 0x45, 0x22, 0xa7, 0x30, 0x55,
+    0x4f, 0x05, 0x9c, 0xc4, 0xf4, 0xbb, 0xa6, 0x37, 0xfc, 0x0a, 0x90, 0x53, 0x64, 0xe1, 0xb7, 0x9c
 };
-static const DPS_Key SYMMETRIC_KEY = { DPS_KEY_SYMMETRIC, { .symmetric = { AES_128_KEY, 16 } } };
+static const DPS_Key SYMMETRIC_KEY = { DPS_KEY_SYMMETRIC, { .symmetric = { AES_256_KEY, 32 } } };
 static const DPS_KeyId SYMMETRIC_KEY_ID = BYTE_STR("Tutorial Symmetric Key");
 /** [Symmetric key] */
 
@@ -717,21 +718,22 @@ static DPS_Status SymmetricKeyHandler(DPS_KeyStoreRequest* request, const DPS_Ke
 /** [Symmetric key handler] */
 
 /* This is only for purposes of the tutorial, a real application must return truly random bytes */
-static void GenerateRandomKey(uint8_t key[16])
+static void GenerateRandomKey(uint8_t key[32])
 {
-    static const uint8_t bytes[16] = {
-        0x23, 0x71, 0x92, 0x70, 0x19, 0xb4, 0xb3, 0xe5, 0x44, 0x43, 0x59, 0xab, 0x70, 0x62, 0x86, 0x11
+    static const uint8_t bytes[32] = {
+        0x33, 0x69, 0xd9, 0x48, 0x36, 0x87, 0x95, 0x44, 0x97, 0x67, 0xf7, 0x09, 0xdc, 0x86, 0xae, 0xe7,
+        0x93, 0x50, 0x09, 0xe9, 0x2c, 0x55, 0xfc, 0x4e, 0x43, 0xf6, 0x26, 0xe3, 0xe8, 0x3e, 0x19, 0x6c
     };
-    memcpy(key, bytes, 16);
+    memcpy(key, bytes, 32);
 }
 
 /** [Ephemeral symmetric key handler] */
 static DPS_Status EphemeralSymmetricKeyHandler(DPS_KeyStoreRequest* request, const DPS_Key* key)
 {
     if (key->type == DPS_KEY_SYMMETRIC) {
-        uint8_t key[16];
+        uint8_t key[32];
         GenerateRandomKey(key);
-        DPS_Key ephemeralKey = { DPS_KEY_SYMMETRIC, { .symmetric = { key, 16 } } };
+        DPS_Key ephemeralKey = { DPS_KEY_SYMMETRIC, { .symmetric = { key, 32 } } };
         return DPS_SetKey(request, &ephemeralKey);
     }
     return DPS_ERR_MISSING;
@@ -779,9 +781,9 @@ static void GenerateEphemeralKey(DPS_ECCurve curve, uint8_t x[66], uint8_t y[66]
 static DPS_Status EphemeralAsymmetricKeyHandler(DPS_KeyStoreRequest* request, const DPS_Key* key)
 {
     if (key->type == DPS_KEY_SYMMETRIC) {
-        uint8_t key[16];
+        uint8_t key[32];
         GenerateRandomKey(key);
-        DPS_Key ephemeralKey = { DPS_KEY_SYMMETRIC, { .symmetric = { key, 16 } } };
+        DPS_Key ephemeralKey = { DPS_KEY_SYMMETRIC, { .symmetric = { key, 32 } } };
         return DPS_SetKey(request, &ephemeralKey);
     } else if (key->type == DPS_KEY_EC) {
         uint8_t x[66], y[66], d[66];
@@ -816,9 +818,9 @@ static DPS_Status KeyHandler(DPS_KeyStoreRequest* request, const DPS_KeyId* keyI
 static DPS_Status EphemeralKeyHandler(DPS_KeyStoreRequest* request, const DPS_Key* key)
 {
     if (key->type == DPS_KEY_SYMMETRIC) {
-        uint8_t key[16];
+        uint8_t key[32];
         GenerateRandomKey(key);
-        DPS_Key ephemeralKey = { DPS_KEY_SYMMETRIC, { .symmetric = { key, 16 } } };
+        DPS_Key ephemeralKey = { DPS_KEY_SYMMETRIC, { .symmetric = { key, 32 } } };
         return DPS_SetKey(request, &ephemeralKey);
     } else if (key->type == DPS_KEY_EC) {
         uint8_t x[66], y[66], d[66];

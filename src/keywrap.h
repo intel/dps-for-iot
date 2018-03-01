@@ -35,7 +35,7 @@
 extern "C" {
 #endif
 
-#define AES_128_KEY_WRAP_LEN 24 /**< The length of the wrapped AES-128 key in bytes */
+#define AES_256_KEY_WRAP_LEN 40 /**< The length of the wrapped AES-256 key in bytes */
 
 /**
  * Wrap a key per the algorithm specified in RFC 3394.
@@ -46,8 +46,8 @@ extern "C" {
  *
  * @return DPS_OK if wrapped, an error otherwise
  */
-DPS_Status KeyWrap(const uint8_t cek[AES_128_KEY_LEN], const uint8_t kek[AES_128_KEY_LEN],
-                   uint8_t cipherText[AES_128_KEY_WRAP_LEN]);
+DPS_Status KeyWrap(const uint8_t cek[AES_256_KEY_LEN], const uint8_t kek[AES_256_KEY_LEN],
+                   uint8_t cipherText[AES_256_KEY_WRAP_LEN]);
 
 /**
  * Unwrap a key per the algorithm specified in RFC 3394.
@@ -58,8 +58,8 @@ DPS_Status KeyWrap(const uint8_t cek[AES_128_KEY_LEN], const uint8_t kek[AES_128
  *
  * @return DPS_OK if unwrapped, an error otherwise
  */
-DPS_Status KeyUnwrap(const uint8_t cipherText[AES_128_KEY_WRAP_LEN], const uint8_t kek[AES_128_KEY_LEN],
-                     uint8_t cek[AES_128_KEY_LEN]);
+DPS_Status KeyUnwrap(const uint8_t cipherText[AES_256_KEY_WRAP_LEN], const uint8_t kek[AES_256_KEY_LEN],
+                     uint8_t cek[AES_256_KEY_LEN]);
 
 #ifdef __cplusplus
 }
