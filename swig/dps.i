@@ -219,7 +219,6 @@ static void InitializeModule();
         DPS_KeyEC* key;
         size_t n;
         switch (curve) {
-        case DPS_EC_CURVE_P256: n = 32; break;
         case DPS_EC_CURVE_P384: n = 48; break;
         case DPS_EC_CURVE_P521: n = 66; break;
         default: return NULL;

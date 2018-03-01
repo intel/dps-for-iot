@@ -25,8 +25,8 @@ The use of the key wrap variants allows multiple recipients to be
 included in a message.
 
 ### Elliptic Curve Keys
-DPS supports the *NIST P-256 (secp256r1)*, *NIST P-384 (secp384r1)*,
-and *NIST P-521 (secp521r1)* curves.
+DPS supports the *NIST P-384 (secp384r1)* and *NIST P-521 (secp521r1)*
+curves.
 
 Point compression is not supported.  Both the x and y coordinates must
 be included in EC key representations such as the ephemeral sender
@@ -48,7 +48,7 @@ the signature is included as a COSE counter signature.  This allows
 intermediate DPS nodes to authenticate the sender of a message without
 decrypting the contents of the message.
 
-DPS supports the *ES256*, *ES384*, and *ES512* signature algorithms.
+DPS supports the *ES384*, and *ES512* signature algorithms.
 
 ## Examples
 

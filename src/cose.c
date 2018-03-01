@@ -552,7 +552,6 @@ static DPS_Status SetKey(DPS_KeyStoreRequest* request, const DPS_Key* key)
             return DPS_ERR_MISSING;
         }
         switch (key->ec.curve) {
-        case DPS_EC_CURVE_P256: len = 32; break;
         case DPS_EC_CURVE_P384: len = 48; break;
         case DPS_EC_CURVE_P521: len = 66; break;
         default:
@@ -649,9 +648,6 @@ static DPS_Status GetSignatureKey(DPS_KeyStore* keyStore, const Signature* sig, 
         return DPS_ERR_MISSING;
     }
     switch (sig->alg) {
-    case COSE_ALG_ES256:
-        curve = DPS_EC_CURVE_P256;
-        break;
     case COSE_ALG_ES384:
         curve = DPS_EC_CURVE_P384;
         break;
@@ -1068,7 +1064,7 @@ static DPS_Status DecodeKey(DPS_RxBuffer* buf, COSE_Key* key)
                 } else {
                     int8_t crv;
                     ret = CBOR_DecodeInt8(buf, &crv);
-                    if ((ret == DPS_OK) && ((crv < DPS_EC_CURVE_P256) || (DPS_EC_CURVE_P521 < crv))) {
+                    if ((ret == DPS_OK) && ((crv < DPS_EC_CURVE_P384) || (DPS_EC_CURVE_P521 < crv))) {
                         ret = DPS_ERR_NOT_IMPLEMENTED;
                     }
                     if (ret == DPS_OK) {

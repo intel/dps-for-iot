@@ -52,7 +52,6 @@ extern "C" {
 #define COSE_ALG_A128GCM                1    /**< AES-GCM mode w/ 128-bit key, 128-bit tag */
 #define COSE_ALG_A128KW                -3    /**< AES Key Wrap w/ 128-bit key */
 #define COSE_ALG_DIRECT                -6    /**< Direct use of CEK */
-#define COSE_ALG_ES256                 -7    /**< ECDSA w/ SHA-256 */
 #define COSE_ALG_ECDH_ES_A128KW       -29    /**< ECDH ES w/ Concat KDF and AES Key Wrap w/ 128-bit key */
 #define COSE_ALG_ES384                -35    /**< ECDSA w/ SHA-384 */
 #define COSE_ALG_ES512                -36    /**< ECDSA w/ SHA-512 */

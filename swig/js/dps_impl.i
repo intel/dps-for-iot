@@ -228,13 +228,13 @@ public:
         argv[0] = SWIG_NewPointerObj(SWIG_as_voidptr(m_request), SWIGTYPE_p__DPS_KeyStoreRequest, 0);
         switch (m_key->type) {
         case DPS_KEY_SYMMETRIC:
-            argv[1] = SWIG_NewPointerObj(SWIG_as_voidptr(m_key), SWIGTYPE_p__DPS_KeySymmetric, 0);
+            argv[1] = SWIG_NewPointerObj(SWIG_as_voidptr(&m_key->symmetric), SWIGTYPE_p__DPS_KeySymmetric, 0);
             break;
         case DPS_KEY_EC:
-            argv[1] = SWIG_NewPointerObj(SWIG_as_voidptr(m_key), SWIGTYPE_p__DPS_KeyEC, 0);
+            argv[1] = SWIG_NewPointerObj(SWIG_as_voidptr(&m_key->ec), SWIGTYPE_p__DPS_KeyEC, 0);
             break;
         case DPS_KEY_EC_CERT:
-            argv[1] = SWIG_NewPointerObj(SWIG_as_voidptr(m_key), SWIGTYPE_p__DPS_KeyCert, 0);
+            argv[1] = SWIG_NewPointerObj(SWIG_as_voidptr(&m_key->cert), SWIGTYPE_p__DPS_KeyCert, 0);
             break;
         }
         *m_ret = CallFunction(keyStore->m_ephemeralKeyHandler->m_val, argc, argv);

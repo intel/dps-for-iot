@@ -54,9 +54,6 @@ int TLSGetCurveParams(DPS_ECCurve curve, mbedtls_ecp_group_id* id, size_t* len)
     case DPS_EC_CURVE_P384:
         *id = MBEDTLS_ECP_DP_SECP384R1;
         break;
-    case DPS_EC_CURVE_P256:
-        *id = MBEDTLS_ECP_DP_SECP256R1;
-        break;
     default:
         ret = MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE;
         break;

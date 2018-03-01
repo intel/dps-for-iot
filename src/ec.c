@@ -42,8 +42,6 @@ size_t CoordinateSize_EC(DPS_ECCurve curve)
         return 66;
     case DPS_EC_CURVE_P384:
         return 48;
-    case DPS_EC_CURVE_P256:
-        return 32;
     default:
         return 0;
     }
@@ -59,9 +57,6 @@ static int GetGroupParams(const mbedtls_ecp_group* group, DPS_ECCurve* curve, si
         break;
     case MBEDTLS_ECP_DP_SECP384R1:
         *curve = DPS_EC_CURVE_P384;
-        break;
-    case MBEDTLS_ECP_DP_SECP256R1:
-        *curve = DPS_EC_CURVE_P256;
         break;
     default:
         ret = MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE;
@@ -85,9 +80,6 @@ static int GetHashFunction(DPS_ECCurve curve, mbedtls_md_type_t* md)
         break;
     case DPS_EC_CURVE_P384:
         *md = MBEDTLS_MD_SHA384;
-        break;
-    case DPS_EC_CURVE_P256:
-        *md = MBEDTLS_MD_SHA256;
         break;
     default:
         ret = MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE;

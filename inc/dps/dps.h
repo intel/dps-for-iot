@@ -135,7 +135,6 @@ typedef struct _DPS_KeySymmetric {
  */
 typedef enum {
     DPS_EC_CURVE_RESERVED = 0,
-    DPS_EC_CURVE_P256 = 1, /**< NIST P-256 also known as secp256r1 */
     DPS_EC_CURVE_P384 = 2, /**< NIST P-384 also known as secp384r1 */
     DPS_EC_CURVE_P521 = 3  /**< NIST P-521 also known as secp521r1 */
 } DPS_ECCurve;
@@ -240,7 +239,7 @@ typedef DPS_Status (*DPS_KeyHandler)(DPS_KeyStoreRequest* request, const DPS_Key
  * @param request The request, only valid with the body of this
  *                callback function.
  * @param key The requested key type and parameters (e.g. key->type is
- *            DPS_KEY_EC and key->ec.curve is DPS_EC_CURVE_P256).
+ *            DPS_KEY_EC and key->ec.curve is DPS_EC_CURVE_P521).
  *
  * @return
  * - DPS_OK when DPS_SetKey() succeeds
