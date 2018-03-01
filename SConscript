@@ -192,6 +192,22 @@ for example in examplesrcs:
 
 exampleenv.Install('#/build/dist/bin', exampleprogs)
 
+# Tutorial examples
+tutorialenv = env.Clone()
+if tutorialenv['PLATFORM'] == 'win32':
+    tutorialenv.Append(CPPDEFINES = ['_CRT_SECURE_NO_WARNINGS'])
+tutorialenv.Append(LIBS = [lib, env['UV_LIBS']])
+
+tutorialsrcs = ['doc/tutorial/tutorial.c']
+
+Depends(tutorialsrcs, ext_libs)
+
+tutorialprogs = []
+for tutorial in tutorialsrcs:
+    tutorialprogs.append(tutorialenv.Program(tutorial))
+
+tutorialenv.Install('#/build/dist/bin', tutorialprogs)
+
 # Documentation
 try:
     docs = libenv.Doxygen('doc/Doxyfile')
