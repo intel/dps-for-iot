@@ -35,7 +35,7 @@ if platform.system() == 'Linux':
         BoolVariable('fsan', 'Enable fuzzer sanitizer?', False),
         BoolVariable('cov', 'Enable code coverage?', False))
 
-tools=['default', 'textfile']
+tools=['default', 'textfile', DPS]
 # Doxygen is optional
 try:
     env = Environment(tools=['doxygen'])

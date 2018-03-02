@@ -1,3 +1,8 @@
+/**
+ * @file
+ * Common mbedTLS functions
+ */
+
 /*
  *******************************************************************
  *
@@ -30,15 +35,33 @@
 extern "C" {
 #endif
 
+/**
+ * The text string representation of the mbedTLS status code.
+ *
+ * @param ret the status code
+ *
+ * @return the text string representation
+ */
 const char *TLSErrTxt(int ret);
 
-/*
+/**
+ * Get the mbedTLS elliptic curve parameters
+ *
  * @param curve the elliptic curve ID
  * @param id the mbedtls elliptic curve ID
  * @param len the size of a coordinate, in bytes
+ *
+ * @return 0 on success, an mbedTLS error code otherwise
  */
 int TLSGetCurveParams(DPS_ECCurve curve, mbedtls_ecp_group_id* id, size_t* len);
 
+/**
+ * Decode the common name (CN) attribute of an X.509 certificate.
+ *
+ * @param crt the X.509 certificate
+ *
+ * @return the CN value, must be freed by the caller.
+ */
 const mbedtls_x509_name* TLSCertificateCN(const mbedtls_x509_crt* crt);
 
 #ifdef __cplusplus

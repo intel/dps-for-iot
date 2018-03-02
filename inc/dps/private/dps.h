@@ -1,3 +1,8 @@
+/**
+ * @file
+ * Internal APIs
+ */
+
 /*
  *******************************************************************
  *
@@ -32,27 +37,29 @@ extern "C" {
 /*
  * Map keys for CBOR serialization of DPS messages
  */
-#define DPS_CBOR_KEY_PORT           1   /* uint */
-#define DPS_CBOR_KEY_TTL            2   /* int */
-#define DPS_CBOR_KEY_PUB_ID         3   /* bstr (UUID) */
-#define DPS_CBOR_KEY_SEQ_NUM        4   /* uint */
-#define DPS_CBOR_KEY_ACK_REQ        5   /* bool */
-#define DPS_CBOR_KEY_BLOOM_FILTER   6   /* bstr */
-#define DPS_CBOR_KEY_SUB_FLAGS      7   /* uint */
-#define DPS_CBOR_KEY_MESH_ID        8   /* bstr (UUID) */
-#define DPS_CBOR_KEY_NEEDS          9   /* bstr */
-#define DPS_CBOR_KEY_INTERESTS     10   /* bstr */
-#define DPS_CBOR_KEY_TOPICS        11   /* array (tstr) */
-#define DPS_CBOR_KEY_DATA          12   /* bstr */
+#define DPS_CBOR_KEY_PORT           1   /**< uint */
+#define DPS_CBOR_KEY_TTL            2   /**< int */
+#define DPS_CBOR_KEY_PUB_ID         3   /**< bstr (UUID) */
+#define DPS_CBOR_KEY_SEQ_NUM        4   /**< uint */
+#define DPS_CBOR_KEY_ACK_REQ        5   /**< bool */
+#define DPS_CBOR_KEY_BLOOM_FILTER   6   /**< bstr */
+#define DPS_CBOR_KEY_SUB_FLAGS      7   /**< uint */
+#define DPS_CBOR_KEY_MESH_ID        8   /**< bstr (UUID) */
+#define DPS_CBOR_KEY_NEEDS          9   /**< bstr */
+#define DPS_CBOR_KEY_INTERESTS     10   /**< bstr */
+#define DPS_CBOR_KEY_TOPICS        11   /**< array (tstr) */
+#define DPS_CBOR_KEY_DATA          12   /**< bstr */
 
+/**
+ * Convert seconds to milliseconds
+ */
 #define DPS_SECS_TO_MS(t)   ((uint64_t)(t) * 1000ull)
-#define DPS_MS_TO_SECS(t)   ((uint32_t)((t) / 1000ull))
 
 /**
  * Address type
  */
 typedef struct _DPS_NodeAddress {
-    struct sockaddr_storage inaddr;
+    struct sockaddr_storage inaddr; /**< Storage for socket address type */
 } DPS_NodeAddress;
 
 /**
@@ -82,12 +89,12 @@ DPS_Status DPS_RxBufferInit(DPS_RxBuffer* buffer, uint8_t* storage, size_t size)
  */
 void DPS_RxBufferFree(DPS_RxBuffer* buffer);
 
-/*
+/**
  * Clear receive buffer fields
  */
 #define DPS_RxBufferClear(b) do { (b)->base = (b)->rxPos = (b)->eod = NULL; } while (0)
 
-/*
+/**
  * Data available in a receive buffer
  */
 #define DPS_RxBufferAvail(b)  ((uint32_t)((b)->eod - (b)->rxPos))
@@ -123,24 +130,24 @@ void DPS_TxBufferFree(DPS_TxBuffer* buffer);
  * Add data to a transmit buffer
  *
  * @param buffer   Buffer to append to
- * @param storage  The data to append
+ * @param data     The data to append
  * @param len      Length of the data to append
  *
  * @return   DPS_OK or DP_ERR_RESOURCES if there not enough room in the buffer
  */
 DPS_Status DPS_TxBufferAppend(DPS_TxBuffer* buffer, const uint8_t* data, size_t len);
 
-/*
+/**
  * Clear transmit buffer fields
  */
 #define DPS_TxBufferClear(b) do { (b)->base = (b)->txPos = (b)->eob = NULL; } while (0)
 
-/*
+/**
  * Space left in a transmit buffer
  */
 #define DPS_TxBufferSpace(b)  ((uint32_t)((b)->eob - (b)->txPos))
 
-/*
+/**
  * Number of bytes that have been written to a transmit buffer
  */
 #define DPS_TxBufferUsed(b)  ((uint32_t)((b)->txPos - (b)->base))
@@ -167,11 +174,16 @@ void DPS_RxBufferToTx(const DPS_RxBuffer* rxBuffer, DPS_TxBuffer* txBuffer);
 
 /**
  * Print the current subscriptions
+ *
+ * @param node The node
  */
 void DPS_DumpSubscriptions(DPS_Node* node);
 
 /**
  * Copy a DPS_KeyId
+ *
+ * @param dest The key ID to copy to
+ * @param src  The key ID to copy from
  *
  * @return dest on success or NULL on failure
  */
@@ -179,6 +191,8 @@ DPS_KeyId* DPS_CopyKeyId(DPS_KeyId* dest, const DPS_KeyId* src);
 
 /**
  * Release memory used by the key ID.
+ *
+ * @param keyId The key ID
  */
 void DPS_ClearKeyId(DPS_KeyId* keyId);
 
@@ -186,11 +200,15 @@ void DPS_ClearKeyId(DPS_KeyId* keyId);
  * A key store request.
  */
 struct _DPS_KeyStoreRequest {
-    DPS_KeyStore* keyStore;
-    void* data;
+    DPS_KeyStore* keyStore; /**< The key store this request is directed to */
+    void* data; /**< The caller provided request data */
+    /** Called to provide a key and key identifier to the requestor */
     DPS_Status (*setKeyAndId)(DPS_KeyStoreRequest* request, const DPS_Key* key, const DPS_KeyId* keyId);
+    /** Called to provide a key to the requestor */
     DPS_Status (*setKey)(DPS_KeyStoreRequest* request, const DPS_Key* key);
-    DPS_Status (*setCA)(DPS_KeyStoreRequest* request, const char* ca);
+    /** Called to provide the CA chain to the requestor */
+    DPS_Status (*setCA)(DPS_KeyStoreRequest* request, const char* ca); 
+    /** Called to provide a certificate to the requestor */
     DPS_Status (*setCert)(DPS_KeyStoreRequest* request, const char* cert, size_t certLen,
                           const char* key, size_t keyLen, const char* pwd, size_t pwdLen);
 };
@@ -199,15 +217,17 @@ struct _DPS_KeyStoreRequest {
  * A key store.
  */
 struct _DPS_KeyStore {
-    void* userData;
-    DPS_KeyAndIdHandler keyAndIdHandler;
-    DPS_KeyHandler keyHandler;
-    DPS_EphemeralKeyHandler ephemeralKeyHandler;
-    DPS_CAHandler caHandler;
+    void* userData; /**< The application provided user data */
+    DPS_KeyAndIdHandler keyAndIdHandler; /**< Called when a key and key identifier is requested */
+    DPS_KeyHandler keyHandler; /**< Called when a key is requested */
+    DPS_EphemeralKeyHandler ephemeralKeyHandler; /**< Called when an ephemeral key is requested */
+    DPS_CAHandler caHandler; /**< Called when a CA chain is requested */
 };
 
 /**
  * Returns a non-secure random number
+ *
+ * @return a non-secure random number
  */
 uint32_t DPS_Rand();
 

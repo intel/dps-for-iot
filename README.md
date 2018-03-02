@@ -64,8 +64,9 @@ emulated ones.
 
 ## Documentation
 
-The C API documentation is generated using Doxygen. There is currently
-no support for generating API documentation for the Python or JS APIs.
+The C API documentation is generated using Doxygen. The Python (pydoc)
+and JavaScript API (JSDoc) documentation is generated from the Doxygen
+output.
 
 Doxygen can be downloaded from here:
 [Doxygen](http://www.stack.nl/~dimitri/doxygen/download.html)
@@ -147,6 +148,3 @@ builds a small mesh and shows how publications sent to any node in the
 mesh get forwarded to the matching subscribers.  The script **reg1**
 uses the *registry*, *reg_pubs*, and *reg_subs* examples programs to
 build a dynamic mesh using the experimental discovery service.
-
-
-

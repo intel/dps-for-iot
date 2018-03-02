@@ -1,3 +1,8 @@
+/**
+ * @file
+ * Elliptic curve algorithms
+ */
+
 /*
  *******************************************************************
  *
@@ -31,12 +36,12 @@ extern "C" {
 #endif
 
 /**
- * Maxmium length of the ECDH shared secret, in bytes
+ * Maximum length of the ECDH shared secret, in bytes
  */
 #define ECDH_MAX_SHARED_SECRET_LEN 66
 
 /**
- * The @curve parameter determines the size of the x, y, and d
+ * The @p curve parameter determines the size of the x, y, and d
  * coordinates
  *
  *   Curve | Coordinate Size (bytes)
@@ -51,24 +56,28 @@ extern "C" {
  */
 size_t CoordinateSize_EC(DPS_ECCurve curve);
 
-/*
+/**
  * Parse the public key from a PEM encoded certificate.
  *
  * @param cert the certificate in PEM format
  * @param curve the elliptic curve ID
  * @param x the X coordinate
  * @param y the Y coordinate
+ *
+ * @return DPS_OK if parse is successful, an error otherwise
  */
 DPS_Status ParseCertificate_ECDSA(const char* cert,
                                   DPS_ECCurve* curve, uint8_t x[EC_MAX_COORD_LEN], uint8_t y[EC_MAX_COORD_LEN]);
 
-/*
+/**
  * Parse the private key from a PEM encoded private key.
  *
- * @param privatekey the optional private key in PEM format
+ * @param privateKey the optional private key in PEM format
  * @param password the optional password protecting the key, may be NULL
  * @param curve the elliptic curve ID
  * @param d the D coordinate
+ *
+ * @return DPS_OK if parse is successful, an error otherwise
  */
 DPS_Status ParsePrivateKey_ECDSA(const char* privateKey, const char* password,
                                  DPS_ECCurve* curve, uint8_t d[EC_MAX_COORD_LEN]);
@@ -76,7 +85,7 @@ DPS_Status ParsePrivateKey_ECDSA(const char* privateKey, const char* password,
 /**
  * Verify an Elliptic Curve Digital Signature Algorithm signature.
  *
- * The @curve parameter determines the size of the @x and @y
+ * The @p curve parameter determines the size of the @p x and @p y
  * coordinates (@see CoordinateSize_EC()), the hashing function used
  * and the expected size of the signature.
  *

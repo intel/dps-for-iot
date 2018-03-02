@@ -1,3 +1,8 @@
+/**
+ * @file
+ * Create and compare UUIDs
+ */
+
 /*
  *******************************************************************
  *
@@ -40,19 +45,24 @@ extern "C" {
  * Type definition for a UUID
  */
 typedef struct _DPS_UUID {
+    /**< The UUID value */
     union {
-        uint8_t val[16];
-        uint64_t val64[2];
+        uint8_t val[16]; /**< The UUID as an array of 8-bit values */
+        uint64_t val64[2]; /**< The UUID as an array of 64-bit values */
     };
 } DPS_UUID;
 
 /**
  * One time initialization
+ *
+ * @return DPS_OK if initialization succeeds, an error otherwise
  */
 DPS_Status DPS_InitUUID();
 
 /**
- *  Non secure generation of a random UUID.
+ * Non secure generation of a random UUID.
+ *
+ * @param uuid The generated UUID.
  */
 void DPS_GenerateUUID(DPS_UUID* uuid);
 
@@ -60,11 +70,23 @@ void DPS_GenerateUUID(DPS_UUID* uuid);
  * Return a string representation of a UUID.
  *
  * @note This function uses a static string and is non-reentrant.
+ *
+ * @param uuid The UUID
+ *
+ * @return The string representation
  */
 const char* DPS_UUIDToString(const DPS_UUID* uuid);
 
 /**
  * Numerical comparison of two UUIDs
+ *
+ * @param a One of the UUIDs to compare
+ * @param b The other UUID to compare
+ *
+ * @return
+ * - <0 if a less than b
+ * - 0 if a equal to b
+ * - >0 if a greater than b
  */
 int DPS_UUIDCompare(const DPS_UUID* a, const DPS_UUID* b);
 

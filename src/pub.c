@@ -820,9 +820,6 @@ static void OnPubSendComplete(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep,
     DPS_OnSendComplete(node, NULL, ep, bufs, 1, status);
 }
 
-/*
- * Multicast a publication or send it directly to a remote subscriber node
- */
 DPS_Status DPS_SendPublication(DPS_Node* node, DPS_Publication* pub, RemoteNode* remote)
 {
     DPS_Status ret;
@@ -927,10 +924,6 @@ DPS_Status DPS_SendPublication(DPS_Node* node, DPS_Publication* pub, RemoteNode*
     return ret;
 }
 
-/*
- * When a ttl expires retained publications are freed, local
- * publications are disabled by clearing the PUBLISH flag.
- */
 void DPS_ExpirePub(DPS_Node* node, DPS_Publication* pub)
 {
     if (pub->flags & PUB_FLAG_LOCAL) {
@@ -1173,12 +1166,6 @@ void DPS_PublicationRemoveSubId(DPS_Publication* pub, const DPS_KeyId* keyId)
     }
 }
 
-/*
- * Serialize the body and payload sections of a publication
- *
- * The topic strings and bloom filter have already been serialized into buffers in
- * the publication structure,
- */
 DPS_Status DPS_SerializePub(DPS_Node* node, DPS_Publication* pub, const uint8_t* data, size_t dataLen, int16_t ttl)
 {
     DPS_Status ret;

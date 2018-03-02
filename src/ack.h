@@ -1,3 +1,8 @@
+/**
+ * @file
+ * Send and receive acknowledgement messages
+ */
+
 /*
  *******************************************************************
  *
@@ -33,37 +38,46 @@
 extern "C" {
 #endif
 
-/*
- * Acknowledgment packet queued to be sent on node loop
+/**
+ * Acknowledgement packet queued to be sent on node loop
  */
 typedef struct _PublicationAck {
-    DPS_TxBuffer buf;               /* Headers, unprotected, and protected fields */
-    DPS_TxBuffer encryptedBuf;      /* Encrypted fields */
-    DPS_NodeAddress destAddr;
-    uint32_t sequenceNum;
-    DPS_UUID pubId;
-    struct _PublicationAck* next;
+    DPS_TxBuffer buf;               /**< Headers, unprotected, and protected fields */
+    DPS_TxBuffer encryptedBuf;      /**< Encrypted fields */
+    DPS_NodeAddress destAddr;       /**< Destination of acknowledgement */
+    uint32_t sequenceNum;           /**< Sequence number being acknowledged */
+    DPS_UUID pubId;                 /**< The UUID of the publication */
+    struct _PublicationAck* next;   /**< Next acknowledgement in the queue */
 } PublicationAck;
 
-/*
+/**
+ * Decode and process a received acknowledgement
+ *
+ * @param node    The local node
+ * @param ep      The endpoint the acknowledgement was received on
+ * @param buffer  The encoded acknowledgement
+ *
+ * @return DPS_OK if decoding and processing is successful, an error otherwise
  */
-DPS_Status DPS_DecodeAcknowledgment(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuffer* buffer);
+DPS_Status DPS_DecodeAcknowledgement(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuffer* buffer);
 
-/*
+/**
  * Send an previously serialized acknowledgement
  *
  * Must be called with the node lock held.
  *
  * @param node    The local node
- * @param ack     The acknowledgment to send
- * @param ackNode The remote node to send the acknowledgment to
+ * @param ack     The acknowledgement to send
+ * @param ackNode The remote node to send the acknowledgement to
+ *
+ * @return DPS_OK if sending is successful, an error otherwise
  */
-DPS_Status DPS_SendAcknowledgment(DPS_Node*node, PublicationAck* ack, RemoteNode* ackNode);
+DPS_Status DPS_SendAcknowledgement(DPS_Node*node, PublicationAck* ack, RemoteNode* ackNode);
 
-/*
+/**
  * Free resources associated with an acknowledgement
  *
- * @param ack   The acknowledgment to destroy.
+ * @param ack   The acknowledgement to destroy.
  */
 void DPS_DestroyAck(PublicationAck* ack);
 

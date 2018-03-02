@@ -1,3 +1,8 @@
+/**
+ * @file
+ * Topic strings
+ */
+
 /*
  *******************************************************************
  *
@@ -70,7 +75,7 @@ DPS_Status DPS_AddTopic(DPS_BitVector* bf, const char* topic, const char* separa
  * @param topic       The topic to match
  * @param separators  The separator strings for the topic
  *
- * @return - DPS_TRUE is there was match, DPS_FALSE is there was not a match.
+ * @return DPS_TRUE if there was match, DPS_FALSE if there was not a match.
  */
 int DPS_MatchTopic(DPS_BitVector* bf, const char* topic, const char* separators);
 
@@ -103,14 +108,19 @@ DPS_Status DPS_MatchTopicString(const char* pubTopic, const char* subTopic, cons
 DPS_Status DPS_MatchTopicList(char* const* pubs, size_t numPubs, char* const* subs, size_t numSubs, const char* separators, int noWild, int* match);
 
 #ifndef NDEBUG
-/*
+/**
  * Print out topic strings
+ *
+ * @param topics The topic strings
+ * @param numTopics The number of topic strings
  */
 void DPS_DumpTopics(const char** topics, size_t numTopics);
 
-/*
+/**
  * Print out all topics 'A' to 'Z' that match the given bit vector.
  * This is useful for debugging DPS routing issues.
+ *
+ * @param bv The bit vector
  */
 void DPS_DumpMatchingTopics(DPS_BitVector* bv);
 #else

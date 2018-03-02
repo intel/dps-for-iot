@@ -1,5 +1,4 @@
 # Message Encryption
-
 The following assumes you are already familiar with the
 [DPS message protocol](Message-Protocol.md).
 
@@ -9,7 +8,6 @@ DPS messages are encrypted using
 Keys are provided to DPS via the [keystore].
 
 ## Content Encryption
-
 The *protected* section of a DPS message forms the protected
 attributes from the application as identified in COSE.  The
 *encrypted* section of a DPS message is the plaintext provided to the
@@ -20,7 +18,6 @@ The implemented content encryption algorithms are *AES-CCM-16-128-128*
 and *AES-CCM-16-64-128*.
 
 ## Content Key Distribution
-
 The encryption key is determined by the recipient algorithm.  DPS
 supports the *direct*, *A128KW*, *ECDH-ES + HKDF-256*, and *ECDH-ES +
 A128KW* recipient algorithms.
@@ -29,7 +26,6 @@ The use of the key wrap variants allows multiple recipients to be
 included in a message.
 
 ### Elliptic Curve Keys
-
 DPS supports the *NIST P-256 (secp256r1)*, *NIST P-384 (secp384r1)*,
 and *NIST P-521 (secp521r1)* curves.
 
@@ -38,7 +34,6 @@ be included in EC key representations such as the ephemeral sender
 key.
 
 ### Key Derivation Functions
-
 HKDF requires context information to be provided.  This is represented
 in COSE as the *COSE_KDF_Context*.
 
@@ -49,7 +44,6 @@ The values of the *identity*, *nonce*, and *other* fields of the
 *SuppPrivInfo* is not included in the *COSE_KDF_Context*.
 
 ## Counter Signatures
-
 After encryption, the encrypted content is signed by the sender and
 the signature is included as a COSE counter signature.  This allows
 intermediate DPS nodes to authenticate the sender of a message without
@@ -58,7 +52,6 @@ decrypting the contents of the message.
 DPS supports the *ES256*, *ES384*, and *ES512* signature algorithms.
 
 ## Examples
-
 An example encrypted publication message, using *AES-CCM-16-128-128*
 for the content, *ECDH-ES+A128KW* for the key distribution, and
 *ES256* for signing, will look like:

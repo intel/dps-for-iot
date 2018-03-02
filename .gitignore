@@ -6,3 +6,4 @@ ext
 core.*
 *~
 out
+*.pyc

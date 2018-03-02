@@ -90,6 +90,7 @@ if platform == 'posix':
     ns3shlib = libenv.SharedLibrary('lib/dps_ns3', ns3shobjs, LIBS = ext_libs)
     libenv.Install('#/build/dist/lib', ns3shlib)
 
+swig_docs = []
 if env['python']:
     # Using SWIG to build the python wrapper
     pyenv = libenv.Clone()
@@ -97,6 +98,12 @@ if env['python']:
     pyenv.Append(LIBPATH = env['PY_LIBPATH'])
     pyenv.Append(CPPPATH = env['PY_CPPPATH'])
     pyenv.Append(LIBS = [lib, env['UV_LIBS']])
+    # Documentation is only available which Doxygen is installed
+    try:
+        if pyenv.Doxygen:
+            pyenv.Append(SWIGFLAGS = ['-DINCLUDE_DOC'])
+    except AttributeError:
+        pass
     # Python has platform specific naming conventions
     pyenv['SHLIBPREFIX'] = '_'
     if platform == 'win32':
@@ -112,6 +119,8 @@ if env['python']:
     pylib = pyenv.SharedLibrary('./py/dps', shobjs + pyobjs)
     pyenv.Install('#/build/dist/py', pylib)
     pyenv.InstallAs('#/build/dist/py/dps.py', './swig/py/dps.py')
+    # Build documentation
+    swig_docs += ['swig/py/dps_doc.i']
 
 if env['nodejs'] and platform == 'posix':
     # Use SWIG to build the node.js wrapper
@@ -129,6 +138,8 @@ if env['nodejs'] and platform == 'posix':
     nodeobjs = nodeenv.SharedObject(['swig/js/dps.i'])
     nodedps = nodeenv.SharedLibrary('lib/nodedps', shobjs + nodeobjs)
     nodeenv.InstallAs('#/build/dist/js/dps.node', nodedps)
+    # Build documentation
+    swig_docs += ['swig/js/dps.jsdoc']
 
 # Unit tests
 testenv = env.Clone()
@@ -183,7 +194,11 @@ exampleenv.Install('#/build/dist/bin', exampleprogs)
 
 # Documentation
 try:
-    libenv.Doxygen('doc/Doxyfile')
+    docs = libenv.Doxygen('doc/Doxyfile')
+    libenv.Doxygen('doc/Doxyfile_dev')
+    libenv.SwigDox(swig_docs, docs)
+    if env['nodejs'] and platform == 'posix':
+        libenv.InstallAs('#/build/dist/js/dps.jsdoc', 'swig/js/dps.jsdoc')
 except:
     # Doxygen may not be installed
     pass
