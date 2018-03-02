@@ -30,6 +30,8 @@
 #include <dps/synchronous.h>
 #include <dps/event.h>
 
+#define A_SIZEOF(a)  (sizeof(a) / sizeof((a)[0]))
+
 #define MAX_TOPICS 64
 #define MAX_MSG_LEN 128
 

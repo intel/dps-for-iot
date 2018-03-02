@@ -37,6 +37,8 @@ extern void usleep(int);
 #define SLEEP(t) usleep((t) * 1000)
 #endif
 
+#define A_SIZEOF(a)  (sizeof(a) / sizeof((a)[0]))
+
 /** [Pre-shared key] */
 #define BYTE_STR(s) { s, sizeof(s) - 1 }
 static const DPS_Key PSK = { DPS_KEY_SYMMETRIC, { .symmetric = BYTE_STR("1234") } };

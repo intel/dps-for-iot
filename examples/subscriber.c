@@ -36,6 +36,8 @@
 #include <dps/event.h>
 #include "keys.h"
 
+#define A_SIZEOF(a)  (sizeof(a) / sizeof((a)[0]))
+
 static int quiet = DPS_FALSE;
 
 static const char AckFmt[] = "This is an ACK from %d";
