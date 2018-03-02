@@ -59,7 +59,10 @@ DPS_Status KeyWrap(const uint8_t cek[AES_256_KEY_LEN], const uint8_t kek[AES_256
         Rlen = AES_256_KEY_WRAP_LEN - 8;
         for (i = 0; i < (AES_256_KEY_LEN / 8); ++i, ++t, R += 8, Rlen -= 8) {
             memcpy_s(A + 8, sizeof(A) - 8, R, 8);
-            mbedtls_aes_encrypt(&aes, A, A);
+            ret = mbedtls_aes_crypt_ecb(&aes, MBEDTLS_AES_ENCRYPT, A, A);
+            if (ret != 0) {
+                goto Exit;
+            }
             memcpy_s(A, sizeof(A), A, 8);
             A[4] ^= (t >> 24) & 0xff;
             A[5] ^= (t >> 16) & 0xff;
@@ -106,7 +109,10 @@ DPS_Status KeyUnwrap(const uint8_t cipherText[AES_256_KEY_WRAP_LEN], const uint8
             A[6] ^= (t >>  8) & 0xff;
             A[7] ^= (t >>  0) & 0xff;
             memcpy_s(A + 8, sizeof(A) - 8, R, 8);
-            mbedtls_aes_decrypt(&aes, A, A);
+            ret = mbedtls_aes_crypt_ecb(&aes, MBEDTLS_AES_DECRYPT, A, A);
+            if (ret != 0) {
+                goto Exit;
+            }
             memcpy_s(R, Rlen, A + 8, 8);
         }
     }
