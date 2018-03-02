@@ -107,6 +107,7 @@ static int Usage(int argc, char** argv)
     DPS_PRINT("       -l: Port to listen on.  This may be 0 to request an ephemeral port.\n");
     DPS_PRINT("       -p: Port to link to.\n");
     DPS_PRINT("       -x: Secure the node.\n");
+    return EXIT_FAILURE;
 }
 
 int main(int argc, char** argv)

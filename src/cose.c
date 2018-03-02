@@ -317,9 +317,6 @@ static DPS_Status EncodeRecipient(DPS_TxBuffer* buf, int8_t alg, const DPS_KeyId
                 ret = CBOR_EncodeBytes(buf, key->ec.y, len);
             }
             break;
-        default:
-            ret = DPS_ERR_NOT_IMPLEMENTED;
-            break;
         }
     }
     if (ret == DPS_OK) {

@@ -399,19 +399,23 @@ DPS_Status ParsePrivateKey_ECDSA(const char* privateKey, const char* password,
     size_t pwLen;
     int ret;
 
-    len = privateKey ? strnlen_s(privateKey, RSIZE_MAX_STR) + 1 : 0;
+    if (!privateKey) {
+        DPS_ERRPRINT("Invalid private key\n");
+        return DPS_ERR_ARGS;
+    }
+    len = strnlen_s(privateKey, RSIZE_MAX_STR);
     if (len == RSIZE_MAX_STR) {
         DPS_ERRPRINT("Invalid private key\n");
         return DPS_ERR_ARGS;
     }
-    pwLen = password ? strnlen_s(password, RSIZE_MAX_STR) : 0;
+    pwLen = strnlen_s(password, RSIZE_MAX_STR);
     if (pwLen == RSIZE_MAX_STR) {
         DPS_ERRPRINT("Invalid password\n");
         return DPS_ERR_ARGS;
     }
 
     mbedtls_pk_init(&pk);
-    ret = mbedtls_pk_parse_key(&pk, (const unsigned char*)privateKey, len,
+    ret = mbedtls_pk_parse_key(&pk, (const unsigned char*)privateKey, len + 1,
                                (const unsigned char*)password, pwLen);
     if (ret != 0) {
         DPS_ERRPRINT("Parse private key failed: %s\n", TLSErrTxt(ret));

@@ -132,10 +132,10 @@ static void ECDSA_VerifyCurve(DPS_ECCurve crv, uint8_t* x, uint8_t* y, uint8_t* 
     DPS_TxBuffer buf;
 
     DPS_TxBufferInit(&buf, NULL, 512);
-    ret = Sign_ECDSA(crv, d, data, sizeof(data), &buf);
+    ret = Sign_ECDSA(crv, d, data, dataLen, &buf);
     ASSERT(ret == DPS_OK);
 
-    ret = Verify_ECDSA(crv, x, y, data, sizeof(data), buf.base, DPS_TxBufferUsed(&buf));
+    ret = Verify_ECDSA(crv, x, y, data, dataLen, buf.base, DPS_TxBufferUsed(&buf));
     ASSERT(ret == DPS_OK);
 
     DPS_TxBufferFree(&buf);

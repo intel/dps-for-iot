@@ -153,10 +153,13 @@ static DPS_Status MemoryKeyStoreSetKey(MemoryKeyStoreEntry* entry, const DPS_Key
 {
     uint8_t* newKey = NULL;
     size_t newLen = 0;
-    if (key->type != DPS_KEY_SYMMETRIC) {
+    if (entry->key.type != DPS_KEY_SYMMETRIC) {
         return DPS_ERR_ARGS;
     }
     if (key) {
+        if (key->type != DPS_KEY_SYMMETRIC) {
+            return DPS_ERR_ARGS;
+        }
         newKey = malloc(key->symmetric.len);
         if (!newKey) {
             return DPS_ERR_RESOURCES;
