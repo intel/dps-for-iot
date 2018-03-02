@@ -138,7 +138,7 @@ const char* KeyIdToString(const DPS_KeyId* keyId)
             isStr = isprint(keyId->id[i]);
         }
         if (isStr) {
-            strncpy_s(str, sizeof(str), keyId->id, keyId->len);
+            strncpy_s(str, sizeof(str), (const char*)keyId->id, keyId->len);
         } else {
             char* dst = str;
             for (i = 0; i < keyId->len; ++i) {
