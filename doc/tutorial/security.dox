@@ -26,7 +26,9 @@
  *
  * @snippet tutorial.c Pre-shared key
  * To use pre-shared keys (PSKs), we'll need to agree on a PSK and its
- * identifier.
+ * identifier.  @c BYTE_STR is a convenience macro used in the
+ * tutorials for using strings anywhere a buffer and its length is
+ * expected in the APIs.
  *
  * @snippet tutorial.c Creating a secure node with a network PSK
  * All of the security mechanisms require that the node be created
@@ -50,7 +52,7 @@
  * To use certificates, we'll need a certificate for each node and the
  * certificates of the authorities that issued them.  DPS supports
  * Elliptic Curve Cryptography (ECC) certificates.  The certificates
- * above are elided due to their size.
+ * above are omitted due to their size.
  *
  * @snippet tutorial.c Creating a secure node with a network certificate
  * Again, all of the security mechanisms require that the node be

@@ -1,4 +1,3 @@
-
 /**
  * @page hello-world Hello world
  * @tableofcontents
@@ -22,8 +21,7 @@
  * discussing how to secure communications.
  *
  * The separators parameter is a string containing the characters used
- * as topic level separators.  A topic is composed of multiple levels
- * with separators between them.  Providing @c /. as the separators
+ * as topic level separators.  Providing @c /. as the separators
  * parameter value means all of the following topics are equivalent:
  * @code
  * a/b/c/d
@@ -60,9 +58,11 @@
  * whether a subscription is required to match the publication's
  * topics exactly or can use wildcards to match the topics.  If we set
  * @c noWildCard to @c DPS_TRUE then only a subscription to @c a/b/c/d
- * will receive this publication.  Since we set @c noWildCard to @c
- * DPS_FALSE here, subscriptions to @c a/#, @c a/+/+/d, or similar
- * variations will receive this publication.
+ * will receive this publication.  This allows the publisher to
+ * prevent publications being sent to catchall subscriptions such as
+ * @c +/#.  Since we set @c noWildCard to @c DPS_FALSE here,
+ * subscriptions to @c a/#, @c a/+/+/d, or similar variations will
+ * receive this publication.
  *
  * Both the publication's key identifier and acknowledgement handler
  * are set to @c NULL here; they are covered in later sections.
@@ -83,9 +83,9 @@
  * nodes.  A non-zero ttl is referred to as a retained publication
  * and is covered later.
  *
- * Recall also that a publisher may send application data multiple
- * times, and each send increments the sequence number of the
- * publication.
+ * A publisher may send additional publications via the same @c
+ * DPS_Publication.  Each additional send increments the sequence
+ * number of the publication.
  *
  * @section subscribing Subscribing
  *
@@ -116,8 +116,9 @@
  * DPS and start the subscription.  The publication handler will be
  * called for each received publication.
  *
- * @note Each instance of @c DPS_Node runs in its own thread.  The
- * publication handler is dispatched from this thread.
+ * @note Each instance of @c DPS_Node creates and runs its own thread.
+ * The lifetime of this thread is the same as the lifetime of the node.
+ * The publication handler is dispatched from this thread.
  *
  * @snippet tutorial.c Receiving a publication
  *
@@ -126,10 +127,12 @@
  *
  * @section acknowledging Acknowledging
  *
- * Acknowledgements provide a means for subscribers to reply to
- * publications.  Similar to publications, acknowledgements may
- * include an application payload, and no assumptions are made by DPS
- * with regards to the acknowledgement payload format.
+ * Acknowledgements provide an optional means for subscribers to reply
+ * to publications.  For example, they may be used when the
+ * publication is logically a request and the acknowledgements are
+ * responses.  Similar to publications, acknowledgements may include
+ * an application payload, and no assumptions are made by DPS with
+ * regards to the acknowledgement payload format.
  *
  * @subsection requesting-an-acknowledgement Requesting an acknowledgement
  * @snippet tutorial.c Requesting an acknowledgement
