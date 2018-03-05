@@ -177,7 +177,7 @@ void DPS_RemoteCompletion(DPS_Node* node, RemoteNode* remote, DPS_Status status)
 
     /*
      * See AllocCompletion() timer.data is only set if the timer handle
-     * was succesfully initialized
+     * was successfully initialized
      */
     if (cpn->timer.data) {
         uv_timer_stop(&cpn->timer);
@@ -258,14 +258,14 @@ void DPS_ClearInboundInterests(DPS_Node* node, RemoteNode* remote)
     }
 }
 
-RemoteNode* DPS_DeleteRemoteNode(DPS_Node* node, RemoteNode* remote)
+void DPS_DeleteRemoteNode(DPS_Node* node, RemoteNode* remote)
 {
     RemoteNode* next;
 
     DPS_DBGTRACE();
 
     if (!IsValidRemoteNode(node, remote)) {
-        return NULL;
+        return;
     }
     if (remote->monitor) {
         DPS_LinkMonitorStop(remote);
@@ -293,7 +293,6 @@ RemoteNode* DPS_DeleteRemoteNode(DPS_Node* node, RemoteNode* remote)
      */
     DPS_NetConnectionDecRef(remote->ep.cn);
     free(remote);
-    return next;
 }
 
 static const DPS_UUID* MinMeshId(DPS_Node* node, RemoteNode* excluded)
@@ -671,7 +670,7 @@ static void SendAcksTask(uv_async_t* handle)
         RemoteNode* ackNode;
         DPS_Status ret = DPS_AddRemoteNode(node, &ack->destAddr, NULL, &ackNode);
         if (ret == DPS_OK || ret == DPS_ERR_EXISTS) {
-            DPS_SendAcknowledgment(node, ack, ackNode);
+            DPS_SendAcknowledgement(node, ack, ackNode);
         }
         node->ackQueue.first = ack->next;
         DPS_DestroyAck(ack);
@@ -934,10 +933,10 @@ static DPS_Status DecodeRequest(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuffe
         }
         break;
     case DPS_MSG_TYPE_ACK:
-        DPS_DBGPRINT("Received acknowledgment via %s\n", DPS_NodeAddrToString(&ep->addr));
-        ret = DPS_DecodeAcknowledgment(node, ep, buf);
+        DPS_DBGPRINT("Received acknowledgement via %s\n", DPS_NodeAddrToString(&ep->addr));
+        ret = DPS_DecodeAcknowledgement(node, ep, buf);
         if (ret != DPS_OK) {
-            DPS_DBGPRINT("DPS_DecodeAcknowledgment returned %s\n", DPS_ErrTxt(ret));
+            DPS_DBGPRINT("DPS_DecodeAcknowledgement returned %s\n", DPS_ErrTxt(ret));
         }
         break;
     case DPS_MSG_TYPE_SAK:
@@ -984,7 +983,7 @@ static DPS_Status OnMulticastReceive(DPS_Node* node, DPS_NetEndpoint* ep, DPS_St
         return DPS_ERR_FAILURE;
     }
     DPS_UnlockNode(node);
-    ret = CoAP_Parse(COAP_OVER_UDP, data, len, &coap, &payload);
+    ret = CoAP_Parse(data, len, &coap, &payload);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Discarding garbage multicast packet len=%zu\n", len);
         return ret;

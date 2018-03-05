@@ -1,3 +1,8 @@
+/**
+ * @file
+ * Public APIs
+ */
+
 /*
  *******************************************************************
  *
@@ -34,8 +39,8 @@
 extern "C" {
 #endif
 
-#define DPS_TRUE  1
-#define DPS_FALSE 0
+#define DPS_TRUE  1 /**< TRUE boolean value */
+#define DPS_FALSE 0 /**< FALSE boolean value */
 
 /**
  * @defgroup nodeaddress Node Address
@@ -59,6 +64,8 @@ const char* DPS_NodeAddrToString(const DPS_NodeAddress* addr);
 
 /**
  * Creates a node address.
+ *
+ * @return The created address, or NULL if creation failed
  */
 DPS_NodeAddress* DPS_CreateAddress();
 
@@ -74,11 +81,16 @@ DPS_NodeAddress* DPS_SetAddress(DPS_NodeAddress* addr, const struct sockaddr* sa
 
 /**
  * Copy a node address
+ *
+ * @param dest The address to copy to.
+ * @param src  The address to copy from.
  */
 void DPS_CopyAddress(DPS_NodeAddress* dest, const DPS_NodeAddress* src);
 
 /**
  * Frees resources associated with an address
+ *
+ * @param addr A previously created address.
  */
 void DPS_DestroyAddress(DPS_NodeAddress* addr);
 
@@ -93,20 +105,23 @@ void DPS_DestroyAddress(DPS_NodeAddress* addr);
 
 /**
  * @name KeyStore
- * Hooks for implementating an application-defined key store.
+ * Hooks for implementing an application-defined key store.
  * @{
  */
 
+/**
+ * A DPS key type
+ */
 typedef enum {
-    DPS_KEY_SYMMETRIC,          /**< struct _DPS_KeySymmetric */
-    DPS_KEY_EC,                 /**< struct _DPS_KeyEC */
-    DPS_KEY_EC_CERT             /**< struct _DPS_KeyCert */
+    DPS_KEY_SYMMETRIC,          /**< DPS_KeySymmetric */
+    DPS_KEY_EC,                 /**< DPS_KeyEC */
+    DPS_KEY_EC_CERT             /**< DPS_KeyCert */
 } DPS_KeyType;
 
 /**
  * Symmetric key data
  *
- * @note need to define this outside of DPS_Key to satisfy SWIG.
+ * @note Need to define this outside of DPS_Key to satisfy SWIG.
  */
 typedef struct _DPS_KeySymmetric {
     const uint8_t* key;         /**< Key data */
@@ -129,7 +144,7 @@ typedef enum {
  * Only @p x and @p y are needed for a public key.  Similarly, only @p
  * d is needed for a private key.
  *
- * @note need to define this outside of DPS_Key to satisfy SWIG.
+ * @note Need to define this outside of DPS_Key to satisfy SWIG.
  */
 typedef struct _DPS_KeyEC {
     DPS_ECCurve curve; /**< The named curve */
@@ -141,7 +156,7 @@ typedef struct _DPS_KeyEC {
 /**
  * Certificate key data.
  *
- * @note need to define this outside of DPS_Key to satisfy SWIG.
+ * @note Need to define this outside of DPS_Key to satisfy SWIG.
  */
 typedef struct _DPS_KeyCert {
     const char *cert;           /**< The certificate in PEM format */
@@ -154,6 +169,7 @@ typedef struct _DPS_KeyCert {
  */
 typedef struct _DPS_Key {
     DPS_KeyType type; /**< Type of key */
+    /** Value of key */
     union {
         DPS_KeySymmetric symmetric; /**< DPS_KEY_SYMMETRIC */
         DPS_KeyEC ec;               /**< DPS_KEY_EC */
@@ -297,7 +313,7 @@ DPS_KeyStore* DPS_KeyStoreHandle(DPS_KeyStoreRequest* request);
  *                            key requests
  * @param caHandler Optional handler for receiving CA chain requests
  *
- * @return A pointer to the key store or NULL if there were no resources.
+ * @return The key store or NULL if there were no resources.
  */
 DPS_KeyStore* DPS_CreateKeyStore(DPS_KeyAndIdHandler keyAndIdHandler, DPS_KeyHandler keyHandler,
                                  DPS_EphemeralKeyHandler ephemeralKeyHandler, DPS_CAHandler caHandler);
@@ -344,12 +360,14 @@ typedef struct _DPS_MemoryKeyStore DPS_MemoryKeyStore;
 /**
  * Creates an in-memory key store.
  *
- * @return A pointer to the key store or NULL if there were no resources.
+ * @return The key store or NULL if there were no resources.
  */
 DPS_MemoryKeyStore* DPS_CreateMemoryKeyStore();
 
 /**
  * Destroys a previously created in-memory key store.
+ *
+ * @param keyStore An in-memory key store
  */
 void DPS_DestroyMemoryKeyStore(DPS_MemoryKeyStore* keyStore);
 
@@ -432,7 +450,7 @@ typedef struct _DPS_Node DPS_Node;
  * @param keyStore      The key store to use for this node
  * @param keyId         The key identifier of this node
  *
- * @return A pointer to the uninitialized node or NULL if there were no resources for the node.
+ * @return The uninitialized node or NULL if there were no resources for the node.
  */
 DPS_Node* DPS_CreateNode(const char* separators, DPS_KeyStore* keyStore, const DPS_KeyId* keyId);
 
@@ -484,9 +502,9 @@ DPS_Status DPS_StartNode(DPS_Node* node, int mcastPub, uint16_t listenPort);
 /**
  * Function prototype for callback function called when a node is destroyed.
  *
- * @param node   The node that was destroyed. This pointer is valid during
+ * @param node   The node that was destroyed. This node is valid during
  *               the callback.
- * @param data   Data pointer passed to DPS_DestroyNode()
+ * @param data   Data passed to DPS_DestroyNode()
  *
  */
 typedef void (*DPS_OnNodeDestroyed)(DPS_Node* node, void* data);
@@ -500,7 +518,7 @@ typedef void (*DPS_OnNodeDestroyed)(DPS_Node* node, void* data);
  *
  * @return
  * - DPS_OK if the node will be destroyed and the callback called
- * - DPS_ERR_NULL node or cb was a null pointer
+ * - DPS_ERR_NULL node or cb was null
  * - Or an error status code in which case the callback will not be called.
  */
 DPS_Status DPS_DestroyNode(DPS_Node* node, DPS_OnNodeDestroyed cb, void* data);
@@ -524,6 +542,8 @@ void DPS_SetNodeSubscriptionUpdateDelay(DPS_Node* node, uint32_t subsRateMsecs);
  * async callback.
  *
  * @param node     The local node to use
+ *
+ * @return The uv event loop
  */
 uv_loop_t* DPS_GetLoop(DPS_Node* node);
 
@@ -531,6 +551,8 @@ uv_loop_t* DPS_GetLoop(DPS_Node* node);
  * Get the port number this node is listening for connections on
  *
  * @param node     The local node to use
+ *
+ * @return The port number
  */
 uint16_t DPS_GetPortNumber(DPS_Node* node);
 
@@ -561,7 +583,7 @@ DPS_Status DPS_Link(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnLinkComplete cb
  *
  * @param node   The local node to use
  * @param addr   The address of the remote node that was unlinked
- * @param data   Application data passed in the call to DPS_Link()
+ * @param data   Application data passed in the call to DPS_Unlink()
  */
 typedef void (*DPS_OnUnlinkComplete)(DPS_Node* node, DPS_NodeAddress* addr, void* data);
 
@@ -616,6 +638,8 @@ typedef struct _DPS_Publication DPS_Publication;
  * Get the UUID for a publication
  *
  * @param pub   The publication
+ *
+ * @return The UUID if publication is valid, or NULL otherwise
  */
 const DPS_UUID* DPS_PublicationGetUUID(const DPS_Publication* pub);
 
@@ -642,6 +666,8 @@ const char* DPS_PublicationGetTopic(const DPS_Publication* pub, size_t index);
  * Get the number of topics in a publication
  *
  * @param pub   The publication
+ *
+ * @return The number of topics.
  */
 size_t DPS_PublicationGetNumTopics(const DPS_Publication* pub);
 
@@ -668,7 +694,7 @@ const DPS_KeyId* DPS_PublicationGetSenderKeyId(const DPS_Publication* pub);
  *
  * @param pub   The publication
  *
- * @return A pointer to the node or NULL if the publication is invalid
+ * @return The node or NULL if the publication is invalid
  */
 DPS_Node* DPS_PublicationGetNode(const DPS_Publication* pub);
 
@@ -676,13 +702,15 @@ DPS_Node* DPS_PublicationGetNode(const DPS_Publication* pub);
  * Allocates storage for a publication
  *
  * @param node         The local node to use
+ *
+ * @return The newly created publication, or NULL if creation failed
  */
 DPS_Publication* DPS_CreatePublication(DPS_Node* node);
 
 /**
  * Creates a partial copy of a publication that can be used to acknowledge the publication.
  * The copy is not useful for anything other than in a call to DPS_AckPublication() and should
- * be freed by calling DPS_DestroyPublcation() when no longer needed.
+ * be freed by calling DPS_DestroyPublication() when no longer needed.
  *
  * The partial copy can be used with DPS_PublicationGetUUID() and DPS_PublicationGetSequenceNum()
  *
@@ -712,7 +740,7 @@ DPS_Status DPS_SetPublicationData(DPS_Publication* pub, void* data);
 void* DPS_GetPublicationData(const DPS_Publication* pub);
 
 /**
- * Function prototype for a publication acknowledgment handler called when an acknowledgement
+ * Function prototype for a publication acknowledgement handler called when an acknowledgement
  * for a publication is received from a remote subscriber. The handler is called for each
  * subscriber that generates an acknowledgement so may be called numerous times for same
  * publication.
@@ -726,8 +754,8 @@ typedef void (*DPS_AcknowledgementHandler)(DPS_Publication* pub, uint8_t* payloa
 /**
  * Initializes a newly created publication with a set of topics. Each publication has a UUID and a
  * sequence number. The sequence number is incremented each time the publication is published. This
- * allows subscriber to determine that publications received form a series. The acknowledgment
- * handler is optional, if present the publication is marked as requesting acknowledgment and that
+ * allows subscriber to determine that publications received form a series. The acknowledgement
+ * handler is optional, if present the publication is marked as requesting acknowledgement and that
  * information is provided to the subscribers.
  *
  * Call the accessor function DPS_PublicationGetUUID() to get the UUID for this publication.
@@ -737,7 +765,9 @@ typedef void (*DPS_AcknowledgementHandler)(DPS_Publication* pub, uint8_t* payloa
  * @param numTopics   The number of topic strings to publish - must be >= 1
  * @param noWildCard  If TRUE the publication will not match wildcard subscriptions
  * @param keyId       Optional key identifier to use for encrypted publications
- * @param handler     Optional handler for receiving acknowledgments
+ * @param handler     Optional handler for receiving acknowledgements
+ *
+ * @return DPS_OK if initialization is successful, an error otherwise
  */
 DPS_Status DPS_InitPublication(DPS_Publication* pub,
                                const char** topics,
@@ -751,6 +781,8 @@ DPS_Status DPS_InitPublication(DPS_Publication* pub,
  *
  * @param pub         The the publication to initialize
  * @param keyId       Key identifier to use for encrypted publications
+ *
+ * @return DPS_OK if addition is successful, an error otherwise
  */
 DPS_Status DPS_PublicationAddSubId(DPS_Publication* pub, const DPS_KeyId* keyId);
 
@@ -776,7 +808,7 @@ void DPS_PublicationRemoveSubId(DPS_Publication* pub, const DPS_KeyId* keyId);
  * @param len          Length of the payload
  * @param ttl          Time to live in seconds - maximum TTL is about 9 hours
  *
- * @return DPS_OK if the topics were succesfully published
+ * @return DPS_OK if the topics were successfully published
  */
 DPS_Status DPS_Publish(DPS_Publication* pub, const uint8_t* pubPayload, size_t len, int16_t ttl);
 
@@ -788,6 +820,8 @@ DPS_Status DPS_Publish(DPS_Publication* pub, const uint8_t* pubPayload, size_t l
  * DPS_CopyPublication().
  *
  * @param pub         The publication to destroy
+ *
+ * @return DPS_OK if destroy is successful, an error otherwise
  */
 DPS_Status DPS_DestroyPublication(DPS_Publication* pub);
 
@@ -798,8 +832,10 @@ DPS_Status DPS_DestroyPublication(DPS_Publication* pub);
  * partial copy of the publication that can be passed to this function at a later time.
  *
  * @param pub           The publication to acknowledge
- * @param ackPayload    Optional payload to accompany the aknowledgment
+ * @param ackPayload    Optional payload to accompany the acknowledgement
  * @param len           The length of the payload
+ *
+ * @return DPS_OK if acknowledge is successful, an error otherwise
  */
 DPS_Status DPS_AckPublication(const DPS_Publication* pub, const uint8_t* ackPayload, size_t len);
 
@@ -838,6 +874,10 @@ const char* DPS_SubscriptionGetTopic(const DPS_Subscription* sub, size_t index);
 
 /**
  * Get the number of topics registered with an active subscription
+ *
+ * @param sub   The subscription
+ *
+ * @return The number of topics.
  */
 size_t DPS_SubscriptionGetNumTopics(const DPS_Subscription* sub);
 
@@ -848,7 +888,7 @@ size_t DPS_SubscriptionGetNumTopics(const DPS_Subscription* sub);
  * @param topics       The topic strings to match
  * @param numTopics    The number of topic strings to match - must be >= 1
  *
- * @return A pointer to the newly created subscription or NULL if resources
+ * @return The newly created subscription or NULL if resources
  *         could not be allocated or the arguments were invalid
  */
 DPS_Subscription* DPS_CreateSubscription(DPS_Node* node, const char** topics, size_t numTopics);
@@ -877,13 +917,13 @@ void* DPS_GetSubscriptionData(DPS_Subscription* sub);
  *
  * @param sub   The subscription
  *
- * @return A pointer to the node or NULL if the subscription is invalid
+ * @return The node or NULL if the subscription is invalid
  */
 DPS_Node* DPS_SubscriptionGetNode(const DPS_Subscription* sub);
 
 /**
  * Function prototype for a publication handler called when a publication is received that
- * matches a subscription. Note that there is a possibilitly of false-positive matches.
+ * matches a subscription. Note that there is a possibility of false-positive matches.
  *
  * The publication handle is only valid within the body of this callback function.
  * DPS_CopyPublication() will make a partial copy of the publication that can be used later for
@@ -907,6 +947,8 @@ typedef void (*DPS_PublicationHandler)(DPS_Subscription* sub, const DPS_Publicat
  *
  * @param sub          The subscription to start
  * @param handler      Callback function to be called with topic matches
+ *
+ * @return DPS_OK if start is successful, an error otherwise
  */
 DPS_Status DPS_Subscribe(DPS_Subscription* sub, DPS_PublicationHandler handler);
 
@@ -914,6 +956,8 @@ DPS_Status DPS_Subscribe(DPS_Subscription* sub, DPS_PublicationHandler handler);
  * Stop subscribing to the subscription topic and free resources allocated for the subscription
  *
  * @param sub   The subscription to cancel
+ *
+ * @return DPS_OK if destroy is successful, an error otherwise
  */
 DPS_Status DPS_DestroySubscription(DPS_Subscription* sub);
 

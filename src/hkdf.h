@@ -1,3 +1,8 @@
+/**
+ * @file
+ * HMAC-based extract-and-expand Key Derivation Function
+ */
+
 /*
  *******************************************************************
  *

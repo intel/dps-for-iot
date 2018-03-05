@@ -1,3 +1,8 @@
+/**
+ * @file
+ * AES-CCM encryption and decryption
+ */
+
 /*
  *******************************************************************
  *
@@ -33,7 +38,7 @@
 extern "C" {
 #endif
 
-/*
+/**
  * This is the recommended nonce size for COSE and the only
  * size that is supported in the DPS implementation. This
  * in turn implies a two byte length field for the encrypted
@@ -42,7 +47,7 @@ extern "C" {
 #define AES_CCM_NONCE_LEN   13
 
 /**
- * Implements AES-CCM (Counter with CBC-MAC) encryption as described in RFC 3610. The message in
+ * Implements AES-CCM (Counter with CBC-MAC) encryption as described in RFC 3610. The message is
  * encrypted in place.
  *
  * @param key        The AES-128 encryption key
@@ -57,8 +62,8 @@ extern "C" {
  *                   (ptLen + M) bytes.
  *
  * @return
- *         - DPS_OK if the CCM context is initialized
- *         - DPS_ERR_RESOURCES if the resources required are not available.
+ * - DPS_OK if the CCM context is initialized
+ * - DPS_ERR_RESOURCES if the resources required are not available.
  */
 DPS_Status Encrypt_CCM(const uint8_t key[AES_128_KEY_LEN],
                        uint8_t M,
@@ -71,7 +76,7 @@ DPS_Status Encrypt_CCM(const uint8_t key[AES_128_KEY_LEN],
                        DPS_TxBuffer* cipherText);
 
 /**
- * Implements AES-CCM (Counter with CBC-MAC) decryption as described in RFC 3610. The message in
+ * Implements AES-CCM (Counter with CBC-MAC) decryption as described in RFC 3610. The message is
  * decrypted in place.
  *
  * @param key        The AES-128 encryption key
@@ -86,9 +91,9 @@ DPS_Status Encrypt_CCM(const uint8_t key[AES_128_KEY_LEN],
  *                   to append (ctLen - M) bytes.
  *
  * @return
- *         - DPS_OK if the CCM context is initialized
- *         - DPS_ERR_RESOURCES if the resources required are not available.
- *         - DPS_ERR_SECURITY if the decryption failed
+ * - DPS_OK if the CCM context is initialized
+ * - DPS_ERR_RESOURCES if the resources required are not available.
+ * - DPS_ERR_SECURITY if the decryption failed
  */
 DPS_Status Decrypt_CCM(const uint8_t key[AES_128_KEY_LEN],
                        uint8_t M,

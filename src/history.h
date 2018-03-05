@@ -1,3 +1,8 @@
+/**
+ * @file
+ * Publication histories
+ */
+
 /*
  *******************************************************************
  *
@@ -33,25 +38,31 @@
 extern "C" {
 #endif
 
+/**
+ * A list of node addresses and sequence numbers
+ */
 typedef struct _DPS_NodeAddressList {
-    uint32_t sn;
-    DPS_NodeAddress addr;
-    struct _DPS_NodeAddressList* next;
+    uint32_t sn;                /**< A sequence number */
+    DPS_NodeAddress addr;       /**< A node address */
+    struct _DPS_NodeAddressList* next; /**< The next address in the list */
 } DPS_NodeAddressList;
 
+/**
+ * A publication history
+ */
 typedef struct _DPS_PubHistory {
-    DPS_UUID id;
-    uint32_t sn;
-    uint8_t ackRequested;
-    DPS_NodeAddressList* addrs;
-    uint64_t expiration;    /* Time when the history record can be deleted */
+    DPS_UUID id;                /**< The UUID for the publication */
+    uint32_t sn;                /**< The sequence number for the publication */
+    uint8_t ackRequested;       /**< DPS_TRUE if publisher has requested an acknowledgement */
+    DPS_NodeAddressList* addrs; /**< Addresses of nodes that sent or forwarded this publication */
+    uint64_t expiration;    /**< Time when the history record can be deleted */
 
-    struct _DPS_PubHistory* left;
-    struct _DPS_PubHistory* right;
-    struct _DPS_PubHistory* parent;
+    struct _DPS_PubHistory* left; /**< Left child in publication history binary tree */
+    struct _DPS_PubHistory* right; /**< Right child in publication history binary tree  */
+    struct _DPS_PubHistory* parent; /**< Parent in publication history binary tree */
 
-    struct _DPS_PubHistory* prev;
-    struct _DPS_PubHistory* next;
+    struct _DPS_PubHistory* prev; /**< Previous history in expiration-sorted list */
+    struct _DPS_PubHistory* next; /**< Next history in expiration-sorted list */
 } DPS_PubHistory;
 
 /**
@@ -59,21 +70,25 @@ typedef struct _DPS_PubHistory {
  * list sorted by expiration.
  */
 typedef struct {
-   uv_loop_t* loop;         /* same loop as the node loop */
-   uv_mutex_t lock;         /* mutex to protect the history struct */
-   DPS_PubHistory* root;    /* Root of binary tree */
-   DPS_PubHistory* latest;  /* Latest publication to expire */
-   DPS_PubHistory* soonest; /* Soonest publication to expire */
-   uint32_t count;
+   uv_loop_t* loop;         /**< same loop as the node loop */
+   uv_mutex_t lock;         /**< mutex to protect the history struct */
+   DPS_PubHistory* root;    /**< Root of binary tree */
+   DPS_PubHistory* latest;  /**< Latest publication to expire */
+   DPS_PubHistory* soonest; /**< Soonest publication to expire */
+   uint32_t count;          /**< Number of histories stored */
 } DPS_History;
 
 /**
  * Discards stale history information
+ *
+ * @param history       The history from a local node
  */
 void DPS_FreshenHistory(DPS_History* history);
 
 /**
  * Free all history records
+ *
+ * @param history       The history from a local node
  */
 void DPS_HistoryFree(DPS_History* history);
 
@@ -86,7 +101,9 @@ void DPS_HistoryFree(DPS_History* history);
  * @param ackRequested  TRUE if an ack was requested by the publisher
  * @param ttl           The ttl for the publication
  * @param addr          Optional address of the node that sent or forwarded this publication. This should
- *                      only be set for publications that are requesting an acknowledgment.
+ *                      only be set for publications that are requesting an acknowledgement.
+ *
+ * @return DPS_OK if update is successful, an error otherwise
  */
 DPS_Status DPS_UpdatePubHistory(DPS_History* history, DPS_UUID* pubId, uint32_t sequenceNum, uint8_t ackRequested, uint16_t ttl, DPS_NodeAddress* addr);
 
@@ -112,7 +129,7 @@ int DPS_PublicationIsStale(DPS_History* history, DPS_UUID* pubId, uint32_t seque
 DPS_Status DPS_DeletePubHistory(DPS_History* history, DPS_UUID* pubId);
 
 /**
- * Lookup a publisher address in the publication history to match an acknowledgment. This is the
+ * Lookup a publisher address in the publication history to match an acknowledgement. This is the
  * address of the sender not necessarily the original publisher.
  *
  * @param history       The history from a local node

@@ -1,3 +1,8 @@
+/**
+ * @file
+ * AES key wrap algorithm
+ */
+
 /*
  *******************************************************************
  *
@@ -30,9 +35,9 @@
 extern "C" {
 #endif
 
-#define AES_128_KEY_WRAP_LEN 24
+#define AES_128_KEY_WRAP_LEN 24 /**< The length of the wrapped AES-128 key in bytes */
 
-/*
+/**
  * Wrap a key per the algorithm specified in RFC 3394.
  *
  * @param cek the content encryption key (aka the plaintext)
@@ -44,7 +49,7 @@ extern "C" {
 DPS_Status KeyWrap(const uint8_t cek[AES_128_KEY_LEN], const uint8_t kek[AES_128_KEY_LEN],
                    uint8_t cipherText[AES_128_KEY_WRAP_LEN]);
 
-/*
+/**
  * Unwrap a key per the algorithm specified in RFC 3394.
  *
  * @param cipherText the wrapped content encryption key

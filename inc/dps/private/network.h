@@ -1,3 +1,8 @@
+/**
+ * @file
+ * Network layer macros and functions
+ */
+
 /*
  *******************************************************************
  *
@@ -30,7 +35,7 @@
 extern "C" {
 #endif
 
-/*
+/**
  * Opaque data structure for network-specific state
  */
 typedef struct _DPS_NetContext DPS_NetContext;
@@ -49,6 +54,9 @@ typedef struct _DPS_NetEndpoint {
     DPS_NetConnection* cn;  /**< The connection state or NULL for connectionless network layers */
 } DPS_NetEndpoint;
 
+/**
+ * Opaque type for multicast receiver
+ */
 typedef struct _DPS_MulticastReceiver DPS_MulticastReceiver;
 
 /**
@@ -68,8 +76,9 @@ void DPS_NetFreeBufs(uv_buf_t* bufs, size_t numBufs);
  * @param data      The raw data
  * @param len       Length of the raw data
  *
- * @return  - DPS_OK if the message was correctly parsed
- *          - An error code indicating the data received was invalid
+ * @return
+ * - DPS_OK if the message was correctly parsed
+ * - An error code indicating the data received was invalid
  */
 typedef DPS_Status (*DPS_OnReceive)(DPS_Node* node, DPS_NetEndpoint* endpoint, DPS_Status status, const uint8_t* data, size_t len);
 
@@ -81,20 +90,29 @@ typedef DPS_Status (*DPS_OnReceive)(DPS_Node* node, DPS_NetEndpoint* endpoint, D
  */
 void DPS_EndpointSetPort(DPS_NetEndpoint* endpoint, uint16_t port);
 
-/*
+/**
  * Start receiving multicast data
+ *
+ * @param node     Opaque pointer to the DPS node
+ * @param cb       Function prototype for handler to be called on receiving data from a remote node
+ *
+ * @return   An opaque pointer to the multicast receiver
  */
 DPS_MulticastReceiver* DPS_MulticastStartReceive(DPS_Node* node, DPS_OnReceive cb);
 
-/*
+/**
  * Stop receiving multicast data
+ *
+ * @param receiver   An opaque pointer to the multicast receiver
  */
 void DPS_MulticastStopReceive(DPS_MulticastReceiver* receiver);
 
-
+/**
+ * Opaque type for multicast sender
+ */
 typedef struct _DPS_MulticastSender DPS_MulticastSender;
 
-/*
+/**
  * Setup to enable sending multicast data
  *
  * @param node     Opaque pointer to the DPS node
@@ -103,16 +121,15 @@ typedef struct _DPS_MulticastSender DPS_MulticastSender;
  */
 DPS_MulticastSender* DPS_MulticastStartSend(DPS_Node* node);
 
-/*
+/**
  * Free resources used for sending multicast data
  *
- * @param node     Opaque pointer to the DPS node
  * @param sender   An opaque pointer to a struct holding the state of the multicast sender.
  *                 This will be free after this call and the pointer will no longer be valid.
  */
 void DPS_MulticastStopSend(DPS_MulticastSender* sender);
 
-/*
+/**
  * Prototype for function called when a send completes .
  *
  * @param node     Opaque pointer to the DPS node
@@ -120,21 +137,23 @@ void DPS_MulticastStopSend(DPS_MulticastSender* sender);
  * @param endpoint The endpoint for which the send was complete
  * @param bufs     Array holding pointers to the buffers passed in the send API call. The data in these buffers
  *                 can now be freed.
- * @param          The length of the bufs array
+ * @param numBufs  The length of the bufs array
  * @param status   Indicates if the send was successful or not
  */
 typedef void (*DPS_NetSendComplete)(DPS_Node* node, void* appCtx, DPS_NetEndpoint* endpoint, uv_buf_t* bufs, size_t numBufs, DPS_Status status);
 
-/*
+/**
  * Multicast some data immediately. This is a synchronous API
  *
- * @param node     Opaque pointer to the DPS node
+ * @param sender   Opaque pointer to the multicast sender
  * @param bufs     Data buffers to send
  * @param numBufs  Number of buffers to send
+ *
+ * @return DPS_OK if send is successful, an error otherwise
  */
 DPS_Status DPS_MulticastSend(DPS_MulticastSender* sender, uv_buf_t* bufs, size_t numBufs);
 
-/*
+/**
  * Start listening and receiving data
  *
  * @param node  Opaque pointer to the DPS node
@@ -145,14 +164,16 @@ DPS_Status DPS_MulticastSend(DPS_MulticastSender* sender, uv_buf_t* bufs, size_t
  */
 DPS_NetContext* DPS_NetStart(DPS_Node* node, uint16_t port, DPS_OnReceive cb);
 
-/*
+/**
  * Get the port the netCtx is listening on
  *
  * @param netCtx  Pointer to an opaque data structure that holds the state of the netCtx.
+ *
+ * @return the port
  */
 uint16_t DPS_NetGetListenerPort(DPS_NetContext* netCtx);
 
-/*
+/**
  * Stop listening for data
  *
  * @param netCtx  Pointer to an opaque data structure that holds the network state.
@@ -160,7 +181,7 @@ uint16_t DPS_NetGetListenerPort(DPS_NetContext* netCtx);
  */
 void DPS_NetStop(DPS_NetContext* netCtx);
 
-/*
+/**
  * Send data to a specific endpoint.
  *
  * @param node            Pointer to the DPS node
@@ -169,20 +190,21 @@ void DPS_NetStop(DPS_NetContext* netCtx);
  *                        information.
  * @param bufs            Data buffers to send, the data in the buffers must be live until the send completes.
  * @param numBufs         Number of buffers to send
- * @param addr            Destination address
- * @param sendCompleteCB  Function called when the send is completeso the content of the data buffers can be freed.
+ * @param sendCompleteCB  Function called when the send is complete so the content of the data buffers can be freed.
+ *
+ * @return DPS_OK if the send is successful, an error otherwise
  */
 DPS_Status DPS_NetSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* endpoint, uv_buf_t* bufs, size_t numBufs, DPS_NetSendComplete sendCompleteCB);
 
-/*
- * Increment the reference count to potentialy keeping a underlying connection alive. This is only
+/**
+ * Increment the reference count to potentially keeping a underlying connection alive. This is only
  * meaningful for connection-oriented transports.
  *
  * @param cn    Connection to be add'refd
  */
 void DPS_NetConnectionAddRef(DPS_NetConnection* cn);
 
-/*
+/**
  * Decrement the reference count on a connection potentially allowing an underlying connection to be
  * dropped. This is only meaningful for connection-oriented transports.
  *
@@ -190,27 +212,29 @@ void DPS_NetConnectionAddRef(DPS_NetConnection* cn);
  */
 void DPS_NetConnectionDecRef(DPS_NetConnection* cn);
 
-/*
+/**
  * Compare two addresses. This comparison handles the case of ipv6 mapped ipv4 address
  *
  * @param addr1  The address to compare against
  * @param addr2  The address to compare with addr1
  *
- * @return Returns zero if the addresses are different non-zero if they are the same
+ * @return 0 if the addresses are different non-0 if they are the same
  */
 int DPS_SameAddr(const DPS_NodeAddress* addr1, const DPS_NodeAddress* addr2);
 
-/*
+/**
  * Generates text for an address
+ *
+ * @note This function uses a static string internally so is not thread-safe
  *
  * @param addr  The address to stringify.
  *
- * This function uses a static string internally so is not thread-safe
+ * @return The text
  */
 const char* DPS_NetAddrText(const struct sockaddr* addr);
 
-/*
- * Maps the supplied address to a v6 adddress if needed.
+/**
+ * Maps the supplied address to a v6 address if needed.
  *
  * This is necessary when using dual-stack sockets.
  *

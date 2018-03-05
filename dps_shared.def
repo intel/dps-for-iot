@@ -2,6 +2,7 @@ LIBRARY dps_shared
 
 EXPORTS
 
+DPS_AckGetSenderKeyId
 DPS_AckPublication
 DPS_CopyAddress
 DPS_CopyPublication
@@ -43,6 +44,7 @@ DPS_NodeAddrToString
 DPS_PublicationAddSubId
 DPS_PublicationGetNode
 DPS_PublicationGetNumTopics
+DPS_PublicationGetSenderKeyId
 DPS_PublicationGetSequenceNum
 DPS_PublicationGetTopic
 DPS_PublicationGetUUID
