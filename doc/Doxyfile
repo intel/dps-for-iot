@@ -26,7 +26,7 @@ DOXYFILE_ENCODING      = UTF-8
 # identify the project. Note that if you do not use Doxywizard you need
 # to put quotes around the project name if it contains spaces.
 
-PROJECT_NAME           = "Distributed Publish Subscribe for IoT"
+PROJECT_NAME           = "Distributed Publish & Subscribe for IoT"
 
 # The PROJECT_NUMBER tag can be used to enter a project or revision number.
 # This could be handy for archiving the generated documentation or
@@ -659,8 +659,18 @@ WARN_LOGFILE           =
 # directories like "/usr/src/myproject". Separate the files or directories
 # with spaces.
 
-INPUT                  = ../README.md \
-                         . \
+INPUT                  = Introduction.dox \
+                         Topic-Strings.dox \
+                         Mesh-Network.dox \
+                         Message-Types-and-Flows.dox \
+                         Data-Series.dox \
+                         Retained-Publications.dox \
+                         Security.dox \
+                         Building-and-Running.dox \
+                         Tutorials.dox \
+                         tutorial/hello_world.dox \
+                         tutorial/link.dox \
+                         tutorial/security.dox \
                          ../inc
 
 # This tag can be used to specify the character encoding of the source files
@@ -744,7 +754,7 @@ EXAMPLE_RECURSIVE      = NO
 # directories that contain image that are included in the documentation (see
 # the \image command).
 
-IMAGE_PATH             =
+IMAGE_PATH             = ../doc/images
 
 # The INPUT_FILTER tag can be used to specify a program that doxygen should
 # invoke to filter for each input file. Doxygen will invoke the filter program
@@ -784,7 +794,7 @@ FILTER_SOURCE_PATTERNS =
 # (index.html). This can be useful if you have a project on for instance GitHub
 # and want to reuse the introduction page also for the doxygen output.
 
-USE_MDFILE_AS_MAINPAGE = ../README.md
+USE_MDFILE_AS_MAINPAGE =
 
 #---------------------------------------------------------------------------
 # configuration options related to source browsing
@@ -1237,7 +1247,7 @@ SERVER_BASED_SEARCH    = NO
 # If the GENERATE_LATEX tag is set to YES (the default) Doxygen will
 # generate Latex output.
 
-GENERATE_LATEX         = NO
+GENERATE_LATEX         = YES
 
 # The LATEX_OUTPUT tag is used to specify where the LaTeX docs will be put.
 # If a relative path is entered the value of OUTPUT_DIRECTORY will be

@@ -1,6 +1,6 @@
 #!/usr/bin/python
 #
-# Usage: swig_doc.py build/docs/xml/index.xml
+# Usage: swig_doc.py [py|js] build/docs/xml/index.xml
 #
 import os
 import re

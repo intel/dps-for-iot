@@ -1,66 +1,66 @@
 /**
- * @example publisher.c
- *
- * This application shows how to initialize a DPS node, create a
- * publication and send it.  It supports IP multicast or publication
- * to a specific host and port number over the configured transport
- * (udp, tcp, or dtls). Optionally the application will request
- * acknowledgements from the receiving subscribers.
- * @code
- * publisher a/b/c "hello world"
- * @endcode
- * sends a single publication to the topic string @b a/b/c and exits.
+@example publisher.c
+
+This application shows how to initialize a DPS node, create a
+publication and send it.  It supports IP multicast or publication
+to a specific host and port number over the configured transport
+(udp, tcp, or dtls). Optionally the application will request
+acknowledgements from the receiving subscribers.
+@code
+publisher a/b/c "hello world"
+@endcode
+sends a single publication to the topic string @b a/b/c and exits.
  */
 
 /**
- * @example subscriber.c
- *
- * This application is the subscription counterpart to publisher.c, it
- * creates a subscription and either listens for multicast
- * publications or links another node to form a subscriber mesh. With
- * the following commands the subscriber application listens for
- * multicast subscriptions that match the specified topic string.
- * @code
- * subscriber a/b/c
- * subscriber a/+/c
- * subscriber a/#
- * @endcode
- * In the examples above the subscriptions all match @b a/b/c. On
- * receiving a matching publication the application prints out the
- * subscription topic string that was matched and all the topic
- * strings that were in the publication, if the publication had a
- * payload that is printed also.
+@example subscriber.c
+
+This application is the subscription counterpart to publisher.c, it
+creates a subscription and either listens for multicast
+publications or links another node to form a subscriber mesh. With
+the following commands the subscriber application listens for
+multicast subscriptions that match the specified topic string.
+@code
+subscriber a/b/c
+subscriber a/+/c
+subscriber a/#
+@endcode
+In the examples above the subscriptions all match @b a/b/c. On
+receiving a matching publication the application prints out the
+subscription topic string that was matched and all the topic
+strings that were in the publication, if the publication had a
+payload that is printed also.
  */
 
 /**
- * @example registry.c
- *
- * This applications uses DPS to implement an experimental discovery
- * service. There are two companion applications, @em reg_pubs and @em
- * reg_subs described below that make use of this service to find and
- * join a mesh identified by a @em tenant topic string.
+@example registry.c
+
+This applications uses DPS to implement an experimental discovery
+service. There are two companion applications, @em reg_pubs and @em
+reg_subs described below that make use of this service to find and
+join a mesh identified by a @em tenant topic string.
  */
 
 /**
- * @example reg_pubs.c
- *
- * This application is similar to @em publisher but it uses the @em
- * registry service to find other nodes to link with. The result is a
- * randomly multiply-connected mesh.
+@example reg_pubs.c
+
+This application is similar to @em publisher but it uses the @em
+registry service to find other nodes to link with. The result is a
+randomly multiply-connected mesh.
  */
 
 /**
- * @example reg_subs.c
- *
- * This application is subscription counterpart to @em reg_subs, it
- * uses the @em registry service to find other node and links into the
- * mesh.
+@example reg_subs.c
+
+This application is subscription counterpart to @em reg_subs, it
+uses the @em registry service to find other node and links into the
+mesh.
  */
 
 /**
- * @example pub_many.c
- *
- * This is application sends a series of publications as fast as they
- * are acknowledged.  It can be used with the @em subscriber
- * application.
+@example pub_many.c
+
+This is application sends a series of publications as fast as they
+are acknowledged.  It can be used with the @em subscriber
+application.
  */

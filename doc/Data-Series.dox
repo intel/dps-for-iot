@@ -1,0 +1,9 @@
+/**
+@page data-series Data Series
+
+DPS has built-in support for data series. In addition to topic
+strings, every publication has a UUID and serial number. Publications
+with same UUID (and topic strings) form a series, the serial number is
+incremented each time the publication is sent to the network. The UUID
+and serial number are available to the receiving subscribers.
+ */
