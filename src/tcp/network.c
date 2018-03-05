@@ -327,7 +327,7 @@ static int GetScopeId(struct sockaddr_in6* addr)
 
 #define LISTEN_BACKLOG  2
 
-DPS_NetContext* DPS_NetStart(DPS_Node* node, int port, DPS_OnReceive cb)
+DPS_NetContext* DPS_NetStart(DPS_Node* node, uint16_t port, DPS_OnReceive cb)
 {
     int ret;
     DPS_NetContext* netCtx;

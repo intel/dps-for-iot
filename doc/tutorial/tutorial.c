@@ -75,7 +75,7 @@ static DPS_Node* CreateNodeWithSymmetricKeyStore();
 static DPS_Node* CreateNodeWithAsymmetricKeyStore();
 static DPS_Node* CreateNodeWithAuthenticatedSender(const DPS_KeyId* nodeId);
 static DPS_Status StartMulticastNode(DPS_Node* node);
-static DPS_Status StartUnicastNode(DPS_Node* node, int listenPort);
+static DPS_Status StartUnicastNode(DPS_Node* node, uint16_t listenPort);
 static void LinkComplete(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, void* data);
 static DPS_Status Publish(DPS_Node* node, const char* security, DPS_Publication** createdPub);
 static DPS_Status PublishAck(DPS_Node* node, const char* security, DPS_Publication** createdPub);
@@ -357,7 +357,7 @@ static DPS_Status StartMulticastNode(DPS_Node* node)
 {
     /** [Starting a node] */
     int mcastPub = DPS_MCAST_PUB_ENABLE_SEND | DPS_MCAST_PUB_ENABLE_RECV;
-    int listenPort = 0;
+    uint16_t listenPort = 0;
     DPS_Status ret = DPS_StartNode(node, mcastPub, listenPort);
     if (ret != DPS_OK) {
         goto Exit;
@@ -368,11 +368,11 @@ static DPS_Status StartMulticastNode(DPS_Node* node)
     return ret;
 }
 
-static DPS_Status StartUnicastNode(DPS_Node* node, int port)
+static DPS_Status StartUnicastNode(DPS_Node* node, uint16_t port)
 {
     /** [Starting a unicast node] */
     int mcastPub = DPS_MCAST_PUB_DISABLED;
-    int listenPort = port;
+    uint16_t listenPort = port;
     DPS_Status ret = DPS_StartNode(node, mcastPub, listenPort);
     if (ret != DPS_OK) {
         goto Exit;

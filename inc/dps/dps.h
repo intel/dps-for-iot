@@ -479,7 +479,7 @@ void* DPS_GetNodeData(const DPS_Node* node);
  *
  * @return DPS_OK or various error status codes
  */
-DPS_Status DPS_StartNode(DPS_Node* node, int mcastPub, int listenPort);
+DPS_Status DPS_StartNode(DPS_Node* node, int mcastPub, uint16_t listenPort);
 
 /**
  * Function prototype for callback function called when a node is destroyed.
