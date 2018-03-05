@@ -40,7 +40,7 @@ extern void usleep(int);
 #define A_SIZEOF(a)  (sizeof(a) / sizeof((a)[0]))
 
 /** [Pre-shared key] */
-#define BYTE_STR(s) { s, sizeof(s) - 1 }
+#define BYTE_STR(s) { (const uint8_t*)s, sizeof(s) - 1 }
 static const DPS_Key PSK = { DPS_KEY_SYMMETRIC, { .symmetric = BYTE_STR("1234") } };
 static const DPS_KeyId PSK_ID = BYTE_STR("Tutorial Network PSK");
 /** [Pre-shared key] */
@@ -101,7 +101,7 @@ static DPS_Status KeyHandler(DPS_KeyStoreRequest* request, const DPS_KeyId* keyI
 static DPS_Status EphemeralKeyHandler(DPS_KeyStoreRequest* request, const DPS_Key* key);
 static void DestroyNode(DPS_Node* node);
 
-static int Usage(int argc, char** argv)
+static void Usage(int argc, char** argv)
 {
     DPS_PRINT("Usage %s [-d] [-l <port>] [-p <port>] [-x <network-psk|network-cert|symmetric|asymmetric>] [auth] [publish|subscribe] [ack]\n", argv[0]);
     DPS_PRINT("       -d: Enable debug ouput if built for debug.\n");
@@ -400,7 +400,7 @@ static DPS_Status SendPublication(DPS_Publication* pub)
     const char* payload = "Hello";
     size_t numPayloadBytes = strlen(payload) + 1;
     int16_t ttl = 0;
-    ret = DPS_Publish(pub, payload, numPayloadBytes, ttl);
+    ret = DPS_Publish(pub, (const uint8_t*)payload, numPayloadBytes, ttl);
     if (ret != DPS_OK) {
         goto Exit;
     }
@@ -612,7 +612,7 @@ static void PublicationAckHandler(DPS_Subscription* sub, const DPS_Publication* 
     if (DPS_PublicationIsAckRequested(pub)) {
         const char* payload = "World";
         size_t numPayloadBytes = strlen(payload) + 1;
-        DPS_Status ret = DPS_AckPublication(pub, payload, numPayloadBytes);
+        DPS_Status ret = DPS_AckPublication(pub, (const uint8_t*)payload, numPayloadBytes);
         if (ret != DPS_OK) {
             goto Exit;
         }
