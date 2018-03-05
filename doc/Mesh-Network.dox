@@ -1,0 +1,69 @@
+/**
+@page mesh-network Mesh Network
+@tableofcontents
+
+A DPS network is a loosely connected collection of network nodes
+(devices) that function as subscriber, publishers, both or
+neither. Loosely connected means that the nodes hold state information
+about other nodes but do not necessarily maintain network connectivity
+to other nodes. There are no predesignated roles, any node can publish
+topics or subscribe to topics. DPS nodes build and manage routing
+tables based on the subscription topics and forward publications
+hop-by-hop from publishers to subscribers. Nodes with multiple network
+interfaces will automatically route publications between
+networks. Nodes can send publications on a local subnet using IP
+multicast, can be manually configured to connect to other nodes, or
+can use a directory service to locate other nodes. Publication routing
+is independent from the network level connections, so long as there is
+at least one network path DPS will route publications to all
+subscribing nodes.
+
+The picture below shows a mesh of subscriber and publisher nodes.
+
+@image html images/dps_mesh.jpg DPS Mesh
+@image latex images/dps_mesh.jpg DPS Mesh
+
+Subscriptions flood throughout the network and can be forwarded in
+either direction, also there may be multiple routes.  Publications
+only flow on routes that have matching subscriptions. Multicast
+publications are unsolicited and will be received by all nodes on the
+same subnet that are configured as multicast listeners. Unicast
+publications are only forwarded if the publication matches the
+subscriptions. In the steady state a publication reaching any node
+will be routed to all matching subscribers.
+
+@section message-transports Transports
+
+@subsection Multicast
+Multicast publications are wrapped in a CoAP envelope and sent to and
+received from the default CoAP port @em 5683.
+
+A CoAP wrapped publication message is sent as a non-confirmable PUT
+request with options:
+- Uri-Path: @em dps/pub
+- Content-Format: @em application/cbor
+
+Control over sending and receiving multicast messages is provided via
+the @em mcastPub parameter of DPS_StartNode().
+
+@subsection Unicast
+DPS implements three different transports for sending and receiving
+unicast messages.
+
+Unicast endpoints may be explicitly created and destroyed with
+DPS_Link() and DPS_Unlink().  The port used in unicast communication
+is provided via the @em listenPort parameter of DPS_StartNode().
+
+@subsubsection UDP
+Each DPS message is contained in a single UDP datagram.
+
+@subsubsection TCP
+Each DPS message is prefixed with the length of the message encoded as
+a CBOR unsigned integer value.
+
+@subsubsection DTLS
+DTLS provides message authentication, integrity and confidentiality
+above UDP.  Each DPS message is contained in a single DTLS datagram.
+
+@see @ref enabling-network-layer-security
+ */

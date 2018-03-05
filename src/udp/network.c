@@ -84,7 +84,7 @@ static void OnData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, const s
     netCtx->receiveCB(netCtx->node, &ep, DPS_OK, (uint8_t*)buf->base, nread);
 }
 
-DPS_NetContext* DPS_NetStart(DPS_Node* node, int port, DPS_OnReceive cb)
+DPS_NetContext* DPS_NetStart(DPS_Node* node, uint16_t port, DPS_OnReceive cb)
 {
     int ret;
     DPS_NetContext* netCtx;

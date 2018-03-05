@@ -39,8 +39,6 @@
 extern "C" {
 #endif
 
-#define A_SIZEOF(a)  (sizeof(a) / sizeof((a)[0])) /**< Helper macro to compute array size */
-
 #define DPS_TRUE  1 /**< TRUE boolean value */
 #define DPS_FALSE 0 /**< FALSE boolean value */
 
@@ -498,7 +496,7 @@ void* DPS_GetNodeData(const DPS_Node* node);
  *
  * @return DPS_OK or various error status codes
  */
-DPS_Status DPS_StartNode(DPS_Node* node, int mcastPub, int listenPort);
+DPS_Status DPS_StartNode(DPS_Node* node, int mcastPub, uint16_t listenPort);
 
 /**
  * Function prototype for callback function called when a node is destroyed.

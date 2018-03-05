@@ -1,0 +1,151 @@
+/**
+@page security Security
+@tableofcontents
+
+DPS has two security mechanisms: end-to-end encryption and link-layer
+encryption. Publication and acknowledgement messages can be encrypted
+end-to-end.  Messages are encrypted using
+[COSE](https://tools.ietf.org/html/rfc8152).
+
+For privacy and to protect the network hop-by-hop links DPS uses link
+layer encryption where possible: DTLS for UDP, TLS for TCP, and
+transport-specific encryption for over non-IP networks. IP multicast
+packets do not use link-layer encryption. Because DPS is fundamentally
+a multi-hop mesh protocol payloads are secured end-to-end.
+
+As noted above publications and acknowledgement messages can be
+encrypted using COSE. The encryption in this case is end-to-end, the
+trust relationship is directly between the publishing node and the
+subscribing node, and intermediate nodes that simply route packets
+over the DPS mesh do not require a trust relationship with either the
+publishers or subscribers and do not hold decryption keys. The
+publication or acknowledgement data payload is encrypted, publications
+also carry the publication topic strings these are included in the
+encrypted payload. Message fields required for routing messages are
+integrity checked but obviously cannot be encrypted.  The sending port
+number and TTL change on each hop so cannot be included in the
+end-to-end integrity check. The COSE format includes an optional KID
+(key-identifier) field. Encrypted DPS messages always have a KID which
+allows the different publications to use different encryption keys.
+
+Subscriptions do not carry payload data and the bit vectors carried in
+the payloads get recomputed at each hop. Unlike publications and
+acknowledgements, subscriptions do not use COSE and rely solely on
+encryption at the link-layer.
+
+Even when data is encrypted there are attack vectors based on traffic
+analysis. Traffic analysis is harder on a multi-hop mesh but because
+publications contain routing information that cannot be encrypted
+end-to-end. Specifically an attacker with access to a compromised node
+could use a dictionary attack to identify the topic strings in the
+publications and subscriptions flowing through that node.  Where this
+is a concern the publishing and subscribing end-points can agree on a
+shared private encoding of topic strings, for example HMAC with a
+shared seed.
+
+The following sections assume you are already familiar with the
+@link message-encoding message encoding @endlink.
+
+@section content-encryption Content Encryption
+The @em protected section of a DPS message forms the protected
+attributes from the application as identified in COSE.  The @em
+encrypted section of a DPS message is the plaintext provided to the
+content encryption algorithm and is replaced by a COSE object, either
+a @em COSE_Encrypt_Tagged or @em COSE_Encrypt0_Tagged object.
+
+The implemented content encryption algorithms is @em A256GCM.
+
+@section content-key-distribution Content Key Distribution
+The encryption key is determined by the recipient algorithm.  DPS
+supports the @em direct, @em A256KW, and <em>ECDH-ES + A256KW</em>
+recipient algorithms.
+
+The use of the key wrap variants allows multiple recipients to be
+included in a message.
+
+@subsection elliptic-curve-keys Elliptic Curve Keys
+DPS supports the <em>NIST P-384 (secp384r1)</em> and <em>NIST P-521
+(secp521r1)</em> curves.
+
+Point compression is not supported.  Both the x and y coordinates must
+be included in EC key representations such as the ephemeral sender
+key.
+
+@subsection key-derivation-functions Key Derivation Functions
+HKDF requires context information to be provided.  This is represented
+in COSE as the @em COSE_KDF_Context.
+
+The values of the @em identity, @em nonce, and @em other fields of the
+@em PartyUInfo and @em PartyVInfo structures in the @em
+COSE_KDF_Context are @em nil.
+
+@em SuppPrivInfo is not included in the @em COSE_KDF_Context.
+
+@section counter-signatures Counter Signatures
+After encryption, the encrypted content is signed by the sender and
+the signature is included as a COSE counter signature.  This allows
+intermediate DPS nodes to authenticate the sender of a message without
+decrypting the contents of the message.
+
+DPS supports the @em ES384, and @em ES512 signature algorithms.
+
+@section examples Examples
+An example encrypted publication message, using @em A256GCM
+for the content, @em ECDH-ES+A256KW for the key distribution, and
+@em ES512 for signing, will look like:
+
+@verbatim
+message = [
+  / version / 1,
+  / type / 1,
+  /unprotected / {
+    / port / 1: 42446,
+    / ttl / 2: 0
+  },
+  / protected (aad) / {
+    / ttl / 2: 0,
+    / pub-id / 3: h'17003AE54085EE56F735764C7631CE61',
+    / seq-num / 4: 1,
+    / ack-req / 5: false,
+    / bloom-filter / 6: [1, 8192, h'002817805F00982A']
+  },
+  / encrypted (COSE_Encrypt_Tagged) / 96(
+    [
+      / protected / h'A101181E' / {
+          \ alg \ 1: 30 \ AES-CCM-16-128-128 \
+        } /,
+      / unprotected / {
+        / iv / 5: h'0100000017003AE54085EE56F7',
+        / countersign / 7: [
+          / protected / h'A10126' /
+              \ alg \ 1: -7 \ ECDSA 256 \
+            } /,
+          / unprotected / {
+            / kid / 4: h'4450532054657374205075626C6973686572'
+          },
+          / signature / h'1F14BDB559BB24A50B1C1ECA91938C445CFF64C4A24F075A6105B4679D19AEE439413AD30BE4C6C402031B2B04E7D6C2E4B2BA6A4C788E5C7DDE805654CA38CE'
+        ]
+      },
+      / ciphertext / h'457C20BF6EB818AD98C4D820EFD2B017CACE97C47144E3D6',
+      / recipients / [
+        [
+          / protected / h'A101381C' / {
+              \ alg \ 1: -29 \ ECDH-ES+A128KW \
+            } /,
+          / unprotected / {
+            / ephemeral / -1: {
+              / kty / 1: 2,
+              / crv / -1: 1,
+              / x / -2: h'B34D696D855245BB79FCC8F0A328F37B7CC935803DAEC9EBAB97F061A68444E1',
+              / y / -3: h'CDF27464CDC3A65DA7EC37139C354940E219A5E55D1A28265A015B2D0A47F72F'
+            },
+            / kid / 4: h'44505320546573742053756273637269626572'
+          },
+          / ciphertext / h'CF83EEA4B372FC210A374E44F040EEFA345C569C2D74A322'
+        ]
+      ]
+    ]
+  )
+]
+@endverbatim
+ */

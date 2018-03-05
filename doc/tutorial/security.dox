@@ -1,247 +1,249 @@
 /**
- * @page security Securing the communications
- * @tableofcontents
- *
- * @section enabling-network-layer-security Enabling network layer security
- *
- * Network layer security can be used to secure unicast communications
- * between two nodes (a single hop).  This includes the subscription,
- * acknowledgement, and subscription acknowledgement messages.  When
- * the two nodes are @link link linked @endlink, it also includes
- * publications.  Multicast publications are not secured.  One of the
- * end-to-end mechanisms described below must be used to secure
- * multicast publications.
- *
- * The first step to enabling network layer security is to build with
- * a transport that supports it.
- *
- * @code
- * $ scons transport=dtls
- * @endcode
- *
- * The DTLS transport supports two mechanisms for securing the
- * connection: pre-shared keys, and certificates.
- *
- * @subsection dtls-with-pre-shared-keys DTLS with pre-shared keys
- *
- * @snippet tutorial.c Pre-shared key
- * To use pre-shared keys (PSKs), we'll need to agree on a PSK and its
- * identifier.
- *
- * @snippet tutorial.c Creating a secure node with a network PSK
- * All of the security mechanisms require that the node be created
- * with a key store.  The DTLS PSK mechanism requires that a @ref
- * DPS_KeyAndIdHandler and @ref DPS_KeyHandler be provided.
- *
- * @snippet tutorial.c PSK and ID handler
- * The key and identifier handler simply uses DPS_SetKeyAndId() to
- * return the PSK and identifier we agreed on earlier.
- *
- * @snippet tutorial.c PSK handler
- * The key handler is used for PSKs as well as other keys, so it must
- * compare the incoming @c keyId against the PSK identifier and either
- * return the PSK using DPS_SetKey() or return @ref DPS_ERR_MISSING.
- *
- * @see DPS_CreateMemoryKeyStore(), DPS_SetNetworkKey()
- *
- * @subsection dtls-with-certificates DTLS with certificates
- *
- * @snippet tutorial.c Certificates
- * To use certificates, we'll need a certificate for each node and the
- * certificates of the authorities that issued them.  DPS supports
- * Elliptic Curve Cryptography (ECC) certificates.  The certificates
- * above are elided due to their size.
- *
- * @snippet tutorial.c Creating a secure node with a network certificate
- * Again, all of the security mechanisms require that the node be
- * created with a key store.  The DTLS certificate mechanism requires
- * that a @ref DPS_KeyHandler and @ref DPS_CAHandler be provided.
- *
- * The certificate mechanism also requires that the @c keyId parameter
- * be provided.  This is the key identifier of the public key (@ref
- * _DPS_KeyCert.cert), private key (@ref _DPS_KeyCert.privateKey), and
- * optional password (@ref _DPS_KeyCert.password) of the created node.
- * This @c keyId value will be provided to the @ref DPS_KeyHandler
- * when the node's own certificate is requested.
- *
- * @snippet tutorial.c Certificate authorities handler
- * The certificate authorities handler simply uses DPS_SetCA() to
- * return the certificate authorities we trust.  To include more than
- * one certificate as shown in this example, concatenate the
- * certificates together.
- *
- * @snippet tutorial.c Certificate handler
- * The key handler is used for certificates as well as other keys, so
- * it must compare the incoming @c keyId against the certificate
- * identifier and either return the certificate using DPS_SetKey() or
- * return @ref DPS_ERR_MISSING.
- *
- * Only the certificate with the key identifier provided to
- * DPS_CreateNode() needs to include the private key (@ref
- * _DPS_KeyCert.privateKey) and optional password (@ref
- * _DPS_KeyCert.password).  For all other certificates, the public key
- * (@ref _DPS_KeyCert.cert) is sufficient.
- *
- * @see DPS_SetTrustedCA(), DPS_SetCertificate()
- *
- * @section protecting-the-payload Protecting the payload
- *
- * While network layer security allows us to secure the communications
- * of a single hop, encrypting the payload allows us to secure the
- * payload across multiple hops.  The payload can only be decrypted by
- * the receiving node.
- *
- * Encrypting a payload uses two keys: the content encryption key that
- * encrypts the payload and the key encryption key that encrypts the
- * content encryption key.  This indirection allows a single instance
- * of the payload to be encrypted for multiple recipients.
- *
- * The content encryption key is always an ephemeral AES key.  The key
- * encryption key may be a symmetric or asymmetric key.
- *
- * @subsection encrypting-with-a-symmetric-key Encrypting with a symmetric key
- *
- * @snippet tutorial.c Symmetric key
- * To use a symmetric key encryption key, we'll need to agree on its
- * value and identifier.
- *
- * @snippet tutorial.c Creating a node with symmetric key handlers
- * Again, all of the security mechanisms require that the node be
- * created with a key store.  The payload encryption mechanism
- * requires that a @ref DPS_KeyHandler and @ref
- * DPS_EphemeralKeyHandler be provided.
- *
- * @snippet tutorial.c Symmetric key handler
- * The key handler is used for symmetric keys as well as other keys,
- * so it must compare the incoming @c keyId against the symmetric key
- * encryption key identifier and either return the key using
- * DPS_SetKey() or return @ref DPS_ERR_MISSING.
- *
- * @snippet tutorial.c Ephemeral symmetric key handler
- * The ephemeral key handler is used for symmetric keys as well as
- * other keys, so it must examine the incoming @c key type to
- * determine what type of ephemeral key to return.  It creates a
- * random key of the requested type and returns it using DPS_SetKey().
- * If it cannot do that, it must return @ref DPS_ERR_MISSING.
- *
- * @snippet tutorial.c Protecting the payload
- * Lastly, we add the key encryption key identifier to the
- * publication.
- *
- * This may be called multiple times with different key identifiers
- * for a single publication.  This allows an application to, for
- * example, associate topics with key identifiers and initialize and
- * encrypt a publication with multiple topics.
- *
- * Acknowledgement payloads will be protected using the same key
- * encryption key identifier the recipient used to decrypt the
- * publication.
- *
- * @see DPS_SetContentKey()
- *
- * @subsection encrypting-with-an-asymmetric-key Encrypting with an asymmetric key
- *
- * The steps necessary to use an asymmetric key encryption key are
- * very similar to the steps needed to use a symmetric key encryption
- * key, described above.  Only the differences are highlighted below.
- *
- * @note Acknowledgement payloads will be encrypted using the same
- * asymmetric key identifier the recipient used to decrypt the
- * publication.  As this is an ephemeral key, the encryption will
- * fail.  For this reason it is recommended to use this mechanism only
- * with @link authenticating-the-message-sender authenticated senders
- * @endlink which prevents this failure.
- *
- * @snippet tutorial.c Asymmetric key
- * To use asymmetric key encryption keys, the publisher will need the
- * public key (@ref _DPS_KeyCert.cert) of each recipient and each
- * recipient will also need the private key (@ref
- * _DPS_KeyCert.privateKey) and optional password (@ref
- * _DPS_KeyCert.password).  The term recipient is used here instead of
- * subscriber since a single recipient key may be used by multiple
- * subscribers.
- *
- * For this example we are using only one recipient.  DPS supports
- * Elliptic Curve Cryptography (ECC) certificates.  The certificate
- * above is elided due to its size.
- *
- * @snippet tutorial.c Ephemeral asymmetric key handler
- * The ephemeral key handler is used for both symmetric and asymmetric
- * keys, so it must examine the incoming @c key type to determine what
- * type of ephemeral key to return.  For @ref DPS_KEY_EC types, the
- * ECC curve must also be examined.
- *
- * The ephemeral ECC key requested here is the ephemeral sender key.
- * The actual key encryption key is derived from the sender and
- * recipient ECC keys.
- *
- * In either case, the key handler creates a random key of the
- * requested type (and curve) and returns it using DPS_SetKey().  If
- * it cannot do that, it must return @ref DPS_ERR_MISSING.
- *
- * @section authenticating-the-message-sender Authenticating the message sender
- *
- * @snippet tutorial.c Creating a secure node with an authenticated sender
- * Authenticating the sender requires that the @c keyId parameter
- * be provided.  This is the key identifier of the public key (@ref
- * _DPS_KeyCert.cert), private key (@ref _DPS_KeyCert.privateKey), and
- * optional password (@ref _DPS_KeyCert.password) of the created node.
- * This @c keyId value will be provided to the @ref DPS_KeyHandler
- * when the node's own certificate is requested.
- *
- * @snippet tutorial.c Key handler
- * The key handler implementation above supports all the mechanisms
- * described so far.
- *
- * @snippet tutorial.c Ephemeral key handler
- * The ephemeral key handler implementation above supports all the
- * mechanisms described so far.
- *
- * @snippet tutorial.c Authenticating a publication
- * @snippet tutorial.c Authenticating an acknowledgement
- * In the publication or acknowledgement handler, the authenticated
- * key identifier can be retrieved with
- * DPS_PublicationGetSenderKeyId() or DPS_AckGetSenderKeyId().
- *
- * @section adding-access-control Adding access control
- *
- * Adding access control is a matter of combining the existing
- * mechanisms to enforce any policies the application needs.  A simple
- * example is shown below.
- *
- * @subsection defining-a-policy Defining a policy
- *
- * @snippet tutorial.c Defining a policy
- * In the above we will allow @c alice to publish to topic @c a/b/c/d,
- * @c bob to subscribe and acknowledge to topic @c a/b/c/d, and @c
- * trudy to subscribe to topic @c a/b/c/d.
- *
- * @c IsAllowed implements the policy by searching through the access
- * control list for matching key identifiers and access bits and uses
- * DPS_PublicationGetNumTopics() and DPS_PublicationGetTopic() to
- * check the topic.
- *
- * @subsection implementing-subscription-control Implementing subscription control
- *
- * @snippet tutorial.c Implementing subscription control
- * After initializing the publication, we use
- * DPS_PublicationAddSubId() to add only the key identifiers of
- * allowed subscribers.  Any other subscribers will be unable to
- * decrypt the publication.
- *
- * @subsection implementing-publication-control Implementing publication control
- *
- * @snippet tutorial.c Implementing publication control
- * In the publication handler before any application-specific handling
- * is done, we use DPS_PublicationGetSenderKeyId() to first check if
- * the sender is allowed to publish to the topic.  If not, we reject
- * the publication.
- *
- * @subsection implementing-acknowledgement-control Implementing acknowledgement control
- *
- * @snippet tutorial.c Implementing acknowledgement control
- * In the acknowledgement handler, before any application-specific
- * handling is done, we use DPS_AckGetSenderKeyId() to first check if
- * the sender is allowed to acknowledge the topic.  If not, we reject
- * the acknowledgement.
+@page tutorials-security Securing the communications
+@tableofcontents
+
+@section enabling-network-layer-security Enabling network layer security
+
+Network layer security can be used to secure unicast communications
+between two nodes (a single hop).  This includes the subscription,
+acknowledgement, and subscription acknowledgement messages.  When
+the two nodes are @link tutorials-link linked @endlink, it also includes
+publications.  Multicast publications are not secured.  One of the
+end-to-end mechanisms described below must be used to secure
+multicast publications.
+
+The first step to enabling network layer security is to build with
+a transport that supports it.
+
+@code
+$ scons transport=dtls
+@endcode
+
+The DTLS transport supports two mechanisms for securing the
+connection: pre-shared keys, and certificates.
+
+@subsection dtls-with-pre-shared-keys DTLS with pre-shared keys
+
+@snippet tutorial.c Pre-shared key
+To use pre-shared keys (PSKs), we'll need to agree on a PSK and its
+identifier.  @c BYTE_STR is a convenience macro used in the
+tutorials for using strings anywhere a buffer and its length is
+expected in the APIs.
+
+@snippet tutorial.c Creating a secure node with a network PSK
+All of the security mechanisms require that the node be created
+with a key store.  The DTLS PSK mechanism requires that a @ref
+DPS_KeyAndIdHandler and @ref DPS_KeyHandler be provided.
+
+@snippet tutorial.c PSK and ID handler
+The key and identifier handler simply uses DPS_SetKeyAndId() to
+return the PSK and identifier we agreed on earlier.
+
+@snippet tutorial.c PSK handler
+The key handler is used for PSKs as well as other keys, so it must
+compare the incoming @c keyId against the PSK identifier and either
+return the PSK using DPS_SetKey() or return @ref DPS_ERR_MISSING.
+
+@see DPS_CreateMemoryKeyStore(), DPS_SetNetworkKey()
+
+@subsection dtls-with-certificates DTLS with certificates
+
+@snippet tutorial.c Certificates
+To use certificates, we'll need a certificate for each node and the
+certificates of the authorities that issued them.  DPS supports
+Elliptic Curve Cryptography (ECC) certificates.  The certificates
+above are omitted due to their size.
+
+@snippet tutorial.c Creating a secure node with a network certificate
+Again, all of the security mechanisms require that the node be
+created with a key store.  The DTLS certificate mechanism requires
+that a @ref DPS_KeyHandler and @ref DPS_CAHandler be provided.
+
+The certificate mechanism also requires that the @c keyId parameter
+be provided.  This is the key identifier of the public key (@ref
+_DPS_KeyCert.cert), private key (@ref _DPS_KeyCert.privateKey), and
+optional password (@ref _DPS_KeyCert.password) of the created node.
+This @c keyId value will be provided to the @ref DPS_KeyHandler
+when the node's own certificate is requested.
+
+@snippet tutorial.c Certificate authorities handler
+The certificate authorities handler simply uses DPS_SetCA() to
+return the certificate authorities we trust.  To include more than
+one certificate as shown in this example, concatenate the
+certificates together.
+
+@snippet tutorial.c Certificate handler
+The key handler is used for certificates as well as other keys, so
+it must compare the incoming @c keyId against the certificate
+identifier and either return the certificate using DPS_SetKey() or
+return @ref DPS_ERR_MISSING.
+
+Only the certificate with the key identifier provided to
+DPS_CreateNode() needs to include the private key (@ref
+_DPS_KeyCert.privateKey) and optional password (@ref
+_DPS_KeyCert.password).  For all other certificates, the public key
+(@ref _DPS_KeyCert.cert) is sufficient.
+
+@see DPS_SetTrustedCA(), DPS_SetCertificate()
+
+@section protecting-the-payload Protecting the payload
+
+While network layer security allows us to secure the communications
+of a single hop, encrypting the payload allows us to secure the
+payload across multiple hops.  The payload can only be decrypted by
+the receiving node.
+
+Encrypting a payload uses two keys: the content encryption key that
+encrypts the payload and the key encryption key that encrypts the
+content encryption key.  This indirection allows a single instance
+of the payload to be encrypted for multiple recipients.
+
+The content encryption key is always an ephemeral AES key.  The key
+encryption key may be a symmetric or asymmetric key.
+
+@subsection encrypting-with-a-symmetric-key Encrypting with a symmetric key
+
+@snippet tutorial.c Symmetric key
+To use a symmetric key encryption key, we'll need to agree on its
+value and identifier.
+
+@snippet tutorial.c Creating a node with symmetric key handlers
+Again, all of the security mechanisms require that the node be
+created with a key store.  The payload encryption mechanism
+requires that a @ref DPS_KeyHandler and @ref
+DPS_EphemeralKeyHandler be provided.
+
+@snippet tutorial.c Symmetric key handler
+The key handler is used for symmetric keys as well as other keys,
+so it must compare the incoming @c keyId against the symmetric key
+encryption key identifier and either return the key using
+DPS_SetKey() or return @ref DPS_ERR_MISSING.
+
+@snippet tutorial.c Ephemeral symmetric key handler
+The ephemeral key handler is used for symmetric keys as well as
+other keys, so it must examine the incoming @c key type to
+determine what type of ephemeral key to return.  It creates a
+random key of the requested type and returns it using DPS_SetKey().
+If it cannot do that, it must return @ref DPS_ERR_MISSING.
+
+@snippet tutorial.c Protecting the payload
+Lastly, we add the key encryption key identifier to the
+publication.
+
+This may be called multiple times with different key identifiers
+for a single publication.  This allows an application to, for
+example, associate topics with key identifiers and initialize and
+encrypt a publication with multiple topics.
+
+Acknowledgement payloads will be protected using the same key
+encryption key identifier the recipient used to decrypt the
+publication.
+
+@see DPS_SetContentKey()
+
+@subsection encrypting-with-an-asymmetric-key Encrypting with an asymmetric key
+
+The steps necessary to use an asymmetric key encryption key are
+very similar to the steps needed to use a symmetric key encryption
+key, described above.  Only the differences are highlighted below.
+
+@note Acknowledgement payloads will be encrypted using the same
+asymmetric key identifier the recipient used to decrypt the
+publication.  As this is an ephemeral key, the encryption will
+fail.  For this reason it is recommended to use this mechanism only
+with @link authenticating-the-message-sender authenticated senders
+@endlink which prevents this failure.
+
+@snippet tutorial.c Asymmetric key
+To use asymmetric key encryption keys, the publisher will need the
+public key (@ref _DPS_KeyCert.cert) of each recipient and each
+recipient will also need the private key (@ref
+_DPS_KeyCert.privateKey) and optional password (@ref
+_DPS_KeyCert.password).  The term recipient is used here instead of
+subscriber since a single recipient key may be used by multiple
+subscribers.
+
+For this example we are using only one recipient.  DPS supports
+Elliptic Curve Cryptography (ECC) certificates.  The certificate
+above is elided due to its size.
+
+@snippet tutorial.c Ephemeral asymmetric key handler
+The ephemeral key handler is used for both symmetric and asymmetric
+keys, so it must examine the incoming @c key type to determine what
+type of ephemeral key to return.  For @ref DPS_KEY_EC types, the
+ECC curve must also be examined.
+
+The ephemeral ECC key requested here is the ephemeral sender key.
+The actual key encryption key is derived from the sender and
+recipient ECC keys.
+
+In either case, the key handler creates a random key of the
+requested type (and curve) and returns it using DPS_SetKey().  If
+it cannot do that, it must return @ref DPS_ERR_MISSING.
+
+@section authenticating-the-message-sender Authenticating the message sender
+
+@snippet tutorial.c Creating a secure node with an authenticated sender
+Authenticating the sender requires that the @c keyId parameter
+be provided.  This is the key identifier of the public key (@ref
+_DPS_KeyCert.cert), private key (@ref _DPS_KeyCert.privateKey), and
+optional password (@ref _DPS_KeyCert.password) of the created node.
+This @c keyId value will be provided to the @ref DPS_KeyHandler
+when the node's own certificate is requested.
+
+@snippet tutorial.c Key handler
+The key handler implementation above supports all the mechanisms
+described so far.
+
+@snippet tutorial.c Ephemeral key handler
+The ephemeral key handler implementation above supports all the
+mechanisms described so far.
+
+@snippet tutorial.c Authenticating a publication
+@snippet tutorial.c Authenticating an acknowledgement
+In the publication or acknowledgement handler, the authenticated
+key identifier can be retrieved with
+DPS_PublicationGetSenderKeyId() or DPS_AckGetSenderKeyId().
+
+@section adding-access-control Adding access control
+
+Adding access control is a matter of combining the existing
+mechanisms to enforce any policies the application needs.  A simple
+example is shown below.
+
+@subsection defining-a-policy Defining a policy
+
+@snippet tutorial.c Defining a policy
+In the above we will allow @c alice to publish to topic @c a/b/c/d,
+@c bob to subscribe and acknowledge to topic @c a/b/c/d, and @c
+trudy to subscribe to topic @c a/b/c/d.
+
+@c IsAllowed implements the policy by searching through the access
+control list for matching key identifiers and access bits and uses
+DPS_PublicationGetNumTopics() and DPS_PublicationGetTopic() to
+check the topic.
+
+@subsection implementing-subscription-control Implementing subscription control
+
+@snippet tutorial.c Implementing subscription control
+After initializing the publication, we use
+DPS_PublicationAddSubId() to add only the key identifiers of
+allowed subscribers.  Any other subscribers will be unable to
+decrypt the publication.
+
+@subsection implementing-publication-control Implementing publication control
+
+@snippet tutorial.c Implementing publication control
+In the publication handler before any application-specific handling
+is done, we use DPS_PublicationGetSenderKeyId() to first check if
+the sender is allowed to publish to the topic.  If not, we reject
+the publication.
+
+@subsection implementing-acknowledgement-control Implementing acknowledgement control
+
+@snippet tutorial.c Implementing acknowledgement control
+In the acknowledgement handler, before any application-specific
+handling is done, we use DPS_AckGetSenderKeyId() to first check if
+the sender is allowed to acknowledge the topic.  If not, we reject
+the acknowledgement.
  */

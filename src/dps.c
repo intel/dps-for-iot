@@ -1269,7 +1269,7 @@ static void StopNodeTask(uv_async_t* handle)
     uv_stop(handle->loop);
 }
 
-DPS_Status DPS_StartNode(DPS_Node* node, int mcast, int rxPort)
+DPS_Status DPS_StartNode(DPS_Node* node, int mcast, uint16_t rxPort)
 {
     DPS_Status ret = DPS_OK;
     int r;

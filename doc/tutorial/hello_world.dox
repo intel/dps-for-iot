@@ -1,165 +1,163 @@
-
 /**
- * @page hello-world Hello world
- * @tableofcontents
- *
- * @section prerequisites Prerequisites
- * @snippet tutorial.c Prerequisites
- *
- * The first step in creating a DPS application is to include the
- * necessary header files.
- *
- * @section creating-a-node Creating a node
- * @snippet tutorial.c Creating a node
- *
- * Each entity in DPS is represented by a @c DPS_Node.  The node may
- * be a publisher, subscriber, both, or neither.  For this example,
- * we're going to be creating publisher and subscriber nodes.
- *
- * Creating a node requires three parameters: the topic separators, a
- * key store, and a key identifier.  For now we're only concerned with
- * the separators.  Key stores and identifiers are covered later when
- * discussing how to secure communications.
- *
- * The separators parameter is a string containing the characters used
- * as topic level separators.  A topic is composed of multiple levels
- * with separators between them.  Providing @c /. as the separators
- * parameter value means all of the following topics are equivalent:
- * @code
- * a/b/c/d
- * a.b.c.d
- * a/b.c/d
- * @endcode
- *
- * @see DPS_SetNodeData(), DPS_GetNodeData()
- *
- * @section starting-a-node Starting a node
- * @snippet tutorial.c Starting a node
- *
- * Once created, a node must be started.  Starting a node enables it
- * to begin sending and receiving DPS messages in the network.
- *
- * For this example, we are going to be sending and receiving
- * multicast publications so we enable both and let DPS assign the
- * listening port.
- *
- * @see DPS_MCAST_PUB_DISABLED, DPS_GetPortNumber()
- *
- * @section publishing Publishing
- *
- * @subsection creating-a-publication Creating a publication
- * @snippet tutorial.c Creating a publication
- *
- * Each publication in DPS is represented by a @c DPS_Publication.
- * Each publication has a set of topics, a UUID, and a sequence
- * number.  In this example we are creating a publication with one
- * topic, @c a/b/c/d.  The UUID is assigned by DPS and the sequence
- * number will be incremented each time we publish.
- *
- * The @c noWildCard parameter is used by the publisher to control
- * whether a subscription is required to match the publication's
- * topics exactly or can use wildcards to match the topics.  If we set
- * @c noWildCard to @c DPS_TRUE then only a subscription to @c a/b/c/d
- * will receive this publication.  Since we set @c noWildCard to @c
- * DPS_FALSE here, subscriptions to @c a/#, @c a/+/+/d, or similar
- * variations will receive this publication.
- *
- * Both the publication's key identifier and acknowledgement handler
- * are set to @c NULL here; they are covered in later sections.
- *
- * @see DPS_SetPublicationData(), DPS_GetPublicationData(),
- *      DPS_PublicationGetNode(), DPS_PublicationGetUUID(),
- *      DPS_PublicationGetSequenceNum()
- *
- * @subsection sending-a-publication Sending a publication
- * @snippet tutorial.c Sending a publication
- *
- * Once created and initialized with a set of topics, application
- * payloads may be sent.  Payload data is simply an array of bytes in
- * DPS, no assumptions are made with regards to the payload format.
- *
- * In this example the @c ttl parameter is zero, indicating that the
- * publication will be sent best-effort to all active subscribing
- * nodes.  A non-zero ttl is referred to as a retained publication
- * and is covered later.
- *
- * Recall also that a publisher may send application data multiple
- * times, and each send increments the sequence number of the
- * publication.
- *
- * @section subscribing Subscribing
- *
- * @subsection creating-a-subscription Creating a subscription
- * @snippet tutorial.c Creating a subscription
- *
- * Each subscription in DPS is represented by a @c DPS_Subscription.
- * In this example we are creating a subscription with one topic with
- * no wildcards, @c a/b/c/d.
- *
- * Wildcards may be used to match a broader set of topics.  A @c +
- * matches any single topic level, and a @c # matches all topic levels
- * from that level on.  In this instance since the publisher is allowing
- * wildcard matching, the subscriber could use either @c a/b/+/d or @c
- * a/# (among others) as the topic and still receive the publication.
- *
- * A subscription may also be created with multiple topics.  The
- * publication must include @em all of the topics to be received.
- *
- * @see DPS_SetSubscriptionData(), DPS_GetSubscriptionData(),
- *      DPS_SubscriptionGetNode()
- *
- * @subsection receiving-a-publication Receiving a publication
- * @snippet tutorial.c Subscribing
- *
- * Publications are received asynchronously.  The first step in
- * receiving a publication is to provide the publication handler to
- * DPS and start the subscription.  The publication handler will be
- * called for each received publication.
- *
- * @note Each instance of @c DPS_Node runs in its own thread.  The
- * publication handler is dispatched from this thread.
- *
- * @snippet tutorial.c Receiving a publication
- *
- * This publication handler exercises the APIs for retrieving the
- * subscription and publication information.
- *
- * @section acknowledging Acknowledging
- *
- * Acknowledgements provide a means for subscribers to reply to
- * publications.  Similar to publications, acknowledgements may
- * include an application payload, and no assumptions are made by DPS
- * with regards to the acknowledgement payload format.
- *
- * @subsection requesting-an-acknowledgement Requesting an acknowledgement
- * @snippet tutorial.c Requesting an acknowledgement
- *
- * Requesting an acknowledgement is identical to @ref creating-a-publication,
- * with the addition of the @c DPS_AcknowledgementHandler.
- *
- * @subsection sending-an-acknowledgement Sending an acknowledgement
- * @snippet tutorial.c Sending an acknowledgement
- *
- * To determine if a publication has requested an ack, call
- * DPS_PublicationIsAckRequested().  To send an acknowledgement, along
- * with any optional acknowledgement payload, call
- * DPS_AckPublication().
- *
- * The @c pub parameter of the publication handler is only valid
- * during the body of the handler.  In order to acknowledge a
- * publication after the handler has returned, the application must
- * first call DPS_CopyPublication() to create a partial copy of the
- * publication.  The copy may be used after the handler returns.
- *
- * @subsection receiving-an-acknowledgement Receiving an acknowledgement
- * @snippet tutorial.c Receiving an acknowledgement
- *
- * Acknowledgements are received asynchronously.  The acknowledgement
- * handler will be called for each received acknowledgement.
- *
- * This acknowledgement handler exercises the APIs for retrieving the
- * publication information associated with the acknowledgement.
- *
- * @note The acknowledgement handler is dispatched from the @c
- * DPS_Node's thread.
+@page tutorials-hello-world Hello world
+@tableofcontents
+
+@section hello-world-prerequisites Prerequisites
+@snippet tutorial.c Prerequisites
+
+The first step in creating a DPS application is to include the
+necessary header files.
+
+@section creating-a-node Creating a node
+@snippet tutorial.c Creating a node
+
+Each entity in DPS is represented by a @c DPS_Node.  The node may
+be a publisher, subscriber, both, or neither.  For this example,
+we're going to be creating publisher and subscriber nodes.
+
+Creating a node requires three parameters: the topic separators, a
+key store, and a key identifier.  For now we're only concerned with
+the separators.  Key stores and identifiers are covered later when
+discussing how to secure communications.
+
+The separators parameter is a string containing the characters used
+as topic level separators.  Providing @c /. as the separators
+parameter value allows both @c / and @c . as separators.
+
+@see DPS_SetNodeData(), DPS_GetNodeData()
+
+@section starting-a-node Starting a node
+@snippet tutorial.c Starting a node
+
+Once created, a node must be started.  Starting a node enables it
+to begin sending and receiving DPS messages in the network.
+
+For this example, we are going to be sending and receiving
+multicast publications so we enable both and let DPS assign the
+listening port.
+
+@see DPS_MCAST_PUB_DISABLED, DPS_GetPortNumber()
+
+@section publishing Publishing
+
+@subsection creating-a-publication Creating a publication
+@snippet tutorial.c Creating a publication
+
+Each publication in DPS is represented by a @c DPS_Publication.
+Each publication has a set of topics, a UUID, and a sequence
+number.  In this example we are creating a publication with one
+topic, @c a/b/c/d.  The UUID is assigned by DPS and the sequence
+number will be incremented each time we publish.
+
+The @c noWildCard parameter is used by the publisher to control
+whether a subscription is required to match the publication's
+topics exactly or can use wildcards to match the topics.  If we set
+@c noWildCard to @c DPS_TRUE then only a subscription to @c a/b/c/d
+will receive this publication.  This allows the publisher to
+prevent publications being sent to catchall subscriptions such as
+@c +/#.  Since we set @c noWildCard to @c DPS_FALSE here,
+subscriptions to @c a/#, @c a/+/+/d, or similar variations will
+receive this publication.
+
+Both the publication's key identifier and acknowledgement handler
+are set to @c NULL here; they are covered in later sections.
+
+@see DPS_SetPublicationData(), DPS_GetPublicationData(),
+     DPS_PublicationGetNode(), DPS_PublicationGetUUID(),
+     DPS_PublicationGetSequenceNum()
+
+@subsection sending-a-publication Sending a publication
+@snippet tutorial.c Sending a publication
+
+Once created and initialized with a set of topics, application
+payloads may be sent.  Payload data is simply an array of bytes in
+DPS, no assumptions are made with regards to the payload format.
+
+In this example the @c ttl parameter is zero, indicating that the
+publication will be sent best-effort to all active subscribing
+nodes.  A non-zero ttl is referred to as a retained publication
+and is covered later.
+
+A publisher may send additional publications via the same @c
+DPS_Publication.  Each additional send increments the sequence
+number of the publication.
+
+@section subscribing Subscribing
+
+@subsection creating-a-subscription Creating a subscription
+@snippet tutorial.c Creating a subscription
+
+Each subscription in DPS is represented by a @c DPS_Subscription.
+In this example we are creating a subscription with one topic with
+no wildcards, @c a/b/c/d.
+
+Wildcards may be used to match a broader set of topics.  A @c +
+matches any single topic level, and a @c # matches all topic levels
+from that level on.  In this instance since the publisher is allowing
+wildcard matching, the subscriber could use either @c a/b/+/d or @c
+a/# (among others) as the topic and still receive the publication.
+
+A subscription may also be created with multiple topics.  The
+publication must include @em all of the topics to be received.
+
+@see DPS_SetSubscriptionData(), DPS_GetSubscriptionData(),
+     DPS_SubscriptionGetNode()
+
+@subsection receiving-a-publication Receiving a publication
+@snippet tutorial.c Subscribing
+
+Publications are received asynchronously.  The first step in
+receiving a publication is to provide the publication handler to
+DPS and start the subscription.  The publication handler will be
+called for each received publication.
+
+@note Each instance of @c DPS_Node creates and runs its own thread.
+The lifetime of this thread is the same as the lifetime of the node.
+The publication handler is dispatched from this thread.
+
+@snippet tutorial.c Receiving a publication
+
+This publication handler exercises the APIs for retrieving the
+subscription and publication information.
+
+@section acknowledging Acknowledging
+
+Acknowledgements provide an optional means for subscribers to reply
+to publications.  For example, they may be used when the
+publication is logically a request and the acknowledgements are
+responses.  Similar to publications, acknowledgements may include
+an application payload, and no assumptions are made by DPS with
+regards to the acknowledgement payload format.
+
+@subsection requesting-an-acknowledgement Requesting an acknowledgement
+@snippet tutorial.c Requesting an acknowledgement
+
+Requesting an acknowledgement is identical to @ref creating-a-publication,
+with the addition of the @c DPS_AcknowledgementHandler.
+
+@subsection sending-an-acknowledgement Sending an acknowledgement
+@snippet tutorial.c Sending an acknowledgement
+
+To determine if a publication has requested an ack, call
+DPS_PublicationIsAckRequested().  To send an acknowledgement, along
+with any optional acknowledgement payload, call
+DPS_AckPublication().
+
+The @c pub parameter of the publication handler is only valid
+during the body of the handler.  In order to acknowledge a
+publication after the handler has returned, the application must
+first call DPS_CopyPublication() to create a partial copy of the
+publication.  The copy may be used after the handler returns.
+
+@subsection receiving-an-acknowledgement Receiving an acknowledgement
+@snippet tutorial.c Receiving an acknowledgement
+
+Acknowledgements are received asynchronously.  The acknowledgement
+handler will be called for each received acknowledgement.
+
+This acknowledgement handler exercises the APIs for retrieving the
+publication information associated with the acknowledgement.
+
+@note The acknowledgement handler is dispatched from the @c
+DPS_Node's thread.
  */

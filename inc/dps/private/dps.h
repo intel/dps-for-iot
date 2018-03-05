@@ -34,6 +34,8 @@
 extern "C" {
 #endif
 
+#define A_SIZEOF(a)  (sizeof(a) / sizeof((a)[0])) /**< Helper macro to compute array size */
+
 /*
  * Map keys for CBOR serialization of DPS messages
  */

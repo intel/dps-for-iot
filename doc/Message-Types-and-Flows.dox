@@ -1,0 +1,165 @@
+/**
+@page message-types-and-flow Message Types and Flow
+@tableofcontents
+
+DPS has four message types: subscriptions, publications,
+acknowledgments, and subscription acknowledgements. Subscriptions and
+publications are both inherently point-to-multipoint. An explicit
+assumption is that in IoT use cases there are many more publishers
+than subscribers. Publications are sent fairly frequently but
+subscriptions are relatively stable; subscriptions do not change
+frequently. To a large extent DPS has been designed around these
+assumptions. DPS would be good for implementing an IoT network with a
+large number of sensors but not ideal for implementing a highly
+scalable peer-to-peer chat service.
+
+When a subscription does change only deltas for the subscription
+propagate through the network, this is typically less than a 100
+bytes.  Subscription acknowledgement messages are used to confirm that
+subscriptions are received at the next hop.
+
+Publications are routed to all subscribers that have subscription
+topics that match the publication topics as described above.
+
+Publications and acknowledgments can be accompanied by a payload,
+subscriptions do not carry a payload. Acknowledgements are optional
+and must be explicitly requested by the publisher when sending a
+publication. A subscriber can send an acknowledgement to the publisher
+along with an optional payload, the acknowledgement reaches the
+publisher by hop-by-hop forwarding in the reverse path of the
+publication. The reverse path ages out fairly quickly so
+acknowledgements should be sent as soon as possible after receipt of a
+publication. A publisher may receive multiple acknowledgments if there
+are multiple subscribers.
+
+@section message-encoding Encoding
+DPS messages are encoded in
+[CBOR](https://tools.ietf.org/html/rfc7049), described below in
+[CDDL](https://tools.ietf.org/html/draft-ietf-cbor-cddl-00).
+
+Each message has the same form.
+
+@verbatim
+message = [
+  version: 1,
+  type: pub / sub / ack / sak,
+  unprotected: { * field },
+  protected: { * field },
+  encrypted: { * field }
+]
+@endverbatim
+
+@subsection field-member-keys Field member keys
+For compactness the member keys are encoded as integers as listed
+below.
+
+@verbatim
+field = (
+  ? 1 => uint,               ; # port number sender is listening on
+  ? 2 => int,                ; # ttl - time to live in seconds
+  ? 3 => uuid,               ; # pub-id - unique identifier for a publication
+  ? 4 => uint,               ; # seq-num - sequence number for a publication
+  ? 5 => bool,               ; # ack-req - indicates if an publisher is requesting an acknowledgement
+  ? 6 => bit-vector,         ; # bloom-filter -the bloom filter for a publication
+  ? 7 => sub-flags,          ; # sub-flags - indicates delta or mute
+  ? 8 => uuid,               ; # mesh-id - the mesh ID
+  ? 9 => bit-vector,         ; # needs - the needs bit vector
+  ? 10 => bit-vector,        ; # interests - the interests bit vector
+  ? 11 => [ + topic: tstr ], ; # topics - the topic strings
+  ? 12 => bstr               ; # data - payload data
+)
+@endverbatim
+
+The description of each message type includes what fields are
+mandatory or optional for each section.
+
+@subsection uuid UUID
+UUIDs identify publications and are also used as key identifiers for
+encrypted messages.
+
+@verbatim
+uuid = bstr .size 16
+@endverbatim
+
+@subsection  bit-vector-encoding Bit vector encoding
+The bit vector encoding includes control flags, the bit vector length
+expressed in bits and the raw or run-length encoded bit vector data.
+
+@verbatim
+bit-vector = [
+  flags: uint .bits bit-vector-flags, ; # bit vector control flags
+  len: uint,                          ; # bit vector length in bits
+  bits: bstr                          ; # raw or rle-encoded bit vector
+]
+@endverbatim
+
+@subsection bit-vector-control-flags Bit vector control flags
+Bits vectors are usually run-length encoded unless the raw unencoded
+bit vector is more compact than the rle-encoded representation. The
+rle-encoded flag indicates if the bit vector is encoded or raw.
+
+The rle-complement flags indicates if the complement of the bit vector
+was was encoded. The bit vector complement is encoded if this results
+in a more compact encoding. This flag is only useful with run-length
+encoding.
+
+@verbatim
+bit-vector-flags = &(
+  rle-encoded: 1,
+  rle-complement: 2
+)
+@endverbatim
+
+@subsection subscription-flags Subscription flags
+
+@verbatim
+sub-flags = &(
+  delta: 1,        ; # indicate interests is a delta
+  mute: 2          ; # mute has been indicated
+)
+@endverbatim
+
+@section publication-message Publication message
+
+@verbatim
+pub = 1
+@endverbatim
+
+@em port and @em ttl are mandatory in the @em unprotected section.
+
+@em ttl, @em pub-id, @em seq-num, @em ack-req and @em bloom-filter are
+mandatory in the @em protected section.
+
+@em topics and @em data are mandatory in the @em encrypted section.
+
+@section subscription-message Subscription message
+
+@verbatim
+sub = 2
+@endverbatim
+
+@em port and @em seq-num are mandatory in the @em unprotected section.
+
+Additionally, in a regular subscription message, @em sub-flags, @em
+mesh-id, @em needs and @em interests are mandatory in the @em
+unprotected section.  In an unlink subscription message those fields
+shall be absent.
+
+@section acknowledgement-message Acknowledgement message
+
+@verbatim
+ack = 3
+@endverbatim
+
+@em pub-id and @em seq-num are mandatory in the @em protected section.
+
+@em data is optional in the @em encrypted section.
+
+@section subscription-acknowledgement-message Subscription acknowledgement message
+
+@verbatim
+sak = 4
+@endverbatim
+
+@em port and @em seq-num are mandatory in the @em unprotected section.
+ */

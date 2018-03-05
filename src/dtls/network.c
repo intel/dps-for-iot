@@ -1265,7 +1265,7 @@ static void RxHandleClosed(uv_handle_t* handle)
     free(handle->data);
 }
 
-DPS_NetContext* DPS_NetStart(DPS_Node* node, int port, DPS_OnReceive cb)
+DPS_NetContext* DPS_NetStart(DPS_Node* node, uint16_t port, DPS_OnReceive cb)
 {
     int ret;
     DPS_NetContext* netCtx;
