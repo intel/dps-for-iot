@@ -104,44 +104,44 @@ message = [
   },
   / protected (aad) / {
     / ttl / 2: 0,
-    / pub-id / 3: h'17003AE54085EE56F735764C7631CE61',
+    / pub-id / 3: h'C032D05B68D077BF53B4B1F356C05205',
     / seq-num / 4: 1,
     / ack-req / 5: false,
-    / bloom-filter / 6: [1, 8192, h'002817805F00982A']
+    / bloom-filter / 6: [1, 8192, h'00EC1780B702403900']
   },
   / encrypted (COSE_Encrypt_Tagged) / 96(
     [
       / protected / h'A101181E' / {
-          \ alg \ 1: 30 \ AES-CCM-16-128-128 \
+          \ alg \ 1: 3 \ A256GCM \
         } /,
       / unprotected / {
-        / iv / 5: h'0100000017003AE54085EE56F7',
+        / iv / 5: h'010000004032D05B68D077BF',
         / countersign / 7: [
-          / protected / h'A10126' /
-              \ alg \ 1: -7 \ ECDSA 256 \
+          / protected / h'A1013823' /
+              \ alg \ 1: -36 \ ECDSA 512 \
             } /,
           / unprotected / {
             / kid / 4: h'4450532054657374205075626C6973686572'
           },
-          / signature / h'1F14BDB559BB24A50B1C1ECA91938C445CFF64C4A24F075A6105B4679D19AEE439413AD30BE4C6C402031B2B04E7D6C2E4B2BA6A4C788E5C7DDE805654CA38CE'
+          / signature / h'017AA18776B87F9D39954F2DD8F8E74490B9B2EEA9092D73E6E35AB42485E4852B3C300A9DD39D1E19D4D47390AAE6DAA3FA80A5B71626B98E502E41EE019882FF250167096A3C25BD0BE4D56D8AA1D7ECB6089BDE0696B8F0D6C025AED2C448584E7DFA5DC95D8A5C28C2615FFD9F41AE7BEC541443CB3DAA04FC498A703F346572D31A'
         ]
       },
-      / ciphertext / h'457C20BF6EB818AD98C4D820EFD2B017CACE97C47144E3D6',
+      / ciphertext / h'C2DE85C0D3B991845A5B473D82CE176B4D2A16101FCC0BEE9E16783A',
       / recipients / [
         [
-          / protected / h'A101381C' / {
-              \ alg \ 1: -29 \ ECDH-ES+A128KW \
+          / protected / h'A101381E' / {
+              \ alg \ 1: -31 \ ECDH-ES+A256KW \
             } /,
           / unprotected / {
             / ephemeral / -1: {
               / kty / 1: 2,
-              / crv / -1: 1,
-              / x / -2: h'B34D696D855245BB79FCC8F0A328F37B7CC935803DAEC9EBAB97F061A68444E1',
-              / y / -3: h'CDF27464CDC3A65DA7EC37139C354940E219A5E55D1A28265A015B2D0A47F72F'
+              / crv / -1: 3,
+              / x / -2: h'00EFB0BDE7232A0D84C82A484104434D5866144F39D5C40F54985E13758A87E168C0004506C9D2B8D145FFD7AD90766A0BC5401EC0059339FC722FCA314019345571',
+              / y / -3: h'00730F02A10FB0F669336487BE43C90B48BAB29E3B6637EABC352DA35B0B3576190D9A3A7A35832D3D75FA1EA24CC08418B7B04B27FF0C54EA0A23BD77EEAB077641'
             },
             / kid / 4: h'44505320546573742053756273637269626572'
           },
-          / ciphertext / h'CF83EEA4B372FC210A374E44F040EEFA345C569C2D74A322'
+          / ciphertext / h'6C4832AE0347DD478D1D9E609FE37DB6BA21F5487CD9342256DEAB6813BEE62E88C24450FF55B4CF'
         ]
       ]
     ]
