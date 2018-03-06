@@ -1,0 +1,18 @@
+#!/bin/bash
+#
+# run dtls_fuzzer for all server and client steps in parallel
+#
+
+function cleanup {
+    kill $(jobs -rp)
+}
+trap cleanup EXIT
+
+for step in {0..6}; do
+    ./build/test/bin/dtls_fuzzer server $step test/corpus_dtls_server_$step test/seed_corpus/dtls_server_$step &
+done
+for step in {0..7}; do
+    ./build/test/bin/dtls_fuzzer client $step test/corpus_dtls_client_$step test/seed_corpus/dtls_client_$step &
+done
+
+wait $(jobs -rp) 2>/dev/null

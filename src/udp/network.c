@@ -33,7 +33,6 @@
  */
 DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
-
 #define MAX_READ_LEN   4096
 
 struct _DPS_NetContext {

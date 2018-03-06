@@ -1,0 +1,31 @@
+#!/usr/bin/python
+#
+# ./corpus_pcap --dir ./corpus dps.pcapng
+#
+# dps.pcapng should contain only DPS packets.  For example:
+#
+# Capture packets from a run of the tests:
+# $ tcpdump -i any -p -s 0 -w dps.tcpdump
+# $ ./test_scripts/run
+#
+# Filter multicast DPS packets:
+# $ tshark -r dps.tcpdump -w dps.pcapng 'coap'
+#
+# Filter unicast DPS packets:
+# $ tshark -r dps.tcpdump -w dps.pcapng 'udp[8:2]==85:01 and not icmp'
+#
+
+import argparse
+import os
+import tempfile
+from scapy.all import *
+
+parser = argparse.ArgumentParser()
+parser.add_argument('-d', '--dir', default='.', help='Output directory')
+parser.add_argument('pcapng', default='dps.pcapng', help='Input pcapng file')
+args = parser.parse_args()
+
+pcapng = rdpcap(args.pcapng)
+for packet in pcapng:
+    with tempfile.NamedTemporaryFile(suffix='.dat', prefix='dps_msg_', dir=args.dir, delete=False) as file:
+        file.write(bytes(packet[UDP].payload))

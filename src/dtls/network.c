@@ -163,6 +163,9 @@ typedef struct _DPS_NetConnection {
 
 struct _DPS_NetContext {
     uv_udp_t rxSocket;
+    uv_udp_recv_cb dataCB;
+    uint32_t handshakeTimeoutMin;
+    uint32_t handshakeTimeoutMax;
     DPS_Node* node;
     DPS_OnReceive receiveCB;
     DPS_NetConnection* cns;
@@ -802,6 +805,7 @@ static DPS_NetConnection* CreateConnection(DPS_Node* node, const struct sockaddr
     }
     mbedtls_ssl_conf_dbg(&cn->conf, OnTLSDebug, NULL);
     mbedtls_ssl_conf_rng(&cn->conf, mbedtls_ctr_drbg_random, &cn->drbg);
+    mbedtls_ssl_conf_handshake_timeout(&cn->conf, netCtx->handshakeTimeoutMin, netCtx->handshakeTimeoutMax);
 
     memset(&request, 0, sizeof(request));
     request.keyStore = keyStore;
@@ -1163,7 +1167,7 @@ static void AllocBuffer(uv_handle_t* handle, size_t suggestedSize, uv_buf_t* buf
     }
 }
 
-static void OnData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, const struct sockaddr* addr, unsigned flags)
+static void OnUdpData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, const struct sockaddr* addr, unsigned flags)
 {
     DPS_NetContext* netCtx = socket->data;
     PendingRead* pr = NULL;
@@ -1259,6 +1263,12 @@ static void OnData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, const s
     DPS_DestroyAddress(nodeAddr);
 }
 
+static void OnData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, const struct sockaddr* addr, unsigned flags)
+{
+    DPS_NetContext* netCtx = socket->data;
+    return netCtx->dataCB(socket, nread, buf, addr, flags);
+}
+
 static void RxHandleClosed(uv_handle_t* handle)
 {
     DPS_DBGPRINT("Closed Rx handle %p\n", handle);
@@ -1283,6 +1293,9 @@ DPS_NetContext* DPS_NetStart(DPS_Node* node, uint16_t port, DPS_OnReceive cb)
         free(netCtx);
         return NULL;
     }
+    netCtx->dataCB = OnUdpData;
+    netCtx->handshakeTimeoutMin = MBEDTLS_SSL_DTLS_TIMEOUT_DFL_MIN;
+    netCtx->handshakeTimeoutMax = MBEDTLS_SSL_DTLS_TIMEOUT_DFL_MAX;
     netCtx->node = node;
     netCtx->receiveCB = cb;
     ret = uv_ip6_addr("::", port, (struct sockaddr_in6*)&addr);
@@ -1454,4 +1467,21 @@ void DPS_NetConnectionDecRef(DPS_NetConnection* cn)
             DestroyConnection(cn);
         }
     }
+}
+
+uv_udp_recv_cb Fuzz_OnData(DPS_Node* node, uv_udp_recv_cb cb)
+{
+    DPS_NetContext* netCtx = node->netCtx;
+    uv_udp_recv_cb ret;
+
+    /*
+     * Shorten the handshake timeouts so that fuzzing can proceed
+     * rapidly
+     */
+    netCtx->handshakeTimeoutMin = 10;
+    netCtx->handshakeTimeoutMax = 100;
+
+    ret = netCtx->dataCB;
+    netCtx->dataCB = cb;
+    return ret;
 }

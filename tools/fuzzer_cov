@@ -1,0 +1,35 @@
+#!/bin/sh
+#
+# run all existing corpus with coverage and generate report in fuzzer_cov directory
+#
+# example:
+# $ rm *.profraw
+# $ scons ... transport=fuzzer cov=yes
+# $ ./fuzzer_cov
+# $ scons ... transport=dtls cov=yes
+# $ USE_DTLS=1 ./fuzzer_cov
+#
+
+USE_DTLS=${USE_DTLS:-0}
+
+LLVM_PROFILE_FILE="%p.profraw"
+
+if [ $USE_DTLS -eq 0 ]; then
+    find test/corpus_cbor -type f | xargs ./build/test/bin/cbor_fuzzer &
+    find test/corpus_multicast -type f | xargs ./build/test/bin/multicast_receive_fuzzer &
+    find test/corpus_unicast -type f | xargs ./build/test/bin/net_receive_fuzzer &
+fi
+
+if [ $USE_DTLS -ne 0 ]; then
+    for step in {0..6}; do
+	find test/corpus_dtls_server_$step -type f | xargs ./build/test/bin/dtls_fuzzer server $step &
+    done
+    for step in {0..7}; do
+	find test/corpus_dtls_client_$step -type f | xargs ./build/test/bin/dtls_fuzzer client $step &
+    done
+fi
+
+wait
+
+llvm-profdata merge -sparse *.profraw -o fuzzer.profdata
+llvm-cov show ./build/dist/lib/libdps_shared.so -instr-profile=fuzzer.profdata --format=html --output-dir=fuzzer_cov --show-instantiation-summary --show-region-summary --stats
