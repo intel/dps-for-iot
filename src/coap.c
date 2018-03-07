@@ -103,6 +103,9 @@ DPS_Status CoAP_Parse(const uint8_t* buffer, size_t bufLen, CoAP_Parsed* coap, D
     coap->msgId = buffer[2] << 8 | buffer[3];
     bufLen -= 4;
     buffer += 4;
+    if (bufLen < coap->tokenLen) {
+        return DPS_ERR_INVALID;
+    }
     if (coap->tokenLen) {
         if (memcpy_s(coap->token, sizeof(coap->token), buffer, coap->tokenLen) != EOK) {
             return DPS_ERR_INVALID;
