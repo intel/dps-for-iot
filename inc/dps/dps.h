@@ -39,8 +39,6 @@
 extern "C" {
 #endif
 
-#define A_SIZEOF(a)  (sizeof(a) / sizeof((a)[0])) /**< Helper macro to compute array size */
-
 #define DPS_TRUE  1 /**< TRUE boolean value */
 #define DPS_FALSE 0 /**< FALSE boolean value */
 
@@ -499,7 +497,7 @@ void* DPS_GetNodeData(const DPS_Node* node);
  *
  * @return DPS_OK or various error status codes
  */
-DPS_Status DPS_StartNode(DPS_Node* node, int mcastPub, int listenPort);
+DPS_Status DPS_StartNode(DPS_Node* node, int mcastPub, uint16_t listenPort);
 
 /**
  * Function prototype for callback function called when a node is destroyed.
@@ -575,7 +573,7 @@ typedef void (*DPS_OnLinkComplete)(DPS_Node* node, DPS_NodeAddress* addr, DPS_St
  * @param addr   The address of the remote node to link to
  * @param cb     The callback function to call on completion, can be NULL which case the function is synchronous
  * @param data   Application data to be passed to the callback
-
+ *
  * @return DPS_OK or an error status. If an error status is returned the callback function will not be called.
  */
 DPS_Status DPS_Link(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnLinkComplete cb, void* data);

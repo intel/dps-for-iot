@@ -6,7 +6,7 @@ libdir=${prefix}/build/dist/lib
 includedir=${prefix}/inc
 
 Name: dps_ns3
-Description: Distributed PubSub
+Description: Distributed Publish & Subscribe for IoT
 Version: @VERSION@
 Requires:
 Libs: -L${libdir} -ldps_ns3

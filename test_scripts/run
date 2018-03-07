@@ -23,6 +23,7 @@ TESTS="./build/test/bin/cbortest \
        ./test_scripts/tree0 \
        ./test_scripts/tree1 \
        ./test_scripts/tree2 \
+       ./test_scripts/tutorial \
        ./test_scripts/versioning"
 BINDINGS_TESTS="./py_scripts/subs_tree.py \
                 ./test_scripts/retained_py \

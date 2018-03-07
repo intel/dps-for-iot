@@ -1272,7 +1272,7 @@ static void StopNodeTask(uv_async_t* handle)
     uv_stop(handle->loop);
 }
 
-DPS_Status DPS_StartNode(DPS_Node* node, int mcast, int rxPort)
+DPS_Status DPS_StartNode(DPS_Node* node, int mcast, uint16_t rxPort)
 {
     DPS_Status ret = DPS_OK;
     int r;
@@ -1566,12 +1566,17 @@ void DPS_MakeNonce(const DPS_UUID* uuid, uint32_t seqNum, uint8_t msgType, uint8
 
 DPS_KeyId* DPS_CopyKeyId(DPS_KeyId* dest, const DPS_KeyId* src)
 {
-    dest->id = malloc(src->len);
-    if (!dest->id) {
-        return NULL;
+    if (src->len) {
+        dest->id = malloc(src->len);
+        if (!dest->id) {
+            return NULL;
+        }
+        dest->len = src->len;
+        memcpy_s((uint8_t*)dest->id, dest->len, src->id, src->len);
+    } else {
+        dest->id = NULL;
+        dest->len = 0;
     }
-    dest->len = src->len;
-    memcpy_s((uint8_t*)dest->id, dest->len, src->id, src->len);
     return dest;
 }
 

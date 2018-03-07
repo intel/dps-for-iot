@@ -1,0 +1,146 @@
+/**
+@page building-and-running Building and Running
+@tableofcontents
+
+@section prerequisites Prerequisites
+
+@subsection prerequisites-linux Linux
+
+- gcc or clang
+
+- [SCons](http://scons.org/pages/download.html)
+
+- libuv is used by node.js so packages are available for many
+distributions but note that DPS requires libuv 1.7 or later so it may
+be necessary to build libuv from source. [libuv source code on
+GitHub.](https://github.com/libuv)
+
+- [SWIG](http://www.swig.org/download.html)
+
+@subsection prerequisites-windows Windows
+- [Visual Studio](https://www.visualstudio.com/downloads/)
+
+  Note: In Visual Studio 2015, Visual C++ is not installed by default.
+  When installing, be sure to choose <strong>Custom</strong>
+  installation and then choose the C++ components you require. Or, if
+  Visual Studio is already installed, choose <strong>File | New |
+  Project | C++</strong> and you will be prompted to install the
+  necessary components.
+
+- [Latest Python 2.7 Release](https://www.python.org/downloads/windows/)
+
+- [SCons](http://scons.org/pages/download.html)
+
+  Note: The SCons installer will not detect the 64-bit installation of
+  Python.  Instead, download the zip file and follow the installation
+  instructions in SCons README.txt.
+
+- [libuv](http://dist.libuv.org/dist/)
+
+- [SWIG](http://www.swig.org/download.html)
+
+@subsection prerequisites-yocto Yocto
+Yocto Project through the OpenEmbedded build system provides an open
+source development environment targeting the ARM, MIPS, PowerPC and
+x86 architectures for a variety of platforms including x86-64 and
+emulated ones.
+
+- [Yocto git](https://git.yoctoproject.org/)
+
+- [Yocto Project Quick Start](http://www.yoctoproject.org/docs/1.8/yocto-project-qs/yocto-project-qs.html)
+
+- [Yocto libuv](https://layers.openembedded.org/layerindex/recipe/32082/)
+
+@subsection prerequisites-documentation Documentation
+
+The C API documentation is generated using Doxygen. The Python (pydoc)
+and JavaScript API (JSDoc) documentation is generated from the Doxygen
+output.
+
+Doxygen can be downloaded from here:
+[Doxygen](http://www.stack.nl/~dimitri/doxygen/download.html)
+
+Building the documentation requires the scons
+[DoxygenBuilder](https://bitbucket.org/scons/scons/wiki/DoxygenBuilder)
+tool.  This [page](https://bitbucket.org/scons/scons/wiki/ToolsIndex)
+has instructions on how to install the builder.
+
+@section building Building
+
+@subsection building-linux-and-windows Linux and Windows
+To build the DPS libraries, examples, bindings, and documentation run
+@c scons.
+
+@verbatim
+$ scons [variant=debug|release] [transport=udp|tcp|dtls] [bindings=all|none]
+@endverbatim
+
+To build with a different compiler use the @c CC and @c CXX build
+options.
+
+@verbatim
+$ scons CC=clang CXX=clang++
+@endverbatim
+
+To see the complete list of build options run <tt>scons --help</tt>.
+The default build configuration is <tt>variant=release transport=udp
+bindings=all</tt>.
+
+@note A limitation of the current implementation is that the transport
+must be configured at compile time.
+
+The scons script pulls down source code from two external projects
+(mbedtls, and safestringlib) into the <tt>./ext</tt> directory. If
+necessary these projects can be populated manually:
+
+@verbatim
+$ git clone https://github.com/ARMmbed/mbedtls ext/mbedtls
+$ git clone https://github.com/01org/safestringlib.git ext/safestring
+@endverbatim
+
+@note The ext projects are populated the first time DPS is built. To
+update these projects you need to manually do a <tt>git pull</tt> or
+delete the project directory and rerun scons.
+
+@subsection building-yocto Yocto
+Clone the poky repository and configure the Yocto environment.  Refer
+to [Yocto Project Quick
+Start](http://www.yoctoproject.org/docs/1.8/yocto-project-qs/yocto-project-qs.html)
+for more information.
+
+Clone the libuv Yocto project and yocto/recipes-connectivity/dps to
+the Yocto Project directory.  Modify the value of SRCREV_dps in
+dps_git.bb to the last commit of dps.
+
+The Yocto Project directory needs to be included in BBLAYERS of
+conf/bblayers.conf.  Refer to [Yocto
+Wiki](https://wiki.yoctoproject.org/wiki/How_do_I) for more
+information.
+
+From the root directory of the Yocto Project, initialize the Yocto
+environment, provide a meaningful build directory name and build Yocto
+DPS.
+
+@verbatim
+$ source oe-init-build-env mybuilds
+$ bitbake dps
+@endverbatim
+
+@section running Running
+
+@subsection running-examples Examples
+
+There are C, Python, and JS (node.js) examples.
+
+The C examples are found in <tt>./examples</tt>, the Python examples
+are in <tt>./py_scripts</tt> and the JS examples are in
+<tt>./js_scripts</tt>.
+
+The C examples are installed in <tt>./build/dist/bin</tt>. There are some
+some test scripts in @c ./test_scripts that run some more complex
+scenarios using the example programs.  The test script @c tree1 builds
+a small mesh and shows how publications sent to any node in the mesh
+get forwarded to the matching subscribers.  The script @c reg1 uses
+the @c registry, @c reg_pubs, and @c reg_subs examples programs to
+build a dynamic mesh using the experimental discovery service.
+ */

@@ -745,7 +745,7 @@ static DPS_NetConnection* CreateConnection(DPS_Node* node, const struct sockaddr
     DPS_KeyStoreRequest request;
 
     if (!keyStore) {
-        DPS_ERRPRINT("Missing key store for PSK\n");
+        DPS_ERRPRINT("Missing key store\n");
         return NULL;
     }
 
@@ -1265,7 +1265,7 @@ static void RxHandleClosed(uv_handle_t* handle)
     free(handle->data);
 }
 
-DPS_NetContext* DPS_NetStart(DPS_Node* node, int port, DPS_OnReceive cb)
+DPS_NetContext* DPS_NetStart(DPS_Node* node, uint16_t port, DPS_OnReceive cb)
 {
     int ret;
     DPS_NetContext* netCtx;
