@@ -529,8 +529,11 @@ Exit:
     }
     DPS_TxBufferFree(&plainTextBuf);
     /* Publication topics will be invalid now if the publication was encrypted */
-    pub->numTopics = 0;
-    pub->topics = NULL;
+    if (pub->topics) {
+        free(pub->topics);
+        pub->numTopics = 0;
+        pub->topics = NULL;
+    }
     return ret;
 }
 
@@ -713,7 +716,7 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
     DPS_TxBufferFree(&pub->protectedBuf);
     DPS_TxBufferFree(&pub->encryptedBuf);
     /*
-     * The topics array has pointers into pub->protectedBuf which are now invalid
+     * The topics array has pointers into pub->encryptedBuf which are now invalid
      */
     if (pub->topics) {
         free(pub->topics);
