@@ -660,24 +660,21 @@ static DPS_Status RunLengthDecode(uint8_t* packed, size_t packedSize, chunk_t* b
              */
             val = current & ((1 << tz) - 1);
             /*
-             * The value is little-endian so we May need to do an endian swap
+             * The value is little-endian so we may need to do an endian swap
              */
 #ifdef ENDIAN_SWAP
             val = BSWAP_32(val);
 #endif
             num0 = val + ((1 << tz) - 1);
             bitPos += num0;
-            if (bitPos >= len) {
-                break;
-            }
             currentBits -= (1 + tz * 2);
             current >>= tz;
         }
+        if (bitPos >= len) {
+            return DPS_ERR_INVALID;
+        }
         SET_BIT(bits, bitPos);
         ++bitPos;
-    }
-    if (bitPos > len) {
-        return DPS_ERR_INVALID;
     }
     return DPS_OK;
 }
