@@ -1,0 +1,34 @@
+\hypertarget{event_8h}{}\section{event.\+h File Reference}
+\label{event_8h}\index{event.\+h@{event.\+h}}
+
+
+Signal and wait on application-\/created events.  
+
+
+\subsection*{Typedefs}
+\begin{DoxyCompactItemize}
+\item 
+typedef struct \+\_\+\+D\+P\+S\+\_\+\+Event \hyperlink{group__event_ga97617da1bac0e76646713b8665dfdd85}{D\+P\+S\+\_\+\+Event}
+\begin{DoxyCompactList}\small\item\em Opaque type for an event. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\subsection*{Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hyperlink{group__event_ga97617da1bac0e76646713b8665dfdd85}{D\+P\+S\+\_\+\+Event} $\ast$ \hyperlink{group__event_gac38abc1e32666d631a40049c90bc66d3}{D\+P\+S\+\_\+\+Create\+Event} ()
+\begin{DoxyCompactList}\small\item\em Create and initialize an event. \end{DoxyCompactList}\item 
+void \hyperlink{group__event_ga7539f700336357cd320d6b40eba59c63}{D\+P\+S\+\_\+\+Destroy\+Event} (\hyperlink{group__event_ga97617da1bac0e76646713b8665dfdd85}{D\+P\+S\+\_\+\+Event} $\ast$event)
+\begin{DoxyCompactList}\small\item\em Destroy an event and free resources. \end{DoxyCompactList}\item 
+void $\ast$ \hyperlink{group__event_gaba8fce0d0896df9b6f294112a251e39f}{D\+P\+S\+\_\+\+Get\+Event\+Data} (const \hyperlink{group__event_ga97617da1bac0e76646713b8665dfdd85}{D\+P\+S\+\_\+\+Event} $\ast$event)
+\begin{DoxyCompactList}\small\item\em Get the event application data. \end{DoxyCompactList}\item 
+void \hyperlink{group__event_ga23a814c5aaebf5bdddebac0ef5d295ce}{D\+P\+S\+\_\+\+Set\+Event\+Data} (\hyperlink{group__event_ga97617da1bac0e76646713b8665dfdd85}{D\+P\+S\+\_\+\+Event} $\ast$event, void $\ast$data)
+\begin{DoxyCompactList}\small\item\em Set the event application data. \end{DoxyCompactList}\item 
+void \hyperlink{group__event_gad0f8a3b372f972bfaa97e29fa01b5c82}{D\+P\+S\+\_\+\+Signal\+Event} (\hyperlink{group__event_ga97617da1bac0e76646713b8665dfdd85}{D\+P\+S\+\_\+\+Event} $\ast$event, \hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{D\+P\+S\+\_\+\+Status} status)
+\begin{DoxyCompactList}\small\item\em Signal an event. \end{DoxyCompactList}\item 
+\hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{D\+P\+S\+\_\+\+Status} \hyperlink{group__event_gacf62ac4adc9f8eaf088cdec6c273e930}{D\+P\+S\+\_\+\+Timed\+Wait\+For\+Event} (\hyperlink{group__event_ga97617da1bac0e76646713b8665dfdd85}{D\+P\+S\+\_\+\+Event} $\ast$event, uint16\+\_\+t timeout)
+\begin{DoxyCompactList}\small\item\em Wait for an event to be signalled with a timeout. \end{DoxyCompactList}\item 
+\hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{D\+P\+S\+\_\+\+Status} \hyperlink{group__event_gab2f3f1236cd100cd271c85191df650e8}{D\+P\+S\+\_\+\+Wait\+For\+Event} (\hyperlink{group__event_ga97617da1bac0e76646713b8665dfdd85}{D\+P\+S\+\_\+\+Event} $\ast$event)
+\begin{DoxyCompactList}\small\item\em Wait for an event to be signalled. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Signal and wait on application-\/created events. 
+

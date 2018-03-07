@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=9"/>
 <meta name="generator" content="Doxygen 1.8.13"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Distributed Publish Subscribe for IoT: Event</title>
+<title>Distributed Publish &amp; Subscribe for IoT: Event</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -28,7 +28,7 @@
  <tbody>
  <tr style="height: 56px;">
   <td id="projectalign" style="padding-left: 0.5em;">
-   <div id="projectname">Distributed Publish Subscribe for IoT
+   <div id="projectname">Distributed Publish &amp; Subscribe for IoT
    </div>
   </td>
  </tr>
@@ -92,8 +92,9 @@ $(document).ready(function(){initNavTree('group__event.html','');});
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="typedef-members"></a>
 Typedefs</h2></td></tr>
-<tr class="memitem:ga97617da1bac0e76646713b8665dfdd85"><td class="memItemLeft" align="right" valign="top">typedef struct _DPS_Event&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__event.html#ga97617da1bac0e76646713b8665dfdd85">DPS_Event</a></td></tr>
-<tr class="memdesc:ga97617da1bac0e76646713b8665dfdd85"><td class="mdescLeft">&#160;</td><td class="mdescRight">Opaque type for an event.  <a href="#ga97617da1bac0e76646713b8665dfdd85">More...</a><br /></td></tr>
+<tr class="memitem:ga97617da1bac0e76646713b8665dfdd85"><td class="memItemLeft" align="right" valign="top"><a id="ga97617da1bac0e76646713b8665dfdd85"></a>
+typedef struct _DPS_Event&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__event.html#ga97617da1bac0e76646713b8665dfdd85">DPS_Event</a></td></tr>
+<tr class="memdesc:ga97617da1bac0e76646713b8665dfdd85"><td class="mdescLeft">&#160;</td><td class="mdescRight">Opaque type for an event. <br /></td></tr>
 <tr class="separator:ga97617da1bac0e76646713b8665dfdd85"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
@@ -105,10 +106,10 @@ Functions</h2></td></tr>
 <tr class="memdesc:ga7539f700336357cd320d6b40eba59c63"><td class="mdescLeft">&#160;</td><td class="mdescRight">Destroy an event and free resources.  <a href="#ga7539f700336357cd320d6b40eba59c63">More...</a><br /></td></tr>
 <tr class="separator:ga7539f700336357cd320d6b40eba59c63"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gaba8fce0d0896df9b6f294112a251e39f"><td class="memItemLeft" align="right" valign="top">void *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__event.html#gaba8fce0d0896df9b6f294112a251e39f">DPS_GetEventData</a> (const <a class="el" href="group__event.html#ga97617da1bac0e76646713b8665dfdd85">DPS_Event</a> *event)</td></tr>
-<tr class="memdesc:gaba8fce0d0896df9b6f294112a251e39f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the event application data pointer.  <a href="#gaba8fce0d0896df9b6f294112a251e39f">More...</a><br /></td></tr>
+<tr class="memdesc:gaba8fce0d0896df9b6f294112a251e39f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the event application data.  <a href="#gaba8fce0d0896df9b6f294112a251e39f">More...</a><br /></td></tr>
 <tr class="separator:gaba8fce0d0896df9b6f294112a251e39f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga23a814c5aaebf5bdddebac0ef5d295ce"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__event.html#ga23a814c5aaebf5bdddebac0ef5d295ce">DPS_SetEventData</a> (<a class="el" href="group__event.html#ga97617da1bac0e76646713b8665dfdd85">DPS_Event</a> *event, void *data)</td></tr>
-<tr class="memdesc:ga23a814c5aaebf5bdddebac0ef5d295ce"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the event application data pointer.  <a href="#ga23a814c5aaebf5bdddebac0ef5d295ce">More...</a><br /></td></tr>
+<tr class="memdesc:ga23a814c5aaebf5bdddebac0ef5d295ce"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the event application data.  <a href="#ga23a814c5aaebf5bdddebac0ef5d295ce">More...</a><br /></td></tr>
 <tr class="separator:ga23a814c5aaebf5bdddebac0ef5d295ce"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gad0f8a3b372f972bfaa97e29fa01b5c82"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__event.html#gad0f8a3b372f972bfaa97e29fa01b5c82">DPS_SignalEvent</a> (<a class="el" href="group__event.html#ga97617da1bac0e76646713b8665dfdd85">DPS_Event</a> *event, <a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a> status)</td></tr>
 <tr class="memdesc:gad0f8a3b372f972bfaa97e29fa01b5c82"><td class="mdescLeft">&#160;</td><td class="mdescRight">Signal an event.  <a href="#gad0f8a3b372f972bfaa97e29fa01b5c82">More...</a><br /></td></tr>
@@ -122,23 +123,6 @@ Functions</h2></td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <p>Signal and wait on application-created events. </p>
-<h2 class="groupheader">Typedef Documentation</h2>
-<a id="ga97617da1bac0e76646713b8665dfdd85"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga97617da1bac0e76646713b8665dfdd85">&#9670;&nbsp;</a></span>DPS_Event</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">typedef struct _DPS_Event <a class="el" href="group__event.html#ga97617da1bac0e76646713b8665dfdd85">DPS_Event</a></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Opaque type for an event. </p>
-
-</div>
-</div>
 <h2 class="groupheader">Function Documentation</h2>
 <a id="gac38abc1e32666d631a40049c90bc66d3"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#gac38abc1e32666d631a40049c90bc66d3">&#9670;&nbsp;</a></span>DPS_CreateEvent()</h2>
@@ -156,8 +140,8 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Create and initialize an event. </p>
-<dl><dt><b>Examples: </b></dt><dd><a class="el" href="pub_many_8c-example.html#a24">pub_many.c</a>, <a class="el" href="publisher_8c-example.html#a34">publisher.c</a>, <a class="el" href="reg_pubs_8c-example.html#a31">reg_pubs.c</a>, <a class="el" href="reg_subs_8c-example.html#a35">reg_subs.c</a>, <a class="el" href="registry_8c-example.html#a10">registry.c</a>, and <a class="el" href="subscriber_8c-example.html#a38">subscriber.c</a>.</dd>
-</dl>
+<dl class="section return"><dt>Returns</dt><dd>The created event, or NULL if creation failed </dd></dl>
+
 </div>
 </div>
 <a id="ga7539f700336357cd320d6b40eba59c63"></a>
@@ -183,8 +167,7 @@ Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
-<dl><dt><b>Examples: </b></dt><dd><a class="el" href="pub_many_8c-example.html#a26">pub_many.c</a>, <a class="el" href="publisher_8c-example.html#a39">publisher.c</a>, <a class="el" href="reg_pubs_8c-example.html#a36">reg_pubs.c</a>, <a class="el" href="reg_subs_8c-example.html#a40">reg_subs.c</a>, <a class="el" href="registry_8c-example.html#a16">registry.c</a>, and <a class="el" href="subscriber_8c-example.html#a47">subscriber.c</a>.</dd>
-</dl>
+
 </div>
 </div>
 <a id="gaba8fce0d0896df9b6f294112a251e39f"></a>
@@ -203,13 +186,14 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Get the event application data pointer. </p>
+<p>Get the event application data. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">event</td><td>The event to get the application data pointer from </td></tr>
+    <tr><td class="paramname">event</td><td>The event to get the application data from</td></tr>
   </table>
   </dd>
 </dl>
+<dl class="section return"><dt>Returns</dt><dd>The application data </dd></dl>
 
 </div>
 </div>
@@ -239,11 +223,11 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Set the event application data pointer. </p>
+<p>Set the event application data. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">event</td><td>The event to set an application data pointer on </td></tr>
-    <tr><td class="paramname">data</td><td>The data pointer to set </td></tr>
+    <tr><td class="paramname">event</td><td>The event to set an application data on </td></tr>
+    <tr><td class="paramname">data</td><td>The data to set </td></tr>
   </table>
   </dd>
 </dl>
@@ -284,8 +268,7 @@ Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
-<dl><dt><b>Examples: </b></dt><dd><a class="el" href="pub_many_8c-example.html#a1">pub_many.c</a>, <a class="el" href="publisher_8c-example.html#a1">publisher.c</a>, <a class="el" href="reg_pubs_8c-example.html#a1">reg_pubs.c</a>, <a class="el" href="reg_subs_8c-example.html#a1">reg_subs.c</a>, <a class="el" href="registry_8c-example.html#a0">registry.c</a>, and <a class="el" href="subscriber_8c-example.html#a1">subscriber.c</a>.</dd>
-</dl>
+
 </div>
 </div>
 <a id="gacf62ac4adc9f8eaf088cdec6c273e930"></a>
@@ -323,8 +306,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>The status passed to <a class="el" href="group__event.html#gad0f8a3b372f972bfaa97e29fa01b5c82" title="Signal an event. ">DPS_SignalEvent()</a> or DPS_ERR_TIMEOUT if the call timed out. </dd></dl>
-<dl><dt><b>Examples: </b></dt><dd><a class="el" href="publisher_8c-example.html#a35">publisher.c</a>, and <a class="el" href="subscriber_8c-example.html#a39">subscriber.c</a>.</dd>
-</dl>
+
 </div>
 </div>
 <a id="gab2f3f1236cd100cd271c85191df650e8"></a>
@@ -351,15 +333,14 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>The status passed to <a class="el" href="group__event.html#gad0f8a3b372f972bfaa97e29fa01b5c82" title="Signal an event. ">DPS_SignalEvent()</a> </dd></dl>
-<dl><dt><b>Examples: </b></dt><dd><a class="el" href="pub_many_8c-example.html#a25">pub_many.c</a>, <a class="el" href="publisher_8c-example.html#a38">publisher.c</a>, <a class="el" href="reg_pubs_8c-example.html#a35">reg_pubs.c</a>, <a class="el" href="reg_subs_8c-example.html#a39">reg_subs.c</a>, <a class="el" href="registry_8c-example.html#a15">registry.c</a>, and <a class="el" href="subscriber_8c-example.html#a46">subscriber.c</a>.</dd>
-</dl>
+
 </div>
 </div>
 </div><!-- contents -->
 </div><!-- doc-content -->
 <div class="navpath" id="nav-path">
   <ul>
-    <li class="footer" style="float:left"><b>Distributed PubSub Manual</b></li> <li class="footer">Generated Tue Feb 20 2018 10:23:50</li>
+    <li class="footer" style="float:left"><b>Distributed Publish & Subscribe for IoT</b></li> <li class="footer">Generated Wed Mar 7 2018 13:26:16</li>
   </ul>
 </div>
 </body>

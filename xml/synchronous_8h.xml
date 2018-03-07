@@ -1,0 +1,158 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.13">
+  <compounddef id="synchronous_8h" kind="file" language="C++">
+    <compoundname>synchronous.h</compoundname>
+    <includes refid="dps_8h" local="no">dps/dps.h</includes>
+    <incdepgraph>
+      <node id="63">
+        <label>dps/dps.h</label>
+        <link refid="dps_8h"/>
+        <childnode refid="64" relation="include">
+        </childnode>
+        <childnode refid="65" relation="include">
+        </childnode>
+        <childnode refid="66" relation="include">
+        </childnode>
+        <childnode refid="67" relation="include">
+        </childnode>
+        <childnode refid="68" relation="include">
+        </childnode>
+        <childnode refid="69" relation="include">
+        </childnode>
+      </node>
+      <node id="64">
+        <label>stdint.h</label>
+      </node>
+      <node id="67">
+        <label>dps/uuid.h</label>
+        <link refid="uuid_8h"/>
+        <childnode refid="64" relation="include">
+        </childnode>
+        <childnode refid="66" relation="include">
+        </childnode>
+      </node>
+      <node id="65">
+        <label>stddef.h</label>
+      </node>
+      <node id="62">
+        <label>synchronous.h</label>
+        <link refid="synchronous_8h"/>
+        <childnode refid="63" relation="include">
+        </childnode>
+      </node>
+      <node id="69">
+        <label>uv.h</label>
+      </node>
+      <node id="68">
+        <label>safe_lib.h</label>
+      </node>
+      <node id="66">
+        <label>dps/err.h</label>
+        <link refid="err_8h"/>
+      </node>
+    </incdepgraph>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="group__node_1ga0bd13b2bd395bbc7807ecc899a8862f1" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
+        <definition>DPS_Status DPS_LinkTo</definition>
+        <argsstring>(DPS_Node *node, const char *host, uint16_t port, DPS_NodeAddress *addr)</argsstring>
+        <name>DPS_LinkTo</name>
+        <param>
+          <type><ref refid="group__node_1ga4dd612ab965134321bb57fdb065f121c" kindref="member">DPS_Node</ref> *</type>
+          <declname>node</declname>
+        </param>
+        <param>
+          <type>const char *</type>
+          <declname>host</declname>
+        </param>
+        <param>
+          <type>uint16_t</type>
+          <declname>port</declname>
+        </param>
+        <param>
+          <type><ref refid="group__nodeaddress_1ga9e9f56aa38e82b4edcef7eb81e9f5bd2" kindref="member">DPS_NodeAddress</ref> *</type>
+          <declname>addr</declname>
+        </param>
+        <briefdescription>
+<para>Synchronous helper that wraps <ref refid="group__node_1ga5064c63b8ce76bf34402e0c80183234b" kindref="member">DPS_Link()</ref>. </para>        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>node</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The local node to link from </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>host</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The host name or IP address to link to. A NULL host indicates localhost. </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>port</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The port number </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>addr</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Returns the resolved address for the remote node</para></parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>DPS_OK if the link is successful, an error otherwise </para></simplesect>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/synchronous.h" line="52" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="group__node_1ga2d5bb0528c2a171991ad6355cbadac69" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
+        <definition>DPS_Status DPS_UnlinkFrom</definition>
+        <argsstring>(DPS_Node *node, DPS_NodeAddress *addr)</argsstring>
+        <name>DPS_UnlinkFrom</name>
+        <param>
+          <type><ref refid="group__node_1ga4dd612ab965134321bb57fdb065f121c" kindref="member">DPS_Node</ref> *</type>
+          <declname>node</declname>
+        </param>
+        <param>
+          <type><ref refid="group__nodeaddress_1ga9e9f56aa38e82b4edcef7eb81e9f5bd2" kindref="member">DPS_NodeAddress</ref> *</type>
+          <declname>addr</declname>
+        </param>
+        <briefdescription>
+<para>Synchronous helper that wraps <ref refid="group__node_1ga79c86c3c0c5d6438b953a9acaab0ab0b" kindref="member">DPS_Unlink()</ref>. </para>        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>node</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The local node to unlink from </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>addr</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The address of the remote node to unlink</para></parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>DPS_OK if the unlink is successful, an error otherwise </para></simplesect>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/synchronous.h" line="62" column="1"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+<para>Synchronous helpers. </para>    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/synchronous.h"/>
+  </compounddef>
+</doxygen>

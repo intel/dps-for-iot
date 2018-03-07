@@ -1,0 +1,671 @@
+The tutorials provide an introduction into the D\+PS A\+P\+Is. It\textquotesingle{}s recommended they be read in the order below and assumes some familiarity with pub/sub terminology.
+
+For compactness, the tutorials use the {\ttfamily a/b/c/d} topic string, where {\ttfamily a}, {\ttfamily b}, {\ttfamily c}, and {\ttfamily d} are the levels and {\ttfamily /} is the level separator, and strings for payload data. A real application would likely use more meaningful topic strings and structured payloads.
+
+
+\begin{DoxyItemize}
+\item \hyperlink{tutorials-hello-world}{Hello world}
+\item \hyperlink{tutorials-link}{Building a D\+PS network}
+\item \hyperlink{tutorials-security}{Securing the communications}
+\end{DoxyItemize}
+
+\begin{DoxySeeAlso}{See also}
+\hyperlink{index}{Introduction}, \hyperlink{topic-strings}{Topic Strings}, \hyperlink{mesh-network}{Mesh Network}, \hyperlink{security}{Security} 
+\end{DoxySeeAlso}
+\hypertarget{tutorials-hello-world}{}\section{Hello world}\label{tutorials-hello-world}
+\hypertarget{tutorials-hello-world_hello-world-prerequisites}{}\subsection{Prerequisites}\label{tutorials-hello-world_hello-world-prerequisites}
+
+\begin{DoxyCodeInclude}
+\textcolor{preprocessor}{#include <\hyperlink{dbg_8h}{dps/dbg.h}>}
+\textcolor{preprocessor}{#include <\hyperlink{dps_8h}{dps/dps.h}>}
+\end{DoxyCodeInclude}
+ The first step in creating a D\+PS application is to include the necessary header files.\hypertarget{tutorials-hello-world_creating-a-node}{}\subsection{Creating a node}\label{tutorials-hello-world_creating-a-node}
+
+\begin{DoxyCodeInclude}
+    \textcolor{keyword}{const} \textcolor{keywordtype}{char} *separators = \textcolor{stringliteral}{"/."};
+    \hyperlink{group__keystore_gaf3833cfe48f848f698514bc5daa075fa}{DPS\_KeyStore}* keyStore = NULL;
+    \textcolor{keyword}{const} \hyperlink{struct___d_p_s___key_id}{DPS\_KeyId}* keyId = NULL;
+    \hyperlink{group__node_ga4dd612ab965134321bb57fdb065f121c}{DPS\_Node}* node = \hyperlink{group__node_gaf6641b5bbf27b2c45ac7f926b0ce4efe}{DPS\_CreateNode}(separators, keyStore, keyId);
+    \textcolor{keywordflow}{if} (!node) \{
+        \textcolor{keywordflow}{goto} Exit;
+    \}
+\end{DoxyCodeInclude}
+ Each entity in D\+PS is represented by a {\ttfamily D\+P\+S\+\_\+\+Node}. The node may be a publisher, subscriber, both, or neither. For this example, we\textquotesingle{}re going to be creating publisher and subscriber nodes.
+
+Creating a node requires three parameters\+: the topic separators, a key store, and a key identifier. For now we\textquotesingle{}re only concerned with the separators. Key stores and identifiers are covered later when discussing how to secure communications.
+
+The separators parameter is a string containing the characters used as topic level separators. Providing {\ttfamily /}. as the separators parameter value allows both {\ttfamily /} and {\ttfamily }. as separators.
+
+\begin{DoxySeeAlso}{See also}
+\hyperlink{group__node_gad19cf4272ba11e935654175c83db2ce1}{D\+P\+S\+\_\+\+Set\+Node\+Data()}, \hyperlink{group__node_ga65bba7bcfe5e940b153fcced4e2e8880}{D\+P\+S\+\_\+\+Get\+Node\+Data()}
+\end{DoxySeeAlso}
+\hypertarget{tutorials-hello-world_starting-a-node}{}\subsection{Starting a node}\label{tutorials-hello-world_starting-a-node}
+
+\begin{DoxyCodeInclude}
+    \textcolor{keywordtype}{int} mcastPub = \hyperlink{group__node_ga178a3a6450eeff450820fa34fd82049c}{DPS\_MCAST\_PUB\_ENABLE\_SEND} | 
+      \hyperlink{group__node_gae493573fb2e02b87258952223eb4fcd7}{DPS\_MCAST\_PUB\_ENABLE\_RECV};
+    uint16\_t listenPort = 0;
+    \hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{DPS\_Status} ret = \hyperlink{group__node_ga160d504bfaeb0d3711e0259000340fe3}{DPS\_StartNode}(node, mcastPub, listenPort);
+    \textcolor{keywordflow}{if} (ret != \hyperlink{group__status_ga0ea3dd37bc558859ae0cb5a4f79a4bdd}{DPS\_OK}) \{
+        \textcolor{keywordflow}{goto} Exit;
+    \}
+\end{DoxyCodeInclude}
+ Once created, a node must be started. Starting a node enables it to begin sending and receiving D\+PS messages in the network.
+
+For this example, we are going to be sending and receiving multicast publications so we enable both and let D\+PS assign the listening port.
+
+\begin{DoxySeeAlso}{See also}
+\hyperlink{group__node_gac939c83361ed89086f37c78d9c9009dd}{D\+P\+S\+\_\+\+M\+C\+A\+S\+T\+\_\+\+P\+U\+B\+\_\+\+D\+I\+S\+A\+B\+L\+ED}, \hyperlink{group__node_gaf920b28fe0721a7f97b11673494d7b36}{D\+P\+S\+\_\+\+Get\+Port\+Number()}
+\end{DoxySeeAlso}
+\hypertarget{tutorials-hello-world_publishing}{}\subsection{Publishing}\label{tutorials-hello-world_publishing}
+\hypertarget{tutorials-hello-world_creating-a-publication}{}\subsubsection{Creating a publication}\label{tutorials-hello-world_creating-a-publication}
+
+\begin{DoxyCodeInclude}
+    \hyperlink{group__publication_ga0d439693474aa54e27f3d45a054696ac}{DPS\_Publication}* pub = \hyperlink{group__publication_gaca070a96a6374e99a05d647c10737962}{DPS\_CreatePublication}(node);
+    \textcolor{keywordflow}{if} (!pub) \{
+        \textcolor{keywordflow}{goto} Exit;
+    \}
+    \textcolor{keyword}{const} \textcolor{keywordtype}{char}* topics[] = \{
+        \textcolor{stringliteral}{"a/b/c/d"}
+    \};
+    \textcolor{keywordtype}{size\_t} numTopics = A\_SIZEOF(topics);
+    \textcolor{keywordtype}{int} noWildCard = \hyperlink{dps_8h_ad8b397975a479b996ef223367d8835a9}{DPS\_FALSE};
+    ret = \hyperlink{group__publication_ga7b0709e28cb34d5a30b90e4142cd6c19}{DPS\_InitPublication}(pub, topics, numTopics, noWildCard, NULL, NULL);
+    \textcolor{keywordflow}{if} (ret != \hyperlink{group__status_ga0ea3dd37bc558859ae0cb5a4f79a4bdd}{DPS\_OK}) \{
+        \textcolor{keywordflow}{goto} Exit;
+    \}
+\end{DoxyCodeInclude}
+ Each publication in D\+PS is represented by a {\ttfamily D\+P\+S\+\_\+\+Publication}. Each publication has a set of topics, a U\+U\+ID, and a sequence number. In this example we are creating a publication with one topic, {\ttfamily a/b/c/d}. The U\+U\+ID is assigned by D\+PS and the sequence number will be incremented each time we publish.
+
+The {\ttfamily no\+Wild\+Card} parameter is used by the publisher to control whether a subscription is required to match the publication\textquotesingle{}s topics exactly or can use wildcards to match the topics. If we set {\ttfamily no\+Wild\+Card} to {\ttfamily D\+P\+S\+\_\+\+T\+R\+UE} then only a subscription to {\ttfamily a/b/c/d} will receive this publication. This allows the publisher to prevent publications being sent to catchall subscriptions such as {\ttfamily +/\#}. Since we set {\ttfamily no\+Wild\+Card} to {\ttfamily D\+P\+S\+\_\+\+F\+A\+L\+SE} here, subscriptions to {\ttfamily a/\#}, {\ttfamily a/+/+/d}, or similar variations will receive this publication.
+
+Both the publication\textquotesingle{}s key identifier and acknowledgement handler are set to {\ttfamily N\+U\+LL} here; they are covered in later sections.
+
+\begin{DoxySeeAlso}{See also}
+\hyperlink{group__publication_ga91c46ccb6df7f4bb99ca5d9d35cc5a4a}{D\+P\+S\+\_\+\+Set\+Publication\+Data()}, \hyperlink{group__publication_gaa8bee35089ac62289c9ba0e6a0568ca0}{D\+P\+S\+\_\+\+Get\+Publication\+Data()}, \hyperlink{group__publication_gad2a37d52f12c93434b431eefd732f363}{D\+P\+S\+\_\+\+Publication\+Get\+Node()}, \hyperlink{group__publication_gaba1ad3ee807b75a1281d334be06a12f7}{D\+P\+S\+\_\+\+Publication\+Get\+U\+U\+I\+D()}, \hyperlink{group__publication_ga875b48217d861d4a9fa5471419d354e9}{D\+P\+S\+\_\+\+Publication\+Get\+Sequence\+Num()}
+\end{DoxySeeAlso}
+\hypertarget{tutorials-hello-world_sending-a-publication}{}\subsubsection{Sending a publication}\label{tutorials-hello-world_sending-a-publication}
+
+\begin{DoxyCodeInclude}
+    \textcolor{keyword}{const} \textcolor{keywordtype}{char}* payload = \textcolor{stringliteral}{"Hello"};
+    \textcolor{keywordtype}{size\_t} numPayloadBytes = strlen(payload) + 1;
+    int16\_t ttl = 0;
+    ret = \hyperlink{group__publication_ga828a4efc5c235c48a81f6460cc3fe416}{DPS\_Publish}(pub, (\textcolor{keyword}{const} uint8\_t*)payload, numPayloadBytes, ttl);
+    \textcolor{keywordflow}{if} (ret != \hyperlink{group__status_ga0ea3dd37bc558859ae0cb5a4f79a4bdd}{DPS\_OK}) \{
+        \textcolor{keywordflow}{goto} Exit;
+    \}
+\end{DoxyCodeInclude}
+ Once created and initialized with a set of topics, application payloads may be sent. Payload data is simply an array of bytes in D\+PS, no assumptions are made with regards to the payload format.
+
+In this example the {\ttfamily ttl} parameter is zero, indicating that the publication will be sent best-\/effort to all active subscribing nodes. A non-\/zero ttl is referred to as a retained publication and is covered later.
+
+A publisher may send additional publications via the same {\ttfamily D\+P\+S\+\_\+\+Publication}. Each additional send increments the sequence number of the publication.\hypertarget{tutorials-hello-world_subscribing}{}\subsection{Subscribing}\label{tutorials-hello-world_subscribing}
+\hypertarget{tutorials-hello-world_creating-a-subscription}{}\subsubsection{Creating a subscription}\label{tutorials-hello-world_creating-a-subscription}
+
+\begin{DoxyCodeInclude}
+    \textcolor{keyword}{const} \textcolor{keywordtype}{char}* topics[] = \{
+        \textcolor{stringliteral}{"a/b/c/d"}
+    \};
+    \textcolor{keywordtype}{size\_t} numTopics = A\_SIZEOF(topics);
+    \hyperlink{group__subscription_gadb927c4c1b7306867a75fc4288b54af7}{DPS\_Subscription}* sub = \hyperlink{group__subscription_ga4095bb00bd0ca7fa9614ebbc2c28199f}{DPS\_CreateSubscription}(node, topics, 
+      numTopics);
+    \textcolor{keywordflow}{if} (!sub) \{
+        \textcolor{keywordflow}{goto} Exit;
+    \}
+\end{DoxyCodeInclude}
+ Each subscription in D\+PS is represented by a {\ttfamily D\+P\+S\+\_\+\+Subscription}. In this example we are creating a subscription with one topic with no wildcards, {\ttfamily a/b/c/d}.
+
+Wildcards may be used to match a broader set of topics. A {\ttfamily +} matches any single topic level, and a {\ttfamily \#} matches all topic levels from that level on. In this instance since the publisher is allowing wildcard matching, the subscriber could use either {\ttfamily a/b/+/d} or {\ttfamily a/\#} (among others) as the topic and still receive the publication.
+
+A subscription may also be created with multiple topics. The publication must include {\itshape all} of the topics to be received.
+
+\begin{DoxySeeAlso}{See also}
+\hyperlink{group__subscription_gad581d341003e20c714061e44b57c2009}{D\+P\+S\+\_\+\+Set\+Subscription\+Data()}, \hyperlink{group__subscription_ga88ab2284734f099ef67bcc60997142b3}{D\+P\+S\+\_\+\+Get\+Subscription\+Data()}, \hyperlink{group__subscription_gafea65751c811555736c8c65fcb3a9480}{D\+P\+S\+\_\+\+Subscription\+Get\+Node()}
+\end{DoxySeeAlso}
+\hypertarget{tutorials-hello-world_receiving-a-publication}{}\subsubsection{Receiving a publication}\label{tutorials-hello-world_receiving-a-publication}
+
+\begin{DoxyCodeInclude}
+        ret = \hyperlink{group__subscription_ga83234ea82a91e07e3f5894a4dcf5267e}{DPS\_Subscribe}(sub, PublicationHandler);
+        \textcolor{keywordflow}{if} (ret != \hyperlink{group__status_ga0ea3dd37bc558859ae0cb5a4f79a4bdd}{DPS\_OK}) \{
+            \textcolor{keywordflow}{goto} Exit;
+        \}
+\end{DoxyCodeInclude}
+ Publications are received asynchronously. The first step in receiving a publication is to provide the publication handler to D\+PS and start the subscription. The publication handler will be called for each received publication.
+
+\begin{DoxyNote}{Note}
+Each instance of {\ttfamily D\+P\+S\+\_\+\+Node} creates and runs its own thread. The lifetime of this thread is the same as the lifetime of the node. The publication handler is dispatched from this thread.
+\end{DoxyNote}
+
+\begin{DoxyCodeInclude}
+\textcolor{keyword}{static} \textcolor{keywordtype}{void} PublicationHandler(\hyperlink{group__subscription_gadb927c4c1b7306867a75fc4288b54af7}{DPS\_Subscription}* sub, \textcolor{keyword}{const} 
+      \hyperlink{group__publication_ga0d439693474aa54e27f3d45a054696ac}{DPS\_Publication}* pub,
+                               uint8\_t* payload, \textcolor{keywordtype}{size\_t} numPayloadBytes)
+\{
+    \textcolor{keywordtype}{size\_t} i;
+
+    \textcolor{keywordflow}{for} (i = 0; i < \hyperlink{group__subscription_gab0ad2c6806f8f44f27c70fff915b7e9a}{DPS\_SubscriptionGetNumTopics}(sub); ++i) \{
+        \textcolor{keyword}{const} \textcolor{keywordtype}{char}* topic = \hyperlink{group__subscription_gaacc63deda2f2d97cf3f44ca84784b2f6}{DPS\_SubscriptionGetTopic}(sub, i);
+        \hyperlink{group__debug_gaf1d25cc7f1d2d92f96ba620217af28fd}{DPS\_PRINT}(\textcolor{stringliteral}{"subscription topic[%ld]=%s\(\backslash\)n"}, i, topic);
+    \}
+
+    \textcolor{keyword}{const} \hyperlink{struct___d_p_s___u_u_i_d}{DPS\_UUID}* uuid = \hyperlink{group__publication_gaba1ad3ee807b75a1281d334be06a12f7}{DPS\_PublicationGetUUID}(pub);
+    \hyperlink{group__debug_gaf1d25cc7f1d2d92f96ba620217af28fd}{DPS\_PRINT}(\textcolor{stringliteral}{"uuid=%s\(\backslash\)n"}, \hyperlink{group__uuid_ga9c51faa57ecb228ce7eda077a90b20ff}{DPS\_UUIDToString}(uuid));
+
+    uint32\_t n = \hyperlink{group__publication_ga875b48217d861d4a9fa5471419d354e9}{DPS\_PublicationGetSequenceNum}(pub);
+    \hyperlink{group__debug_gaf1d25cc7f1d2d92f96ba620217af28fd}{DPS\_PRINT}(\textcolor{stringliteral}{"sequence number=%d\(\backslash\)n"}, n);
+
+    \textcolor{keywordflow}{for} (i = 0; i < \hyperlink{group__publication_gaee6fc3b13484faacff0d26646778f777}{DPS\_PublicationGetNumTopics}(pub); ++i) \{
+        \textcolor{keyword}{const} \textcolor{keywordtype}{char}* topic = \hyperlink{group__publication_ga143a5c6fbe0bdf1725e841f122582432}{DPS\_PublicationGetTopic}(pub, i);
+        \hyperlink{group__debug_gaf1d25cc7f1d2d92f96ba620217af28fd}{DPS\_PRINT}(\textcolor{stringliteral}{"publication topic[%ld]=%s\(\backslash\)n"}, i, topic);
+    \}
+
+    \hyperlink{group__debug_gaf1d25cc7f1d2d92f96ba620217af28fd}{DPS\_PRINT}(\textcolor{stringliteral}{"payload=%.*s\(\backslash\)n"}, numPayloadBytes, payload);
+\}
+\end{DoxyCodeInclude}
+ This publication handler exercises the A\+P\+Is for retrieving the subscription and publication information.\hypertarget{tutorials-hello-world_acknowledging}{}\subsection{Acknowledging}\label{tutorials-hello-world_acknowledging}
+Acknowledgements provide an optional means for subscribers to reply to publications. For example, they may be used when the publication is logically a request and the acknowledgements are responses. Similar to publications, acknowledgements may include an application payload, and no assumptions are made by D\+PS with regards to the acknowledgement payload format.\hypertarget{tutorials-hello-world_requesting-an-acknowledgement}{}\subsubsection{Requesting an acknowledgement}\label{tutorials-hello-world_requesting-an-acknowledgement}
+
+\begin{DoxyCodeInclude}
+    \hyperlink{group__publication_ga0d439693474aa54e27f3d45a054696ac}{DPS\_Publication}* pub = \hyperlink{group__publication_gaca070a96a6374e99a05d647c10737962}{DPS\_CreatePublication}(node);
+    \textcolor{keywordflow}{if} (!pub) \{
+        \textcolor{keywordflow}{goto} Exit;
+    \}
+    \textcolor{keyword}{const} \textcolor{keywordtype}{char}* topics[] = \{
+        \textcolor{stringliteral}{"a/b/c/d"}
+    \};
+    \textcolor{keywordtype}{size\_t} numTopics = A\_SIZEOF(topics);
+    \textcolor{keywordtype}{int} noWildCard = \hyperlink{dps_8h_ad8b397975a479b996ef223367d8835a9}{DPS\_FALSE};
+    ret = \hyperlink{group__publication_ga7b0709e28cb34d5a30b90e4142cd6c19}{DPS\_InitPublication}(pub, topics, numTopics, noWildCard, NULL,
+                              AcknowledgementHandler);
+    \textcolor{keywordflow}{if} (ret != \hyperlink{group__status_ga0ea3dd37bc558859ae0cb5a4f79a4bdd}{DPS\_OK}) \{
+        \textcolor{keywordflow}{goto} Exit;
+    \}
+\end{DoxyCodeInclude}
+ Requesting an acknowledgement is identical to \hyperlink{tutorials-hello-world_creating-a-publication}{Creating a publication}, with the addition of the {\ttfamily D\+P\+S\+\_\+\+Acknowledgement\+Handler}.\hypertarget{tutorials-hello-world_sending-an-acknowledgement}{}\subsubsection{Sending an acknowledgement}\label{tutorials-hello-world_sending-an-acknowledgement}
+
+\begin{DoxyCodeInclude}
+    \textcolor{keywordflow}{if} (\hyperlink{group__publication_ga516f7f314c7b95210751d00285758b9b}{DPS\_PublicationIsAckRequested}(pub)) \{
+        \textcolor{keyword}{const} \textcolor{keywordtype}{char}* payload = \textcolor{stringliteral}{"World"};
+        \textcolor{keywordtype}{size\_t} numPayloadBytes = strlen(payload) + 1;
+        \hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{DPS\_Status} ret = \hyperlink{group__publication_ga308074429a566ffb8d04d55bae520b04}{DPS\_AckPublication}(pub, (\textcolor{keyword}{const} uint8\_t*)payload, 
+      numPayloadBytes);
+        \textcolor{keywordflow}{if} (ret != \hyperlink{group__status_ga0ea3dd37bc558859ae0cb5a4f79a4bdd}{DPS\_OK}) \{
+            \textcolor{keywordflow}{goto} Exit;
+        \}
+    \}
+\end{DoxyCodeInclude}
+ To determine if a publication has requested an ack, call \hyperlink{group__publication_ga516f7f314c7b95210751d00285758b9b}{D\+P\+S\+\_\+\+Publication\+Is\+Ack\+Requested()}. To send an acknowledgement, along with any optional acknowledgement payload, call \hyperlink{group__publication_ga308074429a566ffb8d04d55bae520b04}{D\+P\+S\+\_\+\+Ack\+Publication()}.
+
+The {\ttfamily pub} parameter of the publication handler is only valid during the body of the handler. In order to acknowledge a publication after the handler has returned, the application must first call \hyperlink{group__publication_ga41f31a8b63558e13d73d96de6086e5c4}{D\+P\+S\+\_\+\+Copy\+Publication()} to create a partial copy of the publication. The copy may be used after the handler returns.\hypertarget{tutorials-hello-world_receiving-an-acknowledgement}{}\subsubsection{Receiving an acknowledgement}\label{tutorials-hello-world_receiving-an-acknowledgement}
+
+\begin{DoxyCodeInclude}
+\textcolor{keyword}{static} \textcolor{keywordtype}{void} AcknowledgementHandler(\hyperlink{group__publication_ga0d439693474aa54e27f3d45a054696ac}{DPS\_Publication}* pub,
+                                   uint8\_t* payload, \textcolor{keywordtype}{size\_t} numPayloadBytes)
+\{
+    \textcolor{keywordtype}{size\_t} i;
+
+    \textcolor{keyword}{const} \hyperlink{struct___d_p_s___u_u_i_d}{DPS\_UUID}* uuid = \hyperlink{group__publication_gaba1ad3ee807b75a1281d334be06a12f7}{DPS\_PublicationGetUUID}(pub);
+    \hyperlink{group__debug_gaf1d25cc7f1d2d92f96ba620217af28fd}{DPS\_PRINT}(\textcolor{stringliteral}{"uuid=%s\(\backslash\)n"}, \hyperlink{group__uuid_ga9c51faa57ecb228ce7eda077a90b20ff}{DPS\_UUIDToString}(uuid));
+
+    uint32\_t n = \hyperlink{group__publication_ga875b48217d861d4a9fa5471419d354e9}{DPS\_PublicationGetSequenceNum}(pub);
+    \hyperlink{group__debug_gaf1d25cc7f1d2d92f96ba620217af28fd}{DPS\_PRINT}(\textcolor{stringliteral}{"sequence number=%d\(\backslash\)n"}, n);
+
+    \textcolor{keywordflow}{for} (i = 0; i < \hyperlink{group__publication_gaee6fc3b13484faacff0d26646778f777}{DPS\_PublicationGetNumTopics}(pub); ++i) \{
+        \textcolor{keyword}{const} \textcolor{keywordtype}{char}* topic = \hyperlink{group__publication_ga143a5c6fbe0bdf1725e841f122582432}{DPS\_PublicationGetTopic}(pub, i);
+        \hyperlink{group__debug_gaf1d25cc7f1d2d92f96ba620217af28fd}{DPS\_PRINT}(\textcolor{stringliteral}{"publication topic[%ld]=%s\(\backslash\)n"}, i, topic);
+    \}
+
+    \hyperlink{group__debug_gaf1d25cc7f1d2d92f96ba620217af28fd}{DPS\_PRINT}(\textcolor{stringliteral}{"payload=%.*s\(\backslash\)n"}, numPayloadBytes, payload);
+\}
+\end{DoxyCodeInclude}
+ Acknowledgements are received asynchronously. The acknowledgement handler will be called for each received acknowledgement.
+
+This acknowledgement handler exercises the A\+P\+Is for retrieving the publication information associated with the acknowledgement.
+
+\begin{DoxyNote}{Note}
+The acknowledgement handler is dispatched from the {\ttfamily D\+P\+S\+\_\+\+Node\textquotesingle{}s} thread. 
+\end{DoxyNote}
+\hypertarget{tutorials-link}{}\section{Building a D\+PS network}\label{tutorials-link}
+The \hyperlink{tutorials-hello-world}{Hello world} tutorial showed how to build a simple multicast publisher and subscriber network. This tutorial will show how to use the link functionality of D\+PS to create more complex networks that can span subnets.
+
+As before, we need to create nodes for the publisher and subscriber using \hyperlink{tutorials-hello-world_creating-a-node}{D\+P\+S\+\_\+\+Create\+Node() }. But this time we will create a third type of node that is neither a publisher or subscriber that will forward publications and subscriptions between the publisher and subscriber nodes.\hypertarget{tutorials-link_starting-a-unicast-node}{}\subsection{Starting a node}\label{tutorials-link_starting-a-unicast-node}
+
+\begin{DoxyCodeInclude}
+    \textcolor{keywordtype}{int} mcastPub = \hyperlink{group__node_gac939c83361ed89086f37c78d9c9009dd}{DPS\_MCAST\_PUB\_DISABLED};
+    uint16\_t listenPort = port;
+    \hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{DPS\_Status} ret = \hyperlink{group__node_ga160d504bfaeb0d3711e0259000340fe3}{DPS\_StartNode}(node, mcastPub, listenPort);
+    \textcolor{keywordflow}{if} (ret != \hyperlink{group__status_ga0ea3dd37bc558859ae0cb5a4f79a4bdd}{DPS\_OK}) \{
+        \textcolor{keywordflow}{goto} Exit;
+    \}
+    uint16\_t portNum = \hyperlink{group__node_gaf920b28fe0721a7f97b11673494d7b36}{DPS\_GetPortNumber}(node);
+\end{DoxyCodeInclude}
+ The first thing we will do is disable multicast sending and receiving for our three nodes by using \hyperlink{group__node_gac939c83361ed89086f37c78d9c9009dd}{D\+P\+S\+\_\+\+M\+C\+A\+S\+T\+\_\+\+P\+U\+B\+\_\+\+D\+I\+S\+A\+B\+L\+ED} for the {\ttfamily mcast\+Pub} parameter of \hyperlink{group__node_ga160d504bfaeb0d3711e0259000340fe3}{D\+P\+S\+\_\+\+Start\+Node()}. All publications and subscriptions will go through the forwarding node.
+
+The second thing we do is specify the {\ttfamily listen\+Port} parameter to \hyperlink{group__node_ga160d504bfaeb0d3711e0259000340fe3}{D\+P\+S\+\_\+\+Start\+Node()}. A value of zero lets D\+PS assign an ephemeral listening port. A value of non-\/zero requests a specific port.
+
+The last thing we do is get the ephemeral port D\+PS has chosen with \hyperlink{group__node_gaf920b28fe0721a7f97b11673494d7b36}{D\+P\+S\+\_\+\+Get\+Port\+Number()}. This will be used by the subscriber and publisher to link to the forwarding node.\hypertarget{tutorials-link_linking}{}\subsection{Linking to a node}\label{tutorials-link_linking}
+
+\begin{DoxyCodeInclude}
+        \hyperlink{group__nodeaddress_ga9e9f56aa38e82b4edcef7eb81e9f5bd2}{DPS\_NodeAddress}* addr = \hyperlink{group__nodeaddress_ga6bed18a4b0ad533ec88c7a0d376de818}{DPS\_CreateAddress}();
+        \textcolor{keywordflow}{if} (!addr) \{
+            \textcolor{keywordflow}{goto} Exit;
+        \}
+
+        \textcolor{keyword}{struct }sockaddr\_in saddr;
+        memset(&saddr, 0, \textcolor{keyword}{sizeof}(saddr));
+        saddr.sin\_family = AF\_INET;
+        saddr.sin\_port = htons(linkPort);
+        saddr.sin\_addr.s\_addr = htonl(INADDR\_LOOPBACK);
+
+        \hyperlink{group__nodeaddress_ga6231c243c483bd2d282f7df734a98946}{DPS\_SetAddress}(addr, (\textcolor{keyword}{const} \textcolor{keyword}{struct} sockaddr*)&saddr);
+
+        ret = \hyperlink{group__node_ga5064c63b8ce76bf34402e0c80183234b}{DPS\_Link}(node, addr, LinkComplete, NULL);
+        \hyperlink{group__nodeaddress_ga1f373831e8009ff5959ccb02b8c3fb14}{DPS\_DestroyAddress}(addr);
+        \textcolor{keywordflow}{if} (ret != \hyperlink{group__status_ga0ea3dd37bc558859ae0cb5a4f79a4bdd}{DPS\_OK}) \{
+            \textcolor{keywordflow}{goto} Exit;
+        \}
+\end{DoxyCodeInclude}
+ Now that we know the host ({\ttfamily localhost} in this example) and listening port of the forwarding node, we can call \hyperlink{group__node_ga5064c63b8ce76bf34402e0c80183234b}{D\+P\+S\+\_\+\+Link()} to create the link from the subscriber and publisher to the forwarding node. In order to do this we must first create a \hyperlink{group__nodeaddress_ga9e9f56aa38e82b4edcef7eb81e9f5bd2}{D\+P\+S\+\_\+\+Node\+Address} and set its value to the host and port of the forwarding node.
+
+Once we call \hyperlink{group__node_ga5064c63b8ce76bf34402e0c80183234b}{D\+P\+S\+\_\+\+Link()} we can destroy the \hyperlink{group__nodeaddress_ga9e9f56aa38e82b4edcef7eb81e9f5bd2}{D\+P\+S\+\_\+\+Node\+Address} as we don\textquotesingle{}t need it anymore while we wait for the asynchronous link to complete.
+
+
+\begin{DoxyCodeInclude}
+\textcolor{keyword}{static} \textcolor{keywordtype}{void} LinkComplete(\hyperlink{group__node_ga4dd612ab965134321bb57fdb065f121c}{DPS\_Node}* node, \hyperlink{group__nodeaddress_ga9e9f56aa38e82b4edcef7eb81e9f5bd2}{DPS\_NodeAddress}* addr, 
+      \hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{DPS\_Status} status, \textcolor{keywordtype}{void}* data)
+\{
+    \hyperlink{group__debug_gaf1d25cc7f1d2d92f96ba620217af28fd}{DPS\_PRINT}(\textcolor{stringliteral}{"Linked to %s\(\backslash\)n"}, \hyperlink{group__nodeaddress_gafc7b21048f92370ca29325d6245b576d}{DPS\_NodeAddrToString}(addr));
+\}
+\end{DoxyCodeInclude}
+ The link is now complete and we can proceed with \hyperlink{tutorials-hello-world_receiving-a-publication}{subscribing } or \hyperlink{tutorials-hello-world_sending-a-publication}{publishing } as before.
+
+\begin{DoxyNote}{Note}
+The link complete callback is dispatched from the {\ttfamily D\+P\+S\+\_\+\+Node\textquotesingle{}s} thread.
+\end{DoxyNote}
+\begin{DoxySeeAlso}{See also}
+\hyperlink{group__node_ga79c86c3c0c5d6438b953a9acaab0ab0b}{D\+P\+S\+\_\+\+Unlink()}, \hyperlink{group__node_ga0bd13b2bd395bbc7807ecc899a8862f1}{D\+P\+S\+\_\+\+Link\+To()}, \hyperlink{group__node_ga2d5bb0528c2a171991ad6355cbadac69}{D\+P\+S\+\_\+\+Unlink\+From()} 
+\end{DoxySeeAlso}
+\hypertarget{tutorials-security}{}\section{Securing the communications}\label{tutorials-security}
+\hypertarget{tutorials-security_enabling-network-layer-security}{}\subsection{Enabling network layer security}\label{tutorials-security_enabling-network-layer-security}
+Network layer security can be used to secure unicast communications between two nodes (a single hop). This includes the subscription, acknowledgement, and subscription acknowledgement messages. When the two nodes are \hyperlink{tutorials-link}{linked }, it also includes publications. Multicast publications are not secured. One of the end-\/to-\/end mechanisms described below must be used to secure multicast publications.
+
+The first step to enabling network layer security is to build with a transport that supports it.
+
+
+\begin{DoxyCode}
+$ scons transport=dtls
+\end{DoxyCode}
+
+
+The D\+T\+LS transport supports two mechanisms for securing the connection\+: pre-\/shared keys, and certificates.\hypertarget{tutorials-security_dtls-with-pre-shared-keys}{}\subsubsection{D\+T\+L\+S with pre-\/shared keys}\label{tutorials-security_dtls-with-pre-shared-keys}
+
+\begin{DoxyCodeInclude}
+\textcolor{preprocessor}{#define BYTE\_STR(s) \{ (const uint8\_t*)s, sizeof(s) - 1 \}}
+\textcolor{keyword}{static} \textcolor{keyword}{const} \hyperlink{struct___d_p_s___key}{DPS\_Key} PSK = \{ \hyperlink{group__keystore_gga7ca1045749c725e9c4a1b4758b2a0196a662c1e84628d96be8ae08163af382392}{DPS\_KEY\_SYMMETRIC}, \{ .symmetric = BYTE\_STR(\textcolor{stringliteral}{"1234"}) \} \}
+      ;
+\textcolor{keyword}{static} \textcolor{keyword}{const} \hyperlink{struct___d_p_s___key_id}{DPS\_KeyId} PSK\_ID = BYTE\_STR(\textcolor{stringliteral}{"Tutorial Network PSK"});
+\end{DoxyCodeInclude}
+To use pre-\/shared keys (P\+S\+Ks), we\textquotesingle{}ll need to agree on a P\+SK and its identifier. {\ttfamily B\+Y\+T\+E\+\_\+\+S\+TR} is a convenience macro used in the tutorials for using strings anywhere a buffer and its length is expected in the A\+P\+Is.
+
+
+\begin{DoxyCodeInclude}
+    \textcolor{keyword}{const} \textcolor{keywordtype}{char} *separators = \textcolor{stringliteral}{"/."};
+    \hyperlink{group__keystore_gaf3833cfe48f848f698514bc5daa075fa}{DPS\_KeyStore}* keyStore = \hyperlink{group__keystore_gafa79de23848ff56d0cced67897313369}{DPS\_CreateKeyStore}(PskAndIdHandler, PskHandler, 
+      NULL, NULL);
+    \textcolor{keyword}{const} \hyperlink{struct___d_p_s___key_id}{DPS\_KeyId}* keyId = NULL;
+    \hyperlink{group__node_ga4dd612ab965134321bb57fdb065f121c}{DPS\_Node}* node = \hyperlink{group__node_gaf6641b5bbf27b2c45ac7f926b0ce4efe}{DPS\_CreateNode}(separators, keyStore, keyId);
+    \textcolor{keywordflow}{if} (!node) \{
+        \textcolor{keywordflow}{goto} Exit;
+    \}
+\end{DoxyCodeInclude}
+All of the security mechanisms require that the node be created with a key store. The D\+T\+LS P\+SK mechanism requires that a \hyperlink{group__keystore_ga83d3ade4f4acd7d4385d606270ddfd29}{D\+P\+S\+\_\+\+Key\+And\+Id\+Handler} and \hyperlink{group__keystore_gaccf7e3d43bc1e586132d7f1ae03d02f7}{D\+P\+S\+\_\+\+Key\+Handler} be provided.
+
+
+\begin{DoxyCodeInclude}
+\textcolor{keyword}{static} \hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{DPS\_Status} PskAndIdHandler(\hyperlink{group__keystore_ga7c3e50965b65334e9791780fa855ed16}{DPS\_KeyStoreRequest}* request)
+\{
+    \textcolor{keywordflow}{return} \hyperlink{group__keystore_ga289b1c74c01c9988f04297aa082986de}{DPS\_SetKeyAndId}(request, &PSK, &PSK\_ID);
+\}
+\end{DoxyCodeInclude}
+The key and identifier handler simply uses \hyperlink{group__keystore_ga289b1c74c01c9988f04297aa082986de}{D\+P\+S\+\_\+\+Set\+Key\+And\+Id()} to return the P\+SK and identifier we agreed on earlier.
+
+
+\begin{DoxyCodeInclude}
+\textcolor{keyword}{static} \textcolor{keywordtype}{int} IsSameKeyId(\textcolor{keyword}{const} \hyperlink{struct___d_p_s___key_id}{DPS\_KeyId}* a, \textcolor{keyword}{const} \hyperlink{struct___d_p_s___key_id}{DPS\_KeyId}* b)
+\{
+    \textcolor{keywordflow}{return} (a->\hyperlink{struct___d_p_s___key_id_ad656ed0567e09b47f95776e8af0f29df}{len} == b->\hyperlink{struct___d_p_s___key_id_ad656ed0567e09b47f95776e8af0f29df}{len}) && !memcmp(a->\hyperlink{struct___d_p_s___key_id_a199ba6a4d89e6eab2b1c7f84db7b0e47}{id}, b->\hyperlink{struct___d_p_s___key_id_a199ba6a4d89e6eab2b1c7f84db7b0e47}{id}, a->\hyperlink{struct___d_p_s___key_id_ad656ed0567e09b47f95776e8af0f29df}{len});
+\}
+
+\textcolor{keyword}{static} \hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{DPS\_Status} PskHandler(\hyperlink{group__keystore_ga7c3e50965b65334e9791780fa855ed16}{DPS\_KeyStoreRequest}* request, \textcolor{keyword}{const} 
+      \hyperlink{struct___d_p_s___key_id}{DPS\_KeyId}* keyId)
+\{
+    \textcolor{keywordflow}{if} (IsSameKeyId(keyId, &PSK\_ID)) \{
+        \textcolor{keywordflow}{return} \hyperlink{group__keystore_ga15d6a9b8256b67c2ec8b1d365a98dbab}{DPS\_SetKey}(request, &PSK);
+    \}
+    \textcolor{keywordflow}{return} \hyperlink{group__status_ga5c46980c33492a8b76bffce081dbcba4}{DPS\_ERR\_MISSING};
+\}
+\end{DoxyCodeInclude}
+The key handler is used for P\+S\+Ks as well as other keys, so it must compare the incoming {\ttfamily key\+Id} against the P\+SK identifier and either return the P\+SK using \hyperlink{group__keystore_ga15d6a9b8256b67c2ec8b1d365a98dbab}{D\+P\+S\+\_\+\+Set\+Key()} or return \hyperlink{group__status_ga5c46980c33492a8b76bffce081dbcba4}{D\+P\+S\+\_\+\+E\+R\+R\+\_\+\+M\+I\+S\+S\+I\+NG}.
+
+\begin{DoxySeeAlso}{See also}
+\hyperlink{group__keystore_ga2da4c5f9b7ab5ff6b65d1c8f4d6c30bc}{D\+P\+S\+\_\+\+Create\+Memory\+Key\+Store()}, \hyperlink{group__keystore_ga8664b8c5cc2d3df6512ecb71e7f92212}{D\+P\+S\+\_\+\+Set\+Network\+Key()}
+\end{DoxySeeAlso}
+\hypertarget{tutorials-security_dtls-with-certificates}{}\subsubsection{D\+T\+L\+S with certificates}\label{tutorials-security_dtls-with-certificates}
+
+\begin{DoxyCodeInclude}
+\textcolor{keyword}{extern} \textcolor{keyword}{const} \textcolor{keywordtype}{char}* CA\_CERTIFICATE;
+\textcolor{keyword}{typedef} \textcolor{keyword}{struct }\{
+    \hyperlink{struct___d_p_s___key_id}{DPS\_KeyId} keyId;
+    \hyperlink{struct___d_p_s___key}{DPS\_Key} key;
+\} Certificate;
+\textcolor{keyword}{extern} \textcolor{keyword}{const} Certificate CERTIFICATES[];
+\textcolor{preprocessor}{#include "tutorial\_certs.c"}
+\end{DoxyCodeInclude}
+To use certificates, we\textquotesingle{}ll need a certificate for each node and the certificates of the authorities that issued them. D\+PS supports Elliptic Curve Cryptography (E\+CC) certificates. The certificates above are omitted due to their size.
+
+
+\begin{DoxyCodeInclude}
+    \textcolor{keyword}{const} \textcolor{keywordtype}{char} *separators = \textcolor{stringliteral}{"/."};
+    \hyperlink{group__keystore_gaf3833cfe48f848f698514bc5daa075fa}{DPS\_KeyStore}* keyStore = \hyperlink{group__keystore_gafa79de23848ff56d0cced67897313369}{DPS\_CreateKeyStore}(NULL, CertificateHandler,
+                                                NULL, CertificateAuthoritiesHandler);
+    \textcolor{keyword}{const} \hyperlink{struct___d_p_s___key_id}{DPS\_KeyId}* keyId = nodeId;
+    \hyperlink{group__node_ga4dd612ab965134321bb57fdb065f121c}{DPS\_Node}* node = \hyperlink{group__node_gaf6641b5bbf27b2c45ac7f926b0ce4efe}{DPS\_CreateNode}(separators, keyStore, keyId);
+    \textcolor{keywordflow}{if} (!node) \{
+        \textcolor{keywordflow}{goto} Exit;
+    \}
+\end{DoxyCodeInclude}
+Again, all of the security mechanisms require that the node be created with a key store. The D\+T\+LS certificate mechanism requires that a \hyperlink{group__keystore_gaccf7e3d43bc1e586132d7f1ae03d02f7}{D\+P\+S\+\_\+\+Key\+Handler} and \hyperlink{group__keystore_ga0acd005f34bca4fcbe1c460e2305ddae}{D\+P\+S\+\_\+\+C\+A\+Handler} be provided.
+
+The certificate mechanism also requires that the {\ttfamily key\+Id} parameter be provided. This is the key identifier of the public key (\hyperlink{struct___d_p_s___key_cert_a2783654ef73f2cc58911f40cd6e4f6ba}{\+\_\+\+D\+P\+S\+\_\+\+Key\+Cert\+::cert}), private key (\hyperlink{struct___d_p_s___key_cert_a0ba1842f3982c930ba76469349b0812d}{\+\_\+\+D\+P\+S\+\_\+\+Key\+Cert\+::private\+Key}), and optional password (\hyperlink{struct___d_p_s___key_cert_a18f3f492b66fbeb3de6a09aff54369cf}{\+\_\+\+D\+P\+S\+\_\+\+Key\+Cert\+::password}) of the created node. This {\ttfamily key\+Id} value will be provided to the \hyperlink{group__keystore_gaccf7e3d43bc1e586132d7f1ae03d02f7}{D\+P\+S\+\_\+\+Key\+Handler} when the node\textquotesingle{}s own certificate is requested.
+
+
+\begin{DoxyCodeInclude}
+\textcolor{keyword}{static} \hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{DPS\_Status} CertificateAuthoritiesHandler(\hyperlink{group__keystore_ga7c3e50965b65334e9791780fa855ed16}{DPS\_KeyStoreRequest}* request)
+\{
+    \textcolor{keywordflow}{return} \hyperlink{group__keystore_ga37595f3207e42c52f7006659399135b2}{DPS\_SetCA}(request, CA\_CERTIFICATE);
+\}
+\end{DoxyCodeInclude}
+The certificate authorities handler simply uses \hyperlink{group__keystore_ga37595f3207e42c52f7006659399135b2}{D\+P\+S\+\_\+\+Set\+C\+A()} to return the certificate authorities we trust. To include more than one certificate as shown in this example, concatenate the certificates together.
+
+
+\begin{DoxyCodeInclude}
+\textcolor{keyword}{static} \hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{DPS\_Status} CertificateHandler(\hyperlink{group__keystore_ga7c3e50965b65334e9791780fa855ed16}{DPS\_KeyStoreRequest}* request, \textcolor{keyword}{const} 
+      \hyperlink{struct___d_p_s___key_id}{DPS\_KeyId}* keyId)
+\{
+    \textcolor{keyword}{const} Certificate* certificate;
+    \textcolor{keywordflow}{for} (certificate = CERTIFICATES; certificate->keyId.id; ++certificate) \{
+        \textcolor{keywordflow}{if} (IsSameKeyId(keyId, &certificate->keyId)) \{
+            \textcolor{keywordflow}{return} \hyperlink{group__keystore_ga15d6a9b8256b67c2ec8b1d365a98dbab}{DPS\_SetKey}(request, &certificate->key);
+        \}
+    \}
+    \textcolor{keywordflow}{return} \hyperlink{group__status_ga5c46980c33492a8b76bffce081dbcba4}{DPS\_ERR\_MISSING};
+\}
+\end{DoxyCodeInclude}
+The key handler is used for certificates as well as other keys, so it must compare the incoming {\ttfamily key\+Id} against the certificate identifier and either return the certificate using \hyperlink{group__keystore_ga15d6a9b8256b67c2ec8b1d365a98dbab}{D\+P\+S\+\_\+\+Set\+Key()} or return \hyperlink{group__status_ga5c46980c33492a8b76bffce081dbcba4}{D\+P\+S\+\_\+\+E\+R\+R\+\_\+\+M\+I\+S\+S\+I\+NG}.
+
+Only the certificate with the key identifier provided to \hyperlink{group__node_gaf6641b5bbf27b2c45ac7f926b0ce4efe}{D\+P\+S\+\_\+\+Create\+Node()} needs to include the private key (\hyperlink{struct___d_p_s___key_cert_a0ba1842f3982c930ba76469349b0812d}{\+\_\+\+D\+P\+S\+\_\+\+Key\+Cert\+::private\+Key}) and optional password (\hyperlink{struct___d_p_s___key_cert_a18f3f492b66fbeb3de6a09aff54369cf}{\+\_\+\+D\+P\+S\+\_\+\+Key\+Cert\+::password}). For all other certificates, the public key (\hyperlink{struct___d_p_s___key_cert_a2783654ef73f2cc58911f40cd6e4f6ba}{\+\_\+\+D\+P\+S\+\_\+\+Key\+Cert\+::cert}) is sufficient.
+
+\begin{DoxySeeAlso}{See also}
+\hyperlink{group__keystore_ga8d55f887ebbd6b0af80caa43bf77a088}{D\+P\+S\+\_\+\+Set\+Trusted\+C\+A()}, \hyperlink{group__keystore_ga7a8c6874dd5bff0a6391a5515b545e17}{D\+P\+S\+\_\+\+Set\+Certificate()}
+\end{DoxySeeAlso}
+\hypertarget{tutorials-security_protecting-the-payload}{}\subsection{Protecting the payload}\label{tutorials-security_protecting-the-payload}
+While network layer security allows us to secure the communications of a single hop, encrypting the payload allows us to secure the payload across multiple hops. The payload can only be decrypted by the receiving node.
+
+Encrypting a payload uses two keys\+: the content encryption key that encrypts the payload and the key encryption key that encrypts the content encryption key. This indirection allows a single instance of the payload to be encrypted for multiple recipients.
+
+The content encryption key is always an ephemeral A\+ES key. The key encryption key may be a symmetric or asymmetric key.\hypertarget{tutorials-security_encrypting-with-a-symmetric-key}{}\subsubsection{Encrypting with a symmetric key}\label{tutorials-security_encrypting-with-a-symmetric-key}
+
+\begin{DoxyCodeInclude}
+\textcolor{keyword}{static} \textcolor{keyword}{const} uint8\_t AES\_128\_KEY[16] = \{
+    0x27, 0xbd, 0xa7, 0x4f, 0xd7, 0x60, 0xff, 0x48, 0x10, 0x59, 0x56, 0xde, 0x8f, 0x4b, 0x45, 0x70
+\};
+\textcolor{keyword}{static} \textcolor{keyword}{const} \hyperlink{struct___d_p_s___key}{DPS\_Key} SYMMETRIC\_KEY = \{ \hyperlink{group__keystore_gga7ca1045749c725e9c4a1b4758b2a0196a662c1e84628d96be8ae08163af382392}{DPS\_KEY\_SYMMETRIC}, \{ .symmetric = \{ 
+      AES\_128\_KEY, 16 \} \} \};
+\textcolor{keyword}{static} \textcolor{keyword}{const} \hyperlink{struct___d_p_s___key_id}{DPS\_KeyId} SYMMETRIC\_KEY\_ID = BYTE\_STR(\textcolor{stringliteral}{"Tutorial Symmetric Key"});
+\end{DoxyCodeInclude}
+To use a symmetric key encryption key, we\textquotesingle{}ll need to agree on its value and identifier.
+
+
+\begin{DoxyCodeInclude}
+    \textcolor{keyword}{const} \textcolor{keywordtype}{char} *separators = \textcolor{stringliteral}{"/."};
+    \hyperlink{group__keystore_gaf3833cfe48f848f698514bc5daa075fa}{DPS\_KeyStore}* keyStore = \hyperlink{group__keystore_gafa79de23848ff56d0cced67897313369}{DPS\_CreateKeyStore}(NULL, SymmetricKeyHandler, 
+      EphemeralSymmetricKeyHandler, NULL);
+    \textcolor{keyword}{const} \hyperlink{struct___d_p_s___key_id}{DPS\_KeyId}* keyId = NULL;
+    \hyperlink{group__node_ga4dd612ab965134321bb57fdb065f121c}{DPS\_Node}* node = \hyperlink{group__node_gaf6641b5bbf27b2c45ac7f926b0ce4efe}{DPS\_CreateNode}(separators, keyStore, keyId);
+    \textcolor{keywordflow}{if} (!node) \{
+        \textcolor{keywordflow}{goto} Exit;
+    \}
+\end{DoxyCodeInclude}
+Again, all of the security mechanisms require that the node be created with a key store. The payload encryption mechanism requires that a \hyperlink{group__keystore_gaccf7e3d43bc1e586132d7f1ae03d02f7}{D\+P\+S\+\_\+\+Key\+Handler} and \hyperlink{group__keystore_ga5b4cf102912eea802196d3e307c399ef}{D\+P\+S\+\_\+\+Ephemeral\+Key\+Handler} be provided.
+
+
+\begin{DoxyCodeInclude}
+\textcolor{keyword}{static} \hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{DPS\_Status} SymmetricKeyHandler(\hyperlink{group__keystore_ga7c3e50965b65334e9791780fa855ed16}{DPS\_KeyStoreRequest}* request, \textcolor{keyword}{const} 
+      \hyperlink{struct___d_p_s___key_id}{DPS\_KeyId}* keyId)
+\{
+    \textcolor{keywordflow}{if} (IsSameKeyId(keyId, &SYMMETRIC\_KEY\_ID)) \{
+        \textcolor{keywordflow}{return} \hyperlink{group__keystore_ga15d6a9b8256b67c2ec8b1d365a98dbab}{DPS\_SetKey}(request, &SYMMETRIC\_KEY);
+    \}
+    \textcolor{keywordflow}{return} \hyperlink{group__status_ga5c46980c33492a8b76bffce081dbcba4}{DPS\_ERR\_MISSING};
+\}
+\end{DoxyCodeInclude}
+The key handler is used for symmetric keys as well as other keys, so it must compare the incoming {\ttfamily key\+Id} against the symmetric key encryption key identifier and either return the key using \hyperlink{group__keystore_ga15d6a9b8256b67c2ec8b1d365a98dbab}{D\+P\+S\+\_\+\+Set\+Key()} or return \hyperlink{group__status_ga5c46980c33492a8b76bffce081dbcba4}{D\+P\+S\+\_\+\+E\+R\+R\+\_\+\+M\+I\+S\+S\+I\+NG}.
+
+
+\begin{DoxyCodeInclude}
+\textcolor{keyword}{static} \hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{DPS\_Status} EphemeralSymmetricKeyHandler(\hyperlink{group__keystore_ga7c3e50965b65334e9791780fa855ed16}{DPS\_KeyStoreRequest}* request, \textcolor{keyword}{
+      const} \hyperlink{struct___d_p_s___key}{DPS\_Key}* key)
+\{
+    \textcolor{keywordflow}{if} (key->\hyperlink{struct___d_p_s___key_a347677e64145828ed5b1191a8fdc71d5}{type} == \hyperlink{group__keystore_gga7ca1045749c725e9c4a1b4758b2a0196a662c1e84628d96be8ae08163af382392}{DPS\_KEY\_SYMMETRIC}) \{
+        uint8\_t key[16];
+        GenerateRandomKey(key);
+        \hyperlink{struct___d_p_s___key}{DPS\_Key} ephemeralKey = \{ \hyperlink{group__keystore_gga7ca1045749c725e9c4a1b4758b2a0196a662c1e84628d96be8ae08163af382392}{DPS\_KEY\_SYMMETRIC}, \{ .symmetric = \{ key, 16 \} \} \};
+        \textcolor{keywordflow}{return} \hyperlink{group__keystore_ga15d6a9b8256b67c2ec8b1d365a98dbab}{DPS\_SetKey}(request, &ephemeralKey);
+    \}
+    \textcolor{keywordflow}{return} \hyperlink{group__status_ga5c46980c33492a8b76bffce081dbcba4}{DPS\_ERR\_MISSING};
+\}
+\end{DoxyCodeInclude}
+The ephemeral key handler is used for symmetric keys as well as other keys, so it must examine the incoming {\ttfamily key} type to determine what type of ephemeral key to return. It creates a random key of the requested type and returns it using \hyperlink{group__keystore_ga15d6a9b8256b67c2ec8b1d365a98dbab}{D\+P\+S\+\_\+\+Set\+Key()}. If it cannot do that, it must return \hyperlink{group__status_ga5c46980c33492a8b76bffce081dbcba4}{D\+P\+S\+\_\+\+E\+R\+R\+\_\+\+M\+I\+S\+S\+I\+NG}.
+
+
+\begin{DoxyCodeInclude}
+            ret = \hyperlink{group__publication_ga91471ddf6f66798e255b28b3e913144b}{DPS\_PublicationAddSubId}(pub, &SYMMETRIC\_KEY\_ID);
+            \textcolor{keywordflow}{if} (ret != \hyperlink{group__status_ga0ea3dd37bc558859ae0cb5a4f79a4bdd}{DPS\_OK}) \{
+                \textcolor{keywordflow}{goto} Exit;
+            \}
+\end{DoxyCodeInclude}
+Lastly, we add the key encryption key identifier to the publication.
+
+This may be called multiple times with different key identifiers for a single publication. This allows an application to, for example, associate topics with key identifiers and initialize and encrypt a publication with multiple topics.
+
+Acknowledgement payloads will be protected using the same key encryption key identifier the recipient used to decrypt the publication.
+
+\begin{DoxySeeAlso}{See also}
+\hyperlink{group__keystore_ga1855a8efae53b90fa95aa5b97295c4ec}{D\+P\+S\+\_\+\+Set\+Content\+Key()}
+\end{DoxySeeAlso}
+\hypertarget{tutorials-security_encrypting-with-an-asymmetric-key}{}\subsubsection{Encrypting with an asymmetric key}\label{tutorials-security_encrypting-with-an-asymmetric-key}
+The steps necessary to use an asymmetric key encryption key are very similar to the steps needed to use a symmetric key encryption key, described above. Only the differences are highlighted below.
+
+\begin{DoxyNote}{Note}
+Acknowledgement payloads will be encrypted using the same asymmetric key identifier the recipient used to decrypt the publication. As this is an ephemeral key, the encryption will fail. For this reason it is recommended to use this mechanism only with \hyperlink{tutorials-security_authenticating-the-message-sender}{authenticated senders } which prevents this failure.
+\end{DoxyNote}
+
+\begin{DoxyCodeInclude}
+\textcolor{keyword}{extern} \textcolor{keyword}{const} \hyperlink{struct___d_p_s___key}{DPS\_Key} ASYMMETRIC\_KEY;
+\textcolor{keyword}{static} \textcolor{keyword}{const} \hyperlink{struct___d_p_s___key_id}{DPS\_KeyId} ASYMMETRIC\_KEY\_ID = BYTE\_STR(\textcolor{stringliteral}{"Tutorial Asymmetric Key"});
+\end{DoxyCodeInclude}
+To use asymmetric key encryption keys, the publisher will need the public key (\hyperlink{struct___d_p_s___key_cert_a2783654ef73f2cc58911f40cd6e4f6ba}{\+\_\+\+D\+P\+S\+\_\+\+Key\+Cert\+::cert}) of each recipient and each recipient will also need the private key (\hyperlink{struct___d_p_s___key_cert_a0ba1842f3982c930ba76469349b0812d}{\+\_\+\+D\+P\+S\+\_\+\+Key\+Cert\+::private\+Key}) and optional password (\hyperlink{struct___d_p_s___key_cert_a18f3f492b66fbeb3de6a09aff54369cf}{\+\_\+\+D\+P\+S\+\_\+\+Key\+Cert\+::password}). The term recipient is used here instead of subscriber since a single recipient key may be used by multiple subscribers.
+
+For this example we are using only one recipient. D\+PS supports Elliptic Curve Cryptography (E\+CC) certificates. The certificate above is elided due to its size.
+
+
+\begin{DoxyCodeInclude}
+\textcolor{keyword}{static} \hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{DPS\_Status} EphemeralAsymmetricKeyHandler(\hyperlink{group__keystore_ga7c3e50965b65334e9791780fa855ed16}{DPS\_KeyStoreRequest}* request, \textcolor{keyword}{
+      const} \hyperlink{struct___d_p_s___key}{DPS\_Key}* key)
+\{
+    \textcolor{keywordflow}{if} (key->\hyperlink{struct___d_p_s___key_a347677e64145828ed5b1191a8fdc71d5}{type} == \hyperlink{group__keystore_gga7ca1045749c725e9c4a1b4758b2a0196a662c1e84628d96be8ae08163af382392}{DPS\_KEY\_SYMMETRIC}) \{
+        uint8\_t key[16];
+        GenerateRandomKey(key);
+        \hyperlink{struct___d_p_s___key}{DPS\_Key} ephemeralKey = \{ \hyperlink{group__keystore_gga7ca1045749c725e9c4a1b4758b2a0196a662c1e84628d96be8ae08163af382392}{DPS\_KEY\_SYMMETRIC}, \{ .symmetric = \{ key, 16 \} \} \};
+        \textcolor{keywordflow}{return} \hyperlink{group__keystore_ga15d6a9b8256b67c2ec8b1d365a98dbab}{DPS\_SetKey}(request, &ephemeralKey);
+    \} \textcolor{keywordflow}{else} \textcolor{keywordflow}{if} (key->\hyperlink{struct___d_p_s___key_a347677e64145828ed5b1191a8fdc71d5}{type} == \hyperlink{group__keystore_gga7ca1045749c725e9c4a1b4758b2a0196a58453a89367757e523ac337232387d89}{DPS\_KEY\_EC}) \{
+        uint8\_t x[66], y[66], d[66];
+        GenerateEphemeralKey(key->\hyperlink{struct___d_p_s___key_a8cf482ff4fe81b774462469c5da9295f}{ec}.\hyperlink{struct___d_p_s___key_e_c_a9896c40cd0b6dd0bd05ac5831fc421d9}{curve}, x, y, d);
+        \hyperlink{struct___d_p_s___key}{DPS\_Key} ephemeralKey = \{ \hyperlink{group__keystore_gga7ca1045749c725e9c4a1b4758b2a0196a58453a89367757e523ac337232387d89}{DPS\_KEY\_EC}, \{ .ec = \{ key->\hyperlink{struct___d_p_s___key_a8cf482ff4fe81b774462469c5da9295f}{ec}.
+      \hyperlink{struct___d_p_s___key_e_c_a9896c40cd0b6dd0bd05ac5831fc421d9}{curve}, x, y, d \} \} \};
+        \textcolor{keywordflow}{return} \hyperlink{group__keystore_ga15d6a9b8256b67c2ec8b1d365a98dbab}{DPS\_SetKey}(request, &ephemeralKey);
+    \}
+    \textcolor{keywordflow}{return} \hyperlink{group__status_ga5c46980c33492a8b76bffce081dbcba4}{DPS\_ERR\_MISSING};
+\}
+\end{DoxyCodeInclude}
+The ephemeral key handler is used for both symmetric and asymmetric keys, so it must examine the incoming {\ttfamily key} type to determine what type of ephemeral key to return. For \hyperlink{group__keystore_gga7ca1045749c725e9c4a1b4758b2a0196a58453a89367757e523ac337232387d89}{D\+P\+S\+\_\+\+K\+E\+Y\+\_\+\+EC} types, the E\+CC curve must also be examined.
+
+The ephemeral E\+CC key requested here is the ephemeral sender key. The actual key encryption key is derived from the sender and recipient E\+CC keys.
+
+In either case, the key handler creates a random key of the requested type (and curve) and returns it using \hyperlink{group__keystore_ga15d6a9b8256b67c2ec8b1d365a98dbab}{D\+P\+S\+\_\+\+Set\+Key()}. If it cannot do that, it must return \hyperlink{group__status_ga5c46980c33492a8b76bffce081dbcba4}{D\+P\+S\+\_\+\+E\+R\+R\+\_\+\+M\+I\+S\+S\+I\+NG}.\hypertarget{tutorials-security_authenticating-the-message-sender}{}\subsection{Authenticating the message sender}\label{tutorials-security_authenticating-the-message-sender}
+
+\begin{DoxyCodeInclude}
+    \textcolor{keyword}{const} \textcolor{keywordtype}{char} *separators = \textcolor{stringliteral}{"/."};
+    \hyperlink{group__keystore_gaf3833cfe48f848f698514bc5daa075fa}{DPS\_KeyStore}* keyStore = \hyperlink{group__keystore_gafa79de23848ff56d0cced67897313369}{DPS\_CreateKeyStore}(NULL, KeyHandler, 
+      EphemeralKeyHandler, NULL);
+    \textcolor{keyword}{const} \hyperlink{struct___d_p_s___key_id}{DPS\_KeyId}* keyId = nodeId;
+    \hyperlink{group__node_ga4dd612ab965134321bb57fdb065f121c}{DPS\_Node}* node = \hyperlink{group__node_gaf6641b5bbf27b2c45ac7f926b0ce4efe}{DPS\_CreateNode}(separators, keyStore, keyId);
+    \textcolor{keywordflow}{if} (!node) \{
+        \textcolor{keywordflow}{goto} Exit;
+    \}
+\end{DoxyCodeInclude}
+Authenticating the sender requires that the {\ttfamily key\+Id} parameter be provided. This is the key identifier of the public key (\hyperlink{struct___d_p_s___key_cert_a2783654ef73f2cc58911f40cd6e4f6ba}{\+\_\+\+D\+P\+S\+\_\+\+Key\+Cert\+::cert}), private key (\hyperlink{struct___d_p_s___key_cert_a0ba1842f3982c930ba76469349b0812d}{\+\_\+\+D\+P\+S\+\_\+\+Key\+Cert\+::private\+Key}), and optional password (\hyperlink{struct___d_p_s___key_cert_a18f3f492b66fbeb3de6a09aff54369cf}{\+\_\+\+D\+P\+S\+\_\+\+Key\+Cert\+::password}) of the created node. This {\ttfamily key\+Id} value will be provided to the \hyperlink{group__keystore_gaccf7e3d43bc1e586132d7f1ae03d02f7}{D\+P\+S\+\_\+\+Key\+Handler} when the node\textquotesingle{}s own certificate is requested.
+
+
+\begin{DoxyCodeInclude}
+\textcolor{keyword}{static} \hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{DPS\_Status} KeyHandler(\hyperlink{group__keystore_ga7c3e50965b65334e9791780fa855ed16}{DPS\_KeyStoreRequest}* request, \textcolor{keyword}{const} 
+      \hyperlink{struct___d_p_s___key_id}{DPS\_KeyId}* keyId)
+\{
+    \textcolor{keyword}{const} Certificate* certificate;
+    \textcolor{keywordflow}{for} (certificate = CERTIFICATES; certificate->keyId.id; ++certificate) \{
+        \textcolor{keywordflow}{if} (IsSameKeyId(keyId, &certificate->keyId)) \{
+            \textcolor{keywordflow}{return} \hyperlink{group__keystore_ga15d6a9b8256b67c2ec8b1d365a98dbab}{DPS\_SetKey}(request, &certificate->key);
+        \}
+    \}
+    \textcolor{keywordflow}{if} (IsSameKeyId(keyId, &SYMMETRIC\_KEY\_ID)) \{
+        \textcolor{keywordflow}{return} \hyperlink{group__keystore_ga15d6a9b8256b67c2ec8b1d365a98dbab}{DPS\_SetKey}(request, &SYMMETRIC\_KEY);
+    \}
+    \textcolor{keywordflow}{if} (IsSameKeyId(keyId, &ASYMMETRIC\_KEY\_ID)) \{
+        \textcolor{keywordflow}{return} \hyperlink{group__keystore_ga15d6a9b8256b67c2ec8b1d365a98dbab}{DPS\_SetKey}(request, &ASYMMETRIC\_KEY);
+    \}
+    \textcolor{keywordflow}{return} \hyperlink{group__status_ga5c46980c33492a8b76bffce081dbcba4}{DPS\_ERR\_MISSING};
+\}
+\end{DoxyCodeInclude}
+The key handler implementation above supports all the mechanisms described so far.
+
+
+\begin{DoxyCodeInclude}
+\textcolor{keyword}{static} \hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{DPS\_Status} EphemeralKeyHandler(\hyperlink{group__keystore_ga7c3e50965b65334e9791780fa855ed16}{DPS\_KeyStoreRequest}* request, \textcolor{keyword}{const} 
+      \hyperlink{struct___d_p_s___key}{DPS\_Key}* key)
+\{
+    \textcolor{keywordflow}{if} (key->\hyperlink{struct___d_p_s___key_a347677e64145828ed5b1191a8fdc71d5}{type} == \hyperlink{group__keystore_gga7ca1045749c725e9c4a1b4758b2a0196a662c1e84628d96be8ae08163af382392}{DPS\_KEY\_SYMMETRIC}) \{
+        uint8\_t key[16];
+        GenerateRandomKey(key);
+        \hyperlink{struct___d_p_s___key}{DPS\_Key} ephemeralKey = \{ \hyperlink{group__keystore_gga7ca1045749c725e9c4a1b4758b2a0196a662c1e84628d96be8ae08163af382392}{DPS\_KEY\_SYMMETRIC}, \{ .symmetric = \{ key, 16 \} \} \};
+        \textcolor{keywordflow}{return} \hyperlink{group__keystore_ga15d6a9b8256b67c2ec8b1d365a98dbab}{DPS\_SetKey}(request, &ephemeralKey);
+    \} \textcolor{keywordflow}{else} \textcolor{keywordflow}{if} (key->\hyperlink{struct___d_p_s___key_a347677e64145828ed5b1191a8fdc71d5}{type} == \hyperlink{group__keystore_gga7ca1045749c725e9c4a1b4758b2a0196a58453a89367757e523ac337232387d89}{DPS\_KEY\_EC}) \{
+        uint8\_t x[66], y[66], d[66];
+        GenerateEphemeralKey(key->\hyperlink{struct___d_p_s___key_a8cf482ff4fe81b774462469c5da9295f}{ec}.\hyperlink{struct___d_p_s___key_e_c_a9896c40cd0b6dd0bd05ac5831fc421d9}{curve}, x, y, d);
+        \hyperlink{struct___d_p_s___key}{DPS\_Key} ephemeralKey = \{ \hyperlink{group__keystore_gga7ca1045749c725e9c4a1b4758b2a0196a58453a89367757e523ac337232387d89}{DPS\_KEY\_EC}, \{ .ec = \{ key->\hyperlink{struct___d_p_s___key_a8cf482ff4fe81b774462469c5da9295f}{ec}.
+      \hyperlink{struct___d_p_s___key_e_c_a9896c40cd0b6dd0bd05ac5831fc421d9}{curve}, x, y, d \} \} \};
+        \textcolor{keywordflow}{return} \hyperlink{group__keystore_ga15d6a9b8256b67c2ec8b1d365a98dbab}{DPS\_SetKey}(request, &ephemeralKey);
+    \}
+    \textcolor{keywordflow}{return} \hyperlink{group__status_ga5c46980c33492a8b76bffce081dbcba4}{DPS\_ERR\_MISSING};
+\}
+\end{DoxyCodeInclude}
+The ephemeral key handler implementation above supports all the mechanisms described so far.
+
+
+\begin{DoxyCodeInclude}
+    \textcolor{keyword}{const} \hyperlink{struct___d_p_s___key_id}{DPS\_KeyId}* keyId = \hyperlink{group__publication_ga1d7e81c2f0b19736a4f7a7195e5bd98d}{DPS\_PublicationGetSenderKeyId}(pub);
+    \hyperlink{group__debug_gaf1d25cc7f1d2d92f96ba620217af28fd}{DPS\_PRINT}(\textcolor{stringliteral}{"sender=%.*s\(\backslash\)n"}, keyId->\hyperlink{struct___d_p_s___key_id_ad656ed0567e09b47f95776e8af0f29df}{len}, keyId->\hyperlink{struct___d_p_s___key_id_a199ba6a4d89e6eab2b1c7f84db7b0e47}{id});
+\end{DoxyCodeInclude}
+
+\begin{DoxyCodeInclude}
+    \textcolor{keyword}{const} \hyperlink{struct___d_p_s___key_id}{DPS\_KeyId}* keyId = \hyperlink{group__publication_ga9190b8fa3bad848fb428acd6c0c2b210}{DPS\_AckGetSenderKeyId}(pub);
+    \hyperlink{group__debug_gaf1d25cc7f1d2d92f96ba620217af28fd}{DPS\_PRINT}(\textcolor{stringliteral}{"sender=%.*s\(\backslash\)n"}, keyId->\hyperlink{struct___d_p_s___key_id_ad656ed0567e09b47f95776e8af0f29df}{len}, keyId->\hyperlink{struct___d_p_s___key_id_a199ba6a4d89e6eab2b1c7f84db7b0e47}{id});
+\end{DoxyCodeInclude}
+In the publication or acknowledgement handler, the authenticated key identifier can be retrieved with \hyperlink{group__publication_ga1d7e81c2f0b19736a4f7a7195e5bd98d}{D\+P\+S\+\_\+\+Publication\+Get\+Sender\+Key\+Id()} or \hyperlink{group__publication_ga9190b8fa3bad848fb428acd6c0c2b210}{D\+P\+S\+\_\+\+Ack\+Get\+Sender\+Key\+Id()}.\hypertarget{tutorials-security_adding-access-control}{}\subsection{Adding access control}\label{tutorials-security_adding-access-control}
+Adding access control is a matter of combining the existing mechanisms to enforce any policies the application needs. A simple example is shown below.\hypertarget{tutorials-security_defining-a-policy}{}\subsubsection{Defining a policy}\label{tutorials-security_defining-a-policy}
+
+\begin{DoxyCodeInclude}
+\textcolor{keyword}{typedef} \textcolor{keyword}{struct }\{
+    \textcolor{keyword}{const} \textcolor{keywordtype}{char} *topic;
+    \textcolor{keyword}{const} \hyperlink{struct___d_p_s___key_id}{DPS\_KeyId} keyId;
+    \textcolor{keyword}{enum} \{
+        PUB = (1<<0),
+        SUB = (1<<1),
+        ACK = (1<<2)
+    \} bits;
+\} AccessControlEntry;
+
+\textcolor{keyword}{static} \textcolor{keyword}{const} AccessControlEntry ACL[] = \{
+    \{ \textcolor{stringliteral}{"a/b/c/d"}, BYTE\_STR(\textcolor{stringliteral}{"alice"}), PUB       \},
+    \{ \textcolor{stringliteral}{"a/b/c/d"}, BYTE\_STR(\textcolor{stringliteral}{"bob"}),   SUB | ACK \},
+    \{ \textcolor{stringliteral}{"a/b/c/d"}, BYTE\_STR(\textcolor{stringliteral}{"trudy"}), SUB       \},
+    \{ NULL,      \{ NULL, 0 \},       0         \}
+\};
+
+\textcolor{keyword}{static} \textcolor{keywordtype}{int} IsAllowed(\textcolor{keyword}{const} \hyperlink{struct___d_p_s___key_id}{DPS\_KeyId}* keyId, \textcolor{keywordtype}{int} bits, \textcolor{keyword}{const} 
+      \hyperlink{group__publication_ga0d439693474aa54e27f3d45a054696ac}{DPS\_Publication}* pub)
+\{
+    \textcolor{keyword}{const} AccessControlEntry* ace;
+    \textcolor{keywordflow}{for} (ace = ACL; ace->keyId.id; ++ace) \{
+        \textcolor{keywordflow}{if} (IsSameKeyId(keyId, &ace->keyId) && (bits & ace->bits)) \{
+            \textcolor{keywordtype}{size\_t} i;
+            \textcolor{keywordflow}{for} (i = 0; i < \hyperlink{group__publication_gaee6fc3b13484faacff0d26646778f777}{DPS\_PublicationGetNumTopics}(pub); ++i) \{
+                \textcolor{keywordflow}{if} (!strcmp(ace->topic, \hyperlink{group__publication_ga143a5c6fbe0bdf1725e841f122582432}{DPS\_PublicationGetTopic}(pub, i))) \{
+                    \textcolor{keywordflow}{return} \hyperlink{dps_8h_a4a173ed2665cea74e58558d99b377ab3}{DPS\_TRUE};
+                \}
+            \}
+        \}
+    \}
+    \textcolor{keywordflow}{return} \hyperlink{dps_8h_ad8b397975a479b996ef223367d8835a9}{DPS\_FALSE};
+\}
+\end{DoxyCodeInclude}
+In the above we will allow {\ttfamily alice} to publish to topic {\ttfamily a/b/c/d}, {\ttfamily bob} to subscribe and acknowledge to topic {\ttfamily a/b/c/d}, and {\ttfamily trudy} to subscribe to topic {\ttfamily a/b/c/d}.
+
+{\ttfamily Is\+Allowed} implements the policy by searching through the access control list for matching key identifiers and access bits and uses \hyperlink{group__publication_gaee6fc3b13484faacff0d26646778f777}{D\+P\+S\+\_\+\+Publication\+Get\+Num\+Topics()} and \hyperlink{group__publication_ga143a5c6fbe0bdf1725e841f122582432}{D\+P\+S\+\_\+\+Publication\+Get\+Topic()} to check the topic.\hypertarget{tutorials-security_implementing-subscription-control}{}\subsubsection{Implementing subscription control}\label{tutorials-security_implementing-subscription-control}
+
+\begin{DoxyCodeInclude}
+    ret = \hyperlink{group__publication_ga7b0709e28cb34d5a30b90e4142cd6c19}{DPS\_InitPublication}(pub, topics, numTopics, noWildCard, NULL, 
+      AcknowledgementHandler);
+    \textcolor{keywordflow}{if} (ret != \hyperlink{group__status_ga0ea3dd37bc558859ae0cb5a4f79a4bdd}{DPS\_OK}) \{
+        \textcolor{keywordflow}{goto} Exit;
+    \}
+    \textcolor{keyword}{const} AccessControlEntry* ace;
+    \textcolor{keywordflow}{for} (ace = ACL; ace->keyId.id; ++ace) \{
+        \textcolor{keywordflow}{if} (IsAllowed(&ace->keyId, SUB, pub)) \{
+            ret = \hyperlink{group__publication_ga91471ddf6f66798e255b28b3e913144b}{DPS\_PublicationAddSubId}(pub, &ace->keyId);
+            \textcolor{keywordflow}{if} (ret != \hyperlink{group__status_ga0ea3dd37bc558859ae0cb5a4f79a4bdd}{DPS\_OK}) \{
+                \textcolor{keywordflow}{goto} Exit;
+            \}
+        \}
+    \}
+\end{DoxyCodeInclude}
+After initializing the publication, we use \hyperlink{group__publication_ga91471ddf6f66798e255b28b3e913144b}{D\+P\+S\+\_\+\+Publication\+Add\+Sub\+Id()} to add only the key identifiers of allowed subscribers. Any other subscribers will be unable to decrypt the publication.\hypertarget{tutorials-security_implementing-publication-control}{}\subsubsection{Implementing publication control}\label{tutorials-security_implementing-publication-control}
+
+\begin{DoxyCodeInclude}
+    \textcolor{keyword}{const} \hyperlink{struct___d_p_s___key_id}{DPS\_KeyId}* keyId = \hyperlink{group__publication_ga1d7e81c2f0b19736a4f7a7195e5bd98d}{DPS\_PublicationGetSenderKeyId}(pub);
+    \textcolor{keywordflow}{if} (!IsAllowed(keyId, PUB, pub)) \{
+        \hyperlink{group__debug_gaf1d25cc7f1d2d92f96ba620217af28fd}{DPS\_PRINT}(\textcolor{stringliteral}{"Rejecting publication\(\backslash\)n"});
+        \textcolor{keywordflow}{return};
+    \}
+    \textcolor{comment}{/* Proceed with application handling of publication... */}
+\end{DoxyCodeInclude}
+In the publication handler before any application-\/specific handling is done, we use \hyperlink{group__publication_ga1d7e81c2f0b19736a4f7a7195e5bd98d}{D\+P\+S\+\_\+\+Publication\+Get\+Sender\+Key\+Id()} to first check if the sender is allowed to publish to the topic. If not, we reject the publication.\hypertarget{tutorials-security_implementing-acknowledgement-control}{}\subsubsection{Implementing acknowledgement control}\label{tutorials-security_implementing-acknowledgement-control}
+
+\begin{DoxyCodeInclude}
+    \textcolor{keyword}{const} \hyperlink{struct___d_p_s___key_id}{DPS\_KeyId}* keyId = \hyperlink{group__publication_ga9190b8fa3bad848fb428acd6c0c2b210}{DPS\_AckGetSenderKeyId}(pub);
+    \textcolor{keywordflow}{if} (!IsAllowed(keyId, ACK, pub)) \{
+        \hyperlink{group__debug_gac69225c4b8e73b27204a2963d4ca0633}{DPS\_ERRPRINT}(\textcolor{stringliteral}{"Rejecting acknowledgement\(\backslash\)n"});
+        \textcolor{keywordflow}{return};
+    \}
+    \textcolor{comment}{/* Proceed with application handling of acknowledgement... */}
+\end{DoxyCodeInclude}
+In the acknowledgement handler, before any application-\/specific handling is done, we use \hyperlink{group__publication_ga9190b8fa3bad848fb428acd6c0c2b210}{D\+P\+S\+\_\+\+Ack\+Get\+Sender\+Key\+Id()} to first check if the sender is allowed to acknowledge the topic. If not, we reject the acknowledgement. 

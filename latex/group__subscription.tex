@@ -1,0 +1,228 @@
+\hypertarget{group__subscription}{}\section{Subscription}
+\label{group__subscription}\index{Subscription@{Subscription}}
+
+
+Subscriptions.  
+
+
+\subsection*{Typedefs}
+\begin{DoxyCompactItemize}
+\item 
+typedef void($\ast$ \hyperlink{group__subscription_gab95ef1762636ad505c940744b8dce83f}{D\+P\+S\+\_\+\+Publication\+Handler}) (\hyperlink{group__subscription_gadb927c4c1b7306867a75fc4288b54af7}{D\+P\+S\+\_\+\+Subscription} $\ast$sub, const \hyperlink{group__publication_ga0d439693474aa54e27f3d45a054696ac}{D\+P\+S\+\_\+\+Publication} $\ast$pub, uint8\+\_\+t $\ast$payload, size\+\_\+t len)
+\begin{DoxyCompactList}\small\item\em Function prototype for a publication handler called when a publication is received that matches a subscription. \end{DoxyCompactList}\item 
+\mbox{\Hypertarget{group__subscription_gadb927c4c1b7306867a75fc4288b54af7}\label{group__subscription_gadb927c4c1b7306867a75fc4288b54af7}} 
+typedef struct \+\_\+\+D\+P\+S\+\_\+\+Subscription \hyperlink{group__subscription_gadb927c4c1b7306867a75fc4288b54af7}{D\+P\+S\+\_\+\+Subscription}
+\begin{DoxyCompactList}\small\item\em Opaque type for a subscription. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\subsection*{Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hyperlink{group__subscription_gadb927c4c1b7306867a75fc4288b54af7}{D\+P\+S\+\_\+\+Subscription} $\ast$ \hyperlink{group__subscription_ga4095bb00bd0ca7fa9614ebbc2c28199f}{D\+P\+S\+\_\+\+Create\+Subscription} (\hyperlink{group__node_ga4dd612ab965134321bb57fdb065f121c}{D\+P\+S\+\_\+\+Node} $\ast$node, const char $\ast$$\ast$topics, size\+\_\+t num\+Topics)
+\begin{DoxyCompactList}\small\item\em Allocate memory for a subscription and initialize topics. \end{DoxyCompactList}\item 
+\hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{D\+P\+S\+\_\+\+Status} \hyperlink{group__subscription_gaac78b5690aa31eec642b2a706faac510}{D\+P\+S\+\_\+\+Destroy\+Subscription} (\hyperlink{group__subscription_gadb927c4c1b7306867a75fc4288b54af7}{D\+P\+S\+\_\+\+Subscription} $\ast$sub)
+\begin{DoxyCompactList}\small\item\em Stop subscribing to the subscription topic and free resources allocated for the subscription. \end{DoxyCompactList}\item 
+void $\ast$ \hyperlink{group__subscription_ga88ab2284734f099ef67bcc60997142b3}{D\+P\+S\+\_\+\+Get\+Subscription\+Data} (\hyperlink{group__subscription_gadb927c4c1b7306867a75fc4288b54af7}{D\+P\+S\+\_\+\+Subscription} $\ast$sub)
+\begin{DoxyCompactList}\small\item\em Get application data pointer previously set by \hyperlink{group__subscription_gad581d341003e20c714061e44b57c2009}{D\+P\+S\+\_\+\+Set\+Subscription\+Data()} \end{DoxyCompactList}\item 
+\hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{D\+P\+S\+\_\+\+Status} \hyperlink{group__subscription_gad581d341003e20c714061e44b57c2009}{D\+P\+S\+\_\+\+Set\+Subscription\+Data} (\hyperlink{group__subscription_gadb927c4c1b7306867a75fc4288b54af7}{D\+P\+S\+\_\+\+Subscription} $\ast$sub, void $\ast$data)
+\begin{DoxyCompactList}\small\item\em Store a pointer to application data in a subscription. \end{DoxyCompactList}\item 
+\hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{D\+P\+S\+\_\+\+Status} \hyperlink{group__subscription_ga83234ea82a91e07e3f5894a4dcf5267e}{D\+P\+S\+\_\+\+Subscribe} (\hyperlink{group__subscription_gadb927c4c1b7306867a75fc4288b54af7}{D\+P\+S\+\_\+\+Subscription} $\ast$sub, \hyperlink{group__subscription_gab95ef1762636ad505c940744b8dce83f}{D\+P\+S\+\_\+\+Publication\+Handler} handler)
+\begin{DoxyCompactList}\small\item\em Start subscribing to a set of topics. \end{DoxyCompactList}\item 
+\hyperlink{group__node_ga4dd612ab965134321bb57fdb065f121c}{D\+P\+S\+\_\+\+Node} $\ast$ \hyperlink{group__subscription_gafea65751c811555736c8c65fcb3a9480}{D\+P\+S\+\_\+\+Subscription\+Get\+Node} (const \hyperlink{group__subscription_gadb927c4c1b7306867a75fc4288b54af7}{D\+P\+S\+\_\+\+Subscription} $\ast$sub)
+\begin{DoxyCompactList}\small\item\em Get the local node associated with a subscription. \end{DoxyCompactList}\item 
+size\+\_\+t \hyperlink{group__subscription_gab0ad2c6806f8f44f27c70fff915b7e9a}{D\+P\+S\+\_\+\+Subscription\+Get\+Num\+Topics} (const \hyperlink{group__subscription_gadb927c4c1b7306867a75fc4288b54af7}{D\+P\+S\+\_\+\+Subscription} $\ast$sub)
+\begin{DoxyCompactList}\small\item\em Get the number of topics registered with an active subscription. \end{DoxyCompactList}\item 
+const char $\ast$ \hyperlink{group__subscription_gaacc63deda2f2d97cf3f44ca84784b2f6}{D\+P\+S\+\_\+\+Subscription\+Get\+Topic} (const \hyperlink{group__subscription_gadb927c4c1b7306867a75fc4288b54af7}{D\+P\+S\+\_\+\+Subscription} $\ast$sub, size\+\_\+t index)
+\begin{DoxyCompactList}\small\item\em Get a topic for an active subscription. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Subscriptions. 
+
+
+
+\subsection{Typedef Documentation}
+\mbox{\Hypertarget{group__subscription_gab95ef1762636ad505c940744b8dce83f}\label{group__subscription_gab95ef1762636ad505c940744b8dce83f}} 
+\index{Subscription@{Subscription}!D\+P\+S\+\_\+\+Publication\+Handler@{D\+P\+S\+\_\+\+Publication\+Handler}}
+\index{D\+P\+S\+\_\+\+Publication\+Handler@{D\+P\+S\+\_\+\+Publication\+Handler}!Subscription@{Subscription}}
+\subsubsection{\texorpdfstring{D\+P\+S\+\_\+\+Publication\+Handler}{DPS\_PublicationHandler}}
+{\footnotesize\ttfamily typedef void($\ast$ D\+P\+S\+\_\+\+Publication\+Handler) (\hyperlink{group__subscription_gadb927c4c1b7306867a75fc4288b54af7}{D\+P\+S\+\_\+\+Subscription} $\ast$sub, const \hyperlink{group__publication_ga0d439693474aa54e27f3d45a054696ac}{D\+P\+S\+\_\+\+Publication} $\ast$pub, uint8\+\_\+t $\ast$payload, size\+\_\+t len)}
+
+
+
+Function prototype for a publication handler called when a publication is received that matches a subscription. 
+
+Note that there is a possibility of false-\/positive matches.
+
+The publication handle is only valid within the body of this callback function. \hyperlink{group__publication_ga41f31a8b63558e13d73d96de6086e5c4}{D\+P\+S\+\_\+\+Copy\+Publication()} will make a partial copy of the publication that can be used later for example to call \hyperlink{group__publication_ga308074429a566ffb8d04d55bae520b04}{D\+P\+S\+\_\+\+Ack\+Publication()}.
+
+The accessor functions \hyperlink{group__publication_gaba1ad3ee807b75a1281d334be06a12f7}{D\+P\+S\+\_\+\+Publication\+Get\+U\+U\+I\+D()} and \hyperlink{group__publication_ga875b48217d861d4a9fa5471419d354e9}{D\+P\+S\+\_\+\+Publication\+Get\+Sequence\+Num()} return information about the received publication.
+
+The accessor functions \hyperlink{group__subscription_gab0ad2c6806f8f44f27c70fff915b7e9a}{D\+P\+S\+\_\+\+Subscription\+Get\+Num\+Topics()} and \hyperlink{group__subscription_gaacc63deda2f2d97cf3f44ca84784b2f6}{D\+P\+S\+\_\+\+Subscription\+Get\+Topic()} return information about the subscription that was matched.
+
+
+\begin{DoxyParams}{Parameters}
+{\em sub} & Opaque handle for the subscription that was matched \\
+\hline
+{\em pub} & Opaque handle for the publication that was received \\
+\hline
+{\em payload} & Payload from the publication if any \\
+\hline
+{\em len} & Length of the payload \\
+\hline
+\end{DoxyParams}
+
+
+\subsection{Function Documentation}
+\mbox{\Hypertarget{group__subscription_ga4095bb00bd0ca7fa9614ebbc2c28199f}\label{group__subscription_ga4095bb00bd0ca7fa9614ebbc2c28199f}} 
+\index{Subscription@{Subscription}!D\+P\+S\+\_\+\+Create\+Subscription@{D\+P\+S\+\_\+\+Create\+Subscription}}
+\index{D\+P\+S\+\_\+\+Create\+Subscription@{D\+P\+S\+\_\+\+Create\+Subscription}!Subscription@{Subscription}}
+\subsubsection{\texorpdfstring{D\+P\+S\+\_\+\+Create\+Subscription()}{DPS\_CreateSubscription()}}
+{\footnotesize\ttfamily \hyperlink{group__subscription_gadb927c4c1b7306867a75fc4288b54af7}{D\+P\+S\+\_\+\+Subscription}$\ast$ D\+P\+S\+\_\+\+Create\+Subscription (\begin{DoxyParamCaption}\item[{\hyperlink{group__node_ga4dd612ab965134321bb57fdb065f121c}{D\+P\+S\+\_\+\+Node} $\ast$}]{node,  }\item[{const char $\ast$$\ast$}]{topics,  }\item[{size\+\_\+t}]{num\+Topics }\end{DoxyParamCaption})}
+
+
+
+Allocate memory for a subscription and initialize topics. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em node} & The local node to use \\
+\hline
+{\em topics} & The topic strings to match \\
+\hline
+{\em num\+Topics} & The number of topic strings to match -\/ must be $>$= 1\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The newly created subscription or N\+U\+LL if resources could not be allocated or the arguments were invalid 
+\end{DoxyReturn}
+\mbox{\Hypertarget{group__subscription_gaac78b5690aa31eec642b2a706faac510}\label{group__subscription_gaac78b5690aa31eec642b2a706faac510}} 
+\index{Subscription@{Subscription}!D\+P\+S\+\_\+\+Destroy\+Subscription@{D\+P\+S\+\_\+\+Destroy\+Subscription}}
+\index{D\+P\+S\+\_\+\+Destroy\+Subscription@{D\+P\+S\+\_\+\+Destroy\+Subscription}!Subscription@{Subscription}}
+\subsubsection{\texorpdfstring{D\+P\+S\+\_\+\+Destroy\+Subscription()}{DPS\_DestroySubscription()}}
+{\footnotesize\ttfamily \hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{D\+P\+S\+\_\+\+Status} D\+P\+S\+\_\+\+Destroy\+Subscription (\begin{DoxyParamCaption}\item[{\hyperlink{group__subscription_gadb927c4c1b7306867a75fc4288b54af7}{D\+P\+S\+\_\+\+Subscription} $\ast$}]{sub }\end{DoxyParamCaption})}
+
+
+
+Stop subscribing to the subscription topic and free resources allocated for the subscription. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em sub} & The subscription to cancel\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+D\+P\+S\+\_\+\+OK if destroy is successful, an error otherwise 
+\end{DoxyReturn}
+\mbox{\Hypertarget{group__subscription_ga88ab2284734f099ef67bcc60997142b3}\label{group__subscription_ga88ab2284734f099ef67bcc60997142b3}} 
+\index{Subscription@{Subscription}!D\+P\+S\+\_\+\+Get\+Subscription\+Data@{D\+P\+S\+\_\+\+Get\+Subscription\+Data}}
+\index{D\+P\+S\+\_\+\+Get\+Subscription\+Data@{D\+P\+S\+\_\+\+Get\+Subscription\+Data}!Subscription@{Subscription}}
+\subsubsection{\texorpdfstring{D\+P\+S\+\_\+\+Get\+Subscription\+Data()}{DPS\_GetSubscriptionData()}}
+{\footnotesize\ttfamily void$\ast$ D\+P\+S\+\_\+\+Get\+Subscription\+Data (\begin{DoxyParamCaption}\item[{\hyperlink{group__subscription_gadb927c4c1b7306867a75fc4288b54af7}{D\+P\+S\+\_\+\+Subscription} $\ast$}]{sub }\end{DoxyParamCaption})}
+
+
+
+Get application data pointer previously set by \hyperlink{group__subscription_gad581d341003e20c714061e44b57c2009}{D\+P\+S\+\_\+\+Set\+Subscription\+Data()} 
+
+
+\begin{DoxyParams}{Parameters}
+{\em sub} & The subscription\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+A pointer to the data or N\+U\+LL if the subscription is invalid 
+\end{DoxyReturn}
+\mbox{\Hypertarget{group__subscription_gad581d341003e20c714061e44b57c2009}\label{group__subscription_gad581d341003e20c714061e44b57c2009}} 
+\index{Subscription@{Subscription}!D\+P\+S\+\_\+\+Set\+Subscription\+Data@{D\+P\+S\+\_\+\+Set\+Subscription\+Data}}
+\index{D\+P\+S\+\_\+\+Set\+Subscription\+Data@{D\+P\+S\+\_\+\+Set\+Subscription\+Data}!Subscription@{Subscription}}
+\subsubsection{\texorpdfstring{D\+P\+S\+\_\+\+Set\+Subscription\+Data()}{DPS\_SetSubscriptionData()}}
+{\footnotesize\ttfamily \hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{D\+P\+S\+\_\+\+Status} D\+P\+S\+\_\+\+Set\+Subscription\+Data (\begin{DoxyParamCaption}\item[{\hyperlink{group__subscription_gadb927c4c1b7306867a75fc4288b54af7}{D\+P\+S\+\_\+\+Subscription} $\ast$}]{sub,  }\item[{void $\ast$}]{data }\end{DoxyParamCaption})}
+
+
+
+Store a pointer to application data in a subscription. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em sub} & The subscription \\
+\hline
+{\em data} & The data pointer to store\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+D\+P\+S\+\_\+\+OK or an error 
+\end{DoxyReturn}
+\mbox{\Hypertarget{group__subscription_ga83234ea82a91e07e3f5894a4dcf5267e}\label{group__subscription_ga83234ea82a91e07e3f5894a4dcf5267e}} 
+\index{Subscription@{Subscription}!D\+P\+S\+\_\+\+Subscribe@{D\+P\+S\+\_\+\+Subscribe}}
+\index{D\+P\+S\+\_\+\+Subscribe@{D\+P\+S\+\_\+\+Subscribe}!Subscription@{Subscription}}
+\subsubsection{\texorpdfstring{D\+P\+S\+\_\+\+Subscribe()}{DPS\_Subscribe()}}
+{\footnotesize\ttfamily \hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{D\+P\+S\+\_\+\+Status} D\+P\+S\+\_\+\+Subscribe (\begin{DoxyParamCaption}\item[{\hyperlink{group__subscription_gadb927c4c1b7306867a75fc4288b54af7}{D\+P\+S\+\_\+\+Subscription} $\ast$}]{sub,  }\item[{\hyperlink{group__subscription_gab95ef1762636ad505c940744b8dce83f}{D\+P\+S\+\_\+\+Publication\+Handler}}]{handler }\end{DoxyParamCaption})}
+
+
+
+Start subscribing to a set of topics. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em sub} & The subscription to start \\
+\hline
+{\em handler} & Callback function to be called with topic matches\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+D\+P\+S\+\_\+\+OK if start is successful, an error otherwise 
+\end{DoxyReturn}
+\mbox{\Hypertarget{group__subscription_gafea65751c811555736c8c65fcb3a9480}\label{group__subscription_gafea65751c811555736c8c65fcb3a9480}} 
+\index{Subscription@{Subscription}!D\+P\+S\+\_\+\+Subscription\+Get\+Node@{D\+P\+S\+\_\+\+Subscription\+Get\+Node}}
+\index{D\+P\+S\+\_\+\+Subscription\+Get\+Node@{D\+P\+S\+\_\+\+Subscription\+Get\+Node}!Subscription@{Subscription}}
+\subsubsection{\texorpdfstring{D\+P\+S\+\_\+\+Subscription\+Get\+Node()}{DPS\_SubscriptionGetNode()}}
+{\footnotesize\ttfamily \hyperlink{group__node_ga4dd612ab965134321bb57fdb065f121c}{D\+P\+S\+\_\+\+Node}$\ast$ D\+P\+S\+\_\+\+Subscription\+Get\+Node (\begin{DoxyParamCaption}\item[{const \hyperlink{group__subscription_gadb927c4c1b7306867a75fc4288b54af7}{D\+P\+S\+\_\+\+Subscription} $\ast$}]{sub }\end{DoxyParamCaption})}
+
+
+
+Get the local node associated with a subscription. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em sub} & The subscription\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The node or N\+U\+LL if the subscription is invalid 
+\end{DoxyReturn}
+\mbox{\Hypertarget{group__subscription_gab0ad2c6806f8f44f27c70fff915b7e9a}\label{group__subscription_gab0ad2c6806f8f44f27c70fff915b7e9a}} 
+\index{Subscription@{Subscription}!D\+P\+S\+\_\+\+Subscription\+Get\+Num\+Topics@{D\+P\+S\+\_\+\+Subscription\+Get\+Num\+Topics}}
+\index{D\+P\+S\+\_\+\+Subscription\+Get\+Num\+Topics@{D\+P\+S\+\_\+\+Subscription\+Get\+Num\+Topics}!Subscription@{Subscription}}
+\subsubsection{\texorpdfstring{D\+P\+S\+\_\+\+Subscription\+Get\+Num\+Topics()}{DPS\_SubscriptionGetNumTopics()}}
+{\footnotesize\ttfamily size\+\_\+t D\+P\+S\+\_\+\+Subscription\+Get\+Num\+Topics (\begin{DoxyParamCaption}\item[{const \hyperlink{group__subscription_gadb927c4c1b7306867a75fc4288b54af7}{D\+P\+S\+\_\+\+Subscription} $\ast$}]{sub }\end{DoxyParamCaption})}
+
+
+
+Get the number of topics registered with an active subscription. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em sub} & The subscription\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The number of topics. 
+\end{DoxyReturn}
+\mbox{\Hypertarget{group__subscription_gaacc63deda2f2d97cf3f44ca84784b2f6}\label{group__subscription_gaacc63deda2f2d97cf3f44ca84784b2f6}} 
+\index{Subscription@{Subscription}!D\+P\+S\+\_\+\+Subscription\+Get\+Topic@{D\+P\+S\+\_\+\+Subscription\+Get\+Topic}}
+\index{D\+P\+S\+\_\+\+Subscription\+Get\+Topic@{D\+P\+S\+\_\+\+Subscription\+Get\+Topic}!Subscription@{Subscription}}
+\subsubsection{\texorpdfstring{D\+P\+S\+\_\+\+Subscription\+Get\+Topic()}{DPS\_SubscriptionGetTopic()}}
+{\footnotesize\ttfamily const char$\ast$ D\+P\+S\+\_\+\+Subscription\+Get\+Topic (\begin{DoxyParamCaption}\item[{const \hyperlink{group__subscription_gadb927c4c1b7306867a75fc4288b54af7}{D\+P\+S\+\_\+\+Subscription} $\ast$}]{sub,  }\item[{size\+\_\+t}]{index }\end{DoxyParamCaption})}
+
+
+
+Get a topic for an active subscription. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em sub} & The subscription \\
+\hline
+{\em index} & The topic index\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The topic string or N\+U\+LL if the subscription or index is invalid. 
+\end{DoxyReturn}

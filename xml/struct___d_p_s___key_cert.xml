@@ -1,0 +1,59 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.13">
+  <compounddef id="struct___d_p_s___key_cert" kind="struct" language="C++" prot="public">
+    <compoundname>_DPS_KeyCert</compoundname>
+    <includes refid="dps_8h" local="no">dps.h</includes>
+      <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="struct___d_p_s___key_cert_1a2783654ef73f2cc58911f40cd6e4f6ba" prot="public" static="no" mutable="no">
+        <type>const char *</type>
+        <definition>const char* _DPS_KeyCert::cert</definition>
+        <argsstring></argsstring>
+        <name>cert</name>
+        <briefdescription>
+<para>The certificate in PEM format. </para>        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="162" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="162" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="struct___d_p_s___key_cert_1a18f3f492b66fbeb3de6a09aff54369cf" prot="public" static="no" mutable="no">
+        <type>const char *</type>
+        <definition>const char* _DPS_KeyCert::password</definition>
+        <argsstring></argsstring>
+        <name>password</name>
+        <briefdescription>
+<para>The optional password protecting the key. </para>        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="164" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="164" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="struct___d_p_s___key_cert_1a0ba1842f3982c930ba76469349b0812d" prot="public" static="no" mutable="no">
+        <type>const char *</type>
+        <definition>const char* _DPS_KeyCert::privateKey</definition>
+        <argsstring></argsstring>
+        <name>privateKey</name>
+        <briefdescription>
+<para>The optional private key in PEM format. </para>        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="163" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="163" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+<para>Certificate key data. </para>    </briefdescription>
+    <detaileddescription>
+<para><simplesect kind="note"><para>Need to define this outside of DPS_Key to satisfy SWIG. </para></simplesect>
+</para>    </detaileddescription>
+    <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="161" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="161" bodyend="165"/>
+    <listofallmembers>
+      <member refid="struct___d_p_s___key_cert_1a2783654ef73f2cc58911f40cd6e4f6ba" prot="public" virt="non-virtual"><scope>_DPS_KeyCert</scope><name>cert</name></member>
+      <member refid="struct___d_p_s___key_cert_1a18f3f492b66fbeb3de6a09aff54369cf" prot="public" virt="non-virtual"><scope>_DPS_KeyCert</scope><name>password</name></member>
+      <member refid="struct___d_p_s___key_cert_1a0ba1842f3982c930ba76469349b0812d" prot="public" virt="non-virtual"><scope>_DPS_KeyCert</scope><name>privateKey</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

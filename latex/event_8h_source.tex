@@ -1,0 +1,60 @@
+\hypertarget{event_8h_source}{}\section{event.\+h}
+\label{event_8h_source}\index{event.\+h@{event.\+h}}
+
+\begin{DoxyCode}
+00001 
+00006 \textcolor{comment}{/*}
+00007 \textcolor{comment}{ *******************************************************************}
+00008 \textcolor{comment}{ *}
+00009 \textcolor{comment}{ * Copyright 2016 Intel Corporation All rights reserved.}
+00010 \textcolor{comment}{ *}
+00011 \textcolor{comment}{ *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=}
+00012 \textcolor{comment}{ *}
+00013 \textcolor{comment}{ * Licensed under the Apache License, Version 2.0 (the "License");}
+00014 \textcolor{comment}{ * you may not use this file except in compliance with the License.}
+00015 \textcolor{comment}{ * You may obtain a copy of the License at}
+00016 \textcolor{comment}{ *}
+00017 \textcolor{comment}{ *      http://www.apache.org/licenses/LICENSE-2.0}
+00018 \textcolor{comment}{ *}
+00019 \textcolor{comment}{ * Unless required by applicable law or agreed to in writing, software}
+00020 \textcolor{comment}{ * distributed under the License is distributed on an "AS IS" BASIS,}
+00021 \textcolor{comment}{ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.}
+00022 \textcolor{comment}{ * See the License for the specific language governing permissions and}
+00023 \textcolor{comment}{ * limitations under the License.}
+00024 \textcolor{comment}{ *}
+00025 \textcolor{comment}{ *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=}
+00026 \textcolor{comment}{ */}
+00027 
+00028 \textcolor{preprocessor}{#ifndef \_DPS\_EVENT\_H}
+00029 \textcolor{preprocessor}{#define \_DPS\_EVENT\_H}
+00030 
+00031 \textcolor{preprocessor}{#include <\hyperlink{err_8h}{dps/err.h}>}
+00032 \textcolor{preprocessor}{#include <\hyperlink{dps_8h}{dps/dps.h}>}
+00033 
+00034 \textcolor{preprocessor}{#ifdef \_\_cplusplus}
+00035 \textcolor{keyword}{extern} \textcolor{stringliteral}{"C"} \{
+00036 \textcolor{preprocessor}{#endif}
+00037 
+\Hypertarget{event_8h_source_l00047}\hyperlink{group__event_ga97617da1bac0e76646713b8665dfdd85}{00047} \textcolor{keyword}{typedef} \textcolor{keyword}{struct }\_DPS\_Event \hyperlink{group__event_ga97617da1bac0e76646713b8665dfdd85}{DPS\_Event};
+00048 
+00054 \hyperlink{group__event_ga97617da1bac0e76646713b8665dfdd85}{DPS\_Event}* \hyperlink{group__event_gac38abc1e32666d631a40049c90bc66d3}{DPS\_CreateEvent}();
+00055 
+00061 \textcolor{keywordtype}{void} \hyperlink{group__event_ga7539f700336357cd320d6b40eba59c63}{DPS\_DestroyEvent}(\hyperlink{group__event_ga97617da1bac0e76646713b8665dfdd85}{DPS\_Event}* event);
+00062 
+00069 \textcolor{keywordtype}{void} \hyperlink{group__event_ga23a814c5aaebf5bdddebac0ef5d295ce}{DPS\_SetEventData}(\hyperlink{group__event_ga97617da1bac0e76646713b8665dfdd85}{DPS\_Event}* event, \textcolor{keywordtype}{void}* data);
+00070 
+00078 \textcolor{keywordtype}{void}* \hyperlink{group__event_gaba8fce0d0896df9b6f294112a251e39f}{DPS\_GetEventData}(\textcolor{keyword}{const} \hyperlink{group__event_ga97617da1bac0e76646713b8665dfdd85}{DPS\_Event}* event);
+00079 
+00086 \textcolor{keywordtype}{void} \hyperlink{group__event_gad0f8a3b372f972bfaa97e29fa01b5c82}{DPS\_SignalEvent}(\hyperlink{group__event_ga97617da1bac0e76646713b8665dfdd85}{DPS\_Event}* event, \hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{DPS\_Status} status);
+00087 
+00095 \hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{DPS\_Status} \hyperlink{group__event_gab2f3f1236cd100cd271c85191df650e8}{DPS\_WaitForEvent}(\hyperlink{group__event_ga97617da1bac0e76646713b8665dfdd85}{DPS\_Event}* event);
+00096 
+00105 \hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{DPS\_Status} \hyperlink{group__event_gacf62ac4adc9f8eaf088cdec6c273e930}{DPS\_TimedWaitForEvent}(\hyperlink{group__event_ga97617da1bac0e76646713b8665dfdd85}{DPS\_Event}* event, uint16\_t timeout
+      );
+00106 
+00109 \textcolor{preprocessor}{#ifdef \_\_cplusplus}
+00110 \}
+00111 \textcolor{preprocessor}{#endif}
+00112 
+00113 \textcolor{preprocessor}{#endif}
+\end{DoxyCode}

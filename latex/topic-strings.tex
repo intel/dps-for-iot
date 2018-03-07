@@ -1,0 +1,21 @@
+D\+PS like other pub/sub protocols expresses publications and subscriptions as structured text strings called topic strings.
+
+A topic string is a sequence of substrings delineated by a standalone separator character. In D\+PS almost any character or set of characters the publisher and subscriber agree on can be used as a separator. A publication matches a subscription if the substrings and separators in the publication are the same as the substrings and separators in the publication. Subscription topic strings can also include wildcard characters as described below. These are all valid publication topic strings\+:
+
+\begin{DoxyVerb}foo/bar
+x,y,z
+1.2.3
+a/b/c?val=5
+\end{DoxyVerb}
+
+
+In the last example {\ttfamily /}, {\ttfamily }?, and {\ttfamily =} are separators. Separators must standalone, two or more consecutive separators are disallowed. Subscription topics strings have the same form as publication topics strings but can include wild-\/card characters. D\+PS uses the same wildcard characters as M\+Q\+TT with the same meanings\+: the plus sign {\ttfamily +} wild card matches to any substring in the same position; the hash or pound sign {\ttfamily \#} matches any number of trailing substrings. In D\+PS {\ttfamily +} and {\ttfamily \#} are currently the only characters that are reserved. These are some valid wild-\/carded subscription topic strings\+:
+
+\begin{DoxyVerb}+/bar
+x,+,z
+1.#
+a/b/c?val=+
+\end{DoxyVerb}
+
+
+In M\+Q\+TT and other pub/sub protocols a subscription or publication is a single topic string. A unique feature of D\+PS is that subscriptions and publications can have multiple topic strings. A subscription with more than one topic string will only match publications that have matching topic strings for all of topic strings in the subscription. As an example of how this might be used consider a set of devices that publish a topic string describing device type and a topic string describing the physical location of the device. An application could subscribe to all devices at a specific location by only specifying the location topic string, all devices of a specific type by only specifying the device type, or home in on a device with a specific type at specific location by using both topic strings in the same subscription. Another unique feature of D\+PS is that publisher control over the kinds of wild-\/card matches a subscriber is permitted to use. For example, a publisher can decide that wild-\/card matches must fully specify at least the first N elements in order to match. This offers a publisher control over wide-\/open wildcard subscriptions such as {\ttfamily +/\#}, the most generic form allowed by D\+PS, that will match any publication with two or more elements. 

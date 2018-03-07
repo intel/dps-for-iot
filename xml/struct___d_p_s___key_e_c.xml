@@ -1,0 +1,73 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.13">
+  <compounddef id="struct___d_p_s___key_e_c" kind="struct" language="C++" prot="public">
+    <compoundname>_DPS_KeyEC</compoundname>
+    <includes refid="dps_8h" local="no">dps.h</includes>
+      <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="struct___d_p_s___key_e_c_1a9896c40cd0b6dd0bd05ac5831fc421d9" prot="public" static="no" mutable="no">
+        <type><ref refid="group__keystore_1ga9ba152af7a3ed9076bfa597ef918cac1" kindref="member">DPS_ECCurve</ref></type>
+        <definition>DPS_ECCurve _DPS_KeyEC::curve</definition>
+        <argsstring></argsstring>
+        <name>curve</name>
+        <briefdescription>
+<para>The named curve. </para>        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="150" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="150" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="struct___d_p_s___key_e_c_1aa008a9db4f8bc93e6572b91cfb0a51dd" prot="public" static="no" mutable="no">
+        <type>const uint8_t *</type>
+        <definition>const uint8_t* _DPS_KeyEC::d</definition>
+        <argsstring></argsstring>
+        <name>d</name>
+        <briefdescription>
+<para>D coordinate. </para>        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="153" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="153" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="struct___d_p_s___key_e_c_1a341a17a83bec9eb91bc2ce93c3832d81" prot="public" static="no" mutable="no">
+        <type>const uint8_t *</type>
+        <definition>const uint8_t* _DPS_KeyEC::x</definition>
+        <argsstring></argsstring>
+        <name>x</name>
+        <briefdescription>
+<para>X coordinate. </para>        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="151" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="151" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="struct___d_p_s___key_e_c_1adab7230a279ab8e4a30483cc71608abd" prot="public" static="no" mutable="no">
+        <type>const uint8_t *</type>
+        <definition>const uint8_t* _DPS_KeyEC::y</definition>
+        <argsstring></argsstring>
+        <name>y</name>
+        <briefdescription>
+<para>Y coordinate. </para>        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="152" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="152" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+<para>Elliptic curve key data. </para>    </briefdescription>
+    <detaileddescription>
+<para>Only <computeroutput>x</computeroutput> and <computeroutput>y</computeroutput> are needed for a public key. Similarly, only <computeroutput>d</computeroutput> is needed for a private key.</para><para><simplesect kind="note"><para>Need to define this outside of DPS_Key to satisfy SWIG. </para></simplesect>
+</para>    </detaileddescription>
+    <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="149" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="149" bodyend="154"/>
+    <listofallmembers>
+      <member refid="struct___d_p_s___key_e_c_1a9896c40cd0b6dd0bd05ac5831fc421d9" prot="public" virt="non-virtual"><scope>_DPS_KeyEC</scope><name>curve</name></member>
+      <member refid="struct___d_p_s___key_e_c_1aa008a9db4f8bc93e6572b91cfb0a51dd" prot="public" virt="non-virtual"><scope>_DPS_KeyEC</scope><name>d</name></member>
+      <member refid="struct___d_p_s___key_e_c_1a341a17a83bec9eb91bc2ce93c3832d81" prot="public" virt="non-virtual"><scope>_DPS_KeyEC</scope><name>x</name></member>
+      <member refid="struct___d_p_s___key_e_c_1adab7230a279ab8e4a30483cc71608abd" prot="public" virt="non-virtual"><scope>_DPS_KeyEC</scope><name>y</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

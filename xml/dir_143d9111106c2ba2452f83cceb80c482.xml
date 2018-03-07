@@ -1,0 +1,18 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.13">
+  <compounddef id="dir_143d9111106c2ba2452f83cceb80c482" kind="dir">
+    <compoundname>dps</compoundname>
+    <innerfile refid="dbg_8h">dbg.h</innerfile>
+    <innerfile refid="dps_8h">dps.h</innerfile>
+    <innerfile refid="err_8h">err.h</innerfile>
+    <innerfile refid="event_8h">event.h</innerfile>
+    <innerfile refid="registration_8h">registration.h</innerfile>
+    <innerfile refid="synchronous_8h">synchronous.h</innerfile>
+    <innerfile refid="uuid_8h">uuid.h</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/"/>
+  </compounddef>
+</doxygen>

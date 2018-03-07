@@ -1,0 +1,466 @@
+\hypertarget{group__node}{}\section{Node}
+\label{group__node}\index{Node@{Node}}
+
+
+Entities in the D\+PS network.  
+
+
+\subsection*{Macros}
+\begin{DoxyCompactItemize}
+\item 
+\#define \hyperlink{group__node_gac939c83361ed89086f37c78d9c9009dd}{D\+P\+S\+\_\+\+M\+C\+A\+S\+T\+\_\+\+P\+U\+B\+\_\+\+D\+I\+S\+A\+B\+L\+ED}~0
+\begin{DoxyCompactList}\small\item\em Disable multicast send and receive on the node. \end{DoxyCompactList}\item 
+\#define \hyperlink{group__node_gae493573fb2e02b87258952223eb4fcd7}{D\+P\+S\+\_\+\+M\+C\+A\+S\+T\+\_\+\+P\+U\+B\+\_\+\+E\+N\+A\+B\+L\+E\+\_\+\+R\+E\+CV}~2
+\begin{DoxyCompactList}\small\item\em Enable multicast receive on the node. \end{DoxyCompactList}\item 
+\#define \hyperlink{group__node_ga178a3a6450eeff450820fa34fd82049c}{D\+P\+S\+\_\+\+M\+C\+A\+S\+T\+\_\+\+P\+U\+B\+\_\+\+E\+N\+A\+B\+L\+E\+\_\+\+S\+E\+ND}~1
+\begin{DoxyCompactList}\small\item\em Enable multicast send on the node. \end{DoxyCompactList}\item 
+\mbox{\Hypertarget{group__node_ga89df880f9650da5730fa152642c0be9f}\label{group__node_ga89df880f9650da5730fa152642c0be9f}} 
+\#define \hyperlink{group__node_ga89df880f9650da5730fa152642c0be9f}{D\+P\+S\+\_\+\+S\+U\+B\+S\+C\+R\+I\+P\+T\+I\+O\+N\+\_\+\+U\+P\+D\+A\+T\+E\+\_\+\+R\+A\+TE}~1000
+\begin{DoxyCompactList}\small\item\em The default maximum rate (in msecs) to compute and send out subscription updates. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\subsection*{Typedefs}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{group__node_ga4dd612ab965134321bb57fdb065f121c}\label{group__node_ga4dd612ab965134321bb57fdb065f121c}} 
+typedef struct \+\_\+\+D\+P\+S\+\_\+\+Node \hyperlink{group__node_ga4dd612ab965134321bb57fdb065f121c}{D\+P\+S\+\_\+\+Node}
+\begin{DoxyCompactList}\small\item\em Opaque type for a node. \end{DoxyCompactList}\item 
+typedef void($\ast$ \hyperlink{group__node_gaaf70ac42acab8a67693947871e97600f}{D\+P\+S\+\_\+\+On\+Link\+Complete}) (\hyperlink{group__node_ga4dd612ab965134321bb57fdb065f121c}{D\+P\+S\+\_\+\+Node} $\ast$node, \hyperlink{group__nodeaddress_ga9e9f56aa38e82b4edcef7eb81e9f5bd2}{D\+P\+S\+\_\+\+Node\+Address} $\ast$addr, \hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{D\+P\+S\+\_\+\+Status} status, void $\ast$data)
+\begin{DoxyCompactList}\small\item\em Function prototype for function called when a \hyperlink{group__node_ga5064c63b8ce76bf34402e0c80183234b}{D\+P\+S\+\_\+\+Link()} completes. \end{DoxyCompactList}\item 
+typedef void($\ast$ \hyperlink{group__node_ga1e88cc9ca744782e36d58a022fe026c5}{D\+P\+S\+\_\+\+On\+Node\+Destroyed}) (\hyperlink{group__node_ga4dd612ab965134321bb57fdb065f121c}{D\+P\+S\+\_\+\+Node} $\ast$node, void $\ast$data)
+\begin{DoxyCompactList}\small\item\em Function prototype for callback function called when a node is destroyed. \end{DoxyCompactList}\item 
+typedef void($\ast$ \hyperlink{group__node_gac1c96ed1ff9a92e7421ae1c428acb904}{D\+P\+S\+\_\+\+On\+Resolve\+Address\+Complete}) (\hyperlink{group__node_ga4dd612ab965134321bb57fdb065f121c}{D\+P\+S\+\_\+\+Node} $\ast$node, \hyperlink{group__nodeaddress_ga9e9f56aa38e82b4edcef7eb81e9f5bd2}{D\+P\+S\+\_\+\+Node\+Address} $\ast$addr, void $\ast$data)
+\begin{DoxyCompactList}\small\item\em Function prototype for function called when a \hyperlink{group__node_gab78df7f4498b847ddb32fdd33d39ef0f}{D\+P\+S\+\_\+\+Resolve\+Address()} completes. \end{DoxyCompactList}\item 
+typedef void($\ast$ \hyperlink{group__node_ga70b98e7cc39f0dccdba41f0984de82f6}{D\+P\+S\+\_\+\+On\+Unlink\+Complete}) (\hyperlink{group__node_ga4dd612ab965134321bb57fdb065f121c}{D\+P\+S\+\_\+\+Node} $\ast$node, \hyperlink{group__nodeaddress_ga9e9f56aa38e82b4edcef7eb81e9f5bd2}{D\+P\+S\+\_\+\+Node\+Address} $\ast$addr, void $\ast$data)
+\begin{DoxyCompactList}\small\item\em Function prototype for function called when a \hyperlink{group__node_ga79c86c3c0c5d6438b953a9acaab0ab0b}{D\+P\+S\+\_\+\+Unlink()} completes. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\subsection*{Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hyperlink{group__node_ga4dd612ab965134321bb57fdb065f121c}{D\+P\+S\+\_\+\+Node} $\ast$ \hyperlink{group__node_gaf6641b5bbf27b2c45ac7f926b0ce4efe}{D\+P\+S\+\_\+\+Create\+Node} (const char $\ast$separators, \hyperlink{group__keystore_gaf3833cfe48f848f698514bc5daa075fa}{D\+P\+S\+\_\+\+Key\+Store} $\ast$key\+Store, const \hyperlink{group__keystore_ga4345e29dd2ad5d7fd88a1e988787bd72}{D\+P\+S\+\_\+\+Key\+Id} $\ast$key\+Id)
+\begin{DoxyCompactList}\small\item\em Allocates space for a local D\+PS node. \end{DoxyCompactList}\item 
+\hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{D\+P\+S\+\_\+\+Status} \hyperlink{group__node_ga85f5121f80411f5ab82449efe20b68dd}{D\+P\+S\+\_\+\+Destroy\+Node} (\hyperlink{group__node_ga4dd612ab965134321bb57fdb065f121c}{D\+P\+S\+\_\+\+Node} $\ast$node, \hyperlink{group__node_ga1e88cc9ca744782e36d58a022fe026c5}{D\+P\+S\+\_\+\+On\+Node\+Destroyed} cb, void $\ast$data)
+\begin{DoxyCompactList}\small\item\em Destroys a node and free any resources. \end{DoxyCompactList}\item 
+uv\+\_\+loop\+\_\+t $\ast$ \hyperlink{group__node_ga7dacebc6533305fba12335b3b8c817dc}{D\+P\+S\+\_\+\+Get\+Loop} (\hyperlink{group__node_ga4dd612ab965134321bb57fdb065f121c}{D\+P\+S\+\_\+\+Node} $\ast$node)
+\begin{DoxyCompactList}\small\item\em Get the uv event loop for this node. \end{DoxyCompactList}\item 
+void $\ast$ \hyperlink{group__node_ga65bba7bcfe5e940b153fcced4e2e8880}{D\+P\+S\+\_\+\+Get\+Node\+Data} (const \hyperlink{group__node_ga4dd612ab965134321bb57fdb065f121c}{D\+P\+S\+\_\+\+Node} $\ast$node)
+\begin{DoxyCompactList}\small\item\em Get application data pointer previously set by \hyperlink{group__node_gad19cf4272ba11e935654175c83db2ce1}{D\+P\+S\+\_\+\+Set\+Node\+Data()} \end{DoxyCompactList}\item 
+uint16\+\_\+t \hyperlink{group__node_gaf920b28fe0721a7f97b11673494d7b36}{D\+P\+S\+\_\+\+Get\+Port\+Number} (\hyperlink{group__node_ga4dd612ab965134321bb57fdb065f121c}{D\+P\+S\+\_\+\+Node} $\ast$node)
+\begin{DoxyCompactList}\small\item\em Get the port number this node is listening for connections on. \end{DoxyCompactList}\item 
+\hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{D\+P\+S\+\_\+\+Status} \hyperlink{group__node_ga5064c63b8ce76bf34402e0c80183234b}{D\+P\+S\+\_\+\+Link} (\hyperlink{group__node_ga4dd612ab965134321bb57fdb065f121c}{D\+P\+S\+\_\+\+Node} $\ast$node, \hyperlink{group__nodeaddress_ga9e9f56aa38e82b4edcef7eb81e9f5bd2}{D\+P\+S\+\_\+\+Node\+Address} $\ast$addr, \hyperlink{group__node_gaaf70ac42acab8a67693947871e97600f}{D\+P\+S\+\_\+\+On\+Link\+Complete} cb, void $\ast$data)
+\begin{DoxyCompactList}\small\item\em Link the local node to a remote node. \end{DoxyCompactList}\item 
+\hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{D\+P\+S\+\_\+\+Status} \hyperlink{group__node_ga0bd13b2bd395bbc7807ecc899a8862f1}{D\+P\+S\+\_\+\+Link\+To} (\hyperlink{group__node_ga4dd612ab965134321bb57fdb065f121c}{D\+P\+S\+\_\+\+Node} $\ast$node, const char $\ast$host, uint16\+\_\+t port, \hyperlink{group__nodeaddress_ga9e9f56aa38e82b4edcef7eb81e9f5bd2}{D\+P\+S\+\_\+\+Node\+Address} $\ast$addr)
+\begin{DoxyCompactList}\small\item\em Synchronous helper that wraps \hyperlink{group__node_ga5064c63b8ce76bf34402e0c80183234b}{D\+P\+S\+\_\+\+Link()}. \end{DoxyCompactList}\item 
+\hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{D\+P\+S\+\_\+\+Status} \hyperlink{group__node_gab78df7f4498b847ddb32fdd33d39ef0f}{D\+P\+S\+\_\+\+Resolve\+Address} (\hyperlink{group__node_ga4dd612ab965134321bb57fdb065f121c}{D\+P\+S\+\_\+\+Node} $\ast$node, const char $\ast$host, const char $\ast$service, \hyperlink{group__node_gac1c96ed1ff9a92e7421ae1c428acb904}{D\+P\+S\+\_\+\+On\+Resolve\+Address\+Complete} cb, void $\ast$data)
+\begin{DoxyCompactList}\small\item\em Resolve a host name or IP address and service name or port number. \end{DoxyCompactList}\item 
+\hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{D\+P\+S\+\_\+\+Status} \hyperlink{group__node_gad19cf4272ba11e935654175c83db2ce1}{D\+P\+S\+\_\+\+Set\+Node\+Data} (\hyperlink{group__node_ga4dd612ab965134321bb57fdb065f121c}{D\+P\+S\+\_\+\+Node} $\ast$node, void $\ast$data)
+\begin{DoxyCompactList}\small\item\em Store a pointer to application data in a node. \end{DoxyCompactList}\item 
+void \hyperlink{group__node_gac7e33476c06009ed42a6ea6f3c53380a}{D\+P\+S\+\_\+\+Set\+Node\+Subscription\+Update\+Delay} (\hyperlink{group__node_ga4dd612ab965134321bb57fdb065f121c}{D\+P\+S\+\_\+\+Node} $\ast$node, uint32\+\_\+t subs\+Rate\+Msecs)
+\begin{DoxyCompactList}\small\item\em Specify the time delay (in msecs) between subscription updates. \end{DoxyCompactList}\item 
+\hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{D\+P\+S\+\_\+\+Status} \hyperlink{group__node_ga160d504bfaeb0d3711e0259000340fe3}{D\+P\+S\+\_\+\+Start\+Node} (\hyperlink{group__node_ga4dd612ab965134321bb57fdb065f121c}{D\+P\+S\+\_\+\+Node} $\ast$node, int mcast\+Pub, uint16\+\_\+t listen\+Port)
+\begin{DoxyCompactList}\small\item\em Initialized and starts running a local node. \end{DoxyCompactList}\item 
+\hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{D\+P\+S\+\_\+\+Status} \hyperlink{group__node_ga79c86c3c0c5d6438b953a9acaab0ab0b}{D\+P\+S\+\_\+\+Unlink} (\hyperlink{group__node_ga4dd612ab965134321bb57fdb065f121c}{D\+P\+S\+\_\+\+Node} $\ast$node, \hyperlink{group__nodeaddress_ga9e9f56aa38e82b4edcef7eb81e9f5bd2}{D\+P\+S\+\_\+\+Node\+Address} $\ast$addr, \hyperlink{group__node_ga70b98e7cc39f0dccdba41f0984de82f6}{D\+P\+S\+\_\+\+On\+Unlink\+Complete} cb, void $\ast$data)
+\begin{DoxyCompactList}\small\item\em Unlink the local node from a remote node. \end{DoxyCompactList}\item 
+\hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{D\+P\+S\+\_\+\+Status} \hyperlink{group__node_ga2d5bb0528c2a171991ad6355cbadac69}{D\+P\+S\+\_\+\+Unlink\+From} (\hyperlink{group__node_ga4dd612ab965134321bb57fdb065f121c}{D\+P\+S\+\_\+\+Node} $\ast$node, \hyperlink{group__nodeaddress_ga9e9f56aa38e82b4edcef7eb81e9f5bd2}{D\+P\+S\+\_\+\+Node\+Address} $\ast$addr)
+\begin{DoxyCompactList}\small\item\em Synchronous helper that wraps \hyperlink{group__node_ga79c86c3c0c5d6438b953a9acaab0ab0b}{D\+P\+S\+\_\+\+Unlink()}. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Entities in the D\+PS network. 
+
+
+
+\subsection{Macro Definition Documentation}
+\mbox{\Hypertarget{group__node_gac939c83361ed89086f37c78d9c9009dd}\label{group__node_gac939c83361ed89086f37c78d9c9009dd}} 
+\index{Node@{Node}!D\+P\+S\+\_\+\+M\+C\+A\+S\+T\+\_\+\+P\+U\+B\+\_\+\+D\+I\+S\+A\+B\+L\+ED@{D\+P\+S\+\_\+\+M\+C\+A\+S\+T\+\_\+\+P\+U\+B\+\_\+\+D\+I\+S\+A\+B\+L\+ED}}
+\index{D\+P\+S\+\_\+\+M\+C\+A\+S\+T\+\_\+\+P\+U\+B\+\_\+\+D\+I\+S\+A\+B\+L\+ED@{D\+P\+S\+\_\+\+M\+C\+A\+S\+T\+\_\+\+P\+U\+B\+\_\+\+D\+I\+S\+A\+B\+L\+ED}!Node@{Node}}
+\subsubsection{\texorpdfstring{D\+P\+S\+\_\+\+M\+C\+A\+S\+T\+\_\+\+P\+U\+B\+\_\+\+D\+I\+S\+A\+B\+L\+ED}{DPS\_MCAST\_PUB\_DISABLED}}
+{\footnotesize\ttfamily \#define D\+P\+S\+\_\+\+M\+C\+A\+S\+T\+\_\+\+P\+U\+B\+\_\+\+D\+I\+S\+A\+B\+L\+ED~0}
+
+
+
+Disable multicast send and receive on the node. 
+
+See {\ttfamily mcast\+Pub} of \hyperlink{group__node_ga160d504bfaeb0d3711e0259000340fe3}{D\+P\+S\+\_\+\+Start\+Node()}. \mbox{\Hypertarget{group__node_gae493573fb2e02b87258952223eb4fcd7}\label{group__node_gae493573fb2e02b87258952223eb4fcd7}} 
+\index{Node@{Node}!D\+P\+S\+\_\+\+M\+C\+A\+S\+T\+\_\+\+P\+U\+B\+\_\+\+E\+N\+A\+B\+L\+E\+\_\+\+R\+E\+CV@{D\+P\+S\+\_\+\+M\+C\+A\+S\+T\+\_\+\+P\+U\+B\+\_\+\+E\+N\+A\+B\+L\+E\+\_\+\+R\+E\+CV}}
+\index{D\+P\+S\+\_\+\+M\+C\+A\+S\+T\+\_\+\+P\+U\+B\+\_\+\+E\+N\+A\+B\+L\+E\+\_\+\+R\+E\+CV@{D\+P\+S\+\_\+\+M\+C\+A\+S\+T\+\_\+\+P\+U\+B\+\_\+\+E\+N\+A\+B\+L\+E\+\_\+\+R\+E\+CV}!Node@{Node}}
+\subsubsection{\texorpdfstring{D\+P\+S\+\_\+\+M\+C\+A\+S\+T\+\_\+\+P\+U\+B\+\_\+\+E\+N\+A\+B\+L\+E\+\_\+\+R\+E\+CV}{DPS\_MCAST\_PUB\_ENABLE\_RECV}}
+{\footnotesize\ttfamily \#define D\+P\+S\+\_\+\+M\+C\+A\+S\+T\+\_\+\+P\+U\+B\+\_\+\+E\+N\+A\+B\+L\+E\+\_\+\+R\+E\+CV~2}
+
+
+
+Enable multicast receive on the node. 
+
+See {\ttfamily mcast\+Pub} of \hyperlink{group__node_ga160d504bfaeb0d3711e0259000340fe3}{D\+P\+S\+\_\+\+Start\+Node()}. \mbox{\Hypertarget{group__node_ga178a3a6450eeff450820fa34fd82049c}\label{group__node_ga178a3a6450eeff450820fa34fd82049c}} 
+\index{Node@{Node}!D\+P\+S\+\_\+\+M\+C\+A\+S\+T\+\_\+\+P\+U\+B\+\_\+\+E\+N\+A\+B\+L\+E\+\_\+\+S\+E\+ND@{D\+P\+S\+\_\+\+M\+C\+A\+S\+T\+\_\+\+P\+U\+B\+\_\+\+E\+N\+A\+B\+L\+E\+\_\+\+S\+E\+ND}}
+\index{D\+P\+S\+\_\+\+M\+C\+A\+S\+T\+\_\+\+P\+U\+B\+\_\+\+E\+N\+A\+B\+L\+E\+\_\+\+S\+E\+ND@{D\+P\+S\+\_\+\+M\+C\+A\+S\+T\+\_\+\+P\+U\+B\+\_\+\+E\+N\+A\+B\+L\+E\+\_\+\+S\+E\+ND}!Node@{Node}}
+\subsubsection{\texorpdfstring{D\+P\+S\+\_\+\+M\+C\+A\+S\+T\+\_\+\+P\+U\+B\+\_\+\+E\+N\+A\+B\+L\+E\+\_\+\+S\+E\+ND}{DPS\_MCAST\_PUB\_ENABLE\_SEND}}
+{\footnotesize\ttfamily \#define D\+P\+S\+\_\+\+M\+C\+A\+S\+T\+\_\+\+P\+U\+B\+\_\+\+E\+N\+A\+B\+L\+E\+\_\+\+S\+E\+ND~1}
+
+
+
+Enable multicast send on the node. 
+
+See {\ttfamily mcast\+Pub} of \hyperlink{group__node_ga160d504bfaeb0d3711e0259000340fe3}{D\+P\+S\+\_\+\+Start\+Node()}. 
+
+\subsection{Typedef Documentation}
+\mbox{\Hypertarget{group__node_gaaf70ac42acab8a67693947871e97600f}\label{group__node_gaaf70ac42acab8a67693947871e97600f}} 
+\index{Node@{Node}!D\+P\+S\+\_\+\+On\+Link\+Complete@{D\+P\+S\+\_\+\+On\+Link\+Complete}}
+\index{D\+P\+S\+\_\+\+On\+Link\+Complete@{D\+P\+S\+\_\+\+On\+Link\+Complete}!Node@{Node}}
+\subsubsection{\texorpdfstring{D\+P\+S\+\_\+\+On\+Link\+Complete}{DPS\_OnLinkComplete}}
+{\footnotesize\ttfamily typedef void($\ast$ D\+P\+S\+\_\+\+On\+Link\+Complete) (\hyperlink{group__node_ga4dd612ab965134321bb57fdb065f121c}{D\+P\+S\+\_\+\+Node} $\ast$node, \hyperlink{group__nodeaddress_ga9e9f56aa38e82b4edcef7eb81e9f5bd2}{D\+P\+S\+\_\+\+Node\+Address} $\ast$addr, \hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{D\+P\+S\+\_\+\+Status} status, void $\ast$data)}
+
+
+
+Function prototype for function called when a \hyperlink{group__node_ga5064c63b8ce76bf34402e0c80183234b}{D\+P\+S\+\_\+\+Link()} completes. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em node} & The local node to use \\
+\hline
+{\em addr} & The address of the remote node that was linked \\
+\hline
+{\em status} & Indicates if the link completed or failed \\
+\hline
+{\em data} & Application data passed in the call to \hyperlink{group__node_ga5064c63b8ce76bf34402e0c80183234b}{D\+P\+S\+\_\+\+Link()} \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{group__node_ga1e88cc9ca744782e36d58a022fe026c5}\label{group__node_ga1e88cc9ca744782e36d58a022fe026c5}} 
+\index{Node@{Node}!D\+P\+S\+\_\+\+On\+Node\+Destroyed@{D\+P\+S\+\_\+\+On\+Node\+Destroyed}}
+\index{D\+P\+S\+\_\+\+On\+Node\+Destroyed@{D\+P\+S\+\_\+\+On\+Node\+Destroyed}!Node@{Node}}
+\subsubsection{\texorpdfstring{D\+P\+S\+\_\+\+On\+Node\+Destroyed}{DPS\_OnNodeDestroyed}}
+{\footnotesize\ttfamily typedef void($\ast$ D\+P\+S\+\_\+\+On\+Node\+Destroyed) (\hyperlink{group__node_ga4dd612ab965134321bb57fdb065f121c}{D\+P\+S\+\_\+\+Node} $\ast$node, void $\ast$data)}
+
+
+
+Function prototype for callback function called when a node is destroyed. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em node} & The node that was destroyed. This node is valid during the callback. \\
+\hline
+{\em data} & Data passed to \hyperlink{group__node_ga85f5121f80411f5ab82449efe20b68dd}{D\+P\+S\+\_\+\+Destroy\+Node()} \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{group__node_gac1c96ed1ff9a92e7421ae1c428acb904}\label{group__node_gac1c96ed1ff9a92e7421ae1c428acb904}} 
+\index{Node@{Node}!D\+P\+S\+\_\+\+On\+Resolve\+Address\+Complete@{D\+P\+S\+\_\+\+On\+Resolve\+Address\+Complete}}
+\index{D\+P\+S\+\_\+\+On\+Resolve\+Address\+Complete@{D\+P\+S\+\_\+\+On\+Resolve\+Address\+Complete}!Node@{Node}}
+\subsubsection{\texorpdfstring{D\+P\+S\+\_\+\+On\+Resolve\+Address\+Complete}{DPS\_OnResolveAddressComplete}}
+{\footnotesize\ttfamily typedef void($\ast$ D\+P\+S\+\_\+\+On\+Resolve\+Address\+Complete) (\hyperlink{group__node_ga4dd612ab965134321bb57fdb065f121c}{D\+P\+S\+\_\+\+Node} $\ast$node, \hyperlink{group__nodeaddress_ga9e9f56aa38e82b4edcef7eb81e9f5bd2}{D\+P\+S\+\_\+\+Node\+Address} $\ast$addr, void $\ast$data)}
+
+
+
+Function prototype for function called when a \hyperlink{group__node_gab78df7f4498b847ddb32fdd33d39ef0f}{D\+P\+S\+\_\+\+Resolve\+Address()} completes. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em node} & The local node to use \\
+\hline
+{\em addr} & The resolved address or N\+U\+LL if the address could not be resolved \\
+\hline
+{\em data} & Application data passed in the call to \hyperlink{group__node_gab78df7f4498b847ddb32fdd33d39ef0f}{D\+P\+S\+\_\+\+Resolve\+Address()} \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{group__node_ga70b98e7cc39f0dccdba41f0984de82f6}\label{group__node_ga70b98e7cc39f0dccdba41f0984de82f6}} 
+\index{Node@{Node}!D\+P\+S\+\_\+\+On\+Unlink\+Complete@{D\+P\+S\+\_\+\+On\+Unlink\+Complete}}
+\index{D\+P\+S\+\_\+\+On\+Unlink\+Complete@{D\+P\+S\+\_\+\+On\+Unlink\+Complete}!Node@{Node}}
+\subsubsection{\texorpdfstring{D\+P\+S\+\_\+\+On\+Unlink\+Complete}{DPS\_OnUnlinkComplete}}
+{\footnotesize\ttfamily typedef void($\ast$ D\+P\+S\+\_\+\+On\+Unlink\+Complete) (\hyperlink{group__node_ga4dd612ab965134321bb57fdb065f121c}{D\+P\+S\+\_\+\+Node} $\ast$node, \hyperlink{group__nodeaddress_ga9e9f56aa38e82b4edcef7eb81e9f5bd2}{D\+P\+S\+\_\+\+Node\+Address} $\ast$addr, void $\ast$data)}
+
+
+
+Function prototype for function called when a \hyperlink{group__node_ga79c86c3c0c5d6438b953a9acaab0ab0b}{D\+P\+S\+\_\+\+Unlink()} completes. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em node} & The local node to use \\
+\hline
+{\em addr} & The address of the remote node that was unlinked \\
+\hline
+{\em data} & Application data passed in the call to \hyperlink{group__node_ga79c86c3c0c5d6438b953a9acaab0ab0b}{D\+P\+S\+\_\+\+Unlink()} \\
+\hline
+\end{DoxyParams}
+
+
+\subsection{Function Documentation}
+\mbox{\Hypertarget{group__node_gaf6641b5bbf27b2c45ac7f926b0ce4efe}\label{group__node_gaf6641b5bbf27b2c45ac7f926b0ce4efe}} 
+\index{Node@{Node}!D\+P\+S\+\_\+\+Create\+Node@{D\+P\+S\+\_\+\+Create\+Node}}
+\index{D\+P\+S\+\_\+\+Create\+Node@{D\+P\+S\+\_\+\+Create\+Node}!Node@{Node}}
+\subsubsection{\texorpdfstring{D\+P\+S\+\_\+\+Create\+Node()}{DPS\_CreateNode()}}
+{\footnotesize\ttfamily \hyperlink{group__node_ga4dd612ab965134321bb57fdb065f121c}{D\+P\+S\+\_\+\+Node}$\ast$ D\+P\+S\+\_\+\+Create\+Node (\begin{DoxyParamCaption}\item[{const char $\ast$}]{separators,  }\item[{\hyperlink{group__keystore_gaf3833cfe48f848f698514bc5daa075fa}{D\+P\+S\+\_\+\+Key\+Store} $\ast$}]{key\+Store,  }\item[{const \hyperlink{group__keystore_ga4345e29dd2ad5d7fd88a1e988787bd72}{D\+P\+S\+\_\+\+Key\+Id} $\ast$}]{key\+Id }\end{DoxyParamCaption})}
+
+
+
+Allocates space for a local D\+PS node. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em separators} & The separator characters to use for topic matching, if N\+U\+LL defaults to \char`\"{}/\char`\"{} \\
+\hline
+{\em key\+Store} & The key store to use for this node \\
+\hline
+{\em key\+Id} & The key identifier of this node\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The uninitialized node or N\+U\+LL if there were no resources for the node. 
+\end{DoxyReturn}
+\mbox{\Hypertarget{group__node_ga85f5121f80411f5ab82449efe20b68dd}\label{group__node_ga85f5121f80411f5ab82449efe20b68dd}} 
+\index{Node@{Node}!D\+P\+S\+\_\+\+Destroy\+Node@{D\+P\+S\+\_\+\+Destroy\+Node}}
+\index{D\+P\+S\+\_\+\+Destroy\+Node@{D\+P\+S\+\_\+\+Destroy\+Node}!Node@{Node}}
+\subsubsection{\texorpdfstring{D\+P\+S\+\_\+\+Destroy\+Node()}{DPS\_DestroyNode()}}
+{\footnotesize\ttfamily \hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{D\+P\+S\+\_\+\+Status} D\+P\+S\+\_\+\+Destroy\+Node (\begin{DoxyParamCaption}\item[{\hyperlink{group__node_ga4dd612ab965134321bb57fdb065f121c}{D\+P\+S\+\_\+\+Node} $\ast$}]{node,  }\item[{\hyperlink{group__node_ga1e88cc9ca744782e36d58a022fe026c5}{D\+P\+S\+\_\+\+On\+Node\+Destroyed}}]{cb,  }\item[{void $\ast$}]{data }\end{DoxyParamCaption})}
+
+
+
+Destroys a node and free any resources. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em node} & The node to destroy \\
+\hline
+{\em cb} & Callback function to be called when the node is destroyed \\
+\hline
+{\em data} & Data to be passed to the callback function\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+
+\begin{DoxyItemize}
+\item D\+P\+S\+\_\+\+OK if the node will be destroyed and the callback called
+\item D\+P\+S\+\_\+\+E\+R\+R\+\_\+\+N\+U\+LL node or cb was null
+\item Or an error status code in which case the callback will not be called. 
+\end{DoxyItemize}
+\end{DoxyReturn}
+\mbox{\Hypertarget{group__node_ga7dacebc6533305fba12335b3b8c817dc}\label{group__node_ga7dacebc6533305fba12335b3b8c817dc}} 
+\index{Node@{Node}!D\+P\+S\+\_\+\+Get\+Loop@{D\+P\+S\+\_\+\+Get\+Loop}}
+\index{D\+P\+S\+\_\+\+Get\+Loop@{D\+P\+S\+\_\+\+Get\+Loop}!Node@{Node}}
+\subsubsection{\texorpdfstring{D\+P\+S\+\_\+\+Get\+Loop()}{DPS\_GetLoop()}}
+{\footnotesize\ttfamily uv\+\_\+loop\+\_\+t$\ast$ D\+P\+S\+\_\+\+Get\+Loop (\begin{DoxyParamCaption}\item[{\hyperlink{group__node_ga4dd612ab965134321bb57fdb065f121c}{D\+P\+S\+\_\+\+Node} $\ast$}]{node }\end{DoxyParamCaption})}
+
+
+
+Get the uv event loop for this node. 
+
+The only thing that is safe to do with the node is to create an async callback. Other libuv A\+P\+Is can then be called from within the async callback.
+
+
+\begin{DoxyParams}{Parameters}
+{\em node} & The local node to use\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The uv event loop 
+\end{DoxyReturn}
+\mbox{\Hypertarget{group__node_ga65bba7bcfe5e940b153fcced4e2e8880}\label{group__node_ga65bba7bcfe5e940b153fcced4e2e8880}} 
+\index{Node@{Node}!D\+P\+S\+\_\+\+Get\+Node\+Data@{D\+P\+S\+\_\+\+Get\+Node\+Data}}
+\index{D\+P\+S\+\_\+\+Get\+Node\+Data@{D\+P\+S\+\_\+\+Get\+Node\+Data}!Node@{Node}}
+\subsubsection{\texorpdfstring{D\+P\+S\+\_\+\+Get\+Node\+Data()}{DPS\_GetNodeData()}}
+{\footnotesize\ttfamily void$\ast$ D\+P\+S\+\_\+\+Get\+Node\+Data (\begin{DoxyParamCaption}\item[{const \hyperlink{group__node_ga4dd612ab965134321bb57fdb065f121c}{D\+P\+S\+\_\+\+Node} $\ast$}]{node }\end{DoxyParamCaption})}
+
+
+
+Get application data pointer previously set by \hyperlink{group__node_gad19cf4272ba11e935654175c83db2ce1}{D\+P\+S\+\_\+\+Set\+Node\+Data()} 
+
+
+\begin{DoxyParams}{Parameters}
+{\em node} & The node\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+A pointer to the data or N\+U\+LL if the node is invalid 
+\end{DoxyReturn}
+\mbox{\Hypertarget{group__node_gaf920b28fe0721a7f97b11673494d7b36}\label{group__node_gaf920b28fe0721a7f97b11673494d7b36}} 
+\index{Node@{Node}!D\+P\+S\+\_\+\+Get\+Port\+Number@{D\+P\+S\+\_\+\+Get\+Port\+Number}}
+\index{D\+P\+S\+\_\+\+Get\+Port\+Number@{D\+P\+S\+\_\+\+Get\+Port\+Number}!Node@{Node}}
+\subsubsection{\texorpdfstring{D\+P\+S\+\_\+\+Get\+Port\+Number()}{DPS\_GetPortNumber()}}
+{\footnotesize\ttfamily uint16\+\_\+t D\+P\+S\+\_\+\+Get\+Port\+Number (\begin{DoxyParamCaption}\item[{\hyperlink{group__node_ga4dd612ab965134321bb57fdb065f121c}{D\+P\+S\+\_\+\+Node} $\ast$}]{node }\end{DoxyParamCaption})}
+
+
+
+Get the port number this node is listening for connections on. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em node} & The local node to use\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The port number 
+\end{DoxyReturn}
+\mbox{\Hypertarget{group__node_ga5064c63b8ce76bf34402e0c80183234b}\label{group__node_ga5064c63b8ce76bf34402e0c80183234b}} 
+\index{Node@{Node}!D\+P\+S\+\_\+\+Link@{D\+P\+S\+\_\+\+Link}}
+\index{D\+P\+S\+\_\+\+Link@{D\+P\+S\+\_\+\+Link}!Node@{Node}}
+\subsubsection{\texorpdfstring{D\+P\+S\+\_\+\+Link()}{DPS\_Link()}}
+{\footnotesize\ttfamily \hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{D\+P\+S\+\_\+\+Status} D\+P\+S\+\_\+\+Link (\begin{DoxyParamCaption}\item[{\hyperlink{group__node_ga4dd612ab965134321bb57fdb065f121c}{D\+P\+S\+\_\+\+Node} $\ast$}]{node,  }\item[{\hyperlink{group__nodeaddress_ga9e9f56aa38e82b4edcef7eb81e9f5bd2}{D\+P\+S\+\_\+\+Node\+Address} $\ast$}]{addr,  }\item[{\hyperlink{group__node_gaaf70ac42acab8a67693947871e97600f}{D\+P\+S\+\_\+\+On\+Link\+Complete}}]{cb,  }\item[{void $\ast$}]{data }\end{DoxyParamCaption})}
+
+
+
+Link the local node to a remote node. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em node} & The local node to use \\
+\hline
+{\em addr} & The address of the remote node to link to \\
+\hline
+{\em cb} & The callback function to call on completion, can be N\+U\+LL which case the function is synchronous \\
+\hline
+{\em data} & Application data to be passed to the callback\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+D\+P\+S\+\_\+\+OK or an error status. If an error status is returned the callback function will not be called. 
+\end{DoxyReturn}
+\mbox{\Hypertarget{group__node_ga0bd13b2bd395bbc7807ecc899a8862f1}\label{group__node_ga0bd13b2bd395bbc7807ecc899a8862f1}} 
+\index{Node@{Node}!D\+P\+S\+\_\+\+Link\+To@{D\+P\+S\+\_\+\+Link\+To}}
+\index{D\+P\+S\+\_\+\+Link\+To@{D\+P\+S\+\_\+\+Link\+To}!Node@{Node}}
+\subsubsection{\texorpdfstring{D\+P\+S\+\_\+\+Link\+To()}{DPS\_LinkTo()}}
+{\footnotesize\ttfamily \hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{D\+P\+S\+\_\+\+Status} D\+P\+S\+\_\+\+Link\+To (\begin{DoxyParamCaption}\item[{\hyperlink{group__node_ga4dd612ab965134321bb57fdb065f121c}{D\+P\+S\+\_\+\+Node} $\ast$}]{node,  }\item[{const char $\ast$}]{host,  }\item[{uint16\+\_\+t}]{port,  }\item[{\hyperlink{group__nodeaddress_ga9e9f56aa38e82b4edcef7eb81e9f5bd2}{D\+P\+S\+\_\+\+Node\+Address} $\ast$}]{addr }\end{DoxyParamCaption})}
+
+
+
+Synchronous helper that wraps \hyperlink{group__node_ga5064c63b8ce76bf34402e0c80183234b}{D\+P\+S\+\_\+\+Link()}. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em node} & The local node to link from \\
+\hline
+{\em host} & The host name or IP address to link to. A N\+U\+LL host indicates localhost. \\
+\hline
+{\em port} & The port number \\
+\hline
+{\em addr} & Returns the resolved address for the remote node\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+D\+P\+S\+\_\+\+OK if the link is successful, an error otherwise 
+\end{DoxyReturn}
+\mbox{\Hypertarget{group__node_gab78df7f4498b847ddb32fdd33d39ef0f}\label{group__node_gab78df7f4498b847ddb32fdd33d39ef0f}} 
+\index{Node@{Node}!D\+P\+S\+\_\+\+Resolve\+Address@{D\+P\+S\+\_\+\+Resolve\+Address}}
+\index{D\+P\+S\+\_\+\+Resolve\+Address@{D\+P\+S\+\_\+\+Resolve\+Address}!Node@{Node}}
+\subsubsection{\texorpdfstring{D\+P\+S\+\_\+\+Resolve\+Address()}{DPS\_ResolveAddress()}}
+{\footnotesize\ttfamily \hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{D\+P\+S\+\_\+\+Status} D\+P\+S\+\_\+\+Resolve\+Address (\begin{DoxyParamCaption}\item[{\hyperlink{group__node_ga4dd612ab965134321bb57fdb065f121c}{D\+P\+S\+\_\+\+Node} $\ast$}]{node,  }\item[{const char $\ast$}]{host,  }\item[{const char $\ast$}]{service,  }\item[{\hyperlink{group__node_gac1c96ed1ff9a92e7421ae1c428acb904}{D\+P\+S\+\_\+\+On\+Resolve\+Address\+Complete}}]{cb,  }\item[{void $\ast$}]{data }\end{DoxyParamCaption})}
+
+
+
+Resolve a host name or IP address and service name or port number. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em node} & The local node to use \\
+\hline
+{\em host} & The host name or IP address to resolve \\
+\hline
+{\em service} & The port or service name to resolve \\
+\hline
+{\em cb} & The callback function to call on completion \\
+\hline
+{\em data} & Application data to be passed to the callback\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+D\+P\+S\+\_\+\+OK or an error status. If an error status is returned the callback function will not be called. 
+\end{DoxyReturn}
+\mbox{\Hypertarget{group__node_gad19cf4272ba11e935654175c83db2ce1}\label{group__node_gad19cf4272ba11e935654175c83db2ce1}} 
+\index{Node@{Node}!D\+P\+S\+\_\+\+Set\+Node\+Data@{D\+P\+S\+\_\+\+Set\+Node\+Data}}
+\index{D\+P\+S\+\_\+\+Set\+Node\+Data@{D\+P\+S\+\_\+\+Set\+Node\+Data}!Node@{Node}}
+\subsubsection{\texorpdfstring{D\+P\+S\+\_\+\+Set\+Node\+Data()}{DPS\_SetNodeData()}}
+{\footnotesize\ttfamily \hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{D\+P\+S\+\_\+\+Status} D\+P\+S\+\_\+\+Set\+Node\+Data (\begin{DoxyParamCaption}\item[{\hyperlink{group__node_ga4dd612ab965134321bb57fdb065f121c}{D\+P\+S\+\_\+\+Node} $\ast$}]{node,  }\item[{void $\ast$}]{data }\end{DoxyParamCaption})}
+
+
+
+Store a pointer to application data in a node. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em node} & The node \\
+\hline
+{\em data} & The data pointer to store\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+D\+P\+S\+\_\+\+OK or an error 
+\end{DoxyReturn}
+\mbox{\Hypertarget{group__node_gac7e33476c06009ed42a6ea6f3c53380a}\label{group__node_gac7e33476c06009ed42a6ea6f3c53380a}} 
+\index{Node@{Node}!D\+P\+S\+\_\+\+Set\+Node\+Subscription\+Update\+Delay@{D\+P\+S\+\_\+\+Set\+Node\+Subscription\+Update\+Delay}}
+\index{D\+P\+S\+\_\+\+Set\+Node\+Subscription\+Update\+Delay@{D\+P\+S\+\_\+\+Set\+Node\+Subscription\+Update\+Delay}!Node@{Node}}
+\subsubsection{\texorpdfstring{D\+P\+S\+\_\+\+Set\+Node\+Subscription\+Update\+Delay()}{DPS\_SetNodeSubscriptionUpdateDelay()}}
+{\footnotesize\ttfamily void D\+P\+S\+\_\+\+Set\+Node\+Subscription\+Update\+Delay (\begin{DoxyParamCaption}\item[{\hyperlink{group__node_ga4dd612ab965134321bb57fdb065f121c}{D\+P\+S\+\_\+\+Node} $\ast$}]{node,  }\item[{uint32\+\_\+t}]{subs\+Rate\+Msecs }\end{DoxyParamCaption})}
+
+
+
+Specify the time delay (in msecs) between subscription updates. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em node} & The node \\
+\hline
+{\em subs\+Rate\+Msecs} & The time delay (in msecs) between updates \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{group__node_ga160d504bfaeb0d3711e0259000340fe3}\label{group__node_ga160d504bfaeb0d3711e0259000340fe3}} 
+\index{Node@{Node}!D\+P\+S\+\_\+\+Start\+Node@{D\+P\+S\+\_\+\+Start\+Node}}
+\index{D\+P\+S\+\_\+\+Start\+Node@{D\+P\+S\+\_\+\+Start\+Node}!Node@{Node}}
+\subsubsection{\texorpdfstring{D\+P\+S\+\_\+\+Start\+Node()}{DPS\_StartNode()}}
+{\footnotesize\ttfamily \hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{D\+P\+S\+\_\+\+Status} D\+P\+S\+\_\+\+Start\+Node (\begin{DoxyParamCaption}\item[{\hyperlink{group__node_ga4dd612ab965134321bb57fdb065f121c}{D\+P\+S\+\_\+\+Node} $\ast$}]{node,  }\item[{int}]{mcast\+Pub,  }\item[{uint16\+\_\+t}]{listen\+Port }\end{DoxyParamCaption})}
+
+
+
+Initialized and starts running a local node. 
+
+Node can only be started once.
+
+
+\begin{DoxyParams}{Parameters}
+{\em node} & The node \\
+\hline
+{\em mcast\+Pub} & Indicates if this node sends or listens for multicast publications \\
+\hline
+{\em listen\+Port} & If non-\/zero identifies specific port to listen on\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+D\+P\+S\+\_\+\+OK or various error status codes 
+\end{DoxyReturn}
+\mbox{\Hypertarget{group__node_ga79c86c3c0c5d6438b953a9acaab0ab0b}\label{group__node_ga79c86c3c0c5d6438b953a9acaab0ab0b}} 
+\index{Node@{Node}!D\+P\+S\+\_\+\+Unlink@{D\+P\+S\+\_\+\+Unlink}}
+\index{D\+P\+S\+\_\+\+Unlink@{D\+P\+S\+\_\+\+Unlink}!Node@{Node}}
+\subsubsection{\texorpdfstring{D\+P\+S\+\_\+\+Unlink()}{DPS\_Unlink()}}
+{\footnotesize\ttfamily \hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{D\+P\+S\+\_\+\+Status} D\+P\+S\+\_\+\+Unlink (\begin{DoxyParamCaption}\item[{\hyperlink{group__node_ga4dd612ab965134321bb57fdb065f121c}{D\+P\+S\+\_\+\+Node} $\ast$}]{node,  }\item[{\hyperlink{group__nodeaddress_ga9e9f56aa38e82b4edcef7eb81e9f5bd2}{D\+P\+S\+\_\+\+Node\+Address} $\ast$}]{addr,  }\item[{\hyperlink{group__node_ga70b98e7cc39f0dccdba41f0984de82f6}{D\+P\+S\+\_\+\+On\+Unlink\+Complete}}]{cb,  }\item[{void $\ast$}]{data }\end{DoxyParamCaption})}
+
+
+
+Unlink the local node from a remote node. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em node} & The local node to use \\
+\hline
+{\em addr} & The address of the remote node to unlink from \\
+\hline
+{\em cb} & The callback function to call on completion, can be N\+U\+LL which case the function is synchronous \\
+\hline
+{\em data} & Application data to be passed to the callback\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+D\+P\+S\+\_\+\+OK or an error status. If an error status is returned the callback function will not be called. 
+\end{DoxyReturn}
+\mbox{\Hypertarget{group__node_ga2d5bb0528c2a171991ad6355cbadac69}\label{group__node_ga2d5bb0528c2a171991ad6355cbadac69}} 
+\index{Node@{Node}!D\+P\+S\+\_\+\+Unlink\+From@{D\+P\+S\+\_\+\+Unlink\+From}}
+\index{D\+P\+S\+\_\+\+Unlink\+From@{D\+P\+S\+\_\+\+Unlink\+From}!Node@{Node}}
+\subsubsection{\texorpdfstring{D\+P\+S\+\_\+\+Unlink\+From()}{DPS\_UnlinkFrom()}}
+{\footnotesize\ttfamily \hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{D\+P\+S\+\_\+\+Status} D\+P\+S\+\_\+\+Unlink\+From (\begin{DoxyParamCaption}\item[{\hyperlink{group__node_ga4dd612ab965134321bb57fdb065f121c}{D\+P\+S\+\_\+\+Node} $\ast$}]{node,  }\item[{\hyperlink{group__nodeaddress_ga9e9f56aa38e82b4edcef7eb81e9f5bd2}{D\+P\+S\+\_\+\+Node\+Address} $\ast$}]{addr }\end{DoxyParamCaption})}
+
+
+
+Synchronous helper that wraps \hyperlink{group__node_ga79c86c3c0c5d6438b953a9acaab0ab0b}{D\+P\+S\+\_\+\+Unlink()}. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em node} & The local node to unlink from \\
+\hline
+{\em addr} & The address of the remote node to unlink\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+D\+P\+S\+\_\+\+OK if the unlink is successful, an error otherwise 
+\end{DoxyReturn}

@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.13">
+  <compounddef id="tutorials" kind="page">
+    <compoundname>tutorials</compoundname>
+    <title>Tutorials</title>
+    <innerpage refid="tutorials-hello-world">Hello world</innerpage>
+    <innerpage refid="tutorials-link">Building a DPS network</innerpage>
+    <innerpage refid="tutorials-security">Securing the communications</innerpage>
+    <detaileddescription>
+<para>The tutorials provide an introduction into the DPS APIs. It&apos;s recommended they be read in the order below and assumes some familiarity with pub/sub terminology.</para><para>For compactness, the tutorials use the <computeroutput>a/b/c/d</computeroutput> topic string, where <computeroutput>a</computeroutput>, <computeroutput>b</computeroutput>, <computeroutput>c</computeroutput>, and <computeroutput>d</computeroutput> are the levels and <computeroutput>/</computeroutput> is the level separator, and strings for payload data. A real application would likely use more meaningful topic strings and structured payloads.</para><para><itemizedlist>
+<listitem><para><ref refid="tutorials-hello-world" kindref="compound">Hello world</ref></para></listitem><listitem><para><ref refid="tutorials-link" kindref="compound">Building a DPS network</ref></para></listitem><listitem><para><ref refid="tutorials-security" kindref="compound">Securing the communications</ref></para></listitem></itemizedlist>
+</para><para><simplesect kind="see"><para><ref refid="index" kindref="compound">Introduction</ref>, <ref refid="topic-strings" kindref="compound">Topic Strings</ref>, <ref refid="mesh-network" kindref="compound">Mesh Network</ref>, <ref refid="security" kindref="compound">Security</ref> </para></simplesect>
+</para>    </detaileddescription>
+  </compounddef>
+</doxygen>

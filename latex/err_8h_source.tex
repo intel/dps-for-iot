@@ -1,0 +1,71 @@
+\hypertarget{err_8h_source}{}\section{err.\+h}
+\label{err_8h_source}\index{err.\+h@{err.\+h}}
+
+\begin{DoxyCode}
+00001 
+00006 \textcolor{comment}{/*}
+00007 \textcolor{comment}{ *******************************************************************}
+00008 \textcolor{comment}{ *}
+00009 \textcolor{comment}{ * Copyright 2016 Intel Corporation All rights reserved.}
+00010 \textcolor{comment}{ *}
+00011 \textcolor{comment}{ *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=}
+00012 \textcolor{comment}{ *}
+00013 \textcolor{comment}{ * Licensed under the Apache License, Version 2.0 (the "License");}
+00014 \textcolor{comment}{ * you may not use this file except in compliance with the License.}
+00015 \textcolor{comment}{ * You may obtain a copy of the License at}
+00016 \textcolor{comment}{ *}
+00017 \textcolor{comment}{ *      http://www.apache.org/licenses/LICENSE-2.0}
+00018 \textcolor{comment}{ *}
+00019 \textcolor{comment}{ * Unless required by applicable law or agreed to in writing, software}
+00020 \textcolor{comment}{ * distributed under the License is distributed on an "AS IS" BASIS,}
+00021 \textcolor{comment}{ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.}
+00022 \textcolor{comment}{ * See the License for the specific language governing permissions and}
+00023 \textcolor{comment}{ * limitations under the License.}
+00024 \textcolor{comment}{ *}
+00025 \textcolor{comment}{ *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=}
+00026 \textcolor{comment}{ */}
+00027 
+00028 \textcolor{preprocessor}{#ifndef \_DPS\_ERR\_H}
+00029 \textcolor{preprocessor}{#define \_DPS\_ERR\_H}
+00030 
+00031 \textcolor{preprocessor}{#ifdef \_\_cplusplus}
+00032 \textcolor{keyword}{extern} \textcolor{stringliteral}{"C"} \{
+00033 \textcolor{preprocessor}{#endif}
+00034 
+\Hypertarget{err_8h_source_l00041}\hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{00041} \textcolor{keyword}{typedef} \textcolor{keywordtype}{int} \hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{DPS\_Status}; 
+\Hypertarget{err_8h_source_l00043}\hyperlink{group__status_ga0ea3dd37bc558859ae0cb5a4f79a4bdd}{00043} \textcolor{preprocessor}{#define DPS\_OK                     0 }
+\Hypertarget{err_8h_source_l00044}\hyperlink{group__status_ga9127c1d49f4ca6a51c5585efc76ce362}{00044} \textcolor{preprocessor}{#define DPS\_ERR\_OK                 0 }
+\Hypertarget{err_8h_source_l00045}\hyperlink{group__status_gaa6d56ac86cbf831fe49fa74e46043a1d}{00045} \textcolor{preprocessor}{#define DPS\_ERR\_FAILURE            1 }
+\Hypertarget{err_8h_source_l00046}\hyperlink{group__status_ga36c4d95c785c30cd74bb4498703ae231}{00046} \textcolor{preprocessor}{#define DPS\_ERR\_NULL               2 }
+\Hypertarget{err_8h_source_l00047}\hyperlink{group__status_gab7ef2498c212cd215dcd710c534b44bb}{00047} \textcolor{preprocessor}{#define DPS\_ERR\_ARGS               3 }
+\Hypertarget{err_8h_source_l00048}\hyperlink{group__status_ga09dd06b53fdfdc87406d380de331b75b}{00048} \textcolor{preprocessor}{#define DPS\_ERR\_RESOURCES          4 }
+\Hypertarget{err_8h_source_l00049}\hyperlink{group__status_ga6030b4923c05c4ad75e89b3b7b923c5f}{00049} \textcolor{preprocessor}{#define DPS\_ERR\_READ               5 }
+\Hypertarget{err_8h_source_l00050}\hyperlink{group__status_ga1d0f98f61006267befea4de4378a18d8}{00050} \textcolor{preprocessor}{#define DPS\_ERR\_WRITE              6 }
+\Hypertarget{err_8h_source_l00051}\hyperlink{group__status_gadac4ab9da07e3886e1e93a408e6963c4}{00051} \textcolor{preprocessor}{#define DPS\_ERR\_TIMEOUT            7 }
+\Hypertarget{err_8h_source_l00052}\hyperlink{group__status_gabace0ae959b833d5df1d81ad45cb43b9}{00052} \textcolor{preprocessor}{#define DPS\_ERR\_EOD                8 }
+\Hypertarget{err_8h_source_l00053}\hyperlink{group__status_ga54ee1a62589bee7cd9e82acfd4fa1cad}{00053} \textcolor{preprocessor}{#define DPS\_ERR\_OVERFLOW           9 }
+\Hypertarget{err_8h_source_l00054}\hyperlink{group__status_ga80a0ccafe770ca4149e65300d870c0d9}{00054} \textcolor{preprocessor}{#define DPS\_ERR\_NETWORK           10 }
+\Hypertarget{err_8h_source_l00055}\hyperlink{group__status_ga6cac7d217edd07c3d7f1babf54cac1d7}{00055} \textcolor{preprocessor}{#define DPS\_ERR\_INVALID           11 }
+\Hypertarget{err_8h_source_l00056}\hyperlink{group__status_ga6170fba8d741b70a1f4c7e8662beceea}{00056} \textcolor{preprocessor}{#define DPS\_ERR\_BUSY              12 }
+\Hypertarget{err_8h_source_l00057}\hyperlink{group__status_ga7fb0645b6d1cac68a2ce723c1932b0bf}{00057} \textcolor{preprocessor}{#define DPS\_ERR\_EXISTS            13 }
+\Hypertarget{err_8h_source_l00058}\hyperlink{group__status_ga5c46980c33492a8b76bffce081dbcba4}{00058} \textcolor{preprocessor}{#define DPS\_ERR\_MISSING           14 }
+\Hypertarget{err_8h_source_l00059}\hyperlink{group__status_ga01852545b0caefe96ff155d540bb3a68}{00059} \textcolor{preprocessor}{#define DPS\_ERR\_STALE             15 }
+\Hypertarget{err_8h_source_l00060}\hyperlink{group__status_ga934517e91f6e214fb6cab5089d5acc92}{00060} \textcolor{preprocessor}{#define DPS\_ERR\_NO\_ROUTE          16 }
+\Hypertarget{err_8h_source_l00061}\hyperlink{group__status_ga40f77c0ef70f691e6e158c8756ad8895}{00061} \textcolor{preprocessor}{#define DPS\_ERR\_NOT\_STARTED       17 }
+\Hypertarget{err_8h_source_l00062}\hyperlink{group__status_ga92b1c68aa4f1526347ccb76aa9382d76}{00062} \textcolor{preprocessor}{#define DPS\_ERR\_NOT\_INITIALIZED   18 }
+\Hypertarget{err_8h_source_l00063}\hyperlink{group__status_ga45240d9b5760ba1a30ad0bee0a6d2b7c}{00063} \textcolor{preprocessor}{#define DPS\_ERR\_EXPIRED           19 }
+\Hypertarget{err_8h_source_l00064}\hyperlink{group__status_gab1a09e3fc51905cc823298f964ad60e6}{00064} \textcolor{preprocessor}{#define DPS\_ERR\_UNRESOLVED        20 }
+\Hypertarget{err_8h_source_l00065}\hyperlink{group__status_ga9047d1e219f2a62a948845d922582ec5}{00065} \textcolor{preprocessor}{#define DPS\_ERR\_NODE\_DESTROYED    21 }
+\Hypertarget{err_8h_source_l00066}\hyperlink{group__status_ga40b286792608c99ed5dffd1caca9f569}{00066} \textcolor{preprocessor}{#define DPS\_ERR\_EOF               22 }
+\Hypertarget{err_8h_source_l00067}\hyperlink{group__status_gad175cd9050dec5f3a214bc62c3c7473c}{00067} \textcolor{preprocessor}{#define DPS\_ERR\_NOT\_IMPLEMENTED   23 }
+\Hypertarget{err_8h_source_l00068}\hyperlink{group__status_gaa3bb7fee9a4a926de2df54a272446b5c}{00068} \textcolor{preprocessor}{#define DPS\_ERR\_SECURITY          24 }
+\Hypertarget{err_8h_source_l00069}\hyperlink{group__status_gac13dac4973f6700ff95461171148c1c8}{00069} \textcolor{preprocessor}{#define DPS\_ERR\_NOT\_ENCRYPTED     25 }
+\Hypertarget{err_8h_source_l00070}\hyperlink{group__status_ga87337c85a55fcaf2dbaaf128362f6c8c}{00070} \textcolor{preprocessor}{#define DPS\_ERR\_STOPPING          26 }
+00079 \textcolor{preprocessor}{const char* DPS\_ErrTxt(DPS\_Status s);}
+00080 
+00083 \textcolor{preprocessor}{#ifdef \_\_cplusplus}
+00084 \}
+00085 \textcolor{preprocessor}{#endif}
+00086 
+00087 \textcolor{preprocessor}{#endif}
+\end{DoxyCode}

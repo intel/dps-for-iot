@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=9"/>
 <meta name="generator" content="Doxygen 1.8.13"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Distributed Publish Subscribe for IoT: Node Address</title>
+<title>Distributed Publish &amp; Subscribe for IoT: Node Address</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -28,7 +28,7 @@
  <tbody>
  <tr style="height: 56px;">
   <td id="projectalign" style="padding-left: 0.5em;">
-   <div id="projectname">Distributed Publish Subscribe for IoT
+   <div id="projectname">Distributed Publish &amp; Subscribe for IoT
    </div>
   </td>
  </tr>
@@ -92,8 +92,9 @@ $(document).ready(function(){initNavTree('group__nodeaddress.html','');});
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="typedef-members"></a>
 Typedefs</h2></td></tr>
-<tr class="memitem:ga9e9f56aa38e82b4edcef7eb81e9f5bd2"><td class="memItemLeft" align="right" valign="top">typedef struct _DPS_NodeAddress&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__nodeaddress.html#ga9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a></td></tr>
-<tr class="memdesc:ga9e9f56aa38e82b4edcef7eb81e9f5bd2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Opaque type for a remote node address.  <a href="#ga9e9f56aa38e82b4edcef7eb81e9f5bd2">More...</a><br /></td></tr>
+<tr class="memitem:ga9e9f56aa38e82b4edcef7eb81e9f5bd2"><td class="memItemLeft" align="right" valign="top"><a id="ga9e9f56aa38e82b4edcef7eb81e9f5bd2"></a>
+typedef struct _DPS_NodeAddress&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__nodeaddress.html#ga9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a></td></tr>
+<tr class="memdesc:ga9e9f56aa38e82b4edcef7eb81e9f5bd2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Opaque type for a remote node address. <br /></td></tr>
 <tr class="separator:ga9e9f56aa38e82b4edcef7eb81e9f5bd2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
@@ -116,23 +117,6 @@ Functions</h2></td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <p>Remote node addresses. </p>
-<h2 class="groupheader">Typedef Documentation</h2>
-<a id="ga9e9f56aa38e82b4edcef7eb81e9f5bd2"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga9e9f56aa38e82b4edcef7eb81e9f5bd2">&#9670;&nbsp;</a></span>DPS_NodeAddress</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">typedef struct _DPS_NodeAddress <a class="el" href="group__nodeaddress.html#ga9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Opaque type for a remote node address. </p>
-
-</div>
-</div>
 <h2 class="groupheader">Function Documentation</h2>
 <a id="gace91591af9bf2a99bad07deda1b9176c"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#gace91591af9bf2a99bad07deda1b9176c">&#9670;&nbsp;</a></span>DPS_CopyAddress()</h2>
@@ -161,6 +145,13 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Copy a node address. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">dest</td><td>The address to copy to. </td></tr>
+    <tr><td class="paramname">src</td><td>The address to copy from. </td></tr>
+  </table>
+  </dd>
+</dl>
 
 </div>
 </div>
@@ -180,8 +171,8 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Creates a node address. </p>
-<dl><dt><b>Examples: </b></dt><dd><a class="el" href="pub_many_8c-example.html#a20">pub_many.c</a>, <a class="el" href="publisher_8c-example.html#a23">publisher.c</a>, <a class="el" href="reg_pubs_8c-example.html#a30">reg_pubs.c</a>, <a class="el" href="reg_subs_8c-example.html#a14">reg_subs.c</a>, and <a class="el" href="subscriber_8c-example.html#a40">subscriber.c</a>.</dd>
-</dl>
+<dl class="section return"><dt>Returns</dt><dd>The created address, or NULL if creation failed </dd></dl>
+
 </div>
 </div>
 <a id="ga1f373831e8009ff5959ccb02b8c3fb14"></a>
@@ -201,8 +192,13 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Frees resources associated with an address. </p>
-<dl><dt><b>Examples: </b></dt><dd><a class="el" href="publisher_8c-example.html#a37">publisher.c</a>, <a class="el" href="reg_pubs_8c-example.html#a33">reg_pubs.c</a>, <a class="el" href="reg_subs_8c-example.html#a24">reg_subs.c</a>, and <a class="el" href="subscriber_8c-example.html#a42">subscriber.c</a>.</dd>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">addr</td><td>A previously created address. </td></tr>
+  </table>
+  </dd>
 </dl>
+
 </div>
 </div>
 <a id="gafc7b21048f92370ca29325d6245b576d"></a>
@@ -230,8 +226,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>A text string for the address </dd></dl>
-<dl><dt><b>Examples: </b></dt><dd><a class="el" href="reg_pubs_8c-example.html#a19">reg_pubs.c</a>, <a class="el" href="reg_subs_8c-example.html#a23">reg_subs.c</a>, and <a class="el" href="subscriber_8c-example.html#a44">subscriber.c</a>.</dd>
-</dl>
+
 </div>
 </div>
 <a id="ga6231c243c483bd2d282f7df734a98946"></a>
@@ -276,7 +271,7 @@ Functions</h2></td></tr>
 </div><!-- doc-content -->
 <div class="navpath" id="nav-path">
   <ul>
-    <li class="footer" style="float:left"><b>Distributed PubSub Manual</b></li> <li class="footer">Generated Tue Feb 20 2018 10:23:49</li>
+    <li class="footer" style="float:left"><b>Distributed Publish & Subscribe for IoT</b></li> <li class="footer">Generated Wed Mar 7 2018 13:26:16</li>
   </ul>
 </div>
 </body>

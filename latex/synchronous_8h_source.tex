@@ -1,0 +1,48 @@
+\hypertarget{synchronous_8h_source}{}\section{synchronous.\+h}
+\label{synchronous_8h_source}\index{synchronous.\+h@{synchronous.\+h}}
+
+\begin{DoxyCode}
+00001 
+00006 \textcolor{comment}{/*}
+00007 \textcolor{comment}{ *******************************************************************}
+00008 \textcolor{comment}{ *}
+00009 \textcolor{comment}{ * Copyright 2016 Intel Corporation All rights reserved.}
+00010 \textcolor{comment}{ *}
+00011 \textcolor{comment}{ *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=}
+00012 \textcolor{comment}{ *}
+00013 \textcolor{comment}{ * Licensed under the Apache License, Version 2.0 (the "License");}
+00014 \textcolor{comment}{ * you may not use this file except in compliance with the License.}
+00015 \textcolor{comment}{ * You may obtain a copy of the License at}
+00016 \textcolor{comment}{ *}
+00017 \textcolor{comment}{ *      http://www.apache.org/licenses/LICENSE-2.0}
+00018 \textcolor{comment}{ *}
+00019 \textcolor{comment}{ * Unless required by applicable law or agreed to in writing, software}
+00020 \textcolor{comment}{ * distributed under the License is distributed on an "AS IS" BASIS,}
+00021 \textcolor{comment}{ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.}
+00022 \textcolor{comment}{ * See the License for the specific language governing permissions and}
+00023 \textcolor{comment}{ * limitations under the License.}
+00024 \textcolor{comment}{ *}
+00025 \textcolor{comment}{ *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=}
+00026 \textcolor{comment}{ */}
+00027 
+00028 \textcolor{preprocessor}{#ifndef \_DPS\_SYNCHRONOUS\_H}
+00029 \textcolor{preprocessor}{#define \_DPS\_SYNCHRONOUS\_H}
+00030 
+00031 \textcolor{preprocessor}{#include <\hyperlink{dps_8h}{dps/dps.h}>}
+00032 
+00033 \textcolor{preprocessor}{#ifdef \_\_cplusplus}
+00034 \textcolor{keyword}{extern} \textcolor{stringliteral}{"C"} \{
+00035 \textcolor{preprocessor}{#endif}
+00036 
+00052 \hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{DPS\_Status} \hyperlink{group__node_ga0bd13b2bd395bbc7807ecc899a8862f1}{DPS\_LinkTo}(\hyperlink{group__node_ga4dd612ab965134321bb57fdb065f121c}{DPS\_Node}* node, \textcolor{keyword}{const} \textcolor{keywordtype}{char}* host, uint16\_t port, 
+      \hyperlink{group__nodeaddress_ga9e9f56aa38e82b4edcef7eb81e9f5bd2}{DPS\_NodeAddress}* addr);
+00053 
+00062 \hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{DPS\_Status} \hyperlink{group__node_ga2d5bb0528c2a171991ad6355cbadac69}{DPS\_UnlinkFrom}(\hyperlink{group__node_ga4dd612ab965134321bb57fdb065f121c}{DPS\_Node}* node, 
+      \hyperlink{group__nodeaddress_ga9e9f56aa38e82b4edcef7eb81e9f5bd2}{DPS\_NodeAddress}* addr);
+00063 
+00066 \textcolor{preprocessor}{#ifdef \_\_cplusplus}
+00067 \}
+00068 \textcolor{preprocessor}{#endif}
+00069 
+00070 \textcolor{preprocessor}{#endif}
+\end{DoxyCode}

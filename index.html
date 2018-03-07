@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=9"/>
 <meta name="generator" content="Doxygen 1.8.13"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Distributed Publish Subscribe for IoT: Main Page</title>
+<title>Distributed Publish &amp; Subscribe for IoT: Introduction</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -28,7 +28,7 @@
  <tbody>
  <tr style="height: 56px;">
   <td id="projectalign" style="padding-left: 0.5em;">
-   <div id="projectname">Distributed Publish Subscribe for IoT
+   <div id="projectname">Distributed Publish &amp; Subscribe for IoT
    </div>
   </td>
  </tr>
@@ -80,14 +80,28 @@ $(document).ready(function(){initNavTree('index.html','');});
 
 <div class="header">
   <div class="headertitle">
-<div class="title">Distributed Publish Subscribe for IoT Documentation</div>  </div>
+<div class="title">Introduction </div>  </div>
 </div><!--header-->
 <div class="contents">
-</div><!-- contents -->
+<div class="textblock"><dl class="section note"><dt>Note</dt><dd><b>This is a preview release of the software and is intended for evaluation and experimentation only.</b></dd></dl>
+<p>Distributed Publish &amp; Subscribe for the Internet of Things (DPS) is a new protocol that implements the publish/subscribe (pub/sub) communication pattern.</p>
+<p>The pub/sub pattern for device to device communication is simple and powerful. There are several existing pub/sub protocols seeing heavy use in IoT applications, perhaps most notably MQTT and DDS but there are numerous other. Two characteristics of pub/sub that make it attractive for IoT uses cases are support for loose coupling between publishers and subscribers, and inherent support for point-to-multipoint messaging. There are generally two implementation approaches: brokered (e.g. MQTT), or multicast (e.g. DDS). In brokered pub/sub systems publishers and subscribers connect to a centralized server that routes publications to matching subscribers. In a multicast pub/sub system subscribers receive messages from all publishers and selectively forward matching publications up to the application. The disadvantage of a brokered approach is that the broker is single point of failure, must be 100% available, and scales linearly with bandwidth and processing capability of the broker. Also all messages do a round-trip through the broker which puts a lower bound on communication latency. Multicast pub/sub systems are hard to scale beyond a single subnet and work much better over wired than wireless networks.</p>
+<p>DPS as the name implies is a fully-distributed pub/sub framework. There is no broker, devices or applications (we will just call them nodes) running the DPS protocol form a dynamic multiply-connected mesh where each node functions as a message router. The DPS framework supports a topic string syntax that will be very familiar to MQTT users and also supports MQTT-like retained messages. The mesh is boot-strapped using IP multicast, a directory service, or by explicit URL. The DPS protocol is light-weight and amenable to implementation on very small devices such as sensors that primarily publish data. The DPS architecture is well suited for applications that leverage edge computing in combination with cloud-based analytics.</p>
+<p>Superficially DPS looks like a broker based pub/sub protocol. Some of this is intentional, such as using MQTT’s topic string wild-card syntax, but the architecture is quite different. In a brokered pub/sub system publishers and subscribers typically maintain a long term connection to the broker. This is often necessary because the broker is running in the cloud and the subscriber and publishers are typically running behind a firewall, possibly NAT’d, and must establish an outbound connection to the broker to be able to communicate. DPS does not maintain long term connections, in fact connections only last long enough to send a single subscription or publication message. DPS uses hop-by-hop routing to forward publications to subscribers in the network. A DPS node with multiple network interfaces can forward pub/sub messages from one interface to another, there is no need for an end-to-end network route.</p>
+<p>In a conventional pub/sub system, publishers and subscriber send topic strings to the broker. The broker can essentially see as clear text every topic that passes through. In theory the individual elements in topic strings could be sent as hashes but that is not done currently. In DPS all publication and subscriptions are implicitly hashed and node only routes publications to nodes that have matching subscribers so there is typically no single point through which all messages pass.</p>
+<ul>
+<li><a class="el" href="topic-strings.html">Topic Strings</a></li>
+<li><a class="el" href="mesh-network.html">Mesh Network</a></li>
+<li><a class="el" href="message-types-and-flow.html">Message Types and Flow</a></li>
+<li><a class="el" href="data-series.html">Data Series</a></li>
+<li><a class="el" href="retained-publications.html">Retained Publications</a></li>
+<li><a class="el" href="security.html">Security</a> </li>
+</ul>
+</div></div><!-- contents -->
 </div><!-- doc-content -->
 <div class="navpath" id="nav-path">
   <ul>
-    <li class="footer" style="float:left"><b>Distributed PubSub Manual</b></li> <li class="footer">Generated Tue Feb 20 2018 10:23:50</li>
+    <li class="footer" style="float:left"><b>Distributed Publish & Subscribe for IoT</b></li> <li class="footer">Generated Wed Mar 7 2018 13:26:16</li>
   </ul>
 </div>
 </body>

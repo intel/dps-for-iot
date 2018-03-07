@@ -1,0 +1,494 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygenindex xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="index.xsd" version="1.8.13">
+  <compound refid="struct___d_p_s___key" kind="struct"><name>_DPS_Key</name>
+    <member refid="struct___d_p_s___key_1a34cd61abd9b28c058877dbc8478f43c1" kind="variable"><name>@1</name></member>
+    <member refid="struct___d_p_s___key_1ab26f5094ccd656e85b009f3ce26cc2a6" kind="variable"><name>cert</name></member>
+    <member refid="struct___d_p_s___key_1a8cf482ff4fe81b774462469c5da9295f" kind="variable"><name>ec</name></member>
+    <member refid="struct___d_p_s___key_1a4e26dff7c8127c1709eac2f2f1eadc61" kind="variable"><name>symmetric</name></member>
+    <member refid="struct___d_p_s___key_1a347677e64145828ed5b1191a8fdc71d5" kind="variable"><name>type</name></member>
+  </compound>
+  <compound refid="struct___d_p_s___key_cert" kind="struct"><name>_DPS_KeyCert</name>
+    <member refid="struct___d_p_s___key_cert_1a2783654ef73f2cc58911f40cd6e4f6ba" kind="variable"><name>cert</name></member>
+    <member refid="struct___d_p_s___key_cert_1a18f3f492b66fbeb3de6a09aff54369cf" kind="variable"><name>password</name></member>
+    <member refid="struct___d_p_s___key_cert_1a0ba1842f3982c930ba76469349b0812d" kind="variable"><name>privateKey</name></member>
+  </compound>
+  <compound refid="struct___d_p_s___key_e_c" kind="struct"><name>_DPS_KeyEC</name>
+    <member refid="struct___d_p_s___key_e_c_1a9896c40cd0b6dd0bd05ac5831fc421d9" kind="variable"><name>curve</name></member>
+    <member refid="struct___d_p_s___key_e_c_1aa008a9db4f8bc93e6572b91cfb0a51dd" kind="variable"><name>d</name></member>
+    <member refid="struct___d_p_s___key_e_c_1a341a17a83bec9eb91bc2ce93c3832d81" kind="variable"><name>x</name></member>
+    <member refid="struct___d_p_s___key_e_c_1adab7230a279ab8e4a30483cc71608abd" kind="variable"><name>y</name></member>
+  </compound>
+  <compound refid="struct___d_p_s___key_id" kind="struct"><name>_DPS_KeyId</name>
+    <member refid="struct___d_p_s___key_id_1a199ba6a4d89e6eab2b1c7f84db7b0e47" kind="variable"><name>id</name></member>
+    <member refid="struct___d_p_s___key_id_1ad656ed0567e09b47f95776e8af0f29df" kind="variable"><name>len</name></member>
+  </compound>
+  <compound refid="struct___d_p_s___key_symmetric" kind="struct"><name>_DPS_KeySymmetric</name>
+    <member refid="struct___d_p_s___key_symmetric_1affb7a3c0682b963d4011a1d7ecbbe76a" kind="variable"><name>key</name></member>
+    <member refid="struct___d_p_s___key_symmetric_1ad12194a41f7828b7b7098608bf7d5fd0" kind="variable"><name>len</name></member>
+  </compound>
+  <compound refid="struct___d_p_s___registration" kind="struct"><name>_DPS_Registration</name>
+    <member refid="struct___d_p_s___registration_1a0201a3f33b4b0ad0ed7134607ccc7ecb" kind="variable"><name>flags</name></member>
+    <member refid="struct___d_p_s___registration_1ae78f74ba04a5f9cf7a48d4aa39a3e774" kind="variable"><name>host</name></member>
+    <member refid="struct___d_p_s___registration_1ab9ca063a4985209066220ac048085a57" kind="variable"><name>port</name></member>
+  </compound>
+  <compound refid="struct___d_p_s___registration_list" kind="struct"><name>_DPS_RegistrationList</name>
+    <member refid="struct___d_p_s___registration_list_1a3cf76d39d9ec5bee027f8dae52c1982d" kind="variable"><name>count</name></member>
+    <member refid="struct___d_p_s___registration_list_1a7090074f00b35189ff64c21d5bc40535" kind="variable"><name>list</name></member>
+    <member refid="struct___d_p_s___registration_list_1a9aeb3177f17c29a6af6a702d3994b39d" kind="variable"><name>size</name></member>
+  </compound>
+  <compound refid="struct___d_p_s___u_u_i_d" kind="struct"><name>_DPS_UUID</name>
+    <member refid="struct___d_p_s___u_u_i_d_1ac01a70f40b7080c7d6e42bd538456f35" kind="variable"><name>@3</name></member>
+    <member refid="struct___d_p_s___u_u_i_d_1a5f642859395d3916ea96804c6bf16880" kind="variable"><name>val</name></member>
+    <member refid="struct___d_p_s___u_u_i_d_1aee3748c444033b543f494e8bf6d64645" kind="variable"><name>val64</name></member>
+  </compound>
+  <compound refid="_building-and-_running_8dox" kind="file"><name>Building-and-Running.dox</name>
+  </compound>
+  <compound refid="_data-_series_8dox" kind="file"><name>Data-Series.dox</name>
+  </compound>
+  <compound refid="dbg_8h" kind="file"><name>dbg.h</name>
+    <member refid="group__debug_1ga170843b022fc7bc00bf871eb5189fe52" kind="define"><name>DPS_DBGBYTES</name></member>
+    <member refid="group__debug_1ga7ac5236c2ba157ffcf56cd073dcf0c3f" kind="define"><name>DPS_DBGPRINT</name></member>
+    <member refid="group__debug_1ga0a4156dc81e39b0cf2fb251e37bda307" kind="define"><name>DPS_DBGTRACE</name></member>
+    <member refid="group__debug_1ga62bb2ddb60beb7390755a19cd7874b5c" kind="define"><name>DPS_DBGTRACEA</name></member>
+    <member refid="group__debug_1ga6990490017f384ce2d462e1b5c0963b8" kind="define"><name>DPS_DEBUG_CONTROL</name></member>
+    <member refid="group__debug_1gaeca5ec86966717c8dd2d1ffda4be2b3b" kind="define"><name>DPS_DEBUG_ENABLED</name></member>
+    <member refid="group__debug_1ga6eb8eb8c3804ebd6f51fe2d7a7625ed8" kind="define"><name>DPS_DEBUG_FORCE</name></member>
+    <member refid="group__debug_1ga39adc166f2ce05fb751212c1db9a6ce9" kind="define"><name>DPS_DEBUG_OFF</name></member>
+    <member refid="group__debug_1ga777427dcd2750d5006024ce1a54daaac" kind="define"><name>DPS_DEBUG_ON</name></member>
+    <member refid="group__debug_1gac69225c4b8e73b27204a2963d4ca0633" kind="define"><name>DPS_ERRPRINT</name></member>
+    <member refid="group__debug_1gaf1d25cc7f1d2d92f96ba620217af28fd" kind="define"><name>DPS_PRINT</name></member>
+    <member refid="group__debug_1gad9a3f4ae1ed318b313434a82132c4044" kind="define"><name>DPS_PRINTT</name></member>
+    <member refid="group__debug_1ga37ab9dbe492fd9f7b78349f6e789e5f2" kind="define"><name>DPS_WARNPRINT</name></member>
+    <member refid="group__debug_1gad06c0421a8226b0a95be1d722ca05612" kind="enum"><name>DPS_LogLevel</name></member>
+    <member refid="group__debug_1ggad06c0421a8226b0a95be1d722ca05612ad8adeef2745368cf04dbb19b224df53c" kind="enumvalue"><name>DPS_LOG_ERROR</name></member>
+    <member refid="group__debug_1ggad06c0421a8226b0a95be1d722ca05612a2f7bd5c9db9df8d4f413767c289ee393" kind="enumvalue"><name>DPS_LOG_WARNING</name></member>
+    <member refid="group__debug_1ggad06c0421a8226b0a95be1d722ca05612a2811f744e315eb851568f7707f226b42" kind="enumvalue"><name>DPS_LOG_PRINT</name></member>
+    <member refid="group__debug_1ggad06c0421a8226b0a95be1d722ca05612a1cc419e9ddddde8e3be43ca3fdb30dda" kind="enumvalue"><name>DPS_LOG_PRINTT</name></member>
+    <member refid="group__debug_1ggad06c0421a8226b0a95be1d722ca05612a0f174e3b850ad53207c2ca8f1fbd9692" kind="enumvalue"><name>DPS_LOG_DBGTRACE</name></member>
+    <member refid="group__debug_1ggad06c0421a8226b0a95be1d722ca05612aa2db99dadba3b9117142682254168366" kind="enumvalue"><name>DPS_LOG_DBGPRINT</name></member>
+    <member refid="group__debug_1ga6f4bedbcc8b3bd12cea20b5ce3a8abba" kind="variable"><name>DPS_Debug</name></member>
+    <member refid="group__debug_1ga174fef61dca16376546e570c9b831502" kind="function"><name>DPS_Log</name></member>
+    <member refid="group__debug_1ga7cc66c1e82ef557238c122b067f5337a" kind="function"><name>DPS_LogBytes</name></member>
+  </compound>
+  <compound refid="dps_8h" kind="file"><name>dps.h</name>
+    <member refid="group__keystore_1ga7ca1045749c725e9c4a1b4758b2a0196" kind="enum"><name>DPS_KeyType</name></member>
+    <member refid="group__keystore_1gga7ca1045749c725e9c4a1b4758b2a0196a662c1e84628d96be8ae08163af382392" kind="enumvalue"><name>DPS_KEY_SYMMETRIC</name></member>
+    <member refid="group__keystore_1gga7ca1045749c725e9c4a1b4758b2a0196a58453a89367757e523ac337232387d89" kind="enumvalue"><name>DPS_KEY_EC</name></member>
+    <member refid="group__keystore_1gga7ca1045749c725e9c4a1b4758b2a0196a04e294e477af49e6a4927884f45fcb99" kind="enumvalue"><name>DPS_KEY_EC_CERT</name></member>
+    <member refid="group__keystore_1ga9ba152af7a3ed9076bfa597ef918cac1" kind="enum"><name>DPS_ECCurve</name></member>
+    <member refid="group__keystore_1gga9ba152af7a3ed9076bfa597ef918cac1a4b56a9b3ab7d0e23d57bad72f0c93239" kind="enumvalue"><name>DPS_EC_CURVE_RESERVED</name></member>
+    <member refid="group__keystore_1gga9ba152af7a3ed9076bfa597ef918cac1a96cd27fcba408bafcdd33b83b0395ff8" kind="enumvalue"><name>DPS_EC_CURVE_P256</name></member>
+    <member refid="group__keystore_1gga9ba152af7a3ed9076bfa597ef918cac1a359e576be45def67ea14b96c7bfbe100" kind="enumvalue"><name>DPS_EC_CURVE_P384</name></member>
+    <member refid="group__keystore_1gga9ba152af7a3ed9076bfa597ef918cac1abb97d4a693a02becf44c12b6e4678724" kind="enumvalue"><name>DPS_EC_CURVE_P521</name></member>
+    <member refid="group__keystore_1ga4c58e71301ab14e675033c601e4eabe1" kind="typedef"><name>DPS_KeySymmetric</name></member>
+    <member refid="group__keystore_1ga658140277e0cd5c6ccc3b7727ecaae8a" kind="typedef"><name>DPS_KeyEC</name></member>
+    <member refid="group__keystore_1ga98b6701b118cab76965736ad720f9bcf" kind="typedef"><name>DPS_KeyCert</name></member>
+    <member refid="group__keystore_1gaa56a1429b6a1658e674eea558bdbbfc0" kind="typedef"><name>DPS_Key</name></member>
+    <member refid="group__keystore_1ga4345e29dd2ad5d7fd88a1e988787bd72" kind="typedef"><name>DPS_KeyId</name></member>
+    <member refid="group__keystore_1gaf3833cfe48f848f698514bc5daa075fa" kind="typedef"><name>DPS_KeyStore</name></member>
+    <member refid="group__keystore_1ga7c3e50965b65334e9791780fa855ed16" kind="typedef"><name>DPS_KeyStoreRequest</name></member>
+    <member refid="group__keystore_1ga83d3ade4f4acd7d4385d606270ddfd29" kind="typedef"><name>DPS_KeyAndIdHandler</name></member>
+    <member refid="group__keystore_1gaccf7e3d43bc1e586132d7f1ae03d02f7" kind="typedef"><name>DPS_KeyHandler</name></member>
+    <member refid="group__keystore_1ga5b4cf102912eea802196d3e307c399ef" kind="typedef"><name>DPS_EphemeralKeyHandler</name></member>
+    <member refid="group__keystore_1ga0acd005f34bca4fcbe1c460e2305ddae" kind="typedef"><name>DPS_CAHandler</name></member>
+    <member refid="group__keystore_1ga289b1c74c01c9988f04297aa082986de" kind="function"><name>DPS_SetKeyAndId</name></member>
+    <member refid="group__keystore_1ga15d6a9b8256b67c2ec8b1d365a98dbab" kind="function"><name>DPS_SetKey</name></member>
+    <member refid="group__keystore_1ga37595f3207e42c52f7006659399135b2" kind="function"><name>DPS_SetCA</name></member>
+    <member refid="group__keystore_1ga088b3dc5eff10ab334d1e2aa0a329c26" kind="function"><name>DPS_KeyStoreHandle</name></member>
+    <member refid="group__keystore_1gafa79de23848ff56d0cced67897313369" kind="function"><name>DPS_CreateKeyStore</name></member>
+    <member refid="group__keystore_1ga40bea030ef0ba65ec332880ae2bbfee1" kind="function"><name>DPS_DestroyKeyStore</name></member>
+    <member refid="group__keystore_1gaf8062875af6cab5caabc3f13bf995807" kind="function"><name>DPS_SetKeyStoreData</name></member>
+    <member refid="group__keystore_1ga3b67d7dde74267ee9342dc3efd33812b" kind="function"><name>DPS_GetKeyStoreData</name></member>
+    <member refid="group__keystore_1ga57f11410b3ef6a686594b60836dc8c99" kind="typedef"><name>DPS_MemoryKeyStore</name></member>
+    <member refid="group__keystore_1ga2da4c5f9b7ab5ff6b65d1c8f4d6c30bc" kind="function"><name>DPS_CreateMemoryKeyStore</name></member>
+    <member refid="group__keystore_1ga2f9f4aeff872ca74d5735a8727f4dbae" kind="function"><name>DPS_DestroyMemoryKeyStore</name></member>
+    <member refid="group__keystore_1ga1855a8efae53b90fa95aa5b97295c4ec" kind="function"><name>DPS_SetContentKey</name></member>
+    <member refid="group__keystore_1ga8664b8c5cc2d3df6512ecb71e7f92212" kind="function"><name>DPS_SetNetworkKey</name></member>
+    <member refid="group__keystore_1ga8d55f887ebbd6b0af80caa43bf77a088" kind="function"><name>DPS_SetTrustedCA</name></member>
+    <member refid="group__keystore_1ga7a8c6874dd5bff0a6391a5515b545e17" kind="function"><name>DPS_SetCertificate</name></member>
+    <member refid="group__keystore_1ga2811c4ffff51bd75a72dd0a9c8796616" kind="function"><name>DPS_MemoryKeyStoreHandle</name></member>
+    <member refid="dps_8h_1ad8b397975a479b996ef223367d8835a9" kind="define"><name>DPS_FALSE</name></member>
+    <member refid="group__node_1gac939c83361ed89086f37c78d9c9009dd" kind="define"><name>DPS_MCAST_PUB_DISABLED</name></member>
+    <member refid="group__node_1gae493573fb2e02b87258952223eb4fcd7" kind="define"><name>DPS_MCAST_PUB_ENABLE_RECV</name></member>
+    <member refid="group__node_1ga178a3a6450eeff450820fa34fd82049c" kind="define"><name>DPS_MCAST_PUB_ENABLE_SEND</name></member>
+    <member refid="group__node_1ga89df880f9650da5730fa152642c0be9f" kind="define"><name>DPS_SUBSCRIPTION_UPDATE_RATE</name></member>
+    <member refid="dps_8h_1a4a173ed2665cea74e58558d99b377ab3" kind="define"><name>DPS_TRUE</name></member>
+    <member refid="group__publication_1gaf8615f0bcd3d95859cd7f2cdbf772e23" kind="typedef"><name>DPS_AcknowledgementHandler</name></member>
+    <member refid="group__node_1ga4dd612ab965134321bb57fdb065f121c" kind="typedef"><name>DPS_Node</name></member>
+    <member refid="group__nodeaddress_1ga9e9f56aa38e82b4edcef7eb81e9f5bd2" kind="typedef"><name>DPS_NodeAddress</name></member>
+    <member refid="group__node_1gaaf70ac42acab8a67693947871e97600f" kind="typedef"><name>DPS_OnLinkComplete</name></member>
+    <member refid="group__node_1ga1e88cc9ca744782e36d58a022fe026c5" kind="typedef"><name>DPS_OnNodeDestroyed</name></member>
+    <member refid="group__node_1gac1c96ed1ff9a92e7421ae1c428acb904" kind="typedef"><name>DPS_OnResolveAddressComplete</name></member>
+    <member refid="group__node_1ga70b98e7cc39f0dccdba41f0984de82f6" kind="typedef"><name>DPS_OnUnlinkComplete</name></member>
+    <member refid="group__publication_1ga0d439693474aa54e27f3d45a054696ac" kind="typedef"><name>DPS_Publication</name></member>
+    <member refid="group__subscription_1gab95ef1762636ad505c940744b8dce83f" kind="typedef"><name>DPS_PublicationHandler</name></member>
+    <member refid="group__subscription_1gadb927c4c1b7306867a75fc4288b54af7" kind="typedef"><name>DPS_Subscription</name></member>
+    <member refid="group__publication_1ga9190b8fa3bad848fb428acd6c0c2b210" kind="function"><name>DPS_AckGetSenderKeyId</name></member>
+    <member refid="group__publication_1ga308074429a566ffb8d04d55bae520b04" kind="function"><name>DPS_AckPublication</name></member>
+    <member refid="group__nodeaddress_1gace91591af9bf2a99bad07deda1b9176c" kind="function"><name>DPS_CopyAddress</name></member>
+    <member refid="group__publication_1ga41f31a8b63558e13d73d96de6086e5c4" kind="function"><name>DPS_CopyPublication</name></member>
+    <member refid="group__nodeaddress_1ga6bed18a4b0ad533ec88c7a0d376de818" kind="function"><name>DPS_CreateAddress</name></member>
+    <member refid="group__node_1gaf6641b5bbf27b2c45ac7f926b0ce4efe" kind="function"><name>DPS_CreateNode</name></member>
+    <member refid="group__publication_1gaca070a96a6374e99a05d647c10737962" kind="function"><name>DPS_CreatePublication</name></member>
+    <member refid="group__subscription_1ga4095bb00bd0ca7fa9614ebbc2c28199f" kind="function"><name>DPS_CreateSubscription</name></member>
+    <member refid="group__nodeaddress_1ga1f373831e8009ff5959ccb02b8c3fb14" kind="function"><name>DPS_DestroyAddress</name></member>
+    <member refid="group__node_1ga85f5121f80411f5ab82449efe20b68dd" kind="function"><name>DPS_DestroyNode</name></member>
+    <member refid="group__publication_1ga17bb01c949aaaf3bafd53323c9effd5f" kind="function"><name>DPS_DestroyPublication</name></member>
+    <member refid="group__subscription_1gaac78b5690aa31eec642b2a706faac510" kind="function"><name>DPS_DestroySubscription</name></member>
+    <member refid="group__node_1ga7dacebc6533305fba12335b3b8c817dc" kind="function"><name>DPS_GetLoop</name></member>
+    <member refid="group__node_1ga65bba7bcfe5e940b153fcced4e2e8880" kind="function"><name>DPS_GetNodeData</name></member>
+    <member refid="group__node_1gaf920b28fe0721a7f97b11673494d7b36" kind="function"><name>DPS_GetPortNumber</name></member>
+    <member refid="group__publication_1gaa8bee35089ac62289c9ba0e6a0568ca0" kind="function"><name>DPS_GetPublicationData</name></member>
+    <member refid="group__subscription_1ga88ab2284734f099ef67bcc60997142b3" kind="function"><name>DPS_GetSubscriptionData</name></member>
+    <member refid="group__publication_1ga7b0709e28cb34d5a30b90e4142cd6c19" kind="function"><name>DPS_InitPublication</name></member>
+    <member refid="group__node_1ga5064c63b8ce76bf34402e0c80183234b" kind="function"><name>DPS_Link</name></member>
+    <member refid="group__nodeaddress_1gafc7b21048f92370ca29325d6245b576d" kind="function"><name>DPS_NodeAddrToString</name></member>
+    <member refid="group__publication_1ga91471ddf6f66798e255b28b3e913144b" kind="function"><name>DPS_PublicationAddSubId</name></member>
+    <member refid="group__publication_1gad2a37d52f12c93434b431eefd732f363" kind="function"><name>DPS_PublicationGetNode</name></member>
+    <member refid="group__publication_1gaee6fc3b13484faacff0d26646778f777" kind="function"><name>DPS_PublicationGetNumTopics</name></member>
+    <member refid="group__publication_1ga1d7e81c2f0b19736a4f7a7195e5bd98d" kind="function"><name>DPS_PublicationGetSenderKeyId</name></member>
+    <member refid="group__publication_1ga875b48217d861d4a9fa5471419d354e9" kind="function"><name>DPS_PublicationGetSequenceNum</name></member>
+    <member refid="group__publication_1ga143a5c6fbe0bdf1725e841f122582432" kind="function"><name>DPS_PublicationGetTopic</name></member>
+    <member refid="group__publication_1gaba1ad3ee807b75a1281d334be06a12f7" kind="function"><name>DPS_PublicationGetUUID</name></member>
+    <member refid="group__publication_1ga516f7f314c7b95210751d00285758b9b" kind="function"><name>DPS_PublicationIsAckRequested</name></member>
+    <member refid="group__publication_1gaa5225be2733d6ebfd01f9475e3fc06f5" kind="function"><name>DPS_PublicationRemoveSubId</name></member>
+    <member refid="group__publication_1ga828a4efc5c235c48a81f6460cc3fe416" kind="function"><name>DPS_Publish</name></member>
+    <member refid="group__node_1gab78df7f4498b847ddb32fdd33d39ef0f" kind="function"><name>DPS_ResolveAddress</name></member>
+    <member refid="group__nodeaddress_1ga6231c243c483bd2d282f7df734a98946" kind="function"><name>DPS_SetAddress</name></member>
+    <member refid="group__node_1gad19cf4272ba11e935654175c83db2ce1" kind="function"><name>DPS_SetNodeData</name></member>
+    <member refid="group__node_1gac7e33476c06009ed42a6ea6f3c53380a" kind="function"><name>DPS_SetNodeSubscriptionUpdateDelay</name></member>
+    <member refid="group__publication_1ga91c46ccb6df7f4bb99ca5d9d35cc5a4a" kind="function"><name>DPS_SetPublicationData</name></member>
+    <member refid="group__subscription_1gad581d341003e20c714061e44b57c2009" kind="function"><name>DPS_SetSubscriptionData</name></member>
+    <member refid="group__node_1ga160d504bfaeb0d3711e0259000340fe3" kind="function"><name>DPS_StartNode</name></member>
+    <member refid="group__subscription_1ga83234ea82a91e07e3f5894a4dcf5267e" kind="function"><name>DPS_Subscribe</name></member>
+    <member refid="group__subscription_1gafea65751c811555736c8c65fcb3a9480" kind="function"><name>DPS_SubscriptionGetNode</name></member>
+    <member refid="group__subscription_1gab0ad2c6806f8f44f27c70fff915b7e9a" kind="function"><name>DPS_SubscriptionGetNumTopics</name></member>
+    <member refid="group__subscription_1gaacc63deda2f2d97cf3f44ca84784b2f6" kind="function"><name>DPS_SubscriptionGetTopic</name></member>
+    <member refid="group__node_1ga79c86c3c0c5d6438b953a9acaab0ab0b" kind="function"><name>DPS_Unlink</name></member>
+  </compound>
+  <compound refid="err_8h" kind="file"><name>err.h</name>
+    <member refid="group__status_1gab7ef2498c212cd215dcd710c534b44bb" kind="define"><name>DPS_ERR_ARGS</name></member>
+    <member refid="group__status_1ga6170fba8d741b70a1f4c7e8662beceea" kind="define"><name>DPS_ERR_BUSY</name></member>
+    <member refid="group__status_1gabace0ae959b833d5df1d81ad45cb43b9" kind="define"><name>DPS_ERR_EOD</name></member>
+    <member refid="group__status_1ga40b286792608c99ed5dffd1caca9f569" kind="define"><name>DPS_ERR_EOF</name></member>
+    <member refid="group__status_1ga7fb0645b6d1cac68a2ce723c1932b0bf" kind="define"><name>DPS_ERR_EXISTS</name></member>
+    <member refid="group__status_1ga45240d9b5760ba1a30ad0bee0a6d2b7c" kind="define"><name>DPS_ERR_EXPIRED</name></member>
+    <member refid="group__status_1gaa6d56ac86cbf831fe49fa74e46043a1d" kind="define"><name>DPS_ERR_FAILURE</name></member>
+    <member refid="group__status_1ga6cac7d217edd07c3d7f1babf54cac1d7" kind="define"><name>DPS_ERR_INVALID</name></member>
+    <member refid="group__status_1ga5c46980c33492a8b76bffce081dbcba4" kind="define"><name>DPS_ERR_MISSING</name></member>
+    <member refid="group__status_1ga80a0ccafe770ca4149e65300d870c0d9" kind="define"><name>DPS_ERR_NETWORK</name></member>
+    <member refid="group__status_1ga934517e91f6e214fb6cab5089d5acc92" kind="define"><name>DPS_ERR_NO_ROUTE</name></member>
+    <member refid="group__status_1ga9047d1e219f2a62a948845d922582ec5" kind="define"><name>DPS_ERR_NODE_DESTROYED</name></member>
+    <member refid="group__status_1gac13dac4973f6700ff95461171148c1c8" kind="define"><name>DPS_ERR_NOT_ENCRYPTED</name></member>
+    <member refid="group__status_1gad175cd9050dec5f3a214bc62c3c7473c" kind="define"><name>DPS_ERR_NOT_IMPLEMENTED</name></member>
+    <member refid="group__status_1ga92b1c68aa4f1526347ccb76aa9382d76" kind="define"><name>DPS_ERR_NOT_INITIALIZED</name></member>
+    <member refid="group__status_1ga40f77c0ef70f691e6e158c8756ad8895" kind="define"><name>DPS_ERR_NOT_STARTED</name></member>
+    <member refid="group__status_1ga36c4d95c785c30cd74bb4498703ae231" kind="define"><name>DPS_ERR_NULL</name></member>
+    <member refid="group__status_1ga9127c1d49f4ca6a51c5585efc76ce362" kind="define"><name>DPS_ERR_OK</name></member>
+    <member refid="group__status_1ga54ee1a62589bee7cd9e82acfd4fa1cad" kind="define"><name>DPS_ERR_OVERFLOW</name></member>
+    <member refid="group__status_1ga6030b4923c05c4ad75e89b3b7b923c5f" kind="define"><name>DPS_ERR_READ</name></member>
+    <member refid="group__status_1ga09dd06b53fdfdc87406d380de331b75b" kind="define"><name>DPS_ERR_RESOURCES</name></member>
+    <member refid="group__status_1gaa3bb7fee9a4a926de2df54a272446b5c" kind="define"><name>DPS_ERR_SECURITY</name></member>
+    <member refid="group__status_1ga01852545b0caefe96ff155d540bb3a68" kind="define"><name>DPS_ERR_STALE</name></member>
+    <member refid="group__status_1ga87337c85a55fcaf2dbaaf128362f6c8c" kind="define"><name>DPS_ERR_STOPPING</name></member>
+    <member refid="group__status_1gadac4ab9da07e3886e1e93a408e6963c4" kind="define"><name>DPS_ERR_TIMEOUT</name></member>
+    <member refid="group__status_1gab1a09e3fc51905cc823298f964ad60e6" kind="define"><name>DPS_ERR_UNRESOLVED</name></member>
+    <member refid="group__status_1ga1d0f98f61006267befea4de4378a18d8" kind="define"><name>DPS_ERR_WRITE</name></member>
+    <member refid="group__status_1ga0ea3dd37bc558859ae0cb5a4f79a4bdd" kind="define"><name>DPS_OK</name></member>
+    <member refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kind="typedef"><name>DPS_Status</name></member>
+    <member refid="group__status_1ga916083e3c32631f9d412c84c0999481f" kind="function"><name>DPS_ErrTxt</name></member>
+  </compound>
+  <compound refid="event_8h" kind="file"><name>event.h</name>
+    <member refid="group__event_1ga97617da1bac0e76646713b8665dfdd85" kind="typedef"><name>DPS_Event</name></member>
+    <member refid="group__event_1gac38abc1e32666d631a40049c90bc66d3" kind="function"><name>DPS_CreateEvent</name></member>
+    <member refid="group__event_1ga7539f700336357cd320d6b40eba59c63" kind="function"><name>DPS_DestroyEvent</name></member>
+    <member refid="group__event_1gaba8fce0d0896df9b6f294112a251e39f" kind="function"><name>DPS_GetEventData</name></member>
+    <member refid="group__event_1ga23a814c5aaebf5bdddebac0ef5d295ce" kind="function"><name>DPS_SetEventData</name></member>
+    <member refid="group__event_1gad0f8a3b372f972bfaa97e29fa01b5c82" kind="function"><name>DPS_SignalEvent</name></member>
+    <member refid="group__event_1gacf62ac4adc9f8eaf088cdec6c273e930" kind="function"><name>DPS_TimedWaitForEvent</name></member>
+    <member refid="group__event_1gab2f3f1236cd100cd271c85191df650e8" kind="function"><name>DPS_WaitForEvent</name></member>
+  </compound>
+  <compound refid="hello__world_8dox" kind="file"><name>hello_world.dox</name>
+  </compound>
+  <compound refid="_introduction_8dox" kind="file"><name>Introduction.dox</name>
+  </compound>
+  <compound refid="link_8dox" kind="file"><name>link.dox</name>
+  </compound>
+  <compound refid="_mesh-_network_8dox" kind="file"><name>Mesh-Network.dox</name>
+  </compound>
+  <compound refid="_message-_types-and-_flows_8dox" kind="file"><name>Message-Types-and-Flows.dox</name>
+  </compound>
+  <compound refid="registration_8h" kind="file"><name>registration.h</name>
+    <member refid="group__registration_1gafde6e5d4cc3e65a94afdd30a689221d5" kind="define"><name>DPS_CANDIDATE_FAILED</name></member>
+    <member refid="group__registration_1gae27a3dfd1f2e746220e99921f2c33a6c" kind="define"><name>DPS_CANDIDATE_INVALID</name></member>
+    <member refid="group__registration_1ga243eb1f49d56c2ae1f542a0c95a5a52d" kind="define"><name>DPS_CANDIDATE_LINKED</name></member>
+    <member refid="group__registration_1ga06a44e56022098c9464bd881cf5efe20" kind="define"><name>DPS_CANDIDATE_TRYING</name></member>
+    <member refid="group__registration_1ga0564134dd21bdecf8e8e25cf832e2a38" kind="define"><name>DPS_CANDIDATE_UNLINKED</name></member>
+    <member refid="group__registration_1gad6b4f95f999e950345587b5ae2de69e2" kind="typedef"><name>DPS_OnRegGetComplete</name></member>
+    <member refid="group__registration_1gaaa0a8c9235e57aaf3e95dc3ecbf13c53" kind="typedef"><name>DPS_OnRegLinkToComplete</name></member>
+    <member refid="group__registration_1ga8f1d316de08b7dea7dfe55ae814e0219" kind="typedef"><name>DPS_OnRegPutComplete</name></member>
+    <member refid="group__registration_1gac06db7e10b2626b06bacd09414e7d740" kind="typedef"><name>DPS_Registration</name></member>
+    <member refid="group__registration_1ga2b9489ff306ad253d24b03c418a6eda0" kind="typedef"><name>DPS_RegistrationList</name></member>
+    <member refid="group__registration_1ga7c1111f95ed473c1b27fa3c9ee096796" kind="variable"><name>DPS_RegistryTopicString</name></member>
+    <member refid="group__registration_1ga3d1f2e10a8d3ffd66cf4c3ba5c53b490" kind="function"><name>DPS_CreateRegistrationList</name></member>
+    <member refid="group__registration_1ga0dbaa5dbea47290035a11dc22fc45f2d" kind="function"><name>DPS_DestroyRegistrationList</name></member>
+    <member refid="group__registration_1ga7288d76e731feb67b22951d7d1966311" kind="function"><name>DPS_Registration_Get</name></member>
+    <member refid="group__registration_1ga189dc57b265d83d6503f18e953759559" kind="function"><name>DPS_Registration_GetSyn</name></member>
+    <member refid="group__registration_1ga73550318aa9625aff612e549e9854e0c" kind="function"><name>DPS_Registration_LinkTo</name></member>
+    <member refid="group__registration_1gab50e1fb04be97888ec759b1f0b3df1e6" kind="function"><name>DPS_Registration_LinkToSyn</name></member>
+    <member refid="group__registration_1gac412d38875c80431c558773a42ba0766" kind="function"><name>DPS_Registration_Put</name></member>
+    <member refid="group__registration_1ga19a9b2743c27769b371c1fc8b97eced1" kind="function"><name>DPS_Registration_PutSyn</name></member>
+  </compound>
+  <compound refid="_retained-_publications_8dox" kind="file"><name>Retained-Publications.dox</name>
+  </compound>
+  <compound refid="_security_8dox" kind="file"><name>Security.dox</name>
+  </compound>
+  <compound refid="tutorial_2_security_8dox" kind="file"><name>tutorial/Security.dox</name>
+  </compound>
+  <compound refid="synchronous_8h" kind="file"><name>synchronous.h</name>
+    <member refid="group__node_1ga0bd13b2bd395bbc7807ecc899a8862f1" kind="function"><name>DPS_LinkTo</name></member>
+    <member refid="group__node_1ga2d5bb0528c2a171991ad6355cbadac69" kind="function"><name>DPS_UnlinkFrom</name></member>
+  </compound>
+  <compound refid="_topic-_strings_8dox" kind="file"><name>Topic-Strings.dox</name>
+  </compound>
+  <compound refid="_tutorials_8dox" kind="file"><name>Tutorials.dox</name>
+  </compound>
+  <compound refid="uuid_8h" kind="file"><name>uuid.h</name>
+    <member refid="group__uuid_1gaef1d03afcc6410602ade1d48f24c3997" kind="typedef"><name>DPS_UUID</name></member>
+    <member refid="group__uuid_1ga28a9b3d0518c4327afe94d087d1d2322" kind="function"><name>DPS_GenerateUUID</name></member>
+    <member refid="group__uuid_1ga725c154c5fccf2a2c9a6c32353a63228" kind="function"><name>DPS_InitUUID</name></member>
+    <member refid="group__uuid_1ga7819e63fac9457f892236b1b3f183713" kind="function"><name>DPS_UUIDCompare</name></member>
+    <member refid="group__uuid_1ga9c51faa57ecb228ce7eda077a90b20ff" kind="function"><name>DPS_UUIDToString</name></member>
+  </compound>
+  <compound refid="group__debug" kind="group"><name>debug</name>
+    <member refid="group__debug_1gad06c0421a8226b0a95be1d722ca05612" kind="enum"><name>DPS_LogLevel</name></member>
+    <member refid="group__debug_1ggad06c0421a8226b0a95be1d722ca05612ad8adeef2745368cf04dbb19b224df53c" kind="enumvalue"><name>DPS_LOG_ERROR</name></member>
+    <member refid="group__debug_1ggad06c0421a8226b0a95be1d722ca05612a2f7bd5c9db9df8d4f413767c289ee393" kind="enumvalue"><name>DPS_LOG_WARNING</name></member>
+    <member refid="group__debug_1ggad06c0421a8226b0a95be1d722ca05612a2811f744e315eb851568f7707f226b42" kind="enumvalue"><name>DPS_LOG_PRINT</name></member>
+    <member refid="group__debug_1ggad06c0421a8226b0a95be1d722ca05612a1cc419e9ddddde8e3be43ca3fdb30dda" kind="enumvalue"><name>DPS_LOG_PRINTT</name></member>
+    <member refid="group__debug_1ggad06c0421a8226b0a95be1d722ca05612a0f174e3b850ad53207c2ca8f1fbd9692" kind="enumvalue"><name>DPS_LOG_DBGTRACE</name></member>
+    <member refid="group__debug_1ggad06c0421a8226b0a95be1d722ca05612aa2db99dadba3b9117142682254168366" kind="enumvalue"><name>DPS_LOG_DBGPRINT</name></member>
+    <member refid="group__debug_1ga6f4bedbcc8b3bd12cea20b5ce3a8abba" kind="variable"><name>DPS_Debug</name></member>
+    <member refid="group__debug_1ga174fef61dca16376546e570c9b831502" kind="function"><name>DPS_Log</name></member>
+    <member refid="group__debug_1ga7cc66c1e82ef557238c122b067f5337a" kind="function"><name>DPS_LogBytes</name></member>
+    <member refid="group__debug_1ga170843b022fc7bc00bf871eb5189fe52" kind="define"><name>DPS_DBGBYTES</name></member>
+    <member refid="group__debug_1ga7ac5236c2ba157ffcf56cd073dcf0c3f" kind="define"><name>DPS_DBGPRINT</name></member>
+    <member refid="group__debug_1ga0a4156dc81e39b0cf2fb251e37bda307" kind="define"><name>DPS_DBGTRACE</name></member>
+    <member refid="group__debug_1ga62bb2ddb60beb7390755a19cd7874b5c" kind="define"><name>DPS_DBGTRACEA</name></member>
+    <member refid="group__debug_1ga6990490017f384ce2d462e1b5c0963b8" kind="define"><name>DPS_DEBUG_CONTROL</name></member>
+    <member refid="group__debug_1gaeca5ec86966717c8dd2d1ffda4be2b3b" kind="define"><name>DPS_DEBUG_ENABLED</name></member>
+    <member refid="group__debug_1ga6eb8eb8c3804ebd6f51fe2d7a7625ed8" kind="define"><name>DPS_DEBUG_FORCE</name></member>
+    <member refid="group__debug_1ga39adc166f2ce05fb751212c1db9a6ce9" kind="define"><name>DPS_DEBUG_OFF</name></member>
+    <member refid="group__debug_1ga777427dcd2750d5006024ce1a54daaac" kind="define"><name>DPS_DEBUG_ON</name></member>
+    <member refid="group__debug_1gac69225c4b8e73b27204a2963d4ca0633" kind="define"><name>DPS_ERRPRINT</name></member>
+    <member refid="group__debug_1gaf1d25cc7f1d2d92f96ba620217af28fd" kind="define"><name>DPS_PRINT</name></member>
+    <member refid="group__debug_1gad9a3f4ae1ed318b313434a82132c4044" kind="define"><name>DPS_PRINTT</name></member>
+    <member refid="group__debug_1ga37ab9dbe492fd9f7b78349f6e789e5f2" kind="define"><name>DPS_WARNPRINT</name></member>
+  </compound>
+  <compound refid="group__event" kind="group"><name>event</name>
+    <member refid="group__event_1ga97617da1bac0e76646713b8665dfdd85" kind="typedef"><name>DPS_Event</name></member>
+    <member refid="group__event_1gac38abc1e32666d631a40049c90bc66d3" kind="function"><name>DPS_CreateEvent</name></member>
+    <member refid="group__event_1ga7539f700336357cd320d6b40eba59c63" kind="function"><name>DPS_DestroyEvent</name></member>
+    <member refid="group__event_1gaba8fce0d0896df9b6f294112a251e39f" kind="function"><name>DPS_GetEventData</name></member>
+    <member refid="group__event_1ga23a814c5aaebf5bdddebac0ef5d295ce" kind="function"><name>DPS_SetEventData</name></member>
+    <member refid="group__event_1gad0f8a3b372f972bfaa97e29fa01b5c82" kind="function"><name>DPS_SignalEvent</name></member>
+    <member refid="group__event_1gacf62ac4adc9f8eaf088cdec6c273e930" kind="function"><name>DPS_TimedWaitForEvent</name></member>
+    <member refid="group__event_1gab2f3f1236cd100cd271c85191df650e8" kind="function"><name>DPS_WaitForEvent</name></member>
+  </compound>
+  <compound refid="group__keystore" kind="group"><name>keystore</name>
+    <member refid="group__keystore_1ga7ca1045749c725e9c4a1b4758b2a0196" kind="enum"><name>DPS_KeyType</name></member>
+    <member refid="group__keystore_1gga7ca1045749c725e9c4a1b4758b2a0196a662c1e84628d96be8ae08163af382392" kind="enumvalue"><name>DPS_KEY_SYMMETRIC</name></member>
+    <member refid="group__keystore_1gga7ca1045749c725e9c4a1b4758b2a0196a58453a89367757e523ac337232387d89" kind="enumvalue"><name>DPS_KEY_EC</name></member>
+    <member refid="group__keystore_1gga7ca1045749c725e9c4a1b4758b2a0196a04e294e477af49e6a4927884f45fcb99" kind="enumvalue"><name>DPS_KEY_EC_CERT</name></member>
+    <member refid="group__keystore_1ga9ba152af7a3ed9076bfa597ef918cac1" kind="enum"><name>DPS_ECCurve</name></member>
+    <member refid="group__keystore_1gga9ba152af7a3ed9076bfa597ef918cac1a4b56a9b3ab7d0e23d57bad72f0c93239" kind="enumvalue"><name>DPS_EC_CURVE_RESERVED</name></member>
+    <member refid="group__keystore_1gga9ba152af7a3ed9076bfa597ef918cac1a96cd27fcba408bafcdd33b83b0395ff8" kind="enumvalue"><name>DPS_EC_CURVE_P256</name></member>
+    <member refid="group__keystore_1gga9ba152af7a3ed9076bfa597ef918cac1a359e576be45def67ea14b96c7bfbe100" kind="enumvalue"><name>DPS_EC_CURVE_P384</name></member>
+    <member refid="group__keystore_1gga9ba152af7a3ed9076bfa597ef918cac1abb97d4a693a02becf44c12b6e4678724" kind="enumvalue"><name>DPS_EC_CURVE_P521</name></member>
+    <member refid="group__keystore_1ga4c58e71301ab14e675033c601e4eabe1" kind="typedef"><name>DPS_KeySymmetric</name></member>
+    <member refid="group__keystore_1ga658140277e0cd5c6ccc3b7727ecaae8a" kind="typedef"><name>DPS_KeyEC</name></member>
+    <member refid="group__keystore_1ga98b6701b118cab76965736ad720f9bcf" kind="typedef"><name>DPS_KeyCert</name></member>
+    <member refid="group__keystore_1gaa56a1429b6a1658e674eea558bdbbfc0" kind="typedef"><name>DPS_Key</name></member>
+    <member refid="group__keystore_1ga4345e29dd2ad5d7fd88a1e988787bd72" kind="typedef"><name>DPS_KeyId</name></member>
+    <member refid="group__keystore_1gaf3833cfe48f848f698514bc5daa075fa" kind="typedef"><name>DPS_KeyStore</name></member>
+    <member refid="group__keystore_1ga7c3e50965b65334e9791780fa855ed16" kind="typedef"><name>DPS_KeyStoreRequest</name></member>
+    <member refid="group__keystore_1ga83d3ade4f4acd7d4385d606270ddfd29" kind="typedef"><name>DPS_KeyAndIdHandler</name></member>
+    <member refid="group__keystore_1gaccf7e3d43bc1e586132d7f1ae03d02f7" kind="typedef"><name>DPS_KeyHandler</name></member>
+    <member refid="group__keystore_1ga5b4cf102912eea802196d3e307c399ef" kind="typedef"><name>DPS_EphemeralKeyHandler</name></member>
+    <member refid="group__keystore_1ga0acd005f34bca4fcbe1c460e2305ddae" kind="typedef"><name>DPS_CAHandler</name></member>
+    <member refid="group__keystore_1ga289b1c74c01c9988f04297aa082986de" kind="function"><name>DPS_SetKeyAndId</name></member>
+    <member refid="group__keystore_1ga15d6a9b8256b67c2ec8b1d365a98dbab" kind="function"><name>DPS_SetKey</name></member>
+    <member refid="group__keystore_1ga37595f3207e42c52f7006659399135b2" kind="function"><name>DPS_SetCA</name></member>
+    <member refid="group__keystore_1ga088b3dc5eff10ab334d1e2aa0a329c26" kind="function"><name>DPS_KeyStoreHandle</name></member>
+    <member refid="group__keystore_1gafa79de23848ff56d0cced67897313369" kind="function"><name>DPS_CreateKeyStore</name></member>
+    <member refid="group__keystore_1ga40bea030ef0ba65ec332880ae2bbfee1" kind="function"><name>DPS_DestroyKeyStore</name></member>
+    <member refid="group__keystore_1gaf8062875af6cab5caabc3f13bf995807" kind="function"><name>DPS_SetKeyStoreData</name></member>
+    <member refid="group__keystore_1ga3b67d7dde74267ee9342dc3efd33812b" kind="function"><name>DPS_GetKeyStoreData</name></member>
+    <member refid="group__keystore_1ga57f11410b3ef6a686594b60836dc8c99" kind="typedef"><name>DPS_MemoryKeyStore</name></member>
+    <member refid="group__keystore_1ga2da4c5f9b7ab5ff6b65d1c8f4d6c30bc" kind="function"><name>DPS_CreateMemoryKeyStore</name></member>
+    <member refid="group__keystore_1ga2f9f4aeff872ca74d5735a8727f4dbae" kind="function"><name>DPS_DestroyMemoryKeyStore</name></member>
+    <member refid="group__keystore_1ga1855a8efae53b90fa95aa5b97295c4ec" kind="function"><name>DPS_SetContentKey</name></member>
+    <member refid="group__keystore_1ga8664b8c5cc2d3df6512ecb71e7f92212" kind="function"><name>DPS_SetNetworkKey</name></member>
+    <member refid="group__keystore_1ga8d55f887ebbd6b0af80caa43bf77a088" kind="function"><name>DPS_SetTrustedCA</name></member>
+    <member refid="group__keystore_1ga7a8c6874dd5bff0a6391a5515b545e17" kind="function"><name>DPS_SetCertificate</name></member>
+    <member refid="group__keystore_1ga2811c4ffff51bd75a72dd0a9c8796616" kind="function"><name>DPS_MemoryKeyStoreHandle</name></member>
+  </compound>
+  <compound refid="group__node" kind="group"><name>node</name>
+    <member refid="group__node_1ga4dd612ab965134321bb57fdb065f121c" kind="typedef"><name>DPS_Node</name></member>
+    <member refid="group__node_1gaaf70ac42acab8a67693947871e97600f" kind="typedef"><name>DPS_OnLinkComplete</name></member>
+    <member refid="group__node_1ga1e88cc9ca744782e36d58a022fe026c5" kind="typedef"><name>DPS_OnNodeDestroyed</name></member>
+    <member refid="group__node_1gac1c96ed1ff9a92e7421ae1c428acb904" kind="typedef"><name>DPS_OnResolveAddressComplete</name></member>
+    <member refid="group__node_1ga70b98e7cc39f0dccdba41f0984de82f6" kind="typedef"><name>DPS_OnUnlinkComplete</name></member>
+    <member refid="group__node_1gaf6641b5bbf27b2c45ac7f926b0ce4efe" kind="function"><name>DPS_CreateNode</name></member>
+    <member refid="group__node_1ga85f5121f80411f5ab82449efe20b68dd" kind="function"><name>DPS_DestroyNode</name></member>
+    <member refid="group__node_1ga7dacebc6533305fba12335b3b8c817dc" kind="function"><name>DPS_GetLoop</name></member>
+    <member refid="group__node_1ga65bba7bcfe5e940b153fcced4e2e8880" kind="function"><name>DPS_GetNodeData</name></member>
+    <member refid="group__node_1gaf920b28fe0721a7f97b11673494d7b36" kind="function"><name>DPS_GetPortNumber</name></member>
+    <member refid="group__node_1ga5064c63b8ce76bf34402e0c80183234b" kind="function"><name>DPS_Link</name></member>
+    <member refid="group__node_1ga0bd13b2bd395bbc7807ecc899a8862f1" kind="function"><name>DPS_LinkTo</name></member>
+    <member refid="group__node_1gab78df7f4498b847ddb32fdd33d39ef0f" kind="function"><name>DPS_ResolveAddress</name></member>
+    <member refid="group__node_1gad19cf4272ba11e935654175c83db2ce1" kind="function"><name>DPS_SetNodeData</name></member>
+    <member refid="group__node_1gac7e33476c06009ed42a6ea6f3c53380a" kind="function"><name>DPS_SetNodeSubscriptionUpdateDelay</name></member>
+    <member refid="group__node_1ga160d504bfaeb0d3711e0259000340fe3" kind="function"><name>DPS_StartNode</name></member>
+    <member refid="group__node_1ga79c86c3c0c5d6438b953a9acaab0ab0b" kind="function"><name>DPS_Unlink</name></member>
+    <member refid="group__node_1ga2d5bb0528c2a171991ad6355cbadac69" kind="function"><name>DPS_UnlinkFrom</name></member>
+    <member refid="group__node_1gac939c83361ed89086f37c78d9c9009dd" kind="define"><name>DPS_MCAST_PUB_DISABLED</name></member>
+    <member refid="group__node_1gae493573fb2e02b87258952223eb4fcd7" kind="define"><name>DPS_MCAST_PUB_ENABLE_RECV</name></member>
+    <member refid="group__node_1ga178a3a6450eeff450820fa34fd82049c" kind="define"><name>DPS_MCAST_PUB_ENABLE_SEND</name></member>
+    <member refid="group__node_1ga89df880f9650da5730fa152642c0be9f" kind="define"><name>DPS_SUBSCRIPTION_UPDATE_RATE</name></member>
+  </compound>
+  <compound refid="group__nodeaddress" kind="group"><name>nodeaddress</name>
+    <member refid="group__nodeaddress_1ga9e9f56aa38e82b4edcef7eb81e9f5bd2" kind="typedef"><name>DPS_NodeAddress</name></member>
+    <member refid="group__nodeaddress_1gace91591af9bf2a99bad07deda1b9176c" kind="function"><name>DPS_CopyAddress</name></member>
+    <member refid="group__nodeaddress_1ga6bed18a4b0ad533ec88c7a0d376de818" kind="function"><name>DPS_CreateAddress</name></member>
+    <member refid="group__nodeaddress_1ga1f373831e8009ff5959ccb02b8c3fb14" kind="function"><name>DPS_DestroyAddress</name></member>
+    <member refid="group__nodeaddress_1gafc7b21048f92370ca29325d6245b576d" kind="function"><name>DPS_NodeAddrToString</name></member>
+    <member refid="group__nodeaddress_1ga6231c243c483bd2d282f7df734a98946" kind="function"><name>DPS_SetAddress</name></member>
+  </compound>
+  <compound refid="group__publication" kind="group"><name>publication</name>
+    <member refid="group__publication_1gaf8615f0bcd3d95859cd7f2cdbf772e23" kind="typedef"><name>DPS_AcknowledgementHandler</name></member>
+    <member refid="group__publication_1ga0d439693474aa54e27f3d45a054696ac" kind="typedef"><name>DPS_Publication</name></member>
+    <member refid="group__publication_1ga9190b8fa3bad848fb428acd6c0c2b210" kind="function"><name>DPS_AckGetSenderKeyId</name></member>
+    <member refid="group__publication_1ga308074429a566ffb8d04d55bae520b04" kind="function"><name>DPS_AckPublication</name></member>
+    <member refid="group__publication_1ga41f31a8b63558e13d73d96de6086e5c4" kind="function"><name>DPS_CopyPublication</name></member>
+    <member refid="group__publication_1gaca070a96a6374e99a05d647c10737962" kind="function"><name>DPS_CreatePublication</name></member>
+    <member refid="group__publication_1ga17bb01c949aaaf3bafd53323c9effd5f" kind="function"><name>DPS_DestroyPublication</name></member>
+    <member refid="group__publication_1gaa8bee35089ac62289c9ba0e6a0568ca0" kind="function"><name>DPS_GetPublicationData</name></member>
+    <member refid="group__publication_1ga7b0709e28cb34d5a30b90e4142cd6c19" kind="function"><name>DPS_InitPublication</name></member>
+    <member refid="group__publication_1ga91471ddf6f66798e255b28b3e913144b" kind="function"><name>DPS_PublicationAddSubId</name></member>
+    <member refid="group__publication_1gad2a37d52f12c93434b431eefd732f363" kind="function"><name>DPS_PublicationGetNode</name></member>
+    <member refid="group__publication_1gaee6fc3b13484faacff0d26646778f777" kind="function"><name>DPS_PublicationGetNumTopics</name></member>
+    <member refid="group__publication_1ga1d7e81c2f0b19736a4f7a7195e5bd98d" kind="function"><name>DPS_PublicationGetSenderKeyId</name></member>
+    <member refid="group__publication_1ga875b48217d861d4a9fa5471419d354e9" kind="function"><name>DPS_PublicationGetSequenceNum</name></member>
+    <member refid="group__publication_1ga143a5c6fbe0bdf1725e841f122582432" kind="function"><name>DPS_PublicationGetTopic</name></member>
+    <member refid="group__publication_1gaba1ad3ee807b75a1281d334be06a12f7" kind="function"><name>DPS_PublicationGetUUID</name></member>
+    <member refid="group__publication_1ga516f7f314c7b95210751d00285758b9b" kind="function"><name>DPS_PublicationIsAckRequested</name></member>
+    <member refid="group__publication_1gaa5225be2733d6ebfd01f9475e3fc06f5" kind="function"><name>DPS_PublicationRemoveSubId</name></member>
+    <member refid="group__publication_1ga828a4efc5c235c48a81f6460cc3fe416" kind="function"><name>DPS_Publish</name></member>
+    <member refid="group__publication_1ga91c46ccb6df7f4bb99ca5d9d35cc5a4a" kind="function"><name>DPS_SetPublicationData</name></member>
+  </compound>
+  <compound refid="group__registration" kind="group"><name>registration</name>
+    <member refid="group__registration_1gad6b4f95f999e950345587b5ae2de69e2" kind="typedef"><name>DPS_OnRegGetComplete</name></member>
+    <member refid="group__registration_1gaaa0a8c9235e57aaf3e95dc3ecbf13c53" kind="typedef"><name>DPS_OnRegLinkToComplete</name></member>
+    <member refid="group__registration_1ga8f1d316de08b7dea7dfe55ae814e0219" kind="typedef"><name>DPS_OnRegPutComplete</name></member>
+    <member refid="group__registration_1gac06db7e10b2626b06bacd09414e7d740" kind="typedef"><name>DPS_Registration</name></member>
+    <member refid="group__registration_1ga2b9489ff306ad253d24b03c418a6eda0" kind="typedef"><name>DPS_RegistrationList</name></member>
+    <member refid="group__registration_1ga7c1111f95ed473c1b27fa3c9ee096796" kind="variable"><name>DPS_RegistryTopicString</name></member>
+    <member refid="group__registration_1ga3d1f2e10a8d3ffd66cf4c3ba5c53b490" kind="function"><name>DPS_CreateRegistrationList</name></member>
+    <member refid="group__registration_1ga0dbaa5dbea47290035a11dc22fc45f2d" kind="function"><name>DPS_DestroyRegistrationList</name></member>
+    <member refid="group__registration_1ga7288d76e731feb67b22951d7d1966311" kind="function"><name>DPS_Registration_Get</name></member>
+    <member refid="group__registration_1ga189dc57b265d83d6503f18e953759559" kind="function"><name>DPS_Registration_GetSyn</name></member>
+    <member refid="group__registration_1ga73550318aa9625aff612e549e9854e0c" kind="function"><name>DPS_Registration_LinkTo</name></member>
+    <member refid="group__registration_1gab50e1fb04be97888ec759b1f0b3df1e6" kind="function"><name>DPS_Registration_LinkToSyn</name></member>
+    <member refid="group__registration_1gac412d38875c80431c558773a42ba0766" kind="function"><name>DPS_Registration_Put</name></member>
+    <member refid="group__registration_1ga19a9b2743c27769b371c1fc8b97eced1" kind="function"><name>DPS_Registration_PutSyn</name></member>
+    <member refid="group__registration_1gafde6e5d4cc3e65a94afdd30a689221d5" kind="define"><name>DPS_CANDIDATE_FAILED</name></member>
+    <member refid="group__registration_1gae27a3dfd1f2e746220e99921f2c33a6c" kind="define"><name>DPS_CANDIDATE_INVALID</name></member>
+    <member refid="group__registration_1ga243eb1f49d56c2ae1f542a0c95a5a52d" kind="define"><name>DPS_CANDIDATE_LINKED</name></member>
+    <member refid="group__registration_1ga06a44e56022098c9464bd881cf5efe20" kind="define"><name>DPS_CANDIDATE_TRYING</name></member>
+    <member refid="group__registration_1ga0564134dd21bdecf8e8e25cf832e2a38" kind="define"><name>DPS_CANDIDATE_UNLINKED</name></member>
+  </compound>
+  <compound refid="group__services" kind="group"><name>services</name>
+  </compound>
+  <compound refid="group__status" kind="group"><name>status</name>
+    <member refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kind="typedef"><name>DPS_Status</name></member>
+    <member refid="group__status_1ga916083e3c32631f9d412c84c0999481f" kind="function"><name>DPS_ErrTxt</name></member>
+    <member refid="group__status_1gab7ef2498c212cd215dcd710c534b44bb" kind="define"><name>DPS_ERR_ARGS</name></member>
+    <member refid="group__status_1ga6170fba8d741b70a1f4c7e8662beceea" kind="define"><name>DPS_ERR_BUSY</name></member>
+    <member refid="group__status_1gabace0ae959b833d5df1d81ad45cb43b9" kind="define"><name>DPS_ERR_EOD</name></member>
+    <member refid="group__status_1ga40b286792608c99ed5dffd1caca9f569" kind="define"><name>DPS_ERR_EOF</name></member>
+    <member refid="group__status_1ga7fb0645b6d1cac68a2ce723c1932b0bf" kind="define"><name>DPS_ERR_EXISTS</name></member>
+    <member refid="group__status_1ga45240d9b5760ba1a30ad0bee0a6d2b7c" kind="define"><name>DPS_ERR_EXPIRED</name></member>
+    <member refid="group__status_1gaa6d56ac86cbf831fe49fa74e46043a1d" kind="define"><name>DPS_ERR_FAILURE</name></member>
+    <member refid="group__status_1ga6cac7d217edd07c3d7f1babf54cac1d7" kind="define"><name>DPS_ERR_INVALID</name></member>
+    <member refid="group__status_1ga5c46980c33492a8b76bffce081dbcba4" kind="define"><name>DPS_ERR_MISSING</name></member>
+    <member refid="group__status_1ga80a0ccafe770ca4149e65300d870c0d9" kind="define"><name>DPS_ERR_NETWORK</name></member>
+    <member refid="group__status_1ga934517e91f6e214fb6cab5089d5acc92" kind="define"><name>DPS_ERR_NO_ROUTE</name></member>
+    <member refid="group__status_1ga9047d1e219f2a62a948845d922582ec5" kind="define"><name>DPS_ERR_NODE_DESTROYED</name></member>
+    <member refid="group__status_1gac13dac4973f6700ff95461171148c1c8" kind="define"><name>DPS_ERR_NOT_ENCRYPTED</name></member>
+    <member refid="group__status_1gad175cd9050dec5f3a214bc62c3c7473c" kind="define"><name>DPS_ERR_NOT_IMPLEMENTED</name></member>
+    <member refid="group__status_1ga92b1c68aa4f1526347ccb76aa9382d76" kind="define"><name>DPS_ERR_NOT_INITIALIZED</name></member>
+    <member refid="group__status_1ga40f77c0ef70f691e6e158c8756ad8895" kind="define"><name>DPS_ERR_NOT_STARTED</name></member>
+    <member refid="group__status_1ga36c4d95c785c30cd74bb4498703ae231" kind="define"><name>DPS_ERR_NULL</name></member>
+    <member refid="group__status_1ga9127c1d49f4ca6a51c5585efc76ce362" kind="define"><name>DPS_ERR_OK</name></member>
+    <member refid="group__status_1ga54ee1a62589bee7cd9e82acfd4fa1cad" kind="define"><name>DPS_ERR_OVERFLOW</name></member>
+    <member refid="group__status_1ga6030b4923c05c4ad75e89b3b7b923c5f" kind="define"><name>DPS_ERR_READ</name></member>
+    <member refid="group__status_1ga09dd06b53fdfdc87406d380de331b75b" kind="define"><name>DPS_ERR_RESOURCES</name></member>
+    <member refid="group__status_1gaa3bb7fee9a4a926de2df54a272446b5c" kind="define"><name>DPS_ERR_SECURITY</name></member>
+    <member refid="group__status_1ga01852545b0caefe96ff155d540bb3a68" kind="define"><name>DPS_ERR_STALE</name></member>
+    <member refid="group__status_1ga87337c85a55fcaf2dbaaf128362f6c8c" kind="define"><name>DPS_ERR_STOPPING</name></member>
+    <member refid="group__status_1gadac4ab9da07e3886e1e93a408e6963c4" kind="define"><name>DPS_ERR_TIMEOUT</name></member>
+    <member refid="group__status_1gab1a09e3fc51905cc823298f964ad60e6" kind="define"><name>DPS_ERR_UNRESOLVED</name></member>
+    <member refid="group__status_1ga1d0f98f61006267befea4de4378a18d8" kind="define"><name>DPS_ERR_WRITE</name></member>
+    <member refid="group__status_1ga0ea3dd37bc558859ae0cb5a4f79a4bdd" kind="define"><name>DPS_OK</name></member>
+  </compound>
+  <compound refid="group__subscription" kind="group"><name>subscription</name>
+    <member refid="group__subscription_1gab95ef1762636ad505c940744b8dce83f" kind="typedef"><name>DPS_PublicationHandler</name></member>
+    <member refid="group__subscription_1gadb927c4c1b7306867a75fc4288b54af7" kind="typedef"><name>DPS_Subscription</name></member>
+    <member refid="group__subscription_1ga4095bb00bd0ca7fa9614ebbc2c28199f" kind="function"><name>DPS_CreateSubscription</name></member>
+    <member refid="group__subscription_1gaac78b5690aa31eec642b2a706faac510" kind="function"><name>DPS_DestroySubscription</name></member>
+    <member refid="group__subscription_1ga88ab2284734f099ef67bcc60997142b3" kind="function"><name>DPS_GetSubscriptionData</name></member>
+    <member refid="group__subscription_1gad581d341003e20c714061e44b57c2009" kind="function"><name>DPS_SetSubscriptionData</name></member>
+    <member refid="group__subscription_1ga83234ea82a91e07e3f5894a4dcf5267e" kind="function"><name>DPS_Subscribe</name></member>
+    <member refid="group__subscription_1gafea65751c811555736c8c65fcb3a9480" kind="function"><name>DPS_SubscriptionGetNode</name></member>
+    <member refid="group__subscription_1gab0ad2c6806f8f44f27c70fff915b7e9a" kind="function"><name>DPS_SubscriptionGetNumTopics</name></member>
+    <member refid="group__subscription_1gaacc63deda2f2d97cf3f44ca84784b2f6" kind="function"><name>DPS_SubscriptionGetTopic</name></member>
+  </compound>
+  <compound refid="group__uuid" kind="group"><name>uuid</name>
+    <member refid="group__uuid_1gaef1d03afcc6410602ade1d48f24c3997" kind="typedef"><name>DPS_UUID</name></member>
+    <member refid="group__uuid_1ga28a9b3d0518c4327afe94d087d1d2322" kind="function"><name>DPS_GenerateUUID</name></member>
+    <member refid="group__uuid_1ga725c154c5fccf2a2c9a6c32353a63228" kind="function"><name>DPS_InitUUID</name></member>
+    <member refid="group__uuid_1ga7819e63fac9457f892236b1b3f183713" kind="function"><name>DPS_UUIDCompare</name></member>
+    <member refid="group__uuid_1ga9c51faa57ecb228ce7eda077a90b20ff" kind="function"><name>DPS_UUIDToString</name></member>
+  </compound>
+  <compound refid="topic-strings" kind="page"><name>topic-strings</name>
+  </compound>
+  <compound refid="mesh-network" kind="page"><name>mesh-network</name>
+  </compound>
+  <compound refid="message-types-and-flow" kind="page"><name>message-types-and-flow</name>
+  </compound>
+  <compound refid="data-series" kind="page"><name>data-series</name>
+  </compound>
+  <compound refid="retained-publications" kind="page"><name>retained-publications</name>
+  </compound>
+  <compound refid="security" kind="page"><name>security</name>
+  </compound>
+  <compound refid="building-and-running" kind="page"><name>building-and-running</name>
+  </compound>
+  <compound refid="tutorials" kind="page"><name>tutorials</name>
+  </compound>
+  <compound refid="tutorials-hello-world" kind="page"><name>tutorials-hello-world</name>
+  </compound>
+  <compound refid="tutorials-link" kind="page"><name>tutorials-link</name>
+  </compound>
+  <compound refid="tutorials-security" kind="page"><name>tutorials-security</name>
+  </compound>
+  <compound refid="dir_143d9111106c2ba2452f83cceb80c482" kind="dir"><name>dps</name>
+  </compound>
+  <compound refid="dir_13c0c58698473ed8f9fbf60f7cb2fe0a" kind="dir"><name>dps-for-iot</name>
+  </compound>
+  <compound refid="dir_19a1ad10e03d3a0047dfb07071f3ce2d" kind="dir"><name>inc</name>
+  </compound>
+  <compound refid="indexpage" kind="page"><name>index</name>
+  </compound>
+</doxygenindex>

@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=9"/>
 <meta name="generator" content="Doxygen 1.8.13"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Distributed Publish Subscribe for IoT: Node</title>
+<title>Distributed Publish &amp; Subscribe for IoT: Node</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -28,7 +28,7 @@
  <tbody>
  <tr style="height: 56px;">
   <td id="projectalign" style="padding-left: 0.5em;">
-   <div id="projectname">Distributed Publish Subscribe for IoT
+   <div id="projectname">Distributed Publish &amp; Subscribe for IoT
    </div>
   </td>
  </tr>
@@ -102,14 +102,16 @@ Macros</h2></td></tr>
 <tr class="memitem:ga178a3a6450eeff450820fa34fd82049c"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#ga178a3a6450eeff450820fa34fd82049c">DPS_MCAST_PUB_ENABLE_SEND</a>&#160;&#160;&#160;1</td></tr>
 <tr class="memdesc:ga178a3a6450eeff450820fa34fd82049c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Enable multicast send on the node.  <a href="#ga178a3a6450eeff450820fa34fd82049c">More...</a><br /></td></tr>
 <tr class="separator:ga178a3a6450eeff450820fa34fd82049c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga89df880f9650da5730fa152642c0be9f"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#ga89df880f9650da5730fa152642c0be9f">DPS_SUBSCRIPTION_UPDATE_RATE</a>&#160;&#160;&#160;1000</td></tr>
-<tr class="memdesc:ga89df880f9650da5730fa152642c0be9f"><td class="mdescLeft">&#160;</td><td class="mdescRight">The default maximum rate (in msecs) to compute and send out subscription updates.  <a href="#ga89df880f9650da5730fa152642c0be9f">More...</a><br /></td></tr>
+<tr class="memitem:ga89df880f9650da5730fa152642c0be9f"><td class="memItemLeft" align="right" valign="top"><a id="ga89df880f9650da5730fa152642c0be9f"></a>
+#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#ga89df880f9650da5730fa152642c0be9f">DPS_SUBSCRIPTION_UPDATE_RATE</a>&#160;&#160;&#160;1000</td></tr>
+<tr class="memdesc:ga89df880f9650da5730fa152642c0be9f"><td class="mdescLeft">&#160;</td><td class="mdescRight">The default maximum rate (in msecs) to compute and send out subscription updates. <br /></td></tr>
 <tr class="separator:ga89df880f9650da5730fa152642c0be9f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="typedef-members"></a>
 Typedefs</h2></td></tr>
-<tr class="memitem:ga4dd612ab965134321bb57fdb065f121c"><td class="memItemLeft" align="right" valign="top">typedef struct _DPS_Node&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a></td></tr>
-<tr class="memdesc:ga4dd612ab965134321bb57fdb065f121c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Opaque type for a node.  <a href="#ga4dd612ab965134321bb57fdb065f121c">More...</a><br /></td></tr>
+<tr class="memitem:ga4dd612ab965134321bb57fdb065f121c"><td class="memItemLeft" align="right" valign="top"><a id="ga4dd612ab965134321bb57fdb065f121c"></a>
+typedef struct _DPS_Node&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a></td></tr>
+<tr class="memdesc:ga4dd612ab965134321bb57fdb065f121c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Opaque type for a node. <br /></td></tr>
 <tr class="separator:ga4dd612ab965134321bb57fdb065f121c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gaaf70ac42acab8a67693947871e97600f"><td class="memItemLeft" align="right" valign="top">typedef void(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#gaaf70ac42acab8a67693947871e97600f">DPS_OnLinkComplete</a>) (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, <a class="el" href="group__nodeaddress.html#ga9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *addr, <a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a> status, void *data)</td></tr>
 <tr class="memdesc:gaaf70ac42acab8a67693947871e97600f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function prototype for function called when a <a class="el" href="group__node.html#ga5064c63b8ce76bf34402e0c80183234b" title="Link the local node to a remote node. ">DPS_Link()</a> completes.  <a href="#gaaf70ac42acab8a67693947871e97600f">More...</a><br /></td></tr>
@@ -156,9 +158,9 @@ Functions</h2></td></tr>
 <tr class="memitem:gac7e33476c06009ed42a6ea6f3c53380a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#gac7e33476c06009ed42a6ea6f3c53380a">DPS_SetNodeSubscriptionUpdateDelay</a> (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, uint32_t subsRateMsecs)</td></tr>
 <tr class="memdesc:gac7e33476c06009ed42a6ea6f3c53380a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Specify the time delay (in msecs) between subscription updates.  <a href="#gac7e33476c06009ed42a6ea6f3c53380a">More...</a><br /></td></tr>
 <tr class="separator:gac7e33476c06009ed42a6ea6f3c53380a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga31994ad569ee589760efac037a0cbc8a"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#ga31994ad569ee589760efac037a0cbc8a">DPS_StartNode</a> (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, int mcastPub, int listenPort)</td></tr>
-<tr class="memdesc:ga31994ad569ee589760efac037a0cbc8a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initialized and starts running a local node.  <a href="#ga31994ad569ee589760efac037a0cbc8a">More...</a><br /></td></tr>
-<tr class="separator:ga31994ad569ee589760efac037a0cbc8a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga160d504bfaeb0d3711e0259000340fe3"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#ga160d504bfaeb0d3711e0259000340fe3">DPS_StartNode</a> (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, int mcastPub, uint16_t listenPort)</td></tr>
+<tr class="memdesc:ga160d504bfaeb0d3711e0259000340fe3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initialized and starts running a local node.  <a href="#ga160d504bfaeb0d3711e0259000340fe3">More...</a><br /></td></tr>
+<tr class="separator:ga160d504bfaeb0d3711e0259000340fe3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga79c86c3c0c5d6438b953a9acaab0ab0b"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#ga79c86c3c0c5d6438b953a9acaab0ab0b">DPS_Unlink</a> (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, <a class="el" href="group__nodeaddress.html#ga9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *addr, <a class="el" href="group__node.html#ga70b98e7cc39f0dccdba41f0984de82f6">DPS_OnUnlinkComplete</a> cb, void *data)</td></tr>
 <tr class="memdesc:ga79c86c3c0c5d6438b953a9acaab0ab0b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Unlink the local node from a remote node.  <a href="#ga79c86c3c0c5d6438b953a9acaab0ab0b">More...</a><br /></td></tr>
 <tr class="separator:ga79c86c3c0c5d6438b953a9acaab0ab0b"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -182,9 +184,8 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Disable multicast send and receive on the node. </p>
-<p>See <code>mcastPub</code> of <a class="el" href="group__node.html#ga31994ad569ee589760efac037a0cbc8a" title="Initialized and starts running a local node. ">DPS_StartNode()</a>. </p>
-<dl><dt><b>Examples: </b></dt><dd><a class="el" href="pub_many_8c-example.html#a17">pub_many.c</a>, <a class="el" href="publisher_8c-example.html#a22">publisher.c</a>, <a class="el" href="reg_pubs_8c-example.html#a21">reg_pubs.c</a>, <a class="el" href="reg_subs_8c-example.html#a34">reg_subs.c</a>, and <a class="el" href="subscriber_8c-example.html#a23">subscriber.c</a>.</dd>
-</dl>
+<p>See <code>mcastPub</code> of <a class="el" href="group__node.html#ga160d504bfaeb0d3711e0259000340fe3" title="Initialized and starts running a local node. ">DPS_StartNode()</a>. </p>
+
 </div>
 </div>
 <a id="gae493573fb2e02b87258952223eb4fcd7"></a>
@@ -200,9 +201,8 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Enable multicast receive on the node. </p>
-<p>See <code>mcastPub</code> of <a class="el" href="group__node.html#ga31994ad569ee589760efac037a0cbc8a" title="Initialized and starts running a local node. ">DPS_StartNode()</a>. </p>
-<dl><dt><b>Examples: </b></dt><dd><a class="el" href="subscriber_8c-example.html#a27">subscriber.c</a>.</dd>
-</dl>
+<p>See <code>mcastPub</code> of <a class="el" href="group__node.html#ga160d504bfaeb0d3711e0259000340fe3" title="Initialized and starts running a local node. ">DPS_StartNode()</a>. </p>
+
 </div>
 </div>
 <a id="ga178a3a6450eeff450820fa34fd82049c"></a>
@@ -218,45 +218,11 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Enable multicast send on the node. </p>
-<p>See <code>mcastPub</code> of <a class="el" href="group__node.html#ga31994ad569ee589760efac037a0cbc8a" title="Initialized and starts running a local node. ">DPS_StartNode()</a>. </p>
-<dl><dt><b>Examples: </b></dt><dd><a class="el" href="pub_many_8c-example.html#a13">pub_many.c</a>, and <a class="el" href="publisher_8c-example.html#a18">publisher.c</a>.</dd>
-</dl>
-</div>
-</div>
-<a id="ga89df880f9650da5730fa152642c0be9f"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga89df880f9650da5730fa152642c0be9f">&#9670;&nbsp;</a></span>DPS_SUBSCRIPTION_UPDATE_RATE</h2>
+<p>See <code>mcastPub</code> of <a class="el" href="group__node.html#ga160d504bfaeb0d3711e0259000340fe3" title="Initialized and starts running a local node. ">DPS_StartNode()</a>. </p>
 
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define DPS_SUBSCRIPTION_UPDATE_RATE&#160;&#160;&#160;1000</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>The default maximum rate (in msecs) to compute and send out subscription updates. </p>
-<dl><dt><b>Examples: </b></dt><dd><a class="el" href="publisher_8c-example.html#a17">publisher.c</a>, and <a class="el" href="subscriber_8c-example.html#a24">subscriber.c</a>.</dd>
-</dl>
 </div>
 </div>
 <h2 class="groupheader">Typedef Documentation</h2>
-<a id="ga4dd612ab965134321bb57fdb065f121c"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga4dd612ab965134321bb57fdb065f121c">&#9670;&nbsp;</a></span>DPS_Node</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">typedef struct _DPS_Node <a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Opaque type for a node. </p>
-
-</div>
-</div>
 <a id="gaaf70ac42acab8a67693947871e97600f"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#gaaf70ac42acab8a67693947871e97600f">&#9670;&nbsp;</a></span>DPS_OnLinkComplete</h2>
 
@@ -297,8 +263,8 @@ Functions</h2></td></tr>
 <p>Function prototype for callback function called when a node is destroyed. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">node</td><td>The node that was destroyed. This pointer is valid during the callback. </td></tr>
-    <tr><td class="paramname">data</td><td>Data pointer passed to <a class="el" href="group__node.html#ga85f5121f80411f5ab82449efe20b68dd" title="Destroys a node and free any resources. ">DPS_DestroyNode()</a> </td></tr>
+    <tr><td class="paramname">node</td><td>The node that was destroyed. This node is valid during the callback. </td></tr>
+    <tr><td class="paramname">data</td><td>Data passed to <a class="el" href="group__node.html#ga85f5121f80411f5ab82449efe20b68dd" title="Destroys a node and free any resources. ">DPS_DestroyNode()</a> </td></tr>
   </table>
   </dd>
 </dl>
@@ -346,7 +312,7 @@ Functions</h2></td></tr>
   <table class="params">
     <tr><td class="paramname">node</td><td>The local node to use </td></tr>
     <tr><td class="paramname">addr</td><td>The address of the remote node that was unlinked </td></tr>
-    <tr><td class="paramname">data</td><td>Application data passed in the call to <a class="el" href="group__node.html#ga5064c63b8ce76bf34402e0c80183234b" title="Link the local node to a remote node. ">DPS_Link()</a> </td></tr>
+    <tr><td class="paramname">data</td><td>Application data passed in the call to <a class="el" href="group__node.html#ga79c86c3c0c5d6438b953a9acaab0ab0b" title="Unlink the local node from a remote node. ">DPS_Unlink()</a> </td></tr>
   </table>
   </dd>
 </dl>
@@ -395,9 +361,8 @@ Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>A pointer to the uninitialized node or NULL if there were no resources for the node. </dd></dl>
-<dl><dt><b>Examples: </b></dt><dd><a class="el" href="pub_many_8c-example.html#a18">pub_many.c</a>, <a class="el" href="publisher_8c-example.html#a29">publisher.c</a>, <a class="el" href="reg_pubs_8c-example.html#a27">reg_pubs.c</a>, <a class="el" href="reg_subs_8c-example.html#a31">reg_subs.c</a>, <a class="el" href="registry_8c-example.html#a6">registry.c</a>, and <a class="el" href="subscriber_8c-example.html#a34">subscriber.c</a>.</dd>
-</dl>
+<dl class="section return"><dt>Returns</dt><dd>The uninitialized node or NULL if there were no resources for the node. </dd></dl>
+
 </div>
 </div>
 <a id="ga85f5121f80411f5ab82449efe20b68dd"></a>
@@ -443,12 +408,11 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd><ul>
 <li>DPS_OK if the node will be destroyed and the callback called</li>
-<li>DPS_ERR_NULL node or cb was a null pointer</li>
+<li>DPS_ERR_NULL node or cb was null</li>
 <li>Or an error status code in which case the callback will not be called. </li>
 </ul>
 </dd></dl>
-<dl><dt><b>Examples: </b></dt><dd><a class="el" href="pub_many_8c-example.html#a12">pub_many.c</a>, <a class="el" href="publisher_8c-example.html#a15">publisher.c</a>, <a class="el" href="reg_pubs_8c-example.html#a34">reg_pubs.c</a>, <a class="el" href="reg_subs_8c-example.html#a38">reg_subs.c</a>, <a class="el" href="registry_8c-example.html#a14">registry.c</a>, and <a class="el" href="subscriber_8c-example.html#a45">subscriber.c</a>.</dd>
-</dl>
+
 </div>
 </div>
 <a id="ga7dacebc6533305fba12335b3b8c817dc"></a>
@@ -471,10 +435,11 @@ Functions</h2></td></tr>
 <p>The only thing that is safe to do with the node is to create an async callback. Other libuv APIs can then be called from within the async callback.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">node</td><td>The local node to use </td></tr>
+    <tr><td class="paramname">node</td><td>The local node to use</td></tr>
   </table>
   </dd>
 </dl>
+<dl class="section return"><dt>Returns</dt><dd>The uv event loop </dd></dl>
 
 </div>
 </div>
@@ -524,12 +489,12 @@ Functions</h2></td></tr>
 <p>Get the port number this node is listening for connections on. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">node</td><td>The local node to use </td></tr>
+    <tr><td class="paramname">node</td><td>The local node to use</td></tr>
   </table>
   </dd>
 </dl>
-<dl><dt><b>Examples: </b></dt><dd><a class="el" href="reg_subs_8c-example.html#a22">reg_subs.c</a>, <a class="el" href="registry_8c-example.html#a9">registry.c</a>, and <a class="el" href="subscriber_8c-example.html#a15">subscriber.c</a>.</dd>
-</dl>
+<dl class="section return"><dt>Returns</dt><dd>The port number </dd></dl>
+
 </div>
 </div>
 <a id="ga5064c63b8ce76bf34402e0c80183234b"></a>
@@ -626,14 +591,14 @@ Functions</h2></td></tr>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">node</td><td>The local node to link from </td></tr>
-    <tr><td class="paramname">host</td><td>The host name or IP address to link to </td></tr>
+    <tr><td class="paramname">host</td><td>The host name or IP address to link to. A NULL host indicates localhost. </td></tr>
     <tr><td class="paramname">port</td><td>The port number </td></tr>
-    <tr><td class="paramname">addr</td><td>Returns the resolved address for the remote node </td></tr>
+    <tr><td class="paramname">addr</td><td>Returns the resolved address for the remote node</td></tr>
   </table>
   </dd>
 </dl>
-<dl><dt><b>Examples: </b></dt><dd><a class="el" href="pub_many_8c-example.html#a21">pub_many.c</a>, <a class="el" href="publisher_8c-example.html#a33">publisher.c</a>, and <a class="el" href="subscriber_8c-example.html#a41">subscriber.c</a>.</dd>
-</dl>
+<dl class="section return"><dt>Returns</dt><dd>DPS_OK if the link is successful, an error otherwise </dd></dl>
+
 </div>
 </div>
 <a id="gab78df7f4498b847ddb32fdd33d39ef0f"></a>
@@ -767,12 +732,11 @@ Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
-<dl><dt><b>Examples: </b></dt><dd><a class="el" href="publisher_8c-example.html#a31">publisher.c</a>, and <a class="el" href="subscriber_8c-example.html#a36">subscriber.c</a>.</dd>
-</dl>
+
 </div>
 </div>
-<a id="ga31994ad569ee589760efac037a0cbc8a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga31994ad569ee589760efac037a0cbc8a">&#9670;&nbsp;</a></span>DPS_StartNode()</h2>
+<a id="ga160d504bfaeb0d3711e0259000340fe3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga160d504bfaeb0d3711e0259000340fe3">&#9670;&nbsp;</a></span>DPS_StartNode()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -792,7 +756,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">int&#160;</td>
+          <td class="paramtype">uint16_t&#160;</td>
           <td class="paramname"><em>listenPort</em>&#160;</td>
         </tr>
         <tr>
@@ -814,8 +778,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>DPS_OK or various error status codes </dd></dl>
-<dl><dt><b>Examples: </b></dt><dd><a class="el" href="pub_many_8c-example.html#a19">pub_many.c</a>, <a class="el" href="publisher_8c-example.html#a32">publisher.c</a>, <a class="el" href="reg_pubs_8c-example.html#a29">reg_pubs.c</a>, <a class="el" href="reg_subs_8c-example.html#a33">reg_subs.c</a>, <a class="el" href="registry_8c-example.html#a7">registry.c</a>, and <a class="el" href="subscriber_8c-example.html#a37">subscriber.c</a>.</dd>
-</dl>
+
 </div>
 </div>
 <a id="ga79c86c3c0c5d6438b953a9acaab0ab0b"></a>
@@ -900,19 +863,19 @@ Functions</h2></td></tr>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">node</td><td>The local node to unlink from </td></tr>
-    <tr><td class="paramname">addr</td><td>The address of the remote node to unlink </td></tr>
+    <tr><td class="paramname">addr</td><td>The address of the remote node to unlink</td></tr>
   </table>
   </dd>
 </dl>
-<dl><dt><b>Examples: </b></dt><dd><a class="el" href="publisher_8c-example.html#a36">publisher.c</a>, <a class="el" href="reg_pubs_8c-example.html#a32">reg_pubs.c</a>, and <a class="el" href="subscriber_8c-example.html#a43">subscriber.c</a>.</dd>
-</dl>
+<dl class="section return"><dt>Returns</dt><dd>DPS_OK if the unlink is successful, an error otherwise </dd></dl>
+
 </div>
 </div>
 </div><!-- contents -->
 </div><!-- doc-content -->
 <div class="navpath" id="nav-path">
   <ul>
-    <li class="footer" style="float:left"><b>Distributed PubSub Manual</b></li> <li class="footer">Generated Tue Feb 20 2018 10:23:50</li>
+    <li class="footer" style="float:left"><b>Distributed Publish & Subscribe for IoT</b></li> <li class="footer">Generated Wed Mar 7 2018 13:26:16</li>
   </ul>
 </div>
 </body>

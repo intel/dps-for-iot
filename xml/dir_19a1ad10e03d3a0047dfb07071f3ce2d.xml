@@ -1,0 +1,12 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.13">
+  <compounddef id="dir_19a1ad10e03d3a0047dfb07071f3ce2d" kind="dir">
+    <compoundname>inc</compoundname>
+    <innerdir refid="dir_143d9111106c2ba2452f83cceb80c482">dps</innerdir>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/"/>
+  </compounddef>
+</doxygen>

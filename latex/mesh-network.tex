@@ -1,0 +1,34 @@
+A D\+PS network is a loosely connected collection of network nodes (devices) that function as subscriber, publishers, both or neither.
+
+Loosely connected means that the nodes hold state information about other nodes but do not necessarily maintain network connectivity to other nodes. There are no predesignated roles, any node can publish topics or subscribe to topics. D\+PS nodes build and manage routing tables based on the subscription topics and forward publications hop-\/by-\/hop from publishers to subscribers. Nodes with multiple network interfaces will automatically route publications between networks. Nodes can send publications on a local subnet using IP multicast, can be manually configured to connect to other nodes, or can use a directory service to locate other nodes. Publication routing is independent from the network level connections, so long as there is at least one network path D\+PS will route publications to all subscribing nodes.
+
+The picture below shows a mesh of subscriber and publisher nodes.
+
+ 
+\begin{DoxyImage}
+\includegraphics[width=\textwidth,height=\textheight/2,keepaspectratio=true]{dps_mesh.jpg}
+\doxyfigcaption{D\+PS Mesh}
+\end{DoxyImage}
+
+
+Subscriptions flood throughout the network and can be forwarded in either direction, also there may be multiple routes. Publications only flow on routes that have matching subscriptions. Multicast publications are unsolicited and will be received by all nodes on the same subnet that are configured as multicast listeners. Unicast publications are only forwarded if the publication matches the subscriptions. In the steady state a publication reaching any node will be routed to all matching subscribers.\hypertarget{mesh-network_message-transports}{}\section{Transports}\label{mesh-network_message-transports}
+\hypertarget{mesh-network_Multicast}{}\subsection{Multicast}\label{mesh-network_Multicast}
+Multicast publications are wrapped in a Co\+AP envelope and sent to and received from the default Co\+AP port {\itshape 5683}.
+
+A Co\+AP wrapped publication message is sent as a non-\/confirmable P\+UT request with options\+:
+\begin{DoxyItemize}
+\item Uri-\/\+Path\+: {\itshape dps/pub} 
+\item Content-\/\+Format\+: {\itshape application/cbor} 
+\end{DoxyItemize}
+
+Control over sending and receiving multicast messages is provided via the {\itshape mcast\+Pub} parameter of \hyperlink{group__node_ga160d504bfaeb0d3711e0259000340fe3}{D\+P\+S\+\_\+\+Start\+Node()}.\hypertarget{mesh-network_Unicast}{}\subsection{Unicast}\label{mesh-network_Unicast}
+D\+PS implements three different transports for sending and receiving unicast messages.
+
+Unicast endpoints may be explicitly created and destroyed with \hyperlink{group__node_ga5064c63b8ce76bf34402e0c80183234b}{D\+P\+S\+\_\+\+Link()} and \hyperlink{group__node_ga79c86c3c0c5d6438b953a9acaab0ab0b}{D\+P\+S\+\_\+\+Unlink()}. The port used in unicast communication is provided via the {\itshape listen\+Port} parameter of \hyperlink{group__node_ga160d504bfaeb0d3711e0259000340fe3}{D\+P\+S\+\_\+\+Start\+Node()}.\hypertarget{mesh-network_UDP}{}\subsubsection{U\+DP}\label{mesh-network_UDP}
+Each D\+PS message is contained in a single U\+DP datagram.\hypertarget{mesh-network_TCP}{}\subsubsection{T\+CP}\label{mesh-network_TCP}
+Each D\+PS message is prefixed with the length of the message encoded as a C\+B\+OR unsigned integer value.\hypertarget{mesh-network_DTLS}{}\subsubsection{D\+T\+LS}\label{mesh-network_DTLS}
+D\+T\+LS provides message authentication, integrity and confidentiality above U\+DP. Each D\+PS message is contained in a single D\+T\+LS datagram.
+
+\begin{DoxySeeAlso}{See also}
+\hyperlink{tutorials-security_enabling-network-layer-security}{Enabling network layer security} 
+\end{DoxySeeAlso}

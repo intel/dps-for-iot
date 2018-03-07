@@ -70,7 +70,7 @@ var searchData=
   ['dps_5fsetsubscriptiondata',['DPS_SetSubscriptionData',['../group__subscription.html#gad581d341003e20c714061e44b57c2009',1,'dps.h']]],
   ['dps_5fsettrustedca',['DPS_SetTrustedCA',['../group__keystore.html#ga8d55f887ebbd6b0af80caa43bf77a088',1,'dps.h']]],
   ['dps_5fsignalevent',['DPS_SignalEvent',['../group__event.html#gad0f8a3b372f972bfaa97e29fa01b5c82',1,'event.h']]],
-  ['dps_5fstartnode',['DPS_StartNode',['../group__node.html#ga31994ad569ee589760efac037a0cbc8a',1,'dps.h']]],
+  ['dps_5fstartnode',['DPS_StartNode',['../group__node.html#ga160d504bfaeb0d3711e0259000340fe3',1,'dps.h']]],
   ['dps_5fsubscribe',['DPS_Subscribe',['../group__subscription.html#ga83234ea82a91e07e3f5894a4dcf5267e',1,'dps.h']]],
   ['dps_5fsubscriptiongetnode',['DPS_SubscriptionGetNode',['../group__subscription.html#gafea65751c811555736c8c65fcb3a9480',1,'dps.h']]],
   ['dps_5fsubscriptiongetnumtopics',['DPS_SubscriptionGetNumTopics',['../group__subscription.html#gab0ad2c6806f8f44f27c70fff915b7e9a',1,'dps.h']]],

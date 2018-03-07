@@ -38,7 +38,6 @@ var group__keystore =
     [ "DPS_KeySymmetric", "group__keystore.html#ga4c58e71301ab14e675033c601e4eabe1", null ],
     [ "DPS_MemoryKeyStore", "group__keystore.html#ga57f11410b3ef6a686594b60836dc8c99", null ],
     [ "DPS_ECCurve", "group__keystore.html#ga9ba152af7a3ed9076bfa597ef918cac1", [
-      [ "DPS_EC_CURVE_RESERVED", "group__keystore.html#gga9ba152af7a3ed9076bfa597ef918cac1a4b56a9b3ab7d0e23d57bad72f0c93239", null ],
       [ "DPS_EC_CURVE_P256", "group__keystore.html#gga9ba152af7a3ed9076bfa597ef918cac1a96cd27fcba408bafcdd33b83b0395ff8", null ],
       [ "DPS_EC_CURVE_P384", "group__keystore.html#gga9ba152af7a3ed9076bfa597ef918cac1a359e576be45def67ea14b96c7bfbe100", null ],
       [ "DPS_EC_CURVE_P521", "group__keystore.html#gga9ba152af7a3ed9076bfa597ef918cac1abb97d4a693a02becf44c12b6e4678724", null ]

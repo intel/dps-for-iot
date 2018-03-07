@@ -1,0 +1,17 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.13">
+  <compounddef id="topic-strings" kind="page">
+    <compoundname>topic-strings</compoundname>
+    <title>Topic Strings</title>
+    <detaileddescription>
+<para>DPS like other pub/sub protocols expresses publications and subscriptions as structured text strings called topic strings.</para><para>A topic string is a sequence of substrings delineated by a standalone separator character. In DPS almost any character or set of characters the publisher and subscriber agree on can be used as a separator. A publication matches a subscription if the substrings and separators in the publication are the same as the substrings and separators in the publication. Subscription topic strings can also include wildcard characters as described below. These are all valid publication topic strings:</para><para><verbatim>foo/bar
+x,y,z
+1.2.3
+a/b/c?val=5
+</verbatim></para><para>In the last example <computeroutput>/</computeroutput>, <computeroutput></computeroutput>?, and <computeroutput>=</computeroutput> are separators. Separators must standalone, two or more consecutive separators are disallowed. Subscription topics strings have the same form as publication topics strings but can include wild-card characters. DPS uses the same wildcard characters as MQTT with the same meanings: the plus sign <computeroutput>+</computeroutput> wild card matches to any substring in the same position; the hash or pound sign <computeroutput>#</computeroutput> matches any number of trailing substrings. In DPS <computeroutput>+</computeroutput> and <computeroutput>#</computeroutput> are currently the only characters that are reserved. These are some valid wild-carded subscription topic strings:</para><para><verbatim>+/bar
+x,+,z
+1.#
+a/b/c?val=+
+</verbatim></para><para>In MQTT and other pub/sub protocols a subscription or publication is a single topic string. A unique feature of DPS is that subscriptions and publications can have multiple topic strings. A subscription with more than one topic string will only match publications that have matching topic strings for all of topic strings in the subscription. As an example of how this might be used consider a set of devices that publish a topic string describing device type and a topic string describing the physical location of the device. An application could subscribe to all devices at a specific location by only specifying the location topic string, all devices of a specific type by only specifying the device type, or home in on a device with a specific type at specific location by using both topic strings in the same subscription. Another unique feature of DPS is that publisher control over the kinds of wild-card matches a subscriber is permitted to use. For example, a publisher can decide that wild-card matches must fully specify at least the first N elements in order to match. This offers a publisher control over wide-open wildcard subscriptions such as <computeroutput>+/#</computeroutput>, the most generic form allowed by DPS, that will match any publication with two or more elements. </para>    </detaileddescription>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,37 @@
+\hypertarget{struct___d_p_s___key_e_c}{}\section{\+\_\+\+D\+P\+S\+\_\+\+Key\+EC Struct Reference}
+\label{struct___d_p_s___key_e_c}\index{\+\_\+\+D\+P\+S\+\_\+\+Key\+EC@{\+\_\+\+D\+P\+S\+\_\+\+Key\+EC}}
+
+
+Elliptic curve key data.  
+
+
+\subsection*{Data Fields}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{struct___d_p_s___key_e_c_a9896c40cd0b6dd0bd05ac5831fc421d9}\label{struct___d_p_s___key_e_c_a9896c40cd0b6dd0bd05ac5831fc421d9}} 
+\hyperlink{group__keystore_ga9ba152af7a3ed9076bfa597ef918cac1}{D\+P\+S\+\_\+\+E\+C\+Curve} \hyperlink{struct___d_p_s___key_e_c_a9896c40cd0b6dd0bd05ac5831fc421d9}{curve}
+\begin{DoxyCompactList}\small\item\em The named curve. \end{DoxyCompactList}\item 
+\mbox{\Hypertarget{struct___d_p_s___key_e_c_aa008a9db4f8bc93e6572b91cfb0a51dd}\label{struct___d_p_s___key_e_c_aa008a9db4f8bc93e6572b91cfb0a51dd}} 
+const uint8\+\_\+t $\ast$ \hyperlink{struct___d_p_s___key_e_c_aa008a9db4f8bc93e6572b91cfb0a51dd}{d}
+\begin{DoxyCompactList}\small\item\em D coordinate. \end{DoxyCompactList}\item 
+\mbox{\Hypertarget{struct___d_p_s___key_e_c_a341a17a83bec9eb91bc2ce93c3832d81}\label{struct___d_p_s___key_e_c_a341a17a83bec9eb91bc2ce93c3832d81}} 
+const uint8\+\_\+t $\ast$ \hyperlink{struct___d_p_s___key_e_c_a341a17a83bec9eb91bc2ce93c3832d81}{x}
+\begin{DoxyCompactList}\small\item\em X coordinate. \end{DoxyCompactList}\item 
+\mbox{\Hypertarget{struct___d_p_s___key_e_c_adab7230a279ab8e4a30483cc71608abd}\label{struct___d_p_s___key_e_c_adab7230a279ab8e4a30483cc71608abd}} 
+const uint8\+\_\+t $\ast$ \hyperlink{struct___d_p_s___key_e_c_adab7230a279ab8e4a30483cc71608abd}{y}
+\begin{DoxyCompactList}\small\item\em Y coordinate. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Elliptic curve key data. 
+
+Only {\ttfamily x} and {\ttfamily y} are needed for a public key. Similarly, only {\ttfamily d} is needed for a private key.
+
+\begin{DoxyNote}{Note}
+Need to define this outside of D\+P\+S\+\_\+\+Key to satisfy S\+W\+IG. 
+\end{DoxyNote}
+
+
+The documentation for this struct was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+\hyperlink{dps_8h}{dps.\+h}\end{DoxyCompactItemize}

@@ -1,0 +1,53 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.13">
+  <compounddef id="building-and-running" kind="page">
+    <compoundname>building-and-running</compoundname>
+    <title>Building and Running</title>
+    <detaileddescription>
+<sect1 id="building-and-running_1prerequisites">
+<title>Prerequisites</title>
+<sect2 id="building-and-running_1prerequisites-linux">
+<title>Linux</title>
+<para><itemizedlist>
+<listitem><para>gcc or clang</para></listitem><listitem><para><ulink url="http://scons.org/pages/download.html">SCons</ulink></para></listitem><listitem><para>libuv is used by node.js so packages are available for many distributions but note that DPS requires libuv 1.7 or later so it may be necessary to build libuv from source. <ulink url="https://github.com/libuv">libuv source code on GitHub.</ulink></para></listitem><listitem><para><ulink url="http://www.swig.org/download.html">SWIG</ulink></para></listitem></itemizedlist>
+</para></sect2>
+<sect2 id="building-and-running_1prerequisites-windows">
+<title>Windows</title>
+<para><itemizedlist>
+<listitem><para><ulink url="https://www.visualstudio.com/downloads/">Visual Studio</ulink></para><para>Note: In Visual Studio 2015, Visual C++ is not installed by default. When installing, be sure to choose <bold>Custom</bold> installation and then choose the C++ components you require. Or, if Visual Studio is already installed, choose <bold>File | New | Project | C++</bold> and you will be prompted to install the necessary components.</para></listitem><listitem><para><ulink url="https://www.python.org/downloads/windows/">Latest Python 2.7 Release</ulink></para></listitem><listitem><para><ulink url="http://scons.org/pages/download.html">SCons</ulink></para><para>Note: The SCons installer will not detect the 64-bit installation of Python. Instead, download the zip file and follow the installation instructions in SCons README.txt.</para></listitem><listitem><para><ulink url="http://dist.libuv.org/dist/">libuv</ulink></para></listitem><listitem><para><ulink url="http://www.swig.org/download.html">SWIG</ulink></para></listitem></itemizedlist>
+</para></sect2>
+<sect2 id="building-and-running_1prerequisites-yocto">
+<title>Yocto</title>
+<para>Yocto Project through the OpenEmbedded build system provides an open source development environment targeting the ARM, MIPS, PowerPC and x86 architectures for a variety of platforms including x86-64 and emulated ones.</para><para><itemizedlist>
+<listitem><para><ulink url="https://git.yoctoproject.org/">Yocto git</ulink></para></listitem><listitem><para><ulink url="http://www.yoctoproject.org/docs/1.8/yocto-project-qs/yocto-project-qs.html">Yocto Project Quick Start</ulink></para></listitem><listitem><para><ulink url="https://layers.openembedded.org/layerindex/recipe/32082/">Yocto libuv</ulink></para></listitem></itemizedlist>
+</para></sect2>
+<sect2 id="building-and-running_1prerequisites-documentation">
+<title>Documentation</title>
+<para>The C API documentation is generated using Doxygen. The Python (pydoc) and JavaScript API (JSDoc) documentation is generated from the Doxygen output.</para><para>Doxygen can be downloaded from here: <ulink url="http://www.stack.nl/~dimitri/doxygen/download.html">Doxygen</ulink></para><para>Building the documentation requires the scons <ulink url="https://bitbucket.org/scons/scons/wiki/DoxygenBuilder">DoxygenBuilder</ulink> tool. This <ulink url="https://bitbucket.org/scons/scons/wiki/ToolsIndex">page</ulink> has instructions on how to install the builder.</para></sect2>
+</sect1>
+<sect1 id="building-and-running_1building">
+<title>Building</title>
+<sect2 id="building-and-running_1building-linux-and-windows">
+<title>Linux and Windows</title>
+<para>To build the DPS libraries, examples, bindings, and documentation run <computeroutput>scons</computeroutput>.</para><para><verbatim>$ scons [variant=debug|release] [transport=udp|tcp|dtls] [bindings=all|none]
+</verbatim></para><para>To build with a different compiler use the <computeroutput>CC</computeroutput> and <computeroutput>CXX</computeroutput> build options.</para><para><verbatim>$ scons CC=clang CXX=clang++
+</verbatim></para><para>To see the complete list of build options run <computeroutput>scons <ndash/>help</computeroutput>. The default build configuration is <computeroutput>variant=release transport=udp bindings=all</computeroutput>.</para><para><simplesect kind="note"><para>A limitation of the current implementation is that the transport must be configured at compile time.</para></simplesect>
+The scons script pulls down source code from two external projects (mbedtls, and safestringlib) into the <computeroutput>./ext</computeroutput> directory. If necessary these projects can be populated manually:</para><para><verbatim>$ git clone https://github.com/ARMmbed/mbedtls ext/mbedtls
+$ git clone https://github.com/01org/safestringlib.git ext/safestring
+</verbatim></para><para><simplesect kind="note"><para>The ext projects are populated the first time DPS is built. To update these projects you need to manually do a <computeroutput>git pull</computeroutput> or delete the project directory and rerun scons.</para></simplesect>
+</para></sect2>
+<sect2 id="building-and-running_1building-yocto">
+<title>Yocto</title>
+<para>Clone the poky repository and configure the Yocto environment. Refer to <ulink url="http://www.yoctoproject.org/docs/1.8/yocto-project-qs/yocto-project-qs.html">Yocto Project Quick Start</ulink> for more information.</para><para>Clone the libuv Yocto project and yocto/recipes-connectivity/dps to the Yocto Project directory. Modify the value of SRCREV_dps in dps_git.bb to the last commit of dps.</para><para>The Yocto Project directory needs to be included in BBLAYERS of conf/bblayers.conf. Refer to <ulink url="https://wiki.yoctoproject.org/wiki/How_do_I">Yocto Wiki</ulink> for more information.</para><para>From the root directory of the Yocto Project, initialize the Yocto environment, provide a meaningful build directory name and build Yocto DPS.</para><para><verbatim>$ source oe-init-build-env mybuilds
+$ bitbake dps
+</verbatim></para></sect2>
+</sect1>
+<sect1 id="building-and-running_1running">
+<title>Running</title>
+<sect2 id="building-and-running_1running-examples">
+<title>Examples</title>
+<para>There are C, Python, and JS (node.js) examples.</para><para>The C examples are found in <computeroutput>./examples</computeroutput>, the Python examples are in <computeroutput>./py_scripts</computeroutput> and the JS examples are in <computeroutput>./js_scripts</computeroutput>.</para><para>The C examples are installed in <computeroutput>./build/dist/bin</computeroutput>. There are some some test scripts in <computeroutput></computeroutput>./test_scripts that run some more complex scenarios using the example programs. The test script <computeroutput>tree1</computeroutput> builds a small mesh and shows how publications sent to any node in the mesh get forwarded to the matching subscribers. The script <computeroutput>reg1</computeroutput> uses the <computeroutput>registry</computeroutput>, <computeroutput>reg_pubs</computeroutput>, and <computeroutput>reg_subs</computeroutput> examples programs to build a dynamic mesh using the experimental discovery service. </para></sect2>
+</sect1>
+    </detaileddescription>
+  </compounddef>
+</doxygen>

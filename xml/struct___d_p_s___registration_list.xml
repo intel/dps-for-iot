@@ -1,0 +1,71 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.13">
+  <compounddef id="struct___d_p_s___registration_list" kind="struct" language="C++" prot="public">
+    <compoundname>_DPS_RegistrationList</compoundname>
+    <includes refid="registration_8h" local="no">registration.h</includes>
+      <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="struct___d_p_s___registration_list_1a3cf76d39d9ec5bee027f8dae52c1982d" prot="public" static="no" mutable="no">
+        <type>uint8_t</type>
+        <definition>uint8_t _DPS_RegistrationList::count</definition>
+        <argsstring></argsstring>
+        <name>count</name>
+        <briefdescription>
+<para>Number of entries currently in the list. </para>        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="75" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" bodystart="75" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="struct___d_p_s___registration_list_1a7090074f00b35189ff64c21d5bc40535" prot="public" static="no" mutable="no">
+        <type><ref refid="group__registration_1gac06db7e10b2626b06bacd09414e7d740" kindref="member">DPS_Registration</ref></type>
+        <definition>DPS_Registration _DPS_RegistrationList::list[1]</definition>
+        <argsstring>[1]</argsstring>
+        <name>list</name>
+        <briefdescription>
+<para>The list. </para>        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="76" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" bodystart="76" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="struct___d_p_s___registration_list_1a9aeb3177f17c29a6af6a702d3994b39d" prot="public" static="no" mutable="no">
+        <type>uint8_t</type>
+        <definition>uint8_t _DPS_RegistrationList::size</definition>
+        <argsstring></argsstring>
+        <name>size</name>
+        <briefdescription>
+<para>Size of the list. </para>        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="74" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" bodystart="74" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+<para>For returning a list of candidate remote nodes. </para>    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="16">
+        <label>_DPS_RegistrationList</label>
+        <link refid="struct___d_p_s___registration_list"/>
+        <childnode refid="17" relation="usage">
+          <edgelabel>list</edgelabel>
+        </childnode>
+      </node>
+      <node id="17">
+        <label>_DPS_Registration</label>
+        <link refid="struct___d_p_s___registration"/>
+      </node>
+    </collaborationgraph>
+    <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="73" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" bodystart="73" bodyend="77"/>
+    <listofallmembers>
+      <member refid="struct___d_p_s___registration_list_1a3cf76d39d9ec5bee027f8dae52c1982d" prot="public" virt="non-virtual"><scope>_DPS_RegistrationList</scope><name>count</name></member>
+      <member refid="struct___d_p_s___registration_list_1a7090074f00b35189ff64c21d5bc40535" prot="public" virt="non-virtual"><scope>_DPS_RegistrationList</scope><name>list</name></member>
+      <member refid="struct___d_p_s___registration_list_1a9aeb3177f17c29a6af6a702d3994b39d" prot="public" virt="non-virtual"><scope>_DPS_RegistrationList</scope><name>size</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

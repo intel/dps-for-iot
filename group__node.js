@@ -19,7 +19,7 @@ var group__node =
     [ "DPS_ResolveAddress", "group__node.html#gab78df7f4498b847ddb32fdd33d39ef0f", null ],
     [ "DPS_SetNodeData", "group__node.html#gad19cf4272ba11e935654175c83db2ce1", null ],
     [ "DPS_SetNodeSubscriptionUpdateDelay", "group__node.html#gac7e33476c06009ed42a6ea6f3c53380a", null ],
-    [ "DPS_StartNode", "group__node.html#ga31994ad569ee589760efac037a0cbc8a", null ],
+    [ "DPS_StartNode", "group__node.html#ga160d504bfaeb0d3711e0259000340fe3", null ],
     [ "DPS_Unlink", "group__node.html#ga79c86c3c0c5d6438b953a9acaab0ab0b", null ],
     [ "DPS_UnlinkFrom", "group__node.html#ga2d5bb0528c2a171991ad6355cbadac69", null ]
 ];

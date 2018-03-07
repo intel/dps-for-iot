@@ -1,0 +1,280 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.13">
+  <compounddef id="event_8h" kind="file" language="C++">
+    <compoundname>event.h</compoundname>
+    <includes refid="err_8h" local="no">dps/err.h</includes>
+    <includes refid="dps_8h" local="no">dps/dps.h</includes>
+    <incdepgraph>
+      <node id="30">
+        <label>dps/dps.h</label>
+        <link refid="dps_8h"/>
+        <childnode refid="31" relation="include">
+        </childnode>
+        <childnode refid="32" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="33" relation="include">
+        </childnode>
+        <childnode refid="34" relation="include">
+        </childnode>
+        <childnode refid="35" relation="include">
+        </childnode>
+      </node>
+      <node id="31">
+        <label>stdint.h</label>
+      </node>
+      <node id="33">
+        <label>dps/uuid.h</label>
+        <link refid="uuid_8h"/>
+        <childnode refid="31" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+      </node>
+      <node id="32">
+        <label>stddef.h</label>
+      </node>
+      <node id="28">
+        <label>event.h</label>
+        <link refid="event_8h"/>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+      </node>
+      <node id="35">
+        <label>uv.h</label>
+      </node>
+      <node id="34">
+        <label>safe_lib.h</label>
+      </node>
+      <node id="29">
+        <label>dps/err.h</label>
+        <link refid="err_8h"/>
+      </node>
+    </incdepgraph>
+      <sectiondef kind="typedef">
+      <memberdef kind="typedef" id="group__event_1ga97617da1bac0e76646713b8665dfdd85" prot="public" static="no">
+        <type>struct _DPS_Event</type>
+        <definition>typedef struct _DPS_Event DPS_Event</definition>
+        <argsstring></argsstring>
+        <name>DPS_Event</name>
+        <briefdescription>
+<para>Opaque type for an event. </para>        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/event.h" line="79" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/event.h" bodystart="47" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="group__event_1gac38abc1e32666d631a40049c90bc66d3" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="group__event_1ga97617da1bac0e76646713b8665dfdd85" kindref="member">DPS_Event</ref> *</type>
+        <definition>DPS_Event* DPS_CreateEvent</definition>
+        <argsstring>()</argsstring>
+        <name>DPS_CreateEvent</name>
+        <briefdescription>
+<para>Create and initialize an event. </para>        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>The created event, or NULL if creation failed </para></simplesect>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/event.h" line="54" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="group__event_1ga7539f700336357cd320d6b40eba59c63" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void DPS_DestroyEvent</definition>
+        <argsstring>(DPS_Event *event)</argsstring>
+        <name>DPS_DestroyEvent</name>
+        <param>
+          <type><ref refid="group__event_1ga97617da1bac0e76646713b8665dfdd85" kindref="member">DPS_Event</ref> *</type>
+          <declname>event</declname>
+        </param>
+        <briefdescription>
+<para>Destroy an event and free resources. </para>        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>event</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The event to destroy </para></parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/event.h" line="61" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="group__event_1gaba8fce0d0896df9b6f294112a251e39f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void *</type>
+        <definition>void* DPS_GetEventData</definition>
+        <argsstring>(const DPS_Event *event)</argsstring>
+        <name>DPS_GetEventData</name>
+        <param>
+          <type>const <ref refid="group__event_1ga97617da1bac0e76646713b8665dfdd85" kindref="member">DPS_Event</ref> *</type>
+          <declname>event</declname>
+        </param>
+        <briefdescription>
+<para>Get the event application data. </para>        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>event</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The event to get the application data from</para></parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>The application data </para></simplesect>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/event.h" line="78" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="group__event_1ga23a814c5aaebf5bdddebac0ef5d295ce" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void DPS_SetEventData</definition>
+        <argsstring>(DPS_Event *event, void *data)</argsstring>
+        <name>DPS_SetEventData</name>
+        <param>
+          <type><ref refid="group__event_1ga97617da1bac0e76646713b8665dfdd85" kindref="member">DPS_Event</ref> *</type>
+          <declname>event</declname>
+        </param>
+        <param>
+          <type>void *</type>
+          <declname>data</declname>
+        </param>
+        <briefdescription>
+<para>Set the event application data. </para>        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>event</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The event to set an application data on </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>data</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The data to set </para></parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/event.h" line="69" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="group__event_1gad0f8a3b372f972bfaa97e29fa01b5c82" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void DPS_SignalEvent</definition>
+        <argsstring>(DPS_Event *event, DPS_Status status)</argsstring>
+        <name>DPS_SignalEvent</name>
+        <param>
+          <type><ref refid="group__event_1ga97617da1bac0e76646713b8665dfdd85" kindref="member">DPS_Event</ref> *</type>
+          <declname>event</declname>
+        </param>
+        <param>
+          <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
+          <declname>status</declname>
+        </param>
+        <briefdescription>
+<para>Signal an event. </para>        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>event</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Event to signal </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>status</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>A status code to pass to the event waiter </para></parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/event.h" line="86" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="group__event_1gacf62ac4adc9f8eaf088cdec6c273e930" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
+        <definition>DPS_Status DPS_TimedWaitForEvent</definition>
+        <argsstring>(DPS_Event *event, uint16_t timeout)</argsstring>
+        <name>DPS_TimedWaitForEvent</name>
+        <param>
+          <type><ref refid="group__event_1ga97617da1bac0e76646713b8665dfdd85" kindref="member">DPS_Event</ref> *</type>
+          <declname>event</declname>
+        </param>
+        <param>
+          <type>uint16_t</type>
+          <declname>timeout</declname>
+        </param>
+        <briefdescription>
+<para>Wait for an event to be signalled with a timeout. </para>        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>event</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Event to wait for </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>timeout</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Timeout in milliseconds</para></parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>The status passed to <ref refid="group__event_1gad0f8a3b372f972bfaa97e29fa01b5c82" kindref="member">DPS_SignalEvent()</ref> or DPS_ERR_TIMEOUT if the call timed out. </para></simplesect>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/event.h" line="105" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="group__event_1gab2f3f1236cd100cd271c85191df650e8" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
+        <definition>DPS_Status DPS_WaitForEvent</definition>
+        <argsstring>(DPS_Event *event)</argsstring>
+        <name>DPS_WaitForEvent</name>
+        <param>
+          <type><ref refid="group__event_1ga97617da1bac0e76646713b8665dfdd85" kindref="member">DPS_Event</ref> *</type>
+          <declname>event</declname>
+        </param>
+        <briefdescription>
+<para>Wait for an event to be signalled. </para>        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>event</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Event to wait for</para></parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>The status passed to <ref refid="group__event_1gad0f8a3b372f972bfaa97e29fa01b5c82" kindref="member">DPS_SignalEvent()</ref> </para></simplesect>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/event.h" line="95" column="1"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+<para>Signal and wait on application-created events. </para>    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/event.h"/>
+  </compounddef>
+</doxygen>

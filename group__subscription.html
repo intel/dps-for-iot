@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=9"/>
 <meta name="generator" content="Doxygen 1.8.13"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Distributed Publish Subscribe for IoT: Subscription</title>
+<title>Distributed Publish &amp; Subscribe for IoT: Subscription</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -28,7 +28,7 @@
  <tbody>
  <tr style="height: 56px;">
   <td id="projectalign" style="padding-left: 0.5em;">
-   <div id="projectname">Distributed Publish Subscribe for IoT
+   <div id="projectname">Distributed Publish &amp; Subscribe for IoT
    </div>
   </td>
  </tr>
@@ -95,8 +95,9 @@ Typedefs</h2></td></tr>
 <tr class="memitem:gab95ef1762636ad505c940744b8dce83f"><td class="memItemLeft" align="right" valign="top">typedef void(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__subscription.html#gab95ef1762636ad505c940744b8dce83f">DPS_PublicationHandler</a>) (<a class="el" href="group__subscription.html#gadb927c4c1b7306867a75fc4288b54af7">DPS_Subscription</a> *sub, const <a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub, uint8_t *payload, size_t len)</td></tr>
 <tr class="memdesc:gab95ef1762636ad505c940744b8dce83f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function prototype for a publication handler called when a publication is received that matches a subscription.  <a href="#gab95ef1762636ad505c940744b8dce83f">More...</a><br /></td></tr>
 <tr class="separator:gab95ef1762636ad505c940744b8dce83f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gadb927c4c1b7306867a75fc4288b54af7"><td class="memItemLeft" align="right" valign="top">typedef struct _DPS_Subscription&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__subscription.html#gadb927c4c1b7306867a75fc4288b54af7">DPS_Subscription</a></td></tr>
-<tr class="memdesc:gadb927c4c1b7306867a75fc4288b54af7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Opaque type for a subscription.  <a href="#gadb927c4c1b7306867a75fc4288b54af7">More...</a><br /></td></tr>
+<tr class="memitem:gadb927c4c1b7306867a75fc4288b54af7"><td class="memItemLeft" align="right" valign="top"><a id="gadb927c4c1b7306867a75fc4288b54af7"></a>
+typedef struct _DPS_Subscription&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__subscription.html#gadb927c4c1b7306867a75fc4288b54af7">DPS_Subscription</a></td></tr>
+<tr class="memdesc:gadb927c4c1b7306867a75fc4288b54af7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Opaque type for a subscription. <br /></td></tr>
 <tr class="separator:gadb927c4c1b7306867a75fc4288b54af7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
@@ -142,7 +143,7 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Function prototype for a publication handler called when a publication is received that matches a subscription. </p>
-<p>Note that there is a possibilitly of false-positive matches.</p>
+<p>Note that there is a possibility of false-positive matches.</p>
 <p>The publication handle is only valid within the body of this callback function. <a class="el" href="group__publication.html#ga41f31a8b63558e13d73d96de6086e5c4" title="Creates a partial copy of a publication that can be used to acknowledge the publication. ">DPS_CopyPublication()</a> will make a partial copy of the publication that can be used later for example to call <a class="el" href="group__publication.html#ga308074429a566ffb8d04d55bae520b04" title="Acknowledge a publication. ">DPS_AckPublication()</a>.</p>
 <p>The accessor functions <a class="el" href="group__publication.html#gaba1ad3ee807b75a1281d334be06a12f7" title="Get the UUID for a publication. ">DPS_PublicationGetUUID()</a> and <a class="el" href="group__publication.html#ga875b48217d861d4a9fa5471419d354e9" title="Get the sequence number for a publication. ">DPS_PublicationGetSequenceNum()</a> return information about the received publication.</p>
 <p>The accessor functions <a class="el" href="group__subscription.html#gab0ad2c6806f8f44f27c70fff915b7e9a" title="Get the number of topics registered with an active subscription. ">DPS_SubscriptionGetNumTopics()</a> and <a class="el" href="group__subscription.html#gaacc63deda2f2d97cf3f44ca84784b2f6" title="Get a topic for an active subscription. ">DPS_SubscriptionGetTopic()</a> return information about the subscription that was matched.</p>
@@ -155,22 +156,6 @@ Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
-
-</div>
-</div>
-<a id="gadb927c4c1b7306867a75fc4288b54af7"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#gadb927c4c1b7306867a75fc4288b54af7">&#9670;&nbsp;</a></span>DPS_Subscription</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">typedef struct _DPS_Subscription <a class="el" href="group__subscription.html#gadb927c4c1b7306867a75fc4288b54af7">DPS_Subscription</a></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Opaque type for a subscription. </p>
 
 </div>
 </div>
@@ -216,9 +201,8 @@ Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>A pointer to the newly created subscription or NULL if resources could not be allocated or the arguments were invalid </dd></dl>
-<dl><dt><b>Examples: </b></dt><dd><a class="el" href="reg_subs_8c-example.html#a36">reg_subs.c</a>, <a class="el" href="registry_8c-example.html#a12">registry.c</a>, and <a class="el" href="subscriber_8c-example.html#a19">subscriber.c</a>.</dd>
-</dl>
+<dl class="section return"><dt>Returns</dt><dd>The newly created subscription or NULL if resources could not be allocated or the arguments were invalid </dd></dl>
+
 </div>
 </div>
 <a id="gaac78b5690aa31eec642b2a706faac510"></a>
@@ -240,10 +224,11 @@ Functions</h2></td></tr>
 <p>Stop subscribing to the subscription topic and free resources allocated for the subscription. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">sub</td><td>The subscription to cancel </td></tr>
+    <tr><td class="paramname">sub</td><td>The subscription to cancel</td></tr>
   </table>
   </dd>
 </dl>
+<dl class="section return"><dt>Returns</dt><dd>DPS_OK if destroy is successful, an error otherwise </dd></dl>
 
 </div>
 </div>
@@ -342,12 +327,12 @@ Functions</h2></td></tr>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">sub</td><td>The subscription to start </td></tr>
-    <tr><td class="paramname">handler</td><td>Callback function to be called with topic matches </td></tr>
+    <tr><td class="paramname">handler</td><td>Callback function to be called with topic matches</td></tr>
   </table>
   </dd>
 </dl>
-<dl><dt><b>Examples: </b></dt><dd><a class="el" href="reg_subs_8c-example.html#a37">reg_subs.c</a>, <a class="el" href="registry_8c-example.html#a13">registry.c</a>, and <a class="el" href="subscriber_8c-example.html#a22">subscriber.c</a>.</dd>
-</dl>
+<dl class="section return"><dt>Returns</dt><dd>DPS_OK if start is successful, an error otherwise </dd></dl>
+
 </div>
 </div>
 <a id="gafea65751c811555736c8c65fcb3a9480"></a>
@@ -373,7 +358,7 @@ Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>A pointer to the node or NULL if the subscription is invalid </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>The node or NULL if the subscription is invalid </dd></dl>
 
 </div>
 </div>
@@ -394,8 +379,14 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Get the number of topics registered with an active subscription. </p>
-<dl><dt><b>Examples: </b></dt><dd><a class="el" href="reg_subs_8c-example.html#a6">reg_subs.c</a>, and <a class="el" href="subscriber_8c-example.html#a12">subscriber.c</a>.</dd>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">sub</td><td>The subscription</td></tr>
+  </table>
+  </dd>
 </dl>
+<dl class="section return"><dt>Returns</dt><dd>The number of topics. </dd></dl>
+
 </div>
 </div>
 <a id="gaacc63deda2f2d97cf3f44ca84784b2f6"></a>
@@ -433,15 +424,14 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>The topic string or NULL if the subscription or index is invalid. </dd></dl>
-<dl><dt><b>Examples: </b></dt><dd><a class="el" href="reg_subs_8c-example.html#a9">reg_subs.c</a>, and <a class="el" href="subscriber_8c-example.html#a13">subscriber.c</a>.</dd>
-</dl>
+
 </div>
 </div>
 </div><!-- contents -->
 </div><!-- doc-content -->
 <div class="navpath" id="nav-path">
   <ul>
-    <li class="footer" style="float:left"><b>Distributed PubSub Manual</b></li> <li class="footer">Generated Tue Feb 20 2018 10:23:50</li>
+    <li class="footer" style="float:left"><b>Distributed Publish & Subscribe for IoT</b></li> <li class="footer">Generated Wed Mar 7 2018 13:26:16</li>
   </ul>
 </div>
 </body>

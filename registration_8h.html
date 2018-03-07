@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=9"/>
 <meta name="generator" content="Doxygen 1.8.13"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Distributed Publish Subscribe for IoT: registration.h File Reference</title>
+<title>Distributed Publish &amp; Subscribe for IoT: registration.h File Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -28,7 +28,7 @@
  <tbody>
  <tr style="height: 56px;">
   <td id="projectalign" style="padding-left: 0.5em;">
-   <div id="projectname">Distributed Publish Subscribe for IoT
+   <div id="projectname">Distributed Publish &amp; Subscribe for IoT
    </div>
   </td>
  </tr>
@@ -90,6 +90,9 @@ $(document).ready(function(){initNavTree('registration_8h.html','');});
 </div><!--header-->
 <div class="contents">
 
+<p>A registration service.  
+<a href="#details">More...</a></p>
+
 <p><a href="registration_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="nested-classes"></a>
@@ -103,20 +106,25 @@ Data Structures</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="define-members"></a>
 Macros</h2></td></tr>
-<tr class="memitem:gafde6e5d4cc3e65a94afdd30a689221d5"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__registration.html#gafde6e5d4cc3e65a94afdd30a689221d5">DPS_CANDIDATE_FAILED</a>&#160;&#160;&#160;0x02</td></tr>
-<tr class="memdesc:gafde6e5d4cc3e65a94afdd30a689221d5"><td class="mdescLeft">&#160;</td><td class="mdescRight">An attempt to link to a candidate was attempted but failed.  <a href="group__registration.html#gafde6e5d4cc3e65a94afdd30a689221d5">More...</a><br /></td></tr>
+<tr class="memitem:gafde6e5d4cc3e65a94afdd30a689221d5"><td class="memItemLeft" align="right" valign="top">
+#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__registration.html#gafde6e5d4cc3e65a94afdd30a689221d5">DPS_CANDIDATE_FAILED</a>&#160;&#160;&#160;0x02</td></tr>
+<tr class="memdesc:gafde6e5d4cc3e65a94afdd30a689221d5"><td class="mdescLeft">&#160;</td><td class="mdescRight">An attempt to link to a candidate was attempted but failed. <br /></td></tr>
 <tr class="separator:gafde6e5d4cc3e65a94afdd30a689221d5"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gae27a3dfd1f2e746220e99921f2c33a6c"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__registration.html#gae27a3dfd1f2e746220e99921f2c33a6c">DPS_CANDIDATE_INVALID</a>&#160;&#160;&#160;0x10</td></tr>
-<tr class="memdesc:gae27a3dfd1f2e746220e99921f2c33a6c"><td class="mdescLeft">&#160;</td><td class="mdescRight">This is a invalid candidate address for linking.  <a href="group__registration.html#gae27a3dfd1f2e746220e99921f2c33a6c">More...</a><br /></td></tr>
+<tr class="memitem:gae27a3dfd1f2e746220e99921f2c33a6c"><td class="memItemLeft" align="right" valign="top">
+#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__registration.html#gae27a3dfd1f2e746220e99921f2c33a6c">DPS_CANDIDATE_INVALID</a>&#160;&#160;&#160;0x10</td></tr>
+<tr class="memdesc:gae27a3dfd1f2e746220e99921f2c33a6c"><td class="mdescLeft">&#160;</td><td class="mdescRight">This is a invalid candidate address for linking. <br /></td></tr>
 <tr class="separator:gae27a3dfd1f2e746220e99921f2c33a6c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga243eb1f49d56c2ae1f542a0c95a5a52d"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__registration.html#ga243eb1f49d56c2ae1f542a0c95a5a52d">DPS_CANDIDATE_LINKED</a>&#160;&#160;&#160;0x04</td></tr>
-<tr class="memdesc:ga243eb1f49d56c2ae1f542a0c95a5a52d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Registration is currently linked.  <a href="group__registration.html#ga243eb1f49d56c2ae1f542a0c95a5a52d">More...</a><br /></td></tr>
+<tr class="memitem:ga243eb1f49d56c2ae1f542a0c95a5a52d"><td class="memItemLeft" align="right" valign="top">
+#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__registration.html#ga243eb1f49d56c2ae1f542a0c95a5a52d">DPS_CANDIDATE_LINKED</a>&#160;&#160;&#160;0x04</td></tr>
+<tr class="memdesc:ga243eb1f49d56c2ae1f542a0c95a5a52d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Registration is currently linked. <br /></td></tr>
 <tr class="separator:ga243eb1f49d56c2ae1f542a0c95a5a52d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga06a44e56022098c9464bd881cf5efe20"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__registration.html#ga06a44e56022098c9464bd881cf5efe20">DPS_CANDIDATE_TRYING</a>&#160;&#160;&#160;0x01</td></tr>
-<tr class="memdesc:ga06a44e56022098c9464bd881cf5efe20"><td class="mdescLeft">&#160;</td><td class="mdescRight">An attempt is being made link to a candidate.  <a href="group__registration.html#ga06a44e56022098c9464bd881cf5efe20">More...</a><br /></td></tr>
+<tr class="memitem:ga06a44e56022098c9464bd881cf5efe20"><td class="memItemLeft" align="right" valign="top">
+#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__registration.html#ga06a44e56022098c9464bd881cf5efe20">DPS_CANDIDATE_TRYING</a>&#160;&#160;&#160;0x01</td></tr>
+<tr class="memdesc:ga06a44e56022098c9464bd881cf5efe20"><td class="mdescLeft">&#160;</td><td class="mdescRight">An attempt is being made link to a candidate. <br /></td></tr>
 <tr class="separator:ga06a44e56022098c9464bd881cf5efe20"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga0564134dd21bdecf8e8e25cf832e2a38"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__registration.html#ga0564134dd21bdecf8e8e25cf832e2a38">DPS_CANDIDATE_UNLINKED</a>&#160;&#160;&#160;0x08</td></tr>
-<tr class="memdesc:ga0564134dd21bdecf8e8e25cf832e2a38"><td class="mdescLeft">&#160;</td><td class="mdescRight">Registration was linked but is currently not linked.  <a href="group__registration.html#ga0564134dd21bdecf8e8e25cf832e2a38">More...</a><br /></td></tr>
+<tr class="memitem:ga0564134dd21bdecf8e8e25cf832e2a38"><td class="memItemLeft" align="right" valign="top">
+#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__registration.html#ga0564134dd21bdecf8e8e25cf832e2a38">DPS_CANDIDATE_UNLINKED</a>&#160;&#160;&#160;0x08</td></tr>
+<tr class="memdesc:ga0564134dd21bdecf8e8e25cf832e2a38"><td class="mdescLeft">&#160;</td><td class="mdescRight">Registration was linked but is currently not linked. <br /></td></tr>
 <tr class="separator:ga0564134dd21bdecf8e8e25cf832e2a38"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="typedef-members"></a>
@@ -130,20 +138,22 @@ Typedefs</h2></td></tr>
 <tr class="memitem:ga8f1d316de08b7dea7dfe55ae814e0219"><td class="memItemLeft" align="right" valign="top">typedef void(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__registration.html#ga8f1d316de08b7dea7dfe55ae814e0219">DPS_OnRegPutComplete</a>) (<a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a> status, void *data)</td></tr>
 <tr class="memdesc:ga8f1d316de08b7dea7dfe55ae814e0219"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function prototype for callback called when <a class="el" href="group__registration.html#gac412d38875c80431c558773a42ba0766" title="Resolve the host and port of a registration service and register a local node with that service...">DPS_Registration_Put()</a> completes.  <a href="group__registration.html#ga8f1d316de08b7dea7dfe55ae814e0219">More...</a><br /></td></tr>
 <tr class="separator:ga8f1d316de08b7dea7dfe55ae814e0219"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gac06db7e10b2626b06bacd09414e7d740"><td class="memItemLeft" align="right" valign="top">typedef struct <a class="el" href="struct___d_p_s___registration.html">_DPS_Registration</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__registration.html#gac06db7e10b2626b06bacd09414e7d740">DPS_Registration</a></td></tr>
-<tr class="memdesc:gac06db7e10b2626b06bacd09414e7d740"><td class="mdescLeft">&#160;</td><td class="mdescRight">Registration entry.  <a href="group__registration.html#gac06db7e10b2626b06bacd09414e7d740">More...</a><br /></td></tr>
+<tr class="memitem:gac06db7e10b2626b06bacd09414e7d740"><td class="memItemLeft" align="right" valign="top">
+typedef struct <a class="el" href="struct___d_p_s___registration.html">_DPS_Registration</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__registration.html#gac06db7e10b2626b06bacd09414e7d740">DPS_Registration</a></td></tr>
+<tr class="memdesc:gac06db7e10b2626b06bacd09414e7d740"><td class="mdescLeft">&#160;</td><td class="mdescRight">Registration entry. <br /></td></tr>
 <tr class="separator:gac06db7e10b2626b06bacd09414e7d740"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga2b9489ff306ad253d24b03c418a6eda0"><td class="memItemLeft" align="right" valign="top">typedef struct <a class="el" href="struct___d_p_s___registration_list.html">_DPS_RegistrationList</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__registration.html#ga2b9489ff306ad253d24b03c418a6eda0">DPS_RegistrationList</a></td></tr>
-<tr class="memdesc:ga2b9489ff306ad253d24b03c418a6eda0"><td class="mdescLeft">&#160;</td><td class="mdescRight">For returning a list of candidate remote nodes.  <a href="group__registration.html#ga2b9489ff306ad253d24b03c418a6eda0">More...</a><br /></td></tr>
+<tr class="memitem:ga2b9489ff306ad253d24b03c418a6eda0"><td class="memItemLeft" align="right" valign="top">
+typedef struct <a class="el" href="struct___d_p_s___registration_list.html">_DPS_RegistrationList</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__registration.html#ga2b9489ff306ad253d24b03c418a6eda0">DPS_RegistrationList</a></td></tr>
+<tr class="memdesc:ga2b9489ff306ad253d24b03c418a6eda0"><td class="mdescLeft">&#160;</td><td class="mdescRight">For returning a list of candidate remote nodes. <br /></td></tr>
 <tr class="separator:ga2b9489ff306ad253d24b03c418a6eda0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
 <tr class="memitem:ga3d1f2e10a8d3ffd66cf4c3ba5c53b490"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__registration.html#ga2b9489ff306ad253d24b03c418a6eda0">DPS_RegistrationList</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__registration.html#ga3d1f2e10a8d3ffd66cf4c3ba5c53b490">DPS_CreateRegistrationList</a> (uint8_t size)</td></tr>
-<tr class="memdesc:ga3d1f2e10a8d3ffd66cf4c3ba5c53b490"><td class="mdescLeft">&#160;</td><td class="mdescRight">Create an empty regisration list of the specified size.  <a href="group__registration.html#ga3d1f2e10a8d3ffd66cf4c3ba5c53b490">More...</a><br /></td></tr>
+<tr class="memdesc:ga3d1f2e10a8d3ffd66cf4c3ba5c53b490"><td class="mdescLeft">&#160;</td><td class="mdescRight">Create an empty registration list of the specified size.  <a href="group__registration.html#ga3d1f2e10a8d3ffd66cf4c3ba5c53b490">More...</a><br /></td></tr>
 <tr class="separator:ga3d1f2e10a8d3ffd66cf4c3ba5c53b490"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga0dbaa5dbea47290035a11dc22fc45f2d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__registration.html#ga0dbaa5dbea47290035a11dc22fc45f2d">DPS_DestroyRegistrationList</a> (<a class="el" href="group__registration.html#ga2b9489ff306ad253d24b03c418a6eda0">DPS_RegistrationList</a> *regs)</td></tr>
-<tr class="memdesc:ga0dbaa5dbea47290035a11dc22fc45f2d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Destroy a regisration list and free resources.  <a href="group__registration.html#ga0dbaa5dbea47290035a11dc22fc45f2d">More...</a><br /></td></tr>
+<tr class="memdesc:ga0dbaa5dbea47290035a11dc22fc45f2d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Destroy a registration list and free resources.  <a href="group__registration.html#ga0dbaa5dbea47290035a11dc22fc45f2d">More...</a><br /></td></tr>
 <tr class="separator:ga0dbaa5dbea47290035a11dc22fc45f2d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga7288d76e731feb67b22951d7d1966311"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__registration.html#ga7288d76e731feb67b22951d7d1966311">DPS_Registration_Get</a> (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, const char *host, uint16_t port, const char *tenantString, <a class="el" href="group__registration.html#ga2b9489ff306ad253d24b03c418a6eda0">DPS_RegistrationList</a> *regs, <a class="el" href="group__registration.html#gad6b4f95f999e950345587b5ae2de69e2">DPS_OnRegGetComplete</a> cb, void *data)</td></tr>
 <tr class="memdesc:ga7288d76e731feb67b22951d7d1966311"><td class="mdescLeft">&#160;</td><td class="mdescRight">Resolve the host and port of a registration service and lookup the addresses registered with that service.  <a href="group__registration.html#ga7288d76e731feb67b22951d7d1966311">More...</a><br /></td></tr>
@@ -166,14 +176,18 @@ Functions</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="var-members"></a>
 Variables</h2></td></tr>
-<tr class="memitem:ga7c1111f95ed473c1b27fa3c9ee096796"><td class="memItemLeft" align="right" valign="top">const char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__registration.html#ga7c1111f95ed473c1b27fa3c9ee096796">DPS_RegistryTopicString</a></td></tr>
+<tr class="memitem:ga7c1111f95ed473c1b27fa3c9ee096796"><td class="memItemLeft" align="right" valign="top">
+const char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__registration.html#ga7c1111f95ed473c1b27fa3c9ee096796">DPS_RegistryTopicString</a></td></tr>
+<tr class="memdesc:ga7c1111f95ed473c1b27fa3c9ee096796"><td class="mdescLeft">&#160;</td><td class="mdescRight">The registry topic string. <br /></td></tr>
 <tr class="separator:ga7c1111f95ed473c1b27fa3c9ee096796"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
-</div><!-- contents -->
+<a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
+<div class="textblock"><p>A registration service. </p>
+</div></div><!-- contents -->
 </div><!-- doc-content -->
 <div class="navpath" id="nav-path">
   <ul>
-    <li class="footer" style="float:left"><b>Distributed PubSub Manual</b></li> <li class="footer">Generated Tue Feb 20 2018 10:23:49</li>
+    <li class="footer" style="float:left"><b>Distributed Publish & Subscribe for IoT</b></li> <li class="footer">Generated Wed Mar 7 2018 13:26:16</li>
   </ul>
 </div>
 </body>

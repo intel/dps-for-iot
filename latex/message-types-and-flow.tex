@@ -1,0 +1,100 @@
+D\+PS has four message types\+: subscriptions, publications, acknowledgments, and subscription acknowledgements.
+
+Subscriptions and publications are both inherently point-\/to-\/multipoint. An explicit assumption is that in IoT use cases there are many more publishers than subscribers. Publications are sent fairly frequently but subscriptions are relatively stable; subscriptions do not change frequently. To a large extent D\+PS has been designed around these assumptions. D\+PS would be good for implementing an IoT network with a large number of sensors but not ideal for implementing a highly scalable peer-\/to-\/peer chat service.
+
+When a subscription does change only deltas for the subscription propagate through the network, this is typically less than a 100 bytes. Subscription acknowledgement messages are used to confirm that subscriptions are received at the next hop.
+
+Publications are routed to all subscribers that have subscription topics that match the publication topics as described above.
+
+Publications and acknowledgments can be accompanied by a payload, subscriptions do not carry a payload. Acknowledgements are optional and must be explicitly requested by the publisher when sending a publication. A subscriber can send an acknowledgement to the publisher along with an optional payload, the acknowledgement reaches the publisher by hop-\/by-\/hop forwarding in the reverse path of the publication. The reverse path ages out fairly quickly so acknowledgements should be sent as soon as possible after receipt of a publication. A publisher may receive multiple acknowledgments if there are multiple subscribers.\hypertarget{message-types-and-flow_message-encoding}{}\section{Encoding}\label{message-types-and-flow_message-encoding}
+D\+PS messages are encoded in \href{https://tools.ietf.org/html/rfc7049}{\tt C\+B\+OR}, described below in \href{https://tools.ietf.org/html/draft-ietf-cbor-cddl-00}{\tt C\+D\+DL}.
+
+Each message has the same form.
+
+\begin{DoxyVerb}message = [
+  version: 1,
+  type: pub / sub / ack / sak,
+  unprotected: { * field },
+  protected: { * field },
+  encrypted: { * field }
+]
+\end{DoxyVerb}
+\hypertarget{message-types-and-flow_field-member-keys}{}\subsection{Field member keys}\label{message-types-and-flow_field-member-keys}
+For compactness the member keys are encoded as integers as listed below.
+
+\begin{DoxyVerb}field = (
+  ? 1 => uint,               ; # port number sender is listening on
+  ? 2 => int,                ; # ttl - time to live in seconds
+  ? 3 => uuid,               ; # pub-id - unique identifier for a publication
+  ? 4 => uint,               ; # seq-num - sequence number for a publication
+  ? 5 => bool,               ; # ack-req - indicates if an publisher is requesting an acknowledgement
+  ? 6 => bit-vector,         ; # bloom-filter -the bloom filter for a publication
+  ? 7 => sub-flags,          ; # sub-flags - indicates delta or mute
+  ? 8 => uuid,               ; # mesh-id - the mesh ID
+  ? 9 => bit-vector,         ; # needs - the needs bit vector
+  ? 10 => bit-vector,        ; # interests - the interests bit vector
+  ? 11 => [ + topic: tstr ], ; # topics - the topic strings
+  ? 12 => bstr               ; # data - payload data
+)
+\end{DoxyVerb}
+
+
+The description of each message type includes what fields are mandatory or optional for each section.\hypertarget{message-types-and-flow_uuid}{}\subsection{U\+U\+ID}\label{message-types-and-flow_uuid}
+U\+U\+I\+Ds identify publications and are also used as key identifiers for encrypted messages.
+
+\begin{DoxyVerb}uuid = bstr .size 16
+\end{DoxyVerb}
+\hypertarget{message-types-and-flow_bit-vector-encoding}{}\subsection{Bit vector encoding}\label{message-types-and-flow_bit-vector-encoding}
+The bit vector encoding includes control flags, the bit vector length expressed in bits and the raw or run-\/length encoded bit vector data.
+
+\begin{DoxyVerb}bit-vector = [
+  flags: uint .bits bit-vector-flags, ; # bit vector control flags
+  len: uint,                          ; # bit vector length in bits
+  bits: bstr                          ; # raw or rle-encoded bit vector
+]
+\end{DoxyVerb}
+\hypertarget{message-types-and-flow_bit-vector-control-flags}{}\subsection{Bit vector control flags}\label{message-types-and-flow_bit-vector-control-flags}
+Bits vectors are usually run-\/length encoded unless the raw unencoded bit vector is more compact than the rle-\/encoded representation. The rle-\/encoded flag indicates if the bit vector is encoded or raw.
+
+The rle-\/complement flags indicates if the complement of the bit vector was was encoded. The bit vector complement is encoded if this results in a more compact encoding. This flag is only useful with run-\/length encoding.
+
+\begin{DoxyVerb}bit-vector-flags = &(
+  rle-encoded: 1,
+  rle-complement: 2
+)
+\end{DoxyVerb}
+\hypertarget{message-types-and-flow_subscription-flags}{}\subsection{Subscription flags}\label{message-types-and-flow_subscription-flags}
+\begin{DoxyVerb}sub-flags = &(
+  delta: 1,        ; # indicate interests is a delta
+  mute: 2          ; # mute has been indicated
+)
+\end{DoxyVerb}
+\hypertarget{message-types-and-flow_publication-message}{}\section{Publication message}\label{message-types-and-flow_publication-message}
+\begin{DoxyVerb}pub = 1
+\end{DoxyVerb}
+
+
+{\itshape port} and {\itshape ttl} are mandatory in the {\itshape unprotected} section.
+
+{\itshape ttl}, {\itshape pub-\/id}, {\itshape seq-\/num}, {\itshape ack-\/req} and {\itshape bloom-\/filter} are mandatory in the {\itshape protected} section.
+
+{\itshape topics} and {\itshape data} are mandatory in the {\itshape encrypted} section.\hypertarget{message-types-and-flow_subscription-message}{}\section{Subscription message}\label{message-types-and-flow_subscription-message}
+\begin{DoxyVerb}sub = 2
+\end{DoxyVerb}
+
+
+{\itshape port} and {\itshape seq-\/num} are mandatory in the {\itshape unprotected} section.
+
+Additionally, in a regular subscription message, {\itshape sub-\/flags}, {\itshape mesh-\/id}, {\itshape needs} and {\itshape interests} are mandatory in the {\itshape unprotected} section. In an unlink subscription message those fields shall be absent.\hypertarget{message-types-and-flow_acknowledgement-message}{}\section{Acknowledgement message}\label{message-types-and-flow_acknowledgement-message}
+\begin{DoxyVerb}ack = 3
+\end{DoxyVerb}
+
+
+{\itshape pub-\/id} and {\itshape seq-\/num} are mandatory in the {\itshape protected} section.
+
+{\itshape data} is optional in the {\itshape encrypted} section.\hypertarget{message-types-and-flow_subscription-acknowledgement-message}{}\section{Subscription acknowledgement message}\label{message-types-and-flow_subscription-acknowledgement-message}
+\begin{DoxyVerb}sak = 4
+\end{DoxyVerb}
+
+
+{\itshape port} and {\itshape seq-\/num} are mandatory in the {\itshape unprotected} section. 

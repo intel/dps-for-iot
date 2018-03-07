@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=9"/>
 <meta name="generator" content="Doxygen 1.8.13"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Distributed Publish Subscribe for IoT: dps.h File Reference</title>
+<title>Distributed Publish &amp; Subscribe for IoT: dps.h File Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -28,7 +28,7 @@
  <tbody>
  <tr style="height: 56px;">
   <td id="projectalign" style="padding-left: 0.5em;">
-   <div id="projectname">Distributed Publish Subscribe for IoT
+   <div id="projectname">Distributed Publish &amp; Subscribe for IoT
    </div>
   </td>
  </tr>
@@ -89,6 +89,9 @@ $(document).ready(function(){initNavTree('dps_8h.html','');});
 </div><!--header-->
 <div class="contents">
 
+<p>Public APIs.  
+<a href="#details">More...</a></p>
+
 <p><a href="dps_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="nested-classes"></a>
@@ -111,9 +114,9 @@ Data Structures</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="define-members"></a>
 Macros</h2></td></tr>
-<tr class="memitem:a44b270f60457e96de08275cffdcfaffb"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#a44b270f60457e96de08275cffdcfaffb">A_SIZEOF</a>(a)&#160;&#160;&#160;(sizeof(a) / sizeof((a)[0]))</td></tr>
-<tr class="separator:a44b270f60457e96de08275cffdcfaffb"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad8b397975a479b996ef223367d8835a9"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#ad8b397975a479b996ef223367d8835a9">DPS_FALSE</a>&#160;&#160;&#160;0</td></tr>
+<tr class="memitem:ad8b397975a479b996ef223367d8835a9"><td class="memItemLeft" align="right" valign="top"><a id="ad8b397975a479b996ef223367d8835a9"></a>
+#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#ad8b397975a479b996ef223367d8835a9">DPS_FALSE</a>&#160;&#160;&#160;0</td></tr>
+<tr class="memdesc:ad8b397975a479b996ef223367d8835a9"><td class="mdescLeft">&#160;</td><td class="mdescRight">FALSE boolean value. <br /></td></tr>
 <tr class="separator:ad8b397975a479b996ef223367d8835a9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gac939c83361ed89086f37c78d9c9009dd"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#gac939c83361ed89086f37c78d9c9009dd">DPS_MCAST_PUB_DISABLED</a>&#160;&#160;&#160;0</td></tr>
 <tr class="memdesc:gac939c83361ed89086f37c78d9c9009dd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Disable multicast send and receive on the node.  <a href="group__node.html#gac939c83361ed89086f37c78d9c9009dd">More...</a><br /></td></tr>
@@ -124,22 +127,27 @@ Macros</h2></td></tr>
 <tr class="memitem:ga178a3a6450eeff450820fa34fd82049c"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#ga178a3a6450eeff450820fa34fd82049c">DPS_MCAST_PUB_ENABLE_SEND</a>&#160;&#160;&#160;1</td></tr>
 <tr class="memdesc:ga178a3a6450eeff450820fa34fd82049c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Enable multicast send on the node.  <a href="group__node.html#ga178a3a6450eeff450820fa34fd82049c">More...</a><br /></td></tr>
 <tr class="separator:ga178a3a6450eeff450820fa34fd82049c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga89df880f9650da5730fa152642c0be9f"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#ga89df880f9650da5730fa152642c0be9f">DPS_SUBSCRIPTION_UPDATE_RATE</a>&#160;&#160;&#160;1000</td></tr>
-<tr class="memdesc:ga89df880f9650da5730fa152642c0be9f"><td class="mdescLeft">&#160;</td><td class="mdescRight">The default maximum rate (in msecs) to compute and send out subscription updates.  <a href="group__node.html#ga89df880f9650da5730fa152642c0be9f">More...</a><br /></td></tr>
+<tr class="memitem:ga89df880f9650da5730fa152642c0be9f"><td class="memItemLeft" align="right" valign="top">
+#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#ga89df880f9650da5730fa152642c0be9f">DPS_SUBSCRIPTION_UPDATE_RATE</a>&#160;&#160;&#160;1000</td></tr>
+<tr class="memdesc:ga89df880f9650da5730fa152642c0be9f"><td class="mdescLeft">&#160;</td><td class="mdescRight">The default maximum rate (in msecs) to compute and send out subscription updates. <br /></td></tr>
 <tr class="separator:ga89df880f9650da5730fa152642c0be9f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4a173ed2665cea74e58558d99b377ab3"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#a4a173ed2665cea74e58558d99b377ab3">DPS_TRUE</a>&#160;&#160;&#160;1</td></tr>
+<tr class="memitem:a4a173ed2665cea74e58558d99b377ab3"><td class="memItemLeft" align="right" valign="top"><a id="a4a173ed2665cea74e58558d99b377ab3"></a>
+#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dps_8h.html#a4a173ed2665cea74e58558d99b377ab3">DPS_TRUE</a>&#160;&#160;&#160;1</td></tr>
+<tr class="memdesc:a4a173ed2665cea74e58558d99b377ab3"><td class="mdescLeft">&#160;</td><td class="mdescRight">TRUE boolean value. <br /></td></tr>
 <tr class="separator:a4a173ed2665cea74e58558d99b377ab3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="typedef-members"></a>
 Typedefs</h2></td></tr>
 <tr class="memitem:gaf8615f0bcd3d95859cd7f2cdbf772e23"><td class="memItemLeft" align="right" valign="top">typedef void(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#gaf8615f0bcd3d95859cd7f2cdbf772e23">DPS_AcknowledgementHandler</a>) (<a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub, uint8_t *payload, size_t len)</td></tr>
-<tr class="memdesc:gaf8615f0bcd3d95859cd7f2cdbf772e23"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function prototype for a publication acknowledgment handler called when an acknowledgement for a publication is received from a remote subscriber.  <a href="group__publication.html#gaf8615f0bcd3d95859cd7f2cdbf772e23">More...</a><br /></td></tr>
+<tr class="memdesc:gaf8615f0bcd3d95859cd7f2cdbf772e23"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function prototype for a publication acknowledgement handler called when an acknowledgement for a publication is received from a remote subscriber.  <a href="group__publication.html#gaf8615f0bcd3d95859cd7f2cdbf772e23">More...</a><br /></td></tr>
 <tr class="separator:gaf8615f0bcd3d95859cd7f2cdbf772e23"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga4dd612ab965134321bb57fdb065f121c"><td class="memItemLeft" align="right" valign="top">typedef struct _DPS_Node&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a></td></tr>
-<tr class="memdesc:ga4dd612ab965134321bb57fdb065f121c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Opaque type for a node.  <a href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">More...</a><br /></td></tr>
+<tr class="memitem:ga4dd612ab965134321bb57fdb065f121c"><td class="memItemLeft" align="right" valign="top">
+typedef struct _DPS_Node&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a></td></tr>
+<tr class="memdesc:ga4dd612ab965134321bb57fdb065f121c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Opaque type for a node. <br /></td></tr>
 <tr class="separator:ga4dd612ab965134321bb57fdb065f121c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga9e9f56aa38e82b4edcef7eb81e9f5bd2"><td class="memItemLeft" align="right" valign="top">typedef struct _DPS_NodeAddress&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__nodeaddress.html#ga9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a></td></tr>
-<tr class="memdesc:ga9e9f56aa38e82b4edcef7eb81e9f5bd2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Opaque type for a remote node address.  <a href="group__nodeaddress.html#ga9e9f56aa38e82b4edcef7eb81e9f5bd2">More...</a><br /></td></tr>
+<tr class="memitem:ga9e9f56aa38e82b4edcef7eb81e9f5bd2"><td class="memItemLeft" align="right" valign="top">
+typedef struct _DPS_NodeAddress&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__nodeaddress.html#ga9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a></td></tr>
+<tr class="memdesc:ga9e9f56aa38e82b4edcef7eb81e9f5bd2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Opaque type for a remote node address. <br /></td></tr>
 <tr class="separator:ga9e9f56aa38e82b4edcef7eb81e9f5bd2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gaaf70ac42acab8a67693947871e97600f"><td class="memItemLeft" align="right" valign="top">typedef void(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#gaaf70ac42acab8a67693947871e97600f">DPS_OnLinkComplete</a>) (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, <a class="el" href="group__nodeaddress.html#ga9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *addr, <a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a> status, void *data)</td></tr>
 <tr class="memdesc:gaaf70ac42acab8a67693947871e97600f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function prototype for function called when a <a class="el" href="group__node.html#ga5064c63b8ce76bf34402e0c80183234b" title="Link the local node to a remote node. ">DPS_Link()</a> completes.  <a href="group__node.html#gaaf70ac42acab8a67693947871e97600f">More...</a><br /></td></tr>
@@ -153,14 +161,16 @@ Typedefs</h2></td></tr>
 <tr class="memitem:ga70b98e7cc39f0dccdba41f0984de82f6"><td class="memItemLeft" align="right" valign="top">typedef void(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#ga70b98e7cc39f0dccdba41f0984de82f6">DPS_OnUnlinkComplete</a>) (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, <a class="el" href="group__nodeaddress.html#ga9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *addr, void *data)</td></tr>
 <tr class="memdesc:ga70b98e7cc39f0dccdba41f0984de82f6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function prototype for function called when a <a class="el" href="group__node.html#ga79c86c3c0c5d6438b953a9acaab0ab0b" title="Unlink the local node from a remote node. ">DPS_Unlink()</a> completes.  <a href="group__node.html#ga70b98e7cc39f0dccdba41f0984de82f6">More...</a><br /></td></tr>
 <tr class="separator:ga70b98e7cc39f0dccdba41f0984de82f6"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga0d439693474aa54e27f3d45a054696ac"><td class="memItemLeft" align="right" valign="top">typedef struct _DPS_Publication&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a></td></tr>
-<tr class="memdesc:ga0d439693474aa54e27f3d45a054696ac"><td class="mdescLeft">&#160;</td><td class="mdescRight">Opaque type for a publication.  <a href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">More...</a><br /></td></tr>
+<tr class="memitem:ga0d439693474aa54e27f3d45a054696ac"><td class="memItemLeft" align="right" valign="top">
+typedef struct _DPS_Publication&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a></td></tr>
+<tr class="memdesc:ga0d439693474aa54e27f3d45a054696ac"><td class="mdescLeft">&#160;</td><td class="mdescRight">Opaque type for a publication. <br /></td></tr>
 <tr class="separator:ga0d439693474aa54e27f3d45a054696ac"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gab95ef1762636ad505c940744b8dce83f"><td class="memItemLeft" align="right" valign="top">typedef void(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__subscription.html#gab95ef1762636ad505c940744b8dce83f">DPS_PublicationHandler</a>) (<a class="el" href="group__subscription.html#gadb927c4c1b7306867a75fc4288b54af7">DPS_Subscription</a> *sub, const <a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub, uint8_t *payload, size_t len)</td></tr>
 <tr class="memdesc:gab95ef1762636ad505c940744b8dce83f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function prototype for a publication handler called when a publication is received that matches a subscription.  <a href="group__subscription.html#gab95ef1762636ad505c940744b8dce83f">More...</a><br /></td></tr>
 <tr class="separator:gab95ef1762636ad505c940744b8dce83f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gadb927c4c1b7306867a75fc4288b54af7"><td class="memItemLeft" align="right" valign="top">typedef struct _DPS_Subscription&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__subscription.html#gadb927c4c1b7306867a75fc4288b54af7">DPS_Subscription</a></td></tr>
-<tr class="memdesc:gadb927c4c1b7306867a75fc4288b54af7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Opaque type for a subscription.  <a href="group__subscription.html#gadb927c4c1b7306867a75fc4288b54af7">More...</a><br /></td></tr>
+<tr class="memitem:gadb927c4c1b7306867a75fc4288b54af7"><td class="memItemLeft" align="right" valign="top">
+typedef struct _DPS_Subscription&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__subscription.html#gadb927c4c1b7306867a75fc4288b54af7">DPS_Subscription</a></td></tr>
+<tr class="memdesc:gadb927c4c1b7306867a75fc4288b54af7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Opaque type for a subscription. <br /></td></tr>
 <tr class="separator:gadb927c4c1b7306867a75fc4288b54af7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
@@ -273,9 +283,9 @@ Functions</h2></td></tr>
 <tr class="memitem:gad581d341003e20c714061e44b57c2009"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__subscription.html#gad581d341003e20c714061e44b57c2009">DPS_SetSubscriptionData</a> (<a class="el" href="group__subscription.html#gadb927c4c1b7306867a75fc4288b54af7">DPS_Subscription</a> *sub, void *data)</td></tr>
 <tr class="memdesc:gad581d341003e20c714061e44b57c2009"><td class="mdescLeft">&#160;</td><td class="mdescRight">Store a pointer to application data in a subscription.  <a href="group__subscription.html#gad581d341003e20c714061e44b57c2009">More...</a><br /></td></tr>
 <tr class="separator:gad581d341003e20c714061e44b57c2009"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga31994ad569ee589760efac037a0cbc8a"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#ga31994ad569ee589760efac037a0cbc8a">DPS_StartNode</a> (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, int mcastPub, int listenPort)</td></tr>
-<tr class="memdesc:ga31994ad569ee589760efac037a0cbc8a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initialized and starts running a local node.  <a href="group__node.html#ga31994ad569ee589760efac037a0cbc8a">More...</a><br /></td></tr>
-<tr class="separator:ga31994ad569ee589760efac037a0cbc8a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga160d504bfaeb0d3711e0259000340fe3"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#ga160d504bfaeb0d3711e0259000340fe3">DPS_StartNode</a> (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, int mcastPub, uint16_t listenPort)</td></tr>
+<tr class="memdesc:ga160d504bfaeb0d3711e0259000340fe3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initialized and starts running a local node.  <a href="group__node.html#ga160d504bfaeb0d3711e0259000340fe3">More...</a><br /></td></tr>
+<tr class="separator:ga160d504bfaeb0d3711e0259000340fe3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga83234ea82a91e07e3f5894a4dcf5267e"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__subscription.html#ga83234ea82a91e07e3f5894a4dcf5267e">DPS_Subscribe</a> (<a class="el" href="group__subscription.html#gadb927c4c1b7306867a75fc4288b54af7">DPS_Subscription</a> *sub, <a class="el" href="group__subscription.html#gab95ef1762636ad505c940744b8dce83f">DPS_PublicationHandler</a> handler)</td></tr>
 <tr class="memdesc:ga83234ea82a91e07e3f5894a4dcf5267e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Start subscribing to a set of topics.  <a href="group__subscription.html#ga83234ea82a91e07e3f5894a4dcf5267e">More...</a><br /></td></tr>
 <tr class="separator:ga83234ea82a91e07e3f5894a4dcf5267e"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -294,14 +304,15 @@ Functions</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="member-group"></a>
 KeyStore</h2></td></tr>
-<tr><td class="ititle" colspan="2"><p><a class="anchor" id="amgrp4b5eecef069e79f508e3949bf0ecf75b"></a>Hooks for implementating an application-defined key store. </p>
+<tr><td class="ititle" colspan="2"><p><a class="anchor" id="amgrp4b5eecef069e79f508e3949bf0ecf75b"></a>Hooks for implementing an application-defined key store. </p>
 </td></tr>
 <tr class="memitem:ga7ca1045749c725e9c4a1b4758b2a0196"><td class="memItemLeft" align="right" valign="top">enum &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__keystore.html#ga7ca1045749c725e9c4a1b4758b2a0196">DPS_KeyType</a> { <a class="el" href="group__keystore.html#gga7ca1045749c725e9c4a1b4758b2a0196a662c1e84628d96be8ae08163af382392">DPS_KEY_SYMMETRIC</a>, 
 <a class="el" href="group__keystore.html#gga7ca1045749c725e9c4a1b4758b2a0196a58453a89367757e523ac337232387d89">DPS_KEY_EC</a>, 
 <a class="el" href="group__keystore.html#gga7ca1045749c725e9c4a1b4758b2a0196a04e294e477af49e6a4927884f45fcb99">DPS_KEY_EC_CERT</a>
- }</td></tr>
+ }<tr class="memdesc:ga7ca1045749c725e9c4a1b4758b2a0196"><td class="mdescLeft">&#160;</td><td class="mdescRight">A DPS key type.  <a href="group__keystore.html#ga7ca1045749c725e9c4a1b4758b2a0196">More...</a><br /></td></tr>
+</td></tr>
 <tr class="separator:ga7ca1045749c725e9c4a1b4758b2a0196"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga9ba152af7a3ed9076bfa597ef918cac1"><td class="memItemLeft" align="right" valign="top">enum &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__keystore.html#ga9ba152af7a3ed9076bfa597ef918cac1">DPS_ECCurve</a> { <a class="el" href="group__keystore.html#gga9ba152af7a3ed9076bfa597ef918cac1a4b56a9b3ab7d0e23d57bad72f0c93239">DPS_EC_CURVE_RESERVED</a> = 0, 
+<tr class="memitem:ga9ba152af7a3ed9076bfa597ef918cac1"><td class="memItemLeft" align="right" valign="top">enum &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__keystore.html#ga9ba152af7a3ed9076bfa597ef918cac1">DPS_ECCurve</a> { <b>DPS_EC_CURVE_RESERVED</b> = 0, 
 <a class="el" href="group__keystore.html#gga9ba152af7a3ed9076bfa597ef918cac1a96cd27fcba408bafcdd33b83b0395ff8">DPS_EC_CURVE_P256</a> = 1, 
 <a class="el" href="group__keystore.html#gga9ba152af7a3ed9076bfa597ef918cac1a359e576be45def67ea14b96c7bfbe100">DPS_EC_CURVE_P384</a> = 2, 
 <a class="el" href="group__keystore.html#gga9ba152af7a3ed9076bfa597ef918cac1abb97d4a693a02becf44c12b6e4678724">DPS_EC_CURVE_P521</a> = 3
@@ -317,17 +328,21 @@ KeyStore</h2></td></tr>
 <tr class="memitem:ga98b6701b118cab76965736ad720f9bcf"><td class="memItemLeft" align="right" valign="top">typedef struct <a class="el" href="struct___d_p_s___key_cert.html">_DPS_KeyCert</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__keystore.html#ga98b6701b118cab76965736ad720f9bcf">DPS_KeyCert</a></td></tr>
 <tr class="memdesc:ga98b6701b118cab76965736ad720f9bcf"><td class="mdescLeft">&#160;</td><td class="mdescRight">Certificate key data.  <a href="group__keystore.html#ga98b6701b118cab76965736ad720f9bcf">More...</a><br /></td></tr>
 <tr class="separator:ga98b6701b118cab76965736ad720f9bcf"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gaa56a1429b6a1658e674eea558bdbbfc0"><td class="memItemLeft" align="right" valign="top">typedef struct <a class="el" href="struct___d_p_s___key.html">_DPS_Key</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__keystore.html#gaa56a1429b6a1658e674eea558bdbbfc0">DPS_Key</a></td></tr>
-<tr class="memdesc:gaa56a1429b6a1658e674eea558bdbbfc0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Union of supported key types.  <a href="group__keystore.html#gaa56a1429b6a1658e674eea558bdbbfc0">More...</a><br /></td></tr>
+<tr class="memitem:gaa56a1429b6a1658e674eea558bdbbfc0"><td class="memItemLeft" align="right" valign="top">
+typedef struct <a class="el" href="struct___d_p_s___key.html">_DPS_Key</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__keystore.html#gaa56a1429b6a1658e674eea558bdbbfc0">DPS_Key</a></td></tr>
+<tr class="memdesc:gaa56a1429b6a1658e674eea558bdbbfc0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Union of supported key types. <br /></td></tr>
 <tr class="separator:gaa56a1429b6a1658e674eea558bdbbfc0"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga4345e29dd2ad5d7fd88a1e988787bd72"><td class="memItemLeft" align="right" valign="top">typedef struct <a class="el" href="struct___d_p_s___key_id.html">_DPS_KeyId</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__keystore.html#ga4345e29dd2ad5d7fd88a1e988787bd72">DPS_KeyId</a></td></tr>
-<tr class="memdesc:ga4345e29dd2ad5d7fd88a1e988787bd72"><td class="mdescLeft">&#160;</td><td class="mdescRight">An identifier of a key in a key store.  <a href="group__keystore.html#ga4345e29dd2ad5d7fd88a1e988787bd72">More...</a><br /></td></tr>
+<tr class="memitem:ga4345e29dd2ad5d7fd88a1e988787bd72"><td class="memItemLeft" align="right" valign="top">
+typedef struct <a class="el" href="struct___d_p_s___key_id.html">_DPS_KeyId</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__keystore.html#ga4345e29dd2ad5d7fd88a1e988787bd72">DPS_KeyId</a></td></tr>
+<tr class="memdesc:ga4345e29dd2ad5d7fd88a1e988787bd72"><td class="mdescLeft">&#160;</td><td class="mdescRight">An identifier of a key in a key store. <br /></td></tr>
 <tr class="separator:ga4345e29dd2ad5d7fd88a1e988787bd72"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gaf3833cfe48f848f698514bc5daa075fa"><td class="memItemLeft" align="right" valign="top">typedef struct _DPS_KeyStore&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__keystore.html#gaf3833cfe48f848f698514bc5daa075fa">DPS_KeyStore</a></td></tr>
-<tr class="memdesc:gaf3833cfe48f848f698514bc5daa075fa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Opaque type for a key store.  <a href="group__keystore.html#gaf3833cfe48f848f698514bc5daa075fa">More...</a><br /></td></tr>
+<tr class="memitem:gaf3833cfe48f848f698514bc5daa075fa"><td class="memItemLeft" align="right" valign="top">
+typedef struct _DPS_KeyStore&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__keystore.html#gaf3833cfe48f848f698514bc5daa075fa">DPS_KeyStore</a></td></tr>
+<tr class="memdesc:gaf3833cfe48f848f698514bc5daa075fa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Opaque type for a key store. <br /></td></tr>
 <tr class="separator:gaf3833cfe48f848f698514bc5daa075fa"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga7c3e50965b65334e9791780fa855ed16"><td class="memItemLeft" align="right" valign="top">typedef struct _DPS_KeyStoreRequest&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__keystore.html#ga7c3e50965b65334e9791780fa855ed16">DPS_KeyStoreRequest</a></td></tr>
-<tr class="memdesc:ga7c3e50965b65334e9791780fa855ed16"><td class="mdescLeft">&#160;</td><td class="mdescRight">Opaque type for a key store request.  <a href="group__keystore.html#ga7c3e50965b65334e9791780fa855ed16">More...</a><br /></td></tr>
+<tr class="memitem:ga7c3e50965b65334e9791780fa855ed16"><td class="memItemLeft" align="right" valign="top">
+typedef struct _DPS_KeyStoreRequest&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__keystore.html#ga7c3e50965b65334e9791780fa855ed16">DPS_KeyStoreRequest</a></td></tr>
+<tr class="memdesc:ga7c3e50965b65334e9791780fa855ed16"><td class="mdescLeft">&#160;</td><td class="mdescRight">Opaque type for a key store request. <br /></td></tr>
 <tr class="separator:ga7c3e50965b65334e9791780fa855ed16"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga83d3ade4f4acd7d4385d606270ddfd29"><td class="memItemLeft" align="right" valign="top">typedef <a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__keystore.html#ga83d3ade4f4acd7d4385d606270ddfd29">DPS_KeyAndIdHandler</a>) (<a class="el" href="group__keystore.html#ga7c3e50965b65334e9791780fa855ed16">DPS_KeyStoreRequest</a> *request)</td></tr>
 <tr class="memdesc:ga83d3ade4f4acd7d4385d606270ddfd29"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function prototype for a key store handler called when a key and key identifier is requested.  <a href="group__keystore.html#ga83d3ade4f4acd7d4385d606270ddfd29">More...</a><br /></td></tr>
@@ -370,8 +385,9 @@ KeyStore</h2></td></tr>
 In-memory Key Store</h2></td></tr>
 <tr><td class="ititle" colspan="2"><p><a class="anchor" id="amgrp68c1df9ad4ec9d94325f55864c7d7170"></a>The implementation of an in-memory key store. </p>
 </td></tr>
-<tr class="memitem:ga57f11410b3ef6a686594b60836dc8c99"><td class="memItemLeft" align="right" valign="top">typedef struct _DPS_MemoryKeyStore&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__keystore.html#ga57f11410b3ef6a686594b60836dc8c99">DPS_MemoryKeyStore</a></td></tr>
-<tr class="memdesc:ga57f11410b3ef6a686594b60836dc8c99"><td class="mdescLeft">&#160;</td><td class="mdescRight">Opaque type for an in-memory key store.  <a href="group__keystore.html#ga57f11410b3ef6a686594b60836dc8c99">More...</a><br /></td></tr>
+<tr class="memitem:ga57f11410b3ef6a686594b60836dc8c99"><td class="memItemLeft" align="right" valign="top">
+typedef struct _DPS_MemoryKeyStore&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__keystore.html#ga57f11410b3ef6a686594b60836dc8c99">DPS_MemoryKeyStore</a></td></tr>
+<tr class="memdesc:ga57f11410b3ef6a686594b60836dc8c99"><td class="mdescLeft">&#160;</td><td class="mdescRight">Opaque type for an in-memory key store. <br /></td></tr>
 <tr class="separator:ga57f11410b3ef6a686594b60836dc8c99"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga2da4c5f9b7ab5ff6b65d1c8f4d6c30bc"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__keystore.html#ga57f11410b3ef6a686594b60836dc8c99">DPS_MemoryKeyStore</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__keystore.html#ga2da4c5f9b7ab5ff6b65d1c8f4d6c30bc">DPS_CreateMemoryKeyStore</a> ()</td></tr>
 <tr class="memdesc:ga2da4c5f9b7ab5ff6b65d1c8f4d6c30bc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates an in-memory key store.  <a href="group__keystore.html#ga2da4c5f9b7ab5ff6b65d1c8f4d6c30bc">More...</a><br /></td></tr>
@@ -395,61 +411,13 @@ In-memory Key Store</h2></td></tr>
 <tr class="memdesc:ga2811c4ffff51bd75a72dd0a9c8796616"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the <code>DPS_KeyStore*</code> of an in-memory key store.  <a href="group__keystore.html#ga2811c4ffff51bd75a72dd0a9c8796616">More...</a><br /></td></tr>
 <tr class="separator:ga2811c4ffff51bd75a72dd0a9c8796616"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
-<h2 class="groupheader">Macro Definition Documentation</h2>
-<a id="a44b270f60457e96de08275cffdcfaffb"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a44b270f60457e96de08275cffdcfaffb">&#9670;&nbsp;</a></span>A_SIZEOF</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define A_SIZEOF</td>
-          <td>(</td>
-          <td class="paramtype">&#160;</td>
-          <td class="paramname">a</td><td>)</td>
-          <td>&#160;&#160;&#160;(sizeof(a) / sizeof((a)[0]))</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<dl><dt><b>Examples: </b></dt><dd><a class="el" href="pub_many_8c-example.html#a16">pub_many.c</a>, <a class="el" href="publisher_8c-example.html#a21">publisher.c</a>, <a class="el" href="reg_pubs_8c-example.html#a24">reg_pubs.c</a>, <a class="el" href="reg_subs_8c-example.html#a28">reg_subs.c</a>, and <a class="el" href="subscriber_8c-example.html#a28">subscriber.c</a>.</dd>
-</dl>
-</div>
-</div>
-<a id="ad8b397975a479b996ef223367d8835a9"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ad8b397975a479b996ef223367d8835a9">&#9670;&nbsp;</a></span>DPS_FALSE</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define DPS_FALSE&#160;&#160;&#160;0</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<dl><dt><b>Examples: </b></dt><dd><a class="el" href="pub_many_8c-example.html#a0">pub_many.c</a>, <a class="el" href="publisher_8c-example.html#a0">publisher.c</a>, <a class="el" href="reg_pubs_8c-example.html#a0">reg_pubs.c</a>, <a class="el" href="reg_subs_8c-example.html#a0">reg_subs.c</a>, and <a class="el" href="subscriber_8c-example.html#a0">subscriber.c</a>.</dd>
-</dl>
-</div>
-</div>
-<a id="a4a173ed2665cea74e58558d99b377ab3"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a4a173ed2665cea74e58558d99b377ab3">&#9670;&nbsp;</a></span>DPS_TRUE</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define DPS_TRUE&#160;&#160;&#160;1</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<dl><dt><b>Examples: </b></dt><dd><a class="el" href="pub_many_8c-example.html#a15">pub_many.c</a>, <a class="el" href="publisher_8c-example.html#a20">publisher.c</a>, <a class="el" href="reg_pubs_8c-example.html#a23">reg_pubs.c</a>, <a class="el" href="reg_subs_8c-example.html#a27">reg_subs.c</a>, and <a class="el" href="subscriber_8c-example.html#a26">subscriber.c</a>.</dd>
-</dl>
-</div>
-</div>
-</div><!-- contents -->
+<a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
+<div class="textblock"><p>Public APIs. </p>
+</div></div><!-- contents -->
 </div><!-- doc-content -->
 <div class="navpath" id="nav-path">
   <ul>
-    <li class="footer" style="float:left"><b>Distributed PubSub Manual</b></li> <li class="footer">Generated Tue Feb 20 2018 10:23:49</li>
+    <li class="footer" style="float:left"><b>Distributed Publish & Subscribe for IoT</b></li> <li class="footer">Generated Wed Mar 7 2018 13:26:16</li>
   </ul>
 </div>
 </body>

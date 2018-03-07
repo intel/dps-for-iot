@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=9"/>
 <meta name="generator" content="Doxygen 1.8.13"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Distributed Publish Subscribe for IoT: UUID</title>
+<title>Distributed Publish &amp; Subscribe for IoT: UUID</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -28,7 +28,7 @@
  <tbody>
  <tr style="height: 56px;">
   <td id="projectalign" style="padding-left: 0.5em;">
-   <div id="projectname">Distributed Publish Subscribe for IoT
+   <div id="projectname">Distributed Publish &amp; Subscribe for IoT
    </div>
   </td>
  </tr>
@@ -99,8 +99,9 @@ Data Structures</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="typedef-members"></a>
 Typedefs</h2></td></tr>
-<tr class="memitem:gaef1d03afcc6410602ade1d48f24c3997"><td class="memItemLeft" align="right" valign="top">typedef struct <a class="el" href="struct___d_p_s___u_u_i_d.html">_DPS_UUID</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__uuid.html#gaef1d03afcc6410602ade1d48f24c3997">DPS_UUID</a></td></tr>
-<tr class="memdesc:gaef1d03afcc6410602ade1d48f24c3997"><td class="mdescLeft">&#160;</td><td class="mdescRight">Type definition for a UUID.  <a href="#gaef1d03afcc6410602ade1d48f24c3997">More...</a><br /></td></tr>
+<tr class="memitem:gaef1d03afcc6410602ade1d48f24c3997"><td class="memItemLeft" align="right" valign="top"><a id="gaef1d03afcc6410602ade1d48f24c3997"></a>
+typedef struct <a class="el" href="struct___d_p_s___u_u_i_d.html">_DPS_UUID</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__uuid.html#gaef1d03afcc6410602ade1d48f24c3997">DPS_UUID</a></td></tr>
+<tr class="memdesc:gaef1d03afcc6410602ade1d48f24c3997"><td class="mdescLeft">&#160;</td><td class="mdescRight">Type definition for a UUID. <br /></td></tr>
 <tr class="separator:gaef1d03afcc6410602ade1d48f24c3997"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
@@ -120,23 +121,6 @@ Functions</h2></td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <p>Create and compare UUIDs. </p>
-<h2 class="groupheader">Typedef Documentation</h2>
-<a id="gaef1d03afcc6410602ade1d48f24c3997"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#gaef1d03afcc6410602ade1d48f24c3997">&#9670;&nbsp;</a></span>DPS_UUID</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">typedef struct <a class="el" href="struct___d_p_s___u_u_i_d.html">_DPS_UUID</a>  <a class="el" href="group__uuid.html#gaef1d03afcc6410602ade1d48f24c3997">DPS_UUID</a></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Type definition for a UUID. </p>
-
-</div>
-</div>
 <h2 class="groupheader">Function Documentation</h2>
 <a id="ga28a9b3d0518c4327afe94d087d1d2322"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ga28a9b3d0518c4327afe94d087d1d2322">&#9670;&nbsp;</a></span>DPS_GenerateUUID()</h2>
@@ -155,6 +139,12 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Non secure generation of a random UUID. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">uuid</td><td>The generated UUID. </td></tr>
+  </table>
+  </dd>
+</dl>
 
 </div>
 </div>
@@ -174,6 +164,7 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>One time initialization. </p>
+<dl class="section return"><dt>Returns</dt><dd>DPS_OK if initialization succeeds, an error otherwise </dd></dl>
 
 </div>
 </div>
@@ -204,6 +195,19 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Numerical comparison of two UUIDs. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">a</td><td>One of the UUIDs to compare </td></tr>
+    <tr><td class="paramname">b</td><td>The other UUID to compare</td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd><ul>
+<li>&lt;0 if a less than b</li>
+<li>0 if a equal to b</li>
+<li>&gt;0 if a greater than b </li>
+</ul>
+</dd></dl>
 
 </div>
 </div>
@@ -224,16 +228,22 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Return a string representation of a UUID. </p>
-<dl class="section note"><dt>Note</dt><dd>This function uses a static string and is non-reentrant. </dd></dl>
-<dl><dt><b>Examples: </b></dt><dd><a class="el" href="pub_many_8c-example.html#a5">pub_many.c</a>, <a class="el" href="publisher_8c-example.html#a4">publisher.c</a>, <a class="el" href="reg_pubs_8c-example.html#a4">reg_pubs.c</a>, <a class="el" href="reg_subs_8c-example.html#a8">reg_subs.c</a>, and <a class="el" href="subscriber_8c-example.html#a9">subscriber.c</a>.</dd>
+<dl class="section note"><dt>Note</dt><dd>This function uses a static string and is non-reentrant.</dd></dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">uuid</td><td>The UUID</td></tr>
+  </table>
+  </dd>
 </dl>
+<dl class="section return"><dt>Returns</dt><dd>The string representation </dd></dl>
+
 </div>
 </div>
 </div><!-- contents -->
 </div><!-- doc-content -->
 <div class="navpath" id="nav-path">
   <ul>
-    <li class="footer" style="float:left"><b>Distributed PubSub Manual</b></li> <li class="footer">Generated Tue Feb 20 2018 10:23:50</li>
+    <li class="footer" style="float:left"><b>Distributed Publish & Subscribe for IoT</b></li> <li class="footer">Generated Wed Mar 7 2018 13:26:16</li>
   </ul>
 </div>
 </body>

@@ -1,6 +1,5 @@
 var dps_8h =
 [
-    [ "A_SIZEOF", "dps_8h.html#a44b270f60457e96de08275cffdcfaffb", null ],
     [ "DPS_FALSE", "dps_8h.html#ad8b397975a479b996ef223367d8835a9", null ],
     [ "DPS_MCAST_PUB_DISABLED", "group__node.html#gac939c83361ed89086f37c78d9c9009dd", null ],
     [ "DPS_MCAST_PUB_ENABLE_RECV", "group__node.html#gae493573fb2e02b87258952223eb4fcd7", null ],
@@ -91,7 +90,7 @@ var dps_8h =
     [ "DPS_SetPublicationData", "group__publication.html#ga91c46ccb6df7f4bb99ca5d9d35cc5a4a", null ],
     [ "DPS_SetSubscriptionData", "group__subscription.html#gad581d341003e20c714061e44b57c2009", null ],
     [ "DPS_SetTrustedCA", "group__keystore.html#ga8d55f887ebbd6b0af80caa43bf77a088", null ],
-    [ "DPS_StartNode", "group__node.html#ga31994ad569ee589760efac037a0cbc8a", null ],
+    [ "DPS_StartNode", "group__node.html#ga160d504bfaeb0d3711e0259000340fe3", null ],
     [ "DPS_Subscribe", "group__subscription.html#ga83234ea82a91e07e3f5894a4dcf5267e", null ],
     [ "DPS_SubscriptionGetNode", "group__subscription.html#gafea65751c811555736c8c65fcb3a9480", null ],
     [ "DPS_SubscriptionGetNumTopics", "group__subscription.html#gab0ad2c6806f8f44f27c70fff915b7e9a", null ],

@@ -1,0 +1,134 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.13">
+  <compounddef id="group__uuid" kind="group">
+    <compoundname>uuid</compoundname>
+    <title>UUID</title>
+    <innerclass refid="struct___d_p_s___u_u_i_d" prot="public">_DPS_UUID</innerclass>
+      <sectiondef kind="typedef">
+      <memberdef kind="typedef" id="group__uuid_1gaef1d03afcc6410602ade1d48f24c3997" prot="public" static="no">
+        <type>struct <ref refid="struct___d_p_s___u_u_i_d" kindref="compound">_DPS_UUID</ref></type>
+        <definition>typedef struct _DPS_UUID  DPS_UUID</definition>
+        <argsstring></argsstring>
+        <name>DPS_UUID</name>
+        <briefdescription>
+<para>Type definition for a UUID. </para>        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/uuid.h" line="53" column="1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="group__uuid_1ga28a9b3d0518c4327afe94d087d1d2322" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void DPS_GenerateUUID</definition>
+        <argsstring>(DPS_UUID *uuid)</argsstring>
+        <name>DPS_GenerateUUID</name>
+        <param>
+          <type><ref refid="group__uuid_1gaef1d03afcc6410602ade1d48f24c3997" kindref="member">DPS_UUID</ref> *</type>
+          <declname>uuid</declname>
+        </param>
+        <briefdescription>
+<para>Non secure generation of a random UUID. </para>        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>uuid</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The generated UUID. </para></parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/uuid.h" line="67" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="group__uuid_1ga725c154c5fccf2a2c9a6c32353a63228" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
+        <definition>DPS_Status DPS_InitUUID</definition>
+        <argsstring>()</argsstring>
+        <name>DPS_InitUUID</name>
+        <briefdescription>
+<para>One time initialization. </para>        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>DPS_OK if initialization succeeds, an error otherwise </para></simplesect>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/uuid.h" line="60" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="group__uuid_1ga7819e63fac9457f892236b1b3f183713" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>int</type>
+        <definition>int DPS_UUIDCompare</definition>
+        <argsstring>(const DPS_UUID *a, const DPS_UUID *b)</argsstring>
+        <name>DPS_UUIDCompare</name>
+        <param>
+          <type>const <ref refid="group__uuid_1gaef1d03afcc6410602ade1d48f24c3997" kindref="member">DPS_UUID</ref> *</type>
+          <declname>a</declname>
+        </param>
+        <param>
+          <type>const <ref refid="group__uuid_1gaef1d03afcc6410602ade1d48f24c3997" kindref="member">DPS_UUID</ref> *</type>
+          <declname>b</declname>
+        </param>
+        <briefdescription>
+<para>Numerical comparison of two UUIDs. </para>        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>a</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>One of the UUIDs to compare </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>b</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The other UUID to compare</para></parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para><itemizedlist>
+<listitem><para>&lt;0 if a less than b</para></listitem><listitem><para>0 if a equal to b</para></listitem><listitem><para>&gt;0 if a greater than b </para></listitem></itemizedlist>
+</para></simplesect>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/uuid.h" line="91" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="group__uuid_1ga9c51faa57ecb228ce7eda077a90b20ff" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>const char *</type>
+        <definition>const char* DPS_UUIDToString</definition>
+        <argsstring>(const DPS_UUID *uuid)</argsstring>
+        <name>DPS_UUIDToString</name>
+        <param>
+          <type>const <ref refid="group__uuid_1gaef1d03afcc6410602ade1d48f24c3997" kindref="member">DPS_UUID</ref> *</type>
+          <declname>uuid</declname>
+        </param>
+        <briefdescription>
+<para>Return a string representation of a UUID. </para>        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="note"><para>This function uses a static string and is non-reentrant.</para></simplesect>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>uuid</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The UUID</para></parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>The string representation </para></simplesect>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/uuid.h" line="78" column="1"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+<para>Create and compare UUIDs. </para>    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+  </compounddef>
+</doxygen>

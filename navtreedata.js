@@ -1,9 +1,23 @@
 var NAVTREE =
 [
-  [ "Distributed Publish Subscribe for IoT", "index.html", [
-    [ "Introduction to Distributed Publish Subscribe for IoT", "md__home_tmalsbar_src_github_8com_01org_dps-for-iot__r_e_a_d_m_e.html", null ],
-    [ "Message Encryption", "md__home_tmalsbar_src_github_8com_01org_dps-for-iot_doc__message-_encryption.html", null ],
-    [ "Message Protocol", "md__home_tmalsbar_src_github_8com_01org_dps-for-iot_doc__message-_protocol.html", null ],
+  [ "Distributed Publish & Subscribe for IoT", "index.html", [
+    [ "Introduction", "index.html", "index" ],
+    [ "Building and Running", "building-and-running.html", [
+      [ "Prerequisites", "building-and-running.html#prerequisites", [
+        [ "Linux", "building-and-running.html#prerequisites-linux", null ],
+        [ "Windows", "building-and-running.html#prerequisites-windows", null ],
+        [ "Yocto", "building-and-running.html#prerequisites-yocto", null ],
+        [ "Documentation", "building-and-running.html#prerequisites-documentation", null ]
+      ] ],
+      [ "Building", "building-and-running.html#building", [
+        [ "Linux and Windows", "building-and-running.html#building-linux-and-windows", null ],
+        [ "Yocto", "building-and-running.html#building-yocto", null ]
+      ] ],
+      [ "Running", "building-and-running.html#running", [
+        [ "Examples", "building-and-running.html#running-examples", null ]
+      ] ]
+    ] ],
+    [ "Tutorials", "tutorials.html", "tutorials" ],
     [ "Modules", "modules.html", "modules" ],
     [ "Data Structures", "annotated.html", [
       [ "Data Structures", "annotated.html", "annotated_dup" ],
@@ -24,15 +38,14 @@ var NAVTREE =
         [ "Enumerator", "globals_eval.html", null ],
         [ "Macros", "globals_defs.html", null ]
       ] ]
-    ] ],
-    [ "Examples", "examples.html", "examples" ]
+    ] ]
   ] ]
 ];
 
 var NAVTREEINDEX =
 [
 "annotated.html",
-"group__publication.html#gaba1ad3ee807b75a1281d334be06a12f7"
+"group__publication.html#gaa5225be2733d6ebfd01f9475e3fc06f5"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronisation';

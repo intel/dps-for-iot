@@ -1,0 +1,57 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.13">
+  <compounddef id="struct___d_p_s___u_u_i_d" kind="struct" language="C++" prot="public">
+    <compoundname>_DPS_UUID</compoundname>
+    <includes refid="uuid_8h" local="no">uuid.h</includes>
+      <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="struct___d_p_s___u_u_i_d_1ac01a70f40b7080c7d6e42bd538456f35" prot="public" static="no" mutable="no">
+        <type>union _DPS_UUID::@2</type>
+        <definition>union _DPS_UUID::@2 _DPS_UUID::@3</definition>
+        <argsstring></argsstring>
+        <name>@3</name>
+        <briefdescription>
+<para>&lt; The UUID value </para>        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/uuid.h" line="52" column="1"/>
+      </memberdef>
+      <memberdef kind="variable" id="struct___d_p_s___u_u_i_d_1a5f642859395d3916ea96804c6bf16880" prot="public" static="no" mutable="no">
+        <type>uint8_t</type>
+        <definition>uint8_t _DPS_UUID::val[16]</definition>
+        <argsstring>[16]</argsstring>
+        <name>val</name>
+        <briefdescription>
+<para>The UUID as an array of 8-bit values. </para>        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/uuid.h" line="50" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/uuid.h" bodystart="50" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="struct___d_p_s___u_u_i_d_1aee3748c444033b543f494e8bf6d64645" prot="public" static="no" mutable="no">
+        <type>uint64_t</type>
+        <definition>uint64_t _DPS_UUID::val64[2]</definition>
+        <argsstring>[2]</argsstring>
+        <name>val64</name>
+        <briefdescription>
+<para>The UUID as an array of 64-bit values. </para>        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/uuid.h" line="51" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/uuid.h" bodystart="51" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+<para>Type definition for a UUID. </para>    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/uuid.h" line="47" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/uuid.h" bodystart="47" bodyend="53"/>
+    <listofallmembers>
+      <member refid="struct___d_p_s___u_u_i_d_1a5f642859395d3916ea96804c6bf16880" prot="public" virt="non-virtual"><scope>_DPS_UUID</scope><name>val</name></member>
+      <member refid="struct___d_p_s___u_u_i_d_1aee3748c444033b543f494e8bf6d64645" prot="public" virt="non-virtual"><scope>_DPS_UUID</scope><name>val64</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

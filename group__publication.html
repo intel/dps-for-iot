@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=9"/>
 <meta name="generator" content="Doxygen 1.8.13"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Distributed Publish Subscribe for IoT: Publication</title>
+<title>Distributed Publish &amp; Subscribe for IoT: Publication</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -28,7 +28,7 @@
  <tbody>
  <tr style="height: 56px;">
   <td id="projectalign" style="padding-left: 0.5em;">
-   <div id="projectname">Distributed Publish Subscribe for IoT
+   <div id="projectname">Distributed Publish &amp; Subscribe for IoT
    </div>
   </td>
  </tr>
@@ -93,10 +93,11 @@ $(document).ready(function(){initNavTree('group__publication.html','');});
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="typedef-members"></a>
 Typedefs</h2></td></tr>
 <tr class="memitem:gaf8615f0bcd3d95859cd7f2cdbf772e23"><td class="memItemLeft" align="right" valign="top">typedef void(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#gaf8615f0bcd3d95859cd7f2cdbf772e23">DPS_AcknowledgementHandler</a>) (<a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub, uint8_t *payload, size_t len)</td></tr>
-<tr class="memdesc:gaf8615f0bcd3d95859cd7f2cdbf772e23"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function prototype for a publication acknowledgment handler called when an acknowledgement for a publication is received from a remote subscriber.  <a href="#gaf8615f0bcd3d95859cd7f2cdbf772e23">More...</a><br /></td></tr>
+<tr class="memdesc:gaf8615f0bcd3d95859cd7f2cdbf772e23"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function prototype for a publication acknowledgement handler called when an acknowledgement for a publication is received from a remote subscriber.  <a href="#gaf8615f0bcd3d95859cd7f2cdbf772e23">More...</a><br /></td></tr>
 <tr class="separator:gaf8615f0bcd3d95859cd7f2cdbf772e23"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga0d439693474aa54e27f3d45a054696ac"><td class="memItemLeft" align="right" valign="top">typedef struct _DPS_Publication&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a></td></tr>
-<tr class="memdesc:ga0d439693474aa54e27f3d45a054696ac"><td class="mdescLeft">&#160;</td><td class="mdescRight">Opaque type for a publication.  <a href="#ga0d439693474aa54e27f3d45a054696ac">More...</a><br /></td></tr>
+<tr class="memitem:ga0d439693474aa54e27f3d45a054696ac"><td class="memItemLeft" align="right" valign="top"><a id="ga0d439693474aa54e27f3d45a054696ac"></a>
+typedef struct _DPS_Publication&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a></td></tr>
+<tr class="memdesc:ga0d439693474aa54e27f3d45a054696ac"><td class="mdescLeft">&#160;</td><td class="mdescRight">Opaque type for a publication. <br /></td></tr>
 <tr class="separator:ga0d439693474aa54e27f3d45a054696ac"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
@@ -171,7 +172,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Function prototype for a publication acknowledgment handler called when an acknowledgement for a publication is received from a remote subscriber. </p>
+<p>Function prototype for a publication acknowledgement handler called when an acknowledgement for a publication is received from a remote subscriber. </p>
 <p>The handler is called for each subscriber that generates an acknowledgement so may be called numerous times for same publication.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
@@ -181,22 +182,6 @@ Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
-
-</div>
-</div>
-<a id="ga0d439693474aa54e27f3d45a054696ac"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga0d439693474aa54e27f3d45a054696ac">&#9670;&nbsp;</a></span>DPS_Publication</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">typedef struct _DPS_Publication <a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Opaque type for a publication. </p>
 
 </div>
 </div>
@@ -225,8 +210,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>The key identifier of the subscriber, may be NULL </dd></dl>
-<dl><dt><b>Examples: </b></dt><dd><a class="el" href="publisher_8c-example.html#a7">publisher.c</a>.</dd>
-</dl>
+
 </div>
 </div>
 <a id="ga308074429a566ffb8d04d55bae520b04"></a>
@@ -266,13 +250,13 @@ Functions</h2></td></tr>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">pub</td><td>The publication to acknowledge </td></tr>
-    <tr><td class="paramname">ackPayload</td><td>Optional payload to accompany the aknowledgment </td></tr>
-    <tr><td class="paramname">len</td><td>The length of the payload </td></tr>
+    <tr><td class="paramname">ackPayload</td><td>Optional payload to accompany the acknowledgement </td></tr>
+    <tr><td class="paramname">len</td><td>The length of the payload</td></tr>
   </table>
   </dd>
 </dl>
-<dl><dt><b>Examples: </b></dt><dd><a class="el" href="reg_subs_8c-example.html#a11">reg_subs.c</a>, <a class="el" href="registry_8c-example.html#a2">registry.c</a>, and <a class="el" href="subscriber_8c-example.html#a17">subscriber.c</a>.</dd>
-</dl>
+<dl class="section return"><dt>Returns</dt><dd>DPS_OK if acknowledge is successful, an error otherwise </dd></dl>
+
 </div>
 </div>
 <a id="ga41f31a8b63558e13d73d96de6086e5c4"></a>
@@ -292,7 +276,7 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Creates a partial copy of a publication that can be used to acknowledge the publication. </p>
-<p>The copy is not useful for anything other than in a call to <a class="el" href="group__publication.html#ga308074429a566ffb8d04d55bae520b04" title="Acknowledge a publication. ">DPS_AckPublication()</a> and should be freed by calling DPS_DestroyPublcation() when no longer needed.</p>
+<p>The copy is not useful for anything other than in a call to <a class="el" href="group__publication.html#ga308074429a566ffb8d04d55bae520b04" title="Acknowledge a publication. ">DPS_AckPublication()</a> and should be freed by calling <a class="el" href="group__publication.html#ga17bb01c949aaaf3bafd53323c9effd5f" title="Delete a publication and frees any resources allocated. ">DPS_DestroyPublication()</a> when no longer needed.</p>
 <p>The partial copy can be used with <a class="el" href="group__publication.html#gaba1ad3ee807b75a1281d334be06a12f7" title="Get the UUID for a publication. ">DPS_PublicationGetUUID()</a> and <a class="el" href="group__publication.html#ga875b48217d861d4a9fa5471419d354e9" title="Get the sequence number for a publication. ">DPS_PublicationGetSequenceNum()</a></p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
@@ -323,12 +307,12 @@ Functions</h2></td></tr>
 <p>Allocates storage for a publication. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">node</td><td>The local node to use </td></tr>
+    <tr><td class="paramname">node</td><td>The local node to use</td></tr>
   </table>
   </dd>
 </dl>
-<dl><dt><b>Examples: </b></dt><dd><a class="el" href="pub_many_8c-example.html#a22">pub_many.c</a>, <a class="el" href="publisher_8c-example.html#a9">publisher.c</a>, and <a class="el" href="reg_pubs_8c-example.html#a8">reg_pubs.c</a>.</dd>
-</dl>
+<dl class="section return"><dt>Returns</dt><dd>The newly created publication, or NULL if creation failed </dd></dl>
+
 </div>
 </div>
 <a id="ga17bb01c949aaaf3bafd53323c9effd5f"></a>
@@ -352,12 +336,12 @@ Functions</h2></td></tr>
 <p>This function should only be called for publications created by <a class="el" href="group__publication.html#gaca070a96a6374e99a05d647c10737962" title="Allocates storage for a publication. ">DPS_CreatePublication()</a> or <a class="el" href="group__publication.html#ga41f31a8b63558e13d73d96de6086e5c4" title="Creates a partial copy of a publication that can be used to acknowledge the publication. ">DPS_CopyPublication()</a>.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">pub</td><td>The publication to destroy </td></tr>
+    <tr><td class="paramname">pub</td><td>The publication to destroy</td></tr>
   </table>
   </dd>
 </dl>
-<dl><dt><b>Examples: </b></dt><dd><a class="el" href="pub_many_8c-example.html#a11">pub_many.c</a>, <a class="el" href="publisher_8c-example.html#a8">publisher.c</a>, and <a class="el" href="reg_pubs_8c-example.html#a7">reg_pubs.c</a>.</dd>
-</dl>
+<dl class="section return"><dt>Returns</dt><dd>DPS_OK if destroy is successful, an error otherwise </dd></dl>
+
 </div>
 </div>
 <a id="gaa8bee35089ac62289c9ba0e6a0568ca0"></a>
@@ -438,7 +422,7 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Initializes a newly created publication with a set of topics. </p>
-<p>Each publication has a UUID and a sequence number. The sequence number is incremented each time the publication is published. This allows subscriber to determine that publications received form a series. The acknowledgment handler is optional, if present the publication is marked as requesting acknowledgment and that information is provided to the subscribers.</p>
+<p>Each publication has a UUID and a sequence number. The sequence number is incremented each time the publication is published. This allows subscriber to determine that publications received form a series. The acknowledgement handler is optional, if present the publication is marked as requesting acknowledgement and that information is provided to the subscribers.</p>
 <p>Call the accessor function <a class="el" href="group__publication.html#gaba1ad3ee807b75a1281d334be06a12f7" title="Get the UUID for a publication. ">DPS_PublicationGetUUID()</a> to get the UUID for this publication.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
@@ -447,12 +431,12 @@ Functions</h2></td></tr>
     <tr><td class="paramname">numTopics</td><td>The number of topic strings to publish - must be &gt;= 1 </td></tr>
     <tr><td class="paramname">noWildCard</td><td>If TRUE the publication will not match wildcard subscriptions </td></tr>
     <tr><td class="paramname">keyId</td><td>Optional key identifier to use for encrypted publications </td></tr>
-    <tr><td class="paramname">handler</td><td>Optional handler for receiving acknowledgments </td></tr>
+    <tr><td class="paramname">handler</td><td>Optional handler for receiving acknowledgements</td></tr>
   </table>
   </dd>
 </dl>
-<dl><dt><b>Examples: </b></dt><dd><a class="el" href="pub_many_8c-example.html#a23">pub_many.c</a>, <a class="el" href="publisher_8c-example.html#a10">publisher.c</a>, and <a class="el" href="reg_pubs_8c-example.html#a9">reg_pubs.c</a>.</dd>
-</dl>
+<dl class="section return"><dt>Returns</dt><dd>DPS_OK if initialization is successful, an error otherwise </dd></dl>
+
 </div>
 </div>
 <a id="ga91471ddf6f66798e255b28b3e913144b"></a>
@@ -485,12 +469,12 @@ Functions</h2></td></tr>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">pub</td><td>The the publication to initialize </td></tr>
-    <tr><td class="paramname">keyId</td><td>Key identifier to use for encrypted publications </td></tr>
+    <tr><td class="paramname">keyId</td><td>Key identifier to use for encrypted publications</td></tr>
   </table>
   </dd>
 </dl>
-<dl><dt><b>Examples: </b></dt><dd><a class="el" href="publisher_8c-example.html#a13">publisher.c</a>.</dd>
-</dl>
+<dl class="section return"><dt>Returns</dt><dd>DPS_OK if addition is successful, an error otherwise </dd></dl>
+
 </div>
 </div>
 <a id="gad2a37d52f12c93434b431eefd732f363"></a>
@@ -516,9 +500,8 @@ Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>A pointer to the node or NULL if the publication is invalid </dd></dl>
-<dl><dt><b>Examples: </b></dt><dd><a class="el" href="pub_many_8c-example.html#a3">pub_many.c</a>, and <a class="el" href="subscriber_8c-example.html#a16">subscriber.c</a>.</dd>
-</dl>
+<dl class="section return"><dt>Returns</dt><dd>The node or NULL if the publication is invalid </dd></dl>
+
 </div>
 </div>
 <a id="gaee6fc3b13484faacff0d26646778f777"></a>
@@ -540,12 +523,12 @@ Functions</h2></td></tr>
 <p>Get the number of topics in a publication. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">pub</td><td>The publication </td></tr>
+    <tr><td class="paramname">pub</td><td>The publication</td></tr>
   </table>
   </dd>
 </dl>
-<dl><dt><b>Examples: </b></dt><dd><a class="el" href="subscriber_8c-example.html#a10">subscriber.c</a>.</dd>
-</dl>
+<dl class="section return"><dt>Returns</dt><dd>The number of topics. </dd></dl>
+
 </div>
 </div>
 <a id="ga1d7e81c2f0b19736a4f7a7195e5bd98d"></a>
@@ -572,8 +555,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>The key identifier of the publisher, may be NULL </dd></dl>
-<dl><dt><b>Examples: </b></dt><dd><a class="el" href="subscriber_8c-example.html#a7">subscriber.c</a>.</dd>
-</dl>
+
 </div>
 </div>
 <a id="ga875b48217d861d4a9fa5471419d354e9"></a>
@@ -601,8 +583,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>The sequence number or zero if the publication is invalid. </dd></dl>
-<dl><dt><b>Examples: </b></dt><dd><a class="el" href="pub_many_8c-example.html#a7">pub_many.c</a>, <a class="el" href="publisher_8c-example.html#a6">publisher.c</a>, <a class="el" href="reg_pubs_8c-example.html#a6">reg_pubs.c</a>, <a class="el" href="reg_subs_8c-example.html#a5">reg_subs.c</a>, and <a class="el" href="subscriber_8c-example.html#a5">subscriber.c</a>.</dd>
-</dl>
+
 </div>
 </div>
 <a id="ga143a5c6fbe0bdf1725e841f122582432"></a>
@@ -640,8 +621,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>The topic string or NULL if the publication or index is invalid. </dd></dl>
-<dl><dt><b>Examples: </b></dt><dd><a class="el" href="subscriber_8c-example.html#a11">subscriber.c</a>.</dd>
-</dl>
+
 </div>
 </div>
 <a id="gaba1ad3ee807b75a1281d334be06a12f7"></a>
@@ -663,12 +643,12 @@ Functions</h2></td></tr>
 <p>Get the UUID for a publication. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">pub</td><td>The publication </td></tr>
+    <tr><td class="paramname">pub</td><td>The publication</td></tr>
   </table>
   </dd>
 </dl>
-<dl><dt><b>Examples: </b></dt><dd><a class="el" href="pub_many_8c-example.html#a6">pub_many.c</a>, <a class="el" href="publisher_8c-example.html#a5">publisher.c</a>, <a class="el" href="reg_pubs_8c-example.html#a5">reg_pubs.c</a>, <a class="el" href="reg_subs_8c-example.html#a4">reg_subs.c</a>, and <a class="el" href="subscriber_8c-example.html#a4">subscriber.c</a>.</dd>
-</dl>
+<dl class="section return"><dt>Returns</dt><dd>The UUID if publication is valid, or NULL otherwise </dd></dl>
+
 </div>
 </div>
 <a id="ga516f7f314c7b95210751d00285758b9b"></a>
@@ -695,8 +675,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>1 if an acknowledgement was requested, otherwise 0. </dd></dl>
-<dl><dt><b>Examples: </b></dt><dd><a class="el" href="reg_subs_8c-example.html#a10">reg_subs.c</a>, and <a class="el" href="subscriber_8c-example.html#a14">subscriber.c</a>.</dd>
-</dl>
+
 </div>
 </div>
 <a id="gaa5225be2733d6ebfd01f9475e3fc06f5"></a>
@@ -786,9 +765,8 @@ Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>DPS_OK if the topics were succesfully published </dd></dl>
-<dl><dt><b>Examples: </b></dt><dd><a class="el" href="pub_many_8c-example.html#a8">pub_many.c</a>, <a class="el" href="publisher_8c-example.html#a14">publisher.c</a>, and <a class="el" href="reg_pubs_8c-example.html#a11">reg_pubs.c</a>.</dd>
-</dl>
+<dl class="section return"><dt>Returns</dt><dd>DPS_OK if the topics were successfully published </dd></dl>
+
 </div>
 </div>
 <a id="ga91c46ccb6df7f4bb99ca5d9d35cc5a4a"></a>
@@ -833,7 +811,7 @@ Functions</h2></td></tr>
 </div><!-- doc-content -->
 <div class="navpath" id="nav-path">
   <ul>
-    <li class="footer" style="float:left"><b>Distributed PubSub Manual</b></li> <li class="footer">Generated Tue Feb 20 2018 10:23:50</li>
+    <li class="footer" style="float:left"><b>Distributed Publish & Subscribe for IoT</b></li> <li class="footer">Generated Wed Mar 7 2018 13:26:16</li>
   </ul>
 </div>
 </body>

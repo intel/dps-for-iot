@@ -1,0 +1,67 @@
+\hypertarget{dbg_8h}{}\section{dbg.\+h File Reference}
+\label{dbg_8h}\index{dbg.\+h@{dbg.\+h}}
+
+
+Debug and logging macros and functions.  
+
+
+\subsection*{Macros}
+\begin{DoxyCompactItemize}
+\item 
+\#define \hyperlink{group__debug_ga170843b022fc7bc00bf871eb5189fe52}{D\+P\+S\+\_\+\+D\+B\+G\+B\+Y\+T\+ES}(bytes,  n)~(\hyperlink{group__debug_gaeca5ec86966717c8dd2d1ffda4be2b3b}{D\+P\+S\+\_\+\+D\+E\+B\+U\+G\+\_\+\+E\+N\+A\+B\+L\+ED}() ? \hyperlink{group__debug_ga7cc66c1e82ef557238c122b067f5337a}{D\+P\+S\+\_\+\+Log\+Bytes}(D\+P\+S\+\_\+\+L\+O\+G\+\_\+\+D\+B\+G\+P\+R\+I\+NT, \+\_\+\+\_\+\+F\+I\+L\+E\+\_\+\+\_\+, \+\_\+\+\_\+\+L\+I\+N\+E\+\_\+\+\_\+, \+\_\+\+\_\+\+F\+U\+N\+C\+T\+I\+O\+N\+\_\+\+\_\+, bytes, n) \+: (void)0)
+\begin{DoxyCompactList}\small\item\em Log an array of bytes at D\+B\+G\+P\+R\+I\+NT level. \end{DoxyCompactList}\item 
+\#define \hyperlink{group__debug_ga7ac5236c2ba157ffcf56cd073dcf0c3f}{D\+P\+S\+\_\+\+D\+B\+G\+P\+R\+I\+NT}(fmt, ...)~(\hyperlink{group__debug_gaeca5ec86966717c8dd2d1ffda4be2b3b}{D\+P\+S\+\_\+\+D\+E\+B\+U\+G\+\_\+\+E\+N\+A\+B\+L\+ED}() ? \hyperlink{group__debug_ga174fef61dca16376546e570c9b831502}{D\+P\+S\+\_\+\+Log}(D\+P\+S\+\_\+\+L\+O\+G\+\_\+\+D\+B\+G\+P\+R\+I\+NT, \+\_\+\+\_\+\+F\+I\+L\+E\+\_\+\+\_\+, \+\_\+\+\_\+\+L\+I\+N\+E\+\_\+\+\_\+, \+\_\+\+\_\+\+F\+U\+N\+C\+T\+I\+O\+N\+\_\+\+\_\+, fmt, \#\#\+\_\+\+\_\+\+V\+A\+\_\+\+A\+R\+G\+S\+\_\+\+\_\+) \+: (void)0)
+\begin{DoxyCompactList}\small\item\em Log a message at D\+B\+G\+P\+R\+I\+NT level. \end{DoxyCompactList}\item 
+\#define \hyperlink{group__debug_ga0a4156dc81e39b0cf2fb251e37bda307}{D\+P\+S\+\_\+\+D\+B\+G\+T\+R\+A\+CE}()~(\hyperlink{group__debug_gaeca5ec86966717c8dd2d1ffda4be2b3b}{D\+P\+S\+\_\+\+D\+E\+B\+U\+G\+\_\+\+E\+N\+A\+B\+L\+ED}() ? \hyperlink{group__debug_ga174fef61dca16376546e570c9b831502}{D\+P\+S\+\_\+\+Log}(D\+P\+S\+\_\+\+L\+O\+G\+\_\+\+D\+B\+G\+T\+R\+A\+CE, \+\_\+\+\_\+\+F\+I\+L\+E\+\_\+\+\_\+, \+\_\+\+\_\+\+L\+I\+N\+E\+\_\+\+\_\+, \+\_\+\+\_\+\+F\+U\+N\+C\+T\+I\+O\+N\+\_\+\+\_\+, \char`\"{}\textbackslash{}n\char`\"{}) \+: (void)0)
+\begin{DoxyCompactList}\small\item\em Log a function name at D\+B\+G\+T\+R\+A\+CE level. \end{DoxyCompactList}\item 
+\#define \hyperlink{group__debug_ga62bb2ddb60beb7390755a19cd7874b5c}{D\+P\+S\+\_\+\+D\+B\+G\+T\+R\+A\+C\+EA}(fmt, ...)~(\hyperlink{group__debug_gaeca5ec86966717c8dd2d1ffda4be2b3b}{D\+P\+S\+\_\+\+D\+E\+B\+U\+G\+\_\+\+E\+N\+A\+B\+L\+ED}() ? \hyperlink{group__debug_ga174fef61dca16376546e570c9b831502}{D\+P\+S\+\_\+\+Log}(D\+P\+S\+\_\+\+L\+O\+G\+\_\+\+D\+B\+G\+T\+R\+A\+CE, \+\_\+\+\_\+\+F\+I\+L\+E\+\_\+\+\_\+, \+\_\+\+\_\+\+L\+I\+N\+E\+\_\+\+\_\+, \+\_\+\+\_\+\+F\+U\+N\+C\+T\+I\+O\+N\+\_\+\+\_\+, fmt, \#\#\+\_\+\+\_\+\+V\+A\+\_\+\+A\+R\+G\+S\+\_\+\+\_\+) \+: (void)0)
+\begin{DoxyCompactList}\small\item\em Log a function name and message at D\+B\+G\+T\+R\+A\+CE level. \end{DoxyCompactList}\item 
+\#define \hyperlink{group__debug_ga6990490017f384ce2d462e1b5c0963b8}{D\+P\+S\+\_\+\+D\+E\+B\+U\+G\+\_\+\+C\+O\+N\+T\+R\+OL}(dbg)~\+\_\+\+\_\+attribute\+\_\+\+\_\+((\+\_\+\+\_\+unused\+\_\+\+\_\+))static int \+\_\+\+\_\+\+D\+P\+S\+\_\+\+Debug\+Control = dbg
+\begin{DoxyCompactList}\small\item\em Used at the top of a file to turn debugging on or off for that file. \end{DoxyCompactList}\item 
+\#define \hyperlink{group__debug_gaeca5ec86966717c8dd2d1ffda4be2b3b}{D\+P\+S\+\_\+\+D\+E\+B\+U\+G\+\_\+\+E\+N\+A\+B\+L\+ED}()~((\hyperlink{group__debug_ga6f4bedbcc8b3bd12cea20b5ce3a8abba}{D\+P\+S\+\_\+\+Debug} \&\& (\+\_\+\+\_\+\+D\+P\+S\+\_\+\+Debug\+Control == \hyperlink{group__debug_ga777427dcd2750d5006024ce1a54daaac}{D\+P\+S\+\_\+\+D\+E\+B\+U\+G\+\_\+\+ON})) $\vert$$\vert$ (\+\_\+\+\_\+\+D\+P\+S\+\_\+\+Debug\+Control == \hyperlink{group__debug_ga6eb8eb8c3804ebd6f51fe2d7a7625ed8}{D\+P\+S\+\_\+\+D\+E\+B\+U\+G\+\_\+\+F\+O\+R\+CE}))
+\begin{DoxyCompactList}\small\item\em True if D\+PS debug logging is enabled. \end{DoxyCompactList}\item 
+\#define \hyperlink{group__debug_ga6eb8eb8c3804ebd6f51fe2d7a7625ed8}{D\+P\+S\+\_\+\+D\+E\+B\+U\+G\+\_\+\+F\+O\+R\+CE}~2
+\begin{DoxyCompactList}\small\item\em Force debug logging. \end{DoxyCompactList}\item 
+\#define \hyperlink{group__debug_ga39adc166f2ce05fb751212c1db9a6ce9}{D\+P\+S\+\_\+\+D\+E\+B\+U\+G\+\_\+\+O\+FF}~0
+\begin{DoxyCompactList}\small\item\em Disable debug logging. \end{DoxyCompactList}\item 
+\#define \hyperlink{group__debug_ga777427dcd2750d5006024ce1a54daaac}{D\+P\+S\+\_\+\+D\+E\+B\+U\+G\+\_\+\+ON}~1
+\begin{DoxyCompactList}\small\item\em Enable debug logging. \end{DoxyCompactList}\item 
+\#define \hyperlink{group__debug_gac69225c4b8e73b27204a2963d4ca0633}{D\+P\+S\+\_\+\+E\+R\+R\+P\+R\+I\+NT}(fmt, ...)~\hyperlink{group__debug_ga174fef61dca16376546e570c9b831502}{D\+P\+S\+\_\+\+Log}(D\+P\+S\+\_\+\+L\+O\+G\+\_\+\+E\+R\+R\+OR, \+\_\+\+\_\+\+F\+I\+L\+E\+\_\+\+\_\+, \+\_\+\+\_\+\+L\+I\+N\+E\+\_\+\+\_\+, \+\_\+\+\_\+\+F\+U\+N\+C\+T\+I\+O\+N\+\_\+\+\_\+, fmt, \#\#\+\_\+\+\_\+\+V\+A\+\_\+\+A\+R\+G\+S\+\_\+\+\_\+)
+\begin{DoxyCompactList}\small\item\em Log a message at E\+R\+R\+OR level. \end{DoxyCompactList}\item 
+\#define \hyperlink{group__debug_gaf1d25cc7f1d2d92f96ba620217af28fd}{D\+P\+S\+\_\+\+P\+R\+I\+NT}(fmt, ...)~\hyperlink{group__debug_ga174fef61dca16376546e570c9b831502}{D\+P\+S\+\_\+\+Log}(D\+P\+S\+\_\+\+L\+O\+G\+\_\+\+P\+R\+I\+NT, \+\_\+\+\_\+\+F\+I\+L\+E\+\_\+\+\_\+, \+\_\+\+\_\+\+L\+I\+N\+E\+\_\+\+\_\+, \+\_\+\+\_\+\+F\+U\+N\+C\+T\+I\+O\+N\+\_\+\+\_\+, fmt, \#\#\+\_\+\+\_\+\+V\+A\+\_\+\+A\+R\+G\+S\+\_\+\+\_\+)
+\begin{DoxyCompactList}\small\item\em Log a message at P\+R\+I\+NT level. \end{DoxyCompactList}\item 
+\#define \hyperlink{group__debug_gad9a3f4ae1ed318b313434a82132c4044}{D\+P\+S\+\_\+\+P\+R\+I\+N\+TT}(fmt, ...)~\hyperlink{group__debug_ga174fef61dca16376546e570c9b831502}{D\+P\+S\+\_\+\+Log}(D\+P\+S\+\_\+\+L\+O\+G\+\_\+\+P\+R\+I\+N\+TT, \+\_\+\+\_\+\+F\+I\+L\+E\+\_\+\+\_\+, \+\_\+\+\_\+\+L\+I\+N\+E\+\_\+\+\_\+, \+\_\+\+\_\+\+F\+U\+N\+C\+T\+I\+O\+N\+\_\+\+\_\+, fmt, \#\#\+\_\+\+\_\+\+V\+A\+\_\+\+A\+R\+G\+S\+\_\+\+\_\+)
+\begin{DoxyCompactList}\small\item\em Same as D\+P\+S\+\_\+\+P\+R\+I\+NT but prepends a system timestamp. \end{DoxyCompactList}\item 
+\#define \hyperlink{group__debug_ga37ab9dbe492fd9f7b78349f6e789e5f2}{D\+P\+S\+\_\+\+W\+A\+R\+N\+P\+R\+I\+NT}(fmt, ...)~(\hyperlink{group__debug_gaeca5ec86966717c8dd2d1ffda4be2b3b}{D\+P\+S\+\_\+\+D\+E\+B\+U\+G\+\_\+\+E\+N\+A\+B\+L\+ED}() ? \hyperlink{group__debug_ga174fef61dca16376546e570c9b831502}{D\+P\+S\+\_\+\+Log}(D\+P\+S\+\_\+\+L\+O\+G\+\_\+\+W\+A\+R\+N\+I\+NG, \+\_\+\+\_\+\+F\+I\+L\+E\+\_\+\+\_\+, \+\_\+\+\_\+\+L\+I\+N\+E\+\_\+\+\_\+, \+\_\+\+\_\+\+F\+U\+N\+C\+T\+I\+O\+N\+\_\+\+\_\+, fmt, \#\#\+\_\+\+\_\+\+V\+A\+\_\+\+A\+R\+G\+S\+\_\+\+\_\+) \+: (void)0)
+\begin{DoxyCompactList}\small\item\em Log a message at W\+A\+R\+N\+I\+NG level. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\subsection*{Enumerations}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{group__debug_gad06c0421a8226b0a95be1d722ca05612}\label{group__debug_gad06c0421a8226b0a95be1d722ca05612}} 
+enum \hyperlink{group__debug_gad06c0421a8226b0a95be1d722ca05612}{D\+P\+S\+\_\+\+Log\+Level} \{ \newline
+{\bfseries D\+P\+S\+\_\+\+L\+O\+G\+\_\+\+E\+R\+R\+OR}, 
+{\bfseries D\+P\+S\+\_\+\+L\+O\+G\+\_\+\+W\+A\+R\+N\+I\+NG}, 
+{\bfseries D\+P\+S\+\_\+\+L\+O\+G\+\_\+\+P\+R\+I\+NT}, 
+{\bfseries D\+P\+S\+\_\+\+L\+O\+G\+\_\+\+P\+R\+I\+N\+TT}, 
+\newline
+{\bfseries D\+P\+S\+\_\+\+L\+O\+G\+\_\+\+D\+B\+G\+T\+R\+A\+CE}, 
+{\bfseries D\+P\+S\+\_\+\+L\+O\+G\+\_\+\+D\+B\+G\+P\+R\+I\+NT}
+ \}\begin{DoxyCompactList}\small\item\em Debug logging levels. \end{DoxyCompactList}
+\end{DoxyCompactItemize}
+\subsection*{Functions}
+\begin{DoxyCompactItemize}
+\item 
+void \hyperlink{group__debug_ga174fef61dca16376546e570c9b831502}{D\+P\+S\+\_\+\+Log} (\hyperlink{group__debug_gad06c0421a8226b0a95be1d722ca05612}{D\+P\+S\+\_\+\+Log\+Level} level, const char $\ast$file, int line, const char $\ast$function, const char $\ast$fmt,...)
+\begin{DoxyCompactList}\small\item\em Log a message. \end{DoxyCompactList}\item 
+void \hyperlink{group__debug_ga7cc66c1e82ef557238c122b067f5337a}{D\+P\+S\+\_\+\+Log\+Bytes} (\hyperlink{group__debug_gad06c0421a8226b0a95be1d722ca05612}{D\+P\+S\+\_\+\+Log\+Level} level, const char $\ast$file, int line, const char $\ast$function, const uint8\+\_\+t $\ast$bytes, size\+\_\+t n)
+\begin{DoxyCompactList}\small\item\em Log an array of bytes. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\subsection*{Variables}
+\begin{DoxyCompactItemize}
+\item 
+int \hyperlink{group__debug_ga6f4bedbcc8b3bd12cea20b5ce3a8abba}{D\+P\+S\+\_\+\+Debug}
+\begin{DoxyCompactList}\small\item\em Debug control value. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Debug and logging macros and functions. 
+

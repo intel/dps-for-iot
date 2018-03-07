@@ -1,0 +1,166 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.13">
+  <compounddef id="group__nodeaddress" kind="group">
+    <compoundname>nodeaddress</compoundname>
+    <title>Node Address</title>
+      <sectiondef kind="typedef">
+      <memberdef kind="typedef" id="group__nodeaddress_1ga9e9f56aa38e82b4edcef7eb81e9f5bd2" prot="public" static="no">
+        <type>struct _DPS_NodeAddress</type>
+        <definition>typedef struct _DPS_NodeAddress DPS_NodeAddress</definition>
+        <argsstring></argsstring>
+        <name>DPS_NodeAddress</name>
+        <briefdescription>
+<para>Opaque type for a remote node address. </para>        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="83" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="54" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="group__nodeaddress_1gace91591af9bf2a99bad07deda1b9176c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void DPS_CopyAddress</definition>
+        <argsstring>(DPS_NodeAddress *dest, const DPS_NodeAddress *src)</argsstring>
+        <name>DPS_CopyAddress</name>
+        <param>
+          <type><ref refid="group__nodeaddress_1ga9e9f56aa38e82b4edcef7eb81e9f5bd2" kindref="member">DPS_NodeAddress</ref> *</type>
+          <declname>dest</declname>
+        </param>
+        <param>
+          <type>const <ref refid="group__nodeaddress_1ga9e9f56aa38e82b4edcef7eb81e9f5bd2" kindref="member">DPS_NodeAddress</ref> *</type>
+          <declname>src</declname>
+        </param>
+        <briefdescription>
+<para>Copy a node address. </para>        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>dest</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The address to copy to. </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>src</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The address to copy from. </para></parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="88" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="group__nodeaddress_1ga6bed18a4b0ad533ec88c7a0d376de818" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="group__nodeaddress_1ga9e9f56aa38e82b4edcef7eb81e9f5bd2" kindref="member">DPS_NodeAddress</ref> *</type>
+        <definition>DPS_NodeAddress* DPS_CreateAddress</definition>
+        <argsstring>()</argsstring>
+        <name>DPS_CreateAddress</name>
+        <briefdescription>
+<para>Creates a node address. </para>        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>The created address, or NULL if creation failed </para></simplesect>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="70" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="group__nodeaddress_1ga1f373831e8009ff5959ccb02b8c3fb14" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void DPS_DestroyAddress</definition>
+        <argsstring>(DPS_NodeAddress *addr)</argsstring>
+        <name>DPS_DestroyAddress</name>
+        <param>
+          <type><ref refid="group__nodeaddress_1ga9e9f56aa38e82b4edcef7eb81e9f5bd2" kindref="member">DPS_NodeAddress</ref> *</type>
+          <declname>addr</declname>
+        </param>
+        <briefdescription>
+<para>Frees resources associated with an address. </para>        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>addr</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>A previously created address. </para></parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="95" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="group__nodeaddress_1gafc7b21048f92370ca29325d6245b576d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>const char *</type>
+        <definition>const char* DPS_NodeAddrToString</definition>
+        <argsstring>(const DPS_NodeAddress *addr)</argsstring>
+        <name>DPS_NodeAddrToString</name>
+        <param>
+          <type>const <ref refid="group__nodeaddress_1ga9e9f56aa38e82b4edcef7eb81e9f5bd2" kindref="member">DPS_NodeAddress</ref> *</type>
+          <declname>addr</declname>
+        </param>
+        <briefdescription>
+<para>Get text representation of an address. </para>        </briefdescription>
+        <detaileddescription>
+<para>This function uses a static string buffer so is not thread safe.</para><para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>addr</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>to get the text for</para></parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A text string for the address </para></simplesect>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="63" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="group__nodeaddress_1ga6231c243c483bd2d282f7df734a98946" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="group__nodeaddress_1ga9e9f56aa38e82b4edcef7eb81e9f5bd2" kindref="member">DPS_NodeAddress</ref> *</type>
+        <definition>DPS_NodeAddress* DPS_SetAddress</definition>
+        <argsstring>(DPS_NodeAddress *addr, const struct sockaddr *sa)</argsstring>
+        <name>DPS_SetAddress</name>
+        <param>
+          <type><ref refid="group__nodeaddress_1ga9e9f56aa38e82b4edcef7eb81e9f5bd2" kindref="member">DPS_NodeAddress</ref> *</type>
+          <declname>addr</declname>
+        </param>
+        <param>
+          <type>const struct sockaddr *</type>
+          <declname>sa</declname>
+        </param>
+        <briefdescription>
+<para>Set a node address. </para>        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>addr</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The address to set </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>sa</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The value to set</para></parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>The addr passed in. </para></simplesect>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="80" column="1"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+<para>Remote node addresses. </para>    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,58 @@
+\hypertarget{uuid_8h_source}{}\section{uuid.\+h}
+\label{uuid_8h_source}\index{uuid.\+h@{uuid.\+h}}
+
+\begin{DoxyCode}
+00001 
+00006 \textcolor{comment}{/*}
+00007 \textcolor{comment}{ *******************************************************************}
+00008 \textcolor{comment}{ *}
+00009 \textcolor{comment}{ * Copyright 2016 Intel Corporation All rights reserved.}
+00010 \textcolor{comment}{ *}
+00011 \textcolor{comment}{ *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=}
+00012 \textcolor{comment}{ *}
+00013 \textcolor{comment}{ * Licensed under the Apache License, Version 2.0 (the "License");}
+00014 \textcolor{comment}{ * you may not use this file except in compliance with the License.}
+00015 \textcolor{comment}{ * You may obtain a copy of the License at}
+00016 \textcolor{comment}{ *}
+00017 \textcolor{comment}{ *      http://www.apache.org/licenses/LICENSE-2.0}
+00018 \textcolor{comment}{ *}
+00019 \textcolor{comment}{ * Unless required by applicable law or agreed to in writing, software}
+00020 \textcolor{comment}{ * distributed under the License is distributed on an "AS IS" BASIS,}
+00021 \textcolor{comment}{ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.}
+00022 \textcolor{comment}{ * See the License for the specific language governing permissions and}
+00023 \textcolor{comment}{ * limitations under the License.}
+00024 \textcolor{comment}{ *}
+00025 \textcolor{comment}{ *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=}
+00026 \textcolor{comment}{ */}
+00027 
+00028 \textcolor{preprocessor}{#ifndef \_DPS\_UUID\_H}
+00029 \textcolor{preprocessor}{#define \_DPS\_UUID\_H}
+00030 
+00031 \textcolor{preprocessor}{#include <stdint.h>}
+00032 \textcolor{preprocessor}{#include <\hyperlink{err_8h}{dps/err.h}>}
+00033 
+00034 \textcolor{preprocessor}{#ifdef \_\_cplusplus}
+00035 \textcolor{keyword}{extern} \textcolor{stringliteral}{"C"} \{
+00036 \textcolor{preprocessor}{#endif}
+00037 
+\Hypertarget{uuid_8h_source_l00047}\hyperlink{struct___d_p_s___u_u_i_d}{00047} \textcolor{keyword}{typedef} \textcolor{keyword}{struct }\hyperlink{struct___d_p_s___u_u_i_d}{\_DPS\_UUID} \{
+00049     \textcolor{keyword}{union }\{
+\Hypertarget{uuid_8h_source_l00050}\hyperlink{struct___d_p_s___u_u_i_d_a5f642859395d3916ea96804c6bf16880}{00050}         uint8\_t \hyperlink{struct___d_p_s___u_u_i_d_a5f642859395d3916ea96804c6bf16880}{val}[16]; 
+\Hypertarget{uuid_8h_source_l00051}\hyperlink{struct___d_p_s___u_u_i_d_aee3748c444033b543f494e8bf6d64645}{00051}         uint64\_t \hyperlink{struct___d_p_s___u_u_i_d_aee3748c444033b543f494e8bf6d64645}{val64}[2]; 
+00052     \};
+00053 \} \hyperlink{group__uuid_gaef1d03afcc6410602ade1d48f24c3997}{DPS\_UUID};
+00054 
+00060 \hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{DPS\_Status} \hyperlink{group__uuid_ga725c154c5fccf2a2c9a6c32353a63228}{DPS\_InitUUID}();
+00061 
+00067 \textcolor{keywordtype}{void} \hyperlink{group__uuid_ga28a9b3d0518c4327afe94d087d1d2322}{DPS\_GenerateUUID}(\hyperlink{struct___d_p_s___u_u_i_d}{DPS\_UUID}* uuid);
+00068 
+00078 \textcolor{keyword}{const} \textcolor{keywordtype}{char}* \hyperlink{group__uuid_ga9c51faa57ecb228ce7eda077a90b20ff}{DPS\_UUIDToString}(\textcolor{keyword}{const} \hyperlink{struct___d_p_s___u_u_i_d}{DPS\_UUID}* uuid);
+00079 
+00091 \textcolor{keywordtype}{int} \hyperlink{group__uuid_ga7819e63fac9457f892236b1b3f183713}{DPS\_UUIDCompare}(\textcolor{keyword}{const} \hyperlink{struct___d_p_s___u_u_i_d}{DPS\_UUID}* a, \textcolor{keyword}{const} \hyperlink{struct___d_p_s___u_u_i_d}{DPS\_UUID}* b);
+00092 
+00095 \textcolor{preprocessor}{#ifdef \_\_cplusplus}
+00096 \}
+00097 \textcolor{preprocessor}{#endif}
+00098 
+00099 \textcolor{preprocessor}{#endif}
+\end{DoxyCode}

@@ -1,0 +1,455 @@
+\hypertarget{group__publication}{}\section{Publication}
+\label{group__publication}\index{Publication@{Publication}}
+
+
+Publications.  
+
+
+\subsection*{Typedefs}
+\begin{DoxyCompactItemize}
+\item 
+typedef void($\ast$ \hyperlink{group__publication_gaf8615f0bcd3d95859cd7f2cdbf772e23}{D\+P\+S\+\_\+\+Acknowledgement\+Handler}) (\hyperlink{group__publication_ga0d439693474aa54e27f3d45a054696ac}{D\+P\+S\+\_\+\+Publication} $\ast$pub, uint8\+\_\+t $\ast$payload, size\+\_\+t len)
+\begin{DoxyCompactList}\small\item\em Function prototype for a publication acknowledgement handler called when an acknowledgement for a publication is received from a remote subscriber. \end{DoxyCompactList}\item 
+\mbox{\Hypertarget{group__publication_ga0d439693474aa54e27f3d45a054696ac}\label{group__publication_ga0d439693474aa54e27f3d45a054696ac}} 
+typedef struct \+\_\+\+D\+P\+S\+\_\+\+Publication \hyperlink{group__publication_ga0d439693474aa54e27f3d45a054696ac}{D\+P\+S\+\_\+\+Publication}
+\begin{DoxyCompactList}\small\item\em Opaque type for a publication. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\subsection*{Functions}
+\begin{DoxyCompactItemize}
+\item 
+const \hyperlink{group__keystore_ga4345e29dd2ad5d7fd88a1e988787bd72}{D\+P\+S\+\_\+\+Key\+Id} $\ast$ \hyperlink{group__publication_ga9190b8fa3bad848fb428acd6c0c2b210}{D\+P\+S\+\_\+\+Ack\+Get\+Sender\+Key\+Id} (const \hyperlink{group__publication_ga0d439693474aa54e27f3d45a054696ac}{D\+P\+S\+\_\+\+Publication} $\ast$pub)
+\begin{DoxyCompactList}\small\item\em Get the key identifier of an acknowledgement, only valid with the body of the D\+P\+S\+\_\+\+Acknowledgement\+Handler function. \end{DoxyCompactList}\item 
+\hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{D\+P\+S\+\_\+\+Status} \hyperlink{group__publication_ga308074429a566ffb8d04d55bae520b04}{D\+P\+S\+\_\+\+Ack\+Publication} (const \hyperlink{group__publication_ga0d439693474aa54e27f3d45a054696ac}{D\+P\+S\+\_\+\+Publication} $\ast$pub, const uint8\+\_\+t $\ast$ack\+Payload, size\+\_\+t len)
+\begin{DoxyCompactList}\small\item\em Acknowledge a publication. \end{DoxyCompactList}\item 
+\hyperlink{group__publication_ga0d439693474aa54e27f3d45a054696ac}{D\+P\+S\+\_\+\+Publication} $\ast$ \hyperlink{group__publication_ga41f31a8b63558e13d73d96de6086e5c4}{D\+P\+S\+\_\+\+Copy\+Publication} (const \hyperlink{group__publication_ga0d439693474aa54e27f3d45a054696ac}{D\+P\+S\+\_\+\+Publication} $\ast$pub)
+\begin{DoxyCompactList}\small\item\em Creates a partial copy of a publication that can be used to acknowledge the publication. \end{DoxyCompactList}\item 
+\hyperlink{group__publication_ga0d439693474aa54e27f3d45a054696ac}{D\+P\+S\+\_\+\+Publication} $\ast$ \hyperlink{group__publication_gaca070a96a6374e99a05d647c10737962}{D\+P\+S\+\_\+\+Create\+Publication} (\hyperlink{group__node_ga4dd612ab965134321bb57fdb065f121c}{D\+P\+S\+\_\+\+Node} $\ast$node)
+\begin{DoxyCompactList}\small\item\em Allocates storage for a publication. \end{DoxyCompactList}\item 
+\hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{D\+P\+S\+\_\+\+Status} \hyperlink{group__publication_ga17bb01c949aaaf3bafd53323c9effd5f}{D\+P\+S\+\_\+\+Destroy\+Publication} (\hyperlink{group__publication_ga0d439693474aa54e27f3d45a054696ac}{D\+P\+S\+\_\+\+Publication} $\ast$pub)
+\begin{DoxyCompactList}\small\item\em Delete a publication and frees any resources allocated. \end{DoxyCompactList}\item 
+void $\ast$ \hyperlink{group__publication_gaa8bee35089ac62289c9ba0e6a0568ca0}{D\+P\+S\+\_\+\+Get\+Publication\+Data} (const \hyperlink{group__publication_ga0d439693474aa54e27f3d45a054696ac}{D\+P\+S\+\_\+\+Publication} $\ast$pub)
+\begin{DoxyCompactList}\small\item\em Get application data pointer previously set by \hyperlink{group__publication_ga91c46ccb6df7f4bb99ca5d9d35cc5a4a}{D\+P\+S\+\_\+\+Set\+Publication\+Data()} \end{DoxyCompactList}\item 
+\hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{D\+P\+S\+\_\+\+Status} \hyperlink{group__publication_ga7b0709e28cb34d5a30b90e4142cd6c19}{D\+P\+S\+\_\+\+Init\+Publication} (\hyperlink{group__publication_ga0d439693474aa54e27f3d45a054696ac}{D\+P\+S\+\_\+\+Publication} $\ast$pub, const char $\ast$$\ast$topics, size\+\_\+t num\+Topics, int no\+Wild\+Card, const \hyperlink{group__keystore_ga4345e29dd2ad5d7fd88a1e988787bd72}{D\+P\+S\+\_\+\+Key\+Id} $\ast$key\+Id, \hyperlink{group__publication_gaf8615f0bcd3d95859cd7f2cdbf772e23}{D\+P\+S\+\_\+\+Acknowledgement\+Handler} handler)
+\begin{DoxyCompactList}\small\item\em Initializes a newly created publication with a set of topics. \end{DoxyCompactList}\item 
+\hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{D\+P\+S\+\_\+\+Status} \hyperlink{group__publication_ga91471ddf6f66798e255b28b3e913144b}{D\+P\+S\+\_\+\+Publication\+Add\+Sub\+Id} (\hyperlink{group__publication_ga0d439693474aa54e27f3d45a054696ac}{D\+P\+S\+\_\+\+Publication} $\ast$pub, const \hyperlink{group__keystore_ga4345e29dd2ad5d7fd88a1e988787bd72}{D\+P\+S\+\_\+\+Key\+Id} $\ast$key\+Id)
+\begin{DoxyCompactList}\small\item\em Adds a key identifier to use for encrypted publications. \end{DoxyCompactList}\item 
+\hyperlink{group__node_ga4dd612ab965134321bb57fdb065f121c}{D\+P\+S\+\_\+\+Node} $\ast$ \hyperlink{group__publication_gad2a37d52f12c93434b431eefd732f363}{D\+P\+S\+\_\+\+Publication\+Get\+Node} (const \hyperlink{group__publication_ga0d439693474aa54e27f3d45a054696ac}{D\+P\+S\+\_\+\+Publication} $\ast$pub)
+\begin{DoxyCompactList}\small\item\em Get the local node associated with a publication. \end{DoxyCompactList}\item 
+size\+\_\+t \hyperlink{group__publication_gaee6fc3b13484faacff0d26646778f777}{D\+P\+S\+\_\+\+Publication\+Get\+Num\+Topics} (const \hyperlink{group__publication_ga0d439693474aa54e27f3d45a054696ac}{D\+P\+S\+\_\+\+Publication} $\ast$pub)
+\begin{DoxyCompactList}\small\item\em Get the number of topics in a publication. \end{DoxyCompactList}\item 
+const \hyperlink{group__keystore_ga4345e29dd2ad5d7fd88a1e988787bd72}{D\+P\+S\+\_\+\+Key\+Id} $\ast$ \hyperlink{group__publication_ga1d7e81c2f0b19736a4f7a7195e5bd98d}{D\+P\+S\+\_\+\+Publication\+Get\+Sender\+Key\+Id} (const \hyperlink{group__publication_ga0d439693474aa54e27f3d45a054696ac}{D\+P\+S\+\_\+\+Publication} $\ast$pub)
+\begin{DoxyCompactList}\small\item\em Get the key identifier of a publication. \end{DoxyCompactList}\item 
+uint32\+\_\+t \hyperlink{group__publication_ga875b48217d861d4a9fa5471419d354e9}{D\+P\+S\+\_\+\+Publication\+Get\+Sequence\+Num} (const \hyperlink{group__publication_ga0d439693474aa54e27f3d45a054696ac}{D\+P\+S\+\_\+\+Publication} $\ast$pub)
+\begin{DoxyCompactList}\small\item\em Get the sequence number for a publication. \end{DoxyCompactList}\item 
+const char $\ast$ \hyperlink{group__publication_ga143a5c6fbe0bdf1725e841f122582432}{D\+P\+S\+\_\+\+Publication\+Get\+Topic} (const \hyperlink{group__publication_ga0d439693474aa54e27f3d45a054696ac}{D\+P\+S\+\_\+\+Publication} $\ast$pub, size\+\_\+t index)
+\begin{DoxyCompactList}\small\item\em Get a topic for a publication. \end{DoxyCompactList}\item 
+const \hyperlink{group__uuid_gaef1d03afcc6410602ade1d48f24c3997}{D\+P\+S\+\_\+\+U\+U\+ID} $\ast$ \hyperlink{group__publication_gaba1ad3ee807b75a1281d334be06a12f7}{D\+P\+S\+\_\+\+Publication\+Get\+U\+U\+ID} (const \hyperlink{group__publication_ga0d439693474aa54e27f3d45a054696ac}{D\+P\+S\+\_\+\+Publication} $\ast$pub)
+\begin{DoxyCompactList}\small\item\em Get the U\+U\+ID for a publication. \end{DoxyCompactList}\item 
+int \hyperlink{group__publication_ga516f7f314c7b95210751d00285758b9b}{D\+P\+S\+\_\+\+Publication\+Is\+Ack\+Requested} (const \hyperlink{group__publication_ga0d439693474aa54e27f3d45a054696ac}{D\+P\+S\+\_\+\+Publication} $\ast$pub)
+\begin{DoxyCompactList}\small\item\em Check if an acknowledgement was requested for a publication. \end{DoxyCompactList}\item 
+void \hyperlink{group__publication_gaa5225be2733d6ebfd01f9475e3fc06f5}{D\+P\+S\+\_\+\+Publication\+Remove\+Sub\+Id} (\hyperlink{group__publication_ga0d439693474aa54e27f3d45a054696ac}{D\+P\+S\+\_\+\+Publication} $\ast$pub, const \hyperlink{group__keystore_ga4345e29dd2ad5d7fd88a1e988787bd72}{D\+P\+S\+\_\+\+Key\+Id} $\ast$key\+Id)
+\begin{DoxyCompactList}\small\item\em Removes a key identifier to use for encrypted publications. \end{DoxyCompactList}\item 
+\hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{D\+P\+S\+\_\+\+Status} \hyperlink{group__publication_ga828a4efc5c235c48a81f6460cc3fe416}{D\+P\+S\+\_\+\+Publish} (\hyperlink{group__publication_ga0d439693474aa54e27f3d45a054696ac}{D\+P\+S\+\_\+\+Publication} $\ast$pub, const uint8\+\_\+t $\ast$pub\+Payload, size\+\_\+t len, int16\+\_\+t ttl)
+\begin{DoxyCompactList}\small\item\em Publish a set of topics along with an optional payload. \end{DoxyCompactList}\item 
+\hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{D\+P\+S\+\_\+\+Status} \hyperlink{group__publication_ga91c46ccb6df7f4bb99ca5d9d35cc5a4a}{D\+P\+S\+\_\+\+Set\+Publication\+Data} (\hyperlink{group__publication_ga0d439693474aa54e27f3d45a054696ac}{D\+P\+S\+\_\+\+Publication} $\ast$pub, void $\ast$data)
+\begin{DoxyCompactList}\small\item\em Store a pointer to application data in a publication. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Publications. 
+
+
+
+\subsection{Typedef Documentation}
+\mbox{\Hypertarget{group__publication_gaf8615f0bcd3d95859cd7f2cdbf772e23}\label{group__publication_gaf8615f0bcd3d95859cd7f2cdbf772e23}} 
+\index{Publication@{Publication}!D\+P\+S\+\_\+\+Acknowledgement\+Handler@{D\+P\+S\+\_\+\+Acknowledgement\+Handler}}
+\index{D\+P\+S\+\_\+\+Acknowledgement\+Handler@{D\+P\+S\+\_\+\+Acknowledgement\+Handler}!Publication@{Publication}}
+\subsubsection{\texorpdfstring{D\+P\+S\+\_\+\+Acknowledgement\+Handler}{DPS\_AcknowledgementHandler}}
+{\footnotesize\ttfamily typedef void($\ast$ D\+P\+S\+\_\+\+Acknowledgement\+Handler) (\hyperlink{group__publication_ga0d439693474aa54e27f3d45a054696ac}{D\+P\+S\+\_\+\+Publication} $\ast$pub, uint8\+\_\+t $\ast$payload, size\+\_\+t len)}
+
+
+
+Function prototype for a publication acknowledgement handler called when an acknowledgement for a publication is received from a remote subscriber. 
+
+The handler is called for each subscriber that generates an acknowledgement so may be called numerous times for same publication.
+
+
+\begin{DoxyParams}{Parameters}
+{\em pub} & Opaque handle for the publication that was received \\
+\hline
+{\em payload} & Payload accompanying the acknowledgement if any \\
+\hline
+{\em len} & Length of the payload \\
+\hline
+\end{DoxyParams}
+
+
+\subsection{Function Documentation}
+\mbox{\Hypertarget{group__publication_ga9190b8fa3bad848fb428acd6c0c2b210}\label{group__publication_ga9190b8fa3bad848fb428acd6c0c2b210}} 
+\index{Publication@{Publication}!D\+P\+S\+\_\+\+Ack\+Get\+Sender\+Key\+Id@{D\+P\+S\+\_\+\+Ack\+Get\+Sender\+Key\+Id}}
+\index{D\+P\+S\+\_\+\+Ack\+Get\+Sender\+Key\+Id@{D\+P\+S\+\_\+\+Ack\+Get\+Sender\+Key\+Id}!Publication@{Publication}}
+\subsubsection{\texorpdfstring{D\+P\+S\+\_\+\+Ack\+Get\+Sender\+Key\+Id()}{DPS\_AckGetSenderKeyId()}}
+{\footnotesize\ttfamily const \hyperlink{group__keystore_ga4345e29dd2ad5d7fd88a1e988787bd72}{D\+P\+S\+\_\+\+Key\+Id}$\ast$ D\+P\+S\+\_\+\+Ack\+Get\+Sender\+Key\+Id (\begin{DoxyParamCaption}\item[{const \hyperlink{group__publication_ga0d439693474aa54e27f3d45a054696ac}{D\+P\+S\+\_\+\+Publication} $\ast$}]{pub }\end{DoxyParamCaption})}
+
+
+
+Get the key identifier of an acknowledgement, only valid with the body of the D\+P\+S\+\_\+\+Acknowledgement\+Handler function. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em pub} & The pub parameter of D\+P\+S\+\_\+\+Acknowledgement\+Handler\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The key identifier of the subscriber, may be N\+U\+LL 
+\end{DoxyReturn}
+\mbox{\Hypertarget{group__publication_ga308074429a566ffb8d04d55bae520b04}\label{group__publication_ga308074429a566ffb8d04d55bae520b04}} 
+\index{Publication@{Publication}!D\+P\+S\+\_\+\+Ack\+Publication@{D\+P\+S\+\_\+\+Ack\+Publication}}
+\index{D\+P\+S\+\_\+\+Ack\+Publication@{D\+P\+S\+\_\+\+Ack\+Publication}!Publication@{Publication}}
+\subsubsection{\texorpdfstring{D\+P\+S\+\_\+\+Ack\+Publication()}{DPS\_AckPublication()}}
+{\footnotesize\ttfamily \hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{D\+P\+S\+\_\+\+Status} D\+P\+S\+\_\+\+Ack\+Publication (\begin{DoxyParamCaption}\item[{const \hyperlink{group__publication_ga0d439693474aa54e27f3d45a054696ac}{D\+P\+S\+\_\+\+Publication} $\ast$}]{pub,  }\item[{const uint8\+\_\+t $\ast$}]{ack\+Payload,  }\item[{size\+\_\+t}]{len }\end{DoxyParamCaption})}
+
+
+
+Acknowledge a publication. 
+
+A publication should be acknowledged as soon as possible after receipt, ideally from within the publication handler callback function. If the publication cannot be acknowledged immediately in the publication handler callback, call \hyperlink{group__publication_ga41f31a8b63558e13d73d96de6086e5c4}{D\+P\+S\+\_\+\+Copy\+Publication()} to make a partial copy of the publication that can be passed to this function at a later time.
+
+
+\begin{DoxyParams}{Parameters}
+{\em pub} & The publication to acknowledge \\
+\hline
+{\em ack\+Payload} & Optional payload to accompany the acknowledgement \\
+\hline
+{\em len} & The length of the payload\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+D\+P\+S\+\_\+\+OK if acknowledge is successful, an error otherwise 
+\end{DoxyReturn}
+\mbox{\Hypertarget{group__publication_ga41f31a8b63558e13d73d96de6086e5c4}\label{group__publication_ga41f31a8b63558e13d73d96de6086e5c4}} 
+\index{Publication@{Publication}!D\+P\+S\+\_\+\+Copy\+Publication@{D\+P\+S\+\_\+\+Copy\+Publication}}
+\index{D\+P\+S\+\_\+\+Copy\+Publication@{D\+P\+S\+\_\+\+Copy\+Publication}!Publication@{Publication}}
+\subsubsection{\texorpdfstring{D\+P\+S\+\_\+\+Copy\+Publication()}{DPS\_CopyPublication()}}
+{\footnotesize\ttfamily \hyperlink{group__publication_ga0d439693474aa54e27f3d45a054696ac}{D\+P\+S\+\_\+\+Publication}$\ast$ D\+P\+S\+\_\+\+Copy\+Publication (\begin{DoxyParamCaption}\item[{const \hyperlink{group__publication_ga0d439693474aa54e27f3d45a054696ac}{D\+P\+S\+\_\+\+Publication} $\ast$}]{pub }\end{DoxyParamCaption})}
+
+
+
+Creates a partial copy of a publication that can be used to acknowledge the publication. 
+
+The copy is not useful for anything other than in a call to \hyperlink{group__publication_ga308074429a566ffb8d04d55bae520b04}{D\+P\+S\+\_\+\+Ack\+Publication()} and should be freed by calling \hyperlink{group__publication_ga17bb01c949aaaf3bafd53323c9effd5f}{D\+P\+S\+\_\+\+Destroy\+Publication()} when no longer needed.
+
+The partial copy can be used with \hyperlink{group__publication_gaba1ad3ee807b75a1281d334be06a12f7}{D\+P\+S\+\_\+\+Publication\+Get\+U\+U\+I\+D()} and \hyperlink{group__publication_ga875b48217d861d4a9fa5471419d354e9}{D\+P\+S\+\_\+\+Publication\+Get\+Sequence\+Num()}
+
+
+\begin{DoxyParams}{Parameters}
+{\em pub} & The publication to copy\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+A partial copy of the publication or N\+U\+LL if the publication could not be copied. 
+\end{DoxyReturn}
+\mbox{\Hypertarget{group__publication_gaca070a96a6374e99a05d647c10737962}\label{group__publication_gaca070a96a6374e99a05d647c10737962}} 
+\index{Publication@{Publication}!D\+P\+S\+\_\+\+Create\+Publication@{D\+P\+S\+\_\+\+Create\+Publication}}
+\index{D\+P\+S\+\_\+\+Create\+Publication@{D\+P\+S\+\_\+\+Create\+Publication}!Publication@{Publication}}
+\subsubsection{\texorpdfstring{D\+P\+S\+\_\+\+Create\+Publication()}{DPS\_CreatePublication()}}
+{\footnotesize\ttfamily \hyperlink{group__publication_ga0d439693474aa54e27f3d45a054696ac}{D\+P\+S\+\_\+\+Publication}$\ast$ D\+P\+S\+\_\+\+Create\+Publication (\begin{DoxyParamCaption}\item[{\hyperlink{group__node_ga4dd612ab965134321bb57fdb065f121c}{D\+P\+S\+\_\+\+Node} $\ast$}]{node }\end{DoxyParamCaption})}
+
+
+
+Allocates storage for a publication. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em node} & The local node to use\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The newly created publication, or N\+U\+LL if creation failed 
+\end{DoxyReturn}
+\mbox{\Hypertarget{group__publication_ga17bb01c949aaaf3bafd53323c9effd5f}\label{group__publication_ga17bb01c949aaaf3bafd53323c9effd5f}} 
+\index{Publication@{Publication}!D\+P\+S\+\_\+\+Destroy\+Publication@{D\+P\+S\+\_\+\+Destroy\+Publication}}
+\index{D\+P\+S\+\_\+\+Destroy\+Publication@{D\+P\+S\+\_\+\+Destroy\+Publication}!Publication@{Publication}}
+\subsubsection{\texorpdfstring{D\+P\+S\+\_\+\+Destroy\+Publication()}{DPS\_DestroyPublication()}}
+{\footnotesize\ttfamily \hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{D\+P\+S\+\_\+\+Status} D\+P\+S\+\_\+\+Destroy\+Publication (\begin{DoxyParamCaption}\item[{\hyperlink{group__publication_ga0d439693474aa54e27f3d45a054696ac}{D\+P\+S\+\_\+\+Publication} $\ast$}]{pub }\end{DoxyParamCaption})}
+
+
+
+Delete a publication and frees any resources allocated. 
+
+This does not cancel retained publications that have an unexpired T\+TL. To expire a retained publication call \hyperlink{group__publication_ga828a4efc5c235c48a81f6460cc3fe416}{D\+P\+S\+\_\+\+Publish()} with a zero T\+TL.
+
+This function should only be called for publications created by \hyperlink{group__publication_gaca070a96a6374e99a05d647c10737962}{D\+P\+S\+\_\+\+Create\+Publication()} or \hyperlink{group__publication_ga41f31a8b63558e13d73d96de6086e5c4}{D\+P\+S\+\_\+\+Copy\+Publication()}.
+
+
+\begin{DoxyParams}{Parameters}
+{\em pub} & The publication to destroy\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+D\+P\+S\+\_\+\+OK if destroy is successful, an error otherwise 
+\end{DoxyReturn}
+\mbox{\Hypertarget{group__publication_gaa8bee35089ac62289c9ba0e6a0568ca0}\label{group__publication_gaa8bee35089ac62289c9ba0e6a0568ca0}} 
+\index{Publication@{Publication}!D\+P\+S\+\_\+\+Get\+Publication\+Data@{D\+P\+S\+\_\+\+Get\+Publication\+Data}}
+\index{D\+P\+S\+\_\+\+Get\+Publication\+Data@{D\+P\+S\+\_\+\+Get\+Publication\+Data}!Publication@{Publication}}
+\subsubsection{\texorpdfstring{D\+P\+S\+\_\+\+Get\+Publication\+Data()}{DPS\_GetPublicationData()}}
+{\footnotesize\ttfamily void$\ast$ D\+P\+S\+\_\+\+Get\+Publication\+Data (\begin{DoxyParamCaption}\item[{const \hyperlink{group__publication_ga0d439693474aa54e27f3d45a054696ac}{D\+P\+S\+\_\+\+Publication} $\ast$}]{pub }\end{DoxyParamCaption})}
+
+
+
+Get application data pointer previously set by \hyperlink{group__publication_ga91c46ccb6df7f4bb99ca5d9d35cc5a4a}{D\+P\+S\+\_\+\+Set\+Publication\+Data()} 
+
+
+\begin{DoxyParams}{Parameters}
+{\em pub} & The publication\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+A pointer to the data or N\+U\+LL if the publication is invalid 
+\end{DoxyReturn}
+\mbox{\Hypertarget{group__publication_ga7b0709e28cb34d5a30b90e4142cd6c19}\label{group__publication_ga7b0709e28cb34d5a30b90e4142cd6c19}} 
+\index{Publication@{Publication}!D\+P\+S\+\_\+\+Init\+Publication@{D\+P\+S\+\_\+\+Init\+Publication}}
+\index{D\+P\+S\+\_\+\+Init\+Publication@{D\+P\+S\+\_\+\+Init\+Publication}!Publication@{Publication}}
+\subsubsection{\texorpdfstring{D\+P\+S\+\_\+\+Init\+Publication()}{DPS\_InitPublication()}}
+{\footnotesize\ttfamily \hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{D\+P\+S\+\_\+\+Status} D\+P\+S\+\_\+\+Init\+Publication (\begin{DoxyParamCaption}\item[{\hyperlink{group__publication_ga0d439693474aa54e27f3d45a054696ac}{D\+P\+S\+\_\+\+Publication} $\ast$}]{pub,  }\item[{const char $\ast$$\ast$}]{topics,  }\item[{size\+\_\+t}]{num\+Topics,  }\item[{int}]{no\+Wild\+Card,  }\item[{const \hyperlink{group__keystore_ga4345e29dd2ad5d7fd88a1e988787bd72}{D\+P\+S\+\_\+\+Key\+Id} $\ast$}]{key\+Id,  }\item[{\hyperlink{group__publication_gaf8615f0bcd3d95859cd7f2cdbf772e23}{D\+P\+S\+\_\+\+Acknowledgement\+Handler}}]{handler }\end{DoxyParamCaption})}
+
+
+
+Initializes a newly created publication with a set of topics. 
+
+Each publication has a U\+U\+ID and a sequence number. The sequence number is incremented each time the publication is published. This allows subscriber to determine that publications received form a series. The acknowledgement handler is optional, if present the publication is marked as requesting acknowledgement and that information is provided to the subscribers.
+
+Call the accessor function \hyperlink{group__publication_gaba1ad3ee807b75a1281d334be06a12f7}{D\+P\+S\+\_\+\+Publication\+Get\+U\+U\+I\+D()} to get the U\+U\+ID for this publication.
+
+
+\begin{DoxyParams}{Parameters}
+{\em pub} & The the publication to initialize \\
+\hline
+{\em topics} & The topic strings to publish \\
+\hline
+{\em num\+Topics} & The number of topic strings to publish -\/ must be $>$= 1 \\
+\hline
+{\em no\+Wild\+Card} & If T\+R\+UE the publication will not match wildcard subscriptions \\
+\hline
+{\em key\+Id} & Optional key identifier to use for encrypted publications \\
+\hline
+{\em handler} & Optional handler for receiving acknowledgements\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+D\+P\+S\+\_\+\+OK if initialization is successful, an error otherwise 
+\end{DoxyReturn}
+\mbox{\Hypertarget{group__publication_ga91471ddf6f66798e255b28b3e913144b}\label{group__publication_ga91471ddf6f66798e255b28b3e913144b}} 
+\index{Publication@{Publication}!D\+P\+S\+\_\+\+Publication\+Add\+Sub\+Id@{D\+P\+S\+\_\+\+Publication\+Add\+Sub\+Id}}
+\index{D\+P\+S\+\_\+\+Publication\+Add\+Sub\+Id@{D\+P\+S\+\_\+\+Publication\+Add\+Sub\+Id}!Publication@{Publication}}
+\subsubsection{\texorpdfstring{D\+P\+S\+\_\+\+Publication\+Add\+Sub\+Id()}{DPS\_PublicationAddSubId()}}
+{\footnotesize\ttfamily \hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{D\+P\+S\+\_\+\+Status} D\+P\+S\+\_\+\+Publication\+Add\+Sub\+Id (\begin{DoxyParamCaption}\item[{\hyperlink{group__publication_ga0d439693474aa54e27f3d45a054696ac}{D\+P\+S\+\_\+\+Publication} $\ast$}]{pub,  }\item[{const \hyperlink{group__keystore_ga4345e29dd2ad5d7fd88a1e988787bd72}{D\+P\+S\+\_\+\+Key\+Id} $\ast$}]{key\+Id }\end{DoxyParamCaption})}
+
+
+
+Adds a key identifier to use for encrypted publications. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em pub} & The the publication to initialize \\
+\hline
+{\em key\+Id} & Key identifier to use for encrypted publications\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+D\+P\+S\+\_\+\+OK if addition is successful, an error otherwise 
+\end{DoxyReturn}
+\mbox{\Hypertarget{group__publication_gad2a37d52f12c93434b431eefd732f363}\label{group__publication_gad2a37d52f12c93434b431eefd732f363}} 
+\index{Publication@{Publication}!D\+P\+S\+\_\+\+Publication\+Get\+Node@{D\+P\+S\+\_\+\+Publication\+Get\+Node}}
+\index{D\+P\+S\+\_\+\+Publication\+Get\+Node@{D\+P\+S\+\_\+\+Publication\+Get\+Node}!Publication@{Publication}}
+\subsubsection{\texorpdfstring{D\+P\+S\+\_\+\+Publication\+Get\+Node()}{DPS\_PublicationGetNode()}}
+{\footnotesize\ttfamily \hyperlink{group__node_ga4dd612ab965134321bb57fdb065f121c}{D\+P\+S\+\_\+\+Node}$\ast$ D\+P\+S\+\_\+\+Publication\+Get\+Node (\begin{DoxyParamCaption}\item[{const \hyperlink{group__publication_ga0d439693474aa54e27f3d45a054696ac}{D\+P\+S\+\_\+\+Publication} $\ast$}]{pub }\end{DoxyParamCaption})}
+
+
+
+Get the local node associated with a publication. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em pub} & The publication\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The node or N\+U\+LL if the publication is invalid 
+\end{DoxyReturn}
+\mbox{\Hypertarget{group__publication_gaee6fc3b13484faacff0d26646778f777}\label{group__publication_gaee6fc3b13484faacff0d26646778f777}} 
+\index{Publication@{Publication}!D\+P\+S\+\_\+\+Publication\+Get\+Num\+Topics@{D\+P\+S\+\_\+\+Publication\+Get\+Num\+Topics}}
+\index{D\+P\+S\+\_\+\+Publication\+Get\+Num\+Topics@{D\+P\+S\+\_\+\+Publication\+Get\+Num\+Topics}!Publication@{Publication}}
+\subsubsection{\texorpdfstring{D\+P\+S\+\_\+\+Publication\+Get\+Num\+Topics()}{DPS\_PublicationGetNumTopics()}}
+{\footnotesize\ttfamily size\+\_\+t D\+P\+S\+\_\+\+Publication\+Get\+Num\+Topics (\begin{DoxyParamCaption}\item[{const \hyperlink{group__publication_ga0d439693474aa54e27f3d45a054696ac}{D\+P\+S\+\_\+\+Publication} $\ast$}]{pub }\end{DoxyParamCaption})}
+
+
+
+Get the number of topics in a publication. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em pub} & The publication\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The number of topics. 
+\end{DoxyReturn}
+\mbox{\Hypertarget{group__publication_ga1d7e81c2f0b19736a4f7a7195e5bd98d}\label{group__publication_ga1d7e81c2f0b19736a4f7a7195e5bd98d}} 
+\index{Publication@{Publication}!D\+P\+S\+\_\+\+Publication\+Get\+Sender\+Key\+Id@{D\+P\+S\+\_\+\+Publication\+Get\+Sender\+Key\+Id}}
+\index{D\+P\+S\+\_\+\+Publication\+Get\+Sender\+Key\+Id@{D\+P\+S\+\_\+\+Publication\+Get\+Sender\+Key\+Id}!Publication@{Publication}}
+\subsubsection{\texorpdfstring{D\+P\+S\+\_\+\+Publication\+Get\+Sender\+Key\+Id()}{DPS\_PublicationGetSenderKeyId()}}
+{\footnotesize\ttfamily const \hyperlink{group__keystore_ga4345e29dd2ad5d7fd88a1e988787bd72}{D\+P\+S\+\_\+\+Key\+Id}$\ast$ D\+P\+S\+\_\+\+Publication\+Get\+Sender\+Key\+Id (\begin{DoxyParamCaption}\item[{const \hyperlink{group__publication_ga0d439693474aa54e27f3d45a054696ac}{D\+P\+S\+\_\+\+Publication} $\ast$}]{pub }\end{DoxyParamCaption})}
+
+
+
+Get the key identifier of a publication. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em pub} & The publication\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The key identifier of the publisher, may be N\+U\+LL 
+\end{DoxyReturn}
+\mbox{\Hypertarget{group__publication_ga875b48217d861d4a9fa5471419d354e9}\label{group__publication_ga875b48217d861d4a9fa5471419d354e9}} 
+\index{Publication@{Publication}!D\+P\+S\+\_\+\+Publication\+Get\+Sequence\+Num@{D\+P\+S\+\_\+\+Publication\+Get\+Sequence\+Num}}
+\index{D\+P\+S\+\_\+\+Publication\+Get\+Sequence\+Num@{D\+P\+S\+\_\+\+Publication\+Get\+Sequence\+Num}!Publication@{Publication}}
+\subsubsection{\texorpdfstring{D\+P\+S\+\_\+\+Publication\+Get\+Sequence\+Num()}{DPS\_PublicationGetSequenceNum()}}
+{\footnotesize\ttfamily uint32\+\_\+t D\+P\+S\+\_\+\+Publication\+Get\+Sequence\+Num (\begin{DoxyParamCaption}\item[{const \hyperlink{group__publication_ga0d439693474aa54e27f3d45a054696ac}{D\+P\+S\+\_\+\+Publication} $\ast$}]{pub }\end{DoxyParamCaption})}
+
+
+
+Get the sequence number for a publication. 
+
+Serial numbers are always $>$ 0.
+
+
+\begin{DoxyParams}{Parameters}
+{\em pub} & The publication\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The sequence number or zero if the publication is invalid. 
+\end{DoxyReturn}
+\mbox{\Hypertarget{group__publication_ga143a5c6fbe0bdf1725e841f122582432}\label{group__publication_ga143a5c6fbe0bdf1725e841f122582432}} 
+\index{Publication@{Publication}!D\+P\+S\+\_\+\+Publication\+Get\+Topic@{D\+P\+S\+\_\+\+Publication\+Get\+Topic}}
+\index{D\+P\+S\+\_\+\+Publication\+Get\+Topic@{D\+P\+S\+\_\+\+Publication\+Get\+Topic}!Publication@{Publication}}
+\subsubsection{\texorpdfstring{D\+P\+S\+\_\+\+Publication\+Get\+Topic()}{DPS\_PublicationGetTopic()}}
+{\footnotesize\ttfamily const char$\ast$ D\+P\+S\+\_\+\+Publication\+Get\+Topic (\begin{DoxyParamCaption}\item[{const \hyperlink{group__publication_ga0d439693474aa54e27f3d45a054696ac}{D\+P\+S\+\_\+\+Publication} $\ast$}]{pub,  }\item[{size\+\_\+t}]{index }\end{DoxyParamCaption})}
+
+
+
+Get a topic for a publication. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em pub} & The publication \\
+\hline
+{\em index} & The topic index\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The topic string or N\+U\+LL if the publication or index is invalid. 
+\end{DoxyReturn}
+\mbox{\Hypertarget{group__publication_gaba1ad3ee807b75a1281d334be06a12f7}\label{group__publication_gaba1ad3ee807b75a1281d334be06a12f7}} 
+\index{Publication@{Publication}!D\+P\+S\+\_\+\+Publication\+Get\+U\+U\+ID@{D\+P\+S\+\_\+\+Publication\+Get\+U\+U\+ID}}
+\index{D\+P\+S\+\_\+\+Publication\+Get\+U\+U\+ID@{D\+P\+S\+\_\+\+Publication\+Get\+U\+U\+ID}!Publication@{Publication}}
+\subsubsection{\texorpdfstring{D\+P\+S\+\_\+\+Publication\+Get\+U\+U\+I\+D()}{DPS\_PublicationGetUUID()}}
+{\footnotesize\ttfamily const \hyperlink{group__uuid_gaef1d03afcc6410602ade1d48f24c3997}{D\+P\+S\+\_\+\+U\+U\+ID}$\ast$ D\+P\+S\+\_\+\+Publication\+Get\+U\+U\+ID (\begin{DoxyParamCaption}\item[{const \hyperlink{group__publication_ga0d439693474aa54e27f3d45a054696ac}{D\+P\+S\+\_\+\+Publication} $\ast$}]{pub }\end{DoxyParamCaption})}
+
+
+
+Get the U\+U\+ID for a publication. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em pub} & The publication\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The U\+U\+ID if publication is valid, or N\+U\+LL otherwise 
+\end{DoxyReturn}
+\mbox{\Hypertarget{group__publication_ga516f7f314c7b95210751d00285758b9b}\label{group__publication_ga516f7f314c7b95210751d00285758b9b}} 
+\index{Publication@{Publication}!D\+P\+S\+\_\+\+Publication\+Is\+Ack\+Requested@{D\+P\+S\+\_\+\+Publication\+Is\+Ack\+Requested}}
+\index{D\+P\+S\+\_\+\+Publication\+Is\+Ack\+Requested@{D\+P\+S\+\_\+\+Publication\+Is\+Ack\+Requested}!Publication@{Publication}}
+\subsubsection{\texorpdfstring{D\+P\+S\+\_\+\+Publication\+Is\+Ack\+Requested()}{DPS\_PublicationIsAckRequested()}}
+{\footnotesize\ttfamily int D\+P\+S\+\_\+\+Publication\+Is\+Ack\+Requested (\begin{DoxyParamCaption}\item[{const \hyperlink{group__publication_ga0d439693474aa54e27f3d45a054696ac}{D\+P\+S\+\_\+\+Publication} $\ast$}]{pub }\end{DoxyParamCaption})}
+
+
+
+Check if an acknowledgement was requested for a publication. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em pub} & The publication\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+1 if an acknowledgement was requested, otherwise 0. 
+\end{DoxyReturn}
+\mbox{\Hypertarget{group__publication_gaa5225be2733d6ebfd01f9475e3fc06f5}\label{group__publication_gaa5225be2733d6ebfd01f9475e3fc06f5}} 
+\index{Publication@{Publication}!D\+P\+S\+\_\+\+Publication\+Remove\+Sub\+Id@{D\+P\+S\+\_\+\+Publication\+Remove\+Sub\+Id}}
+\index{D\+P\+S\+\_\+\+Publication\+Remove\+Sub\+Id@{D\+P\+S\+\_\+\+Publication\+Remove\+Sub\+Id}!Publication@{Publication}}
+\subsubsection{\texorpdfstring{D\+P\+S\+\_\+\+Publication\+Remove\+Sub\+Id()}{DPS\_PublicationRemoveSubId()}}
+{\footnotesize\ttfamily void D\+P\+S\+\_\+\+Publication\+Remove\+Sub\+Id (\begin{DoxyParamCaption}\item[{\hyperlink{group__publication_ga0d439693474aa54e27f3d45a054696ac}{D\+P\+S\+\_\+\+Publication} $\ast$}]{pub,  }\item[{const \hyperlink{group__keystore_ga4345e29dd2ad5d7fd88a1e988787bd72}{D\+P\+S\+\_\+\+Key\+Id} $\ast$}]{key\+Id }\end{DoxyParamCaption})}
+
+
+
+Removes a key identifier to use for encrypted publications. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em pub} & The the publication to initialize \\
+\hline
+{\em key\+Id} & Key identifier to remove \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{group__publication_ga828a4efc5c235c48a81f6460cc3fe416}\label{group__publication_ga828a4efc5c235c48a81f6460cc3fe416}} 
+\index{Publication@{Publication}!D\+P\+S\+\_\+\+Publish@{D\+P\+S\+\_\+\+Publish}}
+\index{D\+P\+S\+\_\+\+Publish@{D\+P\+S\+\_\+\+Publish}!Publication@{Publication}}
+\subsubsection{\texorpdfstring{D\+P\+S\+\_\+\+Publish()}{DPS\_Publish()}}
+{\footnotesize\ttfamily \hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{D\+P\+S\+\_\+\+Status} D\+P\+S\+\_\+\+Publish (\begin{DoxyParamCaption}\item[{\hyperlink{group__publication_ga0d439693474aa54e27f3d45a054696ac}{D\+P\+S\+\_\+\+Publication} $\ast$}]{pub,  }\item[{const uint8\+\_\+t $\ast$}]{pub\+Payload,  }\item[{size\+\_\+t}]{len,  }\item[{int16\+\_\+t}]{ttl }\end{DoxyParamCaption})}
+
+
+
+Publish a set of topics along with an optional payload. 
+
+The topics will be published immediately to matching subscribers and then re-\/published whenever a new matching subscription is received.
+
+Call the accessor function \hyperlink{group__publication_gaba1ad3ee807b75a1281d334be06a12f7}{D\+P\+S\+\_\+\+Publication\+Get\+U\+U\+I\+D()} to get the U\+U\+ID for this publication. Call the accessor function \hyperlink{group__publication_ga875b48217d861d4a9fa5471419d354e9}{D\+P\+S\+\_\+\+Publication\+Get\+Sequence\+Num()} to get the current sequence number for this publication. The sequence number is incremented each time \hyperlink{group__publication_ga828a4efc5c235c48a81f6460cc3fe416}{D\+P\+S\+\_\+\+Publish()} is called for the same publication.
+
+
+\begin{DoxyParams}{Parameters}
+{\em pub} & The publication to send \\
+\hline
+{\em pub\+Payload} & Optional payload \\
+\hline
+{\em len} & Length of the payload \\
+\hline
+{\em ttl} & Time to live in seconds -\/ maximum T\+TL is about 9 hours\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+D\+P\+S\+\_\+\+OK if the topics were successfully published 
+\end{DoxyReturn}
+\mbox{\Hypertarget{group__publication_ga91c46ccb6df7f4bb99ca5d9d35cc5a4a}\label{group__publication_ga91c46ccb6df7f4bb99ca5d9d35cc5a4a}} 
+\index{Publication@{Publication}!D\+P\+S\+\_\+\+Set\+Publication\+Data@{D\+P\+S\+\_\+\+Set\+Publication\+Data}}
+\index{D\+P\+S\+\_\+\+Set\+Publication\+Data@{D\+P\+S\+\_\+\+Set\+Publication\+Data}!Publication@{Publication}}
+\subsubsection{\texorpdfstring{D\+P\+S\+\_\+\+Set\+Publication\+Data()}{DPS\_SetPublicationData()}}
+{\footnotesize\ttfamily \hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{D\+P\+S\+\_\+\+Status} D\+P\+S\+\_\+\+Set\+Publication\+Data (\begin{DoxyParamCaption}\item[{\hyperlink{group__publication_ga0d439693474aa54e27f3d45a054696ac}{D\+P\+S\+\_\+\+Publication} $\ast$}]{pub,  }\item[{void $\ast$}]{data }\end{DoxyParamCaption})}
+
+
+
+Store a pointer to application data in a publication. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em pub} & The publication \\
+\hline
+{\em data} & The data pointer to store\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+D\+P\+S\+\_\+\+OK or an error 
+\end{DoxyReturn}

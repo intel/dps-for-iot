@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=9"/>
 <meta name="generator" content="Doxygen 1.8.13"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Distributed Publish Subscribe for IoT: event.h File Reference</title>
+<title>Distributed Publish &amp; Subscribe for IoT: event.h File Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -28,7 +28,7 @@
  <tbody>
  <tr style="height: 56px;">
   <td id="projectalign" style="padding-left: 0.5em;">
-   <div id="projectname">Distributed Publish Subscribe for IoT
+   <div id="projectname">Distributed Publish &amp; Subscribe for IoT
    </div>
   </td>
  </tr>
@@ -87,12 +87,16 @@ $(document).ready(function(){initNavTree('event_8h.html','');});
 </div><!--header-->
 <div class="contents">
 
+<p>Signal and wait on application-created events.  
+<a href="#details">More...</a></p>
+
 <p><a href="event_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="typedef-members"></a>
 Typedefs</h2></td></tr>
-<tr class="memitem:ga97617da1bac0e76646713b8665dfdd85"><td class="memItemLeft" align="right" valign="top">typedef struct _DPS_Event&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__event.html#ga97617da1bac0e76646713b8665dfdd85">DPS_Event</a></td></tr>
-<tr class="memdesc:ga97617da1bac0e76646713b8665dfdd85"><td class="mdescLeft">&#160;</td><td class="mdescRight">Opaque type for an event.  <a href="group__event.html#ga97617da1bac0e76646713b8665dfdd85">More...</a><br /></td></tr>
+<tr class="memitem:ga97617da1bac0e76646713b8665dfdd85"><td class="memItemLeft" align="right" valign="top">
+typedef struct _DPS_Event&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__event.html#ga97617da1bac0e76646713b8665dfdd85">DPS_Event</a></td></tr>
+<tr class="memdesc:ga97617da1bac0e76646713b8665dfdd85"><td class="mdescLeft">&#160;</td><td class="mdescRight">Opaque type for an event. <br /></td></tr>
 <tr class="separator:ga97617da1bac0e76646713b8665dfdd85"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
@@ -104,10 +108,10 @@ Functions</h2></td></tr>
 <tr class="memdesc:ga7539f700336357cd320d6b40eba59c63"><td class="mdescLeft">&#160;</td><td class="mdescRight">Destroy an event and free resources.  <a href="group__event.html#ga7539f700336357cd320d6b40eba59c63">More...</a><br /></td></tr>
 <tr class="separator:ga7539f700336357cd320d6b40eba59c63"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gaba8fce0d0896df9b6f294112a251e39f"><td class="memItemLeft" align="right" valign="top">void *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__event.html#gaba8fce0d0896df9b6f294112a251e39f">DPS_GetEventData</a> (const <a class="el" href="group__event.html#ga97617da1bac0e76646713b8665dfdd85">DPS_Event</a> *event)</td></tr>
-<tr class="memdesc:gaba8fce0d0896df9b6f294112a251e39f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the event application data pointer.  <a href="group__event.html#gaba8fce0d0896df9b6f294112a251e39f">More...</a><br /></td></tr>
+<tr class="memdesc:gaba8fce0d0896df9b6f294112a251e39f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the event application data.  <a href="group__event.html#gaba8fce0d0896df9b6f294112a251e39f">More...</a><br /></td></tr>
 <tr class="separator:gaba8fce0d0896df9b6f294112a251e39f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga23a814c5aaebf5bdddebac0ef5d295ce"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__event.html#ga23a814c5aaebf5bdddebac0ef5d295ce">DPS_SetEventData</a> (<a class="el" href="group__event.html#ga97617da1bac0e76646713b8665dfdd85">DPS_Event</a> *event, void *data)</td></tr>
-<tr class="memdesc:ga23a814c5aaebf5bdddebac0ef5d295ce"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the event application data pointer.  <a href="group__event.html#ga23a814c5aaebf5bdddebac0ef5d295ce">More...</a><br /></td></tr>
+<tr class="memdesc:ga23a814c5aaebf5bdddebac0ef5d295ce"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the event application data.  <a href="group__event.html#ga23a814c5aaebf5bdddebac0ef5d295ce">More...</a><br /></td></tr>
 <tr class="separator:ga23a814c5aaebf5bdddebac0ef5d295ce"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gad0f8a3b372f972bfaa97e29fa01b5c82"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__event.html#gad0f8a3b372f972bfaa97e29fa01b5c82">DPS_SignalEvent</a> (<a class="el" href="group__event.html#ga97617da1bac0e76646713b8665dfdd85">DPS_Event</a> *event, <a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a> status)</td></tr>
 <tr class="memdesc:gad0f8a3b372f972bfaa97e29fa01b5c82"><td class="mdescLeft">&#160;</td><td class="mdescRight">Signal an event.  <a href="group__event.html#gad0f8a3b372f972bfaa97e29fa01b5c82">More...</a><br /></td></tr>
@@ -119,11 +123,13 @@ Functions</h2></td></tr>
 <tr class="memdesc:gab2f3f1236cd100cd271c85191df650e8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Wait for an event to be signalled.  <a href="group__event.html#gab2f3f1236cd100cd271c85191df650e8">More...</a><br /></td></tr>
 <tr class="separator:gab2f3f1236cd100cd271c85191df650e8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
-</div><!-- contents -->
+<a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
+<div class="textblock"><p>Signal and wait on application-created events. </p>
+</div></div><!-- contents -->
 </div><!-- doc-content -->
 <div class="navpath" id="nav-path">
   <ul>
-    <li class="footer" style="float:left"><b>Distributed PubSub Manual</b></li> <li class="footer">Generated Tue Feb 20 2018 10:23:49</li>
+    <li class="footer" style="float:left"><b>Distributed Publish & Subscribe for IoT</b></li> <li class="footer">Generated Wed Mar 7 2018 13:26:16</li>
   </ul>
 </div>
 </body>

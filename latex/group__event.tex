@@ -1,0 +1,156 @@
+\hypertarget{group__event}{}\section{Event}
+\label{group__event}\index{Event@{Event}}
+
+
+Signal and wait on application-\/created events.  
+
+
+\subsection*{Typedefs}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{group__event_ga97617da1bac0e76646713b8665dfdd85}\label{group__event_ga97617da1bac0e76646713b8665dfdd85}} 
+typedef struct \+\_\+\+D\+P\+S\+\_\+\+Event \hyperlink{group__event_ga97617da1bac0e76646713b8665dfdd85}{D\+P\+S\+\_\+\+Event}
+\begin{DoxyCompactList}\small\item\em Opaque type for an event. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\subsection*{Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hyperlink{group__event_ga97617da1bac0e76646713b8665dfdd85}{D\+P\+S\+\_\+\+Event} $\ast$ \hyperlink{group__event_gac38abc1e32666d631a40049c90bc66d3}{D\+P\+S\+\_\+\+Create\+Event} ()
+\begin{DoxyCompactList}\small\item\em Create and initialize an event. \end{DoxyCompactList}\item 
+void \hyperlink{group__event_ga7539f700336357cd320d6b40eba59c63}{D\+P\+S\+\_\+\+Destroy\+Event} (\hyperlink{group__event_ga97617da1bac0e76646713b8665dfdd85}{D\+P\+S\+\_\+\+Event} $\ast$event)
+\begin{DoxyCompactList}\small\item\em Destroy an event and free resources. \end{DoxyCompactList}\item 
+void $\ast$ \hyperlink{group__event_gaba8fce0d0896df9b6f294112a251e39f}{D\+P\+S\+\_\+\+Get\+Event\+Data} (const \hyperlink{group__event_ga97617da1bac0e76646713b8665dfdd85}{D\+P\+S\+\_\+\+Event} $\ast$event)
+\begin{DoxyCompactList}\small\item\em Get the event application data. \end{DoxyCompactList}\item 
+void \hyperlink{group__event_ga23a814c5aaebf5bdddebac0ef5d295ce}{D\+P\+S\+\_\+\+Set\+Event\+Data} (\hyperlink{group__event_ga97617da1bac0e76646713b8665dfdd85}{D\+P\+S\+\_\+\+Event} $\ast$event, void $\ast$data)
+\begin{DoxyCompactList}\small\item\em Set the event application data. \end{DoxyCompactList}\item 
+void \hyperlink{group__event_gad0f8a3b372f972bfaa97e29fa01b5c82}{D\+P\+S\+\_\+\+Signal\+Event} (\hyperlink{group__event_ga97617da1bac0e76646713b8665dfdd85}{D\+P\+S\+\_\+\+Event} $\ast$event, \hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{D\+P\+S\+\_\+\+Status} status)
+\begin{DoxyCompactList}\small\item\em Signal an event. \end{DoxyCompactList}\item 
+\hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{D\+P\+S\+\_\+\+Status} \hyperlink{group__event_gacf62ac4adc9f8eaf088cdec6c273e930}{D\+P\+S\+\_\+\+Timed\+Wait\+For\+Event} (\hyperlink{group__event_ga97617da1bac0e76646713b8665dfdd85}{D\+P\+S\+\_\+\+Event} $\ast$event, uint16\+\_\+t timeout)
+\begin{DoxyCompactList}\small\item\em Wait for an event to be signalled with a timeout. \end{DoxyCompactList}\item 
+\hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{D\+P\+S\+\_\+\+Status} \hyperlink{group__event_gab2f3f1236cd100cd271c85191df650e8}{D\+P\+S\+\_\+\+Wait\+For\+Event} (\hyperlink{group__event_ga97617da1bac0e76646713b8665dfdd85}{D\+P\+S\+\_\+\+Event} $\ast$event)
+\begin{DoxyCompactList}\small\item\em Wait for an event to be signalled. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Signal and wait on application-\/created events. 
+
+
+
+\subsection{Function Documentation}
+\mbox{\Hypertarget{group__event_gac38abc1e32666d631a40049c90bc66d3}\label{group__event_gac38abc1e32666d631a40049c90bc66d3}} 
+\index{Event@{Event}!D\+P\+S\+\_\+\+Create\+Event@{D\+P\+S\+\_\+\+Create\+Event}}
+\index{D\+P\+S\+\_\+\+Create\+Event@{D\+P\+S\+\_\+\+Create\+Event}!Event@{Event}}
+\subsubsection{\texorpdfstring{D\+P\+S\+\_\+\+Create\+Event()}{DPS\_CreateEvent()}}
+{\footnotesize\ttfamily \hyperlink{group__event_ga97617da1bac0e76646713b8665dfdd85}{D\+P\+S\+\_\+\+Event}$\ast$ D\+P\+S\+\_\+\+Create\+Event (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})}
+
+
+
+Create and initialize an event. 
+
+\begin{DoxyReturn}{Returns}
+The created event, or N\+U\+LL if creation failed 
+\end{DoxyReturn}
+\mbox{\Hypertarget{group__event_ga7539f700336357cd320d6b40eba59c63}\label{group__event_ga7539f700336357cd320d6b40eba59c63}} 
+\index{Event@{Event}!D\+P\+S\+\_\+\+Destroy\+Event@{D\+P\+S\+\_\+\+Destroy\+Event}}
+\index{D\+P\+S\+\_\+\+Destroy\+Event@{D\+P\+S\+\_\+\+Destroy\+Event}!Event@{Event}}
+\subsubsection{\texorpdfstring{D\+P\+S\+\_\+\+Destroy\+Event()}{DPS\_DestroyEvent()}}
+{\footnotesize\ttfamily void D\+P\+S\+\_\+\+Destroy\+Event (\begin{DoxyParamCaption}\item[{\hyperlink{group__event_ga97617da1bac0e76646713b8665dfdd85}{D\+P\+S\+\_\+\+Event} $\ast$}]{event }\end{DoxyParamCaption})}
+
+
+
+Destroy an event and free resources. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em event} & The event to destroy \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{group__event_gaba8fce0d0896df9b6f294112a251e39f}\label{group__event_gaba8fce0d0896df9b6f294112a251e39f}} 
+\index{Event@{Event}!D\+P\+S\+\_\+\+Get\+Event\+Data@{D\+P\+S\+\_\+\+Get\+Event\+Data}}
+\index{D\+P\+S\+\_\+\+Get\+Event\+Data@{D\+P\+S\+\_\+\+Get\+Event\+Data}!Event@{Event}}
+\subsubsection{\texorpdfstring{D\+P\+S\+\_\+\+Get\+Event\+Data()}{DPS\_GetEventData()}}
+{\footnotesize\ttfamily void$\ast$ D\+P\+S\+\_\+\+Get\+Event\+Data (\begin{DoxyParamCaption}\item[{const \hyperlink{group__event_ga97617da1bac0e76646713b8665dfdd85}{D\+P\+S\+\_\+\+Event} $\ast$}]{event }\end{DoxyParamCaption})}
+
+
+
+Get the event application data. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em event} & The event to get the application data from\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The application data 
+\end{DoxyReturn}
+\mbox{\Hypertarget{group__event_ga23a814c5aaebf5bdddebac0ef5d295ce}\label{group__event_ga23a814c5aaebf5bdddebac0ef5d295ce}} 
+\index{Event@{Event}!D\+P\+S\+\_\+\+Set\+Event\+Data@{D\+P\+S\+\_\+\+Set\+Event\+Data}}
+\index{D\+P\+S\+\_\+\+Set\+Event\+Data@{D\+P\+S\+\_\+\+Set\+Event\+Data}!Event@{Event}}
+\subsubsection{\texorpdfstring{D\+P\+S\+\_\+\+Set\+Event\+Data()}{DPS\_SetEventData()}}
+{\footnotesize\ttfamily void D\+P\+S\+\_\+\+Set\+Event\+Data (\begin{DoxyParamCaption}\item[{\hyperlink{group__event_ga97617da1bac0e76646713b8665dfdd85}{D\+P\+S\+\_\+\+Event} $\ast$}]{event,  }\item[{void $\ast$}]{data }\end{DoxyParamCaption})}
+
+
+
+Set the event application data. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em event} & The event to set an application data on \\
+\hline
+{\em data} & The data to set \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{group__event_gad0f8a3b372f972bfaa97e29fa01b5c82}\label{group__event_gad0f8a3b372f972bfaa97e29fa01b5c82}} 
+\index{Event@{Event}!D\+P\+S\+\_\+\+Signal\+Event@{D\+P\+S\+\_\+\+Signal\+Event}}
+\index{D\+P\+S\+\_\+\+Signal\+Event@{D\+P\+S\+\_\+\+Signal\+Event}!Event@{Event}}
+\subsubsection{\texorpdfstring{D\+P\+S\+\_\+\+Signal\+Event()}{DPS\_SignalEvent()}}
+{\footnotesize\ttfamily void D\+P\+S\+\_\+\+Signal\+Event (\begin{DoxyParamCaption}\item[{\hyperlink{group__event_ga97617da1bac0e76646713b8665dfdd85}{D\+P\+S\+\_\+\+Event} $\ast$}]{event,  }\item[{\hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{D\+P\+S\+\_\+\+Status}}]{status }\end{DoxyParamCaption})}
+
+
+
+Signal an event. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em event} & Event to signal \\
+\hline
+{\em status} & A status code to pass to the event waiter \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{group__event_gacf62ac4adc9f8eaf088cdec6c273e930}\label{group__event_gacf62ac4adc9f8eaf088cdec6c273e930}} 
+\index{Event@{Event}!D\+P\+S\+\_\+\+Timed\+Wait\+For\+Event@{D\+P\+S\+\_\+\+Timed\+Wait\+For\+Event}}
+\index{D\+P\+S\+\_\+\+Timed\+Wait\+For\+Event@{D\+P\+S\+\_\+\+Timed\+Wait\+For\+Event}!Event@{Event}}
+\subsubsection{\texorpdfstring{D\+P\+S\+\_\+\+Timed\+Wait\+For\+Event()}{DPS\_TimedWaitForEvent()}}
+{\footnotesize\ttfamily \hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{D\+P\+S\+\_\+\+Status} D\+P\+S\+\_\+\+Timed\+Wait\+For\+Event (\begin{DoxyParamCaption}\item[{\hyperlink{group__event_ga97617da1bac0e76646713b8665dfdd85}{D\+P\+S\+\_\+\+Event} $\ast$}]{event,  }\item[{uint16\+\_\+t}]{timeout }\end{DoxyParamCaption})}
+
+
+
+Wait for an event to be signalled with a timeout. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em event} & Event to wait for \\
+\hline
+{\em timeout} & Timeout in milliseconds\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The status passed to \hyperlink{group__event_gad0f8a3b372f972bfaa97e29fa01b5c82}{D\+P\+S\+\_\+\+Signal\+Event()} or D\+P\+S\+\_\+\+E\+R\+R\+\_\+\+T\+I\+M\+E\+O\+UT if the call timed out. 
+\end{DoxyReturn}
+\mbox{\Hypertarget{group__event_gab2f3f1236cd100cd271c85191df650e8}\label{group__event_gab2f3f1236cd100cd271c85191df650e8}} 
+\index{Event@{Event}!D\+P\+S\+\_\+\+Wait\+For\+Event@{D\+P\+S\+\_\+\+Wait\+For\+Event}}
+\index{D\+P\+S\+\_\+\+Wait\+For\+Event@{D\+P\+S\+\_\+\+Wait\+For\+Event}!Event@{Event}}
+\subsubsection{\texorpdfstring{D\+P\+S\+\_\+\+Wait\+For\+Event()}{DPS\_WaitForEvent()}}
+{\footnotesize\ttfamily \hyperlink{group__status_ga30395a84d3cad9d4ec29848106415038}{D\+P\+S\+\_\+\+Status} D\+P\+S\+\_\+\+Wait\+For\+Event (\begin{DoxyParamCaption}\item[{\hyperlink{group__event_ga97617da1bac0e76646713b8665dfdd85}{D\+P\+S\+\_\+\+Event} $\ast$}]{event }\end{DoxyParamCaption})}
+
+
+
+Wait for an event to be signalled. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em event} & Event to wait for\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The status passed to \hyperlink{group__event_gad0f8a3b372f972bfaa97e29fa01b5c82}{D\+P\+S\+\_\+\+Signal\+Event()} 
+\end{DoxyReturn}

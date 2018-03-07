@@ -1,0 +1,684 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.13">
+  <compounddef id="group__publication" kind="group">
+    <compoundname>publication</compoundname>
+    <title>Publication</title>
+      <sectiondef kind="typedef">
+      <memberdef kind="typedef" id="group__publication_1gaf8615f0bcd3d95859cd7f2cdbf772e23" prot="public" static="no">
+        <type>void(*</type>
+        <definition>typedef void(* DPS_AcknowledgementHandler) (DPS_Publication *pub, uint8_t *payload, size_t len)</definition>
+        <argsstring>)(DPS_Publication *pub, uint8_t *payload, size_t len)</argsstring>
+        <name>DPS_AcknowledgementHandler</name>
+        <briefdescription>
+<para>Function prototype for a publication acknowledgement handler called when an acknowledgement for a publication is received from a remote subscriber. </para>        </briefdescription>
+        <detaileddescription>
+<para>The handler is called for each subscriber that generates an acknowledgement so may be called numerous times for same publication.</para><para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>pub</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Opaque handle for the publication that was received </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>payload</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Payload accompanying the acknowledgement if any </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>len</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Length of the payload </para></parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="752" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="752" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="group__publication_1ga0d439693474aa54e27f3d45a054696ac" prot="public" static="no">
+        <type>struct _DPS_Publication</type>
+        <definition>typedef struct _DPS_Publication DPS_Publication</definition>
+        <argsstring></argsstring>
+        <name>DPS_Publication</name>
+        <briefdescription>
+<para>Opaque type for a publication. </para>        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="622" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="635" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="group__publication_1ga9190b8fa3bad848fb428acd6c0c2b210" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>const <ref refid="group__keystore_1ga4345e29dd2ad5d7fd88a1e988787bd72" kindref="member">DPS_KeyId</ref> *</type>
+        <definition>const DPS_KeyId* DPS_AckGetSenderKeyId</definition>
+        <argsstring>(const DPS_Publication *pub)</argsstring>
+        <name>DPS_AckGetSenderKeyId</name>
+        <param>
+          <type>const <ref refid="group__publication_1ga0d439693474aa54e27f3d45a054696ac" kindref="member">DPS_Publication</ref> *</type>
+          <declname>pub</declname>
+        </param>
+        <briefdescription>
+<para>Get the key identifier of an acknowledgement, only valid with the body of the DPS_AcknowledgementHandler function. </para>        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>pub</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The pub parameter of DPS_AcknowledgementHandler</para></parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>The key identifier of the subscriber, may be NULL </para></simplesect>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="850" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="group__publication_1ga308074429a566ffb8d04d55bae520b04" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
+        <definition>DPS_Status DPS_AckPublication</definition>
+        <argsstring>(const DPS_Publication *pub, const uint8_t *ackPayload, size_t len)</argsstring>
+        <name>DPS_AckPublication</name>
+        <param>
+          <type>const <ref refid="group__publication_1ga0d439693474aa54e27f3d45a054696ac" kindref="member">DPS_Publication</ref> *</type>
+          <declname>pub</declname>
+        </param>
+        <param>
+          <type>const uint8_t *</type>
+          <declname>ackPayload</declname>
+        </param>
+        <param>
+          <type>size_t</type>
+          <declname>len</declname>
+        </param>
+        <briefdescription>
+<para>Acknowledge a publication. </para>        </briefdescription>
+        <detaileddescription>
+<para>A publication should be acknowledged as soon as possible after receipt, ideally from within the publication handler callback function. If the publication cannot be acknowledged immediately in the publication handler callback, call <ref refid="group__publication_1ga41f31a8b63558e13d73d96de6086e5c4" kindref="member">DPS_CopyPublication()</ref> to make a partial copy of the publication that can be passed to this function at a later time.</para><para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>pub</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The publication to acknowledge </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>ackPayload</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Optional payload to accompany the acknowledgement </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>len</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The length of the payload</para></parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>DPS_OK if acknowledge is successful, an error otherwise </para></simplesect>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="840" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="group__publication_1ga41f31a8b63558e13d73d96de6086e5c4" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="group__publication_1ga0d439693474aa54e27f3d45a054696ac" kindref="member">DPS_Publication</ref> *</type>
+        <definition>DPS_Publication* DPS_CopyPublication</definition>
+        <argsstring>(const DPS_Publication *pub)</argsstring>
+        <name>DPS_CopyPublication</name>
+        <param>
+          <type>const <ref refid="group__publication_1ga0d439693474aa54e27f3d45a054696ac" kindref="member">DPS_Publication</ref> *</type>
+          <declname>pub</declname>
+        </param>
+        <briefdescription>
+<para>Creates a partial copy of a publication that can be used to acknowledge the publication. </para>        </briefdescription>
+        <detaileddescription>
+<para>The copy is not useful for anything other than in a call to <ref refid="group__publication_1ga308074429a566ffb8d04d55bae520b04" kindref="member">DPS_AckPublication()</ref> and should be freed by calling <ref refid="group__publication_1ga17bb01c949aaaf3bafd53323c9effd5f" kindref="member">DPS_DestroyPublication()</ref> when no longer needed.</para><para>The partial copy can be used with <ref refid="group__publication_1gaba1ad3ee807b75a1281d334be06a12f7" kindref="member">DPS_PublicationGetUUID()</ref> and <ref refid="group__publication_1ga875b48217d861d4a9fa5471419d354e9" kindref="member">DPS_PublicationGetSequenceNum()</ref></para><para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>pub</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The publication to copy</para></parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A partial copy of the publication or NULL if the publication could not be copied. </para></simplesect>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="721" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="group__publication_1gaca070a96a6374e99a05d647c10737962" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="group__publication_1ga0d439693474aa54e27f3d45a054696ac" kindref="member">DPS_Publication</ref> *</type>
+        <definition>DPS_Publication* DPS_CreatePublication</definition>
+        <argsstring>(DPS_Node *node)</argsstring>
+        <name>DPS_CreatePublication</name>
+        <param>
+          <type><ref refid="group__node_1ga4dd612ab965134321bb57fdb065f121c" kindref="member">DPS_Node</ref> *</type>
+          <declname>node</declname>
+        </param>
+        <briefdescription>
+<para>Allocates storage for a publication. </para>        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>node</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The local node to use</para></parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>The newly created publication, or NULL if creation failed </para></simplesect>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="708" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="group__publication_1ga17bb01c949aaaf3bafd53323c9effd5f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
+        <definition>DPS_Status DPS_DestroyPublication</definition>
+        <argsstring>(DPS_Publication *pub)</argsstring>
+        <name>DPS_DestroyPublication</name>
+        <param>
+          <type><ref refid="group__publication_1ga0d439693474aa54e27f3d45a054696ac" kindref="member">DPS_Publication</ref> *</type>
+          <declname>pub</declname>
+        </param>
+        <briefdescription>
+<para>Delete a publication and frees any resources allocated. </para>        </briefdescription>
+        <detaileddescription>
+<para>This does not cancel retained publications that have an unexpired TTL. To expire a retained publication call <ref refid="group__publication_1ga828a4efc5c235c48a81f6460cc3fe416" kindref="member">DPS_Publish()</ref> with a zero TTL.</para><para>This function should only be called for publications created by <ref refid="group__publication_1gaca070a96a6374e99a05d647c10737962" kindref="member">DPS_CreatePublication()</ref> or <ref refid="group__publication_1ga41f31a8b63558e13d73d96de6086e5c4" kindref="member">DPS_CopyPublication()</ref>.</para><para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>pub</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The publication to destroy</para></parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>DPS_OK if destroy is successful, an error otherwise </para></simplesect>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="826" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="group__publication_1gaa8bee35089ac62289c9ba0e6a0568ca0" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void *</type>
+        <definition>void* DPS_GetPublicationData</definition>
+        <argsstring>(const DPS_Publication *pub)</argsstring>
+        <name>DPS_GetPublicationData</name>
+        <param>
+          <type>const <ref refid="group__publication_1ga0d439693474aa54e27f3d45a054696ac" kindref="member">DPS_Publication</ref> *</type>
+          <declname>pub</declname>
+        </param>
+        <briefdescription>
+<para>Get application data pointer previously set by <ref refid="group__publication_1ga91c46ccb6df7f4bb99ca5d9d35cc5a4a" kindref="member">DPS_SetPublicationData()</ref> </para>        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>pub</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The publication</para></parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A pointer to the data or NULL if the publication is invalid </para></simplesect>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="740" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="group__publication_1ga7b0709e28cb34d5a30b90e4142cd6c19" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
+        <definition>DPS_Status DPS_InitPublication</definition>
+        <argsstring>(DPS_Publication *pub, const char **topics, size_t numTopics, int noWildCard, const DPS_KeyId *keyId, DPS_AcknowledgementHandler handler)</argsstring>
+        <name>DPS_InitPublication</name>
+        <param>
+          <type><ref refid="group__publication_1ga0d439693474aa54e27f3d45a054696ac" kindref="member">DPS_Publication</ref> *</type>
+          <declname>pub</declname>
+        </param>
+        <param>
+          <type>const char **</type>
+          <declname>topics</declname>
+        </param>
+        <param>
+          <type>size_t</type>
+          <declname>numTopics</declname>
+        </param>
+        <param>
+          <type>int</type>
+          <declname>noWildCard</declname>
+        </param>
+        <param>
+          <type>const <ref refid="group__keystore_1ga4345e29dd2ad5d7fd88a1e988787bd72" kindref="member">DPS_KeyId</ref> *</type>
+          <declname>keyId</declname>
+        </param>
+        <param>
+          <type><ref refid="group__publication_1gaf8615f0bcd3d95859cd7f2cdbf772e23" kindref="member">DPS_AcknowledgementHandler</ref></type>
+          <declname>handler</declname>
+        </param>
+        <briefdescription>
+<para>Initializes a newly created publication with a set of topics. </para>        </briefdescription>
+        <detaileddescription>
+<para>Each publication has a UUID and a sequence number. The sequence number is incremented each time the publication is published. This allows subscriber to determine that publications received form a series. The acknowledgement handler is optional, if present the publication is marked as requesting acknowledgement and that information is provided to the subscribers.</para><para>Call the accessor function <ref refid="group__publication_1gaba1ad3ee807b75a1281d334be06a12f7" kindref="member">DPS_PublicationGetUUID()</ref> to get the UUID for this publication.</para><para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>pub</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The the publication to initialize </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>topics</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The topic strings to publish </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>numTopics</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The number of topic strings to publish - must be &gt;= 1 </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>noWildCard</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>If TRUE the publication will not match wildcard subscriptions </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>keyId</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Optional key identifier to use for encrypted publications </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>handler</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Optional handler for receiving acknowledgements</para></parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>DPS_OK if initialization is successful, an error otherwise </para></simplesect>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="772" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="group__publication_1ga91471ddf6f66798e255b28b3e913144b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
+        <definition>DPS_Status DPS_PublicationAddSubId</definition>
+        <argsstring>(DPS_Publication *pub, const DPS_KeyId *keyId)</argsstring>
+        <name>DPS_PublicationAddSubId</name>
+        <param>
+          <type><ref refid="group__publication_1ga0d439693474aa54e27f3d45a054696ac" kindref="member">DPS_Publication</ref> *</type>
+          <declname>pub</declname>
+        </param>
+        <param>
+          <type>const <ref refid="group__keystore_1ga4345e29dd2ad5d7fd88a1e988787bd72" kindref="member">DPS_KeyId</ref> *</type>
+          <declname>keyId</declname>
+        </param>
+        <briefdescription>
+<para>Adds a key identifier to use for encrypted publications. </para>        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>pub</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The the publication to initialize </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>keyId</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Key identifier to use for encrypted publications</para></parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>DPS_OK if addition is successful, an error otherwise </para></simplesect>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="787" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="group__publication_1gad2a37d52f12c93434b431eefd732f363" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="group__node_1ga4dd612ab965134321bb57fdb065f121c" kindref="member">DPS_Node</ref> *</type>
+        <definition>DPS_Node* DPS_PublicationGetNode</definition>
+        <argsstring>(const DPS_Publication *pub)</argsstring>
+        <name>DPS_PublicationGetNode</name>
+        <param>
+          <type>const <ref refid="group__publication_1ga0d439693474aa54e27f3d45a054696ac" kindref="member">DPS_Publication</ref> *</type>
+          <declname>pub</declname>
+        </param>
+        <briefdescription>
+<para>Get the local node associated with a publication. </para>        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>pub</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The publication</para></parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>The node or NULL if the publication is invalid </para></simplesect>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="699" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="group__publication_1gaee6fc3b13484faacff0d26646778f777" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>size_t</type>
+        <definition>size_t DPS_PublicationGetNumTopics</definition>
+        <argsstring>(const DPS_Publication *pub)</argsstring>
+        <name>DPS_PublicationGetNumTopics</name>
+        <param>
+          <type>const <ref refid="group__publication_1ga0d439693474aa54e27f3d45a054696ac" kindref="member">DPS_Publication</ref> *</type>
+          <declname>pub</declname>
+        </param>
+        <briefdescription>
+<para>Get the number of topics in a publication. </para>        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>pub</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The publication</para></parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>The number of topics. </para></simplesect>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="672" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="group__publication_1ga1d7e81c2f0b19736a4f7a7195e5bd98d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>const <ref refid="group__keystore_1ga4345e29dd2ad5d7fd88a1e988787bd72" kindref="member">DPS_KeyId</ref> *</type>
+        <definition>const DPS_KeyId* DPS_PublicationGetSenderKeyId</definition>
+        <argsstring>(const DPS_Publication *pub)</argsstring>
+        <name>DPS_PublicationGetSenderKeyId</name>
+        <param>
+          <type>const <ref refid="group__publication_1ga0d439693474aa54e27f3d45a054696ac" kindref="member">DPS_Publication</ref> *</type>
+          <declname>pub</declname>
+        </param>
+        <briefdescription>
+<para>Get the key identifier of a publication. </para>        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>pub</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The publication</para></parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>The key identifier of the publisher, may be NULL </para></simplesect>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="690" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="group__publication_1ga875b48217d861d4a9fa5471419d354e9" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>uint32_t</type>
+        <definition>uint32_t DPS_PublicationGetSequenceNum</definition>
+        <argsstring>(const DPS_Publication *pub)</argsstring>
+        <name>DPS_PublicationGetSequenceNum</name>
+        <param>
+          <type>const <ref refid="group__publication_1ga0d439693474aa54e27f3d45a054696ac" kindref="member">DPS_Publication</ref> *</type>
+          <declname>pub</declname>
+        </param>
+        <briefdescription>
+<para>Get the sequence number for a publication. </para>        </briefdescription>
+        <detaileddescription>
+<para>Serial numbers are always &gt; 0.</para><para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>pub</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The publication</para></parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>The sequence number or zero if the publication is invalid. </para></simplesect>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="653" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="group__publication_1ga143a5c6fbe0bdf1725e841f122582432" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>const char *</type>
+        <definition>const char* DPS_PublicationGetTopic</definition>
+        <argsstring>(const DPS_Publication *pub, size_t index)</argsstring>
+        <name>DPS_PublicationGetTopic</name>
+        <param>
+          <type>const <ref refid="group__publication_1ga0d439693474aa54e27f3d45a054696ac" kindref="member">DPS_Publication</ref> *</type>
+          <declname>pub</declname>
+        </param>
+        <param>
+          <type>size_t</type>
+          <declname>index</declname>
+        </param>
+        <briefdescription>
+<para>Get a topic for a publication. </para>        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>pub</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The publication </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>index</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The topic index</para></parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>The topic string or NULL if the publication or index is invalid. </para></simplesect>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="663" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="group__publication_1gaba1ad3ee807b75a1281d334be06a12f7" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>const <ref refid="group__uuid_1gaef1d03afcc6410602ade1d48f24c3997" kindref="member">DPS_UUID</ref> *</type>
+        <definition>const DPS_UUID* DPS_PublicationGetUUID</definition>
+        <argsstring>(const DPS_Publication *pub)</argsstring>
+        <name>DPS_PublicationGetUUID</name>
+        <param>
+          <type>const <ref refid="group__publication_1ga0d439693474aa54e27f3d45a054696ac" kindref="member">DPS_Publication</ref> *</type>
+          <declname>pub</declname>
+        </param>
+        <briefdescription>
+<para>Get the UUID for a publication. </para>        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>pub</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The publication</para></parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>The UUID if publication is valid, or NULL otherwise </para></simplesect>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="644" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="group__publication_1ga516f7f314c7b95210751d00285758b9b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>int</type>
+        <definition>int DPS_PublicationIsAckRequested</definition>
+        <argsstring>(const DPS_Publication *pub)</argsstring>
+        <name>DPS_PublicationIsAckRequested</name>
+        <param>
+          <type>const <ref refid="group__publication_1ga0d439693474aa54e27f3d45a054696ac" kindref="member">DPS_Publication</ref> *</type>
+          <declname>pub</declname>
+        </param>
+        <briefdescription>
+<para>Check if an acknowledgement was requested for a publication. </para>        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>pub</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The publication</para></parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>1 if an acknowledgement was requested, otherwise 0. </para></simplesect>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="681" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="group__publication_1gaa5225be2733d6ebfd01f9475e3fc06f5" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void DPS_PublicationRemoveSubId</definition>
+        <argsstring>(DPS_Publication *pub, const DPS_KeyId *keyId)</argsstring>
+        <name>DPS_PublicationRemoveSubId</name>
+        <param>
+          <type><ref refid="group__publication_1ga0d439693474aa54e27f3d45a054696ac" kindref="member">DPS_Publication</ref> *</type>
+          <declname>pub</declname>
+        </param>
+        <param>
+          <type>const <ref refid="group__keystore_1ga4345e29dd2ad5d7fd88a1e988787bd72" kindref="member">DPS_KeyId</ref> *</type>
+          <declname>keyId</declname>
+        </param>
+        <briefdescription>
+<para>Removes a key identifier to use for encrypted publications. </para>        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>pub</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The the publication to initialize </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>keyId</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Key identifier to remove </para></parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="795" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="group__publication_1ga828a4efc5c235c48a81f6460cc3fe416" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
+        <definition>DPS_Status DPS_Publish</definition>
+        <argsstring>(DPS_Publication *pub, const uint8_t *pubPayload, size_t len, int16_t ttl)</argsstring>
+        <name>DPS_Publish</name>
+        <param>
+          <type><ref refid="group__publication_1ga0d439693474aa54e27f3d45a054696ac" kindref="member">DPS_Publication</ref> *</type>
+          <declname>pub</declname>
+        </param>
+        <param>
+          <type>const uint8_t *</type>
+          <declname>pubPayload</declname>
+        </param>
+        <param>
+          <type>size_t</type>
+          <declname>len</declname>
+        </param>
+        <param>
+          <type>int16_t</type>
+          <declname>ttl</declname>
+        </param>
+        <briefdescription>
+<para>Publish a set of topics along with an optional payload. </para>        </briefdescription>
+        <detaileddescription>
+<para>The topics will be published immediately to matching subscribers and then re-published whenever a new matching subscription is received.</para><para>Call the accessor function <ref refid="group__publication_1gaba1ad3ee807b75a1281d334be06a12f7" kindref="member">DPS_PublicationGetUUID()</ref> to get the UUID for this publication. Call the accessor function <ref refid="group__publication_1ga875b48217d861d4a9fa5471419d354e9" kindref="member">DPS_PublicationGetSequenceNum()</ref> to get the current sequence number for this publication. The sequence number is incremented each time <ref refid="group__publication_1ga828a4efc5c235c48a81f6460cc3fe416" kindref="member">DPS_Publish()</ref> is called for the same publication.</para><para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>pub</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The publication to send </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>pubPayload</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Optional payload </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>len</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Length of the payload </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>ttl</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Time to live in seconds - maximum TTL is about 9 hours</para></parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>DPS_OK if the topics were successfully published </para></simplesect>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="813" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="group__publication_1ga91c46ccb6df7f4bb99ca5d9d35cc5a4a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
+        <definition>DPS_Status DPS_SetPublicationData</definition>
+        <argsstring>(DPS_Publication *pub, void *data)</argsstring>
+        <name>DPS_SetPublicationData</name>
+        <param>
+          <type><ref refid="group__publication_1ga0d439693474aa54e27f3d45a054696ac" kindref="member">DPS_Publication</ref> *</type>
+          <declname>pub</declname>
+        </param>
+        <param>
+          <type>void *</type>
+          <declname>data</declname>
+        </param>
+        <briefdescription>
+<para>Store a pointer to application data in a publication. </para>        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>pub</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The publication </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>data</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The data pointer to store</para></parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>DPS_OK or an error </para></simplesect>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="731" column="1"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+<para>Publications. </para>    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+  </compounddef>
+</doxygen>

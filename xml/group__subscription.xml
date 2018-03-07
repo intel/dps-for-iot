@@ -1,0 +1,333 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.13">
+  <compounddef id="group__subscription" kind="group">
+    <compoundname>subscription</compoundname>
+    <title>Subscription</title>
+      <sectiondef kind="typedef">
+      <memberdef kind="typedef" id="group__subscription_1gab95ef1762636ad505c940744b8dce83f" prot="public" static="no">
+        <type>void(*</type>
+        <definition>typedef void(* DPS_PublicationHandler) (DPS_Subscription *sub, const DPS_Publication *pub, uint8_t *payload, size_t len)</definition>
+        <argsstring>)(DPS_Subscription *sub, const DPS_Publication *pub, uint8_t *payload, size_t len)</argsstring>
+        <name>DPS_PublicationHandler</name>
+        <briefdescription>
+<para>Function prototype for a publication handler called when a publication is received that matches a subscription. </para>        </briefdescription>
+        <detaileddescription>
+<para>Note that there is a possibility of false-positive matches.</para><para>The publication handle is only valid within the body of this callback function. <ref refid="group__publication_1ga41f31a8b63558e13d73d96de6086e5c4" kindref="member">DPS_CopyPublication()</ref> will make a partial copy of the publication that can be used later for example to call <ref refid="group__publication_1ga308074429a566ffb8d04d55bae520b04" kindref="member">DPS_AckPublication()</ref>.</para><para>The accessor functions <ref refid="group__publication_1gaba1ad3ee807b75a1281d334be06a12f7" kindref="member">DPS_PublicationGetUUID()</ref> and <ref refid="group__publication_1ga875b48217d861d4a9fa5471419d354e9" kindref="member">DPS_PublicationGetSequenceNum()</ref> return information about the received publication.</para><para>The accessor functions <ref refid="group__subscription_1gab0ad2c6806f8f44f27c70fff915b7e9a" kindref="member">DPS_SubscriptionGetNumTopics()</ref> and <ref refid="group__subscription_1gaacc63deda2f2d97cf3f44ca84784b2f6" kindref="member">DPS_SubscriptionGetTopic()</ref> return information about the subscription that was matched.</para><para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>sub</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Opaque handle for the subscription that was matched </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>pub</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Opaque handle for the publication that was received </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>payload</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Payload from the publication if any </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>len</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Length of the payload </para></parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="943" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="943" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="group__subscription_1gadb927c4c1b7306867a75fc4288b54af7" prot="public" static="no">
+        <type>struct _DPS_Subscription</type>
+        <definition>typedef struct _DPS_Subscription DPS_Subscription</definition>
+        <argsstring></argsstring>
+        <name>DPS_Subscription</name>
+        <briefdescription>
+<para>Opaque type for a subscription. </para>        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="850" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="863" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="group__subscription_1ga4095bb00bd0ca7fa9614ebbc2c28199f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="group__subscription_1gadb927c4c1b7306867a75fc4288b54af7" kindref="member">DPS_Subscription</ref> *</type>
+        <definition>DPS_Subscription* DPS_CreateSubscription</definition>
+        <argsstring>(DPS_Node *node, const char **topics, size_t numTopics)</argsstring>
+        <name>DPS_CreateSubscription</name>
+        <param>
+          <type><ref refid="group__node_1ga4dd612ab965134321bb57fdb065f121c" kindref="member">DPS_Node</ref> *</type>
+          <declname>node</declname>
+        </param>
+        <param>
+          <type>const char **</type>
+          <declname>topics</declname>
+        </param>
+        <param>
+          <type>size_t</type>
+          <declname>numTopics</declname>
+        </param>
+        <briefdescription>
+<para>Allocate memory for a subscription and initialize topics. </para>        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>node</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The local node to use </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>topics</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The topic strings to match </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>numTopics</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The number of topic strings to match - must be &gt;= 1</para></parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>The newly created subscription or NULL if resources could not be allocated or the arguments were invalid </para></simplesect>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="894" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="group__subscription_1gaac78b5690aa31eec642b2a706faac510" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
+        <definition>DPS_Status DPS_DestroySubscription</definition>
+        <argsstring>(DPS_Subscription *sub)</argsstring>
+        <name>DPS_DestroySubscription</name>
+        <param>
+          <type><ref refid="group__subscription_1gadb927c4c1b7306867a75fc4288b54af7" kindref="member">DPS_Subscription</ref> *</type>
+          <declname>sub</declname>
+        </param>
+        <briefdescription>
+<para>Stop subscribing to the subscription topic and free resources allocated for the subscription. </para>        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>sub</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The subscription to cancel</para></parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>DPS_OK if destroy is successful, an error otherwise </para></simplesect>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="962" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="group__subscription_1ga88ab2284734f099ef67bcc60997142b3" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void *</type>
+        <definition>void* DPS_GetSubscriptionData</definition>
+        <argsstring>(DPS_Subscription *sub)</argsstring>
+        <name>DPS_GetSubscriptionData</name>
+        <param>
+          <type><ref refid="group__subscription_1gadb927c4c1b7306867a75fc4288b54af7" kindref="member">DPS_Subscription</ref> *</type>
+          <declname>sub</declname>
+        </param>
+        <briefdescription>
+<para>Get application data pointer previously set by <ref refid="group__subscription_1gad581d341003e20c714061e44b57c2009" kindref="member">DPS_SetSubscriptionData()</ref> </para>        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>sub</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The subscription</para></parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A pointer to the data or NULL if the subscription is invalid </para></simplesect>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="913" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="group__subscription_1gad581d341003e20c714061e44b57c2009" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
+        <definition>DPS_Status DPS_SetSubscriptionData</definition>
+        <argsstring>(DPS_Subscription *sub, void *data)</argsstring>
+        <name>DPS_SetSubscriptionData</name>
+        <param>
+          <type><ref refid="group__subscription_1gadb927c4c1b7306867a75fc4288b54af7" kindref="member">DPS_Subscription</ref> *</type>
+          <declname>sub</declname>
+        </param>
+        <param>
+          <type>void *</type>
+          <declname>data</declname>
+        </param>
+        <briefdescription>
+<para>Store a pointer to application data in a subscription. </para>        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>sub</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The subscription </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>data</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The data pointer to store</para></parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>DPS_OK or an error </para></simplesect>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="904" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="group__subscription_1ga83234ea82a91e07e3f5894a4dcf5267e" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
+        <definition>DPS_Status DPS_Subscribe</definition>
+        <argsstring>(DPS_Subscription *sub, DPS_PublicationHandler handler)</argsstring>
+        <name>DPS_Subscribe</name>
+        <param>
+          <type><ref refid="group__subscription_1gadb927c4c1b7306867a75fc4288b54af7" kindref="member">DPS_Subscription</ref> *</type>
+          <declname>sub</declname>
+        </param>
+        <param>
+          <type><ref refid="group__subscription_1gab95ef1762636ad505c940744b8dce83f" kindref="member">DPS_PublicationHandler</ref></type>
+          <declname>handler</declname>
+        </param>
+        <briefdescription>
+<para>Start subscribing to a set of topics. </para>        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>sub</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The subscription to start </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>handler</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Callback function to be called with topic matches</para></parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>DPS_OK if start is successful, an error otherwise </para></simplesect>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="953" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="group__subscription_1gafea65751c811555736c8c65fcb3a9480" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="group__node_1ga4dd612ab965134321bb57fdb065f121c" kindref="member">DPS_Node</ref> *</type>
+        <definition>DPS_Node* DPS_SubscriptionGetNode</definition>
+        <argsstring>(const DPS_Subscription *sub)</argsstring>
+        <name>DPS_SubscriptionGetNode</name>
+        <param>
+          <type>const <ref refid="group__subscription_1gadb927c4c1b7306867a75fc4288b54af7" kindref="member">DPS_Subscription</ref> *</type>
+          <declname>sub</declname>
+        </param>
+        <briefdescription>
+<para>Get the local node associated with a subscription. </para>        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>sub</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The subscription</para></parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>The node or NULL if the subscription is invalid </para></simplesect>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="922" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="group__subscription_1gab0ad2c6806f8f44f27c70fff915b7e9a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>size_t</type>
+        <definition>size_t DPS_SubscriptionGetNumTopics</definition>
+        <argsstring>(const DPS_Subscription *sub)</argsstring>
+        <name>DPS_SubscriptionGetNumTopics</name>
+        <param>
+          <type>const <ref refid="group__subscription_1gadb927c4c1b7306867a75fc4288b54af7" kindref="member">DPS_Subscription</ref> *</type>
+          <declname>sub</declname>
+        </param>
+        <briefdescription>
+<para>Get the number of topics registered with an active subscription. </para>        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>sub</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The subscription</para></parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>The number of topics. </para></simplesect>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="882" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="group__subscription_1gaacc63deda2f2d97cf3f44ca84784b2f6" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>const char *</type>
+        <definition>const char* DPS_SubscriptionGetTopic</definition>
+        <argsstring>(const DPS_Subscription *sub, size_t index)</argsstring>
+        <name>DPS_SubscriptionGetTopic</name>
+        <param>
+          <type>const <ref refid="group__subscription_1gadb927c4c1b7306867a75fc4288b54af7" kindref="member">DPS_Subscription</ref> *</type>
+          <declname>sub</declname>
+        </param>
+        <param>
+          <type>size_t</type>
+          <declname>index</declname>
+        </param>
+        <briefdescription>
+<para>Get a topic for an active subscription. </para>        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>sub</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The subscription </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>index</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The topic index</para></parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>The topic string or NULL if the subscription or index is invalid. </para></simplesect>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="873" column="1"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+<para>Subscriptions. </para>    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+  </compounddef>
+</doxygen>

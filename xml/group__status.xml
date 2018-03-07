@@ -1,0 +1,364 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.13">
+  <compounddef id="group__status" kind="group">
+    <compoundname>status</compoundname>
+    <title>Status</title>
+      <sectiondef kind="typedef">
+      <memberdef kind="typedef" id="group__status_1ga30395a84d3cad9d4ec29848106415038" prot="public" static="no">
+        <type>int</type>
+        <definition>typedef int DPS_Status</definition>
+        <argsstring></argsstring>
+        <name>DPS_Status</name>
+        <briefdescription>
+<para>The status code type. </para>        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="41" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="41" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="group__status_1ga916083e3c32631f9d412c84c0999481f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>const char *</type>
+        <definition>const char* DPS_ErrTxt</definition>
+        <argsstring>(DPS_Status s)</argsstring>
+        <name>DPS_ErrTxt</name>
+        <param>
+          <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
+          <declname>s</declname>
+        </param>
+        <briefdescription>
+<para>The text string representation of the status code. </para>        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>s</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>the status code</para></parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>the text string representation </para></simplesect>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="79" column="1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="define">
+      <memberdef kind="define" id="group__status_1gab7ef2498c212cd215dcd710c534b44bb" prot="public" static="no">
+        <name>DPS_ERR_ARGS</name>
+        <initializer>3</initializer>
+        <briefdescription>
+<para>Invalid argument(s) </para>        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="47" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="47" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="group__status_1ga6170fba8d741b70a1f4c7e8662beceea" prot="public" static="no">
+        <name>DPS_ERR_BUSY</name>
+        <initializer>12</initializer>
+        <briefdescription>
+<para>Operation cannot be performed right now. </para>        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="56" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="56" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="group__status_1gabace0ae959b833d5df1d81ad45cb43b9" prot="public" static="no">
+        <name>DPS_ERR_EOD</name>
+        <initializer>8</initializer>
+        <briefdescription>
+<para>Unexpected end of data. </para>        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="52" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="52" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="group__status_1ga40b286792608c99ed5dffd1caca9f569" prot="public" static="no">
+        <name>DPS_ERR_EOF</name>
+        <initializer>22</initializer>
+        <briefdescription>
+<para>End of file or socket closed. </para>        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="66" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="66" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="group__status_1ga7fb0645b6d1cac68a2ce723c1932b0bf" prot="public" static="no">
+        <name>DPS_ERR_EXISTS</name>
+        <initializer>13</initializer>
+        <briefdescription>
+<para>Something not expected was present. </para>        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="57" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="57" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="group__status_1ga45240d9b5760ba1a30ad0bee0a6d2b7c" prot="public" static="no">
+        <name>DPS_ERR_EXPIRED</name>
+        <initializer>19</initializer>
+        <briefdescription>
+<para>A remote node has expired. </para>        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="63" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="63" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="group__status_1gaa6d56ac86cbf831fe49fa74e46043a1d" prot="public" static="no">
+        <name>DPS_ERR_FAILURE</name>
+        <initializer>1</initializer>
+        <briefdescription>
+<para>Non-specific failure. </para>        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="45" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="45" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="group__status_1ga6cac7d217edd07c3d7f1babf54cac1d7" prot="public" static="no">
+        <name>DPS_ERR_INVALID</name>
+        <initializer>11</initializer>
+        <briefdescription>
+<para>A value was invalid. </para>        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="55" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="55" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="group__status_1ga5c46980c33492a8b76bffce081dbcba4" prot="public" static="no">
+        <name>DPS_ERR_MISSING</name>
+        <initializer>14</initializer>
+        <briefdescription>
+<para>Something expected was missing. </para>        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="58" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="58" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="group__status_1ga80a0ccafe770ca4149e65300d870c0d9" prot="public" static="no">
+        <name>DPS_ERR_NETWORK</name>
+        <initializer>10</initializer>
+        <briefdescription>
+<para>Network or socket error. </para>        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="54" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="54" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="group__status_1ga934517e91f6e214fb6cab5089d5acc92" prot="public" static="no">
+        <name>DPS_ERR_NO_ROUTE</name>
+        <initializer>16</initializer>
+        <briefdescription>
+<para>There is no route to the requested destination. </para>        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="60" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="60" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="group__status_1ga9047d1e219f2a62a948845d922582ec5" prot="public" static="no">
+        <name>DPS_ERR_NODE_DESTROYED</name>
+        <initializer>21</initializer>
+        <briefdescription>
+<para>Node has already been destroyed. </para>        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="65" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="65" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="group__status_1gac13dac4973f6700ff95461171148c1c8" prot="public" static="no">
+        <name>DPS_ERR_NOT_ENCRYPTED</name>
+        <initializer>25</initializer>
+        <briefdescription>
+<para>Payload does not appear to be encrypted. </para>        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="69" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="69" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="group__status_1gad175cd9050dec5f3a214bc62c3c7473c" prot="public" static="no">
+        <name>DPS_ERR_NOT_IMPLEMENTED</name>
+        <initializer>23</initializer>
+        <briefdescription>
+<para>Feature or function not implemented. </para>        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="67" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="67" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="group__status_1ga92b1c68aa4f1526347ccb76aa9382d76" prot="public" static="no">
+        <name>DPS_ERR_NOT_INITIALIZED</name>
+        <initializer>18</initializer>
+        <briefdescription>
+<para>Object has not yet been initialized. </para>        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="62" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="62" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="group__status_1ga40f77c0ef70f691e6e158c8756ad8895" prot="public" static="no">
+        <name>DPS_ERR_NOT_STARTED</name>
+        <initializer>17</initializer>
+        <briefdescription>
+<para>Node has not yet been started. </para>        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="61" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="61" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="group__status_1ga36c4d95c785c30cd74bb4498703ae231" prot="public" static="no">
+        <name>DPS_ERR_NULL</name>
+        <initializer>2</initializer>
+        <briefdescription>
+<para>Invalid null pointer. </para>        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="46" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="46" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="group__status_1ga9127c1d49f4ca6a51c5585efc76ce362" prot="public" static="no">
+        <name>DPS_ERR_OK</name>
+        <initializer>0</initializer>
+        <briefdescription>
+<para>Alias for DPS_OK. </para>        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="44" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="44" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="group__status_1ga54ee1a62589bee7cd9e82acfd4fa1cad" prot="public" static="no">
+        <name>DPS_ERR_OVERFLOW</name>
+        <initializer>9</initializer>
+        <briefdescription>
+<para>Buffer overflow. </para>        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="53" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="53" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="group__status_1ga6030b4923c05c4ad75e89b3b7b923c5f" prot="public" static="no">
+        <name>DPS_ERR_READ</name>
+        <initializer>5</initializer>
+        <briefdescription>
+<para>Read operation failed. </para>        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="49" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="49" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="group__status_1ga09dd06b53fdfdc87406d380de331b75b" prot="public" static="no">
+        <name>DPS_ERR_RESOURCES</name>
+        <initializer>4</initializer>
+        <briefdescription>
+<para>Resource failure, typically memory allocation. </para>        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="48" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="48" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="group__status_1gaa3bb7fee9a4a926de2df54a272446b5c" prot="public" static="no">
+        <name>DPS_ERR_SECURITY</name>
+        <initializer>24</initializer>
+        <briefdescription>
+<para>A security related error - failure to decrypt or authenticate. </para>        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="68" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="68" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="group__status_1ga01852545b0caefe96ff155d540bb3a68" prot="public" static="no">
+        <name>DPS_ERR_STALE</name>
+        <initializer>15</initializer>
+        <briefdescription>
+<para>A publication was stale. </para>        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="59" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="59" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="group__status_1ga87337c85a55fcaf2dbaaf128362f6c8c" prot="public" static="no">
+        <name>DPS_ERR_STOPPING</name>
+        <initializer>26</initializer>
+        <briefdescription>
+<para>The current node is stopping. </para>        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="70" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="70" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="group__status_1gadac4ab9da07e3886e1e93a408e6963c4" prot="public" static="no">
+        <name>DPS_ERR_TIMEOUT</name>
+        <initializer>7</initializer>
+        <briefdescription>
+<para>Operation timed out. </para>        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="51" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="51" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="group__status_1gab1a09e3fc51905cc823298f964ad60e6" prot="public" static="no">
+        <name>DPS_ERR_UNRESOLVED</name>
+        <initializer>20</initializer>
+        <briefdescription>
+<para>Name resolution failed. </para>        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="64" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="64" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="group__status_1ga1d0f98f61006267befea4de4378a18d8" prot="public" static="no">
+        <name>DPS_ERR_WRITE</name>
+        <initializer>6</initializer>
+        <briefdescription>
+<para>Write operation failed. </para>        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="50" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="50" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="group__status_1ga0ea3dd37bc558859ae0cb5a4f79a4bdd" prot="public" static="no">
+        <name>DPS_OK</name>
+        <initializer>0</initializer>
+        <briefdescription>
+<para>Function succeeded. </para>        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="43" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="43" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+<para>Status codes. </para>    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,78 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.13">
+  <compounddef id="message-types-and-flow" kind="page">
+    <compoundname>message-types-and-flow</compoundname>
+    <title>Message Types and Flow</title>
+    <detaileddescription>
+<para>DPS has four message types: subscriptions, publications, acknowledgments, and subscription acknowledgements.</para><para>Subscriptions and publications are both inherently point-to-multipoint. An explicit assumption is that in IoT use cases there are many more publishers than subscribers. Publications are sent fairly frequently but subscriptions are relatively stable; subscriptions do not change frequently. To a large extent DPS has been designed around these assumptions. DPS would be good for implementing an IoT network with a large number of sensors but not ideal for implementing a highly scalable peer-to-peer chat service.</para><para>When a subscription does change only deltas for the subscription propagate through the network, this is typically less than a 100 bytes. Subscription acknowledgement messages are used to confirm that subscriptions are received at the next hop.</para><para>Publications are routed to all subscribers that have subscription topics that match the publication topics as described above.</para><para>Publications and acknowledgments can be accompanied by a payload, subscriptions do not carry a payload. Acknowledgements are optional and must be explicitly requested by the publisher when sending a publication. A subscriber can send an acknowledgement to the publisher along with an optional payload, the acknowledgement reaches the publisher by hop-by-hop forwarding in the reverse path of the publication. The reverse path ages out fairly quickly so acknowledgements should be sent as soon as possible after receipt of a publication. A publisher may receive multiple acknowledgments if there are multiple subscribers.</para><sect1 id="message-types-and-flow_1message-encoding">
+<title>Encoding</title>
+<para>DPS messages are encoded in <ulink url="https://tools.ietf.org/html/rfc7049">CBOR</ulink>, described below in <ulink url="https://tools.ietf.org/html/draft-ietf-cbor-cddl-00">CDDL</ulink>.</para><para>Each message has the same form.</para><para><verbatim>message = [
+  version: 1,
+  type: pub / sub / ack / sak,
+  unprotected: { * field },
+  protected: { * field },
+  encrypted: { * field }
+]
+</verbatim></para><sect2 id="message-types-and-flow_1field-member-keys">
+<title>Field member keys</title>
+<para>For compactness the member keys are encoded as integers as listed below.</para><para><verbatim>field = (
+  ? 1 =&gt; uint,               ; # port number sender is listening on
+  ? 2 =&gt; int,                ; # ttl - time to live in seconds
+  ? 3 =&gt; uuid,               ; # pub-id - unique identifier for a publication
+  ? 4 =&gt; uint,               ; # seq-num - sequence number for a publication
+  ? 5 =&gt; bool,               ; # ack-req - indicates if an publisher is requesting an acknowledgement
+  ? 6 =&gt; bit-vector,         ; # bloom-filter -the bloom filter for a publication
+  ? 7 =&gt; sub-flags,          ; # sub-flags - indicates delta or mute
+  ? 8 =&gt; uuid,               ; # mesh-id - the mesh ID
+  ? 9 =&gt; bit-vector,         ; # needs - the needs bit vector
+  ? 10 =&gt; bit-vector,        ; # interests - the interests bit vector
+  ? 11 =&gt; [ + topic: tstr ], ; # topics - the topic strings
+  ? 12 =&gt; bstr               ; # data - payload data
+)
+</verbatim></para><para>The description of each message type includes what fields are mandatory or optional for each section.</para></sect2>
+<sect2 id="message-types-and-flow_1uuid">
+<title>UUID</title>
+<para>UUIDs identify publications and are also used as key identifiers for encrypted messages.</para><para><verbatim>uuid = bstr .size 16
+</verbatim></para></sect2>
+<sect2 id="message-types-and-flow_1bit-vector-encoding">
+<title>Bit vector encoding</title>
+<para>The bit vector encoding includes control flags, the bit vector length expressed in bits and the raw or run-length encoded bit vector data.</para><para><verbatim>bit-vector = [
+  flags: uint .bits bit-vector-flags, ; # bit vector control flags
+  len: uint,                          ; # bit vector length in bits
+  bits: bstr                          ; # raw or rle-encoded bit vector
+]
+</verbatim></para></sect2>
+<sect2 id="message-types-and-flow_1bit-vector-control-flags">
+<title>Bit vector control flags</title>
+<para>Bits vectors are usually run-length encoded unless the raw unencoded bit vector is more compact than the rle-encoded representation. The rle-encoded flag indicates if the bit vector is encoded or raw.</para><para>The rle-complement flags indicates if the complement of the bit vector was was encoded. The bit vector complement is encoded if this results in a more compact encoding. This flag is only useful with run-length encoding.</para><para><verbatim>bit-vector-flags = &amp;(
+  rle-encoded: 1,
+  rle-complement: 2
+)
+</verbatim></para></sect2>
+<sect2 id="message-types-and-flow_1subscription-flags">
+<title>Subscription flags</title>
+<para><verbatim>sub-flags = &amp;(
+  delta: 1,        ; # indicate interests is a delta
+  mute: 2          ; # mute has been indicated
+)
+</verbatim></para></sect2>
+</sect1>
+<sect1 id="message-types-and-flow_1publication-message">
+<title>Publication message</title>
+<para><verbatim>pub = 1
+</verbatim></para><para><emphasis>port</emphasis> and <emphasis>ttl</emphasis> are mandatory in the <emphasis>unprotected</emphasis> section.</para><para><emphasis>ttl</emphasis>, <emphasis>pub-id</emphasis>, <emphasis>seq-num</emphasis>, <emphasis>ack-req</emphasis> and <emphasis>bloom-filter</emphasis> are mandatory in the <emphasis>protected</emphasis> section.</para><para><emphasis>topics</emphasis> and <emphasis>data</emphasis> are mandatory in the <emphasis>encrypted</emphasis> section.</para></sect1>
+<sect1 id="message-types-and-flow_1subscription-message">
+<title>Subscription message</title>
+<para><verbatim>sub = 2
+</verbatim></para><para><emphasis>port</emphasis> and <emphasis>seq-num</emphasis> are mandatory in the <emphasis>unprotected</emphasis> section.</para><para>Additionally, in a regular subscription message, <emphasis>sub-flags</emphasis>, <emphasis>mesh-id</emphasis>, <emphasis>needs</emphasis> and <emphasis>interests</emphasis> are mandatory in the <emphasis>unprotected</emphasis> section. In an unlink subscription message those fields shall be absent.</para></sect1>
+<sect1 id="message-types-and-flow_1acknowledgement-message">
+<title>Acknowledgement message</title>
+<para><verbatim>ack = 3
+</verbatim></para><para><emphasis>pub-id</emphasis> and <emphasis>seq-num</emphasis> are mandatory in the <emphasis>protected</emphasis> section.</para><para><emphasis>data</emphasis> is optional in the <emphasis>encrypted</emphasis> section.</para></sect1>
+<sect1 id="message-types-and-flow_1subscription-acknowledgement-message">
+<title>Subscription acknowledgement message</title>
+<para><verbatim>sak = 4
+</verbatim></para><para><emphasis>port</emphasis> and <emphasis>seq-num</emphasis> are mandatory in the <emphasis>unprotected</emphasis> section. </para></sect1>
+    </detaileddescription>
+  </compounddef>
+</doxygen>

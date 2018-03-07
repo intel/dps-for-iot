@@ -1,0 +1,79 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.13">
+  <compounddef id="security" kind="page">
+    <compoundname>security</compoundname>
+    <title>Security</title>
+    <detaileddescription>
+<para>DPS has two security mechanisms: end-to-end encryption and link-layer encryption.</para><para>Publication and acknowledgement messages can be encrypted end-to-end. Messages are encrypted using <ulink url="https://tools.ietf.org/html/rfc8152">COSE</ulink>.</para><para>For privacy and to protect the network hop-by-hop links DPS uses link layer encryption where possible: DTLS for UDP, TLS for TCP, and transport-specific encryption for over non-IP networks. IP multicast packets do not use link-layer encryption. Because DPS is fundamentally a multi-hop mesh protocol payloads are secured end-to-end.</para><para>As noted above publications and acknowledgement messages can be encrypted using COSE. The encryption in this case is end-to-end, the trust relationship is directly between the publishing node and the subscribing node, and intermediate nodes that simply route packets over the DPS mesh do not require a trust relationship with either the publishers or subscribers and do not hold decryption keys. The publication or acknowledgement data payload is encrypted, publications also carry the publication topic strings these are included in the encrypted payload. Message fields required for routing messages are integrity checked but obviously cannot be encrypted. The sending port number and TTL change on each hop so cannot be included in the end-to-end integrity check. The COSE format includes an optional KID (key-identifier) field. Encrypted DPS messages always have a KID which allows the different publications to use different encryption keys.</para><para>Subscriptions do not carry payload data and the bit vectors carried in the payloads get recomputed at each hop. Unlike publications and acknowledgements, subscriptions do not use COSE and rely solely on encryption at the link-layer.</para><para>Even when data is encrypted there are attack vectors based on traffic analysis. Traffic analysis is harder on a multi-hop mesh but because publications contain routing information that cannot be encrypted end-to-end. Specifically an attacker with access to a compromised node could use a dictionary attack to identify the topic strings in the publications and subscriptions flowing through that node. Where this is a concern the publishing and subscribing end-points can agree on a shared private encoding of topic strings, for example HMAC with a shared seed.</para><para>The following sections assume you are already familiar with the <ref refid="message-types-and-flow_1message-encoding" kindref="member">message encoding </ref>.</para><sect1 id="security_1content-encryption">
+<title>Content Encryption</title>
+<para>The <emphasis>protected</emphasis> section of a DPS message forms the protected attributes from the application as identified in COSE. The <emphasis>encrypted</emphasis> section of a DPS message is the plaintext provided to the content encryption algorithm and is replaced by a COSE object, either a <emphasis>COSE_Encrypt_Tagged</emphasis> or <emphasis>COSE_Encrypt0_Tagged</emphasis> object.</para><para>The implemented content encryption algorithms are <emphasis>AES-CCM-16-128-128</emphasis> and <emphasis>AES-CCM-16-64-128</emphasis>.</para></sect1>
+<sect1 id="security_1content-key-distribution">
+<title>Content Key Distribution</title>
+<para>The encryption key is determined by the recipient algorithm. DPS supports the <emphasis>direct</emphasis>, <emphasis>A128KW</emphasis>, <emphasis>ECDH-ES + HKDF-256</emphasis>, and <emphasis>ECDH-ES + A128KW</emphasis> recipient algorithms.</para><para>The use of the key wrap variants allows multiple recipients to be included in a message.</para><sect2 id="security_1elliptic-curve-keys">
+<title>Elliptic Curve Keys</title>
+<para>DPS supports the <emphasis>NIST P-256 (secp256r1)</emphasis>, <emphasis>NIST P-384 (secp384r1)</emphasis>, and <emphasis>NIST P-521 (secp521r1)</emphasis> curves.</para><para>Point compression is not supported. Both the x and y coordinates must be included in EC key representations such as the ephemeral sender key.</para></sect2>
+<sect2 id="security_1key-derivation-functions">
+<title>Key Derivation Functions</title>
+<para>HKDF requires context information to be provided. This is represented in COSE as the <emphasis>COSE_KDF_Context</emphasis>.</para><para>The values of the <emphasis>identity</emphasis>, <emphasis>nonce</emphasis>, and <emphasis>other</emphasis> fields of the <emphasis>PartyUInfo</emphasis> and <emphasis>PartyVInfo</emphasis> structures in the <emphasis>COSE_KDF_Context</emphasis> are <emphasis>nil</emphasis>.</para><para><emphasis>SuppPrivInfo</emphasis> is not included in the <emphasis>COSE_KDF_Context</emphasis>.</para></sect2>
+</sect1>
+<sect1 id="security_1counter-signatures">
+<title>Counter Signatures</title>
+<para>After encryption, the encrypted content is signed by the sender and the signature is included as a COSE counter signature. This allows intermediate DPS nodes to authenticate the sender of a message without decrypting the contents of the message.</para><para>DPS supports the <emphasis>ES256</emphasis>, <emphasis>ES384</emphasis>, and <emphasis>ES512</emphasis> signature algorithms.</para></sect1>
+<sect1 id="security_1examples">
+<title>Examples</title>
+<para>An example encrypted publication message, using <emphasis>AES-CCM-16-128-128</emphasis> for the content, <emphasis>ECDH-ES+A128KW</emphasis> for the key distribution, and <emphasis>ES256</emphasis> for signing, will look like:</para><para><verbatim>message = [
+  / version / 1,
+  / type / 1,
+  /unprotected / {
+    / port / 1: 42446,
+    / ttl / 2: 0
+  },
+  / protected (aad) / {
+    / ttl / 2: 0,
+    / pub-id / 3: h&apos;17003AE54085EE56F735764C7631CE61&apos;,
+    / seq-num / 4: 1,
+    / ack-req / 5: false,
+    / bloom-filter / 6: [1, 8192, h&apos;002817805F00982A&apos;]
+  },
+  / encrypted (COSE_Encrypt_Tagged) / 96(
+    [
+      / protected / h&apos;A101181E&apos; / {
+          \ alg \ 1: 30 \ AES-CCM-16-128-128 \
+        } /,
+      / unprotected / {
+        / iv / 5: h&apos;0100000017003AE54085EE56F7&apos;,
+        / countersign / 7: [
+          / protected / h&apos;A10126&apos; /
+              \ alg \ 1: -7 \ ECDSA 256 \
+            } /,
+          / unprotected / {
+            / kid / 4: h&apos;4450532054657374205075626C6973686572&apos;
+          },
+          / signature / h&apos;1F14BDB559BB24A50B1C1ECA91938C445CFF64C4A24F075A6105B4679D19AEE439413AD30BE4C6C402031B2B04E7D6C2E4B2BA6A4C788E5C7DDE805654CA38CE&apos;
+        ]
+      },
+      / ciphertext / h&apos;457C20BF6EB818AD98C4D820EFD2B017CACE97C47144E3D6&apos;,
+      / recipients / [
+        [
+          / protected / h&apos;A101381C&apos; / {
+              \ alg \ 1: -29 \ ECDH-ES+A128KW \
+            } /,
+          / unprotected / {
+            / ephemeral / -1: {
+              / kty / 1: 2,
+              / crv / -1: 1,
+              / x / -2: h&apos;B34D696D855245BB79FCC8F0A328F37B7CC935803DAEC9EBAB97F061A68444E1&apos;,
+              / y / -3: h&apos;CDF27464CDC3A65DA7EC37139C354940E219A5E55D1A28265A015B2D0A47F72F&apos;
+            },
+            / kid / 4: h&apos;44505320546573742053756273637269626572&apos;
+          },
+          / ciphertext / h&apos;CF83EEA4B372FC210A374E44F040EEFA345C569C2D74A322&apos;
+        ]
+      ]
+    ]
+  )
+]
+</verbatim> </para></sect1>
+    </detaileddescription>
+  </compounddef>
+</doxygen>
