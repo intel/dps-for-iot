@@ -140,7 +140,7 @@ static void ReadStdin(DPS_Node* node)
 
     while (fgets(lineBuf, sizeof(lineBuf), stdin) != NULL) {
         size_t len = strnlen(lineBuf, sizeof(lineBuf));
-        int ttl;
+        int ttl = 0;
         int keep;
         int encrypt;
         char* msg = NULL;

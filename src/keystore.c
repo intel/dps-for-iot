@@ -153,10 +153,13 @@ static DPS_Status MemoryKeyStoreSetKey(MemoryKeyStoreEntry* entry, const DPS_Key
 {
     uint8_t* newKey = NULL;
     size_t newLen = 0;
-    if (key->type != DPS_KEY_SYMMETRIC) {
+    if (entry->key.type != DPS_KEY_SYMMETRIC) {
         return DPS_ERR_ARGS;
     }
     if (key) {
+        if (key->type != DPS_KEY_SYMMETRIC) {
+            return DPS_ERR_ARGS;
+        }
         newKey = malloc(key->symmetric.len);
         if (!newKey) {
             return DPS_ERR_RESOURCES;
@@ -259,14 +262,14 @@ static DPS_Status MemoryKeyStoreEphemeralKeyHandler(DPS_KeyStoreRequest* request
 
     switch (key->type) {
     case DPS_KEY_SYMMETRIC: {
-        uint8_t key[AES_128_KEY_LEN];
+        uint8_t key[AES_256_KEY_LEN];
         ret = DPS_RandomKey(mks->rbg, key);
         if (ret != DPS_OK) {
             return ret;
         }
         k.type = DPS_KEY_SYMMETRIC;
         k.symmetric.key = key;
-        k.symmetric.len = AES_128_KEY_LEN;
+        k.symmetric.len = AES_256_KEY_LEN;
         return DPS_SetKey(request, &k);
     }
     case DPS_KEY_EC: {

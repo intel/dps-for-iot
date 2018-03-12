@@ -31,7 +31,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <dps/private/dps.h>
-#include "ccm.h"
+#include "gcm.h"
 #include "crypto.h"
 
 #ifdef __cplusplus
@@ -41,7 +41,7 @@ extern "C" {
 /**
  * Size of the nonce
  */
-#define COSE_NONCE_LEN        AES_CCM_NONCE_LEN
+#define COSE_NONCE_LEN        AES_GCM_NONCE_LEN
 
 /*
  * Algorithms currently supported by this implementation.
@@ -49,13 +49,10 @@ extern "C" {
  * These values are defined in the COSE specification.
  */
 #define COSE_ALG_RESERVED               0    /**< Reserved algorithm value */
-#define COSE_ALG_AES_CCM_16_64_128     10    /**< AES-CCM mode 128-bit key, L=16, M=64,  13-byte nonce, 8 byte auth tag */
-#define COSE_ALG_AES_CCM_16_128_128    30    /**< AES-CCM mode 128-bit key, L=16, M=128, 13-byte nonce, 16 byte auth tag */
-#define COSE_ALG_A128KW                -3    /**< AES Key Wrap w/ 128-bit key */
+#define COSE_ALG_A256GCM                3    /**< AES-GCM mode w/ 256-bit key, 128-bit tag */
+#define COSE_ALG_A256KW                -5    /**< AES Key Wrap w/ 256-bit key */
 #define COSE_ALG_DIRECT                -6    /**< Direct use of CEK */
-#define COSE_ALG_ES256                 -7    /**< ECDSA w/ SHA-256 */
-#define COSE_ALG_ECDH_ES_HKDF_256     -25    /**< ECDH ES w/ HKDF */
-#define COSE_ALG_ECDH_ES_A128KW       -29    /**< ECDH ES w/ Concat KDF and AES Key Wrap w/ 128-bit key */
+#define COSE_ALG_ECDH_ES_A256KW       -31    /**< ECDH ES w/ Concat KDF and AES Key Wrap w/ 256-bit key */
 #define COSE_ALG_ES384                -35    /**< ECDSA w/ SHA-384 */
 #define COSE_ALG_ES512                -36    /**< ECDSA w/ SHA-512 */
 

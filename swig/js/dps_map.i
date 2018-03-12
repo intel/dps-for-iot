@@ -69,6 +69,9 @@ public:
     const char* inspect(int depth, void* opts) {
         return NodeAddrToString($self, depth, opts);
     }
+    const char* toString() {
+        return NodeAddrToString($self, 0, NULL);
+    }
 }
 
 %typemap(in) const sockaddr* (struct sockaddr_storage saddr) {
@@ -225,5 +228,8 @@ public:
 %extend _DPS_UUID {
     const char* inspect(int depth, void* opts) {
         return UUIDToString($self, depth, opts);
+    }
+    const char* toString() {
+        return UUIDToString($self, 0, NULL);
     }
 }

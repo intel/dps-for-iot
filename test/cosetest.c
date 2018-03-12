@@ -28,10 +28,11 @@
 #include <dps/dbg.h>
 #include <dps/err.h>
 #include <dps/private/dps.h>
-#include "ccm.h"
+#include "gcm.h"
 #include "cose.h"
 #include "crypto.h"
 #include "ec.h"
+#include "keywrap.h"
 
 /*
  * Debug control for this module
@@ -51,14 +52,15 @@ static const uint8_t aad[] = {
 };
 
 static const uint8_t nonce[] = {
-    0x01,0x00,0x00,0x00,0x38,0x5e,0x9a,0xdd,0xd5,0x55,0x88,0xc4,0x57
+    0x01,0x00,0x00,0x00,0x38,0x5e,0x9a,0xdd,0xd5,0x55,0x88,0xc4
 };
 
 static const DPS_UUID _keyId = {
     0xed,0x54,0x14,0xa8,0x5c,0x4d,0x4d,0x15,0xb6,0x9f,0x0e,0x99,0x8a,0xb1,0x71,0xf2
 };
 static const uint8_t _key[] = {
-    0x77,0x58,0x22,0xfc,0x3d,0xef,0x48,0x88,0x91,0x25,0x78,0xd0,0xe2,0x74,0x5c,0x10
+    0x45,0x8c,0x75,0x4f,0x76,0x36,0x5a,0xf7,0x51,0x2d,0xe5,0x52,0xc1,0xc5,0xdd,0x6a,
+    0xdf,0x81,0x00,0x91,0x8f,0x85,0x99,0x20,0xf7,0xa8,0xfe,0x85,0xb4,0xf0,0x1f,0xa2
 };
 const DPS_KeyId keyId = { _keyId.val, sizeof(_keyId.val) };
 const DPS_Key key = { DPS_KEY_SYMMETRIC, .symmetric = { _key, sizeof(_key) } };
@@ -76,11 +78,6 @@ static void Dump(const char* tag, const uint8_t* data, size_t len)
     printf("\n");
 }
 
-uint8_t config[] = {
-    COSE_ALG_AES_CCM_16_64_128,
-    COSE_ALG_AES_CCM_16_128_128
-};
-
 static DPS_RBG* rbg = NULL;
 
 static DPS_Status KeyHandler(DPS_KeyStoreRequest* request, const DPS_KeyId* id)
@@ -95,7 +92,7 @@ static DPS_Status KeyHandler(DPS_KeyStoreRequest* request, const DPS_KeyId* id)
 static DPS_Status EphemeralKeyHandler(DPS_KeyStoreRequest* request, const DPS_Key* key)
 {
     DPS_Key k;
-    uint8_t aes[AES_128_KEY_LEN];
+    uint8_t aes[AES_256_KEY_LEN];
     DPS_Status ret;
 
     ret = DPS_RandomKey(rbg, aes);
@@ -104,11 +101,11 @@ static DPS_Status EphemeralKeyHandler(DPS_KeyStoreRequest* request, const DPS_Ke
     }
     k.type = DPS_KEY_SYMMETRIC;
     k.symmetric.key = aes;
-    k.symmetric.len = AES_128_KEY_LEN;
+    k.symmetric.len = AES_256_KEY_LEN;
     return DPS_SetKey(request, &k);
 }
 
-static void CCM_Raw()
+static void GCM_Raw()
 {
     DPS_Status ret;
     DPS_TxBuffer cipherText;
@@ -117,9 +114,9 @@ static void CCM_Raw()
     DPS_TxBufferInit(&cipherText, NULL, 512);
     DPS_TxBufferInit(&plainText, NULL, 512);
 
-    ret = Encrypt_CCM(key.symmetric.key, 16, 2, nonce, (uint8_t*)msg, sizeof(msg), aad, sizeof(aad), &cipherText);
+    ret = Encrypt_GCM(key.symmetric.key, nonce, (uint8_t*)msg, sizeof(msg), aad, sizeof(aad), &cipherText);
     ASSERT(ret == DPS_OK);
-    ret = Decrypt_CCM(key.symmetric.key, 16, 2, nonce, cipherText.base, DPS_TxBufferUsed(&cipherText), aad, sizeof(aad), &plainText);
+    ret = Decrypt_GCM(key.symmetric.key, nonce, cipherText.base, DPS_TxBufferUsed(&cipherText), aad, sizeof(aad), &plainText);
     ASSERT(ret == DPS_OK);
 
     ASSERT(DPS_TxBufferUsed(&plainText) == sizeof(msg));
@@ -135,10 +132,10 @@ static void ECDSA_VerifyCurve(DPS_ECCurve crv, uint8_t* x, uint8_t* y, uint8_t* 
     DPS_TxBuffer buf;
 
     DPS_TxBufferInit(&buf, NULL, 512);
-    ret = Sign_ECDSA(crv, d, data, sizeof(data), &buf);
+    ret = Sign_ECDSA(crv, d, data, dataLen, &buf);
     ASSERT(ret == DPS_OK);
 
-    ret = Verify_ECDSA(crv, x, y, data, sizeof(data), buf.base, DPS_TxBufferUsed(&buf));
+    ret = Verify_ECDSA(crv, x, y, data, dataLen, buf.base, DPS_TxBufferUsed(&buf));
     ASSERT(ret == DPS_OK);
 
     DPS_TxBufferFree(&buf);
@@ -156,22 +153,6 @@ static void ECDSA_Raw()
         0x51, 0xB0
     };
 
-    {
-        DPS_ECCurve crv = DPS_EC_CURVE_P256;
-        uint8_t x[] = {
-            0xba, 0xc5, 0xb1, 0x1c, 0xad, 0x8f, 0x99, 0xf9, 0xc7, 0x2b, 0x05, 0xcf, 0x4b, 0x9e, 0x26, 0xd2,
-            0x44, 0xdc, 0x18, 0x9f, 0x74, 0x52, 0x28, 0x25, 0x5a, 0x21, 0x9a, 0x86, 0xd6, 0xa0, 0x9e, 0xff
-        };
-        uint8_t y[] = {
-            0x20, 0x13, 0x8b, 0xf8, 0x2d, 0xc1, 0xb6, 0xd5, 0x62, 0xbe, 0x0f, 0xa5, 0x4a, 0xb7, 0x80, 0x4a,
-            0x3a, 0x64, 0xb6, 0xd7, 0x2c, 0xcf, 0xed, 0x6b, 0x6f, 0xb6, 0xed, 0x28, 0xbb, 0xfc, 0x11, 0x7e
-        };
-        uint8_t d[] = {
-            0x57, 0xc9, 0x20, 0x77, 0x66, 0x41, 0x46, 0xe8, 0x76, 0x76, 0x0c, 0x95, 0x20, 0xd0, 0x54, 0xaa,
-            0x93, 0xc3, 0xaf, 0xb0, 0x4e, 0x30, 0x67, 0x05, 0xdb, 0x60, 0x90, 0x30, 0x85, 0x07, 0xb4, 0xd3
-        };
-        ECDSA_VerifyCurve(crv, x, y, d, data, sizeof(data));
-    }
     {
         DPS_ECCurve crv = DPS_EC_CURVE_P384;
         uint8_t x[] = {
@@ -231,6 +212,31 @@ static void ECDSA_Raw()
     }
 }
 
+static void KeyWrap_Raw()
+{
+    const uint8_t kek[] = {
+        0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C,0x0D,0x0E,0x0F,
+        0x10,0x11,0x12,0x13,0x14,0x15,0x16,0x17,0x18,0x19,0x1A,0x1B,0x1C,0x1D,0x1E,0x1F,
+    };
+    const uint8_t cek[] = {
+        0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xAA,0xBB,0xCC,0xDD,0xEE,0xFF,
+        0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C,0x0D,0x0E,0x0F
+    };
+    const uint8_t expectedCipherText[] = {
+        0x28,0xC9,0xF4,0x04,0xC4,0xB8,0x10,0xF4,0xCB,0xCC,0xB3,0x5C,0xFB,0x87,0xF8,0x26,
+        0x3F,0x57,0x86,0xE2,0xD8,0x0E,0xD3,0x26,0xCB,0xC7,0xF0,0xE7,0x1A,0x99,0xF4,0x3B,
+        0xFB,0x98,0x8B,0x9B,0x7A,0x02,0xDD,0x21
+    };
+    uint8_t cipherText[AES_256_KEY_WRAP_LEN];
+    DPS_Status ret = KeyWrap(cek, kek, cipherText);
+    ASSERT(ret == DPS_OK);
+    ASSERT(0 == memcmp(cipherText, expectedCipherText, AES_256_KEY_WRAP_LEN));
+    uint8_t unwrappedCek[AES_256_KEY_LEN];
+    ret = KeyUnwrap(cipherText, kek, unwrappedCek);
+    ASSERT(ret == DPS_OK);
+    ASSERT(0 == memcmp(unwrappedCek, cek, AES_256_KEY_LEN));
+}
+
 int main(int argc, char** argv)
 {
     DPS_Status ret;
@@ -241,48 +247,47 @@ int main(int argc, char** argv)
     rbg = DPS_CreateRBG();
     keyStore = DPS_CreateKeyStore(NULL, KeyHandler, EphemeralKeyHandler, NULL);
 
-    CCM_Raw();
+    GCM_Raw();
     ECDSA_Raw();
+    KeyWrap_Raw();
 
-    for (i = 0; i < sizeof(config); ++i) {
-        uint8_t alg = config[i];
-        COSE_Entity recipient;
-        DPS_RxBuffer aadBuf;
-        DPS_RxBuffer msgBuf;
-        DPS_TxBuffer cipherText;
-        DPS_TxBuffer plainText;
-        DPS_RxBuffer input;
+    uint8_t alg = COSE_ALG_A256GCM;
+    COSE_Entity recipient;
+    DPS_RxBuffer aadBuf;
+    DPS_RxBuffer msgBuf;
+    DPS_TxBuffer cipherText;
+    DPS_TxBuffer plainText;
+    DPS_RxBuffer input;
 
-        DPS_RxBufferInit(&aadBuf, (uint8_t*)aad, sizeof(aad));
-        DPS_RxBufferInit(&msgBuf, (uint8_t*)msg, sizeof(msg));
-        recipient.alg = COSE_ALG_A128KW;
-        recipient.kid = keyId;
+    DPS_RxBufferInit(&aadBuf, (uint8_t*)aad, sizeof(aad));
+    DPS_RxBufferInit(&msgBuf, (uint8_t*)msg, sizeof(msg));
+    recipient.alg = COSE_ALG_A256KW;
+    recipient.kid = keyId;
 
-        ret = COSE_Encrypt(alg, nonce, NULL, &recipient, 1, &aadBuf, &msgBuf, keyStore, &cipherText);
-        if (ret != DPS_OK) {
-            DPS_ERRPRINT("COSE_Encrypt failed: %s\n", DPS_ErrTxt(ret));
-            return EXIT_FAILURE;
-        }
-        Dump("CipherText", cipherText.base, DPS_TxBufferUsed(&cipherText));
-        /*
-         * Turn output buffers into input buffers
-         */
-        DPS_TxBufferToRx(&cipherText, &input);
-
-        DPS_RxBufferInit(&aadBuf, (uint8_t*)aad, sizeof(aad));
-
-        ret = COSE_Decrypt(nonce, &recipient, &aadBuf, &input, keyStore, NULL, &plainText);
-        if (ret != DPS_OK) {
-            DPS_ERRPRINT("COSE_Decrypt failed: %s\n", DPS_ErrTxt(ret));
-            return EXIT_FAILURE;
-        }
-
-        ASSERT(DPS_TxBufferUsed(&plainText) == sizeof(msg));
-        ASSERT(memcmp(plainText.base, msg, sizeof(msg)) == 0);
-
-        DPS_TxBufferFree(&cipherText);
-        DPS_TxBufferFree(&plainText);
+    ret = COSE_Encrypt(alg, nonce, NULL, &recipient, 1, &aadBuf, &msgBuf, keyStore, &cipherText);
+    if (ret != DPS_OK) {
+        DPS_ERRPRINT("COSE_Encrypt failed: %s\n", DPS_ErrTxt(ret));
+        return EXIT_FAILURE;
     }
+    Dump("CipherText", cipherText.base, DPS_TxBufferUsed(&cipherText));
+    /*
+     * Turn output buffers into input buffers
+     */
+    DPS_TxBufferToRx(&cipherText, &input);
+
+    DPS_RxBufferInit(&aadBuf, (uint8_t*)aad, sizeof(aad));
+
+    ret = COSE_Decrypt(nonce, &recipient, &aadBuf, &input, keyStore, NULL, &plainText);
+    if (ret != DPS_OK) {
+        DPS_ERRPRINT("COSE_Decrypt failed: %s\n", DPS_ErrTxt(ret));
+        return EXIT_FAILURE;
+    }
+
+    ASSERT(DPS_TxBufferUsed(&plainText) == sizeof(msg));
+    ASSERT(memcmp(plainText.base, msg, sizeof(msg)) == 0);
+
+    DPS_TxBufferFree(&cipherText);
+    DPS_TxBufferFree(&plainText);
 
     DPS_PRINT("Passed\n");
     DPS_DestroyKeyStore(keyStore);

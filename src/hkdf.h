@@ -51,7 +51,7 @@ extern "C" {
  */
 DPS_Status HKDF_SHA256(const uint8_t* secret, size_t secretLen,
                        const uint8_t* context, size_t contextLen,
-                       uint8_t key[AES_128_KEY_LEN]);
+                       uint8_t key[AES_256_KEY_LEN]);
 
 #ifdef __cplusplus
 }

@@ -130,13 +130,13 @@ static DPS_Status EphemeralKeyHandler(DPS_KeyStoreRequest* request, const DPS_Ke
     requestObj = SWIG_NewPointerObj(SWIG_as_voidptr(request), SWIGTYPE_p__DPS_KeyStoreRequest, 0);
     switch (key->type) {
     case DPS_KEY_SYMMETRIC:
-        keyObj = SWIG_NewPointerObj(SWIG_as_voidptr(key), SWIGTYPE_p__DPS_KeySymmetric, 0);
+        keyObj = SWIG_NewPointerObj(SWIG_as_voidptr(&key->symmetric), SWIGTYPE_p__DPS_KeySymmetric, 0);
         break;
     case DPS_KEY_EC:
-        keyObj = SWIG_NewPointerObj(SWIG_as_voidptr(key), SWIGTYPE_p__DPS_KeyEC, 0);
+        keyObj = SWIG_NewPointerObj(SWIG_as_voidptr(&key->ec), SWIGTYPE_p__DPS_KeyEC, 0);
         break;
     case DPS_KEY_EC_CERT:
-        keyObj = SWIG_NewPointerObj(SWIG_as_voidptr(key), SWIGTYPE_p__DPS_KeyCert, 0);
+        keyObj = SWIG_NewPointerObj(SWIG_as_voidptr(&key->cert), SWIGTYPE_p__DPS_KeyCert, 0);
         break;
     default:
         goto Exit;

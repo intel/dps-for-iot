@@ -54,9 +54,6 @@ int TLSGetCurveParams(DPS_ECCurve curve, mbedtls_ecp_group_id* id, size_t* len)
     case DPS_EC_CURVE_P384:
         *id = MBEDTLS_ECP_DP_SECP384R1;
         break;
-    case DPS_EC_CURVE_P256:
-        *id = MBEDTLS_ECP_DP_SECP256R1;
-        break;
     default:
         ret = MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE;
         break;
@@ -102,14 +99,14 @@ void DPS_DestroyRBG(DPS_RBG* rbg)
     }
 }
 
-DPS_Status DPS_RandomKey(DPS_RBG* rbg, uint8_t key[AES_128_KEY_LEN])
+DPS_Status DPS_RandomKey(DPS_RBG* rbg, uint8_t key[AES_256_KEY_LEN])
 {
     int ret;
 
     if (!rbg) {
         return DPS_ERR_ARGS;
     }
-    ret = mbedtls_ctr_drbg_random(&rbg->drbg, key, AES_128_KEY_LEN);
+    ret = mbedtls_ctr_drbg_random(&rbg->drbg, key, AES_256_KEY_LEN);
     if (ret != 0) {
         DPS_ERRPRINT("Generate random bytes failed: %s\n", TLSErrTxt(ret));
         return DPS_ERR_FAILURE;

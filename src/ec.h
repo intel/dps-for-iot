@@ -48,7 +48,6 @@ extern "C" {
  *   ----- | -----------------------
  *   P521  | 66
  *   P384  | 48
- *   P256  | 32
  *
  * @param curve the elliptic curve ID
  *
@@ -93,8 +92,6 @@ DPS_Status ParsePrivateKey_ECDSA(const char* privateKey, const char* password,
  *   ----- | ---------------------- | ------
  *   P521  | 132                    | SHA512
  *   P384  |  96                    | SHA384
- *   P256  |  64                    | SHA256
- *
  *
  * Note that the expected signature size is twice the coordinate size:
  * the signature is expected to be the R value concatenated with the S
