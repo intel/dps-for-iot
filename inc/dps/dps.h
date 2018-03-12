@@ -128,6 +128,8 @@ typedef struct _DPS_KeySymmetric {
     size_t len;                 /**< Size of key data */
 } DPS_KeySymmetric;
 
+#define DPS_AES_256_KEY_LEN 32 /**< AES 256 key length, in bytes */
+
 /**
  * Allowed elliptic curves
  */
