@@ -71,13 +71,13 @@
     <member refid="group__debug_1ga7cc66c1e82ef557238c122b067f5337a" kind="function"><name>DPS_LogBytes</name></member>
   </compound>
   <compound refid="dps_8h" kind="file"><name>dps.h</name>
+    <member refid="group__keystore_1ga02d2171bf3c24345e5f562cb3e181a57" kind="define"><name>DPS_AES_256_KEY_LEN</name></member>
     <member refid="group__keystore_1ga7ca1045749c725e9c4a1b4758b2a0196" kind="enum"><name>DPS_KeyType</name></member>
     <member refid="group__keystore_1gga7ca1045749c725e9c4a1b4758b2a0196a662c1e84628d96be8ae08163af382392" kind="enumvalue"><name>DPS_KEY_SYMMETRIC</name></member>
     <member refid="group__keystore_1gga7ca1045749c725e9c4a1b4758b2a0196a58453a89367757e523ac337232387d89" kind="enumvalue"><name>DPS_KEY_EC</name></member>
     <member refid="group__keystore_1gga7ca1045749c725e9c4a1b4758b2a0196a04e294e477af49e6a4927884f45fcb99" kind="enumvalue"><name>DPS_KEY_EC_CERT</name></member>
     <member refid="group__keystore_1ga9ba152af7a3ed9076bfa597ef918cac1" kind="enum"><name>DPS_ECCurve</name></member>
     <member refid="group__keystore_1gga9ba152af7a3ed9076bfa597ef918cac1a4b56a9b3ab7d0e23d57bad72f0c93239" kind="enumvalue"><name>DPS_EC_CURVE_RESERVED</name></member>
-    <member refid="group__keystore_1gga9ba152af7a3ed9076bfa597ef918cac1a96cd27fcba408bafcdd33b83b0395ff8" kind="enumvalue"><name>DPS_EC_CURVE_P256</name></member>
     <member refid="group__keystore_1gga9ba152af7a3ed9076bfa597ef918cac1a359e576be45def67ea14b96c7bfbe100" kind="enumvalue"><name>DPS_EC_CURVE_P384</name></member>
     <member refid="group__keystore_1gga9ba152af7a3ed9076bfa597ef918cac1abb97d4a693a02becf44c12b6e4678724" kind="enumvalue"><name>DPS_EC_CURVE_P521</name></member>
     <member refid="group__keystore_1ga4c58e71301ab14e675033c601e4eabe1" kind="typedef"><name>DPS_KeySymmetric</name></member>
@@ -302,7 +302,6 @@
     <member refid="group__keystore_1gga7ca1045749c725e9c4a1b4758b2a0196a04e294e477af49e6a4927884f45fcb99" kind="enumvalue"><name>DPS_KEY_EC_CERT</name></member>
     <member refid="group__keystore_1ga9ba152af7a3ed9076bfa597ef918cac1" kind="enum"><name>DPS_ECCurve</name></member>
     <member refid="group__keystore_1gga9ba152af7a3ed9076bfa597ef918cac1a4b56a9b3ab7d0e23d57bad72f0c93239" kind="enumvalue"><name>DPS_EC_CURVE_RESERVED</name></member>
-    <member refid="group__keystore_1gga9ba152af7a3ed9076bfa597ef918cac1a96cd27fcba408bafcdd33b83b0395ff8" kind="enumvalue"><name>DPS_EC_CURVE_P256</name></member>
     <member refid="group__keystore_1gga9ba152af7a3ed9076bfa597ef918cac1a359e576be45def67ea14b96c7bfbe100" kind="enumvalue"><name>DPS_EC_CURVE_P384</name></member>
     <member refid="group__keystore_1gga9ba152af7a3ed9076bfa597ef918cac1abb97d4a693a02becf44c12b6e4678724" kind="enumvalue"><name>DPS_EC_CURVE_P521</name></member>
     <member refid="group__keystore_1ga4c58e71301ab14e675033c601e4eabe1" kind="typedef"><name>DPS_KeySymmetric</name></member>
@@ -324,6 +323,7 @@
     <member refid="group__keystore_1ga40bea030ef0ba65ec332880ae2bbfee1" kind="function"><name>DPS_DestroyKeyStore</name></member>
     <member refid="group__keystore_1gaf8062875af6cab5caabc3f13bf995807" kind="function"><name>DPS_SetKeyStoreData</name></member>
     <member refid="group__keystore_1ga3b67d7dde74267ee9342dc3efd33812b" kind="function"><name>DPS_GetKeyStoreData</name></member>
+    <member refid="group__keystore_1ga02d2171bf3c24345e5f562cb3e181a57" kind="define"><name>DPS_AES_256_KEY_LEN</name></member>
     <member refid="group__keystore_1ga57f11410b3ef6a686594b60836dc8c99" kind="typedef"><name>DPS_MemoryKeyStore</name></member>
     <member refid="group__keystore_1ga2da4c5f9b7ab5ff6b65d1c8f4d6c30bc" kind="function"><name>DPS_CreateMemoryKeyStore</name></member>
     <member refid="group__keystore_1ga2f9f4aeff872ca74d5735a8727f4dbae" kind="function"><name>DPS_DestroyMemoryKeyStore</name></member>

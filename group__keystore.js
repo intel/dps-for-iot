@@ -25,6 +25,7 @@ var group__keystore =
       [ "key", "struct___d_p_s___key_symmetric.html#affb7a3c0682b963d4011a1d7ecbbe76a", null ],
       [ "len", "struct___d_p_s___key_symmetric.html#ad12194a41f7828b7b7098608bf7d5fd0", null ]
     ] ],
+    [ "DPS_AES_256_KEY_LEN", "group__keystore.html#ga02d2171bf3c24345e5f562cb3e181a57", null ],
     [ "DPS_CAHandler", "group__keystore.html#ga0acd005f34bca4fcbe1c460e2305ddae", null ],
     [ "DPS_EphemeralKeyHandler", "group__keystore.html#ga5b4cf102912eea802196d3e307c399ef", null ],
     [ "DPS_Key", "group__keystore.html#gaa56a1429b6a1658e674eea558bdbbfc0", null ],
@@ -38,7 +39,6 @@ var group__keystore =
     [ "DPS_KeySymmetric", "group__keystore.html#ga4c58e71301ab14e675033c601e4eabe1", null ],
     [ "DPS_MemoryKeyStore", "group__keystore.html#ga57f11410b3ef6a686594b60836dc8c99", null ],
     [ "DPS_ECCurve", "group__keystore.html#ga9ba152af7a3ed9076bfa597ef918cac1", [
-      [ "DPS_EC_CURVE_P256", "group__keystore.html#gga9ba152af7a3ed9076bfa597ef918cac1a96cd27fcba408bafcdd33b83b0395ff8", null ],
       [ "DPS_EC_CURVE_P384", "group__keystore.html#gga9ba152af7a3ed9076bfa597ef918cac1a359e576be45def67ea14b96c7bfbe100", null ],
       [ "DPS_EC_CURVE_P521", "group__keystore.html#gga9ba152af7a3ed9076bfa597ef918cac1abb97d4a693a02becf44c12b6e4678724", null ]
     ] ],

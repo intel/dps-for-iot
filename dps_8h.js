@@ -1,5 +1,6 @@
 var dps_8h =
 [
+    [ "DPS_AES_256_KEY_LEN", "group__keystore.html#ga02d2171bf3c24345e5f562cb3e181a57", null ],
     [ "DPS_FALSE", "dps_8h.html#ad8b397975a479b996ef223367d8835a9", null ],
     [ "DPS_MCAST_PUB_DISABLED", "group__node.html#gac939c83361ed89086f37c78d9c9009dd", null ],
     [ "DPS_MCAST_PUB_ENABLE_RECV", "group__node.html#gae493573fb2e02b87258952223eb4fcd7", null ],
@@ -30,7 +31,6 @@ var dps_8h =
     [ "DPS_Subscription", "group__subscription.html#gadb927c4c1b7306867a75fc4288b54af7", null ],
     [ "DPS_ECCurve", "group__keystore.html#ga9ba152af7a3ed9076bfa597ef918cac1", [
       [ "DPS_EC_CURVE_RESERVED", "group__keystore.html#gga9ba152af7a3ed9076bfa597ef918cac1a4b56a9b3ab7d0e23d57bad72f0c93239", null ],
-      [ "DPS_EC_CURVE_P256", "group__keystore.html#gga9ba152af7a3ed9076bfa597ef918cac1a96cd27fcba408bafcdd33b83b0395ff8", null ],
       [ "DPS_EC_CURVE_P384", "group__keystore.html#gga9ba152af7a3ed9076bfa597ef918cac1a359e576be45def67ea14b96c7bfbe100", null ],
       [ "DPS_EC_CURVE_P521", "group__keystore.html#gga9ba152af7a3ed9076bfa597ef918cac1abb97d4a693a02becf44c12b6e4678724", null ]
     ] ],
