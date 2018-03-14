@@ -26,6 +26,10 @@
 #include <assert.h>
 #include <dps/private/cbor.h>
 
+#if CBOR_MAX_STRING_LEN >= RSIZE_MAX_STR
+#error CBOR_MAX_STRING_LEN must be less than RSIZE_MAX_STR (see safe_str_lib.h)
+#endif
+
 /*
  * Debug control for this module
  */
