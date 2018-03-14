@@ -243,13 +243,15 @@ if env['target'] == 'yocto':
 # Build external dependencies
 ext_libs = SConscript('ext/SConscript', exports=['extEnv'])
 
-SConscript('SConscript', src_dir='.', variant_dir='build/obj', duplicate=0, exports=['env', 'ext_libs'])
+version = '0.9.0'
+
+SConscript('SConscript', src_dir='.', variant_dir='build/obj', duplicate=0, exports=['env', 'ext_libs', 'version'])
 
 ######################################################################
 # Scons to generate the dps_ns3.pc file from dps_ns3.pc.in file
 ######################################################################
 pc_file = 'dps_ns3.pc.in'
 pc_vars = {'\@PREFIX\@': env.GetLaunchDir().encode('string_escape'),
-           '\@VERSION\@': '0.9',
+           '\@VERSION\@': version,
 }
 env.Substfile(pc_file, SUBST_DICT = pc_vars)
