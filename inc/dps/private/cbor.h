@@ -409,6 +409,26 @@ DPS_Status CBOR_EndWrapBytes(DPS_TxBuffer* buffer, uint8_t* wrapPtr);
 #define CBOR_EncodeUint32(buffer, n) CBOR_EncodeUint(buffer, (uint64_t)n)
 
 /**
+ * Encode a float
+ *
+ * @param buffer   Buffer to append to
+ * @param f        The float
+ *
+ * @return DPS_OK if successful, an error otherwise
+ */
+DPS_Status CBOR_EncodeFloat(DPS_TxBuffer* buffer, float f);
+
+/**
+ * Encode a double
+ *
+ * @param buffer   Buffer to append to
+ * @param d        The double
+ *
+ * @return DPS_OK if successful, an error otherwise
+ */
+DPS_Status CBOR_EncodeDouble(DPS_TxBuffer* buffer, double d);
+
+/**
  * Decode a byte string
  *
  * @param buffer  Buffer to decode from
@@ -448,6 +468,26 @@ DPS_Status CBOR_DecodeString(DPS_RxBuffer* buffer, char** data, size_t* size);
  * - DPS_ERR_EOD if there was insufficient data in the buffer
  */
 DPS_Status CBOR_DecodeArray(DPS_RxBuffer* buffer, size_t* size);
+
+/**
+ * Decode a float
+ *
+ * @param buffer   Buffer to append to
+ * @param f        The float
+ *
+ * @return DPS_OK if successful, an error otherwise
+ */
+DPS_Status CBOR_DecodeFloat(DPS_RxBuffer* buffer, float* f);
+
+/**
+ * Decode a double
+ *
+ * @param buffer   Buffer to append to
+ * @param d        The double
+ *
+ * @return DPS_OK if successful, an error otherwise
+ */
+DPS_Status CBOR_DecodeDouble(DPS_RxBuffer* buffer, double* d);
 
 /**
  * Skip a CBOR value
