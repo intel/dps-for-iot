@@ -1469,6 +1469,7 @@ void DPS_NetConnectionDecRef(DPS_NetConnection* cn)
     }
 }
 
+#ifdef DPS_USE_FUZZ
 uv_udp_recv_cb Fuzz_OnData(DPS_Node* node, uv_udp_recv_cb cb)
 {
     DPS_NetContext* netCtx = node->netCtx;
@@ -1485,3 +1486,4 @@ uv_udp_recv_cb Fuzz_OnData(DPS_Node* node, uv_udp_recv_cb cb)
     netCtx->dataCB = cb;
     return ret;
 }
+#endif /* DPS_USE_FUZZ */
