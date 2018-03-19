@@ -33,6 +33,14 @@ extern "C" {
  * Preshared keys and certificates for testing only - DO NOT USE THESE KEYS IN A REAL APPLICATION!!!!
  */
 
+extern const DPS_KeyId NetworkKeyId;
+extern const DPS_Key NetworkKey;
+
+#define NUM_KEYS 2
+
+extern const DPS_KeyId PskId[NUM_KEYS];
+extern const DPS_Key Psk[NUM_KEYS];
+
 extern const char TrustedCAs[];
 
 typedef struct _Id {

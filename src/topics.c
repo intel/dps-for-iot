@@ -250,10 +250,12 @@ DPS_Status DPS_MatchTopicString(const char* pubTopic, const char* subTopic, cons
             }
             ++subTopic;
         }
-        if (*pubTopic++ != *subTopic++) {
+        if (*pubTopic != *subTopic) {
             *match = DPS_FALSE;
             break;
         }
+        ++pubTopic;
+        ++subTopic;
     }
     if (*subTopic || *pubTopic) {
         *match = DPS_FALSE;

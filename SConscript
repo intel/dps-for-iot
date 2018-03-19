@@ -17,6 +17,10 @@ if platform == 'win32':
 elif platform == 'posix':
     libenv.Append(CCFLAGS = ['-Wall', '-Wno-format-extra-args'])
 
+# Include the fuzzing hooks when the sanitizer is enabled
+if env['fsan'] == True:
+    libenv.Append(CPPDEFINES = ['DPS_USE_FUZZ'])
+
 libenv.Install('#/build/dist/inc/dps', libenv.Glob('#/inc/dps/*.h'))
 libenv.Install('#/build/dist/inc/dps/private', libenv.Glob('#/inc/dps/private/*.h'))
 
@@ -36,7 +40,6 @@ srcs = ['src/bitvec.c',
         'src/synchronous.c',
         'src/uuid.c',
         'src/linkmon.c',
-        'src/netmcast.c',
         'src/network.c',
         'src/registration.c',
         'src/resolver.c',
@@ -50,11 +53,16 @@ srcs = ['src/bitvec.c',
         'src/mbedtls.c']
 
 if env['transport'] == 'udp':
-    srcs.append('src/udp/network.c')
+    srcs.extend(['src/multicast/network.c',
+                 'src/udp/network.c'])
 elif env['transport'] == 'dtls':
-    srcs.append('src/dtls/network.c')
-else:
-    srcs.append('src/tcp/network.c')
+    srcs.extend(['src/multicast/network.c',
+                 'src/dtls/network.c'])
+elif env['transport'] == 'tcp':
+    srcs.extend(['src/multicast/network.c',
+                 'src/tcp/network.c'])
+elif env['transport'] == 'fuzzer':
+    srcs.extend(['src/fuzzer/network.c'])
 
 Depends(srcs, ext_libs)
 
@@ -170,6 +178,28 @@ for test in testsrcs:
 testprogs.append(testenv.Program(['test/node.c', 'test/keys.c']))
 
 testenv.Install('#/build/test/bin', testprogs)
+
+# Fuzz tests
+if env['fsan'] == True:
+    fenv = env.Clone()
+    fenv.VariantDir('test/fuzzer', 'test')
+    fenv.Append(LINKFLAGS = ['-fsanitize=fuzzer'])
+    fenv.Append(LIBS = [lib, env['UV_LIBS']])
+
+    fsrcs = ['test/fuzzer/cbor_fuzzer.c']
+    if env['transport'] == 'dtls':
+        fsrcs.extend(['test/fuzzer/dtls_fuzzer.c'])
+    elif env['transport'] == 'fuzzer':
+        fsrcs.extend(['test/fuzzer/net_receive_fuzzer.c',
+                      'test/fuzzer/multicast_receive_fuzzer.c'])
+
+    Depends(fsrcs, ext_libs)
+
+    fprogs = []
+    for f in fsrcs:
+        fprogs.append(fenv.Program([f, 'test/fuzzer/keys.c']))
+
+    fenv.Install('#/build/test/bin', fprogs)
 
 # Examples
 exampleenv = env.Clone()

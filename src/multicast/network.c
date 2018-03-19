@@ -26,7 +26,7 @@
 #include <dps/dbg.h>
 #include <dps/dps.h>
 #include <dps/private/network.h>
-#include "coap.h"
+#include "../coap.h"
 
 /*
  * Debug control for this module

@@ -444,7 +444,8 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
     uint32_t revision = 0;
     RemoteNode* remote = NULL;
     CBOR_MapState mapState;
-    DPS_UUID* meshId = NULL;
+    uint8_t* bytes = NULL;
+    DPS_UUID meshId;
     uint8_t flags = 0;
     uint16_t keysMask;
 
@@ -479,8 +480,10 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
             break;
         case DPS_CBOR_KEY_MESH_ID:
             keysMask |= (1 << key);
-            ret = CBOR_DecodeBytes(buf, (uint8_t**)&meshId, &len);
+            ret = CBOR_DecodeBytes(buf, (uint8_t**)&bytes, &len);
             if ((ret == DPS_OK) && (len != sizeof(DPS_UUID))) {
+                ret = DPS_ERR_INVALID;
+            } else if (memcpy_s(meshId.val, sizeof(meshId.val), bytes, len) != EOK) {
                 ret = DPS_ERR_INVALID;
             }
             break;
@@ -583,7 +586,7 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
     }
     remote->inbound.revision = revision;
 
-    DPS_DBGPRINT("Node %d received mesh id %08x from %s\n", node->port, UUID_32(meshId), DESCRIBE(remote));
+    DPS_DBGPRINT("Node %d received mesh id %08x from %s\n", node->port, UUID_32(&meshId), DESCRIBE(remote));
     /*
      * Loops can be detected by either end of a link and corrective action is required
      * to prevent interests from propagating around the loop. The corrective action is
@@ -598,7 +601,7 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
     } else if (remote->inbound.muted) {
         DPS_DBGPRINT("Remote %s has unumuted\n", DESCRIBE(remote));
         ret = DPS_UnmuteRemoteNode(node, remote);
-    } else if (DPS_MeshHasLoop(node, remote, meshId)) {
+    } else if (DPS_MeshHasLoop(node, remote, &meshId)) {
         DPS_DBGPRINT("Loop detected by %d for %s\n", node->port, DESCRIBE(remote));
         if (!remote->outbound.muted) {
             DPS_MuteRemoteNode(node, remote);
@@ -607,7 +610,7 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
 
     if (!remote->outbound.muted) {
         int isDelta = (flags & DPS_SUB_FLAG_DELTA_IND) != 0;
-        memcpy_s(&remote->inbound.meshId, sizeof(remote->inbound.meshId), meshId, sizeof(DPS_UUID));
+        memcpy_s(&remote->inbound.meshId, sizeof(remote->inbound.meshId), &meshId, sizeof(DPS_UUID));
         ret = UpdateInboundInterests(node, remote, interests, needs, isDelta);
         /*
          * Evaluate impact of the change in interests
@@ -622,8 +625,8 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
     /*
      * Track the minimum mesh id we have seen
      */
-    if (DPS_UUIDCompare(meshId, &node->minMeshId) < 0) {
-        memcpy_s(&node->minMeshId, sizeof(node->minMeshId), meshId, sizeof(DPS_UUID));
+    if (DPS_UUIDCompare(&meshId, &node->minMeshId) < 0) {
+        memcpy_s(&node->minMeshId, sizeof(node->minMeshId), &meshId, sizeof(DPS_UUID));
     }
     /*
      * All is good so send an ACK

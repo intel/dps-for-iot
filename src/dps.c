@@ -983,19 +983,23 @@ static DPS_Status OnMulticastReceive(DPS_Node* node, DPS_NetEndpoint* ep, DPS_St
         return DPS_ERR_FAILURE;
     }
     DPS_UnlockNode(node);
+
+    memset(&coap, 0, sizeof(coap));
     ret = CoAP_Parse(data, len, &coap, &payload);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Discarding garbage multicast packet len=%zu\n", len);
-        return ret;
+        goto Exit;
     }
     /*
      * Multicast packets must be non-confirmable
      */
     if (coap.type != COAP_TYPE_NON_CONFIRMABLE) {
         DPS_ERRPRINT("Discarding packet within bad type=%d\n", coap.type);
-        return DPS_ERR_INVALID;
+        ret = DPS_ERR_INVALID;
+        goto Exit;
     }
     ret = DecodeRequest(node, ep, &payload, DPS_TRUE);
+Exit:
     CoAP_Free(&coap);
     return ret;
 }
