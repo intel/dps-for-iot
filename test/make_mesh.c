@@ -618,6 +618,10 @@ int main(int argc, char** argv)
     LinksFailed = 0;
     for (l = links; l != NULL; l = l->next) {
         ret = LinkNodes(NodeMap[l->src], NodeMap[l->dst]);
+        if (ret != DPS_OK) {
+            DPS_ERRPRINT("Failed to link nodes: %s\n", DPS_ErrTxt(ret));
+            return 1;
+        }
         ++numLinks;
     }
     DPS_PRINT("%d nodes making %d links \n", numIds, numLinks);

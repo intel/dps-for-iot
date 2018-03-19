@@ -131,30 +131,36 @@ static void OnLinkedPut(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status ret, v
         regPut->pub = DPS_CreatePublication(node);
         if (!regPut->pub) {
             ret = DPS_ERR_RESOURCES;
-        } else {
-            const char* topics[2];
-            topics[0] = DPS_RegistryTopicString;
-            topics[1] = regPut->tenant;
+            goto Exit;
+        }
+        const char* topics[2];
+        topics[0] = DPS_RegistryTopicString;
+        topics[1] = regPut->tenant;
 
-            DPS_SetPublicationData(regPut->pub, regPut);
-            DPS_InitPublication(regPut->pub, topics, 2, DPS_TRUE, NULL, OnPutAck);
-            ret = DPS_Publish(regPut->pub, regPut->payload.base, DPS_TxBufferUsed(&regPut->payload), REGISTRATION_TTL);
-            /*
-             * Start a timer
-             */
-            if (ret == DPS_OK) {
-                int r;
-                r = uv_timer_init(DPS_GetLoop(node), &regPut->timer);
-                if (!r) {
-                    regPut->timer.data = regPut;
-                    r = uv_timer_start(&regPut->timer, OnPutTimeout, REG_PUT_TIMEOUT, 0);
-                }
-                if (r) {
-                    ret = DPS_ERR_FAILURE;
-                }
-            }
+        DPS_SetPublicationData(regPut->pub, regPut);
+        ret = DPS_InitPublication(regPut->pub, topics, 2, DPS_TRUE, NULL, OnPutAck);
+        if (ret != DPS_OK) {
+            goto Exit;
+        }
+        ret = DPS_Publish(regPut->pub, regPut->payload.base, DPS_TxBufferUsed(&regPut->payload), REGISTRATION_TTL);
+        if (ret != DPS_OK) {
+            goto Exit;
+        }
+        /*
+         * Start a timer
+         */
+        int r;
+        r = uv_timer_init(DPS_GetLoop(node), &regPut->timer);
+        if (!r) {
+            regPut->timer.data = regPut;
+            r = uv_timer_start(&regPut->timer, OnPutTimeout, REG_PUT_TIMEOUT, 0);
+        }
+        if (r) {
+            ret = DPS_ERR_FAILURE;
+            goto Exit;
         }
     }
+Exit:
     if (ret != DPS_OK) {
         RegPutCB(regPut, ret);
     }

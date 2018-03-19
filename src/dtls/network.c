@@ -1313,12 +1313,9 @@ DPS_NetContext* DPS_NetStart(DPS_Node* node, uint16_t port, DPS_OnReceive cb)
     }
 
     mbedtls_debug_set_threshold(DEBUG_MBEDTLS_LEVEL);
-    /* Enable this block to log the supported ciphersuites */
-#if 0
     for (const int* cs = mbedtls_ssl_list_ciphersuites(); *cs; ++cs) {
         DPS_DBGPRINT("  %s\n", mbedtls_ssl_get_ciphersuite_name(*cs));
     }
-#endif
 
     return netCtx;
 

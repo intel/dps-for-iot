@@ -51,11 +51,11 @@ static DPS_Status SetKey(DPS_KeyStoreRequest* request, const DPS_Key* key)
 
     switch (key->type) {
     case DPS_KEY_SYMMETRIC:
-        *alg = COSE_ALG_A128KW;
+        *alg = COSE_ALG_A256KW;
         break;
     case DPS_KEY_EC:
     case DPS_KEY_EC_CERT:
-        *alg = COSE_ALG_ECDH_ES_A128KW;
+        *alg = COSE_ALG_ECDH_ES_A256KW;
         break;
     default:
         return DPS_ERR_MISSING;
@@ -410,15 +410,14 @@ static DPS_Status CallPubHandlers(DPS_Node* node, DPS_Publication* pub)
              */
             switch (recipient.alg) {
             case COSE_ALG_DIRECT:
-            case COSE_ALG_A128KW:
+            case COSE_ALG_A256KW:
                 if (AddRecipient(pub, recipient.alg, &recipient.kid)) {
                     ret = DPS_OK;
                 } else {
                     ret = DPS_ERR_RESOURCES;
                 }
                 break;
-            case COSE_ALG_ECDH_ES_HKDF_256:
-            case COSE_ALG_ECDH_ES_A128KW:
+            case COSE_ALG_ECDH_ES_A256KW:
                 if (AddRecipient(pub, recipient.alg, &pub->sender.kid)) {
                     ret = DPS_OK;
                 } else {
@@ -1261,7 +1260,7 @@ DPS_Status DPS_SerializePub(DPS_Node* node, DPS_Publication* pub, const uint8_t*
         DPS_TxBufferToRx(&encryptedBuf, &plainTextBuf);
         DPS_TxBufferToRx(&protectedBuf, &aadBuf);
         DPS_MakeNonce(&pub->pubId, pub->sequenceNum, DPS_MSG_TYPE_PUB, nonce);
-        ret = COSE_Encrypt(COSE_ALG_AES_CCM_16_128_128, nonce, node->signer.alg ? &node->signer : NULL,
+        ret = COSE_Encrypt(COSE_ALG_A256GCM, nonce, node->signer.alg ? &node->signer : NULL,
                            pub->recipients, pub->recipientsCount, &aadBuf, &plainTextBuf, node->keyStore,
                            &encryptedBuf);
         DPS_RxBufferFree(&plainTextBuf);

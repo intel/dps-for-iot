@@ -1188,9 +1188,6 @@ static DPS_Status GetSignatureAlgorithm(DPS_KeyStore* keyStore, const DPS_KeyId*
         return ret;
     }
     switch (curve) {
-    case DPS_EC_CURVE_P256:
-        *alg = COSE_ALG_ES256;
-        break;
     case DPS_EC_CURVE_P384:
         *alg = COSE_ALG_ES384;
         break;

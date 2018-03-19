@@ -34,7 +34,7 @@
 extern "C" {
 #endif
 
-#define AES_128_KEY_LEN 16 /**< AES 128 key length, in bytes */
+#define AES_256_KEY_LEN 32 /**< AES 256 key length, in bytes */
 
 #define EC_MAX_COORD_LEN 66 /**< Maximum length of an EC coordinate (x, y, or d) */
 
@@ -65,7 +65,7 @@ void DPS_DestroyRBG(DPS_RBG* rbg);
  *
  * @return DPS_OK if creation is successful, an error otherwise
  */
-DPS_Status DPS_RandomKey(DPS_RBG *rbg, uint8_t key[AES_128_KEY_LEN]);
+DPS_Status DPS_RandomKey(DPS_RBG *rbg, uint8_t key[AES_256_KEY_LEN]);
 
 /**
  * Create an ephemeral elliptic curve key

@@ -3,12 +3,12 @@
 export COV_PATH=../../coverity/bin
 export PATH=$PATH:$COV_PATH
 
-scons --clean
-cov-build --dir cov scons
+scons $@ --clean
+cov-build --dir cov scons $@
 
-cov-analyze --dir cov --concurrency --security --rule --enable-constraint-fpp --enable-fnptr --enable-virtual
+cov-analyze --dir cov --concurrency --security --rule --enable-constraint-fpp --enable-fnptr --enable-virtual --strip-path `dirname $PWD`
 
 rm -rf cov_errors
-cov-format-errors --dir cov --html-output cov_errors
+cov-format-errors --dir cov --html-output cov_errors --filesort --strip-path `dirname $PWD` --title "Distributed Publish & Subscribe"
 
-firefox cov_errors/index.html&
+firefox cov_errors/index.html &
