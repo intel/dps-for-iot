@@ -12,20 +12,20 @@
 
 USE_DTLS=${USE_DTLS:-0}
 
-LLVM_PROFILE_FILE="%p.profraw"
+export LLVM_PROFILE_FILE="%p.profraw"
 
 if [ $USE_DTLS -eq 0 ]; then
-    find test/corpus_cbor -type f | xargs ./build/test/bin/cbor_fuzzer &
-    find test/corpus_multicast -type f | xargs ./build/test/bin/multicast_receive_fuzzer &
-    find test/corpus_unicast -type f | xargs ./build/test/bin/net_receive_fuzzer &
+    find test/corpus/cbor -type f | xargs ./build/test/bin/cbor_fuzzer &
+    find test/corpus/multicast_receive -type f | xargs ./build/test/bin/multicast_receive_fuzzer &
+    find test/corpus/unicast_receive -type f | xargs ./build/test/bin/net_receive_fuzzer &
 fi
 
 if [ $USE_DTLS -ne 0 ]; then
     for step in {0..6}; do
-	find test/corpus_dtls_server_$step -type f | xargs ./build/test/bin/dtls_fuzzer server $step &
+	find test/corpus/dtls_server_$step -type f | xargs ./build/test/bin/dtls_fuzzer server $step &
     done
     for step in {0..7}; do
-	find test/corpus_dtls_client_$step -type f | xargs ./build/test/bin/dtls_fuzzer client $step &
+	find test/corpus/dtls_client_$step -type f | xargs ./build/test/bin/dtls_fuzzer client $step &
     done
 fi
 

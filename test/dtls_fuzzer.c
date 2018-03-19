@@ -140,7 +140,7 @@ static void OnServerData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, c
             memcpy(buf->base, fuzzData.base, fuzzData.len);
         } else if (fuzzStep == -1) {
             char template[] = "NNN-XXXXXX.dat";
-            sprintf(template, "%03d-XXXXXX.dat", serverStep);
+            sprintf(template, "%d-XXXXXX.dat", serverStep);
             int fd = mkstemps(template, 4);
             (void)write(fd, buf->base, nread);
             close(fd);
@@ -155,7 +155,7 @@ static void OnClientData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, c
     if (nread > 0) {
         if (fuzzStep == -1) {
             char template[] = "NNN-XXXXXX.dat";
-            sprintf(template, "%03d-XXXXXX.dat", clientStep);
+            sprintf(template, "%d-XXXXXX.dat", clientStep);
             int fd = mkstemps(template, 4);
             (void)write(fd, buf->base, nread);
             close(fd);

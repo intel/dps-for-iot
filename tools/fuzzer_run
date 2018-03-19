@@ -1,0 +1,34 @@
+#!/bin/sh
+#
+# run all the fuzzers to generate more test cases
+#
+# example:
+# $ scons ... transport=fuzzer
+# $ ./fuzzer_run
+# $ scons ... transport=dtls
+# $ USE_DTLS=1 ./fuzzer_run
+#
+
+USE_DTLS=${USE_DTLS:-0}
+
+if [ $USE_DTLS -eq 0 ]; then
+    mkdir -p test/corpus/cbor
+    ./build/test/bin/cbor_fuzzer test/corpus/cbor &
+    mkdir -p test/corpus/multicast_receive
+    ./build/test/bin/multicast_receive_fuzzer test/corpus/multicast_receive test/seed_corpus/multicast_receive &
+    mkdir -p test/corpus/unicast_receive
+    ./build/test/bin/net_receive_fuzzer test/corpus/unicast_receive test/seed_corpus/unicast_receive &
+fi
+
+if [ $USE_DTLS -ne 0 ]; then
+    for step in {0..6}; do
+	mkdir -p test/corpus/dtls_server_$step
+	./build/test/bin/dtls_fuzzer server $step test/corpus/dtls_server_$step test/seed_corpus/dtls_server_$step &
+    done
+    for step in {0..7}; do
+	mkdir -p test/corpus/dtls_client_$step
+	./build/test/bin/dtls_fuzzer client $step test/corpus/dtls_client_$step test/seed_corpus/dtls_client_$step &
+    done
+fi
+
+wait

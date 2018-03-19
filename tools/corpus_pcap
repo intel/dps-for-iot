@@ -9,10 +9,10 @@
 # $ ./test_scripts/run
 #
 # Filter multicast DPS packets:
-# $ tshark -r dps.tcpdump -w dps.pcapng 'coap'
+# $ tshark -r dps.tcpdump -w dps_multicast.pcapng 'coap'
 #
 # Filter unicast DPS packets:
-# $ tshark -r dps.tcpdump -w dps.pcapng 'udp[8:2]==85:01 and not icmp'
+# $ tshark -r dps.tcpdump -w dps_unicast.pcapng 'udp[8:2]==85:01 and not icmp'
 #
 
 import argparse
