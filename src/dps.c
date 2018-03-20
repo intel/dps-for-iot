@@ -142,10 +142,12 @@ DPS_Status DPS_TxBufferInit(DPS_TxBuffer* buffer, uint8_t* storage, size_t size)
 
 DPS_Status DPS_TxBufferAppend(DPS_TxBuffer* buffer, const uint8_t* data, size_t len)
 {
-    if (memcpy_s(buffer->txPos, DPS_TxBufferSpace(buffer), data, len) != EOK) {
-        return DPS_ERR_RESOURCES;
+    if (data && len) {
+        if (memcpy_s(buffer->txPos, DPS_TxBufferSpace(buffer), data, len) != EOK) {
+            return DPS_ERR_OVERFLOW;
+        }
+        buffer->txPos += len;
     }
-    buffer->txPos += len;
     return DPS_OK;
 }
 

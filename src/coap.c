@@ -276,10 +276,12 @@ DPS_Status CoAP_Compose(uint8_t code, const CoAP_Option* opts, size_t numOpts, s
             *buf->txPos++ = (uint8_t)(len >> 8);
             *buf->txPos++ = (uint8_t)(len & 0xFF);
         }
-        if (memcpy_s(buf->txPos, DPS_TxBufferSpace(buf), opts->val, opts->len) != EOK) {
-            return DPS_ERR_RESOURCES;
+        if (opts->val && opts->len) {
+            if (memcpy_s(buf->txPos, DPS_TxBufferSpace(buf), opts->val, opts->len) != EOK) {
+                return DPS_ERR_RESOURCES;
+            }
+            buf->txPos += opts->len;
         }
-        buf->txPos += opts->len;
         optIdLast += delta;
         ++opts;
     }

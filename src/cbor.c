@@ -112,7 +112,7 @@ DPS_Status CBOR_EncodeLength(DPS_TxBuffer* buffer, uint64_t len, uint8_t maj)
 DPS_Status CBOR_Copy(DPS_TxBuffer* buffer, const uint8_t* data, size_t len)
 {
     DPS_Status ret = DPS_OK;
-    if (data) {
+    if (data && len) {
         if (memcpy_s(buffer->txPos, DPS_TxBufferSpace(buffer), data, len) != EOK) {
             ret = DPS_ERR_OVERFLOW;
         } else {
