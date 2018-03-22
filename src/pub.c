@@ -917,9 +917,6 @@ DPS_Status DPS_SendPublication(DPS_Node* node, DPS_Publication* pub, RemoteNode*
              */
             DPS_NetFreeBufs(bufs, 2);
         }
-        if (ret == DPS_OK) {
-            UpdatePubHistory(node, pub);
-        }
     } else {
         DPS_TxBufferFree(&buf);
     }
