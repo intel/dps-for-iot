@@ -503,16 +503,17 @@ DPS_Status CBOR_DecodeDouble(DPS_RxBuffer* buffer, double* d);
 DPS_Status CBOR_Skip(DPS_RxBuffer* buffer, uint8_t* maj, size_t* skipped);
 
 /**
- * Peek at the major type of the next value in the encoded buffer
+ * Peek at the next value in the encoded buffer
  *
  * @param buffer  Buffer to decode from
  * @param maj     Returns the major type of the next value
+ * @param info    Returns the additional information of the next value
  *
  * @return
  * - DPS_OK if the buffer was decoded
  * - DPS_ERR_EOD if there was insufficient data in the buffer
  */
-DPS_Status CBOR_Peek(DPS_RxBuffer* buffer, uint8_t* maj);
+DPS_Status CBOR_Peek(DPS_RxBuffer* buffer, uint8_t* maj, uint64_t* info);
 
 /**
  * Structure for holding state while parsing a map

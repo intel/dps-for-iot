@@ -139,12 +139,11 @@ DPS_Status CBOR_DecodeBoolean(DPS_RxBuffer* buffer, int* i)
  */
 static const size_t IntLengths[] = { 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,3,5,9,0,0,0,0 };
 
-static DPS_Status DecodeUint(DPS_RxBuffer* buffer, uint64_t* n, uint8_t* maj)
+static DPS_Status PeekUint(DPS_RxBuffer* buffer, uint64_t* n, uint8_t* maj, size_t* len)
 {
     size_t avail = DPS_RxBufferAvail(buffer);
     uint8_t* p = buffer->rxPos;
     uint8_t info;
-    size_t len;
 
     if (avail < 1) {
         return DPS_ERR_EOD;
@@ -152,11 +151,11 @@ static DPS_Status DecodeUint(DPS_RxBuffer* buffer, uint64_t* n, uint8_t* maj)
     info = *p;
     *maj = info & 0xE0;
     info &= 0x1F;
-    len = IntLengths[info];
-    if (avail < len) {
+    *len = IntLengths[info];
+    if (avail < *len) {
         return DPS_ERR_EOD;
     }
-    switch (len) {
+    switch (*len) {
     case 1:
         *n = info;
         break;
@@ -175,8 +174,19 @@ static DPS_Status DecodeUint(DPS_RxBuffer* buffer, uint64_t* n, uint8_t* maj)
     default:
         return DPS_ERR_INVALID;
     }
-    buffer->rxPos += len;
     return DPS_OK;
+}
+
+static DPS_Status DecodeUint(DPS_RxBuffer* buffer, uint64_t* n, uint8_t* maj)
+{
+    DPS_Status ret;
+    size_t len;
+
+    ret = PeekUint(buffer, n, maj, &len);
+    if (ret == DPS_OK) {
+        buffer->rxPos += len;
+    }
+    return ret;
 }
 
 DPS_Status CBOR_EncodeBoolean(DPS_TxBuffer* buffer, int i)
@@ -641,16 +651,23 @@ DPS_Status CBOR_DecodeDouble(DPS_RxBuffer* buffer, double* d)
     return DPS_OK;
 }
 
-DPS_Status CBOR_Peek(DPS_RxBuffer* buffer, uint8_t* majOut)
+DPS_Status CBOR_Peek(DPS_RxBuffer* buffer, uint8_t* majOut, uint64_t* infoOut)
 {
+    DPS_Status ret;
+    uint64_t info;
+    size_t len;
+
     if (DPS_RxBufferAvail(buffer) < 1) {
         return DPS_ERR_EOD;
     }
     if (!majOut) {
         return DPS_ERR_ARGS;
     }
-    *majOut = buffer->rxPos[0] & 0xE0;
-    return DPS_OK;
+    ret = PeekUint(buffer, &info, majOut, &len);
+    if (infoOut && (ret == DPS_OK)) {
+        *infoOut = info;
+    }
+    return ret;
 }
 
 DPS_Status CBOR_Skip(DPS_RxBuffer* buffer, uint8_t* majOut, size_t* skipped)

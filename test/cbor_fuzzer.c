@@ -73,7 +73,7 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t len)
     DPS_RxBufferInit(&buf, (uint8_t*)data, len);
     CBOR_Skip(&buf, &u8, &sz);
     DPS_RxBufferInit(&buf, (uint8_t*)data, len);
-    CBOR_Peek(&buf, &u8);
+    CBOR_Peek(&buf, &u8, NULL);
 
     DPS_RxBufferInit(&buf, (uint8_t*)data, len);
     DPS_ParseMapInit(&map, &buf, keys, A_SIZEOF(keys), NULL, 0);
