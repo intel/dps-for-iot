@@ -1321,12 +1321,10 @@ DPS_Status DPS_Publish(DPS_Publication* pub, const uint8_t* payload, size_t len,
      */
     if (ttl < 0) {
         if (!(pub->flags & PUB_FLAG_RETAINED)) {
-            DPS_UnlockNode(node);
             DPS_ERRPRINT("Negative ttl only valid for retained publications\n");
             return DPS_ERR_INVALID;
         }
         if (payload) {
-            DPS_UnlockNode(node);
             DPS_ERRPRINT("Payload not permitted when canceling a retained publication\n");
             return DPS_ERR_INVALID;
         }
