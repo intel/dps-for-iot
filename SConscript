@@ -167,7 +167,8 @@ testsrcs = ['test/hist_unit.c',
             'test/cbortest.c',
             'test/cosetest.c',
             'test/version.c',
-            'test/keystoretest.c']
+            'test/keystoretest.c',
+            'test/publish.c']
 
 Depends(testsrcs, ext_libs)
 

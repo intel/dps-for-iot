@@ -91,6 +91,17 @@ typedef DPS_Status (*DPS_OnReceive)(DPS_Node* node, DPS_NetEndpoint* endpoint, D
 void DPS_EndpointSetPort(DPS_NetEndpoint* endpoint, uint16_t port);
 
 /**
+ * Send a message locally, short-circuiting the transport layer.
+ *
+ * @param node The node sending and receiving the message
+ * @param bufs Data buffers to send
+ * @param numBufs Number of buffers to send
+ *
+ * @return DPS_OK if the send is successful, an error otherwise
+ */
+DPS_Status DPS_LoopbackSend(DPS_Node* node, uv_buf_t* bufs, size_t numBufs);
+
+/**
  * Start receiving multicast data
  *
  * @param node     Opaque pointer to the DPS node
