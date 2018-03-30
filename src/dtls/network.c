@@ -159,7 +159,7 @@ typedef struct _DPS_NetConnection {
     DPS_NetConnection* next;
 } DPS_NetConnection;
 
-#define MAX_READ_LEN   4096
+#define MAX_READ_LEN   65536
 
 struct _DPS_NetContext {
     uv_udp_t rxSocket;
@@ -1158,7 +1158,6 @@ static void ConsumePending(DPS_NetConnection* cn)
 
 static void AllocBuffer(uv_handle_t* handle, size_t suggestedSize, uv_buf_t* buf)
 {
-    DPS_DBGTRACE();
     buf->base = calloc(MAX_READ_LEN, sizeof(uint8_t));
     if (buf->base) {
         buf->len = MAX_READ_LEN;
@@ -1199,6 +1198,10 @@ static void OnUdpData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, cons
         goto Exit;
     }
 #endif
+    if (flags & UV_UDP_PARTIAL) {
+        DPS_ERRPRINT("Dropping partial message, read buffer too small\n");
+        goto Exit;
+    }
 
     DPS_DBGPRINT("OnData() received %zd bytes from network\n", nread);
 
