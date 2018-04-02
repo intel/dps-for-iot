@@ -671,6 +671,7 @@ INPUT                  = Introduction.dox \
                          tutorial/hello_world.dox \
                          tutorial/link.dox \
                          tutorial/security.dox \
+                         Examples.dox \
                          ../inc
 
 # This tag can be used to specify the character encoding of the source files
