@@ -68,9 +68,9 @@ extern "C" {
 #define CBOR_MAX_LENGTH (1 + sizeof(uint64_t))
 
 /**
- * Actual bytes needed to encode a specific length (up to (2^16 - 1))
+ * Actual bytes needed to encode a specific length
  */
-#define CBOR_SIZEOF_LEN(l)      ((((l) < 24) ? 1 : (((l) < 256) ? 2 : 3)))
+#define CBOR_SIZEOF_LEN(l)      ((((l) < 24) ? 1 : (((l) <= UINT8_MAX) ? 2 : (((l) <= UINT16_MAX) ? 3 : ((((l) <= UINT32_MAX) ? 5 : 9))))))
 
 /**
  * Actual bytes needed for encoding a map size
