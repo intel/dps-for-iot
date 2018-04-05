@@ -49,17 +49,20 @@ void DPS_DestroyAck(PublicationAck* ack)
     free(ack);
 }
 
-DPS_Status DPS_SendAcknowledgement(DPS_Node*node, PublicationAck* ack, RemoteNode* ackNode)
+DPS_Status DPS_SendAcknowledgement(DPS_Node* node, PublicationAck* ack, RemoteNode* ackNode)
 {
-    DPS_Status ret;
     uv_buf_t uvBufs[] = {
         uv_buf_init((char*)ack->buf.base, DPS_TxBufferUsed(&ack->buf)),
         uv_buf_init((char*)ack->encryptedBuf.base, DPS_TxBufferUsed(&ack->encryptedBuf))
     };
+    int loopback = DPS_FALSE;
+    DPS_Publication* pub;
+    DPS_Status ret;
 
-    DPS_DBGPRINT("SendAcknowledgement from %d\n", node->port);
+    DPS_DBGPRINT("SendAcknowledgement from %d to %s\n", node->port, DPS_NodeAddrToString(&ackNode->ep.addr));
+
     /*
-     * Ownership of the buffers has been passed to the network
+     * Ownership of the buffers will be passed to the network
      */
     ack->buf.base = NULL;
     ack->encryptedBuf.base = NULL;
