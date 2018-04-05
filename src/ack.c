@@ -352,7 +352,7 @@ DPS_Status DPS_DecodeAcknowledgement(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Rx
      * Search the history record for somewhere to forward the ACK
      */
     ret = DPS_LookupPublisherForAck(&node->history, pubId, &sn, &addr);
-    if ((ret == DPS_OK) && (sequenceNum <= sn) && addr) {
+    if ((ret == DPS_OK) && (sequenceNum <= sn) && addr && !DPS_SameAddr(&ep->addr, addr)) {
         RemoteNode* ackNode;
         DPS_LockNode(node);
         ret = DPS_AddRemoteNode(node, addr, NULL, &ackNode);
