@@ -1,6 +1,6 @@
 import os
 import string
-Import(['env', 'ext_libs'])
+Import(['env', 'ext_libs', 'version'])
 
 platform = env['PLATFORM']
 
@@ -73,10 +73,10 @@ libenv.Install('#/build/dist/lib', lib)
 
 shobjs = libenv.SharedObject(srcs)
 if platform == 'win32':
-    shlib = libenv.SharedLibrary('lib/dps_shared', shobjs + ['dps_shared.def'])
+    shlib = libenv.SharedLibrary('lib/dps_shared', shobjs + ['dps_shared.def'], LIBS = ext_libs, SHLIBVERSION = version)
 else:
-    shlib = libenv.SharedLibrary('lib/dps_shared', shobjs)
-libenv.Install('#/build/dist/lib', shlib)
+    shlib = libenv.SharedLibrary('lib/dps_shared', shobjs, LIBS = ext_libs, SHLIBVERSION = version)
+libenv.InstallVersionedLib('#/build/dist/lib', shlib, SHLIBVERSION = version)
 
 ns3srcs = ['src/bitvec.c',
            'src/cbor.c',

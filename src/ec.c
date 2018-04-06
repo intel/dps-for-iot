@@ -348,7 +348,7 @@ DPS_Status ParseCertificate_ECDSA(const char* cert,
     int ret;
 
     len = cert ? strnlen_s(cert, RSIZE_MAX_STR) + 1 : 0;
-    if (len == RSIZE_MAX_STR) {
+    if (len > RSIZE_MAX_STR) {
         DPS_ERRPRINT("Invalid certificate\n");
         return DPS_ERR_ARGS;
     }

@@ -159,7 +159,7 @@ typedef struct _DPS_NetConnection {
     DPS_NetConnection* next;
 } DPS_NetConnection;
 
-#define MAX_READ_LEN   4096
+#define MAX_READ_LEN   65536
 
 struct _DPS_NetContext {
     uv_udp_t rxSocket;
@@ -663,7 +663,7 @@ static int ResetConnection(DPS_NetConnection* cn, const struct sockaddr* addr)
         DPS_ERRPRINT("Convert addr to string failed: %s\n", uv_err_name(ret));
         return MBEDTLS_ERR_SSL_INTERNAL_ERROR;
     }
-    ret = mbedtls_ssl_set_client_transport_id(&cn->ssl, (const unsigned char*)clientID, strnlen(clientID, sizeof(clientID)));
+    ret = mbedtls_ssl_set_client_transport_id(&cn->ssl, (const unsigned char*)clientID, strnlen_s(clientID, sizeof(clientID)));
     if (ret) {
         DPS_ERRPRINT("Set client transport ID failed: %s\n", TLSErrTxt(ret));
     }
@@ -679,7 +679,7 @@ static DPS_Status SetCA(DPS_KeyStoreRequest* request, const char* ca)
     int ret;
 
     len = ca ? strnlen_s(ca, RSIZE_MAX_STR) + 1 : 0;
-    if (len == RSIZE_MAX_STR) {
+    if (len > RSIZE_MAX_STR) {
         DPS_ERRPRINT("Invalid CA\n");
         return DPS_ERR_MISSING;
     }
@@ -702,7 +702,7 @@ static DPS_Status SetCert(DPS_KeyStoreRequest* request, const DPS_Key* key)
         return DPS_ERR_MISSING;
     }
     len = key->cert.cert ? strnlen_s(key->cert.cert, RSIZE_MAX_STR) + 1 : 0;
-    if (len == RSIZE_MAX_STR) {
+    if (len > RSIZE_MAX_STR) {
         return DPS_ERR_MISSING;
     }
     ret = mbedtls_x509_crt_parse(&cn->cert, (const unsigned char*)key->cert.cert, len);
@@ -711,7 +711,7 @@ static DPS_Status SetCert(DPS_KeyStoreRequest* request, const DPS_Key* key)
         return DPS_ERR_MISSING;
     }
     len = key->cert.privateKey ? strnlen_s(key->cert.privateKey, RSIZE_MAX_STR) + 1 : 0;
-    if (len == RSIZE_MAX_STR) {
+    if (len > RSIZE_MAX_STR) {
         return DPS_ERR_MISSING;
     }
     pwLen = key->cert.password ? strnlen_s(key->cert.password, RSIZE_MAX_STR) : 0;
@@ -1158,7 +1158,6 @@ static void ConsumePending(DPS_NetConnection* cn)
 
 static void AllocBuffer(uv_handle_t* handle, size_t suggestedSize, uv_buf_t* buf)
 {
-    DPS_DBGTRACE();
     buf->base = calloc(MAX_READ_LEN, sizeof(uint8_t));
     if (buf->base) {
         buf->len = MAX_READ_LEN;
@@ -1199,6 +1198,10 @@ static void OnUdpData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, cons
         goto Exit;
     }
 #endif
+    if (flags & UV_UDP_PARTIAL) {
+        DPS_ERRPRINT("Dropping partial message, read buffer too small\n");
+        goto Exit;
+    }
 
     DPS_DBGPRINT("OnData() received %zd bytes from network\n", nread);
 

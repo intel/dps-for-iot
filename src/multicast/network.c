@@ -77,16 +77,29 @@ static void AllocBuffer(uv_handle_t* handle, size_t suggestedSize, uv_buf_t* buf
     buf->base = malloc(buf->len);
 }
 
-static void OnMcastRx(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf, const struct sockaddr* addr, unsigned flags)
+static void OnMcastRx(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf, const struct sockaddr* addr,
+                      unsigned flags)
 {
     DPS_MulticastReceiver* receiver = (DPS_MulticastReceiver*)handle->data;
     DPS_NetEndpoint ep;
 
-    DPS_DBGPRINT("OnMcastRx\n");
+    if (nread == 0 && !addr) {
+        /* No more data to read, free the buffer */
+        free(buf->base);
+        return;
+    }
+
+    DPS_DBGTRACEA("handle=%p,nread=%d,buf={base=%p,len=%d},addr=%p,flags=0x%x\n", handle, nread,
+                  buf->base, buf->len, addr, flags);
+
     if (nread < 0) {
         DPS_ERRPRINT("Read error %s\n", uv_err_name((int)nread));
         uv_close((uv_handle_t*)handle, NULL);
         free(buf->base);
+        return;
+    }
+    if (flags & UV_UDP_PARTIAL) {
+        DPS_ERRPRINT("Dropping partial message, read buffer too small\n");
         return;
     }
     if (addr) {
@@ -95,7 +108,6 @@ static void OnMcastRx(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf, cons
     ep.cn = NULL;
     DPS_SetAddress(&ep.addr, addr);
     receiver->cb(receiver->node, &ep, DPS_OK, (uint8_t*)buf->base, nread);
-    free(buf->base);
 }
 
 static DPS_Status MulticastRxInit(DPS_MulticastReceiver* receiver)

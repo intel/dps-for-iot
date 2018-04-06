@@ -24,6 +24,7 @@
 #include <string.h>
 #include <malloc.h>
 #include <assert.h>
+#include <safe_lib.h>
 #include <dps/dbg.h>
 #include <dps/err.h>
 #include "cose.h"

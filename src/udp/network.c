@@ -33,7 +33,7 @@
  */
 DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
-#define MAX_READ_LEN   4096
+#define MAX_READ_LEN   65536
 
 struct _DPS_NetContext {
     uv_udp_t rxSocket;
@@ -45,8 +45,6 @@ struct _DPS_NetContext {
 static void AllocBuffer(uv_handle_t* handle, size_t suggestedSize, uv_buf_t* buf)
 {
     DPS_NetContext* netCtx = (DPS_NetContext*)handle->data;
-
-    DPS_DBGTRACE();
     buf->len = MAX_READ_LEN;
     buf->base = netCtx->buffer;
 }
@@ -57,12 +55,15 @@ static void RxHandleClosed(uv_handle_t* handle)
     free(handle->data);
 }
 
-static void OnData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, const struct sockaddr* addr, unsigned flags)
+static void OnData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, const struct sockaddr* addr,
+                   unsigned flags)
 {
     DPS_NetEndpoint ep;
     DPS_NetContext* netCtx = (DPS_NetContext*)socket->data;
 
-    DPS_DBGTRACE();
+    DPS_DBGTRACEA("socket=%p,nread=%d,buf={base=%p,len=%d},addr=%p,flags=0x%x\n", socket, nread,
+                  buf->base, buf->len, addr, flags);
+
     if (nread < 0) {
         DPS_ERRPRINT("OnData error %s\n", uv_err_name((int)nread));
         return;
@@ -76,6 +77,10 @@ static void OnData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, const s
     }
     if (!addr) {
         DPS_ERRPRINT("OnData no address\n");
+        return;
+    }
+    if (flags & UV_UDP_PARTIAL) {
+        DPS_ERRPRINT("Dropping partial message, read buffer too small\n");
         return;
     }
     ep.cn = NULL;

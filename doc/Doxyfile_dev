@@ -671,6 +671,7 @@ INPUT                  = Introduction.dox \
                          tutorial/hello_world.dox \
                          tutorial/link.dox \
                          tutorial/security.dox \
+                         Examples.dox \
                          ../inc \
                          ../src
 
