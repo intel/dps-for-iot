@@ -1050,7 +1050,7 @@ static DPS_Status DecodeKey(DPS_RxBuffer* buf, COSE_Key* key)
             key->type = COSE_KEY_EC;
             switch (mapKey) {
             case COSE_EC_KEY_CRV:
-                ret = CBOR_Peek(buf, &maj);
+                ret = CBOR_Peek(buf, &maj, NULL);
                 if (ret != DPS_OK) {
                     return ret;
                 }
@@ -1087,7 +1087,7 @@ static DPS_Status DecodeKey(DPS_RxBuffer* buf, COSE_Key* key)
                 }
                 break;
             case COSE_EC_KEY_Y:
-                ret = CBOR_Peek(buf, &maj);
+                ret = CBOR_Peek(buf, &maj, NULL);
                 if (ret != DPS_OK) {
                     return ret;
                 }

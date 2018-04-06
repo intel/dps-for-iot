@@ -68,9 +68,9 @@ extern "C" {
 #define CBOR_MAX_LENGTH (1 + sizeof(uint64_t))
 
 /**
- * Actual bytes needed to encode a specific length (up to (2^16 - 1))
+ * Actual bytes needed to encode a specific length
  */
-#define CBOR_SIZEOF_LEN(l)      ((((l) < 24) ? 1 : (((l) < 256) ? 2 : 3)))
+#define CBOR_SIZEOF_LEN(l)      ((((l) < 24) ? 1 : (((l) <= UINT8_MAX) ? 2 : (((l) <= UINT16_MAX) ? 3 : ((((l) <= UINT32_MAX) ? 5 : 9))))))
 
 /**
  * Actual bytes needed for encoding a map size
@@ -409,6 +409,26 @@ DPS_Status CBOR_EndWrapBytes(DPS_TxBuffer* buffer, uint8_t* wrapPtr);
 #define CBOR_EncodeUint32(buffer, n) CBOR_EncodeUint(buffer, (uint64_t)n)
 
 /**
+ * Encode a float
+ *
+ * @param buffer   Buffer to append to
+ * @param f        The float
+ *
+ * @return DPS_OK if successful, an error otherwise
+ */
+DPS_Status CBOR_EncodeFloat(DPS_TxBuffer* buffer, float f);
+
+/**
+ * Encode a double
+ *
+ * @param buffer   Buffer to append to
+ * @param d        The double
+ *
+ * @return DPS_OK if successful, an error otherwise
+ */
+DPS_Status CBOR_EncodeDouble(DPS_TxBuffer* buffer, double d);
+
+/**
  * Decode a byte string
  *
  * @param buffer  Buffer to decode from
@@ -450,6 +470,26 @@ DPS_Status CBOR_DecodeString(DPS_RxBuffer* buffer, char** data, size_t* size);
 DPS_Status CBOR_DecodeArray(DPS_RxBuffer* buffer, size_t* size);
 
 /**
+ * Decode a float
+ *
+ * @param buffer   Buffer to append to
+ * @param f        The float
+ *
+ * @return DPS_OK if successful, an error otherwise
+ */
+DPS_Status CBOR_DecodeFloat(DPS_RxBuffer* buffer, float* f);
+
+/**
+ * Decode a double
+ *
+ * @param buffer   Buffer to append to
+ * @param d        The double
+ *
+ * @return DPS_OK if successful, an error otherwise
+ */
+DPS_Status CBOR_DecodeDouble(DPS_RxBuffer* buffer, double* d);
+
+/**
  * Skip a CBOR value
  *
  * @param buffer  Buffer to decode from
@@ -463,16 +503,17 @@ DPS_Status CBOR_DecodeArray(DPS_RxBuffer* buffer, size_t* size);
 DPS_Status CBOR_Skip(DPS_RxBuffer* buffer, uint8_t* maj, size_t* skipped);
 
 /**
- * Peek at the major type of the next value in the encoded buffer
+ * Peek at the next value in the encoded buffer
  *
  * @param buffer  Buffer to decode from
  * @param maj     Returns the major type of the next value
+ * @param info    Returns the additional information of the next value
  *
  * @return
  * - DPS_OK if the buffer was decoded
  * - DPS_ERR_EOD if there was insufficient data in the buffer
  */
-DPS_Status CBOR_Peek(DPS_RxBuffer* buffer, uint8_t* maj);
+DPS_Status CBOR_Peek(DPS_RxBuffer* buffer, uint8_t* maj, uint64_t* info);
 
 /**
  * Structure for holding state while parsing a map

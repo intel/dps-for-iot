@@ -20,6 +20,7 @@
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  */
 
+#include <math.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -48,7 +49,6 @@ static uint64_t Sints[] = {
     INT64_MIN, INT64_MIN + 1,
     -1, 0, 1, -22, -23, -24, -25, -254, -255, -256, -257,
     INT64_MAX - 1, INT64_MAX
-
 };
 
 static const char *Strings[] = {
@@ -63,6 +63,40 @@ static int ln;
 
 #define CHECK(r)   if ((r) != DPS_OK) { ln = __LINE__; goto Failed; }
 
+static const float Floats[] = {
+    100000.0, 3.4028234663852886e+38, INFINITY, NAN, -INFINITY
+};
+
+static const double Doubles[] = {
+    1.1, 1.0e+300, -4.1, INFINITY, NAN, -INFINITY
+};
+
+static DPS_Status TestFloatingPoint()
+{
+    DPS_TxBuffer txBuffer;
+    size_t i;
+    DPS_Status ret;
+
+    for (i = 0; i < A_SIZEOF(Floats); ++i) {
+        DPS_TxBufferInit(&txBuffer, buf, sizeof(buf));
+        ret = CBOR_EncodeFloat(&txBuffer, Floats[i]);
+        if (ret != DPS_OK) {
+            return ret;
+        }
+        CBOR_Dump(NULL, txBuffer.base, DPS_TxBufferUsed(&txBuffer));
+    }
+
+    for (i = 0; i < A_SIZEOF(Doubles); ++i) {
+        DPS_TxBufferInit(&txBuffer, buf, sizeof(buf));
+        ret = CBOR_EncodeDouble(&txBuffer, Doubles[i]);
+        if (ret != DPS_OK) {
+            return ret;
+        }
+        CBOR_Dump(NULL, txBuffer.base, DPS_TxBufferUsed(&txBuffer));
+    }
+    return DPS_OK;
+}
+
 int main(int argc, char** argv)
 {
     size_t i;
@@ -73,6 +107,9 @@ int main(int argc, char** argv)
     uint8_t* test;
     size_t size;
 
+    ret = TestFloatingPoint();
+    CHECK(ret);
+
     DPS_TxBufferInit(&txBuffer, buf, sizeof(buf));
 
     /*
@@ -80,7 +117,7 @@ int main(int argc, char** argv)
      */
     for (n = 0; n < 2; ++n) {
 
-        ret = CBOR_EncodeArray(&txBuffer, 48);
+        ret = CBOR_EncodeArray(&txBuffer, 59);
         CHECK(ret);
 
         for (i = 0; i < sizeof(Uints) / sizeof(Uints[0]); ++i) {
@@ -91,6 +128,14 @@ int main(int argc, char** argv)
         CHECK(ret);
         for (i = 0; i < sizeof(Sints) / sizeof(Sints[0]); ++i) {
             ret = CBOR_EncodeInt(&txBuffer, Sints[i]);
+            CHECK(ret);
+        }
+        for (i = 0; i < sizeof(Floats) / sizeof(Floats[0]); ++i) {
+            ret = CBOR_EncodeFloat(&txBuffer, Floats[i]);
+            CHECK(ret);
+        }
+        for (i = 0; i < sizeof(Doubles) / sizeof(Doubles[0]); ++i) {
+            ret = CBOR_EncodeDouble(&txBuffer, Doubles[i]);
             CHECK(ret);
         }
         ret = CBOR_EncodeArray(&txBuffer, sizeof(Strings) / sizeof(Strings[0]));
@@ -175,7 +220,7 @@ int main(int argc, char** argv)
     DPS_TxBufferToRx(&txBuffer, &rxBuffer);
 
     ret = CBOR_DecodeArray(&rxBuffer, &size);
-    ASSERT(size == 48);
+    ASSERT(size == 59);
     CHECK(ret);
 
     /*
@@ -196,6 +241,20 @@ int main(int argc, char** argv)
         int64_t n;
         ret = CBOR_DecodeInt(&rxBuffer, &n);
         ASSERT(n == Sints[i]);
+        CHECK(ret);
+    }
+
+    for (i = 0; i < sizeof(Floats) / sizeof(Floats[0]); ++i) {
+        float f;
+        ret = CBOR_DecodeFloat(&rxBuffer, &f);
+        ASSERT((f == Floats[i]) || (isnan(f) && isnan(Floats[i])));
+        CHECK(ret);
+    }
+
+    for (i = 0; i < sizeof(Doubles) / sizeof(Doubles[0]); ++i) {
+        double d;
+        ret = CBOR_DecodeDouble(&rxBuffer, &d);
+        ASSERT((d == Doubles[i]) || (isnan(d) && isnan(Doubles[i])));
         CHECK(ret);
     }
 
@@ -386,9 +445,9 @@ int main(int argc, char** argv)
      */
     ret = CBOR_DecodeArray(&rxBuffer, &size);
     CHECK(ret);
-    ASSERT(size == 48);
+    ASSERT(size == 59);
 
-    for (n = 0; n < 48; ++n) {
+    for (n = 0; n < 59; ++n) {
         size_t sz;
         uint8_t maj;
         ret = CBOR_Skip(&rxBuffer, &maj, &sz);
