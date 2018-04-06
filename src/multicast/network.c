@@ -85,8 +85,7 @@ static void OnMcastRx(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf, cons
 
     if (nread == 0 && !addr) {
         /* No more data to read, free the buffer */
-        free(buf->base);
-        return;
+        goto Exit;
     }
 
     DPS_DBGTRACEA("handle=%p,nread=%d,buf={base=%p,len=%d},addr=%p,flags=0x%x\n", handle, nread,
@@ -95,12 +94,11 @@ static void OnMcastRx(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf, cons
     if (nread < 0) {
         DPS_ERRPRINT("Read error %s\n", uv_err_name((int)nread));
         uv_close((uv_handle_t*)handle, NULL);
-        free(buf->base);
-        return;
+        goto Exit;
     }
     if (flags & UV_UDP_PARTIAL) {
         DPS_ERRPRINT("Dropping partial message, read buffer too small\n");
-        return;
+        goto Exit;
     }
     if (addr) {
         DPS_DBGPRINT("Received buffer of size %zd from %s\n", nread, DPS_NetAddrText(addr));
@@ -108,6 +106,8 @@ static void OnMcastRx(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf, cons
     ep.cn = NULL;
     DPS_SetAddress(&ep.addr, addr);
     receiver->cb(receiver->node, &ep, DPS_OK, (uint8_t*)buf->base, nread);
+Exit:
+    free(buf->base);
 }
 
 static DPS_Status MulticastRxInit(DPS_MulticastReceiver* receiver)
