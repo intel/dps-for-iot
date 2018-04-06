@@ -49,23 +49,46 @@ void DPS_DestroyAck(PublicationAck* ack)
     free(ack);
 }
 
-DPS_Status DPS_SendAcknowledgement(DPS_Node*node, PublicationAck* ack, RemoteNode* ackNode)
+DPS_Status DPS_SendAcknowledgement(DPS_Node* node, PublicationAck* ack, RemoteNode* ackNode)
 {
-    DPS_Status ret;
     uv_buf_t uvBufs[] = {
         uv_buf_init((char*)ack->buf.base, DPS_TxBufferUsed(&ack->buf)),
         uv_buf_init((char*)ack->encryptedBuf.base, DPS_TxBufferUsed(&ack->encryptedBuf))
     };
+    int loopback = DPS_FALSE;
+    DPS_Publication* pub;
+    DPS_Status ret;
 
-    DPS_DBGPRINT("SendAcknowledgement from %d\n", node->port);
+    DPS_DBGPRINT("SendAcknowledgement from %d to %s\n", node->port, DPS_NodeAddrToString(&ackNode->ep.addr));
+
     /*
-     * Ownership of the buffers has been passed to the network
+     * Ownership of the buffers will be passed to the network
      */
     ack->buf.base = NULL;
     ack->encryptedBuf.base = NULL;
-    ret = DPS_NetSend(node, NULL, &ackNode->ep, uvBufs, A_SIZEOF(uvBufs), DPS_OnSendComplete);
-    if (ret != DPS_OK) {
-        DPS_SendFailed(node, &ack->destAddr, uvBufs, A_SIZEOF(uvBufs), ret);
+
+    /*
+     * See if this is an ACK for a local publication
+     */
+    for (pub = node->publications; pub != NULL; pub = pub->next) {
+        if (DPS_UUIDCompare(&pub->pubId, &ack->pubId) == 0) {
+            loopback = DPS_TRUE;
+            break;
+        }
+    }
+
+    if (loopback) {
+        ret = DPS_LoopbackSend(node, uvBufs, A_SIZEOF(uvBufs));
+        if (ret == DPS_OK) {
+            DPS_NetFreeBufs(uvBufs, A_SIZEOF(uvBufs));
+        } else {
+            DPS_SendFailed(node, &ack->destAddr, uvBufs, A_SIZEOF(uvBufs), ret);
+        }
+    } else {
+        ret = DPS_NetSend(node, NULL, &ackNode->ep, uvBufs, A_SIZEOF(uvBufs), DPS_OnSendComplete);
+        if (ret != DPS_OK) {
+            DPS_SendFailed(node, &ack->destAddr, uvBufs, A_SIZEOF(uvBufs), ret);
+        }
     }
     return ret;
 }
@@ -332,7 +355,7 @@ DPS_Status DPS_DecodeAcknowledgement(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Rx
      * Search the history record for somewhere to forward the ACK
      */
     ret = DPS_LookupPublisherForAck(&node->history, pubId, &sn, &addr);
-    if ((ret == DPS_OK) && (sequenceNum <= sn) && addr) {
+    if ((ret == DPS_OK) && (sequenceNum <= sn) && addr && !DPS_SameAddr(&ep->addr, addr)) {
         RemoteNode* ackNode;
         DPS_LockNode(node);
         ret = DPS_AddRemoteNode(node, addr, NULL, &ackNode);

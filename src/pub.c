@@ -822,7 +822,7 @@ static void OnPubSendComplete(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep,
     DPS_OnSendComplete(node, NULL, ep, bufs, 1, status);
 }
 
-DPS_Status DPS_SendPublication(DPS_Node* node, DPS_Publication* pub, RemoteNode* remote)
+DPS_Status DPS_SendPublication(DPS_Node* node, DPS_Publication* pub, RemoteNode* remote, int loopback)
 {
     DPS_Status ret;
     DPS_TxBuffer buf;
@@ -907,6 +907,16 @@ DPS_Status DPS_SendPublication(DPS_Node* node, DPS_Publication* pub, RemoteNode*
                  */
                 DPS_SendFailed(node, &remote->ep.addr, bufs + 1, 1, ret);
             }
+        } else if (loopback) {
+            ret = DPS_LoopbackSend(node, bufs + 1, A_SIZEOF(bufs) - 1);
+            /*
+             * Only the first buffer can be freed here - we don't own the others
+             */
+            if (ret == DPS_OK) {
+                DPS_NetFreeBufs(bufs + 1, 1);
+            } else {
+                DPS_SendFailed(node, NULL, bufs + 1, 1, ret);
+            }
         } else {
             ret = CoAP_Wrap(bufs, A_SIZEOF(bufs));
             if (ret == DPS_OK) {
@@ -916,9 +926,6 @@ DPS_Status DPS_SendPublication(DPS_Node* node, DPS_Publication* pub, RemoteNode*
              * Only the first two buffers can be freed - we don't own the others
              */
             DPS_NetFreeBufs(bufs, 2);
-        }
-        if (ret == DPS_OK) {
-            UpdatePubHistory(node, pub);
         }
     } else {
         DPS_TxBufferFree(&buf);

@@ -653,7 +653,7 @@ static DPS_Status SendMatchingPubToSub(DPS_Node* node, DPS_Publication* pub, Rem
         DPS_BitVectorFuzzyHash(node->scratch.needs, node->scratch.interests);
         if (DPS_BitVectorIncludes(node->scratch.needs, subscriber->inbound.needs)) {
             DPS_DBGPRINT("Sending pub %d to %s\n", pub->sequenceNum, DESCRIBE(subscriber));
-            return DPS_SendPublication(node, pub, subscriber);
+            return DPS_SendPublication(node, pub, subscriber, DPS_FALSE);
         }
         DPS_DBGPRINT("Rejected pub %d for %s\n", pub->sequenceNum, DESCRIBE(subscriber));
     }
@@ -699,16 +699,32 @@ static void SendPubsTask(uv_async_t* handle)
          * Only check publications that are flagged to be checked
          */
         if (pub->checkToSend) {
-            DPS_Status ret;
+            DPS_Status ret = DPS_OK;
+            DPS_Subscription* sub;
             RemoteNode* remote;
             RemoteNode* nextRemote;
-            /*
-             * If the node is a multicast sender local publications are always multicast
-             */
-            if (node->mcastSender && (pub->flags & PUB_FLAG_LOCAL)) {
-                ret = DPS_SendPublication(node, pub, NULL);
-                if (ret != DPS_OK) {
-                    DPS_ERRPRINT("SendPublication (multicast) returned %s\n", DPS_ErrTxt(ret));
+            if (pub->flags & PUB_FLAG_LOCAL) {
+                /*
+                 * Loopback publication if there is a matching subscriber candidate on
+                 * this node
+                 */
+                for (sub = node->subscriptions; sub != NULL; sub = sub->next) {
+                    if (DPS_BitVectorIncludes(pub->bf, sub->bf)) {
+                        ret = DPS_SendPublication(node, pub, NULL, DPS_TRUE);
+                        if (ret != DPS_OK) {
+                            DPS_ERRPRINT("SendPublication (loopback) returned %s\n", DPS_ErrTxt(ret));
+                        }
+                        break;
+                    }
+                }
+                /*
+                 * If the node is a multicast sender local publications are always multicast
+                 */
+                if (node->mcastSender) {
+                    ret = DPS_SendPublication(node, pub, NULL, DPS_FALSE);
+                    if (ret != DPS_OK) {
+                        DPS_ERRPRINT("SendPublication (multicast) returned %s\n", DPS_ErrTxt(ret));
+                    }
                 }
             }
             for (remote = node->remoteNodes; remote != NULL; remote = nextRemote) {
@@ -1036,6 +1052,50 @@ static DPS_Status OnNetReceive(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Status s
     }
     DPS_RxBufferInit(&payload, (uint8_t*)data, len);
     return DecodeRequest(node, ep, &payload, DPS_FALSE);
+}
+
+DPS_Status DPS_LoopbackSend(DPS_Node* node, uv_buf_t* bufs, size_t numBufs)
+{
+    DPS_Status ret;
+    struct sockaddr_in saddr;
+    DPS_NetEndpoint ep;
+    DPS_TxBuffer txBuf;
+    DPS_RxBuffer rxBuf;
+    size_t len = 0;
+    size_t i;
+
+    assert(node->state == DPS_NODE_RUNNING);
+
+    memset(&saddr, 0, sizeof(saddr));
+    saddr.sin_family = AF_INET;
+    saddr.sin_port = htons(DPS_GetPortNumber(node));
+    saddr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    DPS_SetAddress(&ep.addr, (const struct sockaddr*)&saddr);
+    ep.cn = NULL;
+
+    DPS_TxBufferClear(&txBuf);
+    for (i = 0; i < numBufs; ++i) {
+        len += bufs[i].len;
+    }
+    ret = DPS_TxBufferInit(&txBuf, NULL, len);
+    if (ret != DPS_OK) {
+        DPS_ERRPRINT("DPS_TxBufferInit failed - %s\n", DPS_ErrTxt(ret));
+        goto Exit;
+    }
+    for (i = 0; i < numBufs; ++i) {
+        ret = DPS_TxBufferAppend(&txBuf, (const uint8_t*)bufs[i].base, bufs[i].len);
+        if (ret != DPS_OK) {
+            DPS_ERRPRINT("DPS_TxBufferAppend failed - %s\n", DPS_ErrTxt(ret));
+            goto Exit;
+        }
+    }
+
+    DPS_TxBufferToRx(&txBuf, &rxBuf);
+    ret = DecodeRequest(node, &ep, &rxBuf, DPS_FALSE);
+
+ Exit:
+    DPS_TxBufferFree(&txBuf);
+    return ret;
 }
 
 static void StopNode(DPS_Node* node)
