@@ -10,6 +10,7 @@ TESTS="./build/test/bin/cbortest \
        ./build/test/bin/packtest \
        ./build/test/bin/publish \
        ./build/test/bin/pubsub \
+       ./build/test/bin/publish \
        ./build/test/bin/rle_compression \
        ./build/test/bin/keystoretest \
        ./test_scripts/auth \
