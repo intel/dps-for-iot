@@ -41,7 +41,7 @@ extern "C" {
  */
 #define DPS_MAX_TOPIC_STRLEN 2048
 
-#if DPS_MAX_TOPIC_STRLEN > RSIZE_MAX_STR
+#if DPS_MAX_TOPIC_STRLEN >= RSIZE_MAX_STR
 #error DPS_MAX_TOPIC_STRLEN must be less than RSIZE_MAX_STR (see safe_str_lib.h)
 #endif
 

@@ -26,7 +26,7 @@
 #include <assert.h>
 #include <dps/private/cbor.h>
 
-#if CBOR_MAX_STRING_LEN > RSIZE_MAX_STR
+#if CBOR_MAX_STRING_LEN >= RSIZE_MAX_STR
 #error CBOR_MAX_STRING_LEN must be less than RSIZE_MAX_STR (see safe_str_lib.h)
 #endif
 
@@ -278,7 +278,7 @@ DPS_Status CBOR_EndWrapBytes(DPS_TxBuffer* buffer, uint8_t* wrapPtr)
 DPS_Status CBOR_EncodeString(DPS_TxBuffer* buffer, const char* str)
 {
     DPS_Status ret;
-    size_t len = strnlen_s(str, CBOR_MAX_STRING_LEN + 1);
+    size_t len = str ? strnlen_s(str, CBOR_MAX_STRING_LEN + 1) + 1 : 0;
 
     if (len > CBOR_MAX_STRING_LEN) {
         ret = DPS_ERR_OVERFLOW;
@@ -462,7 +462,10 @@ DPS_Status CBOR_DecodeString(DPS_RxBuffer* buffer, char** data, size_t* size)
             ret = DPS_ERR_INVALID;
         } else {
             *data = len ? (char*)buffer->rxPos : NULL;
-            *size = len;
+            /*
+             * Decoded length excludes the NUL terminator
+             */
+            *size = len ? len - 1 : 0;
             buffer->rxPos += len;
         }
     }
@@ -602,7 +605,7 @@ DPS_Status CBOR_Skip(DPS_RxBuffer* buffer, uint8_t* majOut, size_t* skipped)
 
 size_t _CBOR_SizeOfString(const char* s)
 {
-    size_t len = s ? strnlen_s(s, CBOR_MAX_STRING_LEN) + 1 : 0;
+    size_t len = s ? strnlen_s(s, CBOR_MAX_STRING_LEN + 1) + 1 : 0;
     return len + CBOR_SIZEOF_LEN(len);
 }
 

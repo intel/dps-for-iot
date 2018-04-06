@@ -37,7 +37,7 @@ extern "C" {
 #endif
 
 /**
- * Maximum string length this implementation will encode or decode
+ * Maximum length for a string excluding NUL terminator
  */
 #define CBOR_MAX_STRING_LEN 2048
 
@@ -419,6 +419,8 @@ DPS_Status CBOR_DecodeBytes(DPS_RxBuffer* buffer, uint8_t** data, size_t* size);
 
 /**
  * Decode a text string
+ *
+ * @note This function excludes the trailing NUL in the returned length.
  *
  * @param buffer  Buffer to decode from
  * @param data    Returns pointer into buffer storage to the decoded string

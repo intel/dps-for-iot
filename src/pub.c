@@ -1100,7 +1100,11 @@ DPS_Status DPS_InitPublication(DPS_Publication* pub,
         }
         if (ret == DPS_OK) {
             for (i = 0; i < numTopics; ++i) {
-                uint64_t len = strnlen(topics[i], CBOR_MAX_STRING_LEN) + 1;
+                /*
+                 * Encode the string in two steps so we can save off
+                 * the topicsBuf pointer into pub->topics[i]
+                 */
+                uint64_t len = strnlen_s(topics[i], CBOR_MAX_STRING_LEN + 1) + 1;
                 if (len > CBOR_MAX_STRING_LEN) {
                     ret = DPS_ERR_OVERFLOW;
                     break;
