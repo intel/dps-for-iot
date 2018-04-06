@@ -123,9 +123,6 @@ def on_pub(sub, pub, payload):
         print "    %s" % (ack_msg)
         dps.ack_publication(pub, ack_msg);
 
-# Enable or disable (default) DPS debug output
-dps.cvar.debug = False
-
 node = dps.create_node("/", key_store, node_id)
 dps.start_node(node, dps.MCAST_PUB_ENABLE_RECV, 0)
 sub = dps.create_subscription(node, ['a/b/c']);

@@ -123,9 +123,6 @@ def on_destroy(node):
     print "Destroyed"
     dps.destroy_key_store(key_store)
 
-# Enable or disable (default) DPS debug output
-dps.cvar.debug = False
-
 node = dps.create_node("/", key_store, node_id)
 dps.start_node(node, dps.MCAST_PUB_ENABLE_SEND, 0)
 pub = dps.create_publication(node)
