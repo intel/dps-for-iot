@@ -80,6 +80,9 @@ typedef struct _DPS_Publication {
     DPS_TxBuffer bfBuf;             /**< Pre-serialized bloom filter */
     DPS_TxBuffer protectedBuf;      /**< Authenticated fields */
     DPS_TxBuffer encryptedBuf;      /**< Encrypted fields */
+    DPS_Publication* history;       /**< History of data in this series */
+    size_t historyCount;            /**< Number of data in history */
+    size_t historyCap;              /**< Maximum number of data in history */
     DPS_Publication* next;          /**< Next publication in list */
 } DPS_Publication;
 

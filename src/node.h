@@ -347,6 +347,17 @@ void DPS_LockNode(DPS_Node* node);
 void DPS_UnlockNode(DPS_Node* node);
 
 /**
+ * Look for node's publication matching the ID and sequence number.
+ *
+ * @param node The node
+ * @param pubId The ID to look for
+ * @param sequenceNum The sequence number to look for
+ *
+ * @return The matching publication or NULL
+ */
+DPS_Publication* DPS_LookupAckHandler(DPS_Node* node, const DPS_UUID* pubId, uint32_t sequenceNum);
+
+/**
  * Generates a random UUID that is less than the UUID passed in.
  * Less in this context means DPS_UUIDCompare(&new, old) < 0
  *

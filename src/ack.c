@@ -275,76 +275,70 @@ DPS_Status DPS_DecodeAcknowledgement(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Rx
     /*
      * See if this is an ACK for a local publication
      */
-    for (pub = node->publications; pub != NULL; pub = pub->next) {
-        if (pub->handler && (pub->sequenceNum == sequenceNum) && (DPS_UUIDCompare(&pub->pubId, pubId) == 0)) {
-            break;
-        }
-    }
+    pub = DPS_LookupAckHandler(node, pubId, sequenceNum);
     if (pub) {
+        uint8_t nonce[COSE_NONCE_LEN];
+        COSE_Entity recipient;
+        DPS_RxBuffer encryptedBuf;
+        DPS_RxBuffer aadBuf;
+        DPS_RxBuffer cipherTextBuf;
+        DPS_TxBuffer plainTextBuf;
         /*
          * Increase the refcount to prevent the publication from being
          * freed from inside the callback function
          */
         DPS_PublicationIncRef(pub);
         DPS_UnlockNode(node);
-        if (pub->handler) {
-            uint8_t nonce[COSE_NONCE_LEN];
-            COSE_Entity recipient;
-            DPS_RxBuffer encryptedBuf;
-            DPS_RxBuffer aadBuf;
-            DPS_RxBuffer cipherTextBuf;
-            DPS_TxBuffer plainTextBuf;
-            /*
-             * Try to decrypt the acknowledgement
-             */
-            DPS_MakeNonce(pubId, sequenceNum, DPS_MSG_TYPE_ACK, nonce);
-            DPS_RxBufferInit(&aadBuf, aadPos, buf->rxPos - aadPos);
-            DPS_RxBufferInit(&cipherTextBuf, buf->rxPos, DPS_RxBufferAvail(buf));
-            ret = COSE_Decrypt(nonce, &recipient, &aadBuf, &cipherTextBuf, node->keyStore,
-                               &pub->ack, &plainTextBuf);
+        /*
+         * Try to decrypt the acknowledgement
+         */
+        DPS_MakeNonce(pubId, sequenceNum, DPS_MSG_TYPE_ACK, nonce);
+        DPS_RxBufferInit(&aadBuf, aadPos, buf->rxPos - aadPos);
+        DPS_RxBufferInit(&cipherTextBuf, buf->rxPos, DPS_RxBufferAvail(buf));
+        ret = COSE_Decrypt(nonce, &recipient, &aadBuf, &cipherTextBuf, node->keyStore,
+                           &pub->ack, &plainTextBuf);
+        if (ret == DPS_OK) {
+            DPS_DBGPRINT("Ack was decrypted\n");
+            CBOR_Dump("plaintext", plainTextBuf.base, DPS_TxBufferUsed(&plainTextBuf));
+            DPS_TxBufferToRx(&plainTextBuf, &encryptedBuf);
+        } else if (ret == DPS_ERR_NOT_ENCRYPTED) {
+            DPS_DBGPRINT("Ack was not encrypted\n");
+            encryptedBuf = cipherTextBuf;
+            ret = DPS_OK;
+        } else {
+            DPS_ERRPRINT("Failed to decrypt Ack - %s\n", DPS_ErrTxt(ret));
+        }
+        if (ret == DPS_OK) {
+            uint8_t* data = NULL;
+            size_t dataLen = 0;
+            ret = DPS_ParseMapInit(&mapState, &encryptedBuf, EncryptedKeys, A_SIZEOF(EncryptedKeys), NULL, 0);
             if (ret == DPS_OK) {
-                DPS_DBGPRINT("Ack was decrypted\n");
-                CBOR_Dump("plaintext", plainTextBuf.base, DPS_TxBufferUsed(&plainTextBuf));
-                DPS_TxBufferToRx(&plainTextBuf, &encryptedBuf);
-            } else if (ret == DPS_ERR_NOT_ENCRYPTED) {
-                DPS_DBGPRINT("Ack was not encrypted\n");
-                encryptedBuf = cipherTextBuf;
-                ret = DPS_OK;
-            } else {
-                DPS_ERRPRINT("Failed to decrypt Ack - %s\n", DPS_ErrTxt(ret));
-            }
-            if (ret == DPS_OK) {
-                uint8_t* data = NULL;
-                size_t dataLen = 0;
-                ret = DPS_ParseMapInit(&mapState, &encryptedBuf, EncryptedKeys, A_SIZEOF(EncryptedKeys), NULL, 0);
-                if (ret == DPS_OK) {
-                    while (!DPS_ParseMapDone(&mapState)) {
-                        int32_t key;
-                        ret = DPS_ParseMapNext(&mapState, &key);
-                        if (ret != DPS_OK) {
-                            break;
-                        }
-                        switch (key) {
-                        case DPS_CBOR_KEY_DATA:
-                            /*
-                             * Get the pointer to the ack data
-                             */
-                            ret = CBOR_DecodeBytes(&encryptedBuf, &data, &dataLen);
-                            break;
-                        }
-                        if (ret != DPS_OK) {
-                            break;
-                        }
+                while (!DPS_ParseMapDone(&mapState)) {
+                    int32_t key;
+                    ret = DPS_ParseMapNext(&mapState, &key);
+                    if (ret != DPS_OK) {
+                        break;
                     }
-                    if (ret == DPS_OK) {
-                        pub->handler(pub, data, dataLen);
+                    switch (key) {
+                    case DPS_CBOR_KEY_DATA:
+                        /*
+                         * Get the pointer to the ack data
+                         */
+                        ret = CBOR_DecodeBytes(&encryptedBuf, &data, &dataLen);
+                        break;
+                    }
+                    if (ret != DPS_OK) {
+                        break;
                     }
                 }
+                if (ret == DPS_OK) {
+                    pub->handler(pub, data, dataLen);
+                }
             }
-            DPS_TxBufferFree(&plainTextBuf);
-            /* Ack ID will be invalid now */
-            memset(&pub->ack, 0, sizeof(pub->ack));
         }
+        DPS_TxBufferFree(&plainTextBuf);
+        /* Ack ID will be invalid now */
+        memset(&pub->ack, 0, sizeof(pub->ack));
         DPS_LockNode(node);
         DPS_PublicationDecRef(pub);
         DPS_UnlockNode(node);

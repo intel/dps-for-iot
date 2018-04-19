@@ -43,6 +43,8 @@
  */
 DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
+static void FreeHistory(DPS_Publication* pub);
+
 #define RemoteNodeAddressText(n)  DPS_NodeAddrToString(&(n)->ep.addr)
 
 static DPS_Status SetKey(DPS_KeyStoreRequest* request, const DPS_Key* key)
@@ -175,6 +177,105 @@ static DPS_Status CopyRecipients(DPS_Publication* dst, const DPS_Publication* sr
     return DPS_ERR_RESOURCES;
 }
 
+static DPS_Publication* ClonePublication(const DPS_Publication* pub)
+{
+    DPS_Publication* clone = NULL;
+    DPS_Status ret;
+    size_t i;
+
+    if (!pub->node) {
+        goto ErrExit;
+    }
+    clone = calloc(1, sizeof(DPS_Publication));
+    if (!clone) {
+        goto ErrExit;
+    }
+    clone->userData = pub->userData;
+    clone->flags = PUB_FLAG_LOCAL;
+    clone->ackRequested = pub->ackRequested;
+    clone->sequenceNum = pub->sequenceNum;
+    clone->handler = pub->handler;
+    clone->pubId = pub->pubId;
+    clone->sender = pub->sender;
+    ret = CopyRecipients(clone, pub);
+    if (ret != DPS_OK) {
+        DPS_ERRPRINT("CopyRecipients failed: %s\n", DPS_ErrTxt(ret));
+        goto ErrExit;
+    }
+    clone->senderAddr = pub->senderAddr;
+    clone->bf = DPS_BitVectorClone(pub->bf);
+    if (!clone->bf) {
+        goto ErrExit;
+    }
+    clone->node = pub->node;
+    clone->ack = pub->ack;
+    clone->topics = malloc(pub->numTopics * sizeof(char*));
+    if (!clone->topics) {
+        goto ErrExit;
+    }
+    clone->numTopics = pub->numTopics;
+    /*
+     * Serialize the topics
+     */
+    size_t bufLen = CBOR_SIZEOF_ARRAY(pub->numTopics);
+    for (i = 0; i < pub->numTopics; ++i) {
+        bufLen += CBOR_SIZEOF_STRING(pub->topics[i]);
+    }
+    assert(!clone->topicsBuf.base);
+    ret = DPS_TxBufferInit(&clone->topicsBuf, NULL, bufLen);
+    if (ret != DPS_OK) {
+        goto ErrExit;
+    }
+    ret = CBOR_EncodeArray(&clone->topicsBuf, pub->numTopics);
+    if (ret != DPS_OK) {
+        goto ErrExit;
+    }
+    for (i = 0; i < pub->numTopics; ++i) {
+        /*
+         * Encode the string in two steps so we can save off
+         * the topicsBuf pointer into pub->topics[i]
+         */
+        uint64_t len = strnlen_s(pub->topics[i], CBOR_MAX_STRING_LEN + 1) + 1;
+        if (len > CBOR_MAX_STRING_LEN) {
+            goto ErrExit;
+        }
+        ret = CBOR_EncodeLength(&clone->topicsBuf, len, CBOR_STRING);
+        if (ret != DPS_OK) {
+            goto ErrExit;
+        }
+        clone->topics[i] = (char*)clone->topicsBuf.txPos;
+        ret = CBOR_Copy(&clone->topicsBuf, (uint8_t*)pub->topics[i], len);
+        if (ret != DPS_OK) {
+            goto ErrExit;
+        }
+    }
+    /*
+     * Serialize the bloom filter
+     */
+    ret = DPS_TxBufferInit(&clone->bfBuf, NULL, 32 + DPS_BitVectorSerializeMaxSize(clone->bf));
+    if (ret != DPS_OK) {
+        goto ErrExit;
+    }
+    ret = DPS_BitVectorSerialize(clone->bf, &clone->bfBuf);
+    if (ret != DPS_OK) {
+        goto ErrExit;
+    }
+    return clone;
+
+ErrExit:
+    if (clone) {
+        DPS_TxBufferFree(&clone->bfBuf);
+        DPS_TxBufferFree(&clone->topicsBuf);
+        if (clone->topics) {
+            free(clone->topics);
+        }
+        DPS_BitVectorFree(clone->bf);
+        FreeRecipients(clone);
+        free(clone);
+    }
+    return NULL;
+}
+
 static DPS_Publication* FreePublication(DPS_Node* node, DPS_Publication* pub)
 {
     DPS_Publication* next = pub->next;
@@ -184,12 +285,14 @@ static DPS_Publication* FreePublication(DPS_Node* node, DPS_Publication* pub)
             node->publications = next;
         } else {
             DPS_Publication* prev = node->publications;
-            while (prev->next != pub) {
+            while (prev && (prev->next != pub)) {
                 prev = prev->next;
-                assert(prev);
             }
-            prev->next = next;
+            if (prev) {
+                prev->next = next;
+            }
         }
+        pub->next = NULL;
         FreeRecipients(pub);
         if (pub->bf) {
             DPS_BitVectorFree(pub->bf);
@@ -201,8 +304,8 @@ static DPS_Publication* FreePublication(DPS_Node* node, DPS_Publication* pub)
             free(pub->topics);
             pub->topics = NULL;
         }
+        FreeHistory(pub);
         pub->flags = PUB_FLAG_WAS_FREED;
-        pub->next = NULL;
     }
     /*
      * If the ref count is non zero the publication buffers are being referenced
@@ -215,6 +318,41 @@ static DPS_Publication* FreePublication(DPS_Node* node, DPS_Publication* pub)
         free(pub);
     }
     return next;
+}
+
+static void AddToHistory(DPS_Publication* pub, DPS_Publication* clone)
+{
+    DPS_Publication** history;
+    DPS_Publication* next;
+
+    if (!pub->historyCap) {
+        return;
+    }
+
+    history = &pub->history;
+    while (*history) {
+        history = &(*history)->next;
+    }
+    *history = clone;
+
+    if (pub->historyCount < pub->historyCap) {
+        ++pub->historyCount;
+    } else {
+        next = pub->history->next;
+        FreePublication(pub->node, pub->history);
+        pub->history = next;
+    }
+}
+
+static void FreeHistory(DPS_Publication* pub)
+{
+    DPS_Publication* next;
+    while (pub->history) {
+        next = pub->history->next;
+        FreePublication(pub->node, pub->history);
+        pub->history = next;
+    }
+    pub->historyCount = 0;
 }
 
 void DPS_PublicationIncRef(DPS_Publication* pub)
@@ -239,18 +377,28 @@ void DPS_FreePublications(DPS_Node* node)
 
 static int IsValidPub(const DPS_Publication* pub)
 {
+    DPS_Node* node;
     DPS_Publication* pubList;
+    DPS_Publication* nextPubList;
 
     if (!pub|| !pub->node || !pub->node->loop) {
         return DPS_FALSE;
     }
-    DPS_LockNode(pub->node);
-    for (pubList = pub->node->publications; pubList != NULL; pubList = pubList->next) {
+    node = pub->node;
+    DPS_LockNode(node);
+    for (pubList = node->publications; pubList; pubList = nextPubList) {
+        nextPubList = pubList->next;
         if (pub == pubList) {
-            break;
+            goto Unlock;
+        }
+        for (pubList = pubList->history; pubList; pubList = pubList->next) {
+            if (pub == pubList) {
+                goto Unlock;
+            }
         }
     }
-    DPS_UnlockNode(pub->node);
+Unlock:
+    DPS_UnlockNode(node);
     return pubList != NULL;
 }
 
@@ -968,19 +1116,19 @@ DPS_Publication* DPS_CopyPublication(const DPS_Publication* pub)
     if (!pub->node) {
         return NULL;
     }
-    if (pub->flags & PUB_FLAG_LOCAL) {
-        return NULL;
-    }
     DPS_Status ret = DPS_ERR_RESOURCES;
     copy = calloc(1, sizeof(DPS_Publication));
     if (!copy) {
         DPS_ERRPRINT("malloc failure: no memory\n");
         goto Exit;
     }
-    copy->pubId = pub->pubId;
-    copy->sequenceNum = pub->sequenceNum;
-    copy->node = pub->node;
+    copy->userData = pub->userData;
+    copy->flags = PUB_FLAG_IS_COPY;
     copy->ackRequested = pub->ackRequested;
+    copy->sequenceNum = pub->sequenceNum;
+    copy->handler = pub->handler;
+    copy->pubId = pub->pubId;
+    copy->sender = pub->sender;
     if (pub->ackRequested) {
         ret = CopyRecipients(copy, pub);
         if (ret != DPS_OK) {
@@ -988,6 +1136,7 @@ DPS_Publication* DPS_CopyPublication(const DPS_Publication* pub)
             goto Exit;
         }
     }
+    copy->node = pub->node;
     copy->numTopics = pub->numTopics;
     if (pub->numTopics > 0) {
         copy->topics = calloc(pub->numTopics, sizeof(char*));
@@ -999,7 +1148,6 @@ DPS_Publication* DPS_CopyPublication(const DPS_Publication* pub)
             copy->topics[i] = strndup(pub->topics[i], DPS_MAX_TOPIC_STRLEN);
         }
     }
-    copy->flags = PUB_FLAG_IS_COPY;
     ret = DPS_OK;
 
 Exit:
@@ -1065,6 +1213,7 @@ DPS_Status DPS_InitPublication(DPS_Publication* pub,
         pub->ackRequested = DPS_TRUE;
     }
     pub->flags = PUB_FLAG_LOCAL;
+    pub->historyCap = 1;
     /*
      * Copy key identifier
      */
@@ -1151,6 +1300,18 @@ DPS_Status DPS_InitPublication(DPS_Publication* pub,
         DPS_TxBufferFree(&pub->bfBuf);
     }
     return ret;
+}
+
+DPS_Status DPS_PublicationConfigureQoS(DPS_Publication* pub, size_t historyDepth)
+{
+    DPS_DBGTRACE();
+
+    if (IsValidPub(pub)) {
+        pub->historyCap = historyDepth;
+        return DPS_OK;
+    } else {
+        return DPS_ERR_ARGS;
+    }
 }
 
 DPS_Status DPS_PublicationAddSubId(DPS_Publication* pub, const DPS_KeyId* keyId)
@@ -1304,6 +1465,8 @@ DPS_Status DPS_Publish(DPS_Publication* pub, const uint8_t* payload, size_t len,
 {
     DPS_Status ret;
     DPS_Node* node = pub ? pub->node : NULL;
+    DPS_Publication* clone;
+
     DPS_DBGTRACE();
 
     if (!pub) {
@@ -1321,26 +1484,36 @@ DPS_Status DPS_Publish(DPS_Publication* pub, const uint8_t* payload, size_t len,
     if (!IsValidPub(pub) || !(pub->flags & PUB_FLAG_LOCAL)) {
         return DPS_ERR_MISSING;
     }
+    /*
+     * Prevent publication from being destroyed while we are cloning
+     * it
+     */
     DPS_LockNode(node);
-    /*
-     * Prevent publication from being overwritten while the buffers
-     * are being referenced by the network layer code.
-     */
-    if (pub->refCount != 0) {
-        DPS_UnlockNode(node);
-        return DPS_ERR_BUSY;
+    if (pub->history) {
+        /*
+         * Clone from newest publication so that sequence numbers are
+         * correct
+         */
+        clone = pub->history;
+        while (clone->next) {
+            clone = clone->next;
+        }
+        clone = ClonePublication(clone);
+    } else {
+        clone = ClonePublication(pub);
     }
-    /*
-     * Prevent publication from being sent while it gets updated
-     */
-    pub->flags &= ~PUB_FLAG_PUBLISH;
-    pub->checkToSend = DPS_FALSE;
     DPS_UnlockNode(node);
+    if (!clone) {
+        return DPS_ERR_RESOURCES;
+    }
+    clone->flags &= ~PUB_FLAG_PUBLISH;
+    clone->checkToSend = DPS_FALSE;
     /*
      * Do some sanity checks for retained publication cancellation
      */
+    /* TODO ignoring this for now */
     if (ttl < 0) {
-        if (!(pub->flags & PUB_FLAG_RETAINED)) {
+        if (!(clone->flags & PUB_FLAG_RETAINED)) {
             DPS_ERRPRINT("Negative ttl only valid for retained publications\n");
             return DPS_ERR_INVALID;
         }
@@ -1349,32 +1522,34 @@ DPS_Status DPS_Publish(DPS_Publication* pub, const uint8_t* payload, size_t len,
             return DPS_ERR_INVALID;
         }
         ttl = 0;
-        pub->flags |= PUB_FLAG_EXPIRED;
+        clone->flags |= PUB_FLAG_EXPIRED;
     } else {
-        pub->flags &= ~PUB_FLAG_RETAINED;
-        pub->flags &= ~PUB_FLAG_EXPIRED;
+        clone->flags &= ~PUB_FLAG_RETAINED;
+        clone->flags &= ~PUB_FLAG_EXPIRED;
     }
     /*
      * Update time before setting expiration because the loop only updates on each iteration and
      * we have no idea know how long it is since the loop last ran.
      */
     uv_update_time(node->loop);
-    pub->expires = uv_now(node->loop) + DPS_SECS_TO_MS(ttl);
+    clone->expires = uv_now(node->loop) + DPS_SECS_TO_MS(ttl);
+    /* TODO ignoring this for now */
     if (ttl > 0) {
-        pub->flags |= PUB_FLAG_RETAINED;
+        clone->flags |= PUB_FLAG_RETAINED;
     }
-    ++pub->sequenceNum;
+    ++clone->sequenceNum;
     /*
      * Serialize the publication
      */
-    ret = DPS_SerializePub(node, pub, payload, len, ttl);
+    ret = DPS_SerializePub(node, clone, payload, len, ttl);
     if (ret != DPS_OK) {
         return ret;
     }
     DPS_LockNode(node);
-    pub->flags |= PUB_FLAG_PUBLISH;
+    clone->flags |= PUB_FLAG_PUBLISH;
+    AddToHistory(pub, clone);
     DPS_UnlockNode(node);
-    DPS_UpdatePubs(node, pub);
+    DPS_UpdatePubs(node, clone);
     return DPS_OK;
 }
 
@@ -1430,15 +1605,55 @@ void* DPS_GetPublicationData(const DPS_Publication* pub)
     return pub ?  pub->userData : NULL;
 }
 
+DPS_Publication* DPS_LookupAckHandler(DPS_Node* node, const DPS_UUID* pubId, uint32_t sequenceNum)
+{
+    DPS_Publication* pub;
+    DPS_Publication* history;
+
+    for (pub = node->publications; pub != NULL; pub = pub->next) {
+        if (pub->handler && (DPS_UUIDCompare(&pub->pubId, pubId) == 0)) {
+            if (pub->sequenceNum == sequenceNum) {
+                return pub;
+            }
+            for (history = pub->history; history; history = history->next) {
+                if (history->sequenceNum == sequenceNum) {
+                    return history;
+                }
+            }
+        }
+    }
+    return NULL;
+}
+
 #ifndef NDEBUG
+static void DumpPub(DPS_Node* node, DPS_Publication* pub)
+{
+    int16_t ttl = PUB_TTL(node, pub);
+    DPS_PRINT("  %s(%d) %s%s%s%s%s%sttl=%d\n", DPS_UUIDToString(&pub->pubId), pub->sequenceNum,
+              pub->flags & PUB_FLAG_PUBLISH ? "PUBLISH " : "",
+              pub->flags & PUB_FLAG_LOCAL ? "LOCAL " : "",
+              pub->flags & PUB_FLAG_RETAINED ? "RETAINED " : "",
+              pub->flags & PUB_FLAG_EXPIRED ? "EXPIRED " : "",
+              pub->flags & PUB_FLAG_WAS_FREED ? "WAS_FREED " : "",
+              pub->flags & PUB_FLAG_IS_COPY ? "IS_COPY " : "",
+              ttl);
+}
+
 void DPS_DumpPubs(DPS_Node* node)
 {
     if (DPS_Debug) {
         DPS_Publication* pub;
+        DPS_Publication* nextPub;
         DPS_PRINT("Node %d:\n", node->port);
-        for (pub = node->publications; pub != NULL; pub = pub->next) {
-            int16_t ttl = PUB_TTL(node, pub);
-            DPS_PRINT("  %s(%d) %s ttl=%d\n", DPS_UUIDToString(&pub->pubId), pub->sequenceNum, pub->flags & PUB_FLAG_RETAINED ? "RETAINED" : "", ttl);
+        for (pub = node->publications; pub; pub = nextPub) {
+            nextPub = pub->next;
+            if (pub->history) {
+                for (pub = pub->history; pub; pub = pub->next) {
+                    DumpPub(node, pub);
+                }
+            } else {
+                DumpPub(node, pub);
+            }
         }
     }
 }
