@@ -900,7 +900,7 @@ DPS_Status DPS_SendPublication(DPS_Node* node, DPS_Publication* pub, RemoteNode*
                 /*
                  * Prevent the publication from being freed until the send completes.
                  */
-                ++pub->refCount;
+                DPS_PublicationIncRef(pub);
             } else {
                 /*
                  * Only the first buffer can be freed here - we don't own the others
@@ -1290,6 +1290,7 @@ DPS_Status DPS_SerializePub(DPS_Node* node, DPS_Publication* pub, const uint8_t*
      * need to hold the node lock while we replace the buffers
      */
     DPS_LockNode(node);
+    assert(pub->refCount == 0);
     DPS_TxBufferFree(&pub->protectedBuf);
     DPS_TxBufferFree(&pub->encryptedBuf);
     pub->protectedBuf = protectedBuf;
@@ -1320,10 +1321,18 @@ DPS_Status DPS_Publish(DPS_Publication* pub, const uint8_t* payload, size_t len,
     if (!IsValidPub(pub) || !(pub->flags & PUB_FLAG_LOCAL)) {
         return DPS_ERR_MISSING;
     }
+    DPS_LockNode(node);
+    /*
+     * Prevent publication from being overwritten while the buffers
+     * are being referenced by the network layer code.
+     */
+    if (pub->refCount != 0) {
+        DPS_UnlockNode(node);
+        return DPS_ERR_BUSY;
+    }
     /*
      * Prevent publication from being sent while it gets updated
      */
-    DPS_LockNode(node);
     pub->flags &= ~PUB_FLAG_PUBLISH;
     pub->checkToSend = DPS_FALSE;
     DPS_UnlockNode(node);
