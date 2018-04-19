@@ -161,25 +161,25 @@ typedef struct {
     DPS_NetSendComplete onSendComplete;
     size_t numBufs;
     uv_buf_t bufs[1];
-} NetSender;
+} NetSend;
 
 static void OnSendComplete(uv_udp_send_t* req, int status)
 {
-    NetSender* sender = (NetSender*)req->data;
+    NetSend* send = (NetSend*)req->data;
     DPS_Status dpsRet = DPS_OK;
 
     if (status) {
         DPS_ERRPRINT("OnSendComplete status=%s\n", uv_err_name(status));
         dpsRet = DPS_ERR_NETWORK;
     }
-    sender->onSendComplete(sender->node, sender->appCtx, &sender->peerEp, sender->bufs, sender->numBufs, dpsRet);
-    free(sender);
+    send->onSendComplete(send->node, send->appCtx, &send->peerEp, send->bufs, send->numBufs, dpsRet);
+    free(send);
 }
 
 DPS_Status DPS_NetSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf_t* bufs, size_t numBufs, DPS_NetSendComplete sendCompleteCB)
 {
     int ret;
-    NetSender* sender;
+    NetSend* send;
 
 #ifndef NDEBUG
     {
@@ -192,27 +192,27 @@ DPS_Status DPS_NetSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf
     }
 #endif
 
-    sender = malloc(sizeof(NetSender) + (numBufs - 1) * sizeof(uv_buf_t));
-    if (!sender) {
+    send = malloc(sizeof(NetSend) + (numBufs - 1) * sizeof(uv_buf_t));
+    if (!send) {
         return DPS_ERR_RESOURCES;
     }
 
-    sender->sendReq.data = sender;
-    sender->onSendComplete = sendCompleteCB;
-    sender->appCtx = appCtx;
-    sender->peerEp = *ep;
-    sender->node = node;
-    memcpy_s(sender->bufs, numBufs * sizeof(uv_buf_t), bufs, numBufs * sizeof(uv_buf_t));
-    sender->numBufs = numBufs;
+    send->sendReq.data = send;
+    send->onSendComplete = sendCompleteCB;
+    send->appCtx = appCtx;
+    send->peerEp = *ep;
+    send->node = node;
+    memcpy_s(send->bufs, numBufs * sizeof(uv_buf_t), bufs, numBufs * sizeof(uv_buf_t));
+    send->numBufs = numBufs;
 
     struct sockaddr_storage inaddr;
     memcpy_s(&inaddr, sizeof(inaddr), &ep->addr.inaddr, sizeof(ep->addr.inaddr));
     DPS_MapAddrToV6((struct sockaddr *)&inaddr);
 
-    ret = uv_udp_send(&sender->sendReq, &node->netCtx->rxSocket, sender->bufs, (uint32_t)numBufs, (const struct sockaddr *)&inaddr, OnSendComplete);
+    ret = uv_udp_send(&send->sendReq, &node->netCtx->rxSocket, send->bufs, (uint32_t)numBufs, (const struct sockaddr *)&inaddr, OnSendComplete);
     if (ret) {
         DPS_ERRPRINT("DPS_NetSend status=%s\n", uv_err_name(ret));
-        free(sender);
+        free(send);
         return DPS_ERR_NETWORK;
     }
     return DPS_OK;

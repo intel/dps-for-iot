@@ -339,6 +339,12 @@ static void TestBackToBackPublish(DPS_Node* node)
         ASSERT(ret == DPS_OK);
     }
 
+    /*
+     * Give some time to receive the publications since we don't
+     * explicitly wait for the acks in this test.
+     */
+    SLEEP(1000);
+
     DPS_DestroySubscription(sub);
     DPS_DestroyPublication(pub);
 }

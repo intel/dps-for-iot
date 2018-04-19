@@ -59,6 +59,7 @@ typedef struct _DPS_Publication {
     void* userData;                 /**< Application provided user data */
     uint8_t flags;                  /**< Internal state flags */
     uint8_t checkToSend;            /**< TRUE if this publication should be checked to send */
+    uint8_t numSend;                /**< Number of pending network sends */
     uint8_t ackRequested;           /**< TRUE if an ack was requested by the publisher */
     uint32_t refCount;              /**< Ref count to prevent publication from being free while a send is in progress */
     uint32_t sequenceNum;           /**< Sequence number for this publication */

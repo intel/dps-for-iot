@@ -310,7 +310,8 @@ static DPS_Publication* FreePublication(DPS_Node* node, DPS_Publication* pub)
     /*
      * If the ref count is non zero the publication buffers are being referenced
      * by the network layer code so cannot be free yet. FreePublication will be
-     * called from OnPubSendComplete() when the ref count goes to zero.
+     * called from OnNetSendComplete() or OnMulticastSendComplete() when the ref
+     * count goes to zero.
      */
     if (pub->refCount == 0) {
         DPS_TxBufferFree(&pub->protectedBuf);
@@ -957,17 +958,44 @@ Exit:
     return ret;
 }
 
-static void OnPubSendComplete(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf_t* bufs, size_t numBufs, DPS_Status status)
+static void OnSendComplete(DPS_Node* node, DPS_Publication* pub)
+{
+    int updatePubs = DPS_FALSE;
+
+    DPS_LockNode(node);
+    --pub->numSend;
+    if (!pub->numSend && pub->next) {
+        updatePubs = DPS_TRUE;
+    }
+    DPS_PublicationDecRef(pub);
+    DPS_UnlockNode(node);
+
+    if (updatePubs) {
+        DPS_UpdatePubs(node, NULL);
+    }
+}
+
+static void OnNetSendComplete(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf_t* bufs, size_t numBufs, DPS_Status status)
 {
     DPS_Publication* pub = (DPS_Publication*)appCtx;
 
-    DPS_LockNode(node);
-    DPS_PublicationDecRef(pub);
-    DPS_UnlockNode(node);
+    OnSendComplete(node, pub);
     /*
      * Only the first buffer can be freed here
      */
     DPS_OnSendComplete(node, NULL, ep, bufs, 1, status);
+}
+
+static void OnMulticastSendComplete(DPS_MulticastSender* sender, void* appCtx, uv_buf_t* bufs, size_t numBufs, DPS_Status status)
+{
+    DPS_Publication* pub = (DPS_Publication*)appCtx;
+    DPS_Node* node = pub->node;
+
+    OnSendComplete(node, pub);
+    /*
+     * Only the first two buffers can be freed - we don't own the others
+     */
+    DPS_OnSendComplete(node, NULL, NULL, bufs, 2, status);
 }
 
 DPS_Status DPS_SendPublication(DPS_Node* node, DPS_Publication* pub, RemoteNode* remote, int loopback)
@@ -1043,12 +1071,13 @@ DPS_Status DPS_SendPublication(DPS_Node* node, DPS_Publication* pub, RemoteNode*
             uv_buf_init((char*)pub->encryptedBuf.base, DPS_TxBufferUsed(&pub->encryptedBuf)),
         };
         if (remote) {
-            ret = DPS_NetSend(node, pub, &remote->ep, bufs + 1, A_SIZEOF(bufs) - 1, OnPubSendComplete);
+            ret = DPS_NetSend(node, pub, &remote->ep, bufs + 1, A_SIZEOF(bufs) - 1, OnNetSendComplete);
             if (ret == DPS_OK) {
                 /*
                  * Prevent the publication from being freed until the send completes.
                  */
                 DPS_PublicationIncRef(pub);
+                ++pub->numSend;
             } else {
                 /*
                  * Only the first buffer can be freed here - we don't own the others
@@ -1068,12 +1097,28 @@ DPS_Status DPS_SendPublication(DPS_Node* node, DPS_Publication* pub, RemoteNode*
         } else {
             ret = CoAP_Wrap(bufs, A_SIZEOF(bufs));
             if (ret == DPS_OK) {
-                ret = DPS_MulticastSend(node->mcastSender, bufs, A_SIZEOF(bufs));
+                ret = DPS_MulticastSend(node->mcastSender, pub, bufs, A_SIZEOF(bufs), OnMulticastSendComplete);
             }
-            /*
-             * Only the first two buffers can be freed - we don't own the others
-             */
-            DPS_NetFreeBufs(bufs, 2);
+            if (ret == DPS_OK) {
+                /*
+                 * Prevent the publication from being freed until the send completes.
+                 */
+                DPS_PublicationIncRef(pub);
+                ++pub->numSend;
+            } else {
+                /*
+                 * Only the first two buffers can be freed - we don't own the others
+                 */
+                DPS_SendFailed(node, NULL, bufs, 2, ret);
+            }
+            if (ret == DPS_ERR_NO_ROUTE) {
+                /*
+                 * Rewrite the error to make DPS_SendPublication a no-op when
+                 * there are no multicast interfaces available.
+                 */
+                DPS_WARNPRINT("DPS_MulticastSend failed - %s\n", DPS_ErrTxt(ret));
+                ret = DPS_OK;
+            }
         }
     } else {
         DPS_TxBufferFree(&buf);
