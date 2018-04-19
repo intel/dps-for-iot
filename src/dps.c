@@ -672,10 +672,12 @@ static void SendAcksTask(uv_async_t* handle)
 
     DPS_LockNode(node);
     while ((ack = node->ackQueue.first) != NULL) {
-        RemoteNode* ackNode;
-        DPS_Status ret = DPS_AddRemoteNode(node, &ack->destAddr, NULL, &ackNode);
-        if (ret == DPS_OK || ret == DPS_ERR_EXISTS) {
-            DPS_SendAcknowledgement(node, ack, ackNode);
+        if (node->state == DPS_NODE_RUNNING) {
+            RemoteNode* ackNode;
+            DPS_Status ret = DPS_AddRemoteNode(node, &ack->destAddr, NULL, &ackNode);
+            if (ret == DPS_OK || ret == DPS_ERR_EXISTS) {
+                DPS_SendAcknowledgement(node, ack, ackNode);
+            }
         }
         node->ackQueue.first = ack->next;
         DPS_DestroyAck(ack);
