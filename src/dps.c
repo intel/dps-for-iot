@@ -647,12 +647,12 @@ static DPS_Status SendMatchingPubToSub(DPS_Node* node, DPS_Publication* pub, Rem
     /*
      * We don't send publications to remote nodes we have received them from.
      */
-    if (!DPS_PublicationReceivedFrom(&node->history, &pub->pubId, pub->sequenceNum, &pub->senderAddr,
-                                     &subscriber->ep.addr)) {
+    if (!DPS_PublicationReceivedFrom(&node->history, &pub->shared->pubId, pub->sequenceNum,
+                                     &pub->shared->senderAddr, &subscriber->ep.addr)) {
         /*
          * This is the pub/sub matching code
          */
-        DPS_BitVectorIntersection(node->scratch.interests, pub->bf, subscriber->inbound.interests);
+        DPS_BitVectorIntersection(node->scratch.interests, pub->shared->bf, subscriber->inbound.interests);
         DPS_BitVectorFuzzyHash(node->scratch.needs, node->scratch.interests);
         if (DPS_BitVectorIncludes(node->scratch.needs, subscriber->inbound.needs)) {
             DPS_DBGPRINT("Sending pub %d to %s\n", pub->sequenceNum, DESCRIBE(subscriber));
@@ -703,7 +703,7 @@ static int SendPub(DPS_Node* node, DPS_Publication* pub)
              * this node
              */
             for (sub = node->subscriptions; sub != NULL; sub = sub->next) {
-                if (DPS_BitVectorIncludes(pub->bf, sub->bf)) {
+                if (DPS_BitVectorIncludes(pub->shared->bf, sub->bf)) {
                     ret = DPS_SendPublication(node, pub, NULL, DPS_TRUE);
                     if (ret != DPS_OK) {
                         DPS_ERRPRINT("SendPublication (loopback) returned %s\n", DPS_ErrTxt(ret));

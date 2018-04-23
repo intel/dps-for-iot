@@ -45,6 +45,30 @@ extern "C" {
 #define PUB_FLAG_IS_COPY   (0x80) /**< This publication is a copy and can only be used for acknowledgements */
 
 /**
+ * Shared fields between members of a publication data series
+ */
+typedef struct _PublicationShared {
+    void* userData;                 /**< Application provided user data */
+    uint8_t ackRequested;           /**< TRUE if an ack was requested by the publisher */
+    DPS_AcknowledgementHandler handler; /**< Called when an acknowledgement is received from a subscriber */
+    DPS_UUID pubId;                 /**< Publication identifier */
+    COSE_Entity* recipients;        /**< Publication recipient IDs */
+    size_t recipientsCount;         /**< Number of valid elements in recipients array */
+    size_t recipientsCap;           /**< Capacity of recipients array */
+    DPS_Node* node;                 /**< Node for this publication */
+    DPS_BitVector* bf;              /**< The Bloom filter bit vector for the topics for this publication */
+    DPS_TxBuffer bfBuf;             /**< Pre-serialized bloom filter */
+    char** topics;                  /**< Publication topics - pointers into topicsBuf */
+    size_t numTopics;               /**< Number of publication topics */
+    DPS_TxBuffer topicsBuf;         /**< Pre-serialized topic strings */
+    uint32_t refCount;              /**< Ref count to prevent shared fields from being freed while in use */
+
+    COSE_Entity sender;             /**< Publication sender ID */
+    DPS_NodeAddress senderAddr;     /**< For retained messages - the sender address */
+    COSE_Entity ack;                /**< For ack messages - the ack sender ID */
+} PublicationShared;
+
+/**
  * Notes on the use of the DPS_Publication fields:
  *
  * The pubId identifies a publication that replaces an earlier
@@ -56,29 +80,14 @@ extern "C" {
  * publication until the ttl expires or it is explicitly expired.
  */
 typedef struct _DPS_Publication {
-    void* userData;                 /**< Application provided user data */
+    PublicationShared* shared;      /**< Shared fields between members of a publication data series */
     uint8_t flags;                  /**< Internal state flags */
     uint8_t checkToSend;            /**< TRUE if this publication should be checked to send */
     uint8_t numSend;                /**< Number of pending network sends */
-    uint8_t ackRequested;           /**< TRUE if an ack was requested by the publisher */
     uint32_t refCount;              /**< Ref count to prevent publication from being free while a send is in progress */
     uint32_t sequenceNum;           /**< Sequence number for this publication */
     uint64_t expires;               /**< Time (in milliseconds) that this publication expires */
-    DPS_AcknowledgementHandler handler; /**< Called when an acknowledgement is received from a subscriber */
-    DPS_UUID pubId;                 /**< Publication identifier */
-    COSE_Entity sender;             /**< Publication sender ID */
-    COSE_Entity* recipients;        /**< Publication recipient IDs */
-    size_t recipientsCount;         /**< Number of valid elements in recipients array */
-    size_t recipientsCap;           /**< Capacity of recipients array */
-    DPS_NodeAddress senderAddr;     /**< For retained messages - the sender address */
-    DPS_BitVector* bf;              /**< The Bloom filter bit vector for the topics for this publication */
-    DPS_Node* node;                 /**< Node for this publication */
-    COSE_Entity ack;                /**< For ack messages - the ack sender ID */
 
-    char** topics;                  /**< Publication topics - pointers into topicsBuf */
-    size_t numTopics;               /**< Number of publication topics */
-    DPS_TxBuffer topicsBuf;         /**< Pre-serialized topic strings */
-    DPS_TxBuffer bfBuf;             /**< Pre-serialized bloom filter */
     DPS_TxBuffer protectedBuf;      /**< Authenticated fields */
     DPS_TxBuffer encryptedBuf;      /**< Encrypted fields */
     DPS_Publication* history;       /**< History of data in this series */

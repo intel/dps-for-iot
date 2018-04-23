@@ -49,6 +49,28 @@ static DPS_Publication* CreatePublication(DPS_Node* node, const char** topics, s
     return pub;
 }
 
+static void TestCreateDestroy(DPS_Node* node)
+{
+    static const char* topics[] = { __FUNCTION__ };
+    static const size_t numTopics = 1;
+    DPS_Publication* pub = NULL;
+    DPS_Status ret;
+
+    DPS_PRINT("%s\n", __FUNCTION__);
+
+    pub = DPS_CreatePublication(node);
+    ASSERT(pub);
+    ret = DPS_DestroyPublication(pub);
+    ASSERT(ret == DPS_OK);
+
+    pub = DPS_CreatePublication(node);
+    ASSERT(pub);
+    ret = DPS_InitPublication(pub, topics, numTopics, DPS_FALSE, NULL, NULL);
+    ASSERT(ret == DPS_OK);
+    ret = DPS_DestroyPublication(pub);
+    ASSERT(ret == DPS_OK);
+}
+
 static void LoopbackLargeMessageHandler(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* payload, size_t len)
 {
     DPS_Event* event = (DPS_Event*)DPS_GetSubscriptionData(sub);
@@ -394,7 +416,6 @@ static void TestBackToBackPublishSeparateNodes(DPS_Node* node)
      * explicitly wait for the acks in this test.
      */
     SLEEP(1000);
-    DPS_PRINT("seqNum=%d\n", seqNum);
 
     DPS_DestroySubscription(sub);
     DPS_DestroyNode(subNode, OnNodeDestroyed, event);
@@ -427,6 +448,7 @@ int main(int argc, char** argv)
     ret = DPS_StartNode(node, DPS_MCAST_PUB_ENABLE_SEND | DPS_MCAST_PUB_ENABLE_RECV, 0);
     ASSERT(ret == DPS_OK);
 
+    TestCreateDestroy(node);
     TestLoopbackLargeMessage(node);
     TestLoopbackAckLargeMessage(node);
     TestHistory(node);
