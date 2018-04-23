@@ -178,7 +178,7 @@ static DPS_Status CopyRecipients(PublicationShared* dst, const PublicationShared
     return DPS_ERR_RESOURCES;
 }
 
-static DPS_Publication* ClonePublication(const DPS_Publication* pub)
+static DPS_Publication* ClonePublication(DPS_Publication* pub)
 {
     DPS_Publication* clone = NULL;
 
@@ -187,7 +187,6 @@ static DPS_Publication* ClonePublication(const DPS_Publication* pub)
         return NULL;
     }
     clone->shared = pub->shared; /* Shallow copy of shared fields */
-    ++clone->shared->refCount;
     clone->flags = PUB_FLAG_LOCAL;
     clone->sequenceNum = pub->sequenceNum;
     return clone;
@@ -242,18 +241,21 @@ static DPS_Publication* FreePublication(DPS_Node* node, DPS_Publication* pub)
     return next;
 }
 
-static void AddToHistory(DPS_Publication* pub, DPS_Publication* clone)
+static int AddToHistory(DPS_Publication* pub, DPS_Publication* clone)
 {
     DPS_Publication** history;
     DPS_Publication* next;
 
     if (!pub->historyCap) {
-        return;
+        return DPS_FALSE;
     }
 
     history = &pub->history;
-    while (*history) {
+    while (*history && (*history != clone)) {
         history = &(*history)->next;
+    }
+    if (*history == clone) {
+        return DPS_FALSE;
     }
     *history = clone;
 
@@ -264,6 +266,7 @@ static void AddToHistory(DPS_Publication* pub, DPS_Publication* clone)
         FreePublication(pub->shared->node, pub->history);
         pub->history = next;
     }
+    return DPS_TRUE;
 }
 
 static void FreeHistory(DPS_Publication* pub)
@@ -1466,6 +1469,7 @@ DPS_Status DPS_Publish(DPS_Publication* pub, const uint8_t* payload, size_t len,
 {
     DPS_Status ret;
     DPS_Node* node = pub ? pub->shared->node : NULL;
+    DPS_Publication* newClone = NULL;
     DPS_Publication* clone;
 
     DPS_DBGTRACE();
@@ -1499,28 +1503,36 @@ DPS_Status DPS_Publish(DPS_Publication* pub, const uint8_t* payload, size_t len,
         while (clone->next) {
             clone = clone->next;
         }
-        clone = ClonePublication(clone);
     } else {
-        clone = ClonePublication(pub);
+        clone = pub;
     }
-    DPS_UnlockNode(node);
+    /*
+     * Retained publications overwrite and don't clone
+     */
+    if (!(clone->flags & PUB_FLAG_RETAINED)) {
+        newClone = ClonePublication(clone);
+        clone = newClone;
+    }
     if (!clone) {
+        DPS_UnlockNode(node);
         return DPS_ERR_RESOURCES;
     }
     clone->flags &= ~PUB_FLAG_PUBLISH;
     clone->checkToSend = DPS_FALSE;
+    DPS_UnlockNode(node);
     /*
      * Do some sanity checks for retained publication cancellation
      */
-    /* TODO ignoring this for now */
     if (ttl < 0) {
         if (!(clone->flags & PUB_FLAG_RETAINED)) {
             DPS_ERRPRINT("Negative ttl only valid for retained publications\n");
-            return DPS_ERR_INVALID;
+            ret = DPS_ERR_INVALID;
+            goto Exit;
         }
         if (payload) {
             DPS_ERRPRINT("Payload not permitted when canceling a retained publication\n");
-            return DPS_ERR_INVALID;
+            ret = DPS_ERR_INVALID;
+            goto Exit;
         }
         ttl = 0;
         clone->flags |= PUB_FLAG_EXPIRED;
@@ -1534,8 +1546,12 @@ DPS_Status DPS_Publish(DPS_Publication* pub, const uint8_t* payload, size_t len,
      */
     uv_update_time(node->loop);
     clone->expires = uv_now(node->loop) + DPS_SECS_TO_MS(ttl);
-    /* TODO ignoring this for now */
     if (ttl > 0) {
+        if (pub->historyCap > 1) {
+            DPS_ERRPRINT("History depth > 1 only valid for non-retained publications\n");
+            ret = DPS_ERR_INVALID;
+            goto Exit;
+        }
         clone->flags |= PUB_FLAG_RETAINED;
     }
     ++clone->sequenceNum;
@@ -1544,14 +1560,23 @@ DPS_Status DPS_Publish(DPS_Publication* pub, const uint8_t* payload, size_t len,
      */
     ret = DPS_SerializePub(node, clone, payload, len, ttl);
     if (ret != DPS_OK) {
-        return ret;
+        goto Exit;
     }
     DPS_LockNode(node);
     clone->flags |= PUB_FLAG_PUBLISH;
-    AddToHistory(pub, clone);
+    if (AddToHistory(pub, clone)) {
+        ++clone->shared->refCount;
+    }
+    newClone = NULL;
     DPS_UnlockNode(node);
     DPS_UpdatePubs(node, clone);
-    return DPS_OK;
+    ret = DPS_OK;
+
+Exit:
+    if (newClone) {
+        free(newClone);
+    }
+    return ret;
 }
 
 DPS_Status DPS_DestroyPublication(DPS_Publication* pub)

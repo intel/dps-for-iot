@@ -424,6 +424,56 @@ static void TestBackToBackPublishSeparateNodes(DPS_Node* node)
     DPS_DestroyPublication(pub);
 }
 
+static void TestRetainedMessage(DPS_Node* node)
+{
+    static const char* topics[] = { __FUNCTION__ };
+    static const size_t numTopics = 1;
+    DPS_Publication* pub = NULL;
+    size_t depth;
+    DPS_Status ret;
+
+    DPS_PRINT("%s\n", __FUNCTION__);
+
+    for (depth = 1; depth <= 2; ++depth) {
+        pub = CreatePublication(node, topics, numTopics, NULL);
+        ret = DPS_PublicationConfigureQoS(pub, depth);
+        ASSERT(ret == DPS_OK);
+        ret = DPS_Publish(pub, NULL, 0, -1);
+        ASSERT(ret == DPS_ERR_INVALID);
+        DPS_DestroyPublication(pub);
+
+        pub = CreatePublication(node, topics, numTopics, NULL);
+        ret = DPS_PublicationConfigureQoS(pub, depth);
+        ASSERT(ret == DPS_OK);
+        ret = DPS_Publish(pub, NULL, 0, 10);
+        if (depth == 1) {
+            ASSERT(ret == DPS_OK);
+        } else {
+            ASSERT(ret == DPS_ERR_INVALID);
+        }
+        ret = DPS_Publish(pub, NULL, 0, 0);
+        ASSERT(ret == DPS_OK);
+        DPS_DestroyPublication(pub);
+
+        pub = CreatePublication(node, topics, numTopics, NULL);
+        ret = DPS_PublicationConfigureQoS(pub, depth);
+        ASSERT(ret == DPS_OK);
+        ret = DPS_Publish(pub, NULL, 0, 10);
+        if (depth == 1) {
+            ASSERT(ret == DPS_OK);
+        } else {
+            ASSERT(ret == DPS_ERR_INVALID);
+        }
+        ret = DPS_Publish(pub, NULL, 0, -1);
+        if (depth == 1) {
+            ASSERT(ret == DPS_OK);
+        } else {
+            ASSERT(ret == DPS_ERR_INVALID);
+        }
+        DPS_DestroyPublication(pub);
+    }
+}
+
 int main(int argc, char** argv)
 {
     char** arg = argv + 1;
@@ -455,6 +505,7 @@ int main(int argc, char** argv)
     TestHistoryDepth(node);
     TestBackToBackPublish(node);
     TestBackToBackPublishSeparateNodes(node);
+    TestRetainedMessage(node);
 
     DPS_DestroyNode(node, OnNodeDestroyed, event);
     DPS_WaitForEvent(event);
