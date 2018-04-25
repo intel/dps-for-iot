@@ -1306,12 +1306,12 @@ DPS_Status DPS_InitPublication(DPS_Publication* pub,
     return ret;
 }
 
-DPS_Status DPS_PublicationConfigureQoS(DPS_Publication* pub, size_t historyDepth)
+DPS_Status DPS_PublicationConfigureQoS(DPS_Publication* pub, const DPS_QoS* qos)
 {
     DPS_DBGTRACE();
 
     if (IsValidPub(pub)) {
-        pub->historyCap = historyDepth;
+        pub->historyCap = qos->historyDepth;
         return DPS_OK;
     } else {
         return DPS_ERR_ARGS;

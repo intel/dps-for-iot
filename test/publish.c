@@ -210,6 +210,7 @@ static void TestHistory(DPS_Node* node)
     static const size_t numTopics = 1;
     DPS_Event* event = NULL;
     DPS_Publication* pub = NULL;
+    DPS_QoS qos;
     DPS_Event* ackEvent = NULL;
     DPS_Subscription* sub = NULL;
     DPS_Status ret;
@@ -220,7 +221,8 @@ static void TestHistory(DPS_Node* node)
     memset(pubs, 0, A_SIZEOF(pubs));
 
     pub = CreatePublication(node, topics, numTopics, HistoryAckHandler);
-    ret = DPS_PublicationConfigureQoS(pub, HISTORY_CAP);
+    qos.historyDepth = HISTORY_CAP;
+    ret = DPS_PublicationConfigureQoS(pub, &qos);
     ASSERT(ret == DPS_OK);
     ackEvent = DPS_CreateEvent();
     ASSERT(ackEvent);
@@ -263,6 +265,7 @@ static void TestHistoryDepth(DPS_Node* node)
     static const size_t numTopics = 1;
     DPS_Event* event = NULL;
     DPS_Publication* pub = NULL;
+    DPS_QoS qos;
     DPS_Event* ackEvent = NULL;
     DPS_Subscription* sub = NULL;
     DPS_Status ret;
@@ -273,7 +276,8 @@ static void TestHistoryDepth(DPS_Node* node)
     memset(pubs, 0, A_SIZEOF(pubs));
 
     pub = CreatePublication(node, topics, numTopics, HistoryAckHandler);
-    ret = DPS_PublicationConfigureQoS(pub, HISTORY_CAP / 2);
+    qos.historyDepth = HISTORY_CAP / 2;
+    ret = DPS_PublicationConfigureQoS(pub, &qos);
     ASSERT(ret == DPS_OK);
     ackEvent = DPS_CreateEvent();
     ASSERT(ackEvent);
@@ -337,6 +341,7 @@ static void TestBackToBackPublish(DPS_Node* node)
     static const size_t numTopics = 1;
     DPS_Publication* pub = NULL;
     size_t depth = 10000;
+    DPS_QoS qos;
     DPS_Subscription* sub = NULL;
     uint32_t seqNum;
     DPS_Status ret;
@@ -345,7 +350,8 @@ static void TestBackToBackPublish(DPS_Node* node)
     DPS_PRINT("%s\n", __FUNCTION__);
 
     pub = CreatePublication(node, topics, numTopics, NULL);
-    ret = DPS_PublicationConfigureQoS(pub, depth);
+    qos.historyDepth = depth;
+    ret = DPS_PublicationConfigureQoS(pub, &qos);
     ASSERT(ret == DPS_OK);
 
     sub = DPS_CreateSubscription(node, topics, numTopics);
@@ -377,6 +383,7 @@ static void TestBackToBackPublishSeparateNodes(DPS_Node* node)
     static const size_t numTopics = 1;
     DPS_Publication* pub = NULL;
     size_t depth = 10000;
+    DPS_QoS qos;
     DPS_Event* event = NULL;
     DPS_Node* subNode = NULL;
     DPS_Subscription* sub = NULL;
@@ -387,7 +394,8 @@ static void TestBackToBackPublishSeparateNodes(DPS_Node* node)
     DPS_PRINT("%s\n", __FUNCTION__);
 
     pub = CreatePublication(node, topics, numTopics, NULL);
-    ret = DPS_PublicationConfigureQoS(pub, depth);
+    qos.historyDepth = depth;
+    ret = DPS_PublicationConfigureQoS(pub, &qos);
     ASSERT(ret == DPS_OK);
 
     event = DPS_CreateEvent();
@@ -430,20 +438,23 @@ static void TestRetainedMessage(DPS_Node* node)
     static const size_t numTopics = 1;
     DPS_Publication* pub = NULL;
     size_t depth;
+    DPS_QoS qos;
     DPS_Status ret;
 
     DPS_PRINT("%s\n", __FUNCTION__);
 
     for (depth = 1; depth <= 2; ++depth) {
+        qos.historyDepth = depth;
+
         pub = CreatePublication(node, topics, numTopics, NULL);
-        ret = DPS_PublicationConfigureQoS(pub, depth);
+        ret = DPS_PublicationConfigureQoS(pub, &qos);
         ASSERT(ret == DPS_OK);
         ret = DPS_Publish(pub, NULL, 0, -1);
         ASSERT(ret == DPS_ERR_INVALID);
         DPS_DestroyPublication(pub);
 
         pub = CreatePublication(node, topics, numTopics, NULL);
-        ret = DPS_PublicationConfigureQoS(pub, depth);
+        ret = DPS_PublicationConfigureQoS(pub, &qos);
         ASSERT(ret == DPS_OK);
         ret = DPS_Publish(pub, NULL, 0, 10);
         if (depth == 1) {
@@ -456,7 +467,7 @@ static void TestRetainedMessage(DPS_Node* node)
         DPS_DestroyPublication(pub);
 
         pub = CreatePublication(node, topics, numTopics, NULL);
-        ret = DPS_PublicationConfigureQoS(pub, depth);
+        ret = DPS_PublicationConfigureQoS(pub, &qos);
         ASSERT(ret == DPS_OK);
         ret = DPS_Publish(pub, NULL, 0, 10);
         if (depth == 1) {
