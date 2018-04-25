@@ -326,6 +326,68 @@ static void TestHistoryDepth(DPS_Node* node)
     DPS_DestroyEvent(ackEvent);
 }
 
+static void TestOutOfOrderAck(DPS_Node* node)
+{
+    static const char* topics[] = { __FUNCTION__ };
+    static const size_t numTopics = 1;
+    DPS_Event* event = NULL;
+    DPS_Publication* pub = NULL;
+    DPS_QoS qos;
+    DPS_Event* ackEvent = NULL;
+    DPS_Subscription* sub = NULL;
+    DPS_Status ret;
+    size_t i;
+
+    DPS_PRINT("%s\n", __FUNCTION__);
+
+    memset(pubs, 0, A_SIZEOF(pubs));
+
+    pub = CreatePublication(node, topics, numTopics, HistoryAckHandler);
+    qos.historyDepth = HISTORY_CAP / 2;
+    ret = DPS_PublicationConfigureQoS(pub, &qos);
+    ASSERT(ret == DPS_OK);
+    ackEvent = DPS_CreateEvent();
+    ASSERT(ackEvent);
+    ret = DPS_SetPublicationData(pub, ackEvent);
+    ASSERT(ret == DPS_OK);
+
+    sub = DPS_CreateSubscription(node, topics, numTopics);
+    ASSERT(sub);
+    event = DPS_CreateEvent();
+    ASSERT(event);
+    ret = DPS_SetSubscriptionData(sub, event);
+    ASSERT(ret == DPS_OK);
+    ret = DPS_Subscribe(sub, HistoryHandler);
+    ASSERT(ret == DPS_OK);
+
+    for (i = 0; i < HISTORY_CAP; ++i) {
+        ret = DPS_Publish(pub, NULL, 0, 0);
+        ASSERT(ret == DPS_OK);
+        ret = DPS_WaitForEvent(event);
+        ASSERT(ret == DPS_OK);
+    }
+
+    for (i = HISTORY_CAP; i > HISTORY_CAP / 2; --i) {
+        ret = DPS_AckPublication(pubs[i], NULL, 0);
+        ASSERT(ret == DPS_OK);
+        DPS_DestroyPublication(pubs[i]);
+        ret = DPS_WaitForEvent(ackEvent);
+        ASSERT(ret == DPS_OK);
+    }
+    for (; i > 0; --i) {
+        ret = DPS_AckPublication(pubs[i], NULL, 0);
+        ASSERT(ret == DPS_OK);
+        DPS_DestroyPublication(pubs[i]);
+        ret = DPS_TimedWaitForEvent(ackEvent, 100);
+        ASSERT(ret == DPS_ERR_TIMEOUT);
+    }
+
+    DPS_DestroySubscription(sub);
+    DPS_DestroyEvent(event);
+    DPS_DestroyPublication(pub);
+    DPS_DestroyEvent(ackEvent);
+}
+
 static void BackToBackPublishHandler(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* payload, size_t len)
 {
     uint32_t* expectedSequenceNum = (uint32_t*)DPS_GetSubscriptionData(sub);
@@ -514,6 +576,7 @@ int main(int argc, char** argv)
     TestLoopbackAckLargeMessage(node);
     TestHistory(node);
     TestHistoryDepth(node);
+    TestOutOfOrderAck(node);
     TestBackToBackPublish(node);
     TestBackToBackPublishSeparateNodes(node);
     TestRetainedMessage(node);
