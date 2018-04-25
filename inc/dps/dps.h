@@ -777,6 +777,24 @@ DPS_Status DPS_InitPublication(DPS_Publication* pub,
                                DPS_AcknowledgementHandler handler);
 
 /**
+ * The Quality-of-Service (QoS) parameters
+ */
+typedef struct _DPS_QoS {
+    /** The maximum number of past and future publications to keep in this series. */
+     size_t historyDepth;
+} DPS_QoS;
+
+/**
+ * Configure the Quality-of-Service (QoS) parameters of a publication.
+ *
+ * @param pub          The publication to initialize
+ * @param qos          The QoS parameters
+ *
+ * @return DPS_OK if configuration is successful, an error otherwise
+ */
+DPS_Status DPS_PublicationConfigureQoS(DPS_Publication* pub, const DPS_QoS* qos);
+
+/**
  * Adds a key identifier to use for encrypted publications.
  *
  * @param pub         The the publication to initialize

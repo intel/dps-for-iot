@@ -143,7 +143,7 @@ static void NetSendTask(uv_async_t* handle)
             DPS_ERRPRINT("CoAP_Wrap failed: %s\n", DPS_ErrTxt(ret));
             exit(EXIT_FAILURE);
         }
-        ret = DPS_MulticastSend(data->node->mcastSender, bufs, A_SIZEOF(bufs));
+        ret = DPS_MulticastSend(data->node->mcastSender, NULL, bufs, A_SIZEOF(bufs), NULL);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("DPS_MulticastSend failed: %s\n", DPS_ErrTxt(ret));
             exit(EXIT_FAILURE);

@@ -26,6 +26,13 @@
 #include <assert.h>
 #include <stdlib.h>
 
+#ifdef _WIN32
+#define SLEEP(t) Sleep(t)
+#else
+extern void usleep(int);
+#define SLEEP(t) usleep((t) * 1000)
+#endif
+
 #define ASSERT(cond) do { assert(cond); if (!(cond)) exit(EXIT_FAILURE); } while (0)
 
 #endif
