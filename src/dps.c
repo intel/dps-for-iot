@@ -857,6 +857,26 @@ static void SendSubsTask(uv_async_t* handle)
     DPS_UnlockNode(node);
 }
 
+static DPS_Publication* UpdatePub(DPS_Node* node, DPS_Publication* pub, int* count)
+{
+    DPS_Publication* next = pub->next;
+
+    /*
+     * Received publications are marked as checkToSend they should not be expired.
+     */
+    if (pub->checkToSend) {
+        ++(*count);
+    } else if (uv_now(node->loop) >= pub->expires) {
+        DPS_ExpirePub(node, pub);
+    } else {
+        if ((pub->flags & PUB_FLAG_PUBLISH) && (node->remoteNodes || node->mcastSender)) {
+            pub->checkToSend = DPS_TRUE;
+            ++(*count);
+        }
+    }
+    return next;
+}
+
 /*
  * Run checks of one or more publications against the current subscriptions
  */
@@ -875,23 +895,16 @@ void DPS_UpdatePubs(DPS_Node* node, DPS_Publication* pub)
         pub->checkToSend = DPS_TRUE;
         ++count;
     } else {
-        DPS_Publication* pubNext;
-        for (pub = node->publications; pub != NULL; pub = pubNext) {
-            pubNext = pub->next;
-            /*
-             * Received publications are marked as checkToSend they should not be expired.
-             */
-            if (pub->checkToSend) {
-                ++count;
-                continue;
-            }
-            if (uv_now(node->loop) >= pub->expires) {
-                DPS_ExpirePub(node, pub);
-            } else {
-                if ((pub->flags & PUB_FLAG_PUBLISH) && (node->remoteNodes || node->mcastSender)) {
-                    pub->checkToSend = DPS_TRUE;
-                    ++count;
+        DPS_Publication* nextPub;
+        for (pub = node->publications; pub != NULL; pub = nextPub) {
+            nextPub = pub->next;
+            if (pub->history) {
+                pub = pub->history;
+                while (pub) {
+                    pub = UpdatePub(node, pub, &count);
                 }
+            } else {
+                UpdatePub(node, pub, &count);
             }
         }
     }
