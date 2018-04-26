@@ -1567,6 +1567,11 @@ DPS_Status DPS_Publish(DPS_Publication* pub, const uint8_t* payload, size_t len,
     if (AddToHistory(pub, clone)) {
         ++clone->shared->refCount;
     }
+    /*
+     * Update the (application-visible) publication's sequence number to the latest sequence number
+     * so that DPS_PublicationGetSequenceNum works as expected after calling DPS_Publish.
+     */
+    pub->sequenceNum = clone->sequenceNum;
     newClone = NULL;
     DPS_UnlockNode(node);
     DPS_UpdatePubs(node, clone);

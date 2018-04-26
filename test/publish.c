@@ -547,6 +547,34 @@ static void TestRetainedMessage(DPS_Node* node)
     }
 }
 
+static void TestSequenceNumbers(DPS_Node* node)
+{
+    static const char* topics[] = { __FUNCTION__ };
+    static const size_t numTopics = 1;
+    DPS_Publication* pub = NULL;
+    size_t depth = 10000;
+    DPS_QoS qos;
+    uint32_t expectedSeqNum;
+    DPS_Status ret;
+    size_t i;
+
+    DPS_PRINT("%s\n", __FUNCTION__);
+
+    pub = CreatePublication(node, topics, numTopics, NULL);
+    qos.historyDepth = depth;
+    ret = DPS_PublicationConfigureQoS(pub, &qos);
+    ASSERT(ret == DPS_OK);
+
+    expectedSeqNum = DPS_PublicationGetSequenceNum(pub) + 1;
+    for (i = 0; i < depth; ++i, ++expectedSeqNum) {
+        ret = DPS_Publish(pub, NULL, 0, 0);
+        ASSERT(ret == DPS_OK);
+        ASSERT(expectedSeqNum == DPS_PublicationGetSequenceNum(pub));
+    }
+
+    DPS_DestroyPublication(pub);
+}
+
 int main(int argc, char** argv)
 {
     char** arg = argv + 1;
@@ -580,6 +608,7 @@ int main(int argc, char** argv)
     TestBackToBackPublish(node);
     TestBackToBackPublishSeparateNodes(node);
     TestRetainedMessage(node);
+    TestSequenceNumbers(node);
 
     DPS_DestroyNode(node, OnNodeDestroyed, event);
     DPS_WaitForEvent(event);
