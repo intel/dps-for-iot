@@ -10,17 +10,19 @@
 
 - [SCons](http://scons.org/pages/download.html)
 
-- libuv is used by node.js so packages are available for many
-distributions but note that DPS requires libuv 1.7 or later so it may
-be necessary to build libuv from source. [libuv source code on
-GitHub.](https://github.com/libuv)
+- [libuv](http://dist.libuv.org/dist/)
+
+  @note When the @c UV_PATH parameter to scons is specified as @c
+  ext/libuv, the scons script pulls down and builds the source code
+  for libuv.
 
 - [SWIG](http://www.swig.org/download.html)
 
 @subsection prerequisites-windows Windows
+
 - [Visual Studio](https://www.visualstudio.com/downloads/)
 
-  Note: In Visual Studio 2015, Visual C++ is not installed by default.
+  @note In Visual Studio 2015, Visual C++ is not installed by default.
   When installing, be sure to choose <strong>Custom</strong>
   installation and then choose the C++ components you require. Or, if
   Visual Studio is already installed, choose <strong>File | New |
@@ -31,11 +33,15 @@ GitHub.](https://github.com/libuv)
 
 - [SCons](http://scons.org/pages/download.html)
 
-  Note: The SCons installer will not detect the 64-bit installation of
+  @note The SCons installer will not detect the 64-bit installation of
   Python.  Instead, download the zip file and follow the installation
   instructions in SCons README.txt.
 
 - [libuv](http://dist.libuv.org/dist/)
+
+  @note When the @c UV_PATH parameter to scons is specified as @c
+  ext\\libuv, the scons script pulls down and builds the source code
+  for libuv.
 
 - [SWIG](http://www.swig.org/download.html)
 
@@ -96,6 +102,15 @@ necessary these projects can be populated manually:
 @verbatim
 $ git clone https://github.com/ARMmbed/mbedtls ext/mbedtls
 $ git clone https://github.com/01org/safestringlib.git ext/safestring
+@endverbatim
+
+When @c UV_PATH is specified as @c ext/libuv, the scons script pulls
+down source code for libuv. If necessary these projects can be
+populated manually:
+
+@verbatim
+$ git clone https://github.com/libuv/libuv.git ext/libuv
+$ git clone https://chromium.googlesource.com/external/gyp ext/libuv/build/gyp
 @endverbatim
 
 @note The ext projects are populated the first time DPS is built. To

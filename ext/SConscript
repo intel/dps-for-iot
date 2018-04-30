@@ -1,5 +1,7 @@
+import os
 Import(['extEnv'])
 
+extLibs = []
 platform = extEnv['PLATFORM']
 
 # Pull down mbedtls from github and build the library
@@ -66,6 +68,7 @@ mbedtlsSrcs += [
 
 mbedtlsObj = mbedtlsEnv.Object(mbedtlsSrcs)
 mbedtlsLib = mbedtlsEnv.Library('lib/libmbedtls', mbedtlsObj)
+extLibs.append('mbedtlsLib')
 
 Depends(mbedtlsSrcs, mbedtlsGit)
 Depends(mbedtlsObj, './mbedtls_config.h')
@@ -105,9 +108,51 @@ scsrcs = ['./safestring/safeclib/ignore_handler_s.c',
 scEnv['CPPPATH'] = './safestring/include'
 
 sclib = scEnv.Library('lib/safestring', scsrcs)
+extLibs.append('sclib')
 
 Depends(scsrcs, scgit)
 
+# Pull down libuv from github and build the library
+
+if extEnv['UV_PATH'] == os.path.join('ext', 'libuv'):
+   uvEnv = extEnv.Clone()
+   uvEnv.Tool('Make')
+
+   uvgit = uvEnv.Command('./libuv/.git', None,
+                         ['git clone https://github.com/libuv/libuv.git ext/libuv',
+                          'git clone https://chromium.googlesource.com/external/gyp ext/libuv/build/gyp'])
+
+   if uvEnv['PLATFORM'] == 'win32':
+      if uvEnv['MSVS_VERSION'] >= '14.1':
+         vs = 'vs2017'
+      else:
+         vs = ''
+      if uvEnv['TARGET_ARCH'] == 'x86_64' or uvEnv['TARGET_ARCH'] == 'amd64':
+         arch = 'x64'
+      else:
+         arch = 'x86'
+      command = 'vcbuild.bat release {} {} static'.format(vs, arch)
+      uvlib = uvEnv.Command('./libuv/Release/lib/libuv.lib', uvgit,
+                            [command],
+                            chdir = 'ext/libuv')
+      uvlib = uvEnv.Install('#/ext/libuv', uvlib)
+      extLibs.append('uvlib')
+   elif uvEnv['PLATFORM'] == 'posix':
+      uvgyp = uvEnv.Command('./libuv/out/Makefile', uvgit,
+                            ['patch -p1 < ../libuv.patch',
+                             'gyp_uv.py -f make'],
+                            chdir = 'ext/libuv')
+      uvlib = uvEnv.Make(source = './libuv/out/Makefile',
+                         target = ['libuv/out/Release/libuv.a'],
+                         MakePath = Dir('libuv'),
+                         MakeEnv = {'BUILDTYPE': 'Release'},
+                         MakeOpts = ['-C', 'out'])
+      uvlib = uvEnv.Install('#/ext/libuv', uvlib)
+      extLibs.append('uvlib')
+   else:
+      print('Unsupported system')
+      exit()
+
 # Return libraries
 
-Return (['mbedtlsLib', 'sclib'])
+Return (extLibs)
