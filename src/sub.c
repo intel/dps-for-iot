@@ -227,7 +227,7 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote)
         interests = remote->outbound.deltaInd ? remote->outbound.delta : remote->outbound.interests;
         len += 4 * CBOR_SIZEOF(uint8_t) +
                CBOR_SIZEOF(uint8_t) +
-               CBOR_SIZEOF_BSTR(sizeof(DPS_UUID)) +
+               CBOR_SIZEOF_BYTES(sizeof(DPS_UUID)) +
                DPS_BitVectorSerializeMaxSize(interests) +
                DPS_BitVectorSerializeMaxSize(remote->outbound.needs);
     } else {

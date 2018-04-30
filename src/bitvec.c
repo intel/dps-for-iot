@@ -751,7 +751,7 @@ DPS_Status DPS_BitVectorSerialize(DPS_BitVector* bv, DPS_TxBuffer* buffer)
 
 size_t DPS_BitVectorSerializeMaxSize(DPS_BitVector* bv)
 {
-    return CBOR_SIZEOF_ARRAY(3) + CBOR_SIZEOF(uint8_t) + CBOR_SIZEOF(uint32_t) + CBOR_SIZEOF_BSTR(bv->len / 8);
+    return CBOR_SIZEOF_ARRAY(3) + CBOR_SIZEOF(uint8_t) + CBOR_SIZEOF(uint32_t) + CBOR_SIZEOF_BYTES(bv->len / 8);
 }
 
 DPS_Status DPS_BitVectorDeserialize(DPS_BitVector* bv, DPS_RxBuffer* buffer)

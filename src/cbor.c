@@ -207,6 +207,15 @@ DPS_Status CBOR_EncodeUint(DPS_TxBuffer* buffer, uint64_t n)
     return EncodeUint(buffer, n, CBOR_UINT);
 }
 
+size_t _CBOR_SizeOfInt(int64_t i)
+{
+    if (i >= 0) {
+        return CBOR_SIZEOF_LEN((uint64_t)i);
+    } else {
+        return CBOR_SIZEOF_LEN(~(uint64_t)i);
+    }
+}
+
 DPS_Status CBOR_EncodeInt(DPS_TxBuffer* buffer, int64_t i)
 {
     if (i >= 0) {

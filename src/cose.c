@@ -46,29 +46,29 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
 #define A256KW_LEN 40
 
-#define SIZEOF_PROTECTED_MAP CBOR_SIZEOF_BSTR(CBOR_SIZEOF_MAP(1) +      \
+#define SIZEOF_PROTECTED_MAP CBOR_SIZEOF_BYTES(CBOR_SIZEOF_MAP(1) +      \
     /* alg */ CBOR_SIZEOF(int8_t) + CBOR_SIZEOF(int8_t))
 
 #define SIZEOF_SIGNATURE 132 /* See comments in Verify_ECDSA() for explanation */
 
 #define SIZEOF_COUNTER_SIGNATURE(kidLen) CBOR_SIZEOF_ARRAY(3) +         \
     SIZEOF_PROTECTED_MAP +                                              \
-    CBOR_SIZEOF_MAP(1) + /* kid */ CBOR_SIZEOF(int8_t) + CBOR_SIZEOF_BSTR(kidLen) + \
-    CBOR_SIZEOF_BSTR(SIZEOF_SIGNATURE)
+    CBOR_SIZEOF_MAP(1) + /* kid */ CBOR_SIZEOF(int8_t) + CBOR_SIZEOF_BYTES(kidLen) + \
+    CBOR_SIZEOF_BYTES(SIZEOF_SIGNATURE)
 
 #define SIZEOF_EPHEMERAL_KEY CBOR_SIZEOF_MAP(4) +                       \
     /* kty */ CBOR_SIZEOF(int8_t) + CBOR_SIZEOF(int8_t) +               \
     /* crv */ CBOR_SIZEOF(int8_t) + CBOR_SIZEOF(int8_t) +               \
-    /* x */ CBOR_SIZEOF(int8_t) + CBOR_SIZEOF_BSTR(EC_MAX_COORD_LEN) +  \
-    /* y */ CBOR_SIZEOF(int8_t) + CBOR_SIZEOF_BSTR(EC_MAX_COORD_LEN)
+    /* x */ CBOR_SIZEOF(int8_t) + CBOR_SIZEOF_BYTES(EC_MAX_COORD_LEN) + \
+    /* y */ CBOR_SIZEOF(int8_t) + CBOR_SIZEOF_BYTES(EC_MAX_COORD_LEN)
 
 #define SIZEOF_RECIPIENT(kidLen) CBOR_SIZEOF_ARRAY(3) +                 \
     SIZEOF_PROTECTED_MAP +                                              \
     CBOR_SIZEOF_MAP(2) +                                                \
     /* alg */ CBOR_SIZEOF(int8_t) + CBOR_SIZEOF(int8_t) +               \
     /* ephemeral key */ CBOR_SIZEOF(int8_t) + SIZEOF_EPHEMERAL_KEY +    \
-    /* kid */ CBOR_SIZEOF(int8_t) + CBOR_SIZEOF_BSTR(kidLen) +          \
-    /* content */ CBOR_SIZEOF_BSTR(A256KW_LEN)
+    /* kid */ CBOR_SIZEOF(int8_t) + CBOR_SIZEOF_BYTES(kidLen) +         \
+    /* content */ CBOR_SIZEOF_BYTES(A256KW_LEN)
 
 #define SIZEOF_PARTY_INFO CBOR_SIZEOF_ARRAY(3) +        \
     /* null */ 1 +                                      \
@@ -355,11 +355,11 @@ static DPS_Status EncodeSig(DPS_TxBuffer* buf, int8_t alg, int8_t sigAlg,
     size_t bufLen;
 
     bufLen = CBOR_SIZEOF_ARRAY(5) +
-        CBOR_SIZEOF_BSTR(sizeof(COUNTER_SIGNATURE)) +
+        CBOR_SIZEOF_BYTES(sizeof(COUNTER_SIGNATURE)) +
         SIZEOF_PROTECTED_MAP +
         SIZEOF_PROTECTED_MAP +
-        CBOR_SIZEOF_BSTR(aadLen) +
-        CBOR_SIZEOF_BSTR(payloadLen);
+        CBOR_SIZEOF_BYTES(aadLen) +
+        CBOR_SIZEOF_BYTES(payloadLen);
 
     ret = DPS_TxBufferInit(buf, NULL, bufLen);
     if (ret == DPS_OK) {
@@ -418,9 +418,9 @@ static DPS_Status EncodeAAD(DPS_TxBuffer* buf, uint8_t tag, int8_t alg, uint8_t*
         return DPS_ERR_INVALID;
     }
     bufLen = CBOR_SIZEOF_ARRAY(3) +
-        CBOR_SIZEOF_BSTR(contextLen) +
+        CBOR_SIZEOF_BYTES(contextLen) +
         SIZEOF_PROTECTED_MAP +
-        CBOR_SIZEOF_BSTR(aadLen);
+        CBOR_SIZEOF_BYTES(aadLen);
 
     ret = DPS_TxBufferInit(buf, NULL, bufLen);
     if (ret == DPS_OK) {
@@ -830,8 +830,8 @@ DPS_Status COSE_Encrypt(int8_t alg, const uint8_t nonce[COSE_NONCE_LEN], const C
         CBOR_SIZEOF_ARRAY(4) +
         SIZEOF_PROTECTED_MAP +
         CBOR_SIZEOF_MAP(2) +
-        /* iv */ CBOR_SIZEOF(int8_t) + CBOR_SIZEOF_BSTR(COSE_NONCE_LEN) +
-        CBOR_SIZEOF_BSTR(DPS_TxBufferUsed(&content));
+        /* iv */ CBOR_SIZEOF(int8_t) + CBOR_SIZEOF_BYTES(COSE_NONCE_LEN) +
+        CBOR_SIZEOF_BYTES(DPS_TxBufferUsed(&content));
     if (signer) {
         ctLen += /* counter signature */ CBOR_SIZEOF(int8_t) + SIZEOF_COUNTER_SIGNATURE(sig.kid.len);
     }
