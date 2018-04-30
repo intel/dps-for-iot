@@ -123,7 +123,7 @@ static DPS_Status SerializeAck(const DPS_Publication* pub, PublicationAck* ack, 
           CBOR_SIZEOF(uint8_t) +
           CBOR_SIZEOF(uint8_t) +
           CBOR_SIZEOF_MAP(2) + 2 * CBOR_SIZEOF(uint8_t) +
-          CBOR_SIZEOF_BSTR(sizeof(DPS_UUID)) +
+          CBOR_SIZEOF_BYTES(sizeof(DPS_UUID)) +
           CBOR_SIZEOF(uint32_t);
     ret = DPS_TxBufferInit(&ack->buf, NULL, len);
     if (ret != DPS_OK) {
@@ -166,7 +166,7 @@ static DPS_Status SerializeAck(const DPS_Publication* pub, PublicationAck* ack, 
      */
     if (ret == DPS_OK) {
         len = CBOR_SIZEOF_MAP(1) + CBOR_SIZEOF(uint8_t) +
-            CBOR_SIZEOF_BSTR(dataLen);
+            CBOR_SIZEOF_BYTES(dataLen);
         ret = DPS_TxBufferInit(&ack->encryptedBuf, NULL, len);
     }
     if (ret == DPS_OK) {

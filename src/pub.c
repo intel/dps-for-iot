@@ -1358,10 +1358,10 @@ DPS_Status DPS_SerializePub(DPS_Node* node, DPS_Publication* pub, const uint8_t*
      * Encode the protected map
      */
     len = CBOR_SIZEOF_MAP(5) + 5 * CBOR_SIZEOF(uint8_t) +
-        CBOR_SIZEOF_BSTR(sizeof(DPS_UUID)) +
+        CBOR_SIZEOF_BYTES(sizeof(DPS_UUID)) +
         CBOR_SIZEOF(uint32_t) +
-        CBOR_SIZEOF_BOOL +
-        CBOR_SIZEOF_BSTR(bfLen) +
+        CBOR_SIZEOF_BOOLEAN() +
+        CBOR_SIZEOF_BYTES(bfLen) +
         CBOR_SIZEOF(int16_t);
     ret = DPS_TxBufferInit(&protectedBuf, NULL, len);
     if (ret != DPS_OK) {
@@ -1405,7 +1405,7 @@ DPS_Status DPS_SerializePub(DPS_Node* node, DPS_Publication* pub, const uint8_t*
     if (ret == DPS_OK) {
         len = CBOR_SIZEOF_MAP(2) + 2 * CBOR_SIZEOF(uint8_t) +
             topicsLen +
-            CBOR_SIZEOF_BSTR(dataLen);
+            CBOR_SIZEOF_BYTES(dataLen);
         ret = DPS_TxBufferInit(&encryptedBuf, NULL, len);
     }
     if (ret == DPS_OK) {

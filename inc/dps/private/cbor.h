@@ -85,7 +85,7 @@ extern "C" {
 /**
  * Actual bytes needed to encode a byte stream of a specified length
  */
-#define CBOR_SIZEOF_BSTR(l)     ((l) + CBOR_SIZEOF_LEN(l))
+#define CBOR_SIZEOF_BYTES(l)     ((l) + CBOR_SIZEOF_LEN(l))
 
 /**
  * Maximum bytes needed to encode an integer type
@@ -95,7 +95,46 @@ extern "C" {
 /**
  * Actual bytes need to encode a boolean
  */
-#define CBOR_SIZEOF_BOOL        (1)
+#define CBOR_SIZEOF_BOOLEAN()    (1)
+
+/**
+ * Actual bytes need to encode an unsigned integer
+ */
+#define CBOR_SIZEOF_UINT(n)      CBOR_SIZEOF_LEN(n)
+
+/**
+ * Actual bytes need to encode a signed integer
+ */
+#define CBOR_SIZEOF_INT(i)       _CBOR_SizeOfInt(i)
+
+/**
+ * Actual bytes need to encode a tag
+ */
+#define CBOR_SIZEOF_TAG(n)       CBOR_SIZEOF_LEN(n)
+
+/**
+ * Actual bytes need to encode a null
+ */
+#define CBOR_SIZEOF_NULL()       (1)
+
+/**
+ * Actual bytes need to encode a float
+ */
+#define CBOR_SIZEOF_FLOAT()      (5)
+
+/**
+ * Actual bytes need to encode a double
+ */
+#define CBOR_SIZEOF_DOUBLE()     (9)
+
+/**
+ * Actual bytes need to encode a signed integer
+ *
+ * @param i The signed integer
+ *
+ * @return The number of bytes needed
+ */
+size_t _CBOR_SizeOfInt(int64_t i);
 
 /**
  * Actual bytes need to encode a string (includes NUL terminator)
