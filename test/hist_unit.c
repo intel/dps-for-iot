@@ -24,14 +24,8 @@
  * Unit test for internal history APIs
  *
  */
-#include <memory.h>
-#include <stdlib.h>
-#include <dps/dps.h>
-#include <dps/dbg.h>
-#include <dps/uuid.h>
-#include <dps/private/dps.h>
-#include "history.h"
 #include "test.h"
+#include "history.h"
 
 extern void DPS_DumpHistory(DPS_History* history);
 

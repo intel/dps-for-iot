@@ -20,11 +20,6 @@
 *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 */
 
-#include <stdlib.h>
-#include <string.h>
-#include <dps/dbg.h>
-#include <dps/dps.h>
-#include <dps/event.h>
 #include "test.h"
 
 #define A_SIZEOF(a)  (sizeof(a) / sizeof((a)[0]))
@@ -86,7 +81,6 @@ static void TestLoopbackLargeMessage(DPS_Node* node)
     DPS_Event* event = NULL;
     DPS_Subscription* sub = NULL;
     DPS_Status ret;
-    size_t n;
 
     DPS_PRINT("%s\n", __FUNCTION__);
 
@@ -154,7 +148,6 @@ static void TestLoopbackAckLargeMessage(DPS_Node* node)
     int receivedMessage = DPS_FALSE;
     DPS_Event* ackEvent = NULL;
     DPS_Status ret;
-    size_t n;
 
     DPS_PRINT("%s\n", __FUNCTION__);
 

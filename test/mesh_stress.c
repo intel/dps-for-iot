@@ -20,16 +20,8 @@
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  */
 
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
 #include "test.h"
-#include <dps/private/network.h>
-#include <dps/dbg.h>
-#include <dps/dps.h>
-#include <dps/synchronous.h>
-#include <dps/event.h>
-#include "../src/node.h"
+#include "node.h"
 
 /*
  * This is just test code so to make it easy port numbers maps 1:1 into this array

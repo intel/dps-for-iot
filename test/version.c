@@ -20,13 +20,7 @@
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  */
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <dps/dbg.h>
-#include <dps/dps.h>
-#include <dps/event.h>
-#include <dps/private/cbor.h>
+#include "test.h"
 #include "coap.h"
 #include "node.h"
 

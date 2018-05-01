@@ -23,6 +23,7 @@
 #include <malloc.h>
 #include <string.h>
 #include <assert.h>
+#include <safe_lib.h>
 #include <dps/dps.h>
 #include <dps/dbg.h>
 #include <dps/uuid.h>

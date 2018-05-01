@@ -20,11 +20,7 @@
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  */
 
-#include <stdlib.h>
-#include <string.h>
-#include <dps/dbg.h>
-#include <dps/event.h>
-#include <dps/synchronous.h>
+#include "test.h"
 #include "keys.h"
 
 #define MAX_TOPICS 64

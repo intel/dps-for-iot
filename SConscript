@@ -11,8 +11,14 @@ env['UV_LIBS'].append(ext_libs)
 # Core libraries
 libenv = env.Clone()
 
+libenv.Append(CPPDEFINES = ['MBEDTLS_USER_CONFIG_FILE=\\"mbedtls_config.h\\"'])
+libenv.Append(CPPPATH = ['#/ext/safestring/include', '#/ext', '#/ext/mbedtls/include'])
+
 # Additional warnings for the core object files
 if platform == 'win32':
+    # We are getting our secure memory and string functions for
+    # SafeStringLib so need to disable the Windows supplied versions
+    libenv.Append(CPPDEFINES = ['__STDC_WANT_SECURE_LIB__=0'])
     libenv.Append(LIBS = env['UV_LIBS'])
 elif platform == 'posix':
     libenv.Append(CCFLAGS = ['-Wall', '-Wno-format-extra-args'])
@@ -152,8 +158,8 @@ if env['nodejs'] and platform == 'posix':
 # Unit tests
 testenv = env.Clone()
 if testenv['PLATFORM'] == 'win32':
-    testenv.Append(CPPDEFINES = ['_CRT_SECURE_NO_WARNINGS'])
-testenv.Append(CPPPATH = ['src'])
+    testenv.Append(CPPDEFINES = ['_CRT_SECURE_NO_WARNINGS', '__STDC_WANT_SECURE_LIB__=0'])
+testenv.Append(CPPPATH = ['#/ext/safestring/include', 'src'])
 testenv.Append(LIBS = [lib, env['UV_LIBS']])
 
 testsrcs = ['test/hist_unit.c',

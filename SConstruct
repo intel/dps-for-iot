@@ -46,14 +46,10 @@ except:
 extEnv = Environment(ENV = os.environ, variables=vars)
 
 env = Environment(
-    CPPDEFINES=[
-        'MBEDTLS_USER_CONFIG_FILE=\\"mbedtls_config.h\\"',
-    ],
     CPPPATH=[
         '#/inc',
-        '#/ext/safestring/include',
-        '#/ext',
-        '#/ext/mbedtls/include',
+    ],
+    CPPDEFINES=[
     ],
     variables=vars,
     tools=tools,
@@ -80,10 +76,6 @@ print("Building for " + env['variant'])
 if env['PLATFORM'] == 'win32':
 
     env.Append(CCFLAGS = ['/J', '/W3', '/WX', '/nologo'])
-
-    # We are getting our secure memory and string functions for
-    # SafeStringLib so need to disable the Windows supplied versions
-    env.Append(CPPDEFINES = ['__STDC_WANT_SECURE_LIB__=0'])
 
     if env['variant'] == 'debug':
         env.Append(CCFLAGS = ['/Zi', '/MT', '/Od', '-DDPS_DEBUG'])

@@ -20,14 +20,7 @@
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  */
 
-#include <stdint.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
 #include "test.h"
-#include <dps/dbg.h>
-#include <dps/err.h>
-#include <dps/private/dps.h>
 #include "gcm.h"
 #include "cose.h"
 #include "crypto.h"
@@ -241,7 +234,6 @@ int main(int argc, char** argv)
 {
     DPS_Status ret;
     DPS_KeyStore* keyStore;
-    int i;
 
     DPS_Debug = 1;
     rbg = DPS_CreateRBG();

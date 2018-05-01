@@ -21,7 +21,6 @@
  */
 
 #include "test.h"
-#include <dps/dps.h>
 
 static DPS_Status GetKeyAndId(DPS_KeyStoreRequest* request)
 {

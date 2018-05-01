@@ -24,7 +24,22 @@
 #define _TEST_H
 
 #include <assert.h>
+#include <math.h>
+#include <safe_lib.h>
+#include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+
+#include <dps/dbg.h>
+#include <dps/dps.h>
+#include <dps/err.h>
+#include <dps/event.h>
+#include <dps/synchronous.h>
+#include <dps/uuid.h>
+
+#include <dps/private/cbor.h>
+#include <dps/private/dps.h>
 
 #ifdef _WIN32
 #define SLEEP(t) Sleep(t)
