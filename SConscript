@@ -24,7 +24,7 @@ elif platform == 'posix':
     libenv.Append(CCFLAGS = ['-Wall', '-Wno-format-extra-args'])
 
 # Include the fuzzing hooks when the sanitizer is enabled
-if env['fsan'] == True:
+if platform == 'posix' and env['fsan'] == True:
     libenv.Append(CPPDEFINES = ['DPS_USE_FUZZ'])
 
 libenv.Install('#/build/dist/inc/dps', libenv.Glob('#/inc/dps/*.h'))
@@ -79,9 +79,9 @@ libenv.Install('#/build/dist/lib', lib)
 
 shobjs = libenv.SharedObject(srcs)
 if platform == 'win32':
-    shlib = libenv.SharedLibrary('lib/dps_shared', shobjs + ['dps_shared.def'], LIBS = ext_libs, SHLIBVERSION = version)
+    shlib = libenv.SharedLibrary('lib/dps_shared', shobjs + ['dps_shared.def'], SHLIBVERSION = version)
 else:
-    shlib = libenv.SharedLibrary('lib/dps_shared', shobjs, LIBS = ext_libs, SHLIBVERSION = version)
+    shlib = libenv.SharedLibrary('lib/dps_shared', shobjs, SHLIBVERSION = version)
 libenv.InstallVersionedLib('#/build/dist/lib', shlib, SHLIBVERSION = version)
 
 ns3srcs = ['src/bitvec.c',
@@ -187,7 +187,7 @@ testprogs.append(testenv.Program(['test/node.c', 'test/keys.c']))
 testenv.Install('#/build/test/bin', testprogs)
 
 # Fuzz tests
-if env['fsan'] == True:
+if platform == 'posix' and env['fsan'] == True:
     fenv = env.Clone()
     fenv.VariantDir('test/fuzzer', 'test')
     fenv.Append(LINKFLAGS = ['-fsanitize=fuzzer'])

@@ -48,6 +48,7 @@ mbedtlsSrcs = [
      './mbedtls/library/pk.c',
      './mbedtls/library/pk_wrap.c',
      './mbedtls/library/pkparse.c',
+     './mbedtls/library/platform.c',
      './mbedtls/library/sha256.c',
      './mbedtls/library/sha512.c',
      './mbedtls/library/timing.c',
