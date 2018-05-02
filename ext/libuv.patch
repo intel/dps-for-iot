@@ -1,0 +1,20 @@
+diff --git a/uv.gyp b/uv.gyp
+index e41f9ff5..9bc12ea4 100644
+--- a/uv.gyp
++++ b/uv.gyp
+@@ -187,6 +187,15 @@
+             ],
+           },
+           'conditions': [
++            ['uv_library=="static_library"', {
++              'conditions': [
++                ['OS=="zos"', {
++                  'cflags': [ '-qexportall' ],
++                }, {
++                  'cflags': [ '-fPIC' ],
++                }],
++              ],
++            }],
+             ['uv_library=="shared_library"', {
+               'conditions': [
+                 ['OS=="zos"', {
