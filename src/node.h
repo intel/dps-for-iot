@@ -35,8 +35,8 @@
 #include "cose.h"
 #include "history.h"
 
-#if UV_VERSION_MAJOR < 1 || UV_VERSION_MINOR < 7
-#error libuv version 1.7 or higher is required
+#if UV_VERSION_MAJOR < 1 || UV_VERSION_MINOR < 15
+#error libuv version 1.15 or higher is required
 #endif
 
 #ifdef __cplusplus

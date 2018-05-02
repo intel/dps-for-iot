@@ -12,6 +12,8 @@
 
 - [libuv](http://dist.libuv.org/dist/)
 
+  libuv version 1.15 or higher is required.
+
   @note When the @c UV_PATH parameter to scons is specified as @c
   ext/libuv, the scons script pulls down and builds the source code
   for libuv.
@@ -38,6 +40,8 @@
   instructions in SCons README.txt.
 
 - [libuv](http://dist.libuv.org/dist/)
+
+  libuv version 1.15 or higher is required.
 
   @note When the @c UV_PATH parameter to scons is specified as @c
   ext\\libuv, the scons script pulls down and builds the source code
