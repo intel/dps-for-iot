@@ -20,12 +20,7 @@
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  */
 
-#include <stdint.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
 #include "test.h"
-#include <dps/dbg.h>
 #include "topics.h"
 
 static uint8_t packed[10000];

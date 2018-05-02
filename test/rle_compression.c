@@ -20,11 +20,7 @@
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <dps/dbg.h>
-#include <dps/err.h>
+#include "test.h"
 #include "bitvec.h"
 
 #define FILTER_BITS     768 * 8

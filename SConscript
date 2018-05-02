@@ -11,14 +11,20 @@ env['UV_LIBS'].append(ext_libs)
 # Core libraries
 libenv = env.Clone()
 
+libenv.Append(CPPDEFINES = ['MBEDTLS_USER_CONFIG_FILE=\\"mbedtls_config.h\\"'])
+libenv.Append(CPPPATH = ['#/ext/safestring/include', '#/ext', '#/ext/mbedtls/include'])
+
 # Additional warnings for the core object files
 if platform == 'win32':
+    # We are getting our secure memory and string functions for
+    # SafeStringLib so need to disable the Windows supplied versions
+    libenv.Append(CPPDEFINES = ['__STDC_WANT_SECURE_LIB__=0'])
     libenv.Append(LIBS = env['UV_LIBS'])
 elif platform == 'posix':
     libenv.Append(CCFLAGS = ['-Wall', '-Wno-format-extra-args'])
 
 # Include the fuzzing hooks when the sanitizer is enabled
-if env['fsan'] == True:
+if platform == 'posix' and env['fsan'] == True:
     libenv.Append(CPPDEFINES = ['DPS_USE_FUZZ'])
 
 libenv.Install('#/build/dist/inc/dps', libenv.Glob('#/inc/dps/*.h'))
@@ -73,9 +79,9 @@ libenv.Install('#/build/dist/lib', lib)
 
 shobjs = libenv.SharedObject(srcs)
 if platform == 'win32':
-    shlib = libenv.SharedLibrary('lib/dps_shared', shobjs + ['dps_shared.def'], LIBS = ext_libs, SHLIBVERSION = version)
+    shlib = libenv.SharedLibrary('lib/dps_shared', shobjs + ['dps_shared.def'], SHLIBVERSION = version)
 else:
-    shlib = libenv.SharedLibrary('lib/dps_shared', shobjs, LIBS = ext_libs, SHLIBVERSION = version)
+    shlib = libenv.SharedLibrary('lib/dps_shared', shobjs, SHLIBVERSION = version)
 libenv.InstallVersionedLib('#/build/dist/lib', shlib, SHLIBVERSION = version)
 
 ns3srcs = ['src/bitvec.c',
@@ -152,8 +158,8 @@ if env['nodejs'] and platform == 'posix':
 # Unit tests
 testenv = env.Clone()
 if testenv['PLATFORM'] == 'win32':
-    testenv.Append(CPPDEFINES = ['_CRT_SECURE_NO_WARNINGS'])
-testenv.Append(CPPPATH = ['src'])
+    testenv.Append(CPPDEFINES = ['_CRT_SECURE_NO_WARNINGS', '__STDC_WANT_SECURE_LIB__=0'])
+testenv.Append(CPPPATH = ['#/ext/safestring/include', 'src'])
 testenv.Append(LIBS = [lib, env['UV_LIBS']])
 
 testsrcs = ['test/hist_unit.c',
@@ -181,7 +187,7 @@ testprogs.append(testenv.Program(['test/node.c', 'test/keys.c']))
 testenv.Install('#/build/test/bin', testprogs)
 
 # Fuzz tests
-if env['fsan'] == True:
+if platform == 'posix' and env['fsan'] == True:
     fenv = env.Clone()
     fenv.VariantDir('test/fuzzer', 'test')
     fenv.Append(LINKFLAGS = ['-fsanitize=fuzzer'])

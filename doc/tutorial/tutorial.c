@@ -862,7 +862,7 @@ typedef struct {
     } bits;
 } AccessControlEntry;
 
-static const AccessControlEntry ACL[] = {
+static const AccessControlEntry AccessControlList[] = {
     { "a/b/c/d", BYTE_STR("alice"), PUB       },
     { "a/b/c/d", BYTE_STR("bob"),   SUB | ACK },
     { "a/b/c/d", BYTE_STR("trudy"), SUB       },
@@ -872,7 +872,7 @@ static const AccessControlEntry ACL[] = {
 static int IsAllowed(const DPS_KeyId* keyId, int bits, const DPS_Publication* pub)
 {
     const AccessControlEntry* ace;
-    for (ace = ACL; ace->keyId.id; ++ace) {
+    for (ace = AccessControlList; ace->keyId.id; ++ace) {
         if (IsSameKeyId(keyId, &ace->keyId) && (bits & ace->bits)) {
             size_t i;
             for (i = 0; i < DPS_PublicationGetNumTopics(pub); ++i) {
@@ -929,7 +929,7 @@ static DPS_Status PublishWithAccessControl(DPS_Node* node)
         goto Exit;
     }
     const AccessControlEntry* ace;
-    for (ace = ACL; ace->keyId.id; ++ace) {
+    for (ace = AccessControlList; ace->keyId.id; ++ace) {
         if (IsAllowed(&ace->keyId, SUB, pub)) {
             ret = DPS_PublicationAddSubId(pub, &ace->keyId);
             if (ret != DPS_OK) {

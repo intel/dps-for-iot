@@ -64,6 +64,7 @@
 %typemap(in) void* opts { $1 = NULL; }
 
 %{
+#include <safe_lib.h>
 #include <dps/dbg.h>
 #include <dps/dps.h>
 #include <dps/err.h>

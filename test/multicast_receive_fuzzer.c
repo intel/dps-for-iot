@@ -20,11 +20,7 @@
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  */
 
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
-#include <dps/dps.h>
-#include <dps/event.h>
+#include "test.h"
 #include "keys.h"
 
 #define A_SIZEOF(a)  (sizeof(a) / sizeof((a)[0]))

@@ -25,6 +25,7 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <assert.h>
+#include <safe_lib.h>
 #include <dps/dbg.h>
 #include <dps/dps.h>
 #include "node.h"

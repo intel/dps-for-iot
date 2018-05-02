@@ -20,6 +20,7 @@
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  */
 
+#include <safe_lib.h>
 #include "keys.h"
 
 static const DPS_UUID _NetworkKeyId = {

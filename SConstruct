@@ -17,17 +17,15 @@ vars.AddVariables(
 # Windows-specific command line variables
 if platform.system() == 'Windows':
     vars.AddVariables(
-        PathVariable('UV_INC', 'Path where libuv includes are installed', 'C:\Program Files\libuv\include'),
-        PathVariable('UV_LIB', 'Path where libuv libraries are installed', 'C:\Program Files\libuv'),
-        PathVariable('PYTHON_PATH', 'Path to Python', 'C:\Python27'),
-        PathVariable('SWIG', 'Path to SWIG executable', 'C:\swigwin-3.0.10\swig.exe'),
+        PathVariable('UV_PATH', 'Path where libuv is installed', 'ext\libuv', PathVariable.PathAccept),
+        PathVariable('PYTHON_PATH', 'Path to Python', 'C:\Python27', PathVariable.PathAccept),
+        PathVariable('SWIG', 'Path to SWIG executable', 'C:\swigwin-3.0.10\swig.exe', PathVariable.PathAccept),
         PathVariable('DOXYGEN_PATH', 'Path to Doxygen', 'C:\Program Files\Doxygen', PathVariable.PathAccept))
 
 # Linux-specific command line variables
 if platform.system() == 'Linux':
     vars.AddVariables(
-        PathVariable('UV_INC', 'Path where libuv includes are installed', '', PathVariable.PathAccept),
-        PathVariable('UV_LIB', 'Path where libuv libraries are installed', '', PathVariable.PathAccept),
+        PathVariable('UV_PATH', 'Path where libuv is installed', '', PathVariable.PathAccept),
         BoolVariable('profile', 'Build for profiling?', False),
         BoolVariable('asan', 'Enable address sanitizer?', False),
         BoolVariable('tsan', 'Enable thread sanitizer?', False),
@@ -46,14 +44,10 @@ except:
 extEnv = Environment(ENV = os.environ, variables=vars)
 
 env = Environment(
-    CPPDEFINES=[
-        'MBEDTLS_USER_CONFIG_FILE=\\"mbedtls_config.h\\"',
-    ],
     CPPPATH=[
         '#/inc',
-        '#/ext/safestring/include',
-        '#/ext',
-        '#/ext/mbedtls/include',
+    ],
+    CPPDEFINES=[
     ],
     variables=vars,
     tools=tools,
@@ -81,10 +75,6 @@ if env['PLATFORM'] == 'win32':
 
     env.Append(CCFLAGS = ['/J', '/W3', '/WX', '/nologo'])
 
-    # We are getting our secure memory and string functions for
-    # SafeStringLib so need to disable the Windows supplied versions
-    env.Append(CPPDEFINES = ['__STDC_WANT_SECURE_LIB__=0'])
-
     if env['variant'] == 'debug':
         env.Append(CCFLAGS = ['/Zi', '/MT', '/Od', '-DDPS_DEBUG'])
         env.Append(LINKFLAGS = ['/DEBUG'])
@@ -107,9 +97,11 @@ if env['PLATFORM'] == 'win32':
     env['PY_LIBPATH'] = [env['PYTHON_PATH'] + '\libs']
 
     # Where to find libuv and the libraries it needs
-    env['UV_LIBS'] = ['libuv', 'ws2_32', 'iphlpapi', 'advapi32']
-    env.Append(LIBPATH=[env['UV_LIB']])
-    env.Append(CPPPATH=[env['UV_INC']])
+    env['UV_LIBS'] = ['ws2_32', 'psapi', 'iphlpapi', 'shell32', 'userenv', 'user32', 'advapi32']
+    if extEnv['UV_PATH'] != os.path.join('ext', 'libuv'):
+        env['UV_LIBS'] = ['libuv'] + env['UV_LIBS']
+    env.Append(LIBPATH=[env['UV_PATH']])
+    env.Append(CPPPATH=[env['UV_PATH'] + '\include'])
 
     # Doxygen needs to be added to default path if available
     if env['DOXYGEN_PATH']:
@@ -211,11 +203,9 @@ elif env['PLATFORM'] == 'posix':
     # Where to find libuv and the libraries it needs
     env['UV_LIBS'] = ['uv', 'pthread']
 
-    if env['UV_LIB']:
-        env.Prepend(LIBPATH = env['UV_LIB'])
-
-    if env['UV_INC']:
-        env.Prepend(CPPPATH = env['UV_INC'])
+    if env['UV_PATH']:
+        env.Prepend(LIBPATH = env['UV_PATH'])
+        env.Prepend(CPPPATH = env['UV_PATH'] + '/include')
 
 else:
     print('Unsupported system')
