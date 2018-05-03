@@ -1,5 +1,5 @@
 diff --git a/uv.gyp b/uv.gyp
-index e41f9ff5..9bc12ea4 100644
+index e41f9ff..9bc12ea 100644
 --- a/uv.gyp
 +++ b/uv.gyp
 @@ -187,6 +187,15 @@
@@ -19,7 +19,7 @@ index e41f9ff5..9bc12ea4 100644
                'conditions': [
                  ['OS=="zos"', {
 diff --git a/vcbuild.bat b/vcbuild.bat
-index c195394f..fe1d4813 100644
+index c195394..fe1d481 100644
 --- a/vcbuild.bat
 +++ b/vcbuild.bat
 @@ -159,8 +159,6 @@ goto run
