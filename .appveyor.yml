@@ -1,0 +1,30 @@
+version: 0.9.0+{build}
+
+image:
+- Visual Studio 2017
+
+install:
+- cinst swig
+- curl -L http://prdownloads.sourceforge.net/scons/scons-3.0.1.zip --output scons-3.0.1.zip
+- 7z x scons-3.0.1.zip
+- cd scons-3.0.1
+- python setup.py install
+
+environment:
+  matrix:
+  - VARIANT: debug
+    TRANSPORT: udp
+  - VARIANT: debug
+    TRANSPORT: tcp
+  - VARIANT: debug
+    TRANSPORT: dtls
+  - VARIANT: release
+    TRANSPORT: udp
+  - VARIANT: release
+    TRANSPORT: tcp
+  - VARIANT: release
+    TRANSPORT: dtls
+
+build_script:
+- cd C:\projects\dps-for-iot
+- scons variant=%VARIANT% transport=%TRANSPORT% PYTHON_PATH=C:\Python27-x64 SWIG=C:\ProgramData\chocolatey\bin\swig.exe
