@@ -23,6 +23,7 @@
 #include <assert.h>
 #include <string.h>
 #include <malloc.h>
+#include <safe_lib.h>
 #include <dps/dbg.h>
 #include <dps/dps.h>
 #include <dps/private/network.h>
@@ -1269,7 +1270,7 @@ static void OnUdpData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, cons
 static void OnData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, const struct sockaddr* addr, unsigned flags)
 {
     DPS_NetContext* netCtx = socket->data;
-    return netCtx->dataCB(socket, nread, buf, addr, flags);
+    netCtx->dataCB(socket, nread, buf, addr, flags);
 }
 
 static void RxHandleClosed(uv_handle_t* handle)
