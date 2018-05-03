@@ -1,5 +1,7 @@
 # Distributed Publish & Subscribe for IoT
 
+[![Build Status](https://travis-ci.org/intel/dps-for-iot.svg?branch=master)](https://travis-ci.org/intel/dps-for-iot)
+
 ***
 
 ### Note: This is a preview release of the software and is intended for evaluation and experimentation only.
