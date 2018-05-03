@@ -1,6 +1,6 @@
 # Distributed Publish & Subscribe for IoT
 
-[![Build Status](https://ci.appveyor.com/api/projects/status/github/intel/dps-for-iot?svg=true)](https://ci.appveyor.com/project/intel/dps-for-iot)
+[![Build Status](https://travis-ci.org/intel/dps-for-iot.svg?branch=master)](https://travis-ci.org/intel/dps-for-iot)
 
 ***
 
