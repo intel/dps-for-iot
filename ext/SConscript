@@ -130,7 +130,8 @@ if extEnv['UV_PATH'] == os.path.join('ext', 'libuv'):
                          ['git clone -n https://github.com/libuv/libuv.git ext/libuv',
                           'git clone https://chromium.googlesource.com/external/gyp ext/libuv/build/gyp'])
    uvrel = uvEnv.Command('./libuv/gyp_uv.py', uvgit,
-                         ['git checkout tags/v1.20.2'],
+                         ['git checkout tags/v1.20.2',
+                          'git apply ../libuv.patch'],
                          chdir = 'ext/libuv')
 
    if uvEnv['PLATFORM'] == 'win32':
@@ -150,8 +151,7 @@ if extEnv['UV_PATH'] == os.path.join('ext', 'libuv'):
       extLibs.append('uvlib')
    elif uvEnv['PLATFORM'] == 'posix':
       uvgyp = uvEnv.Command('./libuv/out/Makefile', uvrel,
-                            ['patch -p1 < ../libuv.patch',
-                             './gyp_uv.py -f make'],
+                            ['./gyp_uv.py -f make'],
                             chdir = 'ext/libuv')
       uvlib = uvEnv.Make(source = './libuv/out/Makefile',
                          target = ['libuv/out/Release/libuv.a'],
@@ -159,7 +159,7 @@ if extEnv['UV_PATH'] == os.path.join('ext', 'libuv'):
                          MakeEnv = {'CC': uvEnv['CC'],
                                     'CXX': uvEnv['CXX'],
                                     'BUILDTYPE': 'Release'},
-                         MakeOpts = ['-C', 'out'])
+                         MakeOpts = ['-C', 'out', 'libuv'])
       uvlib = uvEnv.Install('#/ext/libuv', uvlib)
       extLibs.append('uvlib')
    else:

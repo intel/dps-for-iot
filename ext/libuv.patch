@@ -18,3 +18,16 @@ index e41f9ff5..9bc12ea4 100644
              ['uv_library=="shared_library"', {
                'conditions': [
                  ['OS=="zos"', {
+diff --git a/vcbuild.bat b/vcbuild.bat
+index c195394f..fe1d4813 100644
+--- a/vcbuild.bat
++++ b/vcbuild.bat
+@@ -159,8 +159,6 @@ goto run
+ :msbuild-found
+ msbuild uv.sln /t:%target% /p:Configuration=%config% /p:Platform="%msbuild_platform%" /clp:NoSummary;NoItemAndPropertyList;Verbosity=minimal /nologo
+ if errorlevel 1 exit /b 1
+-msbuild test\test.sln /t:%target% /p:Configuration=%config% /p:Platform="%msbuild_platform%" /clp:NoSummary;NoItemAndPropertyList;Verbosity=minimal /nologo
+-if errorlevel 1 exit /b 1
+ 
+ :run
+ @rem Run tests if requested.
