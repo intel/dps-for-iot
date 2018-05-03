@@ -7,7 +7,11 @@ platform = extEnv['PLATFORM']
 # Pull down mbedtls from github and build the library
 
 mbedtlsEnv = extEnv.Clone()
-mbedtlsGit = mbedtlsEnv.Command('./mbedtls/.git', None, 'git clone https://github.com/ARMmbed/mbedtls ext/mbedtls')
+mbedtlsGit = mbedtlsEnv.Command('./mbedtls/.git', None,
+                                ['git clone -n https://github.com/ARMmbed/mbedtls ext/mbedtls'])
+mbedtlsRel = mbedtlsEnv.Command('./mbedtls/Makefile', mbedtlsGit,
+                                ['git checkout tags/mbedtls-2.8.0'],
+                                chdir = 'ext/mbedtls')
 
 mbedtlsEnv.Append(
     CPPPATH = [
@@ -70,13 +74,17 @@ mbedtlsObj = mbedtlsEnv.Object(mbedtlsSrcs)
 mbedtlsLib = mbedtlsEnv.Library('lib/libmbedtls', mbedtlsObj)
 extLibs.append('mbedtlsLib')
 
-Depends(mbedtlsSrcs, mbedtlsGit)
+Depends(mbedtlsSrcs, mbedtlsRel)
 Depends(mbedtlsObj, './mbedtls_config.h')
 
 # Pull down safestringlib from github and build the library
 
 scEnv = extEnv.Clone()
-scgit = scEnv.Command('./safestring/.git', None, 'git clone https://github.com/01org/safestringlib.git ext/safestring')
+scgit = scEnv.Command('./safestring/.git', None,
+                      ['git clone -n https://github.com/intel/safestringlib.git ext/safestring'])
+screl = scEnv.Command('./safestring/makefile', scgit,
+                      ['git checkout 77b772849eda2321fb0dca56a321e3939930d7b9'],
+                      chdir = 'ext/safestring')
 
 if scEnv['PLATFORM'] == 'win32':
     scEnv.Append(CPPDEFINES = ['_CRT_SECURE_NO_WARNINGS'])
@@ -110,7 +118,7 @@ scEnv['CPPPATH'] = './safestring/include'
 sclib = scEnv.Library('lib/safestring', scsrcs)
 extLibs.append('sclib')
 
-Depends(scsrcs, scgit)
+Depends(scsrcs, screl)
 
 # Pull down libuv from github and build the library
 
@@ -119,8 +127,11 @@ if extEnv['UV_PATH'] == os.path.join('ext', 'libuv'):
    uvEnv.Tool('Make')
 
    uvgit = uvEnv.Command('./libuv/.git', None,
-                         ['git clone https://github.com/libuv/libuv.git ext/libuv',
+                         ['git clone -n https://github.com/libuv/libuv.git ext/libuv',
                           'git clone https://chromium.googlesource.com/external/gyp ext/libuv/build/gyp'])
+   uvrel = uvEnv.Command('./libuv/gyp_uv.py', uvgit,
+                         ['git checkout tags/v1.20.2'],
+                         chdir = 'ext/libuv')
 
    if uvEnv['PLATFORM'] == 'win32':
       if uvEnv['MSVS_VERSION'] >= '14.1':
@@ -132,13 +143,13 @@ if extEnv['UV_PATH'] == os.path.join('ext', 'libuv'):
       else:
          arch = 'x86'
       command = 'vcbuild.bat release {} {} static'.format(vs, arch)
-      uvlib = uvEnv.Command('./libuv/Release/lib/libuv.lib', uvgit,
+      uvlib = uvEnv.Command('./libuv/Release/lib/libuv.lib', uvrel,
                             [command],
                             chdir = 'ext/libuv')
       uvlib = uvEnv.Install('#/ext/libuv', uvlib)
       extLibs.append('uvlib')
    elif uvEnv['PLATFORM'] == 'posix':
-      uvgyp = uvEnv.Command('./libuv/out/Makefile', uvgit,
+      uvgyp = uvEnv.Command('./libuv/out/Makefile', uvrel,
                             ['patch -p1 < ../libuv.patch',
                              './gyp_uv.py -f make'],
                             chdir = 'ext/libuv')
