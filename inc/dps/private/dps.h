@@ -155,6 +155,11 @@ DPS_Status DPS_TxBufferAppend(DPS_TxBuffer* buffer, const uint8_t* data, size_t 
 #define DPS_TxBufferUsed(b)  ((uint32_t)((b)->txPos - (b)->base))
 
 /**
+ * Size of transmit buffer
+ */
+#define DPS_TxBufferCapacity(b)  ((uint32_t)((b)->eob - (b)->base))
+
+/**
  * Convert a transmit buffer into a receive buffer. Note that this
  * aliases the internal storage so care must be taken to avoid a
  * double free.
