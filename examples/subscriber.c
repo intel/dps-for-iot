@@ -209,7 +209,7 @@ static int ParseArgs(int argc, char** argv, Args* args)
             }
             if (strcmp(*argv, "-d") == 0) {
                 ++argv;
-                DPS_Debug = 1;
+                DPS_Debug = DPS_TRUE;
                 continue;
             }
         }
@@ -334,8 +334,8 @@ static void ReadStdin(Subscriber* subscriber)
         if (!ParseArgs(argc, argv, &args)) {
             continue;
         }
-        Subscribe(subscriber, &args);
         LinkTo(subscriber, &args);
+        Subscribe(subscriber, &args);
     }
 }
 
@@ -348,7 +348,7 @@ int main(int argc, char** argv)
     DPS_Event* nodeDestroyed = NULL;
     Subscriber subscriber;
 
-    DPS_Debug = 0;
+    DPS_Debug = DPS_FALSE;
     memset(&subscriber, 0, sizeof(subscriber));
 
     if (!ParseArgs(argc - 1, argv + 1, &args)) {
@@ -389,10 +389,10 @@ int main(int argc, char** argv)
         DPS_TimedWaitForEvent(nodeDestroyed, args.wait * 1000);
     }
 
-    if (!Subscribe(&subscriber, &args)) {
+    if (!LinkTo(&subscriber, &args)) {
         goto Exit;
     }
-    if (!LinkTo(&subscriber, &args)) {
+    if (!Subscribe(&subscriber, &args)) {
         goto Exit;
     }
     if (IsInteractive(&args)) {

@@ -33,10 +33,20 @@ static const char* LevelTxt[] = { "ERROR", "WARNING", "" /* PRINT */, "" /* PRIN
 
 #define stream stdout
 
+static uv_once_t once = UV_ONCE_INIT;
+static uv_mutex_t mutex;
+
+static void InitMutex(void)
+{
+    uv_mutex_init(&mutex);
+}
+
 void DPS_Log(DPS_LogLevel level, const char* file, int line, const char *function, const char *fmt, ...)
 {
     va_list ap;
     va_start(ap, fmt);
+    uv_once(&once, InitMutex);
+    uv_mutex_lock(&mutex);
     switch (level) {
     case DPS_LOG_ERROR:
     case DPS_LOG_WARNING:
@@ -56,11 +66,14 @@ void DPS_Log(DPS_LogLevel level, const char* file, int line, const char *functio
         break;
     }
     fflush(stream);
+    uv_mutex_unlock(&mutex);
     va_end(ap);
 }
 
 void DPS_LogBytes(DPS_LogLevel level, const char* file, int line, const char *function, const uint8_t *bytes, size_t n)
 {
+    uv_once(&once, InitMutex);
+    uv_mutex_lock(&mutex);
     for (size_t i = 0; i < n; ++i) {
         if ((i % 16) == 0) {
             fprintf(stream, "%s%09u %-7s %s@%d: ", i ? "\n" : "", DPS_DBG_TIME, LevelTxt[level], file, line);
@@ -69,4 +82,5 @@ void DPS_LogBytes(DPS_LogLevel level, const char* file, int line, const char *fu
     }
     fprintf(stream, "\n");
     fflush(stream);
+    uv_mutex_unlock(&mutex);
 }

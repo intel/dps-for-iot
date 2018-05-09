@@ -104,7 +104,7 @@ var dps = require("dps");
     var publish = function () {
         dps.publish(pub, "world", 0);
         console.log("Pub UUID " + dps.publicationGetUUID(pub) + "(" + dps.publicationGetSequenceNum(pub) + ")");
-        setTimeout(stop, 200);
+        setTimeout(stop, 1000);
     };
 
     encryption = 1;
@@ -145,5 +145,5 @@ var dps = require("dps");
     dps.publicationAddSubId(pub, pubKeyId);
     dps.publish(pub, "hello", 0);
     console.log("Pub UUID " + dps.publicationGetUUID(pub) + "(" + dps.publicationGetSequenceNum(pub) + ")");
-    setTimeout(publish, 200);
+    setTimeout(publish, 1000);
 }());

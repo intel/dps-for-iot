@@ -26,8 +26,11 @@ before_install:
   - eval "CC=gcc-7 && CXX=g++-7"
   - ./.travis/install-swig.sh
   - ./.travis/install-nodejs.sh
+  - pip install --user cryptography
+  - pip install --user pexpect
 
 language: c
 
 script:
   - scons variant=$VARIANT transport=$TRANSPORT CC=$CC CXX=$CXX UV_PATH=ext/libuv
+  - ./test_scripts/run.py -d

@@ -34,7 +34,7 @@ static DPS_History history;
 //#define READABLE_UUIDS
 #define NUM_PUBS   1000
 
-int main()
+int main(int argc, char** argv)
 {
     DPS_Status ret;
     int i = 0;
@@ -43,7 +43,13 @@ int main()
     DPS_NodeAddress addr;
     DPS_NodeAddress* addrPtr;
 
-    DPS_Debug = 1;
+    DPS_Debug = DPS_FALSE;
+    for (i = 1; i < argc; ++i) {
+        if (!strcmp(argv[i], "-d")) {
+            DPS_Debug = DPS_TRUE;
+        }
+    }
+
     memset(&addr, 0, sizeof(addr));
     addr.inaddr.ss_family = AF_INET6;
 
@@ -61,6 +67,7 @@ int main()
      * This makes debugging easier
      */
     memset(uuid, 0, sizeof(uuid));
+    i = 0;
     while (i < NUM_PUBS) {
         int n = rand() % NUM_PUBS;
         if (uuid[n].val64[0] == 0) {

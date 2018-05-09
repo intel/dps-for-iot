@@ -161,10 +161,10 @@ static void ReadStdin(DPS_Node* node)
 }
 
 
-static DPS_Status FindAndLink(DPS_Node* node, const char* host, uint16_t port, const char* tenant, uint16_t timeout, DPS_NodeAddress* remoteAddr)
+static DPS_Status FindAndLink(DPS_Node* node, const char* host, uint16_t port, const char* tenant, uint8_t count, uint16_t timeout, DPS_NodeAddress* remoteAddr)
 {
     DPS_Status ret;
-    DPS_RegistrationList* regs = DPS_CreateRegistrationList(16);
+    DPS_RegistrationList* regs = DPS_CreateRegistrationList(count);
 
     /*
      * Find nodes to link to
@@ -230,9 +230,9 @@ int main(int argc, char** argv)
     int wait = 0;
     int subsRate = DPS_SUBSCRIPTION_UPDATE_RATE;
     int timeout = DPS_REGISTRATION_GET_TIMEOUT;
+    int count = 16;
 
-    DPS_Debug = 0;
-
+    DPS_Debug = DPS_FALSE;
     while (--argc) {
         if (IntArg("-p", &arg, &argc, &port, 1, UINT16_MAX)) {
             continue;
@@ -262,6 +262,9 @@ int main(int argc, char** argv)
         if (IntArg("-t", &arg, &argc, &ttl, 0, 2000)) {
             continue;
         }
+        if (IntArg("-c", &arg, &argc, &count, 1, UINT8_MAX)) {
+            continue;
+        }
         if (IntArg("--timeout", &arg, &argc, &timeout, 0, UINT16_MAX)) {
             continue;
         }
@@ -280,7 +283,7 @@ int main(int argc, char** argv)
         }
         if (strcmp(*arg, "-d") == 0) {
             ++arg;
-            DPS_Debug = 1;
+            DPS_Debug = DPS_TRUE;
             continue;
         }
         if (*arg[0] == '-') {
@@ -314,7 +317,7 @@ int main(int argc, char** argv)
 
     nodeDestroyed = DPS_CreateEvent();
 
-    ret = FindAndLink(node, host, port, tenant, timeout, remoteAddr);
+    ret = FindAndLink(node, host, port, tenant, count, timeout, remoteAddr);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to link to node: %s\n", DPS_ErrTxt(ret));
         goto Exit;
@@ -355,7 +358,7 @@ Exit:
     return 0;
 
 Usage:
-    DPS_PRINT("Usage %s [-d] [-a] [-w <seconds>] [-t <pub ttl>] [[-h <hostname>] -p <portnum>] [--tenant <tenant string>] [--timeout <milliseconds>] [-m <message>] [-r <milliseconds>] [topic1 topic2 ... topicN]\n", *argv);
+    DPS_PRINT("Usage %s [-d] [-a] [-w <seconds>] [-t <pub ttl>] [[-h <hostname>] -p <portnum>] [--tenant <tenant string>] [-c <count>] [--timeout <milliseconds>] [-m <message>] [-r <milliseconds>] [topic1 topic2 ... topicN]\n", *argv);
     DPS_PRINT("       -d: Enable debug ouput if built for debug.\n");
     DPS_PRINT("       -a: Request an acknowledgement\n");
     DPS_PRINT("       -t: Set a time-to-live on a publication\n");
@@ -365,6 +368,7 @@ Usage:
     DPS_PRINT("       -m: A payload message to accompany the publication.\n");
     DPS_PRINT("       -r: Time to delay between subscription updates.\n");
     DPS_PRINT("       --tenant: Tenant string to use.\n");
+    DPS_PRINT("       -c: Size of registration get request.\n");
     DPS_PRINT("       --timeout: Timeout of registration get request.\n");
     DPS_PRINT("           Enters interactive mode if there are no topic strings on the command line.\n");
     DPS_PRINT("           In interactive mode type -h for commands.\n");

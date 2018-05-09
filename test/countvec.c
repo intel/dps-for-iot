@@ -84,6 +84,14 @@ static void TestDel(DPS_CountVector* cv, uint8_t n)
 int main(int argc, char** argv)
 {
     DPS_CountVector* cv;
+    int i;
+
+    DPS_Debug = DPS_FALSE;
+    for (i = 1; i < argc; ++i) {
+        if (!strcmp(argv[i], "-d")) {
+            DPS_Debug = DPS_TRUE;
+        }
+    }
 
     DPS_Configure(BITLEN, 4);
 

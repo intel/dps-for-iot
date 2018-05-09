@@ -42,6 +42,7 @@ int main(int argc, char** argv)
     size_t report = 0;
     const size_t base = 0xa1c46f01;
 
+    DPS_Debug = DPS_FALSE;
     while (--argc) {
         char* p;
         if (strcmp(*arg, "-b") == 0) {
@@ -68,7 +69,7 @@ int main(int argc, char** argv)
         }
         if (strcmp(*arg, "-d") == 0) {
             ++arg;
-            DPS_Debug = 1;
+            DPS_Debug = DPS_TRUE;
             continue;
         }
         goto Usage;

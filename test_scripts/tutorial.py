@@ -10,7 +10,7 @@ atexit.register(cleanup)
 # When DTLS being used, security must be enabled for the ack to be
 # succesfully delivered.
 #
-if os.getenv('USE_DTLS', '0') == '0':
+if os.environ['USE_DTLS'] == '0':
     #
     # Hello world
     #
@@ -34,7 +34,7 @@ if os.getenv('USE_DTLS', '0') == '0':
     expect(tutorial2, 'payload=Hello{}'.format(os.linesep))
     expect(tutorial3, 'payload=World{}'.format(os.linesep))
 
-if os.getenv('USE_DTLS', '0') != '0':
+if os.environ['USE_DTLS'] != '0':
     #
     # DTLS with pre-shared keys
     #
@@ -57,7 +57,7 @@ if os.getenv('USE_DTLS', '0') != '0':
     expect(tutorial1, 'payload=Hello{}'.format(os.linesep))
     expect(tutorial2, 'payload=World{}'.format(os.linesep))
 
-if os.getenv('USE_DTLS', '0') == '0':
+if os.environ['USE_DTLS'] == '0':
     #
     # Protecting the payload - symmetric key
     #

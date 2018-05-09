@@ -50,6 +50,40 @@ static void OnNodeDestroyed(DPS_Node* node, void* data)
 
 const char* DPS_RegistryTopicString = "dps/registration_service";
 
+#define AddrGetPort(a)     (((struct sockaddr_in*)(a))->sin_port)
+#define AddrSetPort(a, p)  (((struct sockaddr_in*)(a))->sin_port = (p))
+
+static int IsLocalAddr(DPS_NodeAddress* addr, uint16_t port)
+{
+    int local = DPS_FALSE;
+    uv_interface_address_t* ifsAddrs;
+    int numIfs;
+    int r;
+
+    port = htons(port);
+    if (AddrGetPort(addr) != port) {
+        return DPS_FALSE;
+    }
+    r = uv_interface_addresses(&ifsAddrs, &numIfs);
+    if (!r) {
+        size_t i;
+        for (i = 0; i < numIfs; ++i) {
+            uv_interface_address_t* ifn = &ifsAddrs[i];
+            if (!ifn->is_internal) {
+                DPS_NodeAddress a;
+                memcpy_s(&a.inaddr, sizeof(a.inaddr), &ifn->address, sizeof(ifn->address));
+                AddrSetPort(&a.inaddr, port);
+                if (DPS_SameAddr(addr, &a)) {
+                    local = DPS_TRUE;
+                    break;
+                }
+            }
+        }
+        uv_free_interface_addresses(ifsAddrs, numIfs);
+    }
+    return local;
+}
+
 typedef struct {
     char* tenant;
     DPS_Node* node;
@@ -401,9 +435,6 @@ static void OnGetTimeout(uv_timer_t* timer)
     uv_close((uv_handle_t*)timer, OnGetTimerClosed);
 }
 
-#define AddrGetPort(a)     (((struct sockaddr_in*)(a))->sin_port)
-#define AddrSetPort(a, p)  (((struct sockaddr_in*)(a))->sin_port = (p))
-
 static void OnPub(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* data, size_t len)
 {
     RegGet* regGet = (RegGet*)DPS_GetSubscriptionData(sub);
@@ -413,6 +444,16 @@ static void OnPub(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* da
         DPS_Status ret;
         uint8_t count;
         DPS_RxBuffer buf;
+        DPS_NodeAddress* addr = NULL;
+        struct sockaddr_storage saddr;
+        struct sockaddr_in* in = (struct sockaddr_in*)&saddr;
+        struct sockaddr_in6* in6 = (struct sockaddr_in6*)&saddr;
+
+        addr = DPS_CreateAddress();
+        if (!addr) {
+            DPS_ERRPRINT("Create address failed - %s\n", DPS_ERR_RESOURCES);
+            return;
+        }
         /*
          * Parse out the addresses from the payload
          */
@@ -439,12 +480,26 @@ static void OnPub(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* da
                 if (CBOR_DecodeString(&buf, &host, &hLen) != DPS_OK) {
                     break;
                 }
-                DPS_DBGPRINT("  %s:%d\n", host, port);
-                regGet->regs->list[regGet->regs->count].port = port;
-                regGet->regs->list[regGet->regs->count].host = strndup(host, hLen);
-                ++regGet->regs->count;
+                /*
+                 * Skip addresses we can determine are local to the requesting node.
+                 */
+                if (uv_inet_pton(AF_INET, host, &in->sin_addr) == 0) {
+                    in->sin_family = AF_INET;
+                    in->sin_port = htons(port);
+                    DPS_SetAddress(addr, (const struct sockaddr*)in);
+                } else if (uv_inet_pton(AF_INET6, host, &in6->sin6_addr) == 0) {
+                    in6->sin6_family = AF_INET6;
+                    in6->sin6_port = htons(port);
+                    DPS_SetAddress(addr, (const struct sockaddr*)in6);
+                }
+                if (!IsLocalAddr(addr, regGet->port)) {
+                    regGet->regs->list[regGet->regs->count].port = port;
+                    regGet->regs->list[regGet->regs->count].host = strndup(host, hLen);
+                    ++regGet->regs->count;
+                }
             }
         }
+        DPS_DestroyAddress(addr);
     }
 }
 
@@ -630,37 +685,6 @@ static void OnLinked(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, v
     }
     linkTo->cb(node, linkTo->regs, addr, status, linkTo->data);
     free(linkTo);
-}
-
-static int IsLocalAddr(DPS_NodeAddress* addr, uint16_t port)
-{
-    int local = DPS_FALSE;
-    uv_interface_address_t* ifsAddrs;
-    int numIfs;
-    int r;
-
-    port = htons(port);
-    if (AddrGetPort(addr) != port) {
-        return DPS_FALSE;
-    }
-    r = uv_interface_addresses(&ifsAddrs, &numIfs);
-    if (!r) {
-        size_t i;
-        for (i = 0; i < numIfs; ++i) {
-            uv_interface_address_t* ifn = &ifsAddrs[i];
-            if (!ifn->is_internal) {
-                DPS_NodeAddress a;
-                memcpy_s(&a.inaddr, sizeof(a.inaddr), &ifn->address, sizeof(ifn->address));
-                AddrSetPort(&a.inaddr, port);
-                if (DPS_SameAddr(addr, &a)) {
-                    local = DPS_TRUE;
-                    break;
-                }
-            }
-        }
-        uv_free_interface_addresses(ifsAddrs, numIfs);
-    }
-    return local;
 }
 
 static void OnResolve(DPS_Node* node, DPS_NodeAddress* addr, void* data)

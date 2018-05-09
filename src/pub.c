@@ -1666,6 +1666,10 @@ DPS_Publication* DPS_LookupAckHandler(DPS_Node* node, const DPS_UUID* pubId, uin
 }
 
 #ifdef DPS_DEBUG
+
+/* Maximum number of queued pubs to dump, the rest will be elided */
+#define DUMP_PUB_MAX 10
+
 static void DumpPub(DPS_Node* node, DPS_Publication* pub)
 {
     int16_t ttl = PUB_TTL(node, pub);
@@ -1688,8 +1692,12 @@ void DPS_DumpPubs(DPS_Node* node)
         for (pub = node->publications; pub; pub = nextPub) {
             nextPub = pub->next;
             if (pub->history) {
-                for (pub = pub->history; pub; pub = pub->next) {
+                int i;
+                for (i = 0, pub = pub->history; pub && (i < DUMP_PUB_MAX); ++i, pub = pub->next) {
                     DumpPub(node, pub);
+                }
+                if (pub && (i == DUMP_PUB_MAX)) {
+                    DPS_PRINT("  %s(...)\n", DPS_UUIDToString(&pub->shared->pubId));
                 }
             } else {
                 DumpPub(node, pub);

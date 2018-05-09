@@ -245,8 +245,7 @@ int main(int argc, char** argv)
     int listenPort = 0;
     DPS_NodeAddress* addr = NULL;
 
-    DPS_Debug = 0;
-
+    DPS_Debug = DPS_FALSE;
     while (--argc) {
         if (IntArg("-p", &arg, &argc, &linkPort[numLinks], 1, UINT16_MAX)) {
             linkHosts[numLinks] = host;
@@ -291,7 +290,7 @@ int main(int argc, char** argv)
         }
         if (strcmp(*arg, "-d") == 0) {
             ++arg;
-            DPS_Debug = 1;
+            DPS_Debug = DPS_TRUE;
             continue;
         }
         if (*arg[0] == '-') {

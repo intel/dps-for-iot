@@ -1,12 +1,13 @@
 #!/usr/bin/python
 
+from __future__ import print_function
+from common import *
+import glob
 import os
 import pexpect
 from pexpect import popen_spawn
+import platform
 import sys
-
-os.putenv('PYTHONPATH', os.path.join('build', 'dist', 'py'))
-os.putenv('NODE_PATH', os.path.join('build', 'dist', 'js'))
 
 tests = [os.path.join('build', 'test', 'bin', 'cbortest'),
          os.path.join('build', 'test', 'bin', 'cosetest'),
@@ -37,23 +38,39 @@ tests = [os.path.join('build', 'test', 'bin', 'cbortest'),
          os.path.join('test_scripts', 'versioning.py'),
          os.path.join('py_scripts', 'subs_tree.py'),
          os.path.join('test_scripts', 'retained_py.py'),
-         os.path.join('test_scripts', 'simple_js_ks_test.py'),
-         os.path.join('test_scripts', 'simple_js_test.py'),
          os.path.join('test_scripts', 'simple_py_test.py'),
          os.path.join('test_scripts', 'simple_py_ks_test.py')
 ]
+if platform.system() == 'Linux':
+    tests.extend([
+        os.path.join('test_scripts', 'simple_js_ks_test.py'),
+        os.path.join('test_scripts', 'simple_js_test.py')
+        ])
 
 ok = 0
 failed = 0
 failed_tests = ''
 
+def _dump_logs():
+    for log in glob.glob('out/*.log'):
+        size = os.path.getsize(log)
+        with open(log, 'r') as l:
+            print('==> {} <=='.format(log))
+            if size > 32768:
+                l.seek(-32768, os.SEEK_END)
+            print(l.read(), end='')
+
 for test in tests:
+    reset_logs()
     print('[ RUN      ] ' + test)
-    if test.endswith('.py'):
-        cmd = 'python ' + test
+    if test.startswith('test_scripts'):
+        child = popen_spawn.PopenSpawn(['python', test] + sys.argv[1:], logfile=sys.stdout)
+        child.expect(pexpect.EOF, timeout=300)
+        status = child.wait()
+    elif test.startswith('py_scripts'):
+        status = py([test] + sys.argv[1:])
     else:
-        cmd = test
-    status = popen_spawn.PopenSpawn(cmd).wait()
+        status = bin([test] + sys.argv[1:])
     if status == 0:
         print('[       OK ] ' + test)
         ok = ok + 1
@@ -61,6 +78,7 @@ for test in tests:
         print('[   FAILED ] ' + test)
         failed = failed + 1
         failed_tests += '[   FAILED ] ' + test + '\n'
+        _dump_logs()
 
 print('[==========] {} tests ran.'.format(ok + failed))
 if ok > 0:

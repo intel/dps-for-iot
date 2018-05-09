@@ -209,12 +209,11 @@ int main(int argc, char** argv)
     DPS_Status ret = DPS_OK;
     size_t i;
 
-    DPS_Debug = 0;
-
+    DPS_Debug = DPS_FALSE;
     while (--argc) {
         if (strcmp(*arg, "-d") == 0) {
             ++arg;
-            DPS_Debug = 1;
+            DPS_Debug = DPS_TRUE;
         } else if (strcmp(*arg, "-u") == 0) {
             ++arg;
             if (!--argc) {

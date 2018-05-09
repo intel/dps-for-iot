@@ -228,8 +228,7 @@ int main(int argc, char** argv)
     DPS_Event* nodeDestroyed = NULL;
     DPS_Status ret;
 
-    DPS_Debug = 0;
-
+    DPS_Debug = DPS_FALSE;
     while (--argc) {
         if (IntArg("-v", &arg, &argc, &version, 1, UINT16_MAX)) {
             continue;
@@ -245,7 +244,7 @@ int main(int argc, char** argv)
         }
         if (strcmp(*arg, "-d") == 0) {
             ++arg;
-            DPS_Debug = 1;
+            DPS_Debug = DPS_TRUE;
             continue;
         }
         if (*arg[0] == '-') {

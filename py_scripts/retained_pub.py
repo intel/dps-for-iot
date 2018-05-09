@@ -17,8 +17,12 @@ def on_pub(sub, new_sub_pub, payload):
 def on_destroy(node):
     print "Destroyed"
 
-# Enable or disable (default) DPS debug output
-dps.cvar.debug = False
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument("-d", "--debug", action='store_true',
+                    help="Enable debug ouput if built for debug.")
+args = parser.parse_args()
+dps.cvar.debug = args.debug
 
 node = dps.create_node("/")
 dps.start_node(node, dps.MCAST_PUB_ENABLE_SEND + dps.MCAST_PUB_ENABLE_RECV, 0)

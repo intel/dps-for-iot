@@ -70,6 +70,8 @@ int main(int argc, char** argv)
     size_t filterBits = 1024;
     size_t numHashes = 4;
 
+
+    DPS_Debug = DPS_FALSE;
     while (--argc) {
         char* p;
         if (strcmp(*arg, "-b") == 0) {
@@ -96,7 +98,7 @@ int main(int argc, char** argv)
         }
         if (strcmp(*arg, "-d") == 0) {
             ++arg;
-            DPS_Debug = 1;
+            DPS_Debug = DPS_TRUE;
             continue;
         }
         goto Usage;
