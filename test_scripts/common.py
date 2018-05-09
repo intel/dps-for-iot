@@ -34,6 +34,7 @@ rp = 0
 rs = 0
 s = 0
 t = 0
+tm = 0
 v = 0
 
 def _spawn_helper(n, cmd, interpreter=[]):
@@ -115,7 +116,7 @@ def cleanup():
         log.close()
 
 def reset_logs():
-    global ms, n, p, r, rp, rs, s, t, v
+    global ms, n, p, r, rp, rs, s, t, tm, v
     ms = 0
     n = 0
     p = 0
@@ -124,6 +125,7 @@ def reset_logs():
     rs = 0
     s = 0
     t = 0
+    tm = 0
     v = 0
     cleanup()
     shutil.rmtree('out', ignore_errors=True)
@@ -279,6 +281,13 @@ def reg_pubs(args=''):
     child = _spawn(rp, cmd)
     _expect_listening(child)
     return child
+
+def topic_match(pattern, args=''):
+    global tm
+    tm = tm + 1
+    cmd = [os.path.join('build', 'test', 'bin', 'topic_match')] + debug.split() + args.split()
+    child = _spawn(tm, cmd)
+    _expect([child], [pattern])
 
 def expect_reg_linked(children):
     if not isinstance(children, collections.Sequence):
