@@ -4,7 +4,7 @@ Import(['env', 'ext_libs', 'version'])
 
 platform = env['PLATFORM']
 
-env['UV_LIBS'].append(ext_libs)
+env['UV_LIBS'] = [ext_libs] + env['UV_LIBS']
 
 # Additional warning for the lib object files
 
@@ -79,9 +79,9 @@ libenv.Install('#/build/dist/lib', lib)
 
 shobjs = libenv.SharedObject(srcs)
 if platform == 'win32':
-    shlib = libenv.SharedLibrary('lib/dps_shared', shobjs + ['dps_shared.def'], SHLIBVERSION = version)
+    shlib = libenv.SharedLibrary('lib/dps_shared', shobjs + ['dps_shared.def'], LIBS = env['UV_LIBS'], SHLIBVERSION = version)
 else:
-    shlib = libenv.SharedLibrary('lib/dps_shared', shobjs, SHLIBVERSION = version)
+    shlib = libenv.SharedLibrary('lib/dps_shared', shobjs, LIBS = env['UV_LIBS'], SHLIBVERSION = version)
 libenv.InstallVersionedLib('#/build/dist/lib', shlib, SHLIBVERSION = version)
 
 ns3srcs = ['src/bitvec.c',
