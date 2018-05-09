@@ -29,6 +29,9 @@ subs_rate = '-r 100'
 ms = 0
 n = 0
 p = 0
+r = 0
+rp = 0
+rs = 0
 s = 0
 t = 0
 v = 0
@@ -112,10 +115,13 @@ def cleanup():
         log.close()
 
 def reset_logs():
-    global ms, n, p, s, t, v
+    global ms, n, p, r, rp, rs, s, t, v
     ms = 0
     n = 0
     p = 0
+    r = 0
+    rp = 0
+    rs = 0
     s = 0
     t = 0
     v = 0
@@ -249,6 +255,35 @@ def ver(args=''):
     child = _spawn(v, cmd)
     _expect_listening(child)
     return child
+
+def reg(args=''):
+    global r
+    r = r + 1
+    cmd = [os.path.join('build', 'dist', 'bin', 'registry')] + debug.split() + subs_rate.split() + args.split()
+    child = _spawn(r, cmd)
+    _expect_listening(child)
+    return child
+
+def reg_subs(args=''):
+    global rs
+    rs = rs + 1
+    cmd = [os.path.join('build', 'dist', 'bin', 'reg_subs')] + debug.split() + subs_rate.split() + args.split()
+    child = _spawn(rs, cmd)
+    _expect_listening(child)
+    return child
+
+def reg_pubs(args=''):
+    global rp
+    rp = rp + 1
+    cmd = [os.path.join('build', 'dist', 'bin', 'reg_pubs')] + debug.split() + subs_rate.split() + args.split()
+    child = _spawn(rp, cmd)
+    _expect_listening(child)
+    return child
+
+def expect_reg_linked(children):
+    if not isinstance(children, collections.Sequence):
+        children = [children]
+    _expect(children, ['is linked to \S+/\d+'])
 
 def mesh_stress(args=''):
     global ms

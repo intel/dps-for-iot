@@ -26,11 +26,23 @@ static void OnPubMatch(DPS_Subscription* sub, const DPS_Publication* pub, uint8_
 {
     const DPS_UUID* pubId = DPS_PublicationGetUUID(pub);
     uint32_t sn = DPS_PublicationGetSequenceNum(pub);
+    const DPS_KeyId* senderId = DPS_PublicationGetSenderKeyId(pub);
     size_t i;
     size_t numTopics = DPS_SubscriptionGetNumTopics(sub);
 
     if (!quiet) {
-        DPS_PRINT("Pub %s(%d) matches:\n    ", DPS_UUIDToString(pubId), sn);
+        DPS_PRINT("Pub %s(%d) [%s] matches:\n", DPS_UUIDToString(pubId), sn, KeyIdToString(senderId));
+        DPS_PRINT("  pub ");
+        numTopics = DPS_PublicationGetNumTopics(pub);
+        for (i = 0; i < numTopics; ++i) {
+            if (i) {
+                DPS_PRINT(" | ");
+            }
+            DPS_PRINT("%s", DPS_PublicationGetTopic(pub, i));
+        }
+        DPS_PRINT("\n");
+        DPS_PRINT("  sub ");
+        numTopics = DPS_SubscriptionGetNumTopics(sub);
         for (i = 0; i < numTopics; ++i) {
             if (i) {
                 DPS_PRINT(" & ");
@@ -75,6 +87,8 @@ static DPS_Status RegisterAndJoin(DPS_Node* node, const char* host, uint16_t por
         DPS_ERRPRINT("Registration service lookup failed: %s\n", DPS_ErrTxt(ret));
         goto Exit;
     }
+    DPS_PRINT("Found %d remote nodes\n", regs->count);
+
     if (regs->count == 0) {
         ret = DPS_ERR_NO_ROUTE;
         goto Exit;
@@ -82,7 +96,7 @@ static DPS_Status RegisterAndJoin(DPS_Node* node, const char* host, uint16_t por
     remoteAddr = DPS_CreateAddress();
     ret = DPS_Registration_LinkToSyn(node, regs, remoteAddr);
     if (ret == DPS_OK) {
-        DPS_PRINT("Linked %d to remote node %s\n", DPS_GetPortNumber(node), DPS_NodeAddrToString(remoteAddr));
+        DPS_PRINT("%d is linked to %s\n", DPS_GetPortNumber(node), DPS_NodeAddrToString(remoteAddr));
         goto Exit;
     }
 
@@ -129,7 +143,8 @@ int main(int argc, char** argv)
     DPS_Node* node;
     const char* host = "localhost";
     int listen = 0;
-    int port = 30000;
+    int port = 0;
+    int subsRate = DPS_SUBSCRIPTION_UPDATE_RATE;
 
     DPS_Debug = 0;
 
@@ -138,6 +153,9 @@ int main(int argc, char** argv)
             continue;
         }
         if (IntArg("-p", &arg, &argc, &port, 1, UINT16_MAX)) {
+            continue;
+        }
+        if (IntArg("-r", &arg, &argc, &subsRate, 0, INT32_MAX)) {
             continue;
         }
         if (strcmp(*arg, "-h") == 0) {
@@ -184,6 +202,7 @@ int main(int argc, char** argv)
     memoryKeyStore = DPS_CreateMemoryKeyStore();
     DPS_SetNetworkKey(memoryKeyStore, &NetworkKeyId, &NetworkKey);
     node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore), NULL);
+    DPS_SetNodeSubscriptionUpdateDelay(node, subsRate);
 
     ret = DPS_StartNode(node, DPS_MCAST_PUB_DISABLED, listen);
     if (ret != DPS_OK) {
@@ -214,6 +233,12 @@ int main(int argc, char** argv)
     return 0;
 
 Usage:
-    DPS_PRINT("Usage %s [-d] [-l <listen-port>] -h <hostname> -p <portnum> [-t <tenant string>] [-m] topic1 topic2 ... topicN\n", *argv);
+    DPS_PRINT("Usage %s [-d] [-l <listen-port>] [[-h <hostname>] -p <portnum>] [-t <tenant string>] [-r <milliseconds>] topic1 topic2 ... topicN\n", *argv);
+    DPS_PRINT("       -d: Enable debug ouput if built for debug.\n");
+    DPS_PRINT("       -l: port to listen on. Default is an ephemeral port.\n");
+    DPS_PRINT("       -h: Specifies host (localhost is default).\n");
+    DPS_PRINT("       -p: Port to link.\n");
+    DPS_PRINT("       -t: Tenant string to use.\n");
+    DPS_PRINT("       -r: Time to delay between subscription updates.\n");
     return 1;
 }

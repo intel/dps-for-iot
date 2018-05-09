@@ -80,7 +80,8 @@ int main(int argc, char** argv)
     DPS_Event* nodeDestroyed;
     const char* topics[1];
     DPS_Subscription* subscription;
-    int listenPort = 30000;
+    int listenPort = 0;
+    int subsRate = DPS_SUBSCRIPTION_UPDATE_RATE;
 
     DPS_Debug = 0;
 
@@ -93,6 +94,9 @@ int main(int argc, char** argv)
             DPS_Debug = 1;
             continue;
         }
+        if (IntArg("-r", &arg, &argc, &subsRate, 0, INT32_MAX)) {
+            continue;
+        }
         if (*arg[0] == '-') {
             goto Usage;
         }
@@ -101,6 +105,7 @@ int main(int argc, char** argv)
     memoryKeyStore = DPS_CreateMemoryKeyStore();
     DPS_SetNetworkKey(memoryKeyStore, &NetworkKeyId, &NetworkKey);
     node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore), NULL);
+    DPS_SetNodeSubscriptionUpdateDelay(node, subsRate);
     ret = DPS_StartNode(node, 0, listenPort);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));

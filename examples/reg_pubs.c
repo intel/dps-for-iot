@@ -181,7 +181,7 @@ static DPS_Status FindAndLink(DPS_Node* node, const char* host, uint16_t port, c
     }
     ret = DPS_Registration_LinkToSyn(node, regs, remoteAddr);
     if (ret == DPS_OK) {
-        DPS_PRINT("Linked to remote node %s\n", DPS_NodeAddrToString(remoteAddr));
+        DPS_PRINT("%d is linked to %s\n", DPS_GetPortNumber(node), DPS_NodeAddrToString(remoteAddr));
     }
     DPS_DestroyRegistrationList(regs);
     return ret;
@@ -226,7 +226,9 @@ int main(int argc, char** argv)
     const char* host = "localhost";
     char* msg = NULL;
     int ttl = 0;
-    int port = 30000;
+    int port = 0;
+    int wait = 0;
+    int subsRate = DPS_SUBSCRIPTION_UPDATE_RATE;
 
     DPS_Debug = 0;
 
@@ -242,7 +244,7 @@ int main(int argc, char** argv)
             host = *arg++;
             continue;
         }
-        if (strcmp(*arg, "--msg") == 0) {
+        if (strcmp(*arg, "-m") == 0) {
             ++arg;
             if (!--argc) {
                 goto Usage;
@@ -250,15 +252,21 @@ int main(int argc, char** argv)
             msg = *arg++;
             continue;
         }
-        if (IntArg("--ttl", &arg, &argc, &ttl, 0, 2000)) {
+        if (IntArg("-w", &arg, &argc, &wait, 0, 30)) {
             continue;
         }
-        if (strcmp(*arg, "--request-ack") == 0) {
+        if (IntArg("-r", &arg, &argc, &subsRate, 0, INT32_MAX)) {
+            continue;
+        }
+        if (IntArg("-t", &arg, &argc, &ttl, 0, 2000)) {
+            continue;
+        }
+        if (strcmp(*arg, "-a") == 0) {
             ++arg;
             requestAck = DPS_TRUE;
             continue;
         }
-        if (strcmp(*arg, "-t") == 0) {
+        if (strcmp(*arg, "--tenant") == 0) {
             ++arg;
             if (!--argc) {
                 goto Usage;
@@ -289,12 +297,14 @@ int main(int argc, char** argv)
     memoryKeyStore = DPS_CreateMemoryKeyStore();
     DPS_SetNetworkKey(memoryKeyStore, &NetworkKeyId, &NetworkKey);
     node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore), NULL);
+    DPS_SetNodeSubscriptionUpdateDelay(node, subsRate);
 
     ret = DPS_StartNode(node, mcastPub, 0);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
         return 1;
     }
+    DPS_PRINT("Publisher is listening on port %d\n", DPS_GetPortNumber(node));
 
     remoteAddr = DPS_CreateAddress();
 
@@ -313,6 +323,12 @@ int main(int argc, char** argv)
         if (ret != DPS_OK) {
             DPS_ERRPRINT("Failed to create publication - error=%d\n", ret);
             goto Exit;
+        }
+        if (wait) {
+            /*
+             * Wait for a while before sending a publication
+             */
+            DPS_TimedWaitForEvent(nodeDestroyed, wait * 1000);
         }
         ret = DPS_Publish(currentPub, (uint8_t*)msg, msg ? strnlen(msg, MAX_MSG_LEN) + 1 : 0, ttl);
         if (ret == DPS_OK) {
@@ -335,6 +351,17 @@ Exit:
     return 0;
 
 Usage:
-    DPS_PRINT("Usage %s [-d] [-h <hostname>] [-p <portnum>] [-t <tenant string>] [--ttl <pub ttl>] [--msg <message>] topic1 topic2 ... topicN\n", *argv);
+    DPS_PRINT("Usage %s [-d] [-a] [-w <seconds>] [-t <pub ttl>] [[-h <hostname>] -p <portnum>] [--tenant <tenant string>] [-m <message>] [-r <milliseconds>] [topic1 topic2 ... topicN]\n", *argv);
+    DPS_PRINT("       -d: Enable debug ouput if built for debug.\n");
+    DPS_PRINT("       -a: Request an acknowledgement\n");
+    DPS_PRINT("       -t: Set a time-to-live on a publication\n");
+    DPS_PRINT("       -w: Time to wait between linking to remote node and sending publication\n");
+    DPS_PRINT("       -h: Specifies host (localhost is default). Mutiple -h options are permitted.\n");
+    DPS_PRINT("       -p: Port to link. Multiple -p options are permitted.\n");
+    DPS_PRINT("       -m: A payload message to accompany the publication.\n");
+    DPS_PRINT("       -r: Time to delay between subscription updates.\n");
+    DPS_PRINT("       --tenant: Tenant string to use.\n");
+    DPS_PRINT("           Enters interactive mode if there are no topic strings on the command line.\n");
+    DPS_PRINT("           In interactive mode type -h for commands.\n");
     return 1;
 }
