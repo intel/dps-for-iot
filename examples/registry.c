@@ -29,6 +29,7 @@
 #include <dps/synchronous.h>
 #include <dps/registration.h>
 #include <dps/event.h>
+#include "keys.h"
 
 static void OnNodeDestroyed(DPS_Node* node, void* data)
 {
@@ -74,6 +75,7 @@ int main(int argc, char** argv)
 {
     DPS_Status ret;
     char** arg = ++argv;
+    DPS_MemoryKeyStore* memoryKeyStore = NULL;
     DPS_Node* node;
     DPS_Event* nodeDestroyed;
     const char* topics[1];
@@ -96,7 +98,9 @@ int main(int argc, char** argv)
         }
     }
 
-    node = DPS_CreateNode("/", NULL, NULL);
+    memoryKeyStore = DPS_CreateMemoryKeyStore();
+    DPS_SetNetworkKey(memoryKeyStore, &NetworkKeyId, &NetworkKey);
+    node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore), NULL);
     ret = DPS_StartNode(node, 0, listenPort);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
@@ -115,6 +119,7 @@ int main(int argc, char** argv)
     }
     DPS_WaitForEvent(nodeDestroyed);
     DPS_DestroyEvent(nodeDestroyed);
+    DPS_DestroyMemoryKeyStore(memoryKeyStore);
     return 0;
 
 Usage:

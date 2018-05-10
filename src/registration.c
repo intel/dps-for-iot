@@ -32,6 +32,7 @@
 #include <dps/registration.h>
 #include <dps/private/network.h>
 #include <dps/private/cbor.h>
+#include "node.h"
 #include "topics.h"
 #include "compat.h"
 
@@ -247,7 +248,7 @@ DPS_Status DPS_Registration_Put(DPS_Node* node, const char* host, uint16_t port,
         ret = DPS_ERR_RESOURCES;
         goto Exit;
     }
-    regPut->node = DPS_CreateNode("/", NULL, NULL);
+    regPut->node = DPS_CreateNode("/", node->keyStore, node->signer.alg ? &node->signer.kid : NULL);
     if (!regPut->node || !regPut->tenant) {
         ret = DPS_ERR_RESOURCES;
         goto Exit;
@@ -473,7 +474,7 @@ DPS_Status DPS_Registration_Get(DPS_Node* node, const char* host, uint16_t port,
         ret = DPS_ERR_RESOURCES;
         goto Exit;
     }
-    regGet->node = DPS_CreateNode("/", NULL, NULL);
+    regGet->node = DPS_CreateNode("/", node->keyStore, node->signer.alg ? &node->signer.kid : NULL);
     if (!regGet->node) {
         ret = DPS_ERR_RESOURCES;
         goto Exit;
