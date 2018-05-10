@@ -185,7 +185,7 @@ DPS_Status DPS_DestroySubscription(DPS_Subscription* sub)
     return DPS_OK;
 }
 
-#ifndef NDEBUG
+#ifdef DPS_DEBUG
 int _DPS_NumSubs = 0;
 #endif
 
@@ -202,7 +202,7 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote)
     if (!node->netCtx) {
         return DPS_ERR_NETWORK;
     }
-#ifndef NDEBUG
+#ifdef DPS_DEBUG
     ++_DPS_NumSubs;
 #endif
     /*

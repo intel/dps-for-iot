@@ -1648,7 +1648,7 @@ DPS_Publication* DPS_LookupAckHandler(DPS_Node* node, const DPS_UUID* pubId, uin
     return NULL;
 }
 
-#ifndef NDEBUG
+#ifdef DPS_DEBUG
 static void DumpPub(DPS_Node* node, DPS_Publication* pub)
 {
     int16_t ttl = PUB_TTL(node, pub);

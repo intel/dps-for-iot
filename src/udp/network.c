@@ -182,7 +182,7 @@ DPS_Status DPS_NetSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf
     int ret;
     NetSend* send;
 
-#ifndef NDEBUG
+#ifdef DPS_DEBUG
     {
         size_t i;
         size_t len = 0;
