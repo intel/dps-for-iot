@@ -894,17 +894,17 @@ Exit:
 
 static void OnSendComplete(DPS_Node* node, DPS_Publication* pub)
 {
-    int updatePubs = DPS_FALSE;
+    int dataSendIsComplete = DPS_FALSE;
+    int moreDataInSeries = DPS_FALSE;
 
     DPS_LockNode(node);
     --pub->numSend;
-    if (!pub->numSend && pub->next) {
-        updatePubs = DPS_TRUE;
-    }
+    dataSendIsComplete = (pub->numSend == 0);
+    moreDataInSeries = pub->next && (pub->next->shared == pub->shared);
     DPS_PublicationDecRef(pub);
     DPS_UnlockNode(node);
 
-    if (updatePubs) {
+    if (dataSendIsComplete && moreDataInSeries) {
         DPS_UpdatePubs(node, NULL);
     }
 }
