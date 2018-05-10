@@ -24,34 +24,40 @@ pub2 = pub('-p {} -a A'.format(sub1.port))
 expect_pub_received([sub1, sub2], 'A')
 expect(pub2, ['Ack for pub'] * 2)
 
-sys.exit(0)
-
 #
 # Verify that unsupported version is dropped
 #
+# Multicast
 reset_logs()
 
 sub1 = sub('A')
-
-# Multicast
 ver('-v 2')
 
+expect(sub1, 'ERROR.*Expected message version 1, received 2')
+
 # Unicast
+reset_logs()
+
+sub1 = sub('A')
 ver('-p {} -v 2'.format(sub1.port))
 
-expect(sub1, ['ERROR.*Expected message version 1, received 2'] * 3)
+expect(sub1, 'ERROR.*Expected message version 1, received 2')
 
 #
 # Verify that unsupported message type is dropped
 #
+# Multicast
 reset_logs()
 
 sub1 = sub('A')
-
-# Multicast
 ver('-v 1 -t 5')
 
+expect(sub1, 'ERROR.*Invalid message type')
+
 # Unicast
+reset_logs()
+
+sub1 = sub('A')
 ver('-p {} -v 1 -t 5'.format(sub1.port))
 
-expect(sub1, ['ERROR.*Invalid message type'] * 3)
+expect(sub1, 'ERROR.*Invalid message type')
