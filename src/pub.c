@@ -408,7 +408,6 @@ static DPS_Status UpdatePubHistory(DPS_Node* node, DPS_Publication* pub)
                                 pub->shared->ackRequested, PUB_TTL(node, pub), &pub->shared->senderAddr);
 }
 
-
 typedef struct _SubCandidate {
     DPS_Subscription* sub;
     struct _SubCandidate* next;
