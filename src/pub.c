@@ -1011,6 +1011,11 @@ DPS_Status DPS_SendPublication(DPS_Node* node, DPS_Publication* pub, RemoteNode*
                  */
                 DPS_PublicationIncRef(pub);
                 ++pub->numSend;
+                /*
+                 * Update history to prevent retained publications from being resent.
+                 */
+                DPS_UpdatePubHistory(&node->history, &pub->shared->pubId, pub->sequenceNum,
+                                     pub->shared->ackRequested, PUB_TTL(node, pub), &remote->ep.addr);
             } else {
                 /*
                  * Only the first buffer can be freed here - we don't own the others
