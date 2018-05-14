@@ -183,6 +183,7 @@ for test in testsrcs:
     testprogs.append(testenv.Program(test))
 
 testprogs.append(testenv.Program(['test/node.c', 'test/keys.c']))
+testprogs.append(testenv.Program(['test/link.c', 'test/keys.c']))
 
 testenv.Install('#/build/test/bin', testprogs)
 
