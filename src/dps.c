@@ -820,6 +820,12 @@ static void SendSubsTimer(uv_timer_t* handle)
             if (ret != DPS_OK) {
                 break;
             }
+            /*
+             * See comment at end of DPS_Link for an explanation of this
+             */
+            if (!send && remote->completion) {
+                DPS_RemoteCompletion(node, remote, DPS_OK);
+            }
         }
         if (send) {
             reschedule = DPS_TRUE;
@@ -1570,6 +1576,8 @@ DPS_Status DPS_Link(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnLinkComplete cb
     DPS_UnlockNode(node);
     /*
      * This will cause an initial subscription to be sent to the remote node
+     * or trigger the completion if we have no new outbound interests for the
+     * remote node (i.e. the remote node is already linked to us).
      */
     DPS_UpdateSubs(node);
     return DPS_OK;
