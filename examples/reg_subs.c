@@ -63,7 +63,7 @@ static void OnPubMatch(DPS_Subscription* sub, const DPS_Publication* pub, uint8_
 }
 
 
-static DPS_Status RegisterAndJoin(DPS_Node* node, const char* host, uint16_t port, const char* tenant)
+static DPS_Status RegisterAndJoin(DPS_Node* node, const char* host, uint16_t port, const char* tenant, uint16_t timeout)
 {
     DPS_Status ret;
     DPS_RegistrationList* regs;
@@ -74,7 +74,7 @@ static DPS_Status RegisterAndJoin(DPS_Node* node, const char* host, uint16_t por
     /*
      * Register with the registration service
      */
-    ret = DPS_Registration_PutSyn(node, host, port, tenant);
+    ret = DPS_Registration_PutSyn(node, host, port, tenant, DPS_REGISTRATION_PUT_TIMEOUT);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to register with registration service: %s\n", DPS_ErrTxt(ret));
         goto Exit;
@@ -82,7 +82,7 @@ static DPS_Status RegisterAndJoin(DPS_Node* node, const char* host, uint16_t por
     /*
      * Find nodes to join
      */
-    ret = DPS_Registration_GetSyn(node, host, port, tenant, regs);
+    ret = DPS_Registration_GetSyn(node, host, port, tenant, regs, timeout);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Registration service lookup failed: %s\n", DPS_ErrTxt(ret));
         goto Exit;
@@ -145,6 +145,7 @@ int main(int argc, char** argv)
     int listen = 0;
     int port = 0;
     int subsRate = DPS_SUBSCRIPTION_UPDATE_RATE;
+    int timeout = DPS_REGISTRATION_GET_TIMEOUT;
 
     DPS_Debug = 0;
 
@@ -156,6 +157,9 @@ int main(int argc, char** argv)
             continue;
         }
         if (IntArg("-r", &arg, &argc, &subsRate, 0, INT32_MAX)) {
+            continue;
+        }
+        if (IntArg("--timeout", &arg, &argc, &timeout, 0, UINT16_MAX)) {
             continue;
         }
         if (strcmp(*arg, "-h") == 0) {
@@ -213,7 +217,7 @@ int main(int argc, char** argv)
 
     nodeDestroyed = DPS_CreateEvent();
 
-    ret = RegisterAndJoin(node, host, port, tenant);
+    ret = RegisterAndJoin(node, host, port, tenant, timeout);
     if (ret != DPS_OK) {
         DPS_PRINT("Failed to link with any other \"%s\" nodes - continuing\n", tenant);
     }
@@ -233,12 +237,13 @@ int main(int argc, char** argv)
     return 0;
 
 Usage:
-    DPS_PRINT("Usage %s [-d] [-l <listen-port>] [[-h <hostname>] -p <portnum>] [-t <tenant string>] [-r <milliseconds>] topic1 topic2 ... topicN\n", *argv);
+    DPS_PRINT("Usage %s [-d] [-l <listen-port>] [[-h <hostname>] -p <portnum>] [-t <tenant string>] [-r <milliseconds>] [--timeout <milliseconds>] topic1 topic2 ... topicN\n", *argv);
     DPS_PRINT("       -d: Enable debug ouput if built for debug.\n");
     DPS_PRINT("       -l: port to listen on. Default is an ephemeral port.\n");
     DPS_PRINT("       -h: Specifies host (localhost is default).\n");
     DPS_PRINT("       -p: Port to link.\n");
     DPS_PRINT("       -t: Tenant string to use.\n");
     DPS_PRINT("       -r: Time to delay between subscription updates.\n");
+    DPS_PRINT("       --timeout: Timeout of registration get request.\n");
     return 1;
 }

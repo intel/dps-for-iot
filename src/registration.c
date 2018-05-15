@@ -42,8 +42,6 @@
 DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
 #define REGISTRATION_TTL   (60 * 60 * 8)  /* TTL is is seconds */
-#define REG_PUT_TIMEOUT    (2000)         /* Timeout is in milliseconds */
-#define REG_GET_TIMEOUT    (5000)         /* Timeout is in milliseconds */
 
 static void OnNodeDestroyed(DPS_Node* node, void* data)
 {
@@ -63,6 +61,7 @@ typedef struct {
     DPS_NodeAddress addr;
     int linked;
     DPS_Status status;
+    uint16_t timeout;
 } RegPut;
 
 static void RegPutCB(RegPut* regPut)
@@ -183,7 +182,7 @@ static void OnLinkedPut(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status ret, v
         r = uv_timer_init(DPS_GetLoop(node), &regPut->timer);
         if (!r) {
             regPut->timer.data = regPut;
-            r = uv_timer_start(&regPut->timer, OnPutTimeout, REG_PUT_TIMEOUT, 0);
+            r = uv_timer_start(&regPut->timer, OnPutTimeout, regPut->timeout, 0);
         }
         if (r) {
             regPut->status = DPS_ERR_FAILURE;
@@ -256,7 +255,7 @@ Exit:
     return ret;
 }
 
-DPS_Status DPS_Registration_Put(DPS_Node* node, const char* host, uint16_t port, const char* tenantString, DPS_OnRegPutComplete cb, void* data)
+DPS_Status DPS_Registration_Put(DPS_Node* node, const char* host, uint16_t port, const char* tenantString, uint16_t timeout, DPS_OnRegPutComplete cb, void* data)
 {
     DPS_Status ret;
     RegPut* regPut;
@@ -277,6 +276,7 @@ DPS_Status DPS_Registration_Put(DPS_Node* node, const char* host, uint16_t port,
         ret = DPS_ERR_RESOURCES;
         goto Exit;
     }
+    regPut->timeout = timeout;
     regPut->node = DPS_CreateNode("/", node->keyStore, node->signer.alg ? &node->signer.kid : NULL);
     if (!regPut->node || !regPut->tenant) {
         ret = DPS_ERR_RESOURCES;
@@ -317,14 +317,14 @@ static void OnPutComplete(DPS_Status status, void* data)
     DPS_SignalEvent(event, status);
 }
 
-DPS_Status DPS_Registration_PutSyn(DPS_Node* node, const char* host, uint16_t port, const char* tenantString)
+DPS_Status DPS_Registration_PutSyn(DPS_Node* node, const char* host, uint16_t port, const char* tenantString, uint16_t timeout)
 {
     DPS_Status ret;
     DPS_Event* event = DPS_CreateEvent();
     if (!event) {
         return DPS_ERR_RESOURCES;
     }
-    ret = DPS_Registration_Put(node, host, port, tenantString, OnPutComplete, event);
+    ret = DPS_Registration_Put(node, host, port, tenantString, timeout, OnPutComplete, event);
     if (ret == DPS_OK) {
         ret = DPS_WaitForEvent(event);
     }
@@ -345,6 +345,7 @@ typedef struct {
     DPS_NodeAddress addr;
     int linked;
     DPS_Status status;
+    uint16_t timeout;
 } RegGet;
 
 static void RegGetCB(RegGet* regGet)
@@ -430,6 +431,7 @@ static void OnPub(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* da
                 if (CBOR_DecodeString(&buf, &host, &hLen) != DPS_OK) {
                     break;
                 }
+                DPS_DBGPRINT("  %s:%d\n", host, port);
                 regGet->regs->list[regGet->regs->count].port = port;
                 regGet->regs->list[regGet->regs->count].host = strndup(host, hLen);
                 ++regGet->regs->count;
@@ -465,7 +467,7 @@ static void OnLinkedGet(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status ret, v
                 r = uv_timer_init(DPS_GetLoop(node), &regGet->timer);
                 if (!r) {
                     regGet->timer.data = regGet;
-                    r = uv_timer_start(&regGet->timer, OnGetTimeout, REG_GET_TIMEOUT, 0);
+                    r = uv_timer_start(&regGet->timer, OnGetTimeout, regGet->timeout, 0);
                 }
                 if (r) {
                     regGet->status = DPS_ERR_FAILURE;
@@ -494,7 +496,7 @@ static void OnResolveGet(DPS_Node* node, DPS_NodeAddress* addr, void* data)
     }
 }
 
-DPS_Status DPS_Registration_Get(DPS_Node* node, const char* host, uint16_t port, const char* tenantString, DPS_RegistrationList* regs, DPS_OnRegGetComplete cb, void* data)
+DPS_Status DPS_Registration_Get(DPS_Node* node, const char* host, uint16_t port, const char* tenantString, DPS_RegistrationList* regs, uint16_t timeout, DPS_OnRegGetComplete cb, void* data)
 {
     DPS_Status ret;
     RegGet* regGet;
@@ -523,6 +525,7 @@ DPS_Status DPS_Registration_Get(DPS_Node* node, const char* host, uint16_t port,
     regGet->data = data;
     regGet->regs = regs;
     regGet->regs->count = 0;
+    regGet->timeout = timeout;
     regGet->tenant = strndup(tenantString, DPS_MAX_TOPIC_STRLEN);
     if (!regGet->tenant) {
         ret = DPS_ERR_RESOURCES;
@@ -568,7 +571,7 @@ static void OnGetComplete(DPS_RegistrationList* regs, DPS_Status status, void* d
     DPS_SignalEvent(getResult->event, status);
 }
 
-DPS_Status DPS_Registration_GetSyn(DPS_Node* node, const char* host, uint16_t port, const char* tenantString, DPS_RegistrationList* regs)
+DPS_Status DPS_Registration_GetSyn(DPS_Node* node, const char* host, uint16_t port, const char* tenantString, DPS_RegistrationList* regs, uint16_t timeout)
 {
     DPS_Status ret;
     GetResult getResult;
@@ -580,7 +583,7 @@ DPS_Status DPS_Registration_GetSyn(DPS_Node* node, const char* host, uint16_t po
     if (!getResult.event) {
         return DPS_ERR_RESOURCES;
     }
-    ret = DPS_Registration_Get(node, host, port, tenantString, regs, OnGetComplete, &getResult);
+    ret = DPS_Registration_Get(node, host, port, tenantString, regs, timeout, OnGetComplete, &getResult);
     if (ret == DPS_OK) {
         ret = DPS_WaitForEvent(getResult.event);
     }
