@@ -39,16 +39,16 @@ extern "C" {
 
 inline char* strndup(const char* str, size_t maxLen)
 {
-    size_t len = strnlen_s(str, maxLen + 1);
+    size_t len = strnlen_s(str, RSIZE_MAX_STR);
     if (len > maxLen) {
-        return NULL;
-    } else {
-        char* c = malloc(len + 1);
-        if (c) {
-            memcpy_s(c, len + 1, str, len + 1);
-        }
-        return c;
+        len = maxLen;
     }
+    char* c = malloc(len + 1);
+    if (c) {
+        memcpy_s(c, len, str, len);
+        c[len] = '\0';
+    }
+    return c;
 }
 
 #define BSWAP_32(n)  _byteswap_ulong(n)
