@@ -31,6 +31,8 @@ int DPS_Debug = 1;
 
 static const char* LevelTxt[] = { "ERROR", "WARNING", "" /* PRINT */, "" /* PRINTT */, "TRACE", "DEBUG" };
 
+#define stream stdout
+
 void DPS_Log(DPS_LogLevel level, const char* file, int line, const char *function, const char *fmt, ...)
 {
     va_list ap;
@@ -39,20 +41,21 @@ void DPS_Log(DPS_LogLevel level, const char* file, int line, const char *functio
     case DPS_LOG_ERROR:
     case DPS_LOG_WARNING:
     case DPS_LOG_DBGPRINT:
-        fprintf(stderr, "%09u %-7s %s@%d: ", DPS_DBG_TIME, LevelTxt[level], file, line);
-        vfprintf(stderr, fmt, ap);
+        fprintf(stream, "%09u %-7s %s@%d: ", DPS_DBG_TIME, LevelTxt[level], file, line);
+        vfprintf(stream, fmt, ap);
         break;
     case DPS_LOG_PRINTT:
-        fprintf(stderr, "%09u ", DPS_DBG_TIME);
+        fprintf(stream, "%09u ", DPS_DBG_TIME);
         /* FALLTHROUGH */
     case DPS_LOG_PRINT:
-        vfprintf(stderr, fmt, ap);
+        vfprintf(stream, fmt, ap);
         break;
     case DPS_LOG_DBGTRACE:
-        fprintf(stderr, "%09u %-7s %s@%d: %s() ", DPS_DBG_TIME, LevelTxt[level], file, line, function);
-        vfprintf(stderr, fmt, ap);
+        fprintf(stream, "%09u %-7s %s@%d: %s() ", DPS_DBG_TIME, LevelTxt[level], file, line, function);
+        vfprintf(stream, fmt, ap);
         break;
     }
+    fflush(stream);
     va_end(ap);
 }
 
@@ -60,9 +63,10 @@ void DPS_LogBytes(DPS_LogLevel level, const char* file, int line, const char *fu
 {
     for (size_t i = 0; i < n; ++i) {
         if ((i % 16) == 0) {
-            fprintf(stderr, "%s%09u %-7s %s@%d: ", i ? "\n" : "", DPS_DBG_TIME, LevelTxt[level], file, line);
+            fprintf(stream, "%s%09u %-7s %s@%d: ", i ? "\n" : "", DPS_DBG_TIME, LevelTxt[level], file, line);
         }
-        fprintf(stderr, "%02x ", bytes[i]);
+        fprintf(stream, "%02x ", bytes[i]);
     }
-    fprintf(stderr, "\n");
+    fprintf(stream, "\n");
+    fflush(stream);
 }

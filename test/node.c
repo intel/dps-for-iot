@@ -325,6 +325,7 @@ int main(int argc, char** argv)
         }
     }
 
+    DPS_PRINT("Ready\n");
     Wait();
 
 Exit:
@@ -349,6 +350,7 @@ Exit:
     if (addr) {
         DPS_DestroyAddress(addr);
     }
+    DPS_PRINT("Exiting\n");
     return ret;
 
 Usage:

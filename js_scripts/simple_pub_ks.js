@@ -214,6 +214,7 @@ var crypto = require("crypto");
 
     node = dps.createNode("/", keyStore, nodeId);
     dps.startNode(node, dps.MCAST_PUB_ENABLE_SEND, 0);
+    console.log("Publisher is listening on port " +  dps.getPortNumber(node));
     pub = dps.createPublication(node);
 
     dps.initPublication(pub, ["a/b/c"], false, null, onAck);
