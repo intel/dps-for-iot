@@ -360,7 +360,7 @@ public:
         m_pub = pub;
         m_payload = new uint8_t[len+1];
         memcpy(m_payload, payload, len);
-        payload[len+1] = 0;
+        m_payload[len+1] = 0;
         m_len = len;
     }
     virtual ~AcknowledgementCallback() {
@@ -392,7 +392,7 @@ public:
         m_pub = DPS_CopyPublication(pub);
         m_payload = new uint8_t[len+1];
         memcpy(m_payload, payload, len);
-        payload[len+1] = 0;
+        m_payload[len+1] = 0;
         m_len = len;
     }
     virtual ~PublicationCallback() {
