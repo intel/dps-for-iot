@@ -26,6 +26,7 @@ children = []
 logs = []
 subs_rate = '-r 100'
 
+ms = 0
 n = 0
 p = 0
 s = 0
@@ -111,7 +112,8 @@ def cleanup():
         log.close()
 
 def reset_logs():
-    global n, p, s, t, v
+    global ms, n, p, s, t, v
+    ms = 0
     n = 0
     p = 0
     s = 0
@@ -247,6 +249,12 @@ def ver(args=''):
     child = _spawn(v, cmd)
     _expect_listening(child)
     return child
+
+def mesh_stress(args=''):
+    global ms
+    ms = ms + 1
+    cmd = [os.path.join('build', 'test', 'bin', 'mesh_stress')] +  debug.split() +  args.split()
+    return _spawn(ms, cmd)
 
 def link(child, ports):
     if not isinstance(ports, collections.Sequence):
