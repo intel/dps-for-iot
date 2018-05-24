@@ -954,7 +954,9 @@ static DPS_Status DecodeRequest(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuffe
     uint8_t msgType;
     size_t len;
 
-    DPS_DBGTRACE();
+    DPS_DBGTRACEA("node=%p,ep={addr=%s,cn=%p},buf=%p,multicast=%d\n",
+                  node, DPS_NodeAddrToString(&ep->addr), ep->cn, buf, multicast);
+
     CBOR_Dump("Request in", buf->rxPos, DPS_RxBufferAvail(buf));
     ret = CBOR_DecodeArray(buf, &len);
     if (ret != DPS_OK || (len != 5)) {
