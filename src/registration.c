@@ -242,11 +242,14 @@ static DPS_Status BuildPutPayload(DPS_TxBuffer* payload, uint16_t port)
     CBOR_EncodeUint8(payload, (uint8_t)extIfs);
     for (i = 0; i < numIfs; ++i) {
         uv_interface_address_t* ifn = &ifsAddrs[i];
-        if (!ifn->is_internal) {
-            ret = EncodeAddr(payload, (struct sockaddr*)&ifn->address, port);
-            if (ret != DPS_OK) {
-                break;
-            }
+        struct sockaddr* addr = (struct sockaddr*)&ifn->address;
+        if (ifn->is_internal ||
+            ((addr->sa_family == AF_INET6) && IN6_IS_ADDR_LINKLOCAL(&((const struct sockaddr_in6*)addr)->sin6_addr))) {
+            continue;
+        }
+        ret = EncodeAddr(payload, addr, port);
+        if (ret != DPS_OK) {
+            break;
         }
     }
 
