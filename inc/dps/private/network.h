@@ -83,7 +83,12 @@ void DPS_NetFreeBufs(uv_buf_t* bufs, size_t numBufs);
 typedef DPS_Status (*DPS_OnReceive)(DPS_Node* node, DPS_NetEndpoint* endpoint, DPS_Status status, const uint8_t* data, size_t len);
 
 /**
- * Set the port number on a network endpoint
+ * Set the port number on a network endpoint.
+ *
+ * This is only applied to connection-less endpoints since the sending
+ * port may be ephemeral.  For connection endpoints, the sending port
+ * forms part of the connection tuple and is untouched by this
+ * function.
  *
  * @param endpoint  The endpoint to set
  * @param port      The port number to set on the endpoint
