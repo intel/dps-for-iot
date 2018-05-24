@@ -21,6 +21,8 @@
  */
 
 #include "test.h"
+#include "float.h"
+#include "math.h"
 
 static uint8_t buf[1 << 19];
 
@@ -65,6 +67,10 @@ static const double Doubles[] = {
     1.1, 1.0e+300, -4.1, INFINITY, NAN, -INFINITY
 };
 
+static const double DoublesAsFloat[] = {
+    0.0, -FLT_MAX, FLT_MAX, (double)FLT_MAX * 1.0000000000000002
+};
+
 static DPS_Status TestFloatingPoint()
 {
     DPS_TxBuffer txBuffer;
@@ -91,6 +97,8 @@ static DPS_Status TestFloatingPoint()
     return DPS_OK;
 }
 
+#define NUM_ENCODED_VALS   63
+
 int main(int argc, char** argv)
 {
     size_t i;
@@ -111,7 +119,7 @@ int main(int argc, char** argv)
      */
     for (n = 0; n < 2; ++n) {
 
-        ret = CBOR_EncodeArray(&txBuffer, 59);
+        ret = CBOR_EncodeArray(&txBuffer, NUM_ENCODED_VALS);
         CHECK(ret);
 
         for (i = 0; i < sizeof(Uints) / sizeof(Uints[0]); ++i) {
@@ -130,6 +138,10 @@ int main(int argc, char** argv)
         }
         for (i = 0; i < sizeof(Doubles) / sizeof(Doubles[0]); ++i) {
             ret = CBOR_EncodeDouble(&txBuffer, Doubles[i]);
+            CHECK(ret);
+        }
+        for (i = 0; i < sizeof(DoublesAsFloat) / sizeof(DoublesAsFloat[0]); ++i) {
+            ret = CBOR_EncodeDouble(&txBuffer, DoublesAsFloat[i]);
             CHECK(ret);
         }
         ret = CBOR_EncodeArray(&txBuffer, sizeof(Strings) / sizeof(Strings[0]));
@@ -214,7 +226,7 @@ int main(int argc, char** argv)
     DPS_TxBufferToRx(&txBuffer, &rxBuffer);
 
     ret = CBOR_DecodeArray(&rxBuffer, &size);
-    ASSERT(size == 59);
+    ASSERT(size == NUM_ENCODED_VALS);
     CHECK(ret);
 
     /*
@@ -250,6 +262,25 @@ int main(int argc, char** argv)
         ret = CBOR_DecodeDouble(&rxBuffer, &d);
         ASSERT((d == Doubles[i]) || (isnan(d) && isnan(Doubles[i])));
         CHECK(ret);
+    }
+
+    // These are doubles on the wire
+    for (i = 0; i < sizeof(DoublesAsFloat) / sizeof(DoublesAsFloat[0]); ++i) {
+        float f;
+        ret = CBOR_DecodeFloat(&rxBuffer, &f);
+        if (i < 3) {
+            ASSERT(f == (float)DoublesAsFloat[i]);
+            CHECK(ret);
+        } else {
+            if (ret == DPS_ERR_RANGE) {
+                printf("Decode %f failed as expected %d\n", DoublesAsFloat[i], ret);
+                ret = DPS_OK;
+            } else {
+                printf("Decode %f did not fail as expected\n", DoublesAsFloat[i]);
+                ret = DPS_ERR_INVALID;
+            }
+            CHECK(ret);
+        }
     }
 
     ret = CBOR_DecodeArray(&rxBuffer, &size);
@@ -439,9 +470,9 @@ int main(int argc, char** argv)
      */
     ret = CBOR_DecodeArray(&rxBuffer, &size);
     CHECK(ret);
-    ASSERT(size == 59);
+    ASSERT(size == NUM_ENCODED_VALS);
 
-    for (n = 0; n < 59; ++n) {
+    for (n = 0; n < NUM_ENCODED_VALS; ++n) {
         size_t sz;
         uint8_t maj;
         ret = CBOR_Skip(&rxBuffer, &maj, &sz);

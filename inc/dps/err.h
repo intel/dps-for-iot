@@ -68,6 +68,7 @@ typedef int DPS_Status; /**< The status code type */
 #define DPS_ERR_SECURITY          24 /**< A security related error - failure to decrypt or authenticate */
 #define DPS_ERR_NOT_ENCRYPTED     25 /**< Payload does not appear to be encrypted */
 #define DPS_ERR_STOPPING          26 /**< The current node is stopping */
+#define DPS_ERR_RANGE             27 /**< A value is out of range */
 
 /**
  * The text string representation of the status code.
