@@ -313,8 +313,9 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote)
     if (ret == DPS_OK) {
         uv_buf_t uvBuf = uv_buf_init((char*)buf.base, DPS_TxBufferUsed(&buf));
         CBOR_Dump("Sub out", (uint8_t*)uvBuf.base, uvBuf.len);
-        ret = DPS_NetSend(node, NULL, &remote->ep, &uvBuf, 1, DPS_OnSendComplete);
+        ret = DPS_NetSend(node, NULL, &remote->ep, &uvBuf, 1, DPS_OnSendSubscriptionComplete);
         if (ret == DPS_OK) {
+            remote->outbound.subPending = DPS_TRUE;
             if (remote->outbound.ackCountdown) {
                 --remote->outbound.ackCountdown;
             } else {

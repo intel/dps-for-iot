@@ -427,7 +427,7 @@ static void OnTimeout(uv_timer_t* timer)
     DPS_NetConnection* cn = timer->data;
     int ret;
 
-    DPS_DBGTRACE();
+    DPS_DBGTRACEA("cn=%p\n", cn);
 
     cn->timerStatus++;
     if (cn->timerStatus == 1) {
@@ -453,6 +453,8 @@ static void OnTimeout(uv_timer_t* timer)
 static void OnTLSTimerSet(void* data, uint32_t int_ms, uint32_t fin_ms)
 {
     DPS_NetConnection* cn = data;
+
+    DPS_DBGTRACEA("cn=%p,int_ms=%u,fin_ms=%u\n", cn, int_ms, fin_ms);
 
     int active = uv_is_active((uv_handle_t*)&cn->timer);
 
@@ -480,9 +482,11 @@ static void OnTLSTimerSet(void* data, uint32_t int_ms, uint32_t fin_ms)
 static int OnTLSTimerGet(void* data)
 {
     DPS_NetConnection* cn = data;
+
+    DPS_DBGTRACEA("cn=%p timerStatus=%d\n", cn, cn->timerStatus);
+
     return cn->timerStatus;
 }
-
 
 /*
  * DATA TRANSMISSION CALLBACKS

@@ -74,7 +74,7 @@ typedef struct _OnOpCompletion {
  * How long (in milliseconds) to wait to received a response from a remote
  * node this node is linking with.
  */
-#define LINK_RESPONSE_TIMEOUT  5000
+#define LINK_RESPONSE_TIMEOUT  UINT16_MAX /* TODO Do we still need this?  I'm guessing this predates SAKs */
 
 const DPS_UUID DPS_MaxMeshId = { .val64 = { UINT64_MAX, UINT64_MAX } };
 
@@ -643,6 +643,26 @@ void DPS_OnSendComplete(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_bu
     DPS_NetFreeBufs(bufs, numBufs);
 }
 
+void DPS_OnSendSubscriptionComplete(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf_t* bufs, size_t numBufs, DPS_Status status)
+{
+    RemoteNode* remote;
+
+    DPS_DBGPRINT("Send complete %s\n", DPS_ErrTxt(status));
+    if (ep) {
+        DPS_LockNode(node);
+        remote = DPS_LookupRemoteNode(node, &ep->addr);
+        if (remote) {
+            remote->outbound.subPending = DPS_FALSE;
+            if (status != DPS_OK) {
+                DPS_DBGPRINT("Removing node %s\n", DPS_NodeAddrToString(&ep->addr));
+                DPS_DeleteRemoteNode(node, remote);
+            }
+        }
+        DPS_UnlockNode(node);
+    }
+    DPS_NetFreeBufs(bufs, numBufs);
+}
+
 static DPS_Status SendMatchingPubToSub(DPS_Node* node, DPS_Publication* pub, RemoteNode* subscriber)
 {
     /*
@@ -814,7 +834,7 @@ static void SendSubsTimer(uv_timer_t* handle)
                 --remote->outbound.ackCountdown;
                 continue;
             }
-            send = DPS_TRUE;
+            send = !remote->outbound.subPending;
         } else {
             ret = UpdateOutboundInterests(node, remote, &send);
             if (ret != DPS_OK) {

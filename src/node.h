@@ -173,6 +173,7 @@ typedef struct _RemoteNode {
         uint8_t muted;                 /**< TRUE if we have informed the remote that the link is muted */
         uint8_t deltaInd;              /**< TRUE if the interests info is a delta */
         uint8_t ackCountdown;          /**< Number of remaining subscription send retries + 1 */
+        int subPending;                /**< TRUE if subscription send is pending */
         uint32_t revision;             /**< Revision number of last subscription sent to this node */
         DPS_UUID meshId;               /**< The mesh id sent to this remote node */
         DPS_BitVector* needs;          /**< Needs bit vector sent outbound to this remote node */
@@ -211,6 +212,19 @@ void DPS_QueuePublicationAck(DPS_Node* node, PublicationAck* ack);
  * @param status   Indicates if the send was successful or not
  */
 void DPS_OnSendComplete(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf_t* bufs, size_t numBufs, DPS_Status status);
+
+/**
+ * Callback function called when a subscription send operation completes
+ *
+ * @param node     Opaque pointer to the DPS node
+ * @param appCtx   An application context to be passed to the send complete callback
+ * @param ep       The endpoint for which the send was completed
+ * @param bufs     Array holding pointers to the buffers passed in the send API call. The data in these buffers
+ *                 can now be freed.
+ * @param numBufs  The length of the bufs array
+ * @param status   Indicates if the send was successful or not
+ */
+void DPS_OnSendSubscriptionComplete(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf_t* bufs, size_t numBufs, DPS_Status status);
 
 /**
  * Make a nonce for a specific message type
