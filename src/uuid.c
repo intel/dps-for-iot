@@ -114,6 +114,8 @@ static void InitUUID()
 
 DPS_Status DPS_InitUUID()
 {
+    DPS_DBGTRACE();
+
     uv_once(&context.once, InitUUID);
     return context.ret;
 }
@@ -130,6 +132,8 @@ void DPS_GenerateUUID(DPS_UUID* uuid)
 {
     uint64_t* s = (uint64_t*)entropy.seeds;
     uint32_t s0;
+
+    DPS_DBGTRACE();
 
     uv_mutex_lock(&context.mutex);
     s0 = entropy.seeds[0];

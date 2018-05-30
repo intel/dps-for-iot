@@ -118,6 +118,8 @@ int DPS_SameAddr(const DPS_NodeAddress* addr1, const DPS_NodeAddress* addr2)
 
 DPS_NodeAddress* DPS_SetAddress(DPS_NodeAddress* addr, const struct sockaddr* sa)
 {
+    DPS_DBGTRACE();
+
     memzero_s(addr, sizeof(DPS_NodeAddress));
     if (sa) {
         if (sa->sa_family == AF_INET) {

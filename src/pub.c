@@ -1078,6 +1078,9 @@ void DPS_ExpirePub(DPS_Node* node, DPS_Publication* pub)
 DPS_Publication* DPS_CreatePublication(DPS_Node* node)
 {
     DPS_Publication* pub;
+
+    DPS_DBGTRACE();
+
     if (!node) {
         return NULL;
     }
@@ -1121,10 +1124,13 @@ static void DestroyCopy(DPS_Publication* copy)
 DPS_Publication* DPS_CopyPublication(const DPS_Publication* pub)
 {
     DPS_Publication* copy;
+    DPS_Status ret = DPS_ERR_RESOURCES;
+
+    DPS_DBGTRACE();
+
     if (!pub->shared->node) {
         return NULL;
     }
-    DPS_Status ret = DPS_ERR_RESOURCES;
     copy = calloc(1, sizeof(DPS_Publication));
     if (!copy) {
         DPS_ERRPRINT("malloc failure: no memory\n");
@@ -1182,6 +1188,8 @@ DPS_Status DPS_InitPublication(DPS_Publication* pub,
     DPS_Status ret = DPS_OK;
     int8_t alg;
     size_t i;
+
+    DPS_DBGTRACE();
 
     if (!node) {
         return DPS_ERR_NULL;
@@ -1328,6 +1336,8 @@ DPS_Status DPS_PublicationAddSubId(DPS_Publication* pub, const DPS_KeyId* keyId)
     DPS_Status ret;
     int8_t alg;
 
+    DPS_DBGTRACE();
+
     if (IsValidPub(pub)) {
         DPS_DBGPRINT("Publication has a keyId\n");
         ret = GetRecipientAlgorithm(pub->shared->node->keyStore, keyId, &alg);
@@ -1345,6 +1355,8 @@ DPS_Status DPS_PublicationAddSubId(DPS_Publication* pub, const DPS_KeyId* keyId)
 
 void DPS_PublicationRemoveSubId(DPS_Publication* pub, const DPS_KeyId* keyId)
 {
+    DPS_DBGTRACE();
+
     if (IsValidPub(pub)) {
         RemoveRecipient(pub, keyId);
     }
@@ -1594,6 +1606,7 @@ DPS_Status DPS_DestroyPublication(DPS_Publication* pub)
     DPS_Node* node;
 
     DPS_DBGTRACE();
+
     if (!pub) {
         return DPS_ERR_NULL;
     }

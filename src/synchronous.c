@@ -58,6 +58,8 @@ DPS_Status DPS_LinkTo(DPS_Node* node, const char* host, uint16_t port, DPS_NodeA
     char portStr[8];
     DPS_Event* event = DPS_CreateEvent();
 
+    DPS_DBGTRACE();
+
     if (!event) {
         return DPS_ERR_RESOURCES;
     }
@@ -104,6 +106,9 @@ DPS_Status DPS_UnlinkFrom(DPS_Node* node, DPS_NodeAddress* addr)
 {
     DPS_Status ret;
     DPS_Event* event = DPS_CreateEvent();
+
+    DPS_DBGTRACE();
+
     if (!event) {
         return DPS_ERR_RESOURCES;
     }

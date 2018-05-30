@@ -890,6 +890,7 @@ static DPS_Publication* UpdatePub(DPS_Node* node, DPS_Publication* pub, int* cou
 void DPS_UpdatePubs(DPS_Node* node, DPS_Publication* pub)
 {
     int count = 0;
+
     DPS_DBGTRACE();
 
     DPS_LockNode(node);
@@ -1310,6 +1311,8 @@ DPS_Node* DPS_CreateNode(const char* separators, DPS_KeyStore* keyStore, const D
     DPS_Node* node = calloc(1, sizeof(DPS_Node));
     DPS_Status ret;
 
+    DPS_DBGTRACE();
+
     if (!node) {
         return NULL;
     }
@@ -1381,6 +1384,8 @@ DPS_Status DPS_StartNode(DPS_Node* node, int mcast, uint16_t rxPort)
 {
     DPS_Status ret = DPS_OK;
     int r;
+
+    DPS_DBGTRACE();
 
     if (!node) {
         return DPS_ERR_NULL;
@@ -1500,6 +1505,8 @@ uv_loop_t* DPS_GetLoop(DPS_Node* node)
 
 uint16_t DPS_GetPortNumber(DPS_Node* node)
 {
+    DPS_DBGTRACE();
+
     if (node) {
         return node->port;
     } else {
@@ -1511,6 +1518,7 @@ uint16_t DPS_GetPortNumber(DPS_Node* node)
 DPS_Status DPS_DestroyNode(DPS_Node* node, DPS_OnNodeDestroyed cb, void* data)
 {
     DPS_DBGTRACE();
+
     if (!node || !cb) {
         return DPS_ERR_NULL;
     }
@@ -1540,6 +1548,8 @@ DPS_Status DPS_DestroyNode(DPS_Node* node, DPS_OnNodeDestroyed cb, void* data)
 
 void DPS_SetNodeSubscriptionUpdateDelay(DPS_Node* node, uint32_t subsRateMsecs)
 {
+    DPS_DBGTRACE();
+
     node->subsRate = subsRateMsecs;
 }
 
@@ -1549,6 +1559,7 @@ DPS_Status DPS_Link(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnLinkComplete cb
     RemoteNode* remote = NULL;
 
     DPS_DBGTRACE();
+
     if (!addr || !node || !cb) {
         return DPS_ERR_NULL;
     }
@@ -1590,6 +1601,7 @@ DPS_Status DPS_Unlink(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnUnlinkComplet
     RemoteNode* remote;
 
     DPS_DBGTRACE();
+
     if (!addr || !node || !cb) {
         return DPS_ERR_NULL;
     }

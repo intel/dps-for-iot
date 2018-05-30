@@ -264,6 +264,8 @@ DPS_Status DPS_Registration_Put(DPS_Node* node, const char* host, uint16_t port,
     RegPut* regPut;
     uint16_t localPort;
 
+    DPS_DBGTRACE();
+
     localPort = DPS_GetPortNumber(node);
     if (!localPort) {
         return DPS_ERR_INVALID;
@@ -324,6 +326,9 @@ DPS_Status DPS_Registration_PutSyn(DPS_Node* node, const char* host, uint16_t po
 {
     DPS_Status ret;
     DPS_Event* event = DPS_CreateEvent();
+
+    DPS_DBGTRACE();
+
     if (!event) {
         return DPS_ERR_RESOURCES;
     }
@@ -506,6 +511,7 @@ DPS_Status DPS_Registration_Get(DPS_Node* node, const char* host, uint16_t port,
     uint16_t localPort;
 
     DPS_DBGTRACE();
+
     if (!regs) {
         return DPS_ERR_NULL;
     }
@@ -580,6 +586,7 @@ DPS_Status DPS_Registration_GetSyn(DPS_Node* node, const char* host, uint16_t po
     GetResult getResult;
 
     DPS_DBGTRACE();
+
     getResult.event = DPS_CreateEvent();
     getResult.regs = regs;
     regs->count = 0;
@@ -688,6 +695,9 @@ DPS_Status DPS_Registration_LinkTo(DPS_Node* node, DPS_RegistrationList* regs, D
     DPS_Status ret = DPS_ERR_NO_ROUTE;
     size_t i;
     int untried = 0;
+
+    DPS_DBGTRACE();
+
     /*
      * Check there is at least one candidate that hasn't been tried yet
      */
@@ -746,6 +756,8 @@ DPS_Status DPS_Registration_LinkToSyn(DPS_Node* node, DPS_RegistrationList* regs
     DPS_Status ret;
     LinkResult linkResult;
 
+    DPS_DBGTRACE();
+
     linkResult.event = DPS_CreateEvent();
     if (!linkResult.event) {
         return DPS_ERR_RESOURCES;
@@ -762,7 +774,11 @@ DPS_Status DPS_Registration_LinkToSyn(DPS_Node* node, DPS_RegistrationList* regs
 
 DPS_RegistrationList* DPS_CreateRegistrationList(uint8_t size)
 {
-    DPS_RegistrationList* regs = calloc(1, sizeof(DPS_RegistrationList) + (size - 1) * sizeof(DPS_Registration));
+    DPS_RegistrationList* regs;
+
+    DPS_DBGTRACE();
+
+    regs = calloc(1, sizeof(DPS_RegistrationList) + (size - 1) * sizeof(DPS_Registration));
     if (regs) {
         regs->size = size;
     }
@@ -771,6 +787,8 @@ DPS_RegistrationList* DPS_CreateRegistrationList(uint8_t size)
 
 void DPS_DestroyRegistrationList(DPS_RegistrationList* regs)
 {
+    DPS_DBGTRACE();
+
     if (regs) {
         while (regs->size--) {
             if (regs->list[regs->size].host) {

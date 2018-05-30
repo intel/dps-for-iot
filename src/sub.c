@@ -123,6 +123,8 @@ DPS_Subscription* DPS_CreateSubscription(DPS_Node* node, const char** topics, si
     size_t i;
     DPS_Subscription* sub;
 
+    DPS_DBGTRACE();
+
     if (!node || !topics || !numTopics) {
         return NULL;
     }
@@ -145,6 +147,8 @@ DPS_Subscription* DPS_CreateSubscription(DPS_Node* node, const char** topics, si
 DPS_Status DPS_DestroySubscription(DPS_Subscription* sub)
 {
     DPS_Node* node;
+
+    DPS_DBGTRACE();
 
     if (!IsValidSub(sub)) {
         return DPS_ERR_MISSING;
@@ -721,6 +725,8 @@ DPS_Status DPS_Subscribe(DPS_Subscription* sub, DPS_PublicationHandler handler)
     size_t i;
     DPS_Status ret = DPS_OK;
     DPS_Node* node = sub ? sub->node : NULL;
+
+    DPS_DBGTRACE();
 
     if (!node) {
         return DPS_ERR_NULL;
