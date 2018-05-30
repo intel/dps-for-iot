@@ -371,7 +371,7 @@ static DPS_Status SendSubscriptionAck(DPS_Node* node, RemoteNode* remote, uint32
         ret = CBOR_EncodeInt16(&buf, node->port);
     }
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_SEQ_NUM);
+        ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_ACK_SEQ_NUM);
     }
     if (ret == DPS_OK) {
         ret = CBOR_EncodeUint32(&buf, revision);
@@ -657,7 +657,7 @@ DiscardAndExit:
 
 DPS_Status DPS_DecodeSubscriptionAck(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuffer* buf)
 {
-    static const int32_t UnprotectedKeys[] = { DPS_CBOR_KEY_PORT, DPS_CBOR_KEY_SEQ_NUM };
+    static const int32_t UnprotectedKeys[] = { DPS_CBOR_KEY_PORT, DPS_CBOR_KEY_ACK_SEQ_NUM };
     DPS_Status ret;
     uint16_t port;
     uint32_t revision = 0;
@@ -683,7 +683,7 @@ DPS_Status DPS_DecodeSubscriptionAck(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Rx
         case DPS_CBOR_KEY_PORT:
             ret = CBOR_DecodeUint16(buf, &port);
             break;
-        case DPS_CBOR_KEY_SEQ_NUM:
+        case DPS_CBOR_KEY_ACK_SEQ_NUM:
             ret = CBOR_DecodeUint32(buf, &revision);
             break;
         }

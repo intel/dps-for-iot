@@ -51,6 +51,7 @@ extern "C" {
 #define DPS_CBOR_KEY_INTERESTS     10   /**< bstr */
 #define DPS_CBOR_KEY_TOPICS        11   /**< array (tstr) */
 #define DPS_CBOR_KEY_DATA          12   /**< bstr */
+#define DPS_CBOR_KEY_ACK_SEQ_NUM   13   /**< uint */
 
 /**
  * Convert seconds to milliseconds
