@@ -42,7 +42,7 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 const char* DPS_UUIDToString(const DPS_UUID* uuid)
 {
     static const char* hex = "0123456789abcdef";
-    static char str[38];
+    static THREAD char str[38];
     char* dst = str;
     const uint8_t *src = uuid->val;
     size_t i;

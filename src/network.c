@@ -34,6 +34,7 @@
 #include <dps/dbg.h>
 #include <dps/dps.h>
 #include <dps/private/network.h>
+#include "compat.h"
 #include "node.h"
 
 /*
@@ -45,7 +46,7 @@ const char* DPS_NetAddrText(const struct sockaddr* addr)
 {
     if (addr) {
         char name[INET6_ADDRSTRLEN];
-        static char txt[sizeof(name) + 8];
+        static THREAD char txt[sizeof(name) + 8];
         uint16_t port;
         int ret;
         if (addr->sa_family == AF_INET6) {

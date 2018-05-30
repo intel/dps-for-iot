@@ -58,12 +58,16 @@ inline char* strndup(const char* str, size_t maxLen)
 #define __BIG_ENDIAN      1
 #define __BYTE_ORDER      __LITTLE_ENDIAN
 
+#define THREAD __declspec(thread)
+
 #else // posix
 
 #include <endian.h>
 
 #define BSWAP_32(n)  __builtin_bswap32(n)
 #define BSWAP_64(n)  __builtin_bswap64(n)
+
+#define THREAD __thread
 
 #endif
 
