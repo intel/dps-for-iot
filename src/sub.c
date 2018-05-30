@@ -238,6 +238,11 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote)
     } else {
         interests = NULL;
     }
+    /*
+     * The protected and encrypted maps
+     */
+    len += CBOR_SIZEOF_MAP(0) +
+        CBOR_SIZEOF_MAP(0);
 
     ret = DPS_TxBufferInit(&buf, NULL, len);
     if (ret == DPS_OK) {
@@ -266,7 +271,7 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote)
     }
     if (ret == DPS_OK) {
         /*
-         * See UpdateOutboundInterests() the outbound sequence number
+         * See DPS_UpdateOutboundInterests() the outbound sequence number
          * only changes if the subscription changes.
          */
         ret = CBOR_EncodeUint32(&buf, remote->outbound.revision);
@@ -332,22 +337,56 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote)
     return ret;
 }
 
-static DPS_Status SendSubscriptionAck(DPS_Node* node, RemoteNode* remote, uint32_t revision)
+static DPS_Status SendSubscriptionAck(DPS_Node* node, RemoteNode* remote, uint32_t revision, int includeSub)
 {
     DPS_Status ret;
     DPS_TxBuffer buf;
+    DPS_BitVector* interests;
     size_t len;
+    uint8_t flags = 0;
 
     DPS_DBGTRACE();
 
+    if (!node->netCtx) {
+        return DPS_ERR_NETWORK;
+    }
+
+    /*
+     * Set flags
+     */
+    if (remote->outbound.deltaInd) {
+        flags |= DPS_SUB_FLAG_DELTA_IND;
+    }
+    if (remote->outbound.muted) {
+        flags |= DPS_SUB_FLAG_MUTE_IND;
+    }
+
     len = CBOR_SIZEOF_ARRAY(5) +
         CBOR_SIZEOF(uint8_t) +
-        CBOR_SIZEOF(uint8_t) +
-        CBOR_SIZEOF_MAP(2) + 2 * CBOR_SIZEOF(uint8_t) +
+        CBOR_SIZEOF(uint8_t);
+    /*
+     * The unprotected map
+     */
+    len += CBOR_SIZEOF_MAP(2) + 2 * CBOR_SIZEOF(uint8_t) +
         CBOR_SIZEOF(uint16_t) +
-        CBOR_SIZEOF(uint32_t) +
-        CBOR_SIZEOF_MAP(0) +
+        CBOR_SIZEOF(uint32_t);
+    if (includeSub) {
+        len += CBOR_SIZEOF(uint8_t) + CBOR_SIZEOF(uint32_t);
+        interests = remote->outbound.deltaInd ? remote->outbound.delta : remote->outbound.interests;
+        len += 4 * CBOR_SIZEOF(uint8_t) +
+            CBOR_SIZEOF(uint8_t) +
+            CBOR_SIZEOF_BYTES(sizeof(DPS_UUID)) +
+            DPS_BitVectorSerializeMaxSize(interests) +
+            DPS_BitVectorSerializeMaxSize(remote->outbound.needs);
+    } else {
+        interests = NULL;
+    }
+    /*
+     * The protected and encrypted maps
+     */
+    len += CBOR_SIZEOF_MAP(0) +
         CBOR_SIZEOF_MAP(0);
+
     ret = DPS_TxBufferInit(&buf, NULL, len);
     if (ret == DPS_OK) {
         ret = CBOR_EncodeArray(&buf, 5);
@@ -362,13 +401,49 @@ static DPS_Status SendSubscriptionAck(DPS_Node* node, RemoteNode* remote, uint32
      * Encode the unprotected map
      */
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeMap(&buf, 2);
+        ret = CBOR_EncodeMap(&buf, includeSub ? 7 : 2);
     }
     if (ret == DPS_OK) {
         ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_PORT);
     }
     if (ret == DPS_OK) {
         ret = CBOR_EncodeInt16(&buf, node->port);
+    }
+    if (includeSub) {
+        if (ret == DPS_OK) {
+            ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_SEQ_NUM);
+        }
+        if (ret == DPS_OK) {
+            /*
+             * See DPS_UpdateOutboundInterests() the outbound sequence number
+             * only changes if the subscription changes.
+             */
+            ret = CBOR_EncodeUint32(&buf, remote->outbound.revision);
+        }
+        if (ret == DPS_OK) {
+            ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_SUB_FLAGS);
+        }
+        if (ret == DPS_OK) {
+            ret = CBOR_EncodeUint8(&buf, flags);
+        }
+        if (ret == DPS_OK) {
+            ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_MESH_ID);
+        }
+        if (ret == DPS_OK) {
+            ret = CBOR_EncodeBytes(&buf, (uint8_t*)&remote->outbound.meshId, sizeof(DPS_UUID));
+        }
+        if (ret == DPS_OK) {
+            ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_NEEDS);
+        }
+        if (ret == DPS_OK) {
+            ret = DPS_BitVectorSerialize(remote->outbound.needs, &buf);
+        }
+        if (ret == DPS_OK) {
+            ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_INTERESTS);
+        }
+        if (ret == DPS_OK) {
+            ret = DPS_BitVectorSerialize(interests, &buf);
+        }
     }
     if (ret == DPS_OK) {
         ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_ACK_SEQ_NUM);
@@ -393,7 +468,17 @@ static DPS_Status SendSubscriptionAck(DPS_Node* node, RemoteNode* remote, uint32
         uv_buf_t uvBuf = uv_buf_init((char*)buf.base, DPS_TxBufferUsed(&buf));
         CBOR_Dump("Sub ack out", (uint8_t*)uvBuf.base, uvBuf.len);
         ret = DPS_NetSend(node, NULL, &remote->ep, &uvBuf, 1, DPS_OnSendComplete);
-        if (ret != DPS_OK) {
+        if (ret == DPS_OK) {
+            if (includeSub) {
+                remote->outbound.subPending = DPS_TRUE;
+                if (remote->outbound.ackCountdown) {
+                    --remote->outbound.ackCountdown;
+                } else {
+                    remote->outbound.ackCountdown = 1 + DPS_MAX_SUBSCRIPTION_RETRIES;
+                }
+                assert(remote->outbound.ackCountdown);
+            }
+        } else {
             DPS_ERRPRINT("Failed to send subscription ack %s\n", DPS_ErrTxt(ret));
             DPS_SendFailed(node, &remote->ep.addr, &uvBuf, 1, ret);
         }
@@ -454,6 +539,7 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
     DPS_UUID meshId;
     uint8_t flags = 0;
     uint16_t keysMask;
+    int remoteIsNew = DPS_FALSE;
 
     DPS_DBGTRACE();
 
@@ -548,7 +634,7 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
         DPS_LockNode(node);
         remote = DPS_LookupRemoteNode(node, &ep->addr);
         if (remote) {
-            SendSubscriptionAck(node, remote, revision);
+            SendSubscriptionAck(node, remote, revision, DPS_FALSE);
             DPS_DeleteRemoteNode(node, remote);
             /*
              * Evaluate impact of losing the remote's interests
@@ -571,6 +657,7 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
             ret = DPS_OK;
         } else {
             ret = DPS_ClearOutboundInterests(remote);
+            remoteIsNew = DPS_TRUE;
         }
     }
     if (ret != DPS_OK) {
@@ -587,7 +674,7 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
      * Duplicate - presumably an ACK got lost
      */
     if (revision == remote->inbound.revision) {
-        ret = SendSubscriptionAck(node, remote, revision);
+        ret = SendSubscriptionAck(node, remote, revision, DPS_FALSE);
         goto DiscardAndExit;
     }
     remote->inbound.revision = revision;
@@ -638,7 +725,11 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
      * All is good so send an ACK
      */
     if (ret == DPS_OK) {
-        ret = SendSubscriptionAck(node, remote, revision);
+        int includeSub = DPS_FALSE;
+        if (remoteIsNew) {
+            DPS_UpdateOutboundInterests(node, remote, &includeSub);
+        }
+        ret = SendSubscriptionAck(node, remote, revision, includeSub);
     }
     DPS_UnlockNode(node);
     DPS_UpdateSubs(node);
@@ -663,8 +754,15 @@ DPS_Status DPS_DecodeSubscriptionAck(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Rx
     uint32_t revision = 0;
     RemoteNode* remote = NULL;
     CBOR_MapState mapState;
+    uint8_t* rxPos = buf->rxPos;
 
     DPS_DBGTRACE();
+
+    /*
+     * Decode subscription fields if they are present
+     */
+    ret = DPS_DecodeSubscription(node, ep, buf);
+    buf->rxPos = rxPos;
 
     /*
      * Parse keys from unprotected map

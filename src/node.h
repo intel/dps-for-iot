@@ -347,6 +347,17 @@ void DPS_ClearInboundInterests(DPS_Node* node, RemoteNode* remote);
 DPS_Status DPS_ClearOutboundInterests(RemoteNode* remote);
 
 /**
+ * Update outbound interests and needs
+ *
+ * @param node    The local node
+ * @param remote  The remote node
+ * @param send    TRUE if subscription should be sent
+ *
+ * @return DPS_OK if update is successful, an error otherwise
+ */
+DPS_Status DPS_UpdateOutboundInterests(DPS_Node* node, RemoteNode* remote, int* send);
+
+/**
  * Lock the node
  *
  * @param node The node to lock

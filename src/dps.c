@@ -314,7 +314,7 @@ static const DPS_UUID* MinMeshId(DPS_Node* node, RemoteNode* excluded)
     return minMeshId;
 }
 
-static DPS_Status UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, int* send)
+DPS_Status DPS_UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, int* send)
 {
     DPS_Status ret;
     DPS_BitVector* newInterests = NULL;
@@ -417,7 +417,7 @@ static DPS_Status UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, 
     return DPS_OK;
 
 ErrExit:
-    DPS_ERRPRINT("UpdateOutboundInterests: %s\n", DPS_ErrTxt(ret));
+    DPS_ERRPRINT("DPS_UpdateOutboundInterests: %s\n", DPS_ErrTxt(ret));
 
     DPS_BitVectorFree(newInterests);
     DPS_BitVectorFree(newNeeds);
@@ -836,7 +836,7 @@ static void SendSubsTimer(uv_timer_t* handle)
             }
             send = !remote->outbound.subPending;
         } else {
-            ret = UpdateOutboundInterests(node, remote, &send);
+            ret = DPS_UpdateOutboundInterests(node, remote, &send);
             if (ret != DPS_OK) {
                 break;
             }

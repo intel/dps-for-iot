@@ -880,6 +880,13 @@ static DPS_NetConnection* CreateConnection(DPS_Node* node, const struct sockaddr
             DPS_ERRPRINT("UDP start failed: %s\n", uv_err_name(ret));
             goto ErrorExit;
         }
+        {
+            struct sockaddr_in6 addr;
+            int len = sizeof(addr);
+            if (uv_udp_getsockname(&cn->socket, (struct sockaddr*)&addr, &len) == 0) {
+                DPS_DBGPRINT("Client port = %d\n", ntohs(addr.sin6_port));
+            }
+        }
     }
 
     mbedtls_entropy_init(&cn->entropy);
