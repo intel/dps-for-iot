@@ -343,6 +343,11 @@ int main(int argc, char** argv)
         } else {
             DPS_ERRPRINT("Failed to publish topics - error=%d\n", ret);
         }
+        /*
+         * A brief delay before exiting to ensure the publication
+         * gets sent and we have a chance to receive acks if requested
+         */
+        DPS_TimedWaitForEvent(nodeDestroyed, requestAck ? 2000 : 500);
         DPS_UnlinkFrom(node, remoteAddr);
         DPS_DestroyAddress(remoteAddr);
     } else {
