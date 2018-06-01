@@ -432,8 +432,7 @@ static DPS_Status CallPubHandlers(DPS_Node* node, DPS_Publication* pub)
     size_t dataLen = 0;
     CBOR_MapState mapState;
     size_t i;
-    SubCandidate* candidates = NULL;
-    SubCandidate* cdt = NULL;
+    int candidates = DPS_FALSE;
 
     DPS_DBGTRACE();
 
@@ -441,19 +440,11 @@ static DPS_Status CallPubHandlers(DPS_Node* node, DPS_Publication* pub)
      * See if the publication is match candidate. We may discover later that
      * this is a false positive when we check if the actual topic strings match.
      */
-    for (sub = node->subscriptions; sub != NULL; sub = sub->next) {
-        if (!DPS_BitVectorIncludes(pub->shared->bf, sub->bf)) {
-            continue;
-        }
-        cdt = malloc(sizeof(SubCandidate));
-        if (!cdt) {
-            ret = DPS_ERR_RESOURCES;
-            goto Exit;
-        }
-        cdt->sub = sub;
-        cdt->next = candidates;
-        candidates = cdt;
+    DPS_LockNode(node);
+    for (sub = node->subscriptions; sub && !candidates; sub = sub->next) {
+        candidates = DPS_BitVectorIncludes(pub->shared->bf, sub->bf);
     }
+    DPS_UnlockNode(node);
     /*
      * Nothing more to do if we don't have any candidates
      */
@@ -576,10 +567,13 @@ static DPS_Status CallPubHandlers(DPS_Node* node, DPS_Publication* pub)
     /*
      * Iterate over the candidates and check that the pub strings are a match
      */
-    for (cdt = candidates; cdt; cdt = cdt->next) {
+    for (sub = node->subscriptions; sub != NULL; sub = sub->next) {
         int match;
-        ret = DPS_MatchTopicList(pub->shared->topics, pub->shared->numTopics, cdt->sub->topics,
-                                 cdt->sub->numTopics, node->separators, DPS_FALSE, &match);
+        if (!DPS_BitVectorIncludes(pub->shared->bf, sub->bf)) {
+            continue;
+        }
+        ret = DPS_MatchTopicList(pub->shared->topics, pub->shared->numTopics, sub->topics,
+                                 sub->numTopics, node->separators, DPS_FALSE, &match);
         if (ret != DPS_OK) {
             ret = DPS_OK;
             continue;
@@ -588,7 +582,7 @@ static DPS_Status CallPubHandlers(DPS_Node* node, DPS_Publication* pub)
             DPS_DBGPRINT("Matched subscription\n");
             UpdatePubHistory(node, pub);
             DPS_UnlockNode(node);
-            cdt->sub->handler(cdt->sub, pub, data, dataLen);
+            sub->handler(sub, pub, data, dataLen);
             DPS_LockNode(node);
         }
     }
@@ -596,11 +590,6 @@ static DPS_Status CallPubHandlers(DPS_Node* node, DPS_Publication* pub)
 
 Exit:
 
-    while (candidates) {
-        cdt = candidates;
-        candidates = candidates->next;
-        free(cdt);
-    }
     DPS_TxBufferFree(&plainTextBuf);
     /* Publication topics will be invalid now if the publication was encrypted */
     if (pub->shared->topics) {
