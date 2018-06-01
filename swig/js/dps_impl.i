@@ -108,23 +108,17 @@ static void async_cb(uv_async_t* handle)
     mutex.lock();
     while (!queue.empty()) {
         Callback* cb = queue.front();
+        std::condition_variable* cond = cb->m_cond;
         queue.pop();
         mutex.unlock();
         cb->Call();
-        if (cb->m_cond) {
-            cb->m_cond->notify_one();
-        }
         delete cb;
+        if (cond) {
+            cond->notify_one();
+        }
         mutex.lock();
     }
     mutex.unlock();
-}
-
-static void async_send(Callback* cb)
-{
-    std::unique_lock<std::mutex> lock(mutex);
-    queue.push(cb);
-    uv_async_send(&async);
 }
 
 static void sync_send(Callback* cb)
@@ -292,7 +286,7 @@ public:
 
 static void OnNodeDestroyed(DPS_Node* node, void* data)
 {
-    async_send(new NodeDestroyedCallback(node, data));
+    sync_send(new NodeDestroyedCallback(node, data));
 }
 
 class LinkCompleteCallback : public Callback {
@@ -321,7 +315,7 @@ public:
 
 static void OnLinkComplete(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, void* data)
 {
-    async_send(new LinkCompleteCallback(node, addr, status, data));
+    sync_send(new LinkCompleteCallback(node, addr, status, data));
 }
 
 class NodeAddressCompleteCallback : public Callback {
@@ -348,7 +342,7 @@ public:
 
 static void OnNodeAddressComplete(DPS_Node* node, DPS_NodeAddress* addr, void* data)
 {
-    async_send(new NodeAddressCompleteCallback(node, addr, data));
+    sync_send(new NodeAddressCompleteCallback(node, addr, data));
 }
 
 class AcknowledgementCallback : public Callback {
@@ -378,7 +372,7 @@ public:
 
 static void AcknowledgementHandler(DPS_Publication* pub, uint8_t* payload, size_t len)
 {
-    async_send(new AcknowledgementCallback(pub, payload, len));
+    sync_send(new AcknowledgementCallback(pub, payload, len));
 }
 
 class PublicationCallback : public Callback {
@@ -412,7 +406,7 @@ public:
 
 static void PublicationHandler(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* payload, size_t len)
 {
-    async_send(new PublicationCallback(sub, pub, payload, len));
+    sync_send(new PublicationCallback(sub, pub, payload, len));
 }
 
 static void InitializeModule()
