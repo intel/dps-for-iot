@@ -568,8 +568,23 @@ static void TestSequenceNumbers(DPS_Node* node)
     DPS_DestroyPublication(pub);
 }
 
+typedef void (*TEST)(DPS_Node*);
+
 int main(int argc, char** argv)
 {
+    static TEST tests[] = {
+        TestCreateDestroy,
+        TestLoopbackLargeMessage,
+        TestLoopbackAckLargeMessage,
+        TestHistory,
+        TestHistoryDepth,
+        TestOutOfOrderAck,
+        TestBackToBackPublish,
+        TestBackToBackPublishSeparateNodes,
+        TestRetainedMessage,
+        TestSequenceNumbers,
+        NULL
+    };
     char** arg = argv + 1;
     DPS_Event* event = NULL;
     DPS_Node *node = NULL;
@@ -587,24 +602,16 @@ int main(int argc, char** argv)
     event = DPS_CreateEvent();
     ASSERT(event);
 
-    node = DPS_CreateNode("/.", NULL, NULL);
-    ASSERT(node);
-    ret = DPS_StartNode(node, DPS_MCAST_PUB_ENABLE_SEND | DPS_MCAST_PUB_ENABLE_RECV, 0);
-    ASSERT(ret == DPS_OK);
+    for (TEST *test = tests; *test; ++test) {
+        node = DPS_CreateNode("/.", NULL, NULL);
+        ASSERT(node);
+        ret = DPS_StartNode(node, DPS_MCAST_PUB_ENABLE_SEND | DPS_MCAST_PUB_ENABLE_RECV, 0);
+        ASSERT(ret == DPS_OK);
+        (*test)(node);
+        DPS_DestroyNode(node, OnNodeDestroyed, event);
+        DPS_WaitForEvent(event);
+    }
 
-    TestCreateDestroy(node);
-    TestLoopbackLargeMessage(node);
-    TestLoopbackAckLargeMessage(node);
-    TestHistory(node);
-    TestHistoryDepth(node);
-    TestOutOfOrderAck(node);
-    TestBackToBackPublish(node);
-    TestBackToBackPublishSeparateNodes(node);
-    TestRetainedMessage(node);
-    TestSequenceNumbers(node);
-
-    DPS_DestroyNode(node, OnNodeDestroyed, event);
-    DPS_WaitForEvent(event);
     DPS_DestroyEvent(event);
     /*
      * For clean valgrind results, wait for node thread to exit
