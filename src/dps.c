@@ -70,6 +70,8 @@ typedef struct _OnOpCompletion {
 
 const DPS_UUID DPS_MaxMeshId = { .val64 = { UINT64_MAX, UINT64_MAX } };
 
+static void SendSubsTimer(uv_timer_t* handle);
+
 void DPS_LockNode(DPS_Node* node)
 {
     uv_mutex_lock(&node->nodeMutex);
@@ -579,7 +581,12 @@ void DPS_OnSendSubscriptionComplete(DPS_Node* node, void* appCtx, DPS_NetEndpoin
         remote = DPS_LookupRemoteNode(node, &ep->addr);
         if (remote) {
             remote->outbound.subPending = DPS_FALSE;
-            if (status != DPS_OK) {
+            if (status == DPS_OK) {
+                if ((node->state == DPS_NODE_RUNNING) && !node->subsPending) {
+                    node->subsPending = DPS_TRUE;
+                    uv_timer_start(&node->subsTimer, SendSubsTimer, 0, 0);
+                }
+            } else {
                 DPS_DBGPRINT("Removing node %s\n", DPS_NodeAddrToString(&ep->addr));
                 DPS_DeleteRemoteNode(node, remote);
             }
