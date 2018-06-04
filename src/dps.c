@@ -60,8 +60,6 @@ typedef struct _OnOpCompletion {
     void* data;
     DPS_Node* node;
     struct _RemoteNode* remote;
-    uint16_t ttl;
-    uv_timer_t timer;
     union {
         DPS_OnLinkComplete link;
         DPS_OnUnlinkComplete unlink;
@@ -69,12 +67,6 @@ typedef struct _OnOpCompletion {
     } on;
     struct _OnOpCompletion* next;
 } OnOpCompletion;
-
-/*
- * How long (in milliseconds) to wait to received a response from a remote
- * node this node is linking with.
- */
-#define LINK_RESPONSE_TIMEOUT  UINT16_MAX /* TODO Do we still need this?  I'm guessing this predates SAKs */
 
 const DPS_UUID DPS_MaxMeshId = { .val64 = { UINT64_MAX, UINT64_MAX } };
 
@@ -168,11 +160,6 @@ void DPS_RxBufferToTx(const DPS_RxBuffer* rxBuffer, DPS_TxBuffer* txBuffer)
     txBuffer->txPos = rxBuffer->eod;
 }
 
-static void OnTimerClosed(uv_handle_t* handle)
-{
-    free(handle->data);
-}
-
 void DPS_RemoteCompletion(DPS_Node* node, RemoteNode* remote, DPS_Status status)
 {
     OnOpCompletion* cpn = remote->completion;
@@ -182,20 +169,13 @@ void DPS_RemoteCompletion(DPS_Node* node, RemoteNode* remote, DPS_Status status)
      * See AllocCompletion() timer.data is only set if the timer handle
      * was successfully initialized
      */
-    if (cpn->timer.data) {
-        uv_timer_stop(&cpn->timer);
-    }
     remote->completion = NULL;
     if (cpn->op == LINK_OP) {
         cpn->on.link(node, &addr, status, cpn->data);
     } else if (cpn->op == UNLINK_OP) {
         cpn->on.unlink(node, &addr, cpn->data);
     }
-    if (cpn->timer.data) {
-        uv_close((uv_handle_t*)&cpn->timer, OnTimerClosed);
-    } else {
-        free(cpn);
-    }
+    free(cpn);
     if (status != DPS_OK) {
         DPS_DeleteRemoteNode(node, remote);
     }
@@ -507,49 +487,7 @@ RemoteNode* DPS_LookupRemoteNode(DPS_Node* node, DPS_NodeAddress* addr)
     return NULL;
 }
 
-static void OnCompletionTimeout(uv_timer_t* timer)
-{
-    OnOpCompletion* cpn = (OnOpCompletion*)timer->data;
-    DPS_LockNode(cpn->node);
-    DPS_RemoteCompletion(cpn->node, cpn->remote, DPS_ERR_TIMEOUT);
-    DPS_UnlockNode(cpn->node);
-}
-
-static void AsyncCompletion(uv_async_t* async)
-{
-    DPS_Node* node = (DPS_Node*)async->data;
-
-    DPS_DBGTRACE();
-
-    DPS_LockNode(node);
-
-    while (node->completionList) {
-        OnOpCompletion* cpn = node->completionList;
-        node->completionList = cpn->next;
-
-        cpn->timer.data = NULL;
-        if (node->state != DPS_NODE_RUNNING) {
-            DPS_RemoteCompletion(node, cpn->remote, DPS_ERR_STOPPING);
-            continue;
-        }
-        if (uv_timer_init(node->loop, &cpn->timer)) {
-            DPS_RemoteCompletion(node, cpn->remote, DPS_ERR_FAILURE);
-            continue;
-        }
-        /*
-         * So cpn is freed when the timer handle is closed
-         */
-        cpn->timer.data = cpn;
-        if (uv_timer_start(&cpn->timer, OnCompletionTimeout, cpn->ttl, 0)) {
-            DPS_RemoteCompletion(node, cpn->remote, DPS_ERR_FAILURE);
-            continue;
-        }
-    }
-
-    DPS_UnlockNode(node);
-}
-
-static OnOpCompletion* AllocCompletion(DPS_Node* node, RemoteNode* remote, OpType op, void* data, uint16_t ttl, void* cb)
+static OnOpCompletion* AllocCompletion(DPS_Node* node, RemoteNode* remote, OpType op, void* data, void* cb)
 {
     OnOpCompletion* cpn;
 
@@ -559,19 +497,7 @@ static OnOpCompletion* AllocCompletion(DPS_Node* node, RemoteNode* remote, OpTyp
         cpn->data = data;
         cpn->node = node;
         cpn->remote = remote;
-        cpn->ttl = ttl;
         cpn->on.cb = cb;
-        /*
-         * We are holding the node lock so we can link the completion
-         * after we have confirmed the async_send was successful.
-         */
-        if (uv_async_send(&node->completionAsync)) {
-            free(cpn);
-            cpn = NULL;
-        } else {
-            cpn->next = node->completionList;
-            node->completionList = cpn;
-        }
     }
     return cpn;
 }
@@ -1194,11 +1120,6 @@ static void StopNode(DPS_Node* node)
     DPS_AsyncResolveAddress(&node->resolverAsync);
     uv_close((uv_handle_t*)&node->resolverAsync, NULL);
     /*
-     * Cancel any pending completions before closing the handle
-     */
-    AsyncCompletion(&node->completionAsync);
-    uv_close((uv_handle_t*)&node->completionAsync, NULL);
-    /*
      * Delete remote nodes and shutdown any connections.
      */
     while (node->remoteNodes) {
@@ -1445,10 +1366,6 @@ DPS_Status DPS_StartNode(DPS_Node* node, int mcast, uint16_t rxPort)
     r = uv_async_init(node->loop, &node->resolverAsync, DPS_AsyncResolveAddress);
     assert(!r);
 
-    node->completionAsync.data = node;
-    r = uv_async_init(node->loop, &node->completionAsync, AsyncCompletion);
-    assert(!r);
-
     node->subsTimer.data = node;
     r = uv_timer_init(node->loop, &node->subsTimer);
     assert(!r);
@@ -1600,7 +1517,7 @@ DPS_Status DPS_Link(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnLinkComplete cb
     }
     assert(!remote->completion);
     remote->linked = DPS_TRUE;
-    remote->completion = AllocCompletion(node, remote, LINK_OP, data, LINK_RESPONSE_TIMEOUT, cb);
+    remote->completion = AllocCompletion(node, remote, LINK_OP, data, cb);
     if (!remote->completion) {
         DPS_DeleteRemoteNode(node, remote);
         DPS_UnlockNode(node);
@@ -1649,7 +1566,7 @@ DPS_Status DPS_Unlink(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnUnlinkComplet
      * the completion callback will be called.
      */
     remote->unlink = DPS_TRUE;
-    remote->completion = AllocCompletion(node, remote, UNLINK_OP, data, LINK_RESPONSE_TIMEOUT, cb);
+    remote->completion = AllocCompletion(node, remote, UNLINK_OP, data, cb);
     if (!remote->completion) {
         DPS_DeleteRemoteNode(node, remote);
         DPS_UnlockNode(node);
