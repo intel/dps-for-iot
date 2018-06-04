@@ -343,9 +343,8 @@ public:
     size_t m_len;
     AcknowledgementCallback(DPS_Publication* pub, uint8_t* payload, size_t len) {
         m_pub = pub;
-        m_payload = new uint8_t[len+1];
+        m_payload = new uint8_t[len];
         memcpy(m_payload, payload, len);
-        m_payload[len+1] = 0;
         m_len = len;
     }
     virtual ~AcknowledgementCallback() {
@@ -375,9 +374,8 @@ public:
     PublicationCallback(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* payload, size_t len) {
         m_sub = sub;
         m_pub = DPS_CopyPublication(pub);
-        m_payload = new uint8_t[len+1];
+        m_payload = new uint8_t[len];
         memcpy(m_payload, payload, len);
-        m_payload[len+1] = 0;
         m_len = len;
     }
     virtual ~PublicationCallback() {
