@@ -567,7 +567,9 @@ static DPS_Status CallPubHandlers(DPS_Node* node, DPS_Publication* pub)
     /*
      * Iterate over the candidates and check that the pub strings are a match
      */
-    for (sub = node->subscriptions; sub != NULL; sub = sub->next) {
+    DPS_Subscription* nextSub;
+    for (sub = node->subscriptions; sub != NULL; sub = nextSub) {
+        nextSub = sub->next;
         int match;
         if (!DPS_BitVectorIncludes(pub->shared->bf, sub->bf)) {
             continue;
