@@ -32,37 +32,28 @@ static int AsVal_bytes(Handle obj, uint8_t** bytes, size_t* len)
         v8::Local<v8::ArrayBuffer> buf;
         v8::Local<v8::Uint8Array> arr = v8::Local<v8::Uint8Array>::Cast(obj);
         (*len) = arr->ByteLength();
-        (*bytes) = (uint8_t*)malloc((*len));
-        if (!(*bytes)) {
-            return SWIG_MemoryError;
-        }
+        (*bytes) = new uint8_t[*len];
         size_t off = arr->ByteOffset();
         uint8_t* data = (uint8_t*)arr->Buffer()->GetContents().Data();
         memcpy((*bytes), &data[off], (*len));
     } else if (obj->IsArray()) {
         v8::Local<v8::Array> arr = v8::Local<v8::Array>::Cast(obj);
         (*len) = arr->Length();
-        (*bytes) = (uint8_t*)malloc((*len));
-        if (!(*bytes)) {
-            return SWIG_MemoryError;
-        }
+        (*bytes) = new uint8_t[*len];
         size_t i;
         for (i = 0; i < (*len); ++i) {
             v8::Local<v8::Value> valRef;
             if (arr->Get(SWIGV8_CURRENT_CONTEXT(), i).ToLocal(&valRef)) {
                 (*bytes)[i] = valRef->Uint32Value();
             } else {
-                free((*bytes));
+                delete[] (*bytes);
                 return SWIG_TypeError;
             }
         }
     } else if (obj->IsString()) {
         v8::Local<v8::String> str = v8::Local<v8::String>::Cast(obj);
         (*len) =str->Utf8Length();
-        (*bytes) = (uint8_t*)malloc((*len) + 1);
-        if (!(*bytes)) {
-            return SWIG_MemoryError;
-        }
+        (*bytes) = new uint8_t[*len + 1];
         str->WriteUtf8((char*)(*bytes));
     } else if (!obj->IsNull()) {
         return SWIG_TypeError;
