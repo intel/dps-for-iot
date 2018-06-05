@@ -175,8 +175,7 @@ testsrcs = ['test/hist_unit.c',
             'test/cbortest.c',
             'test/cosetest.c',
             'test/version.c',
-            'test/keystoretest.c',
-            'test/publish.c']
+            'test/keystoretest.c']
 
 Depends(testsrcs, ext_libs)
 
@@ -184,8 +183,12 @@ testprogs = []
 for test in testsrcs:
     testprogs.append(testenv.Program(test))
 
-testprogs.append(testenv.Program(['test/node.c', 'test/keys.c']))
-testprogs.append(testenv.Program(['test/link.c', 'test/keys.c']))
+testsrcs = ['test/link.c',
+            'test/node.c',
+            'test/publish.c']
+
+for test in testsrcs:
+    testprogs.append(testenv.Program([test, 'test/keys.c']))
 
 testenv.Install('#/build/test/bin', testprogs)
 

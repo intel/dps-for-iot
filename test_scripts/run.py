@@ -18,7 +18,6 @@ if 'FSAN' not in os.environ or os.environ['FSAN'] == 'no':
              os.path.join('build', 'test', 'bin', 'packtest'),
              os.path.join('build', 'test', 'bin', 'publish'),
              os.path.join('build', 'test', 'bin', 'pubsub'),
-             os.path.join('build', 'test', 'bin', 'publish'),
              os.path.join('build', 'test', 'bin', 'rle_compression'),
              os.path.join('build', 'test', 'bin', 'keystoretest'),
              os.path.join('test_scripts', 'auth.py'),

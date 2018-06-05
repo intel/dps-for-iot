@@ -21,6 +21,7 @@
 */
 
 #include "test.h"
+#include "keys.h"
 
 #define A_SIZEOF(a)  (sizeof(a) / sizeof((a)[0]))
 
@@ -44,7 +45,7 @@ static DPS_Publication* CreatePublication(DPS_Node* node, const char** topics, s
     return pub;
 }
 
-static void TestCreateDestroy(DPS_Node* node)
+static void TestCreateDestroy(DPS_Node* node, DPS_KeyStore* keyStore)
 {
     static const char* topics[] = { __FUNCTION__ };
     static const size_t numTopics = 1;
@@ -72,7 +73,7 @@ static void LoopbackLargeMessageHandler(DPS_Subscription* sub, const DPS_Publica
     DPS_SignalEvent(event, DPS_OK);
 }
 
-static void TestLoopbackLargeMessage(DPS_Node* node)
+static void TestLoopbackLargeMessage(DPS_Node* node, DPS_KeyStore* keyStore)
 {
     static const char* topics[] = { __FUNCTION__ };
     static const size_t numTopics = 1;
@@ -137,7 +138,7 @@ static void LoopbackAckLargeMessageHandler(DPS_Subscription* sub, const DPS_Publ
     ASSERT(ret == DPS_OK);
 }
 
-static void TestLoopbackAckLargeMessage(DPS_Node* node)
+static void TestLoopbackAckLargeMessage(DPS_Node* node, DPS_KeyStore* keyStore)
 {
     static const char* topics[] = { __FUNCTION__ };
     static const size_t numTopics = 1;
@@ -197,7 +198,7 @@ static void HistoryAckHandler(DPS_Publication* pub, uint8_t* payload, size_t len
     DPS_SignalEvent(event, DPS_OK);
 }
 
-static void TestHistory(DPS_Node* node)
+static void TestHistory(DPS_Node* node, DPS_KeyStore* keyStore)
 {
     static const char* topics[] = { __FUNCTION__ };
     static const size_t numTopics = 1;
@@ -252,7 +253,7 @@ static void TestHistory(DPS_Node* node)
     DPS_DestroyEvent(ackEvent);
 }
 
-static void TestHistoryDepth(DPS_Node* node)
+static void TestHistoryDepth(DPS_Node* node, DPS_KeyStore* keyStore)
 {
     static const char* topics[] = { __FUNCTION__ };
     static const size_t numTopics = 1;
@@ -319,7 +320,7 @@ static void TestHistoryDepth(DPS_Node* node)
     DPS_DestroyEvent(ackEvent);
 }
 
-static void TestOutOfOrderAck(DPS_Node* node)
+static void TestOutOfOrderAck(DPS_Node* node, DPS_KeyStore* keyStore)
 {
     static const char* topics[] = { __FUNCTION__ };
     static const size_t numTopics = 1;
@@ -390,7 +391,7 @@ static void BackToBackPublishHandler(DPS_Subscription* sub, const DPS_Publicatio
     ++(*expectedSequenceNum);
 }
 
-static void TestBackToBackPublish(DPS_Node* node)
+static void TestBackToBackPublish(DPS_Node* node, DPS_KeyStore* keyStore)
 {
     static const char* topics[] = { __FUNCTION__ };
     static const size_t numTopics = 1;
@@ -432,7 +433,7 @@ static void TestBackToBackPublish(DPS_Node* node)
     DPS_DestroyPublication(pub);
 }
 
-static void TestBackToBackPublishSeparateNodes(DPS_Node* node)
+static void TestBackToBackPublishSeparateNodes(DPS_Node* node, DPS_KeyStore* keyStore)
 {
     static const char* topics[] = { __FUNCTION__ };
     static const size_t numTopics = 1;
@@ -442,6 +443,7 @@ static void TestBackToBackPublishSeparateNodes(DPS_Node* node)
     DPS_Event* event = NULL;
     DPS_Node* subNode = NULL;
     DPS_Subscription* sub = NULL;
+    DPS_NodeAddress* addr = NULL;
     uint32_t seqNum;
     DPS_Status ret;
     size_t i;
@@ -456,9 +458,9 @@ static void TestBackToBackPublishSeparateNodes(DPS_Node* node)
     event = DPS_CreateEvent();
     ASSERT(event);
 
-    subNode = DPS_CreateNode("/.", NULL, NULL);
+    subNode = DPS_CreateNode("/.", keyStore, NULL);
     ASSERT(subNode);
-    ret = DPS_StartNode(subNode, DPS_MCAST_PUB_ENABLE_SEND | DPS_MCAST_PUB_ENABLE_RECV, 0);
+    ret = DPS_StartNode(subNode, DPS_MCAST_PUB_DISABLED, 0);
     ASSERT(ret == DPS_OK);
 
     sub = DPS_CreateSubscription(subNode, topics, numTopics);
@@ -466,6 +468,11 @@ static void TestBackToBackPublishSeparateNodes(DPS_Node* node)
     ret = DPS_SetSubscriptionData(sub, &seqNum);
     ASSERT(ret == DPS_OK);
     ret = DPS_Subscribe(sub, BackToBackPublishHandler);
+    ASSERT(ret == DPS_OK);
+
+    addr = DPS_CreateAddress();
+    ASSERT(addr);
+    ret = DPS_LinkTo(subNode, NULL, DPS_GetPortNumber(node), addr);
     ASSERT(ret == DPS_OK);
 
     seqNum = DPS_PublicationGetSequenceNum(pub) + 1;
@@ -480,6 +487,7 @@ static void TestBackToBackPublishSeparateNodes(DPS_Node* node)
      */
     SLEEP(1000);
 
+    DPS_DestroyAddress(addr);
     DPS_DestroySubscription(sub);
     DPS_DestroyNode(subNode, OnNodeDestroyed, event);
     DPS_WaitForEvent(event);
@@ -487,7 +495,7 @@ static void TestBackToBackPublishSeparateNodes(DPS_Node* node)
     DPS_DestroyPublication(pub);
 }
 
-static void TestRetainedMessage(DPS_Node* node)
+static void TestRetainedMessage(DPS_Node* node, DPS_KeyStore* keyStore)
 {
     static const char* topics[] = { __FUNCTION__ };
     static const size_t numTopics = 1;
@@ -540,7 +548,7 @@ static void TestRetainedMessage(DPS_Node* node)
     }
 }
 
-static void TestSequenceNumbers(DPS_Node* node)
+static void TestSequenceNumbers(DPS_Node* node, DPS_KeyStore* keyStore)
 {
     static const char* topics[] = { __FUNCTION__ };
     static const size_t numTopics = 1;
@@ -568,7 +576,7 @@ static void TestSequenceNumbers(DPS_Node* node)
     DPS_DestroyPublication(pub);
 }
 
-typedef void (*TEST)(DPS_Node*);
+typedef void (*TEST)(DPS_Node*, DPS_KeyStore*);
 
 int main(int argc, char** argv)
 {
@@ -587,6 +595,7 @@ int main(int argc, char** argv)
     };
     char** arg = argv + 1;
     DPS_Event* event = NULL;
+    DPS_MemoryKeyStore* memoryKeyStore = NULL;
     DPS_Node *node = NULL;
     DPS_Publication* pub = NULL;
     DPS_Status ret;
@@ -603,13 +612,16 @@ int main(int argc, char** argv)
     ASSERT(event);
 
     for (TEST *test = tests; *test; ++test) {
-        node = DPS_CreateNode("/.", NULL, NULL);
+        memoryKeyStore = DPS_CreateMemoryKeyStore();
+        DPS_SetNetworkKey(memoryKeyStore, &NetworkKeyId, &NetworkKey);
+        node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore), NULL);
         ASSERT(node);
         ret = DPS_StartNode(node, DPS_MCAST_PUB_ENABLE_SEND | DPS_MCAST_PUB_ENABLE_RECV, 0);
         ASSERT(ret == DPS_OK);
-        (*test)(node);
+        (*test)(node, DPS_MemoryKeyStoreHandle(memoryKeyStore));
         DPS_DestroyNode(node, OnNodeDestroyed, event);
         DPS_WaitForEvent(event);
+        DPS_DestroyMemoryKeyStore(memoryKeyStore);
     }
 
     DPS_DestroyEvent(event);

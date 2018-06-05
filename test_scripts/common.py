@@ -126,7 +126,10 @@ def _expect_pub(children, topics, allow_error=False, timeout=-1):
 def cleanup():
     global _children
     for child in _children:
-        child.kill(signal.SIGTERM)
+        if sys.platform == 'win32':
+            child.kill(signal.SIGBREAK)
+        else:
+            child.kill(signal.SIGTERM)
         child.read()
     for child in _children:
         child.wait()
