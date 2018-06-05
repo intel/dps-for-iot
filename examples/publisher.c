@@ -29,6 +29,7 @@
 #include <dps/dps.h>
 #include <dps/synchronous.h>
 #include <dps/event.h>
+#include <dps/json.h>
 #include "keys.h"
 
 #define A_SIZEOF(a)  (sizeof(a) / sizeof((a)[0]))
@@ -37,9 +38,11 @@
 #define MAX_MSG_LEN 128
 #define MAX_TOPIC_LEN 256
 
+static uint8_t cbor[MAX_MSG_LEN];
 static char* topics[MAX_TOPICS];
 static size_t numTopics = 0;
 
+static int json = DPS_FALSE;
 static int requestAck = DPS_FALSE;
 
 static DPS_Publication* currentPub = NULL;
@@ -88,10 +91,18 @@ static int AddTopics(char* topicList, char** msg, int* keep, int* ttl, int* encr
                 topicList += 3;
                 *keep = 0;
                 break;
+            case 'j':
+                /*
+                 * After "-j" the rest of the line is a JSON message
+                 */
+                json = DPS_TRUE;
+                *msg = topicList + 1 + len;
+                return 1;
             case 'm':
                 /*
                  * After "-m" the rest of the line is a message
                  */
+                json = DPS_FALSE;
                 *msg = topicList + 1 + len;
                 return 1;
             default:
@@ -100,7 +111,8 @@ static int AddTopics(char* topicList, char** msg, int* keep, int* ttl, int* encr
                 DPS_PRINT("        -h: Print this message\n");
                 DPS_PRINT("        -t: Set ttl on the publication\n");
                 DPS_PRINT("        -x: Disable (0) or enable symmetric (1) or asymmetric(2) encryption. Default is symmetric encryption enabled.\n");
-                DPS_PRINT("        -m: Everything after the -m is the payload for the publication.\n");
+                DPS_PRINT("        -m: Everything after the -m is the string payload for the publication.\n");
+                DPS_PRINT("        -j: Everything after the -j is the JSON payload for the publication.\n");
                 DPS_PRINT("  If there are no topic strings sends previous publication with a new sequence number\n");
                 return 0;
             }
@@ -185,7 +197,15 @@ static void ReadStdin(DPS_Node* node)
                 break;
             }
         }
-        ret = DPS_Publish(currentPub, (uint8_t*)msg, msg ? strnlen(msg, MAX_MSG_LEN) : 0, ttl);
+        if (json) {
+            size_t cborLen;
+            ret = DPS_JSON2CBOR(msg, cbor, sizeof(cbor), &cborLen);
+            if (ret == DPS_OK) {
+                ret = DPS_Publish(currentPub, cbor, cborLen, ttl);
+            }
+        } else {
+            ret = DPS_Publish(currentPub, (uint8_t*)msg, msg ? strnlen(msg, MAX_MSG_LEN) : 0, ttl);
+        }
         if (ret == DPS_OK) {
             DPS_PRINT("Pub UUID %s(%d)\n", DPS_UUIDToString(DPS_PublicationGetUUID(currentPub)),
                       DPS_PublicationGetSequenceNum(currentPub));
@@ -259,6 +279,15 @@ int main(int argc, char** argv)
                 goto Usage;
             }
             host = *arg++;
+            continue;
+        }
+        if (strcmp(*arg, "-j") == 0) {
+            ++arg;
+            if (!--argc) {
+                goto Usage;
+            }
+            json = DPS_TRUE;
+            msg = *arg++;
             continue;
         }
         if (strcmp(*arg, "-m") == 0) {
@@ -368,7 +397,15 @@ int main(int argc, char** argv)
             DPS_TimedWaitForEvent(nodeDestroyed, wait * 1000);
         }
 
-        ret = DPS_Publish(currentPub, (uint8_t*)msg, msg ? strnlen(msg, MAX_MSG_LEN) + 1 : 0, ttl);
+        if (json) {
+            size_t cborLen;
+            ret = DPS_JSON2CBOR(msg, cbor, sizeof(cbor), &cborLen);
+            if (ret == DPS_OK) {
+                ret = DPS_Publish(currentPub, cbor, cborLen, ttl);
+            }
+        } else {
+            ret = DPS_Publish(currentPub, (uint8_t*)msg, msg ? strnlen(msg, MAX_MSG_LEN) + 1 : 0, ttl);
+        }
         if (ret == DPS_OK) {
             DPS_PRINT("Pub UUID %s\n", DPS_UUIDToString(DPS_PublicationGetUUID(currentPub)));
         } else {
@@ -398,7 +435,7 @@ int main(int argc, char** argv)
     return 0;
 
 Usage:
-    DPS_PRINT("Usage %s [-d] [-x 0|1|2] [-a] [-w <seconds>] <seconds>] [-t <ttl>] [[-h <hostname>] -p <portnum>] [-l <portnum>] [-m <message>] [-r <milliseconds>] [topic1 topic2 ... topicN]\n", argv[0]);
+    DPS_PRINT("Usage %s [-d] [-x 0|1|2] [-a] [-w <seconds>] <seconds>] [-t <ttl>] [[-h <hostname>] -p <portnum>] [-l <portnum>] [-m|-j <message>] [-r <milliseconds>] [topic1 topic2 ... topicN]\n", argv[0]);
     DPS_PRINT("       -d: Enable debug ouput if built for debug.\n");
     DPS_PRINT("       -x: Disable (0) or enable symmetric (1) or asymmetric(2) encryption. Default is symmetric encryption enabled.\n");
     DPS_PRINT("       -a: Request an acknowledgement\n");
@@ -407,7 +444,8 @@ Usage:
     DPS_PRINT("       -l: Port number to listen on for incoming connections\n");
     DPS_PRINT("       -h: Specifies host (localhost is default). Mutiple -h options are permitted.\n");
     DPS_PRINT("       -p: port to link. Multiple -p options are permitted.\n");
-    DPS_PRINT("       -m: A payload message to accompany the publication.\n");
+    DPS_PRINT("       -m: A string payload to accompany the publication.\n");
+    DPS_PRINT("       -j: A JSON payload to accompany the publication.\n");
     DPS_PRINT("       -r: Time to delay between subscription updates.\n");
     DPS_PRINT("           Enters interactive mode if there are no topic strings on the command line.\n");
     DPS_PRINT("           In interactive mode type -h for commands.\n");

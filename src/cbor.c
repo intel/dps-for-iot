@@ -42,12 +42,6 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_OFF);
 #define CBOR_LEN4   26
 #define CBOR_LEN8   27
 
-#define CBOR_FALSE  (CBOR_OTHER | 20)
-#define CBOR_TRUE   (CBOR_OTHER | 21)
-#define CBOR_NULL   (CBOR_OTHER | 22)
-#define CBOR_FLOAT  (CBOR_OTHER | 26)
-#define CBOR_DOUBLE (CBOR_OTHER | 27)
-
 static int Requires(uint64_t n)
 {
     if (n < 24) {

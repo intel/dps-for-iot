@@ -58,6 +58,15 @@ extern "C" {
 #define CBOR_OTHER  (7 << 5)
 
 /**
+ * CBOR "OTHER" flags
+ */
+#define CBOR_FALSE  (CBOR_OTHER | 20)
+#define CBOR_TRUE   (CBOR_OTHER | 21)
+#define CBOR_NULL   (CBOR_OTHER | 22)
+#define CBOR_FLOAT  (CBOR_OTHER | 26)
+#define CBOR_DOUBLE (CBOR_OTHER | 27)
+
+/**
  * Maximum bytes needed to encode any length
  */
 #define CBOR_MAX_LENGTH (1 + sizeof(uint64_t))

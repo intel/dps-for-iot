@@ -34,11 +34,13 @@
 #include <dps/dps.h>
 #include <dps/synchronous.h>
 #include <dps/event.h>
+#include <dps/json.h>
 #include "keys.h"
 
 #define A_SIZEOF(a)  (sizeof(a) / sizeof((a)[0]))
 
 static int quiet = DPS_FALSE;
+static int json = DPS_FALSE;
 
 static const char AckFmt[] = "This is an ACK from %d";
 
@@ -79,7 +81,15 @@ static void OnPubMatch(DPS_Subscription* sub, const DPS_Publication* pub, uint8_
         }
         DPS_PRINT("\n");
         if (data) {
-            DPS_PRINT("%.*s\n", (int)len, data);
+            if (json) {
+                char jsonStr[1024];
+                ret = DPS_CBOR2JSON(data, len, jsonStr, sizeof(jsonStr), DPS_TRUE);
+                if (ret == DPS_OK) {
+                    DPS_PRINT("%s\n", jsonStr);
+                }
+            } else {
+                DPS_PRINT("%.*s\n", (int)len, data);
+            }
         }
     }
     if (DPS_PublicationIsAckRequested(pub)) {
@@ -267,6 +277,11 @@ int main(int argc, char** argv)
             if (strcmp(*arg, "-d") == 0) {
                 ++arg;
                 DPS_Debug = 1;
+                continue;
+            }
+            if (strcmp(*arg, "-j") == 0) {
+                ++arg;
+                json = 1;
                 continue;
             }
         }
