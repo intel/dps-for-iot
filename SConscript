@@ -125,6 +125,8 @@ if env['python']:
         pyenv.Append(CCFLAGS = ['/EHsc'])
         # Ignore warnings in generated code
         pyenv.Append(CCFLAGS = ['/wd4244'])
+    elif platform == 'posix':
+        pyenv.Append(CCFLAGS = ['-Wno-deprecated-register'])
 
     pyenv.Append(SWIGFLAGS = ['-python', '-c++', '-Wextra', '-Werror', '-v', '-O'], SWIGPATH = ['#/inc', './swig/py'])
     pyenv.Append(CPPPATH = ['swig', 'swig/py'])
@@ -191,6 +193,7 @@ testenv.Install('#/build/test/bin', testprogs)
 if platform == 'posix' and env['fsan'] == True:
     fenv = env.Clone()
     fenv.VariantDir('test/fuzzer', 'test')
+    fenv.Append(CPPPATH = ['#/ext/safestring/include'])
     fenv.Append(LINKFLAGS = ['-fsanitize=fuzzer'])
     fenv.Append(LIBS = [lib, env['UV_LIBS']])
 

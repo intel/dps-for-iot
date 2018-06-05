@@ -6,8 +6,10 @@ import copy
 import os
 import pexpect
 from pexpect import popen_spawn
+import re
 import signal
 import shutil
+from subprocess import check_output
 import sys
 
 os.environ['USE_DTLS'] = '0'
@@ -19,6 +21,7 @@ except KeyError:
 
 os.environ['PYTHONPATH'] = os.path.join('build', 'dist', 'py')
 os.environ['NODE_PATH'] = os.path.join('build', 'dist', 'js')
+os.environ['LSAN_OPTIONS'] = 'suppressions={}/asan.supp'.format(os.getcwd())
 
 _parser = argparse.ArgumentParser()
 _parser.add_argument("-d", "--debug", action='store_true',
@@ -44,6 +47,15 @@ _t = 0
 _tm = 0
 _v = 0
 
+def _spawn_env(interpreter):
+    spawn_env = os.environ.copy()
+    if interpreter != []:
+        if 'ASAN' in os.environ and os.environ['ASAN'] == 'yes':
+            match = re.search('libasan.*', check_output('ldconfig -p', shell=True))
+            libasan = match.group(0).split()[-1]
+            spawn_env.update({'LD_PRELOAD': libasan})
+    return spawn_env
+
 def _spawn_helper(n, cmd, interpreter=[]):
     global _children, _logs
     name = os.path.basename(cmd[0])
@@ -51,8 +63,7 @@ def _spawn_helper(n, cmd, interpreter=[]):
     log = open(log_name, 'wb')
     log.write('=============================\n{}{} {}\n'.format(name, n, ' '.join(cmd[1:])))
     log.write('=============================\n')
-    cmd = interpreter + cmd
-    child = popen_spawn.PopenSpawn(cmd, logfile=log)
+    child = popen_spawn.PopenSpawn(interpreter + cmd, env=_spawn_env(interpreter), logfile=log)
     child.linesep = os.linesep
     _children.append(child)
     _logs.append(log)
