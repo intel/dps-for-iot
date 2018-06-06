@@ -373,14 +373,14 @@ int main(int argc, char** argv)
     subscriber.node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore), nodeKeyId);
     DPS_SetNodeSubscriptionUpdateDelay(subscriber.node, args.subsRate);
 
+    nodeDestroyed = DPS_CreateEvent();
+
     ret = DPS_StartNode(subscriber.node, args.mcastPub, args.listenPort);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
         goto Exit;
     }
     DPS_PRINT("Subscriber is listening on port %d\n", DPS_GetPortNumber(subscriber.node));
-
-    nodeDestroyed = DPS_CreateEvent();
 
     if (args.wait) {
         /*
@@ -390,9 +390,11 @@ int main(int argc, char** argv)
     }
 
     if (!LinkTo(&subscriber, &args)) {
+        ret = DPS_ERR_FAILURE;
         goto Exit;
     }
     if (!Subscribe(&subscriber, &args)) {
+        ret = DPS_ERR_FAILURE;
         goto Exit;
     }
     if (IsInteractive(&args)) {
@@ -403,16 +405,12 @@ int main(int argc, char** argv)
     }
 
 Exit:
-    if (nodeDestroyed) {
-        if (ret != DPS_OK) {
-            DPS_DestroyNode(subscriber.node, OnNodeDestroyed, nodeDestroyed);
-        }
-        DPS_WaitForEvent(nodeDestroyed);
-        DPS_DestroyEvent(nodeDestroyed);
+    if (ret != DPS_OK) {
+        DPS_DestroyNode(subscriber.node, OnNodeDestroyed, nodeDestroyed);
     }
-    if (memoryKeyStore) {
-        DPS_DestroyMemoryKeyStore(memoryKeyStore);
-    }
+    DPS_WaitForEvent(nodeDestroyed);
+    DPS_DestroyEvent(nodeDestroyed);
+    DPS_DestroyMemoryKeyStore(memoryKeyStore);
     return (ret == DPS_OK) ? EXIT_SUCCESS : EXIT_FAILURE;
 
 Usage:

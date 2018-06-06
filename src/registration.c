@@ -273,7 +273,8 @@ static DPS_Status BuildPutPayload(DPS_TxBuffer* payload, uint16_t port)
      * TODO - for privacy address list should be encrypted using a pre-shared tenant key.
      */
     DPS_DBGPRINT("Encoding %d addresses\n", extIfs);
-    CBOR_EncodeUint8(payload, (uint8_t)extIfs);
+    ret = CBOR_EncodeUint8(payload, (uint8_t)extIfs);
+    assert(ret == DPS_OK);
     for (i = 0; i < numIfs; ++i) {
         uv_interface_address_t* ifn = &ifsAddrs[i];
         struct sockaddr* addr = (struct sockaddr*)&ifn->address;

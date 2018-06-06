@@ -642,6 +642,8 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
             DPS_UpdateSubs(node);
         }
         DPS_UnlockNode(node);
+        DPS_BitVectorFree(interests);
+        DPS_BitVectorFree(needs);
         return DPS_OK;
     }
 
