@@ -34,7 +34,10 @@ else:
 
 _children = []
 _logs = []
-_subs_rate = ['-r', '100']
+if os.environ['USE_DTLS'] == '1':
+    _subs_rate = ['-r', '800']
+else:
+    _subs_rate = ['-r', '100']
 
 _ms = 0
 _n = 0
