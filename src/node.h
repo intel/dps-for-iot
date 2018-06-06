@@ -171,7 +171,8 @@ typedef struct _RemoteNode {
         uint8_t muted;                 /**< TRUE if we have informed the remote that the link is muted */
         uint8_t deltaInd;              /**< TRUE if the interests info is a delta */
         uint8_t ackCountdown;          /**< Number of remaining subscription send retries + 1 */
-        int subPending;                /**< TRUE if subscription send is pending */
+        uint8_t includeSub;            /**< TRUE to include subscription in SAK */
+        uint8_t subPending;            /**< TRUE if subscription send is pending */
         uint32_t revision;             /**< Revision number of last subscription sent to this node */
         DPS_UUID meshId;               /**< The mesh id sent to this remote node */
         DPS_BitVector* needs;          /**< Needs bit vector sent outbound to this remote node */
@@ -353,7 +354,7 @@ DPS_Status DPS_ClearOutboundInterests(RemoteNode* remote);
  *
  * @return DPS_OK if update is successful, an error otherwise
  */
-DPS_Status DPS_UpdateOutboundInterests(DPS_Node* node, RemoteNode* remote, int* send);
+DPS_Status DPS_UpdateOutboundInterests(DPS_Node* node, RemoteNode* remote, uint8_t* send);
 
 /**
  * Lock the node

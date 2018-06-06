@@ -674,7 +674,7 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
      * Duplicate - presumably an ACK got lost
      */
     if (revision == remote->inbound.revision) {
-        ret = SendSubscriptionAck(node, remote, revision, DPS_FALSE);
+        ret = SendSubscriptionAck(node, remote, revision, remote->outbound.includeSub);
         goto DiscardAndExit;
     }
     remote->inbound.revision = revision;
@@ -725,11 +725,10 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
      * All is good so send an ACK
      */
     if (ret == DPS_OK) {
-        int includeSub = DPS_FALSE;
         if (remoteIsNew) {
-            DPS_UpdateOutboundInterests(node, remote, &includeSub);
+            DPS_UpdateOutboundInterests(node, remote, &remote->outbound.includeSub);
         }
-        ret = SendSubscriptionAck(node, remote, revision, includeSub);
+        ret = SendSubscriptionAck(node, remote, revision, remote->outbound.includeSub);
     }
     DPS_UnlockNode(node);
     DPS_UpdateSubs(node);
@@ -806,6 +805,7 @@ DPS_Status DPS_DecodeSubscriptionAck(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Rx
     DPS_LockNode(node);
     remote = DPS_LookupRemoteNode(node, &ep->addr);
     if (remote && remote->outbound.revision == revision) {
+        remote->outbound.includeSub = DPS_FALSE;
         remote->outbound.ackCountdown = 0;
         if (remote->completion) {
             DPS_RemoteCompletion(node, remote, DPS_OK);

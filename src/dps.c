@@ -296,7 +296,7 @@ static const DPS_UUID* MinMeshId(DPS_Node* node, RemoteNode* excluded)
     return minMeshId;
 }
 
-DPS_Status DPS_UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, int* send)
+DPS_Status DPS_UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, uint8_t* send)
 {
     DPS_Status ret;
     DPS_BitVector* newInterests = NULL;
@@ -736,7 +736,7 @@ static void SendSubsTimer(uv_timer_t* handle)
      * Forward subscription to all remote nodes with interests
      */
     for (remote = node->remoteNodes; remote != NULL; remote = remoteNext) {
-        int send = DPS_FALSE;
+        uint8_t send = DPS_FALSE;
         remoteNext = remote->next;
 
         if (remote->unlink) {
