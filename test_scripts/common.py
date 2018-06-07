@@ -36,8 +36,10 @@ _children = []
 _logs = []
 if os.environ['USE_DTLS'] == '1':
     _subs_rate = ['-r', '800']
+    _pub_wait = ['-w', '3']
 else:
     _subs_rate = ['-r', '100']
+    _pub_wait = ['-w', '1']
 
 _ms = 0
 _n = 0
@@ -198,7 +200,7 @@ def sub(args=''):
 def pub(args):
     global _p
     _p = _p + 1
-    cmd = [os.path.join('build', 'dist', 'bin', 'publisher'), '-w', '1'] + _debug + _subs_rate + args.split()
+    cmd = [os.path.join('build', 'dist', 'bin', 'publisher')] + _debug + _subs_rate + _pub_wait + args.split()
     child = _spawn(_p, cmd)
     _expect_listening(child)
     _expect_linked(child, args)
@@ -320,7 +322,7 @@ def reg_subs(args=''):
 def reg_pubs(args=''):
     global _rp
     _rp = _rp + 1
-    cmd = [os.path.join('build', 'dist', 'bin', 'reg_pubs'), '-w', '1'] + _debug + args.split()
+    cmd = [os.path.join('build', 'dist', 'bin', 'reg_pubs')] + _debug + _pub_wait + args.split()
     child = _spawn(_rp, cmd)
     _expect_listening(child)
     return child
