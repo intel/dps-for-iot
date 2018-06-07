@@ -27,6 +27,8 @@
 
 #include <ctype.h>
 #include <safe_lib.h>
+#include <string.h>
+#include <stdlib.h>
 #include <dps/private/cbor.h>
 #include <dps/dbg.h>
 #include <dps/json.h>

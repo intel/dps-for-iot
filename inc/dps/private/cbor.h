@@ -60,11 +60,11 @@ extern "C" {
 /**
  * CBOR "OTHER" flags
  */
-#define CBOR_FALSE  (CBOR_OTHER | 20)
-#define CBOR_TRUE   (CBOR_OTHER | 21)
-#define CBOR_NULL   (CBOR_OTHER | 22)
-#define CBOR_FLOAT  (CBOR_OTHER | 26)
-#define CBOR_DOUBLE (CBOR_OTHER | 27)
+#define CBOR_FALSE  (CBOR_OTHER | 20)   /**< CBOR option flag for boolean FALSE */
+#define CBOR_TRUE   (CBOR_OTHER | 21)   /**< CBOR option flag for boolean TRUE */
+#define CBOR_NULL   (CBOR_OTHER | 22)   /**< CBOR option flag for NULL value */
+#define CBOR_FLOAT  (CBOR_OTHER | 26)   /**< CBOR option flag for 32 bit float */
+#define CBOR_DOUBLE (CBOR_OTHER | 27)   /**< CBOR option flag for 64 bit float */
 
 /**
  * Maximum bytes needed to encode any length
