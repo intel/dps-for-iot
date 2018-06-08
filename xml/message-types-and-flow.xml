@@ -27,7 +27,8 @@
   ? 9 =&gt; bit-vector,         ; # needs - the needs bit vector
   ? 10 =&gt; bit-vector,        ; # interests - the interests bit vector
   ? 11 =&gt; [ + topic: tstr ], ; # topics - the topic strings
-  ? 12 =&gt; bstr               ; # data - payload data
+  ? 12 =&gt; bstr,              ; # data - payload data
+  ? 13 =&gt; uint               ; # ack-seq-num - sequence number for an acknowledgement
 )
 </verbatim></para><para>The description of each message type includes what fields are mandatory or optional for each section.</para></sect2>
 <sect2 id="message-types-and-flow_1uuid">
@@ -68,11 +69,11 @@
 <sect1 id="message-types-and-flow_1acknowledgement-message">
 <title>Acknowledgement message</title>
 <para><verbatim>ack = 3
-</verbatim></para><para><emphasis>pub-id</emphasis> and <emphasis>seq-num</emphasis> are mandatory in the <emphasis>protected</emphasis> section.</para><para><emphasis>data</emphasis> is optional in the <emphasis>encrypted</emphasis> section.</para></sect1>
+</verbatim></para><para><emphasis>pub-id</emphasis> and <emphasis>ack-seq-num</emphasis> are mandatory in the <emphasis>protected</emphasis> section.</para><para><emphasis>data</emphasis> is optional in the <emphasis>encrypted</emphasis> section.</para></sect1>
 <sect1 id="message-types-and-flow_1subscription-acknowledgement-message">
 <title>Subscription acknowledgement message</title>
 <para><verbatim>sak = 4
-</verbatim></para><para><emphasis>port</emphasis> and <emphasis>seq-num</emphasis> are mandatory in the <emphasis>unprotected</emphasis> section. </para></sect1>
+</verbatim></para><para><emphasis>port</emphasis> and <emphasis>ack-seq-num</emphasis> are mandatory in the <emphasis>unprotected</emphasis> section. </para></sect1>
     </detaileddescription>
   </compounddef>
 </doxygen>

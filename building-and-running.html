@@ -106,20 +106,26 @@ Linux</h2>
 <ul>
 <li>gcc or clang</li>
 <li><a href="http://scons.org/pages/download.html">SCons</a></li>
-<li>libuv is used by node.js so packages are available for many distributions but note that DPS requires libuv 1.7 or later so it may be necessary to build libuv from source. <a href="https://github.com/libuv">libuv source code on GitHub.</a></li>
+<li><p class="startli"><a href="http://dist.libuv.org/dist/">libuv</a></p>
+<p class="startli">libuv version 1.15 or higher is required.</p>
+<dl class="section note"><dt>Note</dt><dd>When the <code>UV_PATH</code> parameter to scons is specified as <code>ext/libuv</code>, the scons script pulls down and builds the source code for libuv.</dd></dl>
+</li>
 <li><a href="http://www.swig.org/download.html">SWIG</a></li>
 </ul>
 <h2><a class="anchor" id="prerequisites-windows"></a>
 Windows</h2>
 <ul>
 <li><p class="startli"><a href="https://www.visualstudio.com/downloads/">Visual Studio</a></p>
-<p class="startli">Note: In Visual Studio 2015, Visual C++ is not installed by default. When installing, be sure to choose <b>Custom</b> installation and then choose the C++ components you require. Or, if Visual Studio is already installed, choose <b>File | New | Project | C++</b> and you will be prompted to install the necessary components.</p>
+<dl class="section note"><dt>Note</dt><dd>In Visual Studio 2015, Visual C++ is not installed by default. When installing, be sure to choose <b>Custom</b> installation and then choose the C++ components you require. Or, if Visual Studio is already installed, choose <b>File | New | Project | C++</b> and you will be prompted to install the necessary components.</dd></dl>
 </li>
 <li><a href="https://www.python.org/downloads/windows/">Latest Python 2.7 Release</a></li>
 <li><p class="startli"><a href="http://scons.org/pages/download.html">SCons</a></p>
-<p class="startli">Note: The SCons installer will not detect the 64-bit installation of Python. Instead, download the zip file and follow the installation instructions in SCons README.txt.</p>
+<dl class="section note"><dt>Note</dt><dd>The SCons installer will not detect the 64-bit installation of Python. Instead, download the zip file and follow the installation instructions in SCons README.txt.</dd></dl>
 </li>
-<li><a href="http://dist.libuv.org/dist/">libuv</a></li>
+<li><p class="startli"><a href="http://dist.libuv.org/dist/">libuv</a></p>
+<p class="startli">libuv version 1.15 or higher is required.</p>
+<dl class="section note"><dt>Note</dt><dd>When the <code>UV_PATH</code> parameter to scons is specified as <code>ext\libuv</code>, the scons script pulls down and builds the source code for libuv.</dd></dl>
+</li>
 <li><a href="http://www.swig.org/download.html">SWIG</a></li>
 </ul>
 <h2><a class="anchor" id="prerequisites-yocto"></a>
@@ -148,6 +154,9 @@ Linux and Windows</h2>
 <p>The scons script pulls down source code from two external projects (mbedtls, and safestringlib) into the <code>./ext</code> directory. If necessary these projects can be populated manually:</p>
 <pre class="fragment">$ git clone https://github.com/ARMmbed/mbedtls ext/mbedtls
 $ git clone https://github.com/01org/safestringlib.git ext/safestring
+</pre><p>When <code>UV_PATH</code> is specified as <code>ext/libuv</code>, the scons script pulls down source code for libuv. If necessary these projects can be populated manually:</p>
+<pre class="fragment">$ git clone https://github.com/libuv/libuv.git ext/libuv
+$ git clone https://chromium.googlesource.com/external/gyp ext/libuv/build/gyp
 </pre><dl class="section note"><dt>Note</dt><dd>The ext projects are populated the first time DPS is built. To update these projects you need to manually do a <code>git pull</code> or delete the project directory and rerun scons.</dd></dl>
 <h2><a class="anchor" id="building-yocto"></a>
 Yocto</h2>
@@ -168,7 +177,7 @@ Examples</h2>
 </div><!-- doc-content -->
 <div class="navpath" id="nav-path">
   <ul>
-    <li class="footer" style="float:left"><b>Distributed Publish & Subscribe for IoT</b></li> <li class="footer">Generated Tue Mar 13 2018 10:08:58</li>
+    <li class="footer" style="float:left"><b>Distributed Publish & Subscribe for IoT</b></li> <li class="footer">Generated Fri Jun 8 2018 15:56:01</li>
   </ul>
 </div>
 </body>

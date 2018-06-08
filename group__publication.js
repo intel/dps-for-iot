@@ -1,7 +1,11 @@
 var group__publication =
 [
+    [ "_DPS_QoS", "struct___d_p_s___qo_s.html", [
+      [ "historyDepth", "struct___d_p_s___qo_s.html#a941d0ca942c0de6f8bbb52755387ce02", null ]
+    ] ],
     [ "DPS_AcknowledgementHandler", "group__publication.html#gaf8615f0bcd3d95859cd7f2cdbf772e23", null ],
     [ "DPS_Publication", "group__publication.html#ga0d439693474aa54e27f3d45a054696ac", null ],
+    [ "DPS_QoS", "group__publication.html#ga875f9462225b198bbf7dd1c4a5390017", null ],
     [ "DPS_AckGetSenderKeyId", "group__publication.html#ga9190b8fa3bad848fb428acd6c0c2b210", null ],
     [ "DPS_AckPublication", "group__publication.html#ga308074429a566ffb8d04d55bae520b04", null ],
     [ "DPS_CopyPublication", "group__publication.html#ga41f31a8b63558e13d73d96de6086e5c4", null ],
@@ -10,6 +14,7 @@ var group__publication =
     [ "DPS_GetPublicationData", "group__publication.html#gaa8bee35089ac62289c9ba0e6a0568ca0", null ],
     [ "DPS_InitPublication", "group__publication.html#ga7b0709e28cb34d5a30b90e4142cd6c19", null ],
     [ "DPS_PublicationAddSubId", "group__publication.html#ga91471ddf6f66798e255b28b3e913144b", null ],
+    [ "DPS_PublicationConfigureQoS", "group__publication.html#ga027a7ee80859f47a3263e29d8c989c40", null ],
     [ "DPS_PublicationGetNode", "group__publication.html#gad2a37d52f12c93434b431eefd732f363", null ],
     [ "DPS_PublicationGetNumTopics", "group__publication.html#gaee6fc3b13484faacff0d26646778f777", null ],
     [ "DPS_PublicationGetSenderKeyId", "group__publication.html#ga1d7e81c2f0b19736a4f7a7195e5bd98d", null ],

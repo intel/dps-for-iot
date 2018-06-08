@@ -15,7 +15,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="127" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="127" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="126" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="126" bodyend="-1"/>
       </memberdef>
       <memberdef kind="variable" id="struct___d_p_s___key_symmetric_1ad12194a41f7828b7b7098608bf7d5fd0" prot="public" static="no" mutable="no">
         <type>size_t</type>
@@ -28,7 +28,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="128" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="128" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="127" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="127" bodyend="-1"/>
       </memberdef>
       </sectiondef>
     <briefdescription>
@@ -36,7 +36,7 @@
     <detaileddescription>
 <para><simplesect kind="note"><para>Need to define this outside of DPS_Key to satisfy SWIG. </para></simplesect>
 </para>    </detaileddescription>
-    <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="126" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="126" bodyend="129"/>
+    <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="125" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="125" bodyend="128"/>
     <listofallmembers>
       <member refid="struct___d_p_s___key_symmetric_1affb7a3c0682b963d4011a1d7ecbbe76a" prot="public" virt="non-virtual"><scope>_DPS_KeySymmetric</scope><name>key</name></member>
       <member refid="struct___d_p_s___key_symmetric_1ad12194a41f7828b7b7098608bf7d5fd0" prot="public" virt="non-virtual"><scope>_DPS_KeySymmetric</scope><name>len</name></member>

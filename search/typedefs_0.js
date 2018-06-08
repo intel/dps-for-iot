@@ -25,6 +25,7 @@ var searchData=
   ['dps_5fonunlinkcomplete',['DPS_OnUnlinkComplete',['../group__node.html#ga70b98e7cc39f0dccdba41f0984de82f6',1,'dps.h']]],
   ['dps_5fpublication',['DPS_Publication',['../group__publication.html#ga0d439693474aa54e27f3d45a054696ac',1,'dps.h']]],
   ['dps_5fpublicationhandler',['DPS_PublicationHandler',['../group__subscription.html#gab95ef1762636ad505c940744b8dce83f',1,'dps.h']]],
+  ['dps_5fqos',['DPS_QoS',['../group__publication.html#ga875f9462225b198bbf7dd1c4a5390017',1,'dps.h']]],
   ['dps_5fregistration',['DPS_Registration',['../group__registration.html#gac06db7e10b2626b06bacd09414e7d740',1,'registration.h']]],
   ['dps_5fregistrationlist',['DPS_RegistrationList',['../group__registration.html#ga2b9489ff306ad253d24b03c418a6eda0',1,'registration.h']]],
   ['dps_5fstatus',['DPS_Status',['../group__status.html#ga30395a84d3cad9d4ec29848106415038',1,'err.h']]],

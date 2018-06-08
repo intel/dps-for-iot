@@ -1,0 +1,30 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.13">
+  <compounddef id="struct___d_p_s___qo_s" kind="struct" language="C++" prot="public">
+    <compoundname>_DPS_QoS</compoundname>
+    <includes refid="dps_8h" local="no">dps.h</includes>
+      <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="struct___d_p_s___qo_s_1a941d0ca942c0de6f8bbb52755387ce02" prot="public" static="no" mutable="no">
+        <type>size_t</type>
+        <definition>size_t _DPS_QoS::historyDepth</definition>
+        <argsstring></argsstring>
+        <name>historyDepth</name>
+        <briefdescription>
+<para>The maximum number of past and future publications to keep in this series. </para>        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="784" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="784" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+<para>The Quality-of-Service (QoS) parameters. </para>    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="782" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="782" bodyend="785"/>
+    <listofallmembers>
+      <member refid="struct___d_p_s___qo_s_1a941d0ca942c0de6f8bbb52755387ce02" prot="public" virt="non-virtual"><scope>_DPS_QoS</scope><name>historyDepth</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -19,6 +19,7 @@ var group__status =
     [ "DPS_ERR_NULL", "group__status.html#ga36c4d95c785c30cd74bb4498703ae231", null ],
     [ "DPS_ERR_OK", "group__status.html#ga9127c1d49f4ca6a51c5585efc76ce362", null ],
     [ "DPS_ERR_OVERFLOW", "group__status.html#ga54ee1a62589bee7cd9e82acfd4fa1cad", null ],
+    [ "DPS_ERR_RANGE", "group__status.html#ga2b08e90081ec2019e3e0d304d3693f6f", null ],
     [ "DPS_ERR_READ", "group__status.html#ga6030b4923c05c4ad75e89b3b7b923c5f", null ],
     [ "DPS_ERR_RESOURCES", "group__status.html#ga09dd06b53fdfdc87406d380de331b75b", null ],
     [ "DPS_ERR_SECURITY", "group__status.html#gaa3bb7fee9a4a926de2df54a272446b5c", null ],

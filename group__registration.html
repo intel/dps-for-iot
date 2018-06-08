@@ -124,17 +124,25 @@ Macros</h2></td></tr>
 #define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__registration.html#ga0564134dd21bdecf8e8e25cf832e2a38">DPS_CANDIDATE_UNLINKED</a>&#160;&#160;&#160;0x08</td></tr>
 <tr class="memdesc:ga0564134dd21bdecf8e8e25cf832e2a38"><td class="mdescLeft">&#160;</td><td class="mdescRight">Registration was linked but is currently not linked. <br /></td></tr>
 <tr class="separator:ga0564134dd21bdecf8e8e25cf832e2a38"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga232cb7b41dc02a9c515acd1b4561e102"><td class="memItemLeft" align="right" valign="top"><a id="ga232cb7b41dc02a9c515acd1b4561e102"></a>
+#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__registration.html#ga232cb7b41dc02a9c515acd1b4561e102">DPS_REGISTRATION_GET_TIMEOUT</a>&#160;&#160;&#160;5000</td></tr>
+<tr class="memdesc:ga232cb7b41dc02a9c515acd1b4561e102"><td class="mdescLeft">&#160;</td><td class="mdescRight">Default 5 second timeout for get requests. <br /></td></tr>
+<tr class="separator:ga232cb7b41dc02a9c515acd1b4561e102"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga3347dfe9e98b18d6b9c64eedbfebb7ae"><td class="memItemLeft" align="right" valign="top"><a id="ga3347dfe9e98b18d6b9c64eedbfebb7ae"></a>
+#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__registration.html#ga3347dfe9e98b18d6b9c64eedbfebb7ae">DPS_REGISTRATION_PUT_TIMEOUT</a>&#160;&#160;&#160;2000</td></tr>
+<tr class="memdesc:ga3347dfe9e98b18d6b9c64eedbfebb7ae"><td class="mdescLeft">&#160;</td><td class="mdescRight">Default 2 second timeout for put requests. <br /></td></tr>
+<tr class="separator:ga3347dfe9e98b18d6b9c64eedbfebb7ae"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="typedef-members"></a>
 Typedefs</h2></td></tr>
 <tr class="memitem:gad6b4f95f999e950345587b5ae2de69e2"><td class="memItemLeft" align="right" valign="top">typedef void(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__registration.html#gad6b4f95f999e950345587b5ae2de69e2">DPS_OnRegGetComplete</a>) (<a class="el" href="group__registration.html#ga2b9489ff306ad253d24b03c418a6eda0">DPS_RegistrationList</a> *regs, <a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a> status, void *data)</td></tr>
-<tr class="memdesc:gad6b4f95f999e950345587b5ae2de69e2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function prototype for callback called when <a class="el" href="group__registration.html#ga7288d76e731feb67b22951d7d1966311" title="Resolve the host and port of a registration service and lookup the addresses registered with that ser...">DPS_Registration_Get()</a> completes.  <a href="#gad6b4f95f999e950345587b5ae2de69e2">More...</a><br /></td></tr>
+<tr class="memdesc:gad6b4f95f999e950345587b5ae2de69e2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function prototype for callback called when <a class="el" href="group__registration.html#ga2321a01538e7983ad7685683a16df8c8" title="Resolve the host and port of a registration service and lookup the addresses registered with that ser...">DPS_Registration_Get()</a> completes.  <a href="#gad6b4f95f999e950345587b5ae2de69e2">More...</a><br /></td></tr>
 <tr class="separator:gad6b4f95f999e950345587b5ae2de69e2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gaaa0a8c9235e57aaf3e95dc3ecbf13c53"><td class="memItemLeft" align="right" valign="top">typedef void(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__registration.html#gaaa0a8c9235e57aaf3e95dc3ecbf13c53">DPS_OnRegLinkToComplete</a>) (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, <a class="el" href="group__registration.html#ga2b9489ff306ad253d24b03c418a6eda0">DPS_RegistrationList</a> *regs, <a class="el" href="group__nodeaddress.html#ga9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *addr, <a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a> status, void *data)</td></tr>
 <tr class="memdesc:gaaa0a8c9235e57aaf3e95dc3ecbf13c53"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function prototype for callback called when <a class="el" href="group__registration.html#ga73550318aa9625aff612e549e9854e0c" title="Randomly select a remote candidate to link to. ">DPS_Registration_LinkTo()</a> completes.  <a href="#gaaa0a8c9235e57aaf3e95dc3ecbf13c53">More...</a><br /></td></tr>
 <tr class="separator:gaaa0a8c9235e57aaf3e95dc3ecbf13c53"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga8f1d316de08b7dea7dfe55ae814e0219"><td class="memItemLeft" align="right" valign="top">typedef void(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__registration.html#ga8f1d316de08b7dea7dfe55ae814e0219">DPS_OnRegPutComplete</a>) (<a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a> status, void *data)</td></tr>
-<tr class="memdesc:ga8f1d316de08b7dea7dfe55ae814e0219"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function prototype for callback called when <a class="el" href="group__registration.html#gac412d38875c80431c558773a42ba0766" title="Resolve the host and port of a registration service and register a local node with that service...">DPS_Registration_Put()</a> completes.  <a href="#ga8f1d316de08b7dea7dfe55ae814e0219">More...</a><br /></td></tr>
+<tr class="memdesc:ga8f1d316de08b7dea7dfe55ae814e0219"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function prototype for callback called when <a class="el" href="group__registration.html#ga29a03abc318fd39e11847d7b4f7bf520" title="Resolve the host and port of a registration service and register a local node with that service...">DPS_Registration_Put()</a> completes.  <a href="#ga8f1d316de08b7dea7dfe55ae814e0219">More...</a><br /></td></tr>
 <tr class="separator:ga8f1d316de08b7dea7dfe55ae814e0219"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gac06db7e10b2626b06bacd09414e7d740"><td class="memItemLeft" align="right" valign="top"><a id="gac06db7e10b2626b06bacd09414e7d740"></a>
 typedef struct <a class="el" href="struct___d_p_s___registration.html">_DPS_Registration</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__registration.html#gac06db7e10b2626b06bacd09414e7d740">DPS_Registration</a></td></tr>
@@ -153,24 +161,24 @@ Functions</h2></td></tr>
 <tr class="memitem:ga0dbaa5dbea47290035a11dc22fc45f2d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__registration.html#ga0dbaa5dbea47290035a11dc22fc45f2d">DPS_DestroyRegistrationList</a> (<a class="el" href="group__registration.html#ga2b9489ff306ad253d24b03c418a6eda0">DPS_RegistrationList</a> *regs)</td></tr>
 <tr class="memdesc:ga0dbaa5dbea47290035a11dc22fc45f2d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Destroy a registration list and free resources.  <a href="#ga0dbaa5dbea47290035a11dc22fc45f2d">More...</a><br /></td></tr>
 <tr class="separator:ga0dbaa5dbea47290035a11dc22fc45f2d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga7288d76e731feb67b22951d7d1966311"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__registration.html#ga7288d76e731feb67b22951d7d1966311">DPS_Registration_Get</a> (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, const char *host, uint16_t port, const char *tenantString, <a class="el" href="group__registration.html#ga2b9489ff306ad253d24b03c418a6eda0">DPS_RegistrationList</a> *regs, <a class="el" href="group__registration.html#gad6b4f95f999e950345587b5ae2de69e2">DPS_OnRegGetComplete</a> cb, void *data)</td></tr>
-<tr class="memdesc:ga7288d76e731feb67b22951d7d1966311"><td class="mdescLeft">&#160;</td><td class="mdescRight">Resolve the host and port of a registration service and lookup the addresses registered with that service.  <a href="#ga7288d76e731feb67b22951d7d1966311">More...</a><br /></td></tr>
-<tr class="separator:ga7288d76e731feb67b22951d7d1966311"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga189dc57b265d83d6503f18e953759559"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__registration.html#ga189dc57b265d83d6503f18e953759559">DPS_Registration_GetSyn</a> (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, const char *host, uint16_t port, const char *tenantString, <a class="el" href="group__registration.html#ga2b9489ff306ad253d24b03c418a6eda0">DPS_RegistrationList</a> *regs)</td></tr>
-<tr class="memdesc:ga189dc57b265d83d6503f18e953759559"><td class="mdescLeft">&#160;</td><td class="mdescRight">A synchronous version of DPS_RegistrationGet() this function blocks until the candidate list has been populated or the request times out.  <a href="#ga189dc57b265d83d6503f18e953759559">More...</a><br /></td></tr>
-<tr class="separator:ga189dc57b265d83d6503f18e953759559"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga2321a01538e7983ad7685683a16df8c8"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__registration.html#ga2321a01538e7983ad7685683a16df8c8">DPS_Registration_Get</a> (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, const char *host, uint16_t port, const char *tenantString, <a class="el" href="group__registration.html#ga2b9489ff306ad253d24b03c418a6eda0">DPS_RegistrationList</a> *regs, uint16_t timeout, <a class="el" href="group__registration.html#gad6b4f95f999e950345587b5ae2de69e2">DPS_OnRegGetComplete</a> cb, void *data)</td></tr>
+<tr class="memdesc:ga2321a01538e7983ad7685683a16df8c8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Resolve the host and port of a registration service and lookup the addresses registered with that service.  <a href="#ga2321a01538e7983ad7685683a16df8c8">More...</a><br /></td></tr>
+<tr class="separator:ga2321a01538e7983ad7685683a16df8c8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga8d4821485ce50e028e3057fc47d62e4a"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__registration.html#ga8d4821485ce50e028e3057fc47d62e4a">DPS_Registration_GetSyn</a> (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, const char *host, uint16_t port, const char *tenantString, <a class="el" href="group__registration.html#ga2b9489ff306ad253d24b03c418a6eda0">DPS_RegistrationList</a> *regs, uint16_t timeout)</td></tr>
+<tr class="memdesc:ga8d4821485ce50e028e3057fc47d62e4a"><td class="mdescLeft">&#160;</td><td class="mdescRight">A synchronous version of DPS_RegistrationGet() this function blocks until the candidate list has been populated or the request times out.  <a href="#ga8d4821485ce50e028e3057fc47d62e4a">More...</a><br /></td></tr>
+<tr class="separator:ga8d4821485ce50e028e3057fc47d62e4a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga73550318aa9625aff612e549e9854e0c"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__registration.html#ga73550318aa9625aff612e549e9854e0c">DPS_Registration_LinkTo</a> (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, <a class="el" href="group__registration.html#ga2b9489ff306ad253d24b03c418a6eda0">DPS_RegistrationList</a> *regs, <a class="el" href="group__registration.html#gaaa0a8c9235e57aaf3e95dc3ecbf13c53">DPS_OnRegLinkToComplete</a> cb, void *data)</td></tr>
 <tr class="memdesc:ga73550318aa9625aff612e549e9854e0c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Randomly select a remote candidate to link to.  <a href="#ga73550318aa9625aff612e549e9854e0c">More...</a><br /></td></tr>
 <tr class="separator:ga73550318aa9625aff612e549e9854e0c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gab50e1fb04be97888ec759b1f0b3df1e6"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__registration.html#gab50e1fb04be97888ec759b1f0b3df1e6">DPS_Registration_LinkToSyn</a> (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, <a class="el" href="group__registration.html#ga2b9489ff306ad253d24b03c418a6eda0">DPS_RegistrationList</a> *regs, <a class="el" href="group__nodeaddress.html#ga9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *addr)</td></tr>
 <tr class="memdesc:gab50e1fb04be97888ec759b1f0b3df1e6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Synchronous version of Registration_LinkTo.  <a href="#gab50e1fb04be97888ec759b1f0b3df1e6">More...</a><br /></td></tr>
 <tr class="separator:gab50e1fb04be97888ec759b1f0b3df1e6"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gac412d38875c80431c558773a42ba0766"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__registration.html#gac412d38875c80431c558773a42ba0766">DPS_Registration_Put</a> (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, const char *host, uint16_t port, const char *tenantString, <a class="el" href="group__registration.html#ga8f1d316de08b7dea7dfe55ae814e0219">DPS_OnRegPutComplete</a> cb, void *data)</td></tr>
-<tr class="memdesc:gac412d38875c80431c558773a42ba0766"><td class="mdescLeft">&#160;</td><td class="mdescRight">Resolve the host and port of a registration service and register a local node with that service.  <a href="#gac412d38875c80431c558773a42ba0766">More...</a><br /></td></tr>
-<tr class="separator:gac412d38875c80431c558773a42ba0766"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga19a9b2743c27769b371c1fc8b97eced1"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__registration.html#ga19a9b2743c27769b371c1fc8b97eced1">DPS_Registration_PutSyn</a> (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, const char *host, uint16_t port, const char *tenantString)</td></tr>
-<tr class="memdesc:ga19a9b2743c27769b371c1fc8b97eced1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Synchronous version of DPS_RegistrationPut().  <a href="#ga19a9b2743c27769b371c1fc8b97eced1">More...</a><br /></td></tr>
-<tr class="separator:ga19a9b2743c27769b371c1fc8b97eced1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga29a03abc318fd39e11847d7b4f7bf520"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__registration.html#ga29a03abc318fd39e11847d7b4f7bf520">DPS_Registration_Put</a> (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, const char *host, uint16_t port, const char *tenantString, uint16_t timeout, <a class="el" href="group__registration.html#ga8f1d316de08b7dea7dfe55ae814e0219">DPS_OnRegPutComplete</a> cb, void *data)</td></tr>
+<tr class="memdesc:ga29a03abc318fd39e11847d7b4f7bf520"><td class="mdescLeft">&#160;</td><td class="mdescRight">Resolve the host and port of a registration service and register a local node with that service.  <a href="#ga29a03abc318fd39e11847d7b4f7bf520">More...</a><br /></td></tr>
+<tr class="separator:ga29a03abc318fd39e11847d7b4f7bf520"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga5f1d9eac3ac7ac4869e40b2e33c8ae12"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__registration.html#ga5f1d9eac3ac7ac4869e40b2e33c8ae12">DPS_Registration_PutSyn</a> (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, const char *host, uint16_t port, const char *tenantString, uint16_t timeout)</td></tr>
+<tr class="memdesc:ga5f1d9eac3ac7ac4869e40b2e33c8ae12"><td class="mdescLeft">&#160;</td><td class="mdescRight">Synchronous version of DPS_RegistrationPut().  <a href="#ga5f1d9eac3ac7ac4869e40b2e33c8ae12">More...</a><br /></td></tr>
+<tr class="separator:ga5f1d9eac3ac7ac4869e40b2e33c8ae12"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="var-members"></a>
 Variables</h2></td></tr>
@@ -194,12 +202,12 @@ const char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" hr
       </table>
 </div><div class="memdoc">
 
-<p>Function prototype for callback called when <a class="el" href="group__registration.html#ga7288d76e731feb67b22951d7d1966311" title="Resolve the host and port of a registration service and lookup the addresses registered with that ser...">DPS_Registration_Get()</a> completes. </p>
+<p>Function prototype for callback called when <a class="el" href="group__registration.html#ga2321a01538e7983ad7685683a16df8c8" title="Resolve the host and port of a registration service and lookup the addresses registered with that ser...">DPS_Registration_Get()</a> completes. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">regs</td><td>Struct containing the list of candidate passed in to <a class="el" href="group__registration.html#ga7288d76e731feb67b22951d7d1966311" title="Resolve the host and port of a registration service and lookup the addresses registered with that ser...">DPS_Registration_Get()</a> </td></tr>
+    <tr><td class="paramname">regs</td><td>Struct containing the list of candidate passed in to <a class="el" href="group__registration.html#ga2321a01538e7983ad7685683a16df8c8" title="Resolve the host and port of a registration service and lookup the addresses registered with that ser...">DPS_Registration_Get()</a> </td></tr>
     <tr><td class="paramname">status</td><td>DPS_OK if the get completed successfully - the registration list might be empty, </td></tr>
-    <tr><td class="paramname">data</td><td>Caller supplied data passed into the <a class="el" href="group__registration.html#ga7288d76e731feb67b22951d7d1966311" title="Resolve the host and port of a registration service and lookup the addresses registered with that ser...">DPS_Registration_Get()</a> </td></tr>
+    <tr><td class="paramname">data</td><td>Caller supplied data passed into the <a class="el" href="group__registration.html#ga2321a01538e7983ad7685683a16df8c8" title="Resolve the host and port of a registration service and lookup the addresses registered with that ser...">DPS_Registration_Get()</a> </td></tr>
   </table>
   </dd>
 </dl>
@@ -248,7 +256,7 @@ const char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" hr
       </table>
 </div><div class="memdoc">
 
-<p>Function prototype for callback called when <a class="el" href="group__registration.html#gac412d38875c80431c558773a42ba0766" title="Resolve the host and port of a registration service and register a local node with that service...">DPS_Registration_Put()</a> completes. </p>
+<p>Function prototype for callback called when <a class="el" href="group__registration.html#ga29a03abc318fd39e11847d7b4f7bf520" title="Resolve the host and port of a registration service and register a local node with that service...">DPS_Registration_Put()</a> completes. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">status</td><td>Status code indicating success or failure<ul>
@@ -256,7 +264,7 @@ const char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" hr
 <li>Other error status codes </li>
 </ul>
 </td></tr>
-    <tr><td class="paramname">data</td><td>Caller supplied data passed into the <a class="el" href="group__registration.html#gac412d38875c80431c558773a42ba0766" title="Resolve the host and port of a registration service and register a local node with that service...">DPS_Registration_Put()</a> </td></tr>
+    <tr><td class="paramname">data</td><td>Caller supplied data passed into the <a class="el" href="group__registration.html#ga29a03abc318fd39e11847d7b4f7bf520" title="Resolve the host and port of a registration service and register a local node with that service...">DPS_Registration_Put()</a> </td></tr>
   </table>
   </dd>
 </dl>
@@ -317,8 +325,8 @@ const char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" hr
 
 </div>
 </div>
-<a id="ga7288d76e731feb67b22951d7d1966311"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga7288d76e731feb67b22951d7d1966311">&#9670;&nbsp;</a></span>DPS_Registration_Get()</h2>
+<a id="ga2321a01538e7983ad7685683a16df8c8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga2321a01538e7983ad7685683a16df8c8">&#9670;&nbsp;</a></span>DPS_Registration_Get()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -356,6 +364,12 @@ const char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" hr
         <tr>
           <td class="paramkey"></td>
           <td></td>
+          <td class="paramtype">uint16_t&#160;</td>
+          <td class="paramname"><em>timeout</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
           <td class="paramtype"><a class="el" href="group__registration.html#gad6b4f95f999e950345587b5ae2de69e2">DPS_OnRegGetComplete</a>&#160;</td>
           <td class="paramname"><em>cb</em>, </td>
         </tr>
@@ -381,6 +395,7 @@ const char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" hr
     <tr><td class="paramname">port</td><td>The port number </td></tr>
     <tr><td class="paramname">tenantString</td><td>Topic string identifying the tenant </td></tr>
     <tr><td class="paramname">regs</td><td>Registration list for accumulating the results. The count field must be initialized with the maximum number of registrations to be returned. The candidate list pointer must remain valid until the callback is called. </td></tr>
+    <tr><td class="paramname">timeout</td><td>Timeout in milliseconds </td></tr>
     <tr><td class="paramname">cb</td><td>The callback to call with the result </td></tr>
     <tr><td class="paramname">data</td><td>Caller supplied data to be passed to the callback</td></tr>
   </table>
@@ -390,8 +405,8 @@ const char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" hr
 
 </div>
 </div>
-<a id="ga189dc57b265d83d6503f18e953759559"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga189dc57b265d83d6503f18e953759559">&#9670;&nbsp;</a></span>DPS_Registration_GetSyn()</h2>
+<a id="ga8d4821485ce50e028e3057fc47d62e4a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga8d4821485ce50e028e3057fc47d62e4a">&#9670;&nbsp;</a></span>DPS_Registration_GetSyn()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -424,7 +439,13 @@ const char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" hr
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype"><a class="el" href="group__registration.html#ga2b9489ff306ad253d24b03c418a6eda0">DPS_RegistrationList</a> *&#160;</td>
-          <td class="paramname"><em>regs</em>&#160;</td>
+          <td class="paramname"><em>regs</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint16_t&#160;</td>
+          <td class="paramname"><em>timeout</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -441,7 +462,8 @@ const char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" hr
     <tr><td class="paramname">host</td><td>The host name or IP address to register with </td></tr>
     <tr><td class="paramname">port</td><td>The port number </td></tr>
     <tr><td class="paramname">tenantString</td><td>Topic string identifying the tenant </td></tr>
-    <tr><td class="paramname">regs</td><td>Registration list for accumulating the results.</td></tr>
+    <tr><td class="paramname">regs</td><td>Registration list for accumulating the results. </td></tr>
+    <tr><td class="paramname">timeout</td><td>Timeout in milliseconds</td></tr>
   </table>
   </dd>
 </dl>
@@ -556,8 +578,8 @@ const char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" hr
 
 </div>
 </div>
-<a id="gac412d38875c80431c558773a42ba0766"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#gac412d38875c80431c558773a42ba0766">&#9670;&nbsp;</a></span>DPS_Registration_Put()</h2>
+<a id="ga29a03abc318fd39e11847d7b4f7bf520"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga29a03abc318fd39e11847d7b4f7bf520">&#9670;&nbsp;</a></span>DPS_Registration_Put()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -589,6 +611,12 @@ const char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" hr
         <tr>
           <td class="paramkey"></td>
           <td></td>
+          <td class="paramtype">uint16_t&#160;</td>
+          <td class="paramname"><em>timeout</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
           <td class="paramtype"><a class="el" href="group__registration.html#ga8f1d316de08b7dea7dfe55ae814e0219">DPS_OnRegPutComplete</a>&#160;</td>
           <td class="paramname"><em>cb</em>, </td>
         </tr>
@@ -613,6 +641,7 @@ const char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" hr
     <tr><td class="paramname">host</td><td>The host name or IP address to register with </td></tr>
     <tr><td class="paramname">port</td><td>The port number </td></tr>
     <tr><td class="paramname">tenantString</td><td>Topic string identifying the tenant </td></tr>
+    <tr><td class="paramname">timeout</td><td>Timeout in milliseconds </td></tr>
     <tr><td class="paramname">cb</td><td>Callback called when the registration completes. </td></tr>
     <tr><td class="paramname">data</td><td>Caller provided data to be passed to the callback function</td></tr>
   </table>
@@ -622,8 +651,8 @@ const char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" hr
 
 </div>
 </div>
-<a id="ga19a9b2743c27769b371c1fc8b97eced1"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga19a9b2743c27769b371c1fc8b97eced1">&#9670;&nbsp;</a></span>DPS_Registration_PutSyn()</h2>
+<a id="ga5f1d9eac3ac7ac4869e40b2e33c8ae12"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga5f1d9eac3ac7ac4869e40b2e33c8ae12">&#9670;&nbsp;</a></span>DPS_Registration_PutSyn()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -650,7 +679,13 @@ const char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" hr
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">const char *&#160;</td>
-          <td class="paramname"><em>tenantString</em>&#160;</td>
+          <td class="paramname"><em>tenantString</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint16_t&#160;</td>
+          <td class="paramname"><em>timeout</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -667,7 +702,8 @@ const char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" hr
     <tr><td class="paramname">node</td><td>The local node to register </td></tr>
     <tr><td class="paramname">host</td><td>The host name or IP address to register with </td></tr>
     <tr><td class="paramname">port</td><td>The port number </td></tr>
-    <tr><td class="paramname">tenantString</td><td>Topic string identifying the tenant</td></tr>
+    <tr><td class="paramname">tenantString</td><td>Topic string identifying the tenant </td></tr>
+    <tr><td class="paramname">timeout</td><td>Timeout in milliseconds</td></tr>
   </table>
   </dd>
 </dl>
@@ -679,7 +715,7 @@ const char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" hr
 </div><!-- doc-content -->
 <div class="navpath" id="nav-path">
   <ul>
-    <li class="footer" style="float:left"><b>Distributed Publish & Subscribe for IoT</b></li> <li class="footer">Generated Tue Mar 13 2018 10:08:58</li>
+    <li class="footer" style="float:left"><b>Distributed Publish & Subscribe for IoT</b></li> <li class="footer">Generated Fri Jun 8 2018 15:56:01</li>
   </ul>
 </div>
 </body>

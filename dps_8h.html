@@ -111,6 +111,9 @@ Data Structures</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct___d_p_s___key_symmetric.html">_DPS_KeySymmetric</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Symmetric key data.  <a href="struct___d_p_s___key_symmetric.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct___d_p_s___qo_s.html">_DPS_QoS</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">The Quality-of-Service (QoS) parameters.  <a href="struct___d_p_s___qo_s.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="define-members"></a>
 Macros</h2></td></tr>
@@ -168,6 +171,10 @@ typedef struct _DPS_Publication&#160;</td><td class="memItemRight" valign="botto
 <tr class="memitem:gab95ef1762636ad505c940744b8dce83f"><td class="memItemLeft" align="right" valign="top">typedef void(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__subscription.html#gab95ef1762636ad505c940744b8dce83f">DPS_PublicationHandler</a>) (<a class="el" href="group__subscription.html#gadb927c4c1b7306867a75fc4288b54af7">DPS_Subscription</a> *sub, const <a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub, uint8_t *payload, size_t len)</td></tr>
 <tr class="memdesc:gab95ef1762636ad505c940744b8dce83f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function prototype for a publication handler called when a publication is received that matches a subscription.  <a href="group__subscription.html#gab95ef1762636ad505c940744b8dce83f">More...</a><br /></td></tr>
 <tr class="separator:gab95ef1762636ad505c940744b8dce83f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga875f9462225b198bbf7dd1c4a5390017"><td class="memItemLeft" align="right" valign="top">
+typedef struct <a class="el" href="struct___d_p_s___qo_s.html">_DPS_QoS</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#ga875f9462225b198bbf7dd1c4a5390017">DPS_QoS</a></td></tr>
+<tr class="memdesc:ga875f9462225b198bbf7dd1c4a5390017"><td class="mdescLeft">&#160;</td><td class="mdescRight">The Quality-of-Service (QoS) parameters. <br /></td></tr>
+<tr class="separator:ga875f9462225b198bbf7dd1c4a5390017"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gadb927c4c1b7306867a75fc4288b54af7"><td class="memItemLeft" align="right" valign="top">
 typedef struct _DPS_Subscription&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__subscription.html#gadb927c4c1b7306867a75fc4288b54af7">DPS_Subscription</a></td></tr>
 <tr class="memdesc:gadb927c4c1b7306867a75fc4288b54af7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Opaque type for a subscription. <br /></td></tr>
@@ -238,6 +245,9 @@ Functions</h2></td></tr>
 <tr class="memitem:ga91471ddf6f66798e255b28b3e913144b"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#ga91471ddf6f66798e255b28b3e913144b">DPS_PublicationAddSubId</a> (<a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub, const <a class="el" href="group__keystore.html#ga4345e29dd2ad5d7fd88a1e988787bd72">DPS_KeyId</a> *keyId)</td></tr>
 <tr class="memdesc:ga91471ddf6f66798e255b28b3e913144b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Adds a key identifier to use for encrypted publications.  <a href="group__publication.html#ga91471ddf6f66798e255b28b3e913144b">More...</a><br /></td></tr>
 <tr class="separator:ga91471ddf6f66798e255b28b3e913144b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga027a7ee80859f47a3263e29d8c989c40"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#ga027a7ee80859f47a3263e29d8c989c40">DPS_PublicationConfigureQoS</a> (<a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub, const <a class="el" href="group__publication.html#ga875f9462225b198bbf7dd1c4a5390017">DPS_QoS</a> *qos)</td></tr>
+<tr class="memdesc:ga027a7ee80859f47a3263e29d8c989c40"><td class="mdescLeft">&#160;</td><td class="mdescRight">Configure the Quality-of-Service (QoS) parameters of a publication.  <a href="group__publication.html#ga027a7ee80859f47a3263e29d8c989c40">More...</a><br /></td></tr>
+<tr class="separator:ga027a7ee80859f47a3263e29d8c989c40"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gad2a37d52f12c93434b431eefd732f363"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#gad2a37d52f12c93434b431eefd732f363">DPS_PublicationGetNode</a> (const <a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub)</td></tr>
 <tr class="memdesc:gad2a37d52f12c93434b431eefd732f363"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the local node associated with a publication.  <a href="group__publication.html#gad2a37d52f12c93434b431eefd732f363">More...</a><br /></td></tr>
 <tr class="separator:gad2a37d52f12c93434b431eefd732f363"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -420,7 +430,7 @@ typedef struct _DPS_MemoryKeyStore&#160;</td><td class="memItemRight" valign="bo
 </div><!-- doc-content -->
 <div class="navpath" id="nav-path">
   <ul>
-    <li class="footer" style="float:left"><b>Distributed Publish & Subscribe for IoT</b></li> <li class="footer">Generated Tue Mar 13 2018 10:08:58</li>
+    <li class="footer" style="float:left"><b>Distributed Publish & Subscribe for IoT</b></li> <li class="footer">Generated Fri Jun 8 2018 15:56:01</li>
   </ul>
 </div>
 </body>

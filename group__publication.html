@@ -80,6 +80,7 @@ $(document).ready(function(){initNavTree('group__publication.html','');});
 
 <div class="header">
   <div class="summary">
+<a href="#nested-classes">Data Structures</a> &#124;
 <a href="#typedef-members">Typedefs</a> &#124;
 <a href="#func-members">Functions</a>  </div>
   <div class="headertitle">
@@ -90,6 +91,12 @@ $(document).ready(function(){initNavTree('group__publication.html','');});
 <p>Publications.  
 <a href="#details">More...</a></p>
 <table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="nested-classes"></a>
+Data Structures</h2></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct___d_p_s___qo_s.html">_DPS_QoS</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">The Quality-of-Service (QoS) parameters.  <a href="struct___d_p_s___qo_s.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="typedef-members"></a>
 Typedefs</h2></td></tr>
 <tr class="memitem:gaf8615f0bcd3d95859cd7f2cdbf772e23"><td class="memItemLeft" align="right" valign="top">typedef void(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#gaf8615f0bcd3d95859cd7f2cdbf772e23">DPS_AcknowledgementHandler</a>) (<a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub, uint8_t *payload, size_t len)</td></tr>
@@ -99,6 +106,10 @@ Typedefs</h2></td></tr>
 typedef struct _DPS_Publication&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a></td></tr>
 <tr class="memdesc:ga0d439693474aa54e27f3d45a054696ac"><td class="mdescLeft">&#160;</td><td class="mdescRight">Opaque type for a publication. <br /></td></tr>
 <tr class="separator:ga0d439693474aa54e27f3d45a054696ac"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga875f9462225b198bbf7dd1c4a5390017"><td class="memItemLeft" align="right" valign="top"><a id="ga875f9462225b198bbf7dd1c4a5390017"></a>
+typedef struct <a class="el" href="struct___d_p_s___qo_s.html">_DPS_QoS</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#ga875f9462225b198bbf7dd1c4a5390017">DPS_QoS</a></td></tr>
+<tr class="memdesc:ga875f9462225b198bbf7dd1c4a5390017"><td class="mdescLeft">&#160;</td><td class="mdescRight">The Quality-of-Service (QoS) parameters. <br /></td></tr>
+<tr class="separator:ga875f9462225b198bbf7dd1c4a5390017"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
@@ -126,6 +137,9 @@ Functions</h2></td></tr>
 <tr class="memitem:ga91471ddf6f66798e255b28b3e913144b"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#ga91471ddf6f66798e255b28b3e913144b">DPS_PublicationAddSubId</a> (<a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub, const <a class="el" href="group__keystore.html#ga4345e29dd2ad5d7fd88a1e988787bd72">DPS_KeyId</a> *keyId)</td></tr>
 <tr class="memdesc:ga91471ddf6f66798e255b28b3e913144b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Adds a key identifier to use for encrypted publications.  <a href="#ga91471ddf6f66798e255b28b3e913144b">More...</a><br /></td></tr>
 <tr class="separator:ga91471ddf6f66798e255b28b3e913144b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga027a7ee80859f47a3263e29d8c989c40"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#ga027a7ee80859f47a3263e29d8c989c40">DPS_PublicationConfigureQoS</a> (<a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub, const <a class="el" href="group__publication.html#ga875f9462225b198bbf7dd1c4a5390017">DPS_QoS</a> *qos)</td></tr>
+<tr class="memdesc:ga027a7ee80859f47a3263e29d8c989c40"><td class="mdescLeft">&#160;</td><td class="mdescRight">Configure the Quality-of-Service (QoS) parameters of a publication.  <a href="#ga027a7ee80859f47a3263e29d8c989c40">More...</a><br /></td></tr>
+<tr class="separator:ga027a7ee80859f47a3263e29d8c989c40"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gad2a37d52f12c93434b431eefd732f363"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#gad2a37d52f12c93434b431eefd732f363">DPS_PublicationGetNode</a> (const <a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub)</td></tr>
 <tr class="memdesc:gad2a37d52f12c93434b431eefd732f363"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the local node associated with a publication.  <a href="#gad2a37d52f12c93434b431eefd732f363">More...</a><br /></td></tr>
 <tr class="separator:gad2a37d52f12c93434b431eefd732f363"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -477,6 +491,44 @@ Functions</h2></td></tr>
 
 </div>
 </div>
+<a id="ga027a7ee80859f47a3263e29d8c989c40"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga027a7ee80859f47a3263e29d8c989c40">&#9670;&nbsp;</a></span>DPS_PublicationConfigureQoS()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a> DPS_PublicationConfigureQoS </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *&#160;</td>
+          <td class="paramname"><em>pub</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="group__publication.html#ga875f9462225b198bbf7dd1c4a5390017">DPS_QoS</a> *&#160;</td>
+          <td class="paramname"><em>qos</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Configure the Quality-of-Service (QoS) parameters of a publication. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">pub</td><td>The publication to initialize </td></tr>
+    <tr><td class="paramname">qos</td><td>The QoS parameters</td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>DPS_OK if configuration is successful, an error otherwise </dd></dl>
+
+</div>
+</div>
 <a id="gad2a37d52f12c93434b431eefd732f363"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#gad2a37d52f12c93434b431eefd732f363">&#9670;&nbsp;</a></span>DPS_PublicationGetNode()</h2>
 
@@ -811,7 +863,7 @@ Functions</h2></td></tr>
 </div><!-- doc-content -->
 <div class="navpath" id="nav-path">
   <ul>
-    <li class="footer" style="float:left"><b>Distributed Publish & Subscribe for IoT</b></li> <li class="footer">Generated Tue Mar 13 2018 10:08:58</li>
+    <li class="footer" style="float:left"><b>Distributed Publish & Subscribe for IoT</b></li> <li class="footer">Generated Fri Jun 8 2018 15:56:01</li>
   </ul>
 </div>
 </body>

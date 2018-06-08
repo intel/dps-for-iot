@@ -4,49 +4,44 @@
     <compoundname>synchronous.h</compoundname>
     <includes refid="dps_8h" local="no">dps/dps.h</includes>
     <incdepgraph>
-      <node id="63">
+      <node id="60">
         <label>dps/dps.h</label>
         <link refid="dps_8h"/>
+        <childnode refid="61" relation="include">
+        </childnode>
+        <childnode refid="62" relation="include">
+        </childnode>
+        <childnode refid="63" relation="include">
+        </childnode>
         <childnode refid="64" relation="include">
         </childnode>
         <childnode refid="65" relation="include">
         </childnode>
-        <childnode refid="66" relation="include">
-        </childnode>
-        <childnode refid="67" relation="include">
-        </childnode>
-        <childnode refid="68" relation="include">
-        </childnode>
-        <childnode refid="69" relation="include">
-        </childnode>
       </node>
-      <node id="64">
+      <node id="61">
         <label>stdint.h</label>
       </node>
-      <node id="67">
+      <node id="64">
         <label>dps/uuid.h</label>
         <link refid="uuid_8h"/>
-        <childnode refid="64" relation="include">
+        <childnode refid="61" relation="include">
         </childnode>
-        <childnode refid="66" relation="include">
-        </childnode>
-      </node>
-      <node id="65">
-        <label>stddef.h</label>
-      </node>
-      <node id="62">
-        <label>synchronous.h</label>
-        <link refid="synchronous_8h"/>
         <childnode refid="63" relation="include">
         </childnode>
       </node>
-      <node id="69">
+      <node id="62">
+        <label>stddef.h</label>
+      </node>
+      <node id="59">
+        <label>synchronous.h</label>
+        <link refid="synchronous_8h"/>
+        <childnode refid="60" relation="include">
+        </childnode>
+      </node>
+      <node id="65">
         <label>uv.h</label>
       </node>
-      <node id="68">
-        <label>safe_lib.h</label>
-      </node>
-      <node id="66">
+      <node id="63">
         <label>dps/err.h</label>
         <link refid="err_8h"/>
       </node>

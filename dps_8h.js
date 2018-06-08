@@ -28,6 +28,7 @@ var dps_8h =
     [ "DPS_OnUnlinkComplete", "group__node.html#ga70b98e7cc39f0dccdba41f0984de82f6", null ],
     [ "DPS_Publication", "group__publication.html#ga0d439693474aa54e27f3d45a054696ac", null ],
     [ "DPS_PublicationHandler", "group__subscription.html#gab95ef1762636ad505c940744b8dce83f", null ],
+    [ "DPS_QoS", "group__publication.html#ga875f9462225b198bbf7dd1c4a5390017", null ],
     [ "DPS_Subscription", "group__subscription.html#gadb927c4c1b7306867a75fc4288b54af7", null ],
     [ "DPS_ECCurve", "group__keystore.html#ga9ba152af7a3ed9076bfa597ef918cac1", [
       [ "DPS_EC_CURVE_RESERVED", "group__keystore.html#gga9ba152af7a3ed9076bfa597ef918cac1a4b56a9b3ab7d0e23d57bad72f0c93239", null ],
@@ -67,6 +68,7 @@ var dps_8h =
     [ "DPS_MemoryKeyStoreHandle", "group__keystore.html#ga2811c4ffff51bd75a72dd0a9c8796616", null ],
     [ "DPS_NodeAddrToString", "group__nodeaddress.html#gafc7b21048f92370ca29325d6245b576d", null ],
     [ "DPS_PublicationAddSubId", "group__publication.html#ga91471ddf6f66798e255b28b3e913144b", null ],
+    [ "DPS_PublicationConfigureQoS", "group__publication.html#ga027a7ee80859f47a3263e29d8c989c40", null ],
     [ "DPS_PublicationGetNode", "group__publication.html#gad2a37d52f12c93434b431eefd732f363", null ],
     [ "DPS_PublicationGetNumTopics", "group__publication.html#gaee6fc3b13484faacff0d26646778f777", null ],
     [ "DPS_PublicationGetSenderKeyId", "group__publication.html#ga1d7e81c2f0b19736a4f7a7195e5bd98d", null ],

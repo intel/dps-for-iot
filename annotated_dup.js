@@ -5,6 +5,7 @@ var annotated_dup =
     [ "_DPS_KeyEC", "struct___d_p_s___key_e_c.html", "struct___d_p_s___key_e_c" ],
     [ "_DPS_KeyId", "struct___d_p_s___key_id.html", "struct___d_p_s___key_id" ],
     [ "_DPS_KeySymmetric", "struct___d_p_s___key_symmetric.html", "struct___d_p_s___key_symmetric" ],
+    [ "_DPS_QoS", "struct___d_p_s___qo_s.html", "struct___d_p_s___qo_s" ],
     [ "_DPS_Registration", "struct___d_p_s___registration.html", "struct___d_p_s___registration" ],
     [ "_DPS_RegistrationList", "struct___d_p_s___registration_list.html", "struct___d_p_s___registration_list" ],
     [ "_DPS_UUID", "struct___d_p_s___u_u_i_d.html", "struct___d_p_s___u_u_i_d" ]
