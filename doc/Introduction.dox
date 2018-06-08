@@ -1,9 +1,6 @@
 /**
 @mainpage Introduction
 
-@note <b>This is a preview release of the software and is intended for
-evaluation and experimentation only.</b>
-
 Distributed Publish & Subscribe for the Internet of Things (DPS) is a
 new protocol that implements the publish/subscribe (pub/sub)
 communication pattern.
