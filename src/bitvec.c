@@ -20,10 +20,9 @@
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  */
 
-#include <stdlib.h>
 #include <assert.h>
 #include <safe_lib.h>
-#include <malloc.h>
+#include <stdlib.h>
 #include <dps/dbg.h>
 #include "sha2.h"
 #include "bitvec.h"

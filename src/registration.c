@@ -23,7 +23,7 @@
 #include <assert.h>
 #include <safe_lib.h>
 #include <string.h>
-#include <malloc.h>
+#include <stdlib.h>
 #include <uv.h>
 #include <dps/dps.h>
 #include <dps/dbg.h>
