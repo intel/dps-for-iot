@@ -234,8 +234,15 @@ int main(int argc, char** argv)
 {
     DPS_Status ret;
     DPS_KeyStore* keyStore;
+    int i;
 
-    DPS_Debug = 1;
+    DPS_Debug = DPS_FALSE;
+    for (i = 1; i < argc; ++i) {
+        if (!strcmp(argv[i], "-d")) {
+            DPS_Debug = DPS_TRUE;
+        }
+    }
+
     rbg = DPS_CreateRBG();
     keyStore = DPS_CreateKeyStore(NULL, KeyHandler, EphemeralKeyHandler, NULL);
 

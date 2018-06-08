@@ -109,6 +109,13 @@ int main(int argc, char** argv)
     uint8_t* test;
     size_t size;
 
+    DPS_Debug = DPS_FALSE;
+    for (i = 1; i < argc; ++i) {
+        if (!strcmp(argv[i], "-d")) {
+            DPS_Debug = DPS_TRUE;
+        }
+    }
+
     ret = TestFloatingPoint();
     CHECK(ret);
 

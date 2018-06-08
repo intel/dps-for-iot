@@ -27,6 +27,7 @@
 
 uv_udp_recv_cb Fuzz_OnData(DPS_Node* node, uv_udp_recv_cb cb);
 
+static uv_udp_recv_cb dataCB = NULL;
 static uv_udp_recv_cb serverDataCB = NULL;
 static int serverStep;
 static uv_udp_recv_cb clientDataCB = NULL;
@@ -125,6 +126,11 @@ ErrorExit:
     return NULL;
 }
 
+static void OnData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, const struct sockaddr* addr, unsigned flags)
+{
+    return dataCB(socket, nread, buf, addr, flags);
+}
+
 static void OnServerData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, const struct sockaddr* addr, unsigned flags)
 {
     if (nread > 0) {
@@ -188,6 +194,11 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t len)
     if (!server) {
         goto Exit;
     }
+    if (!strcmp(fuzzRole, "server")) {
+        serverDataCB = Fuzz_OnData(server->node, OnServerData);
+    } else {
+        dataCB = Fuzz_OnData(server->node, OnData);
+    }
     sub = DPS_CreateSubscription(server->node, &topic, 1);
     if (!sub) {
         goto Exit;
@@ -196,14 +207,16 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t len)
     if (ret != DPS_OK) {
         goto Exit;
     }
-    if (!strcmp(fuzzRole, "server")) {
-        serverDataCB = Fuzz_OnData(server->node, OnServerData);
-    }
 
     clientStep = 0;
     client = CreateNode();
     if (!client) {
         goto Exit;
+    }
+    if (!strcmp(fuzzRole, "client")) {
+        clientDataCB = Fuzz_OnData(client->node, OnClientData);
+    } else {
+        dataCB = Fuzz_OnData(client->node, OnData);
     }
     pub = DPS_CreatePublication(client->node);
     if (!pub) {
@@ -212,9 +225,6 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t len)
     ret = DPS_InitPublication(pub, &topic, 1, DPS_FALSE, NULL, NULL);
     if (ret != DPS_OK) {
         goto Exit;
-    }
-    if (!strcmp(fuzzRole, "client")) {
-        clientDataCB = Fuzz_OnData(client->node, OnClientData);
     }
 
     addr = DPS_CreateAddress();

@@ -34,6 +34,7 @@
 #include <dps/dbg.h>
 #include <dps/dps.h>
 #include <dps/private/network.h>
+#include "compat.h"
 #include "node.h"
 
 /*
@@ -45,7 +46,7 @@ const char* DPS_NetAddrText(const struct sockaddr* addr)
 {
     if (addr) {
         char name[INET6_ADDRSTRLEN];
-        static char txt[sizeof(name) + 8];
+        static THREAD char txt[sizeof(name) + 8];
         uint16_t port;
         int ret;
         if (addr->sa_family == AF_INET6) {
@@ -85,20 +86,23 @@ int DPS_SameAddr(const DPS_NodeAddress* addr1, const DPS_NodeAddress* addr2)
 
     if (a->sa_family != b->sa_family) {
         uint32_t ip;
+        tmp.sin6_family = AF_INET6;
         if (a->sa_family == AF_INET6) {
             const struct sockaddr_in* ipb = (const struct sockaddr_in*)b;
-            ip = ipb->sin_addr.s_addr;
             tmp.sin6_port = ipb->sin_port;
-            b = (const struct sockaddr*)&tmp;
+            ip = ipb->sin_addr.s_addr;
         } else {
             const struct sockaddr_in* ipa = (const struct sockaddr_in*)a;
-            ip = ipa->sin_addr.s_addr;
             tmp.sin6_port = ipa->sin_port;
-            a = (const struct sockaddr*)&tmp;
+            ip = ipa->sin_addr.s_addr;
         }
         memcpy_s(&tmp.sin6_addr, sizeof(tmp.sin6_addr), IP4as6, 12);
         memcpy_s((uint8_t*)&tmp.sin6_addr + 12, sizeof(tmp.sin6_addr) - 12, &ip, 4);
-        tmp.sin6_family = AF_INET6;
+        if (a->sa_family == AF_INET6) {
+            b = (const struct sockaddr*)&tmp;
+        } else {
+            a = (const struct sockaddr*)&tmp;
+        }
     }
     if (a->sa_family == AF_INET6 && b->sa_family == AF_INET6) {
         const struct sockaddr_in6* ip6a = (const struct sockaddr_in6*)a;
@@ -115,6 +119,8 @@ int DPS_SameAddr(const DPS_NodeAddress* addr1, const DPS_NodeAddress* addr2)
 
 DPS_NodeAddress* DPS_SetAddress(DPS_NodeAddress* addr, const struct sockaddr* sa)
 {
+    DPS_DBGTRACE();
+
     memzero_s(addr, sizeof(DPS_NodeAddress));
     if (sa) {
         if (sa->sa_family == AF_INET) {
@@ -128,13 +134,15 @@ DPS_NodeAddress* DPS_SetAddress(DPS_NodeAddress* addr, const struct sockaddr* sa
 
 void DPS_EndpointSetPort(DPS_NetEndpoint* ep, uint16_t port)
 {
-    port = htons(port);
-    if (ep->addr.inaddr.ss_family == AF_INET6) {
-        struct sockaddr_in6* ip6 = (struct sockaddr_in6*)&ep->addr.inaddr;
-        ip6->sin6_port = port;
-    } else {
-        struct sockaddr_in* ip4 = (struct sockaddr_in*)&ep->addr.inaddr;
-        ip4->sin_port = port;
+    if (!ep->cn) {
+        port = htons(port);
+        if (ep->addr.inaddr.ss_family == AF_INET6) {
+            struct sockaddr_in6* ip6 = (struct sockaddr_in6*)&ep->addr.inaddr;
+            ip6->sin6_port = port;
+        } else {
+            struct sockaddr_in* ip4 = (struct sockaddr_in*)&ep->addr.inaddr;
+            ip4->sin_port = port;
+        }
     }
 }
 

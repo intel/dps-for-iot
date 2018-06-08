@@ -245,8 +245,7 @@ int main(int argc, char** argv)
     int listenPort = 0;
     DPS_NodeAddress* addr = NULL;
 
-    DPS_Debug = 0;
-
+    DPS_Debug = DPS_FALSE;
     while (--argc) {
         if (IntArg("-p", &arg, &argc, &linkPort[numLinks], 1, UINT16_MAX)) {
             linkHosts[numLinks] = host;
@@ -291,7 +290,7 @@ int main(int argc, char** argv)
         }
         if (strcmp(*arg, "-d") == 0) {
             ++arg;
-            DPS_Debug = 1;
+            DPS_Debug = DPS_TRUE;
             continue;
         }
         if (*arg[0] == '-') {
@@ -332,10 +331,13 @@ int main(int argc, char** argv)
         DPS_ERRPRINT("DPS_CreateNode failed: %s\n", DPS_ErrTxt(ret));
         return 1;
     }
+    DPS_PRINT("Publisher is listening on port %d\n", DPS_GetPortNumber(node));
 
     for (i = 0; i < numLinks; ++i) {
         ret = DPS_LinkTo(node, linkHosts[i], linkPort[i], addr);
-        if (ret != DPS_OK) {
+        if (ret == DPS_OK) {
+            DPS_PRINT("Publisher is linked to %s\n", DPS_NodeAddrToString(addr));
+        } else {
             DPS_ERRPRINT("DPS_LinkTo %d returned %s\n", linkPort[i], DPS_ErrTxt(ret));
         }
     }
@@ -398,7 +400,7 @@ int main(int argc, char** argv)
     return 0;
 
 Usage:
-    DPS_PRINT("Usage %s [-d] [-x 0|1|2] [-a] [-w <seconds>] <seconds>] [-t <ttl>] [[-h <hostname>] -p <portnum>] [-l <portnum>] [-m <message>] [-r <milliseconds>] [topic1 topic2 ... topicN]\n", argv[0]);
+    DPS_PRINT("Usage %s [-d] [-x 0|1|2] [-a] [-w <seconds>] [-t <ttl>] [[-h <hostname>] -p <portnum>] [-l <portnum>] [-m <message>] [-r <milliseconds>] [topic1 topic2 ... topicN]\n", argv[0]);
     DPS_PRINT("       -d: Enable debug ouput if built for debug.\n");
     DPS_PRINT("       -x: Disable (0) or enable symmetric (1) or asymmetric(2) encryption. Default is symmetric encryption enabled.\n");
     DPS_PRINT("       -a: Request an acknowledgement\n");

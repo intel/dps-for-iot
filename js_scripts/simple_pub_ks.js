@@ -186,7 +186,7 @@ var crypto = require("crypto");
     var publish = function () {
         dps.publish(pub, "world", 0);
         console.log("Pub UUID " + dps.publicationGetUUID(pub) + "(" + dps.publicationGetSequenceNum(pub) + ")");
-        setTimeout(stop, 200);
+        setTimeout(stop, 1000);
     };
 
     encryption = 1;
@@ -214,11 +214,12 @@ var crypto = require("crypto");
 
     node = dps.createNode("/", keyStore, nodeId);
     dps.startNode(node, dps.MCAST_PUB_ENABLE_SEND, 0);
+    console.log("Publisher is listening on port " +  dps.getPortNumber(node));
     pub = dps.createPublication(node);
 
     dps.initPublication(pub, ["a/b/c"], false, null, onAck);
     dps.publicationAddSubId(pub, pubKeyId);
     dps.publish(pub, "hello", 0);
     console.log("Pub UUID " + dps.publicationGetUUID(pub) + "(" + dps.publicationGetSequenceNum(pub) + ")");
-    setTimeout(publish, 200);
+    setTimeout(publish, 1000);
 }());

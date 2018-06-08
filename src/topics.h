@@ -107,7 +107,7 @@ DPS_Status DPS_MatchTopicString(const char* pubTopic, const char* subTopic, cons
  */
 DPS_Status DPS_MatchTopicList(char* const* pubs, size_t numPubs, char* const* subs, size_t numSubs, const char* separators, int noWild, int* match);
 
-#ifndef NDEBUG
+#ifdef DPS_DEBUG
 /**
  * Print out topic strings
  *

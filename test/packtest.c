@@ -168,11 +168,25 @@ int main(int argc, char** argv)
 {
     DPS_Status ret;
     DPS_BitVector* bf;
-    size_t filterBits = (argc > 1) ? atoi(argv[1]) : 256;
-    size_t numHashes = (argc > 2) ? atoi(argv[2]) : 4;
+    size_t filterBits = 256;
+    size_t numHashes = 4;
+    int i = 1;
 
+    DPS_Debug = DPS_FALSE;
+    if ((i < argc) && !strcmp(argv[i], "-d")) {
+        DPS_Debug = DPS_TRUE;
+        ++i;
+    }
+    if (i < argc) {
+        filterBits = atoi(argv[i]);
+        ++i;
+    }
+    if (i < argc) {
+        numHashes = atoi(argv[i]);
+        ++i;
+    }
     if (filterBits <= 0) {
-        printf("Usage %s: <filter-bits> [<num-hashes>]\n", argv[0]);
+        printf("Usage %s: [-d] <filter-bits> [<num-hashes>]\n", argv[0]);
         return EXIT_FAILURE;
     }
 

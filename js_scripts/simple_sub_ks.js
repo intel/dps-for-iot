@@ -205,6 +205,7 @@ var crypto = require("crypto");
 
     node = dps.createNode("/", keyStore, nodeId);
     dps.startNode(node, dps.MCAST_PUB_ENABLE_RECV, 0);
+    console.log("Subscriber is listening on port " +  dps.getPortNumber(node));
     sub = dps.createSubscription(node, ["a/b/c"]);
     dps.subscribe(sub, onPub);
 }());

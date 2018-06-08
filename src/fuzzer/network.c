@@ -114,7 +114,7 @@ void DPS_MulticastStopSend(DPS_MulticastSender* sender)
     free(sender);
 }
 
-DPS_Status DPS_MulticastSend(DPS_MulticastSender* sender, uv_buf_t* bufs, size_t numBufs)
+DPS_Status DPS_MulticastSend(DPS_MulticastSender* sender, void* appCtx, uv_buf_t* bufs, size_t numBufs, DPS_MulticastSendComplete sendCompleteCB)
 {
     return DPS_ERR_NOT_IMPLEMENTED;
 }
