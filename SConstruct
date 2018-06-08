@@ -112,9 +112,9 @@ elif env['PLATFORM'] == 'posix':
     # Enable address sanitizer
     if env['asan'] == True:
         env.Append(CCFLAGS = ['-fno-omit-frame-pointer', '-fsanitize=address'])
-        if env['CC'].endswith('gcc'):
+        if 'gcc' in env['CC']:
             env.Append(LIBS = ['asan'])
-        elif env['CC'].endswith('clang'):
+        elif 'clang' in env['CC']:
             env.Append(LINKFLAGS = ['-fsanitize=address'])
         else:
             print('Unsupported compiler')
@@ -123,9 +123,9 @@ elif env['PLATFORM'] == 'posix':
     # Enable thread sanitizer
     if env['tsan'] == True:
         env.Append(CCFLAGS = ['-fsanitize=thread'])
-        if env['CC'].endswith('gcc'):
+        if 'gcc' in env['CC']:
             env.Append(LIBS = ['tsan'])
-        elif env['CC'].endswith('clang'):
+        elif 'clang' in env['CC']:
             env.Append(LINKFLAGS = ['-fsanitize=thread'])
         else:
             print('Unsupported compiler')
@@ -134,9 +134,9 @@ elif env['PLATFORM'] == 'posix':
     # Enable undefined behavior sanitizer
     if env['ubsan'] == True:
         env.Append(CCFLAGS = ['-fsanitize=undefined'])
-        if env['CC'].endswith('gcc'):
+        if 'gcc' in env['CC']:
             env.Append(LIBS = ['ubsan'])
-        elif env['CC'].endswith('clang'):
+        elif 'clang' in env['CC']:
             env.Append(LINKFLAGS = ['-fsanitize=undefined'])
         else:
             print('Unsupported compiler')
@@ -144,7 +144,7 @@ elif env['PLATFORM'] == 'posix':
 
     # Enable fuzzer sanitizer
     if env['fsan'] == True:
-        if env['CC'].endswith('clang'):
+        if 'clang' in env['CC']:
             env.Append(CCFLAGS = ['-fsanitize=fuzzer-no-link'])
         else:
             print('Unsupported compiler')
@@ -152,7 +152,7 @@ elif env['PLATFORM'] == 'posix':
 
     # Enable code coverage
     if env['cov'] == True:
-        if env['CC'].endswith('clang'):
+        if 'clang' in env['CC']:
             env.Append(CCFLAGS = ['-fprofile-instr-generate', '-fcoverage-mapping'])
             env.Append(LINKFLAGS = ['-fprofile-instr-generate', '-fcoverage-mapping'])
         else:

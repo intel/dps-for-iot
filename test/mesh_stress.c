@@ -478,7 +478,7 @@ int main(int argc, char** argv)
          * Brief delay to let things settle down
          */
         DPS_TimedWaitForEvent(sleeper, 1000);
-#ifndef NDEBUG
+#ifdef DPS_DEBUG
         {
             extern int _DPS_NumSubs;
             DPS_PRINT("Sent %d subs\n", _DPS_NumSubs);
@@ -526,7 +526,7 @@ int main(int argc, char** argv)
             DPS_ERRPRINT("Wrong number of muted nodes: Expected %d got %d\n", expMuted, numMuted);
             ASSERT(expMuted == numMuted);
         }
-#ifndef NDEBUG
+#ifdef DPS_DEBUG
         {
             extern int _DPS_NumSubs;
             DPS_PRINT("Sent %d subs\n", _DPS_NumSubs);

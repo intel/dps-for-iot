@@ -43,6 +43,7 @@ def on_pub(sub, pub, payload):
 def subscriber(port, topic, connect_port):
     nodes[port] = dps.create_node("/", key_store, None)
     dps.start_node(nodes[port], 0, port)
+    print "Subscriber is listening on port %d" % (dps.get_port_number(nodes[port]))
     subs[port] = dps.create_subscription(nodes[port], [topic])
     dps.subscribe(subs[port], on_pub)
     if (connect_port != 0):
@@ -52,8 +53,12 @@ def subscriber(port, topic, connect_port):
             print "Linked %d to %d" % (port, connect_port)
         dps.destroy_address(addr)
 
-# Enable or disable (default) DPS debug output
-dps.cvar.debug = False
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument("-d", "--debug", action='store_true',
+                    help="Enable debug ouput if built for debug.")
+args = parser.parse_args()
+dps.cvar.debug = args.debug
 
 subscriber(20000, 'B/B', 0)
 subscriber(30000, 'A/A', 20000)

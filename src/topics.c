@@ -292,7 +292,7 @@ DPS_Status DPS_MatchTopicList(char* const* pubs, size_t numPubs, char* const* su
     return ret;
 }
 
-#ifndef NDEBUG
+#ifdef DPS_DEBUG
 void DPS_DumpTopics(const char** topics, size_t numTopics)
 {
     if (DPS_Debug) {

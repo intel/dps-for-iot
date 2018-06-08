@@ -247,7 +247,7 @@ static DPS_Status EncodeRecipient(DPS_TxBuffer* buf, int8_t alg, const DPS_KeyId
                                   COSE_Key* key, const uint8_t* content, size_t contentLen)
 {
     DPS_Status ret;
-    size_t len;
+    size_t len = 0;
 
     ret = CBOR_EncodeArray(buf, 3);
     /*
@@ -304,7 +304,9 @@ static DPS_Status EncodeRecipient(DPS_TxBuffer* buf, int8_t alg, const DPS_KeyId
             if (ret == DPS_OK) {
                 ret = CBOR_EncodeInt8(buf, key->ec.curve);
             }
-            len = CoordinateSize_EC(key->ec.curve);
+            if (ret == DPS_OK) {
+                len = CoordinateSize_EC(key->ec.curve);
+            }
             if (ret == DPS_OK) {
                 ret = CBOR_EncodeInt8(buf, COSE_EC_KEY_X);
             }

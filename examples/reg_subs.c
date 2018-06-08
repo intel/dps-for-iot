@@ -26,11 +26,23 @@ static void OnPubMatch(DPS_Subscription* sub, const DPS_Publication* pub, uint8_
 {
     const DPS_UUID* pubId = DPS_PublicationGetUUID(pub);
     uint32_t sn = DPS_PublicationGetSequenceNum(pub);
+    const DPS_KeyId* senderId = DPS_PublicationGetSenderKeyId(pub);
     size_t i;
     size_t numTopics = DPS_SubscriptionGetNumTopics(sub);
 
     if (!quiet) {
-        DPS_PRINT("Pub %s(%d) matches:\n    ", DPS_UUIDToString(pubId), sn);
+        DPS_PRINT("Pub %s(%d) [%s] matches:\n", DPS_UUIDToString(pubId), sn, KeyIdToString(senderId));
+        DPS_PRINT("  pub ");
+        numTopics = DPS_PublicationGetNumTopics(pub);
+        for (i = 0; i < numTopics; ++i) {
+            if (i) {
+                DPS_PRINT(" | ");
+            }
+            DPS_PRINT("%s", DPS_PublicationGetTopic(pub, i));
+        }
+        DPS_PRINT("\n");
+        DPS_PRINT("  sub ");
+        numTopics = DPS_SubscriptionGetNumTopics(sub);
         for (i = 0; i < numTopics; ++i) {
             if (i) {
                 DPS_PRINT(" & ");
@@ -50,19 +62,19 @@ static void OnPubMatch(DPS_Subscription* sub, const DPS_Publication* pub, uint8_
     }
 }
 
-
-static DPS_Status RegisterAndJoin(DPS_Node* node, const char* host, uint16_t port, const char* tenant)
+static DPS_Status RegisterAndJoin(DPS_Node* node, const char* host, uint16_t port, const char* tenant, uint8_t count, uint16_t timeout)
 {
     DPS_Status ret;
     DPS_RegistrationList* regs;
     DPS_NodeAddress* remoteAddr = DPS_CreateAddress();
+    size_t i;
 
-    regs = DPS_CreateRegistrationList(16);
+    regs = DPS_CreateRegistrationList(count);
 
     /*
      * Register with the registration service
      */
-    ret = DPS_Registration_PutSyn(node, host, port, tenant);
+    ret = DPS_Registration_PutSyn(node, host, port, tenant, DPS_REGISTRATION_PUT_TIMEOUT);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to register with registration service: %s\n", DPS_ErrTxt(ret));
         goto Exit;
@@ -70,19 +82,24 @@ static DPS_Status RegisterAndJoin(DPS_Node* node, const char* host, uint16_t por
     /*
      * Find nodes to join
      */
-    ret = DPS_Registration_GetSyn(node, host, port, tenant, regs);
+    ret = DPS_Registration_GetSyn(node, host, port, tenant, regs, timeout);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Registration service lookup failed: %s\n", DPS_ErrTxt(ret));
         goto Exit;
     }
+    DPS_PRINT("Found %d remote nodes\n", regs->count);
+
     if (regs->count == 0) {
         ret = DPS_ERR_NO_ROUTE;
         goto Exit;
     }
+    for (i = 0; i < regs->count; ++i) {
+        DPS_PRINT("  %s:%d\n", regs->list[i].host, regs->list[i].port);
+    }
     remoteAddr = DPS_CreateAddress();
     ret = DPS_Registration_LinkToSyn(node, regs, remoteAddr);
     if (ret == DPS_OK) {
-        DPS_PRINT("Linked %d to remote node %s\n", DPS_GetPortNumber(node), DPS_NodeAddrToString(remoteAddr));
+        DPS_PRINT("%d is linked to %s\n", DPS_GetPortNumber(node), DPS_NodeAddrToString(remoteAddr));
         goto Exit;
     }
 
@@ -129,15 +146,27 @@ int main(int argc, char** argv)
     DPS_Node* node;
     const char* host = "localhost";
     int listen = 0;
-    int port = 30000;
+    int port = 0;
+    int subsRate = DPS_SUBSCRIPTION_UPDATE_RATE;
+    int timeout = DPS_REGISTRATION_GET_TIMEOUT;
+    int count = 16;
 
-    DPS_Debug = 0;
+    DPS_Debug = DPS_FALSE;
 
     while (--argc) {
         if (IntArg("-l", &arg, &argc, &listen, 1, UINT16_MAX)) {
             continue;
         }
         if (IntArg("-p", &arg, &argc, &port, 1, UINT16_MAX)) {
+            continue;
+        }
+        if (IntArg("-r", &arg, &argc, &subsRate, 0, INT32_MAX)) {
+            continue;
+        }
+        if (IntArg("--timeout", &arg, &argc, &timeout, 0, UINT16_MAX)) {
+            continue;
+        }
+        if (IntArg("-c", &arg, &argc, &count, 1, UINT8_MAX)) {
             continue;
         }
         if (strcmp(*arg, "-h") == 0) {
@@ -163,7 +192,7 @@ int main(int argc, char** argv)
         }
         if (strcmp(*arg, "-d") == 0) {
             ++arg;
-            DPS_Debug = 1;
+            DPS_Debug = DPS_TRUE;
             continue;
         }
         if (*arg[0] == '-') {
@@ -182,10 +211,9 @@ int main(int argc, char** argv)
     }
 
     memoryKeyStore = DPS_CreateMemoryKeyStore();
-    for (size_t i = 0; i < NUM_KEYS; ++i) {
-        DPS_SetContentKey(memoryKeyStore, &PskId[i], &Psk[i]);
-    }
-    node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore), &PskId[0]);
+    DPS_SetNetworkKey(memoryKeyStore, &NetworkKeyId, &NetworkKey);
+    node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore), NULL);
+    DPS_SetNodeSubscriptionUpdateDelay(node, subsRate);
 
     ret = DPS_StartNode(node, DPS_MCAST_PUB_DISABLED, listen);
     if (ret != DPS_OK) {
@@ -196,7 +224,7 @@ int main(int argc, char** argv)
 
     nodeDestroyed = DPS_CreateEvent();
 
-    ret = RegisterAndJoin(node, host, port, tenant);
+    ret = RegisterAndJoin(node, host, port, tenant, count, timeout);
     if (ret != DPS_OK) {
         DPS_PRINT("Failed to link with any other \"%s\" nodes - continuing\n", tenant);
     }
@@ -216,6 +244,14 @@ int main(int argc, char** argv)
     return 0;
 
 Usage:
-    DPS_PRINT("Usage %s [-d] [-l <listen-port>] -h <hostname> -p <portnum> [-t <tenant string>] [-m] topic1 topic2 ... topicN\n", *argv);
+    DPS_PRINT("Usage %s [-d] [-l <listen-port>] [[-h <hostname>] -p <portnum>] [-t <tenant string>] [-r <milliseconds>] [-c <count>] [--timeout <milliseconds>] topic1 topic2 ... topicN\n", *argv);
+    DPS_PRINT("       -d: Enable debug ouput if built for debug.\n");
+    DPS_PRINT("       -l: port to listen on. Default is an ephemeral port.\n");
+    DPS_PRINT("       -h: Specifies host (localhost is default).\n");
+    DPS_PRINT("       -p: Port to link.\n");
+    DPS_PRINT("       -t: Tenant string to use.\n");
+    DPS_PRINT("       -r: Time to delay between subscription updates.\n");
+    DPS_PRINT("       -c: Size of registration get request.\n");
+    DPS_PRINT("       --timeout: Timeout of registration get request.\n");
     return 1;
 }

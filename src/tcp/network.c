@@ -154,7 +154,7 @@ static void Shutdown(DPS_NetConnection* cn)
 
 static void OnData(uv_stream_t* socket, ssize_t nread, const uv_buf_t* buf)
 {
-    DPS_Status ret;
+    DPS_Status ret = DPS_OK;
     DPS_NetConnection* cn = (DPS_NetConnection*)socket->data;
     DPS_NetContext* netCtx = cn->node->netCtx;
 

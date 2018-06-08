@@ -47,6 +47,14 @@ int main(int argc, char** argv)
     DPS_KeyStore* keyStore;
     DPS_Status ret;
     void* userData;
+    int i;
+
+    DPS_Debug = DPS_FALSE;
+    for (i = 1; i < argc; ++i) {
+        if (!strcmp(argv[i], "-d")) {
+            DPS_Debug = DPS_TRUE;
+        }
+    }
 
     /* Create and destroy */
     keyStore = DPS_CreateKeyStore(GetKeyAndId, GetKey, GetEphemeralKey, GetCA);

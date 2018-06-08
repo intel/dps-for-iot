@@ -39,16 +39,16 @@ extern "C" {
 
 inline char* strndup(const char* str, size_t maxLen)
 {
-    size_t len = strnlen_s(str, maxLen + 1);
+    size_t len = strnlen_s(str, RSIZE_MAX_STR);
     if (len > maxLen) {
-        return NULL;
-    } else {
-        char* c = malloc(len + 1);
-        if (c) {
-            memcpy_s(c, len + 1, str, len + 1);
-        }
-        return c;
+        len = maxLen;
     }
+    char* c = malloc(len + 1);
+    if (c) {
+        memcpy_s(c, len, str, len);
+        c[len] = '\0';
+    }
+    return c;
 }
 
 #define BSWAP_32(n)  _byteswap_ulong(n)
@@ -58,12 +58,16 @@ inline char* strndup(const char* str, size_t maxLen)
 #define __BIG_ENDIAN      1
 #define __BYTE_ORDER      __LITTLE_ENDIAN
 
+#define THREAD __declspec(thread)
+
 #else // posix
 
 #include <endian.h>
 
 #define BSWAP_32(n)  __builtin_bswap32(n)
 #define BSWAP_64(n)  __builtin_bswap64(n)
+
+#define THREAD __thread
 
 #endif
 
