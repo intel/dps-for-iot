@@ -459,7 +459,6 @@ static DPS_Status ToJSON(JSONBuffer* json, DPS_RxBuffer* cbor, int pretty, int i
     uint8_t maj;
     int64_t i64;
     uint64_t u64;
-    double d;
 
     if (DPS_RxBufferAvail(cbor) < 1) {
         return DPS_ERR_EOD;
@@ -622,6 +621,7 @@ static DPS_Status ToJSON(JSONBuffer* json, DPS_RxBuffer* cbor, int pretty, int i
             break;
         }
         if (cbor->rxPos[0] == CBOR_FLOAT || cbor->rxPos[0] == CBOR_DOUBLE) {
+            double d;
             status = CBOR_DecodeDouble(cbor, &d);
             if (status == DPS_OK) {
                 size = snprintf(json->str, json->len, "%f", d);
@@ -637,6 +637,7 @@ static DPS_Status ToJSON(JSONBuffer* json, DPS_RxBuffer* cbor, int pretty, int i
         status = DPS_ERR_INVALID;
         break;
     default:
+        DPS_ERRPRINT("Invalid CBOR major %02x\n", maj);
         status = DPS_ERR_INVALID;
     }
     return status;
