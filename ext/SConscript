@@ -97,6 +97,9 @@ if scEnv['PLATFORM'] == 'win32':
 elif scEnv['PLATFORM'] == 'posix':
     scEnv.Append(CPPDEFINES = ['_ISCO99_SOURCE'])
     scEnv.Append(CFLAGS = ['-Os', '-fPIC', '-std=c99', '-Wall', '-Wextra', '-Wno-unused-parameter', '-Wno-implicit-fallthrough', '-MMD'])
+elif scEnv['PLATFORM'] == 'darwin':
+    scEnv.Append(CPPDEFINES = ['_ISCO99_SOURCE'])
+    scEnv.Append(CFLAGS = ['-Os', '-fPIC', '-std=c99', '-Wall', '-Wextra', '-Wno-unused-parameter', '-Wno-implicit-fallthrough', '-MMD'])
 else:
     print('Unsupported system')
     exit()
@@ -106,7 +109,7 @@ scsrcs = ['./safestring/safeclib/ignore_handler_s.c',
           './safestring/safeclib/safe_str_constraint.c',
           './safestring/safeclib/memcpy_s.c',
           './safestring/safeclib/memmove_s.c',
-          './safestring/safeclib/memset_s.c',
+#          './safestring/safeclib/memset_s.c',
           './safestring/safeclib/memzero_s.c',
           './safestring/safeclib/strcmp_s.c',
           './safestring/safeclib/strncpy_s.c',
