@@ -21,7 +21,7 @@
  */
 
 #include <safe_lib.h>
-#include <malloc.h>
+#include <stdlib.h>
 #include <assert.h>
 #include <dps/dbg.h>
 #include "coap.h"
