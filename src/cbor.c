@@ -635,6 +635,9 @@ DPS_Status CBOR_DecodeDouble(DPS_RxBuffer* buffer, double* d)
     uint8_t* p = buffer->rxPos;
     uint8_t* pd;
 
+    if (avail < 1) {
+        return DPS_ERR_EOD;
+    }
     if (*p == CBOR_FLOAT) {
         float f;
         DPS_Status status = CBOR_DecodeFloat(buffer, &f);
@@ -643,11 +646,11 @@ DPS_Status CBOR_DecodeDouble(DPS_RxBuffer* buffer, double* d)
         }
         return status;
     }
-    if (avail < 9) {
-        return DPS_ERR_EOD;
-    }
     if (*p++ != CBOR_DOUBLE) {
         return DPS_ERR_INVALID;
+    }
+    if (avail < 9) {
+        return DPS_ERR_EOD;
     }
 #if __BYTE_ORDER == __LITTLE_ENDIAN
     pd = (uint8_t*)d + sizeof(double);

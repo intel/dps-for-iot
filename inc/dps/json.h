@@ -6,7 +6,7 @@
 /*
  *******************************************************************
  *
- * Copyright 2016 Intel Corporation All rights reserved.
+ * Copyright 2018 Intel Corporation All rights reserved.
  *
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  *
@@ -42,14 +42,17 @@ extern "C" {
  */
 
 /**
- * Generate CBOR from a JSON string
+ * Generate a CBOR encoded byte array from a JSON string. Note that if there are multiple
+ * JSON elements in the input string only the first one is parsed and anything after the
+ * fist element is ignored.
  *
  * @param json     NUL terminated JSON string to convert
  * @param cbor     Destination buffer for the conversion
  * @param cborSize The size of the cbor buffer
  * @param cborLen  Returns the number of CBOR bytes written 
  *
- * @return - DPS_OK if the conversion was successful
+ * @return
+ *         - DPS_OK if the conversion was successful
  *         - DPS_ERR_OVERFLOW if the cbor buffer was too small
  *         - DPS_ERR_INVALID if the input was not valid JSON
  *         - other error status codes
@@ -57,20 +60,22 @@ extern "C" {
 DPS_Status DPS_JSON2CBOR(const char* json, uint8_t* cbor, size_t cborSize, size_t* cborLen);
 
 /**
- * Generate JSON string from CBOR
+ * Generate a JSON string from a CBOR encoded byte array.
  *
- * @param cbor     Source data for the conversion
- * @param cborLen  The length of the cbor data
- * @param json     JSON string to convert
+ * @param cbor     CBOR encoded source data for the conversion
+ * @param cborLen  The length of the CBOR data
+ * @param json     Destination buffer for generated JSON string
  * @param jsonSize The length of the JSON string buffer
- * @param pretty   If TRUE format with indentation and newlines
+ * @param pretty   If TRUE format the JSON using indentation and newlines, if FALSE
+ *                 the output is compact with no newlines or whitespace is inserted.
  *
- * @return - DPS_OK if the conversion was successful
+ * @return
+ *         - DPS_OK if the conversion was successful
  *         - DPS_ERR_OVERFLOW if the json buffer was too small
  *         - DPS_ERR_INVALID if the input was not valid CBOR
  *         - other error status codes
  */
-DPS_Status DPS_CBOR2JSON(uint8_t* cbor, size_t cborLen, char* json, size_t jsonSize, int pretty);
+DPS_Status DPS_CBOR2JSON(const uint8_t* cbor, size_t cborLen, char* json, size_t jsonSize, int pretty);
 
 /** @} */
 

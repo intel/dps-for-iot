@@ -33,7 +33,7 @@
 #include <dps/dbg.h>
 #include <dps/json.h>
 
-#define MAX_INPUT_STRING_LEN  RSIZE_MAX_STR
+#define MAX_INPUT_STRING_LEN  (RSIZE_MAX_STR - 1)
 #define JSON_MAX_STRING_LEN   CBOR_MAX_STRING_LEN
 
 typedef struct {
@@ -643,7 +643,7 @@ static DPS_Status ToJSON(JSONBuffer* json, DPS_RxBuffer* cbor, int pretty, int i
     return status;
 }
 
-DPS_Status DPS_CBOR2JSON(uint8_t* cbor, size_t cborLen, char* json, size_t jsonSize, int pretty)
+DPS_Status DPS_CBOR2JSON(const uint8_t* cbor, size_t cborLen, char* json, size_t jsonSize, int pretty)
 {
     int indent = 0;
     DPS_Status status;
@@ -655,7 +655,7 @@ DPS_Status DPS_CBOR2JSON(uint8_t* cbor, size_t cborLen, char* json, size_t jsonS
     if (!cborLen || !jsonSize) {
         return DPS_ERR_ARGS;
     }
-    DPS_RxBufferInit(&rxBuf, cbor, cborLen);
+    DPS_RxBufferInit(&rxBuf, (uint8_t*)cbor, cborLen);
     jsonBuf.str = json;
     jsonBuf.len = jsonSize;
     status = ToJSON(&jsonBuf, &rxBuf, pretty, indent);

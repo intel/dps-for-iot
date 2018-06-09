@@ -12,6 +12,7 @@ TESTS="./build/test/bin/cbortest \
        ./build/test/bin/pubsub \
        ./build/test/bin/publish \
        ./build/test/bin/rle_compression \
+       ./build/test/bin/jsontest \
        ./build/test/bin/keystoretest \
        ./test_scripts/auth \
        ./test_scripts/chain_test \

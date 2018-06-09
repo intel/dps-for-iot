@@ -23,6 +23,10 @@
 #include "test.h"
 #include <dps/json.h>
 
+static int ln;
+
+#define CHECK(r)   if ((r) != DPS_OK) { ln = __LINE__; goto Failed; }
+
 static const char json0[] = "1234";
 static const char json1[] = "-0.5";
 static const char json2[] = "[]";
@@ -98,28 +102,22 @@ int main(int argc, char** argv)
 
             // Encode as CBOR
             status = DPS_JSON2CBOR(tests[i], cbor1, sizeof(cbor1), &cbor1Len);
-            if (status != DPS_OK) {
-                goto Failed;
-            }
+            CHECK(status);
             // Decode to JSON
             status = DPS_CBOR2JSON(cbor1, cbor1Len, json, sizeof(json), pretty);
-            if (status != DPS_OK) {
-                goto Failed;
-            }
+            CHECK(status);
             printf("%s\n", json);
             // Encode again as CBOR
             status = DPS_JSON2CBOR(json, cbor2, sizeof(cbor2), &cbor2Len);
-            if (status != DPS_OK) {
-                goto Failed;
-            }
+            CHECK(status);
             // Fidelity check that two CBOR encodings are the same
             if (cbor1Len != cbor2Len) {
                 printf("Test %d failed: CBOR lengths %zu != %zu\n", i, cbor1Len, cbor2Len);
-                goto Failed;
+                CHECK(DPS_ERR_FAILURE);
             }
             if (memcmp(cbor1, cbor2, cbor1Len) != 0) {
                 printf("Test %d failed: CBOR encodings are different:\n%s\n\n%s\n\n", i, tests[i], json);
-                goto Failed;
+                CHECK(DPS_ERR_FAILURE);
             }
         }
     }
@@ -140,6 +138,6 @@ int main(int argc, char** argv)
 
 Failed:
 
-    printf("Failed at test %d %s\n", i, DPS_ErrTxt(status));
+    printf("Failed at test %d line %d %s\n", i, ln, DPS_ErrTxt(status));
     return EXIT_FAILURE;
 }
