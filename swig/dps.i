@@ -27,6 +27,7 @@
  */
 #pragma SWIG nowarn=312
 
+%ignore DPS_CBOR2JSON;
 %ignore DPS_DestroyKeyStore;
 %ignore DPS_DestroyPublication;
 %ignore DPS_DestroySubscription;
@@ -35,6 +36,7 @@
 %ignore DPS_GetNodeData;
 %ignore DPS_GetPublicationData;
 %ignore DPS_GetSubscriptionData;
+%ignore DPS_JSON2CBOR;
 %ignore DPS_KeyStoreHandle;
 %ignore DPS_MemoryKeyStoreHandle;
 %ignore DPS_NodeAddrToString;
@@ -69,6 +71,7 @@
 #include <dps/dps.h>
 #include <dps/err.h>
 #include <dps/event.h>
+#include <dps/json.h>
 #include <dps/synchronous.h>
 #include <dps/uuid.h>
 
@@ -477,6 +480,98 @@ void DestroySubscription(DPS_Subscription* sub)
 %}
 void DestroySubscription(DPS_Subscription* sub);
 
+%typemap(in,numinputs=0,noblock=1) uint8_t** cbor {
+    uint8_t* cbor;
+    cbor = NULL;
+    $1 = &cbor;
+}
+%typemap(out) DPS_Status JSON2CBOR {
+    if ($1 == DPS_OK) {
+        $result = From_bytes(cbor, sz);
+    }
+    delete[] cbor;
+    if ($1 != DPS_OK) {
+        SWIG_exception_fail(SWIG_ERROR, "in method '" "$symname" "'");
+    }
+}
+
+%typemap(default) (const uint8_t* cbor, size_t len) {
+    $1 = NULL;
+    $2 = 0;
+}
+%typemap(default) (int pretty) {
+    $1 = DPS_FALSE;
+}
+%typemap(in) (const uint8_t* cbor, size_t len) {
+    int res = AsVal_bytes($input, &$1, &$2);
+    if (!SWIG_IsOK(res)) {
+        SWIG_exception_fail(SWIG_ArgError(res), "in method '" "$symname" "', argument " "$argnum"" of type '" "$1_type""'");
+    }
+}
+%typemap(in,numinputs=0,noblock=1) char** json {
+    char* json;
+    json = NULL;
+    $1 = &json;
+}
+%typemap(freearg) (const uint8_t* cbor, size_t len) {
+    delete[] $1;
+}
+%typemap(out) DPS_Status CBOR2JSON {
+    if ($1 == DPS_OK) {
+        $result = SWIG_FromCharPtr(json);
+    }
+    delete[] json;
+    if ($1 != DPS_OK) {
+        SWIG_exception_fail(SWIG_ERROR, "in method '" "$symname" "'");
+    }
+}
+
+%{
+DPS_Status JSON2CBOR(const char* json, uint8_t** cbor, size_t* n)
+{
+    DPS_Status ret;
+    size_t sz = 256;
+
+    do {
+        delete[] *cbor;
+        sz *= 2;
+        *cbor = new uint8_t[sz];
+        ret = DPS_JSON2CBOR(json, *cbor, sz, n);
+    } while (ret == DPS_ERR_OVERFLOW);
+    if (ret != DPS_OK) {
+        delete[] *cbor;
+        *cbor = NULL;
+        *n = 0;
+    }
+    return ret;
+}
+
+/*
+ * Note reordering of json to last argument: numinputs=0 doesn't
+ * appear to work correctly for JavaScript generation when argument is
+ * not last.
+ */
+DPS_Status CBOR2JSON(const uint8_t* cbor, size_t len, int pretty, char** json)
+{
+    DPS_Status ret;
+    size_t sz = 256;
+
+    do {
+        delete[] *json;
+        sz *= 2;
+        *json = new char[sz];
+        ret = DPS_CBOR2JSON(cbor, len, *json, sz, pretty);
+    } while (ret == DPS_ERR_OVERFLOW);
+    if (ret != DPS_OK) {
+        delete[] *json;
+        *json = NULL;
+    }
+    return ret;
+}
+%}
+DPS_Status JSON2CBOR(const char* json, uint8_t** cbor, size_t* n);
+DPS_Status CBOR2JSON(const uint8_t* cbor, size_t len, int pretty, char** json);
+
 /*
  * These are workarounds for uninitialized variable warnings in the generated code
  */
@@ -524,6 +619,7 @@ void DestroySubscription(DPS_Subscription* sub);
 %include <dps/dps.h>
 %include <dps/err.h>
 %include <dps/event.h>
+%include <dps/json.h>
 %include <dps/synchronous.h>
 %include <dps/uuid.h>
 

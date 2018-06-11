@@ -25,6 +25,8 @@
 %rename("debug") DPS_Debug;
 %rename("uuidToString") DPS_UUIDToString;
 %rename("uuidCompare") DPS_UUIDCompare;
+%rename("cbor2JSON") CBOR2JSON;
+%rename("json2CBOR") JSON2CBOR;
 %rename("createNode") CreateNode;
 %rename("destroyKeyStore") DestroyKeyStore;
 %rename("destroyPublication") DestroyPublication;
