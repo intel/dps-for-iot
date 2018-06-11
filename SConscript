@@ -23,10 +23,6 @@ if platform == 'win32':
 elif platform == 'posix':
     libenv.Append(CCFLAGS = ['-Wall', '-Wno-format-extra-args'])
 
-# Include the fuzzing hooks when the sanitizer is enabled
-if platform == 'posix' and env['fsan'] == True:
-    libenv.Append(CPPDEFINES = ['DPS_USE_FUZZ'])
-
 libenv.Install('#/build/dist/inc/dps', libenv.Glob('#/inc/dps/*.h'))
 libenv.Install('#/build/dist/inc/dps/private', libenv.Glob('#/inc/dps/private/*.h'))
 

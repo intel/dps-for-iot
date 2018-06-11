@@ -66,6 +66,15 @@ for b in bindings:
 if env['transport'] == 'udp':
     env['USE_UDP'] = 'true'
     env['CPPDEFINES'].append('DPS_USE_UDP')
+elif env['transport'] == 'tcp':
+    env['USE_TCP'] = 'true'
+    env['CPPDEFINES'].append('DPS_USE_TCP')
+elif env['transport'] == 'dtls':
+    env['USE_DTLS'] = 'true'
+    env['CPPDEFINES'].append('DPS_USE_DTLS')
+elif platform == 'posix' and env['fsan'] == True:
+    env['USE_FUZZ'] = 'true'
+    env['CPPDEFINES'].append('DPS_USE_FUZZ')
 
 print("Building for " + env['variant'])
 
