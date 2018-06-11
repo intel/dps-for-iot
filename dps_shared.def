@@ -4,6 +4,7 @@ EXPORTS
 
 DPS_AckGetSenderKeyId
 DPS_AckPublication
+DPS_CBOR2JSON
 DPS_CopyAddress
 DPS_CopyPublication
 DPS_CreateAddress
@@ -34,6 +35,7 @@ DPS_GetPublicationData
 DPS_GetSubscriptionData
 DPS_InitPublication
 DPS_InitUUID
+DPS_JSON2CBOR
 DPS_KeyStoreHandle
 DPS_Link
 DPS_LinkTo
@@ -42,6 +44,7 @@ DPS_LogBytes
 DPS_MemoryKeyStoreHandle
 DPS_NodeAddrToString
 DPS_PublicationAddSubId
+DPS_PublicationConfigureQoS
 DPS_PublicationGetNode
 DPS_PublicationGetNumTopics
 DPS_PublicationGetSenderKeyId
