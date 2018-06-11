@@ -122,9 +122,8 @@ static DPS_Status ToCBORNumber(DPS_TxBuffer* cbor, JSONBuffer* json)
     }
 }
 
-static DPS_Status ExpectStr(JSONBuffer* json, const char* str)
+static DPS_Status ExpectStr(JSONBuffer* json, const char* str, size_t len)
 {
-    size_t len = strnlen_s(str, json->len);
     if (json->len < len || strncmp(json->str, str, len) != 0) {
         DPS_ERRPRINT("Expected \"%s\"\n", str);
         return DPS_ERR_INVALID;
@@ -330,19 +329,19 @@ static DPS_Status ToCBOR(DPS_TxBuffer* cbor, JSONBuffer* json)
         }
         break;
     case 't':
-        status = ExpectStr(json, "true");
+        status = ExpectStr(json, "true", 4);
         if (status == DPS_OK) {
             status = CBOR_EncodeBoolean(cbor, 1);
         }
         break;
     case 'f':
-        status = ExpectStr(json, "false");
+        status = ExpectStr(json, "false", 5);
         if (status == DPS_OK) {
             status = CBOR_EncodeBoolean(cbor, 0);
         }
         break;
     case 'n':
-        status = ExpectStr(json, "null");
+        status = ExpectStr(json, "null", 4);
         if (status == DPS_OK) {
             status = CBOR_EncodeNull(cbor);
         }
@@ -377,13 +376,14 @@ DPS_Status DPS_JSON2CBOR(const char* json, uint8_t* cbor, size_t cborSize, size_
     if (!json || !cbor || !cborLen) {
         return DPS_ERR_NULL;
     }
-    if (!cborSize) {
-        return DPS_ERR_ARGS;
-    }
     jsonBuf.str = (char*)json;
     jsonBuf.len = strnlen_s(json, MAX_INPUT_STRING_LEN);
+    // An empty string is ok
+    if (jsonBuf.len == 0) {
+        *cborLen = 0;
+        return DPS_OK;
+    }
     DPS_TxBufferInit(&cborBuf, cbor, cborSize);
-
     status = ToCBOR(&cborBuf, &jsonBuf);
     if (status == DPS_OK) {
         *cborLen = DPS_TxBufferUsed(&cborBuf);
@@ -652,8 +652,13 @@ DPS_Status DPS_CBOR2JSON(const uint8_t* cbor, size_t cborLen, char* json, size_t
     if (!json || !cbor) {
         return DPS_ERR_NULL;
     }
-    if (!cborLen || !jsonSize) {
-        return DPS_ERR_ARGS;
+    if (jsonSize == 0) {
+        return DPS_ERR_OVERFLOW;
+    }
+    // Empty CBOR is ok
+    if (cborLen == 0) {
+        json[0] = '\0';
+        return DPS_OK;
     }
     DPS_RxBufferInit(&rxBuf, (uint8_t*)cbor, cborLen);
     jsonBuf.str = json;

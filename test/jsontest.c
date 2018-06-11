@@ -25,7 +25,7 @@
 
 static int ln;
 
-#define CHECK(r)   if ((r) != DPS_OK) { ln = __LINE__; goto Failed; }
+#define CHECK(r)   if ((r) != DPS_OK) { status = (r); ln = __LINE__; goto Failed; }
 
 static const char json0[] = "1234";
 static const char json1[] = "-0.5";
@@ -65,9 +65,11 @@ static const char json12[] =
     { \"$binary\":   \"00\" }, \
     { \"$binary\":\"\" } \
  ]";
+static const char json13[] = "1";
+static const char json14[] = "";
 
 static const char* tests[] = {
-    json0, json1, json2, json3, json4, json5, json6, json7, json8, json9, json10, json11, json12
+    json0, json1, json2, json3, json4, json5, json6, json7, json8, json9, json10, json11, json12, json13, json14
 };
 
 static const char bad0[] = "abcd";
@@ -79,10 +81,17 @@ static const char bad5[] = "[[[[ 1, 2 ], 3]}]";
 static const char bad6[] = "ab\ncd";
 static const char bad7[] = "] 1,2 [";
 static const char bad8[] = "[ 1,2,+,= ]";
+static const char bad9[] = "]";
+static const char bad10[] = "[";
+static const char bad11[] = "{";
+static const char bad12[] = "}";
+static const char bad13[] = "*";
+static const char bad14[] = "tru";
+static const char bad15[] = "falsed";
 
 
 static const char* invalid[] = {
-    bad0, bad1, bad2, bad3, bad4, bad5, bad6, bad7, bad8
+    bad0, bad1, bad2, bad3, bad4, bad5, bad6, bad7, bad8, bad9, bad10, bad11, bad12, bad13, bad14, bad15
 };
 
 static uint8_t cbor1[1024];
@@ -93,13 +102,12 @@ int main(int argc, char** argv)
 {
     DPS_Status status = DPS_OK;
     int pretty;
+    size_t cbor1Len;
+    size_t cbor2Len;
     int i;
     // Check with and without formatting
     for (pretty = 0; pretty <= 1; ++pretty) {
         for (i = 0; i < (sizeof(tests) / sizeof(tests[0])); ++i) {
-            size_t cbor1Len;
-            size_t cbor2Len;
-
             // Encode as CBOR
             status = DPS_JSON2CBOR(tests[i], cbor1, sizeof(cbor1), &cbor1Len);
             CHECK(status);
@@ -128,8 +136,30 @@ int main(int argc, char** argv)
         status = DPS_JSON2CBOR(invalid[i], cbor1, sizeof(cbor1), &cbor1Len);
         if (status == DPS_OK) {
             printf("Test of invalid input %d failed\n\n", i);
-            status = DPS_ERR_FAILURE;
-            goto Failed;
+            CHECK(DPS_ERR_FAILURE);
+        }
+    }
+    // Test buffer overflow checks
+    for (pretty = 0; pretty <= 1; ++pretty) {
+        for (i = 0; i < (sizeof(tests) / sizeof(tests[0])); ++i) {
+            status = DPS_JSON2CBOR(tests[i], cbor1, sizeof(cbor1), &cbor1Len);
+            CHECK(status);
+            if (cbor1Len != 0) {
+                // This should fail
+                status = DPS_JSON2CBOR(tests[i], cbor2, cbor1Len - 1, &cbor2Len);
+                if (status != DPS_ERR_OVERFLOW) {
+                    printf("Test for CBOR overrun %d failed\n\n", i);
+                    CHECK(DPS_ERR_FAILURE);
+                }
+                status = DPS_CBOR2JSON(cbor1, cbor1Len, json, sizeof(json), pretty);
+                CHECK(status);
+                // This should fail
+                status = DPS_CBOR2JSON(cbor1, cbor1Len, json, strlen(json) - 1, pretty);
+                if (status != DPS_ERR_OVERFLOW) {
+                    printf("Test for JSON overrun %d failed\n\n", i);
+                    CHECK(DPS_ERR_FAILURE);
+                }
+            }
         }
     }
 
