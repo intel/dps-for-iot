@@ -244,7 +244,7 @@ static DPS_Status ToCBOR(DPS_TxBuffer* cbor, JSONBuffer* json)
         break;
     case '"':
         len = 0;
-		--json->len;
+        --json->len;
         ++json->str;
         while (json->len--) {
             char c = json->str[len];
@@ -266,7 +266,7 @@ static DPS_Status ToCBOR(DPS_TxBuffer* cbor, JSONBuffer* json)
                     status = CBOR_Copy(cbor, &nul, 1);
                 }
             }
-			json->str += len + 1;
+            json->str += len + 1;
         }
         break;
     case '[':
