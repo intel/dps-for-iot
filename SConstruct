@@ -72,9 +72,6 @@ elif env['transport'] == 'tcp':
 elif env['transport'] == 'dtls':
     env['USE_DTLS'] = 'true'
     env['CPPDEFINES'].append('DPS_USE_DTLS')
-elif platform == 'posix' and env['fsan'] == True:
-    env['USE_FUZZ'] = 'true'
-    env['CPPDEFINES'].append('DPS_USE_FUZZ')
 
 print("Building for " + env['variant'])
 
