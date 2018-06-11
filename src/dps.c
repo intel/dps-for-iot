@@ -22,7 +22,7 @@
 
 #include <assert.h>
 #include <string.h>
-#include <malloc.h>
+#include <stdlib.h>
 #include <math.h>
 #include <safe_lib.h>
 #include <dps/dbg.h>
@@ -60,8 +60,6 @@ typedef struct _OnOpCompletion {
     void* data;
     DPS_Node* node;
     struct _RemoteNode* remote;
-    uint16_t ttl;
-    uv_timer_t timer;
     union {
         DPS_OnLinkComplete link;
         DPS_OnUnlinkComplete unlink;
@@ -70,13 +68,9 @@ typedef struct _OnOpCompletion {
     struct _OnOpCompletion* next;
 } OnOpCompletion;
 
-/*
- * How long (in milliseconds) to wait to received a response from a remote
- * node this node is linking with.
- */
-#define LINK_RESPONSE_TIMEOUT  5000
-
 const DPS_UUID DPS_MaxMeshId = { .val64 = { UINT64_MAX, UINT64_MAX } };
+
+static void SendSubsTimer(uv_timer_t* handle);
 
 void DPS_LockNode(DPS_Node* node)
 {
@@ -168,11 +162,6 @@ void DPS_RxBufferToTx(const DPS_RxBuffer* rxBuffer, DPS_TxBuffer* txBuffer)
     txBuffer->txPos = rxBuffer->eod;
 }
 
-static void OnTimerClosed(uv_handle_t* handle)
-{
-    free(handle->data);
-}
-
 void DPS_RemoteCompletion(DPS_Node* node, RemoteNode* remote, DPS_Status status)
 {
     OnOpCompletion* cpn = remote->completion;
@@ -182,20 +171,13 @@ void DPS_RemoteCompletion(DPS_Node* node, RemoteNode* remote, DPS_Status status)
      * See AllocCompletion() timer.data is only set if the timer handle
      * was successfully initialized
      */
-    if (cpn->timer.data) {
-        uv_timer_stop(&cpn->timer);
-    }
     remote->completion = NULL;
     if (cpn->op == LINK_OP) {
         cpn->on.link(node, &addr, status, cpn->data);
     } else if (cpn->op == UNLINK_OP) {
         cpn->on.unlink(node, &addr, cpn->data);
     }
-    if (cpn->timer.data) {
-        uv_close((uv_handle_t*)&cpn->timer, OnTimerClosed);
-    } else {
-        free(cpn);
-    }
+    free(cpn);
     if (status != DPS_OK) {
         DPS_DeleteRemoteNode(node, remote);
     }
@@ -314,7 +296,7 @@ static const DPS_UUID* MinMeshId(DPS_Node* node, RemoteNode* excluded)
     return minMeshId;
 }
 
-static DPS_Status UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, int* send)
+DPS_Status DPS_UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, uint8_t* send)
 {
     DPS_Status ret;
     DPS_BitVector* newInterests = NULL;
@@ -417,7 +399,7 @@ static DPS_Status UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, 
     return DPS_OK;
 
 ErrExit:
-    DPS_ERRPRINT("UpdateOutboundInterests: %s\n", DPS_ErrTxt(ret));
+    DPS_ERRPRINT("DPS_UpdateOutboundInterests: %s\n", DPS_ErrTxt(ret));
 
     DPS_BitVectorFree(newInterests);
     DPS_BitVectorFree(newNeeds);
@@ -507,49 +489,7 @@ RemoteNode* DPS_LookupRemoteNode(DPS_Node* node, DPS_NodeAddress* addr)
     return NULL;
 }
 
-static void OnCompletionTimeout(uv_timer_t* timer)
-{
-    OnOpCompletion* cpn = (OnOpCompletion*)timer->data;
-    DPS_LockNode(cpn->node);
-    DPS_RemoteCompletion(cpn->node, cpn->remote, DPS_ERR_TIMEOUT);
-    DPS_UnlockNode(cpn->node);
-}
-
-static void AsyncCompletion(uv_async_t* async)
-{
-    DPS_Node* node = (DPS_Node*)async->data;
-
-    DPS_DBGTRACE();
-
-    DPS_LockNode(node);
-
-    while (node->completionList) {
-        OnOpCompletion* cpn = node->completionList;
-        node->completionList = cpn->next;
-
-        cpn->timer.data = NULL;
-        if (node->state != DPS_NODE_RUNNING) {
-            DPS_RemoteCompletion(node, cpn->remote, DPS_ERR_STOPPING);
-            continue;
-        }
-        if (uv_timer_init(node->loop, &cpn->timer)) {
-            DPS_RemoteCompletion(node, cpn->remote, DPS_ERR_FAILURE);
-            continue;
-        }
-        /*
-         * So cpn is freed when the timer handle is closed
-         */
-        cpn->timer.data = cpn;
-        if (uv_timer_start(&cpn->timer, OnCompletionTimeout, cpn->ttl, 0)) {
-            DPS_RemoteCompletion(node, cpn->remote, DPS_ERR_FAILURE);
-            continue;
-        }
-    }
-
-    DPS_UnlockNode(node);
-}
-
-static OnOpCompletion* AllocCompletion(DPS_Node* node, RemoteNode* remote, OpType op, void* data, uint16_t ttl, void* cb)
+static OnOpCompletion* AllocCompletion(DPS_Node* node, RemoteNode* remote, OpType op, void* data, void* cb)
 {
     OnOpCompletion* cpn;
 
@@ -559,19 +499,7 @@ static OnOpCompletion* AllocCompletion(DPS_Node* node, RemoteNode* remote, OpTyp
         cpn->data = data;
         cpn->node = node;
         cpn->remote = remote;
-        cpn->ttl = ttl;
         cpn->on.cb = cb;
-        /*
-         * We are holding the node lock so we can link the completion
-         * after we have confirmed the async_send was successful.
-         */
-        if (uv_async_send(&node->completionAsync)) {
-            free(cpn);
-            cpn = NULL;
-        } else {
-            cpn->next = node->completionList;
-            node->completionList = cpn;
-        }
     }
     return cpn;
 }
@@ -637,6 +565,31 @@ void DPS_OnSendComplete(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_bu
         if (remote) {
             DPS_DBGPRINT("Removing node %s\n", DPS_NodeAddrToString(&ep->addr));
             DPS_DeleteRemoteNode(node, remote);
+        }
+        DPS_UnlockNode(node);
+    }
+    DPS_NetFreeBufs(bufs, numBufs);
+}
+
+void DPS_OnSendSubscriptionComplete(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf_t* bufs, size_t numBufs, DPS_Status status)
+{
+    RemoteNode* remote;
+
+    DPS_DBGPRINT("Send complete %s\n", DPS_ErrTxt(status));
+    if (ep) {
+        DPS_LockNode(node);
+        remote = DPS_LookupRemoteNode(node, &ep->addr);
+        if (remote) {
+            remote->outbound.subPending = DPS_FALSE;
+            if (status == DPS_OK) {
+                if ((node->state == DPS_NODE_RUNNING) && !node->subsPending) {
+                    node->subsPending = DPS_TRUE;
+                    uv_timer_start(&node->subsTimer, SendSubsTimer, 0, 0);
+                }
+            } else {
+                DPS_DBGPRINT("Removing node %s\n", DPS_NodeAddrToString(&ep->addr));
+                DPS_DeleteRemoteNode(node, remote);
+            }
         }
         DPS_UnlockNode(node);
     }
@@ -783,7 +736,7 @@ static void SendSubsTimer(uv_timer_t* handle)
      * Forward subscription to all remote nodes with interests
      */
     for (remote = node->remoteNodes; remote != NULL; remote = remoteNext) {
-        int send = DPS_FALSE;
+        uint8_t send = DPS_FALSE;
         remoteNext = remote->next;
 
         if (remote->unlink) {
@@ -814,11 +767,17 @@ static void SendSubsTimer(uv_timer_t* handle)
                 --remote->outbound.ackCountdown;
                 continue;
             }
-            send = DPS_TRUE;
+            send = !remote->outbound.subPending;
         } else {
-            ret = UpdateOutboundInterests(node, remote, &send);
+            ret = DPS_UpdateOutboundInterests(node, remote, &send);
             if (ret != DPS_OK) {
                 break;
+            }
+            /*
+             * See comment at end of DPS_Link for an explanation of this
+             */
+            if (!send && remote->completion) {
+                DPS_RemoteCompletion(node, remote, DPS_OK);
             }
         }
         if (send) {
@@ -884,6 +843,7 @@ static DPS_Publication* UpdatePub(DPS_Node* node, DPS_Publication* pub, int* cou
 void DPS_UpdatePubs(DPS_Node* node, DPS_Publication* pub)
 {
     int count = 0;
+
     DPS_DBGTRACE();
 
     DPS_LockNode(node);
@@ -948,7 +908,9 @@ static DPS_Status DecodeRequest(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuffe
     uint8_t msgType;
     size_t len;
 
-    DPS_DBGTRACE();
+    DPS_DBGTRACEA("node=%p,ep={addr=%s,cn=%p},buf=%p,multicast=%d\n",
+                  node, DPS_NodeAddrToString(&ep->addr), ep->cn, buf, multicast);
+
     CBOR_Dump("Request in", buf->rxPos, DPS_RxBufferAvail(buf));
     ret = CBOR_DecodeArray(buf, &len);
     if (ret != DPS_OK || (len != 5)) {
@@ -1165,11 +1127,6 @@ static void StopNode(DPS_Node* node)
     DPS_AsyncResolveAddress(&node->resolverAsync);
     uv_close((uv_handle_t*)&node->resolverAsync, NULL);
     /*
-     * Cancel any pending completions before closing the handle
-     */
-    AsyncCompletion(&node->completionAsync);
-    uv_close((uv_handle_t*)&node->completionAsync, NULL);
-    /*
      * Delete remote nodes and shutdown any connections.
      */
     while (node->remoteNodes) {
@@ -1302,6 +1259,8 @@ DPS_Node* DPS_CreateNode(const char* separators, DPS_KeyStore* keyStore, const D
     DPS_Node* node = calloc(1, sizeof(DPS_Node));
     DPS_Status ret;
 
+    DPS_DBGTRACE();
+
     if (!node) {
         return NULL;
     }
@@ -1374,6 +1333,8 @@ DPS_Status DPS_StartNode(DPS_Node* node, int mcast, uint16_t rxPort)
     DPS_Status ret = DPS_OK;
     int r;
 
+    DPS_DBGTRACE();
+
     if (!node) {
         return DPS_ERR_NULL;
     }
@@ -1410,10 +1371,6 @@ DPS_Status DPS_StartNode(DPS_Node* node, int mcast, uint16_t rxPort)
 
     node->resolverAsync.data = node;
     r = uv_async_init(node->loop, &node->resolverAsync, DPS_AsyncResolveAddress);
-    assert(!r);
-
-    node->completionAsync.data = node;
-    r = uv_async_init(node->loop, &node->completionAsync, AsyncCompletion);
     assert(!r);
 
     node->subsTimer.data = node;
@@ -1492,6 +1449,8 @@ uv_loop_t* DPS_GetLoop(DPS_Node* node)
 
 uint16_t DPS_GetPortNumber(DPS_Node* node)
 {
+    DPS_DBGTRACE();
+
     if (node) {
         return node->port;
     } else {
@@ -1503,6 +1462,7 @@ uint16_t DPS_GetPortNumber(DPS_Node* node)
 DPS_Status DPS_DestroyNode(DPS_Node* node, DPS_OnNodeDestroyed cb, void* data)
 {
     DPS_DBGTRACE();
+
     if (!node || !cb) {
         return DPS_ERR_NULL;
     }
@@ -1532,6 +1492,8 @@ DPS_Status DPS_DestroyNode(DPS_Node* node, DPS_OnNodeDestroyed cb, void* data)
 
 void DPS_SetNodeSubscriptionUpdateDelay(DPS_Node* node, uint32_t subsRateMsecs)
 {
+    DPS_DBGTRACE();
+
     node->subsRate = subsRateMsecs;
 }
 
@@ -1541,6 +1503,7 @@ DPS_Status DPS_Link(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnLinkComplete cb
     RemoteNode* remote = NULL;
 
     DPS_DBGTRACE();
+
     if (!addr || !node || !cb) {
         return DPS_ERR_NULL;
     }
@@ -1561,7 +1524,7 @@ DPS_Status DPS_Link(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnLinkComplete cb
     }
     assert(!remote->completion);
     remote->linked = DPS_TRUE;
-    remote->completion = AllocCompletion(node, remote, LINK_OP, data, LINK_RESPONSE_TIMEOUT, cb);
+    remote->completion = AllocCompletion(node, remote, LINK_OP, data, cb);
     if (!remote->completion) {
         DPS_DeleteRemoteNode(node, remote);
         DPS_UnlockNode(node);
@@ -1570,6 +1533,8 @@ DPS_Status DPS_Link(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnLinkComplete cb
     DPS_UnlockNode(node);
     /*
      * This will cause an initial subscription to be sent to the remote node
+     * or trigger the completion if we have no new outbound interests for the
+     * remote node (i.e. the remote node is already linked to us).
      */
     DPS_UpdateSubs(node);
     return DPS_OK;
@@ -1580,6 +1545,7 @@ DPS_Status DPS_Unlink(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnUnlinkComplet
     RemoteNode* remote;
 
     DPS_DBGTRACE();
+
     if (!addr || !node || !cb) {
         return DPS_ERR_NULL;
     }
@@ -1607,7 +1573,7 @@ DPS_Status DPS_Unlink(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnUnlinkComplet
      * the completion callback will be called.
      */
     remote->unlink = DPS_TRUE;
-    remote->completion = AllocCompletion(node, remote, UNLINK_OP, data, LINK_RESPONSE_TIMEOUT, cb);
+    remote->completion = AllocCompletion(node, remote, UNLINK_OP, data, cb);
     if (!remote->completion) {
         DPS_DeleteRemoteNode(node, remote);
         DPS_UnlockNode(node);

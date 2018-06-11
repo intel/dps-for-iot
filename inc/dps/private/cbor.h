@@ -613,7 +613,7 @@ DPS_Status DPS_ParseMapNext(CBOR_MapState* mapState, int32_t* key);
  */
 int DPS_ParseMapDone(CBOR_MapState* mapState);
 
-#ifndef NDEBUG
+#ifdef DPS_DEBUG
 /**
  * Print an encoded CBOR value
  *

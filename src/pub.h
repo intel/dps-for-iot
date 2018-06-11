@@ -186,7 +186,7 @@ void DPS_PublicationDecRef(DPS_Publication* pub);
  *
  * @param node The node
  */
-#ifndef NDEBUG
+#ifdef DPS_DEBUG
 void DPS_DumpPubs(DPS_Node* node);
 #else
 #define DPS_DumpPubs(node)

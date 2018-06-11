@@ -20,11 +20,16 @@
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  */
 
-#include <malloc.h>
+#include <stdlib.h>
 #include <safe_lib.h>
 #include <dps/dps.h>
 #include <dps/dbg.h>
 #include <dps/event.h>
+
+/*
+ * Debug control for this module
+ */
+DPS_DEBUG_CONTROL(DPS_DEBUG_OFF);
 
 typedef struct _DPS_Event {
     DPS_Status status;
@@ -36,6 +41,8 @@ typedef struct _DPS_Event {
 
 void DPS_DestroyEvent(DPS_Event* event)
 {
+    DPS_DBGTRACE();
+
     if (event) {
         uv_mutex_destroy(&event->mutex);
         uv_cond_destroy(&event->cond);
@@ -45,7 +52,11 @@ void DPS_DestroyEvent(DPS_Event* event)
 
 DPS_Event* DPS_CreateEvent()
 {
-    DPS_Event* event = calloc(1, sizeof(DPS_Event));
+    DPS_Event* event;
+
+    DPS_DBGTRACE();
+
+    event = calloc(1, sizeof(DPS_Event));
     if (event) {
         uv_mutex_init(&event->mutex);
         uv_cond_init(&event->cond);
@@ -67,6 +78,8 @@ void* DPS_GetEventData(const DPS_Event* event)
 
 void DPS_SignalEvent(DPS_Event* event, DPS_Status status)
 {
+    DPS_DBGTRACE();
+
     if (event) {
         uv_mutex_lock(&event->mutex);
         event->status = status;
@@ -81,6 +94,8 @@ void DPS_SignalEvent(DPS_Event* event, DPS_Status status)
 DPS_Status DPS_TimedWaitForEvent(DPS_Event* event, uint16_t timeout)
 {
     DPS_Status status;
+
+    DPS_DBGTRACE();
 
     if (!timeout) {
         return DPS_WaitForEvent(event);
@@ -106,6 +121,8 @@ DPS_Status DPS_TimedWaitForEvent(DPS_Event* event, uint16_t timeout)
 DPS_Status DPS_WaitForEvent(DPS_Event* event)
 {
     DPS_Status status;
+
+    DPS_DBGTRACE();
 
     if (!event) {
         return DPS_ERR_NULL;

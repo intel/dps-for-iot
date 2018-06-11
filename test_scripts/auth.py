@@ -1,9 +1,9 @@
-#!/bin/bash
+#!/usr/bin/python
 
-# Include common functions
-dir="${BASH_SOURCE%/*}"
-if [[ ! -d "$dir" ]]; then dir="$PWD"; fi
-. "$dir/common.sh"
+from common import *
+import atexit
+
+atexit.register(cleanup)
 
 #
 # Participants
@@ -17,41 +17,35 @@ if [[ ! -d "$dir" ]]; then dir="$PWD"; fi
 # Unauthorized subscription
 # - To protect against Eve, Alice must encrypt for Bob to prevent Eve from eavesdropping.
 #
-reset_logs
+reset_logs()
 
-test_node -u bob -s T
-test_node -u eve -s T
-sleep 1
-test_node -u alice -p T
-sleep 1
+node1 = node('-u bob -s T')
+node2 = node('-u eve -s T')
+node3 = node('-u alice -p T')
 
-expect_pubs_received 1 T
+expect_pub_received(node1, 'T')
+expect_pub_not_received(node2, 'T', allow_error=True)
 
 #
 # Unauthorized publication
 # - To protect against Trudy, Bob must know that Alice is not the originator.
 #
-reset_logs
+reset_logs()
 
-test_node -u bob -s T
-sleep 1
-test_node -u trudy -p T
-sleep 1
+node1 = node('-u bob -s T')
+node2 = node('-u trudy -p T')
 
-expect_pubs_received 0 T
-expect_errors 1 "Unauthorized pub"
+expect_error(node1, 'Unauthorized pub')
 
 #
 # Unauthorized acknowledgement
 # - To protect against Trudy, Alice must know that Bob is not the originator.
 #
-reset_logs
+reset_logs()
 
-test_node -u bob -s T
-test_node -u trudy -s T
-sleep 1
-test_node -u alice -p T
-sleep 2
+node1 = node('-u bob -s T')
+node2 = node('-u trudy -s T')
+node3 = node('-u alice -p T')
 
-expect_pubs_received 2 T
-expect_errors 1 "Unauthorized ack"
+expect_pub_received([node1, node2], 'T', allow_error=True)
+expect_error(node3, 'Unauthorized ack')

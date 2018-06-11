@@ -22,7 +22,7 @@
 
 #include <assert.h>
 #include <string.h>
-#include <malloc.h>
+#include <stdlib.h>
 #include <safe_lib.h>
 #include <dps/dbg.h>
 #include <dps/dps.h>
@@ -421,7 +421,7 @@ DPS_Status DPS_MulticastSend(DPS_MulticastSender* sender, void* appCtx, uv_buf_t
     MulticastSend* send = NULL;
     size_t i;
 
-#ifndef NDEBUG
+#ifdef DPS_DEBUG
     size_t len = 0;
     size_t j;
     for (j = 0; j < numBufs; ++j) {

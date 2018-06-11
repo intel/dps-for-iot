@@ -81,16 +81,22 @@ DPS_KeyStore* DPS_KeyStoreHandle(DPS_KeyStoreRequest* request)
 
 DPS_Status DPS_SetKeyAndId(DPS_KeyStoreRequest* request, const DPS_Key* key, const DPS_KeyId* keyId)
 {
+    DPS_DBGTRACE();
+
     return request->setKeyAndId ? request->setKeyAndId(request, key, keyId) : DPS_ERR_MISSING;
 }
 
 DPS_Status DPS_SetKey(DPS_KeyStoreRequest* request, const DPS_Key* key)
 {
+    DPS_DBGTRACE();
+
     return request->setKey ? request->setKey(request, key) : DPS_ERR_MISSING;
 }
 
 DPS_Status DPS_SetCA(DPS_KeyStoreRequest* request, const char* ca)
 {
+    DPS_DBGTRACE();
+
     return request->setCA ? request->setCA(request, ca): DPS_ERR_MISSING;
 }
 
@@ -510,8 +516,6 @@ ErrorExit:
 
 DPS_KeyStore* DPS_MemoryKeyStoreHandle(DPS_MemoryKeyStore *mks)
 {
-    DPS_DBGTRACE();
-
     if (!mks) {
         return NULL;
     }

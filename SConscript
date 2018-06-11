@@ -126,6 +126,8 @@ if env['python']:
         pyenv.Append(CCFLAGS = ['/EHsc'])
         # Ignore warnings in generated code
         pyenv.Append(CCFLAGS = ['/wd4244'])
+    elif platform == 'posix':
+        pyenv.Append(CCFLAGS = ['-Wno-deprecated-register'])
 
     pyenv.Append(SWIGFLAGS = ['-python', '-c++', '-Wextra', '-Werror', '-v', '-O'], SWIGPATH = ['#/inc', './swig/py'])
     pyenv.Append(CPPPATH = ['swig', 'swig/py'])
@@ -175,8 +177,7 @@ testsrcs = ['test/hist_unit.c',
             'test/cosetest.c',
             'test/jsontest.c',
             'test/version.c',
-            'test/keystoretest.c',
-            'test/publish.c']
+            'test/keystoretest.c']
 
 Depends(testsrcs, ext_libs)
 
@@ -184,7 +185,12 @@ testprogs = []
 for test in testsrcs:
     testprogs.append(testenv.Program(test))
 
-testprogs.append(testenv.Program(['test/node.c', 'test/keys.c']))
+testsrcs = ['test/link.c',
+            'test/node.c',
+            'test/publish.c']
+
+for test in testsrcs:
+    testprogs.append(testenv.Program([test, 'test/keys.c']))
 
 testenv.Install('#/build/test/bin', testprogs)
 
@@ -192,6 +198,7 @@ testenv.Install('#/build/test/bin', testprogs)
 if platform == 'posix' and env['fsan'] == True:
     fenv = env.Clone()
     fenv.VariantDir('test/fuzzer', 'test')
+    fenv.Append(CPPPATH = ['#/ext/safestring/include'])
     fenv.Append(LINKFLAGS = ['-fsanitize=fuzzer'])
     fenv.Append(LIBS = [lib, env['UV_LIBS']])
 

@@ -32,37 +32,28 @@ static int AsVal_bytes(Handle obj, uint8_t** bytes, size_t* len)
         v8::Local<v8::ArrayBuffer> buf;
         v8::Local<v8::Uint8Array> arr = v8::Local<v8::Uint8Array>::Cast(obj);
         (*len) = arr->ByteLength();
-        (*bytes) = (uint8_t*)malloc((*len));
-        if (!(*bytes)) {
-            return SWIG_MemoryError;
-        }
+        (*bytes) = new uint8_t[*len];
         size_t off = arr->ByteOffset();
         uint8_t* data = (uint8_t*)arr->Buffer()->GetContents().Data();
         memcpy((*bytes), &data[off], (*len));
     } else if (obj->IsArray()) {
         v8::Local<v8::Array> arr = v8::Local<v8::Array>::Cast(obj);
         (*len) = arr->Length();
-        (*bytes) = (uint8_t*)malloc((*len));
-        if (!(*bytes)) {
-            return SWIG_MemoryError;
-        }
+        (*bytes) = new uint8_t[*len];
         size_t i;
         for (i = 0; i < (*len); ++i) {
             v8::Local<v8::Value> valRef;
             if (arr->Get(SWIGV8_CURRENT_CONTEXT(), i).ToLocal(&valRef)) {
                 (*bytes)[i] = valRef->Uint32Value();
             } else {
-                free((*bytes));
+                delete[] (*bytes);
                 return SWIG_TypeError;
             }
         }
     } else if (obj->IsString()) {
         v8::Local<v8::String> str = v8::Local<v8::String>::Cast(obj);
         (*len) =str->Utf8Length();
-        (*bytes) = (uint8_t*)malloc((*len) + 1);
-        if (!(*bytes)) {
-            return SWIG_MemoryError;
-        }
+        (*bytes) = new uint8_t[*len + 1];
         str->WriteUtf8((char*)(*bytes));
     } else if (!obj->IsNull()) {
         return SWIG_TypeError;
@@ -108,23 +99,17 @@ static void async_cb(uv_async_t* handle)
     mutex.lock();
     while (!queue.empty()) {
         Callback* cb = queue.front();
+        std::condition_variable* cond = cb->m_cond;
         queue.pop();
         mutex.unlock();
         cb->Call();
-        if (cb->m_cond) {
-            cb->m_cond->notify_one();
-        }
         delete cb;
+        if (cond) {
+            cond->notify_one();
+        }
         mutex.lock();
     }
     mutex.unlock();
-}
-
-static void async_send(Callback* cb)
-{
-    std::unique_lock<std::mutex> lock(mutex);
-    queue.push(cb);
-    uv_async_send(&async);
 }
 
 static void sync_send(Callback* cb)
@@ -292,7 +277,7 @@ public:
 
 static void OnNodeDestroyed(DPS_Node* node, void* data)
 {
-    async_send(new NodeDestroyedCallback(node, data));
+    sync_send(new NodeDestroyedCallback(node, data));
 }
 
 class LinkCompleteCallback : public Callback {
@@ -321,7 +306,7 @@ public:
 
 static void OnLinkComplete(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, void* data)
 {
-    async_send(new LinkCompleteCallback(node, addr, status, data));
+    sync_send(new LinkCompleteCallback(node, addr, status, data));
 }
 
 class NodeAddressCompleteCallback : public Callback {
@@ -348,7 +333,7 @@ public:
 
 static void OnNodeAddressComplete(DPS_Node* node, DPS_NodeAddress* addr, void* data)
 {
-    async_send(new NodeAddressCompleteCallback(node, addr, data));
+    sync_send(new NodeAddressCompleteCallback(node, addr, data));
 }
 
 class AcknowledgementCallback : public Callback {
@@ -358,9 +343,8 @@ public:
     size_t m_len;
     AcknowledgementCallback(DPS_Publication* pub, uint8_t* payload, size_t len) {
         m_pub = pub;
-        m_payload = new uint8_t[len+1];
+        m_payload = new uint8_t[len];
         memcpy(m_payload, payload, len);
-        payload[len+1] = 0;
         m_len = len;
     }
     virtual ~AcknowledgementCallback() {
@@ -378,7 +362,7 @@ public:
 
 static void AcknowledgementHandler(DPS_Publication* pub, uint8_t* payload, size_t len)
 {
-    async_send(new AcknowledgementCallback(pub, payload, len));
+    sync_send(new AcknowledgementCallback(pub, payload, len));
 }
 
 class PublicationCallback : public Callback {
@@ -390,9 +374,8 @@ public:
     PublicationCallback(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* payload, size_t len) {
         m_sub = sub;
         m_pub = DPS_CopyPublication(pub);
-        m_payload = new uint8_t[len+1];
+        m_payload = new uint8_t[len];
         memcpy(m_payload, payload, len);
-        payload[len+1] = 0;
         m_len = len;
     }
     virtual ~PublicationCallback() {
@@ -412,7 +395,7 @@ public:
 
 static void PublicationHandler(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* payload, size_t len)
 {
-    async_send(new PublicationCallback(sub, pub, payload, len));
+    sync_send(new PublicationCallback(sub, pub, payload, len));
 }
 
 static void InitializeModule()

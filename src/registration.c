@@ -23,7 +23,7 @@
 #include <assert.h>
 #include <safe_lib.h>
 #include <string.h>
-#include <malloc.h>
+#include <stdlib.h>
 #include <uv.h>
 #include <dps/dps.h>
 #include <dps/dbg.h>
@@ -32,6 +32,7 @@
 #include <dps/registration.h>
 #include <dps/private/network.h>
 #include <dps/private/cbor.h>
+#include "node.h"
 #include "topics.h"
 #include "compat.h"
 
@@ -41,8 +42,6 @@
 DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
 #define REGISTRATION_TTL   (60 * 60 * 8)  /* TTL is is seconds */
-#define REG_PUT_TIMEOUT    (2000)         /* Timeout is in milliseconds */
-#define REG_GET_TIMEOUT    (5000)         /* Timeout is in milliseconds */
 
 static void OnNodeDestroyed(DPS_Node* node, void* data)
 {
@@ -50,6 +49,40 @@ static void OnNodeDestroyed(DPS_Node* node, void* data)
 }
 
 const char* DPS_RegistryTopicString = "dps/registration_service";
+
+#define AddrGetPort(a)     (((struct sockaddr_in*)(a))->sin_port)
+#define AddrSetPort(a, p)  (((struct sockaddr_in*)(a))->sin_port = (p))
+
+static int IsLocalAddr(DPS_NodeAddress* addr, uint16_t port)
+{
+    int local = DPS_FALSE;
+    uv_interface_address_t* ifsAddrs;
+    int numIfs;
+    int r;
+
+    port = htons(port);
+    if (AddrGetPort(addr) != port) {
+        return DPS_FALSE;
+    }
+    r = uv_interface_addresses(&ifsAddrs, &numIfs);
+    if (!r) {
+        size_t i;
+        for (i = 0; i < numIfs; ++i) {
+            uv_interface_address_t* ifn = &ifsAddrs[i];
+            if (!ifn->is_internal) {
+                DPS_NodeAddress a;
+                memcpy_s(&a.inaddr, sizeof(a.inaddr), &ifn->address, sizeof(ifn->address));
+                AddrSetPort(&a.inaddr, port);
+                if (DPS_SameAddr(addr, &a)) {
+                    local = DPS_TRUE;
+                    break;
+                }
+            }
+        }
+        uv_free_interface_addresses(ifsAddrs, numIfs);
+    }
+    return local;
+}
 
 typedef struct {
     char* tenant;
@@ -59,9 +92,13 @@ typedef struct {
     DPS_TxBuffer payload;
     DPS_OnRegPutComplete cb;
     uv_timer_t timer;
+    DPS_NodeAddress addr;
+    int linked;
+    DPS_Status status;
+    uint16_t timeout;
 } RegPut;
 
-static void RegPutCB(RegPut* regPut, DPS_Status status)
+static void RegPutCB(RegPut* regPut)
 {
     DPS_DBGTRACE();
     if (regPut->pub) {
@@ -70,14 +107,36 @@ static void RegPutCB(RegPut* regPut, DPS_Status status)
     DPS_DestroyNode(regPut->node, OnNodeDestroyed, NULL);
     free(regPut->tenant);
     free(regPut->payload.base);
-    regPut->cb(status, regPut->data);
+    regPut->cb(regPut->status, regPut->data);
     free(regPut);
+}
+
+static void OnPutUnlinkCB(DPS_Node* node, DPS_NodeAddress* addr, void* data)
+{
+    DPS_DBGTRACE();
+    RegPutCB((RegPut*)data);
+}
+
+static void PutUnlink(RegPut* regPut)
+{
+    DPS_Status ret = DPS_OK;
+    if (regPut->linked) {
+        ret = DPS_Unlink(regPut->node, &regPut->addr, OnPutUnlinkCB, regPut);
+        if (ret != DPS_OK) {
+            DPS_WARNPRINT("DPS_Unlink failed - %s\n", DPS_ErrTxt(ret));
+        }
+    }
+    if (!regPut->linked || ret != DPS_OK) {
+        RegPutCB(regPut);
+    }
 }
 
 static void OnPutTimerClosedTO(uv_handle_t* handle)
 {
+    RegPut* regPut = (RegPut*)handle->data;
     DPS_DBGTRACE();
-    RegPutCB((RegPut*)handle->data, DPS_ERR_TIMEOUT);
+    regPut->status = DPS_ERR_TIMEOUT;
+    PutUnlink(regPut);
 }
 
 static void OnPutTimeout(uv_timer_t* timer)
@@ -88,8 +147,10 @@ static void OnPutTimeout(uv_timer_t* timer)
 
 static void OnPutTimerClosedOK(uv_handle_t* handle)
 {
+    RegPut* regPut = (RegPut*)handle->data;
     DPS_DBGTRACE();
-    RegPutCB((RegPut*)handle->data, DPS_OK);
+    regPut->status = DPS_OK;
+    PutUnlink(regPut);
 }
 
 static void OnPutAck(DPS_Publication* pub, uint8_t* data, size_t len)
@@ -127,10 +188,12 @@ static void OnLinkedPut(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status ret, v
 {
     RegPut* regPut = (RegPut*)data;
 
-    if (ret == DPS_OK) {
+    regPut->status = ret;
+    if (regPut->status == DPS_OK) {
+        regPut->linked = DPS_TRUE;
         regPut->pub = DPS_CreatePublication(node);
         if (!regPut->pub) {
-            ret = DPS_ERR_RESOURCES;
+            regPut->status = DPS_ERR_RESOURCES;
             goto Exit;
         }
         const char* topics[2];
@@ -138,12 +201,12 @@ static void OnLinkedPut(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status ret, v
         topics[1] = regPut->tenant;
 
         DPS_SetPublicationData(regPut->pub, regPut);
-        ret = DPS_InitPublication(regPut->pub, topics, 2, DPS_TRUE, NULL, OnPutAck);
-        if (ret != DPS_OK) {
+        regPut->status = DPS_InitPublication(regPut->pub, topics, 2, DPS_TRUE, NULL, OnPutAck);
+        if (regPut->status != DPS_OK) {
             goto Exit;
         }
-        ret = DPS_Publish(regPut->pub, regPut->payload.base, DPS_TxBufferUsed(&regPut->payload), REGISTRATION_TTL);
-        if (ret != DPS_OK) {
+        regPut->status = DPS_Publish(regPut->pub, regPut->payload.base, DPS_TxBufferUsed(&regPut->payload), REGISTRATION_TTL);
+        if (regPut->status != DPS_OK) {
             goto Exit;
         }
         /*
@@ -153,30 +216,30 @@ static void OnLinkedPut(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status ret, v
         r = uv_timer_init(DPS_GetLoop(node), &regPut->timer);
         if (!r) {
             regPut->timer.data = regPut;
-            r = uv_timer_start(&regPut->timer, OnPutTimeout, REG_PUT_TIMEOUT, 0);
+            r = uv_timer_start(&regPut->timer, OnPutTimeout, regPut->timeout, 0);
         }
         if (r) {
-            ret = DPS_ERR_FAILURE;
+            regPut->status = DPS_ERR_FAILURE;
             goto Exit;
         }
     }
 Exit:
-    if (ret != DPS_OK) {
-        RegPutCB(regPut, ret);
+    if (regPut->status != DPS_OK) {
+        PutUnlink(regPut);
     }
 }
 
 static void OnResolvePut(DPS_Node* node, DPS_NodeAddress* addr, void* data)
 {
-    DPS_Status ret;
     RegPut* regPut = (RegPut*)data;
     if (addr) {
-        ret = DPS_Link(node, addr, OnLinkedPut, regPut);
+        DPS_CopyAddress(&regPut->addr, addr);
+        regPut->status = DPS_Link(node, &regPut->addr, OnLinkedPut, regPut);
     } else {
-        ret = DPS_ERR_UNRESOLVED;
+        regPut->status = DPS_ERR_UNRESOLVED;
     }
-    if (ret != DPS_OK) {
-        RegPutCB(regPut, ret);
+    if (regPut->status != DPS_OK) {
+        PutUnlink(regPut);
     }
 }
 
@@ -210,14 +273,18 @@ static DPS_Status BuildPutPayload(DPS_TxBuffer* payload, uint16_t port)
      * TODO - for privacy address list should be encrypted using a pre-shared tenant key.
      */
     DPS_DBGPRINT("Encoding %d addresses\n", extIfs);
-    CBOR_EncodeUint8(payload, (uint8_t)extIfs);
+    ret = CBOR_EncodeUint8(payload, (uint8_t)extIfs);
+    assert(ret == DPS_OK);
     for (i = 0; i < numIfs; ++i) {
         uv_interface_address_t* ifn = &ifsAddrs[i];
-        if (!ifn->is_internal) {
-            ret = EncodeAddr(payload, (struct sockaddr*)&ifn->address, port);
-            if (ret != DPS_OK) {
-                break;
-            }
+        struct sockaddr* addr = (struct sockaddr*)&ifn->address;
+        if (ifn->is_internal ||
+            ((addr->sa_family == AF_INET6) && IN6_IS_ADDR_LINKLOCAL(&((const struct sockaddr_in6*)addr)->sin6_addr))) {
+            continue;
+        }
+        ret = EncodeAddr(payload, addr, port);
+        if (ret != DPS_OK) {
+            break;
         }
     }
 
@@ -226,11 +293,13 @@ Exit:
     return ret;
 }
 
-DPS_Status DPS_Registration_Put(DPS_Node* node, const char* host, uint16_t port, const char* tenantString, DPS_OnRegPutComplete cb, void* data)
+DPS_Status DPS_Registration_Put(DPS_Node* node, const char* host, uint16_t port, const char* tenantString, uint16_t timeout, DPS_OnRegPutComplete cb, void* data)
 {
     DPS_Status ret;
     RegPut* regPut;
     uint16_t localPort;
+
+    DPS_DBGTRACE();
 
     localPort = DPS_GetPortNumber(node);
     if (!localPort) {
@@ -247,7 +316,8 @@ DPS_Status DPS_Registration_Put(DPS_Node* node, const char* host, uint16_t port,
         ret = DPS_ERR_RESOURCES;
         goto Exit;
     }
-    regPut->node = DPS_CreateNode("/", NULL, NULL);
+    regPut->timeout = timeout;
+    regPut->node = DPS_CreateNode("/", node->keyStore, node->signer.alg ? &node->signer.kid : NULL);
     if (!regPut->node || !regPut->tenant) {
         ret = DPS_ERR_RESOURCES;
         goto Exit;
@@ -287,14 +357,17 @@ static void OnPutComplete(DPS_Status status, void* data)
     DPS_SignalEvent(event, status);
 }
 
-DPS_Status DPS_Registration_PutSyn(DPS_Node* node, const char* host, uint16_t port, const char* tenantString)
+DPS_Status DPS_Registration_PutSyn(DPS_Node* node, const char* host, uint16_t port, const char* tenantString, uint16_t timeout)
 {
     DPS_Status ret;
     DPS_Event* event = DPS_CreateEvent();
+
+    DPS_DBGTRACE();
+
     if (!event) {
         return DPS_ERR_RESOURCES;
     }
-    ret = DPS_Registration_Put(node, host, port, tenantString, OnPutComplete, event);
+    ret = DPS_Registration_Put(node, host, port, tenantString, timeout, OnPutComplete, event);
     if (ret == DPS_OK) {
         ret = DPS_WaitForEvent(event);
     }
@@ -312,9 +385,13 @@ typedef struct {
     DPS_OnRegGetComplete cb;
     uv_timer_t timer;
     DPS_RegistrationList* regs;
+    DPS_NodeAddress addr;
+    int linked;
+    DPS_Status status;
+    uint16_t timeout;
 } RegGet;
 
-static void RegGetCB(RegGet* regGet, DPS_Status status)
+static void RegGetCB(RegGet* regGet)
 {
     DPS_DBGTRACE();
     if (regGet->sub) {
@@ -322,14 +399,35 @@ static void RegGetCB(RegGet* regGet, DPS_Status status)
     }
     DPS_DestroyNode(regGet->node, OnNodeDestroyed, NULL);
     free(regGet->tenant);
-    regGet->cb(regGet->regs, status, regGet->data);
+    regGet->cb(regGet->regs, regGet->status, regGet->data);
     free(regGet);
+}
+
+static void OnGetUnlinkCB(DPS_Node* node, DPS_NodeAddress* addr, void* data)
+{
+    DPS_DBGTRACE();
+    RegGetCB((RegGet*)data);
+}
+
+static void GetUnlink(RegGet* regGet)
+{
+    DPS_Status ret = DPS_OK;
+    if (regGet->linked) {
+        ret = DPS_Unlink(regGet->node, &regGet->addr, OnGetUnlinkCB, regGet);
+        if (ret != DPS_OK) {
+            DPS_WARNPRINT("DPS_Unlink failed - %s\n", DPS_ErrTxt(ret));
+        }
+    }
+    if (!regGet->linked || ret != DPS_OK) {
+        RegGetCB(regGet);
+    }
 }
 
 static void OnGetTimerClosed(uv_handle_t* handle)
 {
     RegGet* regGet = (RegGet*)handle->data;
-    RegGetCB(regGet, DPS_OK);
+    regGet->status = DPS_OK;
+    GetUnlink(regGet);
 }
 
 static void OnGetTimeout(uv_timer_t* timer)
@@ -337,9 +435,6 @@ static void OnGetTimeout(uv_timer_t* timer)
     DPS_DBGTRACE();
     uv_close((uv_handle_t*)timer, OnGetTimerClosed);
 }
-
-#define AddrGetPort(a)     (((struct sockaddr_in*)(a))->sin_port)
-#define AddrSetPort(a, p)  (((struct sockaddr_in*)(a))->sin_port = (p))
 
 static void OnPub(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* data, size_t len)
 {
@@ -350,6 +445,16 @@ static void OnPub(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* da
         DPS_Status ret;
         uint8_t count;
         DPS_RxBuffer buf;
+        DPS_NodeAddress* addr = NULL;
+        struct sockaddr_storage saddr;
+        struct sockaddr_in* in = (struct sockaddr_in*)&saddr;
+        struct sockaddr_in6* in6 = (struct sockaddr_in6*)&saddr;
+
+        addr = DPS_CreateAddress();
+        if (!addr) {
+            DPS_ERRPRINT("Create address failed - %s\n", DPS_ERR_RESOURCES);
+            return;
+        }
         /*
          * Parse out the addresses from the payload
          */
@@ -376,11 +481,26 @@ static void OnPub(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* da
                 if (CBOR_DecodeString(&buf, &host, &hLen) != DPS_OK) {
                     break;
                 }
-                regGet->regs->list[regGet->regs->count].port = port;
-                regGet->regs->list[regGet->regs->count].host = strndup(host, hLen);
-                ++regGet->regs->count;
+                /*
+                 * Skip addresses we can determine are local to the requesting node.
+                 */
+                if (uv_inet_pton(AF_INET, host, &in->sin_addr) == 0) {
+                    in->sin_family = AF_INET;
+                    in->sin_port = htons(port);
+                    DPS_SetAddress(addr, (const struct sockaddr*)in);
+                } else if (uv_inet_pton(AF_INET6, host, &in6->sin6_addr) == 0) {
+                    in6->sin6_family = AF_INET6;
+                    in6->sin6_port = htons(port);
+                    DPS_SetAddress(addr, (const struct sockaddr*)in6);
+                }
+                if (!IsLocalAddr(addr, regGet->port)) {
+                    regGet->regs->list[regGet->regs->count].port = port;
+                    regGet->regs->list[regGet->regs->count].host = strndup(host, hLen);
+                    ++regGet->regs->count;
+                }
             }
         }
+        DPS_DestroyAddress(addr);
     }
 }
 
@@ -389,7 +509,8 @@ static void OnLinkedGet(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status ret, v
     RegGet* regGet = (RegGet*)data;
 
     DPS_DBGTRACE();
-    if (ret == DPS_OK) {
+    regGet->status = ret;
+    if (regGet->status == DPS_OK) {
         const char* topics[2];
         /*
          * Subscribe to our tenant topic string
@@ -398,54 +519,55 @@ static void OnLinkedGet(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status ret, v
         topics[1] = regGet->tenant;
         regGet->sub = DPS_CreateSubscription(node, topics, 2);
         if (!regGet->sub) {
-            ret = DPS_ERR_RESOURCES;
+            regGet->status = DPS_ERR_RESOURCES;
         } else {
             DPS_SetSubscriptionData(regGet->sub, regGet);
-            ret = DPS_Subscribe(regGet->sub, OnPub);
+            regGet->status = DPS_Subscribe(regGet->sub, OnPub);
             /*
              * Start a timer
              */
-            if (ret == DPS_OK) {
+            if (regGet->status == DPS_OK) {
                 int r;
                 r = uv_timer_init(DPS_GetLoop(node), &regGet->timer);
                 if (!r) {
                     regGet->timer.data = regGet;
-                    r = uv_timer_start(&regGet->timer, OnGetTimeout, REG_GET_TIMEOUT, 0);
+                    r = uv_timer_start(&regGet->timer, OnGetTimeout, regGet->timeout, 0);
                 }
                 if (r) {
-                    ret = DPS_ERR_FAILURE;
+                    regGet->status = DPS_ERR_FAILURE;
                 }
             }
         }
     }
-    if (ret != DPS_OK) {
-        RegGetCB(regGet, ret);
+    if (regGet->status != DPS_OK) {
+        GetUnlink(regGet);
     }
 }
 
 static void OnResolveGet(DPS_Node* node, DPS_NodeAddress* addr, void* data)
 {
-    DPS_Status ret;
     RegGet* regGet = (RegGet*)data;
 
     DPS_DBGTRACE();
     if (addr) {
-        ret = DPS_Link(node, addr, OnLinkedGet, regGet);
+        DPS_CopyAddress(&regGet->addr, addr);
+        regGet->status = DPS_Link(node, &regGet->addr, OnLinkedGet, regGet);
     } else {
-        ret = DPS_ERR_UNRESOLVED;
+        regGet->status = DPS_ERR_UNRESOLVED;
     }
-    if (ret != DPS_OK) {
-        RegGetCB(regGet, ret);
+    if (regGet->status != DPS_OK) {
+        GetUnlink(regGet);
     }
 }
 
-DPS_Status DPS_Registration_Get(DPS_Node* node, const char* host, uint16_t port, const char* tenantString, DPS_RegistrationList* regs, DPS_OnRegGetComplete cb, void* data)
+DPS_Status DPS_Registration_Get(DPS_Node* node, const char* host, uint16_t port, const char* tenantString, DPS_RegistrationList* regs, uint16_t timeout, DPS_OnRegGetComplete cb, void* data)
 {
     DPS_Status ret;
     RegGet* regGet;
     uint16_t localPort;
 
     DPS_DBGTRACE();
+
     if (!regs) {
         return DPS_ERR_NULL;
     }
@@ -468,12 +590,13 @@ DPS_Status DPS_Registration_Get(DPS_Node* node, const char* host, uint16_t port,
     regGet->data = data;
     regGet->regs = regs;
     regGet->regs->count = 0;
+    regGet->timeout = timeout;
     regGet->tenant = strndup(tenantString, DPS_MAX_TOPIC_STRLEN);
     if (!regGet->tenant) {
         ret = DPS_ERR_RESOURCES;
         goto Exit;
     }
-    regGet->node = DPS_CreateNode("/", NULL, NULL);
+    regGet->node = DPS_CreateNode("/", node->keyStore, node->signer.alg ? &node->signer.kid : NULL);
     if (!regGet->node) {
         ret = DPS_ERR_RESOURCES;
         goto Exit;
@@ -513,19 +636,20 @@ static void OnGetComplete(DPS_RegistrationList* regs, DPS_Status status, void* d
     DPS_SignalEvent(getResult->event, status);
 }
 
-DPS_Status DPS_Registration_GetSyn(DPS_Node* node, const char* host, uint16_t port, const char* tenantString, DPS_RegistrationList* regs)
+DPS_Status DPS_Registration_GetSyn(DPS_Node* node, const char* host, uint16_t port, const char* tenantString, DPS_RegistrationList* regs, uint16_t timeout)
 {
     DPS_Status ret;
     GetResult getResult;
 
     DPS_DBGTRACE();
+
     getResult.event = DPS_CreateEvent();
     getResult.regs = regs;
     regs->count = 0;
     if (!getResult.event) {
         return DPS_ERR_RESOURCES;
     }
-    ret = DPS_Registration_Get(node, host, port, tenantString, regs, OnGetComplete, &getResult);
+    ret = DPS_Registration_Get(node, host, port, tenantString, regs, timeout, OnGetComplete, &getResult);
     if (ret == DPS_OK) {
         ret = DPS_WaitForEvent(getResult.event);
     }
@@ -564,37 +688,6 @@ static void OnLinked(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, v
     free(linkTo);
 }
 
-static int IsLocalAddr(DPS_NodeAddress* addr, uint16_t port)
-{
-    int local = DPS_FALSE;
-    uv_interface_address_t* ifsAddrs;
-    int numIfs;
-    int r;
-
-    port = htons(port);
-    if (AddrGetPort(addr) != port) {
-        return DPS_FALSE;
-    }
-    r = uv_interface_addresses(&ifsAddrs, &numIfs);
-    if (!r) {
-        size_t i;
-        for (i = 0; i < numIfs; ++i) {
-            uv_interface_address_t* ifn = &ifsAddrs[i];
-            if (!ifn->is_internal) {
-                DPS_NodeAddress a;
-                memcpy_s(&a.inaddr, sizeof(a.inaddr), &ifn->address, sizeof(ifn->address));
-                AddrSetPort(&a.inaddr, port);
-                if (DPS_SameAddr(addr, &a)) {
-                    local = DPS_TRUE;
-                    break;
-                }
-            }
-        }
-        uv_free_interface_addresses(ifsAddrs, numIfs);
-    }
-    return local;
-}
-
 static void OnResolve(DPS_Node* node, DPS_NodeAddress* addr, void* data)
 {
     DPS_Status ret = DPS_ERR_NO_ROUTE;
@@ -627,6 +720,9 @@ DPS_Status DPS_Registration_LinkTo(DPS_Node* node, DPS_RegistrationList* regs, D
     DPS_Status ret = DPS_ERR_NO_ROUTE;
     size_t i;
     int untried = 0;
+
+    DPS_DBGTRACE();
+
     /*
      * Check there is at least one candidate that hasn't been tried yet
      */
@@ -685,6 +781,8 @@ DPS_Status DPS_Registration_LinkToSyn(DPS_Node* node, DPS_RegistrationList* regs
     DPS_Status ret;
     LinkResult linkResult;
 
+    DPS_DBGTRACE();
+
     linkResult.event = DPS_CreateEvent();
     if (!linkResult.event) {
         return DPS_ERR_RESOURCES;
@@ -701,7 +799,11 @@ DPS_Status DPS_Registration_LinkToSyn(DPS_Node* node, DPS_RegistrationList* regs
 
 DPS_RegistrationList* DPS_CreateRegistrationList(uint8_t size)
 {
-    DPS_RegistrationList* regs = calloc(1, sizeof(DPS_RegistrationList) + (size - 1) * sizeof(DPS_Registration));
+    DPS_RegistrationList* regs;
+
+    DPS_DBGTRACE();
+
+    regs = calloc(1, sizeof(DPS_RegistrationList) + (size - 1) * sizeof(DPS_Registration));
     if (regs) {
         regs->size = size;
     }
@@ -710,6 +812,8 @@ DPS_RegistrationList* DPS_CreateRegistrationList(uint8_t size)
 
 void DPS_DestroyRegistrationList(DPS_RegistrationList* regs)
 {
+    DPS_DBGTRACE();
+
     if (regs) {
         while (regs->size--) {
             if (regs->list[regs->size].host) {

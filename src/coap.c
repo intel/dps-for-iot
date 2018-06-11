@@ -21,7 +21,7 @@
  */
 
 #include <safe_lib.h>
-#include <malloc.h>
+#include <stdlib.h>
 #include <assert.h>
 #include <dps/dbg.h>
 #include "coap.h"
@@ -48,9 +48,6 @@ static int ParseOpt(const uint8_t* buf, size_t bufLen, int prevOpt, CoAP_Option*
     if (dFlag < 13) {
         opt->id = prevOpt + dFlag;
     } else if (dFlag == 13) {
-        if (bufLen < 1) {
-            return -1;
-        }
         opt->id = 13 + prevOpt + buf[0];
         buf += 1;
         bufLen -= 1;

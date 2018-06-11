@@ -143,8 +143,6 @@ typedef struct _DPS_Node {
 
     uv_async_t resolverAsync;             /**< Async handler for address resolver */
     ResolverInfo* resolverList;           /**< Linked list of address resolution requests */
-    uv_async_t completionAsync;           /**< Async handler for link completion */
-    OnOpCompletion* completionList;       /**< Linked list of completion requests */
 
 } DPS_Node;
 
@@ -173,6 +171,8 @@ typedef struct _RemoteNode {
         uint8_t muted;                 /**< TRUE if we have informed the remote that the link is muted */
         uint8_t deltaInd;              /**< TRUE if the interests info is a delta */
         uint8_t ackCountdown;          /**< Number of remaining subscription send retries + 1 */
+        uint8_t includeSub;            /**< TRUE to include subscription in SAK */
+        uint8_t subPending;            /**< TRUE if subscription send is pending */
         uint32_t revision;             /**< Revision number of last subscription sent to this node */
         DPS_UUID meshId;               /**< The mesh id sent to this remote node */
         DPS_BitVector* needs;          /**< Needs bit vector sent outbound to this remote node */
@@ -211,6 +211,19 @@ void DPS_QueuePublicationAck(DPS_Node* node, PublicationAck* ack);
  * @param status   Indicates if the send was successful or not
  */
 void DPS_OnSendComplete(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf_t* bufs, size_t numBufs, DPS_Status status);
+
+/**
+ * Callback function called when a subscription send operation completes
+ *
+ * @param node     Opaque pointer to the DPS node
+ * @param appCtx   An application context to be passed to the send complete callback
+ * @param ep       The endpoint for which the send was completed
+ * @param bufs     Array holding pointers to the buffers passed in the send API call. The data in these buffers
+ *                 can now be freed.
+ * @param numBufs  The length of the bufs array
+ * @param status   Indicates if the send was successful or not
+ */
+void DPS_OnSendSubscriptionComplete(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf_t* bufs, size_t numBufs, DPS_Status status);
 
 /**
  * Make a nonce for a specific message type
@@ -331,6 +344,17 @@ void DPS_ClearInboundInterests(DPS_Node* node, RemoteNode* remote);
  * @return DPS_OK if clear is successful, an error otherwise
  */
 DPS_Status DPS_ClearOutboundInterests(RemoteNode* remote);
+
+/**
+ * Update outbound interests and needs
+ *
+ * @param node    The local node
+ * @param remote  The remote node
+ * @param send    TRUE if subscription should be sent
+ *
+ * @return DPS_OK if update is successful, an error otherwise
+ */
+DPS_Status DPS_UpdateOutboundInterests(DPS_Node* node, RemoteNode* remote, uint8_t* send);
 
 /**
  * Lock the node

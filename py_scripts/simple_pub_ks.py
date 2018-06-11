@@ -175,16 +175,17 @@ def on_destroy(node):
 
 node = dps.create_node("/", key_store, node_id)
 dps.start_node(node, dps.MCAST_PUB_ENABLE_SEND, 0)
+print "Publisher is listening on port %d" % (dps.get_port_number(node))
 pub = dps.create_publication(node)
 
 dps.init_publication(pub, ['a/b/c'], False, None, on_ack)
 dps.publication_add_sub_id(pub, pub_key_id)
 dps.publish(pub, "hello")
 print "Pub UUID %s(%d)" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub))
-time.sleep(0.2)
+time.sleep(1)
 dps.publish(pub, "world")
 print "Pub UUID %s(%d)" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub))
-time.sleep(0.2)
+time.sleep(1)
 
 dps.destroy_publication(pub)
 dps.destroy_node(node, on_destroy)

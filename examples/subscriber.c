@@ -106,79 +106,6 @@ static void OnPubMatch(DPS_Subscription* sub, const DPS_Publication* pub, uint8_
     }
 }
 
-#define MAX_TOPICS 64
-#define MAX_TOPIC_LEN 256
-
-static int IsInteractive()
-{
-#ifdef _WIN32
-    return _isatty(_fileno(stdin));
-#else
-    return isatty(fileno(stdin));
-#endif
-}
-
-static void ReadStdin(DPS_Node* node)
-{
-    char lineBuf[MAX_TOPIC_LEN + 1];
-
-    while (fgets(lineBuf, sizeof(lineBuf), stdin) != NULL) {
-        char* topics[MAX_TOPICS];
-        size_t numTopics = 0;
-        char* topicList;
-        DPS_Subscription* subscription;
-        DPS_Status ret;
-        size_t len;
-        size_t i;
-
-        len = strnlen(lineBuf, sizeof(lineBuf));
-        while (len && isspace(lineBuf[len - 1])) {
-            --len;
-        }
-        if (len) {
-            lineBuf[len] = 0;
-            DPS_PRINT("Sub: %s\n", lineBuf);
-
-            topicList = lineBuf;
-            numTopics = 0;
-            while (numTopics < MAX_TOPICS) {
-                size_t len = strcspn(topicList, " ");
-                if (!len) {
-                    len = strlen(topicList);
-                }
-                if (!len) {
-                    goto next;
-                }
-                topics[numTopics] = malloc(len + 1);
-                memcpy(topics[numTopics], topicList, len);
-                topics[numTopics][len] = 0;
-                ++numTopics;
-                if (!topicList[len]) {
-                    break;
-                }
-                topicList += len + 1;
-            }
-        }
-        if (numTopics) {
-            subscription = DPS_CreateSubscription(node, (const char**)topics, numTopics);
-            if (!subscription) {
-                ret = DPS_ERR_RESOURCES;
-                DPS_ERRPRINT("Failed to create subscription - error=%s\n", DPS_ErrTxt(ret));
-                break;
-            }
-            ret = DPS_Subscribe(subscription, OnPubMatch);
-            if (ret != DPS_OK) {
-                DPS_ERRPRINT("Failed to subscribe topics - error=%s\n", DPS_ErrTxt(ret));
-                break;
-            }
-        }
-    next:
-        for (i = 0; i < numTopics; ++i) {
-            free(topics[i]);
-        }
-    }
-}
-
 static int IntArg(char* opt, char*** argp, int* argcp, int* val, int min, int max)
 {
     char* p;
@@ -206,201 +133,299 @@ static int IntArg(char* opt, char*** argp, int* argcp, int* val, int min, int ma
 
 #define MAX_LINKS 16
 
-int main(int argc, char** argv)
-{
-    DPS_Status ret;
+typedef struct _Args {
+    int numTopics;
     char* topicList[64];
-    char** arg = argv + 1;
-    int numTopics = 0;
-    int wait = 0;
-    DPS_MemoryKeyStore* memoryKeyStore = NULL;
-    const DPS_KeyId* nodeKeyId = NULL;
-    DPS_Node* node;
-    DPS_Event* nodeDestroyed = NULL;
-    int mcastPub = DPS_MCAST_PUB_DISABLED;
-    const char* host = NULL;
-    int encrypt = 1;
-    int subsRate = DPS_SUBSCRIPTION_UPDATE_RATE;
-    int listenPort = 0;
-    int numLinks = 0;
+    int listenPort;
+    int numLinks;
     int linkPort[MAX_LINKS];
     const char* linkHosts[MAX_LINKS];
-    int numAddrs = 0;
+    int wait;
+    int encrypt;
+    int subsRate;
+    int mcastPub;
+    int interactive;
+} Args;
+
+typedef struct _Subscriber {
+    DPS_Node* node;
+    int numAddrs;
     DPS_NodeAddress* addrs[MAX_LINKS];
+} Subscriber;
 
-    DPS_Debug = 0;
+static int IsInteractive(Args* args)
+{
+    return args->interactive ||
+        (!args->numTopics &&
+#ifdef _WIN32
+         _isatty(_fileno(stdin)));
+#else
+         isatty(fileno(stdin)));
+#endif
+}
 
-    while (--argc) {
+static int ParseArgs(int argc, char** argv, Args* args)
+{
+    const char* host = NULL;
+
+    memset(args, 0, sizeof(*args));
+    args->encrypt = 1;
+    args->subsRate = DPS_SUBSCRIPTION_UPDATE_RATE;
+    args->mcastPub = DPS_MCAST_PUB_DISABLED;
+
+    for (; argc; --argc) {
         /*
          * Topics must come last
          */
-        if (numTopics == 0) {
-            if (IntArg("-l", &arg, &argc, &listenPort, 1, UINT16_MAX)) {
+        if (args->numTopics == 0) {
+            if (IntArg("-l", &argv, &argc, &args->listenPort, 1, UINT16_MAX)) {
                 continue;
             }
-            if (IntArg("-p", &arg, &argc, &linkPort[numLinks], 1, UINT16_MAX)) {
-                if (numLinks == (MAX_LINKS - 1)) {
+            if (IntArg("-p", &argv, &argc, &args->linkPort[args->numLinks], 1, UINT16_MAX)) {
+                if (args->numLinks == (MAX_LINKS - 1)) {
                     DPS_PRINT("Too many -p options\n");
-                    goto Usage;
+                    return DPS_FALSE;
                 }
-                linkHosts[numLinks] = host;
-                ++numLinks;
+                args->linkHosts[args->numLinks] = host;
+                ++args->numLinks;
                 continue;
             }
-            if (strcmp(*arg, "-h") == 0) {
-                ++arg;
+            if (strcmp(*argv, "-h") == 0) {
+                ++argv;
                 if (!--argc) {
-                    goto Usage;
+                    return DPS_FALSE;
                 }
-                host = *arg++;
+                host = *argv++;
                 continue;
             }
-            if (strcmp(*arg, "-q") == 0) {
-                ++arg;
+            if (strcmp(*argv, "-q") == 0) {
+                ++argv;
                 quiet = DPS_TRUE;
                 continue;
             }
-            if (IntArg("-w", &arg, &argc, &wait, 0, 30)) {
+            if (IntArg("-w", &argv, &argc, &args->wait, 0, 30)) {
                 continue;
             }
-            if (IntArg("-x", &arg, &argc, &encrypt, 0, 2)) {
+            if (IntArg("-x", &argv, &argc, &args->encrypt, 0, 2)) {
                 continue;
             }
-            if (IntArg("-r", &arg, &argc, &subsRate, 0, INT32_MAX)) {
+            if (IntArg("-r", &argv, &argc, &args->subsRate, 0, INT32_MAX)) {
                 continue;
             }
-            if (strcmp(*arg, "-m") == 0) {
-                ++arg;
-                mcastPub = DPS_MCAST_PUB_ENABLE_RECV;
+            if (strcmp(*argv, "-m") == 0) {
+                ++argv;
+                args->mcastPub = DPS_MCAST_PUB_ENABLE_RECV;
                 continue;
             }
-            if (strcmp(*arg, "-d") == 0) {
-                ++arg;
-                DPS_Debug = 1;
+            if (strcmp(*argv, "-d") == 0) {
+                ++argv;
+                DPS_Debug = DPS_TRUE;
                 continue;
             }
-            if (strcmp(*arg, "-j") == 0) {
-                ++arg;
+            if (strcmp(*argv, "-j") == 0) {
+                ++argv;
                 json = 1;
                 continue;
             }
         }
-        if (strcmp(*arg, "-s") == 0) {
-            ++arg;
+        if (strcmp(*argv, "-s") == 0) {
+            ++argv;
             /*
              * NULL separator between topic lists
              */
-            if (numTopics > 0) {
-                topicList[numTopics++] = NULL;
+            if (args->numTopics > 0) {
+                args->topicList[args->numTopics++] = NULL;
             }
             continue;
         }
-        if (*arg[0] == '-') {
-            goto Usage;
+        if (strcmp(*argv, "--") == 0) {
+            /*
+             * End of topics, use interactive mode
+             */
+            args->interactive = DPS_TRUE;
+            return DPS_TRUE;
         }
-        if (numTopics == A_SIZEOF(topicList)) {
+        if (*argv[0] == '-') {
+            return DPS_FALSE;
+        }
+        if (args->numTopics == A_SIZEOF(args->topicList)) {
             DPS_PRINT("%s: Too many topics - increase limit and recompile\n", argv[0]);
-            goto Usage;
+            return DPS_FALSE;
         }
-        topicList[numTopics++] = *arg++;
+        args->topicList[args->numTopics++] = *argv++;
     }
+    return DPS_TRUE;
+}
 
-    if (!numLinks) {
-        mcastPub = DPS_MCAST_PUB_ENABLE_RECV;
-    }
-    memoryKeyStore = DPS_CreateMemoryKeyStore();
-    DPS_SetNetworkKey(memoryKeyStore, &NetworkKeyId, &NetworkKey);
-    if (encrypt == 1) {
-        for (size_t i = 0; i < NUM_KEYS; ++i) {
-            DPS_SetContentKey(memoryKeyStore, &PskId[i], &Psk[i]);
-        }
-    } else if (encrypt == 2) {
-        DPS_SetTrustedCA(memoryKeyStore, TrustedCAs);
-        nodeKeyId = &SubscriberId;
-        DPS_SetCertificate(memoryKeyStore, SubscriberCert, SubscriberPrivateKey, SubscriberPassword);
-        DPS_SetCertificate(memoryKeyStore, PublisherCert, NULL, NULL);
-    }
-    node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore), nodeKeyId);
-    DPS_SetNodeSubscriptionUpdateDelay(node, subsRate);
+static int Subscribe(Subscriber* subscriber, Args* args)
+{
+    DPS_Status ret;
 
-    ret = DPS_StartNode(node, mcastPub, listenPort);
-    if (ret != DPS_OK) {
-        DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
-        goto Exit;
-    }
-    DPS_PRINT("Subscriber is listening on port %d\n", DPS_GetPortNumber(node));
-
-    nodeDestroyed = DPS_CreateEvent();
-
-    if (wait) {
-        /*
-         * Wait for a while before trying to link
-         */
-        DPS_TimedWaitForEvent(nodeDestroyed, wait * 1000);
-    }
-
-    if (numTopics) {
-        char** topics = topicList;
-        while (numTopics >= 0) {
+    if (args->numTopics) {
+        char** topics = args->topicList;
+        while (args->numTopics >= 0) {
             DPS_Subscription* subscription;
             int count = 0;
-            while (count < numTopics) {
+            while (count < args->numTopics) {
                 if (!topics[count]) {
                     break;
                 }
                 ++count;
             }
-            subscription = DPS_CreateSubscription(node, (const char**)topics, count);
+            subscription = DPS_CreateSubscription(subscriber->node, (const char**)topics, count);
             ret = DPS_Subscribe(subscription, OnPubMatch);
             if (ret != DPS_OK) {
                 break;
             }
             topics += count + 1;
-            numTopics -= count + 1;
+            args->numTopics -= count + 1;
         }
         if (ret != DPS_OK) {
             DPS_ERRPRINT("Failed to susbscribe topics - error=%s\n", DPS_ErrTxt(ret));
-            goto Exit;
+            return DPS_FALSE;
         }
     }
-    if (numLinks) {
-        int i;
-        for (i = 0; i < numLinks; ++i, ++numAddrs) {
-            addrs[i] = DPS_CreateAddress();
-            ret = DPS_LinkTo(node, linkHosts[i], linkPort[i], addrs[i]);
-            if (ret != DPS_OK) {
-                DPS_DestroyAddress(addrs[i]);
-                DPS_ERRPRINT("DPS_LinkTo %d returned %s\n", linkPort[i], DPS_ErrTxt(ret));
-                goto Exit;
+    return DPS_TRUE;
+}
+
+static int LinkTo(Subscriber* subscriber, Args* args)
+{
+    DPS_Status ret;
+    int i;
+
+    if (args->numLinks) {
+        for (i = 0; i < args->numLinks; ++i, ++subscriber->numAddrs) {
+            subscriber->addrs[subscriber->numAddrs] = DPS_CreateAddress();
+            ret = DPS_LinkTo(subscriber->node, args->linkHosts[i], args->linkPort[i],
+                             subscriber->addrs[subscriber->numAddrs]);
+            if (ret == DPS_OK) {
+                DPS_PRINT("Subscriber is linked to %s\n",
+                          DPS_NodeAddrToString(subscriber->addrs[subscriber->numAddrs]));
+            } else {
+                DPS_DestroyAddress(subscriber->addrs[subscriber->numAddrs]);
+                DPS_ERRPRINT("DPS_LinkTo %d returned %s\n", args->linkPort[i], DPS_ErrTxt(ret));
+                return DPS_FALSE;
             }
         }
     }
-    if (!numTopics && IsInteractive())
-    {
+    return DPS_TRUE;
+}
+
+static void UnlinkFrom(Subscriber* subscriber)
+{
+    int i;
+    for (i = 0; i < subscriber->numAddrs; ++i) {
+        DPS_Status unlinkRet = DPS_UnlinkFrom(subscriber->node, subscriber->addrs[i]);
+        DPS_DestroyAddress(subscriber->addrs[i]);
+        if (unlinkRet != DPS_OK) {
+            DPS_ERRPRINT("DPS_UnlinkFrom %s returned %s\n", DPS_NodeAddrToString(subscriber->addrs[i]), DPS_ErrTxt(unlinkRet));
+        }
+    }
+}
+
+#define MAX_LINE_LEN 256
+#define MAX_TOPICS 64
+#define MAX_ARGS (32 + MAX_TOPICS)
+
+static void ReadStdin(Subscriber* subscriber)
+{
+    char lineBuf[MAX_LINE_LEN + 1];
+
+    while (fgets(lineBuf, sizeof(lineBuf), stdin) != NULL) {
+        Args args;
+        int argc = 0;
+        char *argv[MAX_ARGS];
+        size_t len = strnlen(lineBuf, sizeof(lineBuf));
+        while (len && isspace(lineBuf[len - 1])) {
+            --len;
+        }
+        if (len) {
+            char* tok;
+            lineBuf[len] = 0;
+            for (tok = strtok(lineBuf, " "); tok && (argc < MAX_ARGS); tok = strtok(NULL, " ")) {
+                argv[argc++] = tok;
+            }
+        }
+        if (!ParseArgs(argc, argv, &args)) {
+            continue;
+        }
+        LinkTo(subscriber, &args);
+        Subscribe(subscriber, &args);
+    }
+}
+
+int main(int argc, char** argv)
+{
+    DPS_Status ret;
+    Args args;
+    DPS_MemoryKeyStore* memoryKeyStore = NULL;
+    const DPS_KeyId* nodeKeyId = NULL;
+    DPS_Event* nodeDestroyed = NULL;
+    Subscriber subscriber;
+
+    DPS_Debug = DPS_FALSE;
+    memset(&subscriber, 0, sizeof(subscriber));
+
+    if (!ParseArgs(argc - 1, argv + 1, &args)) {
+        goto Usage;
+    }
+
+    if (!args.numLinks) {
+        args.mcastPub = DPS_MCAST_PUB_ENABLE_RECV;
+    }
+    memoryKeyStore = DPS_CreateMemoryKeyStore();
+    DPS_SetNetworkKey(memoryKeyStore, &NetworkKeyId, &NetworkKey);
+    if (args.encrypt == 1) {
+        for (size_t i = 0; i < NUM_KEYS; ++i) {
+            DPS_SetContentKey(memoryKeyStore, &PskId[i], &Psk[i]);
+        }
+    } else if (args.encrypt == 2) {
+        DPS_SetTrustedCA(memoryKeyStore, TrustedCAs);
+        nodeKeyId = &SubscriberId;
+        DPS_SetCertificate(memoryKeyStore, SubscriberCert, SubscriberPrivateKey, SubscriberPassword);
+        DPS_SetCertificate(memoryKeyStore, PublisherCert, NULL, NULL);
+    }
+    subscriber.node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore), nodeKeyId);
+    DPS_SetNodeSubscriptionUpdateDelay(subscriber.node, args.subsRate);
+
+    nodeDestroyed = DPS_CreateEvent();
+
+    ret = DPS_StartNode(subscriber.node, args.mcastPub, args.listenPort);
+    if (ret != DPS_OK) {
+        DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
+        goto Exit;
+    }
+    DPS_PRINT("Subscriber is listening on port %d\n", DPS_GetPortNumber(subscriber.node));
+
+    if (args.wait) {
+        /*
+         * Wait for a while before trying to link
+         */
+        DPS_TimedWaitForEvent(nodeDestroyed, args.wait * 1000);
+    }
+
+    if (!LinkTo(&subscriber, &args)) {
+        ret = DPS_ERR_FAILURE;
+        goto Exit;
+    }
+    if (!Subscribe(&subscriber, &args)) {
+        ret = DPS_ERR_FAILURE;
+        goto Exit;
+    }
+    if (IsInteractive(&args)) {
         DPS_PRINT("Running in interactive mode\n");
-        ReadStdin(node);
-        int i;
-        for (i = 0; i < numAddrs; ++i) {
-            DPS_Status unlinkRet = DPS_UnlinkFrom(node, addrs[i]);
-            DPS_DestroyAddress(addrs[i]);
-            if (unlinkRet != DPS_OK) {
-                DPS_ERRPRINT("DPS_UnlinkFrom %s returned %s\n", DPS_NodeAddrToString(addrs[i]), DPS_ErrTxt(unlinkRet));
-            }
-        }
-        DPS_DestroyNode(node, OnNodeDestroyed, nodeDestroyed);
+        ReadStdin(&subscriber);
+        UnlinkFrom(&subscriber);
+        DPS_DestroyNode(subscriber.node, OnNodeDestroyed, nodeDestroyed);
     }
 
 Exit:
-    if (nodeDestroyed) {
-        if (ret != DPS_OK) {
-            DPS_DestroyNode(node, OnNodeDestroyed, nodeDestroyed);
-        }
-        DPS_WaitForEvent(nodeDestroyed);
-        DPS_DestroyEvent(nodeDestroyed);
+    if (ret != DPS_OK) {
+        DPS_DestroyNode(subscriber.node, OnNodeDestroyed, nodeDestroyed);
     }
-    if (memoryKeyStore) {
-        DPS_DestroyMemoryKeyStore(memoryKeyStore);
-    }
+    DPS_WaitForEvent(nodeDestroyed);
+    DPS_DestroyEvent(nodeDestroyed);
+    DPS_DestroyMemoryKeyStore(memoryKeyStore);
     return (ret == DPS_OK) ? EXIT_SUCCESS : EXIT_FAILURE;
 
 Usage:

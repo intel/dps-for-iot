@@ -1,33 +1,55 @@
 sudo: required
 
-os: linux
+language: c
+
+compiler:
+  - clang
+  - gcc
+
+env:
+  - VARIANT=debug TRANSPORT=udp ASAN=yes FSAN=no
+  - VARIANT=debug TRANSPORT=tcp ASAN=yes FSAN=no
+  - VARIANT=debug TRANSPORT=dtls ASAN=yes FSAN=no
+  - VARIANT=release TRANSPORT=udp ASAN=yes FSAN=no
+  - VARIANT=release TRANSPORT=tcp ASAN=yes FSAN=no
+  - VARIANT=release TRANSPORT=dtls ASAN=yes FSAN=no
+  - VARIANT=release TRANSPORT=dtls ASAN=yes FSAN=yes
+  - VARIANT=release TRANSPORT=fuzzer ASAN=yes FSAN=yes
+
+matrix:
+  exclude:
+    - compiler: clang
+    - compiler: gcc
+      env: VARIANT=release TRANSPORT=dtls ASAN=yes FSAN=yes
+    - compiler: gcc
+      env: VARIANT=release TRANSPORT=fuzzer ASAN=yes FSAN=yes
+  include:
+    - compiler: clang
+      env: VARIANT=release TRANSPORT=dtls ASAN=yes FSAN=yes
+    - compiler: clang
+      env: VARIANT=release TRANSPORT=fuzzer ASAN=yes FSAN=yes
 
 addons:
   apt:
     sources:
       - ubuntu-toolchain-r-test
+      - llvm-toolchain-trusty-6.0
     packages:
+      - clang-6.0
       - doxygen
       - g++-7
       - zlib1g-dev
 
-compiler:
-  - gcc
-
-env:
-  - CC=gcc-7 CXX=g++-7 VARIANT=debug TRANSPORT=udp
-  - CC=gcc-7 CXX=g++-7 VARIANT=debug TRANSPORT=tcp
-  - CC=gcc-7 CXX=g++-7 VARIANT=debug TRANSPORT=dtls
-  - CC=gcc-7 CXX=g++-7 VARIANT=release TRANSPORT=udp
-  - CC=gcc-7 CXX=g++-7 VARIANT=release TRANSPORT=tcp
-  - CC=gcc-7 CXX=g++-7 VARIANT=release TRANSPORT=dtls
-
 before_install:
-  - eval "CC=gcc-7 && CXX=g++-7"
+  - "[ $CC = gcc ] && export CC=gcc-7 CXX=g++-7 || true"
+  - "[ $CC = clang ] && export CC=clang-6.0 CXX=clang++-6.0 || true"
+
+install:
   - ./.travis/install-swig.sh
   - ./.travis/install-nodejs.sh
-
-language: c
+  - pip install --user cryptography
+  - pip install --user pexpect
 
 script:
-  - scons variant=$VARIANT transport=$TRANSPORT CC=$CC CXX=$CXX UV_PATH=ext/libuv
+  - scons CC=$CC CXX=$CXX variant=$VARIANT transport=$TRANSPORT asan=$ASAN ubsan=yes fsan=$FSAN UV_PATH=ext/libuv
+  - ./test_scripts/run.py -d

@@ -22,7 +22,7 @@
 
 #include <assert.h>
 #include <string.h>
-#include <malloc.h>
+#include <stdlib.h>
 #include <safe_lib.h>
 #include <dps/dbg.h>
 #include <dps/dps.h>
@@ -157,7 +157,7 @@ static DPS_Status SerializeAck(const DPS_Publication* pub, PublicationAck* ack, 
         ret = CBOR_EncodeBytes(&ack->buf, (uint8_t*)&ack->pubId, sizeof(ack->pubId));
     }
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeUint8(&ack->buf, DPS_CBOR_KEY_SEQ_NUM);
+        ret = CBOR_EncodeUint8(&ack->buf, DPS_CBOR_KEY_ACK_SEQ_NUM);
     }
     if (ret == DPS_OK) {
         ret = CBOR_EncodeUint32(&ack->buf, ack->sequenceNum);
@@ -209,7 +209,7 @@ static DPS_Status SerializeAck(const DPS_Publication* pub, PublicationAck* ack, 
 
 DPS_Status DPS_DecodeAcknowledgement(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuffer* buf)
 {
-    static const int32_t ProtectedKeys[] = { DPS_CBOR_KEY_PUB_ID, DPS_CBOR_KEY_SEQ_NUM };
+    static const int32_t ProtectedKeys[] = { DPS_CBOR_KEY_PUB_ID, DPS_CBOR_KEY_ACK_SEQ_NUM };
     static const int32_t EncryptedKeys[] = { DPS_CBOR_KEY_DATA };
     DPS_Status ret;
     DPS_Publication* pub;
@@ -258,7 +258,7 @@ DPS_Status DPS_DecodeAcknowledgement(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Rx
                 }
             }
             break;
-        case DPS_CBOR_KEY_SEQ_NUM:
+        case DPS_CBOR_KEY_ACK_SEQ_NUM:
             ret = CBOR_DecodeUint32(buf, &sequenceNum);
             if ((ret == DPS_OK) && (sequenceNum == 0)) {
                 ret = DPS_ERR_INVALID;

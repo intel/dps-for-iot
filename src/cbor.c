@@ -872,7 +872,7 @@ int DPS_ParseMapDone(CBOR_MapState* mapState)
     }
 }
 
-#ifndef NDEBUG
+#ifdef DPS_DEBUG
 static DPS_Status Dump(DPS_RxBuffer* buffer, int in)
 {
     static const char indent[] = "                                                            ";

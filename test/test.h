@@ -44,7 +44,7 @@
 #ifdef _WIN32
 #define SLEEP(t) Sleep(t)
 #else
-extern void usleep(int);
+#include <unistd.h>
 #define SLEEP(t) usleep((t) * 1000)
 #endif
 

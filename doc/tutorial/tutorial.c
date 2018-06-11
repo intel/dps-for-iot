@@ -364,6 +364,7 @@ static DPS_Status StartMulticastNode(DPS_Node* node)
         goto Exit;
     }
     /** [Starting a node] */
+    DPS_PRINT("Node is listening on port %d\n", DPS_GetPortNumber(node));
 
  Exit:
     return ret;
@@ -380,7 +381,7 @@ static DPS_Status StartUnicastNode(DPS_Node* node, uint16_t port)
     }
     uint16_t portNum = DPS_GetPortNumber(node);
     /** [Starting a unicast node] */
-    DPS_PRINT("port=%d\n", portNum);
+    DPS_PRINT("Node is listening on port %d\n", DPS_GetPortNumber(node));
 
  Exit:
     return ret;
@@ -389,7 +390,7 @@ static DPS_Status StartUnicastNode(DPS_Node* node, uint16_t port)
 /** [Linking complete] */
 static void LinkComplete(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, void* data)
 {
-    DPS_PRINT("Linked to %s\n", DPS_NodeAddrToString(addr));
+    DPS_PRINT("Node is linked to %s\n", DPS_NodeAddrToString(addr));
 }
 /** [Linking complete] */
 
