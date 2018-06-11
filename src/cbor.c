@@ -22,6 +22,7 @@
 
 #include <dps/dbg.h>
 #include <stdint.h>
+#include <string.h>
 #include <math.h>
 #include <float.h>
 #include <safe_lib.h>
@@ -41,12 +42,6 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_OFF);
 #define CBOR_LEN2   25
 #define CBOR_LEN4   26
 #define CBOR_LEN8   27
-
-#define CBOR_FALSE  (CBOR_OTHER | 20)
-#define CBOR_TRUE   (CBOR_OTHER | 21)
-#define CBOR_NULL   (CBOR_OTHER | 22)
-#define CBOR_FLOAT  (CBOR_OTHER | 26)
-#define CBOR_DOUBLE (CBOR_OTHER | 27)
 
 static int Requires(uint64_t n)
 {
@@ -640,7 +635,7 @@ DPS_Status CBOR_DecodeDouble(DPS_RxBuffer* buffer, double* d)
     uint8_t* p = buffer->rxPos;
     uint8_t* pd;
 
-    if (avail < 9) {
+    if (avail < 1) {
         return DPS_ERR_EOD;
     }
     if (*p == CBOR_FLOAT) {
@@ -653,6 +648,9 @@ DPS_Status CBOR_DecodeDouble(DPS_RxBuffer* buffer, double* d)
     }
     if (*p++ != CBOR_DOUBLE) {
         return DPS_ERR_INVALID;
+    }
+    if (avail < 9) {
+        return DPS_ERR_EOD;
     }
 #if __BYTE_ORDER == __LITTLE_ENDIAN
     pd = (uint8_t*)d + sizeof(double);

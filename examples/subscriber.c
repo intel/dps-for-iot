@@ -34,11 +34,13 @@
 #include <dps/dps.h>
 #include <dps/synchronous.h>
 #include <dps/event.h>
+#include <dps/json.h>
 #include "keys.h"
 
 #define A_SIZEOF(a)  (sizeof(a) / sizeof((a)[0]))
 
 static int quiet = DPS_FALSE;
+static int json = DPS_FALSE;
 
 static const char AckFmt[] = "This is an ACK from %d";
 
@@ -79,7 +81,15 @@ static void OnPubMatch(DPS_Subscription* sub, const DPS_Publication* pub, uint8_
         }
         DPS_PRINT("\n");
         if (data) {
-            DPS_PRINT("%.*s\n", (int)len, data);
+            if (json) {
+                char jsonStr[1024];
+                ret = DPS_CBOR2JSON(data, len, jsonStr, sizeof(jsonStr), DPS_TRUE);
+                if (ret == DPS_OK) {
+                    DPS_PRINT("%s\n", jsonStr);
+                }
+            } else {
+                DPS_PRINT("%.*s\n", (int)len, data);
+            }
         }
     }
     if (DPS_PublicationIsAckRequested(pub)) {
@@ -210,6 +220,11 @@ static int ParseArgs(int argc, char** argv, Args* args)
             if (strcmp(*argv, "-d") == 0) {
                 ++argv;
                 DPS_Debug = DPS_TRUE;
+                continue;
+            }
+            if (strcmp(*argv, "-j") == 0) {
+                ++argv;
+                json = 1;
                 continue;
             }
         }
@@ -414,7 +429,7 @@ Exit:
     return (ret == DPS_OK) ? EXIT_SUCCESS : EXIT_FAILURE;
 
 Usage:
-    DPS_PRINT("Usage %s [-d] [-q] [-m] [-w <seconds>] [-x 0|1|2] [[-h <hostname>] -p <portnum>] [-l <listen port] [-m] [-r <milliseconds>] [[-s] topic1 ... topicN]\n", argv[0]);
+    DPS_PRINT("Usage %s [-d] [-q] [-m] [-w <seconds>] [-x 0|1|2] [[-h <hostname>] -p <portnum>] [-l <listen port] [-j] [-r <milliseconds>] [[-s] topic1 ... topicN]\n", argv[0]);
     DPS_PRINT("       -d: Enable debug ouput if built for debug.\n");
     DPS_PRINT("       -q: Quiet - suppresses output about received publications.\n");
     DPS_PRINT("       -x: Disable (0) or enable symmetric (1) or asymmetric(2) encryption. Default is symmetric encryption enabled.\n");
@@ -425,5 +440,6 @@ Usage:
     DPS_PRINT("       -l: port to listen on. Default is an ephemeral port.\n");
     DPS_PRINT("       -r: Time to delay between subscription updates.\n");
     DPS_PRINT("       -s: list of subscription topic strings. Multiple -s options are permitted\n");
+    DPS_PRINT("       -j: Treat payload as CBOR and attempt to decode an display as JSON\n");
     return EXIT_FAILURE;
 }
