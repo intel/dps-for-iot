@@ -2,6 +2,7 @@ var searchData=
 [
   ['dps_5fackgetsenderkeyid',['DPS_AckGetSenderKeyId',['../group__publication.html#ga9190b8fa3bad848fb428acd6c0c2b210',1,'dps.h']]],
   ['dps_5fackpublication',['DPS_AckPublication',['../group__publication.html#ga308074429a566ffb8d04d55bae520b04',1,'dps.h']]],
+  ['dps_5fcbor2json',['DPS_CBOR2JSON',['../group__json.html#gad2363f8bec618e5d1036528a7a18f7f1',1,'json.h']]],
   ['dps_5fcopyaddress',['DPS_CopyAddress',['../group__nodeaddress.html#gace91591af9bf2a99bad07deda1b9176c',1,'dps.h']]],
   ['dps_5fcopypublication',['DPS_CopyPublication',['../group__publication.html#ga41f31a8b63558e13d73d96de6086e5c4',1,'dps.h']]],
   ['dps_5fcreateaddress',['DPS_CreateAddress',['../group__nodeaddress.html#ga6bed18a4b0ad533ec88c7a0d376de818',1,'dps.h']]],
@@ -31,6 +32,7 @@ var searchData=
   ['dps_5fgetsubscriptiondata',['DPS_GetSubscriptionData',['../group__subscription.html#ga88ab2284734f099ef67bcc60997142b3',1,'dps.h']]],
   ['dps_5finitpublication',['DPS_InitPublication',['../group__publication.html#ga7b0709e28cb34d5a30b90e4142cd6c19',1,'dps.h']]],
   ['dps_5finituuid',['DPS_InitUUID',['../group__uuid.html#ga725c154c5fccf2a2c9a6c32353a63228',1,'uuid.h']]],
+  ['dps_5fjson2cbor',['DPS_JSON2CBOR',['../group__json.html#gaaf140c06a9b06690f3645b4d99e0ce8a',1,'json.h']]],
   ['dps_5fkeystorehandle',['DPS_KeyStoreHandle',['../group__keystore.html#ga088b3dc5eff10ab334d1e2aa0a329c26',1,'dps.h']]],
   ['dps_5flink',['DPS_Link',['../group__node.html#ga5064c63b8ce76bf34402e0c80183234b',1,'dps.h']]],
   ['dps_5flinkto',['DPS_LinkTo',['../group__node.html#ga0bd13b2bd395bbc7807ecc899a8862f1',1,'synchronous.h']]],

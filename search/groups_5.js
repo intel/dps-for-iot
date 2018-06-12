@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['registration',['Registration',['../group__registration.html',1,'']]]
+  ['publication',['Publication',['../group__publication.html',1,'']]]
 ];

@@ -1,0 +1,165 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.13">
+  <compounddef id="json_8h" kind="file" language="C++">
+    <compoundname>json.h</compoundname>
+    <includes local="no">stdint.h</includes>
+    <includes refid="err_8h" local="no">dps/err.h</includes>
+    <incdepgraph>
+      <node id="41">
+        <label>stdint.h</label>
+      </node>
+      <node id="40">
+        <label>json.h</label>
+        <link refid="json_8h"/>
+        <childnode refid="41" relation="include">
+        </childnode>
+        <childnode refid="42" relation="include">
+        </childnode>
+      </node>
+      <node id="42">
+        <label>dps/err.h</label>
+        <link refid="err_8h"/>
+      </node>
+    </incdepgraph>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="group__json_1gad2363f8bec618e5d1036528a7a18f7f1" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
+        <definition>DPS_Status DPS_CBOR2JSON</definition>
+        <argsstring>(const uint8_t *cbor, size_t cborLen, char *json, size_t jsonSize, int pretty)</argsstring>
+        <name>DPS_CBOR2JSON</name>
+        <param>
+          <type>const uint8_t *</type>
+          <declname>cbor</declname>
+        </param>
+        <param>
+          <type>size_t</type>
+          <declname>cborLen</declname>
+        </param>
+        <param>
+          <type>char *</type>
+          <declname>json</declname>
+        </param>
+        <param>
+          <type>size_t</type>
+          <declname>jsonSize</declname>
+        </param>
+        <param>
+          <type>int</type>
+          <declname>pretty</declname>
+        </param>
+        <briefdescription>
+<para>Generate a JSON string from a CBOR encoded byte array. </para>        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>cbor</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>CBOR encoded source data for the conversion </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>cborLen</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The length of the CBOR data </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>json</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Destination buffer for generated JSON string </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>jsonSize</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The length of the JSON string buffer </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>pretty</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>If TRUE format the JSON using indentation and newlines, if FALSE the output is compact with no newlines or whitespace is inserted.</para></parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para><itemizedlist>
+<listitem><para>DPS_OK if the conversion was successful</para></listitem><listitem><para>DPS_ERR_OVERFLOW if the json buffer was too small</para></listitem><listitem><para>DPS_ERR_INVALID if the input was not valid CBOR</para></listitem><listitem><para>other error status codes </para></listitem></itemizedlist>
+</para></simplesect>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/json.h" line="78" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="group__json_1gaaf140c06a9b06690f3645b4d99e0ce8a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
+        <definition>DPS_Status DPS_JSON2CBOR</definition>
+        <argsstring>(const char *json, uint8_t *cbor, size_t cborSize, size_t *cborLen)</argsstring>
+        <name>DPS_JSON2CBOR</name>
+        <param>
+          <type>const char *</type>
+          <declname>json</declname>
+        </param>
+        <param>
+          <type>uint8_t *</type>
+          <declname>cbor</declname>
+        </param>
+        <param>
+          <type>size_t</type>
+          <declname>cborSize</declname>
+        </param>
+        <param>
+          <type>size_t *</type>
+          <declname>cborLen</declname>
+        </param>
+        <briefdescription>
+<para>Generate a CBOR encoded byte array from a JSON string. </para>        </briefdescription>
+        <detaileddescription>
+<para>Note that if there are multiple JSON elements in the input string only the first one is parsed and anything after the fist element is ignored.</para><para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>json</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>NUL terminated JSON string to convert </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>cbor</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Destination buffer for the conversion </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>cborSize</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The size of the cbor buffer </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>cborLen</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Returns the number of CBOR bytes written</para></parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para><itemizedlist>
+<listitem><para>DPS_OK if the conversion was successful</para></listitem><listitem><para>DPS_ERR_OVERFLOW if the cbor buffer was too small</para></listitem><listitem><para>DPS_ERR_INVALID if the input was not valid JSON</para></listitem><listitem><para>other error status codes </para></listitem></itemizedlist>
+</para></simplesect>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/json.h" line="60" column="1"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+<para>JSON &lt;-&gt; CBOR conversion. </para>    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/json.h"/>
+  </compounddef>
+</doxygen>

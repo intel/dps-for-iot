@@ -218,6 +218,10 @@
   </compound>
   <compound refid="_introduction_8dox" kind="file"><name>Introduction.dox</name>
   </compound>
+  <compound refid="json_8h" kind="file"><name>json.h</name>
+    <member refid="group__json_1gad2363f8bec618e5d1036528a7a18f7f1" kind="function"><name>DPS_CBOR2JSON</name></member>
+    <member refid="group__json_1gaaf140c06a9b06690f3645b4d99e0ce8a" kind="function"><name>DPS_JSON2CBOR</name></member>
+  </compound>
   <compound refid="link_8dox" kind="file"><name>link.dox</name>
   </compound>
   <compound refid="_mesh-_network_8dox" kind="file"><name>Mesh-Network.dox</name>
@@ -302,6 +306,10 @@
     <member refid="group__event_1gad0f8a3b372f972bfaa97e29fa01b5c82" kind="function"><name>DPS_SignalEvent</name></member>
     <member refid="group__event_1gacf62ac4adc9f8eaf088cdec6c273e930" kind="function"><name>DPS_TimedWaitForEvent</name></member>
     <member refid="group__event_1gab2f3f1236cd100cd271c85191df650e8" kind="function"><name>DPS_WaitForEvent</name></member>
+  </compound>
+  <compound refid="group__json" kind="group"><name>json</name>
+    <member refid="group__json_1gad2363f8bec618e5d1036528a7a18f7f1" kind="function"><name>DPS_CBOR2JSON</name></member>
+    <member refid="group__json_1gaaf140c06a9b06690f3645b4d99e0ce8a" kind="function"><name>DPS_JSON2CBOR</name></member>
   </compound>
   <compound refid="group__keystore" kind="group"><name>keystore</name>
     <member refid="group__keystore_1ga7ca1045749c725e9c4a1b4758b2a0196" kind="enum"><name>DPS_KeyType</name></member>
@@ -496,11 +504,9 @@
   </compound>
   <compound refid="tutorials-security" kind="page"><name>tutorials-security</name>
   </compound>
-  <compound refid="dir_143d9111106c2ba2452f83cceb80c482" kind="dir"><name>dps</name>
+  <compound refid="dir_3021176de528f25fffb2fadc8fb87e26" kind="dir"><name>dps</name>
   </compound>
-  <compound refid="dir_13c0c58698473ed8f9fbf60f7cb2fe0a" kind="dir"><name>dps-for-iot</name>
-  </compound>
-  <compound refid="dir_19a1ad10e03d3a0047dfb07071f3ce2d" kind="dir"><name>inc</name>
+  <compound refid="dir_bfccd401955b95cf8c75461437045ac0" kind="dir"><name>inc</name>
   </compound>
   <compound refid="indexpage" kind="page"><name>index</name>
   </compound>
