@@ -33,6 +33,11 @@
 #include <dps/dbg.h>
 #include <dps/json.h>
 
+/*
+ * Debug control for this module
+ */
+DPS_DEBUG_CONTROL(DPS_DEBUG_OFF);
+
 #define MAX_INPUT_STRING_LEN  (RSIZE_MAX_STR - 1)
 #define JSON_MAX_STRING_LEN   CBOR_MAX_STRING_LEN
 
@@ -373,6 +378,9 @@ DPS_Status DPS_JSON2CBOR(const char* json, uint8_t* cbor, size_t cborSize, size_
     DPS_TxBuffer cborBuf;
     JSONBuffer jsonBuf;
 
+    DPS_DBGTRACEA("json=%p,cbor=%p,cborSize=%d,cborLen=%p\n",
+                  json, cbor, cborSize, cborLen);
+
     if (!json || !cbor || !cborLen) {
         return DPS_ERR_NULL;
     }
@@ -387,6 +395,8 @@ DPS_Status DPS_JSON2CBOR(const char* json, uint8_t* cbor, size_t cborSize, size_
     status = ToCBOR(&cborBuf, &jsonBuf);
     if (status == DPS_OK) {
         *cborLen = DPS_TxBufferUsed(&cborBuf);
+    } else if (status == DPS_ERR_OVERFLOW) {
+        DPS_WARNPRINT("CBOR buffer too small\n");
     } else {
         DPS_ERRPRINT("JSON2CBOR failed near character pos %d : \"%.*s\"\n", (int)(jsonBuf.str - json), 10, jsonBuf.str);
     }
@@ -649,6 +659,10 @@ DPS_Status DPS_CBOR2JSON(const uint8_t* cbor, size_t cborLen, char* json, size_t
     DPS_Status status;
     DPS_RxBuffer rxBuf;
     JSONBuffer jsonBuf;
+
+    DPS_DBGTRACEA("cbor=%p,cborLen=%d,json=%p,jsonSize=%d,pretty=%d\n",
+                  cbor, cborLen, json, jsonSize, pretty);
+
     if (!json || !cbor) {
         return DPS_ERR_NULL;
     }
@@ -664,7 +678,9 @@ DPS_Status DPS_CBOR2JSON(const uint8_t* cbor, size_t cborLen, char* json, size_t
     jsonBuf.str = json;
     jsonBuf.len = jsonSize;
     status = ToJSON(&jsonBuf, &rxBuf, pretty, indent);
-    if (status != DPS_OK) {
+    if (status == DPS_ERR_OVERFLOW) {
+        DPS_WARNPRINT("JSON buffer too small\n");
+    } else if (status != DPS_OK) {
         DPS_ERRPRINT("Invalid CBOR at offset %d\n", (int)(rxBuf.rxPos - rxBuf.base));
     }
     return status;
