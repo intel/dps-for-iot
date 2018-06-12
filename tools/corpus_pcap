@@ -6,7 +6,7 @@
 #
 # Capture packets from a run of the tests:
 # $ tcpdump -i any -p -s 0 -w dps.tcpdump
-# $ ./test_scripts/run
+# $ ./test_scripts/run.py
 #
 # Filter multicast DPS packets:
 # $ tshark -r dps.tcpdump -w dps_multicast.pcapng 'coap'

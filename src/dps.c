@@ -677,6 +677,7 @@ static int SendPub(DPS_Node* node, DPS_Publication* pub)
         }
         for (remote = node->remoteNodes; remote != NULL; remote = nextRemote) {
             nextRemote = remote->next;
+            DPS_DBGPRINT("%s muted=%d/%d,interests=%p\n", DESCRIBE(remote), remote->outbound.muted, remote->inbound.muted, remote->inbound.interests);
             if (!(remote->outbound.muted || remote->inbound.muted) && remote->inbound.interests) {
                 ret = SendMatchingPubToSub(node, pub, remote);
                 if (ret != DPS_OK) {

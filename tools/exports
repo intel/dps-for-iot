@@ -1,4 +1,7 @@
 #!/bin/bash
+#
+# Usage: ./tools/exports > dps_shared.def
+#
 
 echo LIBRARY dps_shared
 echo

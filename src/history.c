@@ -396,7 +396,8 @@ int DPS_PublicationReceivedFrom(DPS_History* history, DPS_UUID* pubId, uint32_t 
     DPS_PubHistory* ph;
     int ret;
 
-    DPS_DBGTRACE();
+    DPS_DBGTRACEA("history=%p,pubId=%s,sequenceNum=%u,source=%s\n", history, DPS_UUIDToString(pubId), sequenceNum, DPS_NodeAddrToString(source));
+    DPS_DBGTRACEA("destination=%s\n", DPS_NodeAddrToString(destination));
 
     if (DPS_SameAddr(source, destination)) {
         return DPS_TRUE;
