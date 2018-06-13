@@ -55,7 +55,7 @@ static DPS_Status CheckWildcarding(const char* topic, const char* separators, DP
         /*
          * A topic cannot start with a final wildcard
          */
-        if (wc == topic && wc[0] == FINAL_WILDC) {
+        if (wc == topic && wc[0] == FINAL_WILDC && wc[1] != 0) {
             return DPS_ERR_INVALID;
         }
         /*
@@ -118,7 +118,7 @@ DPS_Status DPS_AddTopic(DPS_BitVector* bf, const char* topic, const char* separa
 {
     DPS_Status ret = DPS_OK;
     char* segment;
-    size_t prefix = 0;
+    int prefix = 0;
     const char* tp;
     const char* wc;
     size_t tlen;
@@ -176,11 +176,9 @@ DPS_Status DPS_AddTopic(DPS_BitVector* bf, const char* topic, const char* separa
     }
     if (ret == DPS_OK) {
         if (topicType == DPS_PubTopic) {
-            if (prefix > 1) {
-                segment[prefix] = INFIX_WILDC;
-                DPS_BitVectorBloomInsert(bf, (uint8_t*)segment, prefix + 1);
-            }
-            while (prefix) {
+            segment[prefix] = INFIX_WILDC;
+            DPS_BitVectorBloomInsert(bf, (uint8_t*)segment, prefix + 1);
+            while (prefix >= 0) {
                 segment[prefix] = FINAL_WILDC;
                 DPS_BitVectorBloomInsert(bf, (uint8_t*)segment, prefix + 1);
                 --prefix;
