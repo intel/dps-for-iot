@@ -33,6 +33,8 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t len)
     int16_t i16;
     int32_t i32;
     int64_t i;
+    float f;
+    double d;
     size_t sz;
     int b;
     uint8_t* bytes;
@@ -57,6 +59,11 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t len)
     CBOR_DecodeInt32(&buf, &i32);
     DPS_RxBufferInit(&buf, (uint8_t*)data, len);
     CBOR_DecodeInt(&buf, &i);
+
+    DPS_RxBufferInit(&buf, (uint8_t*)data, len);
+    CBOR_DecodeFloat(&buf, &f);
+    DPS_RxBufferInit(&buf, (uint8_t*)data, len);
+    CBOR_DecodeDouble(&buf, &d);
 
     DPS_RxBufferInit(&buf, (uint8_t*)data, len);
     CBOR_DecodeMap(&buf, &sz);
