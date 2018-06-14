@@ -262,14 +262,10 @@ static DPS_Status ToCBOR(DPS_TxBuffer* cbor, JSONBuffer* json)
         if (json->str[len] != '"') {
             status = DPS_ERR_INVALID;
         } else {
-            // Encode string with a terminating NUL
-            status = CBOR_EncodeLength(cbor, len + 1, CBOR_STRING);
+            // Encode string
+            status = CBOR_EncodeLength(cbor, len, CBOR_STRING);
             if (status == DPS_OK) {
                 status = CBOR_Copy(cbor, (uint8_t*)json->str, len);
-                if (status == DPS_OK) {
-                    uint8_t nul = 0;
-                    status = CBOR_Copy(cbor, &nul, 1);
-                }
             }
             json->str += len + 1;
         }
@@ -545,10 +541,6 @@ static DPS_Status ToJSON(JSONBuffer* json, DPS_RxBuffer* cbor, int pretty, int i
             ++json->str;
             --json->len;
             memcpy_s(json->str, json->len, str, size);
-            // Check if string was NUL terminated
-            if (json->str[size - 1] == 0) {
-                --size;
-            }
             json->str[size] = '\"';
             json->len -= size + 1;
             json->str += size + 1;

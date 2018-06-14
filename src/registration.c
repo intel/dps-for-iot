@@ -481,6 +481,11 @@ static void OnPub(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* da
                 if (CBOR_DecodeString(&buf, &host, &hLen) != DPS_OK) {
                     break;
                 }
+                host = strndup(host, hLen);
+                if (!host) {
+                    DPS_ERRPRINT("Failed to copy host - %s\n", DPS_ErrTxt(DPS_ERR_RESOURCES));
+                    break;
+                }
                 /*
                  * Skip addresses we can determine are local to the requesting node.
                  */
@@ -498,6 +503,7 @@ static void OnPub(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* da
                     regGet->regs->list[regGet->regs->count].host = strndup(host, hLen);
                     ++regGet->regs->count;
                 }
+                free(host);
             }
         }
         DPS_DestroyAddress(addr);
