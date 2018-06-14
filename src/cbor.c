@@ -43,6 +43,12 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_OFF);
 #define CBOR_LEN4   26
 #define CBOR_LEN8   27
 
+/*
+ * CBOR major opcodes that encode a length
+ */
+#define MAJOR_ENCODES_LENGTH(m) ((m) == CBOR_BYTES || (m) == CBOR_STRING || (m) == CBOR_ARRAY || (m) == CBOR_MAP)
+
+
 static int Requires(uint64_t n)
 {
     if (n < 24) {
@@ -682,14 +688,19 @@ DPS_Status CBOR_Peek(DPS_RxBuffer* buffer, uint8_t* majOut, uint64_t* infoOut)
     DPS_Status ret;
     uint64_t info;
     size_t len;
+    size_t avail = DPS_RxBufferAvail(buffer);
 
-    if (DPS_RxBufferAvail(buffer) < 1) {
+    if (avail < 1) {
         return DPS_ERR_EOD;
     }
     if (!majOut) {
         return DPS_ERR_ARGS;
     }
     ret = PeekUint(buffer, &info, majOut, &len);
+    // For values encoding a length do a sanity check
+    if ((ret == DPS_OK) && MAJOR_ENCODES_LENGTH(*majOut) && (info >= avail)) {
+        ret = DPS_ERR_INVALID;
+    }
     if (infoOut && (ret == DPS_OK)) {
         *infoOut = info;
     }
