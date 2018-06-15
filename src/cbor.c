@@ -601,23 +601,50 @@ DPS_Status CBOR_DecodeFloat(DPS_RxBuffer* buffer, float* f)
     uint8_t* p = buffer->rxPos;
     uint8_t* pf;
 
-    if (avail < 5) {
+    if (avail < 1) {
         return DPS_ERR_EOD;
     }
-    if (*p == CBOR_DOUBLE) {
-        double d;
-        DPS_Status status = CBOR_DecodeDouble(buffer, &d);
-        if (status == DPS_OK) {
-            if (fabs(d) > FLT_MAX) {
-                return DPS_ERR_RANGE;
+    if (*p != CBOR_FLOAT) {
+        DPS_Status status = DPS_ERR_INVALID;
+        uint8_t maj = *p & 0xE0;
+        if (*p == CBOR_DOUBLE) {
+            double d;
+            status = CBOR_DecodeDouble(buffer, &d);
+            if (status == DPS_OK) {
+                if (fabs(d) > FLT_MAX) {
+                    status = DPS_ERR_RANGE;
+                } else {
+                    *f = (float)d;
+                    if (d != (double)*f) {
+                        status = DPS_ERR_LOST_PRECISION;
+                    }
+                }
             }
-            *f = (float)d;
+        } else if (maj == CBOR_UINT) {
+            uint64_t u64;
+            status = CBOR_DecodeUint(buffer, &u64);
+            if (status == DPS_OK) {
+                *f = (float)u64;
+                if ((uint64_t)*f != u64) {
+                    status = DPS_ERR_LOST_PRECISION;
+                }
+            }
+        } else if (maj == CBOR_NEG) {
+            int64_t i64;
+            status = CBOR_DecodeInt(buffer, &i64);
+            if (status == DPS_OK) {
+                *f = (float)i64;
+                if ((uint64_t)*f != i64) {
+                    status = DPS_ERR_LOST_PRECISION;
+                }
+            }
         }
         return status;
     }
-    if (*p++ != CBOR_FLOAT) {
-        return DPS_ERR_INVALID;
+    if (avail < 5) {
+        return DPS_ERR_EOD;
     }
+    ++p;
 #if __BYTE_ORDER == __LITTLE_ENDIAN
     pf = (uint8_t*)f + sizeof(float);
     *--pf = *p++;
@@ -644,20 +671,40 @@ DPS_Status CBOR_DecodeDouble(DPS_RxBuffer* buffer, double* d)
     if (avail < 1) {
         return DPS_ERR_EOD;
     }
-    if (*p == CBOR_FLOAT) {
-        float f;
-        DPS_Status status = CBOR_DecodeFloat(buffer, &f);
-        if (status == DPS_OK) {
-            *d = f;
+    if (*p != CBOR_DOUBLE) {
+        DPS_Status status = DPS_ERR_INVALID;
+        uint8_t maj = *p & 0xE0;
+        if (*p == CBOR_FLOAT) {
+            float f;
+            DPS_Status status = CBOR_DecodeFloat(buffer, &f);
+            if (status == DPS_OK || status == DPS_ERR_LOST_PRECISION) {
+                *d = f;
+            }
+        } else if (maj == CBOR_UINT) {
+            uint64_t u64;
+            status = CBOR_DecodeUint(buffer, &u64);
+            if (status == DPS_OK) {
+                *d = (double)u64;
+                if ((uint64_t)*d != u64) {
+                    status = DPS_ERR_LOST_PRECISION;
+                }
+            }
+        } else if (maj == CBOR_NEG) {
+            int64_t i64;
+            status = CBOR_DecodeInt(buffer, &i64);
+            if (status == DPS_OK) {
+                *d = (double)i64;
+                if ((uint64_t)*d != i64) {
+                    status = DPS_ERR_LOST_PRECISION;
+                }
+            }
         }
         return status;
-    }
-    if (*p++ != CBOR_DOUBLE) {
-        return DPS_ERR_INVALID;
     }
     if (avail < 9) {
         return DPS_ERR_EOD;
     }
+    ++p;
 #if __BYTE_ORDER == __LITTLE_ENDIAN
     pd = (uint8_t*)d + sizeof(double);
     *--pd = *p++;
@@ -791,7 +838,7 @@ size_t _CBOR_SizeOfString(const char* s)
 }
 
 DPS_Status DPS_ParseMapInit(CBOR_MapState* mapState, DPS_RxBuffer* buffer, const int32_t* keys, size_t numKeys,
-                            const int32_t* optKeys, size_t numOptKeys)
+        const int32_t* optKeys, size_t numOptKeys)
 {
     mapState->buffer = buffer;
     mapState->needs = keys;
