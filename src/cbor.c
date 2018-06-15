@@ -305,7 +305,7 @@ DPS_Status CBOR_EndWrapBytes(DPS_TxBuffer* buffer, uint8_t* wrapPtr)
 DPS_Status CBOR_EncodeString(DPS_TxBuffer* buffer, const char* str)
 {
     DPS_Status ret;
-    size_t len = str ? strnlen_s(str, CBOR_MAX_STRING_LEN + 1) + 1 : 0;
+    size_t len = str ? strnlen_s(str, CBOR_MAX_STRING_LEN + 1) : 0;
 
     if (len > CBOR_MAX_STRING_LEN) {
         ret = DPS_ERR_OVERFLOW;
@@ -546,13 +546,13 @@ DPS_Status CBOR_DecodeString(DPS_RxBuffer* buffer, char** data, size_t* size)
     if (ret == DPS_OK) {
         if (len > DPS_RxBufferAvail(buffer)) {
             ret = DPS_ERR_INVALID;
-        } else {
-            *data = len ? (char*)buffer->rxPos : NULL;
-            /*
-             * Decoded length excludes the NUL terminator
-             */
-            *size = len ? len - 1 : 0;
+        } else if (len > 0) {
+            *data = (char*)buffer->rxPos;
+            *size = len;
             buffer->rxPos += len;
+        } else {
+            *data = NULL;
+            *size = 0;
         }
     }
     return ret;
@@ -833,7 +833,7 @@ DPS_Status CBOR_Skip(DPS_RxBuffer* buffer, uint8_t* majOut, size_t* skipped)
 
 size_t _CBOR_SizeOfString(const char* s)
 {
-    size_t len = s ? strnlen_s(s, CBOR_MAX_STRING_LEN + 1) + 1 : 0;
+    size_t len = s ? strnlen_s(s, CBOR_MAX_STRING_LEN + 1) : 0;
     return len + CBOR_SIZEOF_LEN(len);
 }
 

@@ -107,6 +107,54 @@ static DPS_Status TestFloatingPoint()
     return DPS_OK;
 }
 
+static DPS_Status TestTextString()
+{
+    DPS_TxBuffer txBuffer;
+    DPS_RxBuffer rxBuffer;
+    size_t i;
+    DPS_Status ret;
+    char* str;
+    size_t len;
+
+    const uint8_t empty[] = { 0x60 };
+    const uint8_t a[] = { 0x61, 0x61 };
+    const uint8_t IETF[] = { 0x64, 0x49, 0x45, 0x54, 0x46 };
+    const uint8_t quote[] = { 0x62, 0x22, 0x5c };
+    const uint8_t _00fc[] = { 0x62, 0xc3, 0xbc };
+    const uint8_t _u6c34[] = { 0x63, 0xe6, 0xb0, 0xb4 };
+    const struct {
+        const char* s;
+        const uint8_t* b;
+        size_t nb;
+    } examples[] = {
+        { "", empty, A_SIZEOF(empty) },
+        { "a", a, A_SIZEOF(a) },
+        { "IETF", IETF, A_SIZEOF(IETF) },
+        { "\"\\", quote, A_SIZEOF(quote) },
+        { "\u00fc", _00fc, A_SIZEOF(_00fc) },
+        { "\u6c34", _u6c34, A_SIZEOF(_u6c34) },
+    };
+
+    for (i = 0; i < A_SIZEOF(examples); ++i) {
+        DPS_TxBufferInit(&txBuffer, buf, sizeof(buf));
+        ret = CBOR_EncodeString(&txBuffer, examples[i].s);
+        CHECK(ret);
+        ASSERT(examples[i].nb == DPS_TxBufferUsed(&txBuffer));
+        ASSERT(memcmp(examples[i].b, txBuffer.base, DPS_TxBufferUsed(&txBuffer)) == 0);
+
+        DPS_TxBufferToRx(&txBuffer, &rxBuffer);
+        ret = CBOR_DecodeString(&rxBuffer, &str, &len);
+        ASSERT(strlen(examples[i].s) == len);
+        ASSERT(strncmp(examples[i].s, str, len) == 0);
+    }
+
+    return DPS_OK;
+
+Failed:
+    printf("Failed at line %d %s\n", ln, DPS_ErrTxt(ret));
+    return ret;
+}
+
 #define NUM_ENCODED_VALS   84
 
 int main(int argc, char** argv)
@@ -127,6 +175,8 @@ int main(int argc, char** argv)
     }
 
     ret = TestFloatingPoint();
+    CHECK(ret);
+    ret = TestTextString();
     CHECK(ret);
 
     DPS_TxBufferInit(&txBuffer, buf, sizeof(buf));
