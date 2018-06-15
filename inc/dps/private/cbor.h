@@ -87,9 +87,14 @@ extern "C" {
 #define CBOR_SIZEOF_ARRAY(a)     CBOR_SIZEOF_LEN(a)
 
 /**
- * Actual bytes need to encode a string (includes NUL terminator)
+ * Actual bytes need to encode a string
  */
 #define CBOR_SIZEOF_STRING(s)    _CBOR_SizeOfString(s)
+
+/**
+ * Actual bytes need to encode a static string (e.g. static const char str[])
+ */
+#define CBOR_SIZEOF_STATIC_STRING(s)    ((sizeof(s) - 1) + CBOR_SIZEOF_LEN(sizeof(s) - 1))
 
 /**
  * Actual bytes needed to encode a byte stream of a specified length
@@ -146,7 +151,7 @@ extern "C" {
 size_t _CBOR_SizeOfInt(int64_t i);
 
 /**
- * Actual bytes need to encode a string (includes NUL terminator)
+ * Actual bytes need to encode a string
  *
  * @param s The string to encode
  *
@@ -208,14 +213,7 @@ DPS_Status CBOR_EncodeInt(DPS_TxBuffer* buffer, int64_t i);
 DPS_Status CBOR_EncodeBytes(DPS_TxBuffer* buffer, const uint8_t* data, size_t len);
 
 /**
- * Encoded a text string
- *
- * @note This function automatically appends the trailing NUL. To encode a string
- * without the trailing NUL use
- * @code
- * CBOR_EncodeLength(buf, strlen(str), CBOR_STRING);
- * CBOR_Copy(buf, str, strlen(str));
- * @endcode
+ * Encode a text string
  *
  * @param buffer   Buffer to append to
  * @param str      The text string to append
