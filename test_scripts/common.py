@@ -375,6 +375,6 @@ def expect_ack_received(children, allow_error=False):
     expect(children, 'Ack for pub')
 
 def expect_error(children, error):
-    expect(children, 'ERROR.*{}'.format(error))
+    expect(children, 'ERROR.*{}'.format(error), allow_error=True)
 
 reset_logs()
