@@ -121,7 +121,6 @@ static DPS_Status TestTextString()
     const uint8_t IETF[] = { 0x64, 0x49, 0x45, 0x54, 0x46 };
     const uint8_t quote[] = { 0x62, 0x22, 0x5c };
     const uint8_t _00fc[] = { 0x62, 0xc3, 0xbc };
-    const uint8_t _u6c34[] = { 0x63, 0xe6, 0xb0, 0xb4 };
     const struct {
         const char* s;
         const uint8_t* b;
@@ -131,8 +130,7 @@ static DPS_Status TestTextString()
         { "a", a, A_SIZEOF(a) },
         { "IETF", IETF, A_SIZEOF(IETF) },
         { "\"\\", quote, A_SIZEOF(quote) },
-        { "\u00fc", _00fc, A_SIZEOF(_00fc) },
-        { "\u6c34", _u6c34, A_SIZEOF(_u6c34) },
+        { "\u00fc", _00fc, A_SIZEOF(_00fc) }
     };
 
     for (i = 0; i < A_SIZEOF(examples); ++i) {
@@ -145,7 +143,7 @@ static DPS_Status TestTextString()
         DPS_TxBufferToRx(&txBuffer, &rxBuffer);
         ret = CBOR_DecodeString(&rxBuffer, &str, &len);
         ASSERT(strlen(examples[i].s) == len);
-        ASSERT(strncmp(examples[i].s, str, len) == 0);
+        ASSERT((len == 0) || (strncmp(examples[i].s, str, len) == 0));
     }
 
     return DPS_OK;
