@@ -146,6 +146,15 @@ static DPS_Status TestTextString()
         ASSERT((len == 0) || (strncmp(examples[i].s, str, len) == 0));
     }
 
+    char bigString[4096];
+    memset(bigString, 'A', 4096);
+    DPS_TxBufferInit(&txBuffer, buf, sizeof(buf));
+    ret = CBOR_EncodeString(&txBuffer, bigString);
+    ASSERT(ret == DPS_ERR_OVERFLOW);
+    DPS_TxBufferInit(&txBuffer, buf, sizeof(buf));
+    ret = CBOR_EncodeStringAndLength(&txBuffer, bigString, 4096);
+    ASSERT(ret == DPS_OK);
+
     return DPS_OK;
 
 Failed:

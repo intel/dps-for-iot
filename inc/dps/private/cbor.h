@@ -223,6 +223,17 @@ DPS_Status CBOR_EncodeBytes(DPS_TxBuffer* buffer, const uint8_t* data, size_t le
 DPS_Status CBOR_EncodeString(DPS_TxBuffer* buffer, const char* str);
 
 /**
+ * Encode @p len bytes of a text string
+ *
+ * @param buffer   Buffer to append to
+ * @param str      The text string to append
+ * @param len      The number of characters to append
+ *
+ * @return DPS_OK if successful, an error otherwise
+ */
+DPS_Status CBOR_EncodeStringAndLength(DPS_TxBuffer* buffer, const char* str, size_t len);
+
+/**
  * Encode an array type and the number of data items
  *
  * @param buffer   Buffer to append to
