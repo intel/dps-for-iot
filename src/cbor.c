@@ -301,7 +301,6 @@ DPS_Status CBOR_EndWrapBytes(DPS_TxBuffer* buffer, uint8_t* wrapPtr)
     return CBOR_ReserveBytes(buffer, actual, &pos);
 }
 
-
 DPS_Status CBOR_EncodeString(DPS_TxBuffer* buffer, const char* str)
 {
     DPS_Status ret;
@@ -312,6 +311,17 @@ DPS_Status CBOR_EncodeString(DPS_TxBuffer* buffer, const char* str)
     } else {
         ret = EncodeUint(buffer, (uint32_t)len, CBOR_STRING);
     }
+    if (ret == DPS_OK) {
+        ret = CBOR_Copy(buffer, (uint8_t*)str, len);
+    }
+    return ret;
+}
+
+DPS_Status CBOR_EncodeStringAndLength(DPS_TxBuffer* buffer, const char* str, size_t len)
+{
+    DPS_Status ret;
+
+    ret = EncodeUint(buffer, (uint32_t)len, CBOR_STRING);
     if (ret == DPS_OK) {
         ret = CBOR_Copy(buffer, (uint8_t*)str, len);
     }
