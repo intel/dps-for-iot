@@ -97,6 +97,11 @@ extern "C" {
 #define CBOR_SIZEOF_STATIC_STRING(s)    ((sizeof(s) - 1) + CBOR_SIZEOF_LEN(sizeof(s) - 1))
 
 /**
+ * Actual bytes need to encode a string of length bytes
+ */
+#define CBOR_SIZEOF_STRING_AND_LENGTH(l)    ((l) + CBOR_SIZEOF_LEN(l))
+
+/**
  * Actual bytes needed to encode a byte stream of a specified length
  */
 #define CBOR_SIZEOF_BYTES(l)     ((l) + CBOR_SIZEOF_LEN(l))
