@@ -686,7 +686,7 @@ DPS_Status CBOR_DecodeDouble(DPS_RxBuffer* buffer, double* d)
         uint8_t maj = *p & 0xE0;
         if (*p == CBOR_FLOAT) {
             float f;
-            DPS_Status status = CBOR_DecodeFloat(buffer, &f);
+            status = CBOR_DecodeFloat(buffer, &f);
             if (status == DPS_OK || status == DPS_ERR_LOST_PRECISION) {
                 *d = f;
             }
