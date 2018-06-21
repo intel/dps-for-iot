@@ -1,0 +1,21 @@
+#!/bin/bash
+#
+# Usage: ./tools/docs_upload
+#
+
+DPS_HOME=`pwd`
+COMMIT=`git rev-parse HEAD`
+
+rm -rf code_docs
+mkdir code_docs
+cd code_docs
+git clone -b gh-pages git@github.com:intel/dps-for-iot.git
+cd dps-for-iot
+rm -rf *
+echo "" > .nojekyll
+
+( cat $DPS_HOME/doc/Doxyfile ; echo "OUTPUT_DIRECTORY=."; echo "INPUT=$DPS_HOME/doc/Introduction.dox $DPS_HOME/doc/Topic-Strings.dox $DPS_HOME/doc/Mesh-Network.dox $DPS_HOME/doc/Message-Types-and-Flows.dox $DPS_HOME/doc/Data-Series.dox $DPS_HOME/doc/Retained-Publications.dox $DPS_HOME/doc/Security.dox $DPS_HOME/doc/Building-and-Running.dox $DPS_HOME/doc/Tutorials.dox $DPS_HOME/doc/tutorial/hello_world.dox $DPS_HOME/doc/tutorial/link.dox $DPS_HOME/doc/tutorial/security.dox $DPS_HOME/doc/../inc" ; echo "EXAMPLE_PATH=$DPS_HOME/examples $DPS_HOME/doc/tutorial" ; echo "EXCLUDE=$DPS_HOME/inc/dps/private" ; echo "HTML_OUTPUT=." ; echo "HTML_FOOTER=$DPS_HOME/doc/html/footer.html" ; echo "IMAGE_PATH = $DPS_HOME/doc/images" ) | doxygen - 2>&1 | tee doxygen.log
+
+git add --all
+git commit -m 'Deploy docs to GitHub Pages' -m "Commit: $COMMIT"
+git push --force

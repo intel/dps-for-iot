@@ -68,7 +68,17 @@ static const double Doubles[] = {
 };
 
 static const double DoublesAsFloat[] = {
-    0.0, -FLT_MAX, FLT_MAX, (double)FLT_MAX * 1.0000000000000002
+    0.0, -FLT_MAX, FLT_MAX, (double)FLT_MAX * 1.0000000000000002, 12345.67890123
+};
+
+// Surprisingly INT32_MIN can be represented exactly as a float!
+static const int64_t IntsAsFloat[] = {
+    0, 202, -202, -16777216ll, 16777216ll, -16777217ll, 16777217ll, INT32_MAX, INT32_MIN + 1
+};
+
+// Surprisingly INT64_MIN can be represented exactly as a double!
+static const int64_t IntsAsDouble[] = {
+    0, 2, -3, -9007199254740992ll, 9007199254740992ll, INT32_MAX, INT32_MIN, -9007199254740993ll, 9007199254740993ll, INT64_MAX, INT64_MIN + 1
 };
 
 static DPS_Status TestFloatingPoint()
@@ -97,7 +107,68 @@ static DPS_Status TestFloatingPoint()
     return DPS_OK;
 }
 
-#define NUM_ENCODED_VALS   63
+static DPS_Status TestTextString()
+{
+    DPS_TxBuffer txBuffer;
+    DPS_RxBuffer rxBuffer;
+    size_t i;
+    DPS_Status ret;
+    char* str;
+    size_t len;
+
+    const uint8_t empty[] = { 0x60 };
+    const uint8_t a[] = { 0x61, 0x61 };
+    const uint8_t IETF[] = { 0x64, 0x49, 0x45, 0x54, 0x46 };
+    const uint8_t quote[] = { 0x62, 0x22, 0x5c };
+    const uint8_t _00fc[] = { 0x62, 0xc3, 0xbc };
+    const struct {
+        const char* s;
+        const uint8_t* b;
+        size_t nb;
+    } examples[] = {
+        { "", empty, A_SIZEOF(empty) },
+        { "a", a, A_SIZEOF(a) },
+        { "IETF", IETF, A_SIZEOF(IETF) },
+        { "\"\\", quote, A_SIZEOF(quote) },
+        { "\u00fc", _00fc, A_SIZEOF(_00fc) }
+    };
+
+    for (i = 0; i < A_SIZEOF(examples); ++i) {
+        DPS_TxBufferInit(&txBuffer, buf, sizeof(buf));
+        ret = CBOR_EncodeString(&txBuffer, examples[i].s);
+        CHECK(ret);
+        ASSERT(examples[i].nb == DPS_TxBufferUsed(&txBuffer));
+        ASSERT(memcmp(examples[i].b, txBuffer.base, DPS_TxBufferUsed(&txBuffer)) == 0);
+
+        DPS_TxBufferToRx(&txBuffer, &rxBuffer);
+        ret = CBOR_DecodeString(&rxBuffer, &str, &len);
+        ASSERT(strlen(examples[i].s) == len);
+        ASSERT((len == 0) || (strncmp(examples[i].s, str, len) == 0));
+    }
+
+    /*
+     * bigString is explicitly not NUL terminated in order to ensure
+     * that OVERFLOW is correctly returned for CBOR_EncodeString and
+     * that a NUL terminator is not required for
+     * CBOR_EncodeStringAndLength.
+     */
+    char bigString[CBOR_MAX_STRING_LEN * 2];
+    memset(bigString, 'A', CBOR_MAX_STRING_LEN * 2);
+    DPS_TxBufferInit(&txBuffer, buf, sizeof(buf));
+    ret = CBOR_EncodeString(&txBuffer, bigString);
+    ASSERT(ret == DPS_ERR_OVERFLOW);
+    DPS_TxBufferInit(&txBuffer, buf, sizeof(buf));
+    ret = CBOR_EncodeStringAndLength(&txBuffer, bigString, CBOR_MAX_STRING_LEN * 2);
+    ASSERT(ret == DPS_OK);
+
+    return DPS_OK;
+
+Failed:
+    printf("Failed at line %d %s\n", ln, DPS_ErrTxt(ret));
+    return ret;
+}
+
+#define NUM_ENCODED_VALS   84
 
 int main(int argc, char** argv)
 {
@@ -117,6 +188,8 @@ int main(int argc, char** argv)
     }
 
     ret = TestFloatingPoint();
+    CHECK(ret);
+    ret = TestTextString();
     CHECK(ret);
 
     DPS_TxBufferInit(&txBuffer, buf, sizeof(buf));
@@ -149,6 +222,14 @@ int main(int argc, char** argv)
         }
         for (i = 0; i < sizeof(DoublesAsFloat) / sizeof(DoublesAsFloat[0]); ++i) {
             ret = CBOR_EncodeDouble(&txBuffer, DoublesAsFloat[i]);
+            CHECK(ret);
+        }
+        for (i = 0; i < sizeof(IntsAsDouble) / sizeof(IntsAsDouble[0]); ++i) {
+            ret = CBOR_EncodeInt(&txBuffer, IntsAsDouble[i]);
+            CHECK(ret);
+        }
+        for (i = 0; i < sizeof(IntsAsFloat) / sizeof(IntsAsFloat[0]); ++i) {
+            ret = CBOR_EncodeInt(&txBuffer, IntsAsFloat[i]);
             CHECK(ret);
         }
         ret = CBOR_EncodeArray(&txBuffer, sizeof(Strings) / sizeof(Strings[0]));
@@ -270,24 +351,77 @@ int main(int argc, char** argv)
         ASSERT((d == Doubles[i]) || (isnan(d) && isnan(Doubles[i])));
         CHECK(ret);
     }
-
     // These are doubles on the wire
     for (i = 0; i < sizeof(DoublesAsFloat) / sizeof(DoublesAsFloat[0]); ++i) {
         float f;
         ret = CBOR_DecodeFloat(&rxBuffer, &f);
-        if (i < 3) {
-            ASSERT(f == (float)DoublesAsFloat[i]);
-            CHECK(ret);
-        } else {
+        switch (i) {
+        case 3:
             if (ret == DPS_ERR_RANGE) {
-                printf("Decode %f failed as expected %d\n", DoublesAsFloat[i], ret);
+                printf("Decode %f failed as expected %s\n", DoublesAsFloat[i], DPS_ErrTxt(ret));
                 ret = DPS_OK;
             } else {
                 printf("Decode %f did not fail as expected\n", DoublesAsFloat[i]);
                 ret = DPS_ERR_INVALID;
             }
-            CHECK(ret);
+            break;
+        case 4:
+            if (ret == DPS_ERR_LOST_PRECISION) {
+                printf("Decode %f failed as expected %s\n", DoublesAsFloat[i], DPS_ErrTxt(ret));
+                ret = DPS_OK;
+            } else {
+                printf("Decode %f did not fail as expected\n", DoublesAsFloat[i]);
+                ret = DPS_ERR_INVALID;
+            }
+            break;
+        default:
+            ASSERT(f == (float)DoublesAsFloat[i]);
         }
+        CHECK(ret);
+    }
+    // These are integers on the wire - decode as doubles
+    for (i = 0; i < sizeof(IntsAsDouble) / sizeof(IntsAsDouble[0]); ++i) {
+        double d;
+        ret = CBOR_DecodeDouble(&rxBuffer, &d);
+        switch (i) {
+        case 7:
+        case 8:
+        case 9:
+        case 10:
+            if (ret == DPS_ERR_LOST_PRECISION) {
+                printf("Decode %zi failed as expected %s\n", IntsAsDouble[i], DPS_ErrTxt(ret));
+                ret = DPS_OK;
+            } else {
+                printf("Decode %zi did not fail as expected\n", IntsAsDouble[i]);
+                ret = DPS_ERR_INVALID;
+            }
+            break;
+        default:
+            ASSERT(d == (double)IntsAsDouble[i]);
+        }
+        CHECK(ret);
+    }
+    // These are integers on the wire - decode as floats
+    for (i = 0; i < sizeof(IntsAsFloat) / sizeof(IntsAsFloat[0]); ++i) {
+        float f;
+        ret = CBOR_DecodeFloat(&rxBuffer, &f);
+        switch (i) {
+        case 5:
+        case 6:
+        case 7:
+        case 8:
+            if (ret == DPS_ERR_LOST_PRECISION) {
+                printf("Decode %zi failed as expected %s\n", IntsAsFloat[i], DPS_ErrTxt(ret));
+                ret = DPS_OK;
+            } else {
+                printf("Decode %zi did not fail as expected\n", IntsAsFloat[i]);
+                ret = DPS_ERR_INVALID;
+            }
+            break;
+        default:
+            ASSERT(f == (float)IntsAsFloat[i]);
+        }
+        CHECK(ret);
     }
 
     ret = CBOR_DecodeArray(&rxBuffer, &size);

@@ -33,7 +33,7 @@ reset_logs()
 sub1 = sub('A')
 ver('-v 2')
 
-expect(sub1, 'ERROR.*Expected message version 1, received 2')
+expect_error(sub1, 'Expected message version 1, received 2')
 
 # Unicast
 reset_logs()
@@ -41,7 +41,7 @@ reset_logs()
 sub1 = sub('A')
 ver('-p {} -v 2'.format(sub1.port))
 
-expect(sub1, 'ERROR.*Expected message version 1, received 2')
+expect_error(sub1, 'Expected message version 1, received 2')
 
 #
 # Verify that unsupported message type is dropped
@@ -52,7 +52,7 @@ reset_logs()
 sub1 = sub('A')
 ver('-v 1 -t 5')
 
-expect(sub1, 'ERROR.*Invalid message type')
+expect_error(sub1, 'Invalid message type')
 
 # Unicast
 reset_logs()
@@ -60,4 +60,4 @@ reset_logs()
 sub1 = sub('A')
 ver('-p {} -v 1 -t 5'.format(sub1.port))
 
-expect(sub1, 'ERROR.*Invalid message type')
+expect_error(sub1, 'Invalid message type')

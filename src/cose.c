@@ -107,9 +107,9 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 #define COSE_EC_KEY_Y   -3
 #define COSE_EC_KEY_D   -4
 
-static const uint8_t ENCRYPT0[] = { 'E', 'n', 'c', 'r', 'y', 'p', 't', '0' };
-static const uint8_t ENCRYPT[] = { 'E', 'n', 'c', 'r', 'y', 'p', 't' };
-static const uint8_t COUNTER_SIGNATURE[] = { 'C', 'o', 'u', 'n', 't', 'e', 'r', 'S', 'i', 'g', 'n', 'a', 't', 'u', 'r', 'e' };
+static const char ENCRYPT0[] = "Encrypt0";
+static const char ENCRYPT[] = "Encrypt";
+static const char COUNTER_SIGNATURE[] = "CounterSignature";
 
 /*
  * Union of supported key types.
@@ -357,7 +357,7 @@ static DPS_Status EncodeSig(DPS_TxBuffer* buf, int8_t alg, int8_t sigAlg,
     size_t bufLen;
 
     bufLen = CBOR_SIZEOF_ARRAY(5) +
-        CBOR_SIZEOF_BYTES(sizeof(COUNTER_SIGNATURE)) +
+        CBOR_SIZEOF_STATIC_STRING(COUNTER_SIGNATURE) +
         SIZEOF_PROTECTED_MAP +
         SIZEOF_PROTECTED_MAP +
         CBOR_SIZEOF_BYTES(aadLen) +
@@ -368,11 +368,7 @@ static DPS_Status EncodeSig(DPS_TxBuffer* buf, int8_t alg, int8_t sigAlg,
         ret = CBOR_EncodeArray(buf, 5);
     }
     if (ret == DPS_OK) {
-        /* * COSE spec does not expect a trailing NUL */
-        ret = CBOR_EncodeLength(buf, sizeof(COUNTER_SIGNATURE), CBOR_STRING);
-    }
-    if (ret == DPS_OK) {
-        ret = CBOR_Copy(buf, COUNTER_SIGNATURE, sizeof(COUNTER_SIGNATURE));
+        ret = CBOR_EncodeString(buf, COUNTER_SIGNATURE);
     }
     if (ret == DPS_OK) {
         ret = EncodeProtectedMap(buf, alg);
@@ -403,37 +399,31 @@ static DPS_Status EncodeSig(DPS_TxBuffer* buf, int8_t alg, int8_t sigAlg,
 static DPS_Status EncodeAAD(DPS_TxBuffer* buf, uint8_t tag, int8_t alg, uint8_t* aad, size_t aadLen)
 {
     DPS_Status ret;
-    const uint8_t* context;
-    size_t contextLen;
+    const char* context;
     size_t bufLen;
 
+    bufLen = CBOR_SIZEOF_ARRAY(3) +
+        SIZEOF_PROTECTED_MAP +
+        CBOR_SIZEOF_BYTES(aadLen);
     switch (tag) {
     case COSE_TAG_ENCRYPT0:
+        bufLen += CBOR_SIZEOF_STATIC_STRING(ENCRYPT0);
         context = ENCRYPT0;
-        contextLen = sizeof(ENCRYPT0);
         break;
     case COSE_TAG_ENCRYPT:
+        bufLen += CBOR_SIZEOF_STATIC_STRING(ENCRYPT);
         context = ENCRYPT;
-        contextLen = sizeof(ENCRYPT);
         break;
     default:
         return DPS_ERR_INVALID;
     }
-    bufLen = CBOR_SIZEOF_ARRAY(3) +
-        CBOR_SIZEOF_BYTES(contextLen) +
-        SIZEOF_PROTECTED_MAP +
-        CBOR_SIZEOF_BYTES(aadLen);
 
     ret = DPS_TxBufferInit(buf, NULL, bufLen);
     if (ret == DPS_OK) {
         ret = CBOR_EncodeArray(buf, 3);
     }
     if (ret == DPS_OK) {
-        /* COSE spec does not expect a trailing NUL */
-        ret = CBOR_EncodeLength(buf, contextLen, CBOR_STRING);
-    }
-    if (ret == DPS_OK) {
-        ret = CBOR_Copy(buf, context, contextLen);
+        ret = CBOR_EncodeString(buf, context);
     }
     if (ret == DPS_OK) {
         ret = EncodeProtectedMap(buf, alg);

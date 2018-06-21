@@ -2,12 +2,6 @@
 
 [![Build Status](https://travis-ci.org/intel/dps-for-iot.svg?branch=master)](https://travis-ci.org/intel/dps-for-iot)
 
-***
-
-### Note: This is a preview release of the software and is intended for evaluation and experimentation only.
-
-***
-
 Distributed Publish & Subscribe for IoT (DPS) is a new protocol that
 implements the publish/subscribe (pub/sub) communication pattern.
 

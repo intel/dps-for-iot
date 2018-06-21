@@ -587,8 +587,14 @@ int main(int argc, char** argv)
         TestHistory,
         TestHistoryDepth,
         TestOutOfOrderAck,
+        /*
+         * Reliability is only expected for loopback and reliable
+         * transports.
+         */
         TestBackToBackPublish,
+#if defined(DPS_USE_TCP)
         TestBackToBackPublishSeparateNodes,
+#endif
         TestRetainedMessage,
         TestSequenceNumbers,
         NULL

@@ -34,13 +34,16 @@
 #include <dps/dps.h>
 #include <dps/synchronous.h>
 #include <dps/event.h>
+#include <dps/json.h>
 #include "keys.h"
 
 #define A_SIZEOF(a)  (sizeof(a) / sizeof((a)[0]))
 
 static int quiet = DPS_FALSE;
+static int json = DPS_FALSE;
 
 static const char AckFmt[] = "This is an ACK from %d";
+static const char JSONAckFmt[] = "{\"msg\":\"ACK Message\",\"port\":%d}";
 
 static void OnNodeDestroyed(DPS_Node* node, void* data)
 {
@@ -51,6 +54,7 @@ static void OnNodeDestroyed(DPS_Node* node, void* data)
 
 static void OnPubMatch(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* data, size_t len)
 {
+    char jsonStr[1024];
     DPS_Status ret;
     const DPS_UUID* pubId = DPS_PublicationGetUUID(pub);
     uint32_t sn = DPS_PublicationGetSequenceNum(pub);
@@ -79,17 +83,31 @@ static void OnPubMatch(DPS_Subscription* sub, const DPS_Publication* pub, uint8_
         }
         DPS_PRINT("\n");
         if (data) {
-            DPS_PRINT("%.*s\n", (int)len, data);
+            if (json) {
+                ret = DPS_CBOR2JSON(data, len, jsonStr, sizeof(jsonStr), DPS_TRUE);
+                if (ret == DPS_OK) {
+                    DPS_PRINT("%s\n", jsonStr);
+                }
+            } else {
+                DPS_PRINT("%.*s\n", (int)len, data);
+            }
         }
     }
     if (DPS_PublicationIsAckRequested(pub)) {
-        char ackMsg[sizeof(AckFmt) + 8];
-
-        sprintf(ackMsg, AckFmt, DPS_GetPortNumber(DPS_PublicationGetNode(pub)));
+        uint8_t ackMsg[64];
+        size_t len;
         DPS_PRINT("Sending ack for pub UUID %s(%d)\n", DPS_UUIDToString(DPS_PublicationGetUUID(pub)), DPS_PublicationGetSequenceNum(pub));
-        DPS_PRINT("    %s\n", ackMsg);
-
-        ret = DPS_AckPublication(pub, (uint8_t*)ackMsg, strnlen(ackMsg, sizeof(ackMsg)));
+        if (json) {
+            sprintf(jsonStr, JSONAckFmt, DPS_GetPortNumber(DPS_PublicationGetNode(pub)));
+            DPS_PRINT("    %s\n", jsonStr);
+            ret = DPS_JSON2CBOR(jsonStr, ackMsg, sizeof(ackMsg), &len);
+            assert(ret == DPS_OK);
+        } else {
+            sprintf((char*)ackMsg, AckFmt, DPS_GetPortNumber(DPS_PublicationGetNode(pub)));
+            DPS_PRINT("    %s\n", ackMsg);
+            len = strnlen(ackMsg, sizeof(ackMsg));
+        }
+        ret = DPS_AckPublication(pub, ackMsg, len);
         if (ret != DPS_OK) {
             DPS_PRINT("Failed to ack pub %s\n", DPS_ErrTxt(ret));
         }
@@ -210,6 +228,11 @@ static int ParseArgs(int argc, char** argv, Args* args)
             if (strcmp(*argv, "-d") == 0) {
                 ++argv;
                 DPS_Debug = DPS_TRUE;
+                continue;
+            }
+            if (strcmp(*argv, "-j") == 0) {
+                ++argv;
+                json = 1;
                 continue;
             }
         }
@@ -414,7 +437,7 @@ Exit:
     return (ret == DPS_OK) ? EXIT_SUCCESS : EXIT_FAILURE;
 
 Usage:
-    DPS_PRINT("Usage %s [-d] [-q] [-m] [-w <seconds>] [-x 0|1|2] [[-h <hostname>] -p <portnum>] [-l <listen port] [-m] [-r <milliseconds>] [[-s] topic1 ... topicN]\n", argv[0]);
+    DPS_PRINT("Usage %s [-d] [-q] [-m] [-w <seconds>] [-x 0|1|2] [[-h <hostname>] -p <portnum>] [-l <listen port] [-j] [-r <milliseconds>] [[-s] topic1 ... topicN]\n", argv[0]);
     DPS_PRINT("       -d: Enable debug ouput if built for debug.\n");
     DPS_PRINT("       -q: Quiet - suppresses output about received publications.\n");
     DPS_PRINT("       -x: Disable (0) or enable symmetric (1) or asymmetric(2) encryption. Default is symmetric encryption enabled.\n");
@@ -425,5 +448,6 @@ Usage:
     DPS_PRINT("       -l: port to listen on. Default is an ephemeral port.\n");
     DPS_PRINT("       -r: Time to delay between subscription updates.\n");
     DPS_PRINT("       -s: list of subscription topic strings. Multiple -s options are permitted\n");
+    DPS_PRINT("       -j: Treat payload as CBOR and attempt to decode an display as JSON\n");
     return EXIT_FAILURE;
 }

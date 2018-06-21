@@ -111,6 +111,8 @@ int main(int argc, char** argv)
     }
 
     pubFilter = DPS_BitVectorAlloc();
+    AddTopic(pubFilter, "1");
+    AddTopic(pubFilter, "x/y");
     AddTopic(pubFilter, "red");
     AddTopic(pubFilter, "blue");
     AddTopic(pubFilter, "foo");
@@ -133,7 +135,11 @@ int main(int argc, char** argv)
     AddTopic(pubFilter, "x/y/z");
     AddTopic(pubFilter, "a/b/z");
 
-    //DPS_BitVectorDump(pubFilter, 1);
+    DPS_BitVectorDump(pubFilter, 1);
+
+    SubscriptionCheck(pubFilter, "+", EXPECT);
+    SubscriptionCheck(pubFilter, "#", EXPECT);
+    SubscriptionCheck(pubFilter, "+/+", EXPECT);
     SubscriptionCheck(pubFilter, "foo/+/+.#", EXPECT);
     SubscriptionCheck(pubFilter, "foo/+/+/+/#", NOT_EXPECT);
     SubscriptionCheck(pubFilter, "+/baz", EXPECT);
@@ -150,6 +156,8 @@ int main(int argc, char** argv)
     SubscriptionCheck(pubFilter, "goo/baz", NOT_EXPECT);
     SubscriptionCheck(pubFilter, "foo/+/gorn", EXPECT);
     SubscriptionCheck(pubFilter, "foo/+/+.x", EXPECT);
+    SubscriptionCheck(pubFilter, "foo/baz/gorn.z/1", NOT_EXPECT);
+    SubscriptionCheck(pubFilter, "goo/baz/gorn.z", NOT_EXPECT);
     SubscriptionCheck(pubFilter, "goo/+/gorn", EXPECT_FALSE_POSITIVE);
     SubscriptionCheck(pubFilter, "goo/+/+.x", EXPECT_FALSE_POSITIVE);
     SubscriptionCheck(pubFilter, "1.#", EXPECT);
@@ -163,6 +171,8 @@ int main(int argc, char** argv)
     SubscriptionCheck(pubFilter, "a.b.c.4", NOT_EXPECT);
     SubscriptionCheck(pubFilter, "x/b/#", NOT_EXPECT);
     SubscriptionCheck(pubFilter, "+.+.c.5", NOT_EXPECT);
+    SubscriptionCheck(pubFilter, "1", EXPECT);
+    SubscriptionCheck(pubFilter, "2", NOT_EXPECT);
 
     DPS_BitVectorFree(pubFilter);
     return EXIT_SUCCESS;

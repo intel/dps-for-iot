@@ -30,6 +30,8 @@
 %rename("debug") DPS_Debug;
 %rename("set_ca") DPS_SetCA;
 %rename("set_trusted_ca") DPS_SetTrustedCA;
+%rename("cbor_2_json") CBOR2JSON;
+%rename("json_2_cbor") JSON2CBOR;
 
 %rename("%(regex:/^_?DPS_(.*)$/\\1/)s") "";
 %rename("%(regex:/^_?DPS_([A-Z][a-z0-9]+|UUID)$/\\L\\1/)s", %$isfunction) "";

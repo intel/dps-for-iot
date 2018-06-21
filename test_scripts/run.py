@@ -14,6 +14,7 @@ if 'FSAN' not in os.environ or os.environ['FSAN'] == 'no':
              os.path.join('build', 'test', 'bin', 'cosetest'),
              os.path.join('build', 'test', 'bin', 'countvec'),
              os.path.join('build', 'test', 'bin', 'hist_unit'),
+             os.path.join('build', 'test', 'bin', 'jsontest'),
              os.path.join('build', 'test', 'bin', 'link'),
              os.path.join('build', 'test', 'bin', 'packtest'),
              os.path.join('build', 'test', 'bin', 'publish'),

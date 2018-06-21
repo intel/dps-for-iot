@@ -193,6 +193,25 @@ static DPS_Publication* ClonePublication(DPS_Publication* pub)
     return clone;
 }
 
+static void FreeTopics(DPS_Publication* pub)
+{
+    size_t i;
+
+    assert(pub);
+    assert(pub->shared);
+
+    if (pub->shared->topics) {
+        for (i = 0; i < pub->shared->numTopics; ++i) {
+            if (pub->shared->topics[i]) {
+                free(pub->shared->topics[i]);
+            }
+        }
+        free(pub->shared->topics);
+        pub->shared->topics = NULL;
+        pub->shared->numTopics = 0;
+    }
+}
+
 static DPS_Publication* FreePublication(DPS_Node* node, DPS_Publication* pub)
 {
     DPS_Publication* next = pub->next;
@@ -227,14 +246,10 @@ static DPS_Publication* FreePublication(DPS_Node* node, DPS_Publication* pub)
             FreeRecipients(pub->shared);
             if (pub->shared->bf) {
                 DPS_BitVectorFree(pub->shared->bf);
-                pub->shared->bf = NULL;
             }
             DPS_TxBufferFree(&pub->shared->bfBuf);
             DPS_TxBufferFree(&pub->shared->topicsBuf);
-            if (pub->shared->topics) {
-                free(pub->shared->topics);
-                pub->shared->topics = NULL;
-            }
+            FreeTopics(pub);
             free(pub->shared);
         }
         free(pub);
@@ -535,15 +550,21 @@ static DPS_Status CallPubHandlers(DPS_Node* node, DPS_Publication* pub)
                 ret = DPS_ERR_INVALID;
                 break;
             }
-            pub->shared->topics = malloc(pub->shared->numTopics * sizeof(char*));
+            pub->shared->topics = calloc(pub->shared->numTopics, sizeof(char*));
             if (!pub->shared->topics) {
                 ret = DPS_ERR_RESOURCES;
                 break;
             }
             for (i = 0; i < pub->shared->numTopics; ++i) {
+                char* str;
                 size_t sz;
-                ret = CBOR_DecodeString(&encryptedBuf, &pub->shared->topics[i], &sz);
+                ret = CBOR_DecodeString(&encryptedBuf, &str, &sz);
                 if (ret != DPS_OK) {
+                    break;
+                }
+                pub->shared->topics[i] = strndup(str, sz);
+                if (!pub->shared->topics) {
+                    ret = DPS_ERR_RESOURCES;
                     break;
                 }
             }
@@ -594,11 +615,7 @@ Exit:
 
     DPS_TxBufferFree(&plainTextBuf);
     /* Publication topics will be invalid now if the publication was encrypted */
-    if (pub->shared->topics) {
-        free(pub->shared->topics);
-        pub->shared->numTopics = 0;
-        pub->shared->topics = NULL;
-    }
+    FreeTopics(pub);
     return ret;
 }
 
@@ -790,11 +807,7 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
     /*
      * The topics array has pointers into pub->encryptedBuf which are now invalid
      */
-    if (pub->shared->topics) {
-        free(pub->shared->topics);
-        pub->shared->topics = NULL;
-        pub->shared->numTopics = 0;
-    }
+    FreeTopics(pub);
     /*
      * We have no reason here to hold onto a node for multicast publishers
      */
@@ -1097,14 +1110,7 @@ static void DestroyCopy(DPS_Publication* copy)
 {
     if (copy) {
         if (copy->shared) {
-            if (copy->shared->topics) {
-                for (int i = 0; i < copy->shared->numTopics; i++) {
-                    if (copy->shared->topics[i]) {
-                        free(copy->shared->topics[i]);
-                    }
-                }
-                free(copy->shared->topics);
-            }
+            FreeTopics(copy);
             FreeRecipients(copy->shared);
             free(copy->shared);
         }
@@ -1237,7 +1243,7 @@ DPS_Status DPS_InitPublication(DPS_Publication* pub,
         }
     }
     if (ret == DPS_OK) {
-        pub->shared->topics = malloc(numTopics * sizeof(char*));
+        pub->shared->topics = calloc(numTopics, sizeof(char*));
         if (!pub->shared->topics) {
             ret = DPS_ERR_RESOURCES;
         }
@@ -1258,22 +1264,13 @@ DPS_Status DPS_InitPublication(DPS_Publication* pub,
         }
         if (ret == DPS_OK) {
             for (i = 0; i < numTopics; ++i) {
-                /*
-                 * Encode the string in two steps so we can save off
-                 * the topicsBuf pointer into pub->shared->topics[i]
-                 */
-                uint64_t len = strnlen_s(topics[i], CBOR_MAX_STRING_LEN + 1) + 1;
-                if (len > CBOR_MAX_STRING_LEN) {
-                    ret = DPS_ERR_OVERFLOW;
-                    break;
-                }
-                ret = CBOR_EncodeLength(&pub->shared->topicsBuf, len, CBOR_STRING);
+                ret = CBOR_EncodeString(&pub->shared->topicsBuf, topics[i]);
                 if (ret != DPS_OK) {
                     break;
                 }
-                pub->shared->topics[i] = (char*)pub->shared->topicsBuf.txPos;
-                ret = CBOR_Copy(&pub->shared->topicsBuf, (uint8_t*)topics[i], len);
-                if (ret != DPS_OK) {
+                pub->shared->topics[i] = strndup(topics[i], DPS_MAX_TOPIC_STRLEN);
+                if (!pub->shared->topics) {
+                    ret = DPS_ERR_RESOURCES;
                     break;
                 }
             }
@@ -1297,10 +1294,7 @@ DPS_Status DPS_InitPublication(DPS_Publication* pub,
     } else {
         DPS_TxBufferFree(&pub->shared->bfBuf);
         DPS_TxBufferFree(&pub->shared->topicsBuf);
-        if (pub->shared->topics) {
-            free(pub->shared->topics);
-            pub->shared->topics = NULL;
-        }
+        FreeTopics(pub);
         FreeRecipients(pub->shared);
         if (pub->shared->bf) {
             DPS_BitVectorFree(pub->shared->bf);

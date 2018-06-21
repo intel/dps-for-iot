@@ -58,6 +58,15 @@ extern "C" {
 #define CBOR_OTHER  (7 << 5)
 
 /**
+ * CBOR "OTHER" flags
+ */
+#define CBOR_FALSE  (CBOR_OTHER | 20)   /**< CBOR option flag for boolean FALSE */
+#define CBOR_TRUE   (CBOR_OTHER | 21)   /**< CBOR option flag for boolean TRUE */
+#define CBOR_NULL   (CBOR_OTHER | 22)   /**< CBOR option flag for NULL value */
+#define CBOR_FLOAT  (CBOR_OTHER | 26)   /**< CBOR option flag for 32 bit float */
+#define CBOR_DOUBLE (CBOR_OTHER | 27)   /**< CBOR option flag for 64 bit float */
+
+/**
  * Maximum bytes needed to encode any length
  */
 #define CBOR_MAX_LENGTH (1 + sizeof(uint64_t))
@@ -78,9 +87,19 @@ extern "C" {
 #define CBOR_SIZEOF_ARRAY(a)     CBOR_SIZEOF_LEN(a)
 
 /**
- * Actual bytes need to encode a string (includes NUL terminator)
+ * Actual bytes need to encode a string
  */
 #define CBOR_SIZEOF_STRING(s)    _CBOR_SizeOfString(s)
+
+/**
+ * Actual bytes need to encode a static string (e.g. static const char str[])
+ */
+#define CBOR_SIZEOF_STATIC_STRING(s)    ((sizeof(s) - 1) + CBOR_SIZEOF_LEN(sizeof(s) - 1))
+
+/**
+ * Actual bytes need to encode a string of length bytes
+ */
+#define CBOR_SIZEOF_STRING_AND_LENGTH(l)    ((l) + CBOR_SIZEOF_LEN(l))
 
 /**
  * Actual bytes needed to encode a byte stream of a specified length
@@ -137,7 +156,7 @@ extern "C" {
 size_t _CBOR_SizeOfInt(int64_t i);
 
 /**
- * Actual bytes need to encode a string (includes NUL terminator)
+ * Actual bytes need to encode a string
  *
  * @param s The string to encode
  *
@@ -199,14 +218,7 @@ DPS_Status CBOR_EncodeInt(DPS_TxBuffer* buffer, int64_t i);
 DPS_Status CBOR_EncodeBytes(DPS_TxBuffer* buffer, const uint8_t* data, size_t len);
 
 /**
- * Encoded a text string
- *
- * @note This function automatically appends the trailing NUL. To encode a string
- * without the trailing NUL use
- * @code
- * CBOR_EncodeLength(buf, strlen(str), CBOR_STRING);
- * CBOR_Copy(buf, str, strlen(str));
- * @endcode
+ * Encode a text string
  *
  * @param buffer   Buffer to append to
  * @param str      The text string to append
@@ -214,6 +226,17 @@ DPS_Status CBOR_EncodeBytes(DPS_TxBuffer* buffer, const uint8_t* data, size_t le
  * @return DPS_OK if successful, an error otherwise
  */
 DPS_Status CBOR_EncodeString(DPS_TxBuffer* buffer, const char* str);
+
+/**
+ * Encode @p len bytes of a text string
+ *
+ * @param buffer   Buffer to append to
+ * @param str      The text string to append
+ * @param len      The number of characters to append
+ *
+ * @return DPS_OK if successful, an error otherwise
+ */
+DPS_Status CBOR_EncodeStringAndLength(DPS_TxBuffer* buffer, const char* str, size_t len);
 
 /**
  * Encode an array type and the number of data items
