@@ -23,6 +23,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef _WIN32
+#include <winsock2.h>
+#else
+#include <netinet/in.h>
+#endif
 #include <dps/dbg.h>
 #include <dps/event.h>
 /** [Prerequisites] */

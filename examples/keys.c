@@ -22,6 +22,7 @@
 
 #include "keys.h"
 #include <ctype.h>
+#include <stdio.h>
 #include <string.h>
 
 static const DPS_UUID _NetworkKeyId = {

@@ -215,7 +215,7 @@ struct _DPS_KeyStoreRequest {
     /** Called to provide a key to the requestor */
     DPS_Status (*setKey)(DPS_KeyStoreRequest* request, const DPS_Key* key);
     /** Called to provide the CA chain to the requestor */
-    DPS_Status (*setCA)(DPS_KeyStoreRequest* request, const char* ca); 
+    DPS_Status (*setCA)(DPS_KeyStoreRequest* request, const char* ca);
     /** Called to provide a certificate to the requestor */
     DPS_Status (*setCert)(DPS_KeyStoreRequest* request, const char* cert, size_t certLen,
                           const char* key, size_t keyLen, const char* pwd, size_t pwdLen);
