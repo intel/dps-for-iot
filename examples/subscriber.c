@@ -43,6 +43,7 @@ static int quiet = DPS_FALSE;
 static int json = DPS_FALSE;
 
 static const char AckFmt[] = "This is an ACK from %d";
+static const char JSONAckFmt[] = "{\"msg\":\"ACK Message\",\"port\":%d}";
 
 static void OnNodeDestroyed(DPS_Node* node, void* data)
 {
@@ -53,6 +54,7 @@ static void OnNodeDestroyed(DPS_Node* node, void* data)
 
 static void OnPubMatch(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* data, size_t len)
 {
+    char jsonStr[1024];
     DPS_Status ret;
     const DPS_UUID* pubId = DPS_PublicationGetUUID(pub);
     uint32_t sn = DPS_PublicationGetSequenceNum(pub);
@@ -82,7 +84,6 @@ static void OnPubMatch(DPS_Subscription* sub, const DPS_Publication* pub, uint8_
         DPS_PRINT("\n");
         if (data) {
             if (json) {
-                char jsonStr[1024];
                 ret = DPS_CBOR2JSON(data, len, jsonStr, sizeof(jsonStr), DPS_TRUE);
                 if (ret == DPS_OK) {
                     DPS_PRINT("%s\n", jsonStr);
@@ -93,13 +94,20 @@ static void OnPubMatch(DPS_Subscription* sub, const DPS_Publication* pub, uint8_
         }
     }
     if (DPS_PublicationIsAckRequested(pub)) {
-        char ackMsg[sizeof(AckFmt) + 8];
-
-        sprintf(ackMsg, AckFmt, DPS_GetPortNumber(DPS_PublicationGetNode(pub)));
+        uint8_t ackMsg[64];
+        size_t len;
         DPS_PRINT("Sending ack for pub UUID %s(%d)\n", DPS_UUIDToString(DPS_PublicationGetUUID(pub)), DPS_PublicationGetSequenceNum(pub));
-        DPS_PRINT("    %s\n", ackMsg);
-
-        ret = DPS_AckPublication(pub, (uint8_t*)ackMsg, strnlen(ackMsg, sizeof(ackMsg)));
+        if (json) {
+            sprintf(jsonStr, JSONAckFmt, DPS_GetPortNumber(DPS_PublicationGetNode(pub)));
+            DPS_PRINT("    %s\n", jsonStr);
+            ret = DPS_JSON2CBOR(jsonStr, ackMsg, sizeof(ackMsg), &len);
+            assert(ret == DPS_OK);
+        } else {
+            sprintf((char*)ackMsg, AckFmt, DPS_GetPortNumber(DPS_PublicationGetNode(pub)));
+            DPS_PRINT("    %s\n", ackMsg);
+            len = strnlen(ackMsg, sizeof(ackMsg));
+        }
+        ret = DPS_AckPublication(pub, ackMsg, len);
         if (ret != DPS_OK) {
             DPS_PRINT("Failed to ack pub %s\n", DPS_ErrTxt(ret));
         }

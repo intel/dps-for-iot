@@ -142,7 +142,15 @@ static void OnAck(DPS_Publication* pub, uint8_t* data, size_t len)
     DPS_PRINT("Ack for pub UUID %s(%d) [%s]\n", DPS_UUIDToString(DPS_PublicationGetUUID(pub)),
               DPS_PublicationGetSequenceNum(pub), KeyIdToString(DPS_AckGetSenderKeyId(pub)));
     if (len) {
-        DPS_PRINT("    %.*s\n", (int)len, data);
+        if (json) {
+            char jsonStr[1024];
+            DPS_Status ret = DPS_CBOR2JSON(data, len, jsonStr, sizeof(jsonStr), DPS_TRUE);
+            if (ret == DPS_OK) {
+                DPS_PRINT("%s\n", jsonStr);
+            }
+        } else {
+            DPS_PRINT("%.*s\n", (int)len, data);
+        }
     }
 }
 
