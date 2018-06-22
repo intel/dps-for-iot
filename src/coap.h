@@ -30,6 +30,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <uv.h>
 #include <dps/private/dps.h>
 
 #ifdef __cplusplus

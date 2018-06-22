@@ -22,6 +22,7 @@
 
 #include <stdlib.h>
 #include <safe_lib.h>
+#include <uv.h>
 #include <dps/dps.h>
 #include <dps/dbg.h>
 #include <dps/event.h>

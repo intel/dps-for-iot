@@ -1443,11 +1443,6 @@ DPS_NetContext* DPS_GetNetContext(DPS_Node* node)
     return node->netCtx;
 }
 
-uv_loop_t* DPS_GetLoop(DPS_Node* node)
-{
-    return node->loop;
-}
-
 uint16_t DPS_GetPortNumber(DPS_Node* node)
 {
     DPS_DBGTRACE();

@@ -213,7 +213,7 @@ static void OnLinkedPut(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status ret, v
          * Start a timer
          */
         int r;
-        r = uv_timer_init(DPS_GetLoop(node), &regPut->timer);
+        r = uv_timer_init(node->loop, &regPut->timer);
         if (!r) {
             regPut->timer.data = regPut;
             r = uv_timer_start(&regPut->timer, OnPutTimeout, regPut->timeout, 0);
@@ -534,7 +534,7 @@ static void OnLinkedGet(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status ret, v
              */
             if (regGet->status == DPS_OK) {
                 int r;
-                r = uv_timer_init(DPS_GetLoop(node), &regGet->timer);
+                r = uv_timer_init(node->loop, &regGet->timer);
                 if (!r) {
                     regGet->timer.data = regGet;
                     r = uv_timer_start(&regGet->timer, OnGetTimeout, regGet->timeout, 0);

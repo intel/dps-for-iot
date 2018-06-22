@@ -338,7 +338,7 @@ DPS_NetContext* DPS_NetStart(DPS_Node* node, uint16_t port, DPS_OnReceive cb)
     if (!netCtx) {
         return NULL;
     }
-    ret = uv_tcp_init(DPS_GetLoop(node), &netCtx->socket);
+    ret = uv_tcp_init(node->loop, &netCtx->socket);
     if (ret) {
         DPS_ERRPRINT("uv_tcp_init error=%s\n", uv_err_name(ret));
         free(netCtx);
@@ -517,7 +517,7 @@ DPS_Status DPS_NetSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf
     if (!ep->cn) {
         goto ErrExit;
     }
-    r = uv_tcp_init(DPS_GetLoop(node), &ep->cn->socket);
+    r = uv_tcp_init(node->loop, &ep->cn->socket);
     if (r) {
         goto ErrExit;
     }
