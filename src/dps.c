@@ -688,7 +688,11 @@ static int SendPub(DPS_Node* node, DPS_Publication* pub)
         }
         pub->checkToSend = DPS_FALSE;
     }
-    if (uv_now(node->loop) >= pub->expires) {
+    /*
+     * Only touch publications that are flagged to be published.  Ones
+     * that aren't may be in the process of being updated.
+     */
+    if ((pub->flags & PUB_FLAG_PUBLISH) && (uv_now(node->loop) >= pub->expires)) {
         DPS_ExpirePub(node, pub);
     }
     return send;
