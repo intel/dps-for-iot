@@ -423,49 +423,34 @@ static DPS_Status UpdatePubHistory(DPS_Node* node, DPS_Publication* pub)
                                 pub->shared->ackRequested, PUB_TTL(node, pub), &pub->shared->senderAddr);
 }
 
-typedef struct _SubCandidate {
-    DPS_Subscription* sub;
-    struct _SubCandidate* next;
-} SubCandidate;
-
 /*
- * Check if there is a local subscription for this publication
- * Note that we don't deliver expired publications to the handler.
+ * @param keyStore the key store used in decryption
+ * @param pub the publication to decrypt
+ * @param plainTextBuf the storage for decrypted.  The caller needs to
+ *                     call DPS_TxBufferFree when finished with the
+ *                     decrypted data.
+ * @param data pointer to decrypted data.  This is only valid during
+ *             the lifetime of the plainTextBuf and the publication.
+ * @param dataLen the length of the decrypted data.
+ *
+ * @return
+ * - DPS_OK - message decrypted and parsed succesfully
+ * - DPS_ERR_SECURITY - message failed to decrypt
+ * - Other error - message failed to parse correctly
  */
-static DPS_Status CallPubHandlers(DPS_Node* node, DPS_Publication* pub)
+static DPS_Status DecryptAndParsePub(DPS_KeyStore* keyStore, DPS_Publication* pub,
+                                     DPS_TxBuffer* plainTextBuf, uint8_t** data, size_t* dataLen)
 {
     static const int32_t EncryptedKeys[] = { DPS_CBOR_KEY_TOPICS, DPS_CBOR_KEY_DATA };
-    DPS_Status ret;
     uint8_t nonce[COSE_NONCE_LEN];
-    COSE_Entity recipient;
-    DPS_Subscription* sub;
-    DPS_RxBuffer encryptedBuf;
-    DPS_TxBuffer plainTextBuf;
     DPS_RxBuffer aadBuf;
     DPS_RxBuffer cipherTextBuf;
-    uint8_t* data = NULL;
-    size_t dataLen = 0;
+    COSE_Entity recipient;
+    DPS_RxBuffer encryptedBuf;
     CBOR_MapState mapState;
+    DPS_Status ret;
     size_t i;
-    int candidates = DPS_FALSE;
 
-    DPS_DBGTRACE();
-
-    /*
-     * See if the publication is match candidate. We may discover later that
-     * this is a false positive when we check if the actual topic strings match.
-     */
-    DPS_LockNode(node);
-    for (sub = node->subscriptions; sub && !candidates; sub = sub->next) {
-        candidates = DPS_BitVectorIncludes(pub->shared->bf, sub->bf);
-    }
-    DPS_UnlockNode(node);
-    /*
-     * Nothing more to do if we don't have any candidates
-     */
-    if (!candidates) {
-        return DPS_OK;
-    }
     /*
      * Try to decrypt the publication
      */
@@ -474,12 +459,12 @@ static DPS_Status CallPubHandlers(DPS_Node* node, DPS_Publication* pub)
     DPS_TxBufferToRx(&pub->protectedBuf, &aadBuf);
     DPS_TxBufferToRx(&pub->encryptedBuf, &cipherTextBuf);
 
-    ret = COSE_Decrypt(nonce, &recipient, &aadBuf, &cipherTextBuf, node->keyStore, &pub->shared->sender,
-                       &plainTextBuf);
+    ret = COSE_Decrypt(nonce, &recipient, &aadBuf, &cipherTextBuf, keyStore, &pub->shared->sender,
+                       plainTextBuf);
     if (ret == DPS_OK) {
         DPS_DBGPRINT("Publication was decrypted\n");
-        CBOR_Dump("plaintext", plainTextBuf.base, DPS_TxBufferUsed(&plainTextBuf));
-        DPS_TxBufferToRx(&plainTextBuf, &encryptedBuf);
+        CBOR_Dump("plaintext", plainTextBuf->base, DPS_TxBufferUsed(plainTextBuf));
+        DPS_TxBufferToRx(plainTextBuf, &encryptedBuf);
         /*
          * We will use the same key id when we encrypt the acknowledgement
          */
@@ -520,22 +505,17 @@ static DPS_Status CallPubHandlers(DPS_Node* node, DPS_Publication* pub)
         DPS_TxBufferToRx(&pub->encryptedBuf, &encryptedBuf);
     } else {
         DPS_WARNPRINT("Failed to decrypt publication - %s\n", DPS_ErrTxt(ret));
-        /*
-         * This doesn't indicate an error with the message, it may be
-         * that the message is not encrypted for this node
-         */
-        ret = DPS_OK;
-        goto Exit;
+        return DPS_ERR_SECURITY;
     }
     ret = DPS_ParseMapInit(&mapState, &encryptedBuf, EncryptedKeys, A_SIZEOF(EncryptedKeys), NULL, 0);
     if (ret != DPS_OK) {
-        goto Exit;
+        return ret;
     }
     while (!DPS_ParseMapDone(&mapState)) {
         int32_t key;
         ret = DPS_ParseMapNext(&mapState, &key);
         if (ret != DPS_OK) {
-            goto Exit;
+            return ret;
         }
         switch (key) {
         case DPS_CBOR_KEY_TOPICS:
@@ -573,27 +553,59 @@ static DPS_Status CallPubHandlers(DPS_Node* node, DPS_Publication* pub)
             /*
              * Get the pointer to the publication data
              */
-            ret = CBOR_DecodeBytes(&encryptedBuf, &data, &dataLen);
+            ret = CBOR_DecodeBytes(&encryptedBuf, data, dataLen);
             break;
         }
         if (ret != DPS_OK) {
             break;
         }
     }
-    if (ret != DPS_OK) {
-        goto Exit;
-    }
+    return ret;
+}
 
-    DPS_LockNode(node);
+/*
+ * Check if there is a local subscription for this publication
+ * Note that we don't deliver expired publications to the handler.
+ */
+static DPS_Status CallPubHandlers(DPS_Node* node, DPS_Publication* pub)
+{
+    DPS_Status ret;
+    DPS_Subscription* sub;
+    DPS_Subscription* nextSub;
+    DPS_TxBuffer plainTextBuf;
+    int match;
+    uint8_t* data = NULL;
+    size_t dataLen = 0;
+    int needsDecrypt = DPS_TRUE;
+
+    DPS_DBGTRACE();
+
+    DPS_TxBufferClear(&plainTextBuf);
+
     /*
      * Iterate over the candidates and check that the pub strings are a match
      */
-    DPS_Subscription* nextSub;
+    DPS_LockNode(node);
     for (sub = node->subscriptions; sub != NULL; sub = nextSub) {
         nextSub = sub->next;
-        int match;
         if (!DPS_BitVectorIncludes(pub->shared->bf, sub->bf)) {
             continue;
+        }
+        if (needsDecrypt) {
+            DPS_UnlockNode(node);
+            ret = DecryptAndParsePub(node->keyStore, pub, &plainTextBuf, &data, &dataLen);
+            if (ret == DPS_ERR_SECURITY) {
+                /*
+                 * This doesn't indicate an error with the message, it may be
+                 * that the message is not encrypted for this node
+                 */
+                ret = DPS_OK;
+                goto Exit;
+            } else if (ret != DPS_OK) {
+                goto Exit;
+            }
+            needsDecrypt = DPS_FALSE;
+            DPS_LockNode(node);
         }
         ret = DPS_MatchTopicList(pub->shared->topics, pub->shared->numTopics, sub->topics,
                                  sub->numTopics, node->separators, DPS_FALSE, &match);
@@ -612,7 +624,6 @@ static DPS_Status CallPubHandlers(DPS_Node* node, DPS_Publication* pub)
     DPS_UnlockNode(node);
 
 Exit:
-
     DPS_TxBufferFree(&plainTextBuf);
     /* Publication topics will be invalid now if the publication was encrypted */
     FreeTopics(pub);
