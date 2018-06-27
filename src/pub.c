@@ -1532,7 +1532,7 @@ DPS_Status DPS_Publish(DPS_Publication* pub, const uint8_t* payload, size_t len,
     }
     if (!clone) {
         ret = DPS_ERR_RESOURCES;
-        goto Unlock;
+        goto Exit;
     }
     clone->flags &= ~PUB_FLAG_PUBLISH;
     clone->checkToSend = DPS_FALSE;
@@ -1543,12 +1543,12 @@ DPS_Status DPS_Publish(DPS_Publication* pub, const uint8_t* payload, size_t len,
         if (!(clone->flags & PUB_FLAG_RETAINED)) {
             DPS_ERRPRINT("Negative ttl only valid for retained publications\n");
             ret = DPS_ERR_INVALID;
-            goto Unlock;
+            goto Exit;
         }
         if (payload) {
             DPS_ERRPRINT("Payload not permitted when canceling a retained publication\n");
             ret = DPS_ERR_INVALID;
-            goto Unlock;
+            goto Exit;
         }
         ttl = 0;
         clone->flags |= PUB_FLAG_EXPIRED;
@@ -1566,20 +1566,20 @@ DPS_Status DPS_Publish(DPS_Publication* pub, const uint8_t* payload, size_t len,
         if (pub->historyCap > 1) {
             DPS_ERRPRINT("History depth > 1 only valid for non-retained publications\n");
             ret = DPS_ERR_INVALID;
-            goto Unlock;
+            goto Exit;
         }
         clone->flags |= PUB_FLAG_RETAINED;
     }
     ++clone->sequenceNum;
-    DPS_UnlockNode(node);
     /*
      * Serialize the publication
      */
+    DPS_UnlockNode(node);
     ret = DPS_SerializePub(node, clone, payload, len, ttl);
+    DPS_LockNode(node);
     if (ret != DPS_OK) {
         goto Exit;
     }
-    DPS_LockNode(node);
     clone->flags |= PUB_FLAG_PUBLISH;
     if (AddToHistory(pub, clone)) {
         ++clone->shared->refCount;
@@ -1590,9 +1590,8 @@ DPS_Status DPS_Publish(DPS_Publication* pub, const uint8_t* payload, size_t len,
      */
     pub->sequenceNum = clone->sequenceNum;
     newClone = NULL;
-Unlock:
-    DPS_UnlockNode(node);
 Exit:
+    DPS_UnlockNode(node);
     if (ret == DPS_OK) {
         DPS_UpdatePubs(node, clone);
     }
