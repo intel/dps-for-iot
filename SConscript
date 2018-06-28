@@ -22,6 +22,9 @@ if platform == 'win32':
     libenv.Append(LIBS = env['UV_LIBS'])
 elif platform == 'posix':
     libenv.Append(CCFLAGS = ['-Wall', '-Wno-format-extra-args'])
+elif platform == 'darwin':
+    libenv.Append(CPPDEFINES = ['__STDC_WANT_LIB_EXT1__=0', 'DARWIN'])
+    libenv.Append(CCFLAGS = ['-Wall', '-Wno-format-extra-args'])
 
 # Include the fuzzing hooks when the sanitizer is enabled
 if platform == 'posix' and env['fsan'] == True:
@@ -106,7 +109,7 @@ if platform == 'posix':
     libenv.Install('#/build/dist/lib', ns3shlib)
 
 swig_docs = []
-if env['python']:
+if env['python'] and platform != 'darwin':
     # Using SWIG to build the python wrapper
     pyenv = libenv.Clone()
     pyenv.VariantDir('swig/py', 'swig')
@@ -162,6 +165,8 @@ if env['nodejs'] and platform == 'posix':
 testenv = env.Clone()
 if testenv['PLATFORM'] == 'win32':
     testenv.Append(CPPDEFINES = ['_CRT_SECURE_NO_WARNINGS', '__STDC_WANT_SECURE_LIB__=0'])
+elif platform == 'darwin':
+    testenv.Append(CPPDEFINES = ['__STDC_WANT_LIB_EXT1__=0', 'DARWIN'])
 testenv.Append(CPPPATH = ['#/ext/safestring/include', 'src'])
 testenv.Append(LIBS = [lib, env['UV_LIBS']])
 
@@ -221,6 +226,8 @@ if platform == 'posix' and env['fsan'] == True:
 exampleenv = env.Clone()
 if exampleenv['PLATFORM'] == 'win32':
     exampleenv.Append(CPPDEFINES = ['_CRT_SECURE_NO_WARNINGS'])
+elif platform == 'darwin':
+    exampleenv.Append(CPPDEFINES = ['__STDC_WANT_LIB_EXT1__=0', 'DARWIN'])
 exampleenv.Append(LIBS = [lib, env['UV_LIBS']])
 
 examplesrcs = ['examples/pub_many.c',

@@ -33,6 +33,11 @@ if platform.system() == 'Linux':
         BoolVariable('fsan', 'Enable fuzzer sanitizer?', False),
         BoolVariable('cov', 'Enable code coverage?', False))
 
+# Darwin-specific command line variables
+if platform.system() == 'Darwin':
+    vars.AddVariables(
+        PathVariable('UV_PATH', 'Path where libuv is installed', '', PathVariable.PathAccept))
+
 tools=['default', 'textfile', DPS]
 # Doxygen is optional
 try:
@@ -213,8 +218,33 @@ elif env['PLATFORM'] == 'posix':
         env.Prepend(LIBPATH = env['UV_PATH'])
         env.Prepend(CPPPATH = env['UV_PATH'] + '/include')
 
+elif env['PLATFORM'] == 'darwin':
+
+    # Treat warnings as errors
+    env.Append(CCFLAGS = ['-Werror'])
+
+    if env['variant'] == 'debug':
+        env.Append(CCFLAGS = ['-O', '-DDPS_DEBUG'])
+    else:
+        env.Append(CCFLAGS = ['-O3', '-DNDEBUG'])
+
+    # Where to find Python.h
+    if env['target'] == 'yocto':
+        env['PY_CPPPATH'] = [os.getenv('SYSROOT') + '/usr/include/python2.7']
+    else:
+        env['PY_CPPPATH'] = ['/usr/include/python2.7']
+    env['PY_LIBPATH'] = []
+
+    # Where to find libuv and the libraries it needs
+    env['UV_LIBS'] = ['uv', 'pthread']
+
+    if env['UV_PATH']:
+        env.Prepend(LIBPATH = env['UV_PATH'])
+        env.Prepend(CPPPATH = env['UV_PATH'] + '/include')
+
 else:
-    print('Unsupported system')
+
+    print('Unsupported system: ' + env['PLATFORM'])
     exit()
 
 env.Append(LIBPATH=['./ext'])

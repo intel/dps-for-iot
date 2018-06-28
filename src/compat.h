@@ -62,7 +62,9 @@ inline char* strndup(const char* str, size_t maxLen)
 
 #else // posix
 
+#ifndef DARWIN
 #include <endian.h>
+#endif
 
 #define BSWAP_32(n)  __builtin_bswap32(n)
 #define BSWAP_64(n)  __builtin_bswap64(n)
