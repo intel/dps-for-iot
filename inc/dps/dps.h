@@ -30,9 +30,13 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#ifdef _WIN32
+#include <winsock2.h>
+#else
+#include <sys/socket.h>
+#endif
 #include <dps/err.h>
 #include <dps/uuid.h>
-#include <uv.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -535,17 +539,6 @@ DPS_Status DPS_DestroyNode(DPS_Node* node, DPS_OnNodeDestroyed cb, void* data);
  * @param subsRateMsecs  The time delay (in msecs) between updates
  */
 void DPS_SetNodeSubscriptionUpdateDelay(DPS_Node* node, uint32_t subsRateMsecs);
-
-/**
- * Get the uv event loop for this node. The only thing that is safe to do with the node
- * is to create an async callback. Other libuv APIs can then be called from within the
- * async callback.
- *
- * @param node     The local node to use
- *
- * @return The uv event loop
- */
-uv_loop_t* DPS_GetLoop(DPS_Node* node);
 
 /**
  * Get the port number this node is listening for connections on

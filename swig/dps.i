@@ -67,6 +67,7 @@
 
 %{
 #include <safe_lib.h>
+#include <uv.h>
 #include <dps/dbg.h>
 #include <dps/dps.h>
 #include <dps/err.h>

@@ -177,7 +177,7 @@ static void NetSend(DPS_Node* node, DPS_NetEndpoint* ep, int version, int type)
         exit(EXIT_FAILURE);
     }
     async->data = data;
-    ret = uv_async_init(DPS_GetLoop(node), async, NetSendTask);
+    ret = uv_async_init(node->loop, async, NetSendTask);
     if (ret < 0) {
         DPS_ERRPRINT("uv_async_init failed: %s\n", uv_strerror(ret));
         exit(EXIT_FAILURE);

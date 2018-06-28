@@ -852,7 +852,7 @@ static DPS_NetConnection* CreateConnection(DPS_Node* node, const struct sockaddr
     cn->timerStatus = -1;
     cn->timer.data = cn;
 
-    uv_idle_init(DPS_GetLoop(node), &cn->idleForSendCallbacks);
+    uv_idle_init(node->loop, &cn->idleForSendCallbacks);
     cn->idleForSendCallbacks.data = cn;
 
     /*
@@ -861,7 +861,7 @@ static DPS_NetConnection* CreateConnection(DPS_Node* node, const struct sockaddr
      */
     if (type == MBEDTLS_SSL_IS_CLIENT) {
         struct sockaddr_storage addr;
-        ret = uv_udp_init(DPS_GetLoop(node), &cn->socket);
+        ret = uv_udp_init(node->loop, &cn->socket);
         if (ret) {
             DPS_ERRPRINT("UDP init failed: %s\n", uv_err_name(ret));
             goto ErrorExit;
@@ -1395,7 +1395,7 @@ DPS_NetContext* DPS_NetStart(DPS_Node* node, uint16_t port, DPS_OnReceive cb)
     if (!netCtx) {
         return NULL;
     }
-    ret = uv_udp_init(DPS_GetLoop(node), &netCtx->rxSocket);
+    ret = uv_udp_init(node->loop, &netCtx->rxSocket);
     if (ret) {
         DPS_ERRPRINT("UDP init failed- %s\n", uv_err_name(ret));
         free(netCtx);

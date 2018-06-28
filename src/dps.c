@@ -688,7 +688,11 @@ static int SendPub(DPS_Node* node, DPS_Publication* pub)
         }
         pub->checkToSend = DPS_FALSE;
     }
-    if (uv_now(node->loop) >= pub->expires) {
+    /*
+     * Only touch publications that are flagged to be published.  Ones
+     * that aren't may be in the process of being updated.
+     */
+    if ((pub->flags & PUB_FLAG_PUBLISH) && (uv_now(node->loop) >= pub->expires)) {
         DPS_ExpirePub(node, pub);
     }
     return send;
@@ -1441,11 +1445,6 @@ ErrExit:
 DPS_NetContext* DPS_GetNetContext(DPS_Node* node)
 {
     return node->netCtx;
-}
-
-uv_loop_t* DPS_GetLoop(DPS_Node* node)
-{
-    return node->loop;
 }
 
 uint16_t DPS_GetPortNumber(DPS_Node* node)

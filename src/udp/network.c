@@ -99,7 +99,7 @@ DPS_NetContext* DPS_NetStart(DPS_Node* node, uint16_t port, DPS_OnReceive cb)
     if (!netCtx) {
         return NULL;
     }
-    ret = uv_udp_init(DPS_GetLoop(node), &netCtx->rxSocket);
+    ret = uv_udp_init(node->loop, &netCtx->rxSocket);
     if (ret) {
         DPS_ERRPRINT("uv_tcp_init error=%s\n", uv_err_name(ret));
         free(netCtx);

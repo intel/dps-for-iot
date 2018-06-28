@@ -28,7 +28,6 @@ DPS_ErrTxt
 DPS_GenerateUUID
 DPS_GetEventData
 DPS_GetKeyStoreData
-DPS_GetLoop
 DPS_GetNodeData
 DPS_GetPortNumber
 DPS_GetPublicationData

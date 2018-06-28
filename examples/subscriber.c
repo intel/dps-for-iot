@@ -105,7 +105,7 @@ static void OnPubMatch(DPS_Subscription* sub, const DPS_Publication* pub, uint8_
         } else {
             sprintf((char*)ackMsg, AckFmt, DPS_GetPortNumber(DPS_PublicationGetNode(pub)));
             DPS_PRINT("    %s\n", ackMsg);
-            len = strnlen(ackMsg, sizeof(ackMsg));
+            len = strnlen((char*)ackMsg, sizeof(ackMsg));
         }
         ret = DPS_AckPublication(pub, ackMsg, len);
         if (ret != DPS_OK) {
