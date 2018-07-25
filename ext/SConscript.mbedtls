@@ -1,0 +1,81 @@
+import os
+Import(['extEnv'])
+
+platform = extEnv['PLATFORM']
+
+# Pull down mbedtls from github and build the library
+
+env = extEnv.Clone()
+
+git = env.Command('./mbedtls/.git', None,
+                   ['git clone -n https://github.com/ARMmbed/mbedtls ext/mbedtls'])
+
+dep = env.Command('./mbedtls/Makefile', git,
+                   ['git checkout tags/mbedtls-2.8.0'],
+                     chdir = 'ext/mbedtls')
+
+env.Append(
+    CPPPATH = [
+        '.',
+        './mbedtls/include/',
+    ],
+    CPPDEFINES = [
+        'MBEDTLS_USER_CONFIG_FILE=\\"mbedtls_config.h\\"',
+    ]
+)
+
+if env['PLATFORM'] == 'posix':
+   env.Append(CFLAGS = ['-fPIC', "-g"])
+
+sources = [
+     './mbedtls/library/aes.c',
+     './mbedtls/library/aesni.c',
+     './mbedtls/library/asn1write.c',
+     './mbedtls/library/asn1parse.c',
+     './mbedtls/library/base64.c',
+     './mbedtls/library/bignum.c',
+     './mbedtls/library/cipher.c',
+     './mbedtls/library/cipher_wrap.c',
+     './mbedtls/library/ctr_drbg.c',
+     './mbedtls/library/debug.c',
+     './mbedtls/library/ecdh.c',
+     './mbedtls/library/ecdsa.c',
+     './mbedtls/library/ecp.c',
+     './mbedtls/library/ecp_curves.c',
+     './mbedtls/library/entropy.c',
+     './mbedtls/library/entropy_poll.c',
+     './mbedtls/library/error.c',
+     './mbedtls/library/gcm.c',
+     './mbedtls/library/hmac_drbg.c',
+     './mbedtls/library/md.c',
+     './mbedtls/library/md_wrap.c',
+     './mbedtls/library/md5.c',
+     './mbedtls/library/oid.c',
+     './mbedtls/library/pem.c',
+     './mbedtls/library/pk.c',
+     './mbedtls/library/pk_wrap.c',
+     './mbedtls/library/pkparse.c',
+     './mbedtls/library/platform.c',
+     './mbedtls/library/sha256.c',
+     './mbedtls/library/sha512.c',
+     './mbedtls/library/timing.c',
+     './mbedtls/library/x509.c',
+     './mbedtls/library/x509_crt.c',
+]
+
+sources += [
+     './mbedtls/library/ssl_cache.c',
+     './mbedtls/library/ssl_ciphersuites.c',
+     './mbedtls/library/ssl_cli.c',
+     './mbedtls/library/ssl_cookie.c',
+     './mbedtls/library/ssl_srv.c',
+     './mbedtls/library/ssl_tls.c',
+]
+
+objects = env.Object(sources)
+
+Depends(sources, dep)
+Depends(objects, './mbedtls_config.h')
+
+libs = [env.Library('lib/libmbedtls', objects)]
+Return('libs')

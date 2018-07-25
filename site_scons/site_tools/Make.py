@@ -26,7 +26,7 @@ def parms(target, source, env):
     if 'MakePath' in env.Dictionary().keys():
         make_path = env.subst(str(env['MakePath']))
     else:
-        print "Make builder requires MakePath variable"
+        print("Make builder requires MakePath variable")
         Exit(1)
 
     make_cmd = 'make'
@@ -108,9 +108,9 @@ def builder(target, source, env):
 
     # Make sure there's a directory to run make in
     if len(make_path) == 0:
-        print 'No path specified'
+        print('No path specified')
     if not os.path.exists(make_path):
-        print 'Path %s not found' % make_path
+        print('Path %s not found' % make_path)
 
     # Build up the command and its arguments in a list
     fullcmd = [ make_cmd ]

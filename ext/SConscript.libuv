@@ -1,0 +1,118 @@
+import os
+Import(['extEnv'])
+
+platform = extEnv['PLATFORM']
+
+# Pull down libuv from github and build the library
+
+env = extEnv.Clone()
+
+git = env.Command('./libuv/.git', None,
+                   ['git clone -n https://github.com/libuv/libuv.git ext/libuv'])
+
+dep = env.Command('./libuv/README', git,
+                   ['git checkout tags/v1.20.2'], chdir = 'ext/libuv')
+
+env['CFLAGS'] = []
+env['CPPDEFINES'] = []
+env['CPPPATH'] = []
+
+
+if env['PLATFORM'] == 'win32':
+    env.Append(CFLAGS = ['/J', '/W3', '/nologo'])
+    env.Append(CFLAGS = ['/Gy', '/O2', '/GF', '/MT'])
+    env.Append(CFLAGS = ['/Zc:wchar_t'])
+
+    env.Append(CPPDEFINES = ['WIN32'])
+    env.Append(CPPDEFINES = ['_CRT_NONSTDC_NO_DEPRECATE'])
+    env.Append(CPPDEFINES = ['_CRT_SECURE_NO_WARNINGS'])
+    env.Append(CPPDEFINES = ['__STDC_WANT_SECURE_LIB__=0'])
+    env.Append(CPPDEFINES = ['_WIN32_WINNT=0x0600', '_GNU_SOURCE'])
+
+# Suppress specific warnings
+#    env.Append(CFLAGS = ['/wd4267', '/wd4244'])
+elif env['PLATFORM'] == 'posix':
+    env.Append(CPPDEFINES = ['_ISCO99_SOURCE'])
+    env.Append(CFLAGS = ['-Os', '-fPIC', '-Wall', '-Wextra', '-Wno-unused-parameter', '-Wno-implicit-fallthrough', '-MMD'])
+else:
+    print('Unsupported system')
+    exit()
+
+# Common source files
+sources = [
+    './libuv/src/fs-poll.c',
+    './libuv/src/inet.c',
+    './libuv/src/threadpool.c',
+    './libuv/src/uv-common.c',
+    './libuv/src/uv-data-getter-setters.c',
+    './libuv/src/version.c'
+]
+
+env['CPPPATH'] = ['./libuv/include', './libuv/src']
+
+
+if env['PLATFORM'] == 'win32':
+    sources += [
+        './libuv/src/win/async.c',
+        './libuv/src/win/core.c',
+        './libuv/src/win/detect-wakeup.c',
+        './libuv/src/win/dl.c',
+        './libuv/src/win/error.c',
+        './libuv/src/win/fs-event.c',
+        './libuv/src/win/fs.c',
+        './libuv/src/win/getaddrinfo.c',
+        './libuv/src/win/getnameinfo.c',
+        './libuv/src/win/handle.c',
+        './libuv/src/win/loop-watcher.c',
+        './libuv/src/win/pipe.c',
+        './libuv/src/win/poll.c',
+        './libuv/src/win/process-stdio.c',
+        './libuv/src/win/process.c',
+        './libuv/src/win/req.c',
+        './libuv/src/win/signal.c',
+        './libuv/src/win/snprintf.c',
+        './libuv/src/win/stream.c',
+        './libuv/src/win/tcp.c',
+        './libuv/src/win/thread.c',
+        './libuv/src/win/timer.c',
+        './libuv/src/win/tty.c',
+        './libuv/src/win/udp.c',
+        './libuv/src/win/util.c',
+        './libuv/src/win/winapi.c',
+        './libuv/src/win/winsock.c'
+    ]
+else:
+    sources += [
+        './libuv/src/unix/async.c',
+        './libuv/src/unix/core.c',
+        './libuv/src/unix/dl.c',
+        './libuv/src/unix/fs.c',
+        './libuv/src/unix/getaddrinfo.c',
+        './libuv/src/unix/getnameinfo.c',
+        './libuv/src/unix/linux-core.c',
+        './libuv/src/unix/linux-inotify.c',
+        './libuv/src/unix/linux-syscalls.c',
+        './libuv/src/unix/loop-watcher.c',
+        './libuv/src/unix/loop.c',
+        './libuv/src/unix/procfs-exepath.c',
+        './libuv/src/unix/pipe.c',
+        './libuv/src/unix/poll.c',
+        './libuv/src/unix/proctitle.c',
+        './libuv/src/unix/process.c',
+        './libuv/src/unix/signal.c',
+        './libuv/src/unix/stream.c',
+        './libuv/src/unix/sysinfo-loadavg.c',
+        './libuv/src/unix/sysinfo-memory.c',
+        './libuv/src/unix/tcp.c',
+        './libuv/src/unix/thread.c',
+        './libuv/src/unix/timer.c',
+        './libuv/src/unix/tty.c',
+        './libuv/src/unix/udp.c'
+    ]
+
+objects = env.Object(sources)
+
+Depends(sources, dep)
+
+libs = [env.Library('lib/uv', objects)]
+Return('libs')
