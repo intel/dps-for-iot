@@ -43,6 +43,9 @@ except:
 
 extEnv = Environment(ENV = os.environ, variables=vars)
 
+# Do we need to build libuv
+buildUV = extEnv['UV_PATH'] == os.path.join('ext', 'libuv')
+
 env = Environment(
     CPPPATH=[
         '#/inc',
@@ -104,8 +107,8 @@ if env['PLATFORM'] == 'win32':
 
     # Where to find libuv and the libraries it needs
     env['UV_LIBS'] = ['ws2_32', 'psapi', 'iphlpapi', 'shell32', 'userenv', 'user32', 'advapi32']
-    if extEnv['UV_PATH'] != os.path.join('ext', 'libuv'):
-        env['UV_LIBS'] = ['libuv'] + env['UV_LIBS']
+    if buildUV == False:
+        env.Append(UV_LIBS=['libuv'])
     env.Append(LIBPATH=[env['UV_PATH']])
     env.Append(CPPPATH=[env['UV_PATH'] + '\include'])
 
@@ -206,8 +209,11 @@ elif env['PLATFORM'] == 'posix':
         env['PY_CPPPATH'] = ['/usr/include/python2.7']
     env['PY_LIBPATH'] = []
 
-    # Where to find libuv and the libraries it needs
-    env['UV_LIBS'] = ['uv', 'pthread']
+    env['UV_LIBS'] = ['pthread']
+
+    # Where to find libuv if we didn't build it
+    if buildUV == False:
+        env.Append(UV_LIBS=['uv'])
 
     if env['UV_PATH']:
         env.Prepend(LIBPATH = env['UV_PATH'])
@@ -242,7 +248,7 @@ ext_libs = []
 # Build external dependencies
 ext_libs.append(SConscript('ext/SConscript.mbedtls', exports=['extEnv']))
 ext_libs.append(SConscript('ext/SConscript.safestring', exports=['extEnv']))
-if env['UV_PATH'] == os.path.join('ext', 'libuv'):
+if buildUV == True:
     ext_libs.append(SConscript('ext/SConscript.libuv', exports=['extEnv']))
 
 version = '0.9.0'
