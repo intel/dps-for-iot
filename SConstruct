@@ -236,8 +236,14 @@ if env['target'] == 'yocto':
     extEnv.PrependENVPath('PATH', os.getenv('PATH'))
     extEnv.PrependENVPath('LDFLAGS', os.getenv('LDFLAGS'))
 
+ext_libs = []
+
+
 # Build external dependencies
-ext_libs = SConscript('ext/SConscript', exports=['extEnv'])
+ext_libs.append(SConscript('ext/SConscript.mbedtls', exports=['extEnv']))
+ext_libs.append(SConscript('ext/SConscript.safestring', exports=['extEnv']))
+if env['UV_PATH'] == os.path.join('ext', 'libuv'):
+    ext_libs.append(SConscript('ext/SConscript.libuv', exports=['extEnv']))
 
 version = '0.9.0'
 
@@ -247,7 +253,7 @@ SConscript('SConscript', src_dir='.', variant_dir='build/obj', duplicate=0, expo
 # Scons to generate the dps_ns3.pc file from dps_ns3.pc.in file
 ######################################################################
 pc_file = 'dps_ns3.pc.in'
-pc_vars = {'\@PREFIX\@': env.GetLaunchDir().encode('string_escape'),
+pc_vars = {'\@PREFIX\@': env.GetLaunchDir().encode('unicode_escape'),
            '\@VERSION\@': version,
 }
 env.Substfile(pc_file, SUBST_DICT = pc_vars)
