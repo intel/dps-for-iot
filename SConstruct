@@ -32,9 +32,6 @@ if platform.system() == 'Linux':
         BoolVariable('fsan', 'Enable fuzzer sanitizer?', False),
         BoolVariable('cov', 'Enable code coverage?', False))
 
-# Assume we need to build libuv
-buildUV = True
-
 tools=['default', 'textfile', DPS]
 # Doxygen is optional
 try:
@@ -106,14 +103,13 @@ if env['PLATFORM'] == 'win32':
     env['PY_LIBPATH'] = [env['PYTHON_PATH'] + '\libs']
 
     # Where to find libuv and the libraries it needs
-    env['UV_LIBS'] = ['ws2_32', 'psapi', 'iphlpapi', 'shell32', 'userenv', 'user32', 'advapi32']
+    env['DPS_LIBS'] = ['ws2_32', 'psapi', 'iphlpapi', 'shell32', 'userenv', 'user32', 'advapi32']
     # Check if we need to build libuv
-    if env['UV_PATH'] != 'ext\libuv':
-        buildUV = False
-        env.Append(UV_LIBS=['libuv'])
-
-    env.Append(LIBPATH=[env['UV_PATH']])
-    env.Append(CPPPATH=[env['UV_PATH'] + '\include'])
+    extUV = env['UV_PATH'] == 'ext\libuv'
+    if not extUV:
+        env.Append(DPS_LIBS=['libuv'])
+        env.Append(CPPPATH=[env['UV_PATH'] + '\include'])
+        env.Append(LIBPATH=[env['UV_PATH']])
 
     # Doxygen needs to be added to default path if available
     if env['DOXYGEN_PATH']:
@@ -125,7 +121,7 @@ elif env['PLATFORM'] == 'posix':
     if env['asan'] == True:
         env.Append(CCFLAGS = ['-fno-omit-frame-pointer', '-fsanitize=address'])
         if 'gcc' in env['CC']:
-            env.Append(LIBS = ['asan'])
+            env.Append(DPS_LIBS = ['asan'])
         elif 'clang' in env['CC']:
             env.Append(LINKFLAGS = ['-fsanitize=address'])
         else:
@@ -212,13 +208,13 @@ elif env['PLATFORM'] == 'posix':
         env['PY_CPPPATH'] = ['/usr/include/python2.7']
     env['PY_LIBPATH'] = []
 
-    env['UV_LIBS'] = ['pthread']
+    env['DPS_LIBS'] = ['pthread']
 
     # Check if we need to build libuv
     conf = env.Configure()
-    if conf.CheckLib('uv', symbol='uv_mutex_init_recursive'):
-        buildUV = False
+    extUV = not conf.CheckLib('uv', symbol='uv_mutex_init_recursive')
     env = conf.Finish()
+
 
 else:
     print('Unsupported system')
@@ -249,12 +245,11 @@ ext_libs = []
 # Build external dependencies
 ext_libs.append(SConscript('ext/SConscript.mbedtls', exports=['extEnv']))
 ext_libs.append(SConscript('ext/SConscript.safestring', exports=['extEnv']))
-if buildUV == True:
-    ext_libs.append(SConscript('ext/SConscript.libuv', exports=['extEnv']))
+if extUV: ext_libs.append(SConscript('ext/SConscript.libuv', exports=['extEnv']))
 
 version = '0.9.0'
 
-SConscript('SConscript', src_dir='.', variant_dir='build/obj', duplicate=0, exports=['env', 'ext_libs', 'version'])
+SConscript('SConscript', src_dir='.', variant_dir='build/obj', duplicate=0, exports=['env', 'ext_libs', 'extUV', 'version'])
 
 ######################################################################
 # Scons to generate the dps_ns3.pc file from dps_ns3.pc.in file
