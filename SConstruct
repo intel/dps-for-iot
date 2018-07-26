@@ -83,6 +83,7 @@ print("Building for " + env['variant'])
 if env['PLATFORM'] == 'win32':
 
     env.Append(CCFLAGS = ['/J', '/W3', '/WX', '/nologo'])
+    env.Append(CCFLAGS = ['/execution-charset:utf-8'])
 
     if env['variant'] == 'debug':
         env.Append(CCFLAGS = ['/Zi', '/MT', '/Od', '-DDPS_DEBUG'])
