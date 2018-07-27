@@ -121,7 +121,7 @@ elif env['PLATFORM'] == 'posix':
     if env['asan'] == True:
         env.Append(CCFLAGS = ['-fno-omit-frame-pointer', '-fsanitize=address'])
         if 'gcc' in env['CC']:
-            env.Append(DPS_LIBS = ['asan'])
+            env.Append(LIBS = ['asan'])
         elif 'clang' in env['CC']:
             env.Append(LINKFLAGS = ['-fsanitize=address'])
         else:

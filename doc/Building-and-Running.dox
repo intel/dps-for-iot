@@ -14,9 +14,9 @@
 
   libuv version 1.15 or higher is required.
 
-  @note When the @c UV_PATH parameter to scons is specified as @c
-  ext/libuv, the scons script pulls down and builds the source code
-  for libuv.
+  @note Many Linux distribution ship with libuv installed, the scons
+  script checks if installed libuv can be used and if not pulls down
+  the source code and builds libuv in ext/libuv
 
 - [SWIG](http://www.swig.org/download.html)
 
@@ -43,9 +43,9 @@
 
   libuv version 1.15 or higher is required.
 
-  @note When the @c UV_PATH parameter to scons is specified as @c
-  ext\\libuv, the scons script pulls down and builds the source code
-  for libuv.
+  @note By default the scons script will pull down the source code
+  and build libuv in ext\libuv. To use a pre-built libuv set the
+  @c UV_PATH to point to the libuv installation folder.
 
 - [SWIG](http://www.swig.org/download.html)
 
@@ -99,22 +99,14 @@ bindings=all</tt>.
 @note A limitation of the current implementation is that the transport
 must be configured at compile time.
 
-The scons script pulls down source code from two external projects
-(mbedtls, and safestringlib) into the <tt>./ext</tt> directory. If
+The scons script pulls down source code from three external projects
+(mbedtls, libuv, and safestringlib) into the <tt>./ext</tt> directory. If
 necessary these projects can be populated manually:
 
 @verbatim
 $ git clone https://github.com/ARMmbed/mbedtls ext/mbedtls
 $ git clone https://github.com/01org/safestringlib.git ext/safestring
-@endverbatim
-
-When @c UV_PATH is specified as @c ext/libuv, the scons script pulls
-down source code for libuv. If necessary these projects can be
-populated manually:
-
-@verbatim
 $ git clone https://github.com/libuv/libuv.git ext/libuv
-$ git clone https://chromium.googlesource.com/external/gyp ext/libuv/build/gyp
 @endverbatim
 
 @note The ext projects are populated the first time DPS is built. To
