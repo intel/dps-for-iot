@@ -44,7 +44,7 @@
   libuv version 1.15 or higher is required.
 
   @note By default the scons script will pull down the source code
-  and build libuv in ext\libuv. To use a pre-built libuv set the
+  and build libuv in @c ext\\libuv. To use a pre-built libuv set the
   @c UV_PATH to point to the libuv installation folder.
 
 - [SWIG](http://www.swig.org/download.html)
