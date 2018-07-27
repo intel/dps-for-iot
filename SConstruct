@@ -25,7 +25,6 @@ if platform.system() == 'Windows':
 # Linux-specific command line variables
 if platform.system() == 'Linux':
     vars.AddVariables(
-        PathVariable('UV_PATH', 'Path where libuv is installed', '', PathVariable.PathAccept),
         BoolVariable('profile', 'Build for profiling?', False),
         BoolVariable('asan', 'Enable address sanitizer?', False),
         BoolVariable('tsan', 'Enable thread sanitizer?', False),
@@ -42,9 +41,6 @@ except:
     pass
 
 extEnv = Environment(ENV = os.environ, variables=vars)
-
-# Do we need to build libuv
-buildUV = extEnv['UV_PATH'] == os.path.join('ext', 'libuv')
 
 env = Environment(
     CPPPATH=[
@@ -107,11 +103,13 @@ if env['PLATFORM'] == 'win32':
     env['PY_LIBPATH'] = [env['PYTHON_PATH'] + '\libs']
 
     # Where to find libuv and the libraries it needs
-    env['UV_LIBS'] = ['ws2_32', 'psapi', 'iphlpapi', 'shell32', 'userenv', 'user32', 'advapi32']
-    if buildUV == False:
-        env.Append(UV_LIBS=['libuv'])
-    env.Append(LIBPATH=[env['UV_PATH']])
-    env.Append(CPPPATH=[env['UV_PATH'] + '\include'])
+    env['DPS_LIBS'] = ['ws2_32', 'psapi', 'iphlpapi', 'shell32', 'userenv', 'user32', 'advapi32']
+    # Check if we need to build libuv
+    extUV = env['UV_PATH'] == 'ext\libuv'
+    if not extUV:
+        env.Append(DPS_LIBS=['libuv'])
+        env.Append(CPPPATH=[env['UV_PATH'] + '\include'])
+        env.Append(LIBPATH=[env['UV_PATH']])
 
     # Doxygen needs to be added to default path if available
     if env['DOXYGEN_PATH']:
@@ -210,15 +208,13 @@ elif env['PLATFORM'] == 'posix':
         env['PY_CPPPATH'] = ['/usr/include/python2.7']
     env['PY_LIBPATH'] = []
 
-    env['UV_LIBS'] = ['pthread']
+    env['DPS_LIBS'] = ['pthread']
 
-    # Where to find libuv if we didn't build it
-    if buildUV == False:
-        env.Append(UV_LIBS=['uv'])
+    # Check if we need to build libuv
+    conf = env.Configure()
+    extUV = not conf.CheckLib('uv', symbol='uv_mutex_init_recursive')
+    env = conf.Finish()
 
-    if env['UV_PATH']:
-        env.Prepend(LIBPATH = env['UV_PATH'])
-        env.Prepend(CPPPATH = env['UV_PATH'] + '/include')
 
 else:
     print('Unsupported system')
@@ -249,12 +245,11 @@ ext_libs = []
 # Build external dependencies
 ext_libs.append(SConscript('ext/SConscript.mbedtls', exports=['extEnv']))
 ext_libs.append(SConscript('ext/SConscript.safestring', exports=['extEnv']))
-if buildUV == True:
-    ext_libs.append(SConscript('ext/SConscript.libuv', exports=['extEnv']))
+if extUV: ext_libs.append(SConscript('ext/SConscript.libuv', exports=['extEnv']))
 
 version = '0.9.0'
 
-SConscript('SConscript', src_dir='.', variant_dir='build/obj', duplicate=0, exports=['env', 'ext_libs', 'version'])
+SConscript('SConscript', src_dir='.', variant_dir='build/obj', duplicate=0, exports=['env', 'ext_libs', 'extUV', 'version'])
 
 ######################################################################
 # Scons to generate the dps_ns3.pc file from dps_ns3.pc.in file
