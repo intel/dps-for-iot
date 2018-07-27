@@ -201,6 +201,7 @@ if platform == 'posix' and env['fsan'] == True:
     fenv = env.Clone()
     fenv.VariantDir('test/fuzzer', 'test')
     fenv.Append(CPPPATH = ['#/ext/safestring/include'])
+    if extUV: fenv.Append(CPPPATH = ['#/ext/libuv/include'])
     fenv.Append(LINKFLAGS = ['-fsanitize=fuzzer'])
     fenv.Append(LIBS = [lib, env['DPS_LIBS']])
 
