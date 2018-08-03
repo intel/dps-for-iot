@@ -20,7 +20,8 @@ if platform.system() == 'Windows':
         PathVariable('UV_PATH', 'Path where libuv is installed', 'ext\libuv', PathVariable.PathAccept),
         PathVariable('PYTHON_PATH', 'Path to Python', 'C:\Python27', PathVariable.PathAccept),
         PathVariable('SWIG', 'Path to SWIG executable', 'C:\swigwin-3.0.10\swig.exe', PathVariable.PathAccept),
-        PathVariable('DOXYGEN_PATH', 'Path to Doxygen', 'C:\Program Files\Doxygen', PathVariable.PathAccept))
+        PathVariable('DOXYGEN_PATH', 'Path to Doxygen', 'C:\Program Files\Doxygen', PathVariable.PathAccept),
+        PathVariable('DEF_FILE', 'Path to external defs for dll', 'dps_shared.def', PathVariable.PathIsFile))
 
 # Linux-specific command line variables
 if platform.system() == 'Linux':

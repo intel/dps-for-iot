@@ -81,7 +81,8 @@ libenv.Install('#/build/dist/lib', lib)
 
 shobjs = libenv.SharedObject(srcs)
 if platform == 'win32':
-    shlib = libenv.SharedLibrary('lib/dps_shared', shobjs + ['dps_shared.def'], LIBS = env['DPS_LIBS'], SHLIBVERSION = version)
+    print(env['DEF_FILE'])
+    shlib = libenv.SharedLibrary('lib/dps_shared', shobjs + [env['DEF_FILE']], LIBS = env['DPS_LIBS'], SHLIBVERSION = version)
 else:
     shlib = libenv.SharedLibrary('lib/dps_shared', shobjs, LIBS = env['DPS_LIBS'], SHLIBVERSION = version)
 libenv.InstallVersionedLib('#/build/dist/lib', shlib, SHLIBVERSION = version)
