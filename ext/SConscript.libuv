@@ -11,7 +11,7 @@ git = env.Command('./libuv/.git', None,
                    ['git clone -n https://github.com/libuv/libuv.git ext/libuv'])
 
 dep = env.Command('./libuv/README', git,
-                   ['git checkout tags/v1.20.2'], chdir = 'ext/libuv')
+                   ['git checkout -q tags/v1.20.2'], chdir = 'ext/libuv')
 
 env['CFLAGS'] = []
 env['CPPDEFINES'] = []
