@@ -1,0 +1,27 @@
+import os
+import string
+Import(['env', 'ext_libs', 'lib_dps'])
+
+platform = env['PLATFORM']
+
+app_env = env.Clone()
+if app_env['PLATFORM'] == 'win32':
+    app_env.Append(CPPDEFINES = ['_CRT_SECURE_NO_WARNINGS'])
+
+# Add local include directory to the include path
+app_env.Append(CPPPATH=['./include'])
+
+# Libraries will be statically linked
+app_env['LIBS'] = [lib_dps] + [ext_libs] + env['DPS_LIBS']
+
+# Source files
+app_srcs = Glob('src/*.c')
+
+# Application depends on the libraries
+Depends(app_srcs, app_env['LIBS'])
+
+# Build the executable
+app_program = app_env.Program(app_srcs)
+
+# Install the executable in the bin directory
+app_env.Install('#/' + app_env['application'] + '/bin', app_program)
