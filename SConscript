@@ -268,3 +268,7 @@ try:
 except:
     # Doxygen may not be installed
     pass
+
+# Return the static DPS library
+result = [lib]
+Return('result')

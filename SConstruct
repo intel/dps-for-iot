@@ -11,6 +11,7 @@ vars.AddVariables(
     EnumVariable('transport', 'Transport protocol', default='udp', allowed_values=('udp', 'tcp', 'dtls', 'fuzzer'), ignorecase=2),
     EnumVariable('target', 'Build target', default='local', allowed_values=('local', 'yocto'), ignorecase=2),
     ListVariable('bindings', 'Bindings to build', bindings, bindings),
+    PathVariable('application', 'Application to build', '', PathVariable.PathAccept),
     ('CC', 'C compiler to use'),
     ('CXX', 'C++ compiler to use'))
 
@@ -250,7 +251,13 @@ if extUV: ext_libs.append(SConscript('ext/SConscript.libuv', exports=['extEnv'])
 
 version = '0.9.0'
 
-SConscript('SConscript', src_dir='.', variant_dir='build/obj', duplicate=0, exports=['env', 'ext_libs', 'extUV', 'version'])
+lib_dps = SConscript('SConscript', src_dir='.', variant_dir='build/obj', duplicate=0, exports=['env', 'ext_libs', 'extUV', 'version'])
+
+
+# Build any user applications
+if env['application'] != '':
+    print('Buidling application in ', env['application'])
+    SConscript(env['application'] + '/SConscript', variant_dir=env['application'] + '/build/obj', duplicate=0, exports=['env', 'ext_libs', 'lib_dps'])
 
 ######################################################################
 # Scons to generate the dps_ns3.pc file from dps_ns3.pc.in file
