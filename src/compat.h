@@ -60,7 +60,7 @@ inline char* strndup(const char* str, size_t maxLen)
 
 #define THREAD __declspec(thread)
 
-#else // posix
+#else /* posix */
 
 #include <endian.h>
 

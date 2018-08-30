@@ -1170,12 +1170,13 @@ DPS_Publication* DPS_CopyPublication(const DPS_Publication* pub)
     copy->shared->node = pub->shared->node;
     copy->shared->numTopics = pub->shared->numTopics;
     if (pub->shared->numTopics > 0) {
+	int i;
         copy->shared->topics = calloc(pub->shared->numTopics, sizeof(char*));
         if (!copy->shared->topics) {
             DPS_ERRPRINT("malloc failure: no memory\n");
             goto Exit;
         }
-        for (int i = 0; i < pub->shared->numTopics; i++) {
+        for (i = 0; i < pub->shared->numTopics; i++) {
             copy->shared->topics[i] = strndup(pub->shared->topics[i], DPS_MAX_TOPIC_STRLEN);
         }
     }

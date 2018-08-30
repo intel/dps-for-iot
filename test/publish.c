@@ -599,6 +599,7 @@ int main(int argc, char** argv)
         TestSequenceNumbers,
         NULL
     };
+    TEST* test;
     char** arg = argv + 1;
     DPS_Event* event = NULL;
     DPS_MemoryKeyStore* memoryKeyStore = NULL;
@@ -617,7 +618,7 @@ int main(int argc, char** argv)
     event = DPS_CreateEvent();
     ASSERT(event);
 
-    for (TEST *test = tests; *test; ++test) {
+    for (test = tests; *test; ++test) {
         memoryKeyStore = DPS_CreateMemoryKeyStore();
         DPS_SetNetworkKey(memoryKeyStore, &NetworkKeyId, &NetworkKey);
         node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore), NULL);

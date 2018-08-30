@@ -72,9 +72,10 @@ void DPS_Log(DPS_LogLevel level, const char* file, int line, const char *functio
 
 void DPS_LogBytes(DPS_LogLevel level, const char* file, int line, const char *function, const uint8_t *bytes, size_t n)
 {
+    size_t i;
     uv_once(&once, InitMutex);
     uv_mutex_lock(&mutex);
-    for (size_t i = 0; i < n; ++i) {
+    for (i = 0; i < n; ++i) {
         if ((i % 16) == 0) {
             fprintf(stream, "%s%09u %-7s %s@%d: ", i ? "\n" : "", DPS_DBG_TIME, LevelTxt[level], file, line);
         }

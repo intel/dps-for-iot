@@ -599,7 +599,7 @@ DPS_Status CBOR_DecodeTag(DPS_RxBuffer* buffer, uint64_t* n)
 
     ret = DecodeUint(buffer, n, CBOR_TAG);
     if (ret != DPS_OK) {
-        // Tags are optional so if this is not a tag reset the buffer
+        /* Tags are optional so if this is not a tag reset the buffer */
         buffer->rxPos = pos;
     }
     return ret;
@@ -754,7 +754,7 @@ DPS_Status CBOR_Peek(DPS_RxBuffer* buffer, uint8_t* majOut, uint64_t* infoOut)
         return DPS_ERR_ARGS;
     }
     ret = PeekUint(buffer, &info, majOut, &len);
-    // For values encoding a length do a sanity check
+    /* For values encoding a length do a sanity check */
     if ((ret == DPS_OK) && MAJOR_ENCODES_LENGTH(*majOut) && (info >= avail)) {
         ret = DPS_ERR_INVALID;
     }

@@ -130,7 +130,9 @@ static DPS_Status TestTextString()
         { "a", a, A_SIZEOF(a) },
         { "IETF", IETF, A_SIZEOF(IETF) },
         { "\"\\", quote, A_SIZEOF(quote) },
+#if __STDC_VERSION__ >= 199901L
         { "\u00fc", _00fc, A_SIZEOF(_00fc) }
+#endif
     };
 
     for (i = 0; i < A_SIZEOF(examples); ++i) {
