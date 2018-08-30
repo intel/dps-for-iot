@@ -384,7 +384,8 @@ int main(int argc, char** argv)
     memoryKeyStore = DPS_CreateMemoryKeyStore();
     DPS_SetNetworkKey(memoryKeyStore, &NetworkKeyId, &NetworkKey);
     if (args.encrypt == 1) {
-        for (size_t i = 0; i < NUM_KEYS; ++i) {
+        size_t i;
+        for (i = 0; i < NUM_KEYS; ++i) {
             DPS_SetContentKey(memoryKeyStore, &PskId[i], &Psk[i]);
         }
     } else if (args.encrypt == 2) {

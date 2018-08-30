@@ -261,8 +261,9 @@ int main(int argc, char** argv)
         DPS_EndpointSetPort(&ep, port);
     }
     if (encrypt) {
+        size_t i;
         memoryKeyStore = DPS_CreateMemoryKeyStore();
-        for (size_t i = 0; i < NUM_KEYS; ++i) {
+        for (i = 0; i < NUM_KEYS; ++i) {
             DPS_SetContentKey(memoryKeyStore, &PskId[i], &Psk[i]);
         }
         DPS_SetNetworkKey(memoryKeyStore, &NetworkKeyId, &NetworkKey);

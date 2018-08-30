@@ -119,6 +119,9 @@ if env['PLATFORM'] == 'win32':
 
 elif env['PLATFORM'] == 'posix':
 
+    # uncomment to test for C90 (with gnu extensions) compatibility
+    #env.Append(CCFLAGS = ['-std=gnu90'])
+
     # Enable address sanitizer
     if env['asan'] == True:
         env.Append(CCFLAGS = ['-fno-omit-frame-pointer', '-fsanitize=address'])

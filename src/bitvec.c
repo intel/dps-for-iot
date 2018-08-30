@@ -264,7 +264,9 @@ void DPS_BitVectorBloomInsert(DPS_BitVector* bv, const uint8_t* data, size_t len
     assert(sizeof(hashes) == DPS_SHA2_DIGEST_LEN);
 
     DPS_Sha2((uint8_t*)hashes, data, len);
-    //DPS_PRINT("%.*s   (%zu)\n", (int)len, data, len);
+#if 0
+    DPS_PRINT("%.*s   (%zu)\n", (int)len, data, len);
+#endif
     for (h = 0; h < config.numHashes; ++h) {
 #ifdef ENDIAN_SWAP
         index = hashes[h] % bv->len;

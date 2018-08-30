@@ -333,6 +333,7 @@ DPS_MemoryKeyStore* DPS_CreateMemoryKeyStore()
 
 void DPS_DestroyMemoryKeyStore(DPS_MemoryKeyStore* mks)
 {
+    size_t i;
     DPS_DBGTRACE();
 
     if (!mks) {
@@ -341,7 +342,7 @@ void DPS_DestroyMemoryKeyStore(DPS_MemoryKeyStore* mks)
     if (mks->rbg) {
         DPS_DestroyRBG(mks->rbg);
     }
-    for (size_t i = 0; i < mks->entriesCount; i++) {
+    for (i = 0; i < mks->entriesCount; i++) {
         MemoryKeyStoreEntry* entry = mks->entries + i;
         DPS_ClearKeyId(&entry->keyId);
         if (entry->key.type == DPS_KEY_SYMMETRIC) {
