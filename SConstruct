@@ -258,9 +258,11 @@ lib_dps = SConscript('SConscript', src_dir='.', variant_dir='build/obj', duplica
 
 
 # Build any user applications
-if env['application'] != '':
-    print('Buidling application in ', env['application'])
-    SConscript(env['application'] + '/SConscript', variant_dir=env['application'] + '/build/obj', duplicate=0, exports=['env', 'ext_libs', 'lib_dps'])
+appDir = env['application']
+if appDir != '':
+    print('Building application in ', appDir)
+    env.Default(appDir)
+    SConscript(appDir + '/SConscript', variant_dir=appDir + '/build/obj', duplicate=0, exports=['env', 'ext_libs', 'lib_dps'])
 
 ######################################################################
 # Scons to generate the dps_ns3.pc file from dps_ns3.pc.in file
