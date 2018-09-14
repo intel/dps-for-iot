@@ -16,7 +16,7 @@ computing in combination with cloud-based analytics.
 
 ## [Documentation](https://intel.github.io/dps-for-iot)
 
-In the application subdirectory there is a simple SConscript that can be used as a template for
+In the *application* subdirectory there is a simple SConscript that can be used as a template for
 building your own statically linked DPS C application. Copy the application tree somewhere
 and add your source and header files to the src and include directories.
 
