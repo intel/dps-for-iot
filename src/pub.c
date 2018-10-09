@@ -1285,7 +1285,7 @@ DPS_Status DPS_InitPublication(DPS_Publication* pub,
                     break;
                 }
                 pub->shared->topics[i] = strndup(topics[i], DPS_MAX_TOPIC_STRLEN);
-                if (!pub->shared->topics) {
+                if (!pub->shared->topics[i]) {
                     ret = DPS_ERR_RESOURCES;
                     break;
                 }
