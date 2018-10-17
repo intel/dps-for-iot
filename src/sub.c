@@ -234,7 +234,8 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote)
                CBOR_SIZEOF(uint8_t) +
                CBOR_SIZEOF_BYTES(sizeof(DPS_UUID)) +
                DPS_BitVectorSerializeMaxSize(interests) +
-               DPS_BitVectorSerializeMaxSize(remote->outbound.needs);
+               DPS_BitVectorSerializeFHSize();
+
     } else {
         interests = NULL;
     }
@@ -293,7 +294,7 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote)
             ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_NEEDS);
         }
         if (ret == DPS_OK) {
-            ret = DPS_BitVectorSerialize(remote->outbound.needs, &buf);
+            ret = DPS_BitVectorSerializeFH(remote->outbound.needs, &buf);
         }
         if (ret == DPS_OK) {
             ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_INTERESTS);
@@ -436,7 +437,7 @@ static DPS_Status SendSubscriptionAck(DPS_Node* node, RemoteNode* remote, uint32
             ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_NEEDS);
         }
         if (ret == DPS_OK) {
-            ret = DPS_BitVectorSerialize(remote->outbound.needs, &buf);
+            ret = DPS_BitVectorSerializeFH(remote->outbound.needs, &buf);
         }
         if (ret == DPS_OK) {
             ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_INTERESTS);
@@ -599,7 +600,7 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
             } else {
                 needs = DPS_BitVectorAllocFH();
                 if (needs) {
-                    ret = DPS_BitVectorDeserialize(needs, buf);
+                    ret = DPS_BitVectorDeserializeFH(needs, buf);
                 } else {
                     ret = DPS_ERR_RESOURCES;
                 }
