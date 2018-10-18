@@ -233,6 +233,16 @@ DPS_Status DPS_BitVectorUnion(DPS_BitVector* bvOut, DPS_BitVector* bv);
 DPS_Status DPS_BitVectorSerialize(DPS_BitVector* bv, DPS_TxBuffer* buffer);
 
 /**
+ * Serialize a fuzzy-hash bit vector into a buffer
+ *
+ * @param bv      The bit vector to serialize
+ * @param buffer  The buffer to serialize the bit vector into
+ *
+ * @return  The success or failure of the operation
+ */
+DPS_Status DPS_BitVectorSerializeFH(DPS_BitVector* bv, DPS_TxBuffer* buffer);
+
+/**
  * Maximum buffer space needed to serialize a bit vector.
  *
  * @param bv  The bit vector to check
@@ -242,7 +252,14 @@ DPS_Status DPS_BitVectorSerialize(DPS_BitVector* bv, DPS_TxBuffer* buffer);
 size_t DPS_BitVectorSerializeMaxSize(DPS_BitVector* bv);
 
 /**
- * Deserialize an decompress a bit vector from a buffer
+ * Buffer space needed to serialize a fuzzy hash bit vector.
+ *
+ * @return  The space needed to serialize a fuzzy hash bit vector.
+ */
+size_t DPS_BitVectorSerializeFHSize();
+
+/**
+ * Deserialize and decompress a bit vector from a buffer
  *
  * @param bv      Allocated bit vector to deserialize into
  * @param buffer  The buffer containing a serialized bit vector
@@ -250,6 +267,16 @@ size_t DPS_BitVectorSerializeMaxSize(DPS_BitVector* bv);
  * @return  an initialized bit vector or null if the deserialization failed
  */
 DPS_Status DPS_BitVectorDeserialize(DPS_BitVector* bv, DPS_RxBuffer* buffer);
+
+/**
+ * Deserialize a fuzzy hash bit vector from a buffer
+ *
+ * @param bv      Allocated bit vector to deserialize into
+ * @param buffer  The buffer containing a serialized bit vector
+ *
+ * @return  an initialized bit vector or null if the deserialization failed
+ */
+DPS_Status DPS_BitVectorDeserializeFH(DPS_BitVector* bv, DPS_RxBuffer* buffer);
 
 /**
  * Clear all bits in an existing bit vector.

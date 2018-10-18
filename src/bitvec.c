@@ -680,6 +680,16 @@ static DPS_Status RunLengthDecode(uint8_t* packed, size_t packedSize, chunk_t* b
     return DPS_OK;
 }
 
+DPS_Status DPS_BitVectorSerializeFH(DPS_BitVector* bv, DPS_TxBuffer* buffer)
+{
+    assert(bv->len == FH_BITVECTOR_LEN);
+#ifdef ENDIAN_SWAP
+#error(TODO bit vector endian swapping not implemented)
+#else
+    return CBOR_EncodeBytes(buffer, (const uint8_t*)bv->bits, bv->len / 8);
+#endif
+}
+
 DPS_Status DPS_BitVectorSerialize(DPS_BitVector* bv, DPS_TxBuffer* buffer)
 {
     DPS_Status ret;
@@ -753,6 +763,30 @@ DPS_Status DPS_BitVectorSerialize(DPS_BitVector* bv, DPS_TxBuffer* buffer)
 size_t DPS_BitVectorSerializeMaxSize(DPS_BitVector* bv)
 {
     return CBOR_SIZEOF_ARRAY(3) + CBOR_SIZEOF(uint8_t) + CBOR_SIZEOF(uint32_t) + CBOR_SIZEOF_BYTES(bv->len / 8);
+}
+
+size_t DPS_BitVectorSerializeFHSize(DPS_BitVector* bv)
+{
+    return CBOR_SIZEOF_BYTES(FH_BITVECTOR_LEN / 8);
+}
+
+DPS_Status DPS_BitVectorDeserializeFH(DPS_BitVector* bv, DPS_RxBuffer* buffer)
+{
+    uint8_t* data;
+    size_t size;
+    DPS_Status ret;
+
+    assert(bv->len == FH_BITVECTOR_LEN);
+    ret = CBOR_DecodeBytes(buffer, &data, &size);
+    if (ret == DPS_OK) {
+        if (size == bv->len / 8) {
+            memcpy_s(bv->bits, size, data, size);
+        } else {
+            DPS_ERRPRINT("Deserialized fuzzy hash bit vector has wrong length\n");
+            ret = DPS_ERR_INVALID;
+        }
+    }
+    return ret;
 }
 
 DPS_Status DPS_BitVectorDeserialize(DPS_BitVector* bv, DPS_RxBuffer* buffer)
