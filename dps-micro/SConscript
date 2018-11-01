@@ -1,0 +1,99 @@
+import os
+import string
+Import(['env', 'ext_libs', 'version'])
+
+platform = env['PLATFORM']
+
+env['DPS_LIBS'] = [ext_libs] + env['DPS_LIBS']
+
+# Additional warning for the lib object files
+
+# Core libraries
+libenv = env.Clone()
+
+libenv.Append(CPPDEFINES = ['MBEDTLS_USER_CONFIG_FILE=\\"mbedtls_config.h\\"'])
+libenv.Append(CPPPATH = ['#/include/dps', '#/ext', '#/ext/mbedtls/include'])
+
+# Additional warnings for the core object files
+if platform == 'win32':
+    # We are getting our secure memory and string functions from
+    # SafeStringLib so need to disable the Windows supplied versions
+    libenv.Append(CPPDEFINES = ['__STDC_WANT_SECURE_LIB__=0'])
+    libenv.Append(LIBS = env['DPS_LIBS'])
+elif platform == 'posix':
+    libenv.Append(CCFLAGS = ['-Wall', '-Wno-format-extra-args'])
+
+libenv.Install('#/build/dist/include/dps', libenv.Glob('#/include/dps/*.h'))
+
+srcs = [
+        'src/bitvec.c',
+        'src/cbor.c',
+        'src/cose.c',
+        'src/dbg.c',
+        'src/ec.c',
+        'src/err.c',
+        'src/gcm.c',
+        'src/hkdf.c',
+        'src/io_buf.c',
+        'src/keywrap.c',
+        'src/mbedtls.c',
+        'src/sha2.c',
+        'src/topics.c'
+        ]
+
+Depends(srcs, ext_libs)
+
+objs = libenv.Object(srcs)
+
+lib = libenv.Library('lib/dps', objs)
+libenv.Install('#/build/dist/lib', lib)
+
+shobjs = libenv.SharedObject(srcs)
+if platform == 'win32':
+    print(env['DEF_FILE'])
+    shlib = libenv.SharedLibrary('lib/dps_shared', shobjs + [env['DEF_FILE']], LIBS = env['DPS_LIBS'], SHLIBVERSION = version)
+else:
+    shlib = libenv.SharedLibrary('lib/dps_shared', shobjs, LIBS = env['DPS_LIBS'], SHLIBVERSION = version)
+libenv.InstallVersionedLib('#/build/dist/lib', shlib, SHLIBVERSION = version)
+
+# Unit tests
+testenv = env.Clone()
+
+if testenv['PLATFORM'] == 'win32':
+    testenv.Append(CPPDEFINES = ['_CRT_SECURE_NO_WARNINGS', '__STDC_WANT_SECURE_LIB__=0'])
+
+testenv.Append(LIBS = [lib, env['DPS_LIBS']])
+testsrcs = []
+Depends(testsrcs, ext_libs)
+testprogs = []
+
+for test in testsrcs:
+    testprogs.append(testenv.Program(test))
+
+testsrcs = [
+            'test/bitvec_unit_test.c'
+            ]
+for test in testsrcs:
+    testprogs.append(testenv.Program([test, 'test/keys.c']))
+
+testenv.Install('#/build/test/bin', testprogs)
+
+# Examples
+exampleenv = env.Clone()
+if exampleenv['PLATFORM'] == 'win32':
+    exampleenv.Append(CPPDEFINES = ['_CRT_SECURE_NO_WARNINGS'])
+
+exampleenv.Append(LIBS = [lib, env['DPS_LIBS']])
+examplesrcs = []
+Depends(examplesrcs, ext_libs)
+
+exampleprogs = []
+for example in examplesrcs:
+    exampleprogs.append(exampleenv.Program([example, 'examples/keys.c']))
+
+exampleenv.Install('#/build/dist/bin', exampleprogs)
+
+
+# Return the static DPS library
+result = [lib]
+Return('result')
