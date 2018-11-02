@@ -347,14 +347,18 @@ static size_t RLELen(DPS_BitVector* bv)
 
     for (b = 0; b < bv->popCount; ++b) {
         /*
-         * Length of the run
+         * Length of the zero run
          */
-        uint32_t len = 1 + bv->setBits[b] - prevBit;
+        uint16_t num0 = bv->setBits[b] - prevBit;
         /*
-         * Accumulate space needed to encode length
+         * Size of the length field
          */
-        rleSize += len + Ceil_Log2(len);
-        prevBit = bv->setBits[b];
+        size_t sz = Ceil_Log2(num0 + 1);
+        /*
+         * Space needed to encode the length
+         */
+        rleSize += 1 + 2 * sz;
+        prevBit = bv->setBits[b] + 1;
     }
     return (rleSize + 7) / 8;
 }
@@ -373,7 +377,7 @@ static void RunLengthEncode(DPS_BitVector* bv, uint8_t* rle, size_t len)
         /*
          * Run length of consecutive zeroes
          */
-        uint32_t num0 = bv->setBits[b] - prevBit;
+        uint16_t num0 = bv->setBits[b] - prevBit;
         /*
          * Size of the length field
          */
@@ -382,7 +386,7 @@ static void RunLengthEncode(DPS_BitVector* bv, uint8_t* rle, size_t len)
          * Adjusted length value to write
          */
         uint32_t val = num0 - ((1 << sz) - 1);
-        rleSize += num0;
+        rleSize += sz;
         SET_BIT8(rle, rleSize);
         rleSize++;
         /*
@@ -395,7 +399,7 @@ static void RunLengthEncode(DPS_BitVector* bv, uint8_t* rle, size_t len)
             val >>= 1;
             rleSize++;
         }
-        prevBit = bv->setBits[b];
+        prevBit = bv->setBits[b] + 1;
     }
 }
 
@@ -515,7 +519,7 @@ DPS_Status DPS_BitVectorSerialize(DPS_BitVector* bv, DPS_TxBuffer* buffer)
     size_t len;
     DPS_Status ret;
     uint8_t* rle;
-    uint8_t flags = 0; /* always zero for this implementation */
+    uint8_t flags = FLAG_RLE_ENCODED; /* always RLE encoded in this implementation */
 
     /*
      * Bit vector is encoded as an array of 3 items
@@ -577,7 +581,7 @@ DPS_Status DPS_BitVectorDeserialize(DPS_BitVector* bv, DPS_RxBuffer* buffer)
         return ret;
     }
     if (len != DPS_CONFIG_BIT_LEN) {
-        DPS_ERRPRINT("Deserialized bloom filter has wrong size\n");
+        DPS_ERRPRINT("Deserialized bloom filter has wrong size (%d)\n", len);
         return DPS_ERR_INVALID;
     }
     ret = CBOR_DecodeBytes(buffer, &data, &size);
