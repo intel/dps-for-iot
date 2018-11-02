@@ -3,6 +3,10 @@
 #include <dps/private/bitvec.h>
 
 
+static int atLine;
+#define CHECK(cond)   if (!cond) { atLine = __LINE__; goto failed; }
+
+
 DPS_BitVector bv1;
 DPS_BitVector bv2;
 DPS_BitVector bv3;
@@ -10,12 +14,18 @@ DPS_BitVector bv3;
 static const char* str1 = "red";
 static const char* str2 = "green";
 static const char* str3 = "blue";
+static const char* str4 = "yellow";
 
-static int atLine;
-#define CHECK(cond)   if (!cond) { atLine = __LINE__; goto failed; }
+
+static uint8_t txBuf[1024];
+static uint8_t rxBuf[1024];
+
 
 int main()
 {
+    DPS_Status status;
+    DPS_TxBuffer tx;
+    DPS_RxBuffer rx;
     int ok;
 
     DPS_BitVectorClear(&bv1);
@@ -25,6 +35,22 @@ int main()
     DPS_BitVectorClear(&bv2);
     DPS_BitVectorClear(&bv3);
 
+    /* Check insertion is idempotent */
+    DPS_BitVectorClear(&bv1);
+    DPS_BitVectorClear(&bv2);
+    DPS_BitVectorBloomInsert(&bv1, str1, strlen(str1));
+    DPS_BitVectorBloomInsert(&bv1, str2, strlen(str2));
+    DPS_BitVectorBloomInsert(&bv1, str1, strlen(str1));
+    DPS_BitVectorBloomInsert(&bv1, str2, strlen(str2));
+    DPS_BitVectorBloomInsert(&bv2, str1, strlen(str1));
+    DPS_BitVectorBloomInsert(&bv2, str2, strlen(str2));
+    ok = DPS_BitVectorEquals(&bv1, &bv2);
+    CHECK(ok);
+
+    DPS_BitVectorClear(&bv1);
+    DPS_BitVectorClear(&bv2);
+
+    /* Insertion checks */
     DPS_BitVectorBloomInsert(&bv1, str1, strlen(str1));
     ok = DPS_BitVectorBloomTest(&bv1, str1, strlen(str1));
     CHECK(ok);
@@ -85,6 +111,25 @@ int main()
     ok = DPS_BitVectorIncludes(&bv3, &bv1);
     CHECK(ok);
     ok = DPS_BitVectorIncludes(&bv3, &bv2);
+    CHECK(ok);
+
+    DPS_BitVectorClear(&bv1);
+    DPS_BitVectorBloomInsert(&bv1, str1, strlen(str1));
+    DPS_BitVectorBloomInsert(&bv1, str2, strlen(str2));
+    DPS_BitVectorBloomInsert(&bv1, str3, strlen(str3));
+    DPS_BitVectorBloomInsert(&bv1, str4, strlen(str4));
+
+    /* Serialization */
+    DPS_TxBufferInit(&tx, txBuf, sizeof(txBuf));
+    status = DPS_BitVectorSerialize(&bv1, &tx);
+    CHECK(status == DPS_OK);
+
+    DPS_TxBufferToRx(&tx, &rx);
+
+    /* Deserialization */
+    status = DPS_BitVectorDeserialize(&bv2, &rx);
+    CHECK(status == DPS_OK);
+    ok = DPS_BitVectorEquals(&bv1, &bv2);
     CHECK(ok);
 
     printf("PASSED (%s)\r\n", __FILE__);

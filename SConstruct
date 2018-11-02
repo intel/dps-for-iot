@@ -5,7 +5,7 @@ vars = Variables()
 
 # Generic build variables
 vars.AddVariables(
-    EnumVariable('variant', 'Build variant', default='release', allowed_values=('debug', 'release'), ignorecase=2),
+    EnumVariable('variant', 'Build variant', default='debug', allowed_values=('debug', 'release'), ignorecase=2),
     ('CC', 'C compiler to use'),
     ('CXX', 'C++ compiler to use'))
 
