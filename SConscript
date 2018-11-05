@@ -225,6 +225,7 @@ if platform == 'posix' and env['fsan'] == True:
 exampleenv = env.Clone()
 if exampleenv['PLATFORM'] == 'win32':
     exampleenv.Append(CPPDEFINES = ['_CRT_SECURE_NO_WARNINGS'])
+exampleenv.Append(CPPPATH = ['inc/cpp'])
 exampleenv.Append(LIBS = [lib, env['DPS_LIBS']])
 
 examplesrcs = ['examples/pub_many.c',
@@ -232,7 +233,9 @@ examplesrcs = ['examples/pub_many.c',
                'examples/reg_pubs.c',
                'examples/reg_subs.c',
                'examples/subscriber.c',
-               'examples/registry.c']
+               'examples/registry.c',
+               'examples/pub_qos.cpp',
+               'examples/sub_qos.cpp']
 
 Depends(examplesrcs, ext_libs)
 

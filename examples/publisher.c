@@ -462,5 +462,3 @@ Usage:
     DPS_PRINT("           In interactive mode type -h for commands.\n");
     return 1;
 }
-
-

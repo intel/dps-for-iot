@@ -44,7 +44,7 @@ extern "C" {
 /**
  * Generate a CBOR encoded byte array from a JSON string. Note that if there are multiple
  * JSON elements in the input string only the first one is parsed and anything after the
- * fist element is ignored.
+ * first element is ignored.
  *
  * @param json     NUL terminated JSON string to convert
  * @param cbor     Destination buffer for the conversion
