@@ -71,7 +71,8 @@ for test in testsrcs:
     testprogs.append(testenv.Program(test))
 
 testsrcs = [
-            'test/bitvec_unit_test.c'
+            'test/bitvec_unit_test.c',
+            'test/topic_match.c'
             ]
 for test in testsrcs:
     testprogs.append(testenv.Program([test, 'test/keys.c']))
