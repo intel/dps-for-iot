@@ -316,7 +316,7 @@ void DPS_FreePublications(DPS_Node* node)
     }
 }
 
-static int IsValidPub(const DPS_Publication* pub)
+static int LookupPub(const DPS_Publication* pub, DPS_Publication** head)
 {
     DPS_Node* node;
     DPS_Publication* pubList;
@@ -328,6 +328,9 @@ static int IsValidPub(const DPS_Publication* pub)
     node = pub->shared->node;
     DPS_LockNode(node);
     for (pubList = node->publications; pubList; pubList = nextPubList) {
+        if (head) {
+            *head = pubList;
+        }
         nextPubList = pubList->next;
         if (pub == pubList) {
             goto Unlock;
@@ -341,6 +344,11 @@ static int IsValidPub(const DPS_Publication* pub)
 Unlock:
     DPS_UnlockNode(node);
     return pubList != NULL;
+}
+
+static int IsValidPub(const DPS_Publication* pub)
+{
+    return LookupPub(pub, NULL);
 }
 
 const DPS_UUID* DPS_PublicationGetUUID(const DPS_Publication* pub)
@@ -1322,10 +1330,12 @@ DPS_Status DPS_InitPublication(DPS_Publication* pub,
 
 DPS_Status DPS_PublicationConfigureQoS(DPS_Publication* pub, const DPS_QoS* qos)
 {
+    DPS_Publication* head;
+
     DPS_DBGTRACE();
 
-    if (IsValidPub(pub)) {
-        pub->historyCap = qos->historyDepth;
+    if (LookupPub(pub, &head)) {
+        head->historyCap = qos->historyDepth;
         return DPS_OK;
     } else {
         return DPS_ERR_ARGS;
@@ -1487,6 +1497,7 @@ DPS_Status DPS_Publish(DPS_Publication* pub, const uint8_t* payload, size_t len,
 {
     DPS_Status ret;
     DPS_Node* node = pub ? pub->shared->node : NULL;
+    DPS_Publication* head;
     DPS_Publication* newClone = NULL;
     DPS_Publication* clone;
 
@@ -1504,9 +1515,10 @@ DPS_Status DPS_Publish(DPS_Publication* pub, const uint8_t* payload, size_t len,
     /*
      * Check publication is listed and is local
      */
-    if (!IsValidPub(pub) || !(pub->flags & PUB_FLAG_LOCAL)) {
+    if (!LookupPub(pub, &head) || !(pub->flags & PUB_FLAG_LOCAL)) {
         return DPS_ERR_MISSING;
     }
+    pub = head;
     /*
      * Prevent publication from being destroyed while we are cloning
      * it
