@@ -1459,6 +1459,11 @@ uint16_t DPS_GetPortNumber(DPS_Node* node)
 
 }
 
+uv_loop_t* DPS_GetLoop(DPS_Node* node)
+{
+    return node->loop;
+}
+
 DPS_Status DPS_DestroyNode(DPS_Node* node, DPS_OnNodeDestroyed cb, void* data)
 {
     DPS_DBGTRACE();
