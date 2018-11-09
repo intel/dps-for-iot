@@ -43,6 +43,15 @@
  */
 DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
+/*
+ * Set to non-zero value to simulate lost acks
+ *
+ * Value N specifies rate of loss 1/N
+ */
+#ifndef SIMULATE_PUB_LOSS
+#define SIMULATE_PUB_LOSS 0
+#endif
+
 void DPS_DestroyAck(PublicationAck* ack)
 {
     DPS_TxBufferFree(&ack->buf);
@@ -272,6 +281,15 @@ DPS_Status DPS_DecodeAcknowledgement(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Rx
     if (ret != DPS_OK) {
         return ret;
     }
+#if SIMULATE_PUB_LOSS
+    /*
+     * Enable this code to simulate lost acknowledgements
+     */
+    if (((DPS_Rand() % SIMULATE_PUB_LOSS) == 1)) {
+        DPS_PRINT("%d Simulating lost acknowledgement from %s\n", node->port, DPS_NodeAddrToString(&ep->addr));
+        return DPS_OK;
+    }
+#endif
     DPS_LockNode(node);
     /*
      * See if this is an ACK for a local publication

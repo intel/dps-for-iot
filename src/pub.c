@@ -44,6 +44,15 @@
  */
 DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
+/*
+ * Set to non-zero value to simulate lost publications
+ *
+ * Value N specifies rate of loss 1/N
+ */
+#ifndef SIMULATE_PUB_LOSS
+#define SIMULATE_PUB_LOSS 0
+#endif
+
 static void FreeHistory(DPS_Publication* pub);
 
 #define RemoteNodeAddressText(n)  DPS_NodeAddrToString(&(n)->ep.addr)
@@ -771,6 +780,15 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
      * Record which port the sender is listening on
      */
     DPS_EndpointSetPort(ep, port);
+#if SIMULATE_PUB_LOSS
+    /*
+     * Enable this code to simulate lost publications
+     */
+    if (((DPS_Rand() % SIMULATE_PUB_LOSS) == 1)) {
+        DPS_PRINT("%d Simulating lost publication from %s\n", node->port, DPS_NodeAddrToString(&ep->addr));
+        return DPS_OK;
+    }
+#endif
     /*
      * Check if this is an update for an existing retained publication
      */

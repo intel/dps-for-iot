@@ -50,8 +50,8 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
  *
  * Value N specifies rate of loss 1/N
  */
-#ifndef SIMULATE_PACKET_LOSS
-#define SIMULATE_PACKET_LOSS 0
+#ifndef SIMULATE_SUB_LOSS
+#define SIMULATE_SUB_LOSS 0
 #endif
 
 #define DESCRIBE(n)  DPS_NodeAddrToString(&(n)->ep.addr)
@@ -617,12 +617,12 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
         return ret;
     }
     DPS_EndpointSetPort(ep, port);
-#if SIMULATE_PACKET_LOSS
+#if SIMULATE_SUB_LOSS
     /*
      * Enable this code to simulate lost subscriptions to test
      * out the resynchronization code.
      */
-    if (((DPS_Rand() % SIMULATE_PACKET_LOSS) == 1)) {
+    if (((DPS_Rand() % SIMULATE_SUB_LOSS) == 1)) {
         DPS_PRINT("%d Simulating lost subscription from %s\n", node->port, DPS_NodeAddrToString(&ep->addr));
         return DPS_OK;
     }
@@ -795,12 +795,12 @@ DPS_Status DPS_DecodeSubscriptionAck(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Rx
         return ret;
     }
     DPS_EndpointSetPort(ep, port);
-#if SIMULATE_PACKET_LOSS
+#if SIMULATE_SUB_LOSS
     /*
      * Enable this code to simulate lost subscriptions to test
      * out the resynchronization code.
      */
-    if (((DPS_Rand() % SIMULATE_PACKET_LOSS) == 1)) {
+    if (((DPS_Rand() % SIMULATE_SUB_LOSS) == 1)) {
         DPS_PRINT("%d Simulating lost sub ack from %s\n", node->port, DPS_NodeAddrToString(&ep->addr));
         return DPS_OK;
     }
