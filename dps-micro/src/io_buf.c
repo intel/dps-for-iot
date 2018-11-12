@@ -85,6 +85,20 @@ DPS_Status DPS_TxBufferAppend(DPS_TxBuffer* buffer, const uint8_t* data, size_t 
     return DPS_OK;
 }
 
+/*
+ * TODO - allow space to reserved at the front of a buffer to avoid having
+ *        to do the memmove to create space.
+ */
+DPS_Status DPS_TxBufferPrepend(DPS_TxBuffer* buffer, size_t len, uint8_t** pos)
+{
+    if (len > DPS_TxBufferSpace(buffer)) {
+        return DPS_ERR_RESOURCES;
+    }
+    *pos = buffer->base;
+    memmove(buffer->base, buffer->base + len, DPS_TxBufferUsed(buffer));
+    return DPS_OK;
+}
+
 void DPS_TxBufferToRx(const DPS_TxBuffer* txBuffer, DPS_RxBuffer* rxBuffer)
 {
     assert(txBuffer && rxBuffer);

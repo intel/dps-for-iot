@@ -42,7 +42,7 @@ extern "C" {
 #define DPS_CONFIG_BIT_LEN 8192
 #define DPS_CONFIG_HASHES 4
 
-#define BITVEC_MAX_BITS  64
+#define BITVEC_MAX_BITS  1024
 
 /**
  * Publication and subscription Bloom filters are very sparse so for
@@ -68,7 +68,7 @@ typedef struct _DPS_FHBitVector {
  * @param data   Data for the item to add
  * @param len    Length of the data to add
  */
-void DPS_BitVectorBloomInsert(DPS_BitVector* bv, const uint8_t* data, size_t len);
+DPS_Status DPS_BitVectorBloomInsert(DPS_BitVector* bv, const uint8_t* data, size_t len);
 
 /**
  * Bloom Filter existence check operation.

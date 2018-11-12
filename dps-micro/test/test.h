@@ -1,12 +1,7 @@
-/**
- * @file
- * Public APIs
- */
-
 /*
  *******************************************************************
  *
- * Copyright 2016 Intel Corporation All rights reserved.
+ * Copyright 2017 Intel Corporation All rights reserved.
  *
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  *
@@ -25,28 +20,31 @@
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  */
 
-#ifndef _DPS_H
-#define _DPS_H
+#ifndef _TEST_H
+#define _TEST_H
 
+#include <assert.h>
+#include <math.h>
 #include <stdint.h>
-#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include <dps/dbg.h>
+#include <dps/dps.h>
 #include <dps/err.h>
-#include <dps/key_mgmt.h>
+#include <dps/private/dps.h>
 
-#ifdef __cplusplus
-extern "C" {
+#ifdef _WIN32
+#define SLEEP(t) Sleep(t)
+#else
+#include <unistd.h>
+#define SLEEP(t) usleep((t) * 1000)
 #endif
 
-#define DPS_TRUE  1 /**< TRUE boolean value */
-#define DPS_FALSE 0 /**< FALSE boolean value */
+#define ASSERT(cond) do { assert(cond); if (!(cond)) exit(EXIT_FAILURE); } while (0)
 
-/**
- * Opaque type for a DPS node
- */
-typedef struct _DPS_Node DPS_Node;
-
-#ifdef __cplusplus
-}
-#endif
+static int atLine;
+#define CHECK(cond)   if (!cond) { atLine = __LINE__; goto failed; }
 
 #endif

@@ -104,8 +104,9 @@ static DPS_Status SetBit(DPS_BitVector* bv, uint16_t bit)
     }
 }
 
-void DPS_BitVectorBloomInsert(DPS_BitVector* bv, const uint8_t* data, size_t len)
+DPS_Status DPS_BitVectorBloomInsert(DPS_BitVector* bv, const uint8_t* data, size_t len)
 {
+    DPS_Status status = DPS_OK;
     uint8_t h;
     uint32_t hashes[MAX_HASHES];
 
@@ -115,8 +116,12 @@ void DPS_BitVectorBloomInsert(DPS_BitVector* bv, const uint8_t* data, size_t len
     /* TODO - could be optimized by first sorting the hashes */
     for (h = 0; h < DPS_CONFIG_HASHES; ++h) {
         uint32_t index = hashes[h] % DPS_CONFIG_BIT_LEN;
-        SetBit(bv, index);
+        status = SetBit(bv, index);
+        if (status != DPS_OK) {
+            break;
+        }
     }
+    return status;
 }
 
 static int TestBit(const DPS_BitVector* bv, uint16_t bit)
