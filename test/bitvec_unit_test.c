@@ -1,10 +1,7 @@
 #include <stdio.h>
 #include <string.h>
+#include "test.h"
 #include <dps/private/bitvec.h>
-
-
-static int atLine;
-#define CHECK(cond)   if (!cond) { atLine = __LINE__; goto failed; }
 
 
 DPS_BitVector bv1;

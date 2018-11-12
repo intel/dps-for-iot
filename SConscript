@@ -16,9 +16,6 @@ libenv.Append(CPPPATH = ['#/include/dps', '#/ext', '#/ext/mbedtls/include'])
 
 # Additional warnings for the core object files
 if platform == 'win32':
-    # We are getting our secure memory and string functions from
-    # SafeStringLib so need to disable the Windows supplied versions
-    libenv.Append(CPPDEFINES = ['__STDC_WANT_SECURE_LIB__=0'])
     libenv.Append(LIBS = env['DPS_LIBS'])
 elif platform == 'posix':
     libenv.Append(CCFLAGS = ['-Wall', '-Wno-format-extra-args'])
@@ -27,6 +24,7 @@ libenv.Install('#/build/dist/include/dps', libenv.Glob('#/include/dps/*.h'))
 
 srcs = [
         'src/bitvec.c',
+        'src/coap.c',
         'src/cbor.c',
         'src/cose.c',
         'src/dbg.c',
@@ -40,6 +38,9 @@ srcs = [
         'src/sha2.c',
         'src/topics.c'
         ]
+
+if platform == 'win32':
+    srcs.append('src/win32/network.c')
 
 Depends(srcs, ext_libs)
 
@@ -72,6 +73,7 @@ for test in testsrcs:
 
 testsrcs = [
             'test/bitvec_unit_test.c',
+            'test/topics_unit_test.c',
             'test/topic_match.c'
             ]
 for test in testsrcs:

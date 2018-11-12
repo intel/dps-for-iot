@@ -111,6 +111,15 @@ void DPS_TxBufferFree(DPS_TxBuffer* buffer);
 DPS_Status DPS_TxBufferAppend(DPS_TxBuffer* buffer, const uint8_t* data, size_t len);
 
 /**
+ * Make space to prepend data to a transmit buffer
+
+ * @param buffer   Buffer to prepend to
+ * @param len      Length of the data to prepend
+ * @param pos      Pointer where the prepended data is to be written
+ */
+DPS_Status DPS_TxBufferPrepend(DPS_TxBuffer* buffer, size_t len, uint8_t** pos);
+
+/**
  * Clear transmit buffer fields
  */
 #define DPS_TxBufferClear(b) do { (b)->base = (b)->txPos = (b)->eob = NULL; } while (0)
