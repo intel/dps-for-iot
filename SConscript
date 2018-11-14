@@ -24,6 +24,7 @@ libenv.Install('#/build/dist/include/dps', libenv.Glob('#/include/dps/*.h'))
 
 srcs = [
         'src/bitvec.c',
+        'src/dps.c',
         'src/coap.c',
         'src/cbor.c',
         'src/cose.c',
@@ -73,6 +74,7 @@ for test in testsrcs:
 
 testsrcs = [
             'test/bitvec_unit_test.c',
+            'test/mcast_unit_test.c',
             'test/topics_unit_test.c',
             'test/topic_match.c'
             ]
