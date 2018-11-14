@@ -1,12 +1,7 @@
-/**
- * @file
- * Public APIs
- */
-
 /*
  *******************************************************************
  *
- * Copyright 2016 Intel Corporation All rights reserved.
+ * Copyright 2018 Intel Corporation All rights reserved.
  *
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  *
@@ -25,34 +20,20 @@
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  */
 
-#ifndef _DPS_H
-#define _DPS_H
 
-#include <stdint.h>
-#include <stddef.h>
-#include <dps/err.h>
-#include <dps/key_mgmt.h>
+#include <string.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include <dps/dps.h>
+#include <dps/private/dps.h>
 
-#define DPS_TRUE  1 /**< TRUE boolean value */
-#define DPS_FALSE 0 /**< FALSE boolean value */
+static DPS_Node node;
 
-/**
- * Opaque type for a DPS node
- */
-typedef struct _DPS_Node DPS_Node;
-
-
-DPS_Node* DPS_Init();
-
-void DPS_Terminate(DPS_Node* node);
-
-
-#ifdef __cplusplus
+DPS_Node* DPS_Init()
+{
+    memset(&node, 0, sizeof(node));
+    return &node;
 }
-#endif
 
-#endif
+void DPS_Terminate(DPS_Node* node)
+{
+}
