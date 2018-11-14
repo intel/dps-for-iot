@@ -46,7 +46,9 @@ typedef struct SNSet
     SNSet &
     set(uint32_t sn)
     {
-      sn_.set(sn - base_);
+      if (base_ <= sn) {
+        sn_.set(sn - base_);
+      }
       return *this;
     }
     std::size_t

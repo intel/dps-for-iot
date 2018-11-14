@@ -31,6 +31,16 @@ inline bool operator<(const DPS_UUID& a, const DPS_UUID& b)
   return DPS_UUIDCompare(&a, &b) < 0;
 }
 
+inline dps::TxStream& operator<<(dps::TxStream& buf, const DPS_UUID& uuid)
+{
+    return buf.serializeSequence(uuid.val, sizeof(uuid.val));
+}
+
+inline dps::RxStream& operator>>(dps::RxStream& buf, DPS_UUID& uuid)
+{
+    return buf.deserializeSequence(uuid.val, sizeof(uuid.val));
+}
+
 inline dps::TxStream& operator<<(dps::TxStream& buf, const dps::Range& range)
 {
     return buf << range.first << range.second;
@@ -48,8 +58,7 @@ typedef struct _Ack {
 
 inline dps::TxStream& operator<<(dps::TxStream& buf, const Ack& ack)
 {
-    buf.serializeSequence(ack.uuid_.val, sizeof(ack.uuid_.val));
-    buf << ack.set_.base_;
+    buf << ack.uuid_ << ack.set_.base_;
     buf.serializeSequence(ack.set_.count());
     for (size_t i = 0; i < ack.set_.size(); ++i) {
         if (ack.set_.test(ack.set_.base_ + i)) {
@@ -61,8 +70,7 @@ inline dps::TxStream& operator<<(dps::TxStream& buf, const Ack& ack)
 
 inline dps::RxStream& operator>>(dps::RxStream& buf, Ack& ack)
 {
-    buf.deserializeSequence(ack.uuid_.val, sizeof(ack.uuid_.val));
-    buf >> ack.set_.base_;
+    buf >> ack.uuid_ >> ack.set_.base_;
     size_t size;
     buf.deserializeSequence(&size);
     for (size_t i = 0; i < size; ++i) {
