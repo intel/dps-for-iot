@@ -26,6 +26,11 @@
 #include <string.h>
 #include <stdint.h>
 
+#ifdef _WIN32
+#include <windows.h>
+#else
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif

@@ -24,6 +24,7 @@ libenv.Install('#/build/dist/include/dps', libenv.Glob('#/include/dps/*.h'))
 
 srcs = [
         'src/bitvec.c',
+        'src/dps.c',
         'src/coap.c',
         'src/cbor.c',
         'src/cose.c',
@@ -61,7 +62,7 @@ libenv.InstallVersionedLib('#/build/dist/lib', shlib, SHLIBVERSION = version)
 testenv = env.Clone()
 
 if testenv['PLATFORM'] == 'win32':
-    testenv.Append(CPPDEFINES = ['_CRT_SECURE_NO_WARNINGS', '__STDC_WANT_SECURE_LIB__=0'])
+    testenv.Append(CPPDEFINES = ['_CRT_SECURE_NO_WARNINGS'])
 
 testenv.Append(LIBS = [lib, env['DPS_LIBS']])
 testsrcs = []
@@ -73,6 +74,7 @@ for test in testsrcs:
 
 testsrcs = [
             'test/bitvec_unit_test.c',
+            'test/mcast_unit_test.c',
             'test/topics_unit_test.c',
             'test/topic_match.c'
             ]
