@@ -11,7 +11,7 @@ git = env.Command('./libuv/.git', None,
                    ['git clone -n https://github.com/libuv/libuv.git ext/libuv'])
 
 dep = env.Command('./libuv/README', git,
-                   ['git checkout -q tags/v1.20.2'], chdir = 'ext/libuv')
+                   ['git checkout -q tags/v1.23.2'], chdir = 'ext/libuv')
 
 env['CFLAGS'] = []
 env['CPPDEFINES'] = []
@@ -39,10 +39,19 @@ else:
     exit()
 
 # Common source files
+includes = [
+    './libuv/include/uv.h'
+]
+uvincludes = [
+    './libuv/include/uv/errno.h',
+    './libuv/include/uv/threadpool.h',
+    './libuv/include/uv/version.h'
+]
 sources = [
     './libuv/src/fs-poll.c',
     './libuv/src/inet.c',
     './libuv/src/threadpool.c',
+    './libuv/src/timer.c',
     './libuv/src/uv-common.c',
     './libuv/src/uv-data-getter-setters.c',
     './libuv/src/version.c'
@@ -50,8 +59,11 @@ sources = [
 
 env['CPPPATH'] = ['./libuv/include', './libuv/src']
 
-
 if env['PLATFORM'] == 'win32':
+    uvincludes += [
+        './libuv/include/uv/tree.h',
+        './libuv/include/uv/win.h'
+    ]
     sources += [
         './libuv/src/win/async.c',
         './libuv/src/win/core.c',
@@ -68,13 +80,10 @@ if env['PLATFORM'] == 'win32':
         './libuv/src/win/poll.c',
         './libuv/src/win/process-stdio.c',
         './libuv/src/win/process.c',
-        './libuv/src/win/req.c',
         './libuv/src/win/signal.c',
-        './libuv/src/win/snprintf.c',
         './libuv/src/win/stream.c',
         './libuv/src/win/tcp.c',
         './libuv/src/win/thread.c',
-        './libuv/src/win/timer.c',
         './libuv/src/win/tty.c',
         './libuv/src/win/udp.c',
         './libuv/src/win/util.c',
@@ -82,6 +91,10 @@ if env['PLATFORM'] == 'win32':
         './libuv/src/win/winsock.c'
     ]
 else:
+    uvincludes += [
+        './libuv/include/uv/linux.h',
+        './libuv/include/uv/unix.h'
+    ]
     sources += [
         './libuv/src/unix/async.c',
         './libuv/src/unix/core.c',
@@ -94,18 +107,17 @@ else:
         './libuv/src/unix/linux-syscalls.c',
         './libuv/src/unix/loop-watcher.c',
         './libuv/src/unix/loop.c',
-        './libuv/src/unix/procfs-exepath.c',
         './libuv/src/unix/pipe.c',
         './libuv/src/unix/poll.c',
-        './libuv/src/unix/proctitle.c',
         './libuv/src/unix/process.c',
+        './libuv/src/unix/procfs-exepath.c',
+        './libuv/src/unix/proctitle.c',
         './libuv/src/unix/signal.c',
         './libuv/src/unix/stream.c',
         './libuv/src/unix/sysinfo-loadavg.c',
         './libuv/src/unix/sysinfo-memory.c',
         './libuv/src/unix/tcp.c',
         './libuv/src/unix/thread.c',
-        './libuv/src/unix/timer.c',
         './libuv/src/unix/tty.c',
         './libuv/src/unix/udp.c'
     ]
@@ -114,5 +126,7 @@ objects = env.Object(sources)
 
 Depends(sources, dep)
 
+env.Install('#/build/dist/inc', includes)
+env.Install('#/build/dist/inc/uv', uvincludes)
 libs = [env.Library('lib/uv', objects)]
 Return('libs')
