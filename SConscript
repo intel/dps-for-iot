@@ -226,6 +226,7 @@ exampleenv = env.Clone()
 if exampleenv['PLATFORM'] == 'win32':
     exampleenv.Append(CPPDEFINES = ['_CRT_SECURE_NO_WARNINGS'])
 exampleenv.Append(CPPPATH = ['inc/cpp'])
+if extUV: exampleenv.Append(CPPPATH = ['#/ext/libuv/include'])
 exampleenv.Append(LIBS = [lib, env['DPS_LIBS']])
 
 examplesrcs = ['examples/pub_many.c',
