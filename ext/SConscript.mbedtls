@@ -72,10 +72,11 @@ sources += [
      './mbedtls/library/ssl_tls.c',
 ]
 
-objects = env.Object(sources)
+objs = env.Object(sources)
+shobjs = env.SharedObject(sources)
 
 Depends(sources, dep)
-Depends(objects, './mbedtls_config.h')
+Depends(objs, './mbedtls_config.h')
+Depends(shobjs, './mbedtls_config.h')
 
-libs = [env.Library('lib/libmbedtls', objects)]
-Return('libs')
+Return('objs shobjs')

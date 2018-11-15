@@ -43,7 +43,9 @@ sources = [
 
 env['CPPPATH'] = './safestring/include'
 
+objs = env.Object(sources)
+shobjs = env.SharedObject(sources)
+
 Depends(sources, screl)
 
-libs = [env.Library('lib/safestring', sources)]
-Return('libs')
+Return('objs shobjs')

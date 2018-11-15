@@ -1,10 +1,8 @@
 import os
 import string
-Import(['env', 'ext_libs', 'extUV', 'version'])
+Import(['env', 'ext_objs', 'ext_shobjs', 'extUV', 'version'])
 
 platform = env['PLATFORM']
-
-env['DPS_LIBS'] = [ext_libs] + env['DPS_LIBS']
 
 # Additional warning for the lib object files
 
@@ -13,7 +11,6 @@ libenv = env.Clone()
 
 libenv.Append(CPPDEFINES = ['MBEDTLS_USER_CONFIG_FILE=\\"mbedtls_config.h\\"'])
 libenv.Append(CPPPATH = ['#/ext/safestring/include', '#/ext', '#/ext/mbedtls/include'])
-if extUV: libenv.Append(CPPPATH = ['#/ext/libuv/include'])
 
 # Additional warnings for the core object files
 if platform == 'win32':
@@ -72,14 +69,14 @@ elif env['transport'] == 'tcp':
 elif env['transport'] == 'fuzzer':
     srcs.extend(['src/fuzzer/network.c'])
 
-Depends(srcs, ext_libs)
+Depends(srcs, ext_objs)
 
 objs = libenv.Object(srcs)
 
-lib = libenv.Library('lib/dps', objs)
+lib = libenv.Library('lib/dps', [objs, ext_objs])
 libenv.Install('#/build/dist/lib', lib)
 
-shobjs = libenv.SharedObject(srcs)
+shobjs = libenv.SharedObject(srcs) + ext_shobjs
 if platform == 'win32':
     print(env['DEF_FILE'])
     shlib = libenv.SharedLibrary('lib/dps_shared', shobjs + [env['DEF_FILE']], LIBS = env['DPS_LIBS'], SHLIBVERSION = version)
@@ -104,7 +101,7 @@ ns3srcs = ['src/bitvec.c',
 
 if platform == 'posix':
     ns3shobjs = libenv.SharedObject(ns3srcs)
-    ns3shlib = libenv.SharedLibrary('lib/dps_ns3', ns3shobjs, LIBS = ext_libs)
+    ns3shlib = libenv.SharedLibrary('lib/dps_ns3', ns3shobjs + ext_shobjs)
     libenv.Install('#/build/dist/lib', ns3shlib)
 
 swig_docs = []
@@ -165,7 +162,6 @@ testenv = env.Clone()
 if testenv['PLATFORM'] == 'win32':
     testenv.Append(CPPDEFINES = ['_CRT_SECURE_NO_WARNINGS', '__STDC_WANT_SECURE_LIB__=0'])
 testenv.Append(CPPPATH = ['#/ext/safestring/include', 'src'])
-if extUV: testenv.Append(CPPPATH = ['#/ext/libuv/include'])
 testenv.Append(LIBS = [lib, env['DPS_LIBS']])
 
 testsrcs = ['test/hist_unit.c',
@@ -182,7 +178,7 @@ testsrcs = ['test/hist_unit.c',
             'test/version.c',
             'test/keystoretest.c']
 
-Depends(testsrcs, ext_libs)
+Depends(testsrcs, ext_objs)
 
 testprogs = []
 for test in testsrcs:
@@ -202,7 +198,6 @@ if platform == 'posix' and env['fsan'] == True:
     fenv = env.Clone()
     fenv.VariantDir('test/fuzzer', 'test')
     fenv.Append(CPPPATH = ['#/ext/safestring/include'])
-    if extUV: fenv.Append(CPPPATH = ['#/ext/libuv/include'])
     fenv.Append(LINKFLAGS = ['-fsanitize=fuzzer'])
     fenv.Append(LIBS = [lib, env['DPS_LIBS']])
 
@@ -213,7 +208,7 @@ if platform == 'posix' and env['fsan'] == True:
         fsrcs.extend(['test/fuzzer/net_receive_fuzzer.c',
                       'test/fuzzer/multicast_receive_fuzzer.c'])
 
-    Depends(fsrcs, ext_libs)
+    Depends(fsrcs, ext_objs)
 
     fprogs = []
     for f in fsrcs:
@@ -234,7 +229,7 @@ examplesrcs = ['examples/pub_many.c',
                'examples/subscriber.c',
                'examples/registry.c']
 
-Depends(examplesrcs, ext_libs)
+Depends(examplesrcs, ext_objs)
 
 exampleprogs = []
 for example in examplesrcs:
@@ -250,7 +245,7 @@ tutorialenv.Append(LIBS = [lib, env['DPS_LIBS']])
 
 tutorialsrcs = ['doc/tutorial/tutorial.c']
 
-Depends(tutorialsrcs, ext_libs)
+Depends(tutorialsrcs, ext_objs)
 
 tutorialprogs = []
 for tutorial in tutorialsrcs:

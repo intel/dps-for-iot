@@ -244,17 +244,25 @@ if env['target'] == 'yocto':
     extEnv.PrependENVPath('PATH', os.getenv('PATH'))
     extEnv.PrependENVPath('LDFLAGS', os.getenv('LDFLAGS'))
 
-ext_libs = []
-
+ext_objs = []
+ext_shobjs = []
 
 # Build external dependencies
-ext_libs.append(SConscript('ext/SConscript.mbedtls', exports=['extEnv']))
-ext_libs.append(SConscript('ext/SConscript.safestring', exports=['extEnv']))
-if extUV: ext_libs.append(SConscript('ext/SConscript.libuv', exports=['extEnv']))
+
+objs, shobjs = SConscript('ext/SConscript.mbedtls', exports=['extEnv'])
+ext_objs.append(objs)
+ext_shobjs.append(shobjs)
+objs, shobjs = SConscript('ext/SConscript.safestring', exports=['extEnv'])
+ext_objs.append(objs)
+ext_shobjs.append(shobjs)
+if extUV:
+    objs, shobjs = SConscript('ext/SConscript.libuv', exports=['extEnv'])
+    ext_objs.append(objs)
+    ext_shobjs.append(shobjs)
 
 version = '0.9.0'
 
-lib_dps = SConscript('SConscript', src_dir='.', variant_dir='build/obj', duplicate=0, exports=['env', 'ext_libs', 'extUV', 'version'])
+lib_dps = SConscript('SConscript', src_dir='.', variant_dir='build/obj', duplicate=0, exports=['env', 'ext_objs', 'ext_shobjs', 'extUV', 'version'])
 
 
 # Build any user applications
@@ -262,7 +270,7 @@ appDir = env['application']
 if appDir != '':
     print('Building application in ', appDir)
     env.Default(appDir)
-    SConscript(appDir + '/SConscript', variant_dir=appDir + '/build/obj', duplicate=0, exports=['env', 'ext_libs', 'lib_dps'])
+    SConscript(appDir + '/SConscript', variant_dir=appDir + '/build/obj', duplicate=0, exports=['env', 'lib_dps'])
 
 ######################################################################
 # Scons to generate the dps_ns3.pc file from dps_ns3.pc.in file
