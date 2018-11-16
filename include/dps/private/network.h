@@ -30,6 +30,7 @@
 
 #include <stdint.h>
 #include <dps/private/dps.h>
+#include <dps/private/io_buf.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -38,14 +39,15 @@ extern "C" {
 /**
  * Function prototype for handler to be called on receiving data from a remote node
  *
- * @param node      The node that received the data - the data will be in the node->rxBuffer
+ * @param node      The node that received the data
+ * @param rxBuf     The receive buffer
  * @param status    Indicates if the receive was successful or there was a network layer error
  *
  * @return
  * - DPS_OK if the message was correctly parsed
  * - An error code indicating the data received was invalid
  */
-typedef DPS_Status (*DPS_OnReceive)(DPS_Node* node, DPS_Status status);
+typedef DPS_Status (*DPS_OnReceive)(DPS_Node* node, DPS_RxBuffer* rx, DPS_Status status);
 
 /**
  * Prototype for function called when a send completes.
@@ -85,6 +87,7 @@ void DPS_MCastStop(DPS_Node* node);
  * Multicast data in the node transmit buffer
  *
  * @param node            Opaque pointer to the DPS node
+ * @param txBuf           The transmit buffer
  * @param appCtx          An application context to be passed to the send complete callback
  * @param sendCompleteCB  Function called when the send is complete
  *
@@ -93,7 +96,7 @@ void DPS_MCastStop(DPS_Node* node);
  * - DPS_ERR_NO_ROUTE if no interfaces are usable for multicast,
  * - an error otherwise
  */
-DPS_Status DPS_MCastSend(DPS_Node* node, void* appCtx, DPS_SendComplete sendCompleteCB);
+DPS_Status DPS_MCastSend(DPS_Node* node, DPS_TxBuffer* txBuf, void* appCtx, DPS_SendComplete sendCompleteCB);
 
 /**
  * Start listening and receiving unicast data
@@ -118,12 +121,13 @@ void DPS_UnicastStop(DPS_Node* node);
  * Send data in the tx buffer to a previously specified remote node
  *
  * @param node            Pointer to the DPS node
+ * @param txBuf           The transmit buffer
  * @param appCtx          An application context to be passed to the send complete callback
  * @param sendCompleteCB  Function called when the send is complete so the content of the data buffers can be freed.
  *
  * @return DPS_OK if the send is successful, an error otherwise
  */
-DPS_Status DPS_UnicastSend(DPS_Node* node, void* appCtx, DPS_SendComplete sendCompleteCB);
+DPS_Status DPS_UnicastSend(DPS_Node* node, DPS_TxBuffer* txBuf, void* appCtx, DPS_SendComplete sendCompleteCB);
 
 
 #ifdef __cplusplus

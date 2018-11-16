@@ -19,15 +19,17 @@
  *
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  */
-
 #include "test.h"
+#include <dps/compat.h>
+#include <dps/private/dps.h>
 #include <dps/private/network.h>
 
 
 static DPS_Node* node;
 
-static DPS_Status OnReceive(DPS_Node* node, DPS_Status status)
+static DPS_Status OnReceive(DPS_Node* node, DPS_RxBuffer* rxBuf, DPS_Status status)
 {
+    DPS_PRINT("Received %d bytes\n", DPS_RxBufferAvail(rxBuf));
     return DPS_OK;
 }
 
@@ -53,10 +55,12 @@ int main(int argc, char** argv)
     status = DPS_MCastStart(node, OnReceive);
     CHECK(status == DPS_OK);
 
+    Sleep(120000);
+
     return 0;
 
 failed:
-    printf("FAILED (%s) near line %d\r\n", __FILE__, atLine - 1);
+    DPS_PRINT("FAILED (%s) near line %d\r\n", __FILE__, atLine - 1);
     return 1;
 
 Usage:

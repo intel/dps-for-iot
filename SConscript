@@ -62,7 +62,7 @@ libenv.InstallVersionedLib('#/build/dist/lib', shlib, SHLIBVERSION = version)
 testenv = env.Clone()
 
 if testenv['PLATFORM'] == 'win32':
-    testenv.Append(CPPDEFINES = ['_CRT_SECURE_NO_WARNINGS', '__STDC_WANT_SECURE_LIB__=0'])
+    testenv.Append(CPPDEFINES = ['_CRT_SECURE_NO_WARNINGS'])
 
 testenv.Append(LIBS = [lib, env['DPS_LIBS']])
 testsrcs = []

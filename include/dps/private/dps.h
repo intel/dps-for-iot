@@ -37,9 +37,6 @@
 extern "C" {
 #endif
 
-#define RX_BUFFER_SIZE 2048
-#define TX_BUFFER_SIZE 2048
-
 /**
  * Opaque ype for platform-specific network state
  */
@@ -49,10 +46,6 @@ typedef struct _DPS_Network DPS_Network;
  * Type for a DPS node
  */
 typedef struct _DPS_Node {
-    uint8_t rxBuffer[RX_BUFFER_SIZE];
-    size_t rxLen;
-    uint8_t txBuffer[TX_BUFFER_SIZE];
-    size_t txLen;
     DPS_Network* network;
 } DPS_Node;
 
