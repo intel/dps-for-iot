@@ -29,6 +29,7 @@ if platform == 'posix' and env['fsan'] == True:
     libenv.Append(CPPDEFINES = ['DPS_USE_FUZZ'])
 
 libenv.Install('#/build/dist/inc/dps', libenv.Glob('#/inc/dps/*.h'))
+libenv.Install('#/build/dist/inc/dps', libenv.Glob('#/inc/cpp/dps/*.hpp'))
 libenv.Install('#/build/dist/inc/dps/private', libenv.Glob('#/inc/dps/private/*.h'))
 
 srcs = ['src/bitvec.c',
