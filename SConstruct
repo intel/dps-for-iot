@@ -47,6 +47,7 @@ extEnv = Environment(ENV = os.environ, variables=vars)
 env = Environment(
     CPPPATH=[
         '#/inc',
+        '#/inc/cpp',
     ],
     CPPDEFINES=[
     ],

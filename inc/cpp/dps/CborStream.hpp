@@ -51,7 +51,7 @@ public:
   {
     DPS_TxBufferFree(&buffer_);
   }
-  TxStream(const TxStream& other)
+  TxStream(const TxStream & other)
   {
     ret_ = other.ret_;
     size_ = other.size_;
@@ -60,7 +60,7 @@ public:
     }
     DPS_TxBufferAppend(&buffer_, other.buffer_.base, DPS_TxBufferUsed(&other.buffer_));
   }
-  TxStream(TxStream&& other)
+  TxStream(TxStream && other)
   {
     ret_ = other.ret_;
     size_ = other.size_;
@@ -70,7 +70,7 @@ public:
     other.size_ = 0;
     DPS_TxBufferClear(&other.buffer_);
   }
-  TxStream& operator=(const TxStream& other)
+  TxStream& operator=(const TxStream & other)
   {
     if (this != &other) {
       DPS_TxBufferFree(&buffer_);
@@ -83,7 +83,7 @@ public:
     }
     return *this;
   }
-  TxStream& operator=(TxStream&& other)
+  TxStream& operator=(TxStream && other)
   {
     if (this != &other) {
       DPS_TxBufferFree(&buffer_);

@@ -32,11 +32,6 @@ struct PublicationDeleter {
 
 typedef std::unique_ptr<DPS_Publication, PublicationDeleter> Publication;
 
-typedef struct PublicationInfo {
-  Publication pub;
-  uint32_t sn;
-} PublicationInfo;
-
 template <typename Stream>
 class Cache
 {
@@ -53,14 +48,14 @@ public:
   {
   }
 
-  typename std::deque<Data>::const_iterator
-  begin() const
+  typename std::deque<Data>::iterator
+  begin()
   {
     return data_.begin();
   }
 
-  typename std::deque<Data>::const_iterator
-  end() const
+  typename std::deque<Data>::iterator
+  end()
   {
     return data_.end();
   }
@@ -88,11 +83,21 @@ public:
   {
     return size() >= capacity();
   }
+  size_t
+  avail() const
+  {
+    return capacity() - size();
+  }
 
   const Data &
   front() const
   {
     return data_.front();
+  }
+  const Data &
+  back() const
+  {
+    return data_.back();
   }
 
   uint32_t
@@ -107,10 +112,10 @@ public:
     return data_.back().sn_;
   }
 
-  void
-  removeData(typename std::deque<Data>::const_iterator pos)
+  typename std::deque<Data>::iterator
+  removeData(typename std::deque<Data>::iterator pos)
   {
-    data_.erase(pos);
+    return data_.erase(pos);
   }
 
   bool
@@ -125,15 +130,14 @@ public:
   }
 
   bool
-  takeNextData(Stream & buffer, PublicationInfo & info)
+  takeNextData(Data & data)
   {
     if (empty()) {
       return false;
     }
-    Cache::Data & data = data_.front();
-    info.pub = std::move(data.pub_);
-    info.sn = data.sn_;
-    buffer = std::move(data.buf_);
+    data.pub_ = std::move(data_.front().pub_);
+    data.sn_ = data_.front().sn_;
+    data.buf_ = std::move(data_.front().buf_);
     data_.pop_front();
     return true;
   }

@@ -30,6 +30,15 @@
 #include <dps/CborStream.hpp>
 #include <dps/Publisher.hpp>
 
+class PublisherListener : public dps::PublisherListener
+{
+public:
+  virtual ~PublisherListener() { }
+  virtual void onNewAcknowledgement(dps::Publisher * publisher) {
+      DPS_PRINT("ACK count=%d\n", publisher->unreadCount());
+  }
+};
+
 static void OnNodeDestroyed(DPS_Node* node, void* data)
 {
     DPS_Event* event = (DPS_Event*)data;
@@ -116,11 +125,25 @@ static void ReadStdin(dps::Publisher* publisher)
 
     while (fgets(lineBuf, sizeof(lineBuf), stdin) != nullptr) {
         argc = Parse(lineBuf, sizeof(lineBuf), argv);
+        if (!argc) {
+            continue;
+        }
         if (!strcmp(argv[0], "pub")) {
-            DPS_Status ret = publisher->publish(nullptr, 0);
+            dps::TxStream buf;
+            buf << std::string("hello");
+            DPS_Status ret = publisher->publish(std::move(buf));
             if (ret != DPS_OK) {
                 DPS_ERRPRINT("Publish failed: %s\n", DPS_ErrTxt(ret));
             }
+        } else if (!strcmp(argv[0], "take")) {
+            dps::RxStream rxBuf;
+            dps::PublicationInfo info;
+            if (!publisher->takeNextData(rxBuf, info)) {
+                continue;
+            }
+            std::string msg;
+            rxBuf >> msg;
+            DPS_PRINT("%s(%d) %s\n", DPS_UUIDToString(&info.uuid), info.sn, msg.c_str());
         } else if (!strcmp(argv[0], "dump")) {
             publisher->dump();
         }
@@ -142,7 +165,10 @@ int main(int argc, char** argv)
     int mcast = DPS_MCAST_PUB_ENABLE_SEND | DPS_MCAST_PUB_ENABLE_RECV;
     DPS_Node* node = nullptr;
     dps::QoS qos = { 4, dps::DPS_QOS_RELIABLE };
+    int depth;
     int reliability;
+    bool isClient = false;
+    dps::PublisherListener* listener = nullptr;
     dps::Publisher* publisher = nullptr;
     size_t i;
     DPS_Status ret;
@@ -170,15 +196,24 @@ int main(int argc, char** argv)
             ++numLinks;
             continue;
         }
+        if (IntArg("--depth", &arg, &argc, &depth, 1, 1000)) {
+            qos.depth = depth;
+            continue;
+        }
         if (IntArg("-r", &arg, &argc, &reliability, dps::DPS_QOS_BEST_EFFORT, dps::DPS_QOS_RELIABLE)) {
             qos.reliability = (dps::QoSReliability)reliability;
+            continue;
+        }
+        if (strcmp(*arg, "-c") == 0) {
+            ++arg;
+            isClient = true;
             continue;
         }
     }
     /*
      * Disable multicast publications if we have an explicit destination
      */
-    if (numLinks) {
+    if (listenPort || numLinks) {
         mcast = DPS_MCAST_PUB_DISABLED;
         addr = DPS_CreateAddress();
     }
@@ -202,7 +237,14 @@ int main(int argc, char** argv)
         }
     }
 
-    publisher = new dps::Publisher(qos);
+    if (isClient) {
+        listener = new PublisherListener();
+    }
+    if (qos.reliability == dps::DPS_QOS_BEST_EFFORT) {
+        publisher = new dps::Publisher(qos, listener);
+    } else {
+        publisher = new dps::ReliablePublisher(qos, listener);
+    }
     ret = publisher->initialize(node, topics);
     if (ret != DPS_OK) {
         return EXIT_FAILURE;
@@ -212,9 +254,10 @@ int main(int argc, char** argv)
 
     ret = publisher->close();
     if (ret != DPS_OK) {
-        return EXIT_FAILURE;
+        return ret;
     }
     delete publisher;
+    delete listener;
     ret = DestroyNode(node);
     if (ret != DPS_OK) {
         return EXIT_FAILURE;

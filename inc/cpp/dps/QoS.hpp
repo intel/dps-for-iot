@@ -20,9 +20,16 @@
 #include <dps/dps.h>
 #include <dps/CborStream.hpp>
 
-inline bool operator<(const DPS_UUID & a, const DPS_UUID & b)
+inline bool
+operator<(const DPS_UUID & a, const DPS_UUID & b)
 {
   return DPS_UUIDCompare(&a, &b) < 0;
+}
+
+inline bool
+operator==(const DPS_UUID & a, const DPS_UUID & b)
+{
+  return DPS_UUIDCompare(&a, &b) == 0;
 }
 
 namespace dps
@@ -39,27 +46,41 @@ typedef struct QoS
   QoSReliability reliability;
 } QoS;
 
-inline TxStream & operator<<(TxStream & buf, const DPS_UUID & uuid)
+typedef struct PublicationInfo {
+  DPS_UUID uuid;
+  uint32_t sn;
+} PublicationInfo;
+
+inline TxStream &
+operator<<(TxStream & buf, const DPS_UUID & uuid)
 {
   return buf.serializeSequence(uuid.val, sizeof(uuid.val));
 }
 
-inline RxStream & operator>>(RxStream & buf, DPS_UUID & uuid)
+inline RxStream &
+operator>>(RxStream & buf, DPS_UUID & uuid)
 {
   return buf.deserializeSequence(uuid.val, sizeof(uuid.val));
 }
 
 typedef std::pair<uint32_t, uint32_t> Range;
 
-inline TxStream & operator<<(TxStream & buf, const Range & range)
+inline TxStream &
+operator<<(TxStream & buf, const Range & range)
 {
   return buf << range.first << range.second;
 }
 
-inline RxStream & operator>>(RxStream & buf, Range & range)
+inline RxStream &
+operator>>(RxStream & buf, Range & range)
 {
   return buf >> range.first >> range.second;
 }
+
+typedef struct PublicationHeader {
+  Range range_;
+  uint32_t sn_;
+} PublicationHeader;
 
 typedef struct SNSet
 {
@@ -68,6 +89,7 @@ typedef struct SNSet
   bool
   test(uint32_t sn) const
   {
+    // TODO need to handle wraparound here with sn < base_
     return (sn < base_) || sn_.test(sn - base_);
   }
   SNSet &
@@ -94,49 +116,59 @@ typedef struct SNSet
     return sn_.size();
   }
   void
-  shrink(uint32_t firstSN)
+  shrink()
   {
-    if (base_ < firstSN) {
-      sn_ >>= firstSN - base_;
-      base_ = firstSN;
-    }
     while (sn_.test(0)) {
       sn_ >>= 1;
       ++base_;
     }
   }
+  void
+  shrink(uint32_t firstSn)
+  {
+    if (base_ < firstSn) {
+      sn_ >>= firstSn - base_;
+      base_ = firstSn;
+    }
+    shrink();
+  }
 } SNSet;
 
-typedef struct Ack
+typedef struct AckHeader
 {
   DPS_UUID uuid_;
-  SNSet set_;
-} Ack;
+  SNSet sns_;
+} AckHeader;
 
-inline TxStream & operator<<(TxStream & buf, const Ack & ack)
+inline TxStream &
+operator<<(TxStream & buf, const AckHeader & header)
 {
-  buf << ack.uuid_ << ack.set_.base_;
-  buf.serializeSequence(ack.set_.count());
-  for (size_t i = 0; i < ack.set_.size(); ++i) {
-    if (ack.set_.test(ack.set_.base_ + i)) {
-      buf << ack.set_.base_ + i;
+  buf << header.uuid_ << header.sns_.base_;
+  buf.serializeSequence(header.sns_.count());
+  for (size_t i = 0; i < header.sns_.size(); ++i) {
+    if (header.sns_.test(header.sns_.base_ + i)) {
+      buf << header.sns_.base_ + i;
     }
   }
   return buf;
 }
 
-inline RxStream & operator>>(RxStream & buf, Ack & ack)
+inline RxStream &
+operator>>(RxStream & buf, AckHeader & header)
 {
-  buf >> ack.uuid_ >> ack.set_.base_;
+  buf >> header.uuid_ >> header.sns_.base_;
   size_t size;
   buf.deserializeSequence(&size);
   for (size_t i = 0; i < size; ++i) {
     uint32_t sn;
     buf >> sn;
-    ack.set_.set(sn);
+    header.sns_.set(sn);
   }
   return buf;
 }
+
+static const uint8_t QOS_ADD = 1;
+static const uint8_t QOS_ACK = 2;
 
 }
 

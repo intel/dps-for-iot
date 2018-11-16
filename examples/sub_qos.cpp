@@ -22,8 +22,10 @@
 
 #include <dps/dbg.h>
 #include <dps/dps.h>
+#include <dps/event.h>
 #include <dps/synchronous.h>
 #include <dps/Subscriber.hpp>
+#include <dps/SubscriberListener.hpp>
 
 class SubscriberListener : public dps::SubscriberListener
 {
@@ -120,11 +122,32 @@ static void ReadStdin(dps::Subscriber * subscriber)
 
     while (fgets(lineBuf, sizeof(lineBuf), stdin) != nullptr) {
         argc = Parse(lineBuf, sizeof(lineBuf), argv);
+        if (!argc) {
+            continue;
+        }
         if (!strcmp(argv[0], "take")) {
             dps::RxStream buf;
             dps::PublicationInfo info;
-            if (subscriber->takeNextData(buf, info)) {
-                DPS_PRINT("%s(%d)\n", DPS_UUIDToString(DPS_PublicationGetUUID(info.pub.get())), info.sn);
+            if (!subscriber->takeNextData(buf, info)) {
+                continue;
+            }
+            std::string msg;
+            buf >> msg;
+            DPS_PRINT("%s(%d) %s\n", DPS_UUIDToString(&info.uuid), info.sn, msg.c_str());
+        } else if (!strcmp(argv[0], "ack")) {
+            dps::RxStream rxBuf;
+            dps::PublicationInfo info;
+            if (!subscriber->takeNextData(rxBuf, info)) {
+                continue;
+            }
+            std::string msg;
+            rxBuf >> msg;
+            DPS_PRINT("%s(%d) %s\n", DPS_UUIDToString(&info.uuid), info.sn, msg.c_str());
+            dps::TxStream txBuf;
+            txBuf << std::string("goodbye");
+            DPS_Status ret = subscriber->ack(std::move(txBuf), &info.uuid, info.sn);
+            if (ret != DPS_OK) {
+                DPS_ERRPRINT("ack failed: %s\n", DPS_ErrTxt(ret));
             }
         } else if (!strcmp(argv[0], "dump")) {
             subscriber->dump();
@@ -147,9 +170,11 @@ int main(int argc, char** argv)
     int mcast = DPS_MCAST_PUB_ENABLE_SEND | DPS_MCAST_PUB_ENABLE_RECV;
     DPS_Node* node = nullptr;
     dps::QoS qos = { 4, dps::DPS_QOS_RELIABLE };
+    int depth;
     int reliability;
+    bool isService = false;
+    dps::SubscriberListener* listener = nullptr;
     dps::Subscriber* subscriber = nullptr;
-    SubscriberListener* listener = nullptr;
     size_t i;
     DPS_Status ret;
 
@@ -176,15 +201,24 @@ int main(int argc, char** argv)
             ++numLinks;
             continue;
         }
+        if (IntArg("--depth", &arg, &argc, &depth, 1, 1000)) {
+            qos.depth = depth;
+            continue;
+        }
         if (IntArg("-r", &arg, &argc, &reliability, dps::DPS_QOS_BEST_EFFORT, dps::DPS_QOS_RELIABLE)) {
             qos.reliability = (dps::QoSReliability)reliability;
+            continue;
+        }
+        if (strcmp(*arg, "-s") == 0) {
+            ++arg;
+            isService = true;
             continue;
         }
     }
     /*
      * Disable multicast publications if we have an explicit destination
      */
-    if (numLinks) {
+    if (listenPort || numLinks) {
         mcast = DPS_MCAST_PUB_DISABLED;
         addr = DPS_CreateAddress();
     }
@@ -209,7 +243,11 @@ int main(int argc, char** argv)
     }
 
     listener = new SubscriberListener();
-    subscriber = new dps::Subscriber(qos, listener);
+    if (qos.reliability == dps::DPS_QOS_BEST_EFFORT) {
+        subscriber = new dps::Subscriber(qos, listener);
+    } else {
+        subscriber = new dps::ReliableSubscriber(qos, listener);
+    }
     ret = subscriber->initialize(node, topics);
     if (ret != DPS_OK) {
         return EXIT_FAILURE;
@@ -219,7 +257,7 @@ int main(int argc, char** argv)
 
     ret = subscriber->close();
     if (ret != DPS_OK) {
-        return EXIT_FAILURE;
+        return ret;
     }
     delete subscriber;
     delete listener;
