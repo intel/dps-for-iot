@@ -25,8 +25,8 @@
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  */
 
-#ifndef _NETWORK_H
-#define _NETWORK_H
+#ifndef _DPS_NETWORK_H
+#define _DPS_NETWORK_H
 
 #include <stdint.h>
 #include <uv.h>

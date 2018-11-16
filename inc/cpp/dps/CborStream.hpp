@@ -1,3 +1,4 @@
+// -*- mode: C++; c-basic-offset: 2; -*-
 // Copyright 2018 Intel Corporation All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,12 +13,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef _CBORSTREAM_HPP
-#define _CBORSTREAM_HPP
+#ifndef _DPS_CBORSTREAM_HPP
+#define _DPS_CBORSTREAM_HPP
 
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <string.h>
 
 #include <dps/private/cbor.h>
 
@@ -34,6 +36,16 @@ public:
     if (DPS_TxBufferInit(&buffer_, NULL, hint) != DPS_OK) {
       throw std::bad_alloc();
     }
+  }
+  TxStream(const uint8_t * items, size_t size)
+  {
+    ret_ = DPS_OK;
+    size_ = 0;
+    if (DPS_TxBufferInit(&buffer_, NULL, size) != DPS_OK) {
+      throw std::bad_alloc();
+    }
+    size_ += size;
+    ret_ = CBOR_Copy(&buffer_, items, size);
   }
   ~TxStream()
   {
@@ -222,7 +234,8 @@ private:
   }
 };
 
-class RxStream {
+class RxStream
+{
 public:
   RxStream()
   {

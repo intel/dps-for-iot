@@ -25,8 +25,8 @@
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  */
 
-#ifndef _LOOP_H
-#define _LOOP_H
+#ifndef _DPS_LOOP_H
+#define _DPS_LOOP_H
 
 #include <uv.h>
 

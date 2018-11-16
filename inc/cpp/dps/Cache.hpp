@@ -1,3 +1,4 @@
+// -*- mode: C++; c-basic-offset: 2; -*-
 // Copyright 2018 Intel Corporation All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,11 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef _CACHE_HPP
-#define _CACHE_HPP
+#ifndef _DPS_CACHE_HPP
+#define _DPS_CACHE_HPP
 
 #include <algorithm>
-#include <bitset>
 #include <deque>
 #include <memory>
 
@@ -32,53 +32,10 @@ struct PublicationDeleter {
 
 typedef std::unique_ptr<DPS_Publication, PublicationDeleter> Publication;
 
-typedef std::pair<uint32_t, uint32_t> Range;
-
-typedef struct SNSet
-{
-    uint32_t base_;
-    std::bitset<64> sn_;        // TODO fix hardcoded size
-    bool
-    test(uint32_t sn) const
-    {
-      return (sn < base_) || sn_.test(sn - base_);
-    }
-    SNSet &
-    set(uint32_t sn)
-    {
-      if (base_ <= sn) {
-        sn_.set(sn - base_);
-      }
-      return *this;
-    }
-    std::size_t
-    count() const
-    {
-      return sn_.count();
-    }
-    bool
-    any() const
-    {
-      return sn_.any();
-    }
-    std::size_t
-    size() const
-    {
-      return sn_.size();
-    }
-    void
-    shrink(uint32_t firstSN)
-    {
-      if (base_ < firstSN) {
-        sn_ >>= firstSN - base_;
-        base_ = firstSN;
-      }
-      while (sn_.test(0)) {
-        sn_ >>= 1;
-        ++base_;
-      }
-    }
-} SNSet;
+typedef struct PublicationInfo {
+  Publication pub;
+  uint32_t sn;
+} PublicationInfo;
 
 template <typename Stream>
 class Cache
@@ -168,14 +125,14 @@ public:
   }
 
   bool
-  takeNextData(Publication & pub, uint32_t & sn, Stream & buffer)
+  takeNextData(Stream & buffer, PublicationInfo & info)
   {
     if (empty()) {
       return false;
     }
     Cache::Data & data = data_.front();
-    pub = std::move(data.pub_);
-    sn = data.sn_;
+    info.pub = std::move(data.pub_);
+    info.sn = data.sn_;
     buffer = std::move(data.buf_);
     data_.pop_front();
     return true;

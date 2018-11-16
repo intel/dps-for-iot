@@ -20,53 +20,15 @@
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  */
 
-#include <algorithm>
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
 #include <ctype.h>
-#include <map>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <dps/dbg.h>
 #include <dps/dps.h>
 #include <dps/event.h>
 #include <dps/synchronous.h>
-#include <dps/private/loop.h>
-#include <dps/Cache.hpp>
-#include "common_qos.hpp"
-
-#define A_SIZEOF(a)  (sizeof(a) / sizeof((a)[0]))
-
-#define HEARTBEAT_PERIOD_MS 1000
-#define ALIVE_TIMEOUT_MS 3000
-
-typedef struct SubscriberProxy
-{
-  uint32_t base_;
-  uint64_t alive_;
-
-  void ack(uint32_t sn)
-  {
-    base_ = sn;
-  }
-
-  bool isAcked(uint32_t sn) const
-  {
-    return sn <= base_;
-  }
-} SubscriberProxy;
-
-typedef struct PublisherInfo
-{
-    DPS_QoSReliability reliability_;
-    uint32_t sn_;
-    dps::Cache<dps::TxStream>* cache_;
-    std::map<DPS_UUID, SubscriberProxy> sub_;
-    uv_async_t async_;
-    uv_timer_t timer_;
-    DPS_Event* close_;
-} PublisherInfo;
+#include <dps/CborStream.hpp>
+#include <dps/Publisher.hpp>
 
 static void OnNodeDestroyed(DPS_Node* node, void* data)
 {
@@ -93,209 +55,6 @@ static DPS_Status DestroyNode(DPS_Node* node)
         goto Exit;
     }
     ret = DPS_WaitForEvent(event);
-
-Exit:
-    DPS_DestroyEvent(event);
-    return ret;
-}
-
-static void ResetHeartbeat(PublisherInfo* info)
-{
-    int r = uv_async_send(&info->async_);
-    if (r) {
-        DPS_ERRPRINT("Async send failed: %s\n", uv_strerror(r));
-    }
-}
-
-static void AckHandler(DPS_Publication* pub, uint8_t* payload, size_t len)
-{
-    PublisherInfo* info = (PublisherInfo*)DPS_GetPublicationData(pub);
-    dps::RxStream rxBuf(payload, len);
-    Ack ack;
-
-    if (info->reliability_ != DPS_QOS_RELIABLE) {
-        return;
-    }
-
-    rxBuf >> ack;
-
-    DPS_PRINT("ACK %s(%d)", DPS_UUIDToString(DPS_PublicationGetUUID(pub)), ack.set_.base_ - 1);
-    DPS_PRINT(" [ ");
-    for (size_t i = 0; i < ack.set_.size(); ++i) {
-        if (ack.set_.test(ack.set_.base_ + i)) {
-            DPS_PRINT("%d ", ack.set_.base_ + i);
-        }
-    }
-    DPS_PRINT("]");
-    DPS_PRINT(" %s\n", DPS_UUIDToString(&ack.uuid_));
-
-    info->sub_[ack.uuid_].ack(ack.set_.base_ - 1);
-    info->sub_[ack.uuid_].alive_ = uv_now(DPS_GetLoop(DPS_PublicationGetNode(pub)));
-
-    for (size_t i = 0; i < ack.set_.size(); ++i) {
-        uint32_t sn = ack.set_.base_ + i;
-        if (ack.set_.test(sn)) {
-            auto it = std::find_if(info->cache_->begin(), info->cache_->end(),
-                                   [sn](const dps::Cache<dps::TxStream>::Data& data) {
-                                       return data.sn_ == sn;
-                                   });
-            if (it == info->cache_->end()) {
-                DPS_PRINT("Missing publication %d requested\n", sn);
-                continue;
-            }
-            dps::TxStream txBuf;
-            dps::Range range = { info->cache_->minSN(), info->cache_->maxSN() };
-            txBuf << range << it->sn_ << it->buf_;
-            DPS_PRINT("PUB %s(%d)\n", DPS_UUIDToString(DPS_PublicationGetUUID(pub)), it->sn_);
-            DPS_Status ret = DPS_Publish(pub, txBuf.data(), txBuf.size(), 0);
-            if (ret == DPS_OK) {
-                ResetHeartbeat(info);
-            } else {
-                DPS_ERRPRINT("Publish failed: %s\n", DPS_ErrTxt(ret));
-            }
-        }
-    }
-}
-
-static bool IsAckedByAll(DPS_Publication* pub, uint32_t sn)
-{
-    PublisherInfo* info = (PublisherInfo*)DPS_GetPublicationData(pub);
-
-    // remove dead subscribers
-    uint64_t now = uv_now(DPS_GetLoop(DPS_PublicationGetNode(pub)));
-    for (auto it = info->sub_.begin(); it != info->sub_.end(); ) {
-        if (now - it->second.alive_ >= ALIVE_TIMEOUT_MS) {
-            DPS_PRINT("Subscriber %s is dead\n", DPS_UUIDToString(&it->first));
-            it = info->sub_.erase(it);
-        } else {
-            ++it;
-        }
-    }
-
-    // check if the publication has been acknowledged by all subscribers
-    bool is_acked = true;
-    for (auto it = info->sub_.begin(); is_acked && it != info->sub_.end(); ++it) {
-        is_acked = is_acked && it->second.isAcked(sn);
-    }
-    return is_acked;
-}
-
-static void PubHandler(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* payload, size_t len)
-{
-    PublisherInfo* info = (PublisherInfo*)DPS_GetSubscriptionData(sub);
-
-    if (!DPS_PublicationIsAckRequested(pub)) {
-        return;
-    }
-
-    dps::RxStream rxBuf(payload, len);
-    DPS_UUID uuid;
-
-    rxBuf >> uuid;
-
-    dps::Range range;
-    if (info->cache_->empty()) {
-        range = { 0, 0 };
-    } else {
-        range = { info->cache_->minSN(), info->cache_->maxSN() };
-    }
-    info->sub_[uuid].ack(range.second);
-    info->sub_[uuid].alive_ = uv_now(DPS_GetLoop(DPS_PublicationGetNode(pub)));
-
-    dps::TxStream txBuf;
-    txBuf << range;
-    DPS_Status ret = DPS_AckPublication(pub, txBuf.data(), txBuf.size());
-    if (ret != DPS_OK) {
-        DPS_ERRPRINT("Ack failed: %s\n", DPS_ErrTxt(ret));
-    }
-}
-
-static void OnAsyncClose(uv_handle_t* handle)
-{
-    DPS_Publication* pub = (DPS_Publication*)handle->data;
-    PublisherInfo* info = (PublisherInfo*)DPS_GetPublicationData(pub);
-    DPS_Event* event = info->close_;
-    DPS_SignalEvent(event, DPS_OK);
-}
-
-static void OnTimerClose(uv_handle_t* handle)
-{
-    DPS_Publication* pub = (DPS_Publication*)handle->data;
-    PublisherInfo* info = (PublisherInfo*)DPS_GetPublicationData(pub);
-    uv_close((uv_handle_t*)&info->async_, OnAsyncClose);
-}
-
-static void OnTimer(uv_timer_t* handle)
-{
-    DPS_Publication* pub = (DPS_Publication*)handle->data;
-    PublisherInfo* info = (PublisherInfo*)DPS_GetPublicationData(pub);
-
-    // send out a new heartbeat
-    dps::Range range;
-    if (info->cache_->empty()) {
-        range = { 0, 0 };
-    } else {
-        range = { info->cache_->minSN(), info->cache_->maxSN() };
-    }
-    dps::TxStream txBuf;
-    txBuf << range;
-    DPS_Status ret = DPS_Publish(pub, txBuf.data(), txBuf.size(), 0);
-    if (ret != DPS_OK) {
-        DPS_ERRPRINT("Publish failed: %s\n", DPS_ErrTxt(ret));
-    }
-}
-
-static void OnAsync(uv_async_t* handle)
-{
-    DPS_Publication* pub = (DPS_Publication*)handle->data;
-    PublisherInfo* info = (PublisherInfo*)DPS_GetPublicationData(pub);
-
-    // close all the open handles
-    if (info->close_) {
-        uv_close((uv_handle_t*)&info->timer_, OnTimerClose);
-        return;
-    }
-
-    // request acknowledgements for unacknowledged publications
-    if (info->reliability_ != DPS_QOS_RELIABLE) {
-        return;
-    }
-    if (!uv_is_active((uv_handle_t*)&info->timer_)) {
-        int r = uv_timer_start(&info->timer_, OnTimer, HEARTBEAT_PERIOD_MS, HEARTBEAT_PERIOD_MS);
-        if (r) {
-            DPS_ERRPRINT("Timer start failed: %s\n", uv_strerror(r));
-        }
-    } else {
-        int r = uv_timer_again(&info->timer_);
-        if (r) {
-            DPS_ERRPRINT("Timer again failed: %s\n", uv_strerror(r));
-        }
-    }
-}
-
-static DPS_Status DestroyInfo(PublisherInfo* info)
-{
-    DPS_Event* event = nullptr;
-    DPS_Status ret;
-    int r;
-
-    event = DPS_CreateEvent();
-    if (!event) {
-        ret = DPS_ERR_RESOURCES;
-        goto Exit;
-    }
-    info->close_ = event;
-    r = uv_async_send(&info->async_);
-    if (r) {
-        ret = DPS_ERR_FAILURE;
-        goto Exit;
-    }
-    ret = DPS_WaitForEvent(event);
-    if (ret != DPS_OK) {
-        goto Exit;
-    }
-    delete info->cache_;
-    delete info;
 
 Exit:
     DPS_DestroyEvent(event);
@@ -349,9 +108,8 @@ static int IntArg(const char* opt, char*** argp, int* argcp, int* val, int min, 
     return 1;
 }
 
-static void ReadStdin(DPS_Publication* pub)
+static void ReadStdin(dps::Publisher* publisher)
 {
-    PublisherInfo* info = (PublisherInfo*)DPS_GetPublicationData(pub);
     char lineBuf[256];
     int argc;
     char *argv[MAX_ARGS];
@@ -359,56 +117,12 @@ static void ReadStdin(DPS_Publication* pub)
     while (fgets(lineBuf, sizeof(lineBuf), stdin) != nullptr) {
         argc = Parse(lineBuf, sizeof(lineBuf), argv);
         if (!strcmp(argv[0], "pub")) {
-            if (info->cache_->full()) {
-                if (info->reliability_ == DPS_QOS_BEST_EFFORT) {
-                    info->cache_->removeData(info->cache_->begin());
-                } else if (info->reliability_ == DPS_QOS_RELIABLE) {
-                    for (auto it = info->cache_->begin(); it != info->cache_->end(); ++it) {
-                        if (IsAckedByAll(pub, it->sn_)) {
-                            info->cache_->removeData(it);
-                            break;
-                        }
-                    }
-                }
+            DPS_Status ret = publisher->publish(nullptr, 0);
+            if (ret != DPS_OK) {
+                DPS_ERRPRINT("Publish failed: %s\n", DPS_ErrTxt(ret));
             }
-            // must check for space before adding the data as DPS_Publish must be called before the
-            // copied publication will be correct
-            if (!info->cache_->full()) {
-                dps::TxStream payload(0);
-                dps::TxStream buf;
-                dps::Range range;
-                if (info->cache_->empty()) {
-                    range = { info->sn_ + 1, info->sn_ + 1 };
-                } else {
-                    range = { info->cache_->minSN(), info->sn_ + 1 };
-                }
-                buf << range << info->sn_ + 1 << payload;
-                DPS_Status ret = DPS_Publish(pub, buf.data(), buf.size(), 0);
-                if (ret == DPS_OK) {
-                    dps::Cache<dps::TxStream>::Data data =
-                        { dps::Publication(DPS_CopyPublication(pub)), info->sn_ + 1, std::move(payload) };
-                    info->cache_->addData(std::move(data));
-                    ++info->sn_;
-                    ResetHeartbeat(info);
-                }
-            } else {
-                DPS_PRINT("%s\n", DPS_ErrTxt(DPS_ERR_OVERFLOW));
-            }
-        } else if (!strcmp(argv[0], "drop")) {
-            if (!info->cache_->empty()) {
-                info->cache_->removeData(info->cache_->begin());
-            }
-            ++info->sn_;
         } else if (!strcmp(argv[0], "dump")) {
-            DPS_PRINT("Cache\n");
-            for (auto it = info->cache_->begin(); it != info->cache_->end(); ++it) {
-                DPS_PRINT("  %s(%d)\n", DPS_UUIDToString(DPS_PublicationGetUUID(it->pub_.get())), it->sn_);
-            }
-            DPS_PRINT("Subscribers (reliable)\n");
-            for (auto it = info->sub_.begin(); it != info->sub_.end(); ++it) {
-                DPS_PRINT("  %s ack=%d alive=%" PRIu64 "\n", DPS_UUIDToString(&it->first), it->second.base_,
-                          it->second.alive_);
-            }
+            publisher->dump();
         }
     }
 }
@@ -417,7 +131,7 @@ static void ReadStdin(DPS_Publication* pub)
 
 int main(int argc, char** argv)
 {
-    const char* topics[] = { "A" };
+    std::vector<std::string> topics = { "A" };
     char** arg = argv + 1;
     int listenPort = 0;
     const char* host = NULL;
@@ -427,15 +141,11 @@ int main(int argc, char** argv)
     DPS_NodeAddress* addr = nullptr;
     int mcast = DPS_MCAST_PUB_ENABLE_SEND | DPS_MCAST_PUB_ENABLE_RECV;
     DPS_Node* node = nullptr;
-    DPS_AcknowledgementHandler handler;
-    DPS_Publication* pub = nullptr;
-    DPS_Subscription* sub = nullptr;
-    DPS_QoS qos = { 64 };       /* TODO This is only to allow back-to-back publications */
-    int reliability = DPS_QOS_RELIABLE;
-    PublisherInfo* info = nullptr;
+    dps::QoS qos = { 4, dps::DPS_QOS_RELIABLE };
+    int reliability;
+    dps::Publisher* publisher = nullptr;
     size_t i;
     DPS_Status ret;
-    int r;
 
     DPS_Debug = DPS_FALSE;
     while (--argc) {
@@ -460,7 +170,8 @@ int main(int argc, char** argv)
             ++numLinks;
             continue;
         }
-        if (IntArg("-r", &arg, &argc, &reliability, DPS_QOS_BEST_EFFORT, DPS_QOS_RELIABLE) == 0) {
+        if (IntArg("-r", &arg, &argc, &reliability, dps::DPS_QOS_BEST_EFFORT, dps::DPS_QOS_RELIABLE)) {
+            qos.reliability = (dps::QoSReliability)reliability;
             continue;
         }
     }
@@ -491,74 +202,19 @@ int main(int argc, char** argv)
         }
     }
 
-    pub = DPS_CreatePublication(node);
-    if (!pub) {
-        return EXIT_FAILURE;
-    }
-    handler = (reliability == DPS_QOS_RELIABLE) ? AckHandler : nullptr;
-    ret = DPS_InitPublication(pub, topics, A_SIZEOF(topics), DPS_FALSE, nullptr, handler);
+    publisher = new dps::Publisher(qos);
+    ret = publisher->initialize(node, topics);
     if (ret != DPS_OK) {
-        return EXIT_FAILURE;
-    }
-    ret = DPS_PublicationConfigureQoS(pub, &qos);
-    if (ret != DPS_OK) {
-        return EXIT_FAILURE;
-    }
-    if (reliability == DPS_QOS_RELIABLE) {
-        const char* uuid = DPS_UUIDToString(DPS_PublicationGetUUID(pub));
-        sub = DPS_CreateSubscription(node, &uuid, 1);
-        if (!sub) {
-            return EXIT_FAILURE;
-        }
-    }
-    info = new PublisherInfo;
-    info->reliability_ = (DPS_QoSReliability)reliability;
-    info->sn_ = DPS_PublicationGetSequenceNum(pub);
-    info->cache_ = new dps::Cache<dps::TxStream>(4);
-    r = uv_async_init(DPS_GetLoop(node), &info->async_, OnAsync);
-    if (r) {
-        return EXIT_FAILURE;
-    }
-    info->async_.data = pub;
-    r = uv_timer_init(DPS_GetLoop(node), &info->timer_);
-    if (r) {
-        return EXIT_FAILURE;
-    }
-    info->timer_.data = pub;
-    info->close_ = nullptr;
-    ret = DPS_SetPublicationData(pub, info);
-    if (ret != DPS_OK) {
-        return EXIT_FAILURE;
-    }
-    if (sub) {
-        ret = DPS_SetSubscriptionData(sub, info);
-        if (ret != DPS_OK) {
-            return EXIT_FAILURE;
-        }
-        ret = DPS_Subscribe(sub, PubHandler);
-        if (ret != DPS_OK) {
-            return EXIT_FAILURE;
-        }
-    }
-    r = uv_async_send(&info->async_);
-    if (r) {
         return EXIT_FAILURE;
     }
 
-    ReadStdin(pub);
+    ReadStdin(publisher);
 
-    ret = DestroyInfo(info);
+    ret = publisher->close();
     if (ret != DPS_OK) {
         return EXIT_FAILURE;
     }
-    ret = DPS_DestroySubscription(sub);
-    if (ret != DPS_OK) {
-        return EXIT_FAILURE;
-    }
-    ret = DPS_DestroyPublication(pub);
-    if (ret != DPS_OK) {
-        return EXIT_FAILURE;
-    }
+    delete publisher;
     ret = DestroyNode(node);
     if (ret != DPS_OK) {
         return EXIT_FAILURE;

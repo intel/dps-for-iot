@@ -25,8 +25,8 @@
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  */
 
-#ifndef _CBOR_H
-#define _CBOR_H
+#ifndef _DPS_CBOR_H
+#define _DPS_CBOR_H
 
 #include <stdint.h>
 #include <stddef.h>
