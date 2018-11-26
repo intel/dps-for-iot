@@ -42,6 +42,13 @@ extern "C" {
 #define DPS_MAX_PK_LEN    1024 /**< For sanity check on PK length */
 #define DPS_MAX_PWD_LEN   1024 /**< For sanity check on pass phrase length */
 
+#define DPS_MAX_SYMMETRIC_KEY_LEN DPS_AES_256_KEY_LEN
+/**
+ * Configuration parameter - needs to configured to be large enough
+ * for the maximum key id used by the local application.
+ */
+#define DPS_MAX_KEY_ID_LEN  16
+
 /**
  * A DPS key type
  */
@@ -58,8 +65,8 @@ typedef enum {
  * @note Need to define this outside of DPS_Key to satisfy SWIG.
  */
 typedef struct _DPS_KeySymmetric {
-    const uint8_t* key;         /**< Key data */
-    size_t len;                 /**< Size of key data */
+    uint8_t key[DPS_MAX_SYMMETRIC_KEY_LEN]; /**< Key data */
+    size_t len;                             /**< Size of key data */
 } DPS_KeySymmetric;
 
 /**
@@ -114,8 +121,8 @@ typedef struct _DPS_Key {
  * An identifier of a key in a key store.
  */
 typedef struct _DPS_KeyId {
-    const uint8_t* id; /**< the identifier of the key */
-    size_t len; /**< the length of the identifier, in bytes */
+    uint8_t id[DPS_MAX_KEY_ID_LEN]; /**< the identifier of the key */
+    size_t len;                     /**< the length of the identifier, in bytes */
 } DPS_KeyId;
 
 /**

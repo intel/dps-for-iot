@@ -83,7 +83,8 @@ typedef struct _COSE_Entity {
  * - DPS_OK if the plaintext was successfully encrypted
  * - Other error codes
  */
-DPS_Status COSE_Encrypt(int8_t alg,
+DPS_Status COSE_Encrypt(DPS_Node* node,
+                        int8_t alg,
                         const uint8_t nonce[COSE_NONCE_LEN],
                         const COSE_Entity* signer,
                         const COSE_Entity* recipient, size_t recipientLen,
@@ -115,7 +116,8 @@ DPS_Status COSE_Encrypt(int8_t alg,
  * - DPS_ERR_SECURITY if the payload failed to decrypt
  * - Other error codes
  */
-DPS_Status COSE_Decrypt(const uint8_t* nonce,
+DPS_Status COSE_Decrypt(DPS_Node* node,
+                        const uint8_t* nonce,
                         COSE_Entity* recipient,
                         DPS_RxBuffer* aad,
                         DPS_RxBuffer* cipherText,
