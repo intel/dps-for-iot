@@ -25,55 +25,20 @@
 #include <stdlib.h>
 #include <dps/private/io_buf.h>
 
-void DPS_RxBufferFree(DPS_RxBuffer* buffer)
+void DPS_RxBufferInit(DPS_RxBuffer* buffer, uint8_t* storage, size_t size)
 {
-    if (buffer->base) {
-        free(buffer->base);
-        buffer->base = NULL;
-    }
-    buffer->rxPos = NULL;
-    buffer->eod = NULL;
+    assert(storage);
+    buffer->base = storage;
+    buffer->rxPos = storage;
+    buffer->eod = storage + size;
 }
 
-void DPS_TxBufferFree(DPS_TxBuffer* buffer)
+void DPS_TxBufferInit(DPS_TxBuffer* buffer, uint8_t* storage, size_t size)
 {
-    if (buffer->base) {
-        free(buffer->base);
-        buffer->base = NULL;
-    }
-    buffer->txPos = NULL;
-    buffer->eob = NULL;
-}
-
-DPS_Status DPS_RxBufferInit(DPS_RxBuffer* buffer, uint8_t* storage, size_t size)
-{
-    if (!size) {
-        buffer->base = NULL;
-        buffer->rxPos = NULL;
-        buffer->eod = NULL;
-    } else {
-        assert(storage);
-        buffer->base = storage;
-        buffer->rxPos = storage;
-        buffer->eod = storage + size;
-    }
-    return DPS_OK;
-}
-
-DPS_Status DPS_TxBufferInit(DPS_TxBuffer* buffer, uint8_t* storage, size_t size)
-{
-    DPS_Status ret = DPS_OK;
-    if (!storage && size) {
-        storage = malloc(size);
-        if (!storage) {
-            ret = DPS_ERR_RESOURCES;
-            size = 0;
-        }
-    }
+    assert(storage);
     buffer->base = storage;
     buffer->txPos = storage;
     buffer->eob = storage + size;
-    return ret;
 }
 
 DPS_Status DPS_TxBufferAppend(DPS_TxBuffer* buffer, const uint8_t* data, size_t len)
@@ -113,4 +78,34 @@ void DPS_RxBufferToTx(const DPS_RxBuffer* rxBuffer, DPS_TxBuffer* txBuffer)
     txBuffer->base = rxBuffer->base;
     txBuffer->eob = rxBuffer->eod;
     txBuffer->txPos = rxBuffer->eod;
+}
+
+DPS_Status DPS_TxBufferAlloc(DPS_Node* node, DPS_TxBuffer* buf, size_t len, DPS_BUFFER_POOL pool)
+{
+    if (pool == DPS_TX_POOL) {
+        if ((len + node->txLen) > DPS_TX_BUFFER_SIZE) {
+            return DPS_ERR_RESOURCES;
+        }
+        DPS_TxBufferInit(buf, &node->txBuffer[node->txLen], len);
+        node->txLen += len;
+        return DPS_OK;
+    }
+    if (pool == DPS_TMP_POOL) {
+        if ((len + node->tmpLen) > DPS_TX_BUFFER_SIZE) {
+            return DPS_ERR_RESOURCES;
+        }
+        DPS_TxBufferInit(buf, &node->tmpBuffer[node->tmpLen], len);
+        node->tmpLen += len;
+        return DPS_OK;
+    }
+    return DPS_ERR_ARGS;
+}
+
+void DPS_TxBufferFreePool(DPS_Node* node, DPS_BUFFER_POOL pool)
+{
+    if (pool == DPS_TX_POOL) {
+        node->txLen = 0;
+    } else if (pool == DPS_TMP_POOL) {
+        node->tmpLen = 0;
+    }
 }

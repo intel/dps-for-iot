@@ -347,7 +347,7 @@ static DPS_Status EncodeRecipient(DPS_TxBuffer* buf, int8_t alg, const DPS_KeyId
  *     payload : bstr
  * ]
  */
-static DPS_Status EncodeSig(DPS_TxBuffer* buf, int8_t alg, int8_t sigAlg,
+static DPS_Status EncodeSig(DPS_Node* node, DPS_TxBuffer* buf, int8_t alg, int8_t sigAlg,
                             uint8_t* aad, size_t aadLen,
                             const uint8_t* payload, size_t payloadLen)
 {
@@ -361,7 +361,7 @@ static DPS_Status EncodeSig(DPS_TxBuffer* buf, int8_t alg, int8_t sigAlg,
         CBOR_SIZEOF_BYTES(aadLen) +
         CBOR_SIZEOF_BYTES(payloadLen);
 
-    ret = DPS_TxBufferInit(buf, NULL, bufLen);
+    ret = DPS_TxBufferAlloc(node, buf, bufLen, DPS_TMP_POOL);
     if (ret == DPS_OK) {
         ret = CBOR_EncodeArray(buf, 5);
     }
@@ -394,7 +394,7 @@ static DPS_Status EncodeSig(DPS_TxBuffer* buf, int8_t alg, int8_t sigAlg,
  *     external_aad : bstr
  * ]
  */
-static DPS_Status EncodeAAD(DPS_TxBuffer* buf, uint8_t tag, int8_t alg, uint8_t* aad, size_t aadLen)
+static DPS_Status EncodeAAD(DPS_Node* node, DPS_TxBuffer* buf, uint8_t tag, int8_t alg, uint8_t* aad, size_t aadLen)
 {
     DPS_Status ret;
     const char* context;
@@ -416,7 +416,7 @@ static DPS_Status EncodeAAD(DPS_TxBuffer* buf, uint8_t tag, int8_t alg, uint8_t*
         return DPS_ERR_INVALID;
     }
 
-    ret = DPS_TxBufferInit(buf, NULL, bufLen);
+    ret = DPS_TxBufferAlloc(node, buf, bufLen, DPS_TMP_POOL);
     if (ret == DPS_OK) {
         ret = CBOR_EncodeArray(buf, 3);
     }
@@ -477,7 +477,7 @@ static DPS_Status EncodePartyInfo(DPS_TxBuffer* buf)
  * @param keyLen size of key data in bytes
  * @param recipientAlg key encryption algorithm
  */
-static DPS_Status EncodeKDFContext(DPS_TxBuffer* buf, int8_t alg, uint8_t keyLen, int8_t recipientAlg)
+static DPS_Status EncodeKDFContext(DPS_Node* node, DPS_TxBuffer* buf, int8_t alg, uint8_t keyLen, int8_t recipientAlg)
 {
     DPS_Status ret;
     size_t bufLen;
@@ -490,7 +490,7 @@ static DPS_Status EncodeKDFContext(DPS_TxBuffer* buf, int8_t alg, uint8_t keyLen
         CBOR_SIZEOF(uint16_t) +
         SIZEOF_PROTECTED_MAP;
 
-    ret = DPS_TxBufferInit(buf, NULL, bufLen);
+    ret = DPS_TxBufferAlloc(node, buf, bufLen, DPS_TMP_POOL);
     if (ret == DPS_OK) {
         ret = CBOR_EncodeArray(buf, 4);
     }
@@ -657,9 +657,15 @@ static DPS_Status GetSignatureKey(DPS_KeyStore* keyStore, const Signature* sig, 
     return DPS_OK;
 }
 
-DPS_Status COSE_Encrypt(int8_t alg, const uint8_t nonce[COSE_NONCE_LEN], const COSE_Entity* signer,
-                        const COSE_Entity* recipient, size_t recipientLen, DPS_RxBuffer* aad,
-                        DPS_RxBuffer* plainText, DPS_KeyStore* keyStore, DPS_TxBuffer* cipherText)
+DPS_Status COSE_Encrypt(DPS_Node* node,
+                        int8_t alg,
+                        const uint8_t nonce[COSE_NONCE_LEN],
+                        const COSE_Entity* signer,
+                        const COSE_Entity* recipient, size_t recipientLen,
+                        DPS_RxBuffer* aad,
+                        DPS_RxBuffer* plainText,
+                        DPS_KeyStore* keyStore,
+                        DPS_TxBuffer* cipherText)
 {
     DPS_Status ret;
     uint8_t tag;
@@ -702,12 +708,6 @@ DPS_Status COSE_Encrypt(int8_t alg, const uint8_t nonce[COSE_NONCE_LEN], const C
     }
 
     ptLen = DPS_RxBufferAvail(plainText);
-    DPS_TxBufferClear(&AAD);
-    DPS_TxBufferClear(&toBeSigned);
-    DPS_TxBufferClear(&sigBuf);
-    DPS_TxBufferClear(&kdfContext);
-    DPS_TxBufferClear(&content);
-    DPS_TxBufferClear(cipherText);
     memset(&ephemeralKey, 0, sizeof(ephemeralKey));
     if ((recipientLen == 1) && (recipient[0].alg == COSE_ALG_RESERVED)) {
         tag = COSE_TAG_ENCRYPT0;
@@ -723,7 +723,7 @@ DPS_Status COSE_Encrypt(int8_t alg, const uint8_t nonce[COSE_NONCE_LEN], const C
     /*
      * Create and encode the AAD
      */
-    ret = EncodeAAD(&AAD, tag, alg, aad->base, DPS_RxBufferAvail(aad));
+    ret = EncodeAAD(node, &AAD, tag, alg, aad->base, DPS_RxBufferAvail(aad));
     if (ret != DPS_OK) {
         goto Exit;
     }
@@ -778,7 +778,7 @@ DPS_Status COSE_Encrypt(int8_t alg, const uint8_t nonce[COSE_NONCE_LEN], const C
     /*
      * Call the encryption algorithm
      */
-    ret = DPS_TxBufferInit(&content, NULL, ptLen + M);
+    ret = DPS_TxBufferAlloc(node, &content, ptLen + M, DPS_TMP_POOL);
     if (ret != DPS_OK) {
         goto Exit;
     }
@@ -790,13 +790,13 @@ DPS_Status COSE_Encrypt(int8_t alg, const uint8_t nonce[COSE_NONCE_LEN], const C
      * Countersign the content
      */
     if (signer) {
-        ret = DPS_TxBufferInit(&sigBuf, NULL, SIZEOF_SIGNATURE);
+        ret = DPS_TxBufferAlloc(node, &sigBuf, SIZEOF_SIGNATURE, DPS_TMP_POOL);
         if (ret != DPS_OK) {
             goto Exit;
         }
         sig.alg = signer->alg;
         sig.kid = signer->kid;
-        ret = EncodeSig(&toBeSigned, alg, sig.alg, NULL, 0, content.base, DPS_TxBufferUsed(&content));
+        ret = EncodeSig(node, &toBeSigned, alg, sig.alg, NULL, 0, content.base, DPS_TxBufferUsed(&content));
         if (ret != DPS_OK) {
             goto Exit;
         }
@@ -826,7 +826,7 @@ DPS_Status COSE_Encrypt(int8_t alg, const uint8_t nonce[COSE_NONCE_LEN], const C
     if (tag == COSE_TAG_ENCRYPT) {
         ctLen += CBOR_SIZEOF_ARRAY(recipientLen) + recipientBytes;
     }
-    ret = DPS_TxBufferInit(cipherText, NULL, ctLen);
+    ret = DPS_TxBufferAlloc(node, cipherText, ctLen, DPS_TX_POOL);
     if (ret != DPS_OK) {
         goto Exit;
     }
@@ -889,8 +889,7 @@ DPS_Status COSE_Encrypt(int8_t alg, const uint8_t nonce[COSE_NONCE_LEN], const C
                 assert(tag == COSE_TAG_ENCRYPT0);
                 break;
             case COSE_ALG_DIRECT:
-                ret = EncodeRecipient(cipherText, recipient[i].alg, &recipient[i].kid,
-                                      NULL, NULL, 0);
+                ret = EncodeRecipient(cipherText, recipient[i].alg, &recipient[i].kid, NULL, NULL, 0);
                 if (ret != DPS_OK) {
                     goto Exit;
                 }
@@ -934,22 +933,19 @@ DPS_Status COSE_Encrypt(int8_t alg, const uint8_t nonce[COSE_NONCE_LEN], const C
                 /*
                  * Create the key encryption key using ECDH + HKDF
                  */
-                ret = ECDH(staticKey.ec.curve, staticKey.ec.x, staticKey.ec.y,
-                           ephemeralKey.ec.d, secret, &secretLen);
+                ret = ECDH(staticKey.ec.curve, staticKey.ec.x, staticKey.ec.y, ephemeralKey.ec.d, secret, &secretLen);
                 if (ret != DPS_OK) {
                     goto Exit;
                 }
-                ret = EncodeKDFContext(&kdfContext, COSE_ALG_A256KW, AES_256_KEY_LEN, recipient[i].alg);
+                ret = EncodeKDFContext(node, &kdfContext, COSE_ALG_A256KW, AES_256_KEY_LEN, recipient[i].alg);
                 if (ret != DPS_OK) {
                     goto Exit;
                 }
                 k.type = COSE_KEY_SYMMETRIC;
-                ret = HKDF_SHA256(secret, secretLen, kdfContext.base, DPS_TxBufferUsed(&kdfContext),
-                                  k.symmetric.key);
+                ret = HKDF_SHA256(secret, secretLen, kdfContext.base, DPS_TxBufferUsed(&kdfContext), k.symmetric.key);
                 if (ret != DPS_OK) {
                     goto Exit;
                 }
-                DPS_TxBufferFree(&kdfContext);
                 /*
                  * Wrap the content encryption key
                  */
@@ -957,8 +953,7 @@ DPS_Status COSE_Encrypt(int8_t alg, const uint8_t nonce[COSE_NONCE_LEN], const C
                 if (ret != DPS_OK) {
                     goto Exit;
                 }
-                ret = EncodeRecipient(cipherText, recipient[i].alg, &recipient[i].kid,
-                                      &ephemeralKey, kw, sizeof(kw));
+                ret = EncodeRecipient(cipherText, recipient[i].alg, &recipient[i].kid, &ephemeralKey, kw, sizeof(kw));
                 if (ret != DPS_OK) {
                     goto Exit;
                 }
@@ -968,18 +963,6 @@ DPS_Status COSE_Encrypt(int8_t alg, const uint8_t nonce[COSE_NONCE_LEN], const C
     }
 
 Exit:
-    SecureZeroMemory(&staticKey, sizeof(staticKey));
-    SecureZeroMemory(&ephemeralKey, sizeof(ephemeralKey));
-    SecureZeroMemory(&k, sizeof(k));
-    SecureZeroMemory(&cek, sizeof(cek));
-    DPS_TxBufferFree(&content);
-    DPS_TxBufferFree(&kdfContext);
-    DPS_TxBufferFree(&sigBuf);
-    DPS_TxBufferFree(&toBeSigned);
-    DPS_TxBufferFree(&AAD);
-    if (ret != DPS_OK) {
-        DPS_TxBufferFree(cipherText);
-    }
     return ret;
 }
 
@@ -1275,8 +1258,13 @@ static DPS_Status DecodeRecipient(DPS_RxBuffer* buf, int8_t* alg, DPS_KeyId* kid
     return ret;
 }
 
-DPS_Status COSE_Decrypt(const uint8_t* nonce, COSE_Entity* recipient, DPS_RxBuffer* aad,
-                        DPS_RxBuffer* cipherText, DPS_KeyStore* keyStore, COSE_Entity* signer,
+DPS_Status COSE_Decrypt(DPS_Node* node,
+                        const uint8_t* nonce,
+                        COSE_Entity* recipient,
+                        DPS_RxBuffer* aad,
+                        DPS_RxBuffer* cipherText,
+                        DPS_KeyStore* keyStore,
+                        COSE_Entity* signer,
                         DPS_TxBuffer* plainText)
 {
     DPS_Status ret;
@@ -1310,10 +1298,6 @@ DPS_Status COSE_Decrypt(const uint8_t* nonce, COSE_Entity* recipient, DPS_RxBuff
         return DPS_ERR_ARGS;
     }
 
-    DPS_TxBufferClear(plainText);
-    DPS_TxBufferClear(&AAD);
-    DPS_TxBufferClear(&toBeSigned);
-    DPS_TxBufferClear(&kdfContext);
     memset(&sig, 0, sizeof(sig));
     memset(&k, 0, sizeof(k));
     if (signer) {
@@ -1369,7 +1353,7 @@ DPS_Status COSE_Decrypt(const uint8_t* nonce, COSE_Entity* recipient, DPS_RxBuff
      * Verify signature of encrypted content
      */
     if (sig.sigLen) {
-        ret = EncodeSig(&toBeSigned, alg, sig.alg, NULL, 0, content, contentLen);
+        ret = EncodeSig(node, &toBeSigned, alg, sig.alg, NULL, 0, content, contentLen);
         if (ret != DPS_OK) {
             goto Exit;
         }
@@ -1392,7 +1376,7 @@ DPS_Status COSE_Decrypt(const uint8_t* nonce, COSE_Entity* recipient, DPS_RxBuff
     /*
      * Create and encode the AAD
      */
-    ret = EncodeAAD(&AAD, (uint8_t)tag, alg, aad->base, DPS_RxBufferAvail(aad));
+    ret = EncodeAAD(node, &AAD, (uint8_t)tag, alg, aad->base, DPS_RxBufferAvail(aad));
     if (ret != DPS_OK) {
         goto Exit;
     }
@@ -1464,18 +1448,16 @@ DPS_Status COSE_Decrypt(const uint8_t* nonce, COSE_Entity* recipient, DPS_RxBuff
             /*
              * Create the key encryption key using ECDH + HKDF
              */
-            ret = ECDH(ephemeralKey.ec.curve, ephemeralKey.ec.x, ephemeralKey.ec.y,
-                       staticKey.ec.d, secret, &secretLen);
+            ret = ECDH(ephemeralKey.ec.curve, ephemeralKey.ec.x, ephemeralKey.ec.y, staticKey.ec.d, secret, &secretLen);
             if (ret != DPS_OK) {
                 continue;
             }
-            ret = EncodeKDFContext(&kdfContext, COSE_ALG_A256KW, AES_256_KEY_LEN, recipient->alg);
+            ret = EncodeKDFContext(node, &kdfContext, COSE_ALG_A256KW, AES_256_KEY_LEN, recipient->alg);
             if (ret != DPS_OK) {
                 continue;
             }
             kek.type = COSE_KEY_SYMMETRIC;
-            ret = HKDF_SHA256(secret, secretLen, kdfContext.base, DPS_TxBufferUsed(&kdfContext),
-                              kek.symmetric.key);
+            ret = HKDF_SHA256(secret, secretLen, kdfContext.base, DPS_TxBufferUsed(&kdfContext), kek.symmetric.key);
             if (ret != DPS_OK) {
                 continue;
             }
@@ -1492,31 +1474,12 @@ DPS_Status COSE_Decrypt(const uint8_t* nonce, COSE_Entity* recipient, DPS_RxBuff
             ret = DPS_ERR_NOT_IMPLEMENTED;
             continue;
         }
-        /*
-         * Call the decryption algorithm
-         */
-        ret = DPS_TxBufferInit(plainText, plainText->base, contentLen - M);
-        if (ret != DPS_OK) {
-            goto Exit;
-        }
-        ret = Decrypt_GCM(cek.symmetric.key, nonce ? nonce : iv, content, contentLen,
-                          AAD.base, aadLen, plainText);
+        ret = Decrypt_GCM(cek.symmetric.key, nonce ? nonce : iv, content, contentLen, AAD.base, aadLen, plainText);
         if (ret == DPS_OK) {
             break;
         }
     }
 
 Exit:
-    SecureZeroMemory(&ephemeralKey, sizeof(ephemeralKey));
-    SecureZeroMemory(&staticKey, sizeof(staticKey));
-    SecureZeroMemory(&kek, sizeof(kek));
-    SecureZeroMemory(&k, sizeof(k));
-    SecureZeroMemory(&cek, sizeof(cek));
-    DPS_TxBufferFree(&kdfContext);
-    DPS_TxBufferFree(&toBeSigned);
-    DPS_TxBufferFree(&AAD);
-    if (ret != DPS_OK) {
-        DPS_TxBufferFree(plainText);
-    }
     return ret;
 }
