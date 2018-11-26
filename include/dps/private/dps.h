@@ -38,16 +38,30 @@ extern "C" {
 #endif
 
 /**
- * Opaque ype for platform-specific network state
+ * Opaque type for platform-specific network state
  */
 typedef struct _DPS_Network DPS_Network;
+
+#define DPS_TX_BUFFER_SIZE      2048
+#define DPS_SCRATCH_BUFFER_SIZE 2048
 
 /**
  * Type for a DPS node
  */
 typedef struct _DPS_Node {
+    uint8_t tmpBuffer[DPS_SCRATCH_BUFFER_SIZE];
+    size_t tmpLen;
+    uint8_t txBuffer[DPS_TX_BUFFER_SIZE];
+    size_t txLen;
+    const char* separators;
     DPS_Network* network;
 } DPS_Node;
+
+/*
+ * Forward declarations
+ */
+typedef struct _DPS_Subscription DPS_Subscription;
+typedef struct _DPS_Publication DPS_Publication;
 
 /**
  * A key store request.

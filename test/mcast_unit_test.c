@@ -33,9 +33,14 @@ static DPS_Status OnReceive(DPS_Node* node, DPS_RxBuffer* rxBuf, DPS_Status stat
     return DPS_OK;
 }
 
+static char testString[] = "This is a test string";
+
+static DPS_TxBuffer txBuf;
+
 int main(int argc, char** argv)
 {
     DPS_Status status;
+    int i;
     char** arg = argv + 1;
 
     DPS_Debug = DPS_FALSE;
@@ -55,7 +60,13 @@ int main(int argc, char** argv)
     status = DPS_MCastStart(node, OnReceive);
     CHECK(status == DPS_OK);
 
-    Sleep(120000);
+    DPS_TxBufferAlloc(node, &txBuf, strlen(testString) + 1, DPS_TX_POOL);
+    DPS_TxBufferAppend(&txBuf, testString, strlen(testString) + 1);
+
+    for (i = 0; i < 100; ++i) {
+        Sleep(5000);
+        DPS_MCastSend(node, NULL, NULL);
+    }
 
     return 0;
 

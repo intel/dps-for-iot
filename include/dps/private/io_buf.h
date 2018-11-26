@@ -30,6 +30,7 @@
 
 #include <stdint.h>
 #include <dps/err.h>
+#include <dps/private/dps.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -53,7 +54,7 @@ typedef struct _DPS_RxBuffer {
  *
  * @return   DPS_OK or DP_ERR_RESOURCES if storage is needed and could not be allocated.
  */
-DPS_Status DPS_RxBufferInit(DPS_RxBuffer* buffer, uint8_t* storage, size_t size);
+void DPS_RxBufferInit(DPS_RxBuffer* buffer, uint8_t* storage, size_t size);
 
 /**
  * Free resources allocated for a buffer and nul out the buffer pointers.
@@ -90,14 +91,7 @@ typedef struct _DPS_TxBuffer {
  *
  * @return   DPS_OK or DP_ERR_RESOURCES if storage is needed and could not be allocated.
  */
-DPS_Status DPS_TxBufferInit(DPS_TxBuffer* buffer, uint8_t* storage, size_t size);
-
-/**
- * Free resources allocated for a buffer and nul out the buffer pointers.
- *
- * @param buffer    Buffer to free
- */
-void DPS_TxBufferFree(DPS_TxBuffer* buffer);
+void DPS_TxBufferInit(DPS_TxBuffer* buffer, uint8_t* storage, size_t size);
 
 /**
  * Add data to a transmit buffer
@@ -158,6 +152,33 @@ void DPS_TxBufferToRx(const DPS_TxBuffer* txBuffer, DPS_RxBuffer* rxBuffer);
  * @param txBuffer   Transmit buffer struct to be initialized
  */
 void DPS_RxBufferToTx(const DPS_RxBuffer* rxBuffer, DPS_TxBuffer* txBuffer);
+
+
+typedef enum {
+    DPS_TX_POOL,
+    DPS_TMP_POOL
+} DPS_BUFFER_POOL;
+
+/**
+ * Allocates space for a Tx buffer
+ *
+ * @param node            Pointer to the DPS node
+ * @param txBuf           A transmit buffer to return the allocated bytes
+ * @param len             Number of bytes to allocate
+ * @param pool            Which pool to allocate from
+ *
+ * @return DPS_OK if the space was allocated
+ *         DPS_ERR_RESOURCES if there not enough free space in the transmit buffer
+ */
+DPS_Status DPS_TxBufferAlloc(DPS_Node* node, DPS_TxBuffer* txBuf, size_t len, DPS_BUFFER_POOL pool);
+
+/**
+ * Frees all buffers allocated from the specified pool
+ *
+ * @param node            Pointer to the DPS node
+ * @param pool            The pool to free
+ */
+void DPS_TxBufferFreePool(DPS_Node* node, DPS_BUFFER_POOL);
 
 
 #ifdef __cplusplus

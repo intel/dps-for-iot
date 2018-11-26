@@ -51,18 +51,32 @@
 DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
 #define RX_BUFFER_SIZE 2048
-#define TX_BUFFER_SIZE 2048
 
 #define IPV4  0
 #define IPV6  1
 
+#define MAX_MCAST_INTERFACES  64
+
+/* Identifies which interface to send on */
+typedef struct _InterfaceSpec {
+    ADDRESS_FAMILY family;
+    union {
+        ULONG scope_id; /* for IPv6 */
+        int32_t addr;   /* IPv4 address */
+    };
+} InterfaceSpec;
+
 struct _DPS_Network {
     SOCKET mcastRecvSock[2];             /* IPv4 and IPv6 sockets */
+    SOCKET mcastSendSock[2];             /* IPv4 and IPv6 sockets */
     uint8_t rxBuffer[2][RX_BUFFER_SIZE]; /* need separate buffers for each recv socket */
-    uint8_t txBuffer[TX_BUFFER_SIZE];
     DWORD txLen;
     DPS_OnReceive mcastRecvCB;
     DPS_OnReceive recvCB;
+    uint16_t numMcastIfs;
+    InterfaceSpec mcastIf[MAX_MCAST_INTERFACES];
+    struct sockaddr_in addrCOAP4;
+    struct sockaddr_in6 addrCOAP6;
 };
 
 static DPS_Network netContext;
@@ -178,6 +192,7 @@ DPS_Status DPS_NetworkInit(DPS_Node* node)
     }
     memset(&netContext, 0, sizeof(netContext));
     node->network = &netContext;
+
     return status;
 }
 
@@ -187,12 +202,10 @@ void DPS_NetworkTerminate(DPS_Node* node)
     WSACleanup();
 }
 
-static SOCKET BindSock(int family)
+static SOCKET BindSock(int family, DPS_Network* net, int port)
 {
     int ret = 0;
     SOCKET sock;
-    struct sockaddr_storage storage;
-    socklen_t len = sizeof(storage);
 
     sock = WSASocketW(family, SOCK_DGRAM, IPPROTO_UDP, NULL, 0, WSA_FLAG_OVERLAPPED);
     if (sock == INVALID_SOCKET) {
@@ -204,19 +217,21 @@ static SOCKET BindSock(int family)
         if (ret == SOCKET_ERROR) {
             DPS_DBGPRINT("%s: setsockopt SO_REUSEADDR failed. WSAGetLastError()=0x%x\n", __FUNCTION__, WSAGetLastError());
         }
-        memset(&storage, 0, len);
         if (family == AF_INET) {
-            struct sockaddr_in* sin = (struct sockaddr_in*)&storage;
-            sin->sin_family = AF_INET;
-            sin->sin_port = htons(COAP_UDP_PORT);
-            sin->sin_addr.s_addr = INADDR_ANY;
+            struct sockaddr_in addrAny4;
+            memset(&addrAny4, 0, sizeof(addrAny4));
+            addrAny4.sin_family = AF_INET;
+            addrAny4.sin_addr.s_addr = INADDR_ANY;
+            addrAny4.sin_port = htons(port);
+            ret = bind(sock, (struct sockaddr*)&addrAny4, sizeof(addrAny4));
         } else {
-            struct sockaddr_in6* sin = (struct sockaddr_in6*)&storage;
-            sin->sin6_family = AF_INET6;
-            sin->sin6_port = htons(COAP_UDP_PORT);
-            sin->sin6_addr = in6addr_any;
+            struct sockaddr_in6 addrAny6;
+            memset(&addrAny6, 0, sizeof(addrAny6));
+            addrAny6.sin6_port = htons(port);
+            addrAny6.sin6_family = AF_INET6;
+            addrAny6.sin6_addr = in6addr_any;
+            ret = bind(sock, (struct sockaddr*)&addrAny6, sizeof(addrAny6));
         }
-        ret = bind(sock, (struct sockaddr*)&storage, len);
         if (ret == SOCKET_ERROR) {
             DPS_DBGPRINT("%s: bind() %s failed. WSAGetLastError()=0x%x\n", __FUNCTION__, family == AF_INET ? "IPv4" : "IPv6", WSAGetLastError());
             closesocket(sock);
@@ -259,8 +274,12 @@ DPS_Status DPS_MCastStart(DPS_Node* node, DPS_OnReceive cb)
     PIP_ADAPTER_ADDRESSES adapter;
 
     /* Bind the IPv4 and IPv6 recv sockets */
-    network->mcastRecvSock[IPV4] = BindSock(AF_INET);
-    network->mcastRecvSock[IPV6] = BindSock(AF_INET6);
+    network->mcastRecvSock[IPV4] = BindSock(AF_INET, network, COAP_UDP_PORT);
+    network->mcastRecvSock[IPV6] = BindSock(AF_INET6, network, COAP_UDP_PORT);
+
+    network->mcastSendSock[IPV4] = BindSock(AF_INET, network, 0);
+    network->mcastSendSock[IPV6] = BindSock(AF_INET6, network, 0);
+
     /* OK if we have at least one network family */
     if (network->mcastRecvSock[IPV4] == INVALID_SOCKET && network->mcastRecvSock[IPV6] == INVALID_SOCKET) {
         return DPS_ERR_NETWORK;
@@ -278,6 +297,9 @@ DPS_Status DPS_MCastStart(DPS_Node* node, DPS_OnReceive cb)
             goto ErrorExit;
         }
         memcpy(&req4.gr_group, ai->ai_addr, ai->ai_addrlen);
+        /* Save the COAP destination address */
+        memcpy(&network->addrCOAP4, ai->ai_addr, ai->ai_addrlen);
+        network->addrCOAP4.sin_port = htons(COAP_UDP_PORT);
         freeaddrinfo(ai);
     }
     /* Configure the IPv6 request */
@@ -290,6 +312,9 @@ DPS_Status DPS_MCastStart(DPS_Node* node, DPS_OnReceive cb)
             goto ErrorExit;
         }
         memcpy(&req6.gr_group, ai->ai_addr, ai->ai_addrlen);
+        /* Save the COAP destination address */
+        memcpy(&network->addrCOAP6, ai->ai_addr, ai->ai_addrlen);
+        network->addrCOAP6.sin6_port = htons(COAP_UDP_PORT);
         freeaddrinfo(ai);
     }
     /* Get the network interfaces and set up the multicast groups */
@@ -299,6 +324,7 @@ DPS_Status DPS_MCastStart(DPS_Node* node, DPS_OnReceive cb)
     }
     /* Adapters is returned as a linked list */
     for (adapter = adapterList; adapter; adapter = adapter->Next) {
+        PIP_ADAPTER_UNICAST_ADDRESS_LH addr;
         /* Skip adapters that are not up */
         if (adapter->OperStatus != IfOperStatusUp || adapter->FirstUnicastAddress == NULL) {
             continue;
@@ -322,6 +348,24 @@ DPS_Status DPS_MCastStart(DPS_Node* node, DPS_OnReceive cb)
                 DPS_DBGPRINT("MCAST_JOIN_GOUP IPv6 sucessful\n");
             }
         } 
+        /* Accumulate addresses for multicast send */
+        for (addr = adapter->FirstUnicastAddress; addr != NULL; addr = addr->Next) {
+            struct sockaddr* sa = addr->Address.lpSockaddr;
+            if (network->numMcastIfs >= MAX_MCAST_INTERFACES) {
+                DPS_DBGPRINT("Too many interfaces\n");
+                break;
+            }
+            InterfaceSpec* ifs = &network->mcastIf[network->numMcastIfs];
+            ifs->family = sa->sa_family;
+            if (sa->sa_family == AF_INET6) {
+                struct sockaddr_in6* sin6 = (struct sockaddr_in6*)sa;
+                ifs->scope_id = sin6->sin6_scope_id;
+            } else {
+                struct sockaddr_in* sin = (struct sockaddr_in*)sa;
+                memcpy(&ifs->addr, &sin->sin_addr, sizeof(ifs->addr));
+            }
+            ++network->numMcastIfs;
+        }
     }
     network->mcastRecvCB = cb;
     free(adapterList);
@@ -346,4 +390,39 @@ ErrorExit:
 
     return DPS_ERR_NETWORK;
 
+}
+
+DPS_Status DPS_MCastSend(DPS_Node* node, void* appCtx, DPS_SendComplete sendCompleteCB)
+{
+    DPS_Network* net = node->network;
+    DWORD sent;
+    WSABUF buf;
+    int ret;
+    int i;
+
+    buf.len = (LONG)node->txLen;
+    buf.buf = node->txBuffer;
+
+    for (i = 0; i < net->numMcastIfs; ++i) {
+        InterfaceSpec* ifs = &net->mcastIf[i];
+        if (net->mcastIf[i].family == AF_INET6) {
+            ret = setsockopt(net->mcastSendSock[IPV6], IPPROTO_IPV6, IPV6_MULTICAST_IF, (char*)&ifs->scope_id, sizeof(ifs->scope_id));
+            if (ret == SOCKET_ERROR) {
+                DPS_DBGPRINT("setsockopt IP_MULICAST_IF failed %d\n", WSAGetLastError());
+            } else {
+                ret = WSASendTo(net->mcastSendSock[IPV6], &buf, 1, &sent, 0, (SOCKADDR*)&net->addrCOAP6, sizeof(net->addrCOAP6), NULL, NULL);
+            }
+        } else {
+            ret = setsockopt(net->mcastSendSock[IPV4], IPPROTO_IP, IP_MULTICAST_IF, (char*)&ifs->addr, sizeof(ifs->addr));
+            if (ret == SOCKET_ERROR) {
+                DPS_DBGPRINT("setsockopt IP_MULICAST_IF failed %d\n", WSAGetLastError());
+            } else {
+                ret = WSASendTo(net->mcastSendSock[IPV4], &buf, 1, &sent, 0, (SOCKADDR*)&net->addrCOAP4, sizeof(net->addrCOAP4), NULL, NULL);
+            }
+        }
+        if (ret == SOCKET_ERROR) {
+            DPS_DBGPRINT("WSASEndTo failed %d\n", WSAGetLastError());
+        }
+    }
+    return DPS_OK;
 }

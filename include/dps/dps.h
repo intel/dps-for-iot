@@ -45,7 +45,6 @@ extern "C" {
  */
 typedef struct _DPS_Node DPS_Node;
 
-
 DPS_Node* DPS_Init();
 
 void DPS_Terminate(DPS_Node* node);

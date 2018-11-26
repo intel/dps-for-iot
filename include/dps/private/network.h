@@ -87,7 +87,6 @@ void DPS_MCastStop(DPS_Node* node);
  * Multicast data in the node transmit buffer
  *
  * @param node            Opaque pointer to the DPS node
- * @param txBuf           The transmit buffer
  * @param appCtx          An application context to be passed to the send complete callback
  * @param sendCompleteCB  Function called when the send is complete
  *
@@ -96,7 +95,7 @@ void DPS_MCastStop(DPS_Node* node);
  * - DPS_ERR_NO_ROUTE if no interfaces are usable for multicast,
  * - an error otherwise
  */
-DPS_Status DPS_MCastSend(DPS_Node* node, DPS_TxBuffer* txBuf, void* appCtx, DPS_SendComplete sendCompleteCB);
+DPS_Status DPS_MCastSend(DPS_Node* node, void* appCtx, DPS_SendComplete sendCompleteCB);
 
 /**
  * Start listening and receiving unicast data
@@ -128,7 +127,6 @@ void DPS_UnicastStop(DPS_Node* node);
  * @return DPS_OK if the send is successful, an error otherwise
  */
 DPS_Status DPS_UnicastSend(DPS_Node* node, DPS_TxBuffer* txBuf, void* appCtx, DPS_SendComplete sendCompleteCB);
-
 
 #ifdef __cplusplus
 }

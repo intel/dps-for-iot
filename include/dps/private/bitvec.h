@@ -180,13 +180,13 @@ DPS_Status DPS_BitVectorUnion(DPS_BitVector* bvOut, DPS_BitVector* bv);
 DPS_Status DPS_BitVectorSerialize(DPS_BitVector* bv, DPS_TxBuffer* buffer);
 
 /**
- * Maximum buffer space needed to serialize a bit vector.
+ * Buffer space needed to serialize a bit vector.
  *
  * @param bv  The bit vector to check
  *
- * @return  The maximum space needed to serialize a bit vector.
+ * @return  The buffer space needed to serialize a bit vector.
  */
-size_t DPS_BitVectorSerializeMaxSize(DPS_BitVector* bv);
+size_t DPS_BitVectorSerializedSize(DPS_BitVector* bv);
 
 /**
  * Deserialize an decompress a bit vector from a buffer
