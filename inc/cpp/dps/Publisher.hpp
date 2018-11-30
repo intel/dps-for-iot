@@ -58,7 +58,6 @@ protected:
   DPS_Status initialize(DPS_Node * node, const std::vector<std::string> & topics,
                         DPS_AcknowledgementHandler handler);
   DPS_Status addPublication(TxStream && payload, PublicationInfo * info = nullptr);
-  Range cacheRange() const;
   virtual void onNewPublication(Subscriber * subscriber);
 };
 
@@ -96,6 +95,10 @@ protected:
 
   static const uint64_t heartbeatPeriodMs = 1000;
 
+  enum {
+    HEARTBEAT_ALWAYS,
+    HEARTBEAT_UNACKNOWLEDGED
+  } heartbeatPolicy_;
   uv_async_t async_;
   uv_timer_t timer_;
   DPS_Event * close_;
@@ -103,8 +106,10 @@ protected:
 
   static void ackHandler_(DPS_Publication * pub, uint8_t * data, size_t dataLen);
   virtual void ackHandler(DPS_Publication * pub, const AckHeader & header, RxStream & rxBuf);
-  bool ackedByAll(uint32_t sn);
+  bool ackedByAll(uint32_t sn) const;
+  bool anyUnacked() const;
   void resendRequested(DPS_Publication * pub, const SNSet & sns);
+  virtual TxStream heartbeat();
   void resetHeartbeat();
   static void onAsync_(uv_async_t * handle);
   void onAsync();

@@ -23,18 +23,26 @@ using namespace dps;
 class ReliableSubscriber::Publisher : public ReliablePublisher
 {
 public:
+  ReliableSubscriber * subscriber_;
   RemoteReliablePublisher * remote_;
 
-  Publisher(const QoS & qos, RemoteReliablePublisher * remote);
+  Publisher(const QoS & qos, ReliableSubscriber * subscriber, RemoteReliablePublisher * remote);
   virtual ~Publisher() {}
   virtual DPS_Status initialize(DPS_Node * node, const std::vector<std::string> & topics);
   virtual void ackHandler(DPS_Publication * pub, const AckHeader & header, RxStream & rxBuf);
+  virtual TxStream heartbeat();
 };
 
 Subscriber::Subscriber(const QoS & qos, SubscriberListener * listener)
 : qos_(qos), listener_(listener), sub_(nullptr), cache_(new Cache<RxStream>(qos.depth))
 {
   DPS_GenerateUUID(&uuid_);
+}
+
+Subscriber::Subscriber(const QoS & qos, SubscriberListener * listener, const DPS_UUID * uuid)
+: qos_(qos), listener_(listener), sub_(nullptr), cache_(new Cache<RxStream>(qos.depth))
+{
+  memcpy(&uuid_, uuid, sizeof(DPS_UUID));
 }
 
 Subscriber::~Subscriber()
@@ -146,7 +154,7 @@ void Subscriber::pubHandler_(DPS_Subscription * sub, const DPS_Publication * pub
   RxStream rxBuf(data, dataLen);
   std::lock_guard<std::recursive_mutex> lock(subscriber->internalMutex_);
   PublicationHeader header;
-  rxBuf >> header.range_;
+  rxBuf >> header;
   subscriber->pubHandler(pub, header, rxBuf);
 }
 
@@ -154,11 +162,10 @@ void Subscriber::pubHandler(const DPS_Publication * pub, PublicationHeader & hea
 {
   const DPS_UUID * uuid = DPS_PublicationGetUUID(pub);
 
-  if (rxBuf.eof()) {
+  if (header.type_ != QOS_DATA) {
     return;
   }
-  rxBuf >> header.sn_;
-  DPS_PRINT("PUB %s(%d) [%d,%d]\n", DPS_UUIDToString(uuid), header.sn_, header.range_.first,
+  DPS_PRINT("DATA %s(%d) [%d,%d]\n", DPS_UUIDToString(uuid), header.sn_, header.range_.first,
             header.range_.second);
   if (cache_->full()) {
     cache_->removeData(cache_->begin());
@@ -203,6 +210,11 @@ ReliableSubscriber::ReliableSubscriber(const QoS & qos, SubscriberListener * lis
 {
 }
 
+ReliableSubscriber::ReliableSubscriber(const QoS & qos, SubscriberListener * listener, const DPS_UUID * uuid)
+: Subscriber(qos, listener, uuid)
+{
+}
+
 ReliableSubscriber::~ReliableSubscriber()
 {
   for (auto it = remote_.begin(); it != remote_.end(); ++it) {
@@ -233,7 +245,7 @@ DPS_Status ReliableSubscriber::ack(TxStream && payload, const DPS_UUID * uuid, u
     return ret;
   }
   TxStream txBuf;
-  txBuf << QOS_ACK << uuid_ << sn << payload;
+  txBuf << uuid_ << sn << payload;
   return remote.pub_->publish(std::move(txBuf));
 }
 
@@ -256,16 +268,11 @@ void ReliableSubscriber::pubHandler(const DPS_Publication * pub, PublicationHead
 {
   const DPS_UUID * uuid = DPS_PublicationGetUUID(pub);
   RemoteReliablePublisher & remote = remote_[*uuid];
-  bool isHeartbeat = false;
 
-  if (rxBuf.eof()) {
-    DPS_PRINT("HEARTBEAT %s [%d,%d]\n", DPS_UUIDToString(uuid), header.range_.first,
-              header.range_.second);
-    isHeartbeat = true;
-  } else {
-    rxBuf >> header.sn_;
-    DPS_PRINT("PUB %s(%d) [%d,%d]\n", DPS_UUIDToString(uuid), header.sn_, header.range_.first,
-              header.range_.second);
+  if (header.type_ == QOS_DATA) {
+    DPS_PRINT("DATA %s(%d) [%d,%d]\n", DPS_UUIDToString(uuid), header.sn_, header.range_.first, header.range_.second);
+  } else if (header.type_ == QOS_HEARTBEAT) {
+    DPS_PRINT("HEARTBEAT %s [%d,%d]\n", DPS_UUIDToString(uuid), header.range_.first, header.range_.second);
   }
 
   DPS_Status ret = remote.initialize(uuid, this);
@@ -278,7 +285,8 @@ void ReliableSubscriber::pubHandler(const DPS_Publication * pub, PublicationHead
   }
 
   remote.range_ = header.range_;
-  if (!isHeartbeat && !remote.received(header.sn_)) {
+
+  if (header.type_ == QOS_DATA && !remote.received(header.sn_)) {
     // ensure enough space is available in cache to receive
     // missing publications before adding this one
     size_t need = 1;
@@ -340,28 +348,27 @@ SNSet ReliableSubscriber::missing(const DPS_UUID * uuid, size_t avail)
 DPS_Status ReliableSubscriber::RemoteReliablePublisher::initialize(const DPS_UUID * uuid,
                                                                    ReliableSubscriber * subscriber)
 {
+  DPS_Status ret = DPS_OK;
   if (!pub_) {
-    pub_ = new ReliableSubscriber::Publisher(subscriber->qos_, this);
+    pub_ = new ReliableSubscriber::Publisher(subscriber->qos_, subscriber, this);
     std::vector<std::string> topic = { DPS_UUIDToString(uuid) };
     DPS_Status ret = pub_->initialize(DPS_SubscriptionGetNode(subscriber->sub_), topic);
-    if (ret != DPS_OK) {
+    if (ret == DPS_OK) {
+      busy_ = true;
+    } else {
       delete pub_;
       pub_ = nullptr;
-      return ret;
     }
-    TxStream txBuf;
-    txBuf << QOS_ADD << subscriber->uuid_;
-    pub_->publish(std::move(txBuf));
-    busy_ = true;
   }
-  if (busy_) {
-    return DPS_ERR_BUSY;
+  if (ret == DPS_OK && busy_) {
+    ret = DPS_ERR_BUSY;
   }
-  return DPS_OK;
+  return ret;
 }
 
-ReliableSubscriber::Publisher::Publisher(const QoS & qos, RemoteReliablePublisher * remote)
-  : ReliablePublisher(qos, nullptr), remote_(remote)
+ReliableSubscriber::Publisher::Publisher(const QoS & qos, ReliableSubscriber * subscriber,
+                                         RemoteReliablePublisher * remote)
+  : ReliablePublisher(qos, nullptr), subscriber_(subscriber), remote_(remote)
 {
 }
 
@@ -399,6 +406,24 @@ Exit:
   return ret;
 }
 
+TxStream ReliableSubscriber::Publisher::heartbeat()
+{
+  if (remote_->busy_) {
+    Range range;
+    if (cache_->empty()) {
+      range = { sn_, sn_ };
+    } else {
+      range = { cache_->minSN(), cache_->maxSN() };
+    }
+    PublicationHeader header = { QOS_ADD, range };
+    TxStream txBuf;
+    txBuf << header << subscriber_->uuid_;
+    return txBuf;
+  } else {
+    return ReliablePublisher::heartbeat();
+  }
+}
+
 void ReliableSubscriber::Publisher::ackHandler(DPS_Publication * pub, const AckHeader & header,
                                                RxStream & rxBuf)
 {
@@ -409,7 +434,7 @@ void ReliableSubscriber::Publisher::ackHandler(DPS_Publication * pub, const AckH
     remote_->range_ = range;
     // TODO this assumes VOLATILE for now, for TRANSIENT, use range.first - 1
     remote_->setReceived(range.second, range.second);
-    // TODO don't need heartbeat until I have an ack payload to send
+    heartbeatPolicy_ = HEARTBEAT_UNACKNOWLEDGED;
   }
   ReliablePublisher::ackHandler(pub, header, rxBuf);
 }

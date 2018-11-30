@@ -34,6 +34,7 @@ class Subscriber
   friend class Publisher;
 public:
   Subscriber(const QoS & qos, SubscriberListener * listener);
+  Subscriber(const QoS & qos, SubscriberListener * listener, const DPS_UUID * uuid);
   virtual ~Subscriber();
   virtual DPS_Status initialize(DPS_Node * node, const std::vector<std::string> & topics);
   virtual DPS_Status close();
@@ -69,6 +70,7 @@ class ReliableSubscriber : public Subscriber
 {
 public:
   ReliableSubscriber(const QoS & qos, SubscriberListener * listener);
+  ReliableSubscriber(const QoS & qos, SubscriberListener * listener, const DPS_UUID * uuid);
   virtual ~ReliableSubscriber();
   virtual DPS_Status close();
   virtual DPS_Status ack(TxStream && payload, const DPS_UUID * uuid, uint32_t sn);

@@ -25,7 +25,7 @@ class ReliablePublisher::Subscriber : public ReliableSubscriber
 public:
   ReliablePublisher * publisher_;
 
-  Subscriber(const QoS & qos, ReliablePublisher * publisher);
+  Subscriber(const QoS & qos, ReliablePublisher * publisher, const DPS_UUID * uuid);
   virtual ~Subscriber() {}
   virtual void pubHandler(const DPS_Publication * pub, PublicationHeader & header, RxStream & rxBuf);
 };
@@ -50,8 +50,8 @@ DPS_Status Publisher::initialize(DPS_Node * node, const std::vector<std::string>
     goto Exit;
   }
   if (listener_) {
-    thisSub_ = new Subscriber(qos_, this);
-    std::vector<std::string> thisTopic = { DPS_UUIDToString(DPS_PublicationGetUUID(pub_)) };
+    thisSub_ = new Subscriber(qos_, this, uuid());
+    std::vector<std::string> thisTopic = { DPS_UUIDToString(uuid()) };
     ret = thisSub_->initialize(node, thisTopic);
     if (ret != DPS_OK) {
       goto Exit;
@@ -152,13 +152,19 @@ DPS_Status Publisher::addPublication(TxStream && payload, PublicationInfo * info
   // must check for space before adding the data as DPS_Publish must be called before the
   // copied publication will be correct
   if (!cache_->full()) {
-    PublicationHeader header = { cacheRange(), sn_ + 1 };
+    Range range;
+    if (cache_->empty()) {
+      range = { sn_ + 1, sn_ + 1 };
+    } else {
+      range = { cache_->minSN(), sn_ + 1 };
+    }
+    PublicationHeader header = { QOS_DATA, range, sn_ + 1 };
     TxStream buf;
-    buf << header.range_ << header.sn_ << payload;
+    buf << header << payload;
     DPS_Status ret = DPS_Publish(pub_, buf.data(), buf.size(), 0);
     if (ret == DPS_OK) {
       if (info) {
-        memcpy(&info->uuid, DPS_PublicationGetUUID(pub_), sizeof(DPS_UUID));
+        memcpy(&info->uuid, uuid(), sizeof(DPS_UUID));
         info->sn = header.sn_;
       }
       Cache<TxStream>::Data data =
@@ -172,22 +178,13 @@ DPS_Status Publisher::addPublication(TxStream && payload, PublicationInfo * info
   }
 }
 
-Range Publisher::cacheRange() const
-{
-  if (cache_->empty()) {
-    return { sn_ + 1, sn_ + 1 };
-  } else {
-    return { cache_->minSN(), sn_ + 1 };
-  }
-}
-
 void Publisher::onNewPublication(Subscriber * subscriber)
 {
   listener_->onNewAcknowledgement(this);
 }
 
 ReliablePublisher::ReliablePublisher(const QoS & qos, PublisherListener * listener)
-  : Publisher(qos, listener), close_(nullptr)
+  : Publisher(qos, listener), heartbeatPolicy_(HEARTBEAT_ALWAYS), close_(nullptr)
 {
 }
 
@@ -217,8 +214,8 @@ DPS_Status ReliablePublisher::initialize(DPS_Node * node, const std::vector<std:
     goto Exit;
   }
   timer_.data = this;
-  thisSub_ = new ReliablePublisher::Subscriber(qos_, this);
-  thisTopic = { DPS_UUIDToString(DPS_PublicationGetUUID(pub_)) };
+  thisSub_ = new ReliablePublisher::Subscriber(qos_, this, uuid());
+  thisTopic = { DPS_UUIDToString(uuid()) };
   ret = thisSub_->initialize(node, thisTopic);
   if (ret != DPS_OK) {
     goto Exit;
@@ -319,7 +316,7 @@ void ReliablePublisher::ackHandler(DPS_Publication * pub, const AckHeader & head
   resendRequested(pub, header.sns_);
 }
 
-bool ReliablePublisher::ackedByAll(uint32_t sn)
+bool ReliablePublisher::ackedByAll(uint32_t sn) const
 {
   // check if the serial number has been acknowledged by all subscribers
   bool acked = true;
@@ -327,6 +324,16 @@ bool ReliablePublisher::ackedByAll(uint32_t sn)
     acked = acked && it->second.acked(sn);
   }
   return acked;
+}
+
+bool ReliablePublisher::anyUnacked() const
+{
+  for (auto it = cache_->begin(); it != cache_->end(); ++it) {
+    if (!ackedByAll(it->sn_)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 void ReliablePublisher::resendRequested(DPS_Publication * pub, const SNSet & sns)
@@ -342,9 +349,9 @@ void ReliablePublisher::resendRequested(DPS_Publication * pub, const SNSet & sns
         // missing publication requested
         continue;
       }
-      PublicationHeader header = { { cache_->minSN(), cache_->maxSN() }, it->sn_ };
+      PublicationHeader header = { QOS_DATA, { cache_->minSN(), cache_->maxSN() }, it->sn_ };
       TxStream txBuf;
-      txBuf << header.range_ << header.sn_ << it->buf_;
+      txBuf << header << it->buf_;
       DPS_Status ret = DPS_Publish(pub, txBuf.data(), txBuf.size(), 0);
       if (ret == DPS_OK) {
         resetHeartbeat();
@@ -398,21 +405,35 @@ void ReliablePublisher::onTimer_(uv_timer_t * handle)
   publisher->onTimer();
 }
 
-void ReliablePublisher::onTimer()
+TxStream ReliablePublisher::heartbeat()
 {
-  // send out a new heartbeat
   Range range;
   if (cache_->empty()) {
-    range = { 0, 0 };
+    range = { sn_, sn_ };
   } else {
     range = { cache_->minSN(), cache_->maxSN() };
   }
-  PublicationHeader header = { range };
+  PublicationHeader header = { QOS_HEARTBEAT, range };
   TxStream txBuf;
-  txBuf << header.range_;
-  DPS_Status ret = DPS_Publish(pub_, txBuf.data(), txBuf.size(), 0);
-  if (ret != DPS_OK) {
-    DPS_ERRPRINT("Publish failed: %s\n", DPS_ErrTxt(ret));
+  txBuf << header;
+  return txBuf;
+}
+
+void ReliablePublisher::onTimer()
+{
+  if ((heartbeatPolicy_ == HEARTBEAT_ALWAYS) ||
+      (heartbeatPolicy_ == HEARTBEAT_UNACKNOWLEDGED && anyUnacked())) {
+    // send out a new heartbeat
+    TxStream txBuf = heartbeat();
+    DPS_Status ret = DPS_Publish(pub_, txBuf.data(), txBuf.size(), 0);
+    if (ret != DPS_OK) {
+      DPS_ERRPRINT("Publish failed: %s\n", DPS_ErrTxt(ret));
+    }
+  } else {
+    int err = uv_timer_stop(&timer_);
+    if (err) {
+      DPS_ERRPRINT("uv_timer_stop failed: %s\n", uv_strerror(err));
+    }
   }
 }
 
@@ -430,8 +451,8 @@ void ReliablePublisher::onAsyncClose_(uv_handle_t * handle)
   DPS_SignalEvent(publisher->close_, DPS_OK);
 }
 
-ReliablePublisher::Subscriber::Subscriber(const QoS & qos, ReliablePublisher * publisher)
-  : ReliableSubscriber(qos, publisher), publisher_(publisher)
+ReliablePublisher::Subscriber::Subscriber(const QoS & qos, ReliablePublisher * publisher, const DPS_UUID * uuid)
+  : ReliableSubscriber(qos, publisher, uuid), publisher_(publisher)
 {
 }
 
@@ -442,24 +463,35 @@ void ReliablePublisher::Subscriber::pubHandler(const DPS_Publication * pub, Publ
   RemoteReliablePublisher & remote = remote_[*uuid];
 
   remote.range_ = header.range_;
-  if (rxBuf.eof()) {
-    DPS_PRINT("HEARTBEAT %s [%d,%d]\n", DPS_UUIDToString(uuid), header.range_.first,
-              header.range_.second);
-    ackPublication(pub);
-    return;
-  }
 
-  uint8_t type;
-  rxBuf >> header.sn_ >> type;
-  DPS_PRINT("PUB %s(%d) [%d,%d]\n", DPS_UUIDToString(uuid), header.sn_, header.range_.first,
-            header.range_.second);
-  if (type == QOS_ADD) {
-    remote.setReceived(header.sn_, header.range_.first);
+  if (header.type_ == QOS_DATA) {
+    DPS_PRINT("DATA %s(%d) [%d,%d]\n", DPS_UUIDToString(uuid), header.sn_, header.range_.first,
+              header.range_.second);
+    if (!remote.received(header.sn_)) {
+      // ensure enough space is available in cache to receive
+      // missing publications before adding this one
+      size_t need = 1;
+      for (uint32_t n = header.range_.first; n < header.sn_; ++n) {
+        if (!remote.received(n)) {
+          ++need;
+        }
+      }
+      if (need <= cache_->avail()) {
+        addToCache(pub, header, std::move(rxBuf));
+        remote.setReceived(header.sn_, header.range_.first);
+      }
+    }
+    ackPublication(pub);
+  } else if (header.type_ == QOS_HEARTBEAT) {
+    DPS_PRINT("HEARTBEAT %s [%d,%d]\n", DPS_UUIDToString(uuid), header.range_.first, header.range_.second);
+    ackPublication(pub);
+  } else if (header.type_ == QOS_ADD) {
+    DPS_PRINT("ADD %s [%d,%d]\n", DPS_UUIDToString(uuid), header.range_.first, header.range_.second);
     DPS_UUID subUuid;
     rxBuf >> subUuid;
     Range range;
     if (publisher_->cache_->empty()) {
-      range = { 0, 0 };
+      range = { publisher_->sn_, publisher_->sn_ };
     } else {
       range = { publisher_->cache_->minSN(), publisher_->cache_->maxSN() };
     }
@@ -479,21 +511,5 @@ void ReliablePublisher::Subscriber::pubHandler(const DPS_Publication * pub, Publ
     TxStream txBuf;
     txBuf << range;
     ackPublication(pub, txBuf);
-  } else if (type == QOS_ACK) {
-    if (!remote.received(header.sn_)) {
-      // ensure enough space is available in cache to receive
-      // missing publications before adding this one
-      size_t need = 1;
-      for (uint32_t n = header.range_.first; n < header.sn_; ++n) {
-        if (!remote.received(n)) {
-          ++need;
-        }
-      }
-      if (need <= cache_->avail()) {
-        addToCache(pub, header, std::move(rxBuf));
-        remote.setReceived(header.sn_, header.range_.first);
-      }
-    }
-    ackPublication(pub);
   }
 }

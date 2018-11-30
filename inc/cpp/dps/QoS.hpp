@@ -77,10 +77,38 @@ operator>>(RxStream & buf, Range & range)
   return buf >> range.first >> range.second;
 }
 
+static const uint8_t QOS_DATA = 1;
+static const uint8_t QOS_HEARTBEAT = 2;
+static const uint8_t QOS_ADD = 3;
+
 typedef struct PublicationHeader {
+  uint8_t type_;
   Range range_;
   uint32_t sn_;
 } PublicationHeader;
+
+inline TxStream &
+operator<<(TxStream & buf, const PublicationHeader & header)
+{
+  switch (header.type_) {
+  case QOS_DATA:
+    return buf << header.type_ << header.range_ << header.sn_;
+  default:
+    return buf << header.type_ << header.range_;
+  }
+}
+
+inline RxStream &
+operator>>(RxStream & buf, PublicationHeader & header)
+{
+  buf >> header.type_;
+  switch (header.type_) {
+  case QOS_DATA:
+    return buf >> header.range_ >> header.sn_;
+  default:
+    return buf >> header.range_;
+  }
+}
 
 typedef struct SNSet
 {
@@ -166,9 +194,6 @@ operator>>(RxStream & buf, AckHeader & header)
   }
   return buf;
 }
-
-static const uint8_t QOS_ADD = 1;
-static const uint8_t QOS_ACK = 2;
 
 }
 
