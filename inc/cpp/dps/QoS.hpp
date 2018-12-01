@@ -110,6 +110,18 @@ operator>>(RxStream & buf, PublicationHeader & header)
   }
 }
 
+inline bool
+SN_LT(uint32_t a, uint32_t b)
+{
+  return ((int32_t)((uint32_t)(a) - (uint32_t)(b)) < 0);
+}
+
+inline bool
+SN_LE(uint32_t a, uint32_t b)
+{
+  return ((int32_t)((uint32_t)(a) - (uint32_t)(b)) <= 0);
+}
+
 typedef struct SNSet
 {
   uint32_t base_;
@@ -117,13 +129,12 @@ typedef struct SNSet
   bool
   test(uint32_t sn) const
   {
-    // TODO need to handle wraparound here with sn < base_
-    return (sn < base_) || sn_.test(sn - base_);
+    return SN_LT(sn, base_) || sn_.test(sn - base_);
   }
   SNSet &
   set(uint32_t sn)
   {
-    if (base_ <= sn) {
+    if (SN_LE(base_, sn)) {
       sn_.set(sn - base_);
     }
     return *this;
@@ -154,7 +165,7 @@ typedef struct SNSet
   void
   shrink(uint32_t firstSn)
   {
-    if (base_ < firstSn) {
+    if (SN_LT(base_, firstSn)) {
       sn_ >>= firstSn - base_;
       base_ = firstSn;
     }

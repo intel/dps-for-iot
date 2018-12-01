@@ -290,7 +290,7 @@ void ReliableSubscriber::pubHandler(const DPS_Publication * pub, PublicationHead
     // ensure enough space is available in cache to receive
     // missing publications before adding this one
     size_t need = 1;
-    for (uint32_t n = header.range_.first; n < header.sn_; ++n) {
+    for (uint32_t n = header.range_.first; SN_LT(n, header.sn_); ++n) {
       if (!remote.received(n)) {
         ++need;
       }
@@ -333,10 +333,10 @@ SNSet ReliableSubscriber::missing(const DPS_UUID * uuid, size_t avail)
   received.shrink(range.first);
 
   complement.base_ = received.base_;
-  while (received.test(complement.base_) && complement.base_ <= range.second) {
+  while (received.test(complement.base_) && SN_LE(complement.base_, range.second)) {
     ++complement.base_;
   }
-  for (uint32_t sn = complement.base_; avail && sn <= range.second; ++sn) {
+  for (uint32_t sn = complement.base_; avail && SN_LE(sn, range.second); ++sn) {
     if (!received.test(sn)) {
       complement.set(sn);
       --avail;

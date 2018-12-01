@@ -471,7 +471,7 @@ void ReliablePublisher::Subscriber::pubHandler(const DPS_Publication * pub, Publ
       // ensure enough space is available in cache to receive
       // missing publications before adding this one
       size_t need = 1;
-      for (uint32_t n = header.range_.first; n < header.sn_; ++n) {
+      for (uint32_t n = header.range_.first; SN_LT(n, header.sn_); ++n) {
         if (!remote.received(n)) {
           ++need;
         }
@@ -504,7 +504,7 @@ void ReliablePublisher::Subscriber::pubHandler(const DPS_Publication * pub, Publ
       // same as the original so that any publications sent since the new subscriber
       // appeared will get resent
       range.second = publisher_->remote_[subUuid].acked_.base_ - 1;
-      if (range.first > range.second) {
+      if (SN_LT(range.second, range.first)) {
         range.first = range.second;
       }
     }
