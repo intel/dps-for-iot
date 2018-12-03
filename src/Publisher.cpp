@@ -13,6 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
 #include <dps/dps.h>
 #include <dps/private/loop.h>
 #include <dps/Publisher.hpp>
@@ -288,7 +290,7 @@ void ReliablePublisher::dump()
         DPS_PRINT("%d ", it->second.acked_.base_ + i);
       }
     }
-    DPS_PRINT("]\n");
+    DPS_PRINT("] alive=%" PRIu64 "\n", it->second.alive_);
   }
 }
 
@@ -313,11 +315,22 @@ void ReliablePublisher::ackHandler(DPS_Publication * pub, const AckHeader & head
   DPS_PRINT("]\n");
   uint32_t ackSn = header.sns_.base_ - 1;
   remote_[header.uuid_].setAcked(ackSn, ackSn);
+  remote_[header.uuid_].alive_ = uv_now(DPS_GetLoop(DPS_PublicationGetNode(pub)));
   resendRequested(pub, header.sns_);
 }
 
-bool ReliablePublisher::ackedByAll(uint32_t sn) const
+bool ReliablePublisher::ackedByAll(uint32_t sn)
 {
+  // remove dead subscribers
+  uint64_t now = uv_now(DPS_GetLoop(DPS_PublicationGetNode(pub_)));
+  for (auto it = remote_.begin(); it != remote_.end(); ) {
+    if (now - it->second.alive_ >= aliveTimeoutMs) {
+      it = remote_.erase(it);
+    } else {
+      ++it;
+    }
+  }
+
   // check if the serial number has been acknowledged by all subscribers
   bool acked = true;
   for (auto it = remote_.begin(); acked && it != remote_.end(); ++it) {
@@ -326,7 +339,7 @@ bool ReliablePublisher::ackedByAll(uint32_t sn) const
   return acked;
 }
 
-bool ReliablePublisher::anyUnacked() const
+bool ReliablePublisher::anyUnacked()
 {
   for (auto it = cache_->begin(); it != cache_->end(); ++it) {
     if (!ackedByAll(it->sn_)) {
