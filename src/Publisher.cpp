@@ -33,8 +33,14 @@ public:
 };
 
 Publisher::Publisher(const QoS & qos, PublisherListener * listener)
-  : qos_(qos), listener_(listener), pub_(nullptr), sn_(0), cache_(new Cache<TxStream>(qos.depth)), thisSub_(nullptr)
+  : qos_(qos), listener_(listener), pub_(nullptr), sn_(0), cache_(new Cache<TxStream>(qos.depth)),
+    thisSub_(nullptr), close_(nullptr)
 {
+  if (qos_.durability == DPS_QOS_VOLATILE) {
+    heartbeatPolicy_ = HEARTBEAT_NEVER;
+  } else if (qos_.durability == DPS_QOS_TRANSIENT) {
+    heartbeatPolicy_ = HEARTBEAT_ALWAYS;
+  }
 }
 
 Publisher::~Publisher()
@@ -47,7 +53,8 @@ DPS_Status Publisher::initialize(DPS_Node * node, const std::vector<std::string>
 {
   DPS_Status ret;
   std::lock_guard<std::recursive_mutex> lock(internalMutex_);
-  ret = initialize(node, topics, nullptr);
+  DPS_AcknowledgementHandler handler = (qos_.durability == DPS_QOS_VOLATILE) ? nullptr: ackHandler_;
+  ret = initialize(node, topics, handler);
   if (ret != DPS_OK) {
     goto Exit;
   }
@@ -72,6 +79,7 @@ DPS_Status Publisher::initialize(DPS_Node * node, const std::vector<std::string>
   DPS_QoS qos = { 64 }; // TODO This is only to allow back-to-back publications
   std::vector<const char *> ctopics;
   DPS_Status ret = DPS_OK;
+  int err;
   pub_ = DPS_CreatePublication(node);
   if (!pub_) {
     return DPS_ERR_RESOURCES;
@@ -87,13 +95,43 @@ DPS_Status Publisher::initialize(DPS_Node * node, const std::vector<std::string>
   if (ret != DPS_OK) {
     return ret;
   }
-  return DPS_SetPublicationData(pub_, this);
+  ret = DPS_SetPublicationData(pub_, this);
+  if (ret != DPS_OK) {
+    return ret;
+  }
+  err = uv_async_init(DPS_GetLoop(node), &async_, onAsync_);
+  if (err) {
+    return DPS_ERR_FAILURE;
+  }
+  async_.data = this;
+  err = uv_timer_init(DPS_GetLoop(node), &timer_);
+  if (err) {
+    return DPS_ERR_FAILURE;
+  }
+  timer_.data = this;
+  return DPS_OK;
 }
 
 DPS_Status Publisher::close()
 {
+  DPS_Event* event = nullptr;
   DPS_Status ret;
-  std::lock_guard<std::recursive_mutex> lock(internalMutex_);
+  int err;
+  event = DPS_CreateEvent();
+  if (!event) {
+    ret = DPS_ERR_RESOURCES;
+    goto Exit;
+  }
+  close_ = event;
+  err = uv_async_send(&async_);
+  if (err) {
+    ret = DPS_ERR_FAILURE;
+    goto Exit;
+  }
+  ret = DPS_WaitForEvent(event);
+  if (ret != DPS_OK) {
+    goto Exit;
+  }
   if (thisSub_) {
     ret = thisSub_->close();
     if (ret != DPS_OK) {
@@ -105,6 +143,9 @@ DPS_Status Publisher::close()
     return ret;
   }
   pub_ = nullptr;
+Exit:
+  DPS_DestroyEvent(event);
+  close_ = nullptr;
   return ret;
 }
 
@@ -143,9 +184,11 @@ void Publisher::dump()
   for (auto it = cache_->begin(); it != cache_->end(); ++it) {
     DPS_PRINT("  %s(%d)\n", DPS_UUIDToString(DPS_PublicationGetUUID(it->pub_.get())), it->sn_);
   }
-  DPS_PRINT("Acknowledgement (inbound)\n");
-  for (auto it = thisSub_->cache_->begin(); it != thisSub_->cache_->end(); ++it) {
-    DPS_PRINT("  %s(%d)\n", DPS_UUIDToString(DPS_PublicationGetUUID(it->pub_.get())), it->sn_);
+  if (thisSub_) {
+    DPS_PRINT("Acknowledgement (inbound)\n");
+    for (auto it = thisSub_->cache_->begin(); it != thisSub_->cache_->end(); ++it) {
+      DPS_PRINT("  %s(%d)\n", DPS_UUIDToString(DPS_PublicationGetUUID(it->pub_.get())), it->sn_);
+    }
   }
 }
 
@@ -169,10 +212,9 @@ DPS_Status Publisher::addPublication(TxStream && payload, PublicationInfo * info
         memcpy(&info->uuid, uuid(), sizeof(DPS_UUID));
         info->sn = header.sn_;
       }
-      Cache<TxStream>::Data data =
-        { Publication(DPS_CopyPublication(pub_)), header.sn_, std::move(payload) };
-      cache_->addData(std::move(data));
+      cache_->addData({ Publication(DPS_CopyPublication(pub_)), header.sn_, std::move(payload) });
       ++sn_;
+      resetHeartbeat();
     }
     return ret;
   } else {
@@ -185,9 +227,152 @@ void Publisher::onNewPublication(Subscriber * subscriber)
   listener_->onNewAcknowledgement(this);
 }
 
-ReliablePublisher::ReliablePublisher(const QoS & qos, PublisherListener * listener)
-  : Publisher(qos, listener), heartbeatPolicy_(HEARTBEAT_ALWAYS), close_(nullptr)
+TxStream Publisher::heartbeat()
 {
+  Range range;
+  if (cache_->empty()) {
+    range = { sn_, sn_ };
+  } else {
+    range = { cache_->minSN(), cache_->maxSN() };
+  }
+  PublicationHeader header = { QOS_HEARTBEAT, range };
+  TxStream txBuf;
+  txBuf << header;
+  return txBuf;
+}
+
+void Publisher::resetHeartbeat()
+{
+  int err = uv_async_send(&async_);
+  if (err) {
+    DPS_ERRPRINT("uv_async_send failed: %s\n", uv_strerror(err));
+  }
+}
+
+void Publisher::onAsync_(uv_async_t * handle)
+{
+  Publisher * publisher = static_cast<Publisher *>(handle->data);
+  std::lock_guard<std::recursive_mutex> lock(publisher->internalMutex_);
+  publisher->onAsync();
+}
+
+void Publisher::onAsync()
+{
+  // close all the open handles
+  if (close_) {
+    uv_close((uv_handle_t *)&timer_, onTimerClose_);
+    return;
+  }
+  // request acknowledgements for unacknowledged publications
+  if (!uv_is_active((uv_handle_t *)&timer_)) {
+    int err = uv_timer_start(&timer_, onTimer_, heartbeatPeriodMs, heartbeatPeriodMs);
+    if (err) {
+      DPS_ERRPRINT("uv_timer_start failed: %s\n", uv_strerror(err));
+    }
+  } else {
+    int err = uv_timer_again(&timer_);
+    if (err) {
+      DPS_ERRPRINT("uv_timer_again failed: %s\n", uv_strerror(err));
+    }
+  }
+}
+
+void Publisher::onTimer_(uv_timer_t * handle)
+{
+  Publisher * publisher = static_cast<Publisher *>(handle->data);
+  std::lock_guard<std::recursive_mutex> lock(publisher->internalMutex_);
+  publisher->onTimer();
+}
+
+void Publisher::onTimer()
+{
+  if ((heartbeatPolicy_ == HEARTBEAT_ALWAYS) ||
+      (heartbeatPolicy_ == HEARTBEAT_UNACKNOWLEDGED && anyUnacked())) {
+    // send out a new heartbeat
+    TxStream txBuf = heartbeat();
+    DPS_Status ret = DPS_Publish(pub_, txBuf.data(), txBuf.size(), 0);
+    if (ret != DPS_OK) {
+      DPS_ERRPRINT("Publish failed: %s\n", DPS_ErrTxt(ret));
+    }
+  } else {
+    int err = uv_timer_stop(&timer_);
+    if (err) {
+      DPS_ERRPRINT("uv_timer_stop failed: %s\n", uv_strerror(err));
+    }
+  }
+}
+
+void Publisher::ackHandler_(DPS_Publication * pub, uint8_t * data, size_t dataLen)
+{
+  Publisher * publisher = static_cast<Publisher *>(DPS_GetPublicationData(pub));
+  RxStream rxBuf(data, dataLen);
+  std::lock_guard<std::recursive_mutex> lock(publisher->internalMutex_);
+  AckHeader header;
+  rxBuf >> header;
+  publisher->ackHandler(pub, header, rxBuf);
+}
+
+void Publisher::ackHandler(DPS_Publication * pub, const AckHeader & header, RxStream & rxBuf)
+{
+  DPS_PRINT("ACK %s %d[ ", DPS_UUIDToString(&header.uuid_), header.sns_.base_ - 1);
+  for (size_t i = 0; i < header.sns_.size(); ++i) {
+    if (header.sns_.test(header.sns_.base_ + i)) {
+      DPS_PRINT("%d ", header.sns_.base_ + i);
+    }
+  }
+  DPS_PRINT("]\n");
+  resendRequested(pub, header.sns_);
+}
+
+bool Publisher::anyUnacked()
+{
+  return false;
+}
+
+void Publisher::resendRequested(DPS_Publication * pub, const SNSet & sns)
+{
+  // resend nak'd publications
+  for (size_t i = 0; i < sns.size(); ++i) {
+    uint32_t sn = sns.base_ + i;
+    if (sns.test(sn)) {
+      auto it = std::find_if(cache_->begin(), cache_->end(), [sn](const Cache<TxStream>::Data & data) {
+          return data.sn_ == sn;
+        });
+      if (it == cache_->end()) {
+        // missing publication requested
+        continue;
+      }
+      PublicationHeader header = { QOS_DATA, { cache_->minSN(), cache_->maxSN() }, it->sn_ };
+      TxStream txBuf;
+      txBuf << header << it->buf_;
+      DPS_Status ret = DPS_Publish(pub, txBuf.data(), txBuf.size(), 0);
+      if (ret == DPS_OK) {
+        resetHeartbeat();
+      } else {
+        DPS_ERRPRINT("Publish failed: %s\n", DPS_ErrTxt(ret));
+      }
+    }
+  }
+}
+
+void Publisher::onTimerClose_(uv_handle_t * handle)
+{
+  Publisher * publisher = static_cast<Publisher *>(handle->data);
+  std::lock_guard<std::recursive_mutex> lock(publisher->internalMutex_);
+  uv_close((uv_handle_t *)&publisher->async_, onAsyncClose_);
+}
+
+void Publisher::onAsyncClose_(uv_handle_t * handle)
+{
+  Publisher * publisher = static_cast<Publisher *>(handle->data);
+  std::lock_guard<std::recursive_mutex> lock(publisher->internalMutex_);
+  DPS_SignalEvent(publisher->close_, DPS_OK);
+}
+
+ReliablePublisher::ReliablePublisher(const QoS & qos, PublisherListener * listener)
+  : Publisher(qos, listener)
+{
+  heartbeatPolicy_ = HEARTBEAT_ALWAYS;
 }
 
 ReliablePublisher::~ReliablePublisher()
@@ -198,66 +383,22 @@ DPS_Status ReliablePublisher::initialize(DPS_Node * node, const std::vector<std:
 {
   std::vector<std::string> thisTopic;
   DPS_Status ret;
-  int err;
   std::lock_guard<std::recursive_mutex> lock(internalMutex_);
   ret = Publisher::initialize(node, topics, ackHandler_);
   if (ret != DPS_OK) {
     goto Exit;
   }
-  err = uv_async_init(DPS_GetLoop(node), &async_, onAsync_);
-  if (err) {
-    ret = DPS_ERR_FAILURE;
-    goto Exit;
-  }
-  async_.data = this;
-  err = uv_timer_init(DPS_GetLoop(node), &timer_);
-  if (err) {
-    ret = DPS_ERR_FAILURE;
-    goto Exit;
-  }
-  timer_.data = this;
   thisSub_ = new ReliablePublisher::Subscriber(qos_, this, uuid());
   thisTopic = { DPS_UUIDToString(uuid()) };
   ret = thisSub_->initialize(node, thisTopic);
   if (ret != DPS_OK) {
     goto Exit;
   }
-  err = uv_async_send(&async_);
-  if (err) {
-    ret = DPS_ERR_FAILURE;
-    goto Exit;
-  }
+  resetHeartbeat();
 Exit:
   if (ret != DPS_OK) {
     close();
   }
-  return ret;
-}
-
-DPS_Status ReliablePublisher::close()
-{
-  DPS_Event* event = nullptr;
-  DPS_Status ret;
-  int err;
-  event = DPS_CreateEvent();
-  if (!event) {
-    ret = DPS_ERR_RESOURCES;
-    goto Exit;
-  }
-  close_ = event;
-  err = uv_async_send(&async_);
-  if (err) {
-    ret = DPS_ERR_FAILURE;
-    goto Exit;
-  }
-  ret = DPS_WaitForEvent(event);
-  if (ret != DPS_OK) {
-    goto Exit;
-  }
-  ret = Publisher::close();
-Exit:
-  DPS_DestroyEvent(event);
-  close_ = nullptr;
   return ret;
 }
 
@@ -272,11 +413,7 @@ DPS_Status ReliablePublisher::publish(TxStream && payload, PublicationInfo * inf
       }
     }
   }
-  DPS_Status ret = addPublication(std::move(payload), info);
-  if (ret == DPS_OK) {
-    resetHeartbeat();
-  }
-  return ret;
+  return addPublication(std::move(payload), info);
 }
 
 void ReliablePublisher::dump()
@@ -294,29 +431,12 @@ void ReliablePublisher::dump()
   }
 }
 
-void ReliablePublisher::ackHandler_(DPS_Publication * pub, uint8_t * data, size_t dataLen)
-{
-  ReliablePublisher * publisher = static_cast<ReliablePublisher *>(DPS_GetPublicationData(pub));
-  RxStream rxBuf(data, dataLen);
-  std::lock_guard<std::recursive_mutex> lock(publisher->internalMutex_);
-  AckHeader header;
-  rxBuf >> header;
-  publisher->ackHandler(pub, header, rxBuf);
-}
-
 void ReliablePublisher::ackHandler(DPS_Publication * pub, const AckHeader & header, RxStream & rxBuf)
 {
-  DPS_PRINT("ACK %s %d[ ", DPS_UUIDToString(&header.uuid_), header.sns_.base_ - 1);
-  for (size_t i = 0; i < header.sns_.size(); ++i) {
-    if (header.sns_.test(header.sns_.base_ + i)) {
-      DPS_PRINT("%d ", header.sns_.base_ + i);
-    }
-  }
-  DPS_PRINT("]\n");
   uint32_t ackSn = header.sns_.base_ - 1;
   remote_[header.uuid_].setAcked(ackSn, ackSn);
   remote_[header.uuid_].alive_ = uv_now(DPS_GetLoop(DPS_PublicationGetNode(pub)));
-  resendRequested(pub, header.sns_);
+  Publisher::ackHandler(pub, header, rxBuf);
 }
 
 bool ReliablePublisher::ackedByAll(uint32_t sn)
@@ -349,121 +469,6 @@ bool ReliablePublisher::anyUnacked()
   return false;
 }
 
-void ReliablePublisher::resendRequested(DPS_Publication * pub, const SNSet & sns)
-{
-  // resend nak'd publications
-  for (size_t i = 0; i < sns.size(); ++i) {
-    uint32_t sn = sns.base_ + i;
-    if (sns.test(sn)) {
-      auto it = std::find_if(cache_->begin(), cache_->end(), [sn](const Cache<TxStream>::Data & data) {
-          return data.sn_ == sn;
-        });
-      if (it == cache_->end()) {
-        // missing publication requested
-        continue;
-      }
-      PublicationHeader header = { QOS_DATA, { cache_->minSN(), cache_->maxSN() }, it->sn_ };
-      TxStream txBuf;
-      txBuf << header << it->buf_;
-      DPS_Status ret = DPS_Publish(pub, txBuf.data(), txBuf.size(), 0);
-      if (ret == DPS_OK) {
-        resetHeartbeat();
-      } else {
-        DPS_ERRPRINT("Publish failed: %s\n", DPS_ErrTxt(ret));
-      }
-    }
-  }
-}
-
-void ReliablePublisher::resetHeartbeat()
-{
-  int err = uv_async_send(&async_);
-  if (err) {
-    DPS_ERRPRINT("uv_async_send failed: %s\n", uv_strerror(err));
-  }
-}
-
-void ReliablePublisher::onAsync_(uv_async_t * handle)
-{
-  ReliablePublisher * publisher = static_cast<ReliablePublisher *>(handle->data);
-  std::lock_guard<std::recursive_mutex> lock(publisher->internalMutex_);
-  publisher->onAsync();
-}
-
-void ReliablePublisher::onAsync()
-{
-  // close all the open handles
-  if (close_) {
-    uv_close((uv_handle_t *)&timer_, onTimerClose_);
-    return;
-  }
-  // request acknowledgements for unacknowledged publications
-  if (!uv_is_active((uv_handle_t *)&timer_)) {
-    int err = uv_timer_start(&timer_, onTimer_, heartbeatPeriodMs, heartbeatPeriodMs);
-    if (err) {
-      DPS_ERRPRINT("uv_timer_start failed: %s\n", uv_strerror(err));
-    }
-  } else {
-    int err = uv_timer_again(&timer_);
-    if (err) {
-      DPS_ERRPRINT("uv_timer_again failed: %s\n", uv_strerror(err));
-    }
-  }
-}
-
-void ReliablePublisher::onTimer_(uv_timer_t * handle)
-{
-  ReliablePublisher * publisher = static_cast<ReliablePublisher *>(handle->data);
-  std::lock_guard<std::recursive_mutex> lock(publisher->internalMutex_);
-  publisher->onTimer();
-}
-
-TxStream ReliablePublisher::heartbeat()
-{
-  Range range;
-  if (cache_->empty()) {
-    range = { sn_, sn_ };
-  } else {
-    range = { cache_->minSN(), cache_->maxSN() };
-  }
-  PublicationHeader header = { QOS_HEARTBEAT, range };
-  TxStream txBuf;
-  txBuf << header;
-  return txBuf;
-}
-
-void ReliablePublisher::onTimer()
-{
-  if ((heartbeatPolicy_ == HEARTBEAT_ALWAYS) ||
-      (heartbeatPolicy_ == HEARTBEAT_UNACKNOWLEDGED && anyUnacked())) {
-    // send out a new heartbeat
-    TxStream txBuf = heartbeat();
-    DPS_Status ret = DPS_Publish(pub_, txBuf.data(), txBuf.size(), 0);
-    if (ret != DPS_OK) {
-      DPS_ERRPRINT("Publish failed: %s\n", DPS_ErrTxt(ret));
-    }
-  } else {
-    int err = uv_timer_stop(&timer_);
-    if (err) {
-      DPS_ERRPRINT("uv_timer_stop failed: %s\n", uv_strerror(err));
-    }
-  }
-}
-
-void ReliablePublisher::onTimerClose_(uv_handle_t * handle)
-{
-  ReliablePublisher * publisher = static_cast<ReliablePublisher *>(handle->data);
-  std::lock_guard<std::recursive_mutex> lock(publisher->internalMutex_);
-  uv_close((uv_handle_t *)&publisher->async_, onAsyncClose_);
-}
-
-void ReliablePublisher::onAsyncClose_(uv_handle_t * handle)
-{
-  ReliablePublisher * publisher = static_cast<ReliablePublisher *>(handle->data);
-  std::lock_guard<std::recursive_mutex> lock(publisher->internalMutex_);
-  DPS_SignalEvent(publisher->close_, DPS_OK);
-}
-
 ReliablePublisher::Subscriber::Subscriber(const QoS & qos, ReliablePublisher * publisher, const DPS_UUID * uuid)
   : ReliableSubscriber(qos, publisher, uuid), publisher_(publisher)
 {
@@ -480,21 +485,23 @@ void ReliablePublisher::Subscriber::pubHandler(const DPS_Publication * pub, Publ
   if (header.type_ == QOS_DATA) {
     DPS_PRINT("DATA %s(%d) [%d,%d]\n", DPS_UUIDToString(uuid), header.sn_, header.range_.first,
               header.range_.second);
-    if (!remote.received(header.sn_)) {
-      // ensure enough space is available in cache to receive
-      // missing publications before adding this one
-      size_t need = 1;
-      for (uint32_t n = header.range_.first; SN_LT(n, header.sn_); ++n) {
-        if (!remote.received(n)) {
-          ++need;
+    if (publisher_->listener_) {
+      if (!remote.received(header.sn_)) {
+        // ensure enough space is available in cache to receive
+        // missing publications before adding this one
+        size_t need = 1;
+        for (uint32_t n = header.range_.first; SN_LT(n, header.sn_); ++n) {
+          if (!remote.received(n)) {
+            ++need;
+          }
+        }
+        if (need <= cache_->avail()) {
+          addToCache(pub, header, std::move(rxBuf));
+          remote.setReceived(header.sn_, header.range_.first);
         }
       }
-      if (need <= cache_->avail()) {
-        addToCache(pub, header, std::move(rxBuf));
-        remote.setReceived(header.sn_, header.range_.first);
-      }
+      ackPublication(pub);
     }
-    ackPublication(pub);
   } else if (header.type_ == QOS_HEARTBEAT) {
     DPS_PRINT("HEARTBEAT %s [%d,%d]\n", DPS_UUIDToString(uuid), header.range_.first, header.range_.second);
     ackPublication(pub);
@@ -510,8 +517,11 @@ void ReliablePublisher::Subscriber::pubHandler(const DPS_Publication * pub, Publ
     }
     // set initial sequence number for the new subscriber
     if (publisher_->remote_.find(subUuid) == publisher_->remote_.end()) {
-      // TODO this assumes VOLATILE for now, for TRANSIENT, use range.first - 1:
-      publisher_->remote_[subUuid].setAcked(range.second, range.second);
+      if (qos_.durability == DPS_QOS_VOLATILE) {
+        publisher_->remote_[subUuid].setAcked(range.second, range.second);
+      } else if (qos_.durability == DPS_QOS_TRANSIENT) {
+        publisher_->remote_[subUuid].setAcked(range.first - 1, range.first - 1);
+      }
     } else {
       // duplicate pub from a new subscriber, the reported range must remain the
       // same as the original so that any publications sent since the new subscriber

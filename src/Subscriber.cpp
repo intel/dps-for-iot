@@ -82,7 +82,6 @@ DPS_Status Subscriber::initialize(DPS_Node * node, const std::vector<std::string
 
 DPS_Status Subscriber::close()
 {
-  std::lock_guard<std::recursive_mutex> lock(internalMutex_);
   for (auto it = remote_.begin(); it != remote_.end(); ++it) {
     if (it->second.pub_) {
       DPS_Status ret = it->second.pub_->close();
@@ -141,8 +140,10 @@ void Subscriber::dump()
   DPS_PRINT("Publisher\n");
   for (auto it = remote_.begin(); it != remote_.end(); ++it) {
     DPS_PRINT("  %s\n", DPS_UUIDToString(&it->first));
-    for (auto jt = it->second.pub_->cache_->begin(); jt != it->second.pub_->cache_->end(); ++jt) {
-      DPS_PRINT("    %s(%d)\n", DPS_UUIDToString(DPS_PublicationGetUUID(jt->pub_.get())), jt->sn_);
+    if (it->second.pub_) {
+      for (auto jt = it->second.pub_->cache_->begin(); jt != it->second.pub_->cache_->end(); ++jt) {
+        DPS_PRINT("    %s(%d)\n", DPS_UUIDToString(DPS_PublicationGetUUID(jt->pub_.get())), jt->sn_);
+      }
     }
   }
 }
@@ -162,15 +163,36 @@ void Subscriber::pubHandler(const DPS_Publication * pub, PublicationHeader & hea
 {
   const DPS_UUID * uuid = DPS_PublicationGetUUID(pub);
 
-  if (header.type_ != QOS_DATA) {
+  if (header.type_ == QOS_DATA) {
+    DPS_PRINT("DATA %s(%d) [%d,%d]\n", DPS_UUIDToString(uuid), header.sn_, header.range_.first, header.range_.second);
+  } else if (header.type_ == QOS_HEARTBEAT) {
+    DPS_PRINT("HEARTBEAT %s [%d,%d]\n", DPS_UUIDToString(uuid), header.range_.first, header.range_.second);
+  }
+
+  if (qos_.durability == DPS_QOS_TRANSIENT &&
+      remote_.insert(std::make_pair(*uuid, RemotePublisher())).second) {
+    // request the existing publications from new publishers
+    SNSet sns;
+    sns.base_ = header.range_.first;
+    for (uint32_t sn = sns.base_; SN_LE(sn, header.range_.second); ++sn) {
+      sns.set(sn);
+    }
+    AckHeader header = { uuid_, sns };
+    TxStream buf;
+    buf << header;
+    DPS_Status ret = DPS_AckPublication(pub, buf.data(), buf.size());
+    if (ret != DPS_OK) {
+      DPS_ERRPRINT("Ack failed: %s\n", DPS_ErrTxt(ret));
+    }
     return;
   }
-  DPS_PRINT("DATA %s(%d) [%d,%d]\n", DPS_UUIDToString(uuid), header.sn_, header.range_.first,
-            header.range_.second);
-  if (cache_->full()) {
-    cache_->removeData(cache_->begin());
+
+  if (header.type_ == QOS_DATA) {
+    if (cache_->full()) {
+      cache_->removeData(cache_->begin());
+    }
+    addToCache(pub, header, std::move(rxBuf));
   }
-  addToCache(pub, header, std::move(rxBuf));
 }
 
 void Subscriber::addToCache(const DPS_Publication * pub, const PublicationHeader & header, RxStream && buf)
@@ -224,7 +246,6 @@ ReliableSubscriber::~ReliableSubscriber()
 
 DPS_Status ReliableSubscriber::close()
 {
-  std::lock_guard<std::recursive_mutex> lock(internalMutex_);
   for (auto it = remote_.begin(); it != remote_.end(); ++it) {
     if (it->second.pub_) {
       DPS_Status ret = it->second.pub_->close();
@@ -376,29 +397,12 @@ DPS_Status ReliableSubscriber::Publisher::initialize(DPS_Node * node, const std:
 {
   std::vector<std::string> thisTopic;
   DPS_Status ret;
-  int err;
   std::lock_guard<std::recursive_mutex> lock(internalMutex_);
   ret = dps::Publisher::initialize(node, topics, ackHandler_);
   if (ret != DPS_OK) {
     goto Exit;
   }
-  err = uv_async_init(DPS_GetLoop(node), &async_, onAsync_);
-  if (err) {
-    ret = DPS_ERR_FAILURE;
-    goto Exit;
-  }
-  async_.data = this;
-  err = uv_timer_init(DPS_GetLoop(node), &timer_);
-  if (err) {
-    ret = DPS_ERR_FAILURE;
-    goto Exit;
-  }
-  timer_.data = this;
-  err = uv_async_send(&async_);
-  if (err) {
-    ret = DPS_ERR_FAILURE;
-    goto Exit;
-  }
+  resetHeartbeat();
 Exit:
   if (ret != DPS_OK) {
     close();
@@ -432,8 +436,11 @@ void ReliableSubscriber::Publisher::ackHandler(DPS_Publication * pub, const AckH
     rxBuf >> range;
     remote_->busy_ = false;
     remote_->range_ = range;
-    // TODO this assumes VOLATILE for now, for TRANSIENT, use range.first - 1
-    remote_->setReceived(range.second, range.second);
+    if (qos_.durability == DPS_QOS_VOLATILE) {
+      remote_->setReceived(range.second, range.second);
+    } else if (qos_.durability == DPS_QOS_TRANSIENT) {
+      remote_->setReceived(range.first - 1, range.first - 1);
+    }
     heartbeatPolicy_ = HEARTBEAT_UNACKNOWLEDGED;
   }
   ReliablePublisher::ackHandler(pub, header, rxBuf);

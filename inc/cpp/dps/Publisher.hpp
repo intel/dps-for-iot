@@ -47,6 +47,8 @@ public:
   virtual void dump();
 
 protected:
+  static const uint64_t heartbeatPeriodMs = 1000;
+
   std::recursive_mutex internalMutex_;
   QoS qos_;
   PublisherListener * listener_;
@@ -54,11 +56,31 @@ protected:
   uint32_t sn_;
   Cache<TxStream> * cache_;
   Subscriber * thisSub_;
+  enum {
+    HEARTBEAT_NEVER,
+    HEARTBEAT_ALWAYS,
+    HEARTBEAT_UNACKNOWLEDGED
+  } heartbeatPolicy_;
+  uv_async_t async_;
+  uv_timer_t timer_;
+  DPS_Event * close_;
 
   DPS_Status initialize(DPS_Node * node, const std::vector<std::string> & topics,
                         DPS_AcknowledgementHandler handler);
   DPS_Status addPublication(TxStream && payload, PublicationInfo * info = nullptr);
   virtual void onNewPublication(Subscriber * subscriber);
+  virtual TxStream heartbeat();
+  void resetHeartbeat();
+  static void onAsync_(uv_async_t * handle);
+  void onAsync();
+  static void onTimer_(uv_timer_t * handle);
+  void onTimer();
+  static void onTimerClose_(uv_handle_t * handle);
+  static void onAsyncClose_(uv_handle_t * handle);
+  static void ackHandler_(DPS_Publication * pub, uint8_t * data, size_t dataLen);
+  virtual void ackHandler(DPS_Publication * pub, const AckHeader & header, RxStream & rxBuf);
+  virtual bool anyUnacked();
+  void resendRequested(DPS_Publication * pub, const SNSet & sns);
 };
 
 class ReliablePublisher : public Publisher
@@ -67,7 +89,6 @@ public:
   ReliablePublisher(const QoS & qos, PublisherListener * listener);
   virtual ~ReliablePublisher();
   virtual DPS_Status initialize(DPS_Node * node, const std::vector<std::string> & topics);
-  virtual DPS_Status close();
   virtual DPS_Status publish(TxStream && payload, PublicationInfo * info = nullptr);
   virtual void dump();
 
@@ -94,31 +115,13 @@ protected:
     }
   };
 
-  static const uint64_t heartbeatPeriodMs = 1000;
   static const uint64_t aliveTimeoutMs = 4000;
 
-  enum {
-    HEARTBEAT_ALWAYS,
-    HEARTBEAT_UNACKNOWLEDGED
-  } heartbeatPolicy_;
-  uv_async_t async_;
-  uv_timer_t timer_;
-  DPS_Event * close_;
   std::map<DPS_UUID, RemoteSubscriber> remote_;
 
-  static void ackHandler_(DPS_Publication * pub, uint8_t * data, size_t dataLen);
   virtual void ackHandler(DPS_Publication * pub, const AckHeader & header, RxStream & rxBuf);
   bool ackedByAll(uint32_t sn);
-  bool anyUnacked();
-  void resendRequested(DPS_Publication * pub, const SNSet & sns);
-  virtual TxStream heartbeat();
-  void resetHeartbeat();
-  static void onAsync_(uv_async_t * handle);
-  void onAsync();
-  static void onTimer_(uv_timer_t * handle);
-  void onTimer();
-  static void onTimerClose_(uv_handle_t * handle);
-  static void onAsyncClose_(uv_handle_t * handle);
+  virtual bool anyUnacked();
 };
 
 }

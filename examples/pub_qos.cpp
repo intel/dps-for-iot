@@ -164,8 +164,9 @@ int main(int argc, char** argv)
     DPS_NodeAddress* addr = nullptr;
     int mcast = DPS_MCAST_PUB_ENABLE_SEND | DPS_MCAST_PUB_ENABLE_RECV;
     DPS_Node* node = nullptr;
-    dps::QoS qos = { 4, dps::DPS_QOS_RELIABLE };
+    dps::QoS qos = { 4, dps::DPS_QOS_VOLATILE, dps::DPS_QOS_BEST_EFFORT };
     int depth;
+    int durability;
     int reliability;
     bool isClient = false;
     dps::PublisherListener* listener = nullptr;
@@ -200,7 +201,11 @@ int main(int argc, char** argv)
             qos.depth = depth;
             continue;
         }
-        if (IntArg("-r", &arg, &argc, &reliability, dps::DPS_QOS_BEST_EFFORT, dps::DPS_QOS_RELIABLE)) {
+        if (IntArg("--durability", &arg, &argc, &durability, dps::DPS_QOS_VOLATILE, dps::DPS_QOS_TRANSIENT)) {
+            qos.durability = (dps::QoSDurability)durability;
+            continue;
+        }
+        if (IntArg("--reliability", &arg, &argc, &reliability, dps::DPS_QOS_BEST_EFFORT, dps::DPS_QOS_RELIABLE)) {
             qos.reliability = (dps::QoSReliability)reliability;
             continue;
         }

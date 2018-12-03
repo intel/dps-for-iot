@@ -36,13 +36,19 @@ namespace dps
 {
 
 typedef enum {
-    DPS_QOS_BEST_EFFORT = 0,    /**< Best-effort reliability */
-    DPS_QOS_RELIABLE = 1        /**< Resend missed publications */
+    DPS_QOS_VOLATILE = 0, /**< Do not send old publications to new subscribers */
+    DPS_QOS_TRANSIENT = 1 /**< Send old publications to new subscribers */
+} QoSDurability;
+
+typedef enum {
+    DPS_QOS_BEST_EFFORT = 0, /**< Best-effort reliability */
+    DPS_QOS_RELIABLE = 1     /**< Resend missed publications */
 } QoSReliability;
 
 typedef struct QoS
 {
   size_t depth;
+  QoSDurability durability;
   QoSReliability reliability;
 } QoS;
 
@@ -178,7 +184,9 @@ typedef struct SNSet
   shrink(uint32_t firstSn)
   {
     while (SN_LT(base_, firstSn)) {
-      sn_.erase(sn_.begin());
+      if (!sn_.empty()) {
+        sn_.erase(sn_.begin());
+      }
       ++base_;
     }
     shrink();
