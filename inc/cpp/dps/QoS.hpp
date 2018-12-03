@@ -52,6 +52,12 @@ typedef struct QoS
   QoSReliability reliability;
 } QoS;
 
+inline bool
+QoSIsCompatible(QoS & request, QoS & offer)
+{
+  return (request.durability <= offer.durability) && (request.reliability <= offer.reliability);
+}
+
 typedef struct PublicationInfo {
   DPS_UUID uuid;
   uint32_t sn;
@@ -89,6 +95,7 @@ static const uint8_t QOS_ADD = 3;
 
 typedef struct PublicationHeader {
   uint8_t type_;
+  QoS qos_;
   Range range_;
   uint32_t sn_;
 } PublicationHeader;
@@ -96,24 +103,24 @@ typedef struct PublicationHeader {
 inline TxStream &
 operator<<(TxStream & buf, const PublicationHeader & header)
 {
-  switch (header.type_) {
-  case QOS_DATA:
-    return buf << header.type_ << header.range_ << header.sn_;
-  default:
-    return buf << header.type_ << header.range_;
+  buf << header.type_ << header.qos_.durability << header.qos_.reliability << header.range_;
+  if (header.type_ == QOS_DATA) {
+    buf << header.sn_;
   }
+  return buf;
 }
 
 inline RxStream &
 operator>>(RxStream & buf, PublicationHeader & header)
 {
-  buf >> header.type_;
-  switch (header.type_) {
-  case QOS_DATA:
-    return buf >> header.range_ >> header.sn_;
-  default:
-    return buf >> header.range_;
+  uint8_t durability, reliability;
+  buf >> header.type_ >> durability >> reliability >> header.range_;
+  header.qos_.durability = static_cast<QoSDurability>(durability);
+  header.qos_.reliability = static_cast<QoSReliability>(reliability);
+  if (header.type_ == QOS_DATA) {
+    buf >> header.sn_;
   }
+  return buf;
 }
 
 inline bool

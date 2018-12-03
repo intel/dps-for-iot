@@ -161,8 +161,11 @@ void Subscriber::pubHandler_(DPS_Subscription * sub, const DPS_Publication * pub
 
 void Subscriber::pubHandler(const DPS_Publication * pub, PublicationHeader & header, RxStream & rxBuf)
 {
-  const DPS_UUID * uuid = DPS_PublicationGetUUID(pub);
+  if (!QoSIsCompatible(qos_, header.qos_)) {
+    return;
+  }
 
+  const DPS_UUID * uuid = DPS_PublicationGetUUID(pub);
   if (header.type_ == QOS_DATA) {
     DPS_PRINT("DATA %s(%d) [%d,%d]\n", DPS_UUIDToString(uuid), header.sn_, header.range_.first, header.range_.second);
   } else if (header.type_ == QOS_HEARTBEAT) {
@@ -279,17 +282,22 @@ void ReliableSubscriber::dump()
   DPS_PRINT("Publisher\n");
   for (auto it = remote_.begin(); it != remote_.end(); ++it) {
     DPS_PRINT("  %s [%d,%d]\n", DPS_UUIDToString(&it->first), it->second.range_.first, it->second.range_.second);
-    for (auto jt = it->second.pub_->cache_->begin(); jt != it->second.pub_->cache_->end(); ++jt) {
-      DPS_PRINT("    %s(%d)\n", DPS_UUIDToString(DPS_PublicationGetUUID(jt->pub_.get())), jt->sn_);
+    if (it->second.pub_) {
+      for (auto jt = it->second.pub_->cache_->begin(); jt != it->second.pub_->cache_->end(); ++jt) {
+        DPS_PRINT("    %s(%d)\n", DPS_UUIDToString(DPS_PublicationGetUUID(jt->pub_.get())), jt->sn_);
+      }
     }
   }
 }
 
 void ReliableSubscriber::pubHandler(const DPS_Publication * pub, PublicationHeader & header, RxStream & rxBuf)
 {
+  if (!QoSIsCompatible(qos_, header.qos_)) {
+    return;
+  }
+
   const DPS_UUID * uuid = DPS_PublicationGetUUID(pub);
   RemoteReliablePublisher & remote = remote_[*uuid];
-
   if (header.type_ == QOS_DATA) {
     DPS_PRINT("DATA %s(%d) [%d,%d]\n", DPS_UUIDToString(uuid), header.sn_, header.range_.first, header.range_.second);
   } else if (header.type_ == QOS_HEARTBEAT) {
@@ -419,7 +427,7 @@ TxStream ReliableSubscriber::Publisher::heartbeat()
     } else {
       range = { cache_->minSN(), cache_->maxSN() };
     }
-    PublicationHeader header = { QOS_ADD, range };
+    PublicationHeader header = { QOS_ADD, qos_, range };
     TxStream txBuf;
     txBuf << header << subscriber_->uuid_;
     return txBuf;

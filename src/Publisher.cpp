@@ -203,7 +203,7 @@ DPS_Status Publisher::addPublication(TxStream && payload, PublicationInfo * info
     } else {
       range = { cache_->minSN(), sn_ + 1 };
     }
-    PublicationHeader header = { QOS_DATA, range, sn_ + 1 };
+    PublicationHeader header = { QOS_DATA, qos_, range, sn_ + 1 };
     TxStream buf;
     buf << header << payload;
     DPS_Status ret = DPS_Publish(pub_, buf.data(), buf.size(), 0);
@@ -235,7 +235,7 @@ TxStream Publisher::heartbeat()
   } else {
     range = { cache_->minSN(), cache_->maxSN() };
   }
-  PublicationHeader header = { QOS_HEARTBEAT, range };
+  PublicationHeader header = { QOS_HEARTBEAT, qos_, range };
   TxStream txBuf;
   txBuf << header;
   return txBuf;
@@ -342,7 +342,7 @@ void Publisher::resendRequested(DPS_Publication * pub, const SNSet & sns)
         // missing publication requested
         continue;
       }
-      PublicationHeader header = { QOS_DATA, { cache_->minSN(), cache_->maxSN() }, it->sn_ };
+      PublicationHeader header = { QOS_DATA, qos_, { cache_->minSN(), cache_->maxSN() }, it->sn_ };
       TxStream txBuf;
       txBuf << header << it->buf_;
       DPS_Status ret = DPS_Publish(pub, txBuf.data(), txBuf.size(), 0);
@@ -433,9 +433,12 @@ void ReliablePublisher::dump()
 
 void ReliablePublisher::ackHandler(DPS_Publication * pub, const AckHeader & header, RxStream & rxBuf)
 {
-  uint32_t ackSn = header.sns_.base_ - 1;
-  remote_[header.uuid_].setAcked(ackSn, ackSn);
-  remote_[header.uuid_].alive_ = uv_now(DPS_GetLoop(DPS_PublicationGetNode(pub)));
+  auto it = remote_.find(header.uuid_);
+  if (it != remote_.end()) { // we only care about the state of reliable subscribers
+    uint32_t ackSn = header.sns_.base_ - 1;
+    it->second.setAcked(ackSn, ackSn);
+    it->second.alive_ = uv_now(DPS_GetLoop(DPS_PublicationGetNode(pub)));
+  }
   Publisher::ackHandler(pub, header, rxBuf);
 }
 
@@ -477,9 +480,12 @@ ReliablePublisher::Subscriber::Subscriber(const QoS & qos, ReliablePublisher * p
 void ReliablePublisher::Subscriber::pubHandler(const DPS_Publication * pub, PublicationHeader & header,
                                                RxStream & rxBuf)
 {
+  if (!QoSIsCompatible(header.qos_, qos_)) {
+    return;
+  }
+
   const DPS_UUID * uuid = DPS_PublicationGetUUID(pub);
   RemoteReliablePublisher & remote = remote_[*uuid];
-
   remote.range_ = header.range_;
 
   if (header.type_ == QOS_DATA) {
