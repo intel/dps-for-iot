@@ -125,31 +125,43 @@ SN_LE(uint32_t a, uint32_t b)
 typedef struct SNSet
 {
   uint32_t base_;
-  std::bitset<64> sn_;        // TODO fix hardcoded size
+  std::vector<bool> sn_;
   bool
   test(uint32_t sn) const
   {
-    return SN_LT(sn, base_) || sn_.test(sn - base_);
+    if (SN_LT(sn, base_)) {
+      return true;
+    } else if (sn - base_ < sn_.size()) {
+      return sn_[sn - base_];
+    } else {
+      return false;
+    }
   }
   SNSet &
   set(uint32_t sn)
   {
-    if (SN_LE(base_, sn)) {
-      sn_.set(sn - base_);
+    if (SN_LT(sn, base_)) {
+      // nothing to do
+    } else if (sn - base_ < sn_.size()) {
+      sn_[sn - base_] = true;
+    } else {
+      sn_.resize((sn - base_) + 1);
+      sn_[sn - base_] = true;
     }
     return *this;
   }
-  std::size_t
+  size_t
   count() const
   {
-    return sn_.count();
+    size_t n = 0;
+    for (size_t i = 0; i < sn_.size(); ++i) {
+      if (sn_[i]) {
+        ++n;
+      }
+    }
+    return n;
   }
-  bool
-  any() const
-  {
-    return sn_.any();
-  }
-  std::size_t
+  size_t
   size() const
   {
     return sn_.size();
@@ -157,17 +169,17 @@ typedef struct SNSet
   void
   shrink()
   {
-    while (sn_.test(0)) {
-      sn_ >>= 1;
+    while (!sn_.empty() && sn_[0]) {
+      sn_.erase(sn_.begin());
       ++base_;
     }
   }
   void
   shrink(uint32_t firstSn)
   {
-    if (SN_LT(base_, firstSn)) {
-      sn_ >>= firstSn - base_;
-      base_ = firstSn;
+    while (SN_LT(base_, firstSn)) {
+      sn_.erase(sn_.begin());
+      ++base_;
     }
     shrink();
   }
