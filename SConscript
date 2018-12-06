@@ -60,7 +60,8 @@ srcs = ['src/bitvec.c',
         'src/hkdf.c',
         'src/keywrap.c',
         'src/mbedtls.c']
-srcs.extend(['src/Publisher.cpp',
+srcs.extend(['src/Node.cpp',
+             'src/Publisher.cpp',
              'src/Subscriber.cpp'])
 
 if env['transport'] == 'udp':

@@ -28,19 +28,19 @@ public:
 
   Publisher(const QoS & qos, ReliableSubscriber * subscriber, RemoteReliablePublisher * remote);
   virtual ~Publisher() {}
-  virtual DPS_Status initialize(DPS_Node * node, const std::vector<std::string> & topics);
+  virtual DPS_Status initialize(Node * node, const std::vector<std::string> & topics);
   virtual void ackHandler(DPS_Publication * pub, const AckHeader & header, RxStream & rxBuf);
   virtual TxStream heartbeat();
 };
 
 Subscriber::Subscriber(const QoS & qos, SubscriberListener * listener)
-: qos_(qos), listener_(listener), sub_(nullptr), cache_(new Cache<RxStream>(qos.depth))
+: qos_(qos), listener_(listener), node_(nullptr), sub_(nullptr), cache_(new Cache<RxStream>(qos.depth))
 {
   DPS_GenerateUUID(&uuid_);
 }
 
 Subscriber::Subscriber(const QoS & qos, SubscriberListener * listener, const DPS_UUID * uuid)
-: qos_(qos), listener_(listener), sub_(nullptr), cache_(new Cache<RxStream>(qos.depth))
+: qos_(qos), listener_(listener), node_(nullptr), sub_(nullptr), cache_(new Cache<RxStream>(qos.depth))
 {
   memcpy(&uuid_, uuid, sizeof(DPS_UUID));
 }
@@ -53,14 +53,14 @@ Subscriber::~Subscriber()
   delete cache_;
 }
 
-DPS_Status Subscriber::initialize(DPS_Node * node, const std::vector<std::string> & topics)
+DPS_Status Subscriber::initialize(Node * node, const std::vector<std::string> & topics)
 {
   std::lock_guard<std::recursive_mutex> lock(internalMutex_);
   std::vector<const char *> ctopics;
   DPS_Status ret = DPS_OK;
   std::transform(topics.begin(), topics.end(), std::back_inserter(ctopics),
                  [](const std::string & s) { return s.c_str(); });
-  sub_ = DPS_CreateSubscription(node, ctopics.data(), ctopics.size());
+  sub_ = DPS_CreateSubscription(node->get(), ctopics.data(), ctopics.size());
   if (!sub_) {
     ret = DPS_ERR_RESOURCES;
     goto Exit;
@@ -73,11 +73,25 @@ DPS_Status Subscriber::initialize(DPS_Node * node, const std::vector<std::string
   if (ret != DPS_OK) {
     goto Exit;
   }
+  node_ = node;
  Exit:
   if (ret != DPS_OK) {
     close();
   }
   return ret;
+}
+
+DPS_Status Subscriber::setDiscoverable(bool discoverable)
+{
+  if (!node_) {
+    return DPS_ERR_NOT_INITIALIZED;
+  }
+  if (discoverable) {
+    node_->add(this);
+  } else {
+    node_->remove(this);
+  }
+  return DPS_OK;
 }
 
 DPS_Status Subscriber::close()
@@ -95,6 +109,7 @@ DPS_Status Subscriber::close()
     return ret;
   }
   sub_ = nullptr;
+  node_->remove(this);
   return ret;
 }
 
@@ -167,11 +182,12 @@ void Subscriber::pubHandler(const DPS_Publication * pub, PublicationHeader & hea
 
   const DPS_UUID * uuid = DPS_PublicationGetUUID(pub);
   if (header.type_ == QOS_DATA) {
-    DPS_PRINT("DATA %s(%d) [%d,%d]\n", DPS_UUIDToString(uuid), header.sn_, header.range_.first, header.range_.second);
+    // DPS_PRINT("DATA %s(%d) [%d,%d]\n", DPS_UUIDToString(uuid), header.sn_, header.range_.first, header.range_.second);
   } else if (header.type_ == QOS_HEARTBEAT) {
-    DPS_PRINT("HEARTBEAT %s [%d,%d]\n", DPS_UUIDToString(uuid), header.range_.first, header.range_.second);
+    // DPS_PRINT("HEARTBEAT %s [%d,%d]\n", DPS_UUIDToString(uuid), header.range_.first, header.range_.second);
   }
 
+  // TODO if range=[sn,sn] then there are no older samples to nak
   if (qos_.durability == DPS_QOS_TRANSIENT &&
       remote_.insert(std::make_pair(*uuid, RemotePublisher())).second) {
     // request the existing publications from new publishers
@@ -220,7 +236,7 @@ DPS_Status Subscriber::RemotePublisher::initialize(const DPS_UUID * uuid, Subscr
   if (!pub_) {
     pub_ = new Publisher(subscriber->qos_, nullptr);
     std::vector<std::string> topic = { DPS_UUIDToString(uuid) };
-    DPS_Status ret = pub_->initialize(DPS_SubscriptionGetNode(subscriber->sub_), topic);
+    DPS_Status ret = pub_->initialize(subscriber->node_, topic);
     if (ret != DPS_OK) {
       delete pub_;
       pub_ = nullptr;
@@ -299,9 +315,9 @@ void ReliableSubscriber::pubHandler(const DPS_Publication * pub, PublicationHead
   const DPS_UUID * uuid = DPS_PublicationGetUUID(pub);
   RemoteReliablePublisher & remote = remote_[*uuid];
   if (header.type_ == QOS_DATA) {
-    DPS_PRINT("DATA %s(%d) [%d,%d]\n", DPS_UUIDToString(uuid), header.sn_, header.range_.first, header.range_.second);
+    // DPS_PRINT("DATA %s(%d) [%d,%d]\n", DPS_UUIDToString(uuid), header.sn_, header.range_.first, header.range_.second);
   } else if (header.type_ == QOS_HEARTBEAT) {
-    DPS_PRINT("HEARTBEAT %s [%d,%d]\n", DPS_UUIDToString(uuid), header.range_.first, header.range_.second);
+    // DPS_PRINT("HEARTBEAT %s [%d,%d]\n", DPS_UUIDToString(uuid), header.range_.first, header.range_.second);
   }
 
   DPS_Status ret = remote.initialize(uuid, this);
@@ -381,7 +397,7 @@ DPS_Status ReliableSubscriber::RemoteReliablePublisher::initialize(const DPS_UUI
   if (!pub_) {
     pub_ = new ReliableSubscriber::Publisher(subscriber->qos_, subscriber, this);
     std::vector<std::string> topic = { DPS_UUIDToString(uuid) };
-    DPS_Status ret = pub_->initialize(DPS_SubscriptionGetNode(subscriber->sub_), topic);
+    DPS_Status ret = pub_->initialize(subscriber->node_, topic);
     if (ret == DPS_OK) {
       busy_ = true;
     } else {
@@ -401,7 +417,7 @@ ReliableSubscriber::Publisher::Publisher(const QoS & qos, ReliableSubscriber * s
 {
 }
 
-DPS_Status ReliableSubscriber::Publisher::initialize(DPS_Node * node, const std::vector<std::string> & topics)
+DPS_Status ReliableSubscriber::Publisher::initialize(Node * node, const std::vector<std::string> & topics)
 {
   std::vector<std::string> thisTopic;
   DPS_Status ret;

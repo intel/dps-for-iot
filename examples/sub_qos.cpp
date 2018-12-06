@@ -20,12 +20,23 @@
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  */
 
+#include <set>
 #include <dps/dbg.h>
 #include <dps/dps.h>
 #include <dps/event.h>
 #include <dps/synchronous.h>
+#include <dps/Node.hpp>
 #include <dps/Subscriber.hpp>
 #include <dps/SubscriberListener.hpp>
+
+class NodeListener : public dps::NodeListener
+{
+public:
+    virtual ~NodeListener() { }
+    virtual void onNewChange(dps::Node * node, const dps::RemoteNode * remote) {
+        DPS_PRINT("onNewChange\n");
+    }
+};
 
 class SubscriberListener : public dps::SubscriberListener
 {
@@ -114,7 +125,7 @@ static int IntArg(const char* opt, char*** argp, int* argcp, int* val, int min, 
     return 1;
 }
 
-static void ReadStdin(dps::Subscriber * subscriber)
+static void ReadStdin(dps::Node* node, NodeListener * listener, dps::Subscriber* subscriber)
 {
     char lineBuf[256];
     int argc;
@@ -151,6 +162,17 @@ static void ReadStdin(dps::Subscriber * subscriber)
             }
         } else if (!strcmp(argv[0], "dump")) {
             subscriber->dump();
+        } else if (!strcmp(argv[0], "adv")) {
+            node->advertise();
+        } else if (!strcmp(argv[0], "names")) {
+            std::vector<const dps::RemoteNode*> remotes = node->discovered();
+            for (auto remote = remotes.begin(); remote != remotes.end(); ++remote) {
+                DPS_PRINT("name=%s,namespace=%s\n", (*remote)->name_, (*remote)->namespace_);
+            }
+        } else if (!strcmp(argv[0], "pubs") && (1 < argc)) {
+            DPS_PRINT("%d\n", node->publisherCount(argv[1]));
+        } else if (!strcmp(argv[0], "subs") && (1 < argc)) {
+            DPS_PRINT("%d\n", node->subscriberCount(argv[1]));
         }
     }
 }
@@ -168,7 +190,8 @@ int main(int argc, char** argv)
     int numLinks = 0;
     DPS_NodeAddress* addr = nullptr;
     int mcast = DPS_MCAST_PUB_ENABLE_SEND | DPS_MCAST_PUB_ENABLE_RECV;
-    DPS_Node* node = nullptr;
+    NodeListener* nodeListener = nullptr;
+    dps::Node* node = nullptr;
     dps::QoS qos = { 4, dps::DPS_QOS_VOLATILE, dps::DPS_QOS_BEST_EFFORT };
     int depth;
     int durability;
@@ -228,18 +251,16 @@ int main(int argc, char** argv)
         addr = DPS_CreateAddress();
     }
 
-    node = DPS_CreateNode(nullptr, nullptr, nullptr);
-    if (!node) {
-        return EXIT_FAILURE;
-    }
-    ret = DPS_StartNode(node, mcast, listenPort);
+    nodeListener = new NodeListener();
+    node = new dps::Node(0, "sub_qos", nodeListener);
+    ret = node->initialize(mcast, listenPort);
     if (ret != DPS_OK) {
         return EXIT_FAILURE;
     }
-    DPS_PRINT("Subscriber is listening on port %d\n", DPS_GetPortNumber(node));
+    DPS_PRINT("Subscriber is listening on port %d\n", DPS_GetPortNumber(node->get()));
 
     for (i = 0; i < numLinks; ++i) {
-        ret = DPS_LinkTo(node, linkHosts[i], linkPort[i], addr);
+        ret = DPS_LinkTo(node->get(), linkHosts[i], linkPort[i], addr);
         if (ret == DPS_OK) {
             DPS_PRINT("Subscriber is linked to %s\n", DPS_NodeAddrToString(addr));
         } else {
@@ -257,8 +278,9 @@ int main(int argc, char** argv)
     if (ret != DPS_OK) {
         return EXIT_FAILURE;
     }
+    subscriber->setDiscoverable(true);
 
-    ReadStdin(subscriber);
+    ReadStdin(node, nodeListener, subscriber);
 
     ret = subscriber->close();
     if (ret != DPS_OK) {
@@ -266,10 +288,12 @@ int main(int argc, char** argv)
     }
     delete subscriber;
     delete listener;
-    ret = DestroyNode(node);
+    ret = node->close();
     if (ret != DPS_OK) {
         return EXIT_FAILURE;
     }
+    delete node;
+    delete nodeListener;
     DPS_DestroyAddress(addr);
     return EXIT_SUCCESS;
 

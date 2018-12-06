@@ -21,6 +21,7 @@
 #include <uv.h>
 #include <dps/event.h>
 #include <dps/Cache.hpp>
+#include <dps/Node.hpp>
 #include <dps/QoS.hpp>
 #include <dps/Subscriber.hpp>
 #include <dps/SubscriberListener.hpp>
@@ -38,8 +39,11 @@ class Publisher : protected SubscriberListener
 public:
   Publisher(const QoS & qos, PublisherListener * listener);
   virtual ~Publisher();
-  virtual DPS_Status initialize(DPS_Node * node, const std::vector<std::string> & topics);
+  DPS_Publication * get() { return pub_; }
+  const QoS & qos() const { return qos_; }
+  virtual DPS_Status initialize(Node * node, const std::vector<std::string> & topics);
   virtual DPS_Status close();
+  DPS_Status setDiscoverable(bool discoverable);
   virtual DPS_Status publish(TxStream && payload, PublicationInfo * info = nullptr);
   const DPS_UUID * uuid() const;
   size_t unreadCount();
@@ -52,6 +56,7 @@ protected:
   std::recursive_mutex internalMutex_;
   QoS qos_;
   PublisherListener * listener_;
+  Node * node_;
   DPS_Publication * pub_;
   uint32_t sn_;
   Cache<TxStream> * cache_;
@@ -65,7 +70,7 @@ protected:
   uv_timer_t timer_;
   DPS_Event * close_;
 
-  DPS_Status initialize(DPS_Node * node, const std::vector<std::string> & topics,
+  DPS_Status initialize(Node * node, const std::vector<std::string> & topics,
                         DPS_AcknowledgementHandler handler);
   DPS_Status addPublication(TxStream && payload, PublicationInfo * info = nullptr);
   virtual void onNewPublication(Subscriber * subscriber);
@@ -88,7 +93,8 @@ class ReliablePublisher : public Publisher
 public:
   ReliablePublisher(const QoS & qos, PublisherListener * listener);
   virtual ~ReliablePublisher();
-  virtual DPS_Status initialize(DPS_Node * node, const std::vector<std::string> & topics);
+  virtual DPS_Status initialize(Node * node, const std::vector<std::string> & topics);
+  virtual DPS_Status close();
   virtual DPS_Status publish(TxStream && payload, PublicationInfo * info = nullptr);
   virtual void dump();
 
@@ -117,11 +123,14 @@ protected:
 
   static const uint64_t aliveTimeoutMs = 4000;
 
+  std::vector<DPS_Subscription *> advertisementSub_;
   std::map<DPS_UUID, RemoteSubscriber> remote_;
 
   virtual void ackHandler(DPS_Publication * pub, const AckHeader & header, RxStream & rxBuf);
   bool ackedByAll(uint32_t sn);
   virtual bool anyUnacked();
+  static void advertisementHandler_(DPS_Subscription * sub, const DPS_Publication * pub, uint8_t * data, size_t dataLen);
+  virtual void advertisementHandler(const DPS_Publication * pub);
 };
 
 }

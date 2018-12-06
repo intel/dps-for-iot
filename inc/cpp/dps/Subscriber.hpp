@@ -36,9 +36,12 @@ public:
   Subscriber(const QoS & qos, SubscriberListener * listener);
   Subscriber(const QoS & qos, SubscriberListener * listener, const DPS_UUID * uuid);
   virtual ~Subscriber();
-  virtual DPS_Status initialize(DPS_Node * node, const std::vector<std::string> & topics);
+  DPS_Subscription * get() { return sub_; }
+  const QoS & qos() const { return qos_; }
+  virtual DPS_Status initialize(Node * node, const std::vector<std::string> & topics);
   virtual DPS_Status close();
   const DPS_UUID * uuid() const;
+  DPS_Status setDiscoverable(bool discoverable);
   size_t unreadCount();
   bool takeNextData(RxStream & buf, PublicationInfo & info);
   virtual DPS_Status ack(TxStream && payload, const DPS_UUID * uuid, uint32_t sn);
@@ -55,6 +58,7 @@ protected:
   std::recursive_mutex internalMutex_;
   QoS qos_;
   SubscriberListener * listener_;
+  Node * node_;
   DPS_Subscription * sub_;
   Cache<RxStream> * cache_;
   DPS_UUID uuid_;
