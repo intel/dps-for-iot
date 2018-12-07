@@ -1645,7 +1645,7 @@ DPS_Status DPS_DestroyPublication(DPS_Publication* pub)
     /*
      * Maybe destroying an uninitialized publication
      */
-    if (!IsValidPub(pub) || (pub->flags & PUB_FLAG_IS_COPY)) {
+    if ((pub->flags & PUB_FLAG_IS_COPY) || !IsValidPub(pub)) {
         DestroyCopy(pub);
         return DPS_OK;
     }
