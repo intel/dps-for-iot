@@ -145,7 +145,7 @@ void CoAP_Free(CoAP_Parsed* coap);
  *
  * @return   Returns DPS_OK if the buffer was wrapped or an error if the operation failed.
  */
-DPS_Status CoAP_Wrap(DPS_TxBuffer* buf);
+DPS_Status CoAP_InsertHeader(DPS_Node* node, size_t payloadLen);
 
 #ifdef __cplusplus
 }

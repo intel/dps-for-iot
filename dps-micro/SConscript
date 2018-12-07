@@ -36,8 +36,10 @@ srcs = [
         'src/io_buf.c',
         'src/keywrap.c',
         'src/mbedtls.c',
+        'src/pub.c',
         'src/sha2.c',
-        'src/topics.c'
+        'src/topics.c',
+        'src/uuid.c'
         ]
 
 if platform == 'win32':
@@ -75,6 +77,7 @@ for test in testsrcs:
 testsrcs = [
             'test/bitvec_unit_test.c',
             'test/mcast_unit_test.c',
+            'test/pub_unit_test.c',
             'test/topics_unit_test.c',
             'test/topic_match.c'
             ]

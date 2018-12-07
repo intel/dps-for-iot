@@ -73,6 +73,12 @@ void DPS_RxBufferFree(DPS_RxBuffer* buffer);
  */
 #define DPS_RxBufferAvail(b)  ((uint32_t)((b)->eod - (b)->rxPos))
 
+typedef enum {
+    DPS_TX_POOL,
+    DPS_TX_HDR_POOL,
+    DPS_TMP_POOL
+} DPS_BUFFER_POOL;
+
 /**
  * For managing data to be transmitted
  */
@@ -80,18 +86,9 @@ typedef struct _DPS_TxBuffer {
     uint8_t* base;  /**< base address for buffer */
     uint8_t* eob;   /**< end of buffer */
     uint8_t* txPos; /**< current write location in buffer */
+    DPS_Node* node;
+    DPS_BUFFER_POOL pool;
 } DPS_TxBuffer;
-
-/**
- * Initialize a transmit buffer
- *
- * @param buffer    Buffer to initialized
- * @param storage   The storage for the buffer. If the storage is NULL storage is allocated.
- * @param size      Current size of the buffer
- *
- * @return   DPS_OK or DP_ERR_RESOURCES if storage is needed and could not be allocated.
- */
-void DPS_TxBufferInit(DPS_TxBuffer* buffer, uint8_t* storage, size_t size);
 
 /**
  * Add data to a transmit buffer
@@ -103,15 +100,6 @@ void DPS_TxBufferInit(DPS_TxBuffer* buffer, uint8_t* storage, size_t size);
  * @return   DPS_OK or DP_ERR_RESOURCES if there not enough room in the buffer
  */
 DPS_Status DPS_TxBufferAppend(DPS_TxBuffer* buffer, const uint8_t* data, size_t len);
-
-/**
- * Make space to prepend data to a transmit buffer
-
- * @param buffer   Buffer to prepend to
- * @param len      Length of the data to prepend
- * @param pos      Pointer where the prepended data is to be written
- */
-DPS_Status DPS_TxBufferPrepend(DPS_TxBuffer* buffer, size_t len, uint8_t** pos);
 
 /**
  * Clear transmit buffer fields
@@ -154,31 +142,32 @@ void DPS_TxBufferToRx(const DPS_TxBuffer* txBuffer, DPS_RxBuffer* rxBuffer);
 void DPS_RxBufferToTx(const DPS_RxBuffer* rxBuffer, DPS_TxBuffer* txBuffer);
 
 
-typedef enum {
-    DPS_TX_POOL,
-    DPS_TMP_POOL
-} DPS_BUFFER_POOL;
-
 /**
- * Allocates space for a Tx buffer
+ * Reserves space in one of a node's contiguous buffers. DPS_TxBufferCommit() must be called to finalize allocation of the space,
  *
  * @param node            Pointer to the DPS node
- * @param txBuf           A transmit buffer to return the allocated bytes
- * @param len             Number of bytes to allocate
+ * @param txBuf           A transmit buffer to return the reserved bytes
+ * @param len             Number of bytes to reserve
  * @param pool            Which pool to allocate from
  *
- * @return DPS_OK if the space was allocated
+ * @return DPS_OK if the space was reserved
  *         DPS_ERR_RESOURCES if there not enough free space in the transmit buffer
  */
-DPS_Status DPS_TxBufferAlloc(DPS_Node* node, DPS_TxBuffer* txBuf, size_t len, DPS_BUFFER_POOL pool);
+DPS_Status DPS_TxBufferReserve(DPS_Node* node, DPS_TxBuffer* txBuf, size_t len, DPS_BUFFER_POOL pool);
 
 /**
- * Frees all buffers allocated from the specified pool
+ * Finalizes allocation of space for a Tx buffer by adjusting offsets in the node's contiguous buffer.
+ *
+ * @param txBuf           A transmit buffer that has been written to
+ */
+void DPS_TxBufferCommit(DPS_TxBuffer* txBuf);
+
+/**
+ * Frees all Tx buffer space
  *
  * @param node            Pointer to the DPS node
- * @param pool            The pool to free
  */
-void DPS_TxBufferFreePool(DPS_Node* node, DPS_BUFFER_POOL);
+void DPS_TxBufferFreePools(DPS_Node* node);
 
 
 #ifdef __cplusplus

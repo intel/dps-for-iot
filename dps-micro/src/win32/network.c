@@ -42,6 +42,7 @@
 #include <dps/dps.h>
 #include <dps/err.h>
 #include <dps/dbg.h>
+#include <dps/private/node.h>
 #include <dps/private/coap.h>
 #include <dps/private/network.h>
 
@@ -400,8 +401,8 @@ DPS_Status DPS_MCastSend(DPS_Node* node, void* appCtx, DPS_SendComplete sendComp
     int ret;
     int i;
 
-    buf.len = (LONG)node->txLen;
-    buf.buf = node->txBuffer;
+    buf.len = (LONG)(node->txLen + node->txHdrLen);
+    buf.buf = node->txBuffer + DPS_TX_HEADER_SIZE - node->txHdrLen;
 
     for (i = 0; i < net->numMcastIfs; ++i) {
         InterfaceSpec* ifs = &net->mcastIf[i];

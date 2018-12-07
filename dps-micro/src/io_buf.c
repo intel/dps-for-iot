@@ -23,6 +23,7 @@
 #include <assert.h>
 #include <string.h>
 #include <stdlib.h>
+#include <dps/private/node.h>
 #include <dps/private/io_buf.h>
 
 void DPS_RxBufferInit(DPS_RxBuffer* buffer, uint8_t* storage, size_t size)
@@ -33,7 +34,7 @@ void DPS_RxBufferInit(DPS_RxBuffer* buffer, uint8_t* storage, size_t size)
     buffer->eod = storage + size;
 }
 
-void DPS_TxBufferInit(DPS_TxBuffer* buffer, uint8_t* storage, size_t size)
+static void DPS_TxBufferInit(DPS_TxBuffer* buffer, uint8_t* storage, size_t size)
 {
     assert(storage);
     buffer->base = storage;
@@ -80,32 +81,59 @@ void DPS_RxBufferToTx(const DPS_RxBuffer* rxBuffer, DPS_TxBuffer* txBuffer)
     txBuffer->txPos = rxBuffer->eod;
 }
 
-DPS_Status DPS_TxBufferAlloc(DPS_Node* node, DPS_TxBuffer* buf, size_t len, DPS_BUFFER_POOL pool)
+DPS_Status DPS_TxBufferReserve(DPS_Node* node, DPS_TxBuffer* buf, size_t len, DPS_BUFFER_POOL pool)
 {
-    if (pool == DPS_TX_POOL) {
+    switch (pool) {
+    case DPS_TX_POOL:
         if ((len + node->txLen) > DPS_TX_BUFFER_SIZE) {
             return DPS_ERR_RESOURCES;
         }
-        DPS_TxBufferInit(buf, &node->txBuffer[node->txLen], len);
+        DPS_TxBufferInit(buf, &node->txBuffer[node->txLen + DPS_TX_HEADER_SIZE], len);
         node->txLen += len;
-        return DPS_OK;
-    }
-    if (pool == DPS_TMP_POOL) {
-        if ((len + node->tmpLen) > DPS_TX_BUFFER_SIZE) {
+        break;
+    case DPS_TX_HDR_POOL:
+        if ((len + node->txHdrLen) > DPS_TX_HEADER_SIZE) {
+            return DPS_ERR_RESOURCES;
+        }
+        node->txHdrLen += len;
+        DPS_TxBufferInit(buf, node->txBuffer + DPS_TX_HEADER_SIZE - node->txHdrLen, len);
+        break;
+    case DPS_TMP_POOL:
+        if ((len + node->tmpLen) > DPS_TMP_BUFFER_SIZE) {
             return DPS_ERR_RESOURCES;
         }
         DPS_TxBufferInit(buf, &node->tmpBuffer[node->tmpLen], len);
         node->tmpLen += len;
-        return DPS_OK;
+        break;
+    default:
+        return DPS_ERR_ARGS;
     }
-    return DPS_ERR_ARGS;
+    buf->pool = pool;
+    buf->node = node;
+    return DPS_OK;
 }
 
-void DPS_TxBufferFreePool(DPS_Node* node, DPS_BUFFER_POOL pool)
+void DPS_TxBufferCommit(DPS_TxBuffer* buf)
 {
-    if (pool == DPS_TX_POOL) {
-        node->txLen = 0;
-    } else if (pool == DPS_TMP_POOL) {
-        node->tmpLen = 0;
+    switch (buf->pool) {
+    case DPS_TX_POOL:
+        buf->node->txLen -= DPS_TxBufferSpace(buf);
+        break;
+    case DPS_TX_HDR_POOL:
+        assert(DPS_TxBufferSpace(buf) == 0);
+        break;
+    case DPS_TMP_POOL:
+        buf->node->tmpLen -= DPS_TxBufferSpace(buf);
+        break;
+    default:
+        assert(DPS_FALSE);
+        break;
     }
+}
+
+void DPS_TxBufferFreePools(DPS_Node* node)
+{
+    node->txLen = 0;
+    node->txHdrLen = 0;
+    node->tmpLen = 0;
 }
