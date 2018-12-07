@@ -116,8 +116,11 @@ int main()
     DPS_BitVectorBloomInsert(&bv1, str3, strlen(str3));
     DPS_BitVectorBloomInsert(&bv1, str4, strlen(str4));
 
+    tx.base = txBuf;
+    tx.txPos = txBuf;
+    tx.eob = txBuf + sizeof(txBuf);
+
     /* Serialization */
-    DPS_TxBufferInit(&tx, txBuf, sizeof(txBuf));
     status = DPS_BitVectorSerialize(&bv1, &tx);
     CHECK(status == DPS_OK);
 
