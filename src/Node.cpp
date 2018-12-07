@@ -75,6 +75,8 @@ bool RemoteNode::update(const DPS_UUID * uuid, const DPS_Publication * pub)
   memcpy(&uuid_, uuid, sizeof(DPS_UUID));
   std::map<std::string, size_t> subscriber;
   std::map<std::string, size_t> publisher;
+  name_ = "";
+  namespace_ = "";
   for (size_t i = 0; i < DPS_PublicationGetNumTopics(pub_.get()); ++i) {
     const char * topic = DPS_PublicationGetTopic(pub_.get(), i);
     if (strncmp(topic, "$ROS:name:", sizeof("$ROS:name:") - 1) == 0) {
@@ -123,8 +125,8 @@ bool RemoteNode::add(const char * topic, const char * prefix, std::map<std::stri
   return true;
 }
 
-Node::Node(size_t domainId, const char * name, NodeListener * listener)
-  : node_(nullptr), domainId_(domainId), name_(name), listener_(listener), pub_(nullptr), close_(nullptr)
+Node::Node(size_t domainId, const char * ns, const char * name, NodeListener * listener)
+  : node_(nullptr), domainId_(domainId), namespace_(ns), name_(name), listener_(listener), pub_(nullptr), close_(nullptr)
 {
   DPS_InitUUID();
   DPS_GenerateUUID(&uuid_);
@@ -237,8 +239,12 @@ DPS_Status Node::advertise()
   std::vector<std::string> topics;
   topics.push_back(std::string("$ROS:domain:") + std::to_string(domainId_));
   topics.push_back(std::string("$ROS:uuid:") + DPS_UUIDToString(&uuid_));
-  topics.push_back(std::string("$ROS:name:") + name_);
-  // TODO topics.push_back(std::string("$ROS:namespace:") + std::to_string(namespace_));
+  if (!name_.empty()) {
+    topics.push_back(std::string("$ROS:name:") + name_);
+  }
+  if (!namespace_.empty()) {
+    topics.push_back(std::string("$ROS:namespace:") + namespace_);
+  }
   for (auto it = publisher_.begin(); it != publisher_.end(); ++it) {
     for (size_t i = 0; i < DPS_PublicationGetNumTopics((*it)->get()); ++i) {
       std::string topic = std::string("$ROS:publisher:") + DPS_UUIDToString((*it)->uuid()) + ":" +

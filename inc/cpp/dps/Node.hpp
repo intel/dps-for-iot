@@ -65,7 +65,7 @@ public:
 class Node
 {
 public:
-  Node(size_t domainId, const char * name, NodeListener * listener);
+  Node(size_t domainId, const char * namespace_, const char * name, NodeListener * listener);
   ~Node();
   DPS_Node * get() { return node_; }
   DPS_Status initialize(int mcast, int listenPort);
@@ -88,6 +88,7 @@ private:
 
   DPS_Node * node_;
   size_t domainId_;
+  std::string namespace_;
   std::string name_;
   NodeListener * listener_;
   DPS_UUID uuid_;

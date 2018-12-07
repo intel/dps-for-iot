@@ -220,7 +220,7 @@ int main(int argc, char** argv)
     }
 
     nodeListener = new NodeListener();
-    node = new dps::Node(0, "pub_qos", nodeListener);
+    node = new dps::Node(0, "", "pub_qos", nodeListener);
     ret = node->initialize(mcast, listenPort);
     if (ret != DPS_OK) {
         return EXIT_FAILURE;
