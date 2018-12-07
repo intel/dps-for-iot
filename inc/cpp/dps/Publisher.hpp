@@ -41,6 +41,7 @@ public:
   virtual ~Publisher();
   DPS_Publication * get() { return pub_; }
   const QoS & qos() const { return qos_; }
+  std::vector<std::string> topics() const;
   virtual DPS_Status initialize(Node * node, const std::vector<std::string> & topics);
   virtual DPS_Status close();
   DPS_Status setDiscoverable(bool discoverable);

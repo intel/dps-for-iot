@@ -125,6 +125,11 @@ static void ReadStdin(dps::Node* node, dps::Publisher* publisher)
             DPS_PRINT("%s(%d) %s\n", DPS_UUIDToString(&info.uuid), info.sn, msg.c_str());
         } else if (!strcmp(argv[0], "dump")) {
             publisher->dump();
+        } else if (!strcmp(argv[0], "topics")) {
+            auto ts = publisher->topics();
+            for (auto t = ts.begin(); t != ts.end(); ++t) {
+                DPS_PRINT("%s\n", t->c_str());
+            }
         } else if (!strcmp(argv[0], "adv")) {
             node->advertise();
         } else if (!strcmp(argv[0], "names")) {

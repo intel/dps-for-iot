@@ -49,6 +49,15 @@ Publisher::~Publisher()
   delete cache_;
 }
 
+std::vector<std::string> Publisher::topics() const
+{
+  std::vector<std::string> ts;
+  for (size_t i = 0; i < DPS_PublicationGetNumTopics(pub_); ++i) {
+    ts.push_back(DPS_PublicationGetTopic(pub_, i));
+  }
+  return ts;
+}
+
 DPS_Status Publisher::initialize(Node * node, const std::vector<std::string> & topics)
 {
   DPS_Status ret;

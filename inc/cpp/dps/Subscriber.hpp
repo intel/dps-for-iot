@@ -38,6 +38,7 @@ public:
   virtual ~Subscriber();
   DPS_Subscription * get() { return sub_; }
   const QoS & qos() const { return qos_; }
+  std::vector<std::string> topics() const;
   virtual DPS_Status initialize(Node * node, const std::vector<std::string> & topics);
   virtual DPS_Status close();
   const DPS_UUID * uuid() const;

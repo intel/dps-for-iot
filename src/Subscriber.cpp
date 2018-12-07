@@ -53,6 +53,15 @@ Subscriber::~Subscriber()
   delete cache_;
 }
 
+std::vector<std::string> Subscriber::topics() const
+{
+  std::vector<std::string> ts;
+  for (size_t i = 0; i < DPS_SubscriptionGetNumTopics(sub_); ++i) {
+    ts.push_back(DPS_SubscriptionGetTopic(sub_, i));
+  }
+  return ts;
+}
+
 DPS_Status Subscriber::initialize(Node * node, const std::vector<std::string> & topics)
 {
   std::lock_guard<std::recursive_mutex> lock(internalMutex_);

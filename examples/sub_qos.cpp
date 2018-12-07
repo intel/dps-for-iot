@@ -162,6 +162,11 @@ static void ReadStdin(dps::Node* node, NodeListener * listener, dps::Subscriber*
             }
         } else if (!strcmp(argv[0], "dump")) {
             subscriber->dump();
+        } else if (!strcmp(argv[0], "topics")) {
+            auto ts = subscriber->topics();
+            for (auto t = ts.begin(); t != ts.end(); ++t) {
+                DPS_PRINT("%s\n", t->c_str());
+            }
         } else if (!strcmp(argv[0], "adv")) {
             node->advertise();
         } else if (!strcmp(argv[0], "names")) {
