@@ -21,7 +21,9 @@
  */
 #include "test.h"
 #include <dps/compat.h>
+#include <dps/dps.h>
 #include <dps/private/dps.h>
+#include <dps/private/pub.h>
 #include <dps/private/network.h>
 
 
@@ -37,8 +39,16 @@ static char testString[] = "This is a test string";
 
 static DPS_TxBuffer txBuf;
 
+#define NUM_TOPICS 2
+
+static const char* topics[NUM_TOPICS] = {
+    "red/green/blue",
+    "a/b/c/d"
+};
+
 int main(int argc, char** argv)
 {
+    DPS_Publication pub;
     DPS_Status status;
     int i;
     char** arg = argv + 1;
@@ -60,13 +70,12 @@ int main(int argc, char** argv)
     status = DPS_MCastStart(node, OnReceive);
     CHECK(status == DPS_OK);
 
-    DPS_TxBufferReserve(node, &txBuf, strlen(testString) + 1, DPS_TX_POOL);
-    DPS_TxBufferAppend(&txBuf, testString, strlen(testString) + 1);
-    DPS_TxBufferCommit(&txBuf);
+    DPS_InitPublication(node, &pub, topics, NUM_TOPICS, DPS_FALSE, NULL, NULL);
 
-    for (i = 0; i < 100; ++i) {
+    for (i = 0; i < 10; ++i) {
+        status = DPS_Publish(&pub, (const uint8_t*)testString, strlen(testString) + 1, 0);
+        CHECK(status == DPS_OK);
         Sleep(5000);
-        DPS_MCastSend(node, NULL, NULL);
     }
 
     return 0;

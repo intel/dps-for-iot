@@ -361,7 +361,7 @@ static DPS_Status EncodeSig(DPS_Node* node, DPS_TxBuffer* buf, int8_t alg, int8_
         CBOR_SIZEOF_BYTES(aadLen) +
         CBOR_SIZEOF_BYTES(payloadLen);
 
-    ret = DPS_TxBufferAlloc(node, buf, bufLen, DPS_TMP_POOL);
+    ret = DPS_TxBufferReserve(node, buf, bufLen, DPS_TMP_POOL);
     if (ret == DPS_OK) {
         ret = CBOR_EncodeArray(buf, 5);
     }
@@ -380,6 +380,7 @@ static DPS_Status EncodeSig(DPS_Node* node, DPS_TxBuffer* buf, int8_t alg, int8_
     if (ret == DPS_OK) {
         ret = CBOR_EncodeBytes(buf, payload, payloadLen);
     }
+    DPS_TxBufferCommit(buf);
     return ret;
 }
 
@@ -416,7 +417,7 @@ static DPS_Status EncodeAAD(DPS_Node* node, DPS_TxBuffer* buf, uint8_t tag, int8
         return DPS_ERR_INVALID;
     }
 
-    ret = DPS_TxBufferAlloc(node, buf, bufLen, DPS_TMP_POOL);
+    ret = DPS_TxBufferReserve(node, buf, bufLen, DPS_TMP_POOL);
     if (ret == DPS_OK) {
         ret = CBOR_EncodeArray(buf, 3);
     }
@@ -429,6 +430,7 @@ static DPS_Status EncodeAAD(DPS_Node* node, DPS_TxBuffer* buf, uint8_t tag, int8
     if (ret == DPS_OK) {
         ret = CBOR_EncodeBytes(buf, aad, aadLen);
     }
+    DPS_TxBufferCommit(buf);
     return ret;
 }
 
@@ -490,7 +492,7 @@ static DPS_Status EncodeKDFContext(DPS_Node* node, DPS_TxBuffer* buf, int8_t alg
         CBOR_SIZEOF(uint16_t) +
         SIZEOF_PROTECTED_MAP;
 
-    ret = DPS_TxBufferAlloc(node, buf, bufLen, DPS_TMP_POOL);
+    ret = DPS_TxBufferReserve(node, buf, bufLen, DPS_TMP_POOL);
     if (ret == DPS_OK) {
         ret = CBOR_EncodeArray(buf, 4);
     }
@@ -511,6 +513,9 @@ static DPS_Status EncodeKDFContext(DPS_Node* node, DPS_TxBuffer* buf, int8_t alg
         if (ret == DPS_OK) {
             ret = EncodeProtectedMap(buf, recipientAlg);
         }
+    }
+    if (ret == DPS_OK) {
+        DPS_TxBufferCommit(buf);
     }
     return ret;
 }
@@ -778,7 +783,7 @@ DPS_Status COSE_Encrypt(DPS_Node* node,
     /*
      * Call the encryption algorithm
      */
-    ret = DPS_TxBufferAlloc(node, &content, ptLen + M, DPS_TMP_POOL);
+    ret = DPS_TxBufferReserve(node, &content, ptLen + M, DPS_TMP_POOL);
     if (ret != DPS_OK) {
         goto Exit;
     }
@@ -790,7 +795,7 @@ DPS_Status COSE_Encrypt(DPS_Node* node,
      * Countersign the content
      */
     if (signer) {
-        ret = DPS_TxBufferAlloc(node, &sigBuf, SIZEOF_SIGNATURE, DPS_TMP_POOL);
+        ret = DPS_TxBufferReserve(node, &sigBuf, SIZEOF_SIGNATURE, DPS_TMP_POOL);
         if (ret != DPS_OK) {
             goto Exit;
         }
@@ -810,6 +815,7 @@ DPS_Status COSE_Encrypt(DPS_Node* node,
         }
         sig.sig = sigBuf.base;
         sig.sigLen = DPS_TxBufferUsed(&sigBuf);
+        DPS_TxBufferCommit(&sigBuf);
     }
     /*
      * Allocate cipherText buffer and copy in headers
@@ -826,7 +832,7 @@ DPS_Status COSE_Encrypt(DPS_Node* node,
     if (tag == COSE_TAG_ENCRYPT) {
         ctLen += CBOR_SIZEOF_ARRAY(recipientLen) + recipientBytes;
     }
-    ret = DPS_TxBufferAlloc(node, cipherText, ctLen, DPS_TX_POOL);
+    ret = DPS_TxBufferReserve(node, cipherText, ctLen, DPS_TX_POOL);
     if (ret != DPS_OK) {
         goto Exit;
     }

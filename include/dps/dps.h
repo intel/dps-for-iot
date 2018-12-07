@@ -41,6 +41,37 @@ extern "C" {
 #define DPS_FALSE 0 /**< FALSE boolean value */
 
 /**
+ * Opaque type for a subscription
+ */
+typedef struct _DPS_Subscription DPS_Subscription;
+
+/**
+ * Opaque type for a publication
+ */
+typedef struct _DPS_Publication DPS_Publication;
+
+/**
+ * Function prototype for a publication handler called when a publication is received that
+ * matches a subscription. Note that there is a possibility of false-positive matches.
+ *
+ * The publication handle is only valid within the body of this callback function.
+ * DPS_CopyPublication() will make a partial copy of the publication that can be used later for
+ * example to call DPS_AckPublication().
+ *
+ * The accessor functions DPS_PublicationGetUUID() and DPS_PublicationGetSequenceNum()
+ * return information about the received publication.
+ *
+ * The accessor functions DPS_SubscriptionGetNumTopics() and DPS_SubscriptionGetTopic()
+ * return information about the subscription that was matched.
+ *
+ * @param sub      Opaque handle for the subscription that was matched
+ * @param pub      Opaque handle for the publication that was received
+ * @param payload  Payload from the publication if any
+ * @param len      Length of the payload
+ */
+typedef void (*DPS_PublicationHandler)(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* payload, size_t len);
+
+/**
  * Opaque type for a DPS node
  */
 typedef struct _DPS_Node DPS_Node;
@@ -48,7 +79,6 @@ typedef struct _DPS_Node DPS_Node;
 DPS_Node* DPS_Init();
 
 void DPS_Terminate(DPS_Node* node);
-
 
 #ifdef __cplusplus
 }

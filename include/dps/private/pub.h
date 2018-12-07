@@ -31,6 +31,9 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <dps/private/dps.h>
+#include <dps/private/cose.h>
+#include <dps/private/bitvec.h>
+#include <dps/uuid.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -44,12 +47,24 @@ extern "C" {
 /**
  * Implementation configured maximum number of recipient IDs 
  */
-#define MAX_PUB_RECIPIENTIENTS
+#define MAX_PUB_RECIPIENTS  4
+
+/**
+ * Function prototype for a publication acknowledgement handler called when an acknowledgement
+ * for a publication is received from a remote subscriber. The handler is called for each
+ * subscriber that generates an acknowledgement so may be called numerous times for same
+ * publication.
+ *
+ * @param pub      Opaque handle for the publication that was received
+ * @param payload  Payload accompanying the acknowledgement if any
+ * @param len   Length of the payload
+ */
+typedef void (*DPS_AcknowledgementHandler)(DPS_Publication* pub, uint8_t* payload, size_t len);
 
 /**
  * Shared fields between members of a publication data series
  */
-typedef struct _Publication {
+typedef struct _DPS_Publication {
     DPS_Node* node;                             /**< Node for this publication */
     void* userData;                             /**< Application provided user data */
     uint8_t ackRequested;                       /**< TRUE if an ack was requested by the publisher */
@@ -74,7 +89,13 @@ typedef struct _Publication {
  * @param noWildCard If TRUE subscription wildcard matching will be disallowed
  * @param ackHandler Handler for reporting acks. If NULL acks are not requested for this publication
  */
-DPS_Status DPS_InitPublication(DPS_Node* node, DPS_Publication* pub, const char* topics[], size_t numTopics, int noWildCard, const DPS_KeyId* keyId, DPS_AcknowledgementHandler handler)
+DPS_Status DPS_InitPublication(DPS_Node* node,
+                               DPS_Publication* pub,
+                               const char* topics[],
+                               size_t numTopics,
+                               int noWildCard,
+                               const DPS_KeyId* keyId,
+                               DPS_AcknowledgementHandler handler);
 
 /**
  * Decode and process a received publication
@@ -84,7 +105,7 @@ DPS_Status DPS_InitPublication(DPS_Node* node, DPS_Publication* pub, const char*
  *
  * @return DPS_OK if decoding and processing is successful, an error otherwise
  */
-DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_Publication* pub);
+DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_RxBuffer* buf);
 
 /**
  * Send a publication
@@ -94,7 +115,7 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_Publication* pub);
  *
  * @return DPS_OK if sending is successful, an error otherwise
  */
-DPS_Status DPS_SendPublication(DPS_Publication* pub, uint8_t* data, size_t len);
+DPS_Status DPS_Publish(DPS_Publication* pub, const uint8_t* data, size_t len, int16_t ttl);
 
 #ifdef __cplusplus
 }

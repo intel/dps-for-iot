@@ -37,31 +37,24 @@
 extern "C" {
 #endif
 
-/**
- * Opaque type for platform-specific network state
- */
-typedef struct _DPS_Network DPS_Network;
-
-#define DPS_TX_BUFFER_SIZE      2048
-#define DPS_SCRATCH_BUFFER_SIZE 2048
-
-/**
- * Type for a DPS node
- */
-typedef struct _DPS_Node {
-    uint8_t tmpBuffer[DPS_SCRATCH_BUFFER_SIZE];
-    size_t tmpLen;
-    uint8_t txBuffer[DPS_TX_BUFFER_SIZE];
-    size_t txLen;
-    const char* separators;
-    DPS_Network* network;
-} DPS_Node;
+#define A_SIZEOF(x)   (sizeof(x) / sizeof((x)[0]))
 
 /*
- * Forward declarations
+ * Map keys for CBOR serialization of DPS messages
  */
-typedef struct _DPS_Subscription DPS_Subscription;
-typedef struct _DPS_Publication DPS_Publication;
+#define DPS_CBOR_KEY_PORT           1   /**< uint */
+#define DPS_CBOR_KEY_TTL            2   /**< int */
+#define DPS_CBOR_KEY_PUB_ID         3   /**< bstr (UUID) */
+#define DPS_CBOR_KEY_SEQ_NUM        4   /**< uint */
+#define DPS_CBOR_KEY_ACK_REQ        5   /**< bool */
+#define DPS_CBOR_KEY_BLOOM_FILTER   6   /**< bstr */
+#define DPS_CBOR_KEY_SUB_FLAGS      7   /**< uint */
+#define DPS_CBOR_KEY_MESH_ID        8   /**< bstr (UUID) */
+#define DPS_CBOR_KEY_NEEDS          9   /**< bstr */
+#define DPS_CBOR_KEY_INTERESTS     10   /**< bstr */
+#define DPS_CBOR_KEY_TOPICS        11   /**< array (tstr) */
+#define DPS_CBOR_KEY_DATA          12   /**< bstr */
+#define DPS_CBOR_KEY_ACK_SEQ_NUM   13   /**< uint */
 
 /**
  * A key store request.

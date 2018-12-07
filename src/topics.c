@@ -278,7 +278,7 @@ DPS_Status DPS_MatchTopicString(const char* pubTopic, const char* subTopic, cons
     return DPS_OK;
 }
 
-DPS_Status DPS_MatchTopicList(char* const* pubs, size_t numPubs, char* const* subs, size_t numSubs, const char* separators, int noWild, int* match)
+DPS_Status DPS_MatchTopicList(const char* const* pubs, size_t numPubs, char* const* subs, size_t numSubs, const char* separators, int noWild, int* match)
 {
     DPS_Status ret = DPS_ERR_INVALID;
 

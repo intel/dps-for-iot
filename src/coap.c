@@ -30,7 +30,7 @@
 /*
  * Debug control for this module
  */
-DPS_DEBUG_CONTROL(DPS_DEBUG_OFF);
+DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
 static int ParseOpt(const uint8_t* buf, size_t bufLen, int prevOpt, CoAP_Option* opt)
 {
@@ -178,7 +178,7 @@ static size_t CoAP_OptLen(uint8_t code, const char* token, const CoAP_Option* op
             DPS_ERRPRINT("Options ids must be in ascending order %d < %d\n", opts[i].id, optIdLast);
             return 0;
         }
-        optLen += len + 1;
+        optLen += (len + 1);
         if (delta > 13) {
             ++optLen;
             if (delta > 269) {
@@ -196,14 +196,14 @@ static size_t CoAP_OptLen(uint8_t code, const char* token, const CoAP_Option* op
     if (payloadLen > 0) {
         ++optLen;
     }
-    return optLen + tokenLen + 1;
+    return optLen + tokenLen + 4;
 }
 
 static DPS_Status CoAP_Compose(uint8_t code, const char* token, const CoAP_Option* opts, size_t numOpts, size_t optLen, size_t payloadLen, DPS_TxBuffer* buf)
 {
     static uint16_t msgId = 1;
     uint8_t optIdLast = 0;
-    uint8_t tokenLen = (uint8_t)strnlen(token, COAP_MAX_TOKEN_LEN + 1);
+    uint8_t tokenLen = (uint8_t)strnlen(token, COAP_MAX_TOKEN_LEN);
     DPS_Status ret = DPS_OK;
     
     if (tokenLen > COAP_MAX_TOKEN_LEN) {
@@ -277,6 +277,8 @@ static DPS_Status CoAP_Compose(uint8_t code, const char* token, const CoAP_Optio
     if (payloadLen > 0) {
         *buf->txPos++ = COAP_END_OF_OPTS;
     }
+    DPS_DBGPRINT("CoAP header %d bytes\n", DPS_TxBufferUsed(buf));
+    assert(DPS_TxBufferUsed(buf) == optLen);
     return ret;
 }
 
@@ -285,13 +287,11 @@ static const uint8_t DPS_ContentFormat = COAP_FORMAT_APPLICATION_CBOR;
 
 #define NUM_OPTS 2
 
-DPS_Status CoAP_Wrap(DPS_TxBuffer* buf)
+DPS_Status CoAP_InsertHeader(DPS_Node* node, size_t payloadLen)
 {
     DPS_Status ret;
     DPS_TxBuffer coap;
-    size_t payloadLen = DPS_TxBufferUsed(buf);
     size_t optLen;
-    uint8_t* ptr;
     CoAP_Option opts[NUM_OPTS];
 
     opts[0].id = COAP_OPT_URI_PATH;
@@ -305,10 +305,13 @@ DPS_Status CoAP_Wrap(DPS_TxBuffer* buf)
     if (optLen == 0) {
         return DPS_ERR_INVALID;
     }
-    ret = DPS_TxBufferPrepend(buf, optLen, &ptr);
+    /* Allocate space in the header pool */
+    ret = DPS_TxBufferReserve(node, &coap, optLen, DPS_TX_HDR_POOL);
     if (ret == DPS_OK) {
-        DPS_TxBufferInit(&coap, ptr, optLen);
-        ret =  CoAP_Compose(COAP_CODE(COAP_REQUEST, COAP_PUT), "", opts, optLen, NUM_OPTS, payloadLen, &coap);
+        ret =  CoAP_Compose(COAP_CODE(COAP_REQUEST, COAP_PUT), "", opts, NUM_OPTS, optLen, payloadLen, &coap);
+    }
+    if (ret == DPS_OK) {
+        DPS_TxBufferCommit(&coap);
     }
     return ret;
 }
