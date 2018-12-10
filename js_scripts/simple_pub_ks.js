@@ -176,6 +176,9 @@ var crypto = require("crypto");
         console.log("Ack for pub UUID " + dps.publicationGetUUID(pub) + "(" + dps.publicationGetSequenceNum(pub) + ")");
         console.log("    " + payload);
     };
+    var onPublish = function (pub, status) {
+        console.log("Published UUID " + dps.publicationGetUUID(pub) + "(" + dps.publicationGetSequenceNum(pub) + ") - " + status);
+    };
     var onDestroy = function (node) {
         dps.destroyKeyStore(keyStore);
     };
@@ -184,8 +187,8 @@ var crypto = require("crypto");
         dps.destroyNode(node, onDestroy);
     };
     var publish = function () {
-        dps.publish(pub, "world", 0);
-        console.log("Pub UUID " + dps.publicationGetUUID(pub) + "(" + dps.publicationGetSequenceNum(pub) + ")");
+        dps.publish(pub, "world", 0, onPublish);
+        console.log("Publish UUID " + dps.publicationGetUUID(pub) + "(" + dps.publicationGetSequenceNum(pub) + ")");
         setTimeout(stop, 1000);
     };
 
@@ -219,7 +222,7 @@ var crypto = require("crypto");
 
     dps.initPublication(pub, ["a/b/c"], false, null, onAck);
     dps.publicationAddSubId(pub, pubKeyId);
-    dps.publish(pub, "hello", 0);
-    console.log("Pub UUID " + dps.publicationGetUUID(pub) + "(" + dps.publicationGetSequenceNum(pub) + ")");
+    dps.publish(pub, "hello", 0, onPublish);
+    console.log("Publish UUID " + dps.publicationGetUUID(pub) + "(" + dps.publicationGetSequenceNum(pub) + ")");
     setTimeout(publish, 1000);
 }());

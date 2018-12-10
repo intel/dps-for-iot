@@ -318,7 +318,7 @@ int main(int argc, char** argv)
     }
 
     if (publication) {
-        ret = DPS_Publish(publication, NULL, 0, 0);
+        ret = DPS_Publish(publication, NULL, 0, 0, NULL);
         if (ret != DPS_OK) {
             goto Exit;
         }

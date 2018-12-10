@@ -753,7 +753,7 @@ typedef void (*DPS_AcknowledgementHandler)(DPS_Publication* pub, uint8_t* payloa
  *
  * Call the accessor function DPS_PublicationGetUUID() to get the UUID for this publication.
  *
- * @param pub         The the publication to initialize
+ * @param pub         The publication to initialize
  * @param topics      The topic strings to publish
  * @param numTopics   The number of topic strings to publish - must be >= 1
  * @param noWildCard  If TRUE the publication will not match wildcard subscriptions
@@ -770,27 +770,9 @@ DPS_Status DPS_InitPublication(DPS_Publication* pub,
                                DPS_AcknowledgementHandler handler);
 
 /**
- * The Quality-of-Service (QoS) parameters
- */
-typedef struct _DPS_QoS {
-    /** The maximum number of past and future publications to keep in this series. */
-     size_t historyDepth;
-} DPS_QoS;
-
-/**
- * Configure the Quality-of-Service (QoS) parameters of a publication.
- *
- * @param pub          The publication to initialize
- * @param qos          The QoS parameters
- *
- * @return DPS_OK if configuration is successful, an error otherwise
- */
-DPS_Status DPS_PublicationConfigureQoS(DPS_Publication* pub, const DPS_QoS* qos);
-
-/**
  * Adds a key identifier to use for encrypted publications.
  *
- * @param pub         The the publication to initialize
+ * @param pub         The publication to initialize
  * @param keyId       Key identifier to use for encrypted publications
  *
  * @return DPS_OK if addition is successful, an error otherwise
@@ -800,10 +782,18 @@ DPS_Status DPS_PublicationAddSubId(DPS_Publication* pub, const DPS_KeyId* keyId)
 /**
  * Removes a key identifier to use for encrypted publications.
  *
- * @param pub         The the publication to initialize
+ * @param pub         The publication to initialize
  * @param keyId       Key identifier to remove
  */
 void DPS_PublicationRemoveSubId(DPS_Publication* pub, const DPS_KeyId* keyId);
+
+/**
+ * Function prototype for function called when a DPS_Publish() completes.
+ *
+ * @param pub    The publication
+ * @param status Indicates if the publish completed or failed
+ */
+typedef void (*DPS_OnPublishComplete)(DPS_Publication* pub, DPS_Status status);
 
 /**
  * Publish a set of topics along with an optional payload. The topics will be published immediately
@@ -818,10 +808,12 @@ void DPS_PublicationRemoveSubId(DPS_Publication* pub, const DPS_KeyId* keyId);
  * @param pubPayload   Optional payload
  * @param len          Length of the payload
  * @param ttl          Time to live in seconds - maximum TTL is about 9 hours
+ * @param cb           The callback function to call on completion, can be NULL
  *
  * @return DPS_OK if the topics were successfully published
  */
-DPS_Status DPS_Publish(DPS_Publication* pub, const uint8_t* pubPayload, size_t len, int16_t ttl);
+DPS_Status DPS_Publish(DPS_Publication* pub, const uint8_t* pubPayload, size_t len, int16_t ttl,
+                       DPS_OnPublishComplete cb);
 
 /**
  * Delete a publication and frees any resources allocated. This does not cancel retained publications

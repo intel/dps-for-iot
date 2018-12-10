@@ -168,6 +168,8 @@ elif args.encryption == 2:
 def on_ack(pub, payload):
     print "Ack for pub UUID %s(%d)" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub))
     print "    %s" % (payload)
+def on_publish(pub, status):
+    print "Published UUID %s(%d) - %d" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub), status)
 
 def on_destroy(node):
     print "Destroyed"
@@ -180,11 +182,11 @@ pub = dps.create_publication(node)
 
 dps.init_publication(pub, ['a/b/c'], False, None, on_ack)
 dps.publication_add_sub_id(pub, pub_key_id)
-dps.publish(pub, "hello")
-print "Pub UUID %s(%d)" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub))
+dps.publish(pub, "hello", 0, on_publish)
+print "Publish UUID %s(%d)" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub))
 time.sleep(1)
-dps.publish(pub, "world")
-print "Pub UUID %s(%d)" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub))
+dps.publish(pub, "world", 0, on_publish)
+print "Publish UUID %s(%d)" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub))
 time.sleep(1)
 
 dps.destroy_publication(pub)

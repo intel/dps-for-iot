@@ -102,7 +102,6 @@ DPS_Status Publisher::setDiscoverable(bool discoverable)
 DPS_Status Publisher::initialize(Node * node, const std::vector<std::string> & topics,
                                  DPS_AcknowledgementHandler handler)
 {
-  DPS_QoS qos = { 64 }; // TODO This is only to allow back-to-back publications
   std::vector<const char *> ctopics;
   DPS_Status ret = DPS_OK;
   int err;
@@ -119,7 +118,6 @@ DPS_Status Publisher::initialize(Node * node, const std::vector<std::string> & t
     return ret;
   }
   sn_ = DPS_PublicationGetSequenceNum(pub_);
-  ret = DPS_PublicationConfigureQoS(pub_, &qos);
   if (ret != DPS_OK) {
     return ret;
   }
@@ -236,7 +234,7 @@ DPS_Status Publisher::addPublication(TxStream && payload, PublicationInfo * info
     PublicationHeader header = { QOS_DATA, qos_, range, sn_ + 1 };
     TxStream buf;
     buf << header << payload;
-    DPS_Status ret = DPS_Publish(pub_, buf.data(), buf.size(), 0);
+    DPS_Status ret = DPS_Publish(pub_, buf.data(), buf.size(), 0, nullptr);
     if (ret == DPS_OK) {
       if (info) {
         memcpy(&info->uuid, uuid(), sizeof(DPS_UUID));
@@ -320,7 +318,7 @@ void Publisher::onTimer()
       (heartbeatPolicy_ == HEARTBEAT_UNACKNOWLEDGED && anyUnacked())) {
     // send out a new heartbeat
     TxStream txBuf = heartbeat();
-    DPS_Status ret = DPS_Publish(pub_, txBuf.data(), txBuf.size(), 0);
+    DPS_Status ret = DPS_Publish(pub_, txBuf.data(), txBuf.size(), 0, nullptr);
     if (ret != DPS_OK) {
       DPS_ERRPRINT("Publish failed: %s\n", DPS_ErrTxt(ret));
     }
@@ -375,7 +373,7 @@ void Publisher::resendRequested(DPS_Publication * pub, const SNSet & sns)
       PublicationHeader header = { QOS_DATA, qos_, { cache_->minSN(), cache_->maxSN() }, it->sn_ };
       TxStream txBuf;
       txBuf << header << it->buf_;
-      DPS_Status ret = DPS_Publish(pub, txBuf.data(), txBuf.size(), 0);
+      DPS_Status ret = DPS_Publish(pub, txBuf.data(), txBuf.size(), 0, nullptr);
       if (ret == DPS_OK) {
         resetHeartbeat();
       } else {

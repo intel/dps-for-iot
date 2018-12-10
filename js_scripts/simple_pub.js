@@ -102,7 +102,7 @@ var dps = require("dps");
         dps.destroyNode(node, onDestroy);
     };
     var publish = function () {
-        dps.publish(pub, "world", 0);
+        dps.publish(pub, "world", 0, null);
         console.log("Pub UUID " + dps.publicationGetUUID(pub) + "(" + dps.publicationGetSequenceNum(pub) + ")");
         setTimeout(stop, 1000);
     };
@@ -143,7 +143,7 @@ var dps = require("dps");
 
     dps.initPublication(pub, ["a/b/c"], false, null, onAck);
     dps.publicationAddSubId(pub, pubKeyId);
-    dps.publish(pub, "hello", 0);
+    dps.publish(pub, "hello", 0, null);
     console.log("Pub UUID " + dps.publicationGetUUID(pub) + "(" + dps.publicationGetSequenceNum(pub) + ")");
     setTimeout(publish, 1000);
 }());

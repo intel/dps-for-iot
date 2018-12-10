@@ -330,12 +330,19 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote)
             assert(remote->outbound.ackCountdown);
         } else {
             DPS_ERRPRINT("Failed to send subscription request %s\n", DPS_ErrTxt(ret));
-            DPS_SendFailed(node, &remote->ep.addr, &uvBuf, 1, ret);
+            DPS_OnSendComplete(node, NULL, &remote->ep, &uvBuf, 1, ret);
         }
     } else {
         DPS_TxBufferFree(&buf);
     }
     return ret;
+}
+
+static void OnSendComplete(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf_t* bufs, size_t numBufs, DPS_Status status)
+{
+    DPS_LockNode(node);
+    DPS_OnSendComplete(node, appCtx, ep, bufs, numBufs, status);
+    DPS_UnlockNode(node);
 }
 
 static DPS_Status SendSubscriptionAck(DPS_Node* node, RemoteNode* remote, uint32_t revision, int includeSub)
@@ -468,7 +475,7 @@ static DPS_Status SendSubscriptionAck(DPS_Node* node, RemoteNode* remote, uint32
     if (ret == DPS_OK) {
         uv_buf_t uvBuf = uv_buf_init((char*)buf.base, DPS_TxBufferUsed(&buf));
         CBOR_Dump("Sub ack out", (uint8_t*)uvBuf.base, uvBuf.len);
-        ret = DPS_NetSend(node, NULL, &remote->ep, &uvBuf, 1, DPS_OnSendComplete);
+        ret = DPS_NetSend(node, NULL, &remote->ep, &uvBuf, 1, OnSendComplete);
         if (ret == DPS_OK) {
             if (includeSub) {
                 remote->outbound.subPending = DPS_TRUE;
@@ -481,7 +488,7 @@ static DPS_Status SendSubscriptionAck(DPS_Node* node, RemoteNode* remote, uint32
             }
         } else {
             DPS_ERRPRINT("Failed to send subscription ack %s\n", DPS_ErrTxt(ret));
-            DPS_SendFailed(node, &remote->ep.addr, &uvBuf, 1, ret);
+            DPS_OnSendComplete(node, NULL, &remote->ep, &uvBuf, 1, ret);
         }
     } else {
         DPS_TxBufferFree(&buf);

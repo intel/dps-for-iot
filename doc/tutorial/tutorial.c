@@ -407,7 +407,7 @@ static DPS_Status SendPublication(DPS_Publication* pub)
     const char* payload = "Hello";
     size_t numPayloadBytes = strlen(payload) + 1;
     int16_t ttl = 0;
-    ret = DPS_Publish(pub, (const uint8_t*)payload, numPayloadBytes, ttl);
+    ret = DPS_Publish(pub, (const uint8_t*)payload, numPayloadBytes, ttl, NULL);
     if (ret != DPS_OK) {
         goto Exit;
     }

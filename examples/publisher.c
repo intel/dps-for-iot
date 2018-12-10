@@ -209,10 +209,10 @@ static void ReadStdin(DPS_Node* node)
             size_t cborLen;
             ret = DPS_JSON2CBOR(msg, cbor, sizeof(cbor), &cborLen);
             if (ret == DPS_OK) {
-                ret = DPS_Publish(currentPub, cbor, cborLen, ttl);
+                ret = DPS_Publish(currentPub, cbor, cborLen, ttl, NULL);
             }
         } else {
-            ret = DPS_Publish(currentPub, (uint8_t*)msg, msg ? strnlen(msg, MAX_MSG_LEN) : 0, ttl);
+            ret = DPS_Publish(currentPub, (uint8_t*)msg, msg ? strnlen(msg, MAX_MSG_LEN) : 0, ttl, NULL);
         }
         if (ret == DPS_OK) {
             DPS_PRINT("Pub UUID %s(%d)\n", DPS_UUIDToString(DPS_PublicationGetUUID(currentPub)),
@@ -412,10 +412,10 @@ int main(int argc, char** argv)
             size_t cborLen;
             ret = DPS_JSON2CBOR(msg, cbor, sizeof(cbor), &cborLen);
             if (ret == DPS_OK) {
-                ret = DPS_Publish(currentPub, cbor, cborLen, ttl);
+                ret = DPS_Publish(currentPub, cbor, cborLen, ttl, NULL);
             }
         } else {
-            ret = DPS_Publish(currentPub, (uint8_t*)msg, msg ? strnlen(msg, MAX_MSG_LEN) + 1 : 0, ttl);
+            ret = DPS_Publish(currentPub, (uint8_t*)msg, msg ? strnlen(msg, MAX_MSG_LEN) + 1 : 0, ttl, NULL);
         }
         if (ret == DPS_OK) {
             DPS_PRINT("Pub UUID %s\n", DPS_UUIDToString(DPS_PublicationGetUUID(currentPub)));

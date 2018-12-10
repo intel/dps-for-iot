@@ -59,6 +59,13 @@ void DPS_DestroyAck(PublicationAck* ack)
     free(ack);
 }
 
+static void OnSendComplete(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf_t* bufs, size_t numBufs, DPS_Status status)
+{
+    DPS_LockNode(node);
+    DPS_OnSendComplete(node, appCtx, ep, bufs, numBufs, status);
+    DPS_UnlockNode(node);
+}
+
 DPS_Status DPS_SendAcknowledgement(DPS_Node* node, PublicationAck* ack, RemoteNode* ackNode)
 {
     uv_buf_t uvBufs[] = {
@@ -81,7 +88,7 @@ DPS_Status DPS_SendAcknowledgement(DPS_Node* node, PublicationAck* ack, RemoteNo
      * See if this is an ACK for a local publication
      */
     for (pub = node->publications; pub != NULL; pub = pub->next) {
-        if (DPS_UUIDCompare(&pub->shared->pubId, &ack->pubId) == 0) {
+        if (DPS_UUIDCompare(&pub->pubId, &ack->pubId) == 0) {
             loopback = DPS_TRUE;
             break;
         }
@@ -92,12 +99,12 @@ DPS_Status DPS_SendAcknowledgement(DPS_Node* node, PublicationAck* ack, RemoteNo
         if (ret == DPS_OK) {
             DPS_NetFreeBufs(uvBufs, A_SIZEOF(uvBufs));
         } else {
-            DPS_SendFailed(node, &ack->destAddr, uvBufs, A_SIZEOF(uvBufs), ret);
+            DPS_OnSendComplete(node, NULL, &ackNode->ep, uvBufs, A_SIZEOF(uvBufs), ret);
         }
     } else {
-        ret = DPS_NetSend(node, NULL, &ackNode->ep, uvBufs, A_SIZEOF(uvBufs), DPS_OnSendComplete);
+        ret = DPS_NetSend(node, NULL, &ackNode->ep, uvBufs, A_SIZEOF(uvBufs), OnSendComplete);
         if (ret != DPS_OK) {
-            DPS_SendFailed(node, &ack->destAddr, uvBufs, A_SIZEOF(uvBufs), ret);
+            DPS_OnSendComplete(node, NULL, &ackNode->ep, uvBufs, A_SIZEOF(uvBufs), ret);
         }
     }
     return ret;
@@ -116,7 +123,7 @@ static PublicationAck* AllocPubAck(const DPS_UUID* pubId, uint32_t sequenceNum)
 
 static DPS_Status SerializeAck(const DPS_Publication* pub, PublicationAck* ack, const uint8_t* data, size_t dataLen)
 {
-    DPS_Node* node = pub->shared->node;
+    DPS_Node* node = pub->node;
     DPS_Status ret;
     uint8_t* aadPos;
     size_t len;
@@ -194,7 +201,7 @@ static DPS_Status SerializeAck(const DPS_Publication* pub, PublicationAck* ack, 
     /*
      * If the publication was encrypted the ack must be too
      */
-    if (pub->shared->recipients) {
+    if (pub->recipients) {
         DPS_RxBuffer aadBuf;
         DPS_RxBuffer plainTextBuf;
         DPS_TxBuffer cipherTextBuf;
@@ -204,7 +211,7 @@ static DPS_Status SerializeAck(const DPS_Publication* pub, PublicationAck* ack, 
         DPS_TxBufferToRx(&ack->encryptedBuf, &plainTextBuf);
         DPS_MakeNonce(&ack->pubId, ack->sequenceNum, DPS_MSG_TYPE_ACK, nonce);
         ret = COSE_Encrypt(COSE_ALG_A256GCM, nonce, node->signer.alg ? &node->signer : NULL,
-                           pub->shared->recipients, pub->shared->recipientsCount, &aadBuf, &plainTextBuf,
+                           pub->recipients, pub->recipientsCount, &aadBuf, &plainTextBuf,
                            node->keyStore, &cipherTextBuf);
         DPS_TxBufferFree(&ack->encryptedBuf);
         if (ret == DPS_OK) {
@@ -315,7 +322,7 @@ DPS_Status DPS_DecodeAcknowledgement(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Rx
         DPS_RxBufferInit(&aadBuf, aadPos, buf->rxPos - aadPos);
         DPS_RxBufferInit(&cipherTextBuf, buf->rxPos, DPS_RxBufferAvail(buf));
         ret = COSE_Decrypt(nonce, &recipient, &aadBuf, &cipherTextBuf, node->keyStore,
-                           &pub->shared->ack, &plainTextBuf);
+                           &pub->ack, &plainTextBuf);
         if (ret == DPS_OK) {
             DPS_DBGPRINT("Ack was decrypted\n");
             CBOR_Dump("plaintext", plainTextBuf.base, DPS_TxBufferUsed(&plainTextBuf));
@@ -351,13 +358,13 @@ DPS_Status DPS_DecodeAcknowledgement(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Rx
                     }
                 }
                 if (ret == DPS_OK) {
-                    pub->shared->handler(pub, data, dataLen);
+                    pub->handler(pub, data, dataLen);
                 }
             }
         }
         DPS_TxBufferFree(&plainTextBuf);
         /* Ack ID will be invalid now */
-        memset(&pub->shared->ack, 0, sizeof(pub->shared->ack));
+        memset(&pub->ack, 0, sizeof(pub->ack));
         DPS_LockNode(node);
         DPS_PublicationDecRef(pub);
         DPS_UnlockNode(node);
@@ -382,9 +389,9 @@ DPS_Status DPS_DecodeAcknowledgement(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Rx
             uvBuf.base = malloc(uvBuf.len);
             if (uvBuf.base) {
                 memcpy_s(uvBuf.base, uvBuf.len, buf->base, uvBuf.len);
-                ret = DPS_NetSend(node, NULL, &ackNode->ep, &uvBuf, 1, DPS_OnSendComplete);
+                ret = DPS_NetSend(node, NULL, &ackNode->ep, &uvBuf, 1, OnSendComplete);
                 if (ret != DPS_OK) {
-                    DPS_SendFailed(node, &ackNode->ep.addr, &uvBuf, 1, ret);
+                    DPS_OnSendComplete(node, NULL, &ackNode->ep, &uvBuf, 1, ret);
                 }
             } else {
                 ret = DPS_ERR_RESOURCES;
@@ -399,7 +406,7 @@ DPS_Status DPS_AckPublication(const DPS_Publication* pub, const uint8_t* data, s
 {
     DPS_Status ret;
     DPS_NodeAddress* addr = NULL;
-    DPS_Node* node = pub ? pub->shared->node : NULL;
+    DPS_Node* node = pub ? pub->node : NULL;
     uint32_t sequenceNum;
     PublicationAck* ack;
 
@@ -411,16 +418,16 @@ DPS_Status DPS_AckPublication(const DPS_Publication* pub, const uint8_t* data, s
     if (pub->flags & PUB_FLAG_LOCAL) {
         return DPS_ERR_INVALID;
     }
-    ret = DPS_LookupPublisherForAck(&node->history, &pub->shared->pubId, &sequenceNum, &addr);
+    ret = DPS_LookupPublisherForAck(&node->history, &pub->pubId, &sequenceNum, &addr);
     if (ret != DPS_OK) {
         return ret;
     }
     if (!addr) {
         return DPS_ERR_NO_ROUTE;
     }
-    DPS_DBGPRINT("Queueing acknowledgement for %s/%d to %s\n", DPS_UUIDToString(&pub->shared->pubId),
+    DPS_DBGPRINT("Queueing acknowledgement for %s/%d to %s\n", DPS_UUIDToString(&pub->pubId),
                  pub->sequenceNum, DPS_NodeAddrToString(addr));
-    ack = AllocPubAck(&pub->shared->pubId, pub->sequenceNum);
+    ack = AllocPubAck(&pub->pubId, pub->sequenceNum);
     if (!ack) {
         return DPS_ERR_RESOURCES;
     }

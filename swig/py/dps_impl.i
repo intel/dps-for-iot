@@ -234,7 +234,7 @@ static void OnNodeAddressComplete(DPS_Node* node, DPS_NodeAddress* addr, void* d
 
 static void AcknowledgementHandler(DPS_Publication* pub, uint8_t* payload, size_t len)
 {
-    Handler* handler = (Handler*)DPS_GetPublicationData(pub);
+    PublicationData* data = (PublicationData*)DPS_GetPublicationData(pub);
     PyObject* pubObj;
     PyObject* payloadObj;
     PyObject* ret;
@@ -243,9 +243,24 @@ static void AcknowledgementHandler(DPS_Publication* pub, uint8_t* payload, size_
     gilState = PyGILState_Ensure();
     pubObj = SWIG_NewPointerObj(SWIG_as_voidptr(pub), SWIGTYPE_p__DPS_Publication, 0);
     payloadObj = From_bytes(payload, len);
-    ret = PyObject_CallFunction(handler->m_obj, (char*)"OO", pubObj, payloadObj);
+    ret = PyObject_CallFunction(data->m_acknowledgementHandler->m_obj, (char*)"OO", pubObj, payloadObj);
     Py_XDECREF(ret);
     Py_XDECREF(payloadObj);
+    Py_XDECREF(pubObj);
+    PyGILState_Release(gilState);
+}
+
+static void OnPublishComplete(DPS_Publication* pub, DPS_Status status)
+{
+    PublicationData* data = (PublicationData*)DPS_GetPublicationData(pub);
+    PyObject* pubObj;
+    PyObject* ret;
+    PyGILState_STATE gilState;
+
+    gilState = PyGILState_Ensure();
+    pubObj = SWIG_NewPointerObj(SWIG_as_voidptr(pub), SWIGTYPE_p__DPS_Publication, 0);
+    ret = PyObject_CallFunction(data->m_onPublishComplete->m_obj, (char*)"Oi", pubObj, status);
+    Py_XDECREF(ret);
     Py_XDECREF(pubObj);
     PyGILState_Release(gilState);
 }

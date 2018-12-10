@@ -205,7 +205,7 @@ static void OnLinkedPut(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status ret, v
         if (regPut->status != DPS_OK) {
             goto Exit;
         }
-        regPut->status = DPS_Publish(regPut->pub, regPut->payload.base, DPS_TxBufferUsed(&regPut->payload), REGISTRATION_TTL);
+        regPut->status = DPS_Publish(regPut->pub, regPut->payload.base, DPS_TxBufferUsed(&regPut->payload), REGISTRATION_TTL, NULL);
         if (regPut->status != DPS_OK) {
             goto Exit;
         }

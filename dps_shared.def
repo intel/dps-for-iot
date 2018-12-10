@@ -43,7 +43,6 @@ DPS_LogBytes
 DPS_MemoryKeyStoreHandle
 DPS_NodeAddrToString
 DPS_PublicationAddSubId
-DPS_PublicationConfigureQoS
 DPS_PublicationGetNode
 DPS_PublicationGetNumTopics
 DPS_PublicationGetSenderKeyId

@@ -351,18 +351,41 @@ public:
         delete[] m_payload;
     }
     void Call() {
-        Handler* handler = (Handler*)DPS_GetPublicationData(m_pub);
+        PublicationData* data = (PublicationData*)DPS_GetPublicationData(m_pub);
         int argc = 2;
         v8::Local<v8::Value> argv[argc];
         argv[0] = SWIG_NewPointerObj(SWIG_as_voidptr(m_pub), SWIGTYPE_p__DPS_Publication, 0);
         argv[1] = From_bytes(m_payload, m_len);
-        CallFunction(handler->m_val, argc, argv);
+        CallFunction(data->m_acknowledgementHandler->m_val, argc, argv);
     }
 };
 
 static void AcknowledgementHandler(DPS_Publication* pub, uint8_t* payload, size_t len)
 {
     sync_send(new AcknowledgementCallback(pub, payload, len));
+}
+
+class OnPublishCompleteCallback : public Callback {
+public:
+    DPS_Publication* m_pub;
+    DPS_Status m_status;
+    OnPublishCompleteCallback(DPS_Publication* pub, DPS_Status status) {
+        m_pub = pub;
+        m_status = status;
+    }
+    void Call() {
+        PublicationData* data = (PublicationData*)DPS_GetPublicationData(m_pub);
+        int argc = 2;
+        v8::Local<v8::Value> argv[argc];
+        argv[0] = SWIG_NewPointerObj(SWIG_as_voidptr(m_pub), SWIGTYPE_p__DPS_Publication, 0);
+        argv[1] = SWIG_From_int(m_status);
+        CallFunction(data->m_onPublishComplete->m_val, argc, argv);
+    }
+};
+
+static void OnPublishComplete(DPS_Publication* pub, DPS_Status status)
+{
+    sync_send(new OnPublishCompleteCallback(pub, status));
 }
 
 class PublicationCallback : public Callback {

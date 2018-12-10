@@ -414,7 +414,7 @@ void Node::onTimer()
   }
   // publish the advertisement
   if (pub_) {
-    DPS_Status ret = DPS_Publish(pub_, nullptr, 0, 0);
+    DPS_Status ret = DPS_Publish(pub_, nullptr, 0, 0, nullptr);
     if (ret != DPS_OK) {
       DPS_ERRPRINT("Publish failed: %s\n", DPS_ErrTxt(ret));
     }

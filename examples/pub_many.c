@@ -57,7 +57,7 @@ static void OnAck(DPS_Publication* pub, uint8_t* data, size_t len)
         }
     }
     if (--pubCount) {
-        DPS_Status ret = DPS_Publish(pub, NULL, 0, ttl);
+        DPS_Status ret = DPS_Publish(pub, NULL, 0, ttl, NULL);
         if (ret == DPS_OK) {
             return;
         }
@@ -185,7 +185,7 @@ int main(int argc, char** argv)
 
     nodeDestroyed = DPS_CreateEvent();
 
-    ret = DPS_Publish(pub, (uint8_t*)msg, msg ? strnlen(msg, MAX_MSG_LEN) + 1 : 0, ttl);
+    ret = DPS_Publish(pub, (uint8_t*)msg, msg ? strnlen(msg, MAX_MSG_LEN) + 1 : 0, ttl, NULL);
     if (ret == DPS_OK) {
         DPS_PRINT("Pub UUID %s\n", DPS_UUIDToString(DPS_PublicationGetUUID(pub)));
     } else {

@@ -541,32 +541,17 @@ DPS_Status DPS_AddRemoteNode(DPS_Node* node, DPS_NodeAddress* addr, DPS_NetConne
     return DPS_OK;
 }
 
-void DPS_SendFailed(DPS_Node* node, DPS_NodeAddress* addr, uv_buf_t* bufs, size_t numBufs, DPS_Status status)
-{
-    RemoteNode* remote;
-
-    DPS_DBGPRINT("Send failed %s\n", DPS_ErrTxt(status));
-    remote = DPS_LookupRemoteNode(node, addr);
-    if (remote) {
-        DPS_DBGPRINT("Removing node %s\n", DPS_NodeAddrToString(addr));
-        DPS_DeleteRemoteNode(node, remote);
-    }
-    DPS_NetFreeBufs(bufs, numBufs);
-}
-
 void DPS_OnSendComplete(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf_t* bufs, size_t numBufs, DPS_Status status)
 {
     RemoteNode* remote;
 
     DPS_DBGPRINT("Send complete %s\n", DPS_ErrTxt(status));
     if (ep && (status != DPS_OK)) {
-        DPS_LockNode(node);
         remote = DPS_LookupRemoteNode(node, &ep->addr);
         if (remote) {
             DPS_DBGPRINT("Removing node %s\n", DPS_NodeAddrToString(&ep->addr));
             DPS_DeleteRemoteNode(node, remote);
         }
-        DPS_UnlockNode(node);
     }
     DPS_NetFreeBufs(bufs, numBufs);
 }
@@ -601,12 +586,12 @@ static DPS_Status SendMatchingPubToSub(DPS_Node* node, DPS_Publication* pub, Rem
     /*
      * We don't send publications to remote nodes we have received them from.
      */
-    if (!DPS_PublicationReceivedFrom(&node->history, &pub->shared->pubId, pub->sequenceNum,
-                                     &pub->shared->senderAddr, &subscriber->ep.addr)) {
+    if (!DPS_PublicationReceivedFrom(&node->history, &pub->pubId, pub->sequenceNum,
+                                     &pub->senderAddr, &subscriber->ep.addr)) {
         /*
          * This is the pub/sub matching code
          */
-        DPS_BitVectorIntersection(node->scratch.interests, pub->shared->bf, subscriber->inbound.interests);
+        DPS_BitVectorIntersection(node->scratch.interests, pub->bf, subscriber->inbound.interests);
         DPS_BitVectorFuzzyHash(node->scratch.needs, node->scratch.interests);
         if (DPS_BitVectorIncludes(node->scratch.needs, subscriber->inbound.needs)) {
             DPS_DBGPRINT("Sending pub %d to %s\n", pub->sequenceNum, DESCRIBE(subscriber));
@@ -640,64 +625,6 @@ static void SendAcksTask(uv_async_t* handle)
     DPS_UnlockNode(node);
 }
 
-static int SendPub(DPS_Node* node, DPS_Publication* pub)
-{
-    /*
-     * Only check publications that are flagged to be checked
-     */
-    int send = pub->checkToSend;
-    if (send) {
-        DPS_Status ret = DPS_OK;
-        DPS_Subscription* sub;
-        RemoteNode* remote;
-        RemoteNode* nextRemote;
-        if (pub->flags & PUB_FLAG_LOCAL) {
-            /*
-             * Loopback publication if there is a matching subscriber candidate on
-             * this node
-             */
-            for (sub = node->subscriptions; sub != NULL; sub = sub->next) {
-                if (DPS_BitVectorIncludes(pub->shared->bf, sub->bf)) {
-                    ret = DPS_SendPublication(node, pub, NULL, DPS_TRUE);
-                    if (ret != DPS_OK) {
-                        DPS_ERRPRINT("SendPublication (loopback) returned %s\n", DPS_ErrTxt(ret));
-                    }
-                    break;
-                }
-            }
-            /*
-             * If the node is a multicast sender local publications are always multicast
-             */
-            if (node->mcastSender) {
-                ret = DPS_SendPublication(node, pub, NULL, DPS_FALSE);
-                if (ret != DPS_OK) {
-                    DPS_ERRPRINT("SendPublication (multicast) returned %s\n", DPS_ErrTxt(ret));
-                }
-            }
-        }
-        for (remote = node->remoteNodes; remote != NULL; remote = nextRemote) {
-            nextRemote = remote->next;
-            DPS_DBGPRINT("%s muted=%d/%d,interests=%p\n", DESCRIBE(remote), remote->outbound.muted, remote->inbound.muted, remote->inbound.interests);
-            if (!(remote->outbound.muted || remote->inbound.muted) && remote->inbound.interests) {
-                ret = SendMatchingPubToSub(node, pub, remote);
-                if (ret != DPS_OK) {
-                    DPS_DeleteRemoteNode(node, remote);
-                    DPS_ERRPRINT("SendMatchingPubToSub failed %s\n", DPS_ErrTxt(ret));
-                }
-            }
-        }
-        pub->checkToSend = DPS_FALSE;
-    }
-    /*
-     * Only touch publications that are flagged to be published.  Ones
-     * that aren't may be in the process of being updated.
-     */
-    if ((pub->flags & PUB_FLAG_PUBLISH) && (uv_now(node->loop) >= pub->expires)) {
-        DPS_ExpirePub(node, pub);
-    }
-    return send;
-}
-
 static void SendPubsTask(uv_async_t* handle)
 {
     DPS_Node* node = (DPS_Node*)handle->data;
@@ -712,14 +639,84 @@ static void SendPubsTask(uv_async_t* handle)
      */
     for (pub = node->publications; pub != NULL; pub = nextPub) {
         nextPub = pub->next;
-        if (pub->history) {
-            for (pub = pub->history; pub; pub = pub->next) {
-                if (SendPub(node, pub)) {
-                    break;
+        /*
+         * Only check publications that are flagged to be checked
+         */
+        int send = pub->checkToSend;
+        if (send) {
+            DPS_Status ret = DPS_OK;
+            DPS_Subscription* sub;
+            RemoteNode* remote;
+            RemoteNode* nextRemote;
+            DPS_OnPublishComplete cb;
+            if (pub->flags & PUB_FLAG_LOCAL) {
+                /*
+                 * Loopback publication if there is a matching subscriber candidate on
+                 * this node
+                 */
+                for (sub = node->subscriptions; sub != NULL; sub = sub->next) {
+                    if (DPS_BitVectorIncludes(pub->bf, sub->bf)) {
+                        ret = DPS_SendPublication(node, pub, NULL, DPS_TRUE);
+                        if (ret != DPS_OK) {
+                            DPS_ERRPRINT("SendPublication (loopback) returned %s\n", DPS_ErrTxt(ret));
+                            if (pub->cbStatus != DPS_OK) {
+                                pub->cbStatus = ret;
+                            }
+                        }
+                        break;
+                    }
+                }
+                /*
+                 * If the node is a multicast sender local publications are always multicast
+                 */
+                if (node->mcastSender) {
+                    ret = DPS_SendPublication(node, pub, NULL, DPS_FALSE);
+                    if (ret != DPS_OK) {
+                        DPS_ERRPRINT("SendPublication (multicast) returned %s\n", DPS_ErrTxt(ret));
+                        if (pub->cbStatus != DPS_OK) {
+                            pub->cbStatus = ret;
+                        }
+                    }
                 }
             }
-        } else {
-            SendPub(node, pub);
+            for (remote = node->remoteNodes; remote != NULL; remote = nextRemote) {
+                nextRemote = remote->next;
+                DPS_DBGPRINT("%s muted=%d/%d,interests=%p\n", DESCRIBE(remote), remote->outbound.muted,
+                             remote->inbound.muted, remote->inbound.interests);
+                if (!(remote->outbound.muted || remote->inbound.muted) && remote->inbound.interests) {
+                    ret = SendMatchingPubToSub(node, pub, remote);
+                    if (ret != DPS_OK) {
+                        DPS_DeleteRemoteNode(node, remote);
+                        DPS_ERRPRINT("SendMatchingPubToSub failed %s\n", DPS_ErrTxt(ret));
+                        if (pub->cbStatus != DPS_OK) {
+                            pub->cbStatus = ret;
+                        }
+                    }
+                }
+            }
+            pub->checkToSend = DPS_FALSE;
+            if ((pub->numSend == 0) && pub->cb) {
+                DPS_PublicationIncRef(pub);
+                /*
+                 * Don't issue completion callback more than once.
+                 */
+                cb = pub->cb;
+                pub->cb = NULL;
+                if (pub->cbStatus < DPS_OK) {
+                    pub->cbStatus = DPS_OK;
+                }
+                DPS_UnlockNode(pub->node);
+                cb(pub, pub->cbStatus);
+                DPS_LockNode(pub->node);
+                DPS_PublicationDecRef(pub);
+            }
+        }
+        /*
+         * Only touch publications that are flagged to be published.  Ones
+         * that aren't may be in the process of being updated.
+         */
+        if ((pub->flags & PUB_FLAG_PUBLISH) && (uv_now(node->loop) >= pub->expires)) {
+            DPS_ExpirePub(node, pub);
         }
     }
     DPS_DumpPubs(node);
@@ -822,26 +819,6 @@ static void SendSubsTask(uv_async_t* handle)
     DPS_UnlockNode(node);
 }
 
-static DPS_Publication* UpdatePub(DPS_Node* node, DPS_Publication* pub, int* count)
-{
-    DPS_Publication* next = pub->next;
-
-    /*
-     * Received publications are marked as checkToSend they should not be expired.
-     */
-    if (pub->checkToSend) {
-        ++(*count);
-    } else if (uv_now(node->loop) >= pub->expires) {
-        DPS_ExpirePub(node, pub);
-    } else {
-        if ((pub->flags & PUB_FLAG_PUBLISH) && (node->remoteNodes || node->mcastSender)) {
-            pub->checkToSend = DPS_TRUE;
-            ++(*count);
-        }
-    }
-    return next;
-}
-
 /*
  * Run checks of one or more publications against the current subscriptions
  */
@@ -864,13 +841,18 @@ void DPS_UpdatePubs(DPS_Node* node, DPS_Publication* pub)
         DPS_Publication* nextPub;
         for (pub = node->publications; pub != NULL; pub = nextPub) {
             nextPub = pub->next;
-            if (pub->history) {
-                pub = pub->history;
-                while (pub) {
-                    pub = UpdatePub(node, pub, &count);
-                }
+            /*
+             * Received publications are marked as checkToSend they should not be expired.
+             */
+            if (pub->checkToSend) {
+                ++count;
+            } else if (uv_now(node->loop) >= pub->expires) {
+                DPS_ExpirePub(node, pub);
             } else {
-                UpdatePub(node, pub, &count);
+                if ((pub->flags & PUB_FLAG_PUBLISH) && (node->remoteNodes || node->mcastSender)) {
+                    pub->checkToSend = DPS_TRUE;
+                    ++count;
+                }
             }
         }
     }

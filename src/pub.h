@@ -45,9 +45,17 @@ extern "C" {
 #define PUB_FLAG_IS_COPY   (0x80) /**< This publication is a copy and can only be used for acknowledgements */
 
 /**
- * Shared fields between members of a publication data series
+ * Notes on the use of the DPS_Publication fields:
+ *
+ * The pubId identifies a publication that replaces an earlier
+ * retained instance of the same publication.
+ *
+ * The ttl starts when a publication is first published. It may expire
+ * before the publication is ever sent.  If a publication received by
+ * a subscriber has a non-zero ttl is will be retained for later
+ * publication until the ttl expires or it is explicitly expired.
  */
-typedef struct _PublicationShared {
+typedef struct _DPS_Publication {
     void* userData;                 /**< Application provided user data */
     uint8_t ackRequested;           /**< TRUE if an ack was requested by the publisher */
     DPS_AcknowledgementHandler handler; /**< Called when an acknowledgement is received from a subscriber */
@@ -61,26 +69,13 @@ typedef struct _PublicationShared {
     char** topics;                  /**< Publication topics - pointers into topicsBuf */
     size_t numTopics;               /**< Number of publication topics */
     DPS_TxBuffer topicsBuf;         /**< Pre-serialized topic strings */
-    uint32_t refCount;              /**< Ref count to prevent shared fields from being freed while in use */
-
     COSE_Entity sender;             /**< Publication sender ID */
     DPS_NodeAddress senderAddr;     /**< For retained messages - the sender address */
     COSE_Entity ack;                /**< For ack messages - the ack sender ID */
-} PublicationShared;
 
-/**
- * Notes on the use of the DPS_Publication fields:
- *
- * The pubId identifies a publication that replaces an earlier
- * retained instance of the same publication.
- *
- * The ttl starts when a publication is first published. It may expire
- * before the publication is ever sent.  If a publication received by
- * a subscriber has a non-zero ttl is will be retained for later
- * publication until the ttl expires or it is explicitly expired.
- */
-typedef struct _DPS_Publication {
-    PublicationShared* shared;      /**< Shared fields between members of a publication data series */
+    DPS_OnPublishComplete cb;       /**< Completion callback when for DPS_Publish() */
+    DPS_Status cbStatus;            /**< Completion status */
+    void* cbData;                   /**< Application data passed to completion callback */
     uint8_t flags;                  /**< Internal state flags */
     uint8_t checkToSend;            /**< TRUE if this publication should be checked to send */
     uint8_t numSend;                /**< Number of pending network sends */
@@ -90,9 +85,6 @@ typedef struct _DPS_Publication {
 
     DPS_TxBuffer protectedBuf;      /**< Authenticated fields */
     DPS_TxBuffer encryptedBuf;      /**< Encrypted fields */
-    DPS_Publication* history;       /**< History of data in this series */
-    size_t historyCount;            /**< Number of data in history */
-    size_t historyCap;              /**< Maximum number of data in history */
     DPS_Publication* next;          /**< Next publication in list */
 } DPS_Publication;
 

@@ -202,6 +202,8 @@ void DPS_QueuePublicationAck(DPS_Node* node, PublicationAck* ack);
 /**
  * Callback function called when a network send operation completes
  *
+ * Must be called with the node lock held.
+ *
  * @param node     Opaque pointer to the DPS node
  * @param appCtx   An application context to be passed to the send complete callback
  * @param ep       The endpoint for which the send was completed
@@ -234,20 +236,6 @@ void DPS_OnSendSubscriptionComplete(DPS_Node* node, void* appCtx, DPS_NetEndpoin
  * @param nonce The computed nonce
  */
 void DPS_MakeNonce(const DPS_UUID* uuid, uint32_t seqNum, uint8_t msgType, uint8_t nonce[COSE_NONCE_LEN]);
-
-/**
- * Function to call when a network send operation fails.
- *
- * Must be called with the node lock held.
- *
- * @param node     The local node
- * @param addr     The endpoint for which the send failed
- * @param bufs     Array holding pointers to the buffers passed in the send API call. The data in these buffers
- *                 can now be freed.
- * @param numBufs  The length of the bufs array
- * @param status   Indicates the send status
- */
-void DPS_SendFailed(DPS_Node* node, DPS_NodeAddress* addr, uv_buf_t* bufs, size_t numBufs, DPS_Status status);
 
 /**
  * Add an entry for new remote node or return a pointer to the existing remote node.

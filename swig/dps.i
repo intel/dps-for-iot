@@ -115,6 +115,20 @@ public:
     Handler* m_caHandler;
 };
 
+class PublicationData {
+public:
+    PublicationData() :
+        m_acknowledgementHandler(NULL),
+        m_onPublishComplete(NULL) {
+    }
+    ~PublicationData() {
+        delete m_acknowledgementHandler;
+        delete m_onPublishComplete;
+    }
+    Handler* m_acknowledgementHandler;
+    Handler* m_onPublishComplete;
+};
+
 static int AsVal_bytes(Handle obj, uint8_t** bytes, size_t* len);
 static Handle From_bytes(const uint8_t* bytes, size_t len);
 static Handle From_topics(const char** topics, size_t len);
@@ -129,6 +143,7 @@ static void OnLinkComplete(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status sta
 static void OnNodeAddressComplete(DPS_Node* node, DPS_NodeAddress* addr, void* data);
 
 static void AcknowledgementHandler(DPS_Publication* pub, uint8_t* payload, size_t len);
+static void OnPublishComplete(DPS_Publication* pub, DPS_Status status);
 
 static void PublicationHandler(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* payload, size_t len);
 
@@ -435,7 +450,22 @@ const char** PublicationGetTopics(const DPS_Publication* pub, size_t* n);
 
 %typemap(in) DPS_AcknowledgementHandler {
     $1 = AcknowledgementHandler;
-    DPS_SetPublicationData(arg1, new Handler($input));
+    PublicationData* data = (PublicationData*)DPS_GetPublicationData(arg1);
+    if (!data) {
+        data = new PublicationData();
+        DPS_SetPublicationData(arg1, data);
+    }
+    data->m_acknowledgementHandler = new Handler($input);
+}
+
+%typemap(in) DPS_OnPublishComplete {
+    $1 = OnPublishComplete;
+    PublicationData* data = (PublicationData*)DPS_GetPublicationData(arg1);
+    if (!data) {
+        data = new PublicationData();
+        DPS_SetPublicationData(arg1, data);
+    }
+    data->m_onPublishComplete = new Handler($input);
 }
 
 %{
@@ -581,6 +611,9 @@ DPS_Status CBOR2JSON(const uint8_t* cbor, size_t len, int pretty, char** json);
 }
 %typemap(default) int16_t {
     $1 = 0;
+}
+%typemap(default) DPS_OnPublishComplete {
+    $1 = NULL;
 }
 
 %typemap(default) (const uint8_t *bytes, size_t n) {
