@@ -279,13 +279,13 @@ public:
     return *this;
   }
 
-  uint8_t * getBuffer() const
+  uint8_t * getBufferPos() const
   {
-    return buffer_.base;
+    return buffer_.rxPos;
   }
-  size_t getBufferSize() const
+  size_t getBufferAvail() const
   {
-    return buffer_.eod - buffer_.base;
+    return DPS_RxBufferAvail(&buffer_);
   }
   bool eof() const
   {
