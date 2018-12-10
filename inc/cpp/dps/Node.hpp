@@ -65,6 +65,10 @@ public:
 class Node
 {
 public:
+  const size_t domainId_;
+  const std::string namespace_;
+  const std::string name_;
+
   Node(size_t domainId, const char * namespace_, const char * name, NodeListener * listener);
   ~Node();
   DPS_Node * get() { return node_; }
@@ -86,11 +90,8 @@ private:
   static const uint64_t heartbeatPeriodMs = 1000;
   static const uint64_t aliveTimeoutMs = 4000;
 
-  DPS_Node * node_;
-  size_t domainId_;
-  std::string namespace_;
-  std::string name_;
   NodeListener * listener_;
+  DPS_Node * node_;
   DPS_UUID uuid_;
   DPS_Publication * pub_;
   std::list<Publisher *> publisher_;

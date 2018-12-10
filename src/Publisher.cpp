@@ -53,7 +53,11 @@ std::vector<std::string> Publisher::topics() const
 {
   std::vector<std::string> ts;
   for (size_t i = 0; i < DPS_PublicationGetNumTopics(pub_); ++i) {
-    ts.push_back(DPS_PublicationGetTopic(pub_, i));
+    const char * t = DPS_PublicationGetTopic(pub_, i);
+    if (strncmp(t, "$ROS:", 4) == 0) {
+      continue;
+    }
+    ts.push_back(t);
   }
   return ts;
 }
@@ -106,6 +110,8 @@ DPS_Status Publisher::initialize(Node * node, const std::vector<std::string> & t
   if (!pub_) {
     return DPS_ERR_RESOURCES;
   }
+  std::string domainTopic = std::string("$ROS:domain:") + std::to_string(node->domainId_);
+  ctopics.push_back(domainTopic.c_str());
   std::transform(topics.begin(), topics.end(), std::back_inserter(ctopics),
                  [](const std::string & s) { return s.c_str(); });
   ret = DPS_InitPublication(pub_, ctopics.data(), ctopics.size(), DPS_FALSE, nullptr, handler);
@@ -408,7 +414,6 @@ DPS_Status ReliablePublisher::initialize(Node * node, const std::vector<std::str
   std::vector<std::string> thisTopic;
   DPS_Status ret;
   std::lock_guard<std::recursive_mutex> lock(internalMutex_);
-  // TODO add in $ROS:domain:<id> here and equivalent in subscriber
   ret = Publisher::initialize(node, topics, ackHandler_);
   if (ret != DPS_OK) {
     goto Exit;
@@ -423,9 +428,14 @@ DPS_Status ReliablePublisher::initialize(Node * node, const std::vector<std::str
     // we need to know about each reliable subscriber in order to
     // ensure the initial acked state is in sync and messages are not
     // discarded prematurely
-    std::string topic = "$ROS:subscriber:+:" + *it + ":qos:reliable";
-    const char * ctopic = topic.c_str();
-    DPS_Subscription * sub = DPS_CreateSubscription(node->get(), &ctopic, 1);
+    std::vector<std::string> topics = {
+      "$ROS:domain:" + std::to_string(node->domainId_),
+      "$ROS:subscriber:+:" + *it + ":qos:reliable",
+    };
+    std::vector<const char *> ctopics;
+    std::transform(topics.begin(), topics.end(), std::back_inserter(ctopics),
+                   [](const std::string & s) { return s.c_str(); });
+    DPS_Subscription * sub = DPS_CreateSubscription(node->get(), ctopics.data(), ctopics.size());
     if (!sub) {
       ret = DPS_ERR_RESOURCES;
       goto Exit;

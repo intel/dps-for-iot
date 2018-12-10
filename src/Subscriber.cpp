@@ -57,7 +57,11 @@ std::vector<std::string> Subscriber::topics() const
 {
   std::vector<std::string> ts;
   for (size_t i = 0; i < DPS_SubscriptionGetNumTopics(sub_); ++i) {
-    ts.push_back(DPS_SubscriptionGetTopic(sub_, i));
+    const char * t = DPS_SubscriptionGetTopic(sub_, i);
+    if (strncmp(t, "$ROS:", 4) == 0) {
+      continue;
+    }
+    ts.push_back(t);
   }
   return ts;
 }
@@ -67,6 +71,8 @@ DPS_Status Subscriber::initialize(Node * node, const std::vector<std::string> & 
   std::lock_guard<std::recursive_mutex> lock(internalMutex_);
   std::vector<const char *> ctopics;
   DPS_Status ret = DPS_OK;
+  std::string domainTopic = std::string("$ROS:domain:") + std::to_string(node->domainId_);
+  ctopics.push_back(domainTopic.c_str());
   std::transform(topics.begin(), topics.end(), std::back_inserter(ctopics),
                  [](const std::string & s) { return s.c_str(); });
   sub_ = DPS_CreateSubscription(node->get(), ctopics.data(), ctopics.size());

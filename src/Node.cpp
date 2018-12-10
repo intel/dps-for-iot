@@ -126,7 +126,7 @@ bool RemoteNode::add(const char * topic, const char * prefix, std::map<std::stri
 }
 
 Node::Node(size_t domainId, const char * ns, const char * name, NodeListener * listener)
-  : node_(nullptr), domainId_(domainId), namespace_(ns), name_(name), listener_(listener), pub_(nullptr), close_(nullptr)
+  : domainId_(domainId), namespace_(ns), name_(name), listener_(listener), node_(nullptr), pub_(nullptr), close_(nullptr)
 {
   DPS_InitUUID();
   DPS_GenerateUUID(&uuid_);
@@ -246,9 +246,9 @@ DPS_Status Node::advertise()
     topics.push_back(std::string("$ROS:namespace:") + namespace_);
   }
   for (auto it = publisher_.begin(); it != publisher_.end(); ++it) {
-    for (size_t i = 0; i < DPS_PublicationGetNumTopics((*it)->get()); ++i) {
-      std::string topic = std::string("$ROS:publisher:") + DPS_UUIDToString((*it)->uuid()) + ":" +
-        DPS_PublicationGetTopic((*it)->get(), i);
+    auto ts = (*it)->topics();
+    for (auto t = ts.begin(); t != ts.end(); ++t) {
+      std::string topic = std::string("$ROS:publisher:") + DPS_UUIDToString((*it)->uuid()) + ":" + *t;
       topics.push_back(topic);
       if ((*it)->qos().reliability == DPS_QOS_RELIABLE) { // TODO don't need others currently
         topics.push_back(topic + ":qos:reliable");
@@ -256,9 +256,9 @@ DPS_Status Node::advertise()
     }
   }
   for (auto it = subscriber_.begin(); it != subscriber_.end(); ++it) {
-    for (size_t i = 0; i < DPS_SubscriptionGetNumTopics((*it)->get()); ++i) {
-      std::string topic = std::string("$ROS:subscriber:") + DPS_UUIDToString((*it)->uuid()) + ":" +
-        DPS_SubscriptionGetTopic((*it)->get(), i);
+    auto ts = (*it)->topics();
+    for (auto t = ts.begin(); t != ts.end(); ++t) {
+      std::string topic = std::string("$ROS:subscriber:") + DPS_UUIDToString((*it)->uuid()) + ":" + *t;
       topics.push_back(topic);
       if ((*it)->qos().reliability == DPS_QOS_RELIABLE) { // TODO don't need others currently
         topics.push_back(topic + ":qos:reliable");
