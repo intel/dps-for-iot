@@ -569,7 +569,7 @@ static DPS_Status DecryptAndParsePub(DPS_KeyStore* keyStore, DPS_Publication* pu
  */
 static DPS_Status CallPubHandlers(DPS_Node* node, DPS_Publication* pub)
 {
-    DPS_Status ret;
+    DPS_Status ret = DPS_OK;
     DPS_Subscription* sub;
     DPS_Subscription* nextSub;
     DPS_TxBuffer plainTextBuf;
