@@ -614,7 +614,6 @@ static DPS_Status SerializePub(DPS_Node* node, DPS_Publication* pub, const uint8
     size_t topicsLen = TopicsSerializedSize(pub);
     DPS_TxBuffer buf;
     DPS_TxBuffer protectedBuf;
-    DPS_TxBuffer encryptedBuf;
 
     DPS_DBGTRACE();
 
@@ -709,42 +708,44 @@ static DPS_Status SerializePub(DPS_Node* node, DPS_Publication* pub, const uint8
     }
     DPS_TxBufferCommit(&protectedBuf);
     /*
-     * Encode the encrypted map
+     * If the data is not encrypted can be serialized directly into the TX pool
+     * otherwise it is serialized into the TMP pool.
      */
     len = CBOR_SIZEOF_MAP(2) + 2 * CBOR_SIZEOF(uint8_t) + topicsLen + CBOR_SIZEOF_BYTES(dataLen);
 
-    ret = DPS_TxBufferReserve(node, &encryptedBuf, len, DPS_TMP_POOL);
+    ret = DPS_TxBufferReserve(node, &buf, len, (pub->numRecipients > 0) ? DPS_TMP_POOL : DPS_TX_POOL);
     if (ret != DPS_OK) {
         return ret;
     }
-    ret = CBOR_EncodeMap(&encryptedBuf, 2);
+    ret = CBOR_EncodeMap(&buf, 2);
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeUint8(&encryptedBuf, DPS_CBOR_KEY_TOPICS);
+        ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_TOPICS);
     }
     /* Topic string array */
     if (ret == DPS_OK) {
         int i;
-        ret = CBOR_EncodeArray(&encryptedBuf, pub->numTopics);
+        ret = CBOR_EncodeArray(&buf, pub->numTopics);
         for (i = 0; ret == DPS_OK && i < pub->numTopics; ++i) {
-            ret = CBOR_EncodeString(&encryptedBuf, pub->topics[i]);
+            ret = CBOR_EncodeString(&buf, pub->topics[i]);
         }
     }
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeUint8(&encryptedBuf, DPS_CBOR_KEY_DATA);
+        ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_DATA);
     }
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeBytes(&encryptedBuf, data, dataLen);
+        ret = CBOR_EncodeBytes(&buf, data, dataLen);
     }
     if (ret != DPS_OK) {
         return ret;
     }
     if (pub->numRecipients > 0) {
+        DPS_TxBuffer encryptedBuf;
         DPS_RxBuffer plainTextBuf;
         DPS_RxBuffer aadBuf;
         uint8_t nonce[COSE_NONCE_LEN];
 
         /* Encryption needs the input buffers to be Rx buffers */
-        DPS_TxBufferToRx(&encryptedBuf, &plainTextBuf);
+        DPS_TxBufferToRx(&buf, &plainTextBuf);
         DPS_TxBufferToRx(&protectedBuf, &aadBuf);
         DPS_MakeNonce(&pub->pubId, pub->sequenceNum, DPS_MSG_TYPE_PUB, nonce);
         ret = COSE_Encrypt(node, COSE_ALG_A256GCM, nonce, node->signer.alg ? &node->signer : NULL, pub->recipients, pub->numRecipients, &aadBuf, &plainTextBuf, node->keyStore, &encryptedBuf);
@@ -755,8 +756,9 @@ static DPS_Status SerializePub(DPS_Node* node, DPS_Publication* pub, const uint8
         DPS_DBGPRINT("Publication was encrypted\n");
         CBOR_Dump("aad", aadBuf.base, DPS_RxBufferAvail(&aadBuf));
         CBOR_Dump("cryptText", encryptedBuf.base, DPS_TxBufferUsed(&encryptedBuf));
+    } else {
+        DPS_TxBufferCommit(&buf);
     }
-    DPS_TxBufferCommit(&encryptedBuf);
     return ret;
 }
 
