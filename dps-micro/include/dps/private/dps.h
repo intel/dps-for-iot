@@ -56,34 +56,6 @@ extern "C" {
 #define DPS_CBOR_KEY_DATA          12   /**< bstr */
 #define DPS_CBOR_KEY_ACK_SEQ_NUM   13   /**< uint */
 
-/**
- * A key store request.
- */
-struct _DPS_KeyStoreRequest {
-    DPS_KeyStore* keyStore; /**< The key store this request is directed to */
-    void* data; /**< The caller provided request data */
-    /** Called to provide a key and key identifier to the requestor */
-    DPS_Status (*setKeyAndId)(DPS_KeyStoreRequest* request, const DPS_Key* key, const DPS_KeyId* keyId);
-    /** Called to provide a key to the requestor */
-    DPS_Status (*setKey)(DPS_KeyStoreRequest* request, const DPS_Key* key);
-    /** Called to provide the CA chain to the requestor */
-    DPS_Status (*setCA)(DPS_KeyStoreRequest* request, const char* ca);
-    /** Called to provide a certificate to the requestor */
-    DPS_Status (*setCert)(DPS_KeyStoreRequest* request, const char* cert, size_t certLen, const char* key, size_t keyLen, const char* pwd, size_t pwdLen);
-};
-
-/**
- * A key store.
- */
-struct _DPS_KeyStore {
-    void* userData;                              /**< The application provided user data */
-    DPS_KeyAndIdHandler keyAndIdHandler;         /**< Called when a key and key identifier is requested */
-    DPS_KeyHandler keyHandler;                   /**< Called when a key is requested */
-    DPS_EphemeralKeyHandler ephemeralKeyHandler; /**< Called when an ephemeral key is requested */
-    DPS_CAHandler caHandler;                     /**< Called when a CA chain is requested */
-};
-
-
 #ifdef __cplusplus
 }
 #endif
