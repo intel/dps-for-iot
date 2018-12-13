@@ -61,6 +61,10 @@ protected:
   DPS_Publication * pub_;
   uint32_t sn_;
   Cache<TxStream> * cache_;
+  enum {
+    PUBLISH_IDLE,
+    PUBLISH_BUSY
+  } publishState_;
   Subscriber * thisSub_;
   enum {
     HEARTBEAT_NEVER,
@@ -86,7 +90,10 @@ protected:
   static void ackHandler_(DPS_Publication * pub, uint8_t * data, size_t dataLen);
   virtual void ackHandler(DPS_Publication * pub, const AckHeader & header, RxStream & rxBuf);
   virtual bool anyUnacked();
-  void resendRequested(DPS_Publication * pub, const SNSet & sns);
+  void publish();
+  void republishRequested(DPS_Publication * pub, const SNSet & sns);
+  static void onPublishComplete_(DPS_Publication* pub, DPS_Status status);
+  void onPublishComplete(DPS_Publication* pub, DPS_Status status);
 };
 
 class ReliablePublisher : public Publisher

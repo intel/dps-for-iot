@@ -108,11 +108,21 @@ static void ReadStdin(dps::Node* node, dps::Publisher* publisher)
             continue;
         }
         if (!strcmp(argv[0], "pub")) {
-            dps::TxStream buf;
-            buf << std::string("hello");
-            DPS_Status ret = publisher->publish(std::move(buf));
-            if (ret != DPS_OK) {
-                DPS_ERRPRINT("Publish failed: %s\n", DPS_ErrTxt(ret));
+            size_t n = 1;
+            if (1 < argc) {
+                char *p;
+                n = strtol(argv[1], &p, 10);
+                if (p == argv[1]) {
+                    n = 1;
+                }
+            }
+            for (size_t i = 0; i < n; ++i) {
+                dps::TxStream buf;
+                buf << std::string("hello");
+                DPS_Status ret = publisher->publish(std::move(buf));
+                if (ret != DPS_OK) {
+                    DPS_ERRPRINT("Publish failed: %s\n", DPS_ErrTxt(ret));
+                }
             }
         } else if (!strcmp(argv[0], "take")) {
             dps::RxStream rxBuf;

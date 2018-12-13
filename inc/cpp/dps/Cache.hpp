@@ -26,11 +26,7 @@
 namespace dps
 {
 
-struct PublicationDeleter {
-  void operator()(DPS_Publication * pub) { DPS_DestroyPublication(pub); }
-};
-
-typedef std::unique_ptr<DPS_Publication, PublicationDeleter> Publication;
+const uint8_t DATA_FLAG_UNSENT = (1<<0);
 
 template <typename Stream>
 class Cache
@@ -38,9 +34,18 @@ class Cache
 public:
   typedef struct Data
   {
-    Publication pub_;
+    DPS_UUID uuid_;
     uint32_t sn_;
     Stream buf_;
+    uint8_t flags_;
+    Data()
+    {
+    }
+    Data(const DPS_UUID * uuid, uint32_t sn, Stream && buf, uint8_t flags = 0)
+      : sn_(sn), buf_(std::move(buf)), flags_(flags)
+    {
+      memcpy(&uuid_, uuid, sizeof(DPS_UUID));
+    }
   } Data;
 
   explicit Cache(size_t depth)
@@ -135,7 +140,7 @@ public:
     if (empty()) {
       return false;
     }
-    data.pub_ = std::move(data_.front().pub_);
+    memcpy(&data.uuid_, &data_.front().uuid_, sizeof(DPS_UUID));
     data.sn_ = data_.front().sn_;
     data.buf_ = std::move(data_.front().buf_);
     data_.pop_front();

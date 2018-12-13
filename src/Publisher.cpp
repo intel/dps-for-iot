@@ -34,7 +34,7 @@ public:
 
 Publisher::Publisher(const QoS & qos, PublisherListener * listener)
   : qos_(qos), listener_(listener), node_(nullptr), pub_(nullptr), sn_(0),
-    cache_(new Cache<TxStream>(qos.depth)), thisSub_(nullptr), close_(nullptr)
+    cache_(new Cache<TxStream>(qos.depth)), publishState_(PUBLISH_IDLE), thisSub_(nullptr), close_(nullptr)
 {
   if (qos_.durability == DPS_QOS_VOLATILE) {
     heartbeatPolicy_ = HEARTBEAT_NEVER;
@@ -210,44 +210,63 @@ void Publisher::dump()
 {
   DPS_PRINT("Publication (outbound)\n");
   for (auto it = cache_->begin(); it != cache_->end(); ++it) {
-    DPS_PRINT("  %s(%d)\n", DPS_UUIDToString(DPS_PublicationGetUUID(it->pub_.get())), it->sn_);
+    DPS_PRINT("  %s(%d)\n", DPS_UUIDToString(&it->uuid_), it->sn_);
   }
   if (thisSub_) {
     DPS_PRINT("Acknowledgement (inbound)\n");
     for (auto it = thisSub_->cache_->begin(); it != thisSub_->cache_->end(); ++it) {
-      DPS_PRINT("  %s(%d)\n", DPS_UUIDToString(DPS_PublicationGetUUID(it->pub_.get())), it->sn_);
+      DPS_PRINT("  %s(%d)\n", DPS_UUIDToString(&it->uuid_), it->sn_);
     }
   }
 }
 
+void Publisher::publish()
+{
+  for (auto it = cache_->begin(); (it != cache_->end()) && (publishState_ == PUBLISH_IDLE); ++it) {
+    if (it->flags_ & DATA_FLAG_UNSENT) {
+      PublicationHeader header = { QOS_DATA, qos_, { cache_->minSN(), cache_->maxSN() }, it->sn_ };
+      TxStream buf;
+      buf << header << it->buf_;
+      DPS_Status ret = DPS_Publish(pub_, buf.data(), buf.size(), 0, onPublishComplete_);
+      if (ret == DPS_OK) {
+        it->flags_ &= ~DATA_FLAG_UNSENT;
+        publishState_ = PUBLISH_BUSY;
+        resetHeartbeat();
+      } else {
+        DPS_ERRPRINT("Publish failed: %s\n", DPS_ErrTxt(ret));
+      }
+    }
+  }
+}
+
+void Publisher::onPublishComplete_(DPS_Publication* pub, DPS_Status status)
+{
+  Publisher * publisher = static_cast<Publisher *>(DPS_GetPublicationData(pub));
+  std::lock_guard<std::recursive_mutex> lock(publisher->internalMutex_);
+  publisher->onPublishComplete(pub, status);
+}
+
+void Publisher::onPublishComplete(DPS_Publication* pub, DPS_Status status)
+{
+  if (status != DPS_OK) {
+    DPS_ERRPRINT("Publish failed: %s\n", DPS_ErrTxt(status));
+  }
+  publishState_ = PUBLISH_IDLE;
+  publish();
+}
+
 DPS_Status Publisher::addPublication(TxStream && payload, PublicationInfo * info)
 {
-  // must check for space before adding the data as DPS_Publish must be called before the
-  // copied publication will be correct
-  if (!cache_->full()) {
-    Range range;
-    if (cache_->empty()) {
-      range = { sn_ + 1, sn_ + 1 };
-    } else {
-      range = { cache_->minSN(), sn_ + 1 };
-    }
-    PublicationHeader header = { QOS_DATA, qos_, range, sn_ + 1 };
-    TxStream buf;
-    buf << header << payload;
-    DPS_Status ret = DPS_Publish(pub_, buf.data(), buf.size(), 0, nullptr);
-    if (ret == DPS_OK) {
-      if (info) {
-        memcpy(&info->uuid, uuid(), sizeof(DPS_UUID));
-        info->sn = header.sn_;
-      }
-      cache_->addData({ Publication(DPS_CopyPublication(pub_)), header.sn_, std::move(payload) });
-      ++sn_;
-      resetHeartbeat();
-    }
-    return ret;
-  } else {
+  if (!cache_->addData({ DPS_PublicationGetUUID(pub_), sn_ + 1, std::move(payload), DATA_FLAG_UNSENT })) {
     return DPS_ERR_OVERFLOW;
   }
+  ++sn_;
+  if (info) {
+    memcpy(&info->uuid, uuid(), sizeof(DPS_UUID));
+    info->sn = sn_;
+  }
+  publish();
+  return DPS_OK;
 }
 
 void Publisher::onNewPublication(Subscriber * subscriber)
@@ -349,7 +368,7 @@ void Publisher::ackHandler(DPS_Publication * pub, const AckHeader & header, RxSt
     }
   }
   DPS_PRINT("]\n");
-  resendRequested(pub, header.sns_);
+  republishRequested(pub, header.sns_);
 }
 
 bool Publisher::anyUnacked()
@@ -357,9 +376,9 @@ bool Publisher::anyUnacked()
   return false;
 }
 
-void Publisher::resendRequested(DPS_Publication * pub, const SNSet & sns)
+void Publisher::republishRequested(DPS_Publication * pub, const SNSet & sns)
 {
-  // resend nak'd publications
+  int anyUnsent = false;
   for (size_t i = 0; i < sns.size(); ++i) {
     uint32_t sn = sns.base_ + i;
     if (sns.test(sn)) {
@@ -370,16 +389,12 @@ void Publisher::resendRequested(DPS_Publication * pub, const SNSet & sns)
         // missing publication requested
         continue;
       }
-      PublicationHeader header = { QOS_DATA, qos_, { cache_->minSN(), cache_->maxSN() }, it->sn_ };
-      TxStream txBuf;
-      txBuf << header << it->buf_;
-      DPS_Status ret = DPS_Publish(pub, txBuf.data(), txBuf.size(), 0, nullptr);
-      if (ret == DPS_OK) {
-        resetHeartbeat();
-      } else {
-        DPS_ERRPRINT("Publish failed: %s\n", DPS_ErrTxt(ret));
-      }
+      it->flags_ |= DATA_FLAG_UNSENT;
+      anyUnsent = true;
     }
+  }
+  if (anyUnsent) {
+    publish();
   }
 }
 

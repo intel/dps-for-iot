@@ -165,14 +165,14 @@ void Subscriber::dump()
 {
   DPS_PRINT("Publication (inbound)\n");
   for (auto it = cache_->begin(); it != cache_->end(); ++it) {
-    DPS_PRINT("  %s(%d)\n", DPS_UUIDToString(DPS_PublicationGetUUID(it->pub_.get())), it->sn_);
+    DPS_PRINT("  %s(%d)\n", DPS_UUIDToString(&it->uuid_), it->sn_);
   }
   DPS_PRINT("Publisher\n");
   for (auto it = remote_.begin(); it != remote_.end(); ++it) {
     DPS_PRINT("  %s\n", DPS_UUIDToString(&it->first));
     if (it->second.pub_) {
       for (auto jt = it->second.pub_->cache_->begin(); jt != it->second.pub_->cache_->end(); ++jt) {
-        DPS_PRINT("    %s(%d)\n", DPS_UUIDToString(DPS_PublicationGetUUID(jt->pub_.get())), jt->sn_);
+        DPS_PRINT("    %s(%d)\n", DPS_UUIDToString(&jt->uuid_), jt->sn_);
       }
     }
   }
@@ -232,7 +232,7 @@ void Subscriber::pubHandler(const DPS_Publication * pub, PublicationHeader & hea
 void Subscriber::addToCache(const DPS_Publication * pub, const PublicationHeader & header, RxStream && buf)
 {
   Cache<RxStream>::Data data =
-    { Publication(DPS_CopyPublication(pub)), header.sn_, std::move(buf) };
+    { DPS_PublicationGetUUID(pub), header.sn_, std::move(buf) };
   cache_->addData(std::move(data));
   listener_->onNewPublication(this);
 }
@@ -241,7 +241,7 @@ void Subscriber::takeFromCache(RxStream & buf, PublicationInfo & info)
 {
   Cache<RxStream>::Data data;
   cache_->takeNextData(data);
-  memcpy(&info.uuid, DPS_PublicationGetUUID(data.pub_.get()), sizeof(DPS_UUID));
+  memcpy(&info.uuid, &data.uuid_, sizeof(DPS_UUID));
   info.sn = data.sn_;
   buf = std::move(data.buf_);
 }
@@ -308,14 +308,14 @@ void ReliableSubscriber::dump()
 {
   DPS_PRINT("Publication (inbound)\n");
   for (auto it = cache_->begin(); it != cache_->end(); ++it) {
-    DPS_PRINT("  %s(%d)\n", DPS_UUIDToString(DPS_PublicationGetUUID(it->pub_.get())), it->sn_);
+    DPS_PRINT("  %s(%d)\n", DPS_UUIDToString(&it->uuid_), it->sn_);
   }
   DPS_PRINT("Publisher\n");
   for (auto it = remote_.begin(); it != remote_.end(); ++it) {
     DPS_PRINT("  %s [%d,%d]\n", DPS_UUIDToString(&it->first), it->second.range_.first, it->second.range_.second);
     if (it->second.pub_) {
       for (auto jt = it->second.pub_->cache_->begin(); jt != it->second.pub_->cache_->end(); ++jt) {
-        DPS_PRINT("    %s(%d)\n", DPS_UUIDToString(DPS_PublicationGetUUID(jt->pub_.get())), jt->sn_);
+        DPS_PRINT("    %s(%d)\n", DPS_UUIDToString(&jt->uuid_), jt->sn_);
       }
     }
   }

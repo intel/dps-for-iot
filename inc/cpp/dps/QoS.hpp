@@ -17,6 +17,7 @@
 #define _DPS_QOS_HPP
 
 #include <bitset>
+#include <memory>
 #include <dps/dps.h>
 #include <dps/CborStream.hpp>
 
@@ -34,6 +35,12 @@ operator==(const DPS_UUID & a, const DPS_UUID & b)
 
 namespace dps
 {
+
+struct PublicationDeleter {
+  void operator()(DPS_Publication * pub) { DPS_DestroyPublication(pub); }
+};
+
+typedef std::unique_ptr<DPS_Publication, PublicationDeleter> Publication;
 
 typedef enum {
   DPS_QOS_VOLATILE = 0, /**< Do not send old publications to new subscribers */

@@ -23,7 +23,7 @@
 #include <vector>
 #include <dps/dps.h>
 #include <dps/event.h>
-#include <dps/Cache.hpp>
+#include <dps/QoS.hpp>
 
 DPS_Status DPS_UUIDFromString(const char * str, DPS_UUID * uuid);
 
