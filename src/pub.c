@@ -43,9 +43,9 @@
  */
 DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
-static DPS_Status SetKey(DPS_KeyStoreRequest* request, const DPS_Key* key)
+static DPS_Status KeyResponse(const DPS_Key* key, const DPS_KeyId* keyId, void* data)
 {
-    int8_t* alg = request->data;
+    int8_t* alg = (int8_t*)data;
 
     switch (key->type) {
     case DPS_KEY_SYMMETRIC:
@@ -63,17 +63,11 @@ static DPS_Status SetKey(DPS_KeyStoreRequest* request, const DPS_Key* key)
 
 static DPS_Status GetRecipientAlgorithm(DPS_KeyStore* keyStore, const DPS_KeyId* kid, int8_t* alg)
 {
-    DPS_KeyStoreRequest request;
-
     *alg = COSE_ALG_RESERVED;
-    if (!keyStore || !keyStore->keyHandler) {
+    if (!keyStore || !keyStore->keyRequest) {
         return DPS_ERR_MISSING;
     }
-    memset(&request, 0, sizeof(request));
-    request.keyStore = keyStore;
-    request.data = alg;
-    request.setKey = SetKey;
-    return keyStore->keyHandler(&request, kid);
+    return keyStore->keyRequest(keyStore, kid, KeyResponse, alg);
 }
 
 static COSE_Entity* AddRecipient(DPS_Publication* pub, int8_t alg, const DPS_KeyId* kid)
@@ -744,6 +738,7 @@ static DPS_Status SerializePub(DPS_Node* node, DPS_Publication* pub, const uint8
         DPS_RxBuffer aadBuf;
         uint8_t nonce[COSE_NONCE_LEN];
 
+        DPS_DBGPRINT("Entcrypting publication\n");
         /* Encryption needs the input buffers to be Rx buffers */
         DPS_TxBufferToRx(&buf, &plainTextBuf);
         DPS_TxBufferToRx(&protectedBuf, &aadBuf);

@@ -31,7 +31,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <dps/err.h>
-#include <dps/key_mgmt.h>
+#include <dps/keystore.h>
 
 #ifdef __cplusplus
 extern "C" {
