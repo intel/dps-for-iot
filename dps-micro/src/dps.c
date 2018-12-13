@@ -34,11 +34,20 @@ DPS_Node* DPS_Init()
 {
     memset(&node, 0, sizeof(node));
     node.separators = "/";
+    node.keyStore = DPS_CreateKeyStore();
     return &node;
+}
+
+DPS_KeyStore* DPS_GetKeyStore(DPS_Node* node)
+{
+    return node ? node->keyStore : NULL;
 }
 
 void DPS_Terminate(DPS_Node* node)
 {
+    if (node) {
+        DPS_DestroyKeyStore(node->keyStore);
+    }
 }
 
 void DPS_MakeNonce(const DPS_UUID* uuid, uint32_t seqNum, uint8_t msgType, uint8_t nonce[COSE_NONCE_LEN])

@@ -520,9 +520,9 @@ static DPS_Status EncodeKDFContext(DPS_Node* node, DPS_TxBuffer* buf, int8_t alg
     return ret;
 }
 
-static DPS_Status SetKey(DPS_KeyStoreRequest* request, const DPS_Key* key)
+static DPS_Status KeyResponse(const DPS_Key* key, const DPS_KeyId* keyId, void* data)
 {
-    COSE_Key* ckey = request->data;
+    COSE_Key* ckey = (COSE_Key*)data;
     DPS_Status ret;
     size_t len;
 
@@ -589,30 +589,19 @@ static DPS_Status SetKey(DPS_KeyStoreRequest* request, const DPS_Key* key)
 
 static DPS_Status GetKey(DPS_KeyStore* keyStore, const DPS_KeyId* kid, COSE_Key* key)
 {
-    DPS_KeyStoreRequest request;
-
-    if (!keyStore || !keyStore->keyHandler) {
+    if (!keyStore || !keyStore->keyRequest) {
         return DPS_ERR_MISSING;
     }
-    memset(&request, 0, sizeof(request));
-    request.keyStore = keyStore;
-    request.data = key;
-    request.setKey = SetKey;
-    return keyStore->keyHandler(&request, kid);
+    return keyStore->keyRequest(keyStore, kid, KeyResponse, key);
 }
 
 static DPS_Status GetEphemeralKey(DPS_KeyStore* keyStore, COSE_Key* key)
 {
-    DPS_KeyStoreRequest request;
     DPS_Key k;
 
-    if (!keyStore || !keyStore->ephemeralKeyHandler) {
+    if (!keyStore || !keyStore->ephemeralKeyRequest) {
         return DPS_ERR_MISSING;
     }
-    memset(&request, 0, sizeof(request));
-    request.keyStore = keyStore;
-    request.data = key;
-    request.setKey = SetKey;
     memset(&k, 0, sizeof(k));
     switch (key->type) {
     case COSE_KEY_SYMMETRIC:
@@ -625,16 +614,15 @@ static DPS_Status GetEphemeralKey(DPS_KeyStore* keyStore, COSE_Key* key)
     default:
         return DPS_ERR_MISSING;
     }
-    return keyStore->ephemeralKeyHandler(&request, &k);
+    return keyStore->ephemeralKeyRequest(keyStore, &k, KeyResponse, key);
 }
 
 static DPS_Status GetSignatureKey(DPS_KeyStore* keyStore, const Signature* sig, COSE_Key* key)
 {
     DPS_Status ret;
     DPS_ECCurve curve;
-    DPS_KeyStoreRequest request;
 
-    if (!keyStore || !keyStore->keyHandler) {
+    if (!keyStore || !keyStore->keyRequest) {
         return DPS_ERR_MISSING;
     }
     switch (sig->alg) {
@@ -648,11 +636,7 @@ static DPS_Status GetSignatureKey(DPS_KeyStore* keyStore, const Signature* sig, 
         return DPS_ERR_NOT_IMPLEMENTED;
     }
     key->type = COSE_KEY_EC;
-    memset(&request, 0, sizeof(request));
-    request.keyStore = keyStore;
-    request.data = key;
-    request.setKey = SetKey;
-    ret = keyStore->keyHandler(&request, &sig->kid);
+    ret = keyStore->keyRequest(keyStore, &sig->kid, KeyResponse, key);
     if (ret != DPS_OK) {
         return ret;
     }
@@ -910,8 +894,7 @@ DPS_Status COSE_Encrypt(DPS_Node* node,
                 if (ret != DPS_OK) {
                     goto Exit;
                 }
-                ret = EncodeRecipient(cipherText, recipient[i].alg, &recipient[i].kid,
-                                      NULL, kw, sizeof(kw));
+                ret = EncodeRecipient(cipherText, recipient[i].alg, &recipient[i].kid, NULL, kw, sizeof(kw));
                 if (ret != DPS_OK) {
                     goto Exit;
                 }
@@ -1145,8 +1128,12 @@ static DPS_Status DecodeProtectedMap(DPS_RxBuffer* buf, int8_t* alg)
     return ret;
 }
 
-static DPS_Status DecodeUnprotectedMap(DPS_RxBuffer* buf, int8_t* alg, DPS_KeyId* kid,
-                                       uint8_t* nonce, Signature* sig, COSE_Key* key)
+static DPS_Status DecodeUnprotectedMap(DPS_RxBuffer* buf,
+                                       int8_t* alg,
+                                       DPS_KeyId* kid,
+                                       uint8_t* nonce,
+                                       Signature* sig,
+                                       COSE_Key* key)
 {
     DPS_Status ret;
     size_t size, sz;
@@ -1236,8 +1223,12 @@ static DPS_Status DecodeUnprotectedMap(DPS_RxBuffer* buf, int8_t* alg, DPS_KeyId
     return ret;
 }
 
-static DPS_Status DecodeRecipient(DPS_RxBuffer* buf, int8_t* alg, DPS_KeyId* kid,
-                                  COSE_Key* key, uint8_t** content, size_t *contentLen)
+static DPS_Status DecodeRecipient(DPS_RxBuffer* buf,
+                                  int8_t* alg,
+                                  DPS_KeyId* kid,
+                                  COSE_Key* key,
+                                  uint8_t** content,
+                                  size_t *contentLen)
 {
     DPS_Status ret;
     size_t size;
@@ -1401,8 +1392,7 @@ DPS_Status COSE_Decrypt(DPS_Node* node,
     }
     for (i = 0; i < sz; ++i) {
         if (tag == COSE_TAG_ENCRYPT) {
-            ret = DecodeRecipient(cipherText, &recipient->alg, &recipient->kid,
-                                  &ephemeralKey, &kw, &kwLen);
+            ret = DecodeRecipient(cipherText, &recipient->alg, &recipient->kid, &ephemeralKey, &kw, &kwLen);
             if (ret != DPS_OK) {
                 goto Exit;
             }

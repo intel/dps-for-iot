@@ -34,6 +34,7 @@ srcs = [
         'src/gcm.c',
         'src/hkdf.c',
         'src/io_buf.c',
+        'src/keystore.c',
         'src/keywrap.c',
         'src/mbedtls.c',
         'src/pub.c',
