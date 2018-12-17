@@ -25,16 +25,8 @@
 #include <dps/dps.h>
 #include <dps/private/dps.h>
 #include <dps/private/pub.h>
-#include <dps/private/network.h>
 
 
-static DPS_Node* node;
-
-static DPS_Status OnReceive(DPS_Node* node, DPS_RxBuffer* rxBuf, DPS_Status status)
-{
-    DPS_PRINT("Received %d bytes\n%s\n", DPS_RxBufferAvail(rxBuf), rxBuf->base);
-    return DPS_OK;
-}
 
 static char testString[] = "This is a test string";
 
@@ -49,6 +41,7 @@ static const char* topics[NUM_TOPICS] = {
 
 int main(int argc, char** argv)
 {
+    DPS_Node* node;
     DPS_KeyStore* keyStore = NULL;
     DPS_Publication pub;
     DPS_Status status;
@@ -65,7 +58,7 @@ int main(int argc, char** argv)
         goto Usage;
     }
 
-    node = DPS_Init();
+    node = DPS_CreateNode("/");
 
     /* For testing purposes manually add keys to the key store */
     keyStore = DPS_GetKeyStore(node);
@@ -73,13 +66,10 @@ int main(int argc, char** argv)
         DPS_SetContentKey(keyStore, &PskId[i], &Psk[i]);
     }
 
-    status = DPS_NetworkInit(node);
+    status = DPS_Start(node);
     CHECK(status == DPS_OK);
 
-    status = DPS_MCastStart(node, OnReceive);
-    CHECK(status == DPS_OK);
-
-    /* Initialize publicaton with a pre-shared key */
+    /* Initialize publication with a pre-shared key */
     status = DPS_InitPublication(node, &pub, topics, NUM_TOPICS, DPS_FALSE, &PskId[1], NULL);
     CHECK(status == DPS_OK);
 

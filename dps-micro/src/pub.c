@@ -80,7 +80,6 @@ static COSE_Entity* AddRecipient(DPS_Publication* pub, int8_t alg, const DPS_Key
     recipient = &pub->recipients[pub->numRecipients++];
     recipient->alg = alg;
     memcpy(&recipient->kid, kid, sizeof(DPS_KeyId));
-    ++pub->numRecipients;
     return recipient;
 }
 
@@ -355,7 +354,6 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_RxBuffer* buf)
                                              DPS_CBOR_KEY_ACK_REQ, DPS_CBOR_KEY_BLOOM_FILTER };
     DPS_Status ret;
     uint16_t port;
-    DPS_Publication pub;
     DPS_UUID* pubId = NULL;
     DPS_RxBuffer bfBuf;
     uint8_t* protectedPtr;
@@ -369,6 +367,7 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_RxBuffer* buf)
     DPS_DBGTRACE();
 
     CBOR_Dump("Pub in", buf->rxPos, DPS_RxBufferAvail(buf));
+
     /*
      * Parse keys from unprotected map
      */
@@ -475,9 +474,6 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_RxBuffer* buf)
         DPS_DBGPRINT("Publication %s/%d is stale\n", DPS_UUIDToString(pubId), sequenceNum);
         return DPS_ERR_STALE;
     }
-    memcpy(&pub.pubId, pubId, sizeof(DPS_UUID));
-    pub.sequenceNum = sequenceNum;
-    pub.ackRequested = ackRequested;
     /*
      * A negative TTL is a forced expiration. We don't care about payloads and
      * we don't call local handlers.
@@ -485,8 +481,16 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_RxBuffer* buf)
     if (ttl < 0) {
         ttl = 0;
     } else {
+        DPS_Publication pub;
         DPS_RxBuffer protectedBuf;
         DPS_RxBuffer encryptedBuf;
+
+        /* Initialize the pub struct */
+        memset(&pub, 0, sizeof(pub));
+        pub.node = node;
+        memcpy(&pub.pubId, pubId, sizeof(DPS_UUID));
+        pub.sequenceNum = sequenceNum;
+        pub.ackRequested = ackRequested;
         /*
          * Now we can deserialize the bloom filter
          */
@@ -610,6 +614,8 @@ static DPS_Status SerializePub(DPS_Node* node, DPS_Publication* pub, const uint8
     DPS_TxBuffer protectedBuf;
 
     DPS_DBGTRACE();
+
+    ++pub->sequenceNum;
 
     /*
      * Encode the unprotected map
@@ -738,7 +744,7 @@ static DPS_Status SerializePub(DPS_Node* node, DPS_Publication* pub, const uint8
         DPS_RxBuffer aadBuf;
         uint8_t nonce[COSE_NONCE_LEN];
 
-        DPS_DBGPRINT("Entcrypting publication\n");
+        DPS_DBGPRINT("Encrypting publication\n");
         /* Encryption needs the input buffers to be Rx buffers */
         DPS_TxBufferToRx(&buf, &plainTextBuf);
         DPS_TxBufferToRx(&protectedBuf, &aadBuf);
@@ -776,9 +782,6 @@ DPS_Status DPS_Publish(DPS_Publication* pub, const uint8_t* payload, size_t len,
         if (ret == DPS_OK) {
             ret = DPS_MCastSend(pub->node, NULL, NULL);
         }
-    }
-    if (ret == DPS_OK) {
-        ++pub->sequenceNum;
     }
     return ret;
 }
