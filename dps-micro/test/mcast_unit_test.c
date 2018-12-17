@@ -53,7 +53,7 @@ int main(int argc, char** argv)
         goto Usage;
     }
 
-    node = DPS_Init();
+    node = DPS_CreateNode("/");
     status = DPS_NetworkInit(node);
     CHECK(status == DPS_OK);
 

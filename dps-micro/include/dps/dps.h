@@ -76,9 +76,20 @@ typedef void (*DPS_PublicationHandler)(DPS_Subscription* sub, const DPS_Publicat
  */
 typedef struct _DPS_Node DPS_Node;
 
-DPS_Node* DPS_Init();
+/**
+  * Create the node
+  */
+DPS_Node* DPS_CreateNode(const char* separators);
 
-void DPS_Terminate(DPS_Node* node);
+/**
+  * Start the node
+  */
+DPS_Status DPS_Start(DPS_Node* node);
+
+/**
+  * Destroy the node
+  */
+void DPS_DestroyNode(DPS_Node* node);
 
 #ifdef __cplusplus
 }
