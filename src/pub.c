@@ -27,16 +27,13 @@
 #include <dps/uuid.h>
 #include <dps/private/dps.h>
 #include <dps/private/node.h>
-#include <dps/private/network.h>
-#include <dps/private/bitvec.h>
-#include <dps/private/cbor.h>
-#include <dps/compat.h>
-#include <dps/private/cose.h>
-#include <dps/private/coap.h>
 #include <dps/private/pub.h>
 #include <dps/private/sub.h>
+#include <dps/private/network.h>
+#include <dps/private/bitvec.h>
 #include <dps/private/topics.h>
-#include <dps/private/keywrap.h>
+#include <dps/private/cbor.h>
+#include <dps/private/coap.h>
 
 /*
  * Debug control for this module
@@ -498,6 +495,8 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_RxBuffer* buf)
         if (ret != DPS_OK) {
             goto Exit;
         }
+        DPS_PRINT("Deserialize\n");
+        DPS_BitVectorDump(&pub.bf);
         /*
          * Initialize the protected and encrypted buffers
          */
@@ -521,6 +520,9 @@ DPS_Status DPS_InitPublication(DPS_Node* node, DPS_Publication* pub, const char*
 
     DPS_DBGTRACE();
 
+    if (!node || !pub || !topics) {
+        return DPS_ERR_NULL;
+    }
     /*
      * Must have at least one topic
      */
@@ -555,7 +557,6 @@ DPS_Status DPS_InitPublication(DPS_Node* node, DPS_Publication* pub, const char*
     }
     if (ret == DPS_OK) {
         size_t i;
-        DPS_BitVectorClear(&pub->bf);
         for (i = 0; i < numTopics; ++i) {
             ret = DPS_AddTopic(&pub->bf, topics[i], node->separators, noWildCard ? DPS_PubNoWild : DPS_PubTopic);
             if (ret != DPS_OK) {
@@ -706,6 +707,8 @@ static DPS_Status SerializePub(DPS_Node* node, DPS_Publication* pub, const uint8
     if (ret != DPS_OK) {
         return ret;
     }
+    DPS_PRINT("Serialize\n");
+    DPS_BitVectorDump(&pub->bf);
     DPS_TxBufferCommit(&protectedBuf);
     /*
      * If the data is not encrypted can be serialized directly into the TX pool

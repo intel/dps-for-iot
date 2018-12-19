@@ -39,7 +39,7 @@ extern "C" {
 /**
  * Implementation configured maximum number of topic strings in a subscription
  */
-#define MAX_SUB_TOPICS    8
+#define DPS_MAX_SUB_TOPICS    8
 
 /**
  * Struct to hold the state of a local subscription. We hold the
@@ -48,14 +48,14 @@ extern "C" {
  * subscribers.
  */
 typedef struct _DPS_Subscription {
-    DPS_Node* node;                 /**< Node for this subscription */
-    void* userData;                 /**< Application provided user data */
-    DPS_FHBitVector needs;          /**< Subscription needs */
-    DPS_BitVector bf;               /**< The Bloom filter bit vector for the topics for this subscription */
-    DPS_PublicationHandler handler; /**< Callback function to be called for a matching publication */
-    char* topics[MAX_SUB_TOPICS];   /**< Subscription topics */
-    size_t numTopics;               /**< Number of subscription topics */
-    DPS_Subscription* next;         /**< Next subscription in list */
+    DPS_Node* node;                   /**< Node for this subscription */
+    void* userData;                   /**< Application provided user data */
+    DPS_FHBitVector needs;            /**< Subscription needs */
+    DPS_BitVector bf;                 /**< The Bloom filter bit vector for the topics for this subscription */
+    DPS_PublicationHandler handler;   /**< Callback function to be called for a matching publication */
+    const char* topics[DPS_MAX_SUB_TOPICS]; /**< Subscription topics */
+    size_t numTopics;                 /**< Number of subscription topics */
+    DPS_Subscription* next;           /**< Next subscription in list */
 } DPS_Subscription;
 
 /**
@@ -84,32 +84,23 @@ typedef void (*DPS_PublicationHandler)(DPS_Subscription* sub, const DPS_Publicat
  *
  * @param node         The DPS node
  * @param sub          The subscription
- * @param topics       The topic strings to match
- * @param numTopics    The number of topic strings to match - must be >= 1
+ * @param topics       The topics to subscribe to  - pointers to topic strings must remain valid
+ *                     for the lifetime of the subscription
+ * @param numTopics    The number of topic strings - must be >= 1
  *
- * @return The newly created subscription or NULL if resources
- *         could not be allocated or the arguments were invalid
+ * @return DPS_OK or and error status if the subscription could not be initialized
  */
-DPS_Status* DPS_InitSubscription(DPS_Node* node, DPS_Subscription* sub, const char** topics, size_t numTopics);
+DPS_Status DPS_InitSubscription(DPS_Node* node, DPS_Subscription* sub, const char* const* topics, size_t numTopics);
 
 /**
- * Store a pointer to application data in a subscription.
+ * Active a subscription
  *
- * @param sub   The subscription
- * @param data  The data pointer to store
+ * @param node    The local node
+ * @param remote  The remote node to send the subscription to
  *
- * @return DPS_OK or an error
+ * @return DPS_OK if sending is successful, an error otherwise
  */
-DPS_Status DPS_SetSubscriptionData(DPS_Subscription* sub, void* data);
-
-/**
- * Get application data pointer previously set by DPS_SetSubscriptionData()
- *
- * @param sub   The subscription
- *
- * @return A pointer to the data or NULL if the subscription is invalid
- */
-void* DPS_GetSubscriptionData(DPS_Subscription* sub);
+DPS_Status DPS_Subscribe(DPS_Subscription* sub, DPS_PublicationHandler handler, void* data);
 
 /**
  * Send a subscription to a remote node

@@ -1165,10 +1165,16 @@ static DPS_Status DecodeUnprotectedMap(DPS_RxBuffer* buf,
             if (!kid) {
                 return DPS_ERR_INVALID;
             }
-            ret = CBOR_DecodeBytes(buf, (uint8_t**)&kid->id, &kid->len);
+            ret = CBOR_DecodeBytes(buf, (uint8_t**)&data, &len);
             if (ret != DPS_OK) {
                 return ret;
             }
+            if (len > DPS_MAX_KEY_ID_LEN) {
+                DPS_DBGPRINT("Key id is too long %d\n", len);
+                return DPS_ERR_RESOURCES;
+            }
+            kid->len = len;
+            memcpy(kid->id, data, kid->len);
             break;
         case COSE_HDR_IV:
             if (!nonce) {
