@@ -25,6 +25,7 @@
 #include <dps/dps.h>
 #include <dps/private/dps.h>
 #include <dps/private/pub.h>
+#include <dps/private/sub.h>
 
 
 
@@ -39,11 +40,17 @@ static const char* topics[NUM_TOPICS] = {
     "a/b/c/d"
 };
 
+static void OnPub(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* payload, size_t len)
+{
+    DPS_PRINT("Received matching publication\n");
+}
+
 int main(int argc, char** argv)
 {
     DPS_Node* node;
     DPS_KeyStore* keyStore = NULL;
     DPS_Publication pub;
+    DPS_Subscription sub;
     DPS_Status status;
     int i;
     char** arg = argv + 1;
@@ -73,6 +80,11 @@ int main(int argc, char** argv)
     status = DPS_InitPublication(node, &pub, topics, NUM_TOPICS, DPS_FALSE, &PskId[1], NULL);
     CHECK(status == DPS_OK);
 
+    status = DPS_InitSubscription(node, &sub, topics, 1);
+    CHECK(status == DPS_OK);
+
+    status = DPS_Subscribe(&sub, OnPub, NULL);
+    CHECK(status == DPS_OK);
 
     for (i = 0; i < 10; ++i) {
         status = DPS_Publish(&pub, (const uint8_t*)testString, strlen(testString) + 1, 0);

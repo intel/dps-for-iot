@@ -12,6 +12,11 @@ static const char* str1 = "red";
 static const char* str2 = "green";
 static const char* str3 = "blue";
 static const char* str4 = "yellow";
+static const char* str5 = "cyan";
+static const char* str6 = "magenta";
+static const char* str7 = "black";
+static const char* str8 = "white";
+static const char* str9 = "grey";
 
 
 static uint8_t txBuf[1024];
@@ -115,6 +120,11 @@ int main()
     DPS_BitVectorBloomInsert(&bv1, str2, strlen(str2));
     DPS_BitVectorBloomInsert(&bv1, str3, strlen(str3));
     DPS_BitVectorBloomInsert(&bv1, str4, strlen(str4));
+    DPS_BitVectorBloomInsert(&bv1, str5, strlen(str5));
+    DPS_BitVectorBloomInsert(&bv1, str6, strlen(str6));
+    DPS_BitVectorBloomInsert(&bv1, str7, strlen(str7));
+    DPS_BitVectorBloomInsert(&bv1, str8, strlen(str8));
+    DPS_BitVectorBloomInsert(&bv1, str9, strlen(str9));
 
     tx.base = txBuf;
     tx.txPos = txBuf;
