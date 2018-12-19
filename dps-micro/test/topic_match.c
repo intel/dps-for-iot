@@ -31,7 +31,7 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
 #define MAX_TOPICS  32
 
-const char separators[] = "/.";
+const char separators[] = "/";
 
 static int BloomMatch(char** pubs, size_t numPubs, char** subs, size_t numSubs, int noWildCard)
 {

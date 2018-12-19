@@ -39,6 +39,7 @@ srcs = [
         'src/mbedtls.c',
         'src/pub.c',
         'src/sha2.c',
+        'src/sub.c',
         'src/topics.c',
         'src/uuid.c'
         ]
@@ -79,8 +80,8 @@ testsrcs = [
             'test/bitvec_unit_test.c',
             'test/mcast_unit_test.c',
             'test/pub_unit_test.c',
-            'test/topics_unit_test.c',
-            'test/topic_match.c'
+            'test/topic_match.c',
+            'test/topics_unit_test.c'
             ]
 for test in testsrcs:
     testprogs.append(testenv.Program([test, 'test/keys.c']))
