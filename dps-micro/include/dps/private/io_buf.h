@@ -166,8 +166,9 @@ void DPS_TxBufferCommit(DPS_TxBuffer* txBuf);
  * Frees all Tx buffer space
  *
  * @param node            Pointer to the DPS node
+ * @param pool            The pool to free
  */
-void DPS_TxBufferFreePools(DPS_Node* node);
+void DPS_TxBufferFreePool(DPS_Node* node, DPS_BUFFER_POOL pool);
 
 
 #ifdef __cplusplus

@@ -117,12 +117,14 @@ void DPS_TxBufferCommit(DPS_TxBuffer* buf)
 {
     switch (buf->pool) {
     case DPS_TX_POOL:
+        /* Reclaim unused space */
         buf->node->txLen -= DPS_TxBufferSpace(buf);
         break;
     case DPS_TX_HDR_POOL:
         assert(DPS_TxBufferSpace(buf) == 0);
         break;
     case DPS_TMP_POOL:
+        /* Reclaim unused space */
         buf->node->tmpLen -= DPS_TxBufferSpace(buf);
         break;
     default:
@@ -131,9 +133,21 @@ void DPS_TxBufferCommit(DPS_TxBuffer* buf)
     }
 }
 
-void DPS_TxBufferFreePools(DPS_Node* node)
+void DPS_TxBufferFreePool(DPS_Node* node, DPS_BUFFER_POOL pool)
 {
-    node->txLen = 0;
-    node->txHdrLen = 0;
-    node->tmpLen = 0;
+    switch (pool) {
+    case DPS_TX_POOL:
+        node->txLen = 0;
+        break;
+    case DPS_TX_HDR_POOL:
+        node->txHdrLen = 0;
+        break;
+    case DPS_TMP_POOL:
+        node->tmpLen = 0;
+        break;
+    default:
+        assert(DPS_FALSE);
+        break;
+    }
+
 }
