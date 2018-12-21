@@ -35,7 +35,7 @@ static DPS_Status AddTopic(DPS_BitVector* bv, const char* topic)
     status = DPS_AddTopic(bv, topic, "/.", DPS_PubTopic);
     if (status == DPS_OK) {
         if (DPS_Debug) {
-            DPS_BitVectorDump(bv);
+            DPS_BitVectorDump(bv, DPS_TRUE);
         }
     }
     return status;
@@ -133,7 +133,7 @@ int main(int argc, char** argv)
     status = AddTopic(&bv, "a/b/z");
     CHECK(status == DPS_OK);
 
-    DPS_BitVectorDump(&bv);
+    DPS_BitVectorDump(&bv, DPS_TRUE);
 
     SubscriptionCheck(&bv, "+", EXPECT);
     SubscriptionCheck(&bv, "#", EXPECT);

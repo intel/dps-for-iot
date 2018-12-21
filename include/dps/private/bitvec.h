@@ -39,19 +39,17 @@ extern "C" {
 /*
  * These are defined by the wire protocol
  */
-#define DPS_CONFIG_BIT_LEN 8192
-#define DPS_CONFIG_HASHES 4
-
-#define BITVEC_MAX_BITS  1024
+#define BITVEC_CONFIG_BIT_LEN  8192
+#define BITVEC_CONFIG_BYTE_LEN (BITVEC_CONFIG_BIT_LEN / 8)
+#define BITVEC_CONFIG_HASHES     4
 
 /**
- * Publication and subscription Bloom filters are very sparse so for
- * the tiny footprint implementation it is more space efficient to 
- * store the bloom filters in index form rather than as a bit vector.
+ * Type for a bit vector
  */
 typedef struct _DPS_BitVector {
-    uint16_t popCount;
-    uint16_t setBits[BITVEC_MAX_BITS];
+    uint8_t serializationFlags;
+    uint32_t rleSize;
+    uint64_t bits[BITVEC_CONFIG_BIT_LEN / 64];
 } DPS_BitVector;
 
 /**
@@ -68,7 +66,7 @@ typedef struct _DPS_FHBitVector {
  * @param data   Data for the item to add
  * @param len    Length of the data to add
  */
-DPS_Status DPS_BitVectorBloomInsert(DPS_BitVector* bv, const uint8_t* data, size_t len);
+void DPS_BitVectorBloomInsert(DPS_BitVector* bv, const uint8_t* data, size_t len);
 
 /**
  * Bloom Filter existence check operation.
@@ -99,7 +97,7 @@ float DPS_BitVectorLoadFactor(DPS_BitVector* bv);
  *
  * @return the population count
  */
-size_t DPS_BitVectorPopCount(DPS_BitVector* bv);
+uint32_t DPS_BitVectorPopCount(DPS_BitVector* bv);
 
 /**
  * Generate a "fuzzy hash" (also called a "similarity preserving
@@ -228,7 +226,7 @@ void DPS_BitVectorDup(DPS_BitVector* dst, DPS_BitVector* src);
  *
  * @param bv    The bit vector to dump
  */
-void DPS_BitVectorDump(DPS_BitVector* bv);
+void DPS_BitVectorDump(DPS_BitVector* bv, int dumpBits);
 
 
 #ifdef __cplusplus

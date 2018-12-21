@@ -182,6 +182,13 @@ static DPS_Status DecryptAndParsePub(DPS_Publication* pub,
     DPS_Status ret;
     size_t i;
 
+    /* 
+     * Decrypt into the temporary pool
+     */
+    ret = DPS_TxBufferReserve(pub->node, &outBuf, DPS_RxBufferAvail(cipherTextBuf), DPS_TMP_POOL);
+    if (ret != DPS_OK) {
+        return ret;
+    }
     /*
      * Try to decrypt the publication
      */
@@ -290,15 +297,12 @@ static DPS_Status CallPubHandlers(DPS_Publication* pub, DPS_RxBuffer* protectedB
     DPS_Status ret;
     DPS_Subscription* sub;
     DPS_Subscription* nextSub;
-    DPS_TxBuffer plainTextBuf;
     int match;
     uint8_t* data = NULL;
     size_t dataLen = 0;
     int needsDecrypt = DPS_TRUE;
 
     DPS_DBGTRACE();
-
-    DPS_TxBufferClear(&plainTextBuf);
 
     /*
      * Iterate over the candidates and check that the pub strings are a match
@@ -496,7 +500,7 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_RxBuffer* buf)
             goto Exit;
         }
         DPS_PRINT("Deserialize\n");
-        DPS_BitVectorDump(&pub.bf);
+        DPS_BitVectorDump(&pub.bf, DPS_TRUE);
         /*
          * Initialize the protected and encrypted buffers
          */
@@ -667,7 +671,7 @@ static DPS_Status SerializePub(DPS_Node* node, DPS_Publication* pub, const uint8
         CBOR_SIZEOF_BOOLEAN() +
         CBOR_SIZEOF_BYTES(bfLen) +
         CBOR_SIZEOF(int16_t) +
-        DPS_BitVectorSerializedSize(&pub->bf);
+        bfLen;
 
     ret = DPS_TxBufferReserve(node, &protectedBuf, len, DPS_TX_POOL);
     if (ret != DPS_OK) {
@@ -708,7 +712,7 @@ static DPS_Status SerializePub(DPS_Node* node, DPS_Publication* pub, const uint8
         return ret;
     }
     DPS_PRINT("Serialize\n");
-    DPS_BitVectorDump(&pub->bf);
+    DPS_BitVectorDump(&pub->bf, DPS_TRUE);
     DPS_TxBufferCommit(&protectedBuf);
     /*
      * If the data is not encrypted can be serialized directly into the TX pool
@@ -777,7 +781,9 @@ DPS_Status DPS_Publish(DPS_Publication* pub, const uint8_t* payload, size_t len,
     }
 
     /* Free the Tx buffer pools */
-    DPS_TxBufferFreePools(pub->node);
+    DPS_TxBufferFreePool(pub->node, DPS_TX_POOL);
+    DPS_TxBufferFreePool(pub->node, DPS_TX_HDR_POOL);
+    DPS_TxBufferFreePool(pub->node, DPS_TMP_POOL);
 
     ret = SerializePub(pub->node, pub, payload, len, ttl);
     if (ret == DPS_OK) {
