@@ -397,40 +397,42 @@ static DPS_Status EncodeSig(DPS_Node* node, DPS_TxBuffer* buf, int8_t alg, int8_
  */
 static DPS_Status EncodeAAD(DPS_Node* node, DPS_TxBuffer* buf, uint8_t tag, int8_t alg, uint8_t* aad, size_t aadLen)
 {
-    DPS_Status ret;
-    const char* context;
-    size_t bufLen;
+	DPS_Status ret;
+	const char* context;
+	size_t bufLen;
 
-    bufLen = CBOR_SIZEOF_ARRAY(3) +
-        SIZEOF_PROTECTED_MAP +
-        CBOR_SIZEOF_BYTES(aadLen);
-    switch (tag) {
-    case COSE_TAG_ENCRYPT0:
-        bufLen += CBOR_SIZEOF_STATIC_STRING(ENCRYPT0);
-        context = ENCRYPT0;
-        break;
-    case COSE_TAG_ENCRYPT:
-        bufLen += CBOR_SIZEOF_STATIC_STRING(ENCRYPT);
-        context = ENCRYPT;
-        break;
-    default:
-        return DPS_ERR_INVALID;
-    }
+	bufLen = CBOR_SIZEOF_ARRAY(3) +
+		SIZEOF_PROTECTED_MAP +
+		CBOR_SIZEOF_BYTES(aadLen);
+	switch (tag) {
+	case COSE_TAG_ENCRYPT0:
+		bufLen += CBOR_SIZEOF_STATIC_STRING(ENCRYPT0);
+		context = ENCRYPT0;
+		break;
+	case COSE_TAG_ENCRYPT:
+		bufLen += CBOR_SIZEOF_STATIC_STRING(ENCRYPT);
+		context = ENCRYPT;
+		break;
+	default:
+		return DPS_ERR_INVALID;
+	}
 
-    ret = DPS_TxBufferReserve(node, buf, bufLen, DPS_TMP_POOL);
-    if (ret == DPS_OK) {
-        ret = CBOR_EncodeArray(buf, 3);
+	ret = DPS_TxBufferReserve(node, buf, bufLen, DPS_TMP_POOL);
+	if (ret == DPS_OK) {
+		ret = CBOR_EncodeArray(buf, 3);
+	}
+	if (ret == DPS_OK) {
+		ret = CBOR_EncodeString(buf, context);
+	}
+	if (ret == DPS_OK) {
+		ret = EncodeProtectedMap(buf, alg);
+	}
+	if (ret == DPS_OK) {
+		ret = CBOR_EncodeBytes(buf, aad, aadLen);
+	}
+	if (ret == DPS_OK) {
+	    DPS_TxBufferCommit(buf);
     }
-    if (ret == DPS_OK) {
-        ret = CBOR_EncodeString(buf, context);
-    }
-    if (ret == DPS_OK) {
-        ret = EncodeProtectedMap(buf, alg);
-    }
-    if (ret == DPS_OK) {
-        ret = CBOR_EncodeBytes(buf, aad, aadLen);
-    }
-    DPS_TxBufferCommit(buf);
     return ret;
 }
 

@@ -35,24 +35,8 @@
  */
 DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
-#define MAX_HASHES  8
-
 #if __BYTE_ORDER != __LITTLE_ENDIAN
    #define ENDIAN_SWAP
-#endif
-
-#ifdef _WIN32
-static inline uint32_t COUNT_TZ(uint64_t n)
-{
-    uint32_t index;
-    if (_BitScanForward64(&index, n)) {
-        return index;
-    } else {
-        return 0;
-    }
-}
-#else
-#define COUNT_TZ(n)    __builtin_ctzll((chunk_t)n)
 #endif
 
 /*
@@ -65,92 +49,100 @@ static inline uint32_t COUNT_TZ(uint64_t n)
  */
 #define FLAG_RLE_COMPLEMENT  0x02
 
+/*
+ * Process bit vectors in 64 bit chunks
+ */
+typedef uint64_t chunk_t;
+
+#define CHUNK_SIZE (8 * sizeof(chunk_t))
+
 #define SET_BIT(a, b)  (a)[(b) >> 6] |= (1ull << ((b) & 0x3F))
 #define TEST_BIT(a, b) ((a)[(b) >> 6] & (1ull << ((b) & 0x3F)))
 #define ROTL64(n, r)   (((n) << r) | ((n) >> (64 - r)))
 
+#ifdef _WIN32
+#define POPCOUNT(n)    (uint32_t)(__popcnt64((chunk_t)n))
+static inline uint32_t COUNT_TZ(uint64_t n)
+{
+    uint32_t index;
+    if (_BitScanForward64(&index, n)) {
+        return index;
+    } else {
+        return 0;
+    }
+}
+#else
+#define POPCOUNT(n)    __builtin_popcountll((chunk_t)n)
+#define COUNT_TZ(n)    __builtin_ctzll((chunk_t)n)
+#endif
+
+#define NUM_CHUNKS  (BITVEC_CONFIG_BIT_LEN / CHUNK_SIZE)
+
 #define FH_BITVECTOR_LEN  (4 * sizeof(uint64_t))
 
-size_t DPS_BitVectorPopCount(DPS_BitVector* bv)
+int DPS_BitVectorIsClear(DPS_BitVector* bv)
 {
-    return bv->popCount;
-}
-
-/*
- * Add a bit to the bit vector keeping the indices in ascending order
- */
-static DPS_Status SetBit(DPS_BitVector* bv, uint16_t bit)
-{
-    uint16_t b;
-
-    for (b = 0; b < bv->popCount; ++b) {
-        /* nothing to do if the bit is already set */
-        if (bv->setBits[b] == bit) {
-            return DPS_OK;
-        }
-        if (bit < bv->setBits[b]) {
-            if (bv->popCount != BITVEC_MAX_BITS) {
-                memmove(&bv->setBits[b + 1], &bv->setBits[b], (bv->popCount - b) * sizeof(bv->setBits[b]));
-            }
-            break;
+    size_t i;
+    for (i = 0; i < NUM_CHUNKS; ++i) {
+        if (bv->bits[i]) {
+            return DPS_FALSE;
         }
     }
-    if (bv->popCount == BITVEC_MAX_BITS) {
-        return DPS_ERR_RESOURCES;
-    } else {
-        bv->setBits[b] = bit;
-        ++bv->popCount;
-        return DPS_OK;
+    return DPS_TRUE;
+}
+
+uint32_t DPS_BitVectorPopCount(DPS_BitVector* bv)
+{
+    uint32_t popCount = 0;
+    size_t i;
+    for (i = 0; i < NUM_CHUNKS; ++i) {
+        popCount += POPCOUNT(bv->bits[i]);
+    }
+    return popCount;
+}
+
+void DPS_BitVectorDup(DPS_BitVector* dst, DPS_BitVector* src)
+{
+    if (dst != src) {
+        memcpy(dst->bits, src->bits, sizeof(src->bits));
+        dst->rleSize = src->rleSize;
     }
 }
 
-DPS_Status DPS_BitVectorBloomInsert(DPS_BitVector* bv, const uint8_t* data, size_t len)
+void DPS_BitVectorBloomInsert(DPS_BitVector* bv, const uint8_t* data, size_t len)
 {
-    DPS_Status status = DPS_OK;
     uint8_t h;
-    uint32_t hashes[MAX_HASHES];
-
-    assert(sizeof(hashes) == DPS_SHA2_DIGEST_LEN);
+    uint32_t hashes[DPS_SHA2_DIGEST_LEN];
+    uint32_t index;
 
     DPS_Sha2((uint8_t*)hashes, data, len);
-    /* TODO - could be optimized by first sorting the hashes */
-    for (h = 0; h < DPS_CONFIG_HASHES; ++h) {
-        uint32_t index = hashes[h] % DPS_CONFIG_BIT_LEN;
-        status = SetBit(bv, index);
-        if (status != DPS_OK) {
-            break;
-        }
+#if 0
+    DPS_PRINT("%.*s   (%zu)\n", (int)len, data, len);
+#endif
+    for (h = 0; h < BITVEC_CONFIG_HASHES; ++h) {
+#ifdef ENDIAN_SWAP
+        index = BSWAP_32(hashes[h]) % BITVEC_CONFIG_BIT_LEN;
+#else
+        index = hashes[h] % BITVEC_CONFIG_BIT_LEN;
+#endif
+        SET_BIT(bv->bits, index);
     }
-    return status;
-}
-
-static int TestBit(const DPS_BitVector* bv, uint16_t bit)
-{
-    uint16_t b;
-
-    for (b = 0; b < bv->popCount; ++b) {
-        if (bv->setBits[b] == bit) {
-            return DPS_TRUE;
-        }
-        if (bv->setBits[b] > bit) {
-            break;
-        }
-    }
-    return DPS_FALSE;
 }
 
 int DPS_BitVectorBloomTest(const DPS_BitVector* bv, const uint8_t* data, size_t len)
 {
     uint8_t h;
-    uint32_t hashes[MAX_HASHES];
-
-    assert(sizeof(hashes) == DPS_SHA2_DIGEST_LEN);
+    uint32_t hashes[DPS_SHA2_DIGEST_LEN];
+    uint32_t index;
 
     DPS_Sha2((uint8_t*)hashes, data, len);
-    /* TODO - could be optimized by first sorting the hashes */
-    for (h = 0; h < DPS_CONFIG_HASHES; ++h) {
-        uint32_t index = hashes[h] % DPS_CONFIG_BIT_LEN;
-        if (!TestBit(bv, index)) {
+    for (h = 0; h < BITVEC_CONFIG_HASHES; ++h) {
+#ifdef ENDIAN_SWAP
+        index = BSWAP_32(hashes[h]) % BITVEC_CONFIG_BIT_LEN;
+#else
+        index = hashes[h] % BITVEC_CONFIG_BIT_LEN;
+#endif
+        if (!TEST_BIT(bv->bits, index)) {
             return DPS_FALSE;
         }
     }
@@ -159,60 +151,73 @@ int DPS_BitVectorBloomTest(const DPS_BitVector* bv, const uint8_t* data, size_t 
 
 float DPS_BitVectorLoadFactor(DPS_BitVector* bv)
 {
-    return (float)((100.0 * DPS_BitVectorPopCount(bv) + 1.0) / DPS_CONFIG_BIT_LEN);
+    return (float)((100.0 * DPS_BitVectorPopCount(bv) + 1.0) / BITVEC_CONFIG_BIT_LEN);
 }
 
 int DPS_BitVectorEquals(const DPS_BitVector* bv1, const DPS_BitVector* bv2)
 {
-    if (bv1->popCount != bv2->popCount) {
+    size_t i;
+    const chunk_t* b1;
+    const chunk_t* b2;
+
+    if (!bv1 || !bv2) {
         return DPS_FALSE;
-    } else {
-        return memcmp(bv1->setBits, bv2->setBits, sizeof(bv1->setBits[0]) * bv1->popCount) == 0;
     }
+    b1 = bv1->bits;
+    b2 = bv2->bits;
+    for (i = 0; i < NUM_CHUNKS; ++i, ++b1, ++b2) {
+        if (*b1 != *b2) {
+            return DPS_FALSE;
+        }
+    }
+    return DPS_TRUE;
 }
 
 int DPS_BitVectorIncludes(const DPS_BitVector* bv1, const DPS_BitVector* bv2)
 {
-    uint16_t b1 = 0;
-    uint16_t b2 = 0;
+    size_t i;
+    const chunk_t* b1;
+    const chunk_t* b2;
+    chunk_t b1un = 0;
 
-    /* bv2 must have same or fewer bits set than bv1 */
-    if (bv2->popCount > bv1->popCount) {
+    if (!bv1 || !bv2) {
         return DPS_FALSE;
     }
-    while ((b1 < bv1->popCount) && (b2 < bv2->popCount)) {
-        if (bv2->setBits[b2] > bv1->setBits[b1]) {
-            ++b1;
-            continue;
+    b1 = bv1->bits;
+    b2 = bv2->bits;
+    for (i = 0; i < NUM_CHUNKS; ++i, ++b1, ++b2) {
+        if ((*b1 & *b2) != *b2) {
+            return DPS_FALSE;
         }
-        if (bv2->setBits[b2] < bv1->setBits[b1]) {
-            break;
-        }
-        ++b1;
-        ++b2;
+        b1un |= *b1;
     }
-    return b2 == bv2->popCount;
+    return b1un != 0;
 }
 
 DPS_Status DPS_BitVectorFuzzyHash(DPS_FHBitVector* hash, DPS_BitVector* bv)
 {
-    uint16_t b;
-    uint64_t s = 0;
-    uint64_t p;
-    uint32_t popCount = 0;
+   size_t i;
+    chunk_t s = 0;
+    chunk_t p;
+    uint32_t popCount;
 
     if (!hash || !bv) {
         return DPS_ERR_NULL;
     }
-    if (bv->popCount == 0) {
-        memset(hash, 0, sizeof(hash));
-        return DPS_OK;
+    popCount = DPS_BitVectorPopCount(bv);
+    if (popCount != 0) {
+        /*
+         * Squash the bit vector into 64 bits
+         */
+        for (i = 0; i < NUM_CHUNKS; ++i) {
+            chunk_t n = bv->bits[i];
+            popCount += POPCOUNT(n);
+            s |= n;
+        }
     }
-    /*
-     * Squash the bit vector into 64 bits
-     */
-    for (b = 0; b < bv->popCount; ++b) {
-        s |= (1ull << (bv->setBits[b] % 64));
+    if (popCount == 0) {
+        memset(hash, 0, sizeof(DPS_FHBitVector));
+        return DPS_OK;
     }
     p = s;
     p |= ROTL64(p, 7);
@@ -229,52 +234,56 @@ DPS_Status DPS_BitVectorFuzzyHash(DPS_FHBitVector* hash, DPS_BitVector* bv)
     p |= ROTL64(p, 19);
     p |= ROTL64(p, 41);
     hash->bits[2] = p;
-    if (bv->popCount > 62) {
+    if (popCount > 62) {
         hash->bits[3] = ~0ull;
     } else {
-        hash->bits[3] = (1ull << bv->popCount) - 1;
+        hash->bits[3] = (1ull << popCount) - 1;
     }
     return DPS_OK;
 }
 
 DPS_Status DPS_BitVectorUnion(DPS_BitVector* bvOut, DPS_BitVector* bv)
 {
-    DPS_Status status = DPS_OK;
-    uint16_t b;
-
-    for (b = 0; b < bv->popCount; ++b) {
-        status = SetBit(bvOut, bv->setBits[b]);
-        if (status != DPS_OK) {
-            break;
-        }
+    size_t i;
+    if (!bvOut || !bv) {
+        return DPS_ERR_NULL;
     }
-    return status;
+    for (i = 0; i < NUM_CHUNKS; ++i) {
+        bvOut->bits[i] |= bv->bits[i];
+    }
+    return DPS_OK;
 }
 
 DPS_Status DPS_BitVectorIntersection(DPS_BitVector* bvOut, DPS_BitVector* bv1, DPS_BitVector* bv2)
 {
-    DPS_Status status = DPS_OK;
-    uint16_t b;
-
-    bvOut->popCount = 0;
-
-    for (b = 0; b < bv1->popCount; ++b) {
-        if (TestBit(bv2, bv1->setBits[b])) {
-            status = SetBit(bvOut, bv1->setBits[b]);
-            if (status != DPS_OK) {
-                break;
-            }
-        }
+    size_t i;
+    int nz = 0;
+    if (!bvOut || !bv1 || !bv2) {
+        return DPS_ERR_NULL;
     }
-    return status;
+    for (i = 0; i < NUM_CHUNKS; ++i) {
+        nz |= ((bvOut->bits[i] = bv1->bits[i] & bv2->bits[i]) != 0);
+    }
+    return DPS_OK;
 }
 
 DPS_Status DPS_BitVectorXor(DPS_BitVector* bvOut, DPS_BitVector* bv1, DPS_BitVector* bv2, int* equal)
 {
-    return DPS_ERR_FAILURE;
+    size_t i;
+    int diff = 0;
+    if (!bvOut || !bv1 || !bv2) {
+        return DPS_ERR_NULL;
+    }
+
+    for (i = 0; i < NUM_CHUNKS; ++i) {
+        diff |= ((bvOut->bits[i] = bv1->bits[i] ^ bv2->bits[i]) != 0ull);
+    }
+    if (equal) {
+        *equal = !diff;
+    }
+    return DPS_OK;
 }
 
-#define CLR_BIT8(a, b)   (a)[(b) >> 3] &= ~(1 << ((b) & 0x7))
 #define SET_BIT8(a, b)   (a)[(b) >> 3] |= (1 << ((b) & 0x7))
 #define TEST_BIT8(a, b) ((a)[(b) >> 3] &  (1 << ((b) & 0x7)))
 
@@ -344,101 +353,108 @@ static uint32_t Ceil_Log2(uint16_t n)
 }
 
 
-static size_t RLELen(DPS_BitVector* bv)
+static DPS_Status RunLengthEncode(DPS_BitVector* bv, DPS_TxBuffer* buffer)
 {
-    uint16_t b;
+    DPS_Status ret;
+    size_t i;
     size_t rleSize = 0;
-    uint16_t prevBit = 0;
+    size_t sz;
+    uint32_t num0 = 0;
+    uint8_t* packed;
+    chunk_t complement = bv->serializationFlags & FLAG_RLE_COMPLEMENT ? ~0 : 0;
 
-    for (b = 0; b < bv->popCount; ++b) {
-        /*
-         * Length of the zero run
-         */
-        uint16_t num0 = bv->setBits[b] - prevBit;
-        /*
-         * Size of the length field
-         */
-        size_t sz = Ceil_Log2(num0 + 1);
-        /*
-         * Space needed to encode the length
-         */
-        rleSize += 1 + 2 * sz;
-        prevBit = bv->setBits[b] + 1;
+    ret = CBOR_ReserveBytes(buffer, bv->rleSize, &packed);
+    if (ret != DPS_OK) {
+        return ret;
     }
-    return (rleSize + 7) / 8;
-}
-
-static void RunLengthEncode(DPS_BitVector* bv, uint8_t* rle, size_t len)
-{
-    uint16_t b;
-    size_t rleSize = 0;
-    uint16_t prevBit = 0;
-
     /*
-     * Clear the buffer so we only need to set the 1's
+     * Nothing to encode for empty bit vectors
      */
-    memset(rle, 0, len);
-    for (b = 0; b < bv->popCount; ++b) {
-        /*
-         * Run length of consecutive zeroes
-         */
-        uint16_t num0 = bv->setBits[b] - prevBit;
-        /*
-         * Size of the length field
-         */
-        size_t sz = Ceil_Log2(num0 + 1);
-        /*
-         * Adjusted length value to write
-         */
-        uint32_t val = num0 - ((1 << sz) - 1);
-        rleSize += sz;
-        SET_BIT8(rle, rleSize);
-        rleSize++;
-        /*
-         * Write length of the zero run - little endian
-         */
-        while (sz--) {
-            if (val & 1) {
-                SET_BIT8(rle, rleSize);
-            }
-            val >>= 1;
-            rleSize++;
-        }
-        prevBit = bv->setBits[b] + 1;
+    if (bv->rleSize == 0) {
+        return DPS_OK;
     }
+    /*
+     * We only need to set the 1's so clear the buffer
+     */
+    memset(packed, 0, bv->rleSize);
+
+    for (i = 0; i < NUM_CHUNKS; ++i) {
+        uint32_t rem0;
+        chunk_t chunk = bv->bits[i] ^ complement;
+        if (!chunk) {
+            num0 += CHUNK_SIZE;
+            continue;
+        }
+        rem0 = CHUNK_SIZE;
+        while (chunk) {
+            uint32_t val;
+            int tz = COUNT_TZ(chunk);
+            chunk >>= tz;
+            rem0 -= tz + 1;
+            num0 += tz;
+            /*
+             * Size of the length field
+             */
+            sz = Ceil_Log2(num0 + 1);
+            /*
+             * Adjusted length value to write
+             */
+            val = num0 - ((1 << sz) - 1);
+            /*
+             * Skip zeroes
+             */
+            rleSize += sz;
+            SET_BIT8(packed, rleSize);
+            ++rleSize;
+            if ((rleSize + sz) > BITVEC_CONFIG_BIT_LEN) {
+                return DPS_ERR_OVERFLOW;
+            }
+            /*
+             * Write length of the zero run - little endian
+             */
+            while (sz--) {
+                if (val & 1) {
+                    SET_BIT8(packed, rleSize);
+                }
+                val >>= 1;
+                ++rleSize;
+            }
+            chunk >>= 1;
+            num0 = 0;
+        }
+        num0 = rem0;
+    }
+    assert(((rleSize + 7) / 8) == bv->rleSize);
+    return DPS_OK;
 }
 
 #define TOP_UP_THRESHOLD 56
 
-static DPS_Status RunLengthDecode(uint8_t* rle, size_t rleSize, DPS_BitVector* bv, int complement)
+static DPS_Status RunLengthDecode(uint8_t* packed, size_t packedSize, chunk_t* bits)
 {
-    uint16_t bitPos = 0;
+    size_t bitPos = 0;
     uint64_t current;
     size_t currentBits = 0;
-    uint16_t prevBit = 0;
 
-    bv->popCount = 0;
+    memset(bits, 0, BITVEC_CONFIG_BYTE_LEN);
 
-    if (rleSize) {
+    if (packedSize) {
         currentBits = 8;
-        current = *rle++;
-        --rleSize;
+        current = *packed++;
+        --packedSize;
     }
     while (currentBits) {
-        if (bitPos >= DPS_CONFIG_BIT_LEN) {
-            return DPS_ERR_INVALID;
-        }
         /*
          * Keep the current bits above the threshold where we are guaranteed
          * contiguous bits to decode the lengths below.
          */
-        while (rleSize && (currentBits <= TOP_UP_THRESHOLD)) {
-            current |= (((uint64_t)*rle++) << currentBits);
+        while (packedSize && (currentBits <= TOP_UP_THRESHOLD)) {
+            current |= (((uint64_t)*packed++) << currentBits);
             currentBits += 8;
-            --rleSize;
+            --packedSize;
         }
         if (!current) {
-            assert(rleSize == 0);
+            assert(packedSize == 0);
             break;
         }
         if (current & 1) {
@@ -446,7 +462,7 @@ static DPS_Status RunLengthDecode(uint8_t* rle, size_t rleSize, DPS_BitVector* b
             --currentBits;
         } else {
             uint64_t val;
-            uint64_t runLen;
+            uint64_t num0;
             int tz = COUNT_TZ(current);
 
             current >>= (tz + 1);
@@ -460,71 +476,90 @@ static DPS_Status RunLengthDecode(uint8_t* rle, size_t rleSize, DPS_BitVector* b
 #ifdef ENDIAN_SWAP
             val = BSWAP_64(val);
 #endif
-            runLen = val + (((uint64_t)1 << tz) - 1);
-
+            num0 = val + (((uint64_t)1 << tz) - 1);
+            bitPos += num0;
             currentBits -= (1 + tz * 2);
             current >>= tz;
-
-            if (complement) {
-                /* run of 1's */
-                if ((bv->popCount + runLen) >= BITVEC_MAX_BITS) {
-                    return DPS_ERR_RESOURCES;
-                }
-                while (runLen--) {
-                    bv->setBits[bv->popCount++] = bitPos++;
-                }
-            } else {
-                /* run of 0's */
-                bitPos += (uint16_t)runLen;
-                if (bv->popCount >= BITVEC_MAX_BITS) {
-                    return DPS_ERR_RESOURCES;
-                }
-                bv->setBits[bv->popCount++] = bitPos++;
-            }
         }
+        if (bitPos >= BITVEC_CONFIG_BIT_LEN) {
+            return DPS_ERR_INVALID;
+        }
+        SET_BIT(bits, bitPos);
+        ++bitPos;
     }
     return DPS_OK;
 }
 
 DPS_Status DPS_FHBitVectorSerialize(DPS_FHBitVector* bv, DPS_TxBuffer* buffer)
 {
-    DPS_Status ret;
-    uint8_t flags = 0;
-
-    /*
-     * Bit vector is encoded as an array of 3 items
-     * [
-     *    flags (uint),
-     *    bit vector length (uint)
-     *    compressed bit vector (bstr)
-     * ]
-     */
-    ret = CBOR_EncodeArray(buffer, 3);
-    if (ret != DPS_OK) {
-        return ret;
-    }
-    ret = CBOR_EncodeUint(buffer, flags);
-    if (ret != DPS_OK) {
-        return ret;
-    }
-    ret = CBOR_EncodeUint(buffer, FH_BITVECTOR_LEN);
-    if (ret != DPS_OK) {
-        return ret;
-    }
 #ifdef ENDIAN_SWAP
 #error(TODO bit vector endian swapping not implemented)
 #else
-    ret = CBOR_EncodeBytes(buffer, (const uint8_t*)bv->bits, FH_BITVECTOR_LEN / 8);
+    return CBOR_EncodeBytes(buffer, (const uint8_t*)bv->bits, FH_BITVECTOR_LEN);
 #endif
-    return ret;
+}
+
+static uint32_t RLESize(DPS_BitVector* bv)
+{
+    uint32_t i;
+    uint32_t num0 = 0;
+    chunk_t complement = 0;
+
+    if (bv->rleSize) {
+        return bv->rleSize;
+    }
+    /*
+     * If the first pass doesn't compress by at least 50% try compressing the
+     * complement and take the smaller of the two if compression is effective.
+     */
+     while (1) {
+        uint32_t rleSize = 0;
+        for (i = 0; i < NUM_CHUNKS; ++i) {
+            uint32_t rem0;
+            chunk_t chunk = bv->bits[i] ^ complement;
+            if (!chunk) {
+                num0 += CHUNK_SIZE;
+                continue;
+            }
+            rem0 = CHUNK_SIZE;
+            while (chunk) {
+                uint32_t sz;
+                int tz = COUNT_TZ(chunk);
+                chunk >>= tz;
+                rem0 -= tz + 1;
+                num0 += tz;
+                sz = Ceil_Log2(num0 + 1);
+                rleSize += 1 + sz * 2;
+                chunk >>= 1;
+                num0 = 0;
+            }
+            num0 = rem0;
+        }
+        rleSize = (rleSize + 7) / 8;
+        if (complement) {
+            if (rleSize < bv->rleSize) {
+                bv->rleSize = rleSize;
+                bv->serializationFlags = FLAG_RLE_COMPLEMENT | FLAG_RLE_ENCODED;
+            } else if (bv->rleSize >= BITVEC_CONFIG_BYTE_LEN) {
+                bv->rleSize = BITVEC_CONFIG_BYTE_LEN;
+                bv->serializationFlags = 0;
+            }
+            break;
+        }
+        if (rleSize < (BITVEC_CONFIG_BYTE_LEN / 2)) {
+            bv->rleSize = rleSize;
+            bv->serializationFlags = FLAG_RLE_ENCODED;
+            break;
+        }
+        complement = ~0;
+    }
+    return bv->rleSize;
 }
 
 DPS_Status DPS_BitVectorSerialize(DPS_BitVector* bv, DPS_TxBuffer* buffer)
 {
-    size_t len;
     DPS_Status ret;
-    uint8_t* rle;
-    uint8_t flags = FLAG_RLE_ENCODED; /* always RLE encoded in this implementation */
+    size_t rleSize = RLESize(bv);
 
     /*
      * Bit vector is encoded as an array of 3 items
@@ -538,28 +573,55 @@ DPS_Status DPS_BitVectorSerialize(DPS_BitVector* bv, DPS_TxBuffer* buffer)
     if (ret != DPS_OK) {
         return ret;
     }
-    ret = CBOR_EncodeUint(buffer, flags);
+    ret = CBOR_EncodeUint(buffer, bv->serializationFlags);
     if (ret != DPS_OK) {
         return ret;
     }
-    ret = CBOR_EncodeUint(buffer, DPS_CONFIG_BIT_LEN);
+    ret = CBOR_EncodeUint(buffer, BITVEC_CONFIG_BIT_LEN);
     if (ret != DPS_OK) {
         return ret;
     }
-    /*
-     * Reserve space in the buffer and encode the bit vector
-     */
-    len = RLELen(bv);
-    ret = CBOR_ReserveBytes(buffer, len, &rle);
-    if (ret == DPS_OK) {
-        RunLengthEncode(bv, rle, len);
+    if (bv->serializationFlags & FLAG_RLE_ENCODED) {
+        ret = RunLengthEncode(bv, buffer);
+    } else {
+#ifdef ENDIAN_SWAP
+#error(TODO bit vector endian swapping not implemented)
+#else
+        ret = CBOR_EncodeBytes(buffer, (const uint8_t*)bv->bits, BITVEC_CONFIG_BYTE_LEN);
+#endif
     }
     return ret;
 }
 
-size_t DPS_BitVectorSerializedSize(DPS_BitVector* bv)
+size_t DPS_FHBitVectorSerializedSize(DPS_FHBitVector* bv)
 {
-    return CBOR_SIZEOF_ARRAY(3) + CBOR_SIZEOF(uint8_t) + CBOR_SIZEOF(uint32_t) + RLELen(bv);
+    return CBOR_SIZEOF_BYTES(FH_BITVECTOR_LEN / 8);
+}
+
+DPS_Status DPS_FHBitVectorDeserialize(DPS_FHBitVector* bv, DPS_RxBuffer* buffer)
+{
+    uint8_t* data;
+    size_t size;
+    DPS_Status ret;
+
+    ret = CBOR_DecodeBytes(buffer, &data, &size);
+    if (ret == DPS_OK) {
+        if (size == sizeof(bv->bits)) {
+            memcpy(bv->bits, data, size);
+        } else {
+            DPS_ERRPRINT("Deserialized fuzzy hash bit vector has wrong length\n");
+            ret = DPS_ERR_INVALID;
+        }
+    }
+    return ret;
+}
+
+static void BitVectorComplement(DPS_BitVector* bv)
+{
+    size_t i;
+    for (i = 0; i < NUM_CHUNKS; ++i) {
+        bv->bits[i] = ~bv->bits[i];
+    }
 }
 
 DPS_Status DPS_BitVectorDeserialize(DPS_BitVector* bv, DPS_RxBuffer* buffer)
@@ -585,21 +647,23 @@ DPS_Status DPS_BitVectorDeserialize(DPS_BitVector* bv, DPS_RxBuffer* buffer)
     if (ret != DPS_OK) {
         return ret;
     }
-    if (len != DPS_CONFIG_BIT_LEN) {
-        DPS_ERRPRINT("Deserialized bloom filter has wrong size (%d)\n", len);
+    if (len != BITVEC_CONFIG_BIT_LEN) {
+        DPS_ERRPRINT("Deserialized bloom filter has wrong size\n");
         return DPS_ERR_INVALID;
     }
     ret = CBOR_DecodeBytes(buffer, &data, &size);
     if (ret != DPS_OK) {
         return ret;
     }
+    bv->rleSize = (uint32_t)size;
+    bv->serializationFlags = (uint8_t)flags;
     if (flags & FLAG_RLE_ENCODED) {
-        ret = RunLengthDecode(data, size, bv, (flags & FLAG_RLE_COMPLEMENT));
-    } else if (size == DPS_CONFIG_BIT_LEN / 8) {
-        /*
-         * TODO -  Not run-length encoded so probably has too many bits set, but try anyway
-         */
-        ret = DPS_ERR_RESOURCES;
+        ret = RunLengthDecode(data, size, bv->bits);
+        if ((ret == DPS_OK) && (flags & FLAG_RLE_COMPLEMENT)) {
+            BitVectorComplement(bv);
+        }
+    } else if (size == BITVEC_CONFIG_BYTE_LEN) {
+        memcpy(bv->bits, data, size);
     } else {
         DPS_ERRPRINT("Deserialized bloom filter has wrong length\n");
         ret = DPS_ERR_INVALID;
@@ -607,32 +671,63 @@ DPS_Status DPS_BitVectorDeserialize(DPS_BitVector* bv, DPS_RxBuffer* buffer)
     return ret;
 }
 
-void DPS_BitVectorDup(DPS_BitVector* dst, DPS_BitVector* src)
+void DPS_BitVectorFill(DPS_BitVector* bv)
 {
-    memcpy(dst->setBits, src->setBits, sizeof(src->setBits[0]) * src->popCount);
-    dst->popCount = src->popCount;
-}
-
-int DPS_BitVectorIsClear(DPS_BitVector* bv)
-{
-    return bv->popCount == 0;
+    if (bv) {
+        memset(bv->bits, 0xFF, BITVEC_CONFIG_BYTE_LEN);
+        bv->rleSize = BITVEC_CONFIG_BYTE_LEN;
+    }
 }
 
 void DPS_BitVectorClear(DPS_BitVector* bv)
 {
-    bv->popCount = 0;
+    memset(bv, 0, sizeof(DPS_BitVector));
 }
 
-void DPS_BitVectorDump(DPS_BitVector* bv)
+size_t DPS_BitVectorSerializedSize(DPS_BitVector* bv)
 {
-    uint16_t b;
+    size_t rleLen = RLESize(bv);
+    return CBOR_SIZEOF_ARRAY(3) +
+        CBOR_SIZEOF_UINT(bv->serializationFlags) +
+        CBOR_SIZEOF_UINT(BITVEC_CONFIG_BIT_LEN) +
+        CBOR_SIZEOF_BYTES(rleLen);
+}
 
-    DPS_PRINT("[");
-    for (b = 0; b < bv->popCount; ++b) {
-        if (b) {
-            DPS_PRINT(", ");
+#ifdef DPS_DEBUG
+/*
+ * This is a compressed bit dump - it groups bits to keep
+ * the total output readable. This is usually more useful
+ * than dumping raw 8K long bit vectors.
+ */
+static void CompressedBitDump(const chunk_t* data)
+{
+    size_t stride = BITVEC_CONFIG_BIT_LEN / 128;
+    size_t i;
+    for (i = 0; i < BITVEC_CONFIG_BIT_LEN; i += stride) {
+        int bit = 0;
+        int j;
+        for (j = 0; j < stride; ++j) {
+            if (TEST_BIT(data, i + j)) {
+                bit = 1;
+                break;
+            }
         }
-        DPS_PRINT("%d", bv->setBits[b]);
+        putc(bit ? '1' : '0', stderr);
     }
-    DPS_PRINT("]\n");
+    putc('\n', stderr);
+}
+#endif
+
+void DPS_BitVectorDump(DPS_BitVector* bv, int dumpBits)
+{
+    if (DPS_DEBUG_ENABLED()) {
+        DPS_PRINT("Pop = %u, ", DPS_BitVectorPopCount(bv));
+        DPS_PRINT("RLE bytes = %u, ", RLESize(bv));
+        DPS_PRINT("Loading = %.2f%%\n", (100.0 * DPS_BitVectorPopCount(bv) + 1.0) / BITVEC_CONFIG_BIT_LEN);
+#ifdef DPS_DEBUG
+        if (dumpBits) {
+            CompressedBitDump(bv->bits);
+        }
+#endif
+    }
 }

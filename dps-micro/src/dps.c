@@ -46,6 +46,9 @@ static DPS_Status DecodeRequest(DPS_Node* node, DPS_RxBuffer* buf)
     uint8_t msgType;
     size_t len;
 
+    /* Free the temporary pool */
+    DPS_TxBufferFreePool(node, DPS_TMP_POOL);
+
     CBOR_Dump("Request in", buf->rxPos, DPS_RxBufferAvail(buf));
     ret = CBOR_DecodeArray(buf, &len);
     if (ret != DPS_OK || (len != 5)) {
