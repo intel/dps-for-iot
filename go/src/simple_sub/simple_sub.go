@@ -9,31 +9,8 @@ import (
 	"time"
 )
 
-var (
-	keyStore dps.KeyStore
-	node     *dps.Node
-	sub      *dps.Subscription
-)
-
-func onPub(sub *dps.Subscription, pub *dps.Publication, payload []byte) {
-	fmt.Printf("Pub %v(%v) matches:\n", dps.PublicationGetUUID(pub), dps.PublicationGetSequenceNum(pub))
-	fmt.Printf("  pub %v\n", strings.Join(dps.PublicationGetTopics(pub), " | "))
-	fmt.Printf("  sub %v\n", strings.Join(dps.SubscriptionGetTopics(sub), " | "))
-	fmt.Printf("%v\n", string(payload))
-	if dps.PublicationIsAckRequested(pub) {
-		ackMsg := fmt.Sprintf("This is an ACK from %v", dps.GetPortNumber(dps.PublicationGetNode(pub)))
-		fmt.Printf("Sending ack for pub UUID %v(%v)\n", dps.PublicationGetUUID(pub), dps.PublicationGetSequenceNum(pub))
-		fmt.Printf("    %v\n", ackMsg)
-		dps.AckPublication(pub, []byte(ackMsg))
-	}
-}
-
-func onDestroy(node *dps.Node) {
-	dps.DestroyKeyStore(keyStore)
-}
-
 func main() {
-	/* Pre-shared keys for testing only. DO NOT USE THESE KEYS IN A REAL APPLICATION! */
+	// Pre-shared keys for testing only. DO NOT USE THESE KEYS IN A REAL APPLICATION!
 	networkKeyId := dps.KeyId{
 		0x4c, 0xfc, 0x6b, 0x75, 0x0f, 0x80, 0x95, 0xb3, 0x6c, 0xb7, 0xc1, 0x2f, 0x65, 0x2d, 0x38, 0x26,
 	}
@@ -114,7 +91,7 @@ func main() {
 	}
 
 	var nodeId []byte
-	keyStore = dps.CreateMemoryKeyStore()
+	keyStore := dps.CreateMemoryKeyStore()
 	dps.SetNetworkKey(keyStore, networkKeyId, networkKey)
 	if encryption == 0 {
 		nodeId = nil
@@ -130,12 +107,23 @@ func main() {
 		nodeId = []byte(subscriberId)
 	}
 
-	node = dps.CreateNode("/", keyStore, nodeId)
+	node := dps.CreateNode("/", keyStore, nodeId)
 	dps.StartNode(node, dps.MCAST_PUB_ENABLE_RECV, 0)
 	fmt.Printf("Subscriber is listening on port %v\n", dps.GetPortNumber(node))
 
-	sub = dps.CreateSubscription(node, []string{"a/b/c"})
-	dps.Subscribe(sub, onPub)
+	sub := dps.CreateSubscription(node, []string{"a/b/c"})
+	dps.Subscribe(sub, func(sub *dps.Subscription, pub *dps.Publication, payload []byte) {
+		fmt.Printf("Pub %v(%v) matches:\n", dps.PublicationGetUUID(pub), dps.PublicationGetSequenceNum(pub))
+		fmt.Printf("  pub %v\n", strings.Join(dps.PublicationGetTopics(pub), " | "))
+		fmt.Printf("  sub %v\n", strings.Join(dps.SubscriptionGetTopics(sub), " | "))
+		fmt.Printf("%v\n", string(payload))
+		if dps.PublicationIsAckRequested(pub) {
+			ackMsg := fmt.Sprintf("This is an ACK from %v", dps.GetPortNumber(dps.PublicationGetNode(pub)))
+			fmt.Printf("Sending ack for pub UUID %v(%v)\n", dps.PublicationGetUUID(pub), dps.PublicationGetSequenceNum(pub))
+			fmt.Printf("    %v\n", ackMsg)
+			dps.AckPublication(pub, []byte(ackMsg))
+		}
+	})
 
 	for {
 		time.Sleep(1 * time.Second)

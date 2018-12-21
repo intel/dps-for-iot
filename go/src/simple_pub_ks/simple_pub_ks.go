@@ -11,29 +11,33 @@ import (
 	"time"
 )
 
-var (
-	keyStore dps.KeyStore
-	node     *dps.Node
-	pub      *dps.Publication
-	/* Pre-shared keys for testing only. DO NOT USE THESE KEYS IN A REAL APPLICATION! */
-	networkKeyId = dps.KeyId{
+func pad(in []byte, n int) (out []byte) {
+	out = make([]byte, n)
+	low := len(out) - len(in)
+	copy(out[low:], in)
+	return
+}
+
+func main() {
+	// Pre-shared keys for testing only. DO NOT USE THESE KEYS IN A REAL APPLICATION!
+	networkKeyId := dps.KeyId{
 		0x4c, 0xfc, 0x6b, 0x75, 0x0f, 0x80, 0x95, 0xb3, 0x6c, 0xb7, 0xc1, 0x2f, 0x65, 0x2d, 0x38, 0x26,
 	}
-	networkKey = dps.KeySymmetric{
+	networkKey := dps.KeySymmetric{
 		0x11, 0x21, 0xbb, 0xf4, 0x9f, 0x5e, 0xe5, 0x5a, 0x11, 0x86, 0x47, 0xe6, 0x3d, 0xc6, 0x59, 0xa4,
 		0xc3, 0x1f, 0x16, 0x56, 0x7f, 0x1f, 0xb8, 0x4d, 0xe1, 0x09, 0x28, 0x26, 0xd5, 0xc0, 0xf1, 0x34,
 	}
-	keyId = []dps.KeyId{
+	keyId := []dps.KeyId{
 		dps.KeyId{0xed, 0x54, 0x14, 0xa8, 0x5c, 0x4d, 0x4d, 0x15, 0xb6, 0x9f, 0x0e, 0x99, 0x8a, 0xb1, 0x71, 0xf2},
 		dps.KeyId{0x53, 0x4d, 0x2a, 0x4b, 0x98, 0x76, 0x1f, 0x25, 0x6b, 0x78, 0x3c, 0xc2, 0xf8, 0x12, 0x90, 0xcc},
 	}
-	keyData = []dps.KeySymmetric{
+	keyData := []dps.KeySymmetric{
 		dps.KeySymmetric{0xf6, 0xeb, 0xcb, 0xa4, 0x25, 0xdb, 0x3b, 0x7e, 0x73, 0x03, 0xe6, 0x9c, 0x60, 0x35, 0xae, 0x11,
 			0xae, 0x40, 0x0b, 0x84, 0xf0, 0x03, 0xcc, 0xf9, 0xce, 0x5c, 0x5f, 0xd0, 0xae, 0x51, 0x0a, 0xcc},
 		dps.KeySymmetric{0x2a, 0x93, 0xff, 0x6d, 0x96, 0x7e, 0xb3, 0x20, 0x85, 0x80, 0x0e, 0x21, 0xb0, 0x7f, 0xa7, 0xbe,
 			0x3f, 0x53, 0x68, 0x57, 0xf9, 0x3c, 0x7a, 0x41, 0x59, 0xab, 0x22, 0x2c, 0xf8, 0xcf, 0x08, 0x21},
 	}
-	ca = "-----BEGIN CERTIFICATE-----\r\n" +
+	ca := "-----BEGIN CERTIFICATE-----\r\n" +
 		"MIICJjCCAYegAwIBAgIJAOtGcTaglPb0MAoGCCqGSM49BAMCMCoxCzAJBgNVBAYT\r\n" +
 		"AlVTMQwwCgYDVQQKDANEUFMxDTALBgNVBAMMBHJvb3QwHhcNMTgwMzAxMTgxNDMy\r\n" +
 		"WhcNMjgwMjI3MTgxNDMyWjAqMQswCQYDVQQGEwJVUzEMMAoGA1UECgwDRFBTMQ0w\r\n" +
@@ -47,8 +51,8 @@ var (
 		"riJlVcRKAkIBIhqssJD6XDlyV42a989vmuB52FGsBayiIkoJgzeoTZLLoGFtddpg\r\n" +
 		"KNuru7XZOpdiszeXTDSPY7gmvYZGhLr58ng=\r\n" +
 		"-----END CERTIFICATE-----\r\n"
-	publisherId   = "DPS Test Publisher"
-	publisherCert = "-----BEGIN CERTIFICATE-----\r\n" +
+	publisherId := "DPS Test Publisher"
+	publisherCert := "-----BEGIN CERTIFICATE-----\r\n" +
 		"MIIB2jCCATsCCQDtkL14u3NJRDAKBggqhkjOPQQDBDAqMQswCQYDVQQGEwJVUzEM\r\n" +
 		"MAoGA1UECgwDRFBTMQ0wCwYDVQQDDARyb290MB4XDTE4MDMwMTE4MTQzMloXDTI4\r\n" +
 		"MDIyNzE4MTQzMlowODELMAkGA1UEBhMCVVMxDDAKBgNVBAoMA0RQUzEbMBkGA1UE\r\n" +
@@ -60,7 +64,7 @@ var (
 		"8/82J1qlTw5GSR0snR4R5663D2s3w2e9fIwCQgCp3K8Y7fTPdpwOy91clBr3OFHK\r\n" +
 		"sMt3kjq1vrcbVzZy50hGyGxjUqZHUi87/KuhkcMKSqDC6U7jEiEpv/WNH/VrZQ==\r\n" +
 		"-----END CERTIFICATE-----\r\n"
-	publisherPrivateKey = "-----BEGIN EC PRIVATE KEY-----\r\n" +
+	publisherPrivateKey := "-----BEGIN EC PRIVATE KEY-----\r\n" +
 		"Proc-Type: 4,ENCRYPTED\r\n" +
 		"DEK-Info: AES-256-CBC,F0004AF499EA7B8A7252B286E3274508\r\n" +
 		"\r\n" +
@@ -70,9 +74,9 @@ var (
 		"vPIAyubRAwG+M+wtCxoG9kvwA2TpriwTPb3HaTtefXcaxM8ijS/VQa5mFjphSeUn\r\n" +
 		"BcrDGodlTMw9klV0eJpmDKUrpiXqExhzCsS33jK9YuM=\r\n" +
 		"-----END EC PRIVATE KEY-----\r\n"
-	publisherPassword = "DPS Test Publisher"
-	subscriberId      = "DPS Test Subscriber"
-	subscriberCert    = "-----BEGIN CERTIFICATE-----\r\n" +
+	publisherPassword := "DPS Test Publisher"
+	subscriberId := "DPS Test Subscriber"
+	subscriberCert := "-----BEGIN CERTIFICATE-----\r\n" +
 		"MIIB2jCCATwCCQDtkL14u3NJRTAKBggqhkjOPQQDBDAqMQswCQYDVQQGEwJVUzEM\r\n" +
 		"MAoGA1UECgwDRFBTMQ0wCwYDVQQDDARyb290MB4XDTE4MDMwMTE4MTQzMloXDTI4\r\n" +
 		"MDIyNzE4MTQzMlowOTELMAkGA1UEBhMCVVMxDDAKBgNVBAoMA0RQUzEcMBoGA1UE\r\n" +
@@ -84,75 +88,58 @@ var (
 		"R+AJhf+Slik1tMQePTB5OojwrRYjw40iEDoCQgE6rg0vAE2AZVLYfVsz01we+Rov\r\n" +
 		"L8bFbjmY7xtqNCqRgCP7Nb/DLED8ahqo+uI7tPx5EqxDWj0FdxewZnbnBorBug==\r\n" +
 		"-----END CERTIFICATE-----\r\n"
-)
 
-func onKeyAndId(request *dps.KeyStoreRequest) int {
-	return dps.SetKeyAndId(request, dps.KeySymmetric(networkKey), networkKeyId)
-}
-func onKey(request *dps.KeyStoreRequest, id dps.KeyId) int {
-	for i := 0; i < len(keyId); i++ {
-		if bytes.Compare(keyId[i], id) == 0 {
-			return dps.SetKey(request, dps.KeySymmetric(keyData[i]))
-		}
+	onKeyAndId := func(request *dps.KeyStoreRequest) int {
+		return dps.SetKeyAndId(request, dps.KeySymmetric(networkKey), networkKeyId)
 	}
-	if bytes.Compare(networkKeyId, id) == 0 {
-		return dps.SetKey(request, dps.KeySymmetric(networkKey))
-	}
-	if bytes.Compare([]byte(publisherId), id) == 0 {
-		return dps.SetKey(request, dps.KeyCert{publisherCert, publisherPrivateKey, publisherPassword})
-	}
-	if bytes.Compare([]byte(subscriberId), id) == 0 {
-		return dps.SetKey(request, dps.KeyCert{subscriberCert, "", ""})
-	}
-	return dps.ERR_MISSING
-}
-func pad(in []byte, n int) (out []byte) {
-	out = make([]byte, n)
-	low := len(out) - len(in)
-	copy(out[low:], in)
-	return
-}
-func onEphemeralKey(request *dps.KeyStoreRequest, key dps.Key) int {
-	switch key.(type) {
-	case dps.KeySymmetric:
-		k := make([]byte, 32)
-		_, err := rand.Read(k)
-		if err != nil {
-			return dps.ERR_FAILURE
+	onKey := func(request *dps.KeyStoreRequest, id dps.KeyId) int {
+		for i := 0; i < len(keyId); i++ {
+			if bytes.Compare(keyId[i], id) == 0 {
+				return dps.SetKey(request, dps.KeySymmetric(keyData[i]))
+			}
 		}
-		return dps.SetKey(request, dps.KeySymmetric(k))
-	case dps.KeyEC:
-		var curve elliptic.Curve
-		keyEC, _ := key.(dps.KeyEC)
-		if keyEC.Curve == dps.EC_CURVE_P384 {
-			curve = elliptic.P384()
-		} else if keyEC.Curve == dps.EC_CURVE_P521 {
-			curve = elliptic.P521()
+		if bytes.Compare(networkKeyId, id) == 0 {
+			return dps.SetKey(request, dps.KeySymmetric(networkKey))
 		}
-		d, x, y, err := elliptic.GenerateKey(curve, rand.Reader)
-		if err != nil {
-			return dps.ERR_FAILURE
+		if bytes.Compare([]byte(publisherId), id) == 0 {
+			return dps.SetKey(request, dps.KeyCert{publisherCert, publisherPrivateKey, publisherPassword})
 		}
-		n := (curve.Params().BitSize + 7) / 8
-		return dps.SetKey(request, dps.KeyEC{keyEC.Curve, pad(x.Bytes(), n), pad(y.Bytes(), n), pad(d, n)})
-	default:
+		if bytes.Compare([]byte(subscriberId), id) == 0 {
+			return dps.SetKey(request, dps.KeyCert{subscriberCert, "", ""})
+		}
 		return dps.ERR_MISSING
 	}
-}
-func onCA(request *dps.KeyStoreRequest) int {
-	return dps.SetCA(request, ca)
-}
+	onEphemeralKey := func(request *dps.KeyStoreRequest, key dps.Key) int {
+		switch key.(type) {
+		case dps.KeySymmetric:
+			k := make([]byte, 32)
+			_, err := rand.Read(k)
+			if err != nil {
+				return dps.ERR_FAILURE
+			}
+			return dps.SetKey(request, dps.KeySymmetric(k))
+		case dps.KeyEC:
+			var curve elliptic.Curve
+			keyEC, _ := key.(dps.KeyEC)
+			if keyEC.Curve == dps.EC_CURVE_P384 {
+				curve = elliptic.P384()
+			} else if keyEC.Curve == dps.EC_CURVE_P521 {
+				curve = elliptic.P521()
+			}
+			d, x, y, err := elliptic.GenerateKey(curve, rand.Reader)
+			if err != nil {
+				return dps.ERR_FAILURE
+			}
+			n := (curve.Params().BitSize + 7) / 8
+			return dps.SetKey(request, dps.KeyEC{keyEC.Curve, pad(x.Bytes(), n), pad(y.Bytes(), n), pad(d, n)})
+		default:
+			return dps.ERR_MISSING
+		}
+	}
+	onCA := func(request *dps.KeyStoreRequest) int {
+		return dps.SetCA(request, ca)
+	}
 
-func onAck(pub *dps.Publication, payload []byte) {
-	fmt.Printf("Ack for pub UUID %v(%v)\n", dps.PublicationGetUUID(pub), dps.PublicationGetSequenceNum(pub))
-	fmt.Printf("    %v\n", string(payload))
-}
-
-func onDestroy(node *dps.Node) {
-	dps.DestroyKeyStore(keyStore)
-}
-
-func main() {
 	dps.SetDebug(0)
 	encryption := 1
 	for i := 0; i < len(os.Args); i++ {
@@ -164,6 +151,7 @@ func main() {
 		}
 	}
 
+	var keyStore dps.KeyStore
 	var nodeId, pubKeyId []byte
 	if encryption == 0 {
 		keyStore = dps.CreateKeyStore(onKeyAndId, onKey, onEphemeralKey, nil)
@@ -179,13 +167,16 @@ func main() {
 		pubKeyId = []byte(subscriberId)
 	}
 
-	node = dps.CreateNode("/", keyStore, nodeId)
+	node := dps.CreateNode("/", keyStore, nodeId)
 	dps.StartNode(node, dps.MCAST_PUB_ENABLE_SEND, 0)
 	fmt.Printf("Publisher is listening on port %v\n", dps.GetPortNumber(node))
 
-	pub = dps.CreatePublication(node)
+	pub := dps.CreatePublication(node)
 
-	dps.InitPublication(pub, []string{"a/b/c"}, false, nil, onAck)
+	dps.InitPublication(pub, []string{"a/b/c"}, false, nil, func(pub *dps.Publication, payload []byte) {
+		fmt.Printf("Ack for pub UUID %v(%v)\n", dps.PublicationGetUUID(pub), dps.PublicationGetSequenceNum(pub))
+		fmt.Printf("    %v\n", string(payload))
+	})
 	dps.PublicationAddSubId(pub, pubKeyId)
 	dps.Publish(pub, []byte("hello"), 0)
 	fmt.Printf("Pub UUID %v(%v)\n", dps.PublicationGetUUID(pub), dps.PublicationGetSequenceNum(pub))
@@ -195,5 +186,7 @@ func main() {
 	time.Sleep(100 * time.Millisecond)
 
 	dps.DestroyPublication(pub)
-	dps.DestroyNode(node, onDestroy)
+	dps.DestroyNode(node, func(node *dps.Node) {
+		dps.DestroyKeyStore(keyStore)
+	})
 }

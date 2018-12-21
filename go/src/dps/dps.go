@@ -3,6 +3,7 @@ package dps
 import (
 	"net"
 	"strconv"
+	"sync"
 	"unsafe"
 )
 
@@ -124,40 +125,40 @@ import (
          }
  }
 
- extern void goOnNodeDestroyed(DPS_Node* node, void* data);
+ extern void goOnNodeDestroyed(DPS_Node* node, uintptr_t data);
  static void onNodeDestroyed(DPS_Node* node, void* data) {
-         goOnNodeDestroyed(node, data);
+         goOnNodeDestroyed(node, (uintptr_t)data);
  }
 
- static DPS_Status destroyNode(DPS_Node* node, void* data) {
-         return DPS_DestroyNode(node, onNodeDestroyed, data);
+ static DPS_Status destroyNode(DPS_Node* node, uintptr_t data) {
+         return DPS_DestroyNode(node, onNodeDestroyed, (void*)data);
  }
 
- extern void goOnLinkComplete(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, void* data);
+ extern void goOnLinkComplete(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, uintptr_t data);
  static void onLinkComplete(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, void* data) {
-         goOnLinkComplete(node, addr, status, data);
+         goOnLinkComplete(node, addr, status, (uintptr_t)data);
  }
 
- static DPS_Status link(DPS_Node* node, DPS_NodeAddress* addr, void* data) {
-         return DPS_Link(node, addr, onLinkComplete, data);
+ static DPS_Status link(DPS_Node* node, DPS_NodeAddress* addr, uintptr_t data) {
+         return DPS_Link(node, addr, onLinkComplete, (void*)data);
  }
 
- extern void goOnUnlinkComplete(DPS_Node* node, DPS_NodeAddress* addr, void* data);
+ extern void goOnUnlinkComplete(DPS_Node* node, DPS_NodeAddress* addr, uintptr_t data);
  static void onUnlinkComplete(DPS_Node* node, DPS_NodeAddress* addr, void* data) {
-         goOnUnlinkComplete(node, addr, data);
+         goOnUnlinkComplete(node, addr, (uintptr_t)data);
  }
 
- static DPS_Status unlink(DPS_Node* node, DPS_NodeAddress* addr, void* data) {
-         return DPS_Unlink(node, addr, onUnlinkComplete, data);
+ static DPS_Status unlink(DPS_Node* node, DPS_NodeAddress* addr, uintptr_t data) {
+         return DPS_Unlink(node, addr, onUnlinkComplete, (void*)data);
  }
 
- extern void goOnResolveAddressComplete(DPS_Node* node, DPS_NodeAddress* addr, void* data);
+ extern void goOnResolveAddressComplete(DPS_Node* node, DPS_NodeAddress* addr, uintptr_t data);
  static void onResolveAddressComplete(DPS_Node* node, DPS_NodeAddress* addr, void* data) {
-         goOnResolveAddressComplete(node, addr, data);
+         goOnResolveAddressComplete(node, addr, (uintptr_t)data);
  }
 
- static DPS_Status resolveAddress(DPS_Node* node, char* host, char* service, void* data) {
-         return DPS_ResolveAddress(node, host, service, onResolveAddressComplete, data);
+ static DPS_Status resolveAddress(DPS_Node* node, char* host, char* service, uintptr_t data) {
+         return DPS_ResolveAddress(node, host, service, onResolveAddressComplete, (void*)data);
  }
 
  static char** makeTopics(size_t n) {
@@ -195,6 +196,41 @@ import (
  }
 */
 import "C"
+
+// need a registry to hold onto Go values used inside DPS else they may get gc'd
+type registry struct {
+	mutex  sync.Mutex
+	values map[uintptr]interface{}
+	handle uintptr
+}
+
+func makeRegistry() (r *registry) {
+	r = new(registry)
+	r.values = make(map[uintptr]interface{})
+	return
+}
+func (r *registry) register(fn interface{}) uintptr {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+	r.handle++
+	for r.handle != 0 && r.values[r.handle] != nil {
+		r.handle++
+	}
+	r.values[r.handle] = fn
+	return r.handle
+}
+func (r *registry) unregister(handle uintptr) {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+	delete(r.values, handle)
+}
+func (r *registry) lookup(handle uintptr) interface{} {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+	return r.values[handle]
+}
+
+var reg = makeRegistry()
 
 func Debug() int {
 	return int(C.DPS_Debug)
@@ -284,10 +320,11 @@ type EphemeralKeyHandler func(request *KeyStoreRequest, key Key) int
 type CAHandler func(request *KeyStoreRequest) int
 
 type KeyStore interface {
-	handle() *C.DPS_KeyStore
+	chandle() *C.DPS_KeyStore
 }
 
 type userKeyStore struct {
+	handle              uintptr
 	ckeyStore           *C.DPS_KeyStore
 	keyAndIdHandler     KeyAndIdHandler
 	keyHandler          KeyHandler
@@ -295,7 +332,7 @@ type userKeyStore struct {
 	caHandler           CAHandler
 }
 
-func (ks userKeyStore) handle() *C.DPS_KeyStore { return ks.ckeyStore }
+func (ks userKeyStore) chandle() *C.DPS_KeyStore { return ks.ckeyStore }
 
 func makeKey(key Key) *C.DPS_Key {
 	// no defer below, freeKey will take care of the memory
@@ -356,22 +393,28 @@ func SetCA(request *KeyStoreRequest, ca string) int {
 	defer C.free(unsafe.Pointer(cca))
 	return int(C.DPS_SetCA(crequest, cca))
 }
-func KeyStoreHandle(request *KeyStoreRequest) *KeyStore {
+func KeyStoreHandle(request *KeyStoreRequest) KeyStore {
 	crequest := (*C.DPS_KeyStoreRequest)(request)
 	ckeyStore := C.DPS_KeyStoreHandle(crequest)
-	return (*KeyStore)(C.DPS_GetKeyStoreData(ckeyStore))
+	ks, ok := reg.lookup(uintptr(C.DPS_GetKeyStoreData(ckeyStore))).(*userKeyStore)
+	if ok {
+		return ks
+	} else {
+		return nil
+	}
 }
 func CreateKeyStore(keyAndIdHandler KeyAndIdHandler, keyHandler KeyHandler,
 	ephemeralKeyHandler EphemeralKeyHandler, caHandler CAHandler) (keyStore KeyStore) {
 	ckeyStore := C.createKeyStore()
 	if ckeyStore != nil {
 		ks := new(userKeyStore)
+		ks.handle = reg.register(ks)
 		ks.ckeyStore = ckeyStore
 		ks.keyAndIdHandler = keyAndIdHandler
 		ks.keyHandler = keyHandler
 		ks.ephemeralKeyHandler = ephemeralKeyHandler
 		ks.caHandler = caHandler
-		C.DPS_SetKeyStoreData(ckeyStore, unsafe.Pointer(ks))
+		C.DPS_SetKeyStoreData(ckeyStore, unsafe.Pointer(ks.handle))
 		keyStore = ks
 	}
 	return
@@ -380,6 +423,7 @@ func DestroyKeyStore(keyStore KeyStore) {
 	switch keyStore.(type) {
 	case *userKeyStore:
 		ks, _ := keyStore.(*userKeyStore)
+		reg.unregister(ks.handle)
 		cks := (*C.DPS_KeyStore)(ks.ckeyStore)
 		C.DPS_DestroyKeyStore(cks)
 	case *memoryKeyStore:
@@ -393,27 +437,34 @@ func DestroyKeyStore(keyStore KeyStore) {
 func goKeyAndIdHandler(crequest *C.DPS_KeyStoreRequest) C.DPS_Status {
 	request := (*KeyStoreRequest)(crequest)
 	ckeyStore := (*C.DPS_KeyStore)(C.DPS_KeyStoreHandle(crequest))
-	ks := (*userKeyStore)(C.DPS_GetKeyStoreData(ckeyStore))
-	return C.DPS_Status(ks.keyAndIdHandler(request))
+	ks, ok := reg.lookup(uintptr(C.DPS_GetKeyStoreData(ckeyStore))).(*userKeyStore)
+	if ok {
+		return C.DPS_Status(ks.keyAndIdHandler(request))
+	} else {
+		return ERR_FAILURE
+	}
 }
 
 //export goKeyHandler
 func goKeyHandler(crequest *C.DPS_KeyStoreRequest, ckeyId *C.DPS_KeyId) C.DPS_Status {
 	request := (*KeyStoreRequest)(crequest)
 	ckeyStore := (*C.DPS_KeyStore)(C.DPS_KeyStoreHandle(crequest))
-	ks := (*userKeyStore)(C.DPS_GetKeyStoreData(ckeyStore))
 	var keyId KeyId
 	if ckeyId != nil {
 		keyId = (*[1 << 30]byte)(unsafe.Pointer(ckeyId.id))[:ckeyId.len:ckeyId.len]
 	}
-	return C.DPS_Status(ks.keyHandler(request, keyId))
+	ks, ok := reg.lookup(uintptr(C.DPS_GetKeyStoreData(ckeyStore))).(*userKeyStore)
+	if ok {
+		return C.DPS_Status(ks.keyHandler(request, keyId))
+	} else {
+		return ERR_FAILURE
+	}
 }
 
 //export goEphemeralKeyHandler
 func goEphemeralKeyHandler(crequest *C.DPS_KeyStoreRequest, ckey *C.DPS_Key) C.DPS_Status {
 	request := (*KeyStoreRequest)(crequest)
 	ckeyStore := (*C.DPS_KeyStore)(C.DPS_KeyStoreHandle(crequest))
-	ks := (*userKeyStore)(C.DPS_GetKeyStoreData(ckeyStore))
 	var key Key
 	switch ckey._type {
 	case C.DPS_KEY_SYMMETRIC:
@@ -448,22 +499,31 @@ func goEphemeralKeyHandler(crequest *C.DPS_KeyStoreRequest, ckey *C.DPS_Key) C.D
 		}
 		key = KeyCert{C.GoString(cert.cert), privateKey, password}
 	}
-	return C.DPS_Status(ks.ephemeralKeyHandler(request, key))
+	ks, ok := reg.lookup(uintptr(C.DPS_GetKeyStoreData(ckeyStore))).(*userKeyStore)
+	if ok {
+		return C.DPS_Status(ks.ephemeralKeyHandler(request, key))
+	} else {
+		return ERR_FAILURE
+	}
 }
 
 //export goCAHandler
 func goCAHandler(crequest *C.DPS_KeyStoreRequest) C.DPS_Status {
 	request := (*KeyStoreRequest)(crequest)
 	ckeyStore := (*C.DPS_KeyStore)(C.DPS_KeyStoreHandle(crequest))
-	ks := (*userKeyStore)(C.DPS_GetKeyStoreData(ckeyStore))
-	return C.DPS_Status(ks.caHandler(request))
+	ks, ok := reg.lookup(uintptr(C.DPS_GetKeyStoreData(ckeyStore))).(*userKeyStore)
+	if ok {
+		return C.DPS_Status(ks.caHandler(request))
+	} else {
+		return ERR_FAILURE
+	}
 }
 
 type memoryKeyStore struct {
 	ckeyStore *C.DPS_MemoryKeyStore
 }
 
-func (ks memoryKeyStore) handle() *C.DPS_KeyStore {
+func (ks memoryKeyStore) chandle() *C.DPS_KeyStore {
 	return C.DPS_MemoryKeyStoreHandle((*C.DPS_MemoryKeyStore)(ks.ckeyStore))
 }
 
@@ -535,7 +595,7 @@ type Node C.DPS_Node
 func CreateNode(separators string, keyStore KeyStore, keyId KeyId) *Node {
 	cseparators := C.CString(separators)
 	defer C.free(unsafe.Pointer(cseparators))
-	ckeyStore := keyStore.handle()
+	ckeyStore := keyStore.chandle()
 	var ckeyId *C.DPS_KeyId
 	if len(keyId) > 0 {
 		ckeyId = C.makeKeyId((*C.uint8_t)(&keyId[0]), C.size_t(len(keyId)))
@@ -553,13 +613,17 @@ type OnNodeDestroyed func(*Node)
 
 func DestroyNode(node *Node, cb OnNodeDestroyed) int {
 	cnode := (*C.DPS_Node)(node)
-	return int(C.destroyNode(cnode, unsafe.Pointer(&cb)))
+	handle := reg.register(cb)
+	return int(C.destroyNode(cnode, C.uintptr_t(handle)))
 }
 
 //export goOnNodeDestroyed
-func goOnNodeDestroyed(cnode *C.DPS_Node, data unsafe.Pointer) {
-	cb := (*OnNodeDestroyed)(data)
-	(*cb)((*Node)(cnode))
+func goOnNodeDestroyed(cnode *C.DPS_Node, handle uintptr) {
+	cb, ok := reg.lookup(handle).(OnNodeDestroyed)
+	if ok {
+		cb((*Node)(cnode))
+		reg.unregister(handle)
+	}
 }
 
 func SetNodeSubscriptionUpdateDelay(node *Node, subsRateMsecs uint32) {
@@ -577,15 +641,19 @@ type OnLinkComplete func(node *Node, addr *NodeAddress, status int)
 func Link(node *Node, addr *NodeAddress, cb OnLinkComplete) int {
 	cnode := (*C.DPS_Node)(node)
 	caddr := (*C.DPS_NodeAddress)(addr)
-	return int(C.link(cnode, caddr, unsafe.Pointer(&cb)))
+	handle := reg.register(cb)
+	return int(C.link(cnode, caddr, C.uintptr_t(handle)))
 }
 
 //export goOnLinkComplete
-func goOnLinkComplete(cnode *C.DPS_Node, caddr *C.DPS_NodeAddress, status C.DPS_Status, data unsafe.Pointer) {
+func goOnLinkComplete(cnode *C.DPS_Node, caddr *C.DPS_NodeAddress, status C.DPS_Status, handle uintptr) {
 	node := (*Node)(cnode)
 	addr := (*NodeAddress)(caddr)
-	cb := (*OnLinkComplete)(data)
-	(*cb)(node, addr, int(status))
+	cb, ok := reg.lookup(handle).(OnLinkComplete)
+	if ok {
+		cb(node, addr, int(status))
+		reg.unregister(handle)
+	}
 }
 
 type OnUnlinkComplete func(node *Node, addr *NodeAddress)
@@ -593,15 +661,19 @@ type OnUnlinkComplete func(node *Node, addr *NodeAddress)
 func Unlink(node *Node, addr *NodeAddress, cb OnUnlinkComplete) int {
 	cnode := (*C.DPS_Node)(node)
 	caddr := (*C.DPS_NodeAddress)(addr)
-	return int(C.unlink(cnode, caddr, unsafe.Pointer(&cb)))
+	handle := reg.register(cb)
+	return int(C.unlink(cnode, caddr, C.uintptr_t(handle)))
 }
 
 //export goOnUnlinkComplete
-func goOnUnlinkComplete(cnode *C.DPS_Node, caddr *C.DPS_NodeAddress, data unsafe.Pointer) {
+func goOnUnlinkComplete(cnode *C.DPS_Node, caddr *C.DPS_NodeAddress, handle uintptr) {
 	node := (*Node)(cnode)
 	addr := (*NodeAddress)(caddr)
-	cb := (*OnUnlinkComplete)(data)
-	(*cb)(node, addr)
+	cb, ok := reg.lookup(handle).(OnUnlinkComplete)
+	if ok {
+		cb(node, addr)
+		reg.unregister(handle)
+	}
 }
 
 type OnResolveAddressComplete func(node *Node, addr *NodeAddress)
@@ -612,18 +684,23 @@ func ResolveAddress(node *Node, host string, service string, cb OnResolveAddress
 	defer C.free(unsafe.Pointer(chost))
 	cservice := C.CString(service)
 	defer C.free(unsafe.Pointer(cservice))
-	return int(C.resolveAddress(cnode, chost, cservice, unsafe.Pointer(&cb)))
+	handle := reg.register(cb)
+	return int(C.resolveAddress(cnode, chost, cservice, C.uintptr_t(handle)))
 }
 
 //export goOnResolveAddressComplete
-func goOnResolveAddressComplete(cnode *C.DPS_Node, caddr *C.DPS_NodeAddress, data unsafe.Pointer) {
+func goOnResolveAddressComplete(cnode *C.DPS_Node, caddr *C.DPS_NodeAddress, handle uintptr) {
 	node := (*Node)(cnode)
 	addr := (*NodeAddress)(caddr)
-	cb := (*OnResolveAddressComplete)(data)
-	(*cb)(node, addr)
+	cb, ok := reg.lookup(handle).(OnResolveAddressComplete)
+	if ok {
+		cb(node, addr)
+		reg.unregister(handle)
+	}
 }
 
 type Publication struct {
+	handle  uintptr
 	cpub    *C.DPS_Publication
 	handler AcknowledgementHandler
 }
@@ -665,15 +742,17 @@ func PublicationGetNode(pub *Publication) *Node {
 func CreatePublication(node *Node) (pub *Publication) {
 	cnode := (*C.DPS_Node)(node)
 	pub = new(Publication)
+	pub.handle = reg.register(pub)
 	pub.cpub = C.DPS_CreatePublication(cnode)
-	C.DPS_SetPublicationData(pub.cpub, unsafe.Pointer(pub))
+	C.DPS_SetPublicationData(pub.cpub, unsafe.Pointer(pub.handle))
 	return
 }
 
 func CopyPublication(pub *Publication) (copy *Publication) {
 	copy = new(Publication)
+	copy.handle = reg.register(copy)
 	copy.cpub = C.DPS_CopyPublication(pub.cpub)
-	C.DPS_SetPublicationData(copy.cpub, unsafe.Pointer(copy))
+	C.DPS_SetPublicationData(copy.cpub, unsafe.Pointer(copy.handle))
 	return
 }
 
@@ -700,9 +779,11 @@ func InitPublication(pub *Publication, topics []string, noWildCard bool, keyId K
 
 //export goAcknowledgementHandler
 func goAcknowledgementHandler(cpub *C.DPS_Publication, cpayload *C.uint8_t, clen C.size_t) {
-	pub := (*Publication)(C.DPS_GetPublicationData(cpub))
 	payload := (*[1 << 30]byte)(unsafe.Pointer(cpayload))[:clen:clen]
-	pub.handler(pub, payload)
+	pub, ok := reg.lookup(uintptr(C.DPS_GetPublicationData(cpub))).(*Publication)
+	if ok {
+		pub.handler(pub, payload)
+	}
 }
 
 func PublicationAddSubId(pub *Publication, keyId KeyId) int {
@@ -734,8 +815,12 @@ func Publish(pub *Publication, payload []byte, ttl int16) int {
 	return int(C.DPS_Publish(pub.cpub, cpayload, clen, cttl))
 }
 
-func DestroyPublication(pub *Publication) int {
-	return int(C.DPS_DestroyPublication(pub.cpub))
+func DestroyPublication(pub *Publication) (ret int) {
+	ret = int(C.DPS_DestroyPublication(pub.cpub))
+	if ret == OK {
+		reg.unregister(pub.handle)
+	}
+	return
 }
 
 func AckPublication(pub *Publication, payload []byte) int {
@@ -754,6 +839,7 @@ func AckGetSenderKeyId(pub *Publication) KeyId {
 }
 
 type Subscription struct {
+	handle  uintptr
 	csub    *C.DPS_Subscription
 	handler PublicationHandler
 }
@@ -776,8 +862,9 @@ func CreateSubscription(node *Node, topics []string) (sub *Subscription) {
 		C.setTopic(ctopics, C.CString(t), C.size_t(i))
 	}
 	sub = new(Subscription)
+	sub.handle = reg.register(sub)
 	sub.csub = C.DPS_CreateSubscription(cnode, ctopics, cnumTopics)
-	C.DPS_SetSubscriptionData(sub.csub, unsafe.Pointer(sub))
+	C.DPS_SetSubscriptionData(sub.csub, unsafe.Pointer(sub.handle))
 	return
 }
 
@@ -794,14 +881,20 @@ func Subscribe(sub *Subscription, handler PublicationHandler) int {
 
 //export goPublicationHandler
 func goPublicationHandler(csub *C.DPS_Subscription, cpub *C.DPS_Publication, cpayload *C.uint8_t, clen C.size_t) {
-	sub := (*Subscription)(C.DPS_GetSubscriptionData(csub))
-	pub := Publication{cpub, nil}
+	pub := Publication{0, cpub, nil}
 	payload := (*[1 << 30]byte)(unsafe.Pointer(cpayload))[:clen:clen]
-	sub.handler(sub, &pub, payload)
+	sub, ok := reg.lookup(uintptr(C.DPS_GetSubscriptionData(csub))).(*Subscription)
+	if ok {
+		sub.handler(sub, &pub, payload)
+	}
 }
 
-func DestroySubscription(sub *Subscription) int {
-	return int(C.DPS_DestroySubscription(sub.csub))
+func DestroySubscription(sub *Subscription) (ret int) {
+	ret = int(C.DPS_DestroySubscription(sub.csub))
+	if ret == OK {
+		reg.unregister(sub.handle)
+	}
+	return
 }
 
 const (

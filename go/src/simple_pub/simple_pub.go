@@ -8,23 +8,8 @@ import (
 	"time"
 )
 
-var (
-	keyStore dps.KeyStore
-	node     *dps.Node
-	pub      *dps.Publication
-)
-
-func onAck(pub *dps.Publication, payload []byte) {
-	fmt.Printf("Ack for pub UUID %v(%v)\n", dps.PublicationGetUUID(pub), dps.PublicationGetSequenceNum(pub))
-	fmt.Printf("    %v\n", string(payload))
-}
-
-func onDestroy(node *dps.Node) {
-	dps.DestroyKeyStore(keyStore)
-}
-
 func main() {
-	/* Pre-shared keys for testing only. DO NOT USE THESE KEYS IN A REAL APPLICATION! */
+	// Pre-shared keys for testing only. DO NOT USE THESE KEYS IN A REAL APPLICATION!
 	networkKeyId := dps.KeyId{
 		0x4c, 0xfc, 0x6b, 0x75, 0x0f, 0x80, 0x95, 0xb3, 0x6c, 0xb7, 0xc1, 0x2f, 0x65, 0x2d, 0x38, 0x26,
 	}
@@ -106,7 +91,7 @@ func main() {
 	}
 
 	var nodeId, pubKeyId []byte
-	keyStore = dps.CreateMemoryKeyStore()
+	keyStore := dps.CreateMemoryKeyStore()
 	dps.SetNetworkKey(keyStore, networkKeyId, networkKey)
 	if encryption == 0 {
 		nodeId = nil
@@ -125,13 +110,16 @@ func main() {
 		pubKeyId = []byte(subscriberId)
 	}
 
-	node = dps.CreateNode("/", keyStore, nodeId)
+	node := dps.CreateNode("/", keyStore, nodeId)
 	dps.StartNode(node, dps.MCAST_PUB_ENABLE_SEND, 0)
 	fmt.Printf("Publisher is listening on port %v\n", dps.GetPortNumber(node))
 
-	pub = dps.CreatePublication(node)
+	pub := dps.CreatePublication(node)
 
-	dps.InitPublication(pub, []string{"a/b/c"}, false, nil, onAck)
+	dps.InitPublication(pub, []string{"a/b/c"}, false, nil, func(pub *dps.Publication, payload []byte) {
+		fmt.Printf("Ack for pub UUID %v(%v)\n", dps.PublicationGetUUID(pub), dps.PublicationGetSequenceNum(pub))
+		fmt.Printf("    %v\n", string(payload))
+	})
 	dps.PublicationAddSubId(pub, pubKeyId)
 	dps.Publish(pub, []byte("hello"), 0)
 	fmt.Printf("Pub UUID %v(%v)\n", dps.PublicationGetUUID(pub), dps.PublicationGetSequenceNum(pub))
@@ -141,5 +129,7 @@ func main() {
 	time.Sleep(100 * time.Millisecond)
 
 	dps.DestroyPublication(pub)
-	dps.DestroyNode(node, onDestroy)
+	dps.DestroyNode(node, func(node *dps.Node) {
+		dps.DestroyKeyStore(keyStore)
+	})
 }
