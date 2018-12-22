@@ -9,7 +9,9 @@ import (
 
 /*
  #cgo CFLAGS: -I${SRCDIR}/../../../build/dist/inc
- #cgo LDFLAGS: -L${SRCDIR}/../../../build/dist/lib -ldps_shared -luv
+ // the linux build assumes libuv is provided by the OS, the windows build assumes libuv is provided by dps
+ #cgo linux LDFLAGS: -L${SRCDIR}/../../../build/dist/lib -ldps -luv
+ #cgo windows LDFLAGS: -L${SRCDIR}/../../../build/dist/lib -ldps
 
  #include <stdlib.h>
  #include <string.h>
@@ -148,7 +150,8 @@ import (
          goOnUnlinkComplete(node, addr, (uintptr_t)data);
  }
 
- static DPS_Status unlink(DPS_Node* node, DPS_NodeAddress* addr, uintptr_t data) {
+ // mangle the name to avoid conflicts with mingw
+ static DPS_Status unlink_(DPS_Node* node, DPS_NodeAddress* addr, uintptr_t data) {
          return DPS_Unlink(node, addr, onUnlinkComplete, (void*)data);
  }
 
@@ -662,7 +665,7 @@ func Unlink(node *Node, addr *NodeAddress, cb OnUnlinkComplete) int {
 	cnode := (*C.DPS_Node)(node)
 	caddr := (*C.DPS_NodeAddress)(addr)
 	handle := reg.register(cb)
-	return int(C.unlink(cnode, caddr, C.uintptr_t(handle)))
+	return int(C.unlink_(cnode, caddr, C.uintptr_t(handle)))
 }
 
 //export goOnUnlinkComplete
