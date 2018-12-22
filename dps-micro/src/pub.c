@@ -271,6 +271,13 @@ static DPS_Status DecryptAndParsePub(DPS_Publication* pub,
                 if (ret != DPS_OK) {
                     break;
                 }
+                /*
+                 * This is safe because we know there is at least one
+                 * byte before the string and we have already decode it
+                 */
+                --str;
+                memmove(str, str + 1, sz);
+                str[sz] = 0;
                 pub->topics[i] = str;
             }
             break;
