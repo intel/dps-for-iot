@@ -272,8 +272,9 @@ static DPS_Status DecryptAndParsePub(DPS_Publication* pub,
                     break;
                 }
                 /*
+                 * We need the topic strings to be NUL terminated.
                  * This is safe because we know there is at least one
-                 * byte before the string and we have already decode it
+                 * byte before the string and we have already decoded it
                  */
                 --str;
                 memmove(str, str + 1, sz);
