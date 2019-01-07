@@ -129,7 +129,7 @@ if env['python'] and (env['PLATFORM'] == 'posix' or env['CC'] == 'cl'):
     elif 'gcc' in pyenv['CC']:
         pyenv.Append(CCFLAGS = ['-Wno-ignored-qualifiers', '-Wno-cast-function-type'])
     elif 'clang' in pyenv['CC']:
-        pyenv.Append(CCFLAGS = ['-Wno-ignored-qualifiers'])
+        pyenv.Append(CCFLAGS = ['-Wno-deprecated-register', '-Wno-ignored-qualifiers'])
 
     pyenv.Append(SWIGFLAGS = ['-python', '-c++', '-Wextra', '-Werror', '-v', '-O'], SWIGPATH = ['#/inc', './swig/py'])
     pyenv.Append(CPPPATH = ['swig', 'swig/py'])
