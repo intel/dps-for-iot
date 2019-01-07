@@ -126,8 +126,10 @@ if env['python'] and (env['PLATFORM'] == 'posix' or env['CC'] == 'cl'):
         pyenv.Append(CCFLAGS = ['/EHsc'])
         # Ignore warnings in generated code
         pyenv.Append(CCFLAGS = ['/wd4244', '/wd4703'])
-    else:
-        pyenv.Append(CCFLAGS = ['-Wno-deprecated-register', '-Wno-cast-function-type', '-Wno-ignored-qualifiers'])
+    elif 'gcc' in pyenv['CC']:
+        pyenv.Append(CCFLAGS = ['-Wno-ignored-qualifiers', '-Wno-cast-function-type'])
+    elif 'clang' in pyenv['CC']:
+        pyenv.Append(CCFLAGS = ['-Wno-ignored-qualifiers'])
 
     pyenv.Append(SWIGFLAGS = ['-python', '-c++', '-Wextra', '-Werror', '-v', '-O'], SWIGPATH = ['#/inc', './swig/py'])
     pyenv.Append(CPPPATH = ['swig', 'swig/py'])
@@ -145,7 +147,10 @@ if env['nodejs'] and env['PLATFORM'] == 'posix':
     nodeenv.VariantDir('swig/js', 'swig')
     nodeenv.Append(SWIGFLAGS = ['-javascript', '-node', '-c++', '-DV8_VERSION=0x04059937', '-Wextra', '-Werror', '-v', '-O'], SWIGPATH = ['#/inc', './swig/js'])
     # There may be a bug with the SWIG builder - add -O to CPPFLAGS to get it passed on to the compiler
-    nodeenv.Append(CPPFLAGS = ['-DBUILDING_NODE_EXTENSION', '-std=c++11', '-O', '-Wno-unused-result', '-Wno-cast-function-type', '-Wno-ignored-qualifiers'])
+    nodeenv.Append(CPPDEFINES = ['BUILDING_NODE_EXTENSION'])
+    nodeenv.Append(CCFLAGS = ['-std=c++11', '-O', '-Wno-unused-result', '-Wno-ignored-qualifiers'])
+    if 'gcc' in nodeenv['CC']:
+        nodeenv.Append(CCFLAGS = ['-Wno-cast-function-type'])
     nodeenv.Append(CPPPATH = ['swig', 'swig/js'])
     if env['target'] == 'yocto':
         nodeenv.Append(CPPPATH = [os.getenv('SYSROOT') + '/usr/include/node'])
