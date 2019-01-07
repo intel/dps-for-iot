@@ -24,10 +24,10 @@
 #include <safe_lib.h>
 #include <stdlib.h>
 #include <dps/dbg.h>
-#include "sha2.h"
+#include <dps/private/cbor.h>
 #include "bitvec.h"
 #include "compat.h"
-#include <dps/private/cbor.h>
+#include "sha2.h"
 
 /*
  * Debug control for this module
@@ -88,20 +88,20 @@ typedef count_t counter_t[CHUNK_SIZE];
 #define TEST_BIT(a, b) ((a)[(b) >> 6] & (1ull << ((b) & 0x3F)))
 #define ROTL64(n, r)   (((n) << r) | ((n) >> (64 - r)))
 
-#ifdef _WIN32
+#if defined(__GNUC__) || defined(__MINGW64__)
+#define POPCOUNT(n)    __builtin_popcountll((chunk_t)n)
+#define COUNT_TZ(n)    __builtin_ctzll((chunk_t)n)
+#elif defined(_WIN32)
 #define POPCOUNT(n)    (uint32_t)(__popcnt64((chunk_t)n))
 static inline uint32_t COUNT_TZ(uint64_t n)
 {
-    uint32_t index;
+    unsigned long index;
     if (_BitScanForward64(&index, n)) {
         return index;
     } else {
         return 0;
     }
 }
-#else
-#define POPCOUNT(n)    __builtin_popcountll((chunk_t)n)
-#define COUNT_TZ(n)    __builtin_ctzll((chunk_t)n)
 #endif
 
 #define UNKNOWN_POPCOUNT(bv)  ((bv)->popCount < 0)
@@ -146,7 +146,7 @@ static void CompressedBitDump(const chunk_t* data, size_t bits)
     size_t i;
     for (i = 0; i < bits; i += stride) {
         int bit = 0;
-        int j;
+        size_t j;
         for (j = 0; j < stride; ++j) {
             if (TEST_BIT(data, i + j)) {
                 bit = 1;
@@ -765,7 +765,7 @@ size_t DPS_BitVectorSerializeMaxSize(DPS_BitVector* bv)
     return CBOR_SIZEOF_ARRAY(3) + CBOR_SIZEOF(uint8_t) + CBOR_SIZEOF(uint32_t) + CBOR_SIZEOF_BYTES(bv->len / 8);
 }
 
-size_t DPS_BitVectorSerializeFHSize(DPS_BitVector* bv)
+size_t DPS_BitVectorSerializeFHSize(void)
 {
     return CBOR_SIZEOF_BYTES(FH_BITVECTOR_LEN / 8);
 }

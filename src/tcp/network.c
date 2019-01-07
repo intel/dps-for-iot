@@ -304,8 +304,8 @@ static int GetScopeId(struct sockaddr_in6* addr)
     if (IN6_IS_ADDR_LINKLOCAL(&addr->sin6_addr)) {
         static int linkLocalScope = 0;
         if (!linkLocalScope) {
-            uv_interface_address_t* ifsAddrs;
-            int numIfs;
+            uv_interface_address_t* ifsAddrs = NULL;
+            int numIfs = 0;
             int i;
             uv_interface_addresses(&ifsAddrs, &numIfs);
             for (i = 0; i < numIfs; ++i) {

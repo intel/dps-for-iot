@@ -1,42 +1,18 @@
 import os
-Import(['extEnv'])
-
-platform = extEnv['PLATFORM']
+Import(['env'])
 
 # Pull down libuv from github and build the library
 
-env = extEnv.Clone()
+uvenv = env.Clone()
 
-git = env.Command('./libuv/.git', None,
-                   ['git clone -n https://github.com/libuv/libuv.git ext/libuv'])
+if uvenv['CC'] == 'cl':
+    uvenv.Append(CPPDEFINES = ['_CRT_NONSTDC_NO_DEPRECATE', '_GNU_SOURCE'])
 
-dep = env.Command('./libuv/README', git,
-                   ['git checkout -q tags/v1.23.2'], chdir = 'ext/libuv')
+git = uvenv.Command('./libuv/.git', None,
+                    ['git clone -n https://github.com/libuv/libuv.git ext/libuv'])
 
-env['CFLAGS'] = []
-env['CPPDEFINES'] = []
-env['CPPPATH'] = []
-
-
-if env['PLATFORM'] == 'win32':
-    env.Append(CFLAGS = ['/J', '/W3', '/nologo'])
-    env.Append(CFLAGS = ['/Gy', '/O2', '/GF', '/MT'])
-    env.Append(CFLAGS = ['/Zc:wchar_t'])
-
-    env.Append(CPPDEFINES = ['WIN32'])
-    env.Append(CPPDEFINES = ['_CRT_NONSTDC_NO_DEPRECATE'])
-    env.Append(CPPDEFINES = ['_CRT_SECURE_NO_WARNINGS'])
-    env.Append(CPPDEFINES = ['__STDC_WANT_SECURE_LIB__=0'])
-    env.Append(CPPDEFINES = ['_WIN32_WINNT=0x0600', '_GNU_SOURCE'])
-
-# Suppress specific warnings
-#    env.Append(CFLAGS = ['/wd4267', '/wd4244'])
-elif env['PLATFORM'] == 'posix':
-    env.Append(CPPDEFINES = ['_ISCO99_SOURCE'])
-    env.Append(CFLAGS = ['-Os', '-fPIC', '-Wall', '-Wextra', '-Wno-unused-parameter', '-Wno-implicit-fallthrough', '-MMD'])
-else:
-    print('Unsupported system')
-    exit()
+dep = uvenv.Command('./libuv/README', git,
+                    ['git checkout -q tags/v1.23.2'], chdir = 'ext/libuv')
 
 # Common source files
 includes = [
@@ -57,9 +33,9 @@ sources = [
     './libuv/src/version.c'
 ]
 
-env['CPPPATH'] = ['./libuv/include', './libuv/src']
+uvenv['CPPPATH'] = ['./libuv/include', './libuv/src']
 
-if env['PLATFORM'] == 'win32':
+if uvenv['PLATFORM'] == 'win32':
     uvincludes += [
         './libuv/include/uv/tree.h',
         './libuv/include/uv/win.h'
@@ -122,11 +98,11 @@ else:
         './libuv/src/unix/udp.c'
     ]
 
-objs = env.Object(sources)
-shobjs = env.SharedObject(sources)
+objs = uvenv.Object(sources)
+shobjs = uvenv.SharedObject(sources)
 
 Depends(sources, dep)
 
-env.Install('#/build/dist/inc', includes)
-env.Install('#/build/dist/inc/uv', uvincludes)
+uvenv.Install('#/build/dist/inc', includes)
+uvenv.Install('#/build/dist/inc/uv', uvincludes)
 Return('objs shobjs')

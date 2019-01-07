@@ -20,13 +20,13 @@
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  */
 
-#include <dps/dbg.h>
+#include <assert.h>
+#include <float.h>
+#include <math.h>
+#include <safe_lib.h>
 #include <stdint.h>
 #include <string.h>
-#include <math.h>
-#include <float.h>
-#include <safe_lib.h>
-#include <assert.h>
+#include <dps/dbg.h>
 #include <dps/private/cbor.h>
 
 #if CBOR_MAX_STRING_LEN >= RSIZE_MAX_STR
@@ -644,7 +644,7 @@ DPS_Status CBOR_DecodeFloat(DPS_RxBuffer* buffer, float* f)
             status = CBOR_DecodeInt(buffer, &i64);
             if (status == DPS_OK) {
                 *f = (float)i64;
-                if ((uint64_t)*f != i64) {
+                if ((int64_t)*f != i64) {
                     status = DPS_ERR_LOST_PRECISION;
                 }
             }
@@ -704,7 +704,7 @@ DPS_Status CBOR_DecodeDouble(DPS_RxBuffer* buffer, double* d)
             status = CBOR_DecodeInt(buffer, &i64);
             if (status == DPS_OK) {
                 *d = (double)i64;
-                if ((uint64_t)*d != i64) {
+                if ((int64_t)*d != i64) {
                     status = DPS_ERR_LOST_PRECISION;
                 }
             }

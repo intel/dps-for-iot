@@ -20,23 +20,23 @@
  */
 
 #include <assert.h>
-#include <string.h>
-#include <stdlib.h>
 #include <safe_lib.h>
+#include <stdlib.h>
+#include <string.h>
 #include <dps/dbg.h>
 #include <dps/dps.h>
-#include <dps/uuid.h>
+#include <dps/private/cbor.h>
 #include <dps/private/dps.h>
 #include <dps/private/network.h>
+#include <dps/uuid.h>
 #include "bitvec.h"
-#include <dps/private/cbor.h>
+#include "coap.h"
 #include "compat.h"
 #include "cose.h"
-#include "coap.h"
-#include "pub.h"
-#include "sub.h"
 #include "history.h"
 #include "node.h"
+#include "pub.h"
+#include "sub.h"
 #include "topics.h"
 
 /*
@@ -1170,7 +1170,7 @@ DPS_Publication* DPS_CopyPublication(const DPS_Publication* pub)
     copy->shared->node = pub->shared->node;
     copy->shared->numTopics = pub->shared->numTopics;
     if (pub->shared->numTopics > 0) {
-	int i;
+        size_t i;
         copy->shared->topics = calloc(pub->shared->numTopics, sizeof(char*));
         if (!copy->shared->topics) {
             DPS_ERRPRINT("malloc failure: no memory\n");

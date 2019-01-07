@@ -24,14 +24,14 @@
 #define _CRT_RAND_S
 #endif
 
+#include <safe_lib.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <dps/dbg.h>
-#include <dps/uuid.h>
 #include <stdlib.h>
 #include <string.h>
-#include <safe_lib.h>
 #include <uv.h>
+#include <dps/dbg.h>
+#include <dps/uuid.h>
 #include "compat.h"
 
 /*
@@ -67,13 +67,13 @@ static struct {
     uv_once_t once;
     DPS_Status ret;
     uv_mutex_t mutex;
-} context = { UV_ONCE_INIT, DPS_OK };
+} context = { UV_ONCE_INIT, DPS_OK, { 0 } };
 
 #ifdef _WIN32
 static void InitUUID(void)
 {
     errno_t ret = 0;
-    int i;
+    size_t i;
     uint32_t* n = (uint32_t*)&entropy;
 
     uv_mutex_init(&context.mutex);
@@ -91,7 +91,7 @@ static void InitUUID(void)
  */
 static const char* randPath = "/dev/urandom";
 
-static void InitUUID()
+static void InitUUID(void)
 {
     uv_mutex_init(&context.mutex);
     while (!entropy.nonce[0]) {
@@ -168,7 +168,7 @@ void DPS_RandUUIDLess(DPS_UUID* uuid)
     }
 }
 
-uint32_t DPS_Rand()
+uint32_t DPS_Rand(void)
 {
     uint32_t s0;
 

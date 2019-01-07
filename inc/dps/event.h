@@ -51,7 +51,7 @@ typedef struct _DPS_Event DPS_Event;
  *
  * @return The created event, or NULL if creation failed
  */
-DPS_Event* DPS_CreateEvent();
+DPS_Event* DPS_CreateEvent(void);
 
 /**
  * Destroy an event and free resources

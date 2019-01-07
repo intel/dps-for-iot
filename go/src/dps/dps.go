@@ -11,7 +11,7 @@ import (
  #cgo CFLAGS: -I${SRCDIR}/../../../build/dist/inc
  // the linux build assumes libuv is provided by the OS, the windows build assumes libuv is provided by dps
  #cgo linux LDFLAGS: -L${SRCDIR}/../../../build/dist/lib -ldps -luv
- #cgo windows LDFLAGS: -L${SRCDIR}/../../../build/dist/lib -ldps
+ #cgo windows LDFLAGS: -L${SRCDIR}/../../../build/dist/lib -ldps -lws2_32 -lpsapi -liphlpapi -lshell32 -luserenv
 
  #include <stdlib.h>
  #include <string.h>

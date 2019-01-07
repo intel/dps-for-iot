@@ -20,14 +20,14 @@
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  */
 
-#include <stdlib.h>
-#include <string.h>
 #include <assert.h>
 #include <safe_lib.h>
-#include <dps/dps.h>
+#include <stdlib.h>
+#include <string.h>
 #include <dps/dbg.h>
-#include <dps/uuid.h>
+#include <dps/dps.h>
 #include <dps/private/network.h>
+#include <dps/uuid.h>
 #include "history.h"
 
 /*

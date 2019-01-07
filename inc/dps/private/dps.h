@@ -237,7 +237,7 @@ struct _DPS_KeyStore {
  *
  * @return a non-secure random number
  */
-uint32_t DPS_Rand();
+uint32_t DPS_Rand(void);
 
 #ifdef __cplusplus
 }

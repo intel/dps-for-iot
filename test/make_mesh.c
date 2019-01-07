@@ -187,10 +187,10 @@ static uint16_t GetPort(DPS_NodeAddress* nodeAddr)
     }
 }
 
-static size_t AddLinksForNode(DPS_Node* node)
+static int AddLinksForNode(DPS_Node* node)
 {
     RemoteNode* remote;
-    size_t numMuted = 0;
+    int numMuted = 0;
     uint16_t nodeId = PortMap[DPS_GetPortNumber(node)];
 
     for (remote = node->remoteNodes; remote != NULL; remote = remote->next) {
@@ -210,10 +210,10 @@ static size_t AddLinksForNode(DPS_Node* node)
     return numMuted;
 }
 
-static size_t MakeLinks(size_t* numNodes, size_t* numMuted)
+static int MakeLinks(int* numNodes, int* numMuted)
 {
     size_t i;
-    size_t numArcs = 0;
+    int numArcs = 0;
     LINK* l;
 
     *numMuted = 0;
@@ -237,7 +237,7 @@ static size_t MakeLinks(size_t* numNodes, size_t* numMuted)
     return numArcs;
 }
 
-static void PrintSubgraph(FILE* f, int showMuted, uint16_t* kills, size_t numKills, size_t expMuted, const char* color, int* label)
+static void PrintSubgraph(FILE* f, int showMuted, uint16_t* kills, size_t numKills, int expMuted, const char* color, int* label)
 {
     static int cluster = 0;
     static int base = 0;
@@ -247,9 +247,9 @@ static void PrintSubgraph(FILE* f, int showMuted, uint16_t* kills, size_t numKil
     };
     LINK* l;
     size_t i;
-    size_t numNodes;
-    size_t numArcs;
-    size_t numMuted;
+    int numNodes;
+    int numArcs;
+    int numMuted;
     int maxN = 0;
 
     numArcs = MakeLinks(&numNodes, &numMuted);
@@ -310,7 +310,7 @@ static int CountMuted(DPS_Node* node)
     return numMuted;
 }
 
-static int CountMutedLinks()
+static int CountMutedLinks(void)
 {
     int numMuted = 0;
     size_t i;
@@ -324,7 +324,7 @@ static int CountMutedLinks()
     return numMuted / 2;
 }
 
-static void DumpLinks()
+static void DumpLinks(void)
 {
     LINK* l;
     for (l = links; l != NULL; l = l->next) {
@@ -332,9 +332,9 @@ static void DumpLinks()
     }
 }
 
-static size_t ReadLinks(const char* fn)
+static int ReadLinks(const char* fn)
 {
-    size_t numIds = 0;
+    int numIds = 0;
     FILE* f;
 
     f = fopen(fn, "r");
@@ -345,7 +345,6 @@ static size_t ReadLinks(const char* fn)
     while (1) {
         int ep1;
         int ep2;
-        size_t n = 0;
         ssize_t len;
         char line[32];
 
@@ -513,19 +512,19 @@ int main(int argc, char** argv)
     char** arg = argv + 1;
     LINK* l;
     DPS_Event* sleeper;
-    size_t numIds = 0;
-    size_t numLinks = 0;
+    int numIds = 0;
+    int numLinks = 0;
     int maxSubs = 1;
     int numSubs = 0;
     int numKills = 0;
     int showMuted = 1;
-    size_t expMuted;
+    int expMuted;
     int l1 = 0;
     int l2 = 0;
     const char* inFn = NULL;
     const char* outFn = NULL;
     uint16_t killList[MAX_KILLS];
-    size_t i;
+    int i;
 
     DPS_Debug = 0;
 
@@ -718,7 +717,7 @@ int main(int argc, char** argv)
     fprintf(dotFile, "}\n");
 
     if (numKills > 0) {
-        size_t m;
+        int m;
         /*
          * Kill the nodes on the list
          */
@@ -755,7 +754,7 @@ int main(int argc, char** argv)
 
     DPS_DestroyEvent(sleeper);
 
-    for (i = 0; i < A_SIZEOF(NodeMap); ++i) {
+    for (i = 0; i < (int)A_SIZEOF(NodeMap); ++i) {
         if (NodeMap[i]) {
             DPS_DestroyNode(NodeMap[i], OnNodeDestroyed, NULL);
             NodeMap[i] = NULL;

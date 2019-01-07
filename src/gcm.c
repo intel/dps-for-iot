@@ -20,9 +20,8 @@
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  */
 
-#include <string.h>
-#include <memory.h>
 #include <safe_lib.h>
+#include <string.h>
 #include "gcm.h"
 #include "mbedtls.h"
 #include "mbedtls/cipher.h"

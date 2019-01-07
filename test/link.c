@@ -54,7 +54,7 @@ static DPS_Node* CreateNode(DPS_KeyStore* keyStore)
     return node;
 }
 
-static void TestRemoteLinkedAlready()
+static void TestRemoteLinkedAlready(void)
 {
     DPS_MemoryKeyStore* memoryKeyStore = NULL;
     DPS_Node* a = NULL;

@@ -48,7 +48,7 @@ typedef struct _DPS_RBG DPS_RBG;
  *
  * @return the random byte generator
  */
-DPS_RBG* DPS_CreateRBG();
+DPS_RBG* DPS_CreateRBG(void);
 
 /**
  * Destroy a previously-created instance of a random byte generator

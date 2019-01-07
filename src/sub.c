@@ -21,23 +21,23 @@
  */
 
 #include <assert.h>
-#include <string.h>
-#include <stdlib.h>
 #include <safe_lib.h>
+#include <stdlib.h>
+#include <string.h>
 #include <dps/dbg.h>
 #include <dps/dps.h>
-#include <dps/uuid.h>
+#include <dps/private/cbor.h>
 #include <dps/private/dps.h>
 #include <dps/private/network.h>
-#include "node.h"
+#include <dps/uuid.h>
 #include "bitvec.h"
-#include <dps/private/cbor.h>
-#include "sub.h"
-#include "pub.h"
-#include "topics.h"
-#include "node.h"
 #include "compat.h"
 #include "linkmon.h"
+#include "node.h"
+#include "node.h"
+#include "pub.h"
+#include "sub.h"
+#include "topics.h"
 
 /*
  * Debug control for this module

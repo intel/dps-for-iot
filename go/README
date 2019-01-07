@@ -1,7 +1,0 @@
-To build and run these programs
-
-cd $DPS_FOR_IOT/go/src
-GOPATH=$GOPATH:$DPS_FOR_IOT/go go install *
-
-cd $DPS_FOR_IOT/go/bin
-LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$DPS_FOR_IOT/build/dist/lib ./simple_pub

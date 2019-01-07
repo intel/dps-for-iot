@@ -21,9 +21,9 @@
  */
 
 #include <assert.h>
-#include <string.h>
-#include <stdlib.h>
 #include <safe_lib.h>
+#include <stdlib.h>
+#include <string.h>
 #include <dps/dbg.h>
 #include <dps/dps.h>
 #include <dps/private/network.h>

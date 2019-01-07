@@ -158,8 +158,25 @@ void DPS_NetFreeBufs(uv_buf_t* bufs, size_t numBufs)
 
 void DPS_MapAddrToV6(struct sockaddr* addr)
 {
-#ifdef _WIN32
     /* Windows requires that v4 addresses are mapped to v6 addresses for dual stack sockets */
+#if defined(__MINGW64__)
+    if (addr->sa_family == AF_INET) {
+        static const IN6_ADDR v4mappedprefix = {{ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                                  0x00, 0x00, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00 }};
+        struct in_addr inaddr = ((PSOCKADDR_IN)addr)->sin_addr;
+        SCOPE_ID scope = { 0 };
+        USHORT port = ((PSOCKADDR_IN)addr)->sin_port;
+        memset(addr, 0, sizeof(struct sockaddr_storage));
+        PSOCKADDR_IN6 a6 = (struct sockaddr_in6 *)addr;
+        const PIN_ADDR a4 = &inaddr;
+        a6->sin6_family = AF_INET6;
+        a6->sin6_port = port;
+        a6->sin6_flowinfo = 0;
+        a6->sin6_addr = v4mappedprefix;
+        memcpy(&a6->sin6_addr.s6_bytes[12], a4, 4);
+        a6->sin6_scope_struct = scope;
+    }
+#elif defined(_MSC_VER)
     if (addr->sa_family == AF_INET) {
         struct in_addr inaddr = *(struct in_addr*)INETADDR_ADDRESS(addr);
         SCOPE_ID scope = INETADDR_SCOPE_ID(addr);

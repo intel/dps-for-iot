@@ -98,7 +98,7 @@ static DPS_Status EphemeralKeyHandler(DPS_KeyStoreRequest* request, const DPS_Ke
     return DPS_SetKey(request, &k);
 }
 
-static void GCM_Raw()
+static void GCM_Raw(void)
 {
     DPS_Status ret;
     DPS_TxBuffer cipherText;
@@ -134,7 +134,7 @@ static void ECDSA_VerifyCurve(DPS_ECCurve crv, uint8_t* x, uint8_t* y, uint8_t* 
     DPS_TxBufferFree(&buf);
 }
 
-static void ECDSA_Raw()
+static void ECDSA_Raw(void)
 {
     DPS_Status ret;
 
@@ -205,7 +205,7 @@ static void ECDSA_Raw()
     }
 }
 
-static void KeyWrap_Raw()
+static void KeyWrap_Raw(void)
 {
     const uint8_t kek[] = {
         0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C,0x0D,0x0E,0x0F,

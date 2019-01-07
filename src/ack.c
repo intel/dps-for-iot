@@ -21,21 +21,21 @@
  */
 
 #include <assert.h>
-#include <string.h>
-#include <stdlib.h>
 #include <safe_lib.h>
+#include <stdlib.h>
+#include <string.h>
 #include <dps/dbg.h>
 #include <dps/dps.h>
-#include <dps/uuid.h>
+#include <dps/private/cbor.h>
 #include <dps/private/dps.h>
 #include <dps/private/network.h>
+#include <dps/uuid.h>
+#include "ack.h"
 #include "bitvec.h"
 #include "coap.h"
-#include <dps/private/cbor.h>
-#include "ack.h"
-#include "pub.h"
 #include "history.h"
 #include "node.h"
+#include "pub.h"
 #include "topics.h"
 
 /*

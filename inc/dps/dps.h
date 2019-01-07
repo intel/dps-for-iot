@@ -70,7 +70,7 @@ const char* DPS_NodeAddrToString(const DPS_NodeAddress* addr);
  *
  * @return The created address, or NULL if creation failed
  */
-DPS_NodeAddress* DPS_CreateAddress();
+DPS_NodeAddress* DPS_CreateAddress(void);
 
 /**
  * Set a node address
@@ -366,7 +366,7 @@ typedef struct _DPS_MemoryKeyStore DPS_MemoryKeyStore;
  *
  * @return The key store or NULL if there were no resources.
  */
-DPS_MemoryKeyStore* DPS_CreateMemoryKeyStore();
+DPS_MemoryKeyStore* DPS_CreateMemoryKeyStore(void);
 
 /**
  * Destroys a previously created in-memory key store.

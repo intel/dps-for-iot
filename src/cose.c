@@ -20,17 +20,17 @@
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  */
 
-#include <stdint.h>
-#include <string.h>
-#include <stdlib.h>
 #include <assert.h>
 #include <safe_lib.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 #include <dps/dbg.h>
 #include <dps/err.h>
-#include "cose.h"
 #include <dps/private/cbor.h>
-#include "gcm.h"
+#include "cose.h"
 #include "ec.h"
+#include "gcm.h"
 #include "gcm.h"
 #include "hkdf.h"
 #include "keywrap.h"

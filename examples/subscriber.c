@@ -267,7 +267,7 @@ static int ParseArgs(int argc, char** argv, Args* args)
 
 static int Subscribe(Subscriber* subscriber, Args* args)
 {
-    DPS_Status ret;
+    DPS_Status ret = DPS_ERR_ARGS;
 
     if (args->numTopics) {
         char** topics = args->topicList;
