@@ -8,3 +8,5 @@ core.*
 out
 *.pyc
 *.pdb
+go/bin/*
+go/pkg/*
