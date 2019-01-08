@@ -1,0 +1,34 @@
+From a80a12c6a4c72a4209c94614e77c79d7bdf2bd42 Mon Sep 17 00:00:00 2001
+From: Todd Malsbary <todd.malsbary@intel.com>
+Date: Tue, 8 Jan 2019 15:17:16 -0800
+Subject: [PATCH] DPS
+
+---
+ include/safe_lib.h | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/include/safe_lib.h b/include/safe_lib.h
+index 8e02899..0b0f601 100644
+--- a/include/safe_lib.h
++++ b/include/safe_lib.h
+@@ -33,6 +33,17 @@
+ #ifndef __SAFE_LIB_H__
+ #define __SAFE_LIB_H__
+ 
++/*
++ * MinGW includes slightly different (and for strtok_s, conflicting)
++ * prototypes of the safe APIs.
++ */
++#ifdef __MINGW64__
++#include <_mingw.h>
++#ifdef MINGW_HAS_SECURE_API
++#undef MINGW_HAS_SECURE_API
++#endif
++#endif
++
+ #include "safe_types.h"
+ #include "safe_lib_errno.h"
+ 
+-- 
+2.17.0.windows.1
+

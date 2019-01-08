@@ -8,7 +8,8 @@ scenv = env.Clone()
 scgit = scenv.Command('./safestring/.git', None,
                       ['git clone -n https://github.com/intel/safestringlib.git ext/safestring'])
 screl = scenv.Command('./safestring/makefile', scgit,
-                      ['git fetch', 'git checkout -q 77b772849eda2321fb0dca56a321e3939930d7b9'],
+                      ['git fetch', 'git checkout -q 77b772849eda2321fb0dca56a321e3939930d7b9',
+                       'git am ../0001-DPS.patch'],
                       chdir = 'ext/safestring')
 
 sources = [
