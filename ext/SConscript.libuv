@@ -8,10 +8,11 @@ platform = extEnv['PLATFORM']
 env = extEnv.Clone()
 
 git = env.Command('./libuv/.git', None,
-                   ['git clone -n https://github.com/libuv/libuv.git ext/libuv'])
+                  ['git clone -n https://github.com/libuv/libuv.git ext/libuv'])
 
 dep = env.Command('./libuv/README', git,
-                   ['git checkout -q tags/v1.20.2'], chdir = 'ext/libuv')
+                  ['git fetch', 'git checkout -q tags/v1.20.2'],
+                  chdir = 'ext/libuv')
 
 env['CFLAGS'] = []
 env['CPPDEFINES'] = []

@@ -8,11 +8,11 @@ platform = extEnv['PLATFORM']
 env = extEnv.Clone()
 
 git = env.Command('./mbedtls/.git', None,
-                   ['git clone -n https://github.com/ARMmbed/mbedtls ext/mbedtls'])
+                  ['git clone -n https://github.com/ARMmbed/mbedtls ext/mbedtls'])
 
 dep = env.Command('./mbedtls/Makefile', git,
-                   ['git checkout tags/mbedtls-2.8.0'],
-                     chdir = 'ext/mbedtls')
+                  ['git fetch', 'git checkout tags/mbedtls-2.8.0'],
+                  chdir = 'ext/mbedtls')
 
 env.Append(
     CPPPATH = [
