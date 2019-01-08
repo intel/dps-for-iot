@@ -163,6 +163,27 @@ if env['nodejs'] and env['PLATFORM'] == 'posix':
     # Build documentation
     swig_docs += ['swig/js/dps.jsdoc']
 
+if env['go'] and 'gcc' in env['CC']:
+    goenv = libenv.Clone()
+    goos = os.popen('go env GOOS').read().strip()
+    goarch = os.popen('go env GOARCH').read().strip()
+    gopath = goenv.Dir('#/build/dist/go')
+    goenv.AppendENVPath('GOPATH', gopath)
+    goenv.VariantDir(gopath, 'go')
+
+    golib = goenv.Command(gopath.File('pkg/{}_{}/dps{}'.format(goos, goarch, goenv['LIBSUFFIX'])),
+                          gopath.File('src/dps/dps.go'),
+                          'go install dps', chdir = gopath.Dir('src'))
+    goexamples = ['simple_pub',
+                  'simple_pub_ks',
+                  'simple_sub',
+                  'simple_sub_ks']
+    for example in goexamples:
+        goenv.Command(gopath.File('bin/{}'.format(example)),
+                      gopath.File('src/{}/{}.go'.format(example, example)),
+                      'go install {}'.format(example), chdir = gopath.Dir('src'))
+    goenv.Depends(goexamples, golib)
+
 # Unit tests
 testenv = commonenv.Clone()
 testenv.Append(CPPPATH = ['#/ext/safestring/include', 'src'])

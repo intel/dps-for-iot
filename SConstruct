@@ -5,7 +5,7 @@ AddOption('--tool', action='append', dest='tools', help='Add tool to the environ
 
 vars = Variables()
 
-bindings = Split('python nodejs')
+bindings = Split('python nodejs go')
 
 # Generic build variables
 vars.AddVariables(
