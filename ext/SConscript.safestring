@@ -8,10 +8,10 @@ platform = extEnv['PLATFORM']
 env = extEnv.Clone()
 
 scgit = env.Command('./safestring/.git', None,
-                      ['git clone -n https://github.com/intel/safestringlib.git ext/safestring'])
+                    ['git clone -n https://github.com/intel/safestringlib.git ext/safestring'])
 screl = env.Command('./safestring/makefile', scgit,
-                      ['git checkout 77b772849eda2321fb0dca56a321e3939930d7b9'],
-                      chdir = 'ext/safestring')
+                    ['git fetch', 'git checkout 77b772849eda2321fb0dca56a321e3939930d7b9'],
+		    chdir = 'ext/safestring')
 
 if env['PLATFORM'] == 'win32':
     env.Append(CPPDEFINES = ['_CRT_SECURE_NO_WARNINGS'])
