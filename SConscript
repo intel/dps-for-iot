@@ -74,7 +74,7 @@ Depends(srcs, ext_objs)
 objs = libenv.Object(srcs)
 
 lib = libenv.Library('lib/dps', [objs, ext_objs])
-libenv.Install('#/build/dist/lib', lib)
+installed_lib = libenv.Install('#/build/dist/lib', lib)
 
 shobjs = libenv.SharedObject(srcs) + ext_shobjs
 if libenv['CC'] == 'cl':
@@ -171,9 +171,17 @@ if env['go'] and 'gcc' in env['CC']:
     goenv.AppendENVPath('GOPATH', gopath)
     goenv.VariantDir(gopath, 'go')
 
+    goenv.Append(LIBS = env['DPS_LIBS'])
+    cgo_cflags = ' '.join(['-I' + goenv.GetBuildPath(p) for p in goenv['CPPPATH']])
+    cgo_ldflags = '-L{} -ldps '.format(goenv.Dir('#/build/dist/lib')) + ' '.join(['-l' + l for l in goenv['LIBS']])
+    goenv.AppendENVPath('CGO_CFLAGS', cgo_cflags)
+    goenv.AppendENVPath('CGO_LDFLAGS', cgo_ldflags)
+
     golib = goenv.Command(gopath.File('pkg/{}_{}/dps{}'.format(goos, goarch, goenv['LIBSUFFIX'])),
                           gopath.File('src/dps/dps.go'),
                           'go install dps', chdir = gopath.Dir('src'))
+    goenv.Depends(golib, installed_lib)
+
     goexamples = ['simple_pub',
                   'simple_pub_ks',
                   'simple_sub',
