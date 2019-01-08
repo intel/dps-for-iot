@@ -9,7 +9,7 @@ git = mtenv.Command('./mbedtls/.git', None,
                     ['git clone -n https://github.com/ARMmbed/mbedtls ext/mbedtls'])
 
 dep = mtenv.Command('./mbedtls/Makefile', git,
-                    ['git checkout -q tags/mbedtls-2.8.0'],
+                    ['git fetch', 'git checkout -q tags/mbedtls-2.8.0'],
                     chdir = 'ext/mbedtls')
 
 mtenv.Append(CPPPATH = ['.', './mbedtls/include/',])

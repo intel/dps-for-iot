@@ -12,7 +12,8 @@ git = uvenv.Command('./libuv/.git', None,
                     ['git clone -n https://github.com/libuv/libuv.git ext/libuv'])
 
 dep = uvenv.Command('./libuv/README', git,
-                    ['git checkout -q tags/v1.23.2'], chdir = 'ext/libuv')
+                    ['git fetch', 'git checkout -q tags/v1.23.2'],
+                    chdir = 'ext/libuv')
 
 # Common source files
 includes = [
