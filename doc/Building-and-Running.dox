@@ -94,7 +94,7 @@ To build the DPS libraries, examples, bindings, and documentation run
 @c scons.
 
 @verbatim
-$ scons [variant=debug|release] [transport=udp|tcp|dtls] [bindings=all|none]
+$ scons [variant=debug|release] [transport=udp|tcp|dtls] [bindings=all|none|{python,nodejs,go}]
 @endverbatim
 
 To build with a different compiler use the @c CC and @c CXX build
@@ -104,6 +104,15 @@ options or the <tt>--tool</tt> option.
 $ scons CC=clang CXX=clang++
 $ scons --tool=mingw
 @endverbatim
+
+Depending on the platform and compiler only a subset of bindings are supported.
+<table>
+<tr><th>Platform<th>Compiler   <th>Bindings        </tr>
+<tr><td>Linux   <td>gcc        <td>python,nodejs,go</tr>
+<tr><td>Linux   <td>clang      <td>python,nodejs   </tr>
+<tr><td>Windows <td>cl         <td>python          </tr>
+<tr><td>Windows <td>gcc (MinGW)<td>go              </tr>
+</table>
 
 To see the complete list of build options run <tt>scons --help</tt>.
 The default build configuration is <tt>variant=release transport=udp
