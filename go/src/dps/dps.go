@@ -8,8 +8,6 @@ import (
 )
 
 /*
- // the linux build assumes libuv is provided by the OS, the windows build assumes libuv is provided by dps
-
  #include <stdlib.h>
  #include <string.h>
  #include <uv.h>
