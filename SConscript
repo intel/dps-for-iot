@@ -178,7 +178,7 @@ if env['go']:
         goarch = os.popen('go env GOARCH').read().strip()
         gopath = goenv.Dir('#/build/dist/go')
         goenv.AppendENVPath('GOPATH', gopath)
-        goenv.VariantDir(gopath, 'go')
+        goenv.VariantDir(goenv.Dir('#/build/dist/go/src/dps'), 'go')
 
         goenv.Append(LIBS = env['DPS_LIBS'])
         cgo_cflags = ' '.join(['-I' + goenv.GetBuildPath(p) for p in goenv['CPPPATH']])
@@ -186,20 +186,21 @@ if env['go']:
         goenv.AppendENVPath('CGO_CFLAGS', cgo_cflags)
         goenv.AppendENVPath('CGO_LDFLAGS', cgo_ldflags)
 
-        golib = goenv.Command(gopath.File('pkg/{}_{}/dps{}'.format(goos, goarch, goenv['LIBSUFFIX'])),
+        gopkg = goenv.Command(gopath.File('pkg/{}_{}/dps{}'.format(goos, goarch, goenv['LIBSUFFIX'])),
                               gopath.File('src/dps/dps.go'),
                               'go install dps', chdir = gopath.Dir('src'))
-        goenv.Depends(golib, installed_lib)
+        goenv.Depends(gopkg, installed_lib)
 
-        goexamples = ['simple_pub',
+        goexamples = ['keys',
+                      'simple_pub',
                       'simple_pub_ks',
                       'simple_sub',
                       'simple_sub_ks']
         for example in goexamples:
             goenv.Command(gopath.File('bin/{}'.format(example)),
-                          gopath.File('src/{}/{}.go'.format(example, example)),
-                          'go install {}'.format(example), chdir = gopath.Dir('src'))
-            goenv.Depends(goexamples, golib)
+                          gopath.File('src/dps/examples/{}/{}.go'.format(example, example)),
+                          'go install dps/examples/{}'.format(example), chdir = gopath.Dir('src'))
+            goenv.Depends(goexamples, gopkg)
     else:
         print('Go binding only supported with the gcc compiler')
         exit()
