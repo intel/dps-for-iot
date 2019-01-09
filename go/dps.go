@@ -1000,7 +1000,7 @@ func UUIDToString(uuid *UUID) string {
 	return C.GoString(C.DPS_UUIDToString(cuuid))
 }
 
-func DPS_UUIDCompare(a *UUID, b *UUID) int {
+func UUIDCompare(a *UUID, b *UUID) int {
 	ca := (*C.DPS_UUID)(a)
 	cb := (*C.DPS_UUID)(b)
 	return int(C.DPS_UUIDCompare(ca, cb))
