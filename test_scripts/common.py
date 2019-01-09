@@ -286,6 +286,38 @@ def js_pub_ks(args=''):
     _expect_listening(child)
     return child
 
+def go_sub(args=''):
+    global _s
+    _s = _s + 1
+    cmd = [os.path.join('build', 'dist', 'go', 'bin', 'simple_sub')] + _debug + args.split()
+    child = _spawn(_s, cmd)
+    _expect_listening(child)
+    return child
+
+def go_pub(args=''):
+    global _p
+    _p = _p + 1
+    cmd = [os.path.join('build', 'dist', 'go', 'bin', 'simple_pub')] + _debug + args.split()
+    child = _spawn(_p, cmd)
+    _expect_listening(child)
+    return child
+
+def go_sub_ks(args=''):
+    global _s
+    _s = _s + 1
+    cmd = [os.path.join('build', 'dist', 'go', 'bin', 'simple_sub_ks')] + _debug + args.split()
+    child = _spawn(_s, cmd)
+    _expect_listening(child)
+    return child
+
+def go_pub_ks(args=''):
+    global _p
+    _p = _p + 1
+    cmd = [os.path.join('build', 'dist', 'go', 'bin', 'simple_pub_ks')] + _debug + args.split()
+    child = _spawn(_p, cmd)
+    _expect_listening(child)
+    return child
+
 def tutorial(args=''):
     global _t
     _t = _t + 1
