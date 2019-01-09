@@ -777,7 +777,10 @@ func InitPublication(pub *Publication, topics []string, noWildCard bool, keyId K
 
 //export goAcknowledgementHandler
 func goAcknowledgementHandler(cpub *C.DPS_Publication, cpayload *C.uint8_t, clen C.size_t) {
-	payload := (*[1 << 30]byte)(unsafe.Pointer(cpayload))[:clen:clen]
+	var payload []byte
+	if cpayload != nil {
+		payload = (*[1 << 30]byte)(unsafe.Pointer(cpayload))[:clen:clen]
+	}
 	pub, ok := reg.lookup(uintptr(C.DPS_GetPublicationData(cpub))).(*Publication)
 	if ok {
 		pub.handler(pub, payload)
@@ -880,7 +883,10 @@ func Subscribe(sub *Subscription, handler PublicationHandler) int {
 //export goPublicationHandler
 func goPublicationHandler(csub *C.DPS_Subscription, cpub *C.DPS_Publication, cpayload *C.uint8_t, clen C.size_t) {
 	pub := Publication{0, cpub, nil}
-	payload := (*[1 << 30]byte)(unsafe.Pointer(cpayload))[:clen:clen]
+	var payload []byte
+	if cpayload != nil {
+		payload = (*[1 << 30]byte)(unsafe.Pointer(cpayload))[:clen:clen]
+	}
 	sub, ok := reg.lookup(uintptr(C.DPS_GetSubscriptionData(csub))).(*Subscription)
 	if ok {
 		sub.handler(sub, &pub, payload)
