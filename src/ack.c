@@ -216,7 +216,8 @@ DPS_Status DPS_DecodeAcknowledgement(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Rx
     CBOR_MapState mapState;
     uint32_t sn;
     uint32_t sequenceNum;
-    DPS_UUID* pubId = NULL;
+    uint8_t* bytes = NULL;
+    DPS_UUID pubId;
     DPS_NodeAddress* addr;
     uint8_t* aadPos;
     uint8_t maj;
@@ -251,11 +252,14 @@ DPS_Status DPS_DecodeAcknowledgement(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Rx
         }
         switch (key) {
         case DPS_CBOR_KEY_PUB_ID:
-            ret = CBOR_DecodeBytes(buf, (uint8_t**)&pubId, &len);
+            ret = CBOR_DecodeBytes(buf, &bytes, &len);
             if (ret == DPS_OK) {
                 if (len != sizeof(DPS_UUID)) {
                     ret = DPS_ERR_INVALID;
                 }
+            }
+            if (ret == DPS_OK) {
+                memcpy(&pubId.val, bytes, sizeof(DPS_UUID));
             }
             break;
         case DPS_CBOR_KEY_ACK_SEQ_NUM:
@@ -276,7 +280,7 @@ DPS_Status DPS_DecodeAcknowledgement(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Rx
     /*
      * See if this is an ACK for a local publication
      */
-    pub = DPS_LookupAckHandler(node, pubId, sequenceNum);
+    pub = DPS_LookupAckHandler(node, &pubId, sequenceNum);
     if (pub) {
         uint8_t nonce[COSE_NONCE_LEN];
         COSE_Entity recipient;
@@ -293,7 +297,7 @@ DPS_Status DPS_DecodeAcknowledgement(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Rx
         /*
          * Try to decrypt the acknowledgement
          */
-        DPS_MakeNonce(pubId, sequenceNum, DPS_MSG_TYPE_ACK, nonce);
+        DPS_MakeNonce(&pubId, sequenceNum, DPS_MSG_TYPE_ACK, nonce);
         DPS_RxBufferInit(&aadBuf, aadPos, buf->rxPos - aadPos);
         DPS_RxBufferInit(&cipherTextBuf, buf->rxPos, DPS_RxBufferAvail(buf));
         ret = COSE_Decrypt(nonce, &recipient, &aadBuf, &cipherTextBuf, node->keyStore,
@@ -349,14 +353,14 @@ DPS_Status DPS_DecodeAcknowledgement(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Rx
     /*
      * Search the history record for somewhere to forward the ACK
      */
-    ret = DPS_LookupPublisherForAck(&node->history, pubId, &sn, &addr);
+    ret = DPS_LookupPublisherForAck(&node->history, &pubId, &sn, &addr);
     if ((ret == DPS_OK) && (sequenceNum <= sn) && addr && !DPS_SameAddr(&ep->addr, addr)) {
         RemoteNode* ackNode;
         DPS_LockNode(node);
         ret = DPS_AddRemoteNode(node, addr, NULL, &ackNode);
         if (ret == DPS_OK || ret == DPS_ERR_EXISTS) {
             uv_buf_t uvBuf;
-            DPS_DBGPRINT("Forwarding acknowledgement for %s/%d to %s\n", DPS_UUIDToString(pubId), sequenceNum, DPS_NodeAddrToString(addr));
+            DPS_DBGPRINT("Forwarding acknowledgement for %s/%d to %s\n", DPS_UUIDToString(&pubId), sequenceNum, DPS_NodeAddrToString(addr));
             /*
              * The ACK is forwarded exactly as received
              */
