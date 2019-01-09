@@ -186,9 +186,10 @@ if env['go']:
         goenv.AppendENVPath('CGO_CFLAGS', cgo_cflags)
         goenv.AppendENVPath('CGO_LDFLAGS', cgo_ldflags)
 
+        # The -a option to go install is to workaround the go build cache and scons not cooperating
         gopkg = goenv.Command(gopath.File('pkg/{}_{}/dps{}'.format(goos, goarch, goenv['LIBSUFFIX'])),
                               gopath.File('src/dps/dps.go'),
-                              'go install dps', chdir = gopath.Dir('src'))
+                              'go install -a dps', chdir = gopath.Dir('src'))
         goenv.Depends(gopkg, installed_lib)
 
         goexamples = ['keys',
@@ -197,10 +198,11 @@ if env['go']:
                       'simple_sub',
                       'simple_sub_ks']
         for example in goexamples:
-            goenv.Command(gopath.File('bin/{}'.format(example)),
+            goexample = gopath.File('bin/{}'.format(example))
+            goenv.Depends(goexample, gopkg)
+            goenv.Command(goexample,
                           gopath.File('src/dps/examples/{}/{}.go'.format(example, example)),
-                          'go install dps/examples/{}'.format(example), chdir = gopath.Dir('src'))
-            goenv.Depends(goexamples, gopkg)
+                          'go install -a dps/examples/{}'.format(example), chdir = gopath.Dir('src'))
     else:
         print('Go binding only supported with the gcc compiler')
         exit()
