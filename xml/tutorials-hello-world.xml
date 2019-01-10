@@ -1,17 +1,22 @@
 <?xml version='1.0' encoding='UTF-8' standalone='no'?>
-<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.13">
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.14">
   <compounddef id="tutorials-hello-world" kind="page">
     <compoundname>tutorials-hello-world</compoundname>
     <title>Hello world</title>
+    <tableofcontents/>
+    <briefdescription>
+<para><linebreak/>
+ </para>    </briefdescription>
     <detaileddescription>
-<sect1 id="tutorials-hello-world_1hello-world-prerequisites">
+<para><linebreak/>
+</para><sect1 id="tutorials-hello-world_1hello-world-prerequisites">
 <title>Prerequisites</title>
-<para><programlisting><codeline><highlight class="preprocessor">#include<sp/>&lt;<ref refid="dbg_8h" kindref="compound">dps/dbg.h</ref>&gt;</highlight><highlight class="normal"></highlight></codeline>
+<para><programlisting filename="tutorial.c"><codeline><highlight class="preprocessor">#include<sp/>&lt;<ref refid="dbg_8h" kindref="compound">dps/dbg.h</ref>&gt;</highlight><highlight class="normal"></highlight></codeline>
 <codeline><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;<ref refid="dps_8h" kindref="compound">dps/dps.h</ref>&gt;</highlight><highlight class="normal"></highlight></codeline>
 </programlisting> The first step in creating a DPS application is to include the necessary header files.</para></sect1>
 <sect1 id="tutorials-hello-world_1creating-a-node">
 <title>Creating a node</title>
-<para><programlisting><codeline><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>*separators<sp/>=<sp/></highlight><highlight class="stringliteral">&quot;/.&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<para><programlisting filename="tutorial.c"><codeline><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>*separators<sp/>=<sp/></highlight><highlight class="stringliteral">&quot;/.&quot;</highlight><highlight class="normal">;</highlight></codeline>
 <codeline><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="group__keystore_1gaf3833cfe48f848f698514bc5daa075fa" kindref="member">DPS_KeyStore</ref>*<sp/>keyStore<sp/>=<sp/>NULL;</highlight></codeline>
 <codeline><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="struct___d_p_s___key_id" kindref="compound">DPS_KeyId</ref>*<sp/>keyId<sp/>=<sp/>NULL;</highlight></codeline>
 <codeline><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="group__node_1ga4dd612ab965134321bb57fdb065f121c" kindref="member">DPS_Node</ref>*<sp/>node<sp/>=<sp/><ref refid="group__node_1gaf6641b5bbf27b2c45ac7f926b0ce4efe" kindref="member">DPS_CreateNode</ref>(separators,<sp/>keyStore,<sp/>keyId);</highlight></codeline>
@@ -22,7 +27,7 @@
 </para></sect1>
 <sect1 id="tutorials-hello-world_1starting-a-node">
 <title>Starting a node</title>
-<para><programlisting><codeline><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/>mcastPub<sp/>=<sp/><ref refid="group__node_1ga178a3a6450eeff450820fa34fd82049c" kindref="member">DPS_MCAST_PUB_ENABLE_SEND</ref><sp/>|<sp/><ref refid="group__node_1gae493573fb2e02b87258952223eb4fcd7" kindref="member">DPS_MCAST_PUB_ENABLE_RECV</ref>;</highlight></codeline>
+<para><programlisting filename="tutorial.c"><codeline><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/>mcastPub<sp/>=<sp/><ref refid="group__node_1ga178a3a6450eeff450820fa34fd82049c" kindref="member">DPS_MCAST_PUB_ENABLE_SEND</ref><sp/>|<sp/><ref refid="group__node_1gae493573fb2e02b87258952223eb4fcd7" kindref="member">DPS_MCAST_PUB_ENABLE_RECV</ref>;</highlight></codeline>
 <codeline><highlight class="normal"><sp/><sp/><sp/><sp/>uint16_t<sp/>listenPort<sp/>=<sp/>0;</highlight></codeline>
 <codeline><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref><sp/>ret<sp/>=<sp/><ref refid="group__node_1ga160d504bfaeb0d3711e0259000340fe3" kindref="member">DPS_StartNode</ref>(node,<sp/>mcastPub,<sp/>listenPort);</highlight></codeline>
 <codeline><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(ret<sp/>!=<sp/><ref refid="group__status_1ga0ea3dd37bc558859ae0cb5a4f79a4bdd" kindref="member">DPS_OK</ref>)<sp/>{</highlight></codeline>
@@ -34,7 +39,7 @@
 <title>Publishing</title>
 <sect2 id="tutorials-hello-world_1creating-a-publication">
 <title>Creating a publication</title>
-<para><programlisting><codeline><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="group__publication_1ga0d439693474aa54e27f3d45a054696ac" kindref="member">DPS_Publication</ref>*<sp/>pub<sp/>=<sp/><ref refid="group__publication_1gaca070a96a6374e99a05d647c10737962" kindref="member">DPS_CreatePublication</ref>(node);</highlight></codeline>
+<para><programlisting filename="tutorial.c"><codeline><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="group__publication_1ga0d439693474aa54e27f3d45a054696ac" kindref="member">DPS_Publication</ref>*<sp/>pub<sp/>=<sp/><ref refid="group__publication_1gaca070a96a6374e99a05d647c10737962" kindref="member">DPS_CreatePublication</ref>(node);</highlight></codeline>
 <codeline><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(!pub)<sp/>{</highlight></codeline>
 <codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">goto</highlight><highlight class="normal"><sp/>Exit;</highlight></codeline>
 <codeline><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
@@ -51,7 +56,7 @@
 </para></sect2>
 <sect2 id="tutorials-hello-world_1sending-a-publication">
 <title>Sending a publication</title>
-<para><programlisting><codeline><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal">*<sp/>payload<sp/>=<sp/></highlight><highlight class="stringliteral">&quot;Hello&quot;</highlight><highlight class="normal">;</highlight></codeline>
+<para><programlisting filename="tutorial.c"><codeline><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal">*<sp/>payload<sp/>=<sp/></highlight><highlight class="stringliteral">&quot;Hello&quot;</highlight><highlight class="normal">;</highlight></codeline>
 <codeline><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/>numPayloadBytes<sp/>=<sp/>strlen(payload)<sp/>+<sp/>1;</highlight></codeline>
 <codeline><highlight class="normal"><sp/><sp/><sp/><sp/>int16_t<sp/>ttl<sp/>=<sp/>0;</highlight></codeline>
 <codeline><highlight class="normal"><sp/><sp/><sp/><sp/>ret<sp/>=<sp/><ref refid="group__publication_1ga828a4efc5c235c48a81f6460cc3fe416" kindref="member">DPS_Publish</ref>(pub,<sp/>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>uint8_t*)payload,<sp/>numPayloadBytes,<sp/>ttl);</highlight></codeline>
@@ -64,7 +69,7 @@
 <title>Subscribing</title>
 <sect2 id="tutorials-hello-world_1creating-a-subscription">
 <title>Creating a subscription</title>
-<para><programlisting><codeline><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal">*<sp/>topics[]<sp/>=<sp/>{</highlight></codeline>
+<para><programlisting filename="tutorial.c"><codeline><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal">*<sp/>topics[]<sp/>=<sp/>{</highlight></codeline>
 <codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="stringliteral">&quot;a/b/c/d&quot;</highlight><highlight class="normal"></highlight></codeline>
 <codeline><highlight class="normal"><sp/><sp/><sp/><sp/>};</highlight></codeline>
 <codeline><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/>numTopics<sp/>=<sp/>A_SIZEOF(topics);</highlight></codeline>
@@ -76,12 +81,12 @@
 </para></sect2>
 <sect2 id="tutorials-hello-world_1receiving-a-publication">
 <title>Receiving a publication</title>
-<para><programlisting><codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ret<sp/>=<sp/><ref refid="group__subscription_1ga83234ea82a91e07e3f5894a4dcf5267e" kindref="member">DPS_Subscribe</ref>(sub,<sp/>PublicationHandler);</highlight></codeline>
+<para><programlisting filename="tutorial.c"><codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ret<sp/>=<sp/><ref refid="group__subscription_1ga83234ea82a91e07e3f5894a4dcf5267e" kindref="member">DPS_Subscribe</ref>(sub,<sp/>PublicationHandler);</highlight></codeline>
 <codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(ret<sp/>!=<sp/><ref refid="group__status_1ga0ea3dd37bc558859ae0cb5a4f79a4bdd" kindref="member">DPS_OK</ref>)<sp/>{</highlight></codeline>
 <codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">goto</highlight><highlight class="normal"><sp/>Exit;</highlight></codeline>
 <codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
 </programlisting> Publications are received asynchronously. The first step in receiving a publication is to provide the publication handler to DPS and start the subscription. The publication handler will be called for each received publication.</para><para><simplesect kind="note"><para>Each instance of <computeroutput>DPS_Node</computeroutput> creates and runs its own thread. The lifetime of this thread is the same as the lifetime of the node. The publication handler is dispatched from this thread.</para></simplesect>
-<programlisting><codeline><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>PublicationHandler(<ref refid="group__subscription_1gadb927c4c1b7306867a75fc4288b54af7" kindref="member">DPS_Subscription</ref>*<sp/>sub,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="group__publication_1ga0d439693474aa54e27f3d45a054696ac" kindref="member">DPS_Publication</ref>*<sp/>pub,</highlight></codeline>
+<programlisting filename="tutorial.c"><codeline><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>PublicationHandler(<ref refid="group__subscription_1gadb927c4c1b7306867a75fc4288b54af7" kindref="member">DPS_Subscription</ref>*<sp/>sub,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="group__publication_1ga0d439693474aa54e27f3d45a054696ac" kindref="member">DPS_Publication</ref>*<sp/>pub,</highlight></codeline>
 <codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uint8_t*<sp/>payload,<sp/></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/>numPayloadBytes)</highlight></codeline>
 <codeline><highlight class="normal">{</highlight></codeline>
 <codeline><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/>i;</highlight></codeline>
@@ -110,7 +115,7 @@
 <title>Acknowledging</title>
 <para>Acknowledgements provide an optional means for subscribers to reply to publications. For example, they may be used when the publication is logically a request and the acknowledgements are responses. Similar to publications, acknowledgements may include an application payload, and no assumptions are made by DPS with regards to the acknowledgement payload format.</para><sect2 id="tutorials-hello-world_1requesting-an-acknowledgement">
 <title>Requesting an acknowledgement</title>
-<para><programlisting><codeline><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="group__publication_1ga0d439693474aa54e27f3d45a054696ac" kindref="member">DPS_Publication</ref>*<sp/>pub<sp/>=<sp/><ref refid="group__publication_1gaca070a96a6374e99a05d647c10737962" kindref="member">DPS_CreatePublication</ref>(node);</highlight></codeline>
+<para><programlisting filename="tutorial.c"><codeline><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="group__publication_1ga0d439693474aa54e27f3d45a054696ac" kindref="member">DPS_Publication</ref>*<sp/>pub<sp/>=<sp/><ref refid="group__publication_1gaca070a96a6374e99a05d647c10737962" kindref="member">DPS_CreatePublication</ref>(node);</highlight></codeline>
 <codeline><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(!pub)<sp/>{</highlight></codeline>
 <codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">goto</highlight><highlight class="normal"><sp/>Exit;</highlight></codeline>
 <codeline><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
@@ -127,7 +132,7 @@
 </programlisting> Requesting an acknowledgement is identical to <ref refid="tutorials-hello-world_1creating-a-publication" kindref="member">Creating a publication</ref>, with the addition of the <computeroutput>DPS_AcknowledgementHandler</computeroutput>.</para></sect2>
 <sect2 id="tutorials-hello-world_1sending-an-acknowledgement">
 <title>Sending an acknowledgement</title>
-<para><programlisting><codeline><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<ref refid="group__publication_1ga516f7f314c7b95210751d00285758b9b" kindref="member">DPS_PublicationIsAckRequested</ref>(pub))<sp/>{</highlight></codeline>
+<para><programlisting filename="tutorial.c"><codeline><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<ref refid="group__publication_1ga516f7f314c7b95210751d00285758b9b" kindref="member">DPS_PublicationIsAckRequested</ref>(pub))<sp/>{</highlight></codeline>
 <codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal">*<sp/>payload<sp/>=<sp/></highlight><highlight class="stringliteral">&quot;World&quot;</highlight><highlight class="normal">;</highlight></codeline>
 <codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/>numPayloadBytes<sp/>=<sp/>strlen(payload)<sp/>+<sp/>1;</highlight></codeline>
 <codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref><sp/>ret<sp/>=<sp/><ref refid="group__publication_1ga308074429a566ffb8d04d55bae520b04" kindref="member">DPS_AckPublication</ref>(pub,<sp/>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>uint8_t*)payload,<sp/>numPayloadBytes);</highlight></codeline>
@@ -138,7 +143,7 @@
 </programlisting> To determine if a publication has requested an ack, call <ref refid="group__publication_1ga516f7f314c7b95210751d00285758b9b" kindref="member">DPS_PublicationIsAckRequested()</ref>. To send an acknowledgement, along with any optional acknowledgement payload, call <ref refid="group__publication_1ga308074429a566ffb8d04d55bae520b04" kindref="member">DPS_AckPublication()</ref>.</para><para>The <computeroutput>pub</computeroutput> parameter of the publication handler is only valid during the body of the handler. In order to acknowledge a publication after the handler has returned, the application must first call <ref refid="group__publication_1ga41f31a8b63558e13d73d96de6086e5c4" kindref="member">DPS_CopyPublication()</ref> to create a partial copy of the publication. The copy may be used after the handler returns.</para></sect2>
 <sect2 id="tutorials-hello-world_1receiving-an-acknowledgement">
 <title>Receiving an acknowledgement</title>
-<para><programlisting><codeline><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>AcknowledgementHandler(<ref refid="group__publication_1ga0d439693474aa54e27f3d45a054696ac" kindref="member">DPS_Publication</ref>*<sp/>pub,</highlight></codeline>
+<para><programlisting filename="tutorial.c"><codeline><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>AcknowledgementHandler(<ref refid="group__publication_1ga0d439693474aa54e27f3d45a054696ac" kindref="member">DPS_Publication</ref>*<sp/>pub,</highlight></codeline>
 <codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>uint8_t*<sp/>payload,<sp/></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/>numPayloadBytes)</highlight></codeline>
 <codeline><highlight class="normal">{</highlight></codeline>
 <codeline><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/>i;</highlight></codeline>

@@ -1,6 +1,5 @@
 var NAVTREEINDEX2 =
 {
-"tutorials-security.html#authenticating-the-message-sender":[2,2,2],
 "tutorials-security.html#defining-a-policy":[2,2,3,0],
 "tutorials-security.html#dtls-with-certificates":[2,2,0,1],
 "tutorials-security.html#dtls-with-pre-shared-keys":[2,2,0,0],

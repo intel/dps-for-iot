@@ -11,7 +11,6 @@ var group__node =
     [ "DPS_OnUnlinkComplete", "group__node.html#ga70b98e7cc39f0dccdba41f0984de82f6", null ],
     [ "DPS_CreateNode", "group__node.html#gaf6641b5bbf27b2c45ac7f926b0ce4efe", null ],
     [ "DPS_DestroyNode", "group__node.html#ga85f5121f80411f5ab82449efe20b68dd", null ],
-    [ "DPS_GetLoop", "group__node.html#ga7dacebc6533305fba12335b3b8c817dc", null ],
     [ "DPS_GetNodeData", "group__node.html#ga65bba7bcfe5e940b153fcced4e2e8880", null ],
     [ "DPS_GetPortNumber", "group__node.html#gaf920b28fe0721a7f97b11673494d7b36", null ],
     [ "DPS_Link", "group__node.html#ga5064c63b8ce76bf34402e0c80183234b", null ],

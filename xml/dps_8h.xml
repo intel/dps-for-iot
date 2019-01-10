@@ -1,12 +1,12 @@
 <?xml version='1.0' encoding='UTF-8' standalone='no'?>
-<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.13">
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.14">
   <compounddef id="dps_8h" kind="file" language="C++">
     <compoundname>dps.h</compoundname>
     <includes local="no">stdint.h</includes>
     <includes local="no">stddef.h</includes>
+    <includes local="no">sys/socket.h</includes>
     <includes refid="err_8h" local="no">dps/err.h</includes>
     <includes refid="uuid_8h" local="no">dps/uuid.h</includes>
-    <includes local="no">uv.h</includes>
     <includedby refid="event_8h" local="no">event.h</includedby>
     <includedby refid="registration_8h" local="no">registration.h</includedby>
     <includedby refid="synchronous_8h" local="no">synchronous.h</includedby>
@@ -28,21 +28,21 @@
       <node id="11">
         <label>stdint.h</label>
       </node>
-      <node id="14">
+      <node id="15">
         <label>dps/uuid.h</label>
         <link refid="uuid_8h"/>
         <childnode refid="11" relation="include">
         </childnode>
-        <childnode refid="13" relation="include">
+        <childnode refid="14" relation="include">
         </childnode>
       </node>
       <node id="12">
         <label>stddef.h</label>
       </node>
-      <node id="15">
-        <label>uv.h</label>
-      </node>
       <node id="13">
+        <label>sys/socket.h</label>
+      </node>
+      <node id="14">
         <label>dps/err.h</label>
         <link refid="err_8h"/>
       </node>
@@ -89,9 +89,10 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="130" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="130" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="134" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="134" bodyend="-1"/>
       </memberdef>
-      <memberdef kind="enum" id="group__keystore_1ga7ca1045749c725e9c4a1b4758b2a0196" prot="public" static="no">
+      <memberdef kind="enum" id="group__keystore_1ga7ca1045749c725e9c4a1b4758b2a0196" prot="public" static="no" strong="no">
+        <type></type>
         <name>DPS_KeyType</name>
         <enumvalue id="group__keystore_1gga7ca1045749c725e9c4a1b4758b2a0196a662c1e84628d96be8ae08163af382392" prot="public">
           <name>DPS_KEY_SYMMETRIC</name>
@@ -120,9 +121,10 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="114" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="114" bodyend="118"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="118" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="118" bodyend="122"/>
       </memberdef>
-      <memberdef kind="enum" id="group__keystore_1ga9ba152af7a3ed9076bfa597ef918cac1" prot="public" static="no">
+      <memberdef kind="enum" id="group__keystore_1ga9ba152af7a3ed9076bfa597ef918cac1" prot="public" static="no" strong="no">
+        <type></type>
         <name>DPS_ECCurve</name>
         <enumvalue id="group__keystore_1gga9ba152af7a3ed9076bfa597ef918cac1a4b56a9b3ab7d0e23d57bad72f0c93239" prot="public">
           <name>DPS_EC_CURVE_RESERVED</name>
@@ -154,7 +156,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="135" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="135" bodyend="139"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="139" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="139" bodyend="143"/>
       </memberdef>
       <memberdef kind="typedef" id="group__keystore_1ga4c58e71301ab14e675033c601e4eabe1" prot="public" static="no">
         <type>struct <ref refid="struct___d_p_s___key_symmetric" kindref="compound">_DPS_KeySymmetric</ref></type>
@@ -168,7 +170,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="128" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="132" column="1"/>
       </memberdef>
       <memberdef kind="typedef" id="group__keystore_1ga658140277e0cd5c6ccc3b7727ecaae8a" prot="public" static="no">
         <type>struct <ref refid="struct___d_p_s___key_e_c" kindref="compound">_DPS_KeyEC</ref></type>
@@ -182,7 +184,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="154" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="158" column="1"/>
       </memberdef>
       <memberdef kind="typedef" id="group__keystore_1ga98b6701b118cab76965736ad720f9bcf" prot="public" static="no">
         <type>struct <ref refid="struct___d_p_s___key_cert" kindref="compound">_DPS_KeyCert</ref></type>
@@ -196,7 +198,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="165" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="169" column="1"/>
       </memberdef>
       <memberdef kind="typedef" id="group__keystore_1gaa56a1429b6a1658e674eea558bdbbfc0" prot="public" static="no">
         <type>struct <ref refid="struct___d_p_s___key" kindref="compound">_DPS_Key</ref></type>
@@ -209,7 +211,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="178" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="182" column="1"/>
       </memberdef>
       <memberdef kind="typedef" id="group__keystore_1ga4345e29dd2ad5d7fd88a1e988787bd72" prot="public" static="no">
         <type>struct <ref refid="struct___d_p_s___key_id" kindref="compound">_DPS_KeyId</ref></type>
@@ -222,7 +224,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="186" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="190" column="1"/>
       </memberdef>
       <memberdef kind="typedef" id="group__keystore_1gaf3833cfe48f848f698514bc5daa075fa" prot="public" static="no">
         <type>struct _DPS_KeyStore</type>
@@ -235,7 +237,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="94" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="191" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="98" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="195" bodyend="-1"/>
       </memberdef>
       <memberdef kind="typedef" id="group__keystore_1ga7c3e50965b65334e9791780fa855ed16" prot="public" static="no">
         <type>struct _DPS_KeyStoreRequest</type>
@@ -248,7 +250,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="94" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="196" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="98" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="200" bodyend="-1"/>
       </memberdef>
       <memberdef kind="typedef" id="group__keystore_1ga83d3ade4f4acd7d4385d606270ddfd29" prot="public" static="no">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref>(*</type>
@@ -272,7 +274,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="213" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="213" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="217" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="217" bodyend="-1"/>
       </memberdef>
       <memberdef kind="typedef" id="group__keystore_1gaccf7e3d43bc1e586132d7f1ae03d02f7" prot="public" static="no">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref>(*</type>
@@ -303,7 +305,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="230" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="230" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="234" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="234" bodyend="-1"/>
       </memberdef>
       <memberdef kind="typedef" id="group__keystore_1ga5b4cf102912eea802196d3e307c399ef" prot="public" static="no">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref>(*</type>
@@ -334,7 +336,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="248" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="248" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="252" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="252" bodyend="-1"/>
       </memberdef>
       <memberdef kind="typedef" id="group__keystore_1ga0acd005f34bca4fcbe1c460e2305ddae" prot="public" static="no">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref>(*</type>
@@ -358,7 +360,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="264" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="264" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="268" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="268" bodyend="-1"/>
       </memberdef>
       <memberdef kind="function" id="group__keystore_1ga289b1c74c01c9988f04297aa082986de" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
@@ -406,7 +408,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="275" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="279" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__keystore_1ga15d6a9b8256b67c2ec8b1d365a98dbab" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
@@ -443,7 +445,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="285" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="289" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__keystore_1ga37595f3207e42c52f7006659399135b2" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
@@ -480,7 +482,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="295" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="299" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__keystore_1ga088b3dc5eff10ab334d1e2aa0a329c26" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__keystore_1gaf3833cfe48f848f698514bc5daa075fa" kindref="member">DPS_KeyStore</ref> *</type>
@@ -506,7 +508,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="304" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="308" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__keystore_1gafa79de23848ff56d0cced67897313369" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__keystore_1gaf3833cfe48f848f698514bc5daa075fa" kindref="member">DPS_KeyStore</ref> *</type>
@@ -565,7 +567,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="318" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="322" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__keystore_1ga40bea030ef0ba65ec332880ae2bbfee1" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>void</type>
@@ -590,7 +592,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="326" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="330" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__keystore_1gaf8062875af6cab5caabc3f13bf995807" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
@@ -627,7 +629,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="336" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="340" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__keystore_1ga3b67d7dde74267ee9342dc3efd33812b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>void *</type>
@@ -653,7 +655,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="345" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="349" column="1"/>
       </memberdef>
       </sectiondef>
       <sectiondef kind="user-defined">
@@ -670,13 +672,16 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="345" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="358" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="349" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="362" bodyend="-1"/>
       </memberdef>
-      <memberdef kind="function" id="group__keystore_1ga2da4c5f9b7ab5ff6b65d1c8f4d6c30bc" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+      <memberdef kind="function" id="group__keystore_1gaa54422ad8b44ef7e222e6d3b3d07f5df" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__keystore_1ga57f11410b3ef6a686594b60836dc8c99" kindref="member">DPS_MemoryKeyStore</ref> *</type>
         <definition>DPS_MemoryKeyStore* DPS_CreateMemoryKeyStore</definition>
-        <argsstring>()</argsstring>
+        <argsstring>(void)</argsstring>
         <name>DPS_CreateMemoryKeyStore</name>
+        <param>
+          <type>void</type>
+        </param>
         <briefdescription>
 <para>Creates an in-memory key store. </para>        </briefdescription>
         <detaileddescription>
@@ -684,7 +689,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="365" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="369" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__keystore_1ga2f9f4aeff872ca74d5735a8727f4dbae" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>void</type>
@@ -709,7 +714,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="372" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="376" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__keystore_1ga1855a8efae53b90fa95aa5b97295c4ec" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
@@ -757,7 +762,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="385" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="389" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__keystore_1ga8664b8c5cc2d3df6512ecb71e7f92212" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
@@ -805,7 +810,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="396" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="400" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__keystore_1ga8d55f887ebbd6b0af80caa43bf77a088" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
@@ -842,7 +847,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="406" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="410" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__keystore_1ga7a8c6874dd5bff0a6391a5515b545e17" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
@@ -901,7 +906,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="419" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="423" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__keystore_1ga2811c4ffff51bd75a72dd0a9c8796616" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__keystore_1gaf3833cfe48f848f698514bc5daa075fa" kindref="member">DPS_KeyStore</ref> *</type>
@@ -927,7 +932,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="429" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="433" column="1"/>
       </memberdef>
       </sectiondef>
       <sectiondef kind="define">
@@ -940,7 +945,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="42" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="42" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="46" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="46" bodyend="-1"/>
       </memberdef>
       <memberdef kind="define" id="group__node_1gac939c83361ed89086f37c78d9c9009dd" prot="public" static="no">
         <name>DPS_MCAST_PUB_DISABLED</name>
@@ -951,7 +956,7 @@
 <para>See <computeroutput>mcastPub</computeroutput> of <ref refid="group__node_1ga160d504bfaeb0d3711e0259000340fe3" kindref="member">DPS_StartNode()</ref>. </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="479" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="479" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="483" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="483" bodyend="-1"/>
       </memberdef>
       <memberdef kind="define" id="group__node_1gae493573fb2e02b87258952223eb4fcd7" prot="public" static="no">
         <name>DPS_MCAST_PUB_ENABLE_RECV</name>
@@ -962,7 +967,7 @@
 <para>See <computeroutput>mcastPub</computeroutput> of <ref refid="group__node_1ga160d504bfaeb0d3711e0259000340fe3" kindref="member">DPS_StartNode()</ref>. </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="489" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="489" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="493" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="493" bodyend="-1"/>
       </memberdef>
       <memberdef kind="define" id="group__node_1ga178a3a6450eeff450820fa34fd82049c" prot="public" static="no">
         <name>DPS_MCAST_PUB_ENABLE_SEND</name>
@@ -973,7 +978,7 @@
 <para>See <computeroutput>mcastPub</computeroutput> of <ref refid="group__node_1ga160d504bfaeb0d3711e0259000340fe3" kindref="member">DPS_StartNode()</ref>. </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="484" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="484" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="488" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="488" bodyend="-1"/>
       </memberdef>
       <memberdef kind="define" id="group__node_1ga89df880f9650da5730fa152642c0be9f" prot="public" static="no">
         <name>DPS_SUBSCRIPTION_UPDATE_RATE</name>
@@ -984,7 +989,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="529" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="529" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="533" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="533" bodyend="-1"/>
       </memberdef>
       <memberdef kind="define" id="dps_8h_1a4a173ed2665cea74e58558d99b377ab3" prot="public" static="no">
         <name>DPS_TRUE</name>
@@ -995,7 +1000,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="41" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="41" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="45" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="45" bodyend="-1"/>
       </memberdef>
       </sectiondef>
       <sectiondef kind="typedef">
@@ -1032,7 +1037,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="752" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="752" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="745" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="745" bodyend="-1"/>
       </memberdef>
       <memberdef kind="typedef" id="group__node_1ga4dd612ab965134321bb57fdb065f121c" prot="public" static="no">
         <type>struct _DPS_Node</type>
@@ -1045,7 +1050,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="429" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="444" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="433" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="448" bodyend="-1"/>
       </memberdef>
       <memberdef kind="typedef" id="group__nodeaddress_1ga9e9f56aa38e82b4edcef7eb81e9f5bd2" prot="public" static="no">
         <type>struct _DPS_NodeAddress</type>
@@ -1058,7 +1063,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="83" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="53" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="83" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="57" bodyend="-1"/>
       </memberdef>
       <memberdef kind="typedef" id="group__node_1gaaf70ac42acab8a67693947871e97600f" prot="public" static="no">
         <type>void(*</type>
@@ -1100,7 +1105,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="567" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="567" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="560" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="560" bodyend="-1"/>
       </memberdef>
       <memberdef kind="typedef" id="group__node_1ga1e88cc9ca744782e36d58a022fe026c5" prot="public" static="no">
         <type>void(*</type>
@@ -1128,7 +1133,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="510" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="510" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="514" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="514" bodyend="-1"/>
       </memberdef>
       <memberdef kind="typedef" id="group__node_1gac1c96ed1ff9a92e7421ae1c428acb904" prot="public" static="no">
         <type>void(*</type>
@@ -1163,7 +1168,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="609" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="609" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="602" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="602" bodyend="-1"/>
       </memberdef>
       <memberdef kind="typedef" id="group__node_1ga70b98e7cc39f0dccdba41f0984de82f6" prot="public" static="no">
         <type>void(*</type>
@@ -1198,7 +1203,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="588" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="588" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="581" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="581" bodyend="-1"/>
       </memberdef>
       <memberdef kind="typedef" id="group__publication_1ga0d439693474aa54e27f3d45a054696ac" prot="public" static="no">
         <type>struct _DPS_Publication</type>
@@ -1211,7 +1216,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="622" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="635" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="615" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="628" bodyend="-1"/>
       </memberdef>
       <memberdef kind="typedef" id="group__subscription_1gab95ef1762636ad505c940744b8dce83f" prot="public" static="no">
         <type>void(*</type>
@@ -1253,7 +1258,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="961" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="961" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="954" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="954" bodyend="-1"/>
       </memberdef>
       <memberdef kind="typedef" id="group__publication_1ga875f9462225b198bbf7dd1c4a5390017" prot="public" static="no">
         <type>struct <ref refid="struct___d_p_s___qo_s" kindref="compound">_DPS_QoS</ref></type>
@@ -1266,7 +1271,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="785" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="778" column="1"/>
       </memberdef>
       <memberdef kind="typedef" id="group__subscription_1gadb927c4c1b7306867a75fc4288b54af7" prot="public" static="no">
         <type>struct _DPS_Subscription</type>
@@ -1279,7 +1284,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="868" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="881" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="861" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="874" bodyend="-1"/>
       </memberdef>
       </sectiondef>
       <sectiondef kind="func">
@@ -1307,7 +1312,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="868" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="861" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__publication_1ga308074429a566ffb8d04d55bae520b04" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
@@ -1355,7 +1360,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="858" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="851" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__nodeaddress_1gace91591af9bf2a99bad07deda1b9176c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>void</type>
@@ -1391,7 +1396,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="87" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="91" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__publication_1ga41f31a8b63558e13d73d96de6086e5c4" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__publication_1ga0d439693474aa54e27f3d45a054696ac" kindref="member">DPS_Publication</ref> *</type>
@@ -1417,13 +1422,16 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="721" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="714" column="1"/>
       </memberdef>
-      <memberdef kind="function" id="group__nodeaddress_1ga6bed18a4b0ad533ec88c7a0d376de818" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+      <memberdef kind="function" id="group__nodeaddress_1ga8c6228133cac7601597f3c6160de5aab" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__nodeaddress_1ga9e9f56aa38e82b4edcef7eb81e9f5bd2" kindref="member">DPS_NodeAddress</ref> *</type>
         <definition>DPS_NodeAddress* DPS_CreateAddress</definition>
-        <argsstring>()</argsstring>
+        <argsstring>(void)</argsstring>
         <name>DPS_CreateAddress</name>
+        <param>
+          <type>void</type>
+        </param>
         <briefdescription>
 <para>Creates a node address. </para>        </briefdescription>
         <detaileddescription>
@@ -1431,7 +1439,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="69" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="73" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__node_1gaf6641b5bbf27b2c45ac7f926b0ce4efe" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__node_1ga4dd612ab965134321bb57fdb065f121c" kindref="member">DPS_Node</ref> *</type>
@@ -1479,7 +1487,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="455" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="459" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__publication_1gaca070a96a6374e99a05d647c10737962" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__publication_1ga0d439693474aa54e27f3d45a054696ac" kindref="member">DPS_Publication</ref> *</type>
@@ -1505,7 +1513,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="708" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="701" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__subscription_1ga4095bb00bd0ca7fa9614ebbc2c28199f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__subscription_1gadb927c4c1b7306867a75fc4288b54af7" kindref="member">DPS_Subscription</ref> *</type>
@@ -1553,7 +1561,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="912" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="905" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__nodeaddress_1ga1f373831e8009ff5959ccb02b8c3fb14" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>void</type>
@@ -1578,7 +1586,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="94" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="98" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__node_1ga85f5121f80411f5ab82449efe20b68dd" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
@@ -1628,7 +1636,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="524" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="528" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__publication_1ga17bb01c949aaaf3bafd53323c9effd5f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
@@ -1654,7 +1662,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="844" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="837" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__subscription_1gaac78b5690aa31eec642b2a706faac510" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
@@ -1680,33 +1688,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="980" column="1"/>
-      </memberdef>
-      <memberdef kind="function" id="group__node_1ga7dacebc6533305fba12335b3b8c817dc" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
-        <type>uv_loop_t *</type>
-        <definition>uv_loop_t* DPS_GetLoop</definition>
-        <argsstring>(DPS_Node *node)</argsstring>
-        <name>DPS_GetLoop</name>
-        <param>
-          <type><ref refid="group__node_1ga4dd612ab965134321bb57fdb065f121c" kindref="member">DPS_Node</ref> *</type>
-          <declname>node</declname>
-        </param>
-        <briefdescription>
-<para>Get the uv event loop for this node. </para>        </briefdescription>
-        <detaileddescription>
-<para>The only thing that is safe to do with the node is to create an async callback. Other libuv APIs can then be called from within the async callback.</para><para><parameterlist kind="param"><parameteritem>
-<parameternamelist>
-<parametername>node</parametername>
-</parameternamelist>
-<parameterdescription>
-<para>The local node to use</para></parameterdescription>
-</parameteritem>
-</parameterlist>
-<simplesect kind="return"><para>The uv event loop </para></simplesect>
-</para>        </detaileddescription>
-        <inbodydescription>
-        </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="548" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="973" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__node_1ga65bba7bcfe5e940b153fcced4e2e8880" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>void *</type>
@@ -1732,7 +1714,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="474" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="478" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__node_1gaf920b28fe0721a7f97b11673494d7b36" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>uint16_t</type>
@@ -1758,7 +1740,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="557" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="550" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__publication_1gaa8bee35089ac62289c9ba0e6a0568ca0" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>void *</type>
@@ -1784,7 +1766,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="740" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="733" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__subscription_1ga88ab2284734f099ef67bcc60997142b3" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>void *</type>
@@ -1810,7 +1792,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="931" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="924" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__publication_1ga7b0709e28cb34d5a30b90e4142cd6c19" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
@@ -1891,7 +1873,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="772" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="765" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__node_1ga5064c63b8ce76bf34402e0c80183234b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
@@ -1950,7 +1932,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="579" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="572" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__nodeaddress_1gafc7b21048f92370ca29325d6245b576d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>const char *</type>
@@ -1976,7 +1958,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="62" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="66" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__publication_1ga91471ddf6f66798e255b28b3e913144b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
@@ -2013,7 +1995,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="805" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="798" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__publication_1ga027a7ee80859f47a3263e29d8c989c40" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
@@ -2050,7 +2032,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="795" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="788" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__publication_1gad2a37d52f12c93434b431eefd732f363" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__node_1ga4dd612ab965134321bb57fdb065f121c" kindref="member">DPS_Node</ref> *</type>
@@ -2076,7 +2058,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="699" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="692" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__publication_1gaee6fc3b13484faacff0d26646778f777" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>size_t</type>
@@ -2102,7 +2084,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="672" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="665" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__publication_1ga1d7e81c2f0b19736a4f7a7195e5bd98d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>const <ref refid="group__keystore_1ga4345e29dd2ad5d7fd88a1e988787bd72" kindref="member">DPS_KeyId</ref> *</type>
@@ -2128,7 +2110,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="690" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="683" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__publication_1ga875b48217d861d4a9fa5471419d354e9" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>uint32_t</type>
@@ -2154,7 +2136,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="653" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="646" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__publication_1ga143a5c6fbe0bdf1725e841f122582432" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>const char *</type>
@@ -2191,7 +2173,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="663" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="656" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__publication_1gaba1ad3ee807b75a1281d334be06a12f7" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>const <ref refid="group__uuid_1gaef1d03afcc6410602ade1d48f24c3997" kindref="member">DPS_UUID</ref> *</type>
@@ -2217,7 +2199,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="644" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="637" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__publication_1ga516f7f314c7b95210751d00285758b9b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>int</type>
@@ -2243,7 +2225,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="681" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="674" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__publication_1gaa5225be2733d6ebfd01f9475e3fc06f5" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>void</type>
@@ -2279,7 +2261,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="813" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="806" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__publication_1ga828a4efc5c235c48a81f6460cc3fe416" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
@@ -2338,7 +2320,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="831" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="824" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__node_1gab78df7f4498b847ddb32fdd33d39ef0f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
@@ -2408,7 +2390,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="622" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="615" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__nodeaddress_1ga6231c243c483bd2d282f7df734a98946" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__nodeaddress_1ga9e9f56aa38e82b4edcef7eb81e9f5bd2" kindref="member">DPS_NodeAddress</ref> *</type>
@@ -2445,7 +2427,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="79" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="83" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__node_1gad19cf4272ba11e935654175c83db2ce1" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
@@ -2482,7 +2464,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="465" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="469" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__node_1gac7e33476c06009ed42a6ea6f3c53380a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>void</type>
@@ -2518,7 +2500,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="537" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="541" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__publication_1ga91c46ccb6df7f4bb99ca5d9d35cc5a4a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
@@ -2555,7 +2537,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="731" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="724" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__subscription_1gad581d341003e20c714061e44b57c2009" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
@@ -2592,7 +2574,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="922" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="915" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__node_1ga160d504bfaeb0d3711e0259000340fe3" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
@@ -2640,7 +2622,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="500" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="504" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__subscription_1ga83234ea82a91e07e3f5894a4dcf5267e" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
@@ -2677,7 +2659,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="971" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="964" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__subscription_1gafea65751c811555736c8c65fcb3a9480" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__node_1ga4dd612ab965134321bb57fdb065f121c" kindref="member">DPS_Node</ref> *</type>
@@ -2703,7 +2685,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="940" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="933" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__subscription_1gab0ad2c6806f8f44f27c70fff915b7e9a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>size_t</type>
@@ -2729,7 +2711,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="900" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="893" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__subscription_1gaacc63deda2f2d97cf3f44ca84784b2f6" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>const char *</type>
@@ -2766,7 +2748,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="891" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="884" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__node_1ga79c86c3c0c5d6438b953a9acaab0ab0b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
@@ -2825,7 +2807,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="600" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="593" column="1"/>
       </memberdef>
       </sectiondef>
     <briefdescription>

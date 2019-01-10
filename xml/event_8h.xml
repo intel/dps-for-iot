@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8' standalone='no'?>
-<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.13">
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.14">
   <compounddef id="event_8h" kind="file" language="C++">
     <compoundname>event.h</compoundname>
     <includes refid="err_8h" local="no">dps/err.h</includes>
@@ -12,9 +12,9 @@
         </childnode>
         <childnode refid="32" relation="include">
         </childnode>
-        <childnode refid="29" relation="include">
-        </childnode>
         <childnode refid="33" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
         </childnode>
         <childnode refid="34" relation="include">
         </childnode>
@@ -22,7 +22,7 @@
       <node id="31">
         <label>stdint.h</label>
       </node>
-      <node id="33">
+      <node id="34">
         <label>dps/uuid.h</label>
         <link refid="uuid_8h"/>
         <childnode refid="31" relation="include">
@@ -41,8 +41,8 @@
         <childnode refid="30" relation="include">
         </childnode>
       </node>
-      <node id="34">
-        <label>uv.h</label>
+      <node id="33">
+        <label>sys/socket.h</label>
       </node>
       <node id="29">
         <label>dps/err.h</label>
@@ -61,15 +61,18 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/event.h" line="80" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/event.h" bodystart="47" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/event.h" line="81" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/event.h" bodystart="47" bodyend="-1"/>
       </memberdef>
       </sectiondef>
       <sectiondef kind="func">
-      <memberdef kind="function" id="group__event_1gac38abc1e32666d631a40049c90bc66d3" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+      <memberdef kind="function" id="group__event_1ga9a4bff0ac00ffc6e148564be7f126dab" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__event_1ga97617da1bac0e76646713b8665dfdd85" kindref="member">DPS_Event</ref> *</type>
         <definition>DPS_Event* DPS_CreateEvent</definition>
-        <argsstring>()</argsstring>
+        <argsstring>(void)</argsstring>
         <name>DPS_CreateEvent</name>
+        <param>
+          <type>void</type>
+        </param>
         <briefdescription>
 <para>Create and initialize an event. </para>        </briefdescription>
         <detaileddescription>

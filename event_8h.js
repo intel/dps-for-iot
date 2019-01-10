@@ -1,7 +1,7 @@
 var event_8h =
 [
     [ "DPS_Event", "group__event.html#ga97617da1bac0e76646713b8665dfdd85", null ],
-    [ "DPS_CreateEvent", "group__event.html#gac38abc1e32666d631a40049c90bc66d3", null ],
+    [ "DPS_CreateEvent", "group__event.html#ga9a4bff0ac00ffc6e148564be7f126dab", null ],
     [ "DPS_DestroyEvent", "group__event.html#ga7539f700336357cd320d6b40eba59c63", null ],
     [ "DPS_GetEventData", "group__event.html#gaba8fce0d0896df9b6f294112a251e39f", null ],
     [ "DPS_SetEventData", "group__event.html#ga23a814c5aaebf5bdddebac0ef5d295ce", null ],

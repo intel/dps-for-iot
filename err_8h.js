@@ -8,6 +8,7 @@ var err_8h =
     [ "DPS_ERR_EXPIRED", "group__status.html#ga45240d9b5760ba1a30ad0bee0a6d2b7c", null ],
     [ "DPS_ERR_FAILURE", "group__status.html#gaa6d56ac86cbf831fe49fa74e46043a1d", null ],
     [ "DPS_ERR_INVALID", "group__status.html#ga6cac7d217edd07c3d7f1babf54cac1d7", null ],
+    [ "DPS_ERR_LOST_PRECISION", "group__status.html#ga74601dfd79a287ab4f1431136036e525", null ],
     [ "DPS_ERR_MISSING", "group__status.html#ga5c46980c33492a8b76bffce081dbcba4", null ],
     [ "DPS_ERR_NETWORK", "group__status.html#ga80a0ccafe770ca4149e65300d870c0d9", null ],
     [ "DPS_ERR_NO_ROUTE", "group__status.html#ga934517e91f6e214fb6cab5089d5acc92", null ],

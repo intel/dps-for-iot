@@ -4,7 +4,6 @@ var group__debug =
     [ "DPS_DBGPRINT", "group__debug.html#ga7ac5236c2ba157ffcf56cd073dcf0c3f", null ],
     [ "DPS_DBGTRACE", "group__debug.html#ga0a4156dc81e39b0cf2fb251e37bda307", null ],
     [ "DPS_DBGTRACEA", "group__debug.html#ga62bb2ddb60beb7390755a19cd7874b5c", null ],
-    [ "DPS_DEBUG_CONTROL", "group__debug.html#ga6990490017f384ce2d462e1b5c0963b8", null ],
     [ "DPS_DEBUG_ENABLED", "group__debug.html#gaeca5ec86966717c8dd2d1ffda4be2b3b", null ],
     [ "DPS_DEBUG_FORCE", "group__debug.html#ga6eb8eb8c3804ebd6f51fe2d7a7625ed8", null ],
     [ "DPS_DEBUG_OFF", "group__debug.html#ga39adc166f2ce05fb751212c1db9a6ce9", null ],

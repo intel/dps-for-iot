@@ -1,24 +1,29 @@
 <?xml version='1.0' encoding='UTF-8' standalone='no'?>
-<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.13">
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.14">
   <compounddef id="building-and-running" kind="page">
     <compoundname>building-and-running</compoundname>
     <title>Building and Running</title>
+    <tableofcontents/>
+    <briefdescription>
+<para><linebreak/>
+ </para>    </briefdescription>
     <detaileddescription>
-<sect1 id="building-and-running_1prerequisites">
+<para><linebreak/>
+</para><sect1 id="building-and-running_1prerequisites">
 <title>Prerequisites</title>
 <sect2 id="building-and-running_1prerequisites-linux">
 <title>Linux</title>
 <para><itemizedlist>
-<listitem><para>gcc or clang</para></listitem><listitem><para><ulink url="http://scons.org/pages/download.html">SCons</ulink></para></listitem><listitem><para><ulink url="http://dist.libuv.org/dist/">libuv</ulink></para><para>libuv version 1.15 or higher is required.</para><para><simplesect kind="note"><para>When the <computeroutput>UV_PATH</computeroutput> parameter to scons is specified as <computeroutput>ext/libuv</computeroutput>, the scons script pulls down and builds the source code for libuv.</para></simplesect>
-</para></listitem><listitem><para><ulink url="http://www.swig.org/download.html">SWIG</ulink></para></listitem></itemizedlist>
+<listitem><para>gcc or clang</para></listitem><listitem><para><ulink url="http://scons.org/pages/download.html">SCons</ulink></para></listitem><listitem><para><ulink url="http://dist.libuv.org/dist/">libuv</ulink></para><para>libuv version 1.15 or higher is required.</para><para><simplesect kind="note"><para>Many Linux distribution ship with libuv installed, the scons script checks if installed libuv can be used and if not pulls down the source code and builds libuv in ext/libuv</para></simplesect>
+</para></listitem><listitem><para><ulink url="http://www.swig.org/download.html">SWIG</ulink></para><para>SWIG is only required if building the Python or JavaScript bindings.</para></listitem></itemizedlist>
 </para></sect2>
 <sect2 id="building-and-running_1prerequisites-windows">
 <title>Windows</title>
 <para><itemizedlist>
 <listitem><para><ulink url="https://www.visualstudio.com/downloads/">Visual Studio</ulink></para><para><simplesect kind="note"><para>In Visual Studio 2015, Visual C++ is not installed by default. When installing, be sure to choose <bold>Custom</bold> installation and then choose the C++ components you require. Or, if Visual Studio is already installed, choose <bold>File | New | Project | C++</bold> and you will be prompted to install the necessary components.</para></simplesect>
 </para></listitem><listitem><para><ulink url="https://www.python.org/downloads/windows/">Latest Python 2.7 Release</ulink></para></listitem><listitem><para><ulink url="http://scons.org/pages/download.html">SCons</ulink></para><para><simplesect kind="note"><para>The SCons installer will not detect the 64-bit installation of Python. Instead, download the zip file and follow the installation instructions in SCons README.txt.</para></simplesect>
-</para></listitem><listitem><para><ulink url="http://dist.libuv.org/dist/">libuv</ulink></para><para>libuv version 1.15 or higher is required.</para><para><simplesect kind="note"><para>When the <computeroutput>UV_PATH</computeroutput> parameter to scons is specified as <computeroutput>ext\libuv</computeroutput>, the scons script pulls down and builds the source code for libuv.</para></simplesect>
-</para></listitem><listitem><para><ulink url="http://www.swig.org/download.html">SWIG</ulink></para></listitem></itemizedlist>
+</para></listitem><listitem><para><ulink url="http://dist.libuv.org/dist/">libuv</ulink></para><para>libuv version 1.15 or higher is required.</para><para><simplesect kind="note"><para>By default the scons script will pull down the source code and build libuv in <computeroutput>ext\libuv</computeroutput>. To use a pre-built libuv set the <computeroutput>UV_PATH</computeroutput> to point to the libuv installation folder.</para></simplesect>
+</para></listitem><listitem><para><ulink url="http://www.swig.org/download.html">SWIG</ulink></para><para>SWIG is only required if building the Python or JavaScript bindings. <ulink url="https://chocolatey.org/">Chocolatey</ulink> provides another means to install this dependency.</para></listitem><listitem><para><ulink url="http://www.mingw.org/wiki/Getting_Started">MinGW</ulink></para><para>MinGW is only required if building the Go binding. <ulink url="https://chocolatey.org/">Chocolatey</ulink> provides another means to install this dependency.</para></listitem></itemizedlist>
 </para></sect2>
 <sect2 id="building-and-running_1prerequisites-yocto">
 <title>Yocto</title>
@@ -33,13 +38,24 @@
 <title>Building</title>
 <sect2 id="building-and-running_1building-linux-and-windows">
 <title>Linux and Windows</title>
-<para>To build the DPS libraries, examples, bindings, and documentation run <computeroutput>scons</computeroutput>.</para><para><verbatim>$ scons [variant=debug|release] [transport=udp|tcp|dtls] [bindings=all|none]
-</verbatim></para><para>To build with a different compiler use the <computeroutput>CC</computeroutput> and <computeroutput>CXX</computeroutput> build options.</para><para><verbatim>$ scons CC=clang CXX=clang++
-</verbatim></para><para>To see the complete list of build options run <computeroutput>scons <ndash/>help</computeroutput>. The default build configuration is <computeroutput>variant=release transport=udp bindings=all</computeroutput>.</para><para><simplesect kind="note"><para>A limitation of the current implementation is that the transport must be configured at compile time.</para></simplesect>
-The scons script pulls down source code from two external projects (mbedtls, and safestringlib) into the <computeroutput>./ext</computeroutput> directory. If necessary these projects can be populated manually:</para><para><verbatim>$ git clone https://github.com/ARMmbed/mbedtls ext/mbedtls
+<para>To build the DPS libraries, examples, bindings, and documentation run <computeroutput>scons</computeroutput>.</para><para><verbatim>$ scons [variant=debug|release] [transport=udp|tcp|dtls] [bindings=all|none|{python,nodejs,go}]
+</verbatim></para><para>To build with a different compiler use the <computeroutput>CC</computeroutput> and <computeroutput>CXX</computeroutput> build options or the <computeroutput><ndash/>tool</computeroutput> option.</para><para><verbatim>$ scons CC=clang CXX=clang++
+$ scons --tool=mingw
+</verbatim></para><para>Depending on the platform and compiler only a subset of bindings are supported. <table rows="5" cols="3"><row>
+<entry thead="yes"><para>Platform</para></entry><entry thead="yes"><para>Compiler </para></entry><entry thead="yes"><para>Bindings  </para></entry></row>
+<row>
+<entry thead="no"><para>Linux </para></entry><entry thead="no"><para>gcc </para></entry><entry thead="no"><para>python,nodejs,go </para></entry></row>
+<row>
+<entry thead="no"><para>Linux </para></entry><entry thead="no"><para>clang </para></entry><entry thead="no"><para>python,nodejs  </para></entry></row>
+<row>
+<entry thead="no"><para>Windows </para></entry><entry thead="no"><para>cl </para></entry><entry thead="no"><para>python  </para></entry></row>
+<row>
+<entry thead="no"><para>Windows </para></entry><entry thead="no"><para>gcc (MinGW)</para></entry><entry thead="no"><para>go  </para></entry></row>
+</table>
+</para><para>To see the complete list of build options run <computeroutput>scons <ndash/>help</computeroutput>. The default build configuration is <computeroutput>variant=release transport=udp bindings=all</computeroutput>.</para><para><simplesect kind="note"><para>A limitation of the current implementation is that the transport must be configured at compile time.</para></simplesect>
+The scons script pulls down source code from three external projects (mbedtls, libuv, and safestringlib) into the <computeroutput>./ext</computeroutput> directory. If necessary these projects can be populated manually:</para><para><verbatim>$ git clone https://github.com/ARMmbed/mbedtls ext/mbedtls
 $ git clone https://github.com/01org/safestringlib.git ext/safestring
-</verbatim></para><para>When <computeroutput>UV_PATH</computeroutput> is specified as <computeroutput>ext/libuv</computeroutput>, the scons script pulls down source code for libuv. If necessary these projects can be populated manually:</para><para><verbatim>$ git clone https://github.com/libuv/libuv.git ext/libuv
-$ git clone https://chromium.googlesource.com/external/gyp ext/libuv/build/gyp
+$ git clone https://github.com/libuv/libuv.git ext/libuv
 </verbatim></para><para><simplesect kind="note"><para>The ext projects are populated the first time DPS is built. To update these projects you need to manually do a <computeroutput>git pull</computeroutput> or delete the project directory and rerun scons.</para></simplesect>
 </para></sect2>
 <sect2 id="building-and-running_1building-yocto">
@@ -47,12 +63,16 @@ $ git clone https://chromium.googlesource.com/external/gyp ext/libuv/build/gyp
 <para>Clone the poky repository and configure the Yocto environment. Refer to <ulink url="http://www.yoctoproject.org/docs/1.8/yocto-project-qs/yocto-project-qs.html">Yocto Project Quick Start</ulink> for more information.</para><para>Clone the libuv Yocto project and yocto/recipes-connectivity/dps to the Yocto Project directory. Modify the value of SRCREV_dps in dps_git.bb to the last commit of dps.</para><para>The Yocto Project directory needs to be included in BBLAYERS of conf/bblayers.conf. Refer to <ulink url="https://wiki.yoctoproject.org/wiki/How_do_I">Yocto Wiki</ulink> for more information.</para><para>From the root directory of the Yocto Project, initialize the Yocto environment, provide a meaningful build directory name and build Yocto DPS.</para><para><verbatim>$ source oe-init-build-env mybuilds
 $ bitbake dps
 </verbatim></para></sect2>
+<sect2 id="building-and-running_1building-application">
+<title>Applications</title>
+<para>In the <computeroutput>./application</computeroutput> subdirectory there is a simple SConscript that can be used as a template for building your own statically linked DPS C application. Copy the application tree somewhere and add your source and header files to the <computeroutput>src</computeroutput> and <computeroutput>include</computeroutput> directories.</para><para>To build: <verbatim>scons -C &lt;dps-root-dir&gt; application=&lt;your-application-dir&gt; bindings=none
+</verbatim></para></sect2>
 </sect1>
 <sect1 id="building-and-running_1running">
 <title>Running</title>
 <sect2 id="building-and-running_1running-examples">
 <title>Examples</title>
-<para>There are C, Python, and JS (node.js) examples.</para><para>The C examples are found in <computeroutput>./examples</computeroutput>, the Python examples are in <computeroutput>./py_scripts</computeroutput> and the JS examples are in <computeroutput>./js_scripts</computeroutput>.</para><para>The C examples are installed in <computeroutput>./build/dist/bin</computeroutput>. There are some some test scripts in <computeroutput></computeroutput>./test_scripts that run some more complex scenarios using the example programs. The test script <computeroutput>tree1</computeroutput> builds a small mesh and shows how publications sent to any node in the mesh get forwarded to the matching subscribers. The script <computeroutput>reg1</computeroutput> uses the <computeroutput>registry</computeroutput>, <computeroutput>reg_pubs</computeroutput>, and <computeroutput>reg_subs</computeroutput> examples programs to build a dynamic mesh using the experimental discovery service. </para></sect2>
+<para>There are C, Python, JS (node.js), and Go examples.</para><para>The C examples are found in <computeroutput>./examples</computeroutput>, the Python examples are in <computeroutput>./py_scripts</computeroutput>, the JS examples are in <computeroutput>./js_scripts</computeroutput> and the Go examples are in <computeroutput>./go/src</computeroutput>. Refer to the README.md in each of those directories for more info.</para><para>The C examples are installed in <computeroutput>./build/dist/bin</computeroutput>. There are some some test scripts in <computeroutput></computeroutput>./test_scripts that run some more complex scenarios using the example programs. The test script <computeroutput>tree1</computeroutput> builds a small mesh and shows how publications sent to any node in the mesh get forwarded to the matching subscribers. The script <computeroutput>reg1</computeroutput> uses the <computeroutput>registry</computeroutput>, <computeroutput>reg_pubs</computeroutput>, and <computeroutput>reg_subs</computeroutput> examples programs to build a dynamic mesh using the experimental discovery service. </para></sect2>
 </sect1>
     </detaileddescription>
   </compounddef>

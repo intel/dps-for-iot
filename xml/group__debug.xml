@@ -1,10 +1,11 @@
 <?xml version='1.0' encoding='UTF-8' standalone='no'?>
-<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.13">
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.14">
   <compounddef id="group__debug" kind="group">
     <compoundname>debug</compoundname>
     <title>Debug</title>
       <sectiondef kind="enum">
-      <memberdef kind="enum" id="group__debug_1gad06c0421a8226b0a95be1d722ca05612" prot="public" static="no">
+      <memberdef kind="enum" id="group__debug_1gad06c0421a8226b0a95be1d722ca05612" prot="public" static="no" strong="no">
+        <type></type>
         <name>DPS_LogLevel</name>
         <enumvalue id="group__debug_1ggad06c0421a8226b0a95be1d722ca05612ad8adeef2745368cf04dbb19b224df53c" prot="public">
           <name>DPS_LOG_ERROR</name>
@@ -284,18 +285,6 @@
         <inbodydescription>
         </inbodydescription>
         <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dbg.h" line="117" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dbg.h" bodystart="117" bodyend="-1"/>
-      </memberdef>
-      <memberdef kind="define" id="group__debug_1ga6990490017f384ce2d462e1b5c0963b8" prot="public" static="no">
-        <name>DPS_DEBUG_CONTROL</name>
-        <param><defname>dbg</defname></param>
-        <initializer>__attribute__((__unused__))static int __DPS_DebugControl = dbg</initializer>
-        <briefdescription>
-<para>Used at the top of a file to turn debugging on or off for that file. </para>        </briefdescription>
-        <detaileddescription>
-        </detaileddescription>
-        <inbodydescription>
-        </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dbg.h" line="144" column="10" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dbg.h" bodystart="144" bodyend="-1"/>
       </memberdef>
       <memberdef kind="define" id="group__debug_1gaeca5ec86966717c8dd2d1ffda4be2b3b" prot="public" static="no">
         <name>DPS_DEBUG_ENABLED</name>

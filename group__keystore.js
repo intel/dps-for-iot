@@ -48,7 +48,7 @@ var group__keystore =
       [ "DPS_KEY_EC_CERT", "group__keystore.html#gga7ca1045749c725e9c4a1b4758b2a0196a04e294e477af49e6a4927884f45fcb99", null ]
     ] ],
     [ "DPS_CreateKeyStore", "group__keystore.html#gafa79de23848ff56d0cced67897313369", null ],
-    [ "DPS_CreateMemoryKeyStore", "group__keystore.html#ga2da4c5f9b7ab5ff6b65d1c8f4d6c30bc", null ],
+    [ "DPS_CreateMemoryKeyStore", "group__keystore.html#gaa54422ad8b44ef7e222e6d3b3d07f5df", null ],
     [ "DPS_DestroyKeyStore", "group__keystore.html#ga40bea030ef0ba65ec332880ae2bbfee1", null ],
     [ "DPS_DestroyMemoryKeyStore", "group__keystore.html#ga2f9f4aeff872ca74d5735a8727f4dbae", null ],
     [ "DPS_GetKeyStoreData", "group__keystore.html#ga3b67d7dde74267ee9342dc3efd33812b", null ],

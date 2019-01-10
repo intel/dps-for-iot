@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8' standalone='no'?>
-<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.13">
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.14">
   <compounddef id="registration_8h" kind="file" language="C++">
     <compoundname>registration.h</compoundname>
     <includes refid="dps_8h" local="no">dps/dps.h</includes>
@@ -27,21 +27,21 @@
       <node id="52">
         <label>stdint.h</label>
       </node>
-      <node id="55">
+      <node id="56">
         <label>dps/uuid.h</label>
         <link refid="uuid_8h"/>
         <childnode refid="52" relation="include">
         </childnode>
-        <childnode refid="54" relation="include">
+        <childnode refid="55" relation="include">
         </childnode>
       </node>
       <node id="53">
         <label>stddef.h</label>
       </node>
-      <node id="56">
-        <label>uv.h</label>
-      </node>
       <node id="54">
+        <label>sys/socket.h</label>
+      </node>
+      <node id="55">
         <label>dps/err.h</label>
         <link refid="err_8h"/>
       </node>

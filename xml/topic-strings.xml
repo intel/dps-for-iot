@@ -1,10 +1,14 @@
 <?xml version='1.0' encoding='UTF-8' standalone='no'?>
-<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.13">
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.14">
   <compounddef id="topic-strings" kind="page">
     <compoundname>topic-strings</compoundname>
     <title>Topic Strings</title>
+    <briefdescription>
+<para><linebreak/>
+</para><para>DPS like other pub/sub protocols expresses publications and subscriptions as structured text strings called topic strings. </para>    </briefdescription>
     <detaileddescription>
-<para>DPS like other pub/sub protocols expresses publications and subscriptions as structured text strings called topic strings.</para><para>A topic string is a sequence of substrings delineated by a standalone separator character. In DPS almost any character or set of characters the publisher and subscriber agree on can be used as a separator. A publication matches a subscription if the substrings and separators in the publication are the same as the substrings and separators in the publication. Subscription topic strings can also include wildcard characters as described below. These are all valid publication topic strings:</para><para><verbatim>foo/bar
+<para><linebreak/>
+</para><para>DPS like other pub/sub protocols expresses publications and subscriptions as structured text strings called topic strings.</para><para>A topic string is a sequence of substrings delineated by a standalone separator character. In DPS almost any character or set of characters the publisher and subscriber agree on can be used as a separator. A publication matches a subscription if the substrings and separators in the publication are the same as the substrings and separators in the publication. Subscription topic strings can also include wildcard characters as described below. These are all valid publication topic strings:</para><para><verbatim>foo/bar
 x,y,z
 1.2.3
 a/b/c?val=5
