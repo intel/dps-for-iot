@@ -332,6 +332,10 @@ type userKeyStore struct {
 
 func (ks userKeyStore) chandle() *C.DPS_KeyStore { return ks.ckeyStore }
 
+func makeKeyId(keyId KeyId) *C.DPS_KeyId {
+	return C.makeKeyId((*C.uint8_t)(&keyId[0]), C.size_t(len(keyId)))
+}
+
 func makeKey(key Key) *C.DPS_Key {
 	// no defer below, freeKey will take care of the memory
 	switch key.(type) {
@@ -436,10 +440,12 @@ func goKeyAndIdHandler(crequest *C.DPS_KeyStoreRequest) C.DPS_Status {
 	request := (*KeyStoreRequest)(crequest)
 	ckeyStore := (*C.DPS_KeyStore)(C.DPS_KeyStoreHandle(crequest))
 	ks, ok := reg.lookup(uintptr(C.DPS_GetKeyStoreData(ckeyStore))).(*userKeyStore)
-	if ok {
-		return C.DPS_Status(ks.keyAndIdHandler(request))
-	} else {
+	if !ok {
 		return ERR_FAILURE
+	} else if ks.keyAndIdHandler == nil {
+		return ERR_NOT_IMPLEMENTED
+	} else {
+		return C.DPS_Status(ks.keyAndIdHandler(request))
 	}
 }
 
@@ -448,14 +454,16 @@ func goKeyHandler(crequest *C.DPS_KeyStoreRequest, ckeyId *C.DPS_KeyId) C.DPS_St
 	request := (*KeyStoreRequest)(crequest)
 	ckeyStore := (*C.DPS_KeyStore)(C.DPS_KeyStoreHandle(crequest))
 	var keyId KeyId
-	if ckeyId != nil {
+	if ckeyId != nil && ckeyId.id != nil {
 		keyId = (*[1 << 30]byte)(unsafe.Pointer(ckeyId.id))[:ckeyId.len:ckeyId.len]
 	}
 	ks, ok := reg.lookup(uintptr(C.DPS_GetKeyStoreData(ckeyStore))).(*userKeyStore)
-	if ok {
-		return C.DPS_Status(ks.keyHandler(request, keyId))
-	} else {
+	if !ok {
 		return ERR_FAILURE
+	} else if ks.keyHandler == nil {
+		return ERR_NOT_IMPLEMENTED
+	} else {
+		return C.DPS_Status(ks.keyHandler(request, keyId))
 	}
 }
 
@@ -498,10 +506,12 @@ func goEphemeralKeyHandler(crequest *C.DPS_KeyStoreRequest, ckey *C.DPS_Key) C.D
 		key = KeyCert{C.GoString(cert.cert), privateKey, password}
 	}
 	ks, ok := reg.lookup(uintptr(C.DPS_GetKeyStoreData(ckeyStore))).(*userKeyStore)
-	if ok {
-		return C.DPS_Status(ks.ephemeralKeyHandler(request, key))
-	} else {
+	if !ok {
 		return ERR_FAILURE
+	} else if ks.ephemeralKeyHandler == nil {
+		return ERR_NOT_IMPLEMENTED
+	} else {
+		return C.DPS_Status(ks.ephemeralKeyHandler(request, key))
 	}
 }
 
@@ -510,10 +520,12 @@ func goCAHandler(crequest *C.DPS_KeyStoreRequest) C.DPS_Status {
 	request := (*KeyStoreRequest)(crequest)
 	ckeyStore := (*C.DPS_KeyStore)(C.DPS_KeyStoreHandle(crequest))
 	ks, ok := reg.lookup(uintptr(C.DPS_GetKeyStoreData(ckeyStore))).(*userKeyStore)
-	if ok {
-		return C.DPS_Status(ks.caHandler(request))
-	} else {
+	if !ok {
 		return ERR_FAILURE
+	} else if ks.caHandler == nil {
+		return ERR_NOT_IMPLEMENTED
+	} else {
+		return C.DPS_Status(ks.caHandler(request))
 	}
 }
 
@@ -539,7 +551,10 @@ func SetContentKey(keyStore KeyStore, keyId KeyId, key Key) int {
 	if !ok {
 		return ERR_ARGS
 	}
-	ckeyId := C.makeKeyId((*C.uint8_t)(&keyId[0]), C.size_t(len(keyId)))
+	ckeyId := makeKeyId(keyId)
+	if ckeyId == nil {
+		return ERR_RESOURCES
+	}
 	defer C.free(unsafe.Pointer(ckeyId))
 	ckey := makeKey(key)
 	defer C.freeKey(ckey)
@@ -550,7 +565,10 @@ func SetNetworkKey(keyStore KeyStore, keyId KeyId, key Key) int {
 	if !ok {
 		return ERR_ARGS
 	}
-	ckeyId := C.makeKeyId((*C.uint8_t)(&keyId[0]), C.size_t(len(keyId)))
+	ckeyId := makeKeyId(keyId)
+	if ckeyId == nil {
+		return ERR_RESOURCES
+	}
 	defer C.free(unsafe.Pointer(ckeyId))
 	ckey := makeKey(key)
 	defer C.freeKey(ckey)
@@ -596,7 +614,10 @@ func CreateNode(separators string, keyStore KeyStore, keyId KeyId) *Node {
 	ckeyStore := keyStore.chandle()
 	var ckeyId *C.DPS_KeyId
 	if len(keyId) > 0 {
-		ckeyId = C.makeKeyId((*C.uint8_t)(&keyId[0]), C.size_t(len(keyId)))
+		ckeyId = makeKeyId(keyId)
+		if ckeyId == nil {
+			return nil
+		}
 		defer C.free(unsafe.Pointer(ckeyId))
 	}
 	return (*Node)(C.DPS_CreateNode(cseparators, ckeyStore, ckeyId))
@@ -728,9 +749,12 @@ func PublicationIsAckRequested(pub *Publication) bool {
 	}
 }
 
-func PublicationGetSenderKeyId(pub *Publication) KeyId {
+func PublicationGetSenderKeyId(pub *Publication) (keyId KeyId) {
 	ckeyId := C.DPS_PublicationGetSenderKeyId(pub.cpub)
-	return C.GoBytes(unsafe.Pointer(ckeyId.id), C.int(ckeyId.len))
+	if ckeyId != nil && ckeyId.id != nil {
+		keyId = C.GoBytes(unsafe.Pointer(ckeyId.id), C.int(ckeyId.len))
+	}
+	return
 }
 
 func PublicationGetNode(pub *Publication) *Node {
@@ -790,7 +814,10 @@ func goAcknowledgementHandler(cpub *C.DPS_Publication, cpayload *C.uint8_t, clen
 func PublicationAddSubId(pub *Publication, keyId KeyId) int {
 	var ckeyId *C.DPS_KeyId
 	if keyId != nil {
-		ckeyId = C.makeKeyId((*C.uint8_t)(&keyId[0]), C.size_t(len(keyId)))
+		ckeyId = makeKeyId(keyId)
+		if ckeyId == nil {
+			return ERR_RESOURCES
+		}
 		defer C.free(unsafe.Pointer(ckeyId))
 	}
 	return int(C.DPS_PublicationAddSubId(pub.cpub, ckeyId))
@@ -799,10 +826,12 @@ func PublicationAddSubId(pub *Publication, keyId KeyId) int {
 func PublicationRemoveSubId(pub *Publication, keyId KeyId) {
 	var ckeyId *C.DPS_KeyId
 	if keyId != nil {
-		ckeyId = C.makeKeyId((*C.uint8_t)(&keyId[0]), C.size_t(len(keyId)))
-		defer C.free(unsafe.Pointer(ckeyId))
+		ckeyId = makeKeyId(keyId)
 	}
-	C.DPS_PublicationRemoveSubId(pub.cpub, ckeyId)
+	if ckeyId != nil {
+		defer C.free(unsafe.Pointer(ckeyId))
+		C.DPS_PublicationRemoveSubId(pub.cpub, ckeyId)
+	}
 }
 
 func Publish(pub *Publication, payload []byte, ttl int16) int {
@@ -834,9 +863,12 @@ func AckPublication(pub *Publication, payload []byte) int {
 	return int(C.DPS_AckPublication(pub.cpub, cpayload, clen))
 }
 
-func AckGetSenderKeyId(pub *Publication) KeyId {
+func AckGetSenderKeyId(pub *Publication) (keyId KeyId) {
 	ckeyId := C.DPS_AckGetSenderKeyId(pub.cpub)
-	return C.GoBytes(unsafe.Pointer(ckeyId.id), C.int(ckeyId.len))
+	if ckeyId != nil && ckeyId.id != nil {
+		keyId = C.GoBytes(unsafe.Pointer(ckeyId.id), C.int(ckeyId.len))
+	}
+	return
 }
 
 type Subscription struct {
