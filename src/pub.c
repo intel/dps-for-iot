@@ -20,23 +20,23 @@
  */
 
 #include <assert.h>
-#include <string.h>
-#include <stdlib.h>
 #include <safe_lib.h>
+#include <stdlib.h>
+#include <string.h>
 #include <dps/dbg.h>
 #include <dps/dps.h>
-#include <dps/uuid.h>
+#include <dps/private/cbor.h>
 #include <dps/private/dps.h>
 #include <dps/private/network.h>
+#include <dps/uuid.h>
 #include "bitvec.h"
-#include <dps/private/cbor.h>
+#include "coap.h"
 #include "compat.h"
 #include "cose.h"
-#include "coap.h"
-#include "pub.h"
-#include "sub.h"
 #include "history.h"
 #include "node.h"
+#include "pub.h"
+#include "sub.h"
 #include "topics.h"
 
 /*
@@ -653,7 +653,8 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
     RemoteNode* pubNode = NULL;
     uint16_t port;
     DPS_Publication* pub = NULL;
-    DPS_UUID* pubId = NULL;
+    uint8_t* bytes = NULL;
+    DPS_UUID pubId;
     DPS_RxBuffer bfBuf;
     uint8_t* protectedPtr;
     CBOR_MapState mapState;
@@ -728,9 +729,12 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
             }
             break;
         case DPS_CBOR_KEY_PUB_ID:
-            ret = CBOR_DecodeBytes(buf, (uint8_t**)&pubId, &len);
+            ret = CBOR_DecodeBytes(buf, &bytes, &len);
             if ((ret == DPS_OK) && (len != sizeof(DPS_UUID))) {
                 ret = DPS_ERR_INVALID;
+            }
+            if (ret == DPS_OK) {
+                memcpy(&pubId.val, bytes, sizeof(DPS_UUID));
             }
             break;
         case DPS_CBOR_KEY_SEQ_NUM:
@@ -766,13 +770,13 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
     /*
      * Check if this is an update for an existing retained publication
      */
-    pub = LookupRetained(node, pubId);
+    pub = LookupRetained(node, &pubId);
     if (pub) {
         /*
          * Retained publications can only be updated with newer revisions
          */
         if (sequenceNum <= pub->sequenceNum) {
-            DPS_DBGPRINT("Publication %s/%d is stale (/%d already retained)\n", DPS_UUIDToString(pubId), sequenceNum, pub->sequenceNum);
+            DPS_DBGPRINT("Publication %s/%d is stale (/%d already retained)\n", DPS_UUIDToString(&pubId), sequenceNum, pub->sequenceNum);
             return DPS_ERR_STALE;
         }
     } else {
@@ -780,8 +784,8 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
          * A stale publication is a publication that has the same or older sequence number than the
          * latest publication with the same pubId.
          */
-        if (DPS_PublicationIsStale(&node->history, pubId, sequenceNum)) {
-            DPS_DBGPRINT("Publication %s/%d is stale\n", DPS_UUIDToString(pubId), sequenceNum);
+        if (DPS_PublicationIsStale(&node->history, &pubId, sequenceNum)) {
+            DPS_DBGPRINT("Publication %s/%d is stale\n", DPS_UUIDToString(&pubId), sequenceNum);
             return DPS_ERR_STALE;
         }
         pub = calloc(1, sizeof(DPS_Publication));
@@ -800,7 +804,7 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
             free(pub);
             return DPS_ERR_RESOURCES;
         }
-        memcpy_s(&pub->shared->pubId, sizeof(pub->shared->pubId), pubId, sizeof(DPS_UUID));
+        memcpy_s(&pub->shared->pubId, sizeof(pub->shared->pubId), &pubId, sizeof(DPS_UUID));
         /*
          * Link in the pub
          */
@@ -1170,7 +1174,7 @@ DPS_Publication* DPS_CopyPublication(const DPS_Publication* pub)
     copy->shared->node = pub->shared->node;
     copy->shared->numTopics = pub->shared->numTopics;
     if (pub->shared->numTopics > 0) {
-	int i;
+        size_t i;
         copy->shared->topics = calloc(pub->shared->numTopics, sizeof(char*));
         if (!copy->shared->topics) {
             DPS_ERRPRINT("malloc failure: no memory\n");

@@ -115,16 +115,6 @@ static int IsNew(uint16_t n)
     return 1;
 }
 
-static size_t NumArcs()
-{
-    size_t numArcs = 0;
-    LINK* l;
-    for (l = links; l != NULL; l = l->next) {
-        ++numArcs;
-    }
-    return numArcs;
-}
-
 static LINK* AddLink(uint16_t src, uint16_t dst)
 {
     LINK* l = HasLink(src, dst);
@@ -184,17 +174,7 @@ static int IntArg(char* opt, char*** argp, int* argcp, int* val, int min, int ma
     return 1;
 }
 
-static uint16_t GetPort(DPS_NodeAddress* nodeAddr)
-{
-    const struct sockaddr* addr = (const struct sockaddr*)&nodeAddr->inaddr;
-    if (addr->sa_family == AF_INET6) {
-        return ntohs(((const struct sockaddr_in6*)addr)->sin6_port);
-    } else {
-        return ntohs(((const struct sockaddr_in*)addr)->sin_port);
-    }
-}
-
-static int CountMutedLinks()
+static int CountMutedLinks(void)
 {
     int numMuted = 0;
     size_t i;
@@ -213,7 +193,7 @@ static int CountMutedLinks()
     return numMuted;
 }
 
-static void DumpLinks()
+static void DumpLinks(void)
 {
     LINK* l;
     for (l = links; l != NULL; l = l->next) {
@@ -234,7 +214,6 @@ static int ReadLinks(const char* fn)
     while (1) {
         int ep1;
         int ep2;
-        size_t n = 0;
         ssize_t len;
         char line[32];
 
@@ -276,28 +255,6 @@ ErrExit:
 
     fclose(f);
     return 0;
-}
-
-static void DumpMeshIds(uint16_t numIds)
-{
-    size_t i;
-    for (i = 0; i < numIds; ++i) {
-        uint16_t id = NodeList[i];
-        DPS_Node* node = NodeMap[id];
-        if (node) {
-            DPS_PRINT("Node[%d] meshId %s\n", id, DPS_UUIDToString(&node->minMeshId));
-        }
-    }
-}
-
-static void DumpPortMap(uint16_t numIds)
-{
-    size_t i;
-    for (i = 0; i < numIds; ++i) {
-        uint16_t id = NodeList[i];
-        DPS_Node* node = NodeMap[id];
-        DPS_PRINT("Node[%d] = %d\n", id, DPS_GetPortNumber(node));
-    }
 }
 
 static void OnNodeDestroyed(DPS_Node* node, void* data)
@@ -375,7 +332,7 @@ int main(int argc, char** argv)
     int numMuted = 0;
     int expMuted;
     const char* inFn = NULL;
-    size_t i;
+    int i;
 
     DPS_Debug = 0;
 
@@ -536,7 +493,7 @@ int main(int argc, char** argv)
         /*
          * Cleanup the nodes
          */
-        for (i = 0; i < A_SIZEOF(NodeMap); ++i) {
+        for (i = 0; i < (int)A_SIZEOF(NodeMap); ++i) {
             if (NodeMap[i]) {
                 DPS_DestroyNode(NodeMap[i], OnNodeDestroyed, NULL);
                 NodeMap[i] = NULL;

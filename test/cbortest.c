@@ -41,7 +41,7 @@ static uint64_t Uints[] = {
     UINT64_MAX - 1, UINT64_MAX
 };
 
-static uint64_t Sints[] = {
+static int64_t Sints[] = {
     INT64_MIN, INT64_MIN + 1,
     -1, 0, 1, -22, -23, -24, -25, -254, -255, -256, -257,
     INT64_MAX - 1, INT64_MAX
@@ -81,7 +81,7 @@ static const int64_t IntsAsDouble[] = {
     0, 2, -3, -9007199254740992ll, 9007199254740992ll, INT32_MAX, INT32_MIN, -9007199254740993ll, 9007199254740993ll, INT64_MAX, INT64_MIN + 1
 };
 
-static DPS_Status TestFloatingPoint()
+static DPS_Status TestFloatingPoint(void)
 {
     DPS_TxBuffer txBuffer;
     size_t i;
@@ -107,7 +107,7 @@ static DPS_Status TestFloatingPoint()
     return DPS_OK;
 }
 
-static DPS_Status TestTextString()
+static DPS_Status TestTextString(void)
 {
     DPS_TxBuffer txBuffer;
     DPS_RxBuffer rxBuffer;
@@ -174,6 +174,7 @@ Failed:
 
 int main(int argc, char** argv)
 {
+    int j;
     size_t i;
     size_t n;
     DPS_Status ret;
@@ -183,8 +184,8 @@ int main(int argc, char** argv)
     size_t size;
 
     DPS_Debug = DPS_FALSE;
-    for (i = 1; i < argc; ++i) {
-        if (!strcmp(argv[i], "-d")) {
+    for (j = 1; j < argc; ++j) {
+        if (!strcmp(argv[j], "-d")) {
             DPS_Debug = DPS_TRUE;
         }
     }
@@ -448,7 +449,7 @@ int main(int argc, char** argv)
         size_t len;
         ret = CBOR_DecodeUint(&rxBuffer, &n);
         CHECK(ret);
-        ASSERT(n == Maps[i].key);
+        ASSERT(n == (uint64_t)Maps[i].key);
         ret = CBOR_DecodeString(&rxBuffer, &str, &len);
         CHECK(ret);
         ASSERT(strlen(Maps[i].string) == len && !strncmp(str, Maps[i].string, len));

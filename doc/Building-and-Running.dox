@@ -20,6 +20,8 @@
 
 - [SWIG](http://www.swig.org/download.html)
 
+  SWIG is only required if building the Python or JavaScript bindings.
+
 @subsection prerequisites-windows Windows
 
 - [Visual Studio](https://www.visualstudio.com/downloads/)
@@ -48,6 +50,16 @@
   @c UV_PATH to point to the libuv installation folder.
 
 - [SWIG](http://www.swig.org/download.html)
+
+  SWIG is only required if building the Python or JavaScript bindings.
+  [Chocolatey](https://chocolatey.org/) provides another means to
+  install this dependency.
+
+- [MinGW](http://www.mingw.org/wiki/Getting_Started)
+
+  MinGW is only required if building the Go binding.
+  [Chocolatey](https://chocolatey.org/) provides another means to
+  install this dependency.
 
 @subsection prerequisites-yocto Yocto
 Yocto Project through the OpenEmbedded build system provides an open
@@ -82,15 +94,25 @@ To build the DPS libraries, examples, bindings, and documentation run
 @c scons.
 
 @verbatim
-$ scons [variant=debug|release] [transport=udp|tcp|dtls] [bindings=all|none]
+$ scons [variant=debug|release] [transport=udp|tcp|dtls] [bindings=all|none|{python,nodejs,go}]
 @endverbatim
 
 To build with a different compiler use the @c CC and @c CXX build
-options.
+options or the <tt>--tool</tt> option.
 
 @verbatim
 $ scons CC=clang CXX=clang++
+$ scons --tool=mingw
 @endverbatim
+
+Depending on the platform and compiler only a subset of bindings are supported.
+<table>
+<tr><th>Platform<th>Compiler   <th>Bindings        </tr>
+<tr><td>Linux   <td>gcc        <td>python,nodejs,go</tr>
+<tr><td>Linux   <td>clang      <td>python,nodejs   </tr>
+<tr><td>Windows <td>cl         <td>python          </tr>
+<tr><td>Windows <td>gcc (MinGW)<td>go              </tr>
+</table>
 
 To see the complete list of build options run <tt>scons --help</tt>.
 The default build configuration is <tt>variant=release transport=udp
@@ -137,15 +159,27 @@ $ source oe-init-build-env mybuilds
 $ bitbake dps
 @endverbatim
 
+@subsection building-application Applications
+In the <tt>./application</tt> subdirectory there is a simple SConscript
+that can be used as a template for building your own statically linked
+DPS C application. Copy the application tree somewhere and add your
+source and header files to the <tt>src</tt> and <tt>include</tt> directories.
+
+To build:
+@verbatim
+scons -C <dps-root-dir> application=<your-application-dir> bindings=none
+@endverbatim
+
 @section running Running
 
 @subsection running-examples Examples
 
-There are C, Python, and JS (node.js) examples.
+There are C, Python, JS (node.js), and Go examples.
 
 The C examples are found in <tt>./examples</tt>, the Python examples
-are in <tt>./py_scripts</tt> and the JS examples are in
-<tt>./js_scripts</tt>.
+are in <tt>./py_scripts</tt>, the JS examples are in
+<tt>./js_scripts</tt> and the Go examples are in <tt>./go/src</tt>.
+Refer to the README.md in each of those directories for more info.
 
 The C examples are installed in <tt>./build/dist/bin</tt>. There are some
 some test scripts in @c ./test_scripts that run some more complex

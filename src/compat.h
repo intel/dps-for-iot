@@ -35,9 +35,25 @@ extern "C" {
  * Code required for platform compatibility
  */
 
-#ifdef _WIN32
+#if defined(__GNUC__) || defined(__MINGW64__)
+#define THREAD __thread
+#define BSWAP_32(n)  __builtin_bswap32(n)
+#define BSWAP_64(n)  __builtin_bswap64(n)
+#elif defined(_MSC_VER)
+#define THREAD __declspec(thread)
+#define BSWAP_32(n)  _byteswap_ulong(n)
+#define BSWAP_64(n)  _byteswap_uint64(n)
+#endif
 
-inline char* strndup(const char* str, size_t maxLen)
+#if defined(_WIN32)
+
+#include <stdlib.h>
+
+#define __LITTLE_ENDIAN   0
+#define __BIG_ENDIAN      1
+#define __BYTE_ORDER      __LITTLE_ENDIAN
+
+static inline char* strndup(const char* str, size_t maxLen)
 {
     size_t len = strnlen_s(str, RSIZE_MAX_STR);
     if (len > maxLen) {
@@ -51,23 +67,9 @@ inline char* strndup(const char* str, size_t maxLen)
     return c;
 }
 
-#define BSWAP_32(n)  _byteswap_ulong(n)
-#define BSWAP_64(n)  _byteswap_uint64(n)
-
-#define __LITTLE_ENDIAN   0
-#define __BIG_ENDIAN      1
-#define __BYTE_ORDER      __LITTLE_ENDIAN
-
-#define THREAD __declspec(thread)
-
 #else /* posix */
 
 #include <endian.h>
-
-#define BSWAP_32(n)  __builtin_bswap32(n)
-#define BSWAP_64(n)  __builtin_bswap64(n)
-
-#define THREAD __thread
 
 #endif
 

@@ -1,6 +1,6 @@
 import os
 import string
-Import(['env', 'ext_libs', 'lib_dps'])
+Import(['env', 'lib_dps'])
 
 platform = env['PLATFORM']
 
@@ -12,7 +12,7 @@ if app_env['PLATFORM'] == 'win32':
 app_env.Append(CPPPATH=['./include'])
 
 # Libraries will be statically linked
-app_env['LIBS'] = [lib_dps] + [ext_libs] + env['DPS_LIBS']
+app_env['LIBS'] = [lib_dps] + env['DPS_LIBS']
 
 # Source files
 app_srcs = Glob('src/*.c')

@@ -91,7 +91,7 @@ static void TimedWait(uint16_t msecs)
     DPS_TimedWaitForEvent(event, msecs);
 }
 
-static void Wait()
+static void Wait(void)
 {
     DPS_WaitForEvent(event);
 }

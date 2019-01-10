@@ -1,12 +1,20 @@
 import os
 import platform
 
+AddOption('--tool', action='append', dest='tools', help='Add tool to the environment')
+
 vars = Variables()
 
-bindings = Split('python nodejs')
+bindings = Split('python nodejs go')
 
 # Generic build variables
 vars.AddVariables(
+    BoolVariable('profile', 'Build for profiling?', False),
+    BoolVariable('asan', 'Enable address sanitizer?', False),
+    BoolVariable('tsan', 'Enable thread sanitizer?', False),
+    BoolVariable('ubsan', 'Enable undefined behavior sanitizer?', False),
+    BoolVariable('fsan', 'Enable fuzzer sanitizer?', False),
+    BoolVariable('cov', 'Enable code coverage?', False),
     EnumVariable('variant', 'Build variant', default='release', allowed_values=('debug', 'release'), ignorecase=2),
     EnumVariable('transport', 'Transport protocol', default='udp', allowed_values=('udp', 'tcp', 'dtls', 'fuzzer'), ignorecase=2),
     EnumVariable('target', 'Build target', default='local', allowed_values=('local', 'yocto'), ignorecase=2),
@@ -18,23 +26,18 @@ vars.AddVariables(
 # Windows-specific command line variables
 if platform.system() == 'Windows':
     vars.AddVariables(
-        PathVariable('UV_PATH', 'Path where libuv is installed', 'ext\libuv', PathVariable.PathAccept),
-        PathVariable('PYTHON_PATH', 'Path to Python', 'C:\Python27', PathVariable.PathAccept),
-        PathVariable('SWIG', 'Path to SWIG executable', 'C:\swigwin-3.0.10\swig.exe', PathVariable.PathAccept),
         PathVariable('DOXYGEN_PATH', 'Path to Doxygen', 'C:\Program Files\Doxygen', PathVariable.PathAccept),
+        PathVariable('GIT_PATH', 'Path where git is installed', 'C:\Program Files\Git', PathVariable.PathAccept),
+        PathVariable('PYTHON_PATH', 'Path to Python', 'C:\Python27', PathVariable.PathAccept),
+        PathVariable('UV_PATH', 'Path where libuv is installed', 'ext\libuv', PathVariable.PathAccept),
+        PathVariable('SWIG', 'Path to SWIG executable', 'C:\swigwin-3.0.10\swig.exe', PathVariable.PathAccept),
         PathVariable('DEF_FILE', 'Path to external defs for dll', 'dps_shared.def', PathVariable.PathIsFile))
 
-# Linux-specific command line variables
-if platform.system() == 'Linux':
-    vars.AddVariables(
-        BoolVariable('profile', 'Build for profiling?', False),
-        BoolVariable('asan', 'Enable address sanitizer?', False),
-        BoolVariable('tsan', 'Enable thread sanitizer?', False),
-        BoolVariable('ubsan', 'Enable undefined behavior sanitizer?', False),
-        BoolVariable('fsan', 'Enable fuzzer sanitizer?', False),
-        BoolVariable('cov', 'Enable code coverage?', False))
+tools = GetOption('tools')
+if tools == None:
+    tools = ['default']
+tools.extend(['swig', 'textfile', DPS])
 
-tools=['default', 'textfile', DPS]
 # Doxygen is optional
 try:
     env = Environment(tools=['doxygen'])
@@ -42,23 +45,18 @@ try:
 except:
     pass
 
-extEnv = Environment(ENV = os.environ, variables=vars)
-
 env = Environment(
-    CPPPATH=[
-        '#/inc',
-    ],
-    CPPDEFINES=[
-    ],
-    variables=vars,
-    tools=tools,
+    # os.environ must be imported for the mingw tool to find (and succesfully run) the compiler
+    ENV = os.environ,
+    variables = vars,
+    tools = tools,
 )
 
 Help(vars.GenerateHelpText(env))
 
 for key, val in ARGLIST:
     if key.lower() == 'define':
-        env['CPPDEFINES'].append(val)
+        env.Append(CPPDEFINES = [val])
 
 # Unpack bindings into individually testable booleans
 for b in bindings:
@@ -66,46 +64,32 @@ for b in bindings:
 
 if env['transport'] == 'udp':
     env['USE_UDP'] = 'true'
-    env['CPPDEFINES'].append('DPS_USE_UDP')
+    env.Append(CPPDEFINES = ['DPS_USE_UDP'])
 elif env['transport'] == 'tcp':
     env['USE_TCP'] = 'true'
-    env['CPPDEFINES'].append('DPS_USE_TCP')
+    env.Append(CPPDEFINES = ['DPS_USE_TCP'])
 elif env['transport'] == 'dtls':
     env['USE_DTLS'] = 'true'
-    env['CPPDEFINES'].append('DPS_USE_DTLS')
+    env.Append(CPPDEFINES = ['DPS_USE_DTLS'])
 
 print("Building for " + env['variant'])
 
 # Platform specific configuration
 
 if env['PLATFORM'] == 'win32':
+    env.AppendENVPath('PATH', env['GIT_PATH'] + '\cmd')
 
-    env.Append(CCFLAGS = ['/J', '/W3', '/WX', '/nologo'])
-    env.Append(CCFLAGS = ['/execution-charset:utf-8'])
-
-    if env['variant'] == 'debug':
-        env.Append(CCFLAGS = ['/Zi', '/MT', '/Od', '-DDPS_DEBUG'])
-        env.Append(LINKFLAGS = ['/DEBUG'])
-    else:
-        env.Append(CCFLAGS = ['/Gy', '/O2', '/GF', '/MT'])
-        env.Append(LINKFLAGS = ['/opt:ref'])
-
-    # Stack-based Buffer Overrun Detection
-    env.Append(CCFLAGS = ['/GS'])
-    # Compiler settings validation
-    env.Append(CCFLAGS = ['/sdl'])
-
-    # Data Execution Prevention
-    env.Append(LINKFLAGS = ['/NXCompat'])
-    # Image Randomization
-    env.Append(LINKFLAGS = ['/DynamicBase'])
+    env.Append(CPPDEFINES = ['WIN32_LEAN_AND_MEAN', '_WIN32_WINNT=0x0600'])
+    # We are getting our secure memory and string functions from
+    # SafeStringLib so need to disable the Windows supplied versions
+    env.Append(CPPDEFINES = ['__STDC_WANT_SECURE_LIB__=0', '_STRALIGN_USE_SECURE_CRT=0', '_CRT_SECURE_NO_WARNINGS'])
 
     # Where to find Python.h
     env['PY_CPPPATH'] = [env['PYTHON_PATH'] + '\include']
     env['PY_LIBPATH'] = [env['PYTHON_PATH'] + '\libs']
 
-    # Where to find libuv and the libraries it needs
     env['DPS_LIBS'] = ['ws2_32', 'psapi', 'iphlpapi', 'shell32', 'userenv', 'user32', 'advapi32']
+
     # Check if we need to build libuv
     extUV = env['UV_PATH'] == 'ext\libuv'
     if not extUV:
@@ -118,7 +102,44 @@ if env['PLATFORM'] == 'win32':
         env.PrependENVPath('PATH', env['DOXYGEN_PATH'] + '/bin')
 
 elif env['PLATFORM'] == 'posix':
+    # Where to find Python.h
+    if env['target'] == 'yocto':
+        env['PY_CPPPATH'] = [os.getenv('SYSROOT') + '/usr/include/python2.7']
+    else:
+        env['PY_CPPPATH'] = ['/usr/include/python2.7']
+    env['PY_LIBPATH'] = []
 
+    env['DPS_LIBS'] = ['pthread']
+
+    # Check if we need to build libuv
+    conf = env.Configure()
+    extUV = not conf.CheckLib('uv', symbol='uv_mutex_init_recursive')
+    env = conf.Finish()
+
+else:
+    print('Unsupported system')
+    exit()
+
+if env['CC'] == 'cl':
+    env.Append(CCFLAGS = ['/J', '/execution-charset:utf-8', '/Zc:wchar_t'])
+
+    if env['variant'] == 'debug':
+        env.Append(CCFLAGS = ['/Zi', '/MT', '/Od', '-DDPS_DEBUG'])
+        env.Append(LINKFLAGS = ['/DEBUG'])
+    else:
+        env.Append(CCFLAGS = ['/Gy', '/O2', '/GF', '/GL', '/MT'])
+        env.Append(ARFLAGS = ['/LTCG'])
+        env.Append(LINKFLAGS = ['/opt:ref', '/LTCG'])
+
+    # Stack-based Buffer Overrun Detection
+    env.Append(CCFLAGS = ['/GS'])
+
+    # Data Execution Prevention
+    env.Append(LINKFLAGS = ['/NXCompat'])
+    # Image Randomization
+    env.Append(LINKFLAGS = ['/DynamicBase'])
+
+else:
     # uncomment to test for C90 (with gnu extensions) compatibility
     #env.Append(CCFLAGS = ['-std=gnu90'])
 
@@ -172,30 +193,14 @@ elif env['PLATFORM'] == 'posix':
             print('Unsupported compiler')
             exit();
 
-    # Stack execution protection:
-    env.Append(LINKFLAGS = ['-z', 'noexecstack'])
-
-    # Data relocation and protection (RELRO):
-    env.Append(LINKFLAGS = ['-z', 'relro', '-z', 'now'])
-
-    # Stack-based Buffer Overrun Detection:
-    env.Append(CCFLAGS = ['-fstack-protector-strong'])
-
-    # Position Independent Execution (PIE)
-    env.Append(CCFLAGS = ['-fPIE', '-fPIC'])
-    env.Append(LINKFLAGS = ['-pie']) # PIE for executables only
+    env.Append(CPPDEFINES = ['_FILE_OFFSET_BITS=64'])
+    env.Append(CCFLAGS = ['-fPIC', '-fvisibility=hidden'])
 
     # Fortify source:
     env.Append(CPPDEFINES = ['_FORTIFY_SOURCE=2'])
 
-    # Format string vulnerabilities
-    env.Append(CCFLAGS= ['-Wformat', '-Wformat-security'])
-
-    # gcc option  -mmsse4.2 is to enble generation of popcountq instruction
+    # gcc option -mmsse4.2 is to enble generation of popcountq instruction
     env.Append(CCFLAGS = ['-ggdb', '-msse4.2'])
-
-    # Treat warnings as errors
-    env.Append(CCFLAGS = ['-Werror'])
 
     if env['profile'] == True:
         env.Append(CCFLAGS = ['-pg'])
@@ -206,24 +211,27 @@ elif env['PLATFORM'] == 'posix':
     else:
         env.Append(CCFLAGS = ['-O3', '-DNDEBUG'])
 
-    # Where to find Python.h
-    if env['target'] == 'yocto':
-        env['PY_CPPPATH'] = [os.getenv('SYSROOT') + '/usr/include/python2.7']
-    else:
-        env['PY_CPPPATH'] = ['/usr/include/python2.7']
-    env['PY_LIBPATH'] = []
+if env['PLATFORM'] == 'win32' and 'gcc' in env['CC']:
+    env.Append(CPPDEFINES = ['__USE_MINGW_ANSI_STDIO=1'])
 
-    env['DPS_LIBS'] = ['pthread']
+    # Data Execution Prevention
+    env.Append(LINKFLAGS = ['-Wl,--nxcompat'])
 
-    # Check if we need to build libuv
-    conf = env.Configure()
-    extUV = not conf.CheckLib('uv', symbol='uv_mutex_init_recursive')
-    env = conf.Finish()
+    # Image Randomization
+    env.Append(LINKFLAGS = ['-Wl,--dynamicbase'])
 
+elif env['PLATFORM'] == 'posix':
+    # Stack-based Buffer Overrun Detection:
+    env.Append(CCFLAGS = ['-fstack-protector-strong'])
 
-else:
-    print('Unsupported system')
-    exit()
+    env.Append(CCFLAGS = ['-fPIE'])
+    env.Append(LINKFLAGS = ['-pie']) # PIE for executables only
+
+    # Stack execution protection:
+    env.Append(LINKFLAGS = ['-z', 'noexecstack'])
+
+    # Data relocation and protection (RELRO):
+    env.Append(LINKFLAGS = ['-z', 'relro', '-z', 'now'])
 
 env.Append(LIBPATH=['./ext'])
 
@@ -235,34 +243,37 @@ if env['target'] == 'yocto':
         if os.environ.has_key(i):
             if i in ("CFLAGS", "CCFLAGS", "LINKFLAGS"):
                 env.Replace(**{i: Split(os.getenv(i))})
-                extEnv.Replace(**{i: Split(os.getenv(i))})
             else:
                 env.Replace(**{i: os.getenv(i)})
-                extEnv.Replace(**{i: os.getenv(i)})
     env.PrependENVPath('PATH', os.getenv('PATH'))
     env.PrependENVPath('LDFLAGS', os.getenv('LDFLAGS'))
-    extEnv.PrependENVPath('PATH', os.getenv('PATH'))
-    extEnv.PrependENVPath('LDFLAGS', os.getenv('LDFLAGS'))
 
-ext_libs = []
-
+ext_objs = []
+ext_shobjs = []
 
 # Build external dependencies
-ext_libs.append(SConscript('ext/SConscript.mbedtls', exports=['extEnv']))
-ext_libs.append(SConscript('ext/SConscript.safestring', exports=['extEnv']))
-if extUV: ext_libs.append(SConscript('ext/SConscript.libuv', exports=['extEnv']))
+objs, shobjs = env.SConscript('ext/SConscript.mbedtls', exports=['env'])
+ext_objs.append(objs)
+ext_shobjs.append(shobjs)
+objs, shobjs = env.SConscript('ext/SConscript.safestring', exports=['env'])
+ext_objs.append(objs)
+ext_shobjs.append(shobjs)
+if extUV:
+    objs, shobjs = env.SConscript('ext/SConscript.libuv', exports=['env'])
+    ext_objs.append(objs)
+    ext_shobjs.append(shobjs)
 
 version = '0.9.0'
 
-lib_dps = SConscript('SConscript', src_dir='.', variant_dir='build/obj', duplicate=0, exports=['env', 'ext_libs', 'extUV', 'version'])
-
+# Build DPS
+lib_dps = env.SConscript('SConscript', src_dir='.', variant_dir='build/obj', duplicate=0, exports=['env', 'ext_objs', 'ext_shobjs', 'extUV', 'version'])
 
 # Build any user applications
 appDir = env['application']
 if appDir != '':
     print('Building application in ', appDir)
     env.Default(appDir)
-    SConscript(appDir + '/SConscript', variant_dir=appDir + '/build/obj', duplicate=0, exports=['env', 'ext_libs', 'lib_dps'])
+    env.SConscript(appDir + '/SConscript', variant_dir=appDir + '/build/obj', duplicate=0, exports=['env', 'lib_dps'])
 
 ######################################################################
 # Scons to generate the dps_ns3.pc file from dps_ns3.pc.in file

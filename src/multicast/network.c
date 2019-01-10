@@ -21,9 +21,9 @@
  */
 
 #include <assert.h>
-#include <string.h>
-#include <stdlib.h>
 #include <safe_lib.h>
+#include <stdlib.h>
+#include <string.h>
 #include <dps/dbg.h>
 #include <dps/dps.h>
 #include <dps/private/network.h>
@@ -116,8 +116,8 @@ static DPS_Status MulticastRxInit(DPS_MulticastReceiver* receiver)
     int ret;
     struct sockaddr_storage recv_addr;
     uv_loop_t* uv = receiver->node->loop;
-    uv_interface_address_t* ifsAddrs;
-    int numIfs;
+    uv_interface_address_t* ifsAddrs = NULL;
+    int numIfs = 0;
     int i;
 
     DPS_DBGPRINT("MulticastRxInit UDP port %d\n", COAP_UDP_PORT);
@@ -250,9 +250,9 @@ static DPS_Status MulticastTxInit(DPS_MulticastSender* sender)
 {
     int ret;
     uv_loop_t* uv = sender->node->loop;
-    uv_interface_address_t* ifsAddrs;
+    uv_interface_address_t* ifsAddrs = NULL;
     TxSocket* sock;
-    int numIfs;
+    int numIfs = 0;
     int i;
 
     DPS_DBGPRINT("MulticastTxInit\n");

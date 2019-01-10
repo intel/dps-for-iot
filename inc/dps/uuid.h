@@ -57,7 +57,7 @@ typedef struct _DPS_UUID {
  *
  * @return DPS_OK if initialization succeeds, an error otherwise
  */
-DPS_Status DPS_InitUUID();
+DPS_Status DPS_InitUUID(void);
 
 /**
  * Non secure generation of a random UUID.

@@ -1,31 +1,28 @@
 import os
 import string
-Import(['env', 'ext_libs', 'extUV', 'version'])
+Import(['env', 'ext_objs', 'ext_shobjs', 'extUV', 'version'])
 
-platform = env['PLATFORM']
-
-env['DPS_LIBS'] = [ext_libs] + env['DPS_LIBS']
-
-# Additional warning for the lib object files
+# Additional warning for the these files
+commonenv = env.Clone()
+if commonenv['CC'] == 'cl':
+    commonenv.Append(CCFLAGS = ['/W3', '/WX'])
+    # Compiler settings validation
+    commonenv.Append(CCFLAGS = ['/sdl'])
+else:
+    commonenv.Append(CCFLAGS = ['-Werror', '-Wall', '-Wextra', '-Wformat-security'])
+    commonenv.Append(CCFLAGS = ['-Wno-unused-parameter', '-Wno-unused-function', '-Wno-type-limits', '-Wno-missing-braces', '-Wno-attributes'])
+    commonenv.Append(CFLAGS = ['-Wstrict-prototypes'])
+commonenv.Append(CPPPATH = ['#/inc'])
 
 # Core libraries
-libenv = env.Clone()
+libenv = commonenv.Clone()
 
 libenv.Append(CPPDEFINES = ['MBEDTLS_USER_CONFIG_FILE=\\"mbedtls_config.h\\"'])
 libenv.Append(CPPPATH = ['#/ext/safestring/include', '#/ext', '#/ext/mbedtls/include'])
 if extUV: libenv.Append(CPPPATH = ['#/ext/libuv/include'])
 
-# Additional warnings for the core object files
-if platform == 'win32':
-    # We are getting our secure memory and string functions from
-    # SafeStringLib so need to disable the Windows supplied versions
-    libenv.Append(CPPDEFINES = ['__STDC_WANT_SECURE_LIB__=0'])
-    libenv.Append(LIBS = env['DPS_LIBS'])
-elif platform == 'posix':
-    libenv.Append(CCFLAGS = ['-Wall', '-Wno-format-extra-args'])
-
 # Include the fuzzing hooks when the sanitizer is enabled
-if platform == 'posix' and env['fsan'] == True:
+if env['PLATFORM'] == 'posix' and env['fsan'] == True:
     libenv.Append(CPPDEFINES = ['DPS_USE_FUZZ'])
 
 libenv.Install('#/build/dist/inc/dps', libenv.Glob('#/inc/dps/*.h'))
@@ -72,17 +69,18 @@ elif env['transport'] == 'tcp':
 elif env['transport'] == 'fuzzer':
     srcs.extend(['src/fuzzer/network.c'])
 
-Depends(srcs, ext_libs)
+Depends(srcs, ext_objs)
 
 objs = libenv.Object(srcs)
 
-lib = libenv.Library('lib/dps', objs)
-libenv.Install('#/build/dist/lib', lib)
+lib = libenv.Library('lib/dps', [objs, ext_objs])
+installed_lib = libenv.Install('#/build/dist/lib', lib)
 
-shobjs = libenv.SharedObject(srcs)
-if platform == 'win32':
-    print(env['DEF_FILE'])
+shobjs = libenv.SharedObject(srcs) + ext_shobjs
+if libenv['CC'] == 'cl':
     shlib = libenv.SharedLibrary('lib/dps_shared', shobjs + [env['DEF_FILE']], LIBS = env['DPS_LIBS'], SHLIBVERSION = version)
+elif libenv['PLATFORM'] == 'win32':
+    shlib = libenv.SharedLibrary('lib/dps_shared', shobjs, LIBS = env['DPS_LIBS'])
 else:
     shlib = libenv.SharedLibrary('lib/dps_shared', shobjs, LIBS = env['DPS_LIBS'], SHLIBVERSION = version)
 libenv.InstallVersionedLib('#/build/dist/lib', shlib, SHLIBVERSION = version)
@@ -102,71 +100,117 @@ ns3srcs = ['src/bitvec.c',
            'src/uuid.c',
            'src/topics.c']
 
-if platform == 'posix':
+if env['PLATFORM'] == 'posix':
     ns3shobjs = libenv.SharedObject(ns3srcs)
-    ns3shlib = libenv.SharedLibrary('lib/dps_ns3', ns3shobjs, LIBS = ext_libs)
+    ns3shlib = libenv.SharedLibrary('lib/dps_ns3', ns3shobjs + ext_shobjs)
     libenv.Install('#/build/dist/lib', ns3shlib)
 
 swig_docs = []
 if env['python']:
-    # Using SWIG to build the python wrapper
-    pyenv = libenv.Clone()
-    pyenv.VariantDir('swig/py', 'swig')
-    pyenv.Append(LIBPATH = env['PY_LIBPATH'])
-    pyenv.Append(CPPPATH = env['PY_CPPPATH'])
-    pyenv.Append(LIBS = [lib, env['DPS_LIBS']])
-    # Documentation is only available which Doxygen is installed
-    try:
-        if pyenv.Doxygen:
-            pyenv.Append(SWIGFLAGS = ['-DINCLUDE_DOC'])
-    except AttributeError:
-        pass
-    # Python has platform specific naming conventions
-    pyenv['SHLIBPREFIX'] = '_'
-    if platform == 'win32':
-        pyenv['SHLIBSUFFIX'] = '.pyd'
-        pyenv.Append(CCFLAGS = ['/EHsc'])
-        # Ignore warnings in generated code
-        pyenv.Append(CCFLAGS = ['/wd4244'])
-    elif platform == 'posix':
-        pyenv.Append(CCFLAGS = ['-Wno-deprecated-register'])
+    if env['PLATFORM'] == 'posix' or env['CC'] == 'cl':
+        # Using SWIG to build the python wrapper
+        pyenv = libenv.Clone()
+        pyenv.VariantDir('swig/py', 'swig')
+        pyenv.Append(LIBPATH = env['PY_LIBPATH'])
+        pyenv.Append(CPPPATH = env['PY_CPPPATH'])
+        pyenv.Append(LIBS = [lib, env['DPS_LIBS']])
+        # Documentation is only available which Doxygen is installed
+        try:
+            if pyenv.Doxygen:
+                pyenv.Append(SWIGFLAGS = ['-DINCLUDE_DOC'])
+        except AttributeError:
+            pass
+        # Python has platform specific naming conventions
+        pyenv['SHLIBPREFIX'] = '_'
+        if pyenv['CC'] == 'cl':
+            pyenv['SHLIBSUFFIX'] = '.pyd'
+            pyenv.Append(CCFLAGS = ['/EHsc'])
+            # Ignore warnings in generated code
+            pyenv.Append(CCFLAGS = ['/wd4244', '/wd4703'])
+        elif 'gcc' in pyenv['CC']:
+            pyenv.Append(CCFLAGS = ['-Wno-ignored-qualifiers', '-Wno-cast-function-type'])
+        elif 'clang' in pyenv['CC']:
+            pyenv.Append(CCFLAGS = ['-Wno-deprecated-register', '-Wno-ignored-qualifiers'])
 
-    pyenv.Append(SWIGFLAGS = ['-python', '-c++', '-Wextra', '-Werror', '-v', '-O'], SWIGPATH = ['#/inc', './swig/py'])
-    pyenv.Append(CPPPATH = ['swig', 'swig/py'])
-    # Build python module library
-    pyobjs = pyenv.SharedObject(['swig/py/dps.i'])
-    pylib = pyenv.SharedLibrary('./py/dps', shobjs + pyobjs)
-    pyenv.Install('#/build/dist/py', pylib)
-    pyenv.InstallAs('#/build/dist/py/dps.py', './swig/py/dps.py')
-    # Build documentation
-    swig_docs += ['swig/py/dps_doc.i']
-
-if env['nodejs'] and platform == 'posix':
-    # Use SWIG to build the node.js wrapper
-    nodeenv = libenv.Clone();
-    nodeenv.VariantDir('swig/js', 'swig')
-    nodeenv.Append(SWIGFLAGS = ['-javascript', '-node', '-c++', '-DV8_VERSION=0x04059937', '-Wextra', '-Werror', '-v', '-O'], SWIGPATH = ['#/inc', './swig/js'])
-    # There may be a bug with the SWIG builder - add -O to CPPFLAGS to get it passed on to the compiler
-    nodeenv.Append(CPPFLAGS = ['-DBUILDING_NODE_EXTENSION', '-std=c++11', '-O', '-Wno-unused-result'])
-    nodeenv.Append(CPPPATH = ['swig', 'swig/js'])
-    if env['target'] == 'yocto':
-        nodeenv.Append(CPPPATH = [os.getenv('SYSROOT') + '/usr/include/node'])
+        pyenv.Append(SWIGFLAGS = ['-python', '-c++', '-Wextra', '-Werror', '-v', '-O'], SWIGPATH = ['#/inc', './swig/py'])
+        pyenv.Append(CPPPATH = ['swig', 'swig/py'])
+        # Build python module library
+        pyobjs = pyenv.SharedObject(['swig/py/dps.i'])
+        pylib = pyenv.SharedLibrary('./py/dps', shobjs + pyobjs)
+        pyenv.Install('#/build/dist/py', pylib)
+        pyenv.InstallAs('#/build/dist/py/dps.py', './swig/py/dps.py')
+        # Build documentation
+        swig_docs += ['swig/py/dps_doc.i']
     else:
-        nodeenv.Append(CPPPATH = ['/usr/include/node'])
-    nodeenv.Append(LIBS = [lib, env['DPS_LIBS']])
-    nodeobjs = nodeenv.SharedObject(['swig/js/dps.i'])
-    nodedps = nodeenv.SharedLibrary('lib/nodedps', shobjs + nodeobjs)
-    nodeenv.InstallAs('#/build/dist/js/dps.node', nodedps)
-    # Build documentation
-    swig_docs += ['swig/js/dps.jsdoc']
+        print('Python binding only supported on the posix platform or with the cl compiler')
+        exit()
+
+if env['nodejs']:
+    if env['PLATFORM'] == 'posix':
+        # Use SWIG to build the node.js wrapper
+        nodeenv = libenv.Clone();
+        nodeenv.VariantDir('swig/js', 'swig')
+        nodeenv.Append(SWIGFLAGS = ['-javascript', '-node', '-c++', '-DV8_VERSION=0x04059937', '-Wextra', '-Werror', '-v', '-O'], SWIGPATH = ['#/inc', './swig/js'])
+        # There may be a bug with the SWIG builder - add -O to CPPFLAGS to get it passed on to the compiler
+        nodeenv.Append(CPPDEFINES = ['BUILDING_NODE_EXTENSION'])
+        nodeenv.Append(CCFLAGS = ['-std=c++11', '-O', '-Wno-unused-result', '-Wno-ignored-qualifiers'])
+        if 'gcc' in nodeenv['CC']:
+            nodeenv.Append(CCFLAGS = ['-Wno-cast-function-type'])
+        nodeenv.Append(CPPPATH = ['swig', 'swig/js'])
+        if env['target'] == 'yocto':
+            nodeenv.Append(CPPPATH = [os.getenv('SYSROOT') + '/usr/include/node'])
+        else:
+            nodeenv.Append(CPPPATH = ['/usr/include/node'])
+        nodeenv.Append(LIBS = [lib, env['DPS_LIBS']])
+        nodeobjs = nodeenv.SharedObject(['swig/js/dps.i'])
+        nodedps = nodeenv.SharedLibrary('lib/nodedps', shobjs + nodeobjs)
+        nodeenv.InstallAs('#/build/dist/js/dps.node', nodedps)
+        # Build documentation
+        swig_docs += ['swig/js/dps.jsdoc']
+    else:
+        print('Node.js binding only supported on the posix platform')
+        exit()
+
+if env['go']:
+    if 'gcc' in env['CC']:
+        goenv = libenv.Clone()
+        goos = os.popen('go env GOOS').read().strip()
+        goarch = os.popen('go env GOARCH').read().strip()
+        gopath = goenv.Dir('#/build/dist/go')
+        goenv.AppendENVPath('GOPATH', gopath)
+        goenv.VariantDir(goenv.Dir('#/build/dist/go/src/dps'), 'go')
+
+        goenv.Append(LIBS = env['DPS_LIBS'])
+        cgo_cflags = ' '.join(['-I' + goenv.GetBuildPath(p) for p in goenv['CPPPATH']])
+        cgo_ldflags = '-L{} -ldps '.format(goenv.Dir('#/build/dist/lib')) + ' '.join(['-l' + l for l in goenv['LIBS']])
+        goenv.AppendENVPath('CGO_CFLAGS', cgo_cflags)
+        goenv.AppendENVPath('CGO_LDFLAGS', cgo_ldflags)
+
+        # The -a option to go install is to workaround the go build cache and scons not cooperating
+        gosrc = gopath.File('src/dps/dps.go')
+        gopkg = goenv.Command(gopath.File('pkg/{}_{}/dps{}'.format(goos, goarch, goenv['LIBSUFFIX'])),
+                              [gosrc, installed_lib],
+                              'go install -a dps', chdir = gopath.Dir('src'))
+
+        goexamples = ['keys',
+                      'simple_pub',
+                      'simple_pub_ks',
+                      'simple_sub',
+                      'simple_sub_ks']
+        for example in goexamples:
+            goexample = gopath.File('src/dps/examples/{}/{}.go'.format(example, example))
+            goenv.Command(gopath.File('bin/{}'.format(example)),
+                          [goexample, gopkg],
+                          'go install -a dps/examples/{}'.format(example), chdir = gopath.Dir('src'))
+    else:
+        print('Go binding only supported with the gcc compiler')
+        exit()
 
 # Unit tests
-testenv = env.Clone()
-if testenv['PLATFORM'] == 'win32':
-    testenv.Append(CPPDEFINES = ['_CRT_SECURE_NO_WARNINGS', '__STDC_WANT_SECURE_LIB__=0'])
+testenv = commonenv.Clone()
 testenv.Append(CPPPATH = ['#/ext/safestring/include', 'src'])
-if extUV: testenv.Append(CPPPATH = ['#/ext/libuv/include'])
 testenv.Append(LIBS = [lib, env['DPS_LIBS']])
+if extUV: testenv.Append(CPPPATH = ['#/ext/libuv/include'])
 
 testsrcs = ['test/hist_unit.c',
             'test/make_mesh.c',
@@ -182,7 +226,7 @@ testsrcs = ['test/hist_unit.c',
             'test/version.c',
             'test/keystoretest.c']
 
-Depends(testsrcs, ext_libs)
+Depends(testsrcs, ext_objs)
 
 testprogs = []
 for test in testsrcs:
@@ -198,8 +242,8 @@ for test in testsrcs:
 testenv.Install('#/build/test/bin', testprogs)
 
 # Fuzz tests
-if platform == 'posix' and env['fsan'] == True:
-    fenv = env.Clone()
+if env['PLATFORM'] == 'posix' and env['fsan'] == True:
+    fenv = commonenv.Clone()
     fenv.VariantDir('test/fuzzer', 'test')
     fenv.Append(CPPPATH = ['#/ext/safestring/include'])
     if extUV: fenv.Append(CPPPATH = ['#/ext/libuv/include'])
@@ -213,7 +257,7 @@ if platform == 'posix' and env['fsan'] == True:
         fsrcs.extend(['test/fuzzer/net_receive_fuzzer.c',
                       'test/fuzzer/multicast_receive_fuzzer.c'])
 
-    Depends(fsrcs, ext_libs)
+    Depends(fsrcs, ext_objs)
 
     fprogs = []
     for f in fsrcs:
@@ -222,9 +266,7 @@ if platform == 'posix' and env['fsan'] == True:
     fenv.Install('#/build/test/bin', fprogs)
 
 # Examples
-exampleenv = env.Clone()
-if exampleenv['PLATFORM'] == 'win32':
-    exampleenv.Append(CPPDEFINES = ['_CRT_SECURE_NO_WARNINGS'])
+exampleenv = commonenv.Clone()
 exampleenv.Append(LIBS = [lib, env['DPS_LIBS']])
 
 examplesrcs = ['examples/pub_many.c',
@@ -234,7 +276,7 @@ examplesrcs = ['examples/pub_many.c',
                'examples/subscriber.c',
                'examples/registry.c']
 
-Depends(examplesrcs, ext_libs)
+Depends(examplesrcs, ext_objs)
 
 exampleprogs = []
 for example in examplesrcs:
@@ -243,14 +285,12 @@ for example in examplesrcs:
 exampleenv.Install('#/build/dist/bin', exampleprogs)
 
 # Tutorial examples
-tutorialenv = env.Clone()
-if tutorialenv['PLATFORM'] == 'win32':
-    tutorialenv.Append(CPPDEFINES = ['_CRT_SECURE_NO_WARNINGS'])
+tutorialenv = commonenv.Clone()
 tutorialenv.Append(LIBS = [lib, env['DPS_LIBS']])
 
 tutorialsrcs = ['doc/tutorial/tutorial.c']
 
-Depends(tutorialsrcs, ext_libs)
+Depends(tutorialsrcs, ext_objs)
 
 tutorialprogs = []
 for tutorial in tutorialsrcs:
@@ -263,7 +303,7 @@ try:
     docs = libenv.Doxygen('doc/Doxyfile')
     libenv.Doxygen('doc/Doxyfile_dev')
     libenv.SwigDox(swig_docs, docs)
-    if env['nodejs'] and platform == 'posix':
+    if env['nodejs'] and env['PLATFORM'] == 'posix':
         libenv.InstallAs('#/build/dist/js/dps.jsdoc', 'swig/js/dps.jsdoc')
 except:
     # Doxygen may not be installed

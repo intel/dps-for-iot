@@ -138,10 +138,10 @@ void DPS_LogBytes(DPS_LogLevel level, const char* file, int line, const char *fu
 /**
  * Used at the top of a file to turn debugging on or off for that file
  */
-#ifdef _WIN32
-#define DPS_DEBUG_CONTROL(dbg) static int __DPS_DebugControl = dbg
-#else
+#if defined(__GNUC__) || defined(__MINGW64__)
 #define DPS_DEBUG_CONTROL(dbg) __attribute__((__unused__))static int __DPS_DebugControl = dbg
+#elif defined(_WIN32)
+#define DPS_DEBUG_CONTROL(dbg) static int __DPS_DebugControl = dbg
 #endif
 
 /** @} */

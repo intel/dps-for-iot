@@ -104,7 +104,7 @@ int main(int argc, char** argv)
     int pretty;
     size_t cbor1Len;
     size_t cbor2Len;
-    int i;
+    size_t i;
     // Check with and without formatting
     for (pretty = 0; pretty <= 1; ++pretty) {
         for (i = 0; i < (sizeof(tests) / sizeof(tests[0])); ++i) {
@@ -120,11 +120,11 @@ int main(int argc, char** argv)
             CHECK(status);
             // Fidelity check that two CBOR encodings are the same
             if (cbor1Len != cbor2Len) {
-                printf("Test %d failed: CBOR lengths %zu != %zu\n", i, cbor1Len, cbor2Len);
+                printf("Test %zu failed: CBOR lengths %zu != %zu\n", i, cbor1Len, cbor2Len);
                 CHECK(DPS_ERR_FAILURE);
             }
             if (memcmp(cbor1, cbor2, cbor1Len) != 0) {
-                printf("Test %d failed: CBOR encodings are different:\n%s\n\n%s\n\n", i, tests[i], json);
+                printf("Test %zu failed: CBOR encodings are different:\n%s\n\n%s\n\n", i, tests[i], json);
                 CHECK(DPS_ERR_FAILURE);
             }
         }
@@ -135,7 +135,7 @@ int main(int argc, char** argv)
         // Encode as CBOR
         status = DPS_JSON2CBOR(invalid[i], cbor1, sizeof(cbor1), &cbor1Len);
         if (status == DPS_OK) {
-            printf("Test of invalid input %d failed\n\n", i);
+            printf("Test of invalid input %zu failed\n\n", i);
             CHECK(DPS_ERR_FAILURE);
         }
     }
@@ -148,7 +148,7 @@ int main(int argc, char** argv)
                 // This should fail
                 status = DPS_JSON2CBOR(tests[i], cbor2, cbor1Len - 1, &cbor2Len);
                 if (status != DPS_ERR_OVERFLOW) {
-                    printf("Test for CBOR overrun %d failed\n\n", i);
+                    printf("Test for CBOR overrun %zu failed\n\n", i);
                     CHECK(DPS_ERR_FAILURE);
                 }
                 status = DPS_CBOR2JSON(cbor1, cbor1Len, json, sizeof(json), pretty);
@@ -156,7 +156,7 @@ int main(int argc, char** argv)
                 // This should fail
                 status = DPS_CBOR2JSON(cbor1, cbor1Len, json, strlen(json) - 1, pretty);
                 if (status != DPS_ERR_OVERFLOW) {
-                    printf("Test for JSON overrun %d failed\n\n", i);
+                    printf("Test for JSON overrun %zu failed\n\n", i);
                     CHECK(DPS_ERR_FAILURE);
                 }
             }
@@ -168,6 +168,6 @@ int main(int argc, char** argv)
 
 Failed:
 
-    printf("Failed at test %d line %d %s\n", i, ln, DPS_ErrTxt(status));
+    printf("Failed at test %zu line %d %s\n", i, ln, DPS_ErrTxt(status));
     return EXIT_FAILURE;
 }

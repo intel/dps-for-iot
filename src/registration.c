@@ -66,7 +66,7 @@ static int IsLocalAddr(DPS_NodeAddress* addr, uint16_t port)
     }
     r = uv_interface_addresses(&ifsAddrs, &numIfs);
     if (!r) {
-        size_t i;
+        int i;
         for (i = 0; i < numIfs; ++i) {
             uv_interface_address_t* ifn = &ifsAddrs[i];
             if (!ifn->is_internal) {
@@ -250,7 +250,7 @@ static DPS_Status BuildPutPayload(DPS_TxBuffer* payload, uint16_t port)
     int numIfs;
     int extIfs = 0;
     int r;
-    size_t i;
+    int i;
 
     r = uv_interface_addresses(&ifsAddrs, &numIfs);
     if (r) {

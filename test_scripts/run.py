@@ -37,15 +37,23 @@ if 'FSAN' not in os.environ or os.environ['FSAN'] == 'no':
              os.path.join('test_scripts', 'tree2.py'),
              os.path.join('test_scripts', 'tutorial.py'),
              os.path.join('test_scripts', 'versioning.py'),
-             os.path.join('py_scripts', 'subs_tree.py'),
              os.path.join('test_scripts', 'retained_py.py'),
+    ]
+    if 'BINDINGS' not in os.environ or 'all' in os.environ['BINDINGS'] or 'python' in os.environ['BINDINGS']:
+        tests.extend([
+            os.path.join('py_scripts', 'subs_tree.py'),
              os.path.join('test_scripts', 'simple_py_test.py'),
              os.path.join('test_scripts', 'simple_py_ks_test.py')
-    ]
-    if platform.system() == 'Linux':
+        ])
+    if 'BINDINGS' not in os.environ or 'all' in os.environ['BINDINGS'] or 'nodejs' in os.environ['BINDINGS']:
         tests.extend([
             os.path.join('test_scripts', 'simple_js_ks_test.py'),
             os.path.join('test_scripts', 'simple_js_test.py')
+        ])
+    if 'BINDINGS' not in os.environ or 'all' in os.environ['BINDINGS'] or 'go' in os.environ['BINDINGS']:
+        tests.extend([
+            os.path.join('test_scripts', 'simple_go_ks_test.py'),
+            os.path.join('test_scripts', 'simple_go_test.py')
         ])
 else:
     tests = [os.path.join('test_scripts', 'fuzzer_check.py')]

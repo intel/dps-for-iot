@@ -86,14 +86,14 @@ int DPS_BitVectorBloomTest(const DPS_BitVector* bv, const uint8_t* data, size_t 
  *
  * @return  An initialized bit vector bit vector or NULL if the allocation failed.
  */
-DPS_BitVector* DPS_BitVectorAlloc();
+DPS_BitVector* DPS_BitVectorAlloc(void);
 
 /**
  * Allocates a bit vector sized for use as a fuzzy hash.
  *
  * @return  An initialized bit vector or NULL if the allocation failed.
  */
-DPS_BitVector* DPS_BitVectorAllocFH();
+DPS_BitVector* DPS_BitVectorAllocFH(void);
 
 /**
  * Clone a bit vector
@@ -256,7 +256,7 @@ size_t DPS_BitVectorSerializeMaxSize(DPS_BitVector* bv);
  *
  * @return  The space needed to serialize a fuzzy hash bit vector.
  */
-size_t DPS_BitVectorSerializeFHSize();
+size_t DPS_BitVectorSerializeFHSize(void);
 
 /**
  * Deserialize and decompress a bit vector from a buffer
@@ -333,14 +333,14 @@ void DPS_BitVectorDump(DPS_BitVector* bv, int bits);
  *
  * @return  An initialized count vector bit vector or NULL if the allocation failed.
  */
-DPS_CountVector* DPS_CountVectorAlloc();
+DPS_CountVector* DPS_CountVectorAlloc(void);
 
 /**
  * Allocates a count vector sized for use as a fuzzy hash.
  *
  * @return  An initialized count vector or NULL if the allocation failed.
  */
-DPS_CountVector* DPS_CountVectorAllocFH();
+DPS_CountVector* DPS_CountVectorAllocFH(void);
 
 /**
  * Free resources for a count vector

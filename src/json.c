@@ -49,7 +49,7 @@ typedef struct {
 static DPS_Status CountItems(JSONBuffer* json, size_t* count)
 {
     int empty = 1;
-    int i;
+    size_t i;
     int numBrackets = 0;
     int numBraces = 0;
 
@@ -414,7 +414,7 @@ static DPS_Status Indent(JSONBuffer* json, int pretty, int indent)
             }
         }
         indent *= 2;
-        if (json->len <= (indent + 1)) {
+        if ((int)json->len <= (indent + 1)) {
             return DPS_ERR_OVERFLOW;
         }
         json->str[0] = '\n';

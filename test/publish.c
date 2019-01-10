@@ -111,16 +111,6 @@ static void TestLoopbackLargeMessage(DPS_Node* node, DPS_KeyStore* keyStore)
     DPS_DestroyPublication(pub);
 }
 
-static void LoopbackAckMessageHandler(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* payload, size_t len)
-{
-    int* receivedMessage = (int*)DPS_GetSubscriptionData(sub);
-    DPS_Status ret;
-
-    *receivedMessage = DPS_TRUE;
-    ret = DPS_AckPublication(pub, NULL, 0);
-    ASSERT(ret == DPS_OK);
-}
-
 static void LoopbackAckHandler(DPS_Publication* pub, uint8_t* payload, size_t len)
 {
     DPS_Event* event = (DPS_Event*)DPS_GetPublicationData(pub);
@@ -212,7 +202,7 @@ static void TestHistory(DPS_Node* node, DPS_KeyStore* keyStore)
 
     DPS_PRINT("%s\n", __FUNCTION__);
 
-    memset(pubs, 0, A_SIZEOF(pubs));
+    memset(pubs, 0, sizeof(pubs));
 
     pub = CreatePublication(node, topics, numTopics, HistoryAckHandler);
     qos.historyDepth = HISTORY_CAP;
@@ -267,7 +257,7 @@ static void TestHistoryDepth(DPS_Node* node, DPS_KeyStore* keyStore)
 
     DPS_PRINT("%s\n", __FUNCTION__);
 
-    memset(pubs, 0, A_SIZEOF(pubs));
+    memset(pubs, 0, sizeof(pubs));
 
     pub = CreatePublication(node, topics, numTopics, HistoryAckHandler);
     qos.historyDepth = HISTORY_CAP / 2;
@@ -334,7 +324,7 @@ static void TestOutOfOrderAck(DPS_Node* node, DPS_KeyStore* keyStore)
 
     DPS_PRINT("%s\n", __FUNCTION__);
 
-    memset(pubs, 0, A_SIZEOF(pubs));
+    memset(pubs, 0, sizeof(pubs));
 
     pub = CreatePublication(node, topics, numTopics, HistoryAckHandler);
     qos.historyDepth = HISTORY_CAP / 2;
@@ -433,6 +423,7 @@ static void TestBackToBackPublish(DPS_Node* node, DPS_KeyStore* keyStore)
     DPS_DestroyPublication(pub);
 }
 
+#if defined(DPS_USE_TCP)
 static void TestBackToBackPublishSeparateNodes(DPS_Node* node, DPS_KeyStore* keyStore)
 {
     static const char* topics[] = { __FUNCTION__ };
@@ -494,6 +485,7 @@ static void TestBackToBackPublishSeparateNodes(DPS_Node* node, DPS_KeyStore* key
     DPS_DestroyEvent(event);
     DPS_DestroyPublication(pub);
 }
+#endif
 
 static void TestRetainedMessage(DPS_Node* node, DPS_KeyStore* keyStore)
 {
@@ -604,7 +596,6 @@ int main(int argc, char** argv)
     DPS_Event* event = NULL;
     DPS_MemoryKeyStore* memoryKeyStore = NULL;
     DPS_Node *node = NULL;
-    DPS_Publication* pub = NULL;
     DPS_Status ret;
 
     DPS_Debug = DPS_FALSE;

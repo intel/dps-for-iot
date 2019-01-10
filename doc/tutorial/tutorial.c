@@ -20,16 +20,12 @@
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  */
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#ifdef _WIN32
-#include <winsock2.h>
-#else
+#include <dps/event.h>
+#ifndef _WIN32
 #include <netinet/in.h>
 #endif
-#include <dps/dbg.h>
-#include <dps/event.h>
 /** [Prerequisites] */
 #include <dps/dbg.h>
 #include <dps/dps.h>
@@ -74,11 +70,11 @@ extern const DPS_Key ASYMMETRIC_KEY;
 static const DPS_KeyId ASYMMETRIC_KEY_ID = BYTE_STR("Tutorial Asymmetric Key");
 /** [Asymmetric key] */
 
-static DPS_Node* CreateNode();
-static DPS_Node* CreateNodeWithNetworkPSK();
+static DPS_Node* CreateNode(void);
+static DPS_Node* CreateNodeWithNetworkPSK(void);
 static DPS_Node* CreateNodeWithNetworkCert(const DPS_KeyId* nodeId);
-static DPS_Node* CreateNodeWithSymmetricKeyStore();
-static DPS_Node* CreateNodeWithAsymmetricKeyStore();
+static DPS_Node* CreateNodeWithSymmetricKeyStore(void);
+static DPS_Node* CreateNodeWithAsymmetricKeyStore(void);
 static DPS_Node* CreateNodeWithAuthenticatedSender(const DPS_KeyId* nodeId);
 static DPS_Status StartMulticastNode(DPS_Node* node);
 static DPS_Status StartUnicastNode(DPS_Node* node, uint16_t listenPort);
@@ -259,7 +255,7 @@ Exit:
     return EXIT_SUCCESS;
 }
 
-static DPS_Node* CreateNode()
+static DPS_Node* CreateNode(void)
 {
     /** [Creating a node] */
     const char *separators = "/.";
@@ -275,7 +271,7 @@ Exit:
     return node;
 }
 
-static DPS_Node* CreateNodeWithNetworkPSK()
+static DPS_Node* CreateNodeWithNetworkPSK(void)
 {
     /** [Creating a secure node with a network PSK] */
     const char *separators = "/.";
@@ -310,7 +306,7 @@ Exit:
     return node;
 }
 
-static DPS_Node* CreateNodeWithSymmetricKeyStore()
+static DPS_Node* CreateNodeWithSymmetricKeyStore(void)
 {
     /** [Creating a node with symmetric key handlers] */
     const char *separators = "/.";
@@ -327,7 +323,7 @@ Exit:
     return node;
 }
 
-static DPS_Node* CreateNodeWithAsymmetricKeyStore()
+static DPS_Node* CreateNodeWithAsymmetricKeyStore(void)
 {
     const char *separators = "/.";
     DPS_KeyStore* keyStore = DPS_CreateKeyStore(NULL, AsymmetricKeyHandler, EphemeralAsymmetricKeyHandler, NULL);
@@ -386,7 +382,7 @@ static DPS_Status StartUnicastNode(DPS_Node* node, uint16_t port)
     }
     uint16_t portNum = DPS_GetPortNumber(node);
     /** [Starting a unicast node] */
-    DPS_PRINT("Node is listening on port %d\n", DPS_GetPortNumber(node));
+    DPS_PRINT("Node is listening on port %d\n", portNum);
 
  Exit:
     return ret;

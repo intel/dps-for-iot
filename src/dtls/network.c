@@ -1066,7 +1066,7 @@ static void TLSSend(DPS_NetConnection* cn)
         base = (uint8_t*)pw->bufs[0].base;
     } else {
         total = 0;
-        for (int i = 0; i < pw->numBufs; i++) {
+        for (size_t i = 0; i < pw->numBufs; i++) {
             total += pw->bufs[i].len;
         }
 
@@ -1080,7 +1080,7 @@ static void TLSSend(DPS_NetConnection* cn)
             pw->status = DPS_ERR_RESOURCES;
             return;
         }
-        for (int i = 0; i < pw->numBufs; i++) {
+        for (size_t i = 0; i < pw->numBufs; i++) {
             DPS_TxBufferAppend(&txbuf, (uint8_t*)pw->bufs[i].base, pw->bufs[i].len);
         }
         base = txbuf.base;
@@ -1107,7 +1107,7 @@ static void TLSSend(DPS_NetConnection* cn)
         base = base + ret;
         total = total - ret;
         ret = mbedtls_ssl_write(&cn->ssl, base, total);
-    } while (0 < ret && ret < total);
+    } while (0 < ret && (size_t)ret < total);
 
     DPS_NetConnectionDecRef(cn);
 
