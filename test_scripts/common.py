@@ -52,13 +52,12 @@ _t = 0
 _tm = 0
 _v = 0
 
-def _spawn_env(interpreter):
+def _spawn_env():
     spawn_env = os.environ.copy()
-    if interpreter != []:
-        if 'ASAN' in os.environ and os.environ['ASAN'] == 'yes':
-            match = re.search('libasan.*', check_output('ldconfig -p', shell=True))
-            libasan = match.group(0).split()[-1]
-            spawn_env.update({'LD_PRELOAD': libasan})
+    if 'ASAN' in os.environ and os.environ['ASAN'] == 'yes':
+        match = re.search('libasan.*', check_output('ldconfig -p', shell=True))
+        libasan = match.group(0).split()[-1]
+        spawn_env.update({'LD_PRELOAD': libasan})
     return spawn_env
 
 def _spawn_helper(n, cmd, interpreter=[]):
@@ -68,7 +67,7 @@ def _spawn_helper(n, cmd, interpreter=[]):
     log = open(log_name, 'wb')
     log.write('=============================\n{}{} {}\n'.format(name, n, ' '.join(cmd[1:])))
     log.write('=============================\n')
-    child = popen_spawn.PopenSpawn(interpreter + cmd, env=_spawn_env(interpreter), logfile=log)
+    child = popen_spawn.PopenSpawn(interpreter + cmd, env=_spawn_env(), logfile=log)
     child.linesep = os.linesep
     _children.append(child)
     _logs.append(log)
