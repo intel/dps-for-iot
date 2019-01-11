@@ -30,16 +30,19 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <dps/targets.h>
 #include <dps/dbg.h>
 #include <dps/dps.h>
 #include <dps/err.h>
 #include <dps/private/dps.h>
 
-#ifdef _WIN32
+#if DPS_TARGET == DPS_TARGET_WINDOWS
 #define SLEEP(t) Sleep(t)
-#else
+#elif DPS_TARGET == DPS_TARGET_LINUX
 #include <unistd.h>
 #define SLEEP(t) usleep((t) * 1000)
+#elif DPS_TARGET == DPS_TARGET_ZEPHYR
+#define SLEEP(t) k_sleep(t)
 #endif
 
 #define ASSERT(cond) do { assert(cond); if (!(cond)) exit(EXIT_FAILURE); } while (0)

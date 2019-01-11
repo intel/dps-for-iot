@@ -29,8 +29,8 @@
 #define _SHA2_H
 
 #include <stdint.h>
-#include <dbg.h>
-#include <err.h>
+#include <dps/dbg.h>
+#include <dps/err.h>
 
 #ifdef __cplusplus
 extern "C" {

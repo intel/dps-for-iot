@@ -20,17 +20,20 @@
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  */
 
-#ifdef _WIN32
 #define _CRT_RAND_S
-#endif
 
 #include <stdint.h>
-#include <stdio.h>
+#include <dps/dps.h>
 #include <dps/dbg.h>
 #include <dps/uuid.h>
-#include <stdlib.h>
 #include <string.h>
-#include "compat.h"
+#include <stdlib.h>
+#include <stdio.h>
+
+#if DPS_TARGET == DPS_TARGET_ZEPHYR
+#include <rtc.h>
+#include <entropy.h>
+#endif
 
 /*
  * Debug control for this module
@@ -40,7 +43,7 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 const char* DPS_UUIDToString(const DPS_UUID* uuid)
 {
     static const char* hex = "0123456789abcdef";
-    static THREAD char str[38];
+    static char str[38];
     char* dst = str;
     const uint8_t *src = uuid->val;
     size_t i;
@@ -61,7 +64,7 @@ static struct {
     uint32_t seeds[4];
 } entropy;
 
-#ifdef _WIN32
+#if DPS_TARGET == DPS_TARGET_WINDOWS
 static void InitUUID(void)
 {
     errno_t ret = 0;
@@ -72,7 +75,7 @@ static void InitUUID(void)
         rand_s(n++);
     }
 }
-#else
+#elif DPS_TARGET == DPS_TARGET_LINUX
 /*
  * Linux specific implementation
  */
@@ -91,6 +94,23 @@ static void InitUUID()
         fclose(f);
     }
 }
+#elif DPS_TARGET == DPS_TARGET_ZEPHYR
+
+static void InitUUID()
+{
+    struct device* dev = device_get_binding(CONFIG_ENTROPY_NAME);
+	if (!dev) {
+		DPS_DBGPRINT("No entropy device\n");
+    } else {
+        int ret = entropy_get_entropy(dev, (void*)&entropy, sizeof(entropy));
+        if (ret) {
+            DPS_DBGPRINT("Failed to get entropy\n");
+        }
+    }
+}
+
+#else
+#error "Unsupported target"
 #endif
 
 

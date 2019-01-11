@@ -21,7 +21,6 @@
  */
 #include "test.h"
 #include "keys.h"
-#include <dps/compat.h>
 #include <dps/dps.h>
 #include <dps/private/dps.h>
 #include <dps/private/pub.h>
@@ -30,8 +29,6 @@
 
 
 static char testString[] = "This is a test string";
-
-static DPS_TxBuffer txBuf;
 
 #define NUM_TOPICS 2
 
@@ -89,7 +86,7 @@ int main(int argc, char** argv)
     for (i = 0; i < 10; ++i) {
         status = DPS_Publish(&pub, (const uint8_t*)testString, strlen(testString) + 1, 0);
         CHECK(status == DPS_OK);
-        Sleep(5000);
+        SLEEP(5000);
     }
 
     return 0;

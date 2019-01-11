@@ -28,6 +28,7 @@
 #ifndef _DPS_H
 #define _DPS_H
 
+#include <dps/targets.h>
 #include <stdint.h>
 #include <stddef.h>
 #include <dps/err.h>

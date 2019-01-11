@@ -26,7 +26,6 @@
 #include <dps/err.h>
 #include <dps/dbg.h>
 #include <dps/private/sha2.h>
-#include <dps/compat.h>
 #include <dps/private/bitvec.h>
 #include <dps/private/cbor.h>
 
@@ -559,7 +558,6 @@ static uint32_t RLESize(DPS_BitVector* bv)
 DPS_Status DPS_BitVectorSerialize(DPS_BitVector* bv, DPS_TxBuffer* buffer)
 {
     DPS_Status ret;
-    size_t rleSize = RLESize(bv);
 
     /*
      * Bit vector is encoded as an array of 3 items
