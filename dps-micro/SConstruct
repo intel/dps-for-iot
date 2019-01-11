@@ -68,6 +68,9 @@ if env['PLATFORM'] == 'win32':
     # Windows libs
     env['DPS_LIBS'] = ['ws2_32', 'psapi', 'iphlpapi', 'shell32', 'userenv', 'user32', 'advapi32']
 
+    # Windows target
+    env.Append(CPPDEFINES = ['DPS_TARGET=DPS_TARGET_WINDOWS'])
+
 elif env['PLATFORM'] == 'posix':
 
     # uncomment to test for C90 (with gnu extensions) compatibility
@@ -171,6 +174,8 @@ elif env['PLATFORM'] == 'posix':
     extUV = not conf.CheckLib('uv', symbol='uv_mutex_init_recursive')
     env = conf.Finish()
 
+    # Linux target
+    env.Append(CPPDEFINES = ['DPS_TARGET=DPS_TARGET_LINUX'])
 
 else:
     print('Unsupported system')

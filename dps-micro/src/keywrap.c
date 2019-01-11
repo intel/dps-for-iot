@@ -69,7 +69,6 @@ DPS_Status KeyWrap(const uint8_t cek[AES_256_KEY_LEN], const uint8_t kek[AES_256
             if (ret != 0) {
                 goto Exit;
             }
-            memcpy(A, A, 8);
             A[4] ^= (t >> 24) & 0xff;
             A[5] ^= (t >> 16) & 0xff;
             A[6] ^= (t >>  8) & 0xff;

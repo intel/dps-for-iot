@@ -168,7 +168,7 @@ void DPS_MakeNonce(const DPS_UUID* uuid, uint32_t seqNum, uint8_t msgType, uint8
     *p++ = (uint8_t)(seqNum >> 8);
     *p++ = (uint8_t)(seqNum >> 16);
     *p++ = (uint8_t)(seqNum >> 24);
-    memcpy_s(p, COSE_NONCE_LEN - sizeof(uint32_t), uuid, COSE_NONCE_LEN - sizeof(uint32_t));
+    memcpy(p, uuid, COSE_NONCE_LEN - sizeof(uint32_t));
     /*
      * Adjust one bit so nonce for PUB's and ACK's for same pub id and sequence number are different
      */
