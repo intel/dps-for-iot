@@ -142,15 +142,6 @@ typedef struct _Signature {
     size_t sigLen;
 } Signature;
 
-static volatile void* SecureZeroMemory(volatile void* m, size_t l)
-{
-    volatile uint8_t* p = m;
-    while (l--) {
-        *p++ = 0;
-    }
-    return m;
-}
-
 static DPS_Status SetCryptoParams(int8_t alg, uint8_t* M, size_t* nonceLen)
 {
     switch (alg) {

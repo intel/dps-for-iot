@@ -62,7 +62,7 @@ extern "C" {
 typedef void (*DPS_AcknowledgementHandler)(DPS_Publication* pub, uint8_t* payload, size_t len);
 
 /**
- * Shared fields between members of a publication data series
+ * Struct for a publication
  */
 typedef struct _DPS_Publication {
     DPS_Node* node;                             /**< Node for this publication */

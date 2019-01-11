@@ -607,7 +607,6 @@ void DPS_PublicationRemoveSubId(DPS_Publication* pub, const DPS_KeyId* keyId)
 
 static size_t TopicsSerializedSize(DPS_Publication* pub)
 {
-    const char** topics = pub->topics;
     size_t i;
     size_t sz = CBOR_SIZEOF_ARRAY(pub->numTopics);
 

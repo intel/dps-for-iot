@@ -23,6 +23,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <dps/targets.h>
 #include <dps/dbg.h>
 #include <dps/dps.h>
 #include <dps/private/topics.h>

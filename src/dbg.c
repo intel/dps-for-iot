@@ -21,7 +21,7 @@
  */
 
 #include <stdarg.h>
-#include "dbg.h"
+#include <dps/dbg.h>
 
 int DPS_Debug = 1;
 
@@ -54,7 +54,6 @@ void DPS_Log(DPS_LogLevel level, const char* file, int line, const char *functio
         vfprintf(stream, fmt, ap);
         break;
     }
-    fflush(stream);
     va_end(ap);
 }
 
@@ -68,5 +67,4 @@ void DPS_LogBytes(DPS_LogLevel level, const char* file, int line, const char *fu
         fprintf(stream, "%02x ", bytes[i]);
     }
     fprintf(stream, "\n");
-    fflush(stream);
 }

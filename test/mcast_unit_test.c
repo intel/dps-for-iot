@@ -20,7 +20,7 @@
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  */
 #include "test.h"
-#include <dps/compat.h>
+#include <dps/dps.h>
 #include <dps/private/dps.h>
 #include <dps/private/network.h>
 
