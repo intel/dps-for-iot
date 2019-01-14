@@ -136,6 +136,8 @@ DPS_Status DPS_Start(DPS_Node* node)
 {
     DPS_Status status;
 
+    DPS_DBGTRACE();
+
     status = DPS_NetworkInit(node);
     if (status != DPS_OK) {
         return status;

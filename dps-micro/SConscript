@@ -28,7 +28,6 @@ srcs = [
         'src/coap.c',
         'src/cbor.c',
         'src/cose.c',
-        'src/dbg.c',
         'src/ec.c',
         'src/err.c',
         'src/gcm.c',
@@ -46,6 +45,7 @@ srcs = [
 
 if platform == 'win32':
     srcs.append('src/win32/network.c')
+    srcs.append('src/win32/dbg.c')
 
 Depends(srcs, ext_libs)
 
