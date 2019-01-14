@@ -710,9 +710,9 @@ static void CompressedBitDump(const chunk_t* data)
                 break;
             }
         }
-        putc(bit ? '1' : '0', stderr);
+        fprintf(stdout, bit ? "1" : "0");
     }
-    putc('\n', stderr);
+    fprintf(stdout, "\n");
 }
 #endif
 
