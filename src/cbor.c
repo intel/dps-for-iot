@@ -612,7 +612,7 @@ DPS_Status CBOR_DecodeFloat(DPS_RxBuffer* buffer, float* f)
             double d;
             status = CBOR_DecodeDouble(buffer, &d);
             if (status == DPS_OK) {
-                if (fabs(d) > FLT_MAX) {
+                if (d > FLT_MAX || d < FLT_MIN) {
                     status = DPS_ERR_RANGE;
                 } else {
                     *f = (float)d;

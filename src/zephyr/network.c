@@ -34,6 +34,7 @@
 
 #include <misc/byteorder.h>
 #include <misc/util.h>
+#include <net/ethernet.h>
 #include <net/buf.h>
 #include <net/net_pkt.h>
 #include <net/net_ip.h>
@@ -74,13 +75,18 @@ DPS_Status DPS_NetworkInit(DPS_Node* node)
     DPS_Status status = DPS_OK;
     int ret;
 
+    DPS_DBGTRACE();
+
+    /* Initialize the Ethernet driver on the default interface */
+    ethernet_init(net_if_get_default());
+
     memset(&netContext, 0, sizeof(netContext));
     node->network = &netContext;
 
-    /* Initialize Zephyr network context */
+    /* Get the Zephyr IPv6 network context */
     ret = net_context_get(PF_INET6, SOCK_DGRAM, IPPROTO_UDP, &netContext.context6);
 	if (ret) {
-		DPS_DBGPRINT("Could not get an UDP context\n");
+		DPS_DBGPRINT("Could not get ipV6 UDP context\n");
 		status = DPS_ERR_NETWORK;
     }
     return status;
@@ -119,7 +125,7 @@ static DPS_Status BindSock(int family, DPS_Network* net, int port)
 }
 
 /* Local IPv6 address - TODO should be randomly assiged or a configuration parameter */
-#define LOCAL_ADDR_6   "20:01:0d:b8::01"
+#define LOCAL_ADDR_6   "2001:db8::1"
 
 static DPS_Status JoinMCastGroup()
 {
@@ -130,6 +136,8 @@ static DPS_Status JoinMCastGroup()
     struct net_if_mcast_addr* mcast;
 	struct net_if* iface;
 
+    DPS_DBGTRACE();
+
 	iface = net_if_get_default();
 	if (!iface) {
 		DPS_DBGPRINT("Could not get the default interface\n");
@@ -138,6 +146,10 @@ static DPS_Status JoinMCastGroup()
 
     /* Need to set a unicast address on the interface */
     ret = net_addr_pton(AF_INET6, LOCAL_ADDR_6, &addr6);
+    if (ret) {
+		DPS_DBGPRINT("Invalid IPv6 address\n");
+		return DPS_ERR_NETWORK;
+    }
 	ifaddr = net_if_ipv6_addr_add(iface, &addr6, NET_ADDR_MANUAL, 0);
 	if (!ifaddr) {
 		DPS_DBGPRINT("Could not add unicast address to interface");
@@ -147,6 +159,10 @@ static DPS_Status JoinMCastGroup()
 	ifaddr->addr_state = NET_ADDR_PREFERRED;
 
     ret = net_addr_pton(AF_INET6, COAP_MCAST_ALL_NODES_LINK_LOCAL_6, &mcast6);
+    if (ret) {
+		DPS_DBGPRINT("Invalid IPv6 multicast address\n");
+		return DPS_ERR_NETWORK;
+    }
 	mcast = net_if_ipv6_maddr_add(iface, &mcast6);
 	if (!mcast) {
 		DPS_DBGPRINT("Could not add multicast address to interface\n");
@@ -188,11 +204,13 @@ DPS_Status DPS_MCastStart(DPS_Node* node, DPS_OnReceive cb)
     DPS_Status status;
     DPS_Network* network = node->network;
 
-    status = BindSock(AF_INET6, network, COAP_UDP_PORT);
+    DPS_DBGTRACE();
+
+    status = JoinMCastGroup();
     if (status != DPS_OK) {
         goto Exit;
     }
-    status = JoinMCastGroup();
+    status = BindSock(AF_INET6, network, COAP_UDP_PORT);
     if (status != DPS_OK) {
         goto Exit;
     }

@@ -50,6 +50,8 @@ int main(int argc, char** argv)
     DPS_Subscription sub;
     DPS_Status status;
     int i;
+
+#if DPS_TARGET == DPS_TARGET_WINDOWS || DPS_TARGET == DPS_TARGET_LINUX
     char** arg = argv + 1;
 
     DPS_Debug = DPS_FALSE;
@@ -61,14 +63,21 @@ int main(int argc, char** argv)
         }
         goto Usage;
     }
+#else
+    DPS_Debug = DPS_TRUE;
+#endif
+
+    DPS_PRINT("Starting pub unit test\n");
 
     node = DPS_CreateNode("/");
 
     /* For testing purposes manually add keys to the key store */
     keyStore = DPS_GetKeyStore(node);
+#if 0
     for (i = 0; i < NUM_KEYS; ++i) {
         DPS_SetContentKey(keyStore, &PskId[i], &Psk[i]);
     }
+#endif
 
     status = DPS_Start(node);
     CHECK(status == DPS_OK);
@@ -93,9 +102,14 @@ int main(int argc, char** argv)
 
 failed:
     DPS_PRINT("FAILED: status=%s (%s) near line %d\r\n", DPS_ErrTxt(status), __FILE__, atLine - 1);
+#if DPS_TARGET == DPS_TARGET_ZEPHYR
+    while (1) {
+        SLEEP(100);
+    }
+#else
     return 1;
-
 Usage:
     DPS_PRINT("Usage %s: [-d]\n", argv[0]);
+#endif
     return 1;
 }
