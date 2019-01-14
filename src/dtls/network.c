@@ -88,6 +88,7 @@ typedef struct _PendingWrite {
  * issues -- ensuring certain buffers are alive for enough time.
  */
 typedef struct _DPS_NetConnection {
+    DPS_NetContext* netCtx;
     DPS_Node* node;
     /*
      * The ref counting strategy is as follows:
@@ -133,6 +134,12 @@ typedef struct _DPS_NetConnection {
     int handshakeDone;
     int handshake;
 
+    enum {
+          CN_OPEN = 0,
+          CN_CLOSE_NOTIFIED = 1,
+          CN_CLOSING = 2
+    } state;
+
     /*
      * Entries in the read queue are created from data received from
      * the network, and consumed by the callback we give to mbedtls.
@@ -171,7 +178,11 @@ typedef struct _DPS_NetConnection {
 
 #define MAX_READ_LEN   65536
 
+#define NET_RUNNING  1          /**< Net layer is running */
+#define NET_STOPPING 2          /**< Net layer is stopping */
+
 struct _DPS_NetContext {
+    int state;
     uv_udp_t rxSocket;
     uv_udp_recv_cb dataCB;
     uint32_t handshakeTimeoutMin;
@@ -203,7 +214,7 @@ static void OnServerData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, c
 static void OnClientData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, const struct sockaddr* addr, unsigned flags)
 {
     DPS_NetConnection* cn = socket->data;
-    DPS_NetContext* netCtx = cn->node->netCtx;
+    DPS_NetContext* netCtx = cn->netCtx;
     /*
      * Use the rxSocket here as it's only purpose in dataCB is to get
      * to the DPS_NetContext
@@ -214,7 +225,7 @@ static void OnClientData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, c
 static uv_udp_t* GetSocket(DPS_NetConnection* cn)
 {
     if (cn->type == MBEDTLS_SSL_IS_SERVER) {
-        DPS_NetContext* netCtx = cn->node->netCtx;
+        DPS_NetContext* netCtx = cn->netCtx;
         return &netCtx->rxSocket;
     } else {
         return &cn->socket;
@@ -298,22 +309,11 @@ static void CancelPending(DPS_NetConnection* cn)
      * Capture state of connection as any of the DecRef calls below
      * may destroy it.
      */
-    PendingRead* rq = cn->readQueue;
     PendingWrite* wq = cn->writeQueue;
     PendingWrite* cq = cn->callbackQueue;
-    int handshake = cn->handshake;
 
-    cn->readQueue = NULL;
     cn->writeQueue = NULL;
     cn->callbackQueue = NULL;
-    cn->handshake = 0;
-
-    while (rq) {
-        PendingRead* pr = rq;
-        rq = rq->next;
-        DPS_NetConnectionDecRef(cn);
-        DestroyPendingRead(pr);
-    }
 
     while (wq) {
         PendingWrite* pw = wq;
@@ -331,16 +331,6 @@ static void CancelPending(DPS_NetConnection* cn)
         pw->sendCompleteCB(cn->node, pw->appCtx, &cn->peer, pw->bufs, pw->numBufs, DPS_ERR_NETWORK);
         DPS_NetConnectionDecRef(cn);
         DestroyPendingWrite(pw);
-    }
-
-    switch (handshake) {
-    case MBEDTLS_ERR_SSL_HELLO_VERIFY_REQUIRED:
-    case MBEDTLS_ERR_SSL_WANT_READ:
-    case MBEDTLS_ERR_SSL_WANT_WRITE:
-        DPS_NetConnectionDecRef(cn);
-        break;
-    default:
-        break;
     }
 }
 
@@ -632,6 +622,12 @@ static int OnTLSSend(void* data, const unsigned char *buf, size_t len)
     return -1;
 }
 
+static void RxHandleClosed(uv_handle_t* handle)
+{
+    DPS_DBGPRINT("Closed Rx handle %p\n", handle);
+    free(handle->data);
+}
+
 static void FreeConnection(DPS_NetConnection* cn)
 {
     mbedtls_ssl_free(&cn->ssl);
@@ -648,6 +644,29 @@ static void FreeConnection(DPS_NetConnection* cn)
 
     if (cn->peerAddr) {
         DPS_DestroyAddress(cn->peerAddr);
+    }
+
+    if (cn->netCtx) {
+        DPS_NetConnection* next = cn->next;
+        if (cn->netCtx->cns == cn) {
+            cn->netCtx->cns = next;
+        } else if (cn->netCtx->cns) {
+            DPS_NetConnection* prev = cn->netCtx->cns;
+            while (prev->next != cn) {
+                prev = prev->next;
+                assert(prev);
+            }
+            prev->next = next;
+        }
+    }
+    /*
+     * DPS_NetStop may have been called while some connections are
+     * still active.  Finish the work of DPS_NetStop here when the
+     * last connection is removed from the list.
+     */
+    if ((cn->netCtx->state == NET_STOPPING) && !cn->netCtx->cns) {
+        uv_udp_recv_stop(&cn->netCtx->rxSocket);
+        uv_close((uv_handle_t*)&cn->netCtx->rxSocket, RxHandleClosed);
     }
     free(cn);
 }
@@ -693,34 +712,44 @@ static void DestroyConnection(DPS_NetConnection* cn)
            cn->handshake != MBEDTLS_ERR_SSL_WANT_READ &&
            cn->handshake != MBEDTLS_ERR_SSL_WANT_WRITE);
 
-    if (cn->node->netCtx) {
-        DPS_NetConnection* next = cn->next;
-        if (cn->node->netCtx->cns == cn) {
-            cn->node->netCtx->cns = next;
-        } else if (cn->node->netCtx->cns) {
-            DPS_NetConnection* prev = cn->node->netCtx->cns;
-            while (prev->next != cn) {
-                prev = prev->next;
-                assert(prev);
-            }
-            prev->next = next;
+    switch (cn->state) {
+    case CN_OPEN:
+        cn->state = CN_CLOSE_NOTIFIED;
+        int ret = mbedtls_ssl_close_notify(&cn->ssl);
+        if (ret != 0) {
+            DPS_ERRPRINT("Close notify failed: %s\n", TLSErrTxt(ret));
         }
-    }
-
-    assert(!uv_is_active((uv_handle_t*)&cn->timer));
-    uv_idle_stop(&cn->idleForSendCallbacks);
-    if (cn->type == MBEDTLS_SSL_IS_CLIENT) {
-        uv_udp_recv_stop(&cn->socket);
-    }
-
-    if ((cn->type == MBEDTLS_SSL_IS_CLIENT) && !uv_is_closing((uv_handle_t*)&cn->socket)) {
-        uv_close((uv_handle_t*)&cn->socket, SocketClosed);
-    } else if (!uv_is_closing((uv_handle_t*)&cn->idleForSendCallbacks)) {
-        uv_close((uv_handle_t*)&cn->idleForSendCallbacks, IdleForCallbacksClosed);
-    } else if (!uv_is_closing((uv_handle_t*)&cn->timer)) {
-        uv_close((uv_handle_t*)&cn->timer, TimerClosed);
-    } else {
-        FreeConnection(cn);
+        /*
+         * The ref count may be non-0 now if mbedtls has work to do
+         * for the close notify above.
+         */
+        if (cn->refCount > 0) {
+            return;
+        }
+        /* FALLTHROUGH */
+    case CN_CLOSE_NOTIFIED:
+        cn->state = CN_CLOSING;
+        assert(!uv_is_active((uv_handle_t*)&cn->timer));
+        uv_idle_stop(&cn->idleForSendCallbacks);
+        if (cn->type == MBEDTLS_SSL_IS_CLIENT) {
+            uv_udp_recv_stop(&cn->socket);
+        }
+        if ((cn->type == MBEDTLS_SSL_IS_CLIENT) && !uv_is_closing((uv_handle_t*)&cn->socket)) {
+            uv_close((uv_handle_t*)&cn->socket, SocketClosed);
+        } else if (!uv_is_closing((uv_handle_t*)&cn->idleForSendCallbacks)) {
+            uv_close((uv_handle_t*)&cn->idleForSendCallbacks, IdleForCallbacksClosed);
+        } else if (!uv_is_closing((uv_handle_t*)&cn->timer)) {
+            uv_close((uv_handle_t*)&cn->timer, TimerClosed);
+        } else {
+            FreeConnection(cn);
+        }
+        break;
+    case CN_CLOSING:
+        /*
+         * A close callback is pending and will drive the rest of the
+         * destroy steps.
+         */
+        return;
     }
 }
 
@@ -843,6 +872,7 @@ static DPS_NetConnection* CreateConnection(DPS_Node* node, const struct sockaddr
         return NULL;
     }
 
+    cn->netCtx = netCtx;
     cn->node = node;
     cn->type = type;
     cn->peerAddr = DPS_CreateAddress();
@@ -1123,7 +1153,7 @@ static void TLSSend(DPS_NetConnection* cn)
 
 static void TLSRecv(DPS_NetConnection* cn)
 {
-    DPS_NetContext* netCtx = cn->node->netCtx;
+    DPS_NetContext* netCtx = cn->netCtx;
     int ret;
     uint8_t* data = NULL;
     size_t len = 0;
@@ -1139,6 +1169,13 @@ static void TLSRecv(DPS_NetConnection* cn)
     if (ret < 0) {
         if (ret == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY) {
             DPS_DBGPRINT("Connection was closed gracefully\n");
+            switch (cn->state) {
+            case CN_OPEN:
+                cn->state = CN_CLOSE_NOTIFIED;
+            case CN_CLOSE_NOTIFIED:
+            case CN_CLOSING:
+                break;
+            }
             status = DPS_ERR_EOF;
         } else if (ret == MBEDTLS_ERR_SSL_WANT_READ) {
             DPS_DBGPRINT("Want read cn=%p\n", cn);
@@ -1161,6 +1198,11 @@ static void TLSRecv(DPS_NetConnection* cn)
 
     ret = netCtx->receiveCB(netCtx->node, &cn->peer, status, data, len);
 
+    /*
+     * See comment in TLSHandshake about holding onto a reference
+     * until the incoming data is received after the handshake is
+     * complete.
+     */
     if (cn->handshake == MBEDTLS_ERR_SSL_WANT_READ) {
         assert(cn->refCount > 1);
         DPS_NetConnectionDecRef(cn);
@@ -1246,7 +1288,7 @@ static int TLSHandshake(DPS_NetConnection* cn)
      * connection.  We want to wait until some data comes in before we
      * destroy the connection, so massage the state here.
      */
-    if (cn->type == MBEDTLS_SSL_IS_SERVER) {
+    if ((cn->type == MBEDTLS_SSL_IS_SERVER) && (cn->netCtx->state == NET_RUNNING)) {
         cn->handshake = MBEDTLS_ERR_SSL_WANT_READ;
     }
 
@@ -1317,19 +1359,18 @@ static void OnUdpData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, cons
     nodeAddr = DPS_CreateAddress();
     DPS_SetAddress(nodeAddr, addr);
 
-    /*
-     * A node stops in two steps. It happens that in the middle of one
-     * of these steps we can receive a message, that can trigger the
-     * creation of a connection, leading to more messages to be sent
-     * to the network.
-     */
-    if (netCtx->node->state == DPS_NODE_STOPPING) {
-        DPS_DBGPRINT("Ignoring data received while stopping the node\n");
-        goto Exit;
-    }
-
     cn = LookupConnection(netCtx, nodeAddr);
     if (!cn) {
+        /*
+         * The network layer stops in multiple steps. It happens that
+         * in the middle of one of these steps we can receive a
+         * message, that can trigger the creation of a connection,
+         * leading to more messages to be sent to the network.
+         */
+        if (netCtx->state == NET_STOPPING) {
+            DPS_DBGPRINT("Ignoring incoming data while stopping the network\n");
+            goto Exit;
+        }
         cn = CreateConnection(netCtx->node, addr, MBEDTLS_SSL_IS_SERVER);
         if (!cn) {
             DPS_ERRPRINT("Create server connection structure failed\n");
@@ -1377,12 +1418,6 @@ static void OnUdpData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, cons
     DPS_DestroyAddress(nodeAddr);
 }
 
-static void RxHandleClosed(uv_handle_t* handle)
-{
-    DPS_DBGPRINT("Closed Rx handle %p\n", handle);
-    free(handle->data);
-}
-
 DPS_NetContext* DPS_NetStart(DPS_Node* node, uint16_t port, DPS_OnReceive cb)
 {
     int ret;
@@ -1425,6 +1460,7 @@ DPS_NetContext* DPS_NetStart(DPS_Node* node, uint16_t port, DPS_OnReceive cb)
         DPS_DBGPRINT("  %s\n", mbedtls_ssl_get_ciphersuite_name(*cs));
     }
 
+    netCtx->state = NET_RUNNING;
     DPS_DBGPRINT("Created netCtx=%p\n", netCtx);
     return netCtx;
 
@@ -1461,27 +1497,28 @@ void DPS_NetStop(DPS_NetContext* netCtx)
         return;
     }
 
-    /*
-     * To safely close the rxSocket we need to ensure that no
-     * connections will reference it.  This is done by both stopping
-     * the rxSocket and also stopping each connection's timer
-     * callback.  Once that is done, no OnData or OnTimeout callbacks
-     * will be called that reference rxSocket.  It's then safe to
-     * close the handle and delete this netCtx.
-     */
-    uv_udp_recv_stop(&netCtx->rxSocket);
-    cns = netCtx->cns;
-    while (cns) {
-        DPS_NetConnection* cn = cns;
-        cns = cns->next;
-        int active = uv_is_active((uv_handle_t*)&cn->timer);
-        uv_timer_stop(&cn->timer);
-        CancelPending(cn);
-        if (active) {
-            DPS_NetConnectionDecRef(cn);
+    if (netCtx->state == NET_RUNNING) {
+        netCtx->state = NET_STOPPING;
+        /*
+         * To safely close the rxSocket we need to ensure that no
+         * connections will reference it.
+         */
+        cns = netCtx->cns;
+        while (cns) {
+            DPS_NetConnection* cn = cns;
+            cns = cns->next;
+            CancelPending(cn);
+        }
+        /*
+         * When no connections are active we can close the rxSocket
+         * immediately.  Otherwise we must wait for FreeConnection to
+         * be called to ensure no one is using the rxSocket.
+         */
+        if (!netCtx->cns) {
+            uv_udp_recv_stop(&netCtx->rxSocket);
+            uv_close((uv_handle_t*)&netCtx->rxSocket, RxHandleClosed);
         }
     }
-    uv_close((uv_handle_t*)&netCtx->rxSocket, RxHandleClosed);
 }
 
 DPS_Status DPS_NetSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf_t* bufs, size_t numBufs,

@@ -1027,7 +1027,8 @@ static DPS_Status OnNetReceive(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Status s
 {
     DPS_RxBuffer payload;
 
-    DPS_DBGTRACE();
+    DPS_DBGTRACEA("node=%p,ep={addr=%s,cn=%p},status=%s,data=%p,len=%d\n",
+                  node, DPS_NodeAddrToString(&ep->addr), ep->cn, DPS_ErrTxt(status), data, len);
 
     /*
      * Fail input that comes in when the node is no longer running
