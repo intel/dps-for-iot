@@ -43,11 +43,17 @@ typedef struct _DPS_Node DPS_Node;
 #define DPS_MAX_PWD_LEN   1024 /**< For sanity check on pass phrase length */
 
 #define DPS_MAX_SYMMETRIC_KEY_LEN DPS_AES_256_KEY_LEN
+
 /**
  * Configuration parameter - needs to configured to be large enough
  * for the maximum key id used by the local application.
  */
 #define DPS_MAX_KEY_ID_LEN  32
+
+/**
+ * Configuration parameter for maximum size of the keystore
+ */
+#define DPS_MAX_KEYSTORE_ENTRIES 8
 
 /**
  * A DPS key type

@@ -1,6 +1,8 @@
 /* Use config file, to replace mbed defaults. It is set during
  * compilation with MBEDTLS_USER_CONFIG_FILE environment variable. */
 
+#include <dps/targets.h>
+
 #define MBEDTLS_DEPRECATED_REMOVED
 
 #undef MBEDTLS_ARC4_C
@@ -42,11 +44,14 @@
 #undef MBEDTLS_SSL_PROTO_TLS1_1
 #undef MBEDTLS_X509_RSASSA_PSS_SUPPORT
 
+#if DPS_TARGET == DPS_TARGET_ZEPHYR
 /* For Zephyr */
 #define MBEDTLS_NO_PLATFORM_ENTROPY
+#define MBEDTLS_ENTROPY_HARDWARE_ALT
 #undef MBEDTLS_ENTROPY_PLATFORM
 #undef MBEDTLS_TIMING_C
 #undef MBEDTLS_FS_IO
 #undef MBEDTLS_HAVE_TIME_DATE
 #undef MBEDTLS_HAVE_TIME
+#endif
 

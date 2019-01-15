@@ -45,7 +45,7 @@ typedef struct _ReferenceKeyStore {
     DPS_KeyStore refKS;
     DPS_RBG* rbg;
 
-    KeyStoreEntry* entries;
+    KeyStoreEntry entries[DPS_MAX_KEYSTORE_ENTRIES];
     size_t entriesCount;
     size_t entriesCap;
 
@@ -75,11 +75,12 @@ void DPS_ClearKeyId(DPS_KeyId* keyId)
 
 static KeyStoreEntry* KeyStoreLookup(ReferenceKeyStore* refKS, const DPS_KeyId* keyId)
 {
-    KeyStoreEntry* entry;
     size_t i;
 
+    DPS_DBGTRACE();
+    DPS_DBGPRINT("Entries %p %d\n", refKS, refKS->entriesCount);
     for (i = 0; i < refKS->entriesCount; ++i) {
-        entry = refKS->entries + i;
+        KeyStoreEntry* entry = &refKS->entries[i];
         if (SameKeyId(&entry->keyId, keyId)) {
             return entry;
         }
@@ -87,26 +88,9 @@ static KeyStoreEntry* KeyStoreLookup(ReferenceKeyStore* refKS, const DPS_KeyId* 
     return NULL;
 }
 
-static DPS_Status KeyStoreGrow(ReferenceKeyStore* refKS)
-{
-    if (refKS->entriesCount == refKS->entriesCap) {
-        size_t newCap = 1;
-        if (refKS->entriesCap) {
-            newCap = refKS->entriesCap * 2;
-        }
-        KeyStoreEntry *newEntries = realloc(refKS->entries, newCap * sizeof(KeyStoreEntry));
-        if (!newEntries) {
-            return DPS_ERR_RESOURCES;
-        }
-        memset(newEntries + refKS->entriesCap, 0, (newCap - refKS->entriesCap) * sizeof(KeyStoreEntry));
-        refKS->entries = newEntries;
-        refKS->entriesCap = newCap;
-    }
-    return DPS_OK;
-}
-
 static DPS_Status KeyStoreSetKey(KeyStoreEntry* entry, const DPS_Key* key)
 {
+    DPS_DBGTRACE();
     if (entry->key.type != DPS_KEY_SYMMETRIC) {
         return DPS_ERR_ARGS;
     }
@@ -237,25 +221,20 @@ static DPS_Status CAChainReq(DPS_KeyStore* keyStore, DPS_CAChainResponse respons
 
 DPS_KeyStore* DPS_CreateKeyStore()
 {
-    ReferenceKeyStore* refKS;
+    static ReferenceKeyStore ks;
 
     DPS_DBGTRACE();
 
-    refKS = calloc(1, sizeof(ReferenceKeyStore));
-    if (!refKS) {
+    ks.rbg = DPS_CreateRBG();
+    if (!ks.rbg) {
         return NULL;
     }
-    refKS->rbg = DPS_CreateRBG();
-    if (!refKS->rbg) {
-        free(refKS);
-        return NULL;
-    }
-    refKS->refKS.keyAndIdRequest = KeyAndIdReq;
-    refKS->refKS.keyRequest = KeyReq;
-    refKS->refKS.ephemeralKeyRequest = EphemeralKeyReq;
-    refKS->refKS.caChainRequest = CAChainReq;
+    ks.refKS.keyAndIdRequest = KeyAndIdReq;
+    ks.refKS.keyRequest = KeyReq;
+    ks.refKS.ephemeralKeyRequest = EphemeralKeyReq;
+    ks.refKS.caChainRequest = CAChainReq;
 
-    return (DPS_KeyStore*)refKS;
+    return (DPS_KeyStore*)&ks;
 }
 
 void DPS_DestroyKeyStore(DPS_KeyStore* keyStore)
@@ -271,7 +250,7 @@ void DPS_DestroyKeyStore(DPS_KeyStore* keyStore)
         DPS_DestroyRBG(refKS->rbg);
     }
     for (i = 0; i < refKS->entriesCount; i++) {
-        KeyStoreEntry* entry = refKS->entries + i;
+        KeyStoreEntry* entry = &refKS->entries[i];
         DPS_ClearKeyId(&entry->keyId);
         if (entry->key.type == DPS_KEY_SYMMETRIC) {
             free((uint8_t*)entry->key.symmetric.key);
@@ -318,8 +297,13 @@ DPS_Status DPS_SetContentKey(DPS_KeyStore* keyStore, const DPS_KeyId* keyId, con
 {
     ReferenceKeyStore* refKS = (ReferenceKeyStore*)keyStore;
     KeyStoreEntry* entry;
+    DPS_KeyId id;
 
     DPS_DBGTRACE();
+
+    if (!keyStore || !key || !keyId) {
+        return DPS_ERR_NULL;
+    }
 
     /* Replace key if key ID already exists. */
     entry = KeyStoreLookup(refKS, keyId);
@@ -330,19 +314,11 @@ DPS_Status DPS_SetContentKey(DPS_KeyStore* keyStore, const DPS_KeyId* keyId, con
         return DPS_OK;
     }
 
-    /* If key ID doesn't exist, don't add a NULL key. */
-    if (!key) {
-        return DPS_OK;
-    }
-
-    /* Grow the entries array as needed. */
-    if (KeyStoreGrow(refKS) != DPS_OK) {
+    /* Add the new entry. */
+    if (refKS->entriesCount == DPS_MAX_KEYSTORE_ENTRIES) {
         return DPS_ERR_RESOURCES;
     }
-
-    /* Add the new entry. */
-    entry = refKS->entries + refKS->entriesCount;
-    DPS_KeyId id;
+    entry = &refKS->entries[refKS->entriesCount];
     if (!DPS_CopyKeyId(&id, keyId)) {
         return DPS_ERR_RESOURCES;
     }
@@ -404,18 +380,16 @@ DPS_Status DPS_SetCertificate(DPS_KeyStore* keyStore, const char* cert, const ch
         return DPS_OK;
     }
 
-    /* Grow the certificates array as needed. */
-    if (KeyStoreGrow(refKS) != DPS_OK) {
-        goto ErrorExit;
-    }
-
     /* Add the new entry. */
-    entry = refKS->entries + refKS->entriesCount;
+    if (refKS->entriesCount == DPS_MAX_KEYSTORE_ENTRIES) {
+        return DPS_ERR_RESOURCES;
+    }
+    entry = &refKS->entries[refKS->entriesCount];
     if (SetCertificate(entry, cert, key, password) != DPS_OK) {
         goto ErrorExit;
     }
+    ++refKS->entriesCount;
     entry->keyId = keyId;
-    refKS->entriesCount++;
     return DPS_OK;
 
 ErrorExit:

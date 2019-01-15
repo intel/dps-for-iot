@@ -50,6 +50,7 @@ int main(int argc, char** argv)
     DPS_Subscription sub;
     DPS_Status status;
     int i;
+    int numPubs;
 
 #if DPS_TARGET == DPS_TARGET_WINDOWS || DPS_TARGET == DPS_TARGET_LINUX
     char** arg = argv + 1;
@@ -63,8 +64,10 @@ int main(int argc, char** argv)
         }
         goto Usage;
     }
+    numPubs = 10;
 #else
     DPS_Debug = DPS_TRUE;
+    numPubs = INT_MAX;
 #endif
 
     DPS_PRINT("Starting pub unit test\n");
@@ -73,9 +76,10 @@ int main(int argc, char** argv)
 
     /* For testing purposes manually add keys to the key store */
     keyStore = DPS_GetKeyStore(node);
-#if 0
+#if 1
     for (i = 0; i < NUM_KEYS; ++i) {
-        DPS_SetContentKey(keyStore, &PskId[i], &Psk[i]);
+        status = DPS_SetContentKey(keyStore, &PskId[i], &Psk[i]);
+        CHECK(status == DPS_OK);
     }
 #endif
 
@@ -92,7 +96,7 @@ int main(int argc, char** argv)
     status = DPS_Subscribe(&sub, OnPub, NULL);
     CHECK(status == DPS_OK);
 
-    for (i = 0; i < 10; ++i) {
+    for (i = 0; i < numPubs; ++i) {
         status = DPS_Publish(&pub, (const uint8_t*)testString, strlen(testString) + 1, 0);
         CHECK(status == DPS_OK);
         SLEEP(5000);
