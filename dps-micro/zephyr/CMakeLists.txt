@@ -15,6 +15,7 @@ FILE(GLOB dps_sources "../src/*.c")
 
 target_sources(app PRIVATE "../src/zephyr/network.c")
 target_sources(app PRIVATE "../src/zephyr/dbg.c")
+target_sources(app PRIVATE "../src/zephyr/entropy.c")
 target_sources(app PRIVATE ${dps_sources})
 target_sources(app PRIVATE ${ext_sources})
 

@@ -72,23 +72,18 @@ typedef struct _DPS_RBG {
 
 DPS_RBG* DPS_CreateRBG()
 {
-    DPS_RBG* rbg;
+    static DPS_RBG rbg;
     int ret;
 
-    rbg = malloc(sizeof(DPS_RBG));
-    if (!rbg) {
-        return NULL;
-    }
-    mbedtls_entropy_init(&rbg->entropy);
-    mbedtls_ctr_drbg_init(&rbg->drbg);
-    ret = mbedtls_ctr_drbg_seed(&rbg->drbg, mbedtls_entropy_func, &rbg->entropy,
+    mbedtls_entropy_init(&rbg.entropy);
+    mbedtls_ctr_drbg_init(&rbg.drbg);
+    ret = mbedtls_ctr_drbg_seed(&rbg.drbg, mbedtls_entropy_func, &rbg.entropy,
                                 (const unsigned char*)PERSONALIZATION_STRING, sizeof(PERSONALIZATION_STRING) - 1);
     if (ret != 0) {
         DPS_ERRPRINT("Seed RBG failed: %s\n", TLSErrTxt(ret));
-        DPS_DestroyRBG(rbg);
         return NULL;
     }
-    return rbg;
+    return &rbg;
 }
 
 void DPS_DestroyRBG(DPS_RBG* rbg)
@@ -96,7 +91,6 @@ void DPS_DestroyRBG(DPS_RBG* rbg)
     if (rbg) {
         mbedtls_ctr_drbg_free(&rbg->drbg);
         mbedtls_entropy_free(&rbg->entropy);
-        free(rbg);
     }
 }
 

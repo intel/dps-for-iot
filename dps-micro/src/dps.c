@@ -138,6 +138,9 @@ DPS_Status DPS_Start(DPS_Node* node)
 
     DPS_DBGTRACE();
 
+    if (!node->keyStore) {
+        return DPS_ERR_INVALID;
+    }
     status = DPS_NetworkInit(node);
     if (status != DPS_OK) {
         return status;
