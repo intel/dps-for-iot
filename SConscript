@@ -1,4 +1,5 @@
 import os
+import re
 import string
 Import(['env', 'ext_objs', 'ext_shobjs', 'extUV', 'version'])
 
@@ -171,37 +172,70 @@ if env['nodejs']:
         print('Node.js binding only supported on the posix platform')
         exit()
 
+goimport1_re = re.compile(r'^import\s+"([^"]+)"', re.M)
+goimportn_re = re.compile(r'^import\s+\(([^)]+)\)', re.M)
+def gosrc_scanner(node, env, path):
+    imports = []
+    contents = node.get_contents()
+    for i in goimport1_re.findall(contents) + goimportn_re.findall(contents):
+        for j in i.split():
+            pkg = j.strip('\"')
+            imports += env.Glob('{}/src/{}/*.go'.format(env['ENV']['GOPATH'], pkg))
+            imports += env.Glob('{}/pkg/{}_{}/{}{}'.format(env['ENV']['GOPATH'], env['ENV']['GOOS'], env['ENV']['GOARCH'], pkg, env['LIBSUFFIX']))
+    # Special case for dps.go: any src file importing it also depends on the DPS libraries
+    if any('dps.go' in str(i) for i in imports):
+        imports += lib
+    return imports
+go_scanner = Scanner(function = gosrc_scanner,
+                     skeys = ['.go'])
+
+def gopkg_generator(target, source, env, for_signature):
+    t = os.path.splitext(re.sub(r'.*/go/pkg/[^/]+/', r'', str(target[0])))[0]
+    return 'go install {}'.format(t)
+def gopkg_emitter(target, source, env):
+    src = 'dps/{}.go'.format(source[0])
+    pkg = '{}{}'.format(os.path.dirname(src), env['LIBSUFFIX'])
+    return 'go/pkg/{}_{}/'.format(env['ENV']['GOOS'], env['ENV']['GOARCH']) + pkg, 'go/src/' + src
+gopkg = Builder(generator = gopkg_generator,
+                emitter = gopkg_emitter,
+                source_scanner = go_scanner)
+
+def gobin_generator(target, source, env, for_signature):
+    t = os.path.dirname(re.sub(r'.*/go/src/', r'', str(source[0])))
+    return 'go install {}'.format(t)
+def gobin_emitter(target, source, env):
+    src = 'dps/{}.go'.format(source[0])
+    bin = os.path.basename(str(source[0]))
+    return 'go/bin/' + bin, 'go/src/' + src
+gobin = Builder(generator = gobin_generator,
+                emitter = gobin_emitter,
+                source_scanner = go_scanner)
+
 if env['go']:
     if 'gcc' in env['CC']:
         goenv = libenv.Clone()
-        goos = os.popen('go env GOOS').read().strip()
-        goarch = os.popen('go env GOARCH').read().strip()
-        gopath = goenv.Dir('#/build/dist/go')
-        goenv.AppendENVPath('GOPATH', gopath)
-        goenv.VariantDir(goenv.Dir('#/build/dist/go/src/dps'), 'go')
-
+        goenv.AppendENVPath('GOOS', os.popen('go env GOOS').read().strip())
+        goenv.AppendENVPath('GOARCH', os.popen('go env GOARCH').read().strip())
+        goenv.AppendENVPath('GOPATH', goenv.Dir('go').abspath)
         goenv.Append(LIBS = env['DPS_LIBS'])
         cgo_cflags = ' '.join(['-I' + goenv.GetBuildPath(p) for p in goenv['CPPPATH']])
-        cgo_ldflags = '-L{} -ldps '.format(goenv.Dir('#/build/dist/lib')) + ' '.join(['-l' + l for l in goenv['LIBS']])
+        cgo_ldflags = ' '.join(l.abspath for l in lib) + ' ' + ' '.join(['-l' + l for l in goenv['LIBS']])
         goenv.AppendENVPath('CGO_CFLAGS', cgo_cflags)
         goenv.AppendENVPath('CGO_LDFLAGS', cgo_ldflags)
 
-        # The -a option to go install is to workaround the go build cache and scons not cooperating
-        gosrc = gopath.File('src/dps/dps.go')
-        gopkg = goenv.Command(gopath.File('pkg/{}_{}/dps{}'.format(goos, goarch, goenv['LIBSUFFIX'])),
-                              [gosrc, installed_lib],
-                              'go install -a dps', chdir = gopath.Dir('src'))
+        goenv.Append(BUILDERS = {'GoPkg' : gopkg})
+        goenv.Append(BUILDERS = {'GoBin' : gobin})
 
-        goexamples = ['keys',
-                      'simple_pub',
-                      'simple_pub_ks',
-                      'simple_sub',
-                      'simple_sub_ks']
-        for example in goexamples:
-            goexample = gopath.File('src/dps/examples/{}/{}.go'.format(example, example))
-            goenv.Command(gopath.File('bin/{}'.format(example)),
-                          [goexample, gopkg],
-                          'go install -a dps/examples/{}'.format(example), chdir = gopath.Dir('src'))
+        goenv.VariantDir('go/src/dps', 'go')
+        for p in ['dps',
+                  'examples/keys/keys']:
+            goenv.GoPkg(p)
+        for b in ['examples/simple_sub_ks/simple_sub_ks',
+                  'examples/simple_sub/simple_sub',
+                  'examples/simple_pub_ks/simple_pub_ks',
+                  'examples/simple_pub/simple_pub']:
+            goenv.GoBin(b)
+        goenv.Install('#/build/dist', 'go')
     else:
         print('Go binding only supported with the gcc compiler')
         exit()
