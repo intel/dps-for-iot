@@ -180,8 +180,8 @@ def gosrc_scanner(node, env, path):
     for i in goimport1_re.findall(contents) + goimportn_re.findall(contents):
         for j in i.split():
             pkg = j.strip('\"')
-            imports += env.Glob('{}/src/{}/*.go'.format(env['ENV']['GOPATH'], pkg))
-            imports += env.Glob('{}/pkg/{}_{}/{}{}'.format(env['ENV']['GOPATH'], env['ENV']['GOOS'], env['ENV']['GOARCH'], pkg, env['LIBSUFFIX']))
+            imports += env.Glob('{}/src/{}/*.go'.format(env['GOPATH'], pkg))
+            imports += env.Glob('{}/pkg/{}_{}/{}{}'.format(env['GOPATH'], env['ENV']['GOOS'], env['ENV']['GOARCH'], pkg, env['LIBSUFFIX']))
     # Special case for dps.go: any src file importing it also depends on the DPS libraries
     if any('dps.go' in str(i) for i in imports):
         imports += lib
@@ -190,8 +190,9 @@ go_scanner = Scanner(function = gosrc_scanner,
                      skeys = ['.go'])
 
 def gopkg_generator(target, source, env, for_signature):
-    t = os.path.splitext(re.sub(r'.*/go/pkg/[^/]+/', r'', str(target[0])))[0]
-    return 'go install {}'.format(t)
+    t = str(target[0]).replace(os.path.sep, '/')
+    t = os.path.splitext(re.sub(r'.*/go/pkg/[^/]+/', r'', t))[0]
+    return 'go install -a {}'.format(t)
 def gopkg_emitter(target, source, env):
     src = 'dps/{}.go'.format(source[0])
     pkg = '{}{}'.format(os.path.dirname(src), env['LIBSUFFIX'])
@@ -201,8 +202,9 @@ gopkg = Builder(generator = gopkg_generator,
                 source_scanner = go_scanner)
 
 def gobin_generator(target, source, env, for_signature):
-    t = os.path.dirname(re.sub(r'.*/go/src/', r'', str(source[0])))
-    return 'go install {}'.format(t)
+    t = str(source[0]).replace(os.path.sep, '/')
+    t = os.path.dirname(re.sub(r'.*/go/src/', r'', t))
+    return 'go install -a {}'.format(t)
 def gobin_emitter(target, source, env):
     src = 'dps/{}.go'.format(source[0])
     bin = os.path.basename(str(source[0]))
@@ -216,7 +218,10 @@ if env['go']:
         goenv = libenv.Clone()
         goenv.AppendENVPath('GOOS', os.popen('go env GOOS').read().strip())
         goenv.AppendENVPath('GOARCH', os.popen('go env GOARCH').read().strip())
+        # Append our GOPATH to the environment seen by the go tools and also remember it for use by the
+        # scanner to locate imports.
         goenv.AppendENVPath('GOPATH', goenv.Dir('go').abspath)
+        goenv.Append(GOPATH = goenv.Dir('go').abspath)
         goenv.Append(LIBS = env['DPS_LIBS'])
         cgo_cflags = ' '.join(['-I' + goenv.GetBuildPath(p) for p in goenv['CPPPATH']])
         cgo_ldflags = ' '.join(l.abspath for l in lib) + ' ' + ' '.join(['-l' + l for l in goenv['LIBS']])
