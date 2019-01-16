@@ -176,7 +176,7 @@ goimport1_re = re.compile(r'^import\s+"([^"]+)"', re.M)
 goimportn_re = re.compile(r'^import\s+\(([^)]+)\)', re.M)
 def gosrc_scanner(node, env, path):
     imports = []
-    contents = node.get_contents()
+    contents = node.get_text_contents()
     for i in goimport1_re.findall(contents) + goimportn_re.findall(contents):
         for j in i.split():
             pkg = j.strip('\"')
