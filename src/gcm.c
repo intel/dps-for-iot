@@ -24,6 +24,7 @@
 #include <memory.h>
 #include <dps/private/gcm.h>
 #include <dps/private/mbedtls.h>
+#include <dps/private/malloc.h>
 #include <mbedtls/cipher.h>
 #include <mbedtls/error.h>
 

@@ -22,13 +22,14 @@
 #include "test.h"
 #include "keys.h"
 #include <dps/dps.h>
+#include <dps/targets.h>
 #include <dps/private/dps.h>
 #include <dps/private/pub.h>
 #include <dps/private/sub.h>
 
 
 
-static char testString[] = "This is a test string";
+static char testString[] = "This is a test string from " DPS_TARGET_NAME;
 
 #define NUM_TOPICS 2
 
