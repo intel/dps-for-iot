@@ -7,17 +7,17 @@ platform = extEnv['PLATFORM']
 
 env = extEnv.Clone()
 
-git = env.Command('./mbedtls/.git', None,
-                   ['git clone -n https://github.com/ARMmbed/mbedtls ext/mbedtls'])
+git = env.Command('./src/mbedtls/.git', None,
+                   ['git clone -n https://github.com/ARMmbed/mbedtls ext/src/mbedtls'])
 
-dep = env.Command('./mbedtls/Makefile', git,
+dep = env.Command('./src/mbedtls/Makefile', git,
                    ['git checkout tags/mbedtls-2.8.0'],
-                     chdir = 'ext/mbedtls')
+                     chdir = 'ext/src/mbedtls')
 
 env.Append(
     CPPPATH = [
-        '.',
-        './mbedtls/include/',
+        './include',
+        './src/mbedtls/include/',
     ],
     CPPDEFINES = [
         'MBEDTLS_USER_CONFIG_FILE=\\"mbedtls_config.h\\"',
@@ -28,54 +28,54 @@ if env['PLATFORM'] == 'posix':
    env.Append(CFLAGS = ['-fPIC', "-g"])
 
 sources = [
-     './mbedtls/library/aes.c',
-     './mbedtls/library/aesni.c',
-     './mbedtls/library/asn1write.c',
-     './mbedtls/library/asn1parse.c',
-     './mbedtls/library/base64.c',
-     './mbedtls/library/bignum.c',
-     './mbedtls/library/cipher.c',
-     './mbedtls/library/cipher_wrap.c',
-     './mbedtls/library/ctr_drbg.c',
-     './mbedtls/library/debug.c',
-     './mbedtls/library/ecdh.c',
-     './mbedtls/library/ecdsa.c',
-     './mbedtls/library/ecp.c',
-     './mbedtls/library/ecp_curves.c',
-     './mbedtls/library/entropy.c',
-     './mbedtls/library/entropy_poll.c',
-     './mbedtls/library/error.c',
-     './mbedtls/library/gcm.c',
-     './mbedtls/library/hmac_drbg.c',
-     './mbedtls/library/md.c',
-     './mbedtls/library/md_wrap.c',
-     './mbedtls/library/md5.c',
-     './mbedtls/library/oid.c',
-     './mbedtls/library/pem.c',
-     './mbedtls/library/pk.c',
-     './mbedtls/library/pk_wrap.c',
-     './mbedtls/library/pkparse.c',
-     './mbedtls/library/platform.c',
-     './mbedtls/library/sha256.c',
-     './mbedtls/library/sha512.c',
-     './mbedtls/library/timing.c',
-     './mbedtls/library/x509.c',
-     './mbedtls/library/x509_crt.c',
+     './src/mbedtls/library/aes.c',
+     './src/mbedtls/library/aesni.c',
+     './src/mbedtls/library/asn1write.c',
+     './src/mbedtls/library/asn1parse.c',
+     './src/mbedtls/library/base64.c',
+     './src/mbedtls/library/bignum.c',
+     './src/mbedtls/library/cipher.c',
+     './src/mbedtls/library/cipher_wrap.c',
+     './src/mbedtls/library/ctr_drbg.c',
+     './src/mbedtls/library/debug.c',
+     './src/mbedtls/library/ecdh.c',
+     './src/mbedtls/library/ecdsa.c',
+     './src/mbedtls/library/ecp.c',
+     './src/mbedtls/library/ecp_curves.c',
+     './src/mbedtls/library/entropy.c',
+     './src/mbedtls/library/entropy_poll.c',
+     './src/mbedtls/library/error.c',
+     './src/mbedtls/library/gcm.c',
+     './src/mbedtls/library/hmac_drbg.c',
+     './src/mbedtls/library/md.c',
+     './src/mbedtls/library/md_wrap.c',
+     './src/mbedtls/library/md5.c',
+     './src/mbedtls/library/oid.c',
+     './src/mbedtls/library/pem.c',
+     './src/mbedtls/library/pk.c',
+     './src/mbedtls/library/pk_wrap.c',
+     './src/mbedtls/library/pkparse.c',
+     './src/mbedtls/library/platform.c',
+     './src/mbedtls/library/sha256.c',
+     './src/mbedtls/library/sha512.c',
+     './src/mbedtls/library/timing.c',
+     './src/mbedtls/library/x509.c',
+     './src/mbedtls/library/x509_crt.c',
 ]
 
 sources += [
-     './mbedtls/library/ssl_cache.c',
-     './mbedtls/library/ssl_ciphersuites.c',
-     './mbedtls/library/ssl_cli.c',
-     './mbedtls/library/ssl_cookie.c',
-     './mbedtls/library/ssl_srv.c',
-     './mbedtls/library/ssl_tls.c',
+     './src/mbedtls/library/ssl_cache.c',
+     './src/mbedtls/library/ssl_ciphersuites.c',
+     './src/mbedtls/library/ssl_cli.c',
+     './src/mbedtls/library/ssl_cookie.c',
+     './src/mbedtls/library/ssl_srv.c',
+     './src/mbedtls/library/ssl_tls.c',
 ]
 
 objects = env.Object(sources)
 
 Depends(sources, dep)
-Depends(objects, './mbedtls_config.h')
+Depends(objects, './include/mbedtls_config.h')
 
-libs = [env.Library('lib/libmbedtls', objects)]
+libs = [env.Library('src/lib/libmbedtls', objects)]
 Return('libs')

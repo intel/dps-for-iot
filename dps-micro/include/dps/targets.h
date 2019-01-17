@@ -43,6 +43,8 @@ extern "C" {
 
 #if DPS_TARGET == DPS_TARGET_WINDOWS
 
+#define DPS_TARGET_NAME "Windows"
+
 #include <windows.h>
 
 static inline char* strndup(const char* str, size_t maxLen)
@@ -68,12 +70,16 @@ static inline char* strndup(const char* str, size_t maxLen)
 
 #elif DPS_TARGET == DPS_TARGET_LINUX
 
+#define DPS_TARGET_NAME "Linux"
+
 #include <endian.h>
 
 #define BSWAP_32(n)  __builtin_bswap32(n)
 #define BSWAP_64(n)  __builtin_bswap64(n)
 
 #elif DPS_TARGET == DPS_TARGET_ZEPHYR
+
+#define DPS_TARGET_NAME "Zephyr"
 
 #include <zephyr.h>
 #include <misc/byteorder.h>
