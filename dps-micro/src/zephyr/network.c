@@ -102,6 +102,7 @@ static DPS_Status BindSock(int family, DPS_Network* net, int port)
     DPS_Status status = DPS_OK;
     int ret;
 
+    DPS_DBGTRACE();
     if (family == AF_INET) {
         struct sockaddr_in addrAny4;
         memset(&addrAny4, 0, sizeof(addrAny4));
@@ -138,6 +139,17 @@ static DPS_Status JoinMCastGroup()
 
     DPS_DBGTRACE();
 
+    ret = net_addr_pton(AF_INET6, LOCAL_ADDR_6, &addr6);
+    if (ret) {
+		DPS_DBGPRINT("Invalid IPv6 address\n");
+		return DPS_ERR_NETWORK;
+    }
+    ret = net_addr_pton(AF_INET6, COAP_MCAST_ALL_NODES_LINK_LOCAL_6, &mcast6);
+    if (ret) {
+		DPS_DBGPRINT("Invalid IPv6 multicast address\n");
+		return DPS_ERR_NETWORK;
+    }
+
 	iface = net_if_get_default();
 	if (!iface) {
 		DPS_DBGPRINT("Could not get the default interface\n");
@@ -145,24 +157,13 @@ static DPS_Status JoinMCastGroup()
 	}
 
     /* Need to set a unicast address on the interface */
-    ret = net_addr_pton(AF_INET6, LOCAL_ADDR_6, &addr6);
-    if (ret) {
-		DPS_DBGPRINT("Invalid IPv6 address\n");
-		return DPS_ERR_NETWORK;
-    }
 	ifaddr = net_if_ipv6_addr_add(iface, &addr6, NET_ADDR_MANUAL, 0);
 	if (!ifaddr) {
-		DPS_DBGPRINT("Could not add unicast address to interface");
+		DPS_DBGPRINT("Could not add unicast address to interface\n");
 		return DPS_ERR_NETWORK;
 	}
-
 	ifaddr->addr_state = NET_ADDR_PREFERRED;
-
-    ret = net_addr_pton(AF_INET6, COAP_MCAST_ALL_NODES_LINK_LOCAL_6, &mcast6);
-    if (ret) {
-		DPS_DBGPRINT("Invalid IPv6 multicast address\n");
-		return DPS_ERR_NETWORK;
-    }
+    /* Now we can add the multicast address */
 	mcast = net_if_ipv6_maddr_add(iface, &mcast6);
 	if (!mcast) {
 		DPS_DBGPRINT("Could not add multicast address to interface\n");
@@ -236,6 +237,8 @@ DPS_Status DPS_MCastSend(DPS_Node* node, void* appCtx, DPS_SendComplete sendComp
     uint8_t* buf = node->txBuffer + DPS_TX_HEADER_SIZE - node->txHdrLen;
     struct net_pkt* pkt;
 
+    DPS_DBGTRACE();
+
     memset(&addr6, 0, sizeof(addr6));
     ret = net_addr_pton(AF_INET6, COAP_MCAST_ALL_NODES_LINK_LOCAL_6, &addr6.sin6_addr);
     if (ret) {
@@ -254,7 +257,7 @@ DPS_Status DPS_MCastSend(DPS_Node* node, void* appCtx, DPS_SendComplete sendComp
         net_pkt_unref(pkt);
         return DPS_ERR_NETWORK;
     }
-    /* TODO - register completetion callback */
+    /* TODO - register completion callback */
     ret = net_context_sendto(pkt, (struct sockaddr*)&addr6, sizeof(addr6), NULL, K_FOREVER, NULL, node);
     if (ret < 0) {
         /* balances the internal add ref inside net_pkt_get_tx() */

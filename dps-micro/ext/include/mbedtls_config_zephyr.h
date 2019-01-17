@@ -1,14 +1,14 @@
 /* Use config file, to replace mbed defaults. It is set during
  * compilation with MBEDTLS_USER_CONFIG_FILE environment variable. */
 
-#include <dps/targets.h>
-
 #define MBEDTLS_DEPRECATED_REMOVED
 
 #undef MBEDTLS_ARC4_C
 #undef MBEDTLS_BLOWFISH_C
 #undef MBEDTLS_CAMELLIA_C
 #undef MBEDTLS_CCM_C
+#include <stddef.h>
+
 #undef MBEDTLS_DES_C
 #undef MBEDTLS_DHM_C
 #undef MBEDTLS_ECP_DP_BP256R1_ENABLED
@@ -44,7 +44,6 @@
 #undef MBEDTLS_SSL_PROTO_TLS1_1
 #undef MBEDTLS_X509_RSASSA_PSS_SUPPORT
 
-#if DPS_TARGET == DPS_TARGET_ZEPHYR
 /* For Zephyr */
 #define MBEDTLS_NO_PLATFORM_ENTROPY
 #define MBEDTLS_ENTROPY_HARDWARE_ALT
@@ -53,5 +52,9 @@
 #undef MBEDTLS_FS_IO
 #undef MBEDTLS_HAVE_TIME_DATE
 #undef MBEDTLS_HAVE_TIME
-#endif
-
+/* Replace malloc and free */
+#define MBEDTLS_PLATFORM_MEMORY
+extern void* DPS_CallocCrypto(size_t num, size_t sz);
+#define MBEDTLS_PLATFORM_STD_CALLOC DPS_CallocCrypto
+extern void DPS_FreeCrypto(void* mem);
+#define MBEDTLS_PLATFORM_STD_FREE DPS_FreeCrypto

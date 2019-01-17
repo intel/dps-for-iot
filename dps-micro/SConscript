@@ -12,7 +12,7 @@ env['DPS_LIBS'] = [ext_libs] + env['DPS_LIBS']
 libenv = env.Clone()
 
 libenv.Append(CPPDEFINES = ['MBEDTLS_USER_CONFIG_FILE=\\"mbedtls_config.h\\"'])
-libenv.Append(CPPPATH = ['#/include/dps', '#/ext', '#/ext/mbedtls/include'])
+libenv.Append(CPPPATH = ['#/include/dps', '#/ext/include', '#/ext/src/mbedtls/include'])
 
 # Additional warnings for the core object files
 if platform == 'win32':
@@ -46,6 +46,7 @@ srcs = [
 if platform == 'win32':
     srcs.append('src/win32/network.c')
     srcs.append('src/win32/dbg.c')
+    srcs.append('src/win32/malloc.c')
 
 Depends(srcs, ext_libs)
 

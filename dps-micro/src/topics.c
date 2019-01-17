@@ -28,6 +28,7 @@
 #include <dps/dps.h>
 #include <dps/private/topics.h>
 #include <dps/private/bitvec.h>
+#include <dps/private/malloc.h>
 
 /*
  * Debug control for this module
@@ -149,7 +150,7 @@ DPS_Status DPS_AddTopic(DPS_BitVector* bf, const char* topic, const char* separa
     } else if (wc != topic) {
         DPS_BitVectorBloomInsert(bf, (const uint8_t*)topic, wc - topic);
     }
-    segment = malloc(tlen + 1);
+    segment = DPS_Malloc(tlen + 1, DPS_ALLOC_BRIEF);
     if (!segment) {
         return DPS_ERR_RESOURCES;
     }
@@ -182,7 +183,7 @@ DPS_Status DPS_AddTopic(DPS_BitVector* bf, const char* topic, const char* separa
             }
         }
     }
-    free(segment);
+    DPS_Free(segment, DPS_ALLOC_BRIEF);
     return ret;
 }
 
