@@ -57,6 +57,9 @@ is provided via the @em listenPort parameter of DPS_StartNode().
 @subsubsection UDP
 Each DPS message is contained in a single UDP datagram.
 
+DPS does not perform segmentation and reassembly of application
+payloads that do not fit into a single UDP datagram.
+
 @subsubsection TCP
 Each DPS message is prefixed with the length of the message encoded as
 a CBOR unsigned integer value.
@@ -64,6 +67,9 @@ a CBOR unsigned integer value.
 @subsubsection DTLS
 DTLS provides message authentication, integrity and confidentiality
 above UDP.  Each DPS message is contained in a single DTLS datagram.
+
+DPS does not perform segmentation and reassembly of application
+payloads that do not fit into a single DTLS fragment.
 
 @see @ref enabling-network-layer-security
  */
