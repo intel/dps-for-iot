@@ -95,6 +95,12 @@ parser.add_argument("-d", "--debug", action='store_true',
                     help="Enable debug ouput if built for debug.")
 parser.add_argument("-x", "--encryption", type=int, choices=[0,1,2], default=1,
                     help="Disable (0) or enable symmetric (1) or asymmetric(2) encryption. Default is symmetric encryption enabled.")
+parser.add_argument("-l", "--listen", type=int, default=0,
+                    help="Port number to listen on for incoming connections.")
+parser.add_argument("-o", "--host", default=None,
+                    help="Host to link to.")
+parser.add_argument("-p", "--port", type=int, default=0,
+                    help="Port to link to.")
 args = parser.parse_args()
 dps.cvar.debug = args.debug
 
@@ -124,10 +130,20 @@ def on_pub(sub, pub, payload):
         dps.ack_publication(pub, ack_msg);
 
 node = dps.create_node("/", key_store, node_id)
-dps.start_node(node, dps.MCAST_PUB_ENABLE_RECV, 0)
+dps.start_node(node, dps.MCAST_PUB_ENABLE_RECV, args.listen)
 print "Subscriber is listening on port %d" % (dps.get_port_number(node))
+
 sub = dps.create_subscription(node, ['a/b/c']);
 dps.subscribe(sub, on_pub)
+
+if args.host != None or args.port != 0:
+    addr = dps.create_address()
+    ret = dps.link_to(node, args.host, args.port, addr)
+    if ret == dps.OK:
+        print "Subscriber is linked to %s" % (addr)
+    else:
+        print "link_to %d returned %s" % (args.port, dps.err_txt(ret))
+    dps.destroy_address(addr)
 
 if not sys.flags.interactive:
     while True:
