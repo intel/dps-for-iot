@@ -304,6 +304,23 @@ if env['PLATFORM'] == 'posix' and env['fsan'] == True:
 
     fenv.Install('#/build/test/bin', fprogs)
 
+# Performance tests
+penv = commonenv.Clone()
+penv.Append(CPPPATH = ['#/ext/safestring/include', 'src'])
+penv.Append(LIBS = [lib, env['DPS_LIBS']])
+if extUV: penv.Append(CPPPATH = ['#/ext/libuv/include'])
+
+psrcs = ['test/perf/publisher.c',
+         'test/perf/subscriber.c']
+
+Depends(psrcs, ext_objs)
+
+pprogs = []
+for test in psrcs:
+    pprogs.append(penv.Program(test))
+
+penv.Install('#/build/test/perf/bin', pprogs)
+
 # Examples
 exampleenv = commonenv.Clone()
 exampleenv.Append(LIBS = [lib, env['DPS_LIBS']])
