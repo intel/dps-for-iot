@@ -240,6 +240,9 @@ if env['go']:
                   'examples/simple_pub_ks/simple_pub_ks',
                   'examples/simple_pub/simple_pub']:
             goenv.GoBin(b)
+        for b in ['test/perf_publisher/perf_publisher',
+                  'test/perf_subscriber/perf_subscriber']:
+            goenv.GoBin(b)
         goenv.Install('#/build/dist', 'go')
     else:
         print('Go binding only supported with the gcc compiler')

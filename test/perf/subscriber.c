@@ -91,7 +91,7 @@ int main(int argc, char** argv)
     char** arg = argv + 1;
     DPS_Event* nodeDestroyed = NULL;
     DPS_Subscription* subscription = NULL;
-    int listenPort;
+    int listenPort = 0;
     DPS_Node* node;
 
     DPS_Debug = DPS_FALSE;
