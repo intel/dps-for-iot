@@ -611,7 +611,10 @@ type Node C.DPS_Node
 func CreateNode(separators string, keyStore KeyStore, keyId KeyId) *Node {
 	cseparators := C.CString(separators)
 	defer C.free(unsafe.Pointer(cseparators))
-	ckeyStore := keyStore.chandle()
+	var ckeyStore *C.DPS_KeyStore
+	if keyStore != nil {
+		ckeyStore = keyStore.chandle()
+	}
 	var ckeyId *C.DPS_KeyId
 	if len(keyId) > 0 {
 		ckeyId = makeKeyId(keyId)
