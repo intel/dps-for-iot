@@ -99,7 +99,7 @@ parser.add_argument("-x", "--encryption", type=int, choices=[0,1,2], default=1,
                     help="Disable (0) or enable symmetric (1) or asymmetric(2) encryption. Default is symmetric encryption enabled.")
 parser.add_argument("-l", "--listen", type=int, default=0,
                     help="Port number to listen on for incoming connections.")
-parser.add_argument("-o", "--host", default="127.0.0.1",
+parser.add_argument("-o", "--host", default=None,
                     help="Host to link to.")
 parser.add_argument("-p", "--port", type=int, default=0,
                     help="Port to link to.")
@@ -144,6 +144,8 @@ print "Publisher is listening on port %d" % (dps.get_port_number(node))
 
 if args.port != 0:
     addr = dps.create_address()
+    if args.host == None:
+        args.host = "127.0.0.1"
     dps.set_address(addr, (args.host, args.port))
     ret = dps.link(node, addr, on_link)
     if ret == dps.OK:
