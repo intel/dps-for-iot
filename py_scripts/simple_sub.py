@@ -136,7 +136,7 @@ print "Subscriber is listening on port %d" % (dps.get_port_number(node))
 sub = dps.create_subscription(node, ['a/b/c']);
 dps.subscribe(sub, on_pub)
 
-if args.host != None or args.port != 0:
+if args.port != 0:
     addr = dps.create_address()
     ret = dps.link_to(node, args.host, args.port, addr)
     if ret == dps.OK:
@@ -144,6 +144,8 @@ if args.host != None or args.port != 0:
     else:
         print "link_to %d returned %s" % (args.port, dps.err_txt(ret))
     dps.destroy_address(addr)
+elif args.host != None:
+    sys.exit("Invalid argument: must provide port with host")
 
 if not sys.flags.interactive:
     while True:
