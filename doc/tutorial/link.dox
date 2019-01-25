@@ -14,6 +14,10 @@ time we will create a third type of node that is neither a
 publisher or subscriber that will forward publications and
 subscriptions between the publisher and subscriber nodes.
 
+Note that a third node is not strictly necessary.  It is possible to
+use the same mechanisms described below to link the publisher and
+subscriber nodes.
+
 @section starting-a-unicast-node Starting a node
 @snippet tutorial.c Starting a unicast node
 

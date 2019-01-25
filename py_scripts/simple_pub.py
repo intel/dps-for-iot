@@ -1,5 +1,7 @@
 #!/usr/bin/python
 import dps
+import sys
+import threading
 import time
 
 # Pre-shared keys for testing only. DO NOT USE THESE KEYS IN A REAL APPLICATION!
@@ -95,6 +97,13 @@ parser.add_argument("-d", "--debug", action='store_true',
                     help="Enable debug ouput if built for debug.")
 parser.add_argument("-x", "--encryption", type=int, choices=[0,1,2], default=1,
                     help="Disable (0) or enable symmetric (1) or asymmetric(2) encryption. Default is symmetric encryption enabled.")
+parser.add_argument("-l", "--listen", type=int, default=0,
+                    help="Port number to listen on for incoming connections.")
+parser.add_argument("-o", "--host", default=None,
+                    help="Host to link to.")
+parser.add_argument("-p", "--port", type=int, default=0,
+                    help="Port to link to.")
+
 args = parser.parse_args()
 dps.cvar.debug = args.debug
 
@@ -115,19 +124,39 @@ elif args.encryption == 2:
     node_id = publisher_id
     pub_key_id = subscriber_id
 
+event = threading.Event()
+
 def on_ack(pub, payload):
     print "Ack for pub UUID %s(%d)" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub))
     print "    %s" % (payload)
+
+def on_link(node, addr, status):
+    print "Publisher is linked to %s" % (addr)
+    event.set()
 
 def on_destroy(node):
     print "Destroyed"
     dps.destroy_key_store(key_store)
 
 node = dps.create_node("/", key_store, node_id)
-dps.start_node(node, dps.MCAST_PUB_ENABLE_SEND, 0)
+dps.start_node(node, dps.MCAST_PUB_ENABLE_SEND, args.listen)
 print "Publisher is listening on port %d" % (dps.get_port_number(node))
-pub = dps.create_publication(node)
 
+if args.port != 0:
+    addr = dps.create_address()
+    if args.host == None:
+        args.host = "127.0.0.1"
+    dps.set_address(addr, (args.host, args.port))
+    ret = dps.link(node, addr, on_link)
+    if ret == dps.OK:
+        event.wait()
+    else:
+        print "link_to %d returned %s" % (args.port, dps.err_txt(ret))
+    dps.destroy_address(addr)
+elif args.host != None:
+    sys.exit("Invalid argument: must provide port with host")
+
+pub = dps.create_publication(node)
 dps.init_publication(pub, ['a/b/c'], False, None, on_ack)
 dps.publication_add_sub_id(pub, pub_key_id)
 dps.publish(pub, "hello")
