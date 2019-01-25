@@ -11,7 +11,7 @@ set(mbedtls_dir ${ext_dir}/mbedtls)
 
 if(NOT EXISTS ${mbedtls_dir})
     execute_process(COMMAND ${GIT_EXECUTABLE} clone https://github.com/ARMmbed/mbedtls.git ${mbedtls_dir})
-    execute_process(COMMAND ${GIT_EXECUTABLE} -C ${mdbedtls_dir} chekout tags/mbedtls-2.8.0)
+    execute_process(COMMAND ${GIT_EXECUTABLE} -C ${mbedtls_dir} checkout tags/mbedtls-2.8.0)
 endif()
 
 add_compile_definitions(MBEDTLS_USER_CONFIG_FILE="${ext_dir}/mbedtls_config_zephyr.h")
