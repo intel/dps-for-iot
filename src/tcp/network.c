@@ -178,7 +178,7 @@ static void OnData(uv_stream_t* socket, ssize_t nread, const uv_buf_t* buf)
     }
     assert(socket == (uv_stream_t*)&cn->socket);
 
-    cn->readLen += (uint16_t)nread;
+    cn->readLen += nread;
     /*
      * Parse out the message length
      */
