@@ -240,6 +240,9 @@ if env['go']:
                   'examples/simple_pub_ks/simple_pub_ks',
                   'examples/simple_pub/simple_pub']:
             goenv.GoBin(b)
+        for b in ['test/perf_publisher/perf_publisher',
+                  'test/perf_subscriber/perf_subscriber']:
+            goenv.GoBin(b)
         goenv.Install('#/build/dist', 'go')
     else:
         print('Go binding only supported with the gcc compiler')
@@ -303,6 +306,23 @@ if env['PLATFORM'] == 'posix' and env['fsan'] == True:
         fprogs.append(fenv.Program([f, 'test/fuzzer/keys.c']))
 
     fenv.Install('#/build/test/bin', fprogs)
+
+# Performance tests
+penv = commonenv.Clone()
+penv.Append(CPPPATH = ['#/ext/safestring/include', 'src'])
+penv.Append(LIBS = [lib, env['DPS_LIBS']])
+if extUV: penv.Append(CPPPATH = ['#/ext/libuv/include'])
+
+psrcs = ['test/perf/publisher.c',
+         'test/perf/subscriber.c']
+
+Depends(psrcs, ext_objs)
+
+pprogs = []
+for test in psrcs:
+    pprogs.append(penv.Program(test))
+
+penv.Install('#/build/test/perf/bin', pprogs)
 
 # Examples
 exampleenv = commonenv.Clone()

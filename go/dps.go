@@ -611,7 +611,10 @@ type Node C.DPS_Node
 func CreateNode(separators string, keyStore KeyStore, keyId KeyId) *Node {
 	cseparators := C.CString(separators)
 	defer C.free(unsafe.Pointer(cseparators))
-	ckeyStore := keyStore.chandle()
+	var ckeyStore *C.DPS_KeyStore
+	if keyStore != nil {
+		ckeyStore = keyStore.chandle()
+	}
 	var ckeyId *C.DPS_KeyId
 	if len(keyId) > 0 {
 		ckeyId = makeKeyId(keyId)
@@ -1001,11 +1004,18 @@ func CBOR2JSON(cbor []byte, pretty bool) (json string, err int) {
 
 func LinkTo(node *Node, host string, port uint16) (addr *NodeAddress, err int) {
 	cnode := (*C.DPS_Node)(node)
-	chost := C.CString(host)
+	var chost *C.char
+	if len(host) > 0 {
+		chost = C.CString(host)
+	}
 	defer C.free(unsafe.Pointer(chost))
-	addr = new(NodeAddress)
-	caddr := (*C.DPS_NodeAddress)(addr)
+	caddr := C.DPS_CreateAddress()
 	err = int(C.DPS_LinkTo(cnode, chost, C.uint16_t(port), caddr))
+	if err == OK {
+		addr = (*NodeAddress)(caddr)
+	} else {
+		C.DPS_DestroyAddress(caddr)
+	}
 	return
 }
 
