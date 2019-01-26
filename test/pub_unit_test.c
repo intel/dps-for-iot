@@ -77,12 +77,10 @@ int main(int argc, char** argv)
 
     /* For testing purposes manually add keys to the key store */
     keyStore = DPS_GetKeyStore(node);
-#if 1
     for (i = 0; i < NUM_KEYS; ++i) {
         status = DPS_SetContentKey(keyStore, &PskId[i], &Psk[i]);
         CHECK(status == DPS_OK);
     }
-#endif
 
     status = DPS_Start(node);
     CHECK(status == DPS_OK);

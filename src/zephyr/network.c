@@ -176,11 +176,17 @@ static DPS_Status JoinMCastGroup()
 static void OnData(struct net_context* context, struct net_pkt* pkt, int status, void* userData)
 {
     DPS_Node* node = (DPS_Node*)userData;
-    DPS_Network* net = node->network;
+    DPS_Network* net;
     unsigned int hdrLen;
     unsigned int rcvLen;
     DPS_RxBuffer rxBuf;
 
+    DPS_DBGTRACE();
+
+    if (!node) {
+		DPS_ERRPRINT("Expected a valid node pointer\n");
+    }
+    net = node->network;
     /* 
 	 * Skip the packet header (fits in the first fragment) - TODO we eventually need to extract the source address
 	 */
