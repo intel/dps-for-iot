@@ -302,7 +302,7 @@ static DPS_Status DecryptAndParsePub(DPS_Publication* pub,
  */
 static DPS_Status CallPubHandlers(DPS_Publication* pub, DPS_RxBuffer* protectedBuf, DPS_RxBuffer* encryptedBuf)
 {
-    DPS_Status ret;
+    DPS_Status ret = DPS_OK;
     DPS_Subscription* sub;
     DPS_Subscription* nextSub;
     int match;
