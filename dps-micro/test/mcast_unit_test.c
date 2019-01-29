@@ -65,7 +65,7 @@ int main(int argc, char** argv)
     DPS_TxBufferCommit(&txBuf);
 
     for (i = 0; i < 100; ++i) {
-        Sleep(5000);
+        SLEEP(5000);
         DPS_MCastSend(node, NULL, NULL);
     }
 

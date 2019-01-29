@@ -33,7 +33,7 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
 const char separators[] = "/";
 
-static int BloomMatch(char** pubs, size_t numPubs, char** subs, size_t numSubs, int noWildCard)
+static int BloomMatch(const char** pubs, size_t numPubs, const char** subs, size_t numSubs, int noWildCard)
 {
     int cmp;
     DPS_BitVector pubBf;
@@ -57,9 +57,9 @@ static int BloomMatch(char** pubs, size_t numPubs, char** subs, size_t numSubs, 
 
 int main(int argc, char** argv)
 {
-    char* pubs[MAX_TOPICS + 1];
-    char* subs[MAX_TOPICS + 1];
-    char** topics = NULL;
+    const char* pubs[MAX_TOPICS + 1];
+    const char* subs[MAX_TOPICS + 1];
+    const char** topics = NULL;
     size_t numPubs = 0;
     size_t numSubs = 0;
     DPS_Status ret;

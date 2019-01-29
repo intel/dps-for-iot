@@ -48,6 +48,11 @@ if platform == 'win32':
     srcs.append('src/win32/dbg.c')
     srcs.append('src/win32/malloc.c')
 
+if platform == 'posix':
+    srcs.append('src/posix/network.c')
+    srcs.append('src/posix/dbg.c')
+    srcs.append('src/posix/malloc.c')
+
 Depends(srcs, ext_libs)
 
 objs = libenv.Object(srcs)
