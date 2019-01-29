@@ -25,11 +25,11 @@ libenv.Install('#/build/dist/include/dps', libenv.Glob('#/include/dps/*.h'))
 srcs = [
         'src/ack.c',
         'src/bitvec.c',
-        'src/dps.c',
-        'src/dtls.c',
         'src/coap.c',
         'src/cbor.c',
         'src/cose.c',
+        'src/dps.c',
+        'src/dtls.c',
         'src/ec.c',
         'src/err.c',
         'src/gcm.c',
@@ -51,6 +51,12 @@ if platform == 'win32':
     srcs.append('src/win32/malloc.c')
     srcs.append('src/win32/timer.c')
 
+if platform == 'posix':
+    srcs.append('src/posix/network.c')
+    srcs.append('src/posix/dbg.c')
+    srcs.append('src/posix/malloc.c')
+    srcs.append('src/posix/timer.c')
+
 Depends(srcs, ext_libs)
 
 objs = libenv.Object(srcs)
@@ -64,7 +70,7 @@ if platform == 'win32':
     shlib = libenv.SharedLibrary('lib/dps_shared', shobjs + [env['DEF_FILE']], LIBS = env['DPS_LIBS'], SHLIBVERSION = version)
 else:
     shlib = libenv.SharedLibrary('lib/dps_shared', shobjs, LIBS = env['DPS_LIBS'], SHLIBVERSION = version)
-    
+
 libenv.InstallVersionedLib('#/build/dist/lib', shlib, SHLIBVERSION = version)
 
 # Unit tests

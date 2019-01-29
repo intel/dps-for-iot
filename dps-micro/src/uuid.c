@@ -87,10 +87,12 @@ static void InitUUID()
         FILE* f = fopen(randPath, "r");
         if (!f) {
             DPS_ERRPRINT("fopen(\"%s\", \"r\") failed\n", randPath);
-            context.ret = DPS_ERR_READ;
             break;
         }
-        fread(&entropy, 1, sizeof(entropy), f);
+        size_t n = fread(&entropy, 1, sizeof(entropy), f);
+        if (n != sizeof(entropy)) {
+            DPS_ERRPRINT("fread(\"%s\", \"r\") failed\n", randPath);
+        }
         fclose(f);
     }
 }
