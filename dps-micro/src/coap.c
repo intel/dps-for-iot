@@ -30,7 +30,7 @@
 /*
  * Debug control for this module
  */
-DPS_DEBUG_CONTROL(DPS_DEBUG_OFF);
+DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
 static int ParseOpt(const uint8_t* buf, size_t bufLen, int prevOpt, CoAP_Option* opt)
 {
@@ -86,7 +86,7 @@ static int ParseOpt(const uint8_t* buf, size_t bufLen, int prevOpt, CoAP_Option*
 
 void CoAP_Free(CoAP_Parsed* coap)
 {
-    memset(coap, 0, sizeof(coap));
+    memset(coap, 0, sizeof(*coap));
 }
 
 DPS_Status CoAP_Parse(const uint8_t* buffer, size_t bufLen, CoAP_Parsed* coap, DPS_RxBuffer* payload)

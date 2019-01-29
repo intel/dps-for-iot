@@ -5,6 +5,7 @@ vars = Variables()
 
 # Generic build variables
 vars.AddVariables(
+    EnumVariable('target', 'Build target', default='local', allowed_values=('local', 'yocto'), ignorecase=2),
     EnumVariable('variant', 'Build variant', default='debug', allowed_values=('debug', 'release'), ignorecase=2),
     ('CC', 'C compiler to use'),
     ('CXX', 'C++ compiler to use'))
@@ -49,7 +50,7 @@ if env['PLATFORM'] == 'win32':
     env.Append(CCFLAGS = ['/execution-charset:utf-8'])
 
     if env['variant'] == 'debug':
-        env.Append(CCFLAGS = ['/Zi', '/MT', '/Od', '/RTC1', '-DDPS_DEBUG'])
+        env.Append(CCFLAGS = ['/Zi', '/MT', '/Od', '-DDPS_DEBUG'])
         env.Append(LINKFLAGS = ['/DEBUG'])
     else:
         env.Append(CCFLAGS = ['/Gy', '/O2', '/GF', '/MT'])
@@ -159,6 +160,8 @@ elif env['PLATFORM'] == 'posix':
         env.Append(CCFLAGS = ['-O', '-DDPS_DEBUG'])
     else:
         env.Append(CCFLAGS = ['-O3', '-DNDEBUG'])
+
+    env['DPS_LIBS'] = ['pthread']
 
     # Linux target
     env.Append(CPPDEFINES = ['DPS_TARGET=DPS_TARGET_LINUX'])
