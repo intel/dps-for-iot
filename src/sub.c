@@ -101,14 +101,65 @@ DPS_Node* DPS_SubscriptionGetNode(const DPS_Subscription* sub)
 
 static DPS_Subscription* FreeSubscription(DPS_Subscription* sub)
 {
+    DPS_Node* node = sub->node;
     DPS_Subscription* next = sub->next;
-    DPS_BitVectorFree(sub->bf);
-    DPS_BitVectorFree(sub->needs);
-    while (sub->numTopics) {
-        free(sub->topics[--sub->numTopics]);
+    int unlinked = DPS_FALSE;
+
+    if (!(sub->flags & SUB_FLAG_WAS_FREED)) {
+        /*
+         * Unlink the subscription
+         */
+        if (node->subscriptions == sub) {
+            node->subscriptions = sub->next;
+            unlinked = DPS_TRUE;
+        } else {
+            DPS_Subscription* prev = node->subscriptions;
+            while (prev && (prev->next != sub)) {
+                prev = prev->next;
+            }
+            if (prev && (prev->next == sub)) {
+                prev->next = sub->next;
+                unlinked = DPS_TRUE;
+            }
+        }
+        /*
+         * This removes this subscription's contributions to the interests and needs
+         */
+        if (unlinked) {
+            if (DPS_CountVectorDel(node->interests, sub->bf) != DPS_OK) {
+                assert(!"Count error");
+            }
+            if (DPS_CountVectorDel(node->needs, sub->needs) != DPS_OK) {
+                assert(!"Count error");
+            }
+        }
+        sub->next = NULL;
+        sub->flags = SUB_FLAG_WAS_FREED;
     }
-    free(sub);
+
+    if (sub->refCount == 0) {
+        DPS_BitVectorFree(sub->bf);
+        DPS_BitVectorFree(sub->needs);
+        while (sub->numTopics) {
+            free(sub->topics[--sub->numTopics]);
+        }
+        free(sub);
+    }
+
     return next;
+}
+
+void DPS_SubscriptionIncRef(DPS_Subscription* sub)
+{
+    ++sub->refCount;
+}
+
+void DPS_SubscriptionDecRef(DPS_Subscription* sub)
+{
+    assert(sub->refCount != 0);
+    if ((--sub->refCount == 0) && (sub->flags & SUB_FLAG_WAS_FREED)) {
+        FreeSubscription(sub);
+    }
 }
 
 void DPS_FreeSubscriptions(DPS_Node* node)
@@ -158,31 +209,9 @@ DPS_Status DPS_DestroySubscription(DPS_Subscription* sub)
      * Protect the node while we update it
      */
     DPS_LockNode(node);
-    /*
-     * Unlink the subscription
-     */
-    if (node->subscriptions == sub) {
-        node->subscriptions = sub->next;
-    } else {
-        DPS_Subscription* prev = node->subscriptions;
-        while (prev->next != sub) {
-            prev = prev->next;
-        }
-        prev->next = sub->next;
-    }
-    /*
-     * This removes this subscription's contributions to the interests and needs
-     */
-    if (DPS_CountVectorDel(node->interests, sub->bf) != DPS_OK) {
-        assert(!"Count error");
-    }
-    if (DPS_CountVectorDel(node->needs, sub->needs) != DPS_OK) {
-        assert(!"Count error");
-    }
-    DPS_UnlockNode(node);
-
     DPS_DBGPRINT("Unsubscribing from %zu topics\n", sub->numTopics);
     FreeSubscription(sub);
+    DPS_UnlockNode(node);
 
     DPS_UpdateSubs(node);
 
