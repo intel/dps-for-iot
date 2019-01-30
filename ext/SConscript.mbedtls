@@ -9,7 +9,7 @@ git = mtenv.Command('./mbedtls/.git', None,
                     ['git clone -n https://github.com/ARMmbed/mbedtls ext/mbedtls'])
 
 dep = mtenv.Command('./mbedtls/Makefile', git,
-                    ['git fetch', 'git checkout -q tags/mbedtls-2.8.0'],
+                    ['git fetch', 'git checkout -q tags/mbedtls-2.16.0'],
                     chdir = 'ext/mbedtls')
 
 mtenv.Append(CPPPATH = ['.', './mbedtls/include/',])
@@ -34,16 +34,19 @@ sources = [
      './mbedtls/library/entropy_poll.c',
      './mbedtls/library/error.c',
      './mbedtls/library/gcm.c',
+     './mbedtls/library/hkdf.c',
      './mbedtls/library/hmac_drbg.c',
      './mbedtls/library/md.c',
      './mbedtls/library/md_wrap.c',
      './mbedtls/library/md5.c',
+     './mbedtls/library/nist_kw.c',
      './mbedtls/library/oid.c',
      './mbedtls/library/pem.c',
      './mbedtls/library/pk.c',
      './mbedtls/library/pk_wrap.c',
      './mbedtls/library/pkparse.c',
      './mbedtls/library/platform.c',
+     './mbedtls/library/platform_util.c',
      './mbedtls/library/sha256.c',
      './mbedtls/library/sha512.c',
      './mbedtls/library/timing.c',

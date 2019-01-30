@@ -23,10 +23,8 @@
 #include <safe_lib.h>
 #include <string.h>
 #include <dps/dbg.h>
-#include "mbedtls/md.h"
-#include "mbedtls/error.h"
+#include "mbedtls/hkdf.h"
 #include "hkdf.h"
-#include "mbedtls.h"
 
 /*
  * Debug control for this module
@@ -37,59 +35,11 @@ DPS_Status HKDF_SHA256(const uint8_t* secret, size_t secretLen,
                        const uint8_t* context, size_t contextLen,
                        uint8_t key[AES_256_KEY_LEN])
 {
-    mbedtls_md_context_t md;
     const mbedtls_md_info_t* info;
-    uint8_t digest[MBEDTLS_MD_MAX_SIZE];
-    uint8_t count;
     int ret;
 
-    mbedtls_md_init(&md);
-
-    /*
-     * Extract
-     */
     info = mbedtls_md_info_from_type(MBEDTLS_MD_SHA256);
-    ret = mbedtls_md_setup(&md, info, 1);
-    if (ret != 0) {
-        goto Exit;
-    }
-    ret = mbedtls_md_hmac_starts(&md, NULL, 0);
-    if (ret != 0) {
-        goto Exit;
-    }
-    ret = mbedtls_md_hmac_update(&md, secret, secretLen);
-    if (ret != 0) {
-        goto Exit;
-    }
-    ret = mbedtls_md_hmac_finish(&md, digest);
-    if (ret != 0) {
-        goto Exit;
-    }
-
-    /*
-     * Expand
-     */
-    ret = mbedtls_md_hmac_starts(&md, digest, mbedtls_md_get_size(info));
-    if (ret != 0) {
-        goto Exit;
-    }
-    ret = mbedtls_md_hmac_update(&md, context, contextLen);
-    if (ret != 0) {
-        goto Exit;
-    }
-    count = 1;
-    ret = mbedtls_md_hmac_update(&md, &count, sizeof(count));
-    if (ret != 0) {
-        goto Exit;
-    }
-    ret = mbedtls_md_hmac_finish(&md, digest);
-    if (ret != 0) {
-        goto Exit;
-    }
-    memcpy_s(key, AES_256_KEY_LEN, digest, AES_256_KEY_LEN);
-
-Exit:
-    mbedtls_md_free(&md);
+    ret = mbedtls_hkdf(info, NULL, 0, secret, secretLen, context, contextLen, key, AES_256_KEY_LEN);
     if (ret == 0) {
         return DPS_OK;
     } else {
