@@ -588,30 +588,33 @@ static DPS_Status CallPubHandlers(DPS_Node* node, DPS_Publication* pub)
     DPS_LockNode(node);
     for (sub = node->subscriptions; sub != NULL; sub = nextSub) {
         nextSub = sub->next;
+        DPS_SubscriptionIncRef(sub);
         if (!DPS_BitVectorIncludes(pub->shared->bf, sub->bf)) {
-            continue;
+            goto Next;
         }
         if (needsDecrypt) {
             DPS_UnlockNode(node);
             ret = DecryptAndParsePub(node->keyStore, pub, &plainTextBuf, &data, &dataLen);
-            if (ret == DPS_ERR_SECURITY) {
-                /*
-                 * This doesn't indicate an error with the message, it may be
-                 * that the message is not encrypted for this node
-                 */
-                ret = DPS_OK;
-                goto Exit;
-            } else if (ret != DPS_OK) {
-                goto Exit;
-            }
-            needsDecrypt = DPS_FALSE;
             DPS_LockNode(node);
+            if (ret == DPS_OK) {
+                needsDecrypt = DPS_FALSE;
+            } else {
+                if (ret == DPS_ERR_SECURITY) {
+                    /*
+                     * This doesn't indicate an error with the message, it may be
+                     * that the message is not encrypted for this node
+                     */
+                    ret = DPS_OK;
+                }
+                DPS_SubscriptionDecRef(sub);
+                break;
+            }
         }
         ret = DPS_MatchTopicList(pub->shared->topics, pub->shared->numTopics, sub->topics,
                                  sub->numTopics, node->separators, DPS_FALSE, &match);
         if (ret != DPS_OK) {
             ret = DPS_OK;
-            continue;
+            goto Next;
         }
         if (match) {
             DPS_DBGPRINT("Matched subscription\n");
@@ -620,10 +623,10 @@ static DPS_Status CallPubHandlers(DPS_Node* node, DPS_Publication* pub)
             sub->handler(sub, pub, data, dataLen);
             DPS_LockNode(node);
         }
+    Next:
+        DPS_SubscriptionDecRef(sub);
     }
     DPS_UnlockNode(node);
-
-Exit:
     DPS_TxBufferFree(&plainTextBuf);
     /* Publication topics will be invalid now if the publication was encrypted */
     FreeTopics(pub);

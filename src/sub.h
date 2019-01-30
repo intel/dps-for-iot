@@ -43,6 +43,8 @@ extern "C" {
  */
 #define DPS_MAX_SUBSCRIPTION_RETRIES  8
 
+#define SUB_FLAG_WAS_FREED (0x01) /**< The subscription has been freed but has a non-zero ref count */
+
 /**
  * Struct to hold the state of a local subscription. We hold the
  * topics so we can provide return the topic list when we get a
@@ -55,6 +57,8 @@ typedef struct _DPS_Subscription {
     DPS_BitVector* bf;              /**< The Bloom filter bit vector for the topics for this subscription */
     DPS_PublicationHandler handler; /**< Callback function to be called for a matching publication */
     DPS_Node* node;                 /**< Node for this subscription */
+    uint32_t refCount;              /**< Ref count to prevent subscription from being freed while in use */
+    uint8_t flags;                  /**< Internal state flags */
     DPS_Subscription* next;         /**< Next subscription in list */
     size_t numTopics;               /**< Number of subscription topics */
     char* topics[1];                /**< Subscription topics */
@@ -66,6 +70,22 @@ typedef struct _DPS_Subscription {
  * @param node  The node for this operation
  */
 void DPS_FreeSubscriptions(DPS_Node* node);
+
+/**
+ * Increase a subscription's refcount to prevent it from being freed
+ * from inside a callback function
+ *
+ * @param sub The subscription
+ */
+void DPS_SubscriptionIncRef(DPS_Subscription* sub);
+
+/**
+ * Decrease a subscription's refcount to allow it to be freed after
+ * returning from a callback function
+ *
+ * @param sub The subscription
+ */
+void DPS_SubscriptionDecRef(DPS_Subscription* sub);
 
 /**
  * Send a subscription to a remote node
