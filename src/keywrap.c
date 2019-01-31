@@ -23,7 +23,7 @@
 #include <safe_lib.h>
 #include <string.h>
 #include <dps/dbg.h>
-#include "mbedtls/aes.h"
+#include "mbedtls/nist_kw.h"
 #include "keywrap.h"
 
 /*
@@ -31,50 +31,30 @@
  */
 DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
-/*
- * The default IV defined in RFC 3394.
- */
-static const uint64_t IV = 0xa6a6a6a6a6a6a6a6;
-
 DPS_Status KeyWrap(const uint8_t cek[AES_256_KEY_LEN], const uint8_t kek[AES_256_KEY_LEN],
                    uint8_t cipherText[AES_256_KEY_WRAP_LEN])
 {
-    mbedtls_aes_context aes;
-    uint8_t A[AES_256_KEY_LEN];
-    uint8_t* R;
-    size_t i, j, t, Rlen;
+    mbedtls_nist_kw_context kw;
+    size_t n;
     int ret;
 
-    mbedtls_aes_init(&aes);
-    ret = mbedtls_aes_setkey_enc(&aes, kek, AES_256_KEY_LEN * 8);
+    mbedtls_nist_kw_init(&kw);
+    ret = mbedtls_nist_kw_setkey(&kw, MBEDTLS_CIPHER_ID_AES, kek, AES_256_KEY_LEN * 8, 1);
     if (ret != 0) {
         goto Exit;
     }
-
-    memcpy_s(A, sizeof(A), &IV, sizeof(IV));
-    memcpy_s(cipherText + 8, AES_256_KEY_WRAP_LEN - 8, cek, AES_256_KEY_LEN);
-    t = 1;
-    for (j = 0; j < 6; ++j) {
-        R = cipherText + 8;
-        Rlen = AES_256_KEY_WRAP_LEN - 8;
-        for (i = 0; i < (AES_256_KEY_LEN / 8); ++i, ++t, R += 8, Rlen -= 8) {
-            memcpy_s(A + 8, sizeof(A) - 8, R, 8);
-            ret = mbedtls_aes_crypt_ecb(&aes, MBEDTLS_AES_ENCRYPT, A, A);
-            if (ret != 0) {
-                goto Exit;
-            }
-            memcpy_s(A, sizeof(A), A, 8);
-            A[4] ^= (t >> 24) & 0xff;
-            A[5] ^= (t >> 16) & 0xff;
-            A[6] ^= (t >>  8) & 0xff;
-            A[7] ^= (t >>  0) & 0xff;
-            memcpy_s(R, Rlen, A + 8, 8);
-        }
+    ret = mbedtls_nist_kw_wrap(&kw, MBEDTLS_KW_MODE_KW, cek, AES_256_KEY_LEN,
+                               cipherText, &n, AES_256_KEY_WRAP_LEN);
+    if (ret != 0) {
+        goto Exit;
     }
-    memcpy_s(cipherText, AES_256_KEY_WRAP_LEN, A, 8);
+    if (n != AES_256_KEY_WRAP_LEN) {
+        ret = -1;
+        goto Exit;
+    }
 
 Exit:
-    mbedtls_aes_free(&aes);
+    mbedtls_nist_kw_free(&kw);
     if (ret == 0) {
         return DPS_OK;
     } else {
@@ -85,41 +65,27 @@ Exit:
 DPS_Status KeyUnwrap(const uint8_t cipherText[AES_256_KEY_WRAP_LEN], const uint8_t kek[AES_256_KEY_LEN],
                      uint8_t cek[AES_256_KEY_LEN])
 {
-    mbedtls_aes_context aes;
-    uint8_t A[AES_256_KEY_LEN];
-    uint8_t* R;
-    size_t i, j, t, Rlen;
+    mbedtls_nist_kw_context kw;
+    size_t n;
     int ret;
 
-    mbedtls_aes_init(&aes);
-    ret = mbedtls_aes_setkey_dec(&aes, kek, AES_256_KEY_LEN * 8);
+    mbedtls_nist_kw_init(&kw);
+    ret = mbedtls_nist_kw_setkey(&kw, MBEDTLS_CIPHER_ID_AES, kek, AES_256_KEY_LEN * 8, 0);
     if (ret != 0) {
         goto Exit;
     }
-
-    memcpy_s(A, sizeof(A), cipherText, 8);
-    memcpy_s(cek, AES_256_KEY_LEN, cipherText + 8, AES_256_KEY_LEN);
-    t = (AES_256_KEY_LEN / 8) * 6;
-    for (j = 6; j > 0; --j) {
-        R = cek + AES_256_KEY_LEN - 8;
-        Rlen = 8;
-        for (i = (AES_256_KEY_LEN / 8); i > 0; --i, --t, R -= 8, Rlen += 8) {
-            A[4] ^= (t >> 24) & 0xff;
-            A[5] ^= (t >> 16) & 0xff;
-            A[6] ^= (t >>  8) & 0xff;
-            A[7] ^= (t >>  0) & 0xff;
-            memcpy_s(A + 8, sizeof(A) - 8, R, 8);
-            ret = mbedtls_aes_crypt_ecb(&aes, MBEDTLS_AES_DECRYPT, A, A);
-            if (ret != 0) {
-                goto Exit;
-            }
-            memcpy_s(R, Rlen, A + 8, 8);
-        }
+    ret = mbedtls_nist_kw_unwrap(&kw, MBEDTLS_KW_MODE_KW, cipherText, AES_256_KEY_WRAP_LEN,
+                                 cek, &n, AES_256_KEY_LEN);
+    if (ret != 0) {
+        goto Exit;
     }
-    ret = memcmp(A, &IV, sizeof(IV));
+    if (n != AES_256_KEY_LEN) {
+        ret = -1;
+        goto Exit;
+    }
 
 Exit:
-    mbedtls_aes_free(&aes);
+    mbedtls_nist_kw_free(&kw);
     if (ret == 0) {
         return DPS_OK;
     } else {
