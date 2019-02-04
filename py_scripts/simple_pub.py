@@ -128,7 +128,7 @@ elif args.encryption == 2:
 event = threading.Event()
 
 def on_ack(pub, payload):
-    print "Ack for pub UUID %s(%d)" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub))
+    print "Ack for pub UUID %s(%d) [%s]" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub), dps.ack_get_sender_key_id(pub))
     print "    %s" % (payload)
 
 def on_link(node, addr, status):

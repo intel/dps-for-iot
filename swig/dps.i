@@ -304,6 +304,13 @@ const DPS_KeyType _DPS_KeyCert_type_get(DPS_KeyCert*) { return DPS_KEY_EC_CERT; 
         $1 = &keyId;
     }
 }
+%typemap(out) const DPS_KeyId* {
+    if ($1) {
+        $result = From_bytes($1->id, $1->len);
+    } else {
+        $result = From_bytes(NULL, 0);
+    }
+}
 %typemap(freearg) const DPS_KeyId* {
     if (SWIG_IsNewObj(res$argnum) && $1) {
         delete[] $1->id;
