@@ -358,7 +358,7 @@ DPS_Node* CreateNode(const char* separators)
 }
 DPS_Node* CreateNode(const char* separators, DPS_MemoryKeyStore* keyStore, const DPS_KeyId* keyId)
 {
-    return DPS_CreateNode(separators, DPS_MemoryKeyStoreHandle(keyStore), NULL);
+    return DPS_CreateNode(separators, DPS_MemoryKeyStoreHandle(keyStore), keyId);
 }
 %}
 DPS_Node* CreateNode(const char* separators);
