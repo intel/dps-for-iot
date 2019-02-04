@@ -22,12 +22,16 @@
 %{
 static int AsVal_bytes(Handle obj, uint8_t** bytes, size_t* len)
 {
-    int alloc = SWIG_NEWOBJ;
+    int alloc = SWIG_OLDOBJ;
     if (SWIG_IsOK(SWIG_AsCharPtrAndSize(obj, (char**)bytes, len, &alloc))) {
         if (*len) {
             --(*len);
         }
-        return SWIG_OK;
+        return alloc;
+    } else if (PyByteArray_Check(obj)) {
+        *len = PyByteArray_GET_SIZE(obj);
+        *bytes = (uint8_t*)PyByteArray_AS_STRING(obj);
+        return SWIG_OLDOBJ;
     } else if (PySequence_Check(obj)) {
         Py_ssize_t sz = PySequence_Length(obj);
         Py_ssize_t i;
@@ -47,7 +51,7 @@ static int AsVal_bytes(Handle obj, uint8_t** bytes, size_t* len)
             }
             *len = sz;
         }
-        return SWIG_OK;
+        return SWIG_NEWOBJ;
     } else {
         return SWIG_TypeError;
     }

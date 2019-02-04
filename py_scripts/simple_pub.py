@@ -106,6 +106,7 @@ parser.add_argument("-p", "--port", type=int, default=0,
 
 args = parser.parse_args()
 dps.cvar.debug = args.debug
+mcast = dps.MCAST_PUB_ENABLE_SEND
 
 key_store = dps.create_memory_key_store()
 dps.set_network_key(key_store, network_key_id, network_key)
@@ -138,9 +139,12 @@ def on_destroy(node):
     print "Destroyed"
     dps.destroy_key_store(key_store)
 
+if args.port != 0:
+    mcast = dps.MCAST_PUB_DISABLED
+
 node = dps.create_node("/", key_store, node_id)
-dps.start_node(node, dps.MCAST_PUB_ENABLE_SEND, args.listen)
 print "Publisher is listening on port %d" % (dps.get_port_number(node))
+dps.start_node(node, mcast, args.listen)
 
 if args.port != 0:
     addr = dps.create_address()
