@@ -58,7 +58,7 @@ static int AsVal_bytes(Handle obj, uint8_t** bytes, size_t* len)
     } else if (!obj->IsNull()) {
         return SWIG_TypeError;
     }
-    return SWIG_OK;
+    return SWIG_NEWOBJ;
 }
 
 static Handle From_bytes(const uint8_t* bytes, size_t len)

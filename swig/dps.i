@@ -158,32 +158,33 @@ static void InitializeModule();
 %immutable _DPS_KeyCert::privateKey;
 %immutable _DPS_KeyCert::password;
 
-%typemap(in) const DPS_Key* (DPS_Key k, uint8_t* bytes = NULL) {
+%typemap(in) const DPS_Key* (DPS_Key k, uint8_t* bytes = NULL, int res = 0) {
     void* argp;
-    if (SWIG_IsOK(SWIG_ConvertPtr($input, &argp, SWIGTYPE_p__DPS_Key, 0))) {
+    if (SWIG_IsOK((res = SWIG_ConvertPtr($input, &argp, SWIGTYPE_p__DPS_Key, 0)))) {
         $1 = (DPS_Key*)argp;
-    } else if (SWIG_IsOK(SWIG_ConvertPtr($input, &argp, SWIGTYPE_p__DPS_KeySymmetric, 0))) {
+    } else if (SWIG_IsOK((res = SWIG_ConvertPtr($input, &argp, SWIGTYPE_p__DPS_KeySymmetric, 0)))) {
         k.type = DPS_KEY_SYMMETRIC;
         memcpy(&k.symmetric, argp, sizeof(DPS_KeySymmetric));
         $1 = &k;
-    } else if (SWIG_IsOK(SWIG_ConvertPtr($input, &argp, SWIGTYPE_p__DPS_KeyEC, 0))) {
+    } else if (SWIG_IsOK((res = SWIG_ConvertPtr($input, &argp, SWIGTYPE_p__DPS_KeyEC, 0)))) {
         k.type = DPS_KEY_EC;
         memcpy(&k.ec, argp, sizeof(DPS_KeyEC));
         $1 = &k;
-    } else if (SWIG_IsOK(SWIG_ConvertPtr($input, &argp, SWIGTYPE_p__DPS_KeyCert, 0))) {
+    } else if (SWIG_IsOK((res = SWIG_ConvertPtr($input, &argp, SWIGTYPE_p__DPS_KeyCert, 0)))) {
         k.type = DPS_KEY_EC_CERT;
         memcpy(&k.ec, argp, sizeof(DPS_KeyCert));
         $1 = &k;
-    } else if (SWIG_IsOK(AsVal_bytes($input, &bytes, &k.symmetric.len))) {
+    } else if (SWIG_IsOK((res = AsVal_bytes($input, &bytes, &k.symmetric.len)))) {
         k.type = DPS_KEY_SYMMETRIC;
         k.symmetric.key = bytes;
         $1 = &k;
     } else {
-        SWIG_exception_fail(SWIG_ArgError(SWIG_TypeError), "in method '" "$symname" "', argument " "$argnum"" of type '" "$1_type""'");
+        res = SWIG_TypeError;
+        SWIG_exception_fail(SWIG_ArgError(res), "in method '" "$symname" "', argument " "$argnum"" of type '" "$1_type""'");
     }
 }
 %typemap(freearg) const DPS_Key* {
-    if (bytes$argnum) {
+    if (SWIG_IsNewObj(res$argnum)) {
         delete[] bytes$argnum;
     }
 }
@@ -207,15 +208,17 @@ static void InitializeModule();
     }
 }
 
-%typemap(in) const uint8_t* {
+%typemap(in) const uint8_t* (int res = 0) {
     size_t unused;
-    int res = AsVal_bytes($input, (uint8_t**)&$1, &unused);
+    res = AsVal_bytes($input, (uint8_t**)&$1, &unused);
     if (!SWIG_IsOK(res)) {
         SWIG_exception_fail(SWIG_ArgError(res), "in method '" "$symname" "', argument " "$argnum"" of type '" "$1_type""'");
     }
 }
 %typemap(freearg) const uint8_t* {
-    delete[] $1;
+    if (SWIG_IsNewObj(res$argnum)) {
+        delete[] $1;
+    }
 }
 
 %extend _DPS_KeyEC {
@@ -292,8 +295,8 @@ const DPS_KeyType _DPS_KeyEC_type_get(DPS_KeyEC*) { return DPS_KEY_EC; }
 const DPS_KeyType _DPS_KeyCert_type_get(DPS_KeyCert*) { return DPS_KEY_EC_CERT; }
 %}
 
-%typemap(in) const DPS_KeyId* (DPS_KeyId keyId) {
-    int res = AsVal_bytes($input, (uint8_t**)&keyId.id, &keyId.len);
+%typemap(in) const DPS_KeyId* (DPS_KeyId keyId, int res = 0) {
+    res = AsVal_bytes($input, (uint8_t**)&keyId.id, &keyId.len);
     if (!SWIG_IsOK(res)) {
         SWIG_exception_fail(SWIG_ArgError(res), "in method '" "$symname" "', argument " "$argnum"" of type '" "$1_type""'");
     }
@@ -302,7 +305,9 @@ const DPS_KeyType _DPS_KeyCert_type_get(DPS_KeyCert*) { return DPS_KEY_EC_CERT; 
     }
 }
 %typemap(freearg) const DPS_KeyId* {
-    if ($1) delete[] $1->id;
+    if (SWIG_IsNewObj(res$argnum) && $1) {
+        delete[] $1->id;
+    }
 }
 
 %typemap(in) DPS_KeyAndIdHandler (Handler* handler = NULL) {
@@ -386,28 +391,32 @@ DPS_Node* CreateNode(const char* separators, DPS_MemoryKeyStore* keyStore, const
     $1 = NULL;
     $2 = 0;
 }
-%typemap(in) (const uint8_t* pubPayload, size_t len) {
-    int res = AsVal_bytes($input, &$1, &$2);
+%typemap(in) (const uint8_t* pubPayload, size_t len) (int res = 0) {
+    res = AsVal_bytes($input, &$1, &$2);
     if (!SWIG_IsOK(res)) {
         SWIG_exception_fail(SWIG_ArgError(res), "in method '" "$symname" "', argument " "$argnum"" of type '" "$1_type""'");
     }
 }
 %typemap(freearg) (const uint8_t* pubPayload, size_t len) {
-    delete[] $1;
+    if (SWIG_IsNewObj(res$argnum)) {
+        delete[] $1;
+    }
 }
 
 %typemap(default) (const uint8_t* ackPayload, size_t len) {
     $1 = NULL;
     $2 = 0;
 }
-%typemap(in) (const uint8_t* ackPayload, size_t len) {
-    int res = AsVal_bytes($input, &$1, &$2);
+%typemap(in) (const uint8_t* ackPayload, size_t len) (int res = 0) {
+    res = AsVal_bytes($input, &$1, &$2);
     if (!SWIG_IsOK(res)) {
         SWIG_exception_fail(SWIG_ArgError(res), "in method '" "$symname" "', argument " "$argnum"" of type '" "$1_type""'");
     }
 }
 %typemap(freearg) (const uint8_t* ackPayload, size_t len) {
-    delete[] $1;
+    if (SWIG_IsNewObj(res$argnum)) {
+        delete[] $1;
+    }
 }
 
 %typemap(in,numinputs=0,noblock=1) size_t* n {
@@ -503,8 +512,8 @@ void DestroySubscription(DPS_Subscription* sub);
 %typemap(default) (int pretty) {
     $1 = DPS_FALSE;
 }
-%typemap(in) (const uint8_t* cbor, size_t len) {
-    int res = AsVal_bytes($input, &$1, &$2);
+%typemap(in) (const uint8_t* cbor, size_t len, int res) {
+    res = AsVal_bytes($input, &$1, &$2);
     if (!SWIG_IsOK(res)) {
         SWIG_exception_fail(SWIG_ArgError(res), "in method '" "$symname" "', argument " "$argnum"" of type '" "$1_type""'");
     }
@@ -515,7 +524,9 @@ void DestroySubscription(DPS_Subscription* sub);
     $1 = &json;
 }
 %typemap(freearg) (const uint8_t* cbor, size_t len) {
-    delete[] $1;
+    if (SWIG_IsNewObj(res$argnum)) {
+        delete[] $1;
+    }
 }
 %typemap(out) DPS_Status CBOR2JSON {
     if ($1 == DPS_OK) {
@@ -587,14 +598,16 @@ DPS_Status CBOR2JSON(const uint8_t* cbor, size_t len, int pretty, char** json);
     $1 = NULL;
     $2 = 0;
 }
-%typemap(in) (const uint8_t* bytes, size_t n) {
-    int res = AsVal_bytes($input, &$1, &$2);
+%typemap(in) (const uint8_t* bytes, size_t n) (int res = 0) {
+    res = AsVal_bytes($input, &$1, &$2);
     if (!SWIG_IsOK(res)) {
         SWIG_exception_fail(SWIG_ArgError(res), "in method '" "$symname" "', argument " "$argnum"" of type '" "$1_type""'");
     }
 }
 %typemap(freearg) (const uint8_t* bytes, size_t n) {
-    delete[] $1;
+    if (SWIG_IsNewObj(res$argnum)) {
+        delete[] $1;
+    }
 }
 
 %typemap(in) const DPS_UUID* {
