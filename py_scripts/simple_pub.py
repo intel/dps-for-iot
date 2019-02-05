@@ -95,8 +95,8 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("-d", "--debug", action='store_true',
                     help="Enable debug ouput if built for debug.")
-parser.add_argument("-x", "--encryption", type=int, choices=[0,1,2], default=1,
-                    help="Disable (0) or enable symmetric (1) or asymmetric(2) encryption. Default is symmetric encryption enabled.")
+parser.add_argument("-x", "--encryption", type=int, choices=[0,1,2,3], default=1,
+                    help="Disable (0) or enable symmetric encryption (1), asymmetric encryption (2), or authentication(3). Default is symmetric encryption enabled.")
 parser.add_argument("-l", "--listen", type=int, default=0,
                     help="Port number to listen on for incoming connections.")
 parser.add_argument("-o", "--host", default=None,
@@ -124,6 +124,12 @@ elif args.encryption == 2:
     dps.set_certificate(key_store, subscriber_cert)
     node_id = publisher_id
     pub_key_id = subscriber_id
+elif args.encryption == 3:
+    dps.set_trusted_ca(key_store, ca)
+    dps.set_certificate(key_store, publisher_cert, publisher_private_key, publisher_password)
+    dps.set_certificate(key_store, subscriber_cert)
+    node_id = publisher_id
+    pub_key_id = None
 
 event = threading.Event()
 
