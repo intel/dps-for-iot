@@ -32,6 +32,10 @@ static int AsVal_bytes(Handle obj, uint8_t** bytes, size_t* len)
         *len = PyByteArray_GET_SIZE(obj);
         *bytes = (uint8_t*)PyByteArray_AS_STRING(obj);
         return SWIG_OLDOBJ;
+    } else if (PyBytes_Check(obj)) {
+        *len = PyBytes_GET_SIZE(obj);
+        *bytes = (uint8_t*)PyBytes_AS_STRING(obj);
+        return SWIG_OLDOBJ;
     } else if (PySequence_Check(obj)) {
         Py_ssize_t sz = PySequence_Length(obj);
         Py_ssize_t i;
