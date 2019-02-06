@@ -112,7 +112,7 @@ def expect_linked(child, ports):
         ports = [ports]
     _expect_linked(child, ('-p {} ' * len(ports)).format(*ports))
 
-def _expect_pub(children, topics, allow_error=False, timeout=-1):
+def _expect_pub(children, topics, allow_error=False, timeout=-1, signers=None):
     for child in children:
         patterns = []
         for topic in topics:
@@ -120,12 +120,34 @@ def _expect_pub(children, topics, allow_error=False, timeout=-1):
         patterns = ['(' + '|'.join(patterns) + '){}'.format(child.linesep)] * len(topics)
         while len(patterns):
             if not allow_error:
+                if signers != None:
+                    i = child.expect(['ERROR'] + ['Pub [0-9a-f-]+\([0-9]+\) \[(.*)\] matches:'], timeout=timeout)
+                    if i == 0:
+                        raise RuntimeError('ERROR')
+                    signers.append(child.match.group(1))
                 i = child.expect(['ERROR'] + patterns, timeout=timeout)
                 if i == 0:
                     raise RuntimeError('ERROR')
             else:
+                if signers != None:
+                    child.expect(['Pub [0-9a-f-]+\([0-9]+\) \[(.*)\] matches:'], timeout=timeout)
+                    signers.append(child.match.group(1))
                 child.expect(patterns, timeout=timeout)
             patterns.remove(child.match.re.pattern)
+
+def _expect_ack(children, allow_error=False, timeout=-1, signers=None):
+    if signers != None:
+        pattern = ['Ack for pub UUID [0-9a-f-]+\([0-9]+\) \[(.*)\]']
+    else:
+        pattern = ['Ack for pub']
+    if not allow_error:
+        pattern.append('ERROR')
+    for child in children:
+        i = child.expect(pattern, timeout)
+        if i != 0:
+            raise RuntimeError(pattern[i])
+        if signers != None:
+            signers.append(child.match.group(1))
 
 def cleanup():
     global _children
@@ -388,12 +410,17 @@ def expect(children, pattern, allow_error=False, timeout=-1):
         pattern = [pattern]
     _expect(children, pattern, allow_error, timeout)
 
-def expect_pub_received(children, topic, allow_error=False, timeout=-1):
+def expect_pub_received(children, topic, allow_error=False, timeout=-1, signers=None):
     if not isinstance(children, collections.Sequence):
         children = [children]
     if isinstance(topic, str):
         topic = [topic]
-    _expect_pub(children, topic, allow_error, timeout)
+    _expect_pub(children, topic, allow_error, timeout, signers)
+
+def expect_ack_received(children, allow_error=False, timeout=-1, signers=None):
+    if not isinstance(children, collections.Sequence):
+        children = [children]
+    _expect_ack(children, allow_error, timeout, signers)
 
 def expect_pub_not_received(children, topic, allow_error=False):
     try:
@@ -401,9 +428,6 @@ def expect_pub_not_received(children, topic, allow_error=False):
     except pexpect.TIMEOUT:
         return
     raise RuntimeError(topic)
-
-def expect_ack_received(children, allow_error=False):
-    expect(children, 'Ack for pub')
 
 def expect_error(children, error):
     expect(children, 'ERROR.*{}'.format(error), allow_error=True)

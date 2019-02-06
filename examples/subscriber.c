@@ -214,7 +214,7 @@ static int ParseArgs(int argc, char** argv, Args* args)
             if (IntArg("-w", &argv, &argc, &args->wait, 0, 30)) {
                 continue;
             }
-            if (IntArg("-x", &argv, &argc, &args->encrypt, 0, 2)) {
+            if (IntArg("-x", &argv, &argc, &args->encrypt, 0, 3)) {
                 continue;
             }
             if (IntArg("-r", &argv, &argc, &args->subsRate, 0, INT32_MAX)) {
@@ -393,6 +393,11 @@ int main(int argc, char** argv)
         nodeKeyId = &SubscriberId;
         DPS_SetCertificate(memoryKeyStore, SubscriberCert, SubscriberPrivateKey, SubscriberPassword);
         DPS_SetCertificate(memoryKeyStore, PublisherCert, NULL, NULL);
+    } else if (args.encrypt == 3) {
+        DPS_SetTrustedCA(memoryKeyStore, TrustedCAs);
+        nodeKeyId = &SubscriberId;
+        DPS_SetCertificate(memoryKeyStore, SubscriberCert, SubscriberPrivateKey, SubscriberPassword);
+        DPS_SetCertificate(memoryKeyStore, PublisherCert, NULL, NULL);
     }
     subscriber.node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore), nodeKeyId);
     DPS_SetNodeSubscriptionUpdateDelay(subscriber.node, args.subsRate);
@@ -438,10 +443,10 @@ Exit:
     return (ret == DPS_OK) ? EXIT_SUCCESS : EXIT_FAILURE;
 
 Usage:
-    DPS_PRINT("Usage %s [-d] [-q] [-m] [-w <seconds>] [-x 0|1|2] [[-h <hostname>] -p <portnum>] [-l <listen port] [-j] [-r <milliseconds>] [[-s] topic1 ... topicN]\n", argv[0]);
+    DPS_PRINT("Usage %s [-d] [-q] [-m] [-w <seconds>] [-x 0|1|2|3] [[-h <hostname>] -p <portnum>] [-l <listen port] [-j] [-r <milliseconds>] [[-s] topic1 ... topicN]\n", argv[0]);
     DPS_PRINT("       -d: Enable debug ouput if built for debug.\n");
     DPS_PRINT("       -q: Quiet - suppresses output about received publications.\n");
-    DPS_PRINT("       -x: Disable (0) or enable symmetric (1) or asymmetric(2) encryption. Default is symmetric encryption enabled.\n");
+    DPS_PRINT("       -x: Disable (0) or enable symmetric encryption (1), asymmetric encryption (2), or authentication (3). Default is symmetric encryption enabled.\n");
     DPS_PRINT("       -h: Specifies host (localhost is default). Mutiple -h options are permitted.\n");
     DPS_PRINT("       -w: Time to wait before establishing links\n");
     DPS_PRINT("       -p: A port to link. Multiple -p options are permitted.\n");

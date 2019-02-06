@@ -58,6 +58,35 @@ static const uint8_t _key[] = {
 const DPS_KeyId keyId = { _keyId.val, sizeof(_keyId.val) };
 const DPS_Key key = { DPS_KEY_SYMMETRIC, .symmetric = { _key, sizeof(_key) } };
 
+#define SIGNER_ID "DPS Test Publisher"
+static const DPS_KeyId signerId = { (const uint8_t*)SIGNER_ID, sizeof(SIGNER_ID) - 1 };
+static const char signerCert[] =
+    "-----BEGIN CERTIFICATE-----\r\n"
+    "MIIB2jCCATsCCQDtkL14u3NJRDAKBggqhkjOPQQDBDAqMQswCQYDVQQGEwJVUzEM\r\n"
+    "MAoGA1UECgwDRFBTMQ0wCwYDVQQDDARyb290MB4XDTE4MDMwMTE4MTQzMloXDTI4\r\n"
+    "MDIyNzE4MTQzMlowODELMAkGA1UEBhMCVVMxDDAKBgNVBAoMA0RQUzEbMBkGA1UE\r\n"
+    "AwwSRFBTIFRlc3QgUHVibGlzaGVyMIGbMBAGByqGSM49AgEGBSuBBAAjA4GGAAQB\r\n"
+    "igbpvXYHms+7wTa1BcAf3PQF3/6R/J92HcbiPtPGVNlPYdpCnyYEF7DoNvgI/Iag\r\n"
+    "EqUjryMWoxwi+KghG1BwA2MAKhn/ta4TAXfASPr9gzYK5g+pKFnOXqc4sWut/o8D\r\n"
+    "se6LU2D3PsQBs5/kCkbjz1/sKQVbDJGT5eTHQvC5nxjToZcwCgYIKoZIzj0EAwQD\r\n"
+    "gYwAMIGIAkIBIEo4NfnSh60U4srn2iSR/u5VFHi4Yy3PjlKlkmRDo+ClPVHPOK7y\r\n"
+    "8/82J1qlTw5GSR0snR4R5663D2s3w2e9fIwCQgCp3K8Y7fTPdpwOy91clBr3OFHK\r\n"
+    "sMt3kjq1vrcbVzZy50hGyGxjUqZHUi87/KuhkcMKSqDC6U7jEiEpv/WNH/VrZQ==\r\n"
+    "-----END CERTIFICATE-----\r\n";
+static const char signerPrivateKey[] =
+    "-----BEGIN EC PRIVATE KEY-----\r\n"
+    "Proc-Type: 4,ENCRYPTED\r\n"
+    "DEK-Info: AES-256-CBC,F0004AF499EA7B8A7252B286E3274508\r\n"
+    "\r\n"
+    "M5Du62n9VNOQjomIiToNODHeUexM6/kd/BJv5htLIKK+IuWhbz7uKiDa1ULrxz5x\r\n"
+    "KVEh6b0h3WjQ5Z+tlHGGedD4uarwWcUDaw9j2kTpaN33HuCmQAEgH7Lqtq4BnI4S\r\n"
+    "7FDtpoXtMOWGBs/AhQlUXQE0lFENacZ3PLkbafHVzcm19hWZk19ANpZOPbRNgMdQ\r\n"
+    "vPIAyubRAwG+M+wtCxoG9kvwA2TpriwTPb3HaTtefXcaxM8ijS/VQa5mFjphSeUn\r\n"
+    "BcrDGodlTMw9klV0eJpmDKUrpiXqExhzCsS33jK9YuM=\r\n"
+    "-----END EC PRIVATE KEY-----\r\n";
+static const char signerPassword[] = "DPS Test Publisher";
+const DPS_Key signerKey = { DPS_KEY_EC_CERT, .cert = { signerCert, signerPrivateKey, signerPassword } };
+
 static void Dump(const char* tag, const uint8_t* data, size_t len)
 {
     size_t i;
@@ -75,27 +104,35 @@ static DPS_RBG* rbg = NULL;
 
 static DPS_Status KeyHandler(DPS_KeyStoreRequest* request, const DPS_KeyId* id)
 {
-    if ((id->len != keyId.len) || (memcmp(id->id, keyId.id, keyId.len) != 0)) {
-        return DPS_ERR_MISSING;
-    } else {
+    if ((id->len == keyId.len) && (memcmp(id->id, keyId.id, keyId.len) == 0)) {
         return DPS_SetKey(request, &key);
+    } else if ((id->len == signerId.len) && (memcmp(id->id, signerId.id, signerId.len) == 0)) {
+        return DPS_SetKey(request, &signerKey);
+    } else {
+        return DPS_ERR_MISSING;
     }
 }
 
 static DPS_Status EphemeralKeyHandler(DPS_KeyStoreRequest* request, const DPS_Key* key)
 {
-    DPS_Key k;
-    uint8_t aes[AES_256_KEY_LEN];
-    DPS_Status ret;
+    switch (key->type) {
+    case DPS_KEY_SYMMETRIC: {
+        DPS_Key k;
+        uint8_t aes[AES_256_KEY_LEN];
+        DPS_Status ret;
 
-    ret = DPS_RandomKey(rbg, aes);
-    if (ret != DPS_OK) {
-        return ret;
+        ret = DPS_RandomKey(rbg, aes);
+        if (ret != DPS_OK) {
+            return ret;
+        }
+        k.type = DPS_KEY_SYMMETRIC;
+        k.symmetric.key = aes;
+        k.symmetric.len = AES_256_KEY_LEN;
+        return DPS_SetKey(request, &k);
     }
-    k.type = DPS_KEY_SYMMETRIC;
-    k.symmetric.key = aes;
-    k.symmetric.len = AES_256_KEY_LEN;
-    return DPS_SetKey(request, &k);
+    default:
+        return DPS_ERR_NOT_IMPLEMENTED;
+    }
 }
 
 static void GCM_Raw(void)
@@ -250,19 +287,21 @@ int main(int argc, char** argv)
     ECDSA_Raw();
     KeyWrap_Raw();
 
-    uint8_t alg = COSE_ALG_A256GCM;
-    COSE_Entity recipient;
     DPS_RxBuffer aadBuf;
     DPS_RxBuffer msgBuf;
+
+    /*
+     * Encryption and decryption
+     */
+    uint8_t alg = COSE_ALG_A256GCM;
+    COSE_Entity recipient;
     DPS_TxBuffer cipherText;
     DPS_TxBuffer plainText;
     DPS_RxBuffer input;
-
     DPS_RxBufferInit(&aadBuf, (uint8_t*)aad, sizeof(aad));
     DPS_RxBufferInit(&msgBuf, (uint8_t*)msg, sizeof(msg));
     recipient.alg = COSE_ALG_A256KW;
     recipient.kid = keyId;
-
     ret = COSE_Encrypt(alg, nonce, NULL, &recipient, 1, &aadBuf, &msgBuf, keyStore, &cipherText);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("COSE_Encrypt failed: %s\n", DPS_ErrTxt(ret));
@@ -273,18 +312,45 @@ int main(int argc, char** argv)
      * Turn output buffers into input buffers
      */
     DPS_TxBufferToRx(&cipherText, &input);
-
     DPS_RxBufferInit(&aadBuf, (uint8_t*)aad, sizeof(aad));
-
     ret = COSE_Decrypt(nonce, &recipient, &aadBuf, &input, keyStore, NULL, &plainText);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("COSE_Decrypt failed: %s\n", DPS_ErrTxt(ret));
         return EXIT_FAILURE;
     }
-
     ASSERT(DPS_TxBufferUsed(&plainText) == sizeof(msg));
     ASSERT(memcmp(plainText.base, msg, sizeof(msg)) == 0);
+    DPS_TxBufferFree(&cipherText);
+    DPS_TxBufferFree(&plainText);
 
+    /*
+     * Signing and verification
+     */
+    COSE_Entity signer;
+    signer.alg = COSE_ALG_ES512;
+    signer.kid = signerId;
+    DPS_RxBufferInit(&aadBuf, (uint8_t*)aad, sizeof(aad));
+    DPS_RxBufferInit(&msgBuf, (uint8_t*)msg, sizeof(msg));
+    ret = COSE_Sign(&signer, &aadBuf, &msgBuf, keyStore, &cipherText);
+    if (ret != DPS_OK) {
+        DPS_ERRPRINT("COSE_Sign failed: %s\n", DPS_ErrTxt(ret));
+        return EXIT_FAILURE;
+    }
+    Dump("CipherText", cipherText.base, DPS_TxBufferUsed(&cipherText));
+    /*
+     * Turn output buffers into input buffers
+     */
+    DPS_TxBufferToRx(&cipherText, &input);
+    DPS_RxBufferInit(&aadBuf, (uint8_t*)aad, sizeof(aad));
+    memset(&signer, 0, sizeof(signer));
+    ret = COSE_Verify(&aadBuf, &input, keyStore, &signer, &plainText);
+    if (ret != DPS_OK) {
+        DPS_ERRPRINT("COSE_Verify failed: %s\n", DPS_ErrTxt(ret));
+        return EXIT_FAILURE;
+    }
+    ASSERT(signer.kid.len == signerId.len);
+    ASSERT(memcmp(signer.kid.id, signerId.id, signer.kid.len) == 0);
+    ASSERT(DPS_TxBufferUsed(&plainText) == sizeof(msg));
     DPS_TxBufferFree(&cipherText);
     DPS_TxBufferFree(&plainText);
 

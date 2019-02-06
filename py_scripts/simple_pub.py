@@ -96,7 +96,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("-d", "--debug", action='store_true',
                     help="Enable debug ouput if built for debug.")
 parser.add_argument("-x", "--encryption", type=int, choices=[0,1,2,3], default=1,
-                    help="Disable (0) or enable symmetric encryption (1), asymmetric encryption (2), or authentication(3). Default is symmetric encryption enabled.")
+                    help="Disable (0) or enable symmetric encryption (1), asymmetric encryption (2), or authentication (3). Default is symmetric encryption enabled.")
 parser.add_argument("-l", "--listen", type=int, default=0,
                     help="Port number to listen on for incoming connections.")
 parser.add_argument("-o", "--host", default=None,
