@@ -2,9 +2,9 @@
 @page security Security
 @tableofcontents
 
-DPS has two security mechanisms: end-to-end encryption and link-layer
-encryption. Publication and acknowledgement messages can be encrypted
-end-to-end.  Messages are encrypted using
+DPS has two security mechanisms: end-to-end encryption/signing and
+link-layer encryption. Publication and acknowledgement messages can be
+encrypted/signed end-to-end.  Messages are encrypted/signed using
 [COSE](https://tools.ietf.org/html/rfc8152).
 
 For privacy and to protect the network hop-by-hop links DPS uses link
@@ -14,19 +14,20 @@ packets do not use link-layer encryption. Because DPS is fundamentally
 a multi-hop mesh protocol payloads are secured end-to-end.
 
 As noted above publications and acknowledgement messages can be
-encrypted using COSE. The encryption in this case is end-to-end, the
-trust relationship is directly between the publishing node and the
-subscribing node, and intermediate nodes that simply route packets
-over the DPS mesh do not require a trust relationship with either the
-publishers or subscribers and do not hold decryption keys. The
-publication or acknowledgement data payload is encrypted, publications
-also carry the publication topic strings these are included in the
-encrypted payload. Message fields required for routing messages are
-integrity checked but obviously cannot be encrypted.  The sending port
-number and TTL change on each hop so cannot be included in the
-end-to-end integrity check. The COSE format includes an optional KID
-(key-identifier) field. Encrypted DPS messages always have a KID which
-allows the different publications to use different encryption keys.
+encrypted/signed using COSE. The protection in this case is
+end-to-end, the trust relationship is directly between the publishing
+node and the subscribing node, and intermediate nodes that simply
+route packets over the DPS mesh do not require a trust relationship
+with either the publishers or subscribers and do not hold keys. The
+publication or acknowledgement data payload is encrypted/signed,
+publications also carry the publication topic strings: these are
+included in the encrypted/signed payload. Message fields required for
+routing messages are integrity checked but obviously cannot be
+encrypted.  The sending port number and TTL change on each hop so
+cannot be included in the end-to-end integrity check. The COSE format
+includes an optional KID (key-identifier) field. Encrypted DPS
+messages always have a KID which allows the different publications to
+use different encryption keys.
 
 Subscriptions do not carry payload data and the bit vectors carried in
 the payloads get recomputed at each hop. Unlike publications and
@@ -50,8 +51,9 @@ The following sections assume you are already familiar with the
 The @em protected section of a DPS message forms the protected
 attributes from the application as identified in COSE.  The @em
 encrypted section of a DPS message is the plaintext provided to the
-content encryption algorithm and is replaced by a COSE object, either
-a @em COSE_Encrypt_Tagged or @em COSE_Encrypt0_Tagged object.
+content encryption algorithm and is replaced by a COSE object, one of
+@em COSE_Encrypt_Tagged, @em COSE_Encrypt0_Tagged, or @em
+COSE_Sign1_Tagged.
 
 The implemented content encryption algorithms is @em A256GCM.
 
@@ -89,6 +91,14 @@ decrypting the contents of the message.
 
 DPS supports the @em ES384, and @em ES512 signature algorithms.
 
+@section signatures Signatures
+Alternatively, the plaintext content may also be signed by the sender
+in a @em COSE_Sign1_Tagged message.  The @em protected section of a
+DPS message continues to form the protected attributes from the
+application as identified in COSE.
+
+DPS supports the @em ES384, and @em ES512 signature algorithms.
+
 @section examples Examples
 An example encrypted publication message, using @em A256GCM
 for the content, @em ECDH-ES+A256KW for the key distribution, and
@@ -98,7 +108,7 @@ for the content, @em ECDH-ES+A256KW for the key distribution, and
 message = [
   / version / 1,
   / type / 1,
-  /unprotected / {
+  / unprotected / {
     / port / 1: 42446,
     / ttl / 2: 0
   },
@@ -144,6 +154,39 @@ message = [
           / ciphertext / h'6C4832AE0347DD478D1D9E609FE37DB6BA21F5487CD9342256DEAB6813BEE62E88C24450FF55B4CF'
         ]
       ]
+    ]
+  )
+]
+@endverbatim
+
+An example signed publication message, using @em ES512 for signing,
+will look like:
+
+@verbatim
+message = [
+  / version / 1,
+  / type / 1,
+  / unprotected / {
+    / port / 1: 44841,
+    / ttl / 2: 0
+  },
+  / protected (aad) / {
+    / ttl / 2: 0,
+    / pub-id / 3: h'CFE420F59A58D3319EB1B316D371BBA9',
+    / seq-num / 4: 1,
+    / ack-req / 5: false,
+    / bloom-filter / 6: [1, 8192, h'004B00E9003700F3003C0340024000F880126C508020C044004B2201B409E807EC01440310005005EC0074079E009B801B34']
+  },
+  / encrypted (COSE_Sign1_Tagged) / 18(
+    [
+      / protected / h'A1013823' / {
+          \ alg \ 1: -36 \ ECDSA 512 \
+        } /,
+      / unprotected / {
+        / kid / 4: h'4450532054657374205075626C6973686572'
+      },
+      / payload / h'A20B8165612F622F630C4D48656C6C6F20776F726C642100',
+      / signature / h'01C619F247E6630EFB19C7FC911B5CC9A708B91E607437BDF3D2D1BD3EEF76355FED44D8CA5C5137F0AEF9959C01E52B7C92E461B04D84941E5FF954E70FAA26E0B4008EE950D93FA1EB59F5222086B61CCD39FB066880B2AF0DF455ABB8D7320E0E91F94AD529E3AAD9BDF3AF4D82486516244FCC975A8D54B441D09C83A61DADBC8736'
     ]
   )
 ]
