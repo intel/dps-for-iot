@@ -296,6 +296,25 @@ static int Subscribe(Subscriber* subscriber, Args* args)
     return DPS_TRUE;
 }
 
+static void OnLinkComplete(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, void* data)
+{
+    if (status == DPS_OK) {
+        DPS_PRINT("Subscriber is linked to %s\n", DPS_NodeAddrToString(addr));
+    } else {
+        DPS_ERRPRINT("DPS_Link %s returned %s\n", DPS_NodeAddrToString(addr), DPS_ErrTxt(status));
+    }
+}
+
+static void OnResolveAddressComplete(DPS_Node* node, DPS_NodeAddress* addr, void* data)
+{
+    DPS_Status ret;
+
+    ret = DPS_Link(node, addr, OnLinkComplete, NULL);
+    if (ret != DPS_OK) {
+        DPS_ERRPRINT("DPS_ResolveAddress %s returned %s\n", DPS_NodeAddrToString(addr), DPS_ErrTxt(ret));
+    }
+}
+
 static int LinkTo(Subscriber* subscriber, Args* args)
 {
     DPS_Status ret;
@@ -303,15 +322,15 @@ static int LinkTo(Subscriber* subscriber, Args* args)
 
     if (args->numLinks) {
         for (i = 0; i < args->numLinks; ++i, ++subscriber->numAddrs) {
-            subscriber->addrs[subscriber->numAddrs] = DPS_CreateAddress();
-            ret = DPS_LinkTo(subscriber->node, args->linkHosts[i], args->linkPort[i],
-                             subscriber->addrs[subscriber->numAddrs]);
-            if (ret == DPS_OK) {
-                DPS_PRINT("Subscriber is linked to %s\n",
-                          DPS_NodeAddrToString(subscriber->addrs[subscriber->numAddrs]));
-            } else {
-                DPS_DestroyAddress(subscriber->addrs[subscriber->numAddrs]);
-                DPS_ERRPRINT("DPS_LinkTo %d returned %s\n", args->linkPort[i], DPS_ErrTxt(ret));
+            const char* host = args->linkHosts[i];
+            if (!host) {
+                host = "localhost";
+            }
+            char service[6] = { 0 };
+            snprintf(service, 6, "%d", args->linkPort[i]);
+            ret = DPS_ResolveAddress(subscriber->node, host, service, OnResolveAddressComplete, NULL);
+            if (ret != DPS_OK) {
+                DPS_ERRPRINT("DPS_ResolveAddress %d returned %s\n", args->linkPort[i], DPS_ErrTxt(ret));
                 return DPS_FALSE;
             }
         }
