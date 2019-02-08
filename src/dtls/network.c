@@ -195,6 +195,36 @@ struct _DPS_NetContext {
     char plainBuffer[MAX_READ_LEN];
 };
 
+/*
+ * Used when the key store supports certificates.
+ */
+static const int AllCipherSuites[] = {
+    MBEDTLS_TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+    MBEDTLS_TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384,
+    MBEDTLS_TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+    MBEDTLS_TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256,
+    MBEDTLS_TLS_ECDHE_PSK_WITH_AES_256_CBC_SHA384,
+    MBEDTLS_TLS_ECDHE_PSK_WITH_AES_128_CBC_SHA256,
+    MBEDTLS_TLS_PSK_WITH_AES_256_GCM_SHA384,
+    MBEDTLS_TLS_PSK_WITH_AES_256_CBC_SHA384,
+    MBEDTLS_TLS_PSK_WITH_AES_128_GCM_SHA256,
+    MBEDTLS_TLS_PSK_WITH_AES_128_CBC_SHA256,
+    0
+};
+
+/*
+ * Used when the key store supports only PSKs.
+ */
+static const int PskCipherSuites[] = {
+    MBEDTLS_TLS_ECDHE_PSK_WITH_AES_256_CBC_SHA384,
+    MBEDTLS_TLS_ECDHE_PSK_WITH_AES_128_CBC_SHA256,
+    MBEDTLS_TLS_PSK_WITH_AES_256_GCM_SHA384,
+    MBEDTLS_TLS_PSK_WITH_AES_256_CBC_SHA384,
+    MBEDTLS_TLS_PSK_WITH_AES_128_GCM_SHA256,
+    MBEDTLS_TLS_PSK_WITH_AES_128_CBC_SHA256,
+    0
+};
+
 static void AllocBuffer(uv_handle_t* handle, size_t suggestedSize, uv_buf_t* buf)
 {
     buf->base = calloc(MAX_READ_LEN, sizeof(uint8_t));
@@ -858,6 +888,7 @@ static DPS_NetConnection* CreateConnection(DPS_Node* node, const struct sockaddr
     DPS_NetContext* netCtx = node->netCtx;
     DPS_KeyStore* keyStore = node->keyStore;
     DPS_KeyStoreRequest request;
+    const int* ciphersuites = AllCipherSuites;
 
     DPS_DBGTRACEA("node=%p,addr=%s,type=%s\n",
                   node, DPS_NetAddrText(addr), (type == MBEDTLS_SSL_IS_SERVER) ? "server" : "client");
@@ -960,25 +991,31 @@ static DPS_NetConnection* CreateConnection(DPS_Node* node, const struct sockaddr
     request.data = cn;
 
     mbedtls_x509_crt_init(&cn->cacert);
-    if (keyStore->caHandler) {
+    if (!keyStore->caHandler) {
+        ciphersuites = PskCipherSuites;
+    } else {
         request.setCA = SetCA;
         ret = keyStore->caHandler(&request);
         if (ret == 0) {
             mbedtls_ssl_conf_ca_chain(&cn->conf, &cn->cacert, NULL);
         } else {
             DPS_WARNPRINT("Parsing trusted certificate(s) failed: %s\n", DPS_ErrTxt(ret));
+            ciphersuites = PskCipherSuites;
         }
         request.setCA = NULL;
     }
     mbedtls_x509_crt_init(&cn->cert);
     mbedtls_pk_init(&cn->pkey);
-    if (keyStore->keyHandler) {
+    if (!keyStore->keyHandler) {
+        ciphersuites = PskCipherSuites;
+    } else {
         request.setKey = SetCert;
         ret = keyStore->keyHandler(&request, &node->signer.kid);
         if (ret == 0) {
             mbedtls_ssl_conf_own_cert(&cn->conf, &cn->cert, &cn->pkey);
         } else {
             DPS_WARNPRINT("Parsing certificate failed: %s\n", DPS_ErrTxt(ret));
+            ciphersuites = PskCipherSuites;
         }
         request.setKey = NULL;
     }
@@ -995,6 +1032,10 @@ static DPS_NetConnection* CreateConnection(DPS_Node* node, const struct sockaddr
         }
         request.setKeyAndId = NULL;
     }
+    for (const int* cs = ciphersuites; *cs; ++cs) {
+        DPS_DBGPRINT("  %s\n", mbedtls_ssl_get_ciphersuite_name(*cs));
+    }
+    mbedtls_ssl_conf_ciphersuites(&cn->conf, ciphersuites);
     mbedtls_ssl_conf_authmode(&cn->conf, MBEDTLS_SSL_VERIFY_REQUIRED);
 
     mbedtls_ssl_init(&cn->ssl);
@@ -1456,9 +1497,6 @@ DPS_NetContext* DPS_NetStart(DPS_Node* node, uint16_t port, DPS_OnReceive cb)
     }
 
     mbedtls_debug_set_threshold(DEBUG_MBEDTLS_LEVEL);
-    for (const int* cs = mbedtls_ssl_list_ciphersuites(); *cs; ++cs) {
-        DPS_DBGPRINT("  %s\n", mbedtls_ssl_get_ciphersuite_name(*cs));
-    }
 
     netCtx->state = NET_RUNNING;
     DPS_DBGPRINT("Created netCtx=%p\n", netCtx);
