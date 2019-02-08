@@ -357,8 +357,8 @@ static void ReadStdin(Subscriber* subscriber)
         if (!ParseArgs(argc, argv, &args)) {
             continue;
         }
-        LinkTo(subscriber, &args);
         Subscribe(subscriber, &args);
+        LinkTo(subscriber, &args);
     }
 }
 
@@ -418,11 +418,11 @@ int main(int argc, char** argv)
         DPS_TimedWaitForEvent(nodeDestroyed, args.wait * 1000);
     }
 
-    if (!LinkTo(&subscriber, &args)) {
+    if (!Subscribe(&subscriber, &args)) {
         ret = DPS_ERR_FAILURE;
         goto Exit;
     }
-    if (!Subscribe(&subscriber, &args)) {
+    if (!LinkTo(&subscriber, &args)) {
         ret = DPS_ERR_FAILURE;
         goto Exit;
     }
