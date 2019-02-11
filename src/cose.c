@@ -808,7 +808,7 @@ DPS_Status COSE_Encrypt(int8_t alg, const uint8_t nonce[COSE_NONCE_LEN], const C
     if (ret != DPS_OK) {
         goto Exit;
     }
-    ret = Encrypt_GCM(cek.symmetric.key, nonce, plainText->base, ptLen, AAD.base, aadLen, &content);
+    ret = Encrypt_GCM(cek.symmetric.key, nonce, plainText, 1, AAD.base, aadLen, &content);
     if (ret != DPS_OK) {
         goto Exit;
     }

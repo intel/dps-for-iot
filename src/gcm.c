@@ -24,51 +24,107 @@
 #include <string.h>
 #include "gcm.h"
 #include "mbedtls.h"
-#include "mbedtls/cipher.h"
+#include "mbedtls/gcm.h"
 #include "mbedtls/error.h"
 
 #define M 16 /* Tag length, in bytes */
 
 DPS_Status Encrypt_GCM(const uint8_t key[AES_256_KEY_LEN],
                        const uint8_t nonce[AES_GCM_NONCE_LEN],
-                       const uint8_t* plainText,
-                       size_t ptLen,
+                       DPS_RxBuffer* plainText,
+                       size_t numPlainText,
                        const uint8_t* aad,
                        size_t aadLen,
                        DPS_TxBuffer* cipherText)
 {
-    const mbedtls_cipher_info_t* info;
-    mbedtls_cipher_context_t ctx;
+    mbedtls_gcm_context ctx;
+    size_t len;
     int ret;
-    size_t outLen;
+    size_t ptLen;
+    size_t i;
+    char buf[16];
 
+    ptLen = 0;
+    for (i = 0; i < numPlainText; ++i) {
+        ptLen += DPS_RxBufferAvail(&plainText[i]);
+    }
     if (DPS_TxBufferSpace(cipherText) < (ptLen + M)) {
         return DPS_ERR_OVERFLOW;
     }
 
-    info = mbedtls_cipher_info_from_type(MBEDTLS_CIPHER_AES_256_GCM);
-    mbedtls_cipher_init(&ctx);
-    ret = mbedtls_cipher_setup(&ctx, info);
-    if (ret != 0) {
-        DPS_ERRPRINT("Cipher setup failed: %s\n", TLSErrTxt(ret));
-        goto Exit;
-    }
-    ret = mbedtls_cipher_setkey(&ctx, key, AES_256_KEY_LEN * 8, MBEDTLS_ENCRYPT);
+    mbedtls_gcm_init(&ctx);
+    ret = mbedtls_gcm_setkey(&ctx, MBEDTLS_CIPHER_ID_AES, key, AES_256_KEY_LEN * 8);
     if (ret != 0) {
         DPS_ERRPRINT("Cipher set key failed: %s\n", TLSErrTxt(ret));
         goto Exit;
     }
-    outLen = DPS_TxBufferSpace(cipherText) - M;
-    ret = mbedtls_cipher_auth_encrypt(&ctx, nonce, AES_GCM_NONCE_LEN, aad, aadLen, plainText, ptLen,
-                                      cipherText->txPos, &outLen, cipherText->txPos + ptLen, M);
+    ret = mbedtls_gcm_starts(&ctx, MBEDTLS_GCM_ENCRYPT, nonce, AES_GCM_NONCE_LEN, aad, aadLen);
     if (ret != 0) {
-        DPS_ERRPRINT("Cipher auth encrypt failed: %s\n", TLSErrTxt(ret));
+        DPS_ERRPRINT("Cipher start failed: %s\n", TLSErrTxt(ret));
         goto Exit;
     }
-    cipherText->txPos += ptLen + M;
+
+    for (i = 0; i < numPlainText; ++i) {
+        /*
+         * Updates must be a multiple of 16 bytes
+         */
+        len = (DPS_RxBufferAvail(&plainText[i]) / 16) * 16;
+        ret = mbedtls_gcm_update(&ctx, len, plainText[i].rxPos, cipherText->txPos);
+        if (ret != 0) {
+            DPS_ERRPRINT("Cipher update failed: %s\n", TLSErrTxt(ret));
+            goto Exit;
+        }
+        plainText[i].rxPos += len;
+        cipherText->txPos += len;
+
+        if (DPS_RxBufferAvail(&plainText[i])) {
+            if ((i + 1) < numPlainText) {
+                size_t borrow;
+                /*
+                 * Copy and borrow to make a 16 byte buffer for update
+                 */
+                len = DPS_RxBufferAvail(&plainText[i]);
+                assert(len <= 16);
+                memcpy(buf, plainText[i].rxPos, len);
+                plainText[i].rxPos += len;
+
+                borrow = DPS_RxBufferAvail(&plainText[i + 1]);
+                if (borrow > (16 - len)) {
+                    borrow = 16 - len;
+                }
+                memcpy(&buf[len], plainText[i + 1].rxPos, borrow);
+                plainText[i + 1].rxPos += borrow;
+                ret = mbedtls_gcm_update(&ctx, len + borrow, (const unsigned char*)buf, cipherText->txPos);
+                if (ret != 0) {
+                    DPS_ERRPRINT("Cipher update failed: %s\n", TLSErrTxt(ret));
+                    goto Exit;
+                }
+                cipherText->txPos += len + borrow;
+            } else {
+                /*
+                 * Last update can be less than 16 bytes
+                 */
+                len = DPS_RxBufferAvail(&plainText[i]);
+                ret = mbedtls_gcm_update(&ctx, len, plainText[i].rxPos, cipherText->txPos);
+                if (ret != 0) {
+                    DPS_ERRPRINT("Cipher update failed: %s\n", TLSErrTxt(ret));
+                    goto Exit;
+                }
+                plainText[i].rxPos += len;
+                cipherText->txPos += len;
+            }
+        }
+    }
+
+    ret = mbedtls_gcm_finish(&ctx, cipherText->txPos, M);
+    if (ret != 0) {
+        DPS_ERRPRINT("Cipher finish failed: %s\n", TLSErrTxt(ret));
+        goto Exit;
+    }
+    cipherText->txPos += M;
 
 Exit:
-    mbedtls_cipher_free(&ctx);
+    mbedtls_gcm_free(&ctx);
     if (ret == 0) {
         return DPS_OK;
     } else {

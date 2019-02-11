@@ -48,14 +48,14 @@ extern "C" {
  * Implements AES-GCM (Galois/Counter Mode) encryption. The message is
  * encrypted in place.
  *
- * @param key        The AES-256 encryption key
- * @param nonce      The nonce (must be 12 bytes in this implementation)
- * @param plainText  Plaintext to be encrypted,
- * @param ptLen      The length of the plaintext
- * @param aad        The auxiliary data that will be authenticated but not encrypted
- * @param aadLen     The length of the auxiliary data
- * @param cipherText Returns the cipher text. The buffer must have room to append
- *                   (ptLen + 16) bytes.
+ * @param key          The AES-256 encryption key
+ * @param nonce        The nonce (must be 12 bytes in this implementation)
+ * @param plainText    The plain text buffers to be encrypted
+ * @param numPlainText The number of plain text buffers
+ * @param aad          The auxiliary data that will be authenticated but not encrypted
+ * @param aadLen       The length of the auxiliary data
+ * @param cipherText   Returns the cipher text. The buffer must have room to append
+ *                     (ptLen + 16) bytes.
  *
  * @return
  * - DPS_OK if the GCM context is initialized
@@ -63,8 +63,8 @@ extern "C" {
  */
 DPS_Status Encrypt_GCM(const uint8_t key[AES_256_KEY_LEN],
                        const uint8_t nonce[AES_GCM_NONCE_LEN],
-                       const uint8_t* plainText,
-                       size_t ptLen,
+                       DPS_RxBuffer* plainText,
+                       size_t numPlainText,
                        const uint8_t* aad,
                        size_t aadLen,
                        DPS_TxBuffer* cipherText);
