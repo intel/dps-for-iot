@@ -196,7 +196,7 @@ static void OnProbeTimeout(uv_timer_t* handle)
              * We have to delete the publication history for the probe otherwise
              * it will look like a duplicate and will be discarded.
              */
-            DPS_DeletePubHistory(&monitor->node->history, &monitor->pub->shared->pubId);
+            DPS_DeletePubHistory(&monitor->node->history, &monitor->pub->pubId);
         }
     }
 
