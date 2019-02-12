@@ -31,6 +31,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <dps/private/dps.h>
+#include <dps/private/node.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -119,7 +120,7 @@ DPS_Status DPS_SendSubscription(DPS_Subscription* sub);
  *
  * @return DPS_OK if decoding and processing is successful, an error otherwise
  */
-DPS_Status DPS_DecodeSubscription(DPS_Node* node);
+DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NodeAddress* from, DPS_RxBuffer* buf);
 
 /**
  * Decode and process a received subscription acknowledgement
@@ -128,7 +129,7 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node);
  *
  * @return DPS_OK if decoding and processing is successful, an error otherwise
  */
-DPS_Status DPS_DecodeSubscriptionAck(DPS_Node* node);
+DPS_Status DPS_DecodeSubscriptionAck(DPS_Node* node, DPS_NodeAddress* from, DPS_RxBuffer* buf);
 
 #ifdef __cplusplus
 }

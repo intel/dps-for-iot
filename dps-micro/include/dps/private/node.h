@@ -30,6 +30,8 @@
 
 #include <stdint.h>
 #include <dps/private/cose.h>
+#include <dps/private/bitvec.h>
+#include <dps/private/network.h>
 #include <dps/uuid.h>
 
 #ifdef __cplusplus
@@ -46,15 +48,11 @@ extern "C" {
 #define DPS_MSG_TYPE_ACK  3   /**< End-to-end publication acknowledgement */
 #define DPS_MSG_TYPE_SAK  4   /**< One-hop subscription acknowledgement */
 
-#define DPS_NODE_CREATED      0 /**< Node is created */
-#define DPS_NODE_RUNNING      1 /**< Node is running */
-#define DPS_NODE_STOPPING     2 /**< Node is stopping */
-#define DPS_NODE_STOPPED      3 /**< Node is stopped */
-
 /**
  * Opaque type for platform-specific network state
  */
 typedef struct _DPS_Network DPS_Network;
+
 typedef struct _DPS_KeyStore DPS_KeyStore;
 typedef struct _DPS_Subscription DPS_Subscription;
 
@@ -71,12 +69,21 @@ typedef struct _DPS_Node {
     uint8_t txBuffer[DPS_TX_HEADER_SIZE + DPS_TX_BUFFER_SIZE];
     size_t txHdrLen;
     size_t txLen;
+    DPS_BitVector interests;          /* Interests for this node */
+    DPS_FHBitVector needs;            /* Needs for this node */
+    uint32_t revision;                /* Interests revision for this node */
+    DPS_UUID meshId;                  /* GUID */
     const char* separators;
     uint16_t port;
+    uint8_t linked;                   /* TRUE is linked to a remote node */
+    DPS_NodeAddress* remoteNode;      /* Address of remote node if there is one */
+    uint32_t remoteRevision;          /* Subscription revision number for remote node */
+    DPS_BitVector remoteInterests;    /* Interests from remote node */
+    DPS_FHBitVector remoteNeeds;      /* Needs from remote node */
     COSE_Entity signer;
     DPS_Network* network;
     DPS_KeyStore* keyStore;
-    DPS_Subscription* subscriptions;
+    DPS_Subscription* subscriptions;  /* Linked list of this node's subscriptions */
 } DPS_Node;
 
 /**

@@ -41,7 +41,7 @@ extern "C" {
  */
 #define BITVEC_CONFIG_BIT_LEN  8192
 #define BITVEC_CONFIG_BYTE_LEN (BITVEC_CONFIG_BIT_LEN / 8)
-#define BITVEC_CONFIG_HASHES     4
+#define BITVEC_CONFIG_HASHES     3
 
 /**
  * Type for a bit vector
@@ -110,10 +110,49 @@ uint32_t DPS_BitVectorPopCount(DPS_BitVector* bv);
  *
  * @param hash  Returns the fuzzy hash of the input bit vector
  * @param bv    An initialized bit vector
- *
- * @return  The population count (number of bits set) of the bit vector.
  */
-DPS_Status DPS_BitVectorFuzzyHash(DPS_FHBitVector* hash, DPS_BitVector* bv);
+void DPS_BitVectorFuzzyHash(DPS_FHBitVector* hash, DPS_BitVector* bv);
+
+/**
+ * Duplicate a FH bit vector
+ *
+ * @param dst Destination bit vector
+ * @param src Source bit vector
+ */
+static inline void DPS_FHBitVectorDup(DPS_FHBitVector* dst, DPS_FHBitVector* src)
+{
+    memcpy(dst, src, sizeof(DPS_FHBitVector));
+}
+
+
+/**
+ * Buffer space needed to serialize a FH bit vector.
+ *
+ * @param bv  The FH bit vector to serialize
+ *
+ * @return  The buffer space needed to serialize the bit vector.
+ */
+size_t DPS_FHBitVectorSerializedSize(DPS_FHBitVector* bv);
+
+/**
+ * Serialize a FH bit vector into a buffer
+ *
+ * @param bv      The FH bit vector to serialize
+ * @param buffer  The buffer to serialize the bit vector into
+ *
+ * @return  The success or failure of the operation
+ */
+DPS_Status DPS_FHBitVectorSerialize(DPS_FHBitVector* bv, DPS_TxBuffer* buffer);
+
+/**
+ * Deserialize a FH bit vector from a buffer
+ *
+ * @param bv      The FH bit vector to deserialize
+ * @param buffer  The buffer to deserialize the bit vector from
+ *
+ * @return  The success or failure of the operation
+ */
+DPS_Status DPS_FHBitVectorDeserialize(DPS_FHBitVector* bv, DPS_RxBuffer* buffer);
 
 /**
  * Check if one bit vector includes all bits of another. The two bit
@@ -220,6 +259,21 @@ int DPS_BitVectorIsClear(DPS_BitVector* bv);
  * @param src Source bit vector
  */
 void DPS_BitVectorDup(DPS_BitVector* dst, DPS_BitVector* src);
+
+/**
+ * Compute the xor of two bit vectors. The bit vectors must be the
+ * same size.
+ *
+ * @param bvOut   The bit vector to receive the difference (can be same as bv1 or bv2)
+ * @param bv1     A bit vector
+ * @param bv2     A bit vector
+ * @param equal   Returns non-zero if the two bit input vectors are identical in which case
+ *                the output vector will be cleared. Can be NULL.
+ *
+ * @return DPS_OK if computing the xor is successful, an error
+ *         otherwise
+ */
+DPS_Status DPS_BitVectorXor(DPS_BitVector* bvOut, DPS_BitVector* bv1, DPS_BitVector* bv2, int* equal);
 
 /**
  * Dump information about a bit vector

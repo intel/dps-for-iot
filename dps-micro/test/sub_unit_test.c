@@ -31,11 +31,11 @@
 
 static char testString[] = "This is a test string from " DPS_TARGET_NAME;
 
-#define NUM_TOPICS 2
+#define NUM_TOPICS 1
 
-static const char* topics[NUM_TOPICS] = {
+static const char* topics[] = {
+    "a/b/c/d",
     "red/green/blue",
-    "a/b/c/d"
 };
 
 static void OnPub(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* payload, size_t len)
@@ -43,22 +43,21 @@ static void OnPub(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* pa
     int txtLen = 0;
     DPS_PRINT("Received matching publication %d bytes\n", len);
 
-    while (txtLen <= len && isprint(payload[txtLen])) {
-        ++txtLen;
+    if (payload) {
+        while (txtLen <= len && isprint(payload[txtLen])) {
+            ++txtLen;
+        }
+        DPS_PRINT("%.*s\n", txtLen, payload);
     }
-    DPS_PRINT("%.*s\n", txtLen, payload);
-
 }
 
 int main(int argc, char** argv)
 {
     DPS_Node* node;
     DPS_KeyStore* keyStore = NULL;
-    DPS_Publication pub;
     DPS_Subscription sub;
     DPS_Status status;
     int i;
-    int numPubs;
 
 #if DPS_TARGET == DPS_TARGET_WINDOWS || DPS_TARGET == DPS_TARGET_LINUX
     char** arg = argv + 1;
@@ -72,13 +71,11 @@ int main(int argc, char** argv)
         }
         goto Usage;
     }
-    numPubs = 10;
 #else
     DPS_Debug = DPS_TRUE;
-    numPubs = INT_MAX;
 #endif
 
-    DPS_PRINT("Starting pub unit test\n");
+    DPS_PRINT("Starting sub unit test\n");
 
     node = DPS_CreateNode("/");
 
@@ -92,21 +89,13 @@ int main(int argc, char** argv)
     status = DPS_Start(node);
     CHECK(status == DPS_OK);
 
-    /* Initialize publication with a pre-shared key */
-    status = DPS_InitPublication(node, &pub, topics, NUM_TOPICS, DPS_FALSE, &PskId[1], NULL);
-    CHECK(status == DPS_OK);
-
     status = DPS_InitSubscription(node, &sub, topics, 1);
     CHECK(status == DPS_OK);
 
     status = DPS_Subscribe(&sub, OnPub, NULL);
     CHECK(status == DPS_OK);
 
-    for (i = 0; i < numPubs; ++i) {
-        status = DPS_Publish(&pub, (const uint8_t*)testString, strlen(testString) + 1, 0);
-        CHECK(status == DPS_OK);
-        SLEEP(5000);
-    }
+    SLEEP(500000);
 
     return 0;
 

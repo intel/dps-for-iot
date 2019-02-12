@@ -36,10 +36,33 @@
 extern "C" {
 #endif
 
+    
+/**
+  * Abstract type for a DPS node address
+  */
+typedef struct _DPS_NodeAddress DPS_NodeAddress;
+
+/**
+  * Set the port on a node address
+  */
+void DPS_NodeAddressSetPort(DPS_NodeAddress* addr, uint16_t port);
+
+/**
+  * Copy a node address
+  */
+void DPS_CopyNodeAddress(DPS_NodeAddress* dest, const DPS_NodeAddress* src);
+
+/**
+  * Compare to addresses
+  */
+int DPS_SameNodeAddress(const DPS_NodeAddress* addr1, const DPS_NodeAddress* addr2);
+
 /**
  * Function prototype for handler to be called on receiving data from a remote node
  *
  * @param node      The node that received the data
+ * @param from      Address of the node that sent the data
+ * @param mcast     Non-zero if the packet was a multicast packet
  * @param rxBuf     The receive buffer
  * @param status    Indicates if the receive was successful or there was a network layer error
  *
@@ -47,7 +70,7 @@ extern "C" {
  * - DPS_OK if the message was correctly parsed
  * - An error code indicating the data received was invalid
  */
-typedef DPS_Status (*DPS_OnReceive)(DPS_Node* node, DPS_RxBuffer* rx, DPS_Status status);
+typedef DPS_Status (*DPS_OnReceive)(DPS_Node* node, DPS_NodeAddress* from, int mcast, DPS_RxBuffer* rx, DPS_Status status);
 
 /**
  * Prototype for function called when a send completes.
@@ -74,14 +97,7 @@ void DPS_NetworkTerminate(DPS_Node* node);
  * @param node     Opaque pointer to the DPS node
  * @param cb       Function prototype for handler to be called on receiving data from a remote node
  */
-DPS_Status DPS_MCastStart(DPS_Node* node, DPS_OnReceive cb);
-
-/**
- * Stop receiving multicast data
- *
- * @param node     Opaque pointer to the DPS node
- */
-void DPS_MCastStop(DPS_Node* node);
+DPS_Status DPS_NetworkStart(DPS_Node* node, DPS_OnReceive cb);
 
 /**
  * Multicast data in the node transmit buffer
@@ -117,16 +133,16 @@ DPS_Status DPS_UnicastStart(DPS_Node* node, uint16_t port, DPS_OnReceive cb);
 void DPS_UnicastStop(DPS_Node* node);
 
 /**
- * Send data in the tx buffer to a previously specified remote node
+ * Unicast data in the node transmit buffer
  *
  * @param node            Pointer to the DPS node
- * @param txBuf           The transmit buffer
+ * @param dest            Destination address
  * @param appCtx          An application context to be passed to the send complete callback
  * @param sendCompleteCB  Function called when the send is complete so the content of the data buffers can be freed.
  *
  * @return DPS_OK if the send is successful, an error otherwise
  */
-DPS_Status DPS_UnicastSend(DPS_Node* node, DPS_TxBuffer* txBuf, void* appCtx, DPS_SendComplete sendCompleteCB);
+DPS_Status DPS_UnicastSend(DPS_Node* node, DPS_NodeAddress* dest, void* appCtx, DPS_SendComplete sendCompleteCB);
 
 #ifdef __cplusplus
 }

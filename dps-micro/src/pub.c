@@ -356,7 +356,7 @@ static int PublicationIsStale(DPS_Node* node, DPS_UUID* pubId, uint32_t sequence
     return DPS_FALSE;
 }
 
-DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_RxBuffer* buf)
+DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NodeAddress* from, DPS_RxBuffer* buf)
 {
     static const int32_t UnprotectedKeys[] = { DPS_CBOR_KEY_PORT, DPS_CBOR_KEY_TTL };
     static const int32_t ProtectedKeys[] = { DPS_CBOR_KEY_TTL, DPS_CBOR_KEY_PUB_ID, DPS_CBOR_KEY_SEQ_NUM,
@@ -787,7 +787,7 @@ DPS_Status DPS_Publish(DPS_Publication* pub, const uint8_t* payload, size_t len,
         return DPS_ERR_NULL;
     }
 
-    /* Free the Tx buffer pools */
+    /* Reset the Tx buffer pools */
     DPS_TxBufferFreePool(pub->node, DPS_TX_POOL);
     DPS_TxBufferFreePool(pub->node, DPS_TX_HDR_POOL);
     DPS_TxBufferFreePool(pub->node, DPS_TMP_POOL);
