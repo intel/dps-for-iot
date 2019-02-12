@@ -459,8 +459,8 @@ static DPS_Status DecryptAndParsePub(DPS_KeyStore* keyStore, DPS_Publication* pu
     DPS_TxBufferToRx(&pub->protectedBuf, &aadBuf);
     DPS_TxBufferToRx(&pub->encryptedBuf, &cipherTextBuf);
 
-    ret = COSE_Decrypt(nonce, &recipient, &aadBuf, &cipherTextBuf, keyStore, &pub->shared->sender,
-                       plainTextBuf);
+    ret = COSE_Deserialize(nonce, &recipient, &aadBuf, &cipherTextBuf, keyStore, &pub->shared->sender,
+                           plainTextBuf);
     if (ret == DPS_OK) {
         DPS_DBGPRINT("Publication was decrypted\n");
         CBOR_Dump("plaintext", plainTextBuf->base, DPS_TxBufferUsed(plainTextBuf));
@@ -474,6 +474,12 @@ static DPS_Status DecryptAndParsePub(DPS_KeyStore* keyStore, DPS_Publication* pu
              * Asymmetric keys must use the sender info if provided.
              */
             switch (recipient.alg) {
+            case COSE_ALG_RESERVED:
+                /*
+                 * Recipient is implicit or not present.
+                 */
+                ret = DPS_OK;
+                break;
             case COSE_ALG_DIRECT:
             case COSE_ALG_A256KW:
                 if (AddRecipient(pub, recipient.alg, &recipient.kid)) {
@@ -497,14 +503,14 @@ static DPS_Status DecryptAndParsePub(DPS_KeyStore* keyStore, DPS_Publication* pu
                 DPS_WARNPRINT("Ack requested, but missing sender ID\n");
             }
         }
-    } else if (ret == DPS_ERR_NOT_ENCRYPTED) {
-        DPS_DBGPRINT("Publication was not encrypted\n");
+    } else if (ret == DPS_ERR_NOT_COSE) {
+        DPS_DBGPRINT("Publication was not a COSE object\n");
         /*
          * The payload was not encrypted
          */
         DPS_TxBufferToRx(&pub->encryptedBuf, &encryptedBuf);
     } else {
-        DPS_WARNPRINT("Failed to decrypt publication - %s\n", DPS_ErrTxt(ret));
+        DPS_WARNPRINT("Failed to deserialize publication - %s\n", DPS_ErrTxt(ret));
         return DPS_ERR_SECURITY;
     }
     ret = DPS_ParseMapInit(&mapState, &encryptedBuf, EncryptedKeys, A_SIZEOF(EncryptedKeys), NULL, 0);
@@ -1453,7 +1459,7 @@ DPS_Status DPS_SerializePub(DPS_Node* node, DPS_Publication* pub, const uint8_t*
         return ret;
     }
 
-    if (pub->shared->recipients) {
+    if (pub->shared->recipients || node->signer.alg) {
         DPS_RxBuffer plainTextBuf;
         DPS_RxBuffer aadBuf;
         uint8_t nonce[COSE_NONCE_LEN];
@@ -1461,16 +1467,16 @@ DPS_Status DPS_SerializePub(DPS_Node* node, DPS_Publication* pub, const uint8_t*
         DPS_TxBufferToRx(&encryptedBuf, &plainTextBuf);
         DPS_TxBufferToRx(&protectedBuf, &aadBuf);
         DPS_MakeNonce(&pub->shared->pubId, pub->sequenceNum, DPS_MSG_TYPE_PUB, nonce);
-        ret = COSE_Encrypt(COSE_ALG_A256GCM, nonce, node->signer.alg ? &node->signer : NULL,
-                           pub->shared->recipients, pub->shared->recipientsCount, &aadBuf, &plainTextBuf,
-                           node->keyStore, &encryptedBuf);
+        ret = COSE_Serialize(COSE_ALG_A256GCM, nonce, node->signer.alg ? &node->signer : NULL,
+                             pub->shared->recipients, pub->shared->recipientsCount, &aadBuf, &plainTextBuf,
+                             node->keyStore, &encryptedBuf);
         DPS_RxBufferFree(&plainTextBuf);
         if (ret != DPS_OK) {
-            DPS_WARNPRINT("COSE_Encrypt failed: %s\n", DPS_ErrTxt(ret));
+            DPS_WARNPRINT("COSE_Serialize failed: %s\n", DPS_ErrTxt(ret));
             DPS_TxBufferFree(&protectedBuf);
             return ret;
         }
-        DPS_DBGPRINT("Publication was encrypted\n");
+        DPS_DBGPRINT("Publication was COSE serialized\n");
         CBOR_Dump("aad", aadBuf.base, DPS_RxBufferAvail(&aadBuf));
         CBOR_Dump("cryptText", encryptedBuf.base, DPS_TxBufferUsed(&encryptedBuf));
     }

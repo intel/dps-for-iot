@@ -84,8 +84,8 @@ static int AddTopics(char* topicList, char** msg, int* keep, int* ttl, int* encr
                 topicList += 3;
                 break;
             case 'x':
-                if (!sscanf(topicList, "-x %d", encrypt) || (*encrypt < 0) || (*encrypt > 2)) {
-                    DPS_PRINT("-x requires 0..2\n");
+                if (!sscanf(topicList, "-x %d", encrypt) || (*encrypt < 0) || (*encrypt > 3)) {
+                    DPS_PRINT("-x requires 0..3\n");
                     return 0;
                 }
                 topicList += 3;
@@ -107,10 +107,10 @@ static int AddTopics(char* topicList, char** msg, int* keep, int* ttl, int* encr
                 return 1;
             default:
                 DPS_PRINT("Send one publication.\n");
-                DPS_PRINT("  [topic1 ... topicN  [-x 0|1|2]] [-t <ttl>] [-m message]\n");
+                DPS_PRINT("  [topic1 ... topicN  [-x 0|1|2|3]] [-t <ttl>] [-m message]\n");
                 DPS_PRINT("        -h: Print this message\n");
                 DPS_PRINT("        -t: Set ttl on the publication\n");
-                DPS_PRINT("        -x: Disable (0) or enable symmetric (1) or asymmetric(2) encryption. Default is symmetric encryption enabled.\n");
+                DPS_PRINT("        -x: Disable (0) or enable symmetric encryption (1), asymmetric encryption (2), or authentication (3). Default is symmetric encryption enabled.\n");
                 DPS_PRINT("        -m: Everything after the -m is the string payload for the publication.\n");
                 DPS_PRINT("        -j: Everything after the -j is the JSON payload for the publication.\n");
                 DPS_PRINT("  If there are no topic strings sends previous publication with a new sequence number\n");
@@ -317,7 +317,7 @@ int main(int argc, char** argv)
         if (IntArg("-r", &arg, &argc, &subsRate, 0, INT32_MAX)) {
             continue;
         }
-        if (IntArg("-x", &arg, &argc, &encrypt, 0, 2)) {
+        if (IntArg("-x", &arg, &argc, &encrypt, 0, 3)) {
             continue;
         }
         if (strcmp(*arg, "-a") == 0) {
@@ -359,6 +359,12 @@ int main(int argc, char** argv)
         nodeKeyId = &PublisherId;
         DPS_SetCertificate(memoryKeyStore, PublisherCert, PublisherPrivateKey, PublisherPassword);
         DPS_SetCertificate(memoryKeyStore, SubscriberCert, NULL, NULL);
+    } else if (encrypt == 3) {
+        DPS_SetTrustedCA(memoryKeyStore, TrustedCAs);
+        nodeKeyId = &PublisherId;
+        DPS_SetCertificate(memoryKeyStore, PublisherCert, PublisherPrivateKey, PublisherPassword);
+        DPS_SetCertificate(memoryKeyStore, SubscriberCert, NULL, NULL);
+        nodeKeyId = &PublisherId;
     }
 
     node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore), nodeKeyId);
@@ -446,9 +452,9 @@ int main(int argc, char** argv)
     return 0;
 
 Usage:
-    DPS_PRINT("Usage %s [-d] [-x 0|1|2] [-a] [-w <seconds>] [-t <ttl>] [[-h <hostname>] -p <portnum>] [-l <portnum>] [-m|-j <message>] [-r <milliseconds>] [topic1 topic2 ... topicN]\n", argv[0]);
+    DPS_PRINT("Usage %s [-d] [-x 0|1|2|3] [-a] [-w <seconds>] [-t <ttl>] [[-h <hostname>] -p <portnum>] [-l <portnum>] [-m|-j <message>] [-r <milliseconds>] [topic1 topic2 ... topicN]\n", argv[0]);
     DPS_PRINT("       -d: Enable debug ouput if built for debug.\n");
-    DPS_PRINT("       -x: Disable (0) or enable symmetric (1) or asymmetric(2) encryption. Default is symmetric encryption enabled.\n");
+    DPS_PRINT("       -x: Disable (0) or enable symmetric encryption (1), asymmetric encryption (2), or authentication (3). Default is symmetric encryption enabled.\n");
     DPS_PRINT("       -a: Request an acknowledgement\n");
     DPS_PRINT("       -t: Set a time-to-live on a publication\n");
     DPS_PRINT("       -w: Time to wait between linking to remote node and sending publication\n");

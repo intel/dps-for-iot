@@ -119,7 +119,7 @@ elif args.encryption == 2:
     node_id = subscriber_id
 
 def on_pub(sub, pub, payload):
-    print "Pub %s(%d) matches:" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub))
+    print "Pub %s(%d) [%s] matches:" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub), str(dps.publication_get_sender_key_id(pub)))
     print "  pub " + " | ".join(dps.publication_get_topics(pub))
     print "  sub " + " | ".join(dps.subscription_get_topics(sub))
     print payload

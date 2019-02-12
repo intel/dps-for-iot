@@ -110,7 +110,7 @@ DPS_Status COSE_Encrypt(int8_t alg,
  *
  * @return
  * - DPS_OK if the payload was successfully decrypted
- * - DPS_ERR_NOT_ENCRYPTED if the payload is not a COSE payload (no COSE tag)
+ * - DPS_ERR_NOT_COSE if the payload is not a COSE payload (no COSE tag)
  * - DPS_ERR_INVALID if the payload is badly formed
  * - DPS_ERR_SECURITY if the payload failed to decrypt
  * - Other error codes
@@ -122,6 +122,87 @@ DPS_Status COSE_Decrypt(const uint8_t* nonce,
                         DPS_KeyStore* keyStore,
                         COSE_Entity* signer,
                         DPS_TxBuffer* plainText);
+
+/**
+ * COSE Signing
+ *
+ * @param signer         The signer information
+ * @param aad            Buffer containing the external auxiliary authenticated data
+ * @param plainText      Buffer containing the plain text payload to be signed
+ * @param keyStore       Request handler for encryption keys
+ * @param cipherText     Buffer for returning the signed output. The storage for this buffer is allocated
+ *                       by this function and must be freed by the caller.
+ *
+ * @return
+ * - DPS_OK if the plaintext was successfully signed
+ * - Other error codes
+ */
+DPS_Status COSE_Sign(const COSE_Entity* signer,
+                     DPS_RxBuffer* aad,
+                     DPS_RxBuffer* plainText,
+                     DPS_KeyStore* keyStore,
+                     DPS_TxBuffer* cipherText);
+
+/**
+ * COSE Verification
+ *
+ * @note This function succeeds if the COSE object is successfully
+ * parsed.  Check the value of @c signer to determine if the signature
+ * was verified or not.
+ *
+ * @param aad        Buffer containing the external auxiliary authenticated data.
+ * @param cipherText Buffer containing the signed input data
+ * @param keyStore   Request handler for encryption keys
+ * @param signer     Returns the recipient information used to successfully verify the signed cipherText.
+ *                   Note that this points into cipherText so care must be taken to avoid
+ *                   referencing freed memory.  This will be memset to 0 if not verified.
+ * @param plainText  Buffer for returning the signed payload. The storage for this
+ *                   buffer is allocated by this function and must be freed by the caller.
+ *
+ * @return
+ * - DPS_OK if the payload was successfully parsed
+ * - DPS_ERR_NOT_COSE if the payload is not a COSE payload (no COSE tag)
+ * - DPS_ERR_INVALID if the payload is badly formed
+ * - DPS_ERR_SECURITY if the payload failed to decrypt
+ * - Other error codes
+ */
+DPS_Status COSE_Verify(DPS_RxBuffer* aad,
+                       DPS_RxBuffer* cipherText,
+                       DPS_KeyStore* keyStore,
+                       COSE_Entity* signer,
+                       DPS_TxBuffer* plainText);
+
+/**
+ * COSE serialization
+ *
+ * When @c recipient and @c recipientLen are non-zero, call @ref COSE_Encrypt().  Otherwise call
+ * @ref COSE_Sign().
+ *
+ * @copydetails COSE_Encrypt()
+ */
+DPS_Status COSE_Serialize(int8_t alg,
+                          const uint8_t nonce[COSE_NONCE_LEN],
+                          const COSE_Entity* signer,
+                          const COSE_Entity* recipient, size_t recipientLen,
+                          DPS_RxBuffer* aad,
+                          DPS_RxBuffer* plainText,
+                          DPS_KeyStore* keyStore,
+                          DPS_TxBuffer* cipherText);
+
+/**
+ * COSE deserialization
+ *
+ * Reads the COSE tag and decrypts a COSE encryption object or verifies a COSE signing object.
+ *
+ * @copydetails COSE_Decrypt()
+ */
+DPS_Status COSE_Deserialize(const uint8_t* nonce,
+                            COSE_Entity* recipient,
+                            DPS_RxBuffer* aad,
+                            DPS_RxBuffer* cipherText,
+                            DPS_KeyStore* keyStore,
+                            COSE_Entity* signer,
+                            DPS_TxBuffer* plainText);
 
 #ifdef __cplusplus
 }

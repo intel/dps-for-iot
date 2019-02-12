@@ -304,6 +304,13 @@ const DPS_KeyType _DPS_KeyCert_type_get(DPS_KeyCert*) { return DPS_KEY_EC_CERT; 
         $1 = &keyId;
     }
 }
+%typemap(out) const DPS_KeyId* {
+    if ($1) {
+        $result = From_bytes($1->id, $1->len);
+    } else {
+        $result = From_bytes(NULL, 0);
+    }
+}
 %typemap(freearg) const DPS_KeyId* {
     if (SWIG_IsNewObj(res$argnum) && $1) {
         delete[] $1->id;
@@ -358,7 +365,7 @@ DPS_Node* CreateNode(const char* separators)
 }
 DPS_Node* CreateNode(const char* separators, DPS_MemoryKeyStore* keyStore, const DPS_KeyId* keyId)
 {
-    return DPS_CreateNode(separators, DPS_MemoryKeyStoreHandle(keyStore), NULL);
+    return DPS_CreateNode(separators, DPS_MemoryKeyStoreHandle(keyStore), keyId);
 }
 %}
 DPS_Node* CreateNode(const char* separators);

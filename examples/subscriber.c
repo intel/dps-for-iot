@@ -214,7 +214,7 @@ static int ParseArgs(int argc, char** argv, Args* args)
             if (IntArg("-w", &argv, &argc, &args->wait, 0, 30)) {
                 continue;
             }
-            if (IntArg("-x", &argv, &argc, &args->encrypt, 0, 2)) {
+            if (IntArg("-x", &argv, &argc, &args->encrypt, 0, 3)) {
                 continue;
             }
             if (IntArg("-r", &argv, &argc, &args->subsRate, 0, INT32_MAX)) {
@@ -296,6 +296,25 @@ static int Subscribe(Subscriber* subscriber, Args* args)
     return DPS_TRUE;
 }
 
+static void OnLinkComplete(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, void* data)
+{
+    if (status == DPS_OK) {
+        DPS_PRINT("Subscriber is linked to %s\n", DPS_NodeAddrToString(addr));
+    } else {
+        DPS_ERRPRINT("DPS_Link %s returned %s\n", DPS_NodeAddrToString(addr), DPS_ErrTxt(status));
+    }
+}
+
+static void OnResolveAddressComplete(DPS_Node* node, DPS_NodeAddress* addr, void* data)
+{
+    DPS_Status ret;
+
+    ret = DPS_Link(node, addr, OnLinkComplete, NULL);
+    if (ret != DPS_OK) {
+        DPS_ERRPRINT("DPS_ResolveAddress %s returned %s\n", DPS_NodeAddrToString(addr), DPS_ErrTxt(ret));
+    }
+}
+
 static int LinkTo(Subscriber* subscriber, Args* args)
 {
     DPS_Status ret;
@@ -303,15 +322,15 @@ static int LinkTo(Subscriber* subscriber, Args* args)
 
     if (args->numLinks) {
         for (i = 0; i < args->numLinks; ++i, ++subscriber->numAddrs) {
-            subscriber->addrs[subscriber->numAddrs] = DPS_CreateAddress();
-            ret = DPS_LinkTo(subscriber->node, args->linkHosts[i], args->linkPort[i],
-                             subscriber->addrs[subscriber->numAddrs]);
-            if (ret == DPS_OK) {
-                DPS_PRINT("Subscriber is linked to %s\n",
-                          DPS_NodeAddrToString(subscriber->addrs[subscriber->numAddrs]));
-            } else {
-                DPS_DestroyAddress(subscriber->addrs[subscriber->numAddrs]);
-                DPS_ERRPRINT("DPS_LinkTo %d returned %s\n", args->linkPort[i], DPS_ErrTxt(ret));
+            const char* host = args->linkHosts[i];
+            if (!host) {
+                host = "localhost";
+            }
+            char service[6] = { 0 };
+            snprintf(service, 6, "%d", args->linkPort[i]);
+            ret = DPS_ResolveAddress(subscriber->node, host, service, OnResolveAddressComplete, NULL);
+            if (ret != DPS_OK) {
+                DPS_ERRPRINT("DPS_ResolveAddress %d returned %s\n", args->linkPort[i], DPS_ErrTxt(ret));
                 return DPS_FALSE;
             }
         }
@@ -357,8 +376,8 @@ static void ReadStdin(Subscriber* subscriber)
         if (!ParseArgs(argc, argv, &args)) {
             continue;
         }
-        LinkTo(subscriber, &args);
         Subscribe(subscriber, &args);
+        LinkTo(subscriber, &args);
     }
 }
 
@@ -393,6 +412,11 @@ int main(int argc, char** argv)
         nodeKeyId = &SubscriberId;
         DPS_SetCertificate(memoryKeyStore, SubscriberCert, SubscriberPrivateKey, SubscriberPassword);
         DPS_SetCertificate(memoryKeyStore, PublisherCert, NULL, NULL);
+    } else if (args.encrypt == 3) {
+        DPS_SetTrustedCA(memoryKeyStore, TrustedCAs);
+        nodeKeyId = &SubscriberId;
+        DPS_SetCertificate(memoryKeyStore, SubscriberCert, SubscriberPrivateKey, SubscriberPassword);
+        DPS_SetCertificate(memoryKeyStore, PublisherCert, NULL, NULL);
     }
     subscriber.node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore), nodeKeyId);
     DPS_SetNodeSubscriptionUpdateDelay(subscriber.node, args.subsRate);
@@ -413,11 +437,11 @@ int main(int argc, char** argv)
         DPS_TimedWaitForEvent(nodeDestroyed, args.wait * 1000);
     }
 
-    if (!LinkTo(&subscriber, &args)) {
+    if (!Subscribe(&subscriber, &args)) {
         ret = DPS_ERR_FAILURE;
         goto Exit;
     }
-    if (!Subscribe(&subscriber, &args)) {
+    if (!LinkTo(&subscriber, &args)) {
         ret = DPS_ERR_FAILURE;
         goto Exit;
     }
@@ -438,10 +462,10 @@ Exit:
     return (ret == DPS_OK) ? EXIT_SUCCESS : EXIT_FAILURE;
 
 Usage:
-    DPS_PRINT("Usage %s [-d] [-q] [-m] [-w <seconds>] [-x 0|1|2] [[-h <hostname>] -p <portnum>] [-l <listen port] [-j] [-r <milliseconds>] [[-s] topic1 ... topicN]\n", argv[0]);
+    DPS_PRINT("Usage %s [-d] [-q] [-m] [-w <seconds>] [-x 0|1|2|3] [[-h <hostname>] -p <portnum>] [-l <listen port] [-j] [-r <milliseconds>] [[-s] topic1 ... topicN]\n", argv[0]);
     DPS_PRINT("       -d: Enable debug ouput if built for debug.\n");
     DPS_PRINT("       -q: Quiet - suppresses output about received publications.\n");
-    DPS_PRINT("       -x: Disable (0) or enable symmetric (1) or asymmetric(2) encryption. Default is symmetric encryption enabled.\n");
+    DPS_PRINT("       -x: Disable (0) or enable symmetric encryption (1), asymmetric encryption (2), or authentication (3). Default is symmetric encryption enabled.\n");
     DPS_PRINT("       -h: Specifies host (localhost is default). Mutiple -h options are permitted.\n");
     DPS_PRINT("       -w: Time to wait before establishing links\n");
     DPS_PRINT("       -p: A port to link. Multiple -p options are permitted.\n");

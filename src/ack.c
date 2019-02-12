@@ -185,7 +185,7 @@ static DPS_Status SerializeAck(const DPS_Publication* pub, PublicationAck* ack, 
     /*
      * If the publication was encrypted the ack must be too
      */
-    if (pub->shared->recipients) {
+    if (pub->shared->recipients || node->signer.alg) {
         DPS_RxBuffer aadBuf;
         DPS_RxBuffer plainTextBuf;
         DPS_TxBuffer cipherTextBuf;
@@ -194,14 +194,14 @@ static DPS_Status SerializeAck(const DPS_Publication* pub, PublicationAck* ack, 
         DPS_RxBufferInit(&aadBuf, aadPos, ack->buf.txPos - aadPos);
         DPS_TxBufferToRx(&ack->encryptedBuf, &plainTextBuf);
         DPS_MakeNonce(&ack->pubId, ack->sequenceNum, DPS_MSG_TYPE_ACK, nonce);
-        ret = COSE_Encrypt(COSE_ALG_A256GCM, nonce, node->signer.alg ? &node->signer : NULL,
-                           pub->shared->recipients, pub->shared->recipientsCount, &aadBuf, &plainTextBuf,
-                           node->keyStore, &cipherTextBuf);
+        ret = COSE_Serialize(COSE_ALG_A256GCM, nonce, node->signer.alg ? &node->signer : NULL,
+                             pub->shared->recipients, pub->shared->recipientsCount, &aadBuf, &plainTextBuf,
+                             node->keyStore, &cipherTextBuf);
         DPS_TxBufferFree(&ack->encryptedBuf);
         if (ret == DPS_OK) {
             ack->encryptedBuf = cipherTextBuf;
         } else {
-            DPS_WARNPRINT("COSE_Encrypt failed: %s\n", DPS_ErrTxt(ret));
+            DPS_WARNPRINT("COSE_Serialize failed: %s\n", DPS_ErrTxt(ret));
         }
     }
     return ret;
@@ -300,18 +300,18 @@ DPS_Status DPS_DecodeAcknowledgement(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Rx
         DPS_MakeNonce(&pubId, sequenceNum, DPS_MSG_TYPE_ACK, nonce);
         DPS_RxBufferInit(&aadBuf, aadPos, buf->rxPos - aadPos);
         DPS_RxBufferInit(&cipherTextBuf, buf->rxPos, DPS_RxBufferAvail(buf));
-        ret = COSE_Decrypt(nonce, &recipient, &aadBuf, &cipherTextBuf, node->keyStore,
-                           &pub->shared->ack, &plainTextBuf);
+        ret = COSE_Deserialize(nonce, &recipient, &aadBuf, &cipherTextBuf, node->keyStore,
+                               &pub->shared->ack, &plainTextBuf);
         if (ret == DPS_OK) {
-            DPS_DBGPRINT("Ack was decrypted\n");
+            DPS_DBGPRINT("Ack was COSE deserialized\n");
             CBOR_Dump("plaintext", plainTextBuf.base, DPS_TxBufferUsed(&plainTextBuf));
             DPS_TxBufferToRx(&plainTextBuf, &encryptedBuf);
-        } else if (ret == DPS_ERR_NOT_ENCRYPTED) {
-            DPS_DBGPRINT("Ack was not encrypted\n");
+        } else if (ret == DPS_ERR_NOT_COSE) {
+            DPS_DBGPRINT("Ack was not a COSE object\n");
             encryptedBuf = cipherTextBuf;
             ret = DPS_OK;
         } else {
-            DPS_ERRPRINT("Failed to decrypt Ack - %s\n", DPS_ErrTxt(ret));
+            DPS_ERRPRINT("Failed to deserialize Ack - %s\n", DPS_ErrTxt(ret));
         }
         if (ret == DPS_OK) {
             uint8_t* data = NULL;
