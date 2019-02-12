@@ -27,7 +27,7 @@
 
 static DPS_Node* node;
 
-static DPS_Status OnReceive(DPS_Node* node, DPS_RxBuffer* rxBuf, DPS_Status status)
+static DPS_Status OnReceive(DPS_Node* node, DPS_NodeAddress* addr, int mcast, DPS_RxBuffer* rxBuf, DPS_Status status)
 {
     DPS_PRINT("Received %d bytes\n%s\n", DPS_RxBufferAvail(rxBuf), rxBuf->base);
     return DPS_OK;
@@ -57,7 +57,7 @@ int main(int argc, char** argv)
     status = DPS_NetworkInit(node);
     CHECK(status == DPS_OK);
 
-    status = DPS_MCastStart(node, OnReceive);
+    status = DPS_NetworkStart(node, OnReceive);
     CHECK(status == DPS_OK);
 
     DPS_TxBufferReserve(node, &txBuf, strlen(testString) + 1, DPS_TX_POOL);

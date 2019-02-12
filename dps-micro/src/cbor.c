@@ -32,7 +32,7 @@
 /*
  * Debug control for this module
  */
-DPS_DEBUG_CONTROL(DPS_DEBUG_OFF);
+DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
 #define CBOR_LEN1   24
 #define CBOR_LEN2   25

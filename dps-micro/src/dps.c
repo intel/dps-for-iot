@@ -30,6 +30,7 @@
 #include <dps/private/cbor.h>
 #include <dps/private/coap.h>
 #include <dps/private/pub.h>
+#include <dps/private/sub.h>
 #include <dps/uuid.h>
 
 /*
@@ -39,7 +40,7 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
 static DPS_Node node;
 
-static DPS_Status DecodeRequest(DPS_Node* node, DPS_RxBuffer* buf)
+static DPS_Status DecodeRequest(DPS_Node* node, DPS_NodeAddress* from, DPS_RxBuffer* buf)
 {
     DPS_Status ret;
     uint8_t msgVersion;
@@ -72,9 +73,21 @@ static DPS_Status DecodeRequest(DPS_Node* node, DPS_RxBuffer* buf)
     ret = DPS_ERR_INVALID;
     switch (msgType) {
     case DPS_MSG_TYPE_PUB:
-        ret = DPS_DecodePublication(node, buf);
+        ret = DPS_DecodePublication(node, from, buf);
         if (ret != DPS_OK) {
             DPS_DBGPRINT("DecodePublication returned %s\n", DPS_ErrTxt(ret));
+        }
+        break;
+    case DPS_MSG_TYPE_SUB:
+        ret = DPS_DecodeSubscription(node, from, buf);
+        if (ret != DPS_OK) {
+            DPS_DBGPRINT("DecodeSubscription returned %s\n", DPS_ErrTxt(ret));
+        }
+        break;
+    case DPS_MSG_TYPE_SAK:
+        ret = DPS_DecodeSubscriptionAck(node, from, buf);
+        if (ret != DPS_OK) {
+            DPS_DBGPRINT("DPS_DecodeSubscriptionAck returned %s\n", DPS_ErrTxt(ret));
         }
         break;
 #if 0
@@ -82,18 +95,6 @@ static DPS_Status DecodeRequest(DPS_Node* node, DPS_RxBuffer* buf)
         ret = DPS_DecodeAcknowledgement(node, ep, buf);
         if (ret != DPS_OK) {
             DPS_DBGPRINT("DPS_DecodeAcknowledgement returned %s\n", DPS_ErrTxt(ret));
-        }
-        break;
-    case DPS_MSG_TYPE_SUB:
-        ret = DPS_DecodeSubscription(node, ep, buf);
-        if (ret != DPS_OK) {
-            DPS_DBGPRINT("DecodeSubscription returned %s\n", DPS_ErrTxt(ret));
-        }
-        break;
-    case DPS_MSG_TYPE_SAK:
-        ret = DPS_DecodeSubscriptionAck(node, ep, buf);
-        if (ret != DPS_OK) {
-            DPS_DBGPRINT("DPS_DecodeSubscriptionAck returned %s\n", DPS_ErrTxt(ret));
         }
         break;
 #endif
@@ -111,15 +112,17 @@ static DPS_Status DecodeRequest(DPS_Node* node, DPS_RxBuffer* buf)
     return ret;
 }
 
-static DPS_Status OnMcastReceive(DPS_Node* node, DPS_RxBuffer* rxBuf, DPS_Status status)
+static DPS_Status OnReceive(DPS_Node* node, DPS_NodeAddress* from, int mcast, DPS_RxBuffer* rxBuf, DPS_Status status)
 {
-    DPS_Status ret;
-    CoAP_Parsed coap;
-    DPS_DBGTRACEA("Received %d bytes\n%s\n", DPS_RxBufferAvail(rxBuf), rxBuf->base);
+    DPS_Status ret = DPS_OK;
+    DPS_DBGTRACEA("Received %d bytes\n", DPS_RxBufferAvail(rxBuf));
 
-    ret = CoAP_Parse(rxBuf->base, DPS_RxBufferAvail(rxBuf), &coap, rxBuf);
+    if (mcast) {
+        CoAP_Parsed coap;
+        ret = CoAP_Parse(rxBuf->base, DPS_RxBufferAvail(rxBuf), &coap, rxBuf);
+    }
     if (ret == DPS_OK) {
-        ret = DecodeRequest(node, rxBuf);
+        ret = DecodeRequest(node, from, rxBuf);
     }
     return ret;
 }
@@ -145,7 +148,7 @@ DPS_Status DPS_Start(DPS_Node* node)
     if (status != DPS_OK) {
         return status;
     }
-    status = DPS_MCastStart(node, OnMcastReceive);
+    status = DPS_NetworkStart(node, OnReceive);
     if (status != DPS_OK) {
         return status;
     }

@@ -79,6 +79,31 @@ static inline uint32_t COUNT_TZ(uint64_t n)
 
 #define FH_BITVECTOR_LEN  (4 * sizeof(uint64_t))
 
+#ifdef DPS_DEBUG
+/*
+ * This is a compressed bit dump - it groups bits to keep
+ * the total output readable. This is usually more useful
+ * than dumping raw 8K long bit vectors.
+ */
+static void CompressedBitDump(const chunk_t* data, size_t bits)
+{
+    size_t stride = bits <= 256 ? 2 : bits / 128;
+    size_t i;
+    for (i = 0; i < bits; i += stride) {
+        int bit = 0;
+        int j;
+        for (j = 0; j < stride; ++j) {
+            if (TEST_BIT(data, i + j)) {
+                bit = 1;
+                break;
+            }
+        }
+        fprintf(stdout, bit ? "1" : "0");
+    }
+    fprintf(stdout, "\n");
+}
+#endif
+
 int DPS_BitVectorIsClear(DPS_BitVector* bv)
 {
     size_t i;
@@ -115,7 +140,7 @@ void DPS_BitVectorBloomInsert(DPS_BitVector* bv, const uint8_t* data, size_t len
     uint32_t index;
 
     DPS_Sha2((uint8_t*)hashes, data, len);
-#if 0
+#if 1
     DPS_PRINT("%.*s   (%zu)\n", (int)len, data, len);
 #endif
     for (h = 0; h < BITVEC_CONFIG_HASHES; ++h) {
@@ -193,30 +218,24 @@ int DPS_BitVectorIncludes(const DPS_BitVector* bv1, const DPS_BitVector* bv2)
     return b1un != 0;
 }
 
-DPS_Status DPS_BitVectorFuzzyHash(DPS_FHBitVector* hash, DPS_BitVector* bv)
+void DPS_BitVectorFuzzyHash(DPS_FHBitVector* hash, DPS_BitVector* bv)
 {
-   size_t i;
+    size_t i;
     chunk_t s = 0;
     chunk_t p;
-    uint32_t popCount;
+    uint32_t popCount = 0;
 
-    if (!hash || !bv) {
-        return DPS_ERR_NULL;
-    }
-    popCount = DPS_BitVectorPopCount(bv);
-    if (popCount != 0) {
-        /*
-         * Squash the bit vector into 64 bits
-         */
-        for (i = 0; i < NUM_CHUNKS; ++i) {
-            chunk_t n = bv->bits[i];
-            popCount += POPCOUNT(n);
-            s |= n;
-        }
+    /*
+     * Squash the bit vector into 64 bits
+     */
+    for (i = 0; i < NUM_CHUNKS; ++i) {
+        chunk_t n = bv->bits[i];
+        popCount += POPCOUNT(n);
+        s |= n;
     }
     if (popCount == 0) {
         memset(hash, 0, sizeof(DPS_FHBitVector));
-        return DPS_OK;
+        return;
     }
     p = s;
     p |= ROTL64(p, 7);
@@ -238,7 +257,7 @@ DPS_Status DPS_BitVectorFuzzyHash(DPS_FHBitVector* hash, DPS_BitVector* bv)
     } else {
         hash->bits[3] = (1ull << popCount) - 1;
     }
-    return DPS_OK;
+    CompressedBitDump(hash->bits, FH_BITVECTOR_LEN * 8);
 }
 
 DPS_Status DPS_BitVectorUnion(DPS_BitVector* bvOut, DPS_BitVector* bv)
@@ -511,7 +530,7 @@ static uint32_t RLESize(DPS_BitVector* bv)
      * If the first pass doesn't compress by at least 50% try compressing the
      * complement and take the smaller of the two if compression is effective.
      */
-     while (1) {
+    while (1) {
         uint32_t rleSize = 0;
         for (i = 0; i < NUM_CHUNKS; ++i) {
             uint32_t rem0;
@@ -593,7 +612,7 @@ DPS_Status DPS_BitVectorSerialize(DPS_BitVector* bv, DPS_TxBuffer* buffer)
 
 size_t DPS_FHBitVectorSerializedSize(DPS_FHBitVector* bv)
 {
-    return CBOR_SIZEOF_BYTES(FH_BITVECTOR_LEN / 8);
+    return CBOR_SIZEOF_BYTES(FH_BITVECTOR_LEN);
 }
 
 DPS_Status DPS_FHBitVectorDeserialize(DPS_FHBitVector* bv, DPS_RxBuffer* buffer)
@@ -691,31 +710,6 @@ size_t DPS_BitVectorSerializedSize(DPS_BitVector* bv)
         CBOR_SIZEOF_BYTES(rleLen);
 }
 
-#ifdef DPS_DEBUG
-/*
- * This is a compressed bit dump - it groups bits to keep
- * the total output readable. This is usually more useful
- * than dumping raw 8K long bit vectors.
- */
-static void CompressedBitDump(const chunk_t* data)
-{
-    size_t stride = BITVEC_CONFIG_BIT_LEN / 128;
-    size_t i;
-    for (i = 0; i < BITVEC_CONFIG_BIT_LEN; i += stride) {
-        int bit = 0;
-        int j;
-        for (j = 0; j < stride; ++j) {
-            if (TEST_BIT(data, i + j)) {
-                bit = 1;
-                break;
-            }
-        }
-        fprintf(stdout, bit ? "1" : "0");
-    }
-    fprintf(stdout, "\n");
-}
-#endif
-
 void DPS_BitVectorDump(DPS_BitVector* bv, int dumpBits)
 {
     if (DPS_DEBUG_ENABLED()) {
@@ -724,7 +718,7 @@ void DPS_BitVectorDump(DPS_BitVector* bv, int dumpBits)
         DPS_PRINT("Loading = %.2f%%\n", (100.0 * DPS_BitVectorPopCount(bv) + 1.0) / BITVEC_CONFIG_BIT_LEN);
 #ifdef DPS_DEBUG
         if (dumpBits) {
-            CompressedBitDump(bv->bits);
+            CompressedBitDump(bv->bits, BITVEC_CONFIG_BIT_LEN);
         }
 #endif
     }

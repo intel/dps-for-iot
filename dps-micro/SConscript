@@ -81,6 +81,7 @@ testsrcs = [
             'test/bitvec_unit_test.c',
             'test/mcast_unit_test.c',
             'test/pub_unit_test.c',
+            'test/sub_unit_test.c',
             'test/topic_match.c',
             'test/topics_unit_test.c'
             ]

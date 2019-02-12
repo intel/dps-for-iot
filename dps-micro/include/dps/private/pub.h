@@ -33,6 +33,7 @@
 #include <dps/private/dps.h>
 #include <dps/private/cose.h>
 #include <dps/private/bitvec.h>
+#include <dps/private/node.h>
 #include <dps/uuid.h>
 
 #ifdef __cplusplus
@@ -105,17 +106,30 @@ DPS_Status DPS_InitPublication(DPS_Node* node,
  *
  * @return DPS_OK if decoding and processing is successful, an error otherwise
  */
-DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_RxBuffer* buf);
+DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NodeAddress* from, DPS_RxBuffer* buf);
 
 /**
  * Send a publication
  *
- * @param node      The local node
  * @param pub       The publication to send
+ * @param data      An optional payload to send with the publication
+ * @param len       Size of the payload
+ * @param ttl       Time for the publication to remain deliverable
  *
  * @return DPS_OK if sending is successful, an error otherwise
  */
 DPS_Status DPS_Publish(DPS_Publication* pub, const uint8_t* data, size_t len, int16_t ttl);
+
+/**
+  * Send an acknowledgement for a publication
+  *
+  * @param pub       The publication to acknowledge
+  * @param data      An optional payload to send with the acknowledgment
+  * @param len       Size of the payload
+  *
+  * @return DPS_OK if sending is successful, an error otherwise
+  */
+DPS_Status DPS_AckPublication(const DPS_Publication* pub, const uint8_t* data, size_t len);
 
 #ifdef __cplusplus
 }
