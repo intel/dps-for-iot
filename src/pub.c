@@ -878,8 +878,9 @@ static void OnMulticastSendComplete(DPS_MulticastSender* sender, void* appCtx, u
     DPS_OnSendComplete(node, NULL, NULL, bufs, 1, status);
 }
 
-DPS_Status DPS_SendPublication(DPS_Node* node, DPS_Publication* pub, RemoteNode* remote)
+DPS_Status DPS_SendPublication(DPS_Publication* pub, RemoteNode* remote)
 {
+    DPS_Node* node = pub->node;
     DPS_Status ret;
     DPS_TxBuffer buf;
     size_t len;

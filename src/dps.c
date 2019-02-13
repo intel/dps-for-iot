@@ -602,8 +602,9 @@ void DPS_OnSendSubscriptionComplete(DPS_Node* node, void* appCtx, DPS_NetEndpoin
     DPS_NetFreeBufs(bufs, numBufs);
 }
 
-static DPS_Status SendMatchingPubToSub(DPS_Node* node, DPS_Publication* pub, RemoteNode* subscriber)
+static DPS_Status SendMatchingPubToSub(DPS_Publication* pub, RemoteNode* subscriber)
 {
+    DPS_Node* node = pub->node;
     /*
      * We don't send publications to remote nodes we have received them from.
      */
@@ -616,7 +617,7 @@ static DPS_Status SendMatchingPubToSub(DPS_Node* node, DPS_Publication* pub, Rem
         DPS_BitVectorFuzzyHash(node->scratch.needs, node->scratch.interests);
         if (DPS_BitVectorIncludes(node->scratch.needs, subscriber->inbound.needs)) {
             DPS_DBGPRINT("Sending pub %d to %s\n", pub->sequenceNum, DESCRIBE(subscriber));
-            return DPS_SendPublication(node, pub, subscriber);
+            return DPS_SendPublication(pub, subscriber);
         }
         DPS_DBGPRINT("Rejected pub %d for %s\n", pub->sequenceNum, DESCRIBE(subscriber));
     }
@@ -676,7 +677,7 @@ static void SendPubsTask(uv_async_t* handle)
                  */
                 for (sub = node->subscriptions; sub != NULL; sub = sub->next) {
                     if (DPS_BitVectorIncludes(pub->bf, sub->bf)) {
-                        ret = DPS_SendPublication(node, pub, LoopbackNode);
+                        ret = DPS_SendPublication(pub, LoopbackNode);
                         if (ret != DPS_OK) {
                             DPS_ERRPRINT("SendPublication (loopback) returned %s\n", DPS_ErrTxt(ret));
                         }
@@ -687,7 +688,7 @@ static void SendPubsTask(uv_async_t* handle)
                  * If the node is a multicast sender local publications are always multicast
                  */
                 if (node->mcastSender) {
-                    ret = DPS_SendPublication(node, pub, NULL);
+                    ret = DPS_SendPublication(pub, NULL);
                     if (ret != DPS_OK) {
                         DPS_ERRPRINT("SendPublication (multicast) returned %s\n", DPS_ErrTxt(ret));
                     }
@@ -697,7 +698,7 @@ static void SendPubsTask(uv_async_t* handle)
                 nextRemote = remote->next;
                 DPS_DBGPRINT("%s muted=%d/%d,interests=%p\n", DESCRIBE(remote), remote->outbound.muted, remote->inbound.muted, remote->inbound.interests);
                 if (!(remote->outbound.muted || remote->inbound.muted) && remote->inbound.interests) {
-                    ret = SendMatchingPubToSub(node, pub, remote);
+                    ret = SendMatchingPubToSub(pub, remote);
                     if (ret != DPS_OK) {
                         DPS_DeleteRemoteNode(node, remote);
                         DPS_ERRPRINT("SendMatchingPubToSub failed %s\n", DPS_ErrTxt(ret));
