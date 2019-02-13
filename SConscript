@@ -56,7 +56,8 @@ srcs = ['src/bitvec.c',
         'src/ec.c',
         'src/hkdf.c',
         'src/keywrap.c',
-        'src/mbedtls.c']
+        'src/mbedtls.c',
+        'src/queue.c']
 
 if env['transport'] == 'udp':
     srcs.extend(['src/multicast/network.c',
