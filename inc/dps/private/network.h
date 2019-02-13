@@ -81,7 +81,8 @@ void DPS_NetFreeBufs(uv_buf_t* bufs, size_t numBufs);
  * - DPS_OK if the message was correctly parsed
  * - An error code indicating the data received was invalid
  */
-typedef DPS_Status (*DPS_OnReceive)(DPS_Node* node, DPS_NetEndpoint* endpoint, DPS_Status status, const uint8_t* data, size_t len);
+typedef DPS_Status (*DPS_OnReceive)(DPS_Node* node, DPS_NetEndpoint* endpoint, DPS_Status status,
+                                    const uint8_t* data, size_t len);
 
 /**
  * Set the port number on a network endpoint.
@@ -151,12 +152,13 @@ void DPS_MulticastStopSend(DPS_MulticastSender* sender);
  *
  * @param sender   Opaque pointer to the struct holding the state of the multicast sender
  * @param appCtx   Application context pointer that was passed into DPS_MulticastSend()
- * @param bufs     Array holding pointers to the buffers passed in the send API call. The data in these buffers
- *                 can now be freed.
+ * @param bufs     Array holding pointers to the buffers passed in the send API call. The data in these
+ *                 buffers can now be freed.
  * @param numBufs  The length of the bufs array
  * @param status   Indicates if the send was successful or not
  */
-typedef void (*DPS_MulticastSendComplete)(DPS_MulticastSender* sender, void* appCtx, uv_buf_t* bufs, size_t numBufs, DPS_Status status);
+typedef void (*DPS_MulticastSendComplete)(DPS_MulticastSender* sender, void* appCtx, uv_buf_t* bufs,
+                                          size_t numBufs, DPS_Status status);
 
 /**
  * Multicast some data.
@@ -165,14 +167,16 @@ typedef void (*DPS_MulticastSendComplete)(DPS_MulticastSender* sender, void* app
  * @param appCtx          An application context to be passed to the send complete callback
  * @param bufs            Data buffers to send
  * @param numBufs         Number of buffers to send
- * @param sendCompleteCB  Function called when the send is complete so the content of the data buffers can be freed.
+ * @param sendCompleteCB  Function called when the send is complete so the content of the data buffers
+ *                        can be freed.
  *
  * @return
  * - DPS_OK if send is successful,
  * - DPS_ERR_NO_ROUTE if no interfaces are usable for multicast,
  * - an error otherwise
  */
-DPS_Status DPS_MulticastSend(DPS_MulticastSender* sender, void* appCtx, uv_buf_t* bufs, size_t numBufs, DPS_MulticastSendComplete sendCompleteCB);
+DPS_Status DPS_MulticastSend(DPS_MulticastSender* sender, void* appCtx, uv_buf_t* bufs, size_t numBufs,
+                             DPS_MulticastSendComplete sendCompleteCB);
 
 /**
  * Start listening and receiving data
@@ -206,29 +210,36 @@ void DPS_NetStop(DPS_NetContext* netCtx);
  * Prototype for function called when a send completes.
  *
  * @param node     Opaque pointer to the DPS node
- * @param appCtx   Application context pointer that was passed into DPS_NetSend()
+ * @param appCtx   Application context pointer that was passed into
+ *                 DPS_NetSend()
  * @param endpoint The endpoint for which the send was complete
- * @param bufs     Array holding pointers to the buffers passed in the send API call. The data in these buffers
- *                 can now be freed.
+ * @param bufs     Array holding pointers to the buffers passed in the
+ *                 send API call. The data in these buffers can now be
+ *                 freed.
  * @param numBufs  The length of the bufs array
  * @param status   Indicates if the send was successful or not
  */
-typedef void (*DPS_NetSendComplete)(DPS_Node* node, void* appCtx, DPS_NetEndpoint* endpoint, uv_buf_t* bufs, size_t numBufs, DPS_Status status);
+typedef void (*DPS_NetSendComplete)(DPS_Node* node, void* appCtx, DPS_NetEndpoint* endpoint,
+                                    uv_buf_t* bufs, size_t numBufs, DPS_Status status);
 
 /**
  * Send data to a specific endpoint.
  *
  * @param node            Pointer to the DPS node
- * @param appCtx          An application context to be passed to the send complete callback
- * @param endpoint        The endpoint to send to - note this may be updated with connection state
- *                        information.
- * @param bufs            Data buffers to send, the data in the buffers must be live until the send completes.
+ * @param appCtx          An application context to be passed to the send
+ *                        complete callback
+ * @param endpoint        The endpoint to send to - note this may be updated
+ *                        with connection state information.
+ * @param bufs            Data buffers to send, the data in the buffers must be
+ *                        live until the send completes.
  * @param numBufs         Number of buffers to send
- * @param sendCompleteCB  Function called when the send is complete so the content of the data buffers can be freed.
+ * @param sendCompleteCB  Function called when the send is complete so
+ *                        the content of the data buffers can be freed.
  *
  * @return DPS_OK if the send is successful, an error otherwise
  */
-DPS_Status DPS_NetSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* endpoint, uv_buf_t* bufs, size_t numBufs, DPS_NetSendComplete sendCompleteCB);
+DPS_Status DPS_NetSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* endpoint,
+                       uv_buf_t* bufs, size_t numBufs, DPS_NetSendComplete sendCompleteCB);
 
 /**
  * Increment the reference count to potentially keeping a underlying connection alive. This is only
