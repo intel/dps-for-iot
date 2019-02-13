@@ -334,7 +334,7 @@ DPS_Status CoAP_Wrap(uv_buf_t* bufs, size_t numBufs)
     for (i = 1; i < numBufs; ++i) {
         len += bufs[i].len;
     }
-    ret =  CoAP_Compose(COAP_CODE(COAP_REQUEST, COAP_PUT), opts, A_SIZEOF(opts), len, &coap);
+    ret = CoAP_Compose(COAP_CODE(COAP_REQUEST, COAP_PUT), opts, A_SIZEOF(opts), len, &coap);
     if (ret == DPS_OK) {
         bufs[0].base = (void*)coap.base;
         bufs[0].len = DPS_TxBufferUsed(&coap);

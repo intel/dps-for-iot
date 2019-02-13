@@ -410,17 +410,20 @@ static void MulticastSendComplete(uv_udp_send_t* req, int status)
     }
     if (--send->numTx == 0) {
         if (send->onSendComplete) {
-            send->onSendComplete(send->sender, send->appCtx, send->bufs, send->numBufs, send->ret);
+            send->onSendComplete(send->sender, send->appCtx, &send->bufs[1], send->numBufs - 1, send->ret);
         }
+        DPS_NetFreeBufs(send->bufs, 1);
         free(send);
     }
     free(req);
 }
 
-DPS_Status DPS_MulticastSend(DPS_MulticastSender* sender, void* appCtx, uv_buf_t* bufs, size_t numBufs, DPS_MulticastSendComplete sendCompleteCB)
+DPS_Status DPS_MulticastSend(DPS_MulticastSender* sender, void* appCtx, uv_buf_t* bufs, size_t numBufs,
+                             DPS_MulticastSendComplete sendCompleteCB)
 {
     MulticastSend* send = NULL;
     size_t i;
+    DPS_Status ret;
 
 #ifdef DPS_DEBUG
     size_t len = 0;
@@ -437,7 +440,7 @@ DPS_Status DPS_MulticastSend(DPS_MulticastSender* sender, void* appCtx, uv_buf_t
         return DPS_ERR_NO_ROUTE;
     }
 
-    send = malloc(sizeof(MulticastSend) + (numBufs - 1) * sizeof(uv_buf_t));
+    send = malloc(sizeof(MulticastSend) + numBufs * sizeof(uv_buf_t));
     if (!send) {
         return DPS_ERR_RESOURCES;
     }
@@ -446,8 +449,13 @@ DPS_Status DPS_MulticastSend(DPS_MulticastSender* sender, void* appCtx, uv_buf_t
     send->onSendComplete = sendCompleteCB;
     send->ret = DPS_OK;
     send->numTx = 0;
-    memcpy_s(send->bufs, numBufs * sizeof(uv_buf_t), bufs, numBufs * sizeof(uv_buf_t));
-    send->numBufs = numBufs;
+    memcpy_s(&send->bufs[1], numBufs * sizeof(uv_buf_t), bufs, numBufs * sizeof(uv_buf_t));
+    send->numBufs = numBufs + 1;
+    ret = CoAP_Wrap(send->bufs, send->numBufs);
+    if (ret != DPS_OK) {
+        free(send);
+        return ret;
+    }
 
     /*
      * Send on each interface
@@ -473,12 +481,15 @@ DPS_Status DPS_MulticastSend(DPS_MulticastSender* sender, void* appCtx, uv_buf_t
         }
         sendReq->data = send;
 
-        ret = uv_udp_send(sendReq, &sender->udpTx[i].udp, send->bufs, (unsigned int)numBufs, (struct sockaddr*)&addr, MulticastSendComplete);
+        ret = uv_udp_send(sendReq, &sender->udpTx[i].udp, send->bufs, (unsigned int)send->numBufs,
+                          (struct sockaddr*)&addr, MulticastSendComplete);
         if (ret) {
-            DPS_ERRPRINT("uv_udp_send to %s failed: %s\n", DPS_NetAddrText((struct sockaddr*)&addr), uv_err_name(ret));
+            DPS_ERRPRINT("uv_udp_send to %s failed: %s\n", DPS_NetAddrText((struct sockaddr*)&addr),
+                         uv_err_name(ret));
             free(sendReq);
         } else {
-            DPS_DBGPRINT("DPS_MulticastSend total %zu bytes to %s\n", len, DPS_NetAddrText((struct sockaddr*)&addr));
+            DPS_DBGPRINT("DPS_MulticastSend total %zu bytes to %s\n", len,
+                         DPS_NetAddrText((struct sockaddr*)&addr));
             ++send->numTx;
         }
     }
@@ -486,6 +497,7 @@ DPS_Status DPS_MulticastSend(DPS_MulticastSender* sender, void* appCtx, uv_buf_t
         /*
          * Not a single send was successful
          */
+        DPS_NetFreeBufs(send->bufs, 1);
         free(send);
         return DPS_ERR_NETWORK;
     }

@@ -873,9 +873,9 @@ static void OnMulticastSendComplete(DPS_MulticastSender* sender, void* appCtx, u
 
     OnSendComplete(node, pub);
     /*
-     * Only the first two buffers can be freed - we don't own the others
+     * Only the first buffer can be freed here
      */
-    DPS_OnSendComplete(node, NULL, NULL, bufs, 2, status);
+    DPS_OnSendComplete(node, NULL, NULL, bufs, 1, status);
 }
 
 DPS_Status DPS_SendPublication(DPS_Node* node, DPS_Publication* pub, RemoteNode* remote, int loopback)
@@ -945,13 +945,12 @@ DPS_Status DPS_SendPublication(DPS_Node* node, DPS_Publication* pub, RemoteNode*
      */
     if (ret == DPS_OK) {
         uv_buf_t bufs[] = {
-            uv_buf_init(NULL, 0),
             uv_buf_init((char*)buf.base, DPS_TxBufferUsed(&buf)),
             uv_buf_init((char*)pub->protectedBuf.base, DPS_TxBufferUsed(&pub->protectedBuf)),
             uv_buf_init((char*)pub->encryptedBuf.base, DPS_TxBufferUsed(&pub->encryptedBuf)),
         };
         if (remote) {
-            ret = DPS_NetSend(node, pub, &remote->ep, bufs + 1, A_SIZEOF(bufs) - 1, OnNetSendComplete);
+            ret = DPS_NetSend(node, pub, &remote->ep, bufs, A_SIZEOF(bufs), OnNetSendComplete);
             if (ret == DPS_OK) {
                 /*
                  * Prevent the publication from being freed until the send completes.
@@ -966,23 +965,20 @@ DPS_Status DPS_SendPublication(DPS_Node* node, DPS_Publication* pub, RemoteNode*
                 /*
                  * Only the first buffer can be freed here - we don't own the others
                  */
-                DPS_SendFailed(node, &remote->ep.addr, bufs + 1, 1, ret);
+                DPS_SendFailed(node, &remote->ep.addr, bufs, 1, ret);
             }
         } else if (loopback) {
-            ret = DPS_LoopbackSend(node, bufs + 1, A_SIZEOF(bufs) - 1);
+            ret = DPS_LoopbackSend(node, bufs, A_SIZEOF(bufs));
             /*
              * Only the first buffer can be freed here - we don't own the others
              */
             if (ret == DPS_OK) {
-                DPS_NetFreeBufs(bufs + 1, 1);
+                DPS_NetFreeBufs(bufs, 1);
             } else {
-                DPS_SendFailed(node, NULL, bufs + 1, 1, ret);
+                DPS_SendFailed(node, NULL, bufs, 1, ret);
             }
         } else {
-            ret = CoAP_Wrap(bufs, A_SIZEOF(bufs));
-            if (ret == DPS_OK) {
-                ret = DPS_MulticastSend(node->mcastSender, pub, bufs, A_SIZEOF(bufs), OnMulticastSendComplete);
-            }
+            ret = DPS_MulticastSend(node->mcastSender, pub, bufs, A_SIZEOF(bufs), OnMulticastSendComplete);
             if (ret == DPS_OK) {
                 /*
                  * Prevent the publication from being freed until the send completes.
@@ -990,9 +986,9 @@ DPS_Status DPS_SendPublication(DPS_Node* node, DPS_Publication* pub, RemoteNode*
                 DPS_PublicationIncRef(pub);
             } else {
                 /*
-                 * Only the first two buffers can be freed - we don't own the others
+                 * Only the first buffer can be freed - we don't own the others
                  */
-                DPS_SendFailed(node, NULL, bufs, 2, ret);
+                DPS_SendFailed(node, NULL, bufs, 1, ret);
             }
             if (ret == DPS_ERR_NO_ROUTE) {
                 /*
@@ -1015,7 +1011,8 @@ void DPS_ExpirePub(DPS_Node* node, DPS_Publication* pub)
         pub->flags &= ~PUB_FLAG_PUBLISH;
         pub->flags &= ~PUB_FLAG_EXPIRED;
     } else  {
-        DPS_DBGPRINT("Expiring %spub %s\n", pub->flags & PUB_FLAG_RETAINED ? "retained " : "", DPS_UUIDToString(&pub->pubId));
+        DPS_DBGPRINT("Expiring %spub %s\n", pub->flags & PUB_FLAG_RETAINED ? "retained " : "",
+                     DPS_UUIDToString(&pub->pubId));
         FreePublication(node, pub);
     }
 }
