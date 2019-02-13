@@ -878,7 +878,7 @@ static void OnMulticastSendComplete(DPS_MulticastSender* sender, void* appCtx, u
     DPS_OnSendComplete(node, NULL, NULL, bufs, 1, status);
 }
 
-DPS_Status DPS_SendPublication(DPS_Node* node, DPS_Publication* pub, RemoteNode* remote, int loopback)
+DPS_Status DPS_SendPublication(DPS_Node* node, DPS_Publication* pub, RemoteNode* remote)
 {
     DPS_Status ret;
     DPS_TxBuffer buf;
@@ -949,7 +949,17 @@ DPS_Status DPS_SendPublication(DPS_Node* node, DPS_Publication* pub, RemoteNode*
             uv_buf_init((char*)pub->protectedBuf.base, DPS_TxBufferUsed(&pub->protectedBuf)),
             uv_buf_init((char*)pub->encryptedBuf.base, DPS_TxBufferUsed(&pub->encryptedBuf)),
         };
-        if (remote) {
+        if (remote == LoopbackNode) {
+            ret = DPS_LoopbackSend(node, bufs, A_SIZEOF(bufs));
+            /*
+             * Only the first buffer can be freed here - we don't own the others
+             */
+            if (ret == DPS_OK) {
+                DPS_NetFreeBufs(bufs, 1);
+            } else {
+                DPS_SendFailed(node, NULL, bufs, 1, ret);
+            }
+        } else if (remote) {
             ret = DPS_NetSend(node, pub, &remote->ep, bufs, A_SIZEOF(bufs), OnNetSendComplete);
             if (ret == DPS_OK) {
                 /*
@@ -966,16 +976,6 @@ DPS_Status DPS_SendPublication(DPS_Node* node, DPS_Publication* pub, RemoteNode*
                  * Only the first buffer can be freed here - we don't own the others
                  */
                 DPS_SendFailed(node, &remote->ep.addr, bufs, 1, ret);
-            }
-        } else if (loopback) {
-            ret = DPS_LoopbackSend(node, bufs, A_SIZEOF(bufs));
-            /*
-             * Only the first buffer can be freed here - we don't own the others
-             */
-            if (ret == DPS_OK) {
-                DPS_NetFreeBufs(bufs, 1);
-            } else {
-                DPS_SendFailed(node, NULL, bufs, 1, ret);
             }
         } else {
             ret = DPS_MulticastSend(node->mcastSender, pub, bufs, A_SIZEOF(bufs), OnMulticastSendComplete);

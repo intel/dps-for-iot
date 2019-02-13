@@ -70,6 +70,12 @@ typedef struct _OnOpCompletion {
 
 const DPS_UUID DPS_MaxMeshId = { .val64 = { UINT64_MAX, UINT64_MAX } };
 
+/*
+ * We just need a unique pointer here to represent LoopbackNode.  The
+ * actual value doesn't matter since it is not a real RemoteNode.
+ */
+RemoteNode* LoopbackNode = (RemoteNode*)&LoopbackNode;
+
 static void SendSubsTimer(uv_timer_t* handle);
 
 void DPS_LockNode(DPS_Node* node)
@@ -610,7 +616,7 @@ static DPS_Status SendMatchingPubToSub(DPS_Node* node, DPS_Publication* pub, Rem
         DPS_BitVectorFuzzyHash(node->scratch.needs, node->scratch.interests);
         if (DPS_BitVectorIncludes(node->scratch.needs, subscriber->inbound.needs)) {
             DPS_DBGPRINT("Sending pub %d to %s\n", pub->sequenceNum, DESCRIBE(subscriber));
-            return DPS_SendPublication(node, pub, subscriber, DPS_FALSE);
+            return DPS_SendPublication(node, pub, subscriber);
         }
         DPS_DBGPRINT("Rejected pub %d for %s\n", pub->sequenceNum, DESCRIBE(subscriber));
     }
@@ -670,7 +676,7 @@ static void SendPubsTask(uv_async_t* handle)
                  */
                 for (sub = node->subscriptions; sub != NULL; sub = sub->next) {
                     if (DPS_BitVectorIncludes(pub->bf, sub->bf)) {
-                        ret = DPS_SendPublication(node, pub, NULL, DPS_TRUE);
+                        ret = DPS_SendPublication(node, pub, LoopbackNode);
                         if (ret != DPS_OK) {
                             DPS_ERRPRINT("SendPublication (loopback) returned %s\n", DPS_ErrTxt(ret));
                         }
@@ -681,7 +687,7 @@ static void SendPubsTask(uv_async_t* handle)
                  * If the node is a multicast sender local publications are always multicast
                  */
                 if (node->mcastSender) {
-                    ret = DPS_SendPublication(node, pub, NULL, DPS_FALSE);
+                    ret = DPS_SendPublication(node, pub, NULL);
                     if (ret != DPS_OK) {
                         DPS_ERRPRINT("SendPublication (multicast) returned %s\n", DPS_ErrTxt(ret));
                     }

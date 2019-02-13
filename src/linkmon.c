@@ -191,7 +191,7 @@ static void OnProbeTimeout(uv_timer_t* handle)
         ret = DPS_SerializePub(monitor->node, monitor->pub, NULL, 0, 0);
         if (ret == DPS_OK) {
             DPS_DBGPRINT("Send link probe from %d to %s\n", monitor->node->port, DESCRIBE(monitor->remote));
-            ret = DPS_SendPublication(monitor->node, monitor->pub, monitor->remote, DPS_FALSE);
+            ret = DPS_SendPublication(monitor->node, monitor->pub, monitor->remote);
             /*
              * We have to delete the publication history for the probe otherwise
              * it will look like a duplicate and will be discarded.

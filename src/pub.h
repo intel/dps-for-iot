@@ -115,12 +115,12 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
  *
  * @param node      The local node
  * @param pub       The publication to send
- * @param remote    The remote node to send the publication to, NULL for multicast
- * @param loopback  DPS_TRUE if publication should be looped back
+ * @param remote    The remote node to send the publication to,
+ *                  LoopbackNode for loopback, or NULL for multicast
  *
  * @return DPS_OK if sending is successful, an error otherwise
  */
-DPS_Status DPS_SendPublication(DPS_Node* node, DPS_Publication* pub, RemoteNode* remote, int loopback);
+DPS_Status DPS_SendPublication(DPS_Node* node, DPS_Publication* pub, RemoteNode* remote);
 
 /**
  * When a ttl expires retained publications are freed, local
