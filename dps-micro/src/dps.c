@@ -31,6 +31,7 @@
 #include <dps/private/coap.h>
 #include <dps/private/pub.h>
 #include <dps/private/sub.h>
+#include <dps/private/ack.h>
 #include <dps/uuid.h>
 
 /*
@@ -90,14 +91,12 @@ static DPS_Status DecodeRequest(DPS_Node* node, DPS_NodeAddress* from, DPS_RxBuf
             DPS_DBGPRINT("DPS_DecodeSubscriptionAck returned %s\n", DPS_ErrTxt(ret));
         }
         break;
-#if 0
     case DPS_MSG_TYPE_ACK:
-        ret = DPS_DecodeAcknowledgement(node, ep, buf);
+        ret = DPS_DecodeAcknowledgement(node, from, buf);
         if (ret != DPS_OK) {
             DPS_DBGPRINT("DPS_DecodeAcknowledgement returned %s\n", DPS_ErrTxt(ret));
         }
         break;
-#endif
     default:
         DPS_ERRPRINT("Invalid message type\n");
         break;

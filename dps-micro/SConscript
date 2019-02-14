@@ -23,6 +23,7 @@ elif platform == 'posix':
 libenv.Install('#/build/dist/include/dps', libenv.Glob('#/include/dps/*.h'))
 
 srcs = [
+        'src/ack.c',
         'src/bitvec.c',
         'src/dps.c',
         'src/coap.c',
