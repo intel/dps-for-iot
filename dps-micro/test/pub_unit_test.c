@@ -21,6 +21,7 @@
  */
 #include "test.h"
 #include "keys.h"
+#include <ctype.h>
 #include <dps/dps.h>
 #include <dps/targets.h>
 #include <dps/private/dps.h>
