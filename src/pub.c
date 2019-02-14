@@ -739,6 +739,7 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
             return DPS_ERR_RESOURCES;
         }
         memcpy_s(&pub->pubId, sizeof(pub->pubId), &pubId, sizeof(DPS_UUID));
+        DPS_QueueInit(&pub->sendCompletedQueue);
         /*
          * Link in the pub
          */
@@ -848,37 +849,57 @@ Exit:
     return ret;
 }
 
-static void OnSendComplete(DPS_Node* node, DPS_Publication* pub)
+static void SendComplete(DPS_SendPublicationRequest* req, DPS_NetEndpoint* ep, uv_buf_t* bufs, size_t numBufs,
+                         DPS_Status status)
 {
+    DPS_Publication* pub = req->pub;
+    DPS_Node* node = pub->node;
+    RemoteNode* remote;
+
+    req->status = status;
+    DPS_QueuePushBack(&pub->sendCompletedQueue, &req->queue);
+    if (ep && (req->status != DPS_OK)) {
+        remote = DPS_LookupRemoteNode(node, &ep->addr);
+        if (remote) {
+            DPS_DBGPRINT("Removing node %s\n", DPS_NodeAddrToString(&ep->addr));
+            DPS_DeleteRemoteNode(node, remote);
+        }
+    }
+    /*
+     * Only the first buffer can be freed here - we don't own the others
+     */
+    if (numBufs > 0) {
+        DPS_NetFreeBufs(bufs, 1);
+    }
+}
+
+static void OnNetSendComplete(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf_t* bufs,
+                              size_t numBufs, DPS_Status status)
+{
+    DPS_SendPublicationRequest* req = appCtx;
+    DPS_Publication* pub = req->pub;
     DPS_LockNode(node);
+    SendComplete(req, ep, bufs, numBufs, status);
+    DPS_SendPublicationCompletion(pub);
     DPS_PublicationDecRef(pub);
     DPS_UnlockNode(node);
 }
 
-static void OnNetSendComplete(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf_t* bufs, size_t numBufs, DPS_Status status)
+static void OnMulticastSendComplete(DPS_MulticastSender* sender, void* appCtx, uv_buf_t* bufs,
+                                    size_t numBufs, DPS_Status status)
 {
-    DPS_Publication* pub = (DPS_Publication*)appCtx;
-
-    OnSendComplete(node, pub);
-    /*
-     * Only the first buffer can be freed here
-     */
-    DPS_OnSendComplete(node, NULL, ep, bufs, 1, status);
-}
-
-static void OnMulticastSendComplete(DPS_MulticastSender* sender, void* appCtx, uv_buf_t* bufs, size_t numBufs, DPS_Status status)
-{
-    DPS_Publication* pub = (DPS_Publication*)appCtx;
+    DPS_SendPublicationRequest* req = appCtx;
+    DPS_Publication* pub = req->pub;
     DPS_Node* node = pub->node;
-
-    OnSendComplete(node, pub);
-    /*
-     * Only the first buffer can be freed here
-     */
-    DPS_OnSendComplete(node, NULL, NULL, bufs, 1, status);
+    DPS_LockNode(node);
+    SendComplete(req, NULL, bufs, numBufs, status);
+    DPS_SendPublicationCompletion(pub);
+    DPS_PublicationDecRef(pub);
+    DPS_UnlockNode(node);
 }
 
-DPS_Status DPS_SendPublication(DPS_Publication* pub, RemoteNode* remote)
+DPS_Status DPS_SendPublication(DPS_SendPublicationRequest* request, DPS_Publication* pub, RemoteNode* remote,
+                               DPS_SendPublicationComplete sendCompleteCB)
 {
     DPS_Node* node = pub->node;
     DPS_Status ret;
@@ -891,6 +912,10 @@ DPS_Status DPS_SendPublication(DPS_Publication* pub, RemoteNode* remote)
     if (!node->netCtx) {
         return DPS_ERR_NETWORK;
     }
+
+    request->pub = pub;
+    request->sendCompleteCB = sendCompleteCB;
+
     if (pub->flags & PUB_FLAG_RETAINED) {
         if (pub->flags & PUB_FLAG_EXPIRED) {
             ttl = -1;
@@ -902,6 +927,7 @@ DPS_Status DPS_SendPublication(DPS_Publication* pub, RemoteNode* remote)
              * silently ignore the publication.
              */
             if (ttl <= 0) {
+                SendComplete(request, NULL, NULL, 0, DPS_OK);
                 return DPS_OK;
             }
         }
@@ -952,16 +978,9 @@ DPS_Status DPS_SendPublication(DPS_Publication* pub, RemoteNode* remote)
         };
         if (remote == LoopbackNode) {
             ret = DPS_LoopbackSend(node, bufs, A_SIZEOF(bufs));
-            /*
-             * Only the first buffer can be freed here - we don't own the others
-             */
-            if (ret == DPS_OK) {
-                DPS_NetFreeBufs(bufs, 1);
-            } else {
-                DPS_SendFailed(node, NULL, bufs, 1, ret);
-            }
+            SendComplete(request, NULL, bufs, A_SIZEOF(bufs), ret);
         } else if (remote) {
-            ret = DPS_NetSend(node, pub, &remote->ep, bufs, A_SIZEOF(bufs), OnNetSendComplete);
+            ret = DPS_NetSend(node, request, &remote->ep, bufs, A_SIZEOF(bufs), OnNetSendComplete);
             if (ret == DPS_OK) {
                 /*
                  * Prevent the publication from being freed until the send completes.
@@ -973,37 +992,38 @@ DPS_Status DPS_SendPublication(DPS_Publication* pub, RemoteNode* remote)
                 DPS_UpdatePubHistory(&node->history, &pub->pubId, pub->sequenceNum,
                                      pub->ackRequested, PUB_TTL(node, pub), &remote->ep.addr);
             } else {
-                /*
-                 * Only the first buffer can be freed here - we don't own the others
-                 */
-                DPS_SendFailed(node, &remote->ep.addr, bufs, 1, ret);
+                SendComplete(request, &remote->ep, bufs, A_SIZEOF(bufs), ret);
             }
         } else {
-            ret = DPS_MulticastSend(node->mcastSender, pub, bufs, A_SIZEOF(bufs), OnMulticastSendComplete);
+            ret = DPS_MulticastSend(node->mcastSender, request, bufs, A_SIZEOF(bufs), OnMulticastSendComplete);
             if (ret == DPS_OK) {
-                /*
-                 * Prevent the publication from being freed until the send completes.
-                 */
                 DPS_PublicationIncRef(pub);
             } else {
-                /*
-                 * Only the first buffer can be freed - we don't own the others
-                 */
-                DPS_SendFailed(node, NULL, bufs, 1, ret);
-            }
-            if (ret == DPS_ERR_NO_ROUTE) {
-                /*
-                 * Rewrite the error to make DPS_SendPublication a no-op when
-                 * there are no multicast interfaces available.
-                 */
                 DPS_WARNPRINT("DPS_MulticastSend failed - %s\n", DPS_ErrTxt(ret));
-                ret = DPS_OK;
+                if (ret == DPS_ERR_NO_ROUTE) {
+                    /*
+                     * Rewrite the error to make DPS_SendPublication a no-op when
+                     * there are no multicast interfaces available.
+                     */
+                    ret = DPS_OK;
+                }
+                SendComplete(request, NULL, bufs, A_SIZEOF(bufs), ret);
             }
         }
     } else {
         DPS_TxBufferFree(&buf);
     }
     return ret;
+}
+
+void DPS_SendPublicationCompletion(DPS_Publication* pub)
+{
+    while (!DPS_QueueEmpty(&pub->sendCompletedQueue)) {
+        DPS_SendPublicationRequest* req =
+            (DPS_SendPublicationRequest*)DPS_QueueFront(&pub->sendCompletedQueue);
+        DPS_QueueRemove(&req->queue);
+        req->sendCompleteCB(req, req->status);
+    }
 }
 
 void DPS_ExpirePub(DPS_Node* node, DPS_Publication* pub)
@@ -1036,6 +1056,7 @@ DPS_Publication* DPS_CreatePublication(DPS_Node* node)
     }
     DPS_GenerateUUID(&pub->pubId);
     pub->node = node;
+    DPS_QueueInit(&pub->sendCompletedQueue);
     return pub;
 }
 

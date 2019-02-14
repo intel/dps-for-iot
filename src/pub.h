@@ -32,6 +32,7 @@
 #include <stddef.h>
 #include <dps/private/dps.h>
 #include "node.h"
+#include "queue.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -73,6 +74,7 @@ typedef struct _DPS_Publication {
     COSE_Entity sender;             /**< Publication sender ID */
     DPS_NodeAddress senderAddr;     /**< For retained messages - the sender address */
     COSE_Entity ack;                /**< For ack messages - the ack sender ID */
+    DPS_Queue sendCompletedQueue;   /**< Completed publication send requests */
 
     uint8_t flags;                  /**< Internal state flags */
     uint8_t checkToSend;            /**< TRUE if this publication should be checked to send */
@@ -110,16 +112,48 @@ void DPS_UpdatePubs(DPS_Node* node, DPS_Publication* pub);
  */
 DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuffer* buffer, int multicast);
 
+typedef struct _DPS_SendPublicationRequest DPS_SendPublicationRequest;
+
+/**
+ * Called when DPS_SendPublication() completes.
+ *
+ * @param req The request
+ * @param status The status of the send.
+ */
+typedef void (*DPS_SendPublicationComplete)(DPS_SendPublicationRequest* req, DPS_Status status);
+
+/**
+ * A request to DPS_SendPublication
+ */
+typedef struct _DPS_SendPublicationRequest {
+    DPS_Queue queue;                            /**< Request queue */
+    void* data;                                 /**< Context pointer */
+    DPS_Publication* pub;                       /**< The publication */
+    DPS_SendPublicationComplete sendCompleteCB; /**< The completion callback */
+    DPS_Status status;                          /**< Result of the publication send */
+} DPS_SendPublicationRequest;
+
 /**
  * Multicast a publication or send it directly to a remote subscriber node
  *
- * @param pub       The publication to send
- * @param remote    The remote node to send the publication to,
- *                  LoopbackNode for loopback, or NULL for multicast
+ * @param request        The publication send request
+ * @param pub            The publication to send
+ * @param remote         The remote node to send the publication to,
+ *                       LoopbackNode for loopback, or NULL for multicast
+ * @param sendCompleteCB Function called when the send is complete so
+ *                       the content of the data buffers can be freed.
  *
  * @return DPS_OK if sending is successful, an error otherwise
  */
-DPS_Status DPS_SendPublication(DPS_Publication* pub, RemoteNode* remote);
+DPS_Status DPS_SendPublication(DPS_SendPublicationRequest* request, DPS_Publication* pub, RemoteNode* remote,
+                               DPS_SendPublicationComplete sendCompleteCB);
+
+/**
+ * Complete any finished send publication requests.
+ *
+ * @param pub The publication
+ */
+void DPS_SendPublicationCompletion(DPS_Publication* pub);
 
 /**
  * When a ttl expires retained publications are freed, local

@@ -145,10 +145,17 @@ void DPS_LinkMonitorStop(RemoteNode* remote)
     }
 }
 
+static void SendProbeComplete(DPS_SendPublicationRequest* req, DPS_Status status)
+{
+    DPS_DBGTRACEA("req=%p,status=%s\n", req, DPS_ErrTxt(status));
+    free(req);
+}
+
 static void OnProbeTimeout(uv_timer_t* handle)
 {
     DPS_Status ret = DPS_ERR_TIMEOUT;
     LinkMonitor* monitor = (LinkMonitor*)handle->data;
+    DPS_SendPublicationRequest* req = NULL;
 
     DPS_DBGTRACE();
 
@@ -189,20 +196,31 @@ static void OnProbeTimeout(uv_timer_t* handle)
          */
         ++monitor->pub->sequenceNum;
         ret = DPS_SerializePub(monitor->node, monitor->pub, NULL, 0, 0);
-        if (ret == DPS_OK) {
-            DPS_DBGPRINT("Send link probe from %d to %s\n", monitor->node->port, DESCRIBE(monitor->remote));
-            ret = DPS_SendPublication(monitor->pub, monitor->remote);
-            /*
-             * We have to delete the publication history for the probe otherwise
-             * it will look like a duplicate and will be discarded.
-             */
-            DPS_DeletePubHistory(&monitor->node->history, &monitor->pub->pubId);
+    }
+    if (ret == DPS_OK) {
+        DPS_DBGPRINT("Send link probe from %d to %s\n", monitor->node->port, DESCRIBE(monitor->remote));
+        req = malloc(sizeof(DPS_SendPublicationRequest));
+        if (!req) {
+            ret = DPS_ERR_RESOURCES;
         }
     }
-
+    if (ret == DPS_OK) {
+        ret = DPS_SendPublication(req, monitor->pub, monitor->remote, SendProbeComplete);
+        /*
+         * We have to delete the publication history for the probe otherwise
+         * it will look like a duplicate and will be discarded.
+         */
+        DPS_DeletePubHistory(&monitor->node->history, &monitor->pub->pubId);
+    }
     if (ret != DPS_OK) {
         DPS_DBGPRINT("Link probe failed on retry %d\n", monitor->retries);
         DPS_UnmuteRemoteNode(monitor->node, monitor->remote);
+    }
+
+    if (ret == DPS_OK) {
+        DPS_SendPublicationCompletion(monitor->pub);
+    } else {
+        free(req);
     }
 
     DPS_UnlockNode(monitor->node);
