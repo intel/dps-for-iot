@@ -34,6 +34,7 @@
 #include <dps/private/topics.h>
 #include <dps/private/cbor.h>
 #include <dps/private/coap.h>
+#include <dps/private/malloc.h>
 
 /*
  * Debug control for this module
@@ -366,6 +367,7 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NodeAddress* from, DPS_RxBu
     DPS_UUID* pubId = NULL;
     DPS_RxBuffer bfBuf;
     uint8_t* protectedPtr;
+    DPS_Publication* pub = NULL;
     CBOR_MapState mapState;
     uint32_t sequenceNum;
     int16_t ttl;
@@ -471,11 +473,6 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NodeAddress* from, DPS_RxBu
         return ret;
     }
     /*
-     * Record which port the sender is listening on
-     */
-    //DPS_EndpointSetPort(ep, port);
-
-    /*
      * A stale publication is a publication that has the same or older sequence number than the
      * latest publication with the same pubId.
      */
@@ -490,38 +487,110 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NodeAddress* from, DPS_RxBu
     if (ttl < 0) {
         ttl = 0;
     } else {
-        DPS_Publication pub;
         DPS_RxBuffer protectedBuf;
         DPS_RxBuffer encryptedBuf;
 
-        /* Initialize the pub struct */
-        memset(&pub, 0, sizeof(pub));
-        pub.node = node;
-        memcpy(&pub.pubId, pubId, sizeof(DPS_UUID));
-        pub.sequenceNum = sequenceNum;
-        pub.ackRequested = ackRequested;
+        pub = DPS_Calloc(sizeof(DPS_Publication), DPS_ALLOC_BRIEF);
+        if (!pub) {
+            ret = DPS_ERR_RESOURCES;
+            goto Exit;
+        }
+        pub->sendAddr = DPS_AllocNodeAddress(DPS_ALLOC_BRIEF);
+        if (!pub->sendAddr) {
+            ret = DPS_ERR_RESOURCES;
+            goto Exit;
+        }
+        pub->node = node;
+        memcpy(&pub->pubId, pubId, sizeof(DPS_UUID));
+        pub->sequenceNum = sequenceNum;
+        pub->ackRequested = ackRequested;
+        /*
+         * Record the sender's address and port
+         */
+        DPS_CopyNodeAddress(pub->sendAddr, from);
+        DPS_NodeAddressSetPort(pub->sendAddr, port);
         /*
          * Now we can deserialize the bloom filter
          */
-        ret = DPS_BitVectorDeserialize(&pub.bf, &bfBuf);
+        ret = DPS_BitVectorDeserialize(&pub->bf, &bfBuf);
         if (ret != DPS_OK) {
             goto Exit;
         }
         DPS_PRINT("Deserialize\n");
-        DPS_BitVectorDump(&pub.bf, DPS_TRUE);
+        DPS_BitVectorDump(&pub->bf, DPS_TRUE);
         /*
          * Initialize the protected and encrypted buffers
          */
         DPS_RxBufferInit(&protectedBuf, protectedPtr, buf->rxPos - protectedPtr);
         DPS_RxBufferInit(&encryptedBuf, buf->rxPos, DPS_RxBufferAvail(buf));
-        ret = CallPubHandlers(&pub, &protectedBuf, &encryptedBuf);
+        ret = CallPubHandlers(pub, &protectedBuf, &encryptedBuf);
         if (ret != DPS_OK) {
             goto Exit;
         }
+        DPS_Free(pub->sendAddr, DPS_ALLOC_BRIEF);
+        DPS_Free(pub, DPS_ALLOC_BRIEF);
     }
     return DPS_OK;
 
 Exit:
+
+    if (pub) {
+        if (pub->sendAddr) {
+            DPS_Free(pub->sendAddr, DPS_ALLOC_BRIEF);
+        }
+        DPS_Free(pub, DPS_ALLOC_BRIEF);
+    }
+    return ret;
+}
+
+static DPS_Status UnlinkPublication(DPS_Node* node, DPS_Publication* rmPub)
+{
+    DPS_Publication* prev = NULL;
+    DPS_Publication* pub;
+
+    for (pub = node->publications; pub; pub = pub->next) {
+        if (pub == rmPub) {
+            if (prev) {
+                prev->next = pub->next;
+            } else {
+                node->publications = pub->next;
+            }
+            break;
+        }
+    }
+    if (pub) {
+        return DPS_OK;
+    } else {
+        return DPS_ERR_MISSING;
+    }
+}
+
+DPS_Publication* DPS_LookupAckHandler(DPS_Node* node, const DPS_UUID* pubId, uint32_t sequenceNum)
+{
+    DPS_Publication* pub;
+
+    for (pub = node->publications; pub; pub = pub->next) {
+        if (pub->handler && (DPS_UUIDCompare(&pub->pubId, pubId) == 0)) {
+            if (pub->sequenceNum != sequenceNum) {
+                pub = NULL;
+            }
+            break;
+        }
+    }
+    return pub;
+}
+
+DPS_Status DPS_RemovePublication(DPS_Publication* pub)
+{
+    DPS_Status ret;
+
+    if (!pub->node) {
+        return DPS_ERR_NULL;
+    }
+    ret = UnlinkPublication(pub->node, pub);
+    if (ret == DPS_OK) {
+        memset(pub, 0, sizeof(DPS_Publication));
+    }
     return ret;
 }
 
@@ -763,7 +832,8 @@ static DPS_Status SerializePub(DPS_Node* node, DPS_Publication* pub, const uint8
         DPS_TxBufferToRx(&buf, &plainTextBuf);
         DPS_TxBufferToRx(&protectedBuf, &aadBuf);
         DPS_MakeNonce(&pub->pubId, pub->sequenceNum, DPS_MSG_TYPE_PUB, nonce);
-        ret = COSE_Encrypt(node, COSE_ALG_A256GCM, nonce, node->signer.alg ? &node->signer : NULL, pub->recipients, pub->numRecipients, &aadBuf, &plainTextBuf, node->keyStore, &encryptedBuf);
+        ret = COSE_Encrypt(node, COSE_ALG_A256GCM, nonce, node->signer.alg ? &node->signer : NULL,
+                pub->recipients, pub->numRecipients, &aadBuf, &plainTextBuf, node->keyStore, &encryptedBuf);
         if (ret != DPS_OK) {
             DPS_WARNPRINT("COSE_Encrypt failed: %s\n", DPS_ErrTxt(ret));
             return ret;
@@ -816,19 +886,3 @@ void* DPS_GetPublicationData(const DPS_Publication* pub)
 {
     return pub ?  pub->userData : NULL;
 }
-
-#if 0
-DPS_Publication* DPS_LookupAckHandler(DPS_Node* node, const DPS_UUID* pubId, uint32_t sequenceNum)
-{
-    DPS_Publication* pub;
-
-    for (pub = node->publications; pub != NULL; pub = pub->next) {
-        if (pub->handler && (DPS_UUIDCompare(&pub->pubId, pubId) == 0)) {
-            if (pub->sequenceNum == sequenceNum) {
-                return pub;
-            }
-        }
-    }
-    return NULL;
-}
-#endif

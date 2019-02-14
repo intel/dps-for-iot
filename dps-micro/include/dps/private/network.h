@@ -31,6 +31,7 @@
 #include <stdint.h>
 #include <dps/private/dps.h>
 #include <dps/private/io_buf.h>
+#include <dps/private/malloc.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -56,6 +57,11 @@ void DPS_CopyNodeAddress(DPS_NodeAddress* dest, const DPS_NodeAddress* src);
   * Compare to addresses
   */
 int DPS_SameNodeAddress(const DPS_NodeAddress* addr1, const DPS_NodeAddress* addr2);
+
+/**
+  * Allocate a node address from the requested pool. Call DPS_Free() to free the memory
+  */
+DPS_NodeAddress* DPS_AllocNodeAddress(DPS_AllocPool pool);
 
 /**
  * Function prototype for handler to be called on receiving data from a remote node

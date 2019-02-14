@@ -74,6 +74,11 @@ void DPS_NodeAddressSetPort(DPS_NodeAddress* addr, uint16_t port)
     }
 }
 
+DPS_NodeAddress* DPS_AllocNodeAddress(DPS_AllocPool pool)
+{
+    return DPS_Calloc(sizeof(DPS_NodeAddress), pool);
+}
+
 void DPS_CopyNodeAddress(DPS_NodeAddress* dest, const DPS_NodeAddress* src)
 {
     memcpy(dest, src, sizeof(DPS_NodeAddress));

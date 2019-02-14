@@ -55,6 +55,7 @@ typedef struct _DPS_Network DPS_Network;
 
 typedef struct _DPS_KeyStore DPS_KeyStore;
 typedef struct _DPS_Subscription DPS_Subscription;
+typedef struct _DPS_Publication DPS_Publication;
 
 #define DPS_TX_HEADER_SIZE       32
 #define DPS_TX_BUFFER_SIZE     2048
@@ -84,6 +85,7 @@ typedef struct _DPS_Node {
     DPS_Network* network;
     DPS_KeyStore* keyStore;
     DPS_Subscription* subscriptions;  /* Linked list of this node's subscriptions */
+    DPS_Publication* publications;    /* Linked list of this node's publications */
 } DPS_Node;
 
 /**

@@ -30,6 +30,7 @@
 
 
 static char testString[] = "This is a test string from " DPS_TARGET_NAME;
+static char ackString[] = "This is an ack string from " DPS_TARGET_NAME;
 
 #define NUM_TOPICS 1
 
@@ -48,6 +49,15 @@ static void OnPub(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* pa
             ++txtLen;
         }
         DPS_PRINT("%.*s\n", txtLen, payload);
+    }
+
+    if (DPS_PublicationIsAckRequested(pub)) {
+        DPS_Status ret;
+        DPS_PRINT("Ack was requested\n");
+        ret = DPS_AckPublication(pub, ackString, sizeof(ackString));
+        if (ret != DPS_OK) {
+            DPS_PRINT("Ack failed %s\n", DPS_ErrTxt(ret));
+        }
     }
 }
 
