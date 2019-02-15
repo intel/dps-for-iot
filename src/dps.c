@@ -807,11 +807,13 @@ static void SendSubsTask(uv_async_t* handle)
 }
 
 /*
- * Run checks of one or more publications against the current subscriptions
+ * Run checks of the publications against the current subscriptions
  */
-void DPS_UpdatePubs(DPS_Node* node, DPS_Publication* pub)
+void DPS_UpdatePubs(DPS_Node* node)
 {
     int count = 0;
+    DPS_Publication* pub;
+    DPS_Publication* nextPub;
 
     DPS_DBGTRACE();
 
@@ -820,24 +822,18 @@ void DPS_UpdatePubs(DPS_Node* node, DPS_Publication* pub)
         DPS_UnlockNode(node);
         return;
     }
-
-    if (pub && !DPS_QueueEmpty(&pub->sendQueue)) {
-        ++count;
-    } else {
-        DPS_Publication* nextPub;
-        for (pub = node->publications; pub != NULL; pub = nextPub) {
-            nextPub = pub->next;
-            if (!DPS_QueueEmpty(&pub->sendQueue)) {
-                 ++count;
-            } else if (uv_now(node->loop) >= pub->expires) {
-                DPS_ExpirePub(node, pub);
-            } else {
-                if ((pub->flags & PUB_FLAG_PUBLISH) && (node->remoteNodes || node->mcastSender)) {
-                    assert(pub->retained);
-                    DPS_QueuePushBack(&pub->sendQueue, &pub->retained->queue);
-                    pub->retained = NULL;
-                    ++count;
-                }
+    for (pub = node->publications; pub != NULL; pub = nextPub) {
+        nextPub = pub->next;
+        if (!DPS_QueueEmpty(&pub->sendQueue)) {
+            ++count;
+        } else if (uv_now(node->loop) >= pub->expires) {
+            DPS_ExpirePub(node, pub);
+        } else {
+            if ((pub->flags & PUB_FLAG_PUBLISH) && (node->remoteNodes || node->mcastSender)) {
+                assert(pub->retained);
+                DPS_QueuePushBack(&pub->sendQueue, &pub->retained->queue);
+                pub->retained = NULL;
+                ++count;
             }
         }
     }

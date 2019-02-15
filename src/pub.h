@@ -93,12 +93,11 @@ typedef struct _DPS_Publication {
 #define PUB_TTL(node, pub)  (int16_t)((pub->expires + 999 - uv_now((node)->loop)) / 1000)
 
 /**
- * Run checks of one or more publications against the current subscriptions
+ * Run checks of the publications against the current subscriptions
  *
  * @param node       The local node
- * @param pub        The publication, may be NULL
  */
-void DPS_UpdatePubs(DPS_Node* node, DPS_Publication* pub);
+void DPS_UpdatePubs(DPS_Node* node);
 
 /**
  * Decode and process a received publication

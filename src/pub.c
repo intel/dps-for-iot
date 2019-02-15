@@ -864,10 +864,10 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
             goto Exit;
         }
     }
-    DPS_QueuePushBack(&pub->sendQueue, &req->queue);
     pub->expires = uv_now(node->loop) + DPS_SECS_TO_MS(ttl);
     UpdatePubHistory(req);
-    DPS_UpdatePubs(node, pub);
+    DPS_QueuePushBack(&pub->sendQueue, &req->queue);
+    uv_async_send(&node->pubsAsync);
     return DPS_OK;
 
 Exit:
@@ -1511,11 +1511,9 @@ static DPS_Status Publish(DPS_PublishRequest* req, DPS_Publication* pub, const u
     }
     DPS_QueuePushBack(&pub->sendQueue, &req->queue);
     pub->flags |= PUB_FLAG_PUBLISH;
+    uv_async_send(&node->pubsAsync);
 Exit:
     DPS_UnlockNode(node);
-    if (ret == DPS_OK) {
-        DPS_UpdatePubs(node, pub);
-    }
     return ret;
 }
 

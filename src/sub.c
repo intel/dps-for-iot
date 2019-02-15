@@ -741,7 +741,7 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
          * Evaluate impact of the change in interests
          */
         if (ret == DPS_OK) {
-            DPS_UpdatePubs(node, NULL);
+            DPS_UpdatePubs(node);
         }
     } else {
         DPS_BitVectorFree(interests);
