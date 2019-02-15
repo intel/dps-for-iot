@@ -32,7 +32,7 @@
 #include <stddef.h>
 #include <dps/private/dps.h>
 #include "node.h"
-
+#include "queue.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -42,12 +42,12 @@ extern "C" {
  * Acknowledgement packet queued to be sent on node loop
  */
 typedef struct _PublicationAck {
+    DPS_Queue queue;                /**< Ack queue */
     DPS_TxBuffer buf;               /**< Headers, unprotected, and protected fields */
     DPS_TxBuffer encryptedBuf;      /**< Encrypted fields */
     DPS_NodeAddress destAddr;       /**< Destination of acknowledgement */
     uint32_t sequenceNum;           /**< Sequence number being acknowledged */
     DPS_UUID pubId;                 /**< The UUID of the publication */
-    struct _PublicationAck* next;   /**< Next acknowledgement in the queue */
 } PublicationAck;
 
 /**

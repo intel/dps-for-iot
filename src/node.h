@@ -34,6 +34,7 @@
 #include "bitvec.h"
 #include "cose.h"
 #include "history.h"
+#include "queue.h"
 
 #if UV_VERSION_MAJOR < 1 || UV_VERSION_MINOR < 15
 #error libuv version 1.15 or higher is required
@@ -110,10 +111,7 @@ typedef struct _DPS_Node {
     uint32_t subsRate;                    /**< Specifies time delay (in msecs) between subscription updates */
     uv_timer_t subsTimer;                 /**< Timer for sending subscriptions */
 
-    struct {
-        PublicationAck* first;            /**< First queued acknowledgement packet */
-        PublicationAck* last;             /**< Last queued acknowledgement packet */
-    } ackQueue;                           /**< Queued acknowledgement packets */
+    DPS_Queue ackQueue;                   /**< Queued acknowledgement packets */
 
     RemoteNode* remoteNodes;              /**< Linked list of remote nodes */
 

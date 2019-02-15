@@ -610,7 +610,8 @@ static void SendAcksTask(uv_async_t* handle)
     DPS_DBGTRACE();
 
     DPS_LockNode(node);
-    while ((ack = node->ackQueue.first) != NULL) {
+    while (!DPS_QueueEmpty(&node->ackQueue)) {
+        ack = (PublicationAck*)DPS_QueueFront(&node->ackQueue);
         if (node->state == DPS_NODE_RUNNING) {
             RemoteNode* ackNode;
             DPS_Status ret = DPS_AddRemoteNode(node, &ack->destAddr, NULL, &ackNode);
@@ -618,10 +619,9 @@ static void SendAcksTask(uv_async_t* handle)
                 DPS_SendAcknowledgement(node, ack, ackNode);
             }
         }
-        node->ackQueue.first = ack->next;
+        DPS_QueueRemove(&ack->queue);
         DPS_DestroyAck(ack);
     }
-    node->ackQueue.last = NULL;
     DPS_UnlockNode(node);
 }
 
@@ -869,13 +869,7 @@ void DPS_QueuePublicationAck(DPS_Node* node, PublicationAck* ack)
     DPS_DBGTRACE();
 
     DPS_LockNode(node);
-    if (node->ackQueue.last) {
-        node->ackQueue.last->next = ack;
-    }
-    node->ackQueue.last = ack;
-    if (!node->ackQueue.first) {
-        node->ackQueue.first = ack;
-    }
+    DPS_QueuePushBack(&node->ackQueue, &ack->queue);
     uv_async_send(&node->acksAsync);
     DPS_UnlockNode(node);
 }
@@ -1276,6 +1270,7 @@ DPS_Node* DPS_CreateNode(const char* separators, DPS_KeyStore* keyStore, const D
     }
     strncpy_s(node->separators, sizeof(node->separators), separators, sizeof(node->separators) - 1);
     node->keyStore = keyStore;
+    DPS_QueueInit(&node->ackQueue);
     /*
      * Set default probe configuration and subscription rate parameters
      */

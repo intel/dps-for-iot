@@ -740,7 +740,7 @@ void* DPS_GetPublicationData(const DPS_Publication* pub);
  *
  * @param pub      Opaque handle for the publication that was received
  * @param payload  Payload accompanying the acknowledgement if any
- * @param len   Length of the payload
+ * @param len      Length of the payload
  */
 typedef void (*DPS_AcknowledgementHandler)(DPS_Publication* pub, uint8_t* payload, size_t len);
 
