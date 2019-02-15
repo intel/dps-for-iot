@@ -359,7 +359,7 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote)
             assert(remote->outbound.ackCountdown);
         } else {
             DPS_ERRPRINT("Failed to send subscription request %s\n", DPS_ErrTxt(ret));
-            DPS_SendFailed(node, &remote->ep.addr, &uvBuf, 1, ret);
+            DPS_SendComplete(node, &remote->ep.addr, &uvBuf, 1, ret);
         }
     } else {
         DPS_TxBufferFree(&buf);
@@ -510,7 +510,7 @@ static DPS_Status SendSubscriptionAck(DPS_Node* node, RemoteNode* remote, uint32
             }
         } else {
             DPS_ERRPRINT("Failed to send subscription ack %s\n", DPS_ErrTxt(ret));
-            DPS_SendFailed(node, &remote->ep.addr, &uvBuf, 1, ret);
+            DPS_SendComplete(node, &remote->ep.addr, &uvBuf, 1, ret);
         }
     } else {
         DPS_TxBufferFree(&buf);

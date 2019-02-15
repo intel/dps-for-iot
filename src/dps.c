@@ -547,34 +547,27 @@ DPS_Status DPS_AddRemoteNode(DPS_Node* node, DPS_NodeAddress* addr, DPS_NetConne
     return DPS_OK;
 }
 
-void DPS_SendFailed(DPS_Node* node, DPS_NodeAddress* addr, uv_buf_t* bufs, size_t numBufs, DPS_Status status)
+void DPS_SendComplete(DPS_Node* node, DPS_NodeAddress* addr, uv_buf_t* bufs, size_t numBufs, DPS_Status status)
 {
     RemoteNode* remote;
 
-    DPS_DBGPRINT("Send failed %s\n", DPS_ErrTxt(status));
-    remote = DPS_LookupRemoteNode(node, addr);
-    if (remote) {
-        DPS_DBGPRINT("Removing node %s\n", DPS_NodeAddrToString(addr));
-        DPS_DeleteRemoteNode(node, remote);
+    DPS_DBGPRINT("Send complete %s\n", DPS_ErrTxt(status));
+
+    if (addr && (status != DPS_OK)) {
+        remote = DPS_LookupRemoteNode(node, addr);
+        if (remote) {
+            DPS_DBGPRINT("Removing node %s\n", DPS_NodeAddrToString(addr));
+            DPS_DeleteRemoteNode(node, remote);
+        }
     }
     DPS_NetFreeBufs(bufs, numBufs);
 }
 
 void DPS_OnSendComplete(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf_t* bufs, size_t numBufs, DPS_Status status)
 {
-    RemoteNode* remote;
-
-    DPS_DBGPRINT("Send complete %s\n", DPS_ErrTxt(status));
-    if (ep && (status != DPS_OK)) {
-        DPS_LockNode(node);
-        remote = DPS_LookupRemoteNode(node, &ep->addr);
-        if (remote) {
-            DPS_DBGPRINT("Removing node %s\n", DPS_NodeAddrToString(&ep->addr));
-            DPS_DeleteRemoteNode(node, remote);
-        }
-        DPS_UnlockNode(node);
-    }
-    DPS_NetFreeBufs(bufs, numBufs);
+    DPS_LockNode(node);
+    DPS_SendComplete(node, ep ? &ep->addr : NULL, bufs, numBufs, status);
+    DPS_UnlockNode(node);
 }
 
 void DPS_OnSendSubscriptionComplete(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf_t* bufs, size_t numBufs, DPS_Status status)

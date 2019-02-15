@@ -901,7 +901,6 @@ static void SendComplete(DPS_PublishRequest* req, DPS_NetEndpoint* ep, uv_buf_t*
 {
     DPS_Publication* pub = req->pub;
     DPS_Node* node = pub->node;
-    RemoteNode* remote;
 
     assert(req->numSends > 0);
     --req->numSends;
@@ -912,21 +911,12 @@ static void SendComplete(DPS_PublishRequest* req, DPS_NetEndpoint* ep, uv_buf_t*
         req->status = status;
     }
     /*
-     * Remove remote when a send to it fails
-     */
-    if (ep && (status != DPS_OK)) {
-        remote = DPS_LookupRemoteNode(node, &ep->addr);
-        if (remote) {
-            DPS_DBGPRINT("Removing node %s\n", DPS_NodeAddrToString(&ep->addr));
-            DPS_DeleteRemoteNode(node, remote);
-        }
-    }
-    /*
-     * Free the buffers allocated in DPS_SendPublication - the other buffers belong to the requester
+     * Only the first buffer belongs to us
      */
     if (numBufs > 0) {
-        DPS_NetFreeBufs(bufs, 1);
+        numBufs = 1;
     }
+    DPS_SendComplete(node, ep ? &ep->addr : NULL, bufs, numBufs, status);
 }
 
 static void OnNetSendComplete(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf_t* bufs,

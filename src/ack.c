@@ -83,12 +83,12 @@ DPS_Status DPS_SendAcknowledgement(DPS_Node* node, PublicationAck* ack, RemoteNo
         if (ret == DPS_OK) {
             DPS_NetFreeBufs(uvBufs, A_SIZEOF(uvBufs));
         } else {
-            DPS_SendFailed(node, &ack->destAddr, uvBufs, A_SIZEOF(uvBufs), ret);
+            DPS_SendComplete(node, &ack->destAddr, uvBufs, A_SIZEOF(uvBufs), ret);
         }
     } else {
         ret = DPS_NetSend(node, NULL, &ackNode->ep, uvBufs, A_SIZEOF(uvBufs), DPS_OnSendComplete);
         if (ret != DPS_OK) {
-            DPS_SendFailed(node, &ack->destAddr, uvBufs, A_SIZEOF(uvBufs), ret);
+            DPS_SendComplete(node, &ack->destAddr, uvBufs, A_SIZEOF(uvBufs), ret);
         }
     }
     return ret;
@@ -370,7 +370,7 @@ DPS_Status DPS_DecodeAcknowledgement(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Rx
                 memcpy_s(uvBuf.base, uvBuf.len, buf->base, uvBuf.len);
                 ret = DPS_NetSend(node, NULL, &ackNode->ep, &uvBuf, 1, DPS_OnSendComplete);
                 if (ret != DPS_OK) {
-                    DPS_SendFailed(node, &ackNode->ep.addr, &uvBuf, 1, ret);
+                    DPS_SendComplete(node, &ackNode->ep.addr, &uvBuf, 1, ret);
                 }
             } else {
                 ret = DPS_ERR_RESOURCES;

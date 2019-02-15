@@ -204,19 +204,6 @@ void DPS_UpdateSubs(DPS_Node* node);
 void DPS_QueuePublicationAck(DPS_Node* node, PublicationAck* ack);
 
 /**
- * Callback function called when a network send operation completes
- *
- * @param node     Opaque pointer to the DPS node
- * @param appCtx   An application context to be passed to the send complete callback
- * @param ep       The endpoint for which the send was completed
- * @param bufs     Array holding pointers to the buffers passed in the send API call. The data in these buffers
- *                 can now be freed.
- * @param numBufs  The length of the bufs array
- * @param status   Indicates if the send was successful or not
- */
-void DPS_OnSendComplete(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf_t* bufs, size_t numBufs, DPS_Status status);
-
-/**
  * Callback function called when a subscription send operation completes
  *
  * @param node     Opaque pointer to the DPS node
@@ -240,7 +227,7 @@ void DPS_OnSendSubscriptionComplete(DPS_Node* node, void* appCtx, DPS_NetEndpoin
 void DPS_MakeNonce(const DPS_UUID* uuid, uint32_t seqNum, uint8_t msgType, uint8_t nonce[COSE_NONCE_LEN]);
 
 /**
- * Function to call when a network send operation fails.
+ * Function to call when a send operation completes.
  *
  * Must be called with the node lock held.
  *
@@ -251,7 +238,22 @@ void DPS_MakeNonce(const DPS_UUID* uuid, uint32_t seqNum, uint8_t msgType, uint8
  * @param numBufs  The length of the bufs array
  * @param status   Indicates the send status
  */
-void DPS_SendFailed(DPS_Node* node, DPS_NodeAddress* addr, uv_buf_t* bufs, size_t numBufs, DPS_Status status);
+void DPS_SendComplete(DPS_Node* node, DPS_NodeAddress* addr, uv_buf_t* bufs, size_t numBufs, DPS_Status status);
+
+/**
+ * Callback function called when a network send operation completes.
+ *
+ * Acquires the node lock and calls DPS_SendComplete().
+ *
+ * @param node     Opaque pointer to the DPS node
+ * @param appCtx   An application context to be passed to the send complete callback
+ * @param ep       The endpoint for which the send was completed
+ * @param bufs     Array holding pointers to the buffers passed in the send API call. The data in these buffers
+ *                 can now be freed.
+ * @param numBufs  The length of the bufs array
+ * @param status   Indicates if the send was successful or not
+ */
+void DPS_OnSendComplete(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf_t* bufs, size_t numBufs, DPS_Status status);
 
 /**
  * Add an entry for new remote node or return a pointer to the existing remote node.
