@@ -625,11 +625,6 @@ static void SendAcksTask(uv_async_t* handle)
     DPS_UnlockNode(node);
 }
 
-static void SendPubComplete(DPS_PublishRequest* req, DPS_Status status)
-{
-    DPS_DBGTRACEA("req=%p,status=%s\n", req, DPS_ErrTxt(status));
-}
-
 static void SendPubsTask(uv_async_t* handle)
 {
     DPS_Node* node = (DPS_Node*)handle->data;
@@ -707,9 +702,7 @@ static void SendPubsTask(uv_async_t* handle)
                     DPS_ERRPRINT("SendPublication (unicast) returned %s\n", DPS_ErrTxt(ret));
                 }
             }
-            if (req->numSends == 0) {
-                req->completeCB(req, req->status);
-            }
+            DPS_PublishCompletion(req);
         }
         /*
          * Only touch publications that are flagged to be published.  Ones

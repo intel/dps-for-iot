@@ -121,7 +121,7 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
 typedef void (*DPS_PublishComplete)(DPS_PublishRequest* req, DPS_Status status);
 
 /**
- * A request to DPS_Publish
+ * A request to DPS_Publish()
  */
 typedef struct _DPS_PublishRequest {
     DPS_Queue queue;                /**< Request queue */
@@ -133,6 +133,15 @@ typedef struct _DPS_PublishRequest {
     DPS_TxBuffer protectedBuf;      /**< Authenticated fields */
     DPS_TxBuffer encryptedBuf;      /**< Encrypted fields */
 } DPS_PublishRequest;
+
+/**
+ * Initialize a request to DPS_Publish()
+ *
+ * @param req The publish request
+ * @param pub The publication
+ * @param cb The completion callback
+ */
+void DPS_PublishRequestInit(DPS_PublishRequest* req, DPS_Publication* pub, DPS_PublishComplete cb);
 
 /**
  * Multicast a publication or send it directly to a remote subscriber node
@@ -147,6 +156,28 @@ typedef struct _DPS_PublishRequest {
 DPS_Status DPS_SendPublication(DPS_PublishRequest* req, DPS_Publication* pub, RemoteNode* remote);
 
 /**
+ * Serialize the body and payload sections of a publication
+ *
+ * The topic strings and bloom filter have already been serialized into buffers in
+ * the publication structure,
+ *
+ * @param req The publish request
+ * @param data The payload
+ * @param dataLen The number of payload bytes
+ * @param ttl The time-to-live of the publication
+ *
+ * @return DPS_OK if the serialization is successful, an error otherwise
+ */
+DPS_Status DPS_SerializePub(DPS_PublishRequest* req, const uint8_t* data, size_t dataLen, int16_t ttl);
+
+/**
+ * Complete the request if finished.
+ *
+ * @param req The publish request
+ */
+void DPS_PublishCompletion(DPS_PublishRequest* req);
+
+/**
  * When a ttl expires retained publications are freed, local
  * publications are disabled by clearing the PUBLISH flag.
  *
@@ -154,21 +185,6 @@ DPS_Status DPS_SendPublication(DPS_PublishRequest* req, DPS_Publication* pub, Re
  * @param pub The publication
  */
 void DPS_ExpirePub(DPS_Node* node, DPS_Publication* pub);
-
-/**
- * Serialize the body and payload sections of a publication
- *
- * The topic strings and bloom filter have already been serialized into buffers in
- * the publication structure,
- *
- * @param request The publish request
- * @param data The payload
- * @param dataLen The number of payload bytes
- * @param ttl The time-to-live of the publication
- *
- * @return DPS_OK if the serialization is successful, an error otherwise
- */
-DPS_Status DPS_SerializePub(DPS_PublishRequest* request, const uint8_t* data, size_t dataLen, int16_t ttl);
 
 /**
  * Free publications of node

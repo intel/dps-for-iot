@@ -193,12 +193,7 @@ static void OnProbeTimeout(uv_timer_t* handle)
         if (!req) {
             ret = DPS_ERR_RESOURCES;
         }
-        req->pub = monitor->pub;
-        req->completeCB = SendProbeComplete;
-        req->status = DPS_ERR_FAILURE;
-        req->numSends = 0;
-        DPS_TxBufferClear(&req->protectedBuf);
-        DPS_TxBufferClear(&req->encryptedBuf);
+        DPS_PublishRequestInit(req, monitor->pub, SendProbeComplete);
     }
     if (ret == DPS_OK) {
         /*
@@ -224,9 +219,7 @@ static void OnProbeTimeout(uv_timer_t* handle)
     }
 
     if (ret == DPS_OK) {
-        if (req->numSends == 0) {
-            req->completeCB(req, req->status);
-        }
+        DPS_PublishCompletion(req);
     } else {
         free(req);
     }

@@ -196,6 +196,15 @@ static void FreeTopics(DPS_Publication* pub)
     }
 }
 
+static void FreeRequest(DPS_PublishRequest* req)
+{
+    if (req) {
+        DPS_TxBufferFree(&req->encryptedBuf);
+        DPS_TxBufferFree(&req->protectedBuf);
+        free(req);
+    }
+}
+
 static DPS_Publication* FreePublication(DPS_Node* node, DPS_Publication* pub)
 {
     DPS_Publication* next = pub->next;
@@ -226,14 +235,11 @@ static DPS_Publication* FreePublication(DPS_Node* node, DPS_Publication* pub)
         while (!DPS_QueueEmpty(&pub->sendQueue)) {
             req = (DPS_PublishRequest*)DPS_QueueFront(&pub->sendQueue);
             DPS_QueueRemove(&req->queue);
-            req->completeCB(req, DPS_ERR_WRITE);
+            assert(req->numSends == 0);
+            req->status = DPS_ERR_WRITE;
+            DPS_PublishCompletion(req);
         }
-        if (pub->retained) {
-            DPS_TxBufferFree(&pub->retained->encryptedBuf);
-            DPS_TxBufferFree(&pub->retained->protectedBuf);
-            free(pub->retained);
-            pub->retained = NULL;
-        }
+        FreeRequest(pub->retained);
         FreeRecipients(pub);
         if (pub->bf) {
             DPS_BitVectorFree(pub->bf);
@@ -606,16 +612,10 @@ static void PublishComplete(DPS_PublishRequest* req, DPS_Status status)
     DPS_DBGTRACEA("req=%p,status=%s\n", req, DPS_ErrTxt(status));
 
     if (uv_now(node->loop) < pub->expires) {
-        if (pub->retained) {
-            DPS_TxBufferFree(&pub->retained->encryptedBuf);
-            DPS_TxBufferFree(&pub->retained->protectedBuf);
-            free(pub->retained);
-        }
+        FreeRequest(pub->retained);
         pub->retained = req;
     } else {
-        DPS_TxBufferFree(&req->encryptedBuf);
-        DPS_TxBufferFree(&req->protectedBuf);
-        free(req);
+        FreeRequest(req);
     }
 }
 
@@ -810,18 +810,16 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
     /*
      * Allocate the publish request for handling and forwarding
      *
-     * The DPS_ERR_NO_ROUTE status will be returned if we do not
-     * forward the publication
+     * The DPS_ERR_NO_ROUTE status will be reported in the completion
+     * callback if we do not forward the publication
      */
     req = malloc(sizeof(DPS_PublishRequest));
     if (!req) {
         ret = DPS_ERR_RESOURCES;
         goto Exit;
     }
-    req->pub = pub;
-    req->completeCB = PublishComplete;
+    DPS_PublishRequestInit(req, pub, PublishComplete);
     req->status = DPS_ERR_NO_ROUTE;
-    req->numSends = 0;
     ret = DPS_TxBufferInit(&req->protectedBuf, NULL, buf->rxPos - protectedPtr);
     if (ret != DPS_OK) {
         goto Exit;
@@ -935,9 +933,7 @@ static void OnNetSendComplete(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep,
 
     DPS_LockNode(node);
     SendComplete(req, ep, bufs, numBufs, status);
-    if (req->numSends == 0) {
-        req->completeCB(req, req->status);
-    }
+    DPS_PublishCompletion(req);
     DPS_PublicationDecRef(pub);
     DPS_UnlockNode(node);
 }
@@ -951,9 +947,7 @@ static void OnMulticastSendComplete(DPS_MulticastSender* sender, void* appCtx, u
 
     DPS_LockNode(node);
     SendComplete(req, NULL, bufs, numBufs, status);
-    if (req->numSends == 0) {
-        req->completeCB(req, req->status);
-    }
+    DPS_PublishCompletion(req);
     DPS_PublicationDecRef(pub);
     DPS_UnlockNode(node);
 }
@@ -1073,17 +1067,30 @@ DPS_Status DPS_SendPublication(DPS_PublishRequest* req, DPS_Publication* pub, Re
     return ret;
 }
 
+void DPS_PublishRequestInit(DPS_PublishRequest* req, DPS_Publication* pub, DPS_PublishComplete cb)
+{
+    req->pub = pub;
+    req->completeCB = cb;
+    req->status = DPS_ERR_FAILURE;
+    req->numSends = 0;
+    DPS_TxBufferClear(&req->protectedBuf);
+    DPS_TxBufferClear(&req->encryptedBuf);
+}
+
+void DPS_PublishCompletion(DPS_PublishRequest* req)
+{
+    if (req->numSends == 0) {
+        req->completeCB(req, req->status);
+    }
+}
+
 void DPS_ExpirePub(DPS_Node* node, DPS_Publication* pub)
 {
     if (pub->flags & PUB_FLAG_LOCAL) {
         pub->flags &= ~PUB_FLAG_PUBLISH;
         pub->flags &= ~PUB_FLAG_EXPIRED;
-        if (pub->retained) {
-            DPS_TxBufferFree(&pub->retained->encryptedBuf);
-            DPS_TxBufferFree(&pub->retained->protectedBuf);
-            free(pub->retained);
-            pub->retained = NULL;
-        }
+        FreeRequest(pub->retained);
+        pub->retained = NULL;
     } else  {
         DPS_DBGPRINT("Expiring %spub %s\n", pub->flags & PUB_FLAG_RETAINED ? "retained " : "",
                      DPS_UUIDToString(&pub->pubId));
@@ -1462,14 +1469,7 @@ static DPS_Status Publish(DPS_PublishRequest* req, DPS_Publication* pub, const u
     if (!IsValidPub(pub) || !(pub->flags & PUB_FLAG_LOCAL)) {
         return DPS_ERR_MISSING;
     }
-
-    req->pub = pub;
-    req->completeCB = cb;
-    req->status = DPS_ERR_FAILURE;
-    req->numSends = 0;
-    DPS_TxBufferClear(&req->protectedBuf);
-    DPS_TxBufferClear(&req->encryptedBuf);
-
+    DPS_PublishRequestInit(req, pub, cb);
     /*
      * Prevent publication from being destroyed while we are cloning
      * it
@@ -1546,11 +1546,7 @@ DPS_Status DPS_Publish(DPS_Publication* pub, const uint8_t* payload, size_t len,
 
 Exit:
     if (ret != DPS_OK) {
-        if (req) {
-            DPS_TxBufferFree(&req->encryptedBuf);
-            DPS_TxBufferFree(&req->protectedBuf);
-            free(req);
-        }
+        FreeRequest(req);
     }
     return ret;
 }
