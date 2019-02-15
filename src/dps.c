@@ -625,31 +625,9 @@ static void SendAcksTask(uv_async_t* handle)
     DPS_UnlockNode(node);
 }
 
-static void SendPublicationComplete(DPS_SendPublicationRequest* req, DPS_Status status)
+static void SendPubComplete(DPS_PublishRequest* req, DPS_Status status)
 {
     DPS_DBGTRACEA("req=%p,status=%s\n", req, DPS_ErrTxt(status));
-    free(req);
-}
-
-static DPS_Status SendPublication(DPS_Publication* pub, RemoteNode* remote)
-{
-    DPS_SendPublicationRequest* req = NULL;
-    DPS_Status ret;
-
-    req = malloc(sizeof(DPS_SendPublicationRequest));
-    if (!req) {
-        ret = DPS_ERR_RESOURCES;
-        goto Exit;
-    }
-    ret = DPS_SendPublication(req, pub, remote, SendPublicationComplete);
-
-Exit:
-    if (ret != DPS_OK) {
-        if (req) {
-            free(req);
-        }
-    }
-    return ret;
 }
 
 static void SendPubsTask(uv_async_t* handle)
@@ -661,6 +639,7 @@ static void SendPubsTask(uv_async_t* handle)
     RemoteNode* remote;
     RemoteNode* nextRemote;
     DPS_Status ret = DPS_OK;
+    DPS_PublishRequest* req;
 
     DPS_DBGTRACE();
 
@@ -679,61 +658,67 @@ static void SendPubsTask(uv_async_t* handle)
         pub->checkToSend = DPS_FALSE;
 
         DPS_PublicationIncRef(pub);
-        if (pub->flags & PUB_FLAG_LOCAL) {
-            /*
-             * Loopback publication if there is a matching subscriber candidate on
-             * this node
-             */
-            for (sub = node->subscriptions; sub != NULL; sub = sub->next) {
-                if (DPS_BitVectorIncludes(pub->bf, sub->bf)) {
-                    ret = SendPublication(pub, LoopbackNode);
-                    if (ret != DPS_OK) {
-                        DPS_ERRPRINT("SendPublication (loopback) returned %s\n", DPS_ErrTxt(ret));
+        while (!DPS_QueueEmpty(&pub->sendQueue)) {
+            req = (DPS_PublishRequest*)DPS_QueueFront(&pub->sendQueue);
+            DPS_QueueRemove(&req->queue);
+            if (pub->flags & PUB_FLAG_LOCAL) {
+                /*
+                 * Loopback publication if there is a matching subscriber candidate on
+                 * this node
+                 */
+                for (sub = node->subscriptions; sub != NULL; sub = sub->next) {
+                    if (DPS_BitVectorIncludes(pub->bf, sub->bf)) {
+                        ret = DPS_SendPublication(req, pub, LoopbackNode);
+                        if (ret != DPS_OK) {
+                            DPS_ERRPRINT("SendPublication (loopback) returned %s\n", DPS_ErrTxt(ret));
+                        }
+                        break;
                     }
-                    break;
+                }
+                /*
+                 * If the node is a multicast sender local publications are always multicast
+                 */
+                if (node->mcastSender) {
+                    ret = DPS_SendPublication(req, pub, NULL);
+                    if (ret != DPS_OK) {
+                        DPS_ERRPRINT("SendPublication (multicast) returned %s\n", DPS_ErrTxt(ret));
+                    }
                 }
             }
-            /*
-             * If the node is a multicast sender local publications are always multicast
-             */
-            if (node->mcastSender) {
-                ret = SendPublication(pub, NULL);
+            for (remote = node->remoteNodes; remote != NULL; remote = nextRemote) {
+                nextRemote = remote->next;
+                DPS_DBGPRINT("%s muted=%d/%d,interests=%p\n", DESCRIBE(remote), remote->outbound.muted,
+                             remote->inbound.muted, remote->inbound.interests);
+                if (remote->outbound.muted || remote->inbound.muted || !remote->inbound.interests) {
+                    continue;
+                }
+                /*
+                 * We don't send publications to remote nodes we have received them from.
+                 */
+                if (DPS_PublicationReceivedFrom(&node->history, &pub->pubId, pub->sequenceNum,
+                                                &pub->senderAddr, &remote->ep.addr)) {
+                    continue;
+                }
+                /*
+                 * This is the pub/sub matching code
+                 */
+                DPS_BitVectorIntersection(node->scratch.interests, pub->bf, remote->inbound.interests);
+                DPS_BitVectorFuzzyHash(node->scratch.needs, node->scratch.interests);
+                if (!DPS_BitVectorIncludes(node->scratch.needs, remote->inbound.needs)) {
+                    DPS_DBGPRINT("Rejected pub %d for %s\n", pub->sequenceNum, DESCRIBE(remote));
+                    continue;
+                }
+                DPS_DBGPRINT("Sending pub %d to %s\n", pub->sequenceNum, DESCRIBE(remote));
+                ret = DPS_SendPublication(req, pub, remote);
                 if (ret != DPS_OK) {
-                    DPS_ERRPRINT("SendPublication (multicast) returned %s\n", DPS_ErrTxt(ret));
+                    DPS_DeleteRemoteNode(node, remote);
+                    DPS_ERRPRINT("SendPublication (unicast) returned %s\n", DPS_ErrTxt(ret));
                 }
             }
-        }
-        for (remote = node->remoteNodes; remote != NULL; remote = nextRemote) {
-            nextRemote = remote->next;
-            DPS_DBGPRINT("%s muted=%d/%d,interests=%p\n", DESCRIBE(remote), remote->outbound.muted,
-                         remote->inbound.muted, remote->inbound.interests);
-            if (remote->outbound.muted || remote->inbound.muted || !remote->inbound.interests) {
-                continue;
-            }
-            /*
-             * We don't send publications to remote nodes we have received them from.
-             */
-            if (DPS_PublicationReceivedFrom(&node->history, &pub->pubId, pub->sequenceNum, &pub->senderAddr,
-                                            &remote->ep.addr)) {
-                continue;
-            }
-            /*
-             * This is the pub/sub matching code
-             */
-            DPS_BitVectorIntersection(node->scratch.interests, pub->bf, remote->inbound.interests);
-            DPS_BitVectorFuzzyHash(node->scratch.needs, node->scratch.interests);
-            if (!DPS_BitVectorIncludes(node->scratch.needs, remote->inbound.needs)) {
-                DPS_DBGPRINT("Rejected pub %d for %s\n", pub->sequenceNum, DESCRIBE(remote));
-                continue;
-            }
-            DPS_DBGPRINT("Sending pub %d to %s\n", pub->sequenceNum, DESCRIBE(remote));
-            ret = SendPublication(pub, remote);
-            if (ret != DPS_OK) {
-                DPS_DeleteRemoteNode(node, remote);
-                DPS_ERRPRINT("SendPublication (unicast) returned %s\n", DPS_ErrTxt(ret));
+            if (req->numSends == 0) {
+                req->completeCB(req, req->status);
             }
         }
-        DPS_SendPublicationCompletion(pub);
         /*
          * Only touch publications that are flagged to be published.  Ones
          * that aren't may be in the process of being updated.
@@ -874,6 +859,9 @@ void DPS_UpdatePubs(DPS_Node* node, DPS_Publication* pub)
                 DPS_ExpirePub(node, pub);
             } else {
                 if ((pub->flags & PUB_FLAG_PUBLISH) && (node->remoteNodes || node->mcastSender)) {
+                    assert(pub->retained);
+                    DPS_QueuePushBack(&pub->sendQueue, &pub->retained->queue);
+                    pub->retained = NULL;
                     pub->checkToSend = DPS_TRUE;
                     ++count;
                 }

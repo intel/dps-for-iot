@@ -45,6 +45,8 @@ extern "C" {
 #define PUB_FLAG_WAS_FREED (0x20) /**< The publication has been freed but has a non-zero ref count */
 #define PUB_FLAG_IS_COPY   (0x80) /**< This publication is a copy and can only be used for acknowledgements */
 
+typedef struct _DPS_PublishRequest DPS_PublishRequest;
+
 /**
  * Notes on the use of the DPS_Publication fields:
  *
@@ -74,7 +76,7 @@ typedef struct _DPS_Publication {
     COSE_Entity sender;             /**< Publication sender ID */
     DPS_NodeAddress senderAddr;     /**< For retained messages - the sender address */
     COSE_Entity ack;                /**< For ack messages - the ack sender ID */
-    DPS_Queue sendCompletedQueue;   /**< Completed publication send requests */
+    DPS_Queue sendQueue;            /**< Publication send requests */
 
     uint8_t flags;                  /**< Internal state flags */
     uint8_t checkToSend;            /**< TRUE if this publication should be checked to send */
@@ -82,8 +84,7 @@ typedef struct _DPS_Publication {
     uint32_t sequenceNum;           /**< Sequence number for this publication */
     uint64_t expires;               /**< Time (in milliseconds) that this publication expires */
 
-    DPS_TxBuffer protectedBuf;      /**< Authenticated fields */
-    DPS_TxBuffer encryptedBuf;      /**< Encrypted fields */
+    DPS_PublishRequest* retained;   /**< The retained message */
     DPS_Publication* next;          /**< Next publication in list */
 } DPS_Publication;
 
@@ -112,48 +113,39 @@ void DPS_UpdatePubs(DPS_Node* node, DPS_Publication* pub);
  */
 DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuffer* buffer, int multicast);
 
-typedef struct _DPS_SendPublicationRequest DPS_SendPublicationRequest;
-
 /**
- * Called when DPS_SendPublication() completes.
+ * Called when DPS_Publish() completes.
  *
  * @param req The request
- * @param status The status of the send.
+ * @param status The status of the publish.
  */
-typedef void (*DPS_SendPublicationComplete)(DPS_SendPublicationRequest* req, DPS_Status status);
+typedef void (*DPS_PublishComplete)(DPS_PublishRequest* req, DPS_Status status);
 
 /**
- * A request to DPS_SendPublication
+ * A request to DPS_Publish
  */
-typedef struct _DPS_SendPublicationRequest {
-    DPS_Queue queue;                            /**< Request queue */
-    void* data;                                 /**< Context pointer */
-    DPS_Publication* pub;                       /**< The publication */
-    DPS_SendPublicationComplete sendCompleteCB; /**< The completion callback */
-    DPS_Status status;                          /**< Result of the publication send */
-} DPS_SendPublicationRequest;
+typedef struct _DPS_PublishRequest {
+    DPS_Queue queue;                /**< Request queue */
+    void* data;                     /**< Context pointer */
+    DPS_Publication* pub;           /**< The publication */
+    DPS_PublishComplete completeCB; /**< The completion callback */
+    DPS_Status status;              /**< Result of the publish */
+    size_t numSends;                /**< Number of pending sends */
+    DPS_TxBuffer protectedBuf;      /**< Authenticated fields */
+    DPS_TxBuffer encryptedBuf;      /**< Encrypted fields */
+} DPS_PublishRequest;
 
 /**
  * Multicast a publication or send it directly to a remote subscriber node
  *
- * @param request        The publication send request
+ * @param req            The publication send request
  * @param pub            The publication to send
  * @param remote         The remote node to send the publication to,
  *                       LoopbackNode for loopback, or NULL for multicast
- * @param sendCompleteCB Function called when the send is complete so
- *                       the content of the data buffers can be freed.
  *
  * @return DPS_OK if sending is successful, an error otherwise
  */
-DPS_Status DPS_SendPublication(DPS_SendPublicationRequest* request, DPS_Publication* pub, RemoteNode* remote,
-                               DPS_SendPublicationComplete sendCompleteCB);
-
-/**
- * Complete any finished send publication requests.
- *
- * @param pub The publication
- */
-void DPS_SendPublicationCompletion(DPS_Publication* pub);
+DPS_Status DPS_SendPublication(DPS_PublishRequest* req, DPS_Publication* pub, RemoteNode* remote);
 
 /**
  * When a ttl expires retained publications are freed, local
@@ -170,15 +162,14 @@ void DPS_ExpirePub(DPS_Node* node, DPS_Publication* pub);
  * The topic strings and bloom filter have already been serialized into buffers in
  * the publication structure,
  *
- * @param node The node
- * @param pub The publication
+ * @param request The publish request
  * @param data The payload
  * @param dataLen The number of payload bytes
  * @param ttl The time-to-live of the publication
  *
  * @return DPS_OK if the serialization is successful, an error otherwise
  */
-DPS_Status DPS_SerializePub(DPS_Node* node, DPS_Publication* pub, const uint8_t* data, size_t dataLen, int16_t ttl);
+DPS_Status DPS_SerializePub(DPS_PublishRequest* request, const uint8_t* data, size_t dataLen, int16_t ttl);
 
 /**
  * Free publications of node
