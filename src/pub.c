@@ -544,7 +544,6 @@ static DPS_Status CallPubHandlers(DPS_PublishRequest* req)
     /*
      * Iterate over the candidates and check that the pub strings are a match
      */
-    DPS_LockNode(node);
     for (sub = node->subscriptions; sub != NULL; sub = nextSub) {
         nextSub = sub->next;
         DPS_SubscriptionIncRef(sub);
@@ -585,7 +584,6 @@ static DPS_Status CallPubHandlers(DPS_PublishRequest* req)
     Next:
         DPS_SubscriptionDecRef(sub);
     }
-    DPS_UnlockNode(node);
     DPS_TxBufferFree(&plainTextBuf);
     /* Publication topics will be invalid now if the publication was encrypted */
     FreeTopics(pub);
@@ -745,8 +743,14 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
      * Record which port the sender is listening on
      */
     DPS_EndpointSetPort(ep, port);
+
+    DPS_LockNode(node);
     /*
-     * Check if this is an update for an existing retained publication
+     * Lookup an existing retained publication or create a new one.
+     *
+     * Add a reference so that publication remains alive while we use
+     * it: the node lock will get released when we issue callbacks
+     * into the application for crypto or subscription handlers below.
      */
     pub = LookupRetained(node, &pubId);
     if (pub) {
@@ -754,9 +758,18 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
          * Retained publications can only be updated with newer revisions
          */
         if (sequenceNum <= pub->retained->sequenceNum) {
-            DPS_DBGPRINT("Publication %s/%d is stale (/%d already retained)\n", DPS_UUIDToString(&pubId), sequenceNum, pub->retained->sequenceNum);
-            return DPS_ERR_STALE;
+            DPS_DBGPRINT("Publication %s/%d is stale (/%d already retained)\n", DPS_UUIDToString(&pubId),
+                         sequenceNum, pub->retained->sequenceNum);
+            ret = DPS_ERR_STALE;
+            /*
+             * Set pub to NULL here so we don't delete it during
+             * cleanup - we want to drop the stale revision, not
+             * remove the most recent revision.
+             */
+            pub = NULL;
+            goto Exit;
         }
+        DPS_PublicationIncRef(pub);
     } else {
         /*
          * A stale publication is a publication that has the same or older sequence number than the
@@ -764,27 +777,28 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
          */
         if (DPS_PublicationIsStale(&node->history, &pubId, sequenceNum)) {
             DPS_DBGPRINT("Publication %s/%d is stale\n", DPS_UUIDToString(&pubId), sequenceNum);
-            return DPS_ERR_STALE;
+            ret = DPS_ERR_STALE;
+            goto Exit;
         }
         pub = calloc(1, sizeof(DPS_Publication));
         if (!pub) {
-            return DPS_ERR_RESOURCES;
+            ret = DPS_ERR_RESOURCES;
+            goto Exit;
         }
+        pub->node = node;
+        DPS_QueueInit(&pub->sendQueue);
+        DPS_PublicationIncRef(pub);
         pub->bf = DPS_BitVectorAlloc();
         if (!pub->bf) {
-            free(pub);
-            return DPS_ERR_RESOURCES;
+            ret = DPS_ERR_RESOURCES;
+            goto Exit;
         }
         memcpy_s(&pub->pubId, sizeof(pub->pubId), &pubId, sizeof(DPS_UUID));
-        DPS_QueueInit(&pub->sendQueue);
         /*
          * Link in the pub
          */
-        DPS_LockNode(node);
         pub->next = node->publications;
         node->publications = pub;
-        pub->node = node;
-        DPS_UnlockNode(node);
     }
     pub->sequenceNum = sequenceNum;
     pub->ackRequested = ackRequested;
@@ -798,13 +812,11 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
      * We have no reason here to hold onto a node for multicast publishers
      */
     if (!multicast) {
-        DPS_LockNode(node);
         ret = DPS_AddRemoteNode(node, &ep->addr, ep->cn, &pubNode);
         if (ret == DPS_ERR_EXISTS) {
             DPS_DBGPRINT("Updating existing node\n");
             ret = DPS_OK;
         }
-        DPS_UnlockNode(node);
         if (ret != DPS_OK) {
             goto Exit;
         }
@@ -868,31 +880,32 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
     UpdatePubHistory(req);
     DPS_QueuePushBack(&pub->sendQueue, &req->queue);
     uv_async_send(&node->pubsAsync);
-    return DPS_OK;
+    ret = DPS_OK;
 
 Exit:
+    if (req && (ret != DPS_OK)) {
+        assert(pub);
+        PublishComplete(req, ret);
+    }
     /*
      * Delete the publisher node if it is sending bad data
      */
     if (ret == DPS_ERR_INVALID || ret == DPS_ERR_SECURITY) {
         DPS_ERRPRINT("Deleting bad publisher\n");
-        DPS_LockNode(node);
         DPS_DeleteRemoteNode(node, pubNode);
-        DPS_UnlockNode(node);
     }
     if (pub) {
-        DPS_LockNode(node);
-        /*
-         * TODO - should we be updating the pub history after an error?
-         */
-        DPS_UpdatePubHistory(&node->history, &pub->pubId, sequenceNum, pub->ackRequested, PUB_TTL(node, pub),
-                             &pub->senderAddr);
-        if (req) {
-            PublishComplete(req, ret);
+        if (ret != DPS_OK) {
+            /*
+             * TODO - should we be updating the pub history after an error?
+             */
+            DPS_UpdatePubHistory(&node->history, &pub->pubId, sequenceNum, pub->ackRequested,
+                                 PUB_TTL(node, pub), &pub->senderAddr);
+            FreePublication(node, pub);
         }
-        FreePublication(node, pub);
-        DPS_UnlockNode(node);
+        DPS_PublicationDecRef(pub);
     }
+    DPS_UnlockNode(node);
     return ret;
 }
 
@@ -1425,9 +1438,11 @@ DPS_Status DPS_SerializePub(DPS_PublishRequest* req, const uint8_t* data, size_t
         DPS_TxBufferToRx(&req->encryptedBuf, &plainTextBuf);
         DPS_TxBufferToRx(&req->protectedBuf, &aadBuf);
         DPS_MakeNonce(&pub->pubId, req->sequenceNum, DPS_MSG_TYPE_PUB, nonce);
+        DPS_UnlockNode(node);
         ret = COSE_Serialize(COSE_ALG_A256GCM, nonce, node->signer.alg ? &node->signer : NULL,
                              pub->recipients, pub->recipientsCount, &aadBuf, &plainTextBuf,
                              node->keyStore, &req->encryptedBuf);
+        DPS_LockNode(node);
         DPS_RxBufferFree(&plainTextBuf);
         if (ret != DPS_OK) {
             DPS_WARNPRINT("COSE_Serialize failed: %s\n", DPS_ErrTxt(ret));
@@ -1465,10 +1480,14 @@ static DPS_Status Publish(DPS_PublishRequest* req, DPS_Publication* pub, const u
     }
     DPS_PublishRequestInit(req, pub, cb);
     /*
-     * Prevent publication from being destroyed while we are cloning
-     * it
+     * Prevent publication from being destroyed while we are using it.
+     * Note that we add a reference to keep the publication alive when
+     * we release the node lock for serialization.  The release is
+     * necessary as the serialization calls the application's crypto
+     * handlers.
      */
     DPS_LockNode(node);
+    DPS_PublicationIncRef(pub);
     pub->flags &= ~PUB_FLAG_PUBLISH;
     /*
      * Do some sanity checks for retained publication cancellation
@@ -1503,9 +1522,7 @@ static DPS_Status Publish(DPS_PublishRequest* req, DPS_Publication* pub, const u
     /*
      * Serialize the publication
      */
-    DPS_UnlockNode(node);
     ret = DPS_SerializePub(req, payload, len, ttl);
-    DPS_LockNode(node);
     if (ret != DPS_OK) {
         goto Exit;
     }
@@ -1513,6 +1530,7 @@ static DPS_Status Publish(DPS_PublishRequest* req, DPS_Publication* pub, const u
     pub->flags |= PUB_FLAG_PUBLISH;
     uv_async_send(&node->pubsAsync);
 Exit:
+    DPS_PublicationDecRef(pub);
     DPS_UnlockNode(node);
     return ret;
 }
