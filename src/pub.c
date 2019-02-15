@@ -1505,8 +1505,11 @@ static DPS_Status Publish(DPS_PublishRequest* req, DPS_Publication* pub, const u
         }
         ttl = 0;
         pub->flags |= PUB_FLAG_EXPIRED;
-    } else {
+    } else if (ttl == 0) {
         pub->flags &= ~PUB_FLAG_RETAINED;
+        pub->flags &= ~PUB_FLAG_EXPIRED;
+    } else if (ttl > 0) {
+        pub->flags |= PUB_FLAG_RETAINED;
         pub->flags &= ~PUB_FLAG_EXPIRED;
     }
     /*
@@ -1515,9 +1518,6 @@ static DPS_Status Publish(DPS_PublishRequest* req, DPS_Publication* pub, const u
      */
     uv_update_time(node->loop);
     pub->expires = uv_now(node->loop) + DPS_SECS_TO_MS(ttl);
-    if (ttl > 0) {
-        pub->flags |= PUB_FLAG_RETAINED;
-    }
     req->sequenceNum = ++pub->sequenceNum;
     /*
      * Serialize the publication
