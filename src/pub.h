@@ -79,7 +79,6 @@ typedef struct _DPS_Publication {
     DPS_Queue sendQueue;            /**< Publication send requests */
 
     uint8_t flags;                  /**< Internal state flags */
-    uint8_t checkToSend;            /**< TRUE if this publication should be checked to send */
     uint32_t refCount;              /**< Ref count to prevent publication from being free while a send is in progress */
     uint32_t sequenceNum;           /**< Sequence number for this publication */
     uint64_t expires;               /**< Time (in milliseconds) that this publication expires */

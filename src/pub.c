@@ -1476,7 +1476,6 @@ static DPS_Status Publish(DPS_PublishRequest* req, DPS_Publication* pub, const u
      */
     DPS_LockNode(node);
     pub->flags &= ~PUB_FLAG_PUBLISH;
-    pub->checkToSend = DPS_FALSE;
     /*
      * Do some sanity checks for retained publication cancellation
      */

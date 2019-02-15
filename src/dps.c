@@ -649,14 +649,6 @@ static void SendPubsTask(uv_async_t* handle)
      */
     for (pub = node->publications; pub != NULL; pub = nextPub) {
         nextPub = pub->next;
-        /*
-         * Only check publications that are flagged to be checked
-         */
-        if (!pub->checkToSend) {
-            continue;
-        }
-        pub->checkToSend = DPS_FALSE;
-
         DPS_PublicationIncRef(pub);
         while (!DPS_QueueEmpty(&pub->sendQueue)) {
             req = (DPS_PublishRequest*)DPS_QueueFront(&pub->sendQueue);
@@ -843,18 +835,14 @@ void DPS_UpdatePubs(DPS_Node* node, DPS_Publication* pub)
         return;
     }
 
-    if (pub) {
-        pub->checkToSend = DPS_TRUE;
+    if (pub && !DPS_QueueEmpty(&pub->sendQueue)) {
         ++count;
     } else {
         DPS_Publication* nextPub;
         for (pub = node->publications; pub != NULL; pub = nextPub) {
             nextPub = pub->next;
-            /*
-             * Received publications are marked as checkToSend they should not be expired.
-             */
-            if (pub->checkToSend) {
-                ++count;
+            if (!DPS_QueueEmpty(&pub->sendQueue)) {
+                 ++count;
             } else if (uv_now(node->loop) >= pub->expires) {
                 DPS_ExpirePub(node, pub);
             } else {
@@ -862,7 +850,6 @@ void DPS_UpdatePubs(DPS_Node* node, DPS_Publication* pub)
                     assert(pub->retained);
                     DPS_QueuePushBack(&pub->sendQueue, &pub->retained->queue);
                     pub->retained = NULL;
-                    pub->checkToSend = DPS_TRUE;
                     ++count;
                 }
             }
