@@ -682,7 +682,7 @@ static void SendPubsTask(uv_async_t* handle)
                 /*
                  * We don't send publications to remote nodes we have received them from.
                  */
-                if (DPS_PublicationReceivedFrom(&node->history, &pub->pubId, pub->sequenceNum,
+                if (DPS_PublicationReceivedFrom(&node->history, &pub->pubId, req->sequenceNum,
                                                 &pub->senderAddr, &remote->ep.addr)) {
                     continue;
                 }
@@ -692,10 +692,10 @@ static void SendPubsTask(uv_async_t* handle)
                 DPS_BitVectorIntersection(node->scratch.interests, pub->bf, remote->inbound.interests);
                 DPS_BitVectorFuzzyHash(node->scratch.needs, node->scratch.interests);
                 if (!DPS_BitVectorIncludes(node->scratch.needs, remote->inbound.needs)) {
-                    DPS_DBGPRINT("Rejected pub %d for %s\n", pub->sequenceNum, DESCRIBE(remote));
+                    DPS_DBGPRINT("Rejected pub %d for %s\n", req->sequenceNum, DESCRIBE(remote));
                     continue;
                 }
-                DPS_DBGPRINT("Sending pub %d to %s\n", pub->sequenceNum, DESCRIBE(remote));
+                DPS_DBGPRINT("Sending pub %d to %s\n", req->sequenceNum, DESCRIBE(remote));
                 ret = DPS_SendPublication(req, pub, remote);
                 if (ret != DPS_OK) {
                     DPS_DeleteRemoteNode(node, remote);

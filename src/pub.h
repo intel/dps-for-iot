@@ -80,7 +80,7 @@ typedef struct _DPS_Publication {
 
     uint8_t flags;                  /**< Internal state flags */
     uint32_t refCount;              /**< Ref count to prevent publication from being free while a send is in progress */
-    uint32_t sequenceNum;           /**< Sequence number for this publication */
+    uint32_t sequenceNum;       /**< Sequence number for this publication */
     uint64_t expires;               /**< Time (in milliseconds) that this publication expires */
 
     DPS_PublishRequest* retained;   /**< The retained message */
@@ -130,6 +130,7 @@ typedef struct _DPS_PublishRequest {
     DPS_PublishComplete completeCB; /**< The completion callback */
     DPS_Status status;              /**< Result of the publish */
     size_t numSends;                /**< Number of pending sends */
+    uint32_t sequenceNum;           /**< Sequence number for this request */
     DPS_TxBuffer protectedBuf;      /**< Authenticated fields */
     DPS_TxBuffer encryptedBuf;      /**< Encrypted fields */
 } DPS_PublishRequest;

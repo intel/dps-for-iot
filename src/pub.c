@@ -365,10 +365,12 @@ DPS_Node* DPS_PublicationGetNode(const DPS_Publication* pub)
     }
 }
 
-static DPS_Status UpdatePubHistory(DPS_Node* node, DPS_Publication* pub)
+static DPS_Status UpdatePubHistory(DPS_PublishRequest* req)
 {
-    return DPS_UpdatePubHistory(&node->history, &pub->pubId, pub->sequenceNum,
-                                pub->ackRequested, PUB_TTL(node, pub), &pub->senderAddr);
+    DPS_Publication* pub = req->pub;
+    DPS_Node* node = pub->node;
+    return DPS_UpdatePubHistory(&node->history, &pub->pubId, req->sequenceNum, pub->ackRequested,
+                                PUB_TTL(node, pub), &pub->senderAddr);
 }
 
 /*
@@ -403,7 +405,7 @@ static DPS_Status DecryptAndParsePub(DPS_PublishRequest* req, DPS_TxBuffer* plai
     /*
      * Try to decrypt the publication
      */
-    DPS_MakeNonce(&pub->pubId, pub->sequenceNum, DPS_MSG_TYPE_PUB, nonce);
+    DPS_MakeNonce(&pub->pubId, req->sequenceNum, DPS_MSG_TYPE_PUB, nonce);
 
     DPS_TxBufferToRx(&req->protectedBuf, &aadBuf);
     DPS_TxBufferToRx(&req->encryptedBuf, &cipherTextBuf);
@@ -575,7 +577,7 @@ static DPS_Status CallPubHandlers(DPS_PublishRequest* req)
         }
         if (match) {
             DPS_DBGPRINT("Matched subscription\n");
-            UpdatePubHistory(node, pub);
+            UpdatePubHistory(req);
             DPS_UnlockNode(node);
             sub->handler(sub, pub, data, dataLen);
             DPS_LockNode(node);
@@ -751,8 +753,8 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
         /*
          * Retained publications can only be updated with newer revisions
          */
-        if (sequenceNum <= pub->sequenceNum) {
-            DPS_DBGPRINT("Publication %s/%d is stale (/%d already retained)\n", DPS_UUIDToString(&pubId), sequenceNum, pub->sequenceNum);
+        if (sequenceNum <= pub->retained->sequenceNum) {
+            DPS_DBGPRINT("Publication %s/%d is stale (/%d already retained)\n", DPS_UUIDToString(&pubId), sequenceNum, pub->retained->sequenceNum);
             return DPS_ERR_STALE;
         }
     } else {
@@ -820,6 +822,7 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
     }
     DPS_PublishRequestInit(req, pub, PublishComplete);
     req->status = DPS_ERR_NO_ROUTE;
+    req->sequenceNum = sequenceNum;
     ret = DPS_TxBufferInit(&req->protectedBuf, NULL, buf->rxPos - protectedPtr);
     if (ret != DPS_OK) {
         goto Exit;
@@ -863,7 +866,7 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
     }
     DPS_QueuePushBack(&pub->sendQueue, &req->queue);
     pub->expires = uv_now(node->loop) + DPS_SECS_TO_MS(ttl);
-    UpdatePubHistory(node, pub);
+    UpdatePubHistory(req);
     DPS_UpdatePubs(node, pub);
     return DPS_OK;
 
@@ -882,7 +885,8 @@ Exit:
         /*
          * TODO - should we be updating the pub history after an error?
          */
-        UpdatePubHistory(node, pub);
+        DPS_UpdatePubHistory(&node->history, &pub->pubId, sequenceNum, pub->ackRequested, PUB_TTL(node, pub),
+                             &pub->senderAddr);
         if (req) {
             PublishComplete(req, ret);
         }
@@ -1040,7 +1044,7 @@ DPS_Status DPS_SendPublication(DPS_PublishRequest* req, DPS_Publication* pub, Re
                 /*
                  * Update history to prevent retained publications from being resent.
                  */
-                DPS_UpdatePubHistory(&node->history, &pub->pubId, pub->sequenceNum,
+                DPS_UpdatePubHistory(&node->history, &pub->pubId, req->sequenceNum,
                                      pub->ackRequested, PUB_TTL(node, pub), &remote->ep.addr);
             } else {
                 SendComplete(req, &remote->ep, bufs, A_SIZEOF(bufs), ret);
@@ -1379,7 +1383,7 @@ DPS_Status DPS_SerializePub(DPS_PublishRequest* req, const uint8_t* data, size_t
         ret = CBOR_EncodeUint8(&req->protectedBuf, DPS_CBOR_KEY_SEQ_NUM);
     }
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeUint32(&req->protectedBuf, pub->sequenceNum);
+        ret = CBOR_EncodeUint32(&req->protectedBuf, req->sequenceNum);
     }
     if (ret == DPS_OK) {
         ret = CBOR_EncodeUint8(&req->protectedBuf, DPS_CBOR_KEY_ACK_REQ);
@@ -1430,7 +1434,7 @@ DPS_Status DPS_SerializePub(DPS_PublishRequest* req, const uint8_t* data, size_t
 
         DPS_TxBufferToRx(&req->encryptedBuf, &plainTextBuf);
         DPS_TxBufferToRx(&req->protectedBuf, &aadBuf);
-        DPS_MakeNonce(&pub->pubId, pub->sequenceNum, DPS_MSG_TYPE_PUB, nonce);
+        DPS_MakeNonce(&pub->pubId, req->sequenceNum, DPS_MSG_TYPE_PUB, nonce);
         ret = COSE_Serialize(COSE_ALG_A256GCM, nonce, node->signer.alg ? &node->signer : NULL,
                              pub->recipients, pub->recipientsCount, &aadBuf, &plainTextBuf,
                              node->keyStore, &req->encryptedBuf);
@@ -1505,7 +1509,7 @@ static DPS_Status Publish(DPS_PublishRequest* req, DPS_Publication* pub, const u
     if (ttl > 0) {
         pub->flags |= PUB_FLAG_RETAINED;
     }
-    ++pub->sequenceNum;
+    req->sequenceNum = ++pub->sequenceNum;
     /*
      * Serialize the publication
      */
@@ -1517,11 +1521,6 @@ static DPS_Status Publish(DPS_PublishRequest* req, DPS_Publication* pub, const u
     }
     DPS_QueuePushBack(&pub->sendQueue, &req->queue);
     pub->flags |= PUB_FLAG_PUBLISH;
-    /*
-     * Update the (application-visible) publication's sequence number to the latest sequence number
-     * so that DPS_PublicationGetSequenceNum works as expected after calling DPS_Publish.
-     */
-    pub->sequenceNum = pub->sequenceNum;
 Exit:
     DPS_UnlockNode(node);
     if (ret == DPS_OK) {

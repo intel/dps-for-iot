@@ -281,7 +281,6 @@ static void TestBackToBackPublish(DPS_Node* node, DPS_KeyStore* keyStore)
     for (i = 0; i < depth; ++i) {
         ret = DPS_Publish(pub, NULL, 0, 0);
         ASSERT(ret == DPS_OK);
-        /* TODO wait for publish callback */
     }
 
     /*
@@ -337,7 +336,6 @@ static void TestBackToBackPublishSeparateNodes(DPS_Node* node, DPS_KeyStore* key
     for (i = 0; i < depth; ++i) {
         ret = DPS_Publish(pub, NULL, 0, 0);
         ASSERT(ret == DPS_OK);
-        /* TODO wait for publish callback */
     }
 
     /*
@@ -421,12 +419,12 @@ int main(int argc, char** argv)
          * Reliability is only expected for loopback and reliable
          * transports.
          */
-        // TODO TestBackToBackPublish,
+        TestBackToBackPublish,
 #if defined(DPS_USE_TCP)
-        // TODO TestBackToBackPublishSeparateNodes,
+        TestBackToBackPublishSeparateNodes,
 #endif
         TestRetainedMessage,
-        // TODO TestSequenceNumbers,
+        TestSequenceNumbers,
         NULL
     };
     TEST* test;

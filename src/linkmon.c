@@ -201,7 +201,7 @@ static void OnProbeTimeout(uv_timer_t* handle)
          * to call the lower layer APIs for force the probe publication
          * to be sent.
          */
-        ++monitor->pub->sequenceNum;
+        req->sequenceNum = ++monitor->pub->sequenceNum;
         ret = DPS_SerializePub(req, NULL, 0, 0);
     }
     if (ret == DPS_OK) {
