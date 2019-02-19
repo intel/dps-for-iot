@@ -1098,7 +1098,7 @@ void DPS_PublishCompletion(DPS_PublishRequest* req)
 void DPS_ExpirePub(DPS_Node* node, DPS_Publication* pub)
 {
     if (pub->flags & PUB_FLAG_LOCAL) {
-        pub->flags &= ~PUB_FLAG_EXPIRED;
+        pub->flags |= PUB_FLAG_EXPIRED;
     } else {
         DPS_DBGPRINT("Expiring %spub %s\n", pub->flags & PUB_FLAG_RETAINED ? "retained " : "",
                      DPS_UUIDToString(&pub->pubId));
