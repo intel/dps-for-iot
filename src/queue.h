@@ -66,6 +66,15 @@ int DPS_QueueEmpty(const DPS_Queue* queue);
 DPS_Queue* DPS_QueueFront(const DPS_Queue* queue);
 
 /**
+ * Returns the item at the back of the queue.
+ *
+ * @param queue the queue
+ *
+ * @return the item at the back of the queue
+ */
+DPS_Queue* DPS_QueueBack(const DPS_Queue* queue);
+
+/**
  * Pushes an item onto the back of the queue
  *
  * @param queue the queue

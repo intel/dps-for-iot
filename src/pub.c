@@ -235,11 +235,19 @@ static DPS_Publication* FreePublication(DPS_Node* node, DPS_Publication* pub)
         while (!DPS_QueueEmpty(&pub->sendQueue)) {
             req = (DPS_PublishRequest*)DPS_QueueFront(&pub->sendQueue);
             DPS_QueueRemove(&req->queue);
-            assert(req->numSends == 0);
+            assert(req->refCount > 0);
+            --req->refCount;
             req->status = DPS_ERR_WRITE;
             DPS_PublishCompletion(req);
         }
-        FreeRequest(pub->retained);
+        while (!DPS_QueueEmpty(&pub->retainedQueue)) {
+            req = (DPS_PublishRequest*)DPS_QueueFront(&pub->retainedQueue);
+            DPS_QueueRemove(&req->queue);
+            assert(req->refCount > 0);
+            --req->refCount;
+            req->status = DPS_ERR_WRITE;
+            DPS_PublishCompletion(req);
+        }
         FreeRecipients(pub);
         if (pub->bf) {
             DPS_BitVectorFree(pub->bf);
@@ -370,7 +378,7 @@ static DPS_Status UpdatePubHistory(DPS_PublishRequest* req)
     DPS_Publication* pub = req->pub;
     DPS_Node* node = pub->node;
     return DPS_UpdatePubHistory(&node->history, &pub->pubId, req->sequenceNum, pub->ackRequested,
-                                PUB_TTL(node, pub), &pub->senderAddr);
+                                REQ_TTL(req), &pub->senderAddr);
 }
 
 /*
@@ -606,17 +614,9 @@ static DPS_Publication* LookupRetained(DPS_Node* node, DPS_UUID* pubId)
 
 static void PublishComplete(DPS_PublishRequest* req, DPS_Status status)
 {
-    DPS_Publication* pub = req->pub;
-    DPS_Node* node = pub->node;
-
     DPS_DBGTRACEA("req=%p,status=%s\n", req, DPS_ErrTxt(status));
 
-    if (uv_now(node->loop) < pub->expires) {
-        FreeRequest(pub->retained);
-        pub->retained = req;
-    } else {
-        FreeRequest(req);
-    }
+    FreeRequest(req);
 }
 
 DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuffer* buf, int multicast)
@@ -757,9 +757,9 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
         /*
          * Retained publications can only be updated with newer revisions
          */
-        if (sequenceNum <= pub->retained->sequenceNum) {
+        if (sequenceNum <= pub->sequenceNum) {
             DPS_DBGPRINT("Publication %s/%d is stale (/%d already retained)\n", DPS_UUIDToString(&pubId),
-                         sequenceNum, pub->retained->sequenceNum);
+                         sequenceNum, pub->sequenceNum);
             ret = DPS_ERR_STALE;
             /*
              * Set pub to NULL here so we don't delete it during
@@ -787,6 +787,7 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
         }
         pub->node = node;
         DPS_QueueInit(&pub->sendQueue);
+        DPS_QueueInit(&pub->retainedQueue);
         DPS_PublicationIncRef(pub);
         pub->bf = DPS_BitVectorAlloc();
         if (!pub->bf) {
@@ -802,7 +803,6 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
     }
     pub->sequenceNum = sequenceNum;
     pub->ackRequested = ackRequested;
-    pub->flags |= PUB_FLAG_PUBLISH;
     pub->senderAddr = ep->addr;
     /*
      * The topics array has pointers into pub->encryptedBuf which are now invalid
@@ -876,9 +876,11 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
             goto Exit;
         }
     }
-    pub->expires = uv_now(node->loop) + DPS_SECS_TO_MS(ttl);
+    req->ttl = ttl;
+    req->expires = uv_now(node->loop) + DPS_SECS_TO_MS(ttl);
     UpdatePubHistory(req);
     DPS_QueuePushBack(&pub->sendQueue, &req->queue);
+    ++req->refCount;
     uv_async_send(&node->pubsAsync);
     ret = DPS_OK;
 
@@ -899,8 +901,8 @@ Exit:
             /*
              * TODO - should we be updating the pub history after an error?
              */
-            DPS_UpdatePubHistory(&node->history, &pub->pubId, sequenceNum, pub->ackRequested,
-                                 PUB_TTL(node, pub), &pub->senderAddr);
+            DPS_UpdatePubHistory(&node->history, &pub->pubId, sequenceNum, pub->ackRequested, ttl,
+                                 &pub->senderAddr);
             FreePublication(node, pub);
         }
         DPS_PublicationDecRef(pub);
@@ -915,8 +917,8 @@ static void SendComplete(DPS_PublishRequest* req, DPS_NetEndpoint* ep, uv_buf_t*
     DPS_Publication* pub = req->pub;
     DPS_Node* node = pub->node;
 
-    assert(req->numSends > 0);
-    --req->numSends;
+    assert(req->refCount > 0);
+    --req->refCount;
     /*
      * If at least one send succeeds, report success to the requester
      */
@@ -977,13 +979,14 @@ DPS_Status DPS_SendPublication(DPS_PublishRequest* req, DPS_Publication* pub, Re
         if (pub->flags & PUB_FLAG_EXPIRED) {
             ttl = -1;
         } else {
-            ttl = PUB_TTL(node, pub);
+            ttl = REQ_TTL(req);
             /*
              * It is possible that a retained publication has expired between
              * being marked to send and getting to this point; if so we
              * silently ignore the publication.
              */
             if (ttl <= 0) {
+                ++req->refCount;
                 SendComplete(req, NULL, NULL, 0, DPS_OK);
                 return DPS_OK;
             }
@@ -1033,7 +1036,7 @@ DPS_Status DPS_SendPublication(DPS_PublishRequest* req, DPS_Publication* pub, Re
             uv_buf_init((char*)req->protectedBuf.base, DPS_TxBufferUsed(&req->protectedBuf)),
             uv_buf_init((char*)req->encryptedBuf.base, DPS_TxBufferUsed(&req->encryptedBuf)),
         };
-        ++req->numSends;
+        ++req->refCount;
         if (remote == LoopbackNode) {
             ret = DPS_LoopbackSend(node, bufs, A_SIZEOF(bufs));
             SendComplete(req, NULL, bufs, A_SIZEOF(bufs), ret);
@@ -1048,7 +1051,7 @@ DPS_Status DPS_SendPublication(DPS_PublishRequest* req, DPS_Publication* pub, Re
                  * Update history to prevent retained publications from being resent.
                  */
                 DPS_UpdatePubHistory(&node->history, &pub->pubId, req->sequenceNum,
-                                     pub->ackRequested, PUB_TTL(node, pub), &remote->ep.addr);
+                                     pub->ackRequested, REQ_TTL(req), &remote->ep.addr);
             } else {
                 SendComplete(req, &remote->ep, bufs, A_SIZEOF(bufs), ret);
             }
@@ -1078,15 +1081,16 @@ void DPS_PublishRequestInit(DPS_PublishRequest* req, DPS_Publication* pub, DPS_P
 {
     req->pub = pub;
     req->completeCB = cb;
+    req->expires = 0;
     req->status = DPS_ERR_FAILURE;
-    req->numSends = 0;
+    req->refCount = 0;
     DPS_TxBufferClear(&req->protectedBuf);
     DPS_TxBufferClear(&req->encryptedBuf);
 }
 
 void DPS_PublishCompletion(DPS_PublishRequest* req)
 {
-    if (req->numSends == 0) {
+    if (req->refCount == 0) {
         req->completeCB(req, req->status);
     }
 }
@@ -1094,11 +1098,8 @@ void DPS_PublishCompletion(DPS_PublishRequest* req)
 void DPS_ExpirePub(DPS_Node* node, DPS_Publication* pub)
 {
     if (pub->flags & PUB_FLAG_LOCAL) {
-        pub->flags &= ~PUB_FLAG_PUBLISH;
         pub->flags &= ~PUB_FLAG_EXPIRED;
-        FreeRequest(pub->retained);
-        pub->retained = NULL;
-    } else  {
+    } else {
         DPS_DBGPRINT("Expiring %spub %s\n", pub->flags & PUB_FLAG_RETAINED ? "retained " : "",
                      DPS_UUIDToString(&pub->pubId));
         FreePublication(node, pub);
@@ -1124,6 +1125,7 @@ DPS_Publication* DPS_CreatePublication(DPS_Node* node)
     DPS_GenerateUUID(&pub->pubId);
     pub->node = node;
     DPS_QueueInit(&pub->sendQueue);
+    DPS_QueueInit(&pub->retainedQueue);
     return pub;
 }
 
@@ -1488,7 +1490,6 @@ static DPS_Status Publish(DPS_PublishRequest* req, DPS_Publication* pub, const u
      */
     DPS_LockNode(node);
     DPS_PublicationIncRef(pub);
-    pub->flags &= ~PUB_FLAG_PUBLISH;
     /*
      * Do some sanity checks for retained publication cancellation
      */
@@ -1512,12 +1513,7 @@ static DPS_Status Publish(DPS_PublishRequest* req, DPS_Publication* pub, const u
         pub->flags |= PUB_FLAG_RETAINED;
         pub->flags &= ~PUB_FLAG_EXPIRED;
     }
-    /*
-     * Update time before setting expiration because the loop only updates on each iteration and
-     * we have no idea know how long it is since the loop last ran.
-     */
-    uv_update_time(node->loop);
-    pub->expires = uv_now(node->loop) + DPS_SECS_TO_MS(ttl);
+    req->ttl = ttl;
     req->sequenceNum = ++pub->sequenceNum;
     /*
      * Serialize the publication
@@ -1527,7 +1523,7 @@ static DPS_Status Publish(DPS_PublishRequest* req, DPS_Publication* pub, const u
         goto Exit;
     }
     DPS_QueuePushBack(&pub->sendQueue, &req->queue);
-    pub->flags |= PUB_FLAG_PUBLISH;
+    ++req->refCount;
     uv_async_send(&node->pubsAsync);
 Exit:
     DPS_PublicationDecRef(pub);
@@ -1621,9 +1617,12 @@ void DPS_DumpPubs(DPS_Node* node)
         DPS_Publication* pub;
         DPS_PRINT("Node %d:\n", node->port);
         for (pub = node->publications; pub; pub = pub->next) {
-            int16_t ttl = PUB_TTL(node, pub);
-            DPS_PRINT("  %s(%d) %s%s%s%s%s%sttl=%d\n", DPS_UUIDToString(&pub->pubId), pub->sequenceNum,
-                      pub->flags & PUB_FLAG_PUBLISH ? "PUBLISH " : "",
+            int16_t ttl = 0;
+            if (!DPS_QueueEmpty(&pub->retainedQueue)) {
+                DPS_PublishRequest* req = (DPS_PublishRequest*)DPS_QueueBack(&pub->retainedQueue);
+                ttl = REQ_TTL(req);
+            }
+            DPS_PRINT("  %s(%d) %s%s%s%s%sttl=%d\n", DPS_UUIDToString(&pub->pubId), pub->sequenceNum,
                       pub->flags & PUB_FLAG_LOCAL ? "LOCAL " : "",
                       pub->flags & PUB_FLAG_RETAINED ? "RETAINED " : "",
                       pub->flags & PUB_FLAG_EXPIRED ? "EXPIRED " : "",

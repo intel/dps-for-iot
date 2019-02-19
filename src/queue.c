@@ -37,6 +37,11 @@ DPS_Queue* DPS_QueueFront(const DPS_Queue* queue)
     return queue->next;
 }
 
+DPS_Queue* DPS_QueueBack(const DPS_Queue* queue)
+{
+    return queue->prev;
+}
+
 void DPS_QueuePushBack(DPS_Queue* queue, DPS_Queue* item)
 {
     item->next = queue;

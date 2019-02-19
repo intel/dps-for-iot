@@ -370,6 +370,8 @@ static void TestRetainedMessage(DPS_Node* node, DPS_KeyStore* keyStore)
     pub = CreatePublication(node, topics, numTopics, NULL);
     ret = DPS_Publish(pub, NULL, 0, 10);
     ASSERT(ret == DPS_OK);
+    ret = DPS_Publish(pub, NULL, 0, 10);
+    ASSERT(ret == DPS_OK);
     ret = DPS_Publish(pub, NULL, 0, 0);
     ASSERT(ret == DPS_OK);
     DPS_DestroyPublication(pub);

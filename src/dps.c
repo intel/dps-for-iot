@@ -641,6 +641,11 @@ static void SendPubsTask(uv_async_t* handle)
         while (!DPS_QueueEmpty(&pub->sendQueue)) {
             req = (DPS_PublishRequest*)DPS_QueueFront(&pub->sendQueue);
             DPS_QueueRemove(&req->queue);
+            assert(req->refCount > 0);
+            --req->refCount;
+            if (!req->expires) {
+                req->expires = uv_now(node->loop) + DPS_SECS_TO_MS(req->ttl);
+            }
             if (pub->flags & PUB_FLAG_LOCAL) {
                 /*
                  * Loopback publication if there is a matching subscriber candidate on
@@ -695,13 +700,20 @@ static void SendPubsTask(uv_async_t* handle)
                     DPS_ERRPRINT("SendPublication (unicast) returned %s\n", DPS_ErrTxt(ret));
                 }
             }
+            if (!DPS_QueueEmpty(&pub->retainedQueue)) {
+                DPS_PublishRequest* existing = (DPS_PublishRequest*)DPS_QueueFront(&pub->retainedQueue);
+                DPS_QueueRemove(&existing->queue);
+                assert(existing->refCount > 0);
+                --existing->refCount;
+                DPS_PublishCompletion(existing);
+            }
+            if (uv_now(node->loop) < req->expires) {
+                DPS_QueuePushBack(&pub->retainedQueue, &req->queue);
+                ++req->refCount;
+            }
             DPS_PublishCompletion(req);
         }
-        /*
-         * Only touch publications that are flagged to be published.  Ones
-         * that aren't may be in the process of being updated.
-         */
-        if ((pub->flags & PUB_FLAG_PUBLISH) && (uv_now(node->loop) >= pub->expires)) {
+        if (DPS_QueueEmpty(&pub->retainedQueue)) {
             DPS_ExpirePub(node, pub);
         }
         DPS_PublicationDecRef(pub);
@@ -814,6 +826,7 @@ void DPS_UpdatePubs(DPS_Node* node)
     int count = 0;
     DPS_Publication* pub;
     DPS_Publication* nextPub;
+    DPS_PublishRequest* req;
 
     DPS_DBGTRACE();
 
@@ -826,15 +839,13 @@ void DPS_UpdatePubs(DPS_Node* node)
         nextPub = pub->next;
         if (!DPS_QueueEmpty(&pub->sendQueue)) {
             ++count;
-        } else if (uv_now(node->loop) >= pub->expires) {
+        } else if (DPS_QueueEmpty(&pub->retainedQueue)) {
             DPS_ExpirePub(node, pub);
-        } else {
-            if ((pub->flags & PUB_FLAG_PUBLISH) && (node->remoteNodes || node->mcastSender)) {
-                assert(pub->retained);
-                DPS_QueuePushBack(&pub->sendQueue, &pub->retained->queue);
-                pub->retained = NULL;
-                ++count;
-            }
+        } else if (node->remoteNodes || node->mcastSender) {
+            req = (DPS_PublishRequest*)DPS_QueueFront(&pub->retainedQueue);
+            DPS_QueueRemove(&req->queue);
+            DPS_QueuePushBack(&pub->sendQueue, &req->queue);
+            ++count;
         }
     }
     if (count) {

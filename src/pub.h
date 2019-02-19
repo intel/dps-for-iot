@@ -38,7 +38,6 @@
 extern "C" {
 #endif
 
-#define PUB_FLAG_PUBLISH   (0x01) /**< The publication should be published */
 #define PUB_FLAG_LOCAL     (0x02) /**< The publication is local to this node */
 #define PUB_FLAG_RETAINED  (0x04) /**< The publication had a non-zero TTL */
 #define PUB_FLAG_EXPIRED   (0x10) /**< The publication had a negative TTL */
@@ -77,20 +76,19 @@ typedef struct _DPS_Publication {
     DPS_NodeAddress senderAddr;     /**< For retained messages - the sender address */
     COSE_Entity ack;                /**< For ack messages - the ack sender ID */
     DPS_Queue sendQueue;            /**< Publication send requests */
+    DPS_Queue retainedQueue;        /**< The retained publication send requests */
 
     uint8_t flags;                  /**< Internal state flags */
     uint32_t refCount;              /**< Ref count to prevent publication from being free while a send is in progress */
-    uint32_t sequenceNum;       /**< Sequence number for this publication */
-    uint64_t expires;               /**< Time (in milliseconds) that this publication expires */
+    uint32_t sequenceNum;           /**< Sequence number for this publication */
 
-    DPS_PublishRequest* retained;   /**< The retained message */
     DPS_Publication* next;          /**< Next publication in list */
 } DPS_Publication;
 
 /**
- * Time-to-live in seconds of a publication
+ * Time-to-live in seconds of a publish request
  */
-#define PUB_TTL(node, pub)  (int16_t)((pub->expires + 999 - uv_now((node)->loop)) / 1000)
+#define REQ_TTL(req)  (int16_t)((req->expires + 999 - uv_now((req->pub->node)->loop)) / 1000)
 
 /**
  * Run checks of the publications against the current subscriptions
@@ -127,8 +125,10 @@ typedef struct _DPS_PublishRequest {
     void* data;                     /**< Context pointer */
     DPS_Publication* pub;           /**< The publication */
     DPS_PublishComplete completeCB; /**< The completion callback */
+    int16_t ttl;                    /**< Time to live in seconds - maximum TTL is about 9 hours */
+    uint64_t expires;               /**< Time (in milliseconds) that this publication expires */
     DPS_Status status;              /**< Result of the publish */
-    size_t numSends;                /**< Number of pending sends */
+    size_t refCount;                /**< Prevent request from being freed while in use */
     uint32_t sequenceNum;           /**< Sequence number for this request */
     DPS_TxBuffer protectedBuf;      /**< Authenticated fields */
     DPS_TxBuffer encryptedBuf;      /**< Encrypted fields */
