@@ -24,8 +24,8 @@
 #include <kernel.h>
 #include <dps/private/malloc.h>
 
-K_MEM_POOL_DEFINE(briefPool, 64, 2048, 1, 4);
-K_MEM_POOL_DEFINE(longtermPool, 64, 1024, 4, 4);
+K_MEM_POOL_DEFINE(briefPool, 64, 2048, 2, 4);
+K_MEM_POOL_DEFINE(longtermPool, 64, 1024, 6, 4);
 K_MEM_POOL_DEFINE(permanentPool, 64, 4096, 4, 4);
 
 void* DPS_Malloc(size_t len, DPS_AllocPool pool)

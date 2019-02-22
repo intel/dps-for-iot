@@ -61,6 +61,20 @@ struct _DPS_NodeAddress {
     struct sockaddr_storage inaddr;
 };
 
+struct _DPS_Network {
+    struct net_context* ucast4;       /* IPv4 unicast network context */
+    struct net_context* mcast4;       /* IPv4 multicast network context */
+    struct net_context* ucast6;       /* IPv6 unicast network context */
+    struct net_context* mcast6;       /* IPv6 multicast network context */
+    uint8_t rxBuffer[RX_BUFFER_SIZE];
+    size_t txLen;
+    DPS_OnReceive recvCB;
+    struct sockaddr_in addrCOAP4;
+    struct sockaddr_in6 addrCOAP6;
+};
+
+static DPS_Network netContext;
+
 void DPS_NodeAddressSetPort(DPS_NodeAddress* addr, uint16_t port)
 {
     port = htons(port);
@@ -124,18 +138,6 @@ int DPS_SameNodeAddress(const DPS_NodeAddress* addr1, const DPS_NodeAddress* add
     }
 }
 
-struct _DPS_Network {
-    struct net_context* context4;       /* Zephyr IPv4 network context */
-    struct net_context* context6;       /* Zephyr IPv6 network context */
-    uint8_t rxBuffer[RX_BUFFER_SIZE]; 
-    size_t txLen;
-    DPS_OnReceive recvCB;
-    struct sockaddr_in addrCOAP4;
-    struct sockaddr_in6 addrCOAP6;
-};
-
-static DPS_Network netContext;
-
 DPS_Status DPS_NetworkInit(DPS_Node* node)
 {
     DPS_Status status = DPS_OK;
@@ -149,10 +151,15 @@ DPS_Status DPS_NetworkInit(DPS_Node* node)
     memset(&netContext, 0, sizeof(netContext));
     node->network = &netContext;
 
-    /* Get the Zephyr IPv6 network context */
-    ret = net_context_get(PF_INET6, SOCK_DGRAM, IPPROTO_UDP, &netContext.context6);
+    /* Get the Zephyr IPv6 network contexts */
+    ret = net_context_get(PF_INET6, SOCK_DGRAM, IPPROTO_UDP, &netContext.mcast6);
 	if (ret) {
-		DPS_DBGPRINT("Could not get ipV6 UDP context\n");
+		DPS_DBGPRINT("Could not get ipV6 multicast context\n");
+		status = DPS_ERR_NETWORK;
+    }
+    ret = net_context_get(PF_INET6, SOCK_DGRAM, IPPROTO_UDP, &netContext.ucast6);
+	if (ret) {
+		DPS_DBGPRINT("Could not get ipV6 unicast context\n");
 		status = DPS_ERR_NETWORK;
     }
     return status;
@@ -163,6 +170,10 @@ void DPS_NetworkTerminate(DPS_Node* node)
     node->network = NULL;
 }
 
+/* Local address - TODO should be randomly assiged or a configuration parameter */
+#define LOCAL_ADDR_6   "2001:db8::1"
+#define LOCAL_ADDR_4   "169.254.78.133"
+
 static DPS_Status BindSock(int family, DPS_Network* net, int port)
 {
     DPS_Status status = DPS_OK;
@@ -170,19 +181,19 @@ static DPS_Status BindSock(int family, DPS_Network* net, int port)
 
     DPS_DBGTRACE();
     if (family == AF_INET) {
-        struct sockaddr_in addrAny4;
-        memset(&addrAny4, 0, sizeof(addrAny4));
-        addrAny4.sin_family = AF_INET;
-        addrAny4.sin_addr.s_addr = INADDR_ANY;
-        addrAny4.sin_port = htons(port);
-        ret = net_context_bind(net->context4, (struct sockaddr*)&addrAny4, sizeof(addrAny4));
+        struct sockaddr_in addr;
+        memset(&addr, 0, sizeof(addr));
+        addr.sin_family = AF_INET;
+        net_addr_pton(AF_INET, LOCAL_ADDR_4, &addr.sin_addr);
+        addr.sin_port = htons(port);
+        ret = net_context_bind(net->ucast4, (struct sockaddr*)&addr, sizeof(addr));
     } else {
-        struct sockaddr_in6 addrAny6;
-        memset(&addrAny6, 0, sizeof(addrAny6));
-        addrAny6.sin6_port = htons(port);
-        addrAny6.sin6_family = AF_INET6;
-        addrAny6.sin6_addr = in6addr_any;
-        ret = net_context_bind(net->context6, (struct sockaddr*)&addrAny6, sizeof(addrAny6));
+        struct sockaddr_in6 addr;
+        memset(&addr, 0, sizeof(addr));
+        addr.sin6_family = AF_INET6;
+        net_addr_pton(AF_INET6, LOCAL_ADDR_6, &addr.sin6_addr);
+        addr.sin6_port = htons(port);
+        ret = net_context_bind(net->ucast6, (struct sockaddr*)&addr, sizeof(addr));
     }
     if (ret) {
         DPS_DBGPRINT("bind() %s failed. 0x%x\n", family == AF_INET ? "IPv4" : "IPv6", ret);
@@ -191,14 +202,11 @@ static DPS_Status BindSock(int family, DPS_Network* net, int port)
     return status;
 }
 
-/* Local IPv6 address - TODO should be randomly assiged or a configuration parameter */
-#define LOCAL_ADDR_6   "2001:db8::1"
-
-static DPS_Status JoinMCastGroup()
+static DPS_Status JoinMCastGroup(DPS_Network* net)
 {
     int ret;
 	struct in6_addr addr6;
-    struct in6_addr mcast6;
+    struct sockaddr_in6 mcast6;
 	struct net_if_addr* ifaddr;
     struct net_if_mcast_addr* mcast;
 	struct net_if* iface;
@@ -210,7 +218,8 @@ static DPS_Status JoinMCastGroup()
 		DPS_DBGPRINT("Invalid IPv6 address\n");
 		return DPS_ERR_NETWORK;
     }
-    ret = net_addr_pton(AF_INET6, COAP_MCAST_ALL_NODES_LINK_LOCAL_6, &mcast6);
+    memset(&mcast6, 0, sizeof(mcast6));
+    ret = net_addr_pton(AF_INET6, COAP_MCAST_ALL_NODES_LINK_LOCAL_6, &mcast6.sin6_addr);
     if (ret) {
 		DPS_DBGPRINT("Invalid IPv6 multicast address\n");
 		return DPS_ERR_NETWORK;
@@ -230,12 +239,19 @@ static DPS_Status JoinMCastGroup()
 	}
 	ifaddr->addr_state = NET_ADDR_PREFERRED;
     /* Now we can add the multicast address */
-	mcast = net_if_ipv6_maddr_add(iface, &mcast6);
+	mcast = net_if_ipv6_maddr_add(iface, &mcast6.sin6_addr);
 	if (!mcast) {
 		DPS_DBGPRINT("Could not add multicast address to interface\n");
 		return DPS_ERR_NETWORK;
 	}
-
+    /* Bind the multicast address and port */
+    mcast6.sin6_family = AF_INET6;
+    mcast6.sin6_port = htons(COAP_UDP_PORT);
+    ret = net_context_bind(net->mcast6, (struct sockaddr*)&mcast6, sizeof(mcast6));
+    if (ret) {
+		DPS_DBGPRINT("Unable to bind IPv6 multicast address %d\n", ret);
+		return DPS_ERR_NETWORK;
+    }
 	return DPS_OK;
 }
 
@@ -252,6 +268,7 @@ static void OnData(struct net_context* context,
     unsigned int rcvLen;
     DPS_RxBuffer rxBuf;
     DPS_NodeAddress from;
+    uint16_t port;
 
     DPS_DBGTRACE();
 
@@ -259,35 +276,50 @@ static void OnData(struct net_context* context,
 		DPS_ERRPRINT("Expected a valid node pointer\n");
     }
     net = node->network;
-    /* 
-	 * Skip the packet header (fits in the first fragment) - TODO we eventually need to extract the source address
+    /*
+	 * Skip the packet header (fits in the first fragment)
 	 */
 	hdrLen = net_pkt_appdata(pkt) - pkt->frags->data;
 
 	rcvLen = net_pkt_appdatalen(pkt);
 	if (rcvLen > RX_BUFFER_SIZE) {
-		DPS_DBGPRINT("Packet to large for receive buffer\n");
+		DPS_ERRPRINT("Packet too large for receive buffer\n");
         return;
 	}
+    port = proto_hdr->udp->dst_port;
 	net_buf_linearize(net->rxBuffer, rcvLen, pkt->buffer, hdrLen, rcvLen);
+    /* We are done with the packet so unref it so it can be freed */
+    net_pkt_unref(pkt);
     /* Extract the source address and port from the headers */
     memset(&from, 0, sizeof(from));
     if (net_pkt_family(pkt) == AF_INET6) {
         struct sockaddr_in6* sa6 = (struct sockaddr_in6*)&from.inaddr;
         memcpy(&sa6->sin6_addr, &ip_hdr->ipv6->src, sizeof(struct in6_addr));
         sa6->sin6_family = AF_INET6;
-        sa6->sin6_port = proto_hdr->udp->src_port;
+        sa6->sin6_port = port;
     } else {
         struct sockaddr_in* sa4 = (struct sockaddr_in*)&from.inaddr;
         memcpy(&sa4->sin_addr, &ip_hdr->ipv4->src, sizeof(struct in_addr));
         sa4->sin_family = AF_INET;
-        sa4->sin_port = proto_hdr->udp->src_port;
+        sa4->sin_port = port;
     }
-    /* We are done with the packet so unref it so it can be freed */
-    net_pkt_unref(pkt);
-
+    DPS_DBGPRINT("Received %d bytes on port %d\n", rcvLen, ntohs(port));
     DPS_RxBufferInit(&rxBuf, net->rxBuffer, rcvLen);
-    net->recvCB(node, &from, DPS_TRUE, &rxBuf, DPS_OK);
+    net->recvCB(node, &from, context == net->mcast6 || context == net->mcast4, &rxBuf, DPS_OK);
+}
+
+/* TODO - currently there is no Zephyr API to get the port number */
+static uint16_t GetPort(struct net_context* context)
+{
+    uint16_t port;
+    if (context->local.family == AF_INET6) {
+        const struct sockaddr_in6_ptr* addr = net_sin6_ptr(&context->local);
+        port = addr->sin6_port;
+    } else {
+        const struct sockaddr_in_ptr* addr = net_sin_ptr(&context->local);
+        port = addr->sin_port;
+    }
+    return ntohs(port);
 }
 
 DPS_Status DPS_NetworkStart(DPS_Node* node, DPS_OnReceive cb)
@@ -298,22 +330,31 @@ DPS_Status DPS_NetworkStart(DPS_Node* node, DPS_OnReceive cb)
 
     DPS_DBGTRACE();
 
-    status = JoinMCastGroup();
+    status = JoinMCastGroup(network);
     if (status != DPS_OK) {
         goto Exit;
     }
-    status = BindSock(AF_INET6, network, COAP_UDP_PORT);
+    status = BindSock(AF_INET6, network, 0);
     if (status != DPS_OK) {
         goto Exit;
     }
     network->recvCB = cb;
 
-	ret = net_context_recv(network->context6, OnData, K_NO_WAIT, node);
+	ret = net_context_recv(network->mcast6, OnData, K_NO_WAIT, node);
 	if (ret) {
-		DPS_DBGPRINT("Could not register callback\n");
+		DPS_ERRPRINT("Could not register callback\n");
 		status = DPS_ERR_NETWORK;
         goto Exit;
 	}
+	ret = net_context_recv(network->ucast6, OnData, K_NO_WAIT, node);
+	if (ret) {
+		DPS_ERRPRINT("Could not register callback\n");
+		status = DPS_ERR_NETWORK;
+        goto Exit;
+	}
+
+    node->port = GetPort(network->ucast6);
+    DPS_DBGPRINT("Listening on port %d\n", node->port);
 
 Exit:
     return status;
@@ -338,7 +379,7 @@ DPS_Status DPS_MCastSend(DPS_Node* node, void* appCtx, DPS_SendComplete sendComp
     addr6.sin6_family = AF_INET6;
     addr6.sin6_port = htons(COAP_UDP_PORT);
 
-    pkt = net_pkt_get_tx(net->context6, K_FOREVER);
+    pkt = net_pkt_get_tx(net->mcast6, K_FOREVER);
     if (!pkt) {
         return DPS_ERR_NETWORK;
     }
@@ -368,7 +409,7 @@ DPS_Status DPS_UnicastSend(DPS_Node* node, DPS_NodeAddress* dest, void* appCtx, 
 
     DPS_DBGTRACE();
 
-    pkt = net_pkt_get_tx(net->context6, K_FOREVER);
+    pkt = net_pkt_get_tx(net->ucast6, K_FOREVER);
     if (!pkt) {
         return DPS_ERR_NETWORK;
     }

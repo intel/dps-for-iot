@@ -76,4 +76,4 @@ target_sources(app PRIVATE ${mbedtls_sources})
 # The application to build
 include_directories("../test")
 target_sources(app PRIVATE "../test/keys.c")
-target_sources(app PRIVATE "../test/pub_unit_test.c")
+target_sources(app PRIVATE "../test/sub_unit_test.c")
