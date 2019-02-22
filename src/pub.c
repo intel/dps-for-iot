@@ -1442,7 +1442,7 @@ DPS_Status DPS_SerializePub(DPS_PublishRequest* req, const uint8_t* data, size_t
         DPS_MakeNonce(&pub->pubId, req->sequenceNum, DPS_MSG_TYPE_PUB, nonce);
         DPS_UnlockNode(node);
         ret = COSE_Serialize(COSE_ALG_A256GCM, nonce, node->signer.alg ? &node->signer : NULL,
-                             pub->recipients, pub->recipientsCount, &aadBuf, &plainTextBuf,
+                             pub->recipients, pub->recipientsCount, &aadBuf, &plainTextBuf, 1,
                              node->keyStore, &req->encryptedBuf);
         DPS_LockNode(node);
         DPS_RxBufferFree(&plainTextBuf);

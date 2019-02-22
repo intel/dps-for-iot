@@ -63,8 +63,7 @@ extern "C" {
  */
 DPS_Status Encrypt_GCM(const uint8_t key[AES_256_KEY_LEN],
                        const uint8_t nonce[AES_GCM_NONCE_LEN],
-                       DPS_RxBuffer* plainText,
-                       size_t numPlainText,
+                       DPS_RxBuffer* plainText, size_t numPlainText,
                        const uint8_t* aad,
                        size_t aadLen,
                        DPS_TxBuffer* cipherText);

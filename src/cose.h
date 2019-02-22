@@ -74,6 +74,8 @@ typedef struct _COSE_Entity {
  * @param recipient      The recipient information
  * @param recipientLen   The number of recipients
  * @param aad            Buffer containing the external auxiliary authenticated data
+ * @param plainText      Plain text buffers to be encrypted
+ * @param numPlainText   Number of plain text buffers
  * @param plainText      Buffer containing the plain text payload to be encrypted
  * @param keyStore       Request handler for encryption keys
  * @param cipherText     Buffer for returning the authenticated and encrypted output. The storage for this
@@ -88,7 +90,7 @@ DPS_Status COSE_Encrypt(int8_t alg,
                         const COSE_Entity* signer,
                         const COSE_Entity* recipient, size_t recipientLen,
                         DPS_RxBuffer* aad,
-                        DPS_RxBuffer* plainText,
+                        DPS_RxBuffer* plainText, size_t numPlainText,
                         DPS_KeyStore* keyStore,
                         DPS_TxBuffer* cipherText);
 
@@ -185,7 +187,7 @@ DPS_Status COSE_Serialize(int8_t alg,
                           const COSE_Entity* signer,
                           const COSE_Entity* recipient, size_t recipientLen,
                           DPS_RxBuffer* aad,
-                          DPS_RxBuffer* plainText,
+                          DPS_RxBuffer* plainText, size_t numPlainText,
                           DPS_KeyStore* keyStore,
                           DPS_TxBuffer* cipherText);
 

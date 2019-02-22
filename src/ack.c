@@ -195,7 +195,7 @@ static DPS_Status SerializeAck(const DPS_Publication* pub, PublicationAck* ack, 
         DPS_TxBufferToRx(&ack->encryptedBuf, &plainTextBuf);
         DPS_MakeNonce(&ack->pubId, ack->sequenceNum, DPS_MSG_TYPE_ACK, nonce);
         ret = COSE_Serialize(COSE_ALG_A256GCM, nonce, node->signer.alg ? &node->signer : NULL,
-                             pub->recipients, pub->recipientsCount, &aadBuf, &plainTextBuf,
+                             pub->recipients, pub->recipientsCount, &aadBuf, &plainTextBuf, 1,
                              node->keyStore, &cipherTextBuf);
         DPS_TxBufferFree(&ack->encryptedBuf);
         if (ret == DPS_OK) {

@@ -120,8 +120,8 @@ DPS_Status Verify_ECDSA(DPS_ECCurve curve, const uint8_t* x, const uint8_t* y,
  *
  * @param curve the elliptic curve ID
  * @param d the D coordinate
- * @param data the data to hash
- * @param dataLen the size of the data, in bytes
+ * @param buf the data buffers to hash
+ * @param numBuf the number of data buffers
  * @param sig returns the signature
  *
  * @return
@@ -129,7 +129,7 @@ DPS_Status Verify_ECDSA(DPS_ECCurve curve, const uint8_t* x, const uint8_t* y,
  *         - DPS_ERR_INVALID if the signature cannot be computed
  */
 DPS_Status Sign_ECDSA(DPS_ECCurve curve, const uint8_t* d,
-                      const uint8_t* data, size_t dataLen,
+                      DPS_RxBuffer* buf, size_t numBuf,
                       DPS_TxBuffer* sig);
 
 /**

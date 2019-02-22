@@ -233,10 +233,12 @@ static void GCM_Raw(void)
 static void ECDSA_VerifyCurve(DPS_ECCurve crv, uint8_t* x, uint8_t* y, uint8_t* d, uint8_t* data, size_t dataLen)
 {
     DPS_Status ret;
+    DPS_RxBuffer dataBuf;
     DPS_TxBuffer buf;
 
+    DPS_RxBufferInit(&dataBuf, data, dataLen);
     DPS_TxBufferInit(&buf, NULL, 512);
-    ret = Sign_ECDSA(crv, d, data, dataLen, &buf);
+    ret = Sign_ECDSA(crv, d, &dataBuf, 1, &buf);
     ASSERT(ret == DPS_OK);
 
     ret = Verify_ECDSA(crv, x, y, data, dataLen, buf.base, DPS_TxBufferUsed(&buf));
@@ -376,7 +378,7 @@ int main(int argc, char** argv)
     DPS_RxBufferInit(&msgBuf, (uint8_t*)msg, sizeof(msg));
     recipient.alg = COSE_ALG_A256KW;
     recipient.kid = keyId;
-    ret = COSE_Encrypt(alg, nonce, NULL, &recipient, 1, &aadBuf, &msgBuf, keyStore, &cipherText);
+    ret = COSE_Encrypt(alg, nonce, NULL, &recipient, 1, &aadBuf, &msgBuf, 1, keyStore, &cipherText);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("COSE_Encrypt failed: %s\n", DPS_ErrTxt(ret));
         return EXIT_FAILURE;
