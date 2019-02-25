@@ -38,16 +38,26 @@
 extern "C" {
 #endif
 
+#define ACK_BUFS_MAX 4 /**< Number of buffers used in acknowledgement packet */
+
 /**
  * Acknowledgement packet queued to be sent on node loop
  */
 typedef struct _PublicationAck {
     DPS_Queue queue;                /**< Ack queue */
-    DPS_TxBuffer buf;               /**< Headers, unprotected, and protected fields */
-    DPS_TxBuffer encryptedBuf;      /**< Encrypted fields */
     DPS_NodeAddress destAddr;       /**< Destination of acknowledgement */
     uint32_t sequenceNum;           /**< Sequence number being acknowledged */
     DPS_UUID pubId;                 /**< The UUID of the publication */
+    /**
+     * Ack fields.
+     *
+     * Usage of the buffers is as follows:
+     * 0. DPS headers, unprotected, and protected fields
+     * 1. COSE headers (may be empty)
+     * 2. Payload (clear or encrypted)
+     * 3. COSE footers (may be empty)
+     */
+    DPS_TxBuffer bufs[ACK_BUFS_MAX];
 } PublicationAck;
 
 /**

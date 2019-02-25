@@ -100,8 +100,8 @@ DPS_Status ParsePrivateKey_ECDSA(const char* privateKey, const char* password,
  * @param curve the elliptic curve ID
  * @param x the X coordinate
  * @param y the Y coordinate
- * @param data the data to hash
- * @param dataLen the size of the data, in bytes
+ * @param buf the data buffers to hash
+ * @param numBuf the number of data buffers
  * @param sig the signature to verify
  * @param sigLen the size of the signature, in bytes
  *
@@ -110,7 +110,7 @@ DPS_Status ParsePrivateKey_ECDSA(const char* privateKey, const char* password,
  *         - DPS_ERR_INVALID if the signature is not verified
  */
 DPS_Status Verify_ECDSA(DPS_ECCurve curve, const uint8_t* x, const uint8_t* y,
-                        const uint8_t* data, size_t dataLen,
+                        const DPS_RxBuffer* buf, size_t numBuf,
                         const uint8_t* sig, size_t sigLen);
 
 /**

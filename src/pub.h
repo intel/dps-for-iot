@@ -38,6 +38,8 @@
 extern "C" {
 #endif
 
+#define PUB_BUFS_MAX 4 /**< Maximum number of payload buffers */
+
 #define PUB_FLAG_LOCAL     (0x02) /**< The publication is local to this node */
 #define PUB_FLAG_RETAINED  (0x04) /**< The publication had a non-zero TTL */
 #define PUB_FLAG_EXPIRED   (0x10) /**< The publication had a negative TTL */
@@ -121,17 +123,25 @@ typedef void (*DPS_PublishComplete)(DPS_PublishRequest* req, DPS_Status status);
  * A request to DPS_Publish()
  */
 typedef struct _DPS_PublishRequest {
-    DPS_Queue queue;                /**< Request queue */
-    void* data;                     /**< Context pointer */
-    DPS_Publication* pub;           /**< The publication */
-    DPS_PublishComplete completeCB; /**< The completion callback */
-    int16_t ttl;                    /**< Time to live in seconds - maximum TTL is about 9 hours */
-    uint64_t expires;               /**< Time (in milliseconds) that this publication expires */
-    DPS_Status status;              /**< Result of the publish */
-    size_t refCount;                /**< Prevent request from being freed while in use */
-    uint32_t sequenceNum;           /**< Sequence number for this request */
-    DPS_TxBuffer protectedBuf;      /**< Authenticated fields */
-    DPS_TxBuffer encryptedBuf;      /**< Encrypted fields */
+    DPS_Queue queue;                 /**< Request queue */
+    void* data;                      /**< Context pointer */
+    DPS_Publication* pub;            /**< The publication */
+    DPS_PublishComplete completeCB;  /**< The completion callback */
+    int16_t ttl;                     /**< Time to live in seconds - maximum TTL is about 9 hours */
+    uint64_t expires;                /**< Time (in milliseconds) that this publication expires */
+    DPS_Status status;               /**< Result of the publish */
+    size_t refCount;                 /**< Prevent request from being freed while in use */
+    uint32_t sequenceNum;            /**< Sequence number for this request */
+    /**
+     * Publication fields.
+     *
+     * Usage of the buffers is as follows:
+     * 0. Authenticated fields
+     * 1. COSE headers (may be empty)
+     * 2. Payload (clear or encrypted)
+     * 3. COSE footers (may be empty)
+     */
+    DPS_TxBuffer bufs[PUB_BUFS_MAX];
 } DPS_PublishRequest;
 
 /**

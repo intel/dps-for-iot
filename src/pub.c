@@ -198,9 +198,12 @@ static void FreeTopics(DPS_Publication* pub)
 
 static void FreeRequest(DPS_PublishRequest* req)
 {
+    size_t i;
+
     if (req) {
-        DPS_TxBufferFree(&req->encryptedBuf);
-        DPS_TxBufferFree(&req->protectedBuf);
+        for (i = 0; i < PUB_BUFS_MAX; ++i) {
+            DPS_TxBufferFree(&req->bufs[i]);
+        }
         free(req);
     }
 }
@@ -407,6 +410,8 @@ static DPS_Status DecryptAndParsePub(DPS_PublishRequest* req, DPS_TxBuffer* plai
     COSE_Entity recipient;
     DPS_RxBuffer encryptedBuf;
     CBOR_MapState mapState;
+    uint8_t type;
+    uint64_t tag;
     DPS_Status ret;
     size_t i;
 
@@ -414,62 +419,78 @@ static DPS_Status DecryptAndParsePub(DPS_PublishRequest* req, DPS_TxBuffer* plai
      * Try to decrypt the publication
      */
     DPS_MakeNonce(&pub->pubId, req->sequenceNum, DPS_MSG_TYPE_PUB, nonce);
-
-    DPS_TxBufferToRx(&req->protectedBuf, &aadBuf);
-    DPS_TxBufferToRx(&req->encryptedBuf, &cipherTextBuf);
-
-    ret = COSE_Deserialize(nonce, &recipient, &aadBuf, &cipherTextBuf, keyStore, &pub->sender,
-                           plainTextBuf);
+    DPS_TxBufferToRx(&req->bufs[0], &aadBuf);
+    DPS_TxBufferToRx(&req->bufs[1], &cipherTextBuf);
+    DPS_TxBufferClear(plainTextBuf);
+    ret = CBOR_Peek(&cipherTextBuf, &type, &tag);
     if (ret == DPS_OK) {
-        DPS_DBGPRINT("Publication was decrypted\n");
-        CBOR_Dump("plaintext", plainTextBuf->base, DPS_TxBufferUsed(plainTextBuf));
-        DPS_TxBufferToRx(plainTextBuf, &encryptedBuf);
-        /*
-         * We will use the same key id when we encrypt the acknowledgement
-         */
-        if (pub->ackRequested) {
+        if (type == CBOR_TAG) {
+            if ((tag == COSE_TAG_ENCRYPT0) || (tag == COSE_TAG_ENCRYPT)) {
+                ret = COSE_Decrypt(nonce, &recipient, &aadBuf, &cipherTextBuf, keyStore, &pub->sender,
+                                   plainTextBuf);
+                if (ret == DPS_OK) {
+                    DPS_DBGPRINT("Publication was decrypted\n");
+                    CBOR_Dump("plaintext", plainTextBuf->base, DPS_TxBufferUsed(plainTextBuf));
+                    DPS_TxBufferToRx(plainTextBuf, &encryptedBuf);
+                    /*
+                     * We will use the same key id when we encrypt the acknowledgement
+                     */
+                    if (pub->ackRequested) {
+                        /*
+                         * Symmetric keys can use the recipient directly.
+                         * Asymmetric keys must use the sender info if provided.
+                         */
+                        switch (recipient.alg) {
+                        case COSE_ALG_RESERVED:
+                            /*
+                             * Recipient is implicit or not present.
+                             */
+                            ret = DPS_OK;
+                            break;
+                        case COSE_ALG_DIRECT:
+                        case COSE_ALG_A256KW:
+                            if (AddRecipient(pub, recipient.alg, &recipient.kid)) {
+                                ret = DPS_OK;
+                            } else {
+                                ret = DPS_ERR_RESOURCES;
+                            }
+                            break;
+                        case COSE_ALG_ECDH_ES_A256KW:
+                            if (AddRecipient(pub, recipient.alg, &pub->sender.kid)) {
+                                ret = DPS_OK;
+                            } else {
+                                ret = DPS_ERR_RESOURCES;
+                            }
+                            break;
+                        default:
+                            ret = DPS_ERR_MISSING;
+                            break;
+                        }
+                        if (ret != DPS_OK) {
+                            DPS_WARNPRINT("Ack requested, but missing sender ID\n");
+                        }
+                    }
+                }
+            } else if (tag == COSE_TAG_SIGN1) {
+                ret = COSE_Verify(&aadBuf, &cipherTextBuf, keyStore, &pub->sender);
+                if (ret == DPS_OK) {
+                    DPS_DBGPRINT("Publication was verified\n");
+                    encryptedBuf = cipherTextBuf;
+                }
+            } else {
+                ret = DPS_ERR_INVALID;
+            }
+        } else {
+            DPS_DBGPRINT("Publication was not a COSE object\n");
             /*
-             * Symmetric keys can use the recipient directly.
-             * Asymmetric keys must use the sender info if provided.
+             * The payload was not encrypted
              */
-            switch (recipient.alg) {
-            case COSE_ALG_RESERVED:
-                /*
-                 * Recipient is implicit or not present.
-                 */
-                ret = DPS_OK;
-                break;
-            case COSE_ALG_DIRECT:
-            case COSE_ALG_A256KW:
-                if (AddRecipient(pub, recipient.alg, &recipient.kid)) {
-                    ret = DPS_OK;
-                } else {
-                    ret = DPS_ERR_RESOURCES;
-                }
-                break;
-            case COSE_ALG_ECDH_ES_A256KW:
-                if (AddRecipient(pub, recipient.alg, &pub->sender.kid)) {
-                    ret = DPS_OK;
-                } else {
-                    ret = DPS_ERR_RESOURCES;
-                }
-                break;
-            default:
-                ret = DPS_ERR_MISSING;
-                break;
-            }
-            if (ret != DPS_OK) {
-                DPS_WARNPRINT("Ack requested, but missing sender ID\n");
-            }
+            DPS_TxBufferToRx(&req->bufs[1], &encryptedBuf);
+            ret = DPS_OK;
         }
-    } else if (ret == DPS_ERR_NOT_COSE) {
-        DPS_DBGPRINT("Publication was not a COSE object\n");
-        /*
-         * The payload was not encrypted
-         */
-        DPS_TxBufferToRx(&req->encryptedBuf, &encryptedBuf);
-    } else {
-        DPS_WARNPRINT("Failed to deserialize publication - %s\n", DPS_ErrTxt(ret));
+    }
+    if (ret != DPS_OK) {
+        DPS_WARNPRINT("Failed to deserialize publication - %s\n", DPS_ErrTxt(DPS_ERR_SECURITY));
         return DPS_ERR_SECURITY;
     }
     ret = DPS_ParseMapInit(&mapState, &encryptedBuf, EncryptedKeys, A_SIZEOF(EncryptedKeys), NULL, 0);
@@ -835,16 +856,16 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
     DPS_PublishRequestInit(req, pub, PublishComplete);
     req->status = DPS_ERR_NO_ROUTE;
     req->sequenceNum = sequenceNum;
-    ret = DPS_TxBufferInit(&req->protectedBuf, NULL, buf->rxPos - protectedPtr);
+    ret = DPS_TxBufferInit(&req->bufs[0], NULL, buf->rxPos - protectedPtr);
     if (ret != DPS_OK) {
         goto Exit;
     }
-    ret = DPS_TxBufferInit(&req->encryptedBuf, NULL, DPS_RxBufferAvail(buf));
+    ret = DPS_TxBufferInit(&req->bufs[1], NULL, DPS_RxBufferAvail(buf));
     if (ret != DPS_OK) {
         goto Exit;
     }
-    DPS_TxBufferAppend(&req->protectedBuf, protectedPtr, buf->rxPos - protectedPtr);
-    DPS_TxBufferAppend(&req->encryptedBuf, buf->rxPos, DPS_RxBufferAvail(buf));
+    DPS_TxBufferAppend(&req->bufs[0], protectedPtr, buf->rxPos - protectedPtr);
+    DPS_TxBufferAppend(&req->bufs[1], buf->rxPos, DPS_RxBufferAvail(buf));
     /*
      * A negative TTL is a forced expiration. We don't call local handlers.
      */
@@ -968,6 +989,7 @@ DPS_Status DPS_SendPublication(DPS_PublishRequest* req, DPS_Publication* pub, Re
     DPS_TxBuffer buf;
     size_t len;
     int16_t ttl = 0;
+    size_t i;
 
     DPS_DBGTRACE();
 
@@ -1031,11 +1053,11 @@ DPS_Status DPS_SendPublication(DPS_PublishRequest* req, DPS_Publication* pub, Re
      * Protected and encrypted maps are already serialized
      */
     if (ret == DPS_OK) {
-        uv_buf_t bufs[] = {
-            uv_buf_init((char*)buf.base, DPS_TxBufferUsed(&buf)),
-            uv_buf_init((char*)req->protectedBuf.base, DPS_TxBufferUsed(&req->protectedBuf)),
-            uv_buf_init((char*)req->encryptedBuf.base, DPS_TxBufferUsed(&req->encryptedBuf)),
-        };
+        uv_buf_t bufs[1 + PUB_BUFS_MAX];
+        bufs[0] = uv_buf_init((char*)buf.base, DPS_TxBufferUsed(&buf));
+        for (i = 0; i < PUB_BUFS_MAX; ++i) {
+            bufs[1 + i] = uv_buf_init((char*)req->bufs[i].base, DPS_TxBufferUsed(&req->bufs[i]));
+        }
         ++req->refCount;
         if (remote == LoopbackNode) {
             ret = DPS_LoopbackSend(node, bufs, A_SIZEOF(bufs));
@@ -1079,13 +1101,16 @@ DPS_Status DPS_SendPublication(DPS_PublishRequest* req, DPS_Publication* pub, Re
 
 void DPS_PublishRequestInit(DPS_PublishRequest* req, DPS_Publication* pub, DPS_PublishComplete cb)
 {
+    size_t i;
+
     req->pub = pub;
     req->completeCB = cb;
     req->expires = 0;
     req->status = DPS_ERR_FAILURE;
     req->refCount = 0;
-    DPS_TxBufferClear(&req->protectedBuf);
-    DPS_TxBufferClear(&req->encryptedBuf);
+    for (i = 0; i < PUB_BUFS_MAX; ++i) {
+        DPS_TxBufferClear(&req->bufs[i]);
+    }
 }
 
 void DPS_PublishCompletion(DPS_PublishRequest* req)
@@ -1357,6 +1382,7 @@ DPS_Status DPS_SerializePub(DPS_PublishRequest* req, const uint8_t* data, size_t
     size_t topicsLen = DPS_TxBufferUsed(&pub->topicsBuf);
     DPS_Status ret;
     size_t len;
+    size_t i;
 
     /*
      * Encode the protected map
@@ -1367,95 +1393,104 @@ DPS_Status DPS_SerializePub(DPS_PublishRequest* req, const uint8_t* data, size_t
         CBOR_SIZEOF_BOOLEAN() +
         CBOR_SIZEOF_BYTES(bfLen) +
         CBOR_SIZEOF(int16_t);
-    ret = DPS_TxBufferInit(&req->protectedBuf, NULL, len);
+    ret = DPS_TxBufferInit(&req->bufs[0], NULL, len);
     if (ret != DPS_OK) {
         return DPS_ERR_RESOURCES;
     }
-    ret = CBOR_EncodeMap(&req->protectedBuf, 5);
+    ret = CBOR_EncodeMap(&req->bufs[0], 5);
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeUint8(&req->protectedBuf, DPS_CBOR_KEY_TTL);
+        ret = CBOR_EncodeUint8(&req->bufs[0], DPS_CBOR_KEY_TTL);
     }
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeInt16(&req->protectedBuf, ttl);
+        ret = CBOR_EncodeInt16(&req->bufs[0], ttl);
     }
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeUint8(&req->protectedBuf, DPS_CBOR_KEY_PUB_ID);
+        ret = CBOR_EncodeUint8(&req->bufs[0], DPS_CBOR_KEY_PUB_ID);
     }
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeBytes(&req->protectedBuf, (uint8_t*)&pub->pubId, sizeof(pub->pubId));
+        ret = CBOR_EncodeBytes(&req->bufs[0], (uint8_t*)&pub->pubId, sizeof(pub->pubId));
     }
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeUint8(&req->protectedBuf, DPS_CBOR_KEY_SEQ_NUM);
+        ret = CBOR_EncodeUint8(&req->bufs[0], DPS_CBOR_KEY_SEQ_NUM);
     }
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeUint32(&req->protectedBuf, req->sequenceNum);
+        ret = CBOR_EncodeUint32(&req->bufs[0], req->sequenceNum);
     }
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeUint8(&req->protectedBuf, DPS_CBOR_KEY_ACK_REQ);
+        ret = CBOR_EncodeUint8(&req->bufs[0], DPS_CBOR_KEY_ACK_REQ);
     }
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeBoolean(&req->protectedBuf, pub->ackRequested);
+        ret = CBOR_EncodeBoolean(&req->bufs[0], pub->ackRequested);
     }
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeUint8(&req->protectedBuf, DPS_CBOR_KEY_BLOOM_FILTER);
+        ret = CBOR_EncodeUint8(&req->bufs[0], DPS_CBOR_KEY_BLOOM_FILTER);
     }
     if (ret == DPS_OK) {
-        ret = CBOR_Copy(&req->protectedBuf, pub->bfBuf.base, bfLen);
+        ret = CBOR_Copy(&req->bufs[0], pub->bfBuf.base, bfLen);
     }
 
     /*
      * Encode the encrypted map
      */
+    DPS_TxBufferClear(&req->bufs[1]);
     if (ret == DPS_OK) {
         len = CBOR_SIZEOF_MAP(2) + 2 * CBOR_SIZEOF(uint8_t) +
             topicsLen +
             CBOR_SIZEOF_BYTES(dataLen);
-        ret = DPS_TxBufferInit(&req->encryptedBuf, NULL, len);
+        ret = DPS_TxBufferInit(&req->bufs[2], NULL, len);
     }
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeMap(&req->encryptedBuf, 2);
+        ret = CBOR_EncodeMap(&req->bufs[2], 2);
     }
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeUint8(&req->encryptedBuf, DPS_CBOR_KEY_TOPICS);
+        ret = CBOR_EncodeUint8(&req->bufs[2], DPS_CBOR_KEY_TOPICS);
     }
     if (ret == DPS_OK) {
-        ret = DPS_TxBufferAppend(&req->encryptedBuf, pub->topicsBuf.base, topicsLen);
+        ret = DPS_TxBufferAppend(&req->bufs[2], pub->topicsBuf.base, topicsLen);
     }
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeUint8(&req->encryptedBuf, DPS_CBOR_KEY_DATA);
+        ret = CBOR_EncodeUint8(&req->bufs[2], DPS_CBOR_KEY_DATA);
     }
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeBytes(&req->encryptedBuf, data, dataLen);
+        ret = CBOR_EncodeBytes(&req->bufs[2], data, dataLen);
+    }
+    DPS_TxBufferClear(&req->bufs[3]);
+    if (ret == DPS_OK) {
+        if (pub->recipients || node->signer.alg) {
+            DPS_RxBuffer plainTextBuf;
+            DPS_RxBuffer aadBuf;
+            uint8_t nonce[COSE_NONCE_LEN];
+
+            DPS_TxBufferToRx(&req->bufs[2], &plainTextBuf);
+            DPS_TxBufferToRx(&req->bufs[0], &aadBuf);
+            DPS_MakeNonce(&pub->pubId, req->sequenceNum, DPS_MSG_TYPE_PUB, nonce);
+            DPS_UnlockNode(node);
+            if (pub->recipients) {
+                ret = COSE_Encrypt(COSE_ALG_A256GCM, nonce, node->signer.alg ? &node->signer : NULL,
+                                   pub->recipients, pub->recipientsCount, &aadBuf, &plainTextBuf, 1,
+                                   node->keyStore, &req->bufs[1], &req->bufs[2], &req->bufs[3]);
+                DPS_RxBufferFree(&plainTextBuf);
+            } else {
+                ret = COSE_Sign(&node->signer, &aadBuf, &plainTextBuf, 1, node->keyStore, &req->bufs[1],
+                                &req->bufs[3]);
+            }
+            DPS_LockNode(node);
+            if (ret == DPS_OK) {
+                DPS_DBGPRINT("Publication was COSE serialized\n");
+                CBOR_Dump("aad", aadBuf.base, DPS_RxBufferAvail(&aadBuf));
+                for (i = 1; i < PUB_BUFS_MAX; ++i) {
+                    CBOR_Dump("cryptText", req->bufs[i].base, DPS_TxBufferUsed(&req->bufs[i]));
+                }
+            } else {
+                DPS_WARNPRINT("COSE_Serialize failed: %s\n", DPS_ErrTxt(ret));
+            }
+        }
     }
     if (ret != DPS_OK) {
-        DPS_TxBufferFree(&req->protectedBuf);
-        return ret;
-    }
-
-    if (pub->recipients || node->signer.alg) {
-        DPS_RxBuffer plainTextBuf;
-        DPS_RxBuffer aadBuf;
-        uint8_t nonce[COSE_NONCE_LEN];
-
-        DPS_TxBufferToRx(&req->encryptedBuf, &plainTextBuf);
-        DPS_TxBufferToRx(&req->protectedBuf, &aadBuf);
-        DPS_MakeNonce(&pub->pubId, req->sequenceNum, DPS_MSG_TYPE_PUB, nonce);
-        DPS_UnlockNode(node);
-        ret = COSE_Serialize(COSE_ALG_A256GCM, nonce, node->signer.alg ? &node->signer : NULL,
-                             pub->recipients, pub->recipientsCount, &aadBuf, &plainTextBuf, 1,
-                             node->keyStore, &req->encryptedBuf);
-        DPS_LockNode(node);
-        DPS_RxBufferFree(&plainTextBuf);
-        if (ret != DPS_OK) {
-            DPS_WARNPRINT("COSE_Serialize failed: %s\n", DPS_ErrTxt(ret));
-            DPS_TxBufferFree(&req->protectedBuf);
-            return ret;
+        for (i = 0; i < PUB_BUFS_MAX; ++i) {
+            DPS_TxBufferFree(&req->bufs[i]);
         }
-        DPS_DBGPRINT("Publication was COSE serialized\n");
-        CBOR_Dump("aad", aadBuf.base, DPS_RxBufferAvail(&aadBuf));
-        CBOR_Dump("cryptText", req->encryptedBuf.base, DPS_TxBufferUsed(&req->encryptedBuf));
     }
-
     return ret;
 }
 

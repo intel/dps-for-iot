@@ -45,28 +45,34 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
 void DPS_DestroyAck(PublicationAck* ack)
 {
-    DPS_TxBufferFree(&ack->buf);
-    DPS_TxBufferFree(&ack->encryptedBuf);
+    size_t i;
+
+    for (i = 0; i < ACK_BUFS_MAX; ++i) {
+        DPS_TxBufferFree(&ack->bufs[i]);
+    }
     free(ack);
 }
 
 DPS_Status DPS_SendAcknowledgement(DPS_Node* node, PublicationAck* ack, RemoteNode* ackNode)
 {
-    uv_buf_t uvBufs[] = {
-        uv_buf_init((char*)ack->buf.base, DPS_TxBufferUsed(&ack->buf)),
-        uv_buf_init((char*)ack->encryptedBuf.base, DPS_TxBufferUsed(&ack->encryptedBuf))
-    };
+    uv_buf_t uvBufs[ACK_BUFS_MAX];
     int loopback = DPS_FALSE;
     DPS_Publication* pub;
     DPS_Status ret;
+    size_t i;
 
     DPS_DBGPRINT("SendAcknowledgement from %d to %s\n", node->port, DPS_NodeAddrToString(&ackNode->ep.addr));
+
+    for (i = 0; i < ACK_BUFS_MAX; ++i) {
+        uvBufs[i] = uv_buf_init((char*)ack->bufs[i].base, DPS_TxBufferUsed(&ack->bufs[i]));
+    };
 
     /*
      * Ownership of the buffers will be passed to the network
      */
-    ack->buf.base = NULL;
-    ack->encryptedBuf.base = NULL;
+    for (i = 0; i < ACK_BUFS_MAX; ++i) {
+        ack->bufs[i].base = NULL;
+    }
 
     /*
      * See if this is an ACK for a local publication
@@ -105,7 +111,8 @@ static PublicationAck* AllocPubAck(const DPS_UUID* pubId, uint32_t sequenceNum)
     return ack;
 }
 
-static DPS_Status SerializeAck(const DPS_Publication* pub, PublicationAck* ack, const uint8_t* data, size_t dataLen)
+static DPS_Status SerializeAck(const DPS_Publication* pub, PublicationAck* ack, const uint8_t* data,
+                               size_t dataLen)
 {
     DPS_Node* node = pub->node;
     DPS_Status ret;
@@ -126,59 +133,61 @@ static DPS_Status SerializeAck(const DPS_Publication* pub, PublicationAck* ack, 
           CBOR_SIZEOF_MAP(2) + 2 * CBOR_SIZEOF(uint8_t) +
           CBOR_SIZEOF_BYTES(sizeof(DPS_UUID)) +
           CBOR_SIZEOF(uint32_t);
-    ret = DPS_TxBufferInit(&ack->buf, NULL, len);
+    ret = DPS_TxBufferInit(&ack->bufs[0], NULL, len);
     if (ret != DPS_OK) {
         return ret;
     }
-    ret = CBOR_EncodeArray(&ack->buf, 5);
+    ret = CBOR_EncodeArray(&ack->bufs[0], 5);
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeUint8(&ack->buf, DPS_MSG_VERSION);
+        ret = CBOR_EncodeUint8(&ack->bufs[0], DPS_MSG_VERSION);
     }
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeUint8(&ack->buf, DPS_MSG_TYPE_ACK);
+        ret = CBOR_EncodeUint8(&ack->bufs[0], DPS_MSG_TYPE_ACK);
     }
     /*
      * Encode the (empty) unprotected map
      */
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeMap(&ack->buf, 0);
+        ret = CBOR_EncodeMap(&ack->bufs[0], 0);
     }
     /*
      * Encode the protected map
      */
-    aadPos = ack->buf.txPos;
+    aadPos = ack->bufs[0].txPos;
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeMap(&ack->buf, 2);
+        ret = CBOR_EncodeMap(&ack->bufs[0], 2);
     }
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeUint8(&ack->buf, DPS_CBOR_KEY_PUB_ID);
+        ret = CBOR_EncodeUint8(&ack->bufs[0], DPS_CBOR_KEY_PUB_ID);
     }
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeBytes(&ack->buf, (uint8_t*)&ack->pubId, sizeof(ack->pubId));
+        ret = CBOR_EncodeBytes(&ack->bufs[0], (uint8_t*)&ack->pubId, sizeof(ack->pubId));
     }
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeUint8(&ack->buf, DPS_CBOR_KEY_ACK_SEQ_NUM);
+        ret = CBOR_EncodeUint8(&ack->bufs[0], DPS_CBOR_KEY_ACK_SEQ_NUM);
     }
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeUint32(&ack->buf, ack->sequenceNum);
+        ret = CBOR_EncodeUint32(&ack->bufs[0], ack->sequenceNum);
     }
     /*
      * Encode the encrypted map
      */
+    DPS_TxBufferClear(&ack->bufs[1]);
     if (ret == DPS_OK) {
         len = CBOR_SIZEOF_MAP(1) + CBOR_SIZEOF(uint8_t) +
             CBOR_SIZEOF_BYTES(dataLen);
-        ret = DPS_TxBufferInit(&ack->encryptedBuf, NULL, len);
+        ret = DPS_TxBufferInit(&ack->bufs[2], NULL, len);
     }
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeMap(&ack->encryptedBuf, 1);
+        ret = CBOR_EncodeMap(&ack->bufs[2], 1);
     }
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeUint8(&ack->encryptedBuf, DPS_CBOR_KEY_DATA);
+        ret = CBOR_EncodeUint8(&ack->bufs[2], DPS_CBOR_KEY_DATA);
     }
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeBytes(&ack->encryptedBuf, data, dataLen);
+        ret = CBOR_EncodeBytes(&ack->bufs[2], data, dataLen);
     }
+    DPS_TxBufferClear(&ack->bufs[3]);
     if (ret != DPS_OK) {
         return ret;
     }
@@ -186,21 +195,23 @@ static DPS_Status SerializeAck(const DPS_Publication* pub, PublicationAck* ack, 
      * If the publication was encrypted the ack must be too
      */
     if (pub->recipients || node->signer.alg) {
-        DPS_RxBuffer aadBuf;
         DPS_RxBuffer plainTextBuf;
-        DPS_TxBuffer cipherTextBuf;
+        DPS_RxBuffer aadBuf;
         uint8_t nonce[COSE_NONCE_LEN];
 
-        DPS_RxBufferInit(&aadBuf, aadPos, ack->buf.txPos - aadPos);
-        DPS_TxBufferToRx(&ack->encryptedBuf, &plainTextBuf);
+        DPS_TxBufferToRx(&ack->bufs[2], &plainTextBuf);
+        DPS_RxBufferInit(&aadBuf, aadPos, ack->bufs[0].txPos - aadPos);
         DPS_MakeNonce(&ack->pubId, ack->sequenceNum, DPS_MSG_TYPE_ACK, nonce);
-        ret = COSE_Serialize(COSE_ALG_A256GCM, nonce, node->signer.alg ? &node->signer : NULL,
-                             pub->recipients, pub->recipientsCount, &aadBuf, &plainTextBuf, 1,
-                             node->keyStore, &cipherTextBuf);
-        DPS_TxBufferFree(&ack->encryptedBuf);
-        if (ret == DPS_OK) {
-            ack->encryptedBuf = cipherTextBuf;
+        if (pub->recipients) {
+            ret = COSE_Encrypt(COSE_ALG_A256GCM, nonce, node->signer.alg ? &node->signer : NULL,
+                               pub->recipients, pub->recipientsCount, &aadBuf, &plainTextBuf, 1,
+                               node->keyStore, &ack->bufs[1], &ack->bufs[2], &ack->bufs[3]);
+            DPS_RxBufferFree(&plainTextBuf);
         } else {
+            ret = COSE_Sign(&node->signer, &aadBuf, &plainTextBuf, 1, node->keyStore, &ack->bufs[1],
+                            &ack->bufs[3]);
+        }
+        if (ret != DPS_OK) {
             DPS_WARNPRINT("COSE_Serialize failed: %s\n", DPS_ErrTxt(ret));
         }
     }
@@ -283,11 +294,13 @@ DPS_Status DPS_DecodeAcknowledgement(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Rx
     pub = DPS_LookupAckHandler(node, &pubId, sequenceNum);
     if (pub) {
         uint8_t nonce[COSE_NONCE_LEN];
-        COSE_Entity recipient;
+        COSE_Entity unused;
         DPS_RxBuffer encryptedBuf;
         DPS_RxBuffer aadBuf;
         DPS_RxBuffer cipherTextBuf;
         DPS_TxBuffer plainTextBuf;
+        uint8_t type;
+        uint64_t tag;
         /*
          * Increase the refcount to prevent the publication from being
          * freed from inside the callback function
@@ -300,18 +313,31 @@ DPS_Status DPS_DecodeAcknowledgement(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Rx
         DPS_MakeNonce(&pubId, sequenceNum, DPS_MSG_TYPE_ACK, nonce);
         DPS_RxBufferInit(&aadBuf, aadPos, buf->rxPos - aadPos);
         DPS_RxBufferInit(&cipherTextBuf, buf->rxPos, DPS_RxBufferAvail(buf));
-        ret = COSE_Deserialize(nonce, &recipient, &aadBuf, &cipherTextBuf, node->keyStore,
-                               &pub->ack, &plainTextBuf);
-        if (ret == DPS_OK) {
-            DPS_DBGPRINT("Ack was COSE deserialized\n");
-            CBOR_Dump("plaintext", plainTextBuf.base, DPS_TxBufferUsed(&plainTextBuf));
-            DPS_TxBufferToRx(&plainTextBuf, &encryptedBuf);
-        } else if (ret == DPS_ERR_NOT_COSE) {
+        DPS_TxBufferClear(&plainTextBuf);
+        ret = CBOR_Peek(&cipherTextBuf, &type, &tag);
+        if ((ret == DPS_OK) && (type == CBOR_TAG)) {
+            if ((tag == COSE_TAG_ENCRYPT0) || (tag == COSE_TAG_ENCRYPT)) {
+                ret = COSE_Decrypt(nonce, &unused, &aadBuf, &cipherTextBuf, node->keyStore, &pub->ack,
+                                   &plainTextBuf);
+                if (ret == DPS_OK) {
+                    DPS_DBGPRINT("Ack was COSE decrypted\n");
+                    CBOR_Dump("plaintext", plainTextBuf.base, DPS_TxBufferUsed(&plainTextBuf));
+                    DPS_TxBufferToRx(&plainTextBuf, &encryptedBuf);
+                }
+            } else if (tag == COSE_TAG_SIGN1) {
+                ret = COSE_Verify(&aadBuf, &cipherTextBuf, node->keyStore, &pub->ack);
+                if (ret == DPS_OK) {
+                    DPS_DBGPRINT("Ack was COSE verified\n");
+                    encryptedBuf = cipherTextBuf;
+                }
+            } else {
+                ret = DPS_ERR_INVALID;
+                DPS_ERRPRINT("Invalid COSE object for Ack - %s\n", DPS_ErrTxt(ret));
+            }
+        } else {
             DPS_DBGPRINT("Ack was not a COSE object\n");
             encryptedBuf = cipherTextBuf;
             ret = DPS_OK;
-        } else {
-            DPS_ERRPRINT("Failed to deserialize Ack - %s\n", DPS_ErrTxt(ret));
         }
         if (ret == DPS_OK) {
             uint8_t* data = NULL;

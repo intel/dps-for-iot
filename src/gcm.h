@@ -64,8 +64,7 @@ extern "C" {
 DPS_Status Encrypt_GCM(const uint8_t key[AES_256_KEY_LEN],
                        const uint8_t nonce[AES_GCM_NONCE_LEN],
                        DPS_RxBuffer* plainText, size_t numPlainText,
-                       const uint8_t* aad,
-                       size_t aadLen,
+                       const uint8_t* aad, size_t aadLen,
                        DPS_TxBuffer* cipherText);
 
 /**
@@ -88,10 +87,8 @@ DPS_Status Encrypt_GCM(const uint8_t key[AES_256_KEY_LEN],
  */
 DPS_Status Decrypt_GCM(const uint8_t key[AES_256_KEY_LEN],
                        const uint8_t nonce[AES_GCM_NONCE_LEN],
-                       const uint8_t* cipherText,
-                       size_t ctLen,
-                       const uint8_t* aad,
-                       size_t aadLen,
+                       const uint8_t* cipherText, size_t ctLen,
+                       const uint8_t* aad, size_t aadLen,
                        DPS_TxBuffer* plainText);
 
 #ifdef __cplusplus

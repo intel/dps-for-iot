@@ -241,7 +241,7 @@ static void ECDSA_VerifyCurve(DPS_ECCurve crv, uint8_t* x, uint8_t* y, uint8_t* 
     ret = Sign_ECDSA(crv, d, &dataBuf, 1, &buf);
     ASSERT(ret == DPS_OK);
 
-    ret = Verify_ECDSA(crv, x, y, data, dataLen, buf.base, DPS_TxBufferUsed(&buf));
+    ret = Verify_ECDSA(crv, x, y, &dataBuf, 1, buf.base, DPS_TxBufferUsed(&buf));
     ASSERT(ret == DPS_OK);
 
     DPS_TxBufferFree(&buf);
@@ -312,7 +312,9 @@ static void ECDSA_Raw(void)
             0x53, 0x3c, 0x49, 0x89, 0xd3, 0xac, 0x38, 0xc3, 0x8b, 0x71, 0x48, 0x1c, 0xc3, 0x43, 0x0c, 0x9d,
             0x65, 0xe7, 0xdd, 0xff
         };
-        ret = Verify_ECDSA(crv, x, y, data, sizeof(data), sig, sizeof(sig));
+        DPS_RxBuffer dataBuf;
+        DPS_RxBufferInit(&dataBuf, data, sizeof(data));
+        ret = Verify_ECDSA(crv, x, y, &dataBuf, 1, sig, sizeof(sig));
         ASSERT(ret == DPS_OK);
         ECDSA_VerifyCurve(crv, x, y, d, data, sizeof(data));
     }
@@ -371,23 +373,36 @@ int main(int argc, char** argv)
      */
     uint8_t alg = COSE_ALG_A256GCM;
     COSE_Entity recipient;
-    DPS_TxBuffer cipherText;
+    DPS_TxBuffer cipherText[3];
     DPS_TxBuffer plainText;
+    DPS_TxBuffer txBuf;
     DPS_RxBuffer input;
+    size_t ctLen;
     DPS_RxBufferInit(&aadBuf, (uint8_t*)aad, sizeof(aad));
     DPS_RxBufferInit(&msgBuf, (uint8_t*)msg, sizeof(msg));
     recipient.alg = COSE_ALG_A256KW;
     recipient.kid = keyId;
-    ret = COSE_Encrypt(alg, nonce, NULL, &recipient, 1, &aadBuf, &msgBuf, 1, keyStore, &cipherText);
+    ret = COSE_Encrypt(alg, nonce, NULL, &recipient, 1, &aadBuf, &msgBuf, 1, keyStore, &cipherText[0],
+                       &cipherText[1], &cipherText[2]);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("COSE_Encrypt failed: %s\n", DPS_ErrTxt(ret));
         return EXIT_FAILURE;
     }
-    Dump("CipherText", cipherText.base, DPS_TxBufferUsed(&cipherText));
+    for (i = 0; i < 3; ++i) {
+        Dump("CipherText", cipherText[i].base, DPS_TxBufferUsed(&cipherText[i]));
+    }
     /*
      * Turn output buffers into input buffers
      */
-    DPS_TxBufferToRx(&cipherText, &input);
+    ctLen = 0;
+    for (i = 0; i < 3; ++i) {
+        ctLen += DPS_TxBufferUsed(&cipherText[i]);
+    }
+    DPS_TxBufferInit(&txBuf, NULL, ctLen);
+    for (i = 0; i < 3; ++i) {
+        DPS_TxBufferAppend(&txBuf, cipherText[i].base, DPS_TxBufferUsed(&cipherText[i]));
+    }
+    DPS_TxBufferToRx(&txBuf, &input);
     DPS_RxBufferInit(&aadBuf, (uint8_t*)aad, sizeof(aad));
     ret = COSE_Decrypt(nonce, &recipient, &aadBuf, &input, keyStore, NULL, &plainText);
     if (ret != DPS_OK) {
@@ -396,8 +411,11 @@ int main(int argc, char** argv)
     }
     ASSERT(DPS_TxBufferUsed(&plainText) == sizeof(msg));
     ASSERT(memcmp(plainText.base, msg, sizeof(msg)) == 0);
-    DPS_TxBufferFree(&cipherText);
+    for (i = 0; i < 3; ++i) {
+        DPS_TxBufferFree(&cipherText[i]);
+    }
     DPS_TxBufferFree(&plainText);
+    DPS_TxBufferFree(&txBuf);
 
     /*
      * Signing and verification
@@ -407,28 +425,43 @@ int main(int argc, char** argv)
     signer.kid = signerId;
     DPS_RxBufferInit(&aadBuf, (uint8_t*)aad, sizeof(aad));
     DPS_RxBufferInit(&msgBuf, (uint8_t*)msg, sizeof(msg));
-    ret = COSE_Sign(&signer, &aadBuf, &msgBuf, keyStore, &cipherText);
+    DPS_RxBufferToTx(&msgBuf, &cipherText[1]);
+    ret = COSE_Sign(&signer, &aadBuf, &msgBuf, 1, keyStore, &cipherText[0], &cipherText[2]);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("COSE_Sign failed: %s\n", DPS_ErrTxt(ret));
         return EXIT_FAILURE;
     }
-    Dump("CipherText", cipherText.base, DPS_TxBufferUsed(&cipherText));
+    for (i = 0; i < 3; ++i) {
+        Dump("CipherText", cipherText[i].base, DPS_TxBufferUsed(&cipherText[i]));
+    }
     /*
      * Turn output buffers into input buffers
      */
-    DPS_TxBufferToRx(&cipherText, &input);
+    ctLen = 0;
+    for (i = 0; i < 3; ++i) {
+        ctLen += DPS_TxBufferUsed(&cipherText[i]);
+    }
+    DPS_TxBufferInit(&txBuf, NULL, ctLen);
+    for (i = 0; i < 3; ++i) {
+        DPS_TxBufferAppend(&txBuf, cipherText[i].base, DPS_TxBufferUsed(&cipherText[i]));
+    }
+    DPS_TxBufferToRx(&txBuf, &input);
     DPS_RxBufferInit(&aadBuf, (uint8_t*)aad, sizeof(aad));
     memset(&signer, 0, sizeof(signer));
-    ret = COSE_Verify(&aadBuf, &input, keyStore, &signer, &plainText);
+    ret = COSE_Verify(&aadBuf, &input, keyStore, &signer);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("COSE_Verify failed: %s\n", DPS_ErrTxt(ret));
         return EXIT_FAILURE;
     }
     ASSERT(signer.kid.len == signerId.len);
     ASSERT(memcmp(signer.kid.id, signerId.id, signer.kid.len) == 0);
-    ASSERT(DPS_TxBufferUsed(&plainText) == sizeof(msg));
-    DPS_TxBufferFree(&cipherText);
-    DPS_TxBufferFree(&plainText);
+    ASSERT(DPS_RxBufferAvail(&input) == sizeof(msg));
+    for (i = 0; i < 3; ++i) {
+        if (i != 1) {
+            DPS_TxBufferFree(&cipherText[i]);
+        }
+    }
+    DPS_TxBufferFree(&txBuf);
 
     DPS_PRINT("Passed\n");
     DPS_DestroyKeyStore(keyStore);
