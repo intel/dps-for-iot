@@ -52,6 +52,7 @@ DPS_PublicationGetUUID
 DPS_PublicationIsAckRequested
 DPS_PublicationRemoveSubId
 DPS_Publish
+DPS_PublishBufs
 DPS_Registration_Get
 DPS_Registration_GetSyn
 DPS_Registration_LinkTo

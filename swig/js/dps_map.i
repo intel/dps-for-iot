@@ -32,6 +32,7 @@
 %rename("destroyPublication") DestroyPublication;
 %rename("destroySubscription") DestroySubscription;
 %rename("publicationGetTopics") PublicationGetTopics;
+%rename("publishBufs") PublishBufs;
 %rename("setCertificate") SetCertificate;
 %rename("subscriptionGetTopics") SubscriptionGetTopics;
 %rename("%(regex:/^_?DPS_(.*)/\\l\\1/)s", %$isfunction) "";
@@ -42,9 +43,9 @@ typedef v8::Handle<v8::Value> Handle;
 
 class Handler {
 public:
-    Handler(v8::Handle<v8::Value> val) {
-        m_val.Reset(v8::Isolate::GetCurrent(), val);
-    }
+    Handler() { }
+    Handler(v8::Handle<v8::Value> val) { Set(val); }
+    void Set(v8::Handle<v8::Value> val) { m_val.Reset(v8::Isolate::GetCurrent(), val); }
     v8::Persistent<v8::Value> m_val;
 };
 %}
@@ -225,6 +226,43 @@ public:
     for (uint32_t i = 0; i < $2; ++i)
         free($1[i]);
     free($1);
+}
+
+%typemap(in) (Buffer* bufs, size_t numBufs) {
+    /*
+     * typemap(default) doesn't appear to be initializing the values
+     * in the JavaScript binding
+     */
+    $1 = NULL;
+    $2 = 0;
+
+    size_t len;
+    size_t i;
+    if ($input->IsArray()) {
+        v8::Local<v8::Array> arr = v8::Local<v8::Array>::Cast($input);
+        len = arr->Length();
+        if (len) {
+            $1 = new Buffer[len];
+            $2 = len;
+            for (i = 0; i < len; ++i) {
+                v8::Local<v8::Value> valRef;
+                if (!arr->Get(SWIGV8_CURRENT_CONTEXT(), i).ToLocal(&valRef)) {
+                    SWIG_exception_fail(SWIG_ArgError(SWIG_TypeError), "in method '" "$symname" "', argument " "$argnum"" of type '" "$1_type""'");
+                }
+                int res = $1[i].Set(valRef);
+                if (!SWIG_IsOK(res)) {
+                    SWIG_exception_fail(SWIG_ArgError(res), "in method '" "$symname" "', argument " "$argnum"" of type '" "$1_type""'");
+                }
+            }
+        }
+    } else {
+        $1 = new Buffer[1];
+        $2 = 1;
+        int res = $1[0].Set($input);
+        if (!SWIG_IsOK(res)) {
+            SWIG_exception_fail(SWIG_ArgError(res), "in method '" "$symname" "', argument " "$argnum"" of type '" "$1_type""'");
+        }
+    }
 }
 
 %extend _DPS_UUID {
