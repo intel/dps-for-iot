@@ -38,7 +38,7 @@
 extern "C" {
 #endif
 
-#define PUB_BUFS_MAX 4 /**< Maximum number of payload buffers */
+#define NUM_INTERNAL_PUB_BUFS 4 /**< Additional buffers needed for message serialization */
 
 #define PUB_FLAG_LOCAL     (0x02) /**< The publication is local to this node */
 #define PUB_FLAG_RETAINED  (0x04) /**< The publication had a non-zero TTL */
@@ -112,46 +112,56 @@ void DPS_UpdatePubs(DPS_Node* node);
 DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuffer* buffer, int multicast);
 
 /**
- * Called when DPS_Publish() completes.
- *
- * @param req The request
- * @param status The status of the publish.
- */
-typedef void (*DPS_PublishComplete)(DPS_PublishRequest* req, DPS_Status status);
-
-/**
  * A request to DPS_Publish()
  */
 typedef struct _DPS_PublishRequest {
-    DPS_Queue queue;                 /**< Request queue */
-    void* data;                      /**< Context pointer */
-    DPS_Publication* pub;            /**< The publication */
-    DPS_PublishComplete completeCB;  /**< The completion callback */
-    int16_t ttl;                     /**< Time to live in seconds - maximum TTL is about 9 hours */
-    uint64_t expires;                /**< Time (in milliseconds) that this publication expires */
-    DPS_Status status;               /**< Result of the publish */
-    size_t refCount;                 /**< Prevent request from being freed while in use */
-    uint32_t sequenceNum;            /**< Sequence number for this request */
+    DPS_Queue queue;                    /**< Request queue */
+    DPS_Publication* pub;               /**< The publication */
+    DPS_PublishBufsComplete completeCB; /**< The completion callback */
+    void* data;                         /**< Context pointer */
+    int16_t ttl;                        /**< Time to live in seconds - maximum TTL is about 9 hours */
+    uint64_t expires;                   /**< Time (in milliseconds) that this publication expires */
+    DPS_Status status;                  /**< Result of the publish */
+    size_t refCount;                    /**< Prevent request from being freed while in use */
+    uint32_t sequenceNum;               /**< Sequence number for this request */
+    size_t numBufs;                     /**< Number of buffers */
     /**
      * Publication fields.
      *
-     * Usage of the buffers is as follows:
-     * 0. Authenticated fields
-     * 1. COSE headers (may be empty)
-     * 2. Payload (clear or encrypted)
-     * 3. COSE footers (may be empty)
+     * Usage of the buffers when serializing is follows:
+     * 0:            Authenticated fields
+     * 1:            COSE headers (may be empty)
+     * 2:            Payload headers
+     * 3..numBufs-2: Payload
+     * numBufs-1:    COSE footers (may be empty)
+     *
+     * Usage of the buffers when decoding is simpler:
+     * 0:            Authenticated fields
+     * 1:            Complete COSE object
      */
-    DPS_TxBuffer bufs[PUB_BUFS_MAX];
+    DPS_TxBuffer bufs[1];
 } DPS_PublishRequest;
 
 /**
- * Initialize a request to DPS_Publish()
+ * Creates a request to DPS_Publish()
  *
- * @param req The publish request
  * @param pub The publication
+ * @param numBufs The number of payload buffers.  Note that this number does not include non-payload buffers,
+ *                those are added internally.
  * @param cb The completion callback
+ * @param data The data to be passed to the callback function
+ *
+ * @return The created request, or NULL if creation failed
  */
-void DPS_PublishRequestInit(DPS_PublishRequest* req, DPS_Publication* pub, DPS_PublishComplete cb);
+DPS_PublishRequest* DPS_CreatePublishRequest(DPS_Publication* pub, size_t numBufs, DPS_PublishBufsComplete cb,
+                                             void* data);
+
+/**
+ * Frees resources associated with a publish request
+ *
+ * @param req A previously created request.
+  */
+void DPS_DestroyPublishRequest(DPS_PublishRequest* req);
 
 /**
  * Multicast a publication or send it directly to a remote subscriber node
@@ -172,13 +182,13 @@ DPS_Status DPS_SendPublication(DPS_PublishRequest* req, DPS_Publication* pub, Re
  * the publication structure,
  *
  * @param req The publish request
- * @param data The payload
- * @param dataLen The number of payload bytes
+ * @param bufs Optional payload buffers
+ * @param numBufs The number of buffers
  * @param ttl The time-to-live of the publication
  *
  * @return DPS_OK if the serialization is successful, an error otherwise
  */
-DPS_Status DPS_SerializePub(DPS_PublishRequest* req, const uint8_t* data, size_t dataLen, int16_t ttl);
+DPS_Status DPS_SerializePub(DPS_PublishRequest* req, const DPS_Buffer* bufs, size_t numBufs, int16_t ttl);
 
 /**
  * Complete the request if finished.

@@ -50,12 +50,11 @@ extern "C" {
  *
  * @param key          The AES-256 encryption key
  * @param nonce        The nonce (must be 12 bytes in this implementation)
- * @param plainText    The plain text buffers to be encrypted
- * @param numPlainText The number of plain text buffers
+ * @param bufs         The buffers to be encrypted
+ * @param numBufs      The number of buffers
+ * @param tag          The authentication tag buffer
  * @param aad          The auxiliary data that will be authenticated but not encrypted
  * @param aadLen       The length of the auxiliary data
- * @param cipherText   Returns the cipher text. The buffer must have room to append
- *                     (ptLen + 16) bytes.
  *
  * @return
  * - DPS_OK if the GCM context is initialized
@@ -63,9 +62,9 @@ extern "C" {
  */
 DPS_Status Encrypt_GCM(const uint8_t key[AES_256_KEY_LEN],
                        const uint8_t nonce[AES_GCM_NONCE_LEN],
-                       DPS_RxBuffer* plainText, size_t numPlainText,
-                       const uint8_t* aad, size_t aadLen,
-                       DPS_TxBuffer* cipherText);
+                       DPS_TxBuffer* bufs, size_t numBufs,
+                       DPS_TxBuffer* tag,
+                       const uint8_t* aad, size_t aadLen);
 
 /**
  * Implements AES-GCM (Galois/Counter Mode) decryption. The message is

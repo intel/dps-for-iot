@@ -140,6 +140,8 @@ static void GCM_Raw(void)
     DPS_Status ret;
     uint8_t buf[2][512];
     DPS_RxBuffer msgBuf[2];
+    DPS_TxBuffer payload[2];
+    DPS_TxBuffer tag;
     DPS_TxBuffer cipherText;
     DPS_TxBuffer plainText;
     uint8_t pt[1024];
@@ -211,10 +213,19 @@ static void GCM_Raw(void)
             DPS_RxBufferInit(&msgBuf[1], buf[1], 20);
             break;
         }
-        DPS_TxBufferInit(&cipherText, NULL, 512);
-        DPS_TxBufferInit(&plainText, NULL, 512);
-        ret = Encrypt_GCM(key.symmetric.key, nonce, msgBuf, 2, aad, sizeof(aad), &cipherText);
+        for (i = 0; i < 2; ++i) {
+            DPS_TxBufferInit(&payload[i], NULL, DPS_RxBufferAvail(&msgBuf[i]));
+            DPS_TxBufferAppend(&payload[i], msgBuf[i].base, DPS_RxBufferAvail(&msgBuf[i]));
+        }
+        DPS_TxBufferInit(&tag, NULL, 16);
+        ret = Encrypt_GCM(key.symmetric.key, nonce, payload, 2, &tag, aad, sizeof(aad));
         ASSERT(ret == DPS_OK);
+        DPS_TxBufferInit(&cipherText, NULL, 512);
+        for (i = 0; i < 2; ++i) {
+            DPS_TxBufferAppend(&cipherText, payload[i].base, DPS_TxBufferUsed(&payload[i]));
+        }
+        DPS_TxBufferAppend(&cipherText, tag.base, DPS_TxBufferUsed(&tag));
+        DPS_TxBufferInit(&plainText, NULL, 512);
         ret = Decrypt_GCM(key.symmetric.key, nonce, cipherText.base, DPS_TxBufferUsed(&cipherText),
                           aad, sizeof(aad), &plainText);
         ASSERT(ret == DPS_OK);
@@ -225,6 +236,9 @@ static void GCM_Raw(void)
         ASSERT(DPS_TxBufferUsed(&plainText) == ptLen);
         ASSERT(memcmp(plainText.base, pt, ptLen) == 0);
 
+        DPS_TxBufferFree(&payload[1]);
+        DPS_TxBufferFree(&payload[0]);
+        DPS_TxBufferFree(&tag);
         DPS_TxBufferFree(&cipherText);
         DPS_TxBufferFree(&plainText);
     }
@@ -366,7 +380,6 @@ int main(int argc, char** argv)
     KeyWrap_Raw();
 
     DPS_RxBuffer aadBuf;
-    DPS_RxBuffer msgBuf;
 
     /*
      * Encryption and decryption
@@ -379,11 +392,12 @@ int main(int argc, char** argv)
     DPS_RxBuffer input;
     size_t ctLen;
     DPS_RxBufferInit(&aadBuf, (uint8_t*)aad, sizeof(aad));
-    DPS_RxBufferInit(&msgBuf, (uint8_t*)msg, sizeof(msg));
+    DPS_TxBufferInit(&cipherText[1], NULL, sizeof(msg));
+    DPS_TxBufferAppend(&cipherText[1], (uint8_t*)msg, sizeof(msg));
     recipient.alg = COSE_ALG_A256KW;
     recipient.kid = keyId;
-    ret = COSE_Encrypt(alg, nonce, NULL, &recipient, 1, &aadBuf, &msgBuf, 1, keyStore, &cipherText[0],
-                       &cipherText[1], &cipherText[2]);
+    ret = COSE_Encrypt(alg, nonce, NULL, &recipient, 1, &aadBuf, &cipherText[0], &cipherText[1], 1, &cipherText[2],
+                       keyStore);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("COSE_Encrypt failed: %s\n", DPS_ErrTxt(ret));
         return EXIT_FAILURE;
@@ -414,6 +428,7 @@ int main(int argc, char** argv)
     for (i = 0; i < 3; ++i) {
         DPS_TxBufferFree(&cipherText[i]);
     }
+    DPS_TxBufferFree(&cipherText[1]);
     DPS_TxBufferFree(&plainText);
     DPS_TxBufferFree(&txBuf);
 
@@ -424,9 +439,9 @@ int main(int argc, char** argv)
     signer.alg = COSE_ALG_ES512;
     signer.kid = signerId;
     DPS_RxBufferInit(&aadBuf, (uint8_t*)aad, sizeof(aad));
-    DPS_RxBufferInit(&msgBuf, (uint8_t*)msg, sizeof(msg));
-    DPS_RxBufferToTx(&msgBuf, &cipherText[1]);
-    ret = COSE_Sign(&signer, &aadBuf, &msgBuf, 1, keyStore, &cipherText[0], &cipherText[2]);
+    DPS_TxBufferInit(&cipherText[1], NULL, sizeof(msg));
+    DPS_TxBufferAppend(&cipherText[1], (uint8_t*)msg, sizeof(msg));
+    ret = COSE_Sign(&signer, &aadBuf, &cipherText[0], &cipherText[1], 1, &cipherText[2], keyStore);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("COSE_Sign failed: %s\n", DPS_ErrTxt(ret));
         return EXIT_FAILURE;
@@ -457,9 +472,7 @@ int main(int argc, char** argv)
     ASSERT(memcmp(signer.kid.id, signerId.id, signer.kid.len) == 0);
     ASSERT(DPS_RxBufferAvail(&input) == sizeof(msg));
     for (i = 0; i < 3; ++i) {
-        if (i != 1) {
-            DPS_TxBufferFree(&cipherText[i]);
-        }
+        DPS_TxBufferFree(&cipherText[i]);
     }
     DPS_TxBufferFree(&txBuf);
 

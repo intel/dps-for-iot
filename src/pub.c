@@ -196,14 +196,16 @@ static void FreeTopics(DPS_Publication* pub)
     }
 }
 
-static void FreeRequest(DPS_PublishRequest* req)
+void DPS_DestroyPublishRequest(DPS_PublishRequest* req)
 {
-    size_t i;
-
     if (req) {
-        for (i = 0; i < PUB_BUFS_MAX; ++i) {
-            DPS_TxBufferFree(&req->bufs[i]);
-        }
+        DPS_TxBufferFree(&req->bufs[0]);
+        DPS_TxBufferFree(&req->bufs[1]);
+        DPS_TxBufferFree(&req->bufs[2]);
+        DPS_TxBufferFree(&req->bufs[req->numBufs - 1]);
+        /*
+         * Any additional buffers belong to the application
+         */
         free(req);
     }
 }
@@ -633,13 +635,6 @@ static DPS_Publication* LookupRetained(DPS_Node* node, DPS_UUID* pubId)
     return pub;
 }
 
-static void PublishComplete(DPS_PublishRequest* req, DPS_Status status)
-{
-    DPS_DBGTRACEA("req=%p,status=%s\n", req, DPS_ErrTxt(status));
-
-    FreeRequest(req);
-}
-
 DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuffer* buf, int multicast)
 {
     static const int32_t UnprotectedKeys[] = { DPS_CBOR_KEY_PORT, DPS_CBOR_KEY_TTL };
@@ -848,12 +843,11 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
      * The DPS_ERR_NO_ROUTE status will be reported in the completion
      * callback if we do not forward the publication
      */
-    req = malloc(sizeof(DPS_PublishRequest));
+    req = DPS_CreatePublishRequest(pub, 0, NULL, NULL);
     if (!req) {
         ret = DPS_ERR_RESOURCES;
         goto Exit;
     }
-    DPS_PublishRequestInit(req, pub, PublishComplete);
     req->status = DPS_ERR_NO_ROUTE;
     req->sequenceNum = sequenceNum;
     ret = DPS_TxBufferInit(&req->bufs[0], NULL, buf->rxPos - protectedPtr);
@@ -908,7 +902,8 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
 Exit:
     if (req && (ret != DPS_OK)) {
         assert(pub);
-        PublishComplete(req, ret);
+        req->status = ret;
+        DPS_DestroyPublishRequest(req);
     }
     /*
      * Delete the publisher node if it is sending bad data
@@ -1053,17 +1048,17 @@ DPS_Status DPS_SendPublication(DPS_PublishRequest* req, DPS_Publication* pub, Re
      * Protected and encrypted maps are already serialized
      */
     if (ret == DPS_OK) {
-        uv_buf_t bufs[1 + PUB_BUFS_MAX];
+        uv_buf_t bufs[1 + DPS_BUFS_MAX];
         bufs[0] = uv_buf_init((char*)buf.base, DPS_TxBufferUsed(&buf));
-        for (i = 0; i < PUB_BUFS_MAX; ++i) {
+        for (i = 0; i < req->numBufs; ++i) {
             bufs[1 + i] = uv_buf_init((char*)req->bufs[i].base, DPS_TxBufferUsed(&req->bufs[i]));
         }
         ++req->refCount;
         if (remote == LoopbackNode) {
-            ret = DPS_LoopbackSend(node, bufs, A_SIZEOF(bufs));
-            SendComplete(req, NULL, bufs, A_SIZEOF(bufs), ret);
+            ret = DPS_LoopbackSend(node, bufs, 1 + req->numBufs);
+            SendComplete(req, NULL, bufs, 1 + req->numBufs, ret);
         } else if (remote) {
-            ret = DPS_NetSend(node, req, &remote->ep, bufs, A_SIZEOF(bufs), OnNetSendComplete);
+            ret = DPS_NetSend(node, req, &remote->ep, bufs, 1 + req->numBufs, OnNetSendComplete);
             if (ret == DPS_OK) {
                 /*
                  * Prevent the publication from being freed until the send completes.
@@ -1075,10 +1070,10 @@ DPS_Status DPS_SendPublication(DPS_PublishRequest* req, DPS_Publication* pub, Re
                 DPS_UpdatePubHistory(&node->history, &pub->pubId, req->sequenceNum,
                                      pub->ackRequested, REQ_TTL(req), &remote->ep.addr);
             } else {
-                SendComplete(req, &remote->ep, bufs, A_SIZEOF(bufs), ret);
+                SendComplete(req, &remote->ep, bufs, 1 + req->numBufs, ret);
             }
         } else {
-            ret = DPS_MulticastSend(node->mcastSender, req, bufs, A_SIZEOF(bufs), OnMulticastSendComplete);
+            ret = DPS_MulticastSend(node->mcastSender, req, bufs, 1 + req->numBufs, OnMulticastSendComplete);
             if (ret == DPS_OK) {
                 DPS_PublicationIncRef(pub);
             } else {
@@ -1090,7 +1085,7 @@ DPS_Status DPS_SendPublication(DPS_PublishRequest* req, DPS_Publication* pub, Re
                      */
                     ret = DPS_OK;
                 }
-                SendComplete(req, NULL, bufs, A_SIZEOF(bufs), ret);
+                SendComplete(req, NULL, bufs, 1 + req->numBufs, ret);
             }
         }
     } else {
@@ -1099,24 +1094,47 @@ DPS_Status DPS_SendPublication(DPS_PublishRequest* req, DPS_Publication* pub, Re
     return ret;
 }
 
-void DPS_PublishRequestInit(DPS_PublishRequest* req, DPS_Publication* pub, DPS_PublishComplete cb)
+DPS_PublishRequest* DPS_CreatePublishRequest(DPS_Publication* pub, size_t numBufs, DPS_PublishBufsComplete cb,
+                                             void* data)
 {
-    size_t i;
+    DPS_PublishRequest* req = NULL;
 
+    /*
+     * Reserve additional buffers for the authenticated fields,
+     * optional COSE headers, payload headers, and optional COSE
+     * footers.
+     */
+    numBufs += NUM_INTERNAL_PUB_BUFS;
+    req = calloc(1, sizeof(DPS_PublishRequest) + ((numBufs - 1) * sizeof(DPS_TxBuffer)));
+    if (!req) {
+        return NULL;
+    }
     req->pub = pub;
     req->completeCB = cb;
-    req->expires = 0;
+    req->data = data;
     req->status = DPS_ERR_FAILURE;
-    req->refCount = 0;
-    for (i = 0; i < PUB_BUFS_MAX; ++i) {
-        DPS_TxBufferClear(&req->bufs[i]);
-    }
+    req->numBufs = numBufs;
+    return req;
 }
 
 void DPS_PublishCompletion(DPS_PublishRequest* req)
 {
+    DPS_Buffer bufs[DPS_BUFS_MAX];
+    size_t numBufs = 0;
+    size_t i;
+
     if (req->refCount == 0) {
-        req->completeCB(req, req->status);
+        if (req->completeCB) {
+            if (req->numBufs > NUM_INTERNAL_PUB_BUFS) {
+                numBufs = req->numBufs - NUM_INTERNAL_PUB_BUFS;
+                for (i = 0; i < numBufs; ++i) {
+                    bufs[i].base = req->bufs[i + 3].base;
+                    bufs[i].len = DPS_TxBufferUsed(&req->bufs[i + 3]);
+                }
+            }
+            req->completeCB(req->pub, numBufs ? bufs : NULL, numBufs, req->status, req->data);
+        }
+        DPS_DestroyPublishRequest(req);
     }
 }
 
@@ -1374,15 +1392,18 @@ void DPS_PublicationRemoveSubId(DPS_Publication* pub, const DPS_KeyId* keyId)
     }
 }
 
-DPS_Status DPS_SerializePub(DPS_PublishRequest* req, const uint8_t* data, size_t dataLen, int16_t ttl)
+DPS_Status DPS_SerializePub(DPS_PublishRequest* req, const DPS_Buffer* bufs, size_t numBufs, int16_t ttl)
 {
     DPS_Publication* pub = req->pub;
     DPS_Node* node = pub->node;
     size_t bfLen = DPS_TxBufferUsed(&pub->bfBuf);
     size_t topicsLen = DPS_TxBufferUsed(&pub->topicsBuf);
+    size_t dataLen;
     DPS_Status ret;
     size_t len;
     size_t i;
+
+    assert(req->numBufs == numBufs + NUM_INTERNAL_PUB_BUFS);
 
     /*
      * Encode the protected map
@@ -1428,15 +1449,18 @@ DPS_Status DPS_SerializePub(DPS_PublishRequest* req, const uint8_t* data, size_t
     if (ret == DPS_OK) {
         ret = CBOR_Copy(&req->bufs[0], pub->bfBuf.base, bfLen);
     }
-
     /*
      * Encode the encrypted map
      */
     DPS_TxBufferClear(&req->bufs[1]);
+    dataLen = 0;
+    for (i = 0; i < numBufs; ++i) {
+        dataLen += bufs[i].len;
+    }
     if (ret == DPS_OK) {
         len = CBOR_SIZEOF_MAP(2) + 2 * CBOR_SIZEOF(uint8_t) +
             topicsLen +
-            CBOR_SIZEOF_BYTES(dataLen);
+            CBOR_SIZEOF_LEN(dataLen);
         ret = DPS_TxBufferInit(&req->bufs[2], NULL, len);
     }
     if (ret == DPS_OK) {
@@ -1452,33 +1476,36 @@ DPS_Status DPS_SerializePub(DPS_PublishRequest* req, const uint8_t* data, size_t
         ret = CBOR_EncodeUint8(&req->bufs[2], DPS_CBOR_KEY_DATA);
     }
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeBytes(&req->bufs[2], data, dataLen);
+        ret = CBOR_EncodeLength(&req->bufs[2], dataLen, CBOR_BYTES);
     }
-    DPS_TxBufferClear(&req->bufs[3]);
+    for (i = 0; (ret == DPS_OK) && (i < numBufs); ++i) {
+        req->bufs[i + 3].base = bufs[i].base;
+        req->bufs[i + 3].eob = bufs[i].base + bufs[i].len;
+        req->bufs[i + 3].txPos = req->bufs[i + 3].eob;
+    }
+    DPS_TxBufferClear(&req->bufs[req->numBufs - 1]);
     if (ret == DPS_OK) {
         if (pub->recipients || node->signer.alg) {
-            DPS_RxBuffer plainTextBuf;
             DPS_RxBuffer aadBuf;
             uint8_t nonce[COSE_NONCE_LEN];
 
-            DPS_TxBufferToRx(&req->bufs[2], &plainTextBuf);
             DPS_TxBufferToRx(&req->bufs[0], &aadBuf);
             DPS_MakeNonce(&pub->pubId, req->sequenceNum, DPS_MSG_TYPE_PUB, nonce);
             DPS_UnlockNode(node);
             if (pub->recipients) {
                 ret = COSE_Encrypt(COSE_ALG_A256GCM, nonce, node->signer.alg ? &node->signer : NULL,
-                                   pub->recipients, pub->recipientsCount, &aadBuf, &plainTextBuf, 1,
-                                   node->keyStore, &req->bufs[1], &req->bufs[2], &req->bufs[3]);
-                DPS_RxBufferFree(&plainTextBuf);
+                                   pub->recipients, pub->recipientsCount, &aadBuf, &req->bufs[1],
+                                   &req->bufs[2], req->numBufs - 3, &req->bufs[req->numBufs - 1],
+                                   node->keyStore);
             } else {
-                ret = COSE_Sign(&node->signer, &aadBuf, &plainTextBuf, 1, node->keyStore, &req->bufs[1],
-                                &req->bufs[3]);
+                ret = COSE_Sign(&node->signer, &aadBuf, &req->bufs[1], &req->bufs[2], req->numBufs - 3,
+                                &req->bufs[req->numBufs - 1], node->keyStore);
             }
             DPS_LockNode(node);
             if (ret == DPS_OK) {
                 DPS_DBGPRINT("Publication was COSE serialized\n");
                 CBOR_Dump("aad", aadBuf.base, DPS_RxBufferAvail(&aadBuf));
-                for (i = 1; i < PUB_BUFS_MAX; ++i) {
+                for (i = 3; i < (req->numBufs - 3); ++i) {
                     CBOR_Dump("cryptText", req->bufs[i].base, DPS_TxBufferUsed(&req->bufs[i]));
                 }
             } else {
@@ -1487,21 +1514,31 @@ DPS_Status DPS_SerializePub(DPS_PublishRequest* req, const uint8_t* data, size_t
         }
     }
     if (ret != DPS_OK) {
-        for (i = 0; i < PUB_BUFS_MAX; ++i) {
-            DPS_TxBufferFree(&req->bufs[i]);
-        }
+        DPS_TxBufferFree(&req->bufs[0]);
+        DPS_TxBufferFree(&req->bufs[1]);
+        DPS_TxBufferFree(&req->bufs[2]);
+        DPS_TxBufferFree(&req->bufs[req->numBufs - 1]);
+        /*
+         * Any additional buffers belong to the application
+         */
     }
     return ret;
 }
 
-static DPS_Status Publish(DPS_PublishRequest* req, DPS_Publication* pub, const uint8_t* payload,
-                          size_t len, int16_t ttl, DPS_PublishComplete cb)
+DPS_Status DPS_PublishBufs(DPS_Publication* pub, const DPS_Buffer* bufs, size_t numBufs, int16_t ttl,
+                           DPS_PublishBufsComplete cb, void* data)
 {
     DPS_Status ret;
     DPS_Node* node = pub ? pub->node : NULL;
+    DPS_PublishRequest* req = NULL;
+
+    DPS_DBGTRACE();
 
     if (!pub) {
         return DPS_ERR_NULL;
+    }
+    if ((!bufs && numBufs) || (numBufs > DPS_BUFS_MAX)) {
+        return DPS_ERR_ARGS;
     }
     if (!node) {
         return DPS_ERR_NOT_INITIALIZED;
@@ -1515,7 +1552,12 @@ static DPS_Status Publish(DPS_PublishRequest* req, DPS_Publication* pub, const u
     if (!IsValidPub(pub) || !(pub->flags & PUB_FLAG_LOCAL)) {
         return DPS_ERR_MISSING;
     }
-    DPS_PublishRequestInit(req, pub, cb);
+
+    req = DPS_CreatePublishRequest(pub, numBufs, cb, data);
+    if (!req) {
+        ret = DPS_ERR_RESOURCES;
+        goto Exit;
+    }
     /*
      * Prevent publication from being destroyed while we are using it.
      * Note that we add a reference to keep the publication alive when
@@ -1534,7 +1576,7 @@ static DPS_Status Publish(DPS_PublishRequest* req, DPS_Publication* pub, const u
             ret = DPS_ERR_INVALID;
             goto Exit;
         }
-        if (payload) {
+        if (bufs) {
             DPS_ERRPRINT("Payload not permitted when canceling a retained publication\n");
             ret = DPS_ERR_INVALID;
             goto Exit;
@@ -1553,7 +1595,7 @@ static DPS_Status Publish(DPS_PublishRequest* req, DPS_Publication* pub, const u
     /*
      * Serialize the publication
      */
-    ret = DPS_SerializePub(req, payload, len, ttl);
+    ret = DPS_SerializePub(req, bufs, numBufs, ttl);
     if (ret != DPS_OK) {
         goto Exit;
     }
@@ -1563,26 +1605,42 @@ static DPS_Status Publish(DPS_PublishRequest* req, DPS_Publication* pub, const u
 Exit:
     DPS_PublicationDecRef(pub);
     DPS_UnlockNode(node);
+    if (ret != DPS_OK) {
+        DPS_DestroyPublishRequest(req);
+    }
     return ret;
+}
+
+static void PublishComplete(DPS_Publication* pub, const DPS_Buffer* bufs, size_t numBufs, DPS_Status status,
+                            void* data)
+{
+    if (numBufs && bufs[0].base) {
+        free(bufs[0].base);
+    }
 }
 
 DPS_Status DPS_Publish(DPS_Publication* pub, const uint8_t* payload, size_t len, int16_t ttl)
 {
-    DPS_PublishRequest* req = NULL;
     DPS_Status ret;
+    DPS_Buffer buf = { NULL, 0 };
+    DPS_Buffer* bufs = NULL;
+    size_t numBufs = 0;
 
     DPS_DBGTRACE();
 
-    req = malloc(sizeof(DPS_PublishRequest));
-    if (!req) {
-        ret = DPS_ERR_RESOURCES;
-        goto Exit;
+    if (payload && len) {
+        buf.base = malloc(len);
+        if (!buf.base) {
+            return DPS_ERR_RESOURCES;
+        }
+        memcpy(buf.base, payload, len);
+        buf.len = len;
+        bufs = &buf;
+        numBufs = 1;
     }
-    ret = Publish(req, pub, payload, len, ttl, PublishComplete);
-
-Exit:
+    ret = DPS_PublishBufs(pub, bufs, numBufs, ttl, PublishComplete, NULL);
     if (ret != DPS_OK) {
-        FreeRequest(req);
+        free(buf.base);
     }
     return ret;
 }

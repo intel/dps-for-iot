@@ -75,7 +75,7 @@ typedef struct _COSE_Entity {
 /**
  * COSE Encryption
  *
- * The complete COSE object is formed by concatenating the header, cipherText, and footer buffers.
+ * The complete COSE object is formed by concatenating the header, payload, and footer buffers.
  *
  * @param alg            The symmetric crypto algorithm variant to use
  * @param nonce          The nonce
@@ -83,16 +83,13 @@ typedef struct _COSE_Entity {
  * @param recipient      The recipient information
  * @param recipientLen   The number of recipients
  * @param aad            Buffer containing the external auxiliary authenticated data
- * @param plainText      Plain text buffers to be encrypted
- * @param numPlainText   Number of plain text buffers
- * @param plainText      Buffer containing the plain text payload to be encrypted
- * @param keyStore       Request handler for encryption keys
  * @param header         Buffer for returning the COSE headers. The storage for this
  *                       buffer is allocated by this function and must be freed by the caller.
- * @param cipherText     Buffer for returning the authenticated and encrypted output. The storage for this
- *                       buffer is allocated by this function and must be freed by the caller.
+ * @param payload        Plain text buffers to be encrypted
+ * @param numPayload     Number of plain text buffers
  * @param footer         Buffer for returning the COSE footers. The storage for this
  *                       buffer is allocated by this function and must be freed by the caller.
+ * @param keyStore       Request handler for encryption keys
  *
  * @return
  * - DPS_OK if the plaintext was successfully encrypted
@@ -103,9 +100,10 @@ DPS_Status COSE_Encrypt(int8_t alg,
                         const COSE_Entity* signer,
                         const COSE_Entity* recipient, size_t recipientLen,
                         DPS_RxBuffer* aad,
-                        DPS_RxBuffer* plainText, size_t numPlainText,
-                        DPS_KeyStore* keyStore,
-                        DPS_TxBuffer* header, DPS_TxBuffer* cipherText, DPS_TxBuffer* footer);
+                        DPS_TxBuffer* header,
+                        DPS_TxBuffer* payload, size_t numPayload,
+                        DPS_TxBuffer* footer,
+                        DPS_KeyStore* keyStore);
 
 /**
  * COSE Decryption
@@ -145,8 +143,8 @@ DPS_Status COSE_Decrypt(const uint8_t* nonce,
  *
  * @param signer         The signer information
  * @param aad            Buffer containing the external auxiliary authenticated data
- * @param plainText      Plain text buffers to be signed
- * @param numPlainText   Number of plain text buffers
+ * @param payload        Plain text buffers to be signed
+ * @param numPayload     Number of plain text buffers
  * @param keyStore       Request handler for encryption keys
  * @param header         Buffer for returning the COSE headers. The storage for this
  *                       buffer is allocated by this function and must be freed by the caller.
@@ -159,9 +157,10 @@ DPS_Status COSE_Decrypt(const uint8_t* nonce,
  */
 DPS_Status COSE_Sign(const COSE_Entity* signer,
                      DPS_RxBuffer* aad,
-                     DPS_RxBuffer* plainText, size_t numPlainText,
-                     DPS_KeyStore* keyStore,
-                     DPS_TxBuffer* header, DPS_TxBuffer* footer);
+                     DPS_TxBuffer* header,
+                     DPS_TxBuffer* payload, size_t numPayload,
+                     DPS_TxBuffer* footer,
+                     DPS_KeyStore* keyStore);
 
 /**
  * COSE Verification

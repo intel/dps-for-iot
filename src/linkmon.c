@@ -145,12 +145,6 @@ void DPS_LinkMonitorStop(RemoteNode* remote)
     }
 }
 
-static void SendProbeComplete(DPS_PublishRequest* req, DPS_Status status)
-{
-    DPS_DBGTRACEA("req=%p,status=%s\n", req, DPS_ErrTxt(status));
-    free(req);
-}
-
 static void OnProbeTimeout(uv_timer_t* handle)
 {
     DPS_Status ret = DPS_ERR_TIMEOUT;
@@ -189,11 +183,10 @@ static void OnProbeTimeout(uv_timer_t* handle)
      * Send a next probe
      */
     if (ret == DPS_OK) {
-        req = malloc(sizeof(DPS_PublishRequest));
+        req = DPS_CreatePublishRequest(monitor->pub, 0, NULL, NULL);
         if (!req) {
             ret = DPS_ERR_RESOURCES;
         }
-        DPS_PublishRequestInit(req, monitor->pub, SendProbeComplete);
     }
     if (ret == DPS_OK) {
         /*
@@ -221,7 +214,7 @@ static void OnProbeTimeout(uv_timer_t* handle)
     if (ret == DPS_OK) {
         DPS_PublishCompletion(req);
     } else {
-        free(req);
+        DPS_DestroyPublishRequest(req);
     }
 
     DPS_UnlockNode(monitor->node);

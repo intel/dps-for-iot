@@ -195,21 +195,18 @@ static DPS_Status SerializeAck(const DPS_Publication* pub, PublicationAck* ack, 
      * If the publication was encrypted the ack must be too
      */
     if (pub->recipients || node->signer.alg) {
-        DPS_RxBuffer plainTextBuf;
         DPS_RxBuffer aadBuf;
         uint8_t nonce[COSE_NONCE_LEN];
 
-        DPS_TxBufferToRx(&ack->bufs[2], &plainTextBuf);
         DPS_RxBufferInit(&aadBuf, aadPos, ack->bufs[0].txPos - aadPos);
         DPS_MakeNonce(&ack->pubId, ack->sequenceNum, DPS_MSG_TYPE_ACK, nonce);
         if (pub->recipients) {
             ret = COSE_Encrypt(COSE_ALG_A256GCM, nonce, node->signer.alg ? &node->signer : NULL,
-                               pub->recipients, pub->recipientsCount, &aadBuf, &plainTextBuf, 1,
-                               node->keyStore, &ack->bufs[1], &ack->bufs[2], &ack->bufs[3]);
-            DPS_RxBufferFree(&plainTextBuf);
+                               pub->recipients, pub->recipientsCount, &aadBuf, &ack->bufs[1],
+                               &ack->bufs[2], 1, &ack->bufs[3], node->keyStore);
         } else {
-            ret = COSE_Sign(&node->signer, &aadBuf, &plainTextBuf, 1, node->keyStore, &ack->bufs[1],
-                            &ack->bufs[3]);
+            ret = COSE_Sign(&node->signer, &aadBuf, &ack->bufs[1], &ack->bufs[2], 1, &ack->bufs[3],
+                            node->keyStore);
         }
         if (ret != DPS_OK) {
             DPS_WARNPRINT("COSE_Serialize failed: %s\n", DPS_ErrTxt(ret));

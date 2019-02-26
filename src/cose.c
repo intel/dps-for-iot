@@ -703,13 +703,13 @@ static DPS_Status GetSignatureKey(DPS_KeyStore* keyStore, const Signature* sig, 
 
 DPS_Status COSE_Encrypt(int8_t alg, const uint8_t nonce[COSE_NONCE_LEN], const COSE_Entity* signer,
                         const COSE_Entity* recipient, size_t recipientLen, DPS_RxBuffer* aad,
-                        DPS_RxBuffer* plainText, size_t numPlainText, DPS_KeyStore* keyStore,
-                        DPS_TxBuffer* header, DPS_TxBuffer* cipherText, DPS_TxBuffer* footer)
+                        DPS_TxBuffer* header, DPS_TxBuffer* payload, size_t numPayload,
+                        DPS_TxBuffer* footer, DPS_KeyStore* keyStore)
 {
     DPS_Status ret;
     uint8_t tag;
     size_t recipientBytes;
-    size_t ptLen;
+    size_t payloadLen;
     DPS_TxBuffer AAD;
     size_t aadLen;
     Signature sig;
@@ -724,14 +724,13 @@ DPS_Status COSE_Encrypt(int8_t alg, const uint8_t nonce[COSE_NONCE_LEN], const C
     COSE_Key k;
     uint8_t M;
     size_t nonceLen;
-    DPS_RxBuffer content;
     size_t contentLen;
     size_t ctLen;
     size_t i;
 
     DPS_DBGTRACE();
 
-    if (!recipient || !recipientLen || !aad || !plainText || !numPlainText) {
+    if (!recipient || !recipientLen || !aad || !header || !payload || !numPayload || !footer) {
         return DPS_ERR_ARGS;
     }
 
@@ -747,16 +746,15 @@ DPS_Status COSE_Encrypt(int8_t alg, const uint8_t nonce[COSE_NONCE_LEN], const C
         }
     }
 
-    ptLen = 0;
-    for (i = 0; i < numPlainText; ++i) {
-        ptLen += DPS_RxBufferAvail(plainText);
+    payloadLen = 0;
+    for (i = 0; i < numPayload; ++i) {
+        payloadLen += DPS_TxBufferUsed(&payload[i]);
     }
     DPS_TxBufferClear(&AAD);
     DPS_TxBufferClear(&toBeSigned);
     DPS_TxBufferClear(&sigBuf);
     DPS_TxBufferClear(&kdfContext);
     DPS_TxBufferClear(header);
-    DPS_TxBufferClear(cipherText);
     DPS_TxBufferClear(footer);
     memset(&ephemeralKey, 0, sizeof(ephemeralKey));
     if ((recipientLen == 1) && (recipient[0].alg == COSE_ALG_RESERVED)) {
@@ -769,7 +767,7 @@ DPS_Status COSE_Encrypt(int8_t alg, const uint8_t nonce[COSE_NONCE_LEN], const C
     if (ret != DPS_OK) {
         goto Exit;
     }
-    contentLen = ptLen + M;
+    contentLen = payloadLen + M;
 
     /*
      * Allocate header buffer and copy in headers
@@ -778,7 +776,8 @@ DPS_Status COSE_Encrypt(int8_t alg, const uint8_t nonce[COSE_NONCE_LEN], const C
         CBOR_SIZEOF_ARRAY(4) +
         SIZEOF_PROTECTED_MAP +
         CBOR_SIZEOF_MAP(2) +
-        /* iv */ CBOR_SIZEOF(int8_t) + CBOR_SIZEOF_BYTES(COSE_NONCE_LEN);
+        /* iv */ CBOR_SIZEOF(int8_t) + CBOR_SIZEOF_BYTES(COSE_NONCE_LEN) +
+        CBOR_SIZEOF_LEN(contentLen);
     if (signer) {
         ctLen += /* counter signature */ CBOR_SIZEOF(int8_t) + SIZEOF_COUNTER_SIGNATURE(signer->kid.len);
     }
@@ -836,8 +835,7 @@ DPS_Status COSE_Encrypt(int8_t alg, const uint8_t nonce[COSE_NONCE_LEN], const C
     /*
      * [3] Encrypted content
      */
-    ctLen = CBOR_SIZEOF_BYTES(contentLen);
-    ret = DPS_TxBufferInit(cipherText, NULL, ctLen);
+    ret = CBOR_EncodeLength(header, contentLen, CBOR_BYTES);
     if (ret != DPS_OK) {
         goto Exit;
     }
@@ -899,12 +897,15 @@ DPS_Status COSE_Encrypt(int8_t alg, const uint8_t nonce[COSE_NONCE_LEN], const C
     /*
      * Call the encryption algorithm
      */
-    ret = CBOR_EncodeLength(cipherText, contentLen, CBOR_BYTES);
+    ctLen = M;
+    if (tag == COSE_TAG_ENCRYPT) {
+        ctLen += CBOR_SIZEOF_ARRAY(recipientLen) + recipientBytes;
+    }
+    ret = DPS_TxBufferInit(footer, NULL, ctLen);
     if (ret != DPS_OK) {
         goto Exit;
     }
-    DPS_RxBufferInit(&content, cipherText->txPos, contentLen);
-    ret = Encrypt_GCM(cek.symmetric.key, nonce, plainText, numPlainText, AAD.base, aadLen, cipherText);
+    ret = Encrypt_GCM(cek.symmetric.key, nonce, payload, numPayload, footer, AAD.base, aadLen);
     if (ret != DPS_OK) {
         goto Exit;
     }
@@ -913,14 +914,17 @@ DPS_Status COSE_Encrypt(int8_t alg, const uint8_t nonce[COSE_NONCE_LEN], const C
      * unprotected map with the signature
      */
     if (signer) {
-        DPS_RxBuffer dataBuf[2];
+        DPS_RxBuffer dataBuf[numPayload + DPS_BUFS_MAX];
         ret = EncodePartialSig(&toBeSigned, tag, alg, sig.alg, NULL, 0, contentLen);
         if (ret != DPS_OK) {
             goto Exit;
         }
         DPS_TxBufferToRx(&toBeSigned, &dataBuf[0]);
-        dataBuf[1] = content;
-        ret = Sign_ECDSA(k.ec.curve, k.ec.d, dataBuf, 2, &sigBuf);
+        for (i = 0; i < numPayload; ++i) {
+            DPS_TxBufferToRx(&payload[i], &dataBuf[i + 1]);
+        }
+        DPS_TxBufferToRx(footer, &dataBuf[i + 1]);
+        ret = Sign_ECDSA(k.ec.curve, k.ec.d, dataBuf, numPayload + 2, &sigBuf);
         if (ret != DPS_OK) {
             goto Exit;
         }
@@ -931,11 +935,6 @@ DPS_Status COSE_Encrypt(int8_t alg, const uint8_t nonce[COSE_NONCE_LEN], const C
      * [4] Recipients
      */
     if (tag == COSE_TAG_ENCRYPT) {
-        ctLen = CBOR_SIZEOF_ARRAY(recipientLen) + recipientBytes;
-        ret = DPS_TxBufferInit(footer, NULL, ctLen);
-        if (ret != DPS_OK) {
-            goto Exit;
-        }
         ret = CBOR_EncodeArray(footer, recipientLen);
         if (ret != DPS_OK) {
             goto Exit;
@@ -1038,11 +1037,6 @@ Exit:
     DPS_TxBufferFree(&kdfContext);
     DPS_TxBufferFree(&toBeSigned);
     DPS_TxBufferFree(&AAD);
-    if (ret != DPS_OK) {
-        for (i = 0; i < 3; ++i) {
-            DPS_TxBufferFree(&cipherText[i]);
-        }
-    }
     return ret;
 }
 
@@ -1609,23 +1603,24 @@ Exit:
     return ret;
 }
 
-DPS_Status COSE_Sign(const COSE_Entity* signer, DPS_RxBuffer* aad, DPS_RxBuffer* plainText,
-                     size_t numPlainText, DPS_KeyStore* keyStore, DPS_TxBuffer* header, DPS_TxBuffer* footer)
+DPS_Status COSE_Sign(const COSE_Entity* signer, DPS_RxBuffer* aad, DPS_TxBuffer* header,
+                     DPS_TxBuffer* payload, size_t numPayload, DPS_TxBuffer* footer,
+                     DPS_KeyStore* keyStore)
 {
     DPS_Status ret;
     uint8_t tag;
     Signature sig;
     DPS_TxBuffer toBeSigned;
-    DPS_RxBuffer dataBuf[numPlainText + 1];
+    DPS_RxBuffer dataBuf[numPayload + DPS_BUFS_MAX];
     DPS_TxBuffer sigBuf;
     COSE_Key k;
-    size_t ptLen;
+    size_t payloadLen;
     size_t ctLen;
     size_t i;
 
     DPS_DBGTRACE();
 
-    if (!aad || !plainText || !numPlainText || !signer) {
+    if (!signer || !aad || !header || !payload || !numPayload || !footer) {
         return DPS_ERR_ARGS;
     }
 
@@ -1644,12 +1639,12 @@ DPS_Status COSE_Sign(const COSE_Entity* signer, DPS_RxBuffer* aad, DPS_RxBuffer*
     }
     sig.alg = signer->alg;
     sig.kid = signer->kid;
-    ptLen = 0;
-    for (i = 0; i < numPlainText; ++i) {
-        ptLen += DPS_RxBufferAvail(plainText);
+    payloadLen = 0;
+    for (i = 0; i < numPayload; ++i) {
+        payloadLen += DPS_TxBufferUsed(&payload[i]);
     }
     ret = EncodePartialSig(&toBeSigned, tag, sig.alg, COSE_ALG_RESERVED, aad->base, DPS_RxBufferAvail(aad),
-                           ptLen);
+                           payloadLen);
     if (ret != DPS_OK) {
         goto Exit;
     }
@@ -1658,10 +1653,10 @@ DPS_Status COSE_Sign(const COSE_Entity* signer, DPS_RxBuffer* aad, DPS_RxBuffer*
         goto Exit;
     }
     DPS_TxBufferToRx(&toBeSigned, &dataBuf[0]);
-    for (i = 0; i < numPlainText; ++i) {
-        dataBuf[i + 1] = plainText[i];
+    for (i = 0; i < numPayload; ++i) {
+        DPS_TxBufferToRx(&payload[i], &dataBuf[i + 1]);
     }
-    ret = Sign_ECDSA(k.ec.curve, k.ec.d, dataBuf, numPlainText + 1, &sigBuf);
+    ret = Sign_ECDSA(k.ec.curve, k.ec.d, dataBuf, numPayload + 1, &sigBuf);
     if (ret != DPS_OK) {
         goto Exit;
     }
@@ -1675,7 +1670,7 @@ DPS_Status COSE_Sign(const COSE_Entity* signer, DPS_RxBuffer* aad, DPS_RxBuffer*
         SIZEOF_PROTECTED_MAP +
         CBOR_SIZEOF_MAP(1) +
         /* kid */ CBOR_SIZEOF(int8_t) + SIZEOF_COUNTER_SIGNATURE(sig.kid.len) +
-        CBOR_SIZEOF_LEN(ptLen);
+        CBOR_SIZEOF_LEN(payloadLen);
     ret = DPS_TxBufferInit(header, NULL, ctLen);
     if (ret != DPS_OK) {
         goto Exit;
@@ -1711,7 +1706,7 @@ DPS_Status COSE_Sign(const COSE_Entity* signer, DPS_RxBuffer* aad, DPS_RxBuffer*
     /*
      * [3] Content
      */
-    ret = CBOR_EncodeLength(header, ptLen, CBOR_BYTES);
+    ret = CBOR_EncodeLength(header, payloadLen, CBOR_BYTES);
     if (ret != DPS_OK) {
         goto Exit;
     }
