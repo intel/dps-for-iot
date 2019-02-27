@@ -207,6 +207,16 @@ import (
          return DPS_PublishBufs(pub, bufs, numBufs, ttl, publishBufsComplete, (void*)data);
  }
 
+ extern void goAckPublicationBufsComplete(DPS_Publication* pub, uintptr_t data);
+ static void ackPublicationBufsComplete(DPS_Publication* pub, const DPS_Buffer* bufs, size_t numBufs, DPS_Status status, void* data)
+ {
+         goAckPublicationBufsComplete(pub, (uintptr_t)data);
+ }
+
+ static DPS_Status ackPublicationBufs(DPS_Publication* pub, const DPS_Buffer* bufs, size_t numBufs, uintptr_t data) {
+         return DPS_AckPublicationBufs(pub, bufs, numBufs, ackPublicationBufsComplete, (void*)data);
+ }
+
 */
 import "C"
 
@@ -871,10 +881,10 @@ func PublishBufs(pub *Publication, bufs [][]byte, ttl int16) int {
 	handle := reg.register(bufs)
 	cbufs := C.makeBuffers(C.size_t(len(bufs)))
 	defer C.free(unsafe.Pointer(cbufs))
-	p2 := (*[1<<30]C.DPS_Buffer)(unsafe.Pointer(cbufs))
+	cbuf := (*[1<<30]C.DPS_Buffer)(unsafe.Pointer(cbufs))
 	for i := 0; i < len(bufs); i++ {
-		p2[i].base = (*C.uint8_t)(&bufs[i][0])
-		p2[i].len = C.size_t(len(bufs[i]))
+		cbuf[i].base = (*C.uint8_t)(&bufs[i][0])
+		cbuf[i].len = C.size_t(len(bufs[i]))
 	}
 	cnumBufs := C.size_t(len(bufs))
 	cttl := C.int16_t(ttl)
@@ -897,6 +907,23 @@ func AckPublication(pub *Publication, payload []byte) int {
 		clen = C.size_t(len(payload))
 	}
 	return int(C.DPS_AckPublication(pub.cpub, cpayload, clen))
+}
+
+//export goAckPublicationBufsComplete
+func goAckPublicationBufsComplete(cpub *C.DPS_Publication, handle uintptr) {
+	reg.unregister(handle)
+}
+func AckPublicationBufs(pub *Publication, bufs [][]byte) int {
+	handle := reg.register(bufs)
+	cbufs := C.makeBuffers(C.size_t(len(bufs)))
+	defer C.free(unsafe.Pointer(cbufs))
+	cbuf := (*[1<<30]C.DPS_Buffer)(unsafe.Pointer(cbufs))
+	for i := 0; i < len(bufs); i++ {
+		cbuf[i].base = (*C.uint8_t)(&bufs[i][0])
+		cbuf[i].len = C.size_t(len(bufs[i]))
+	}
+	cnumBufs := C.size_t(len(bufs))
+	return int(C.ackPublicationBufs(pub.cpub, cbufs, cnumBufs, C.uintptr_t(handle)))
 }
 
 func AckGetSenderKeyId(pub *Publication) (keyId KeyId) {

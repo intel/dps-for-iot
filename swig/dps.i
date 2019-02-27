@@ -27,6 +27,7 @@
  */
 #pragma SWIG nowarn=312
 
+%ignore DPS_AckPublicationBufs;
 %ignore DPS_CBOR2JSON;
 %ignore DPS_DestroyKeyStore;
 %ignore DPS_DestroyPublication;
@@ -688,8 +689,27 @@ DPS_Status PublishBufs(DPS_Publication* pub, Buffer* bufs, size_t numBufs, int16
     }
     return DPS_PublishBufs(pub, dpsBufs, numBufs, ttl, PublishBufsComplete, bufs);
 }
+
+static void AckPublicationBufsComplete(DPS_Publication* pub, const DPS_Buffer*, size_t numBufs,
+                                       DPS_Status status, void* data)
+{
+    Buffer* bufs = reinterpret_cast<Buffer*>(data);
+    delete[] bufs;
+}
+
+DPS_Status AckPublicationBufs(DPS_Publication* pub, Buffer* bufs, size_t numBufs)
+{
+    DPS_Buffer dpsBufs[numBufs];
+    size_t i;
+
+    for (i = 0; i < numBufs; ++i) {
+        dpsBufs[i] = bufs[i].m_buf;
+    }
+    return DPS_AckPublicationBufs(pub, dpsBufs, numBufs, AckPublicationBufsComplete, bufs);
+}
 %}
 DPS_Status PublishBufs(DPS_Publication* pub, Buffer* bufs, size_t numBufs, int16_t ttl);
+DPS_Status AckPublicationBufs(DPS_Publication* pub, Buffer* bufs, size_t numBufs);
 
 %include <dps/dbg.h>
 %include <dps/dps.h>

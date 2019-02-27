@@ -4,6 +4,7 @@ EXPORTS
 
 DPS_AckGetSenderKeyId
 DPS_AckPublication
+DPS_AckPublicationBufs
 DPS_CBOR2JSON
 DPS_CopyAddress
 DPS_CopyPublication

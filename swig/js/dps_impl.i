@@ -52,7 +52,7 @@ static int AsVal_bytes(Handle obj, uint8_t** bytes, size_t* len)
         }
     } else if (obj->IsString()) {
         v8::Local<v8::String> str = v8::Local<v8::String>::Cast(obj);
-        (*len) =str->Utf8Length();
+        (*len) = str->Utf8Length();
         (*bytes) = new uint8_t[*len + 1];
         str->WriteUtf8((char*)(*bytes));
     } else if (!obj->IsNull()) {

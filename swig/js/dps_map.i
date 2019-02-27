@@ -22,6 +22,7 @@
 /*
  * Module is called dps we don't need the DPS prefix on every function
  */
+%rename("ackPublicationBufs") AckPublicationBufs;
 %rename("debug") DPS_Debug;
 %rename("uuidToString") DPS_UUIDToString;
 %rename("uuidCompare") DPS_UUIDCompare;
