@@ -914,7 +914,7 @@ DPS_Status COSE_Encrypt(int8_t alg, const uint8_t nonce[COSE_NONCE_LEN], const C
      * unprotected map with the signature
      */
     if (signer) {
-        DPS_RxBuffer dataBuf[numPayload + DPS_BUFS_MAX];
+        DPS_RxBuffer dataBuf[2 + DPS_BUFS_MAX];
         ret = EncodePartialSig(&toBeSigned, tag, alg, sig.alg, NULL, 0, contentLen);
         if (ret != DPS_OK) {
             goto Exit;
@@ -1611,7 +1611,7 @@ DPS_Status COSE_Sign(const COSE_Entity* signer, DPS_RxBuffer* aad, DPS_TxBuffer*
     uint8_t tag;
     Signature sig;
     DPS_TxBuffer toBeSigned;
-    DPS_RxBuffer dataBuf[numPayload + DPS_BUFS_MAX];
+    DPS_RxBuffer dataBuf[1 + DPS_BUFS_MAX];
     DPS_TxBuffer sigBuf;
     COSE_Key k;
     size_t payloadLen;

@@ -128,7 +128,7 @@ typedef struct _DPS_PublishRequest {
     /**
      * Publication fields.
      *
-     * Usage of the buffers when serializing is follows:
+     * Usage of the buffers when serializing is as follows:
      * 0:            Authenticated fields
      * 1:            COSE headers (may be empty)
      * 2:            Payload headers

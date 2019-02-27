@@ -43,19 +43,85 @@
  */
 DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
-void DPS_DestroyAck(PublicationAck* ack)
+static PublicationAck* CreateAck(const DPS_Publication* pub, size_t numBufs,
+                                 DPS_AckPublicationBufsComplete cb, void* data)
 {
-    size_t i;
+    PublicationAck* ack = NULL;
 
-    for (i = 0; i < ACK_BUFS_MAX; ++i) {
-        DPS_TxBufferFree(&ack->bufs[i]);
+    /*
+     * Reserve additional buffers for the authenticated fields,
+     * optional COSE headers, payload headers, and optional COSE
+     * footers.
+     */
+    numBufs += NUM_INTERNAL_ACK_BUFS;
+    ack = calloc(1, sizeof(PublicationAck) + ((numBufs - 1) * sizeof(DPS_TxBuffer)));
+    if (!ack) {
+        return NULL;
     }
-    free(ack);
+    ack->pub = (DPS_Publication*)pub;
+    DPS_PublicationIncRef(ack->pub);
+    ack->sequenceNum = pub->sequenceNum;
+    ack->completeCB = cb;
+    ack->data = data;
+    ack->numBufs = numBufs;
+    return ack;
 }
 
-DPS_Status DPS_SendAcknowledgement(DPS_Node* node, PublicationAck* ack, RemoteNode* ackNode)
+static void DestroyAck(PublicationAck* ack)
 {
-    uv_buf_t uvBufs[ACK_BUFS_MAX];
+    if (ack) {
+        DPS_TxBufferFree(&ack->bufs[0]);
+        DPS_TxBufferFree(&ack->bufs[1]);
+        DPS_TxBufferFree(&ack->bufs[2]);
+        DPS_TxBufferFree(&ack->bufs[ack->numBufs - 1]);
+        /*
+         * Any additional buffers belong to the application
+         */
+        DPS_PublicationDecRef(ack->pub);
+        free(ack);
+    }
+}
+
+void DPS_AckPublicationCompletion(PublicationAck* ack)
+{
+    DPS_Buffer bufs[DPS_BUFS_MAX];
+    size_t numBufs = 0;
+    size_t i;
+
+    if (ack->completeCB) {
+        if (ack->numBufs > NUM_INTERNAL_ACK_BUFS) {
+            numBufs = ack->numBufs - NUM_INTERNAL_ACK_BUFS;
+            for (i = 0; i < numBufs; ++i) {
+                bufs[i].base = ack->bufs[i + 3].base;
+                bufs[i].len = DPS_TxBufferUsed(&ack->bufs[i + 3]);
+            }
+        }
+        ack->completeCB(ack->pub, numBufs ? bufs : NULL, numBufs, ack->status, ack->data);
+    }
+    DestroyAck(ack);
+}
+
+static void SendComplete(PublicationAck* ack, uv_buf_t* bufs, size_t numBufs, DPS_Status status)
+{
+    ack->status = status;
+    DPS_SendComplete(ack->pub->node, &ack->destAddr, NULL, 0, status);
+    DPS_AckPublicationCompletion(ack);
+}
+
+static void OnNetSendComplete(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf_t* bufs,
+                              size_t numBufs, DPS_Status status)
+{
+    PublicationAck* ack = appCtx;
+
+    DPS_LockNode(node);
+    SendComplete(ack, bufs, numBufs, status);
+    DPS_UnlockNode(node);
+}
+
+DPS_Status DPS_SendAcknowledgement(PublicationAck* ack, RemoteNode* ackNode)
+{
+    DPS_Node* node = ack->pub->node;
+    uv_buf_t uvBufs[NUM_INTERNAL_ACK_BUFS + DPS_BUFS_MAX];
     int loopback = DPS_FALSE;
     DPS_Publication* pub;
     DPS_Status ret;
@@ -63,65 +129,50 @@ DPS_Status DPS_SendAcknowledgement(DPS_Node* node, PublicationAck* ack, RemoteNo
 
     DPS_DBGPRINT("SendAcknowledgement from %d to %s\n", node->port, DPS_NodeAddrToString(&ackNode->ep.addr));
 
-    for (i = 0; i < ACK_BUFS_MAX; ++i) {
+    for (i = 0; i < ack->numBufs; ++i) {
         uvBufs[i] = uv_buf_init((char*)ack->bufs[i].base, DPS_TxBufferUsed(&ack->bufs[i]));
     };
-
-    /*
-     * Ownership of the buffers will be passed to the network
-     */
-    for (i = 0; i < ACK_BUFS_MAX; ++i) {
-        ack->bufs[i].base = NULL;
-    }
 
     /*
      * See if this is an ACK for a local publication
      */
     for (pub = node->publications; pub != NULL; pub = pub->next) {
-        if (DPS_UUIDCompare(&pub->pubId, &ack->pubId) == 0) {
+        if (DPS_UUIDCompare(&pub->pubId, &ack->pub->pubId) == 0) {
             loopback = DPS_TRUE;
             break;
         }
     }
 
     if (loopback) {
-        ret = DPS_LoopbackSend(node, uvBufs, A_SIZEOF(uvBufs));
-        if (ret == DPS_OK) {
-            DPS_NetFreeBufs(uvBufs, A_SIZEOF(uvBufs));
-        } else {
-            DPS_SendComplete(node, &ack->destAddr, uvBufs, A_SIZEOF(uvBufs), ret);
-        }
+        ret = DPS_LoopbackSend(node, uvBufs, ack->numBufs);
+        SendComplete(ack, uvBufs, ack->numBufs, ret);
     } else {
-        ret = DPS_NetSend(node, NULL, &ackNode->ep, uvBufs, A_SIZEOF(uvBufs), DPS_OnSendComplete);
+        ret = DPS_NetSend(node, ack, &ackNode->ep, uvBufs, ack->numBufs, OnNetSendComplete);
         if (ret != DPS_OK) {
-            DPS_SendComplete(node, &ack->destAddr, uvBufs, A_SIZEOF(uvBufs), ret);
+            SendComplete(ack, uvBufs, ack->numBufs, ret);
         }
     }
-    return ret;
+    /*
+     * Return DPS_OK as the ack request has been (or will be)
+     * completed now
+     */
+    return DPS_OK;
 }
 
-static PublicationAck* AllocPubAck(const DPS_UUID* pubId, uint32_t sequenceNum)
-{
-    PublicationAck* ack = calloc(1, sizeof(PublicationAck));
-    if (!ack) {
-        return NULL;
-    }
-    ack->pubId = *pubId;
-    ack->sequenceNum = sequenceNum;
-    return ack;
-}
-
-static DPS_Status SerializeAck(const DPS_Publication* pub, PublicationAck* ack, const uint8_t* data,
-                               size_t dataLen)
+static DPS_Status SerializeAck(const DPS_Publication* pub, PublicationAck* ack, const DPS_Buffer* bufs,
+                               size_t numBufs)
 {
     DPS_Node* node = pub->node;
     DPS_Status ret;
     uint8_t* aadPos;
+    size_t dataLen;
     size_t len;
+    size_t i;
 
     DPS_DBGTRACE();
 
     assert(ack->sequenceNum != 0);
+    assert(ack->numBufs == numBufs + NUM_INTERNAL_ACK_BUFS);
 
     if (!node->netCtx) {
         return DPS_ERR_NETWORK;
@@ -161,7 +212,7 @@ static DPS_Status SerializeAck(const DPS_Publication* pub, PublicationAck* ack, 
         ret = CBOR_EncodeUint8(&ack->bufs[0], DPS_CBOR_KEY_PUB_ID);
     }
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeBytes(&ack->bufs[0], (uint8_t*)&ack->pubId, sizeof(ack->pubId));
+        ret = CBOR_EncodeBytes(&ack->bufs[0], (uint8_t*)&ack->pub->pubId, sizeof(ack->pub->pubId));
     }
     if (ret == DPS_OK) {
         ret = CBOR_EncodeUint8(&ack->bufs[0], DPS_CBOR_KEY_ACK_SEQ_NUM);
@@ -173,9 +224,13 @@ static DPS_Status SerializeAck(const DPS_Publication* pub, PublicationAck* ack, 
      * Encode the encrypted map
      */
     DPS_TxBufferClear(&ack->bufs[1]);
+    dataLen = 0;
+    for (i = 0; i < numBufs; ++i) {
+        dataLen += bufs[i].len;
+    }
     if (ret == DPS_OK) {
         len = CBOR_SIZEOF_MAP(1) + CBOR_SIZEOF(uint8_t) +
-            CBOR_SIZEOF_BYTES(dataLen);
+            CBOR_SIZEOF_LEN(dataLen);
         ret = DPS_TxBufferInit(&ack->bufs[2], NULL, len);
     }
     if (ret == DPS_OK) {
@@ -185,9 +240,14 @@ static DPS_Status SerializeAck(const DPS_Publication* pub, PublicationAck* ack, 
         ret = CBOR_EncodeUint8(&ack->bufs[2], DPS_CBOR_KEY_DATA);
     }
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeBytes(&ack->bufs[2], data, dataLen);
+        ret = CBOR_EncodeLength(&ack->bufs[2], dataLen, CBOR_BYTES);
     }
-    DPS_TxBufferClear(&ack->bufs[3]);
+    for (i = 0; (ret == DPS_OK) && (i < numBufs); ++i) {
+        ack->bufs[i + 3].base = bufs[i].base;
+        ack->bufs[i + 3].eob = bufs[i].base + bufs[i].len;
+        ack->bufs[i + 3].txPos = ack->bufs[i + 3].eob;
+    }
+    DPS_TxBufferClear(&ack->bufs[ack->numBufs - 1]);
     if (ret != DPS_OK) {
         return ret;
     }
@@ -199,14 +259,15 @@ static DPS_Status SerializeAck(const DPS_Publication* pub, PublicationAck* ack, 
         uint8_t nonce[COSE_NONCE_LEN];
 
         DPS_RxBufferInit(&aadBuf, aadPos, ack->bufs[0].txPos - aadPos);
-        DPS_MakeNonce(&ack->pubId, ack->sequenceNum, DPS_MSG_TYPE_ACK, nonce);
+        DPS_MakeNonce(&ack->pub->pubId, ack->sequenceNum, DPS_MSG_TYPE_ACK, nonce);
         if (pub->recipients) {
             ret = COSE_Encrypt(COSE_ALG_A256GCM, nonce, node->signer.alg ? &node->signer : NULL,
                                pub->recipients, pub->recipientsCount, &aadBuf, &ack->bufs[1],
-                               &ack->bufs[2], 1, &ack->bufs[3], node->keyStore);
+                               &ack->bufs[2], ack->numBufs - 3, &ack->bufs[ack->numBufs - 1],
+                               node->keyStore);
         } else {
-            ret = COSE_Sign(&node->signer, &aadBuf, &ack->bufs[1], &ack->bufs[2], 1, &ack->bufs[3],
-                            node->keyStore);
+            ret = COSE_Sign(&node->signer, &aadBuf, &ack->bufs[1], &ack->bufs[2], ack->numBufs - 3,
+                            &ack->bufs[ack->numBufs - 1], node->keyStore);
         }
         if (ret != DPS_OK) {
             DPS_WARNPRINT("COSE_Serialize failed: %s\n", DPS_ErrTxt(ret));
@@ -404,12 +465,13 @@ DPS_Status DPS_DecodeAcknowledgement(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Rx
     return ret;
 }
 
-DPS_Status DPS_AckPublication(const DPS_Publication* pub, const uint8_t* data, size_t dataLen)
+DPS_Status DPS_AckPublicationBufs(const DPS_Publication* pub, const DPS_Buffer* bufs, size_t numBufs,
+                                  DPS_AckPublicationBufsComplete cb, void* data)
 {
     DPS_Status ret;
     DPS_NodeAddress* addr = NULL;
     DPS_Node* node = pub ? pub->node : NULL;
-    uint32_t sequenceNum;
+    uint32_t unused;
     PublicationAck* ack;
 
     DPS_DBGTRACE();
@@ -420,7 +482,10 @@ DPS_Status DPS_AckPublication(const DPS_Publication* pub, const uint8_t* data, s
     if (pub->flags & PUB_FLAG_LOCAL) {
         return DPS_ERR_INVALID;
     }
-    ret = DPS_LookupPublisherForAck(&node->history, &pub->pubId, &sequenceNum, &addr);
+    if ((!bufs && numBufs) || (numBufs > DPS_BUFS_MAX)) {
+        return DPS_ERR_ARGS;
+    }
+    ret = DPS_LookupPublisherForAck(&node->history, &pub->pubId, &unused, &addr);
     if (ret != DPS_OK) {
         return ret;
     }
@@ -429,17 +494,50 @@ DPS_Status DPS_AckPublication(const DPS_Publication* pub, const uint8_t* data, s
     }
     DPS_DBGPRINT("Queueing acknowledgement for %s/%d to %s\n", DPS_UUIDToString(&pub->pubId),
                  pub->sequenceNum, DPS_NodeAddrToString(addr));
-    ack = AllocPubAck(&pub->pubId, pub->sequenceNum);
+    ack = CreateAck(pub, numBufs, cb, data);
     if (!ack) {
         return DPS_ERR_RESOURCES;
     }
-    ret = SerializeAck(pub, ack, data, dataLen);
+    ret = SerializeAck(pub, ack, bufs, numBufs);
     if (ret == DPS_OK) {
         ack->destAddr = *addr;
         DPS_QueuePublicationAck(node, ack);
     } else {
-        DPS_DestroyAck(ack);
+        DestroyAck(ack);
     }
     return ret;
 }
 
+static void AckPublicationComplete(DPS_Publication* pub, const DPS_Buffer* bufs, size_t numBufs,
+                                   DPS_Status status, void* data)
+{
+    if (numBufs && bufs[0].base) {
+        free(bufs[0].base);
+    }
+}
+
+DPS_Status DPS_AckPublication(const DPS_Publication* pub, const uint8_t* data, size_t dataLen)
+{
+    DPS_Status ret;
+    DPS_Buffer buf = { NULL, 0 };
+    DPS_Buffer* bufs = NULL;
+    size_t numBufs = 0;
+
+    DPS_DBGTRACE();
+
+    if (data && dataLen) {
+        buf.base = malloc(dataLen);
+        if (!buf.base) {
+            return DPS_ERR_RESOURCES;
+        }
+        memcpy(buf.base, data, dataLen);
+        buf.len = dataLen;
+        bufs = &buf;
+        numBufs = 1;
+    }
+    ret = DPS_AckPublicationBufs(pub, bufs, numBufs, AckPublicationComplete, NULL);
+    if (ret != DPS_OK) {
+        free(buf.base);
+    }
+    return ret;
+}

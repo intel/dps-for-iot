@@ -814,7 +814,7 @@ typedef struct _DPS_Buffer {
 } DPS_Buffer;
 
 /**
- * Called when DPS_Publish() completes.
+ * Called when DPS_PublishBufs() completes.
  *
  * @param pub     The publication
  * @param bufs    The payload buffers passed to DPS_PublishBufs()
@@ -877,6 +877,36 @@ DPS_Status DPS_DestroyPublication(DPS_Publication* pub);
  * @return DPS_OK if acknowledge is successful, an error otherwise
  */
 DPS_Status DPS_AckPublication(const DPS_Publication* pub, const uint8_t* ackPayload, size_t len);
+
+/**
+ * Called when DPS_AckPublicationBufs() completes.
+ *
+ * @param pub     The publication
+ * @param bufs    The payload buffers passed to DPS_AckPublicationBufs()
+ * @param numBufs The number of payload buffers passed to DPS_AckPublicationBufs()
+ * @param status  The status of the publish
+ * @param data    Application data passed to DPS_AckPublicationBufs()
+ */
+typedef void (*DPS_AckPublicationBufsComplete)(DPS_Publication* pub, const DPS_Buffer* bufs, size_t numBufs,
+                                               DPS_Status status, void* data);
+
+/**
+ * Acknowledge a publication. A publication should be acknowledged as soon as possible after receipt,
+ * ideally from within the publication handler callback function. If the publication cannot be
+ * acknowledged immediately in the publication handler callback, call DPS_CopyPublication() to make a
+ * partial copy of the publication that can be passed to this function at a later time.
+ *
+ * @param pub           The publication to acknowledge
+ * @param bufs          Optional payload buffers - this memory must remain valid until the callback
+ *                      function is called
+ * @param numBufs       The number of buffers
+ * @param cb            Callback function called when the acknowledge is complete
+ * @param data          Data to be passed to the callback function
+ *
+ * @return DPS_OK if acknowledge is successful, an error otherwise
+ */
+DPS_Status DPS_AckPublicationBufs(const DPS_Publication* pub, const DPS_Buffer* bufs, size_t numBufs,
+                                  DPS_AckPublicationBufsComplete cb, void* data);
 
 /**
  * Get the key identifier of an acknowledgement, only valid with the

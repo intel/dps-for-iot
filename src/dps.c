@@ -599,21 +599,26 @@ static void SendAcksTask(uv_async_t* handle)
 {
     DPS_Node* node = (DPS_Node*)handle->data;
     PublicationAck* ack;
+    RemoteNode* ackNode;
+    DPS_Status ret;
 
     DPS_DBGTRACE();
 
     DPS_LockNode(node);
     while (!DPS_QueueEmpty(&node->ackQueue)) {
         ack = (PublicationAck*)DPS_QueueFront(&node->ackQueue);
-        if (node->state == DPS_NODE_RUNNING) {
-            RemoteNode* ackNode;
-            DPS_Status ret = DPS_AddRemoteNode(node, &ack->destAddr, NULL, &ackNode);
-            if (ret == DPS_OK || ret == DPS_ERR_EXISTS) {
-                DPS_SendAcknowledgement(node, ack, ackNode);
-            }
-        }
         DPS_QueueRemove(&ack->queue);
-        DPS_DestroyAck(ack);
+        if (node->state == DPS_NODE_RUNNING) {
+            ret = DPS_AddRemoteNode(node, &ack->destAddr, NULL, &ackNode);
+            if (ret == DPS_OK || ret == DPS_ERR_EXISTS) {
+                ret = DPS_SendAcknowledgement(ack, ackNode);
+            }
+        } else {
+            ret = DPS_ERR_NOT_STARTED;
+        }
+        if (ret != DPS_OK) {
+            DPS_AckPublicationCompletion(ack);
+        }
     }
     DPS_UnlockNode(node);
 }
@@ -1070,12 +1075,14 @@ DPS_Status DPS_LoopbackSend(DPS_Node* node, uv_buf_t* bufs, size_t numBufs)
 
 static void StopNode(DPS_Node* node)
 {
+    PublicationAck* ack;
+
     /*
      * Indicates the node is no longer running
      */
     node->state = DPS_NODE_STOPPED;
     /*
-     * Stop receivng and close all global handle
+     * Stop receiving and close all global handles
      */
     if (node->mcastReceiver) {
         DPS_MulticastStopReceive(node->mcastReceiver);
@@ -1105,6 +1112,15 @@ static void StopNode(DPS_Node* node)
      */
     while (node->remoteNodes) {
         DPS_DeleteRemoteNode(node, node->remoteNodes);
+    }
+    /*
+     * Cleanup any unresolved acks
+     */
+    while (!DPS_QueueEmpty(&node->ackQueue)) {
+        ack = (PublicationAck*)DPS_QueueFront(&node->ackQueue);
+        DPS_QueueRemove(&ack->queue);
+        ack->status = DPS_ERR_WRITE;
+        DPS_AckPublicationCompletion(ack);
     }
     /*
      * Run the event loop again to ensure that all cleanup is

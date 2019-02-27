@@ -1048,7 +1048,7 @@ DPS_Status DPS_SendPublication(DPS_PublishRequest* req, DPS_Publication* pub, Re
      * Protected and encrypted maps are already serialized
      */
     if (ret == DPS_OK) {
-        uv_buf_t bufs[1 + DPS_BUFS_MAX];
+        uv_buf_t bufs[1 + NUM_INTERNAL_PUB_BUFS + DPS_BUFS_MAX];
         bufs[0] = uv_buf_init((char*)buf.base, DPS_TxBufferUsed(&buf));
         for (i = 0; i < req->numBufs; ++i) {
             bufs[1 + i] = uv_buf_init((char*)req->bufs[i].base, DPS_TxBufferUsed(&req->bufs[i]));
@@ -1174,7 +1174,7 @@ DPS_Publication* DPS_CreatePublication(DPS_Node* node)
 
 static void DestroyCopy(DPS_Publication* copy)
 {
-    if (copy) {
+    if (copy && copy->refCount == 0) {
         FreeTopics(copy);
         FreeRecipients(copy);
         free(copy);
@@ -1648,6 +1648,7 @@ DPS_Status DPS_Publish(DPS_Publication* pub, const uint8_t* payload, size_t len,
 DPS_Status DPS_DestroyPublication(DPS_Publication* pub)
 {
     DPS_Node* node;
+    DPS_Status ret;
 
     DPS_DBGTRACE();
 
@@ -1655,23 +1656,27 @@ DPS_Status DPS_DestroyPublication(DPS_Publication* pub)
         return DPS_ERR_NULL;
     }
     node = pub->node;
+    DPS_LockNode(node);
     /*
      * Maybe destroying an uninitialized publication
      */
     if (!IsValidPub(pub) || (pub->flags & PUB_FLAG_IS_COPY)) {
         DestroyCopy(pub);
-        return DPS_OK;
+        ret = DPS_OK;
+        goto Exit;
     }
     /*
      * Check publication is local
      */
     if (!(pub->flags & PUB_FLAG_LOCAL)) {
-        return DPS_ERR_MISSING;
+        ret = DPS_ERR_MISSING;
+        goto Exit;
     }
-    DPS_LockNode(node);
     FreePublication(node, pub);
+    ret = DPS_OK;
+Exit:
     DPS_UnlockNode(node);
-    return DPS_OK;
+    return ret;
 }
 
 DPS_Status DPS_SetPublicationData(DPS_Publication* pub, void* data)
