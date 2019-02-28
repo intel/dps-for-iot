@@ -245,6 +245,15 @@ struct _DPS_KeyStore {
  */
 uint32_t DPS_Rand(void);
 
+/**
+ * Returns if publication is encrypted.
+ *
+ * @param pub The publication
+ *
+ * @return DPS_TRUE if encrypted, DPS_FALSE otherwise
+ */
+int DPS_PublicationIsEncrypted(const DPS_Publication* pub);
+
 #ifdef __cplusplus
 }
 #endif

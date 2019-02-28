@@ -20,9 +20,8 @@
  */
 
 %{
-static int AsVal_bytes(Handle obj, uint8_t** bytes, size_t* len)
+static int AsVal_bytes(Handle obj, uint8_t** bytes, size_t* len, int alloc)
 {
-    int alloc = SWIG_OLDOBJ;
     if (SWIG_IsOK(SWIG_AsCharPtrAndSize(obj, (char**)bytes, len, &alloc))) {
         if (*len) {
             --(*len);
@@ -34,8 +33,13 @@ static int AsVal_bytes(Handle obj, uint8_t** bytes, size_t* len)
         return SWIG_OLDOBJ;
     } else if (PyBytes_Check(obj)) {
         *len = PyBytes_GET_SIZE(obj);
-        *bytes = (uint8_t*)PyBytes_AS_STRING(obj);
-        return SWIG_OLDOBJ;
+        if (alloc == SWIG_OLDOBJ) {
+            *bytes = (uint8_t*)PyBytes_AS_STRING(obj);
+            return SWIG_OLDOBJ;
+        } else {
+            *bytes = reinterpret_cast<uint8_t*>(memcpy(new uint8_t[*len], PyBytes_AS_STRING(obj), *len));
+            return SWIG_NEWOBJ;
+        }
     } else if (PySequence_Check(obj)) {
         Py_ssize_t sz = PySequence_Length(obj);
         Py_ssize_t i;
@@ -59,6 +63,19 @@ static int AsVal_bytes(Handle obj, uint8_t** bytes, size_t* len)
     } else {
         return SWIG_TypeError;
     }
+}
+
+static int AsVal_bytes(Handle obj, uint8_t** bytes, size_t* len)
+{
+    return AsVal_bytes(obj, bytes, len, SWIG_OLDOBJ);
+}
+
+/*
+ * Returns a mutable object
+ */
+static int AsSafeVal_bytes(Handle obj, uint8_t** bytes, size_t* len)
+{
+    return AsVal_bytes(obj, bytes, len, SWIG_NEWOBJ);
 }
 
 static Handle From_bytes(const uint8_t* bytes, size_t len)

@@ -1392,6 +1392,11 @@ void DPS_PublicationRemoveSubId(DPS_Publication* pub, const DPS_KeyId* keyId)
     }
 }
 
+int DPS_PublicationIsEncrypted(const DPS_Publication* pub)
+{
+    return pub && pub->recipients;
+}
+
 DPS_Status DPS_SerializePub(DPS_PublishRequest* req, const DPS_Buffer* bufs, size_t numBufs, int16_t ttl)
 {
     DPS_Publication* pub = req->pub;

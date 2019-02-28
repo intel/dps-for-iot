@@ -119,6 +119,7 @@ public:
 };
 
 static int AsVal_bytes(Handle obj, uint8_t** bytes, size_t* len);
+static int AsSafeVal_bytes(Handle obj, uint8_t** bytes, size_t* len);
 static Handle From_bytes(const uint8_t* bytes, size_t len);
 static Handle From_topics(const char** topics, size_t len);
 
@@ -665,6 +666,11 @@ public:
     int Set(Handle obj) {
         m_obj.Set(obj);
         m_alloc = AsVal_bytes(obj, &m_buf.base, &m_buf.len);
+        return m_alloc;
+    }
+    int SetSafe(Handle obj) {
+        m_obj.Set(obj);
+        m_alloc = AsSafeVal_bytes(obj, &m_buf.base, &m_buf.len);
         return m_alloc;
     }
     Handler m_obj;
