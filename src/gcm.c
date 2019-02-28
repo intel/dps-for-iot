@@ -29,6 +29,55 @@
 
 #define M 16 /* Tag length, in bytes */
 
+static size_t BorrowBytes(uint8_t* dst, DPS_TxBuffer* buf, DPS_TxBuffer* end, uint8_t* src)
+{
+    size_t n;
+    size_t len;
+
+    len = 0;
+    for (;;) {
+        while ((len < 16) && (src < buf->txPos)) {
+            n = buf->txPos - src;
+            if (n > (16 - len)) {
+                n = 16 - len;
+            }
+            memcpy(dst, src, n);
+            dst += n;
+            src += n;
+            len += n;
+        }
+        if ((len == 16) || (++buf == end)) {
+            break;
+        }
+        src = buf->base;
+    }
+    return len;
+}
+
+static void ReturnBytes(uint8_t** dst, DPS_TxBuffer** buf, DPS_TxBuffer* end, uint8_t* src, size_t len)
+{
+    size_t n;
+
+    for (;;) {
+        while (len && ((*dst) < (*buf)->txPos)) {
+            n = (*buf)->txPos - (*dst);
+            if (n > len) {
+                n = len;
+            }
+            memcpy((*dst), src, n);
+            (*dst) += n;
+            src += n;
+            len -= n;
+        }
+        if (((*dst) == (*buf)->txPos) && (++(*buf) != end)) {
+            (*dst) = (*buf)->base;
+        }
+        if (!len || ((*buf) == end)) {
+            break;
+        }
+    }
+}
+
 DPS_Status Encrypt_GCM(const uint8_t key[AES_256_KEY_LEN],
                        const uint8_t nonce[AES_GCM_NONCE_LEN],
                        DPS_TxBuffer* bufs, size_t numBufs,
@@ -39,8 +88,7 @@ DPS_Status Encrypt_GCM(const uint8_t key[AES_256_KEY_LEN],
     mbedtls_gcm_context ctx;
     size_t len;
     int ret;
-    size_t i;
-    DPS_RxBuffer buf;
+    uint8_t* pos;
     uint8_t tmp[16];
 
     if (DPS_TxBufferSpace(tag) < M) {
@@ -60,61 +108,34 @@ DPS_Status Encrypt_GCM(const uint8_t key[AES_256_KEY_LEN],
     }
 
     if (numBufs) {
-        DPS_TxBufferToRx(&bufs[0], &buf);
-        for (i = 0; i < numBufs; ++i) {
+        DPS_TxBuffer* buf = &bufs[0];
+        pos = buf->base;
+        while (buf < &bufs[numBufs]) {
             /*
              * Updates must be a multiple of 16 bytes
              */
-            len = (DPS_RxBufferAvail(&buf) / 16) * 16;
-            ret = mbedtls_gcm_update(&ctx, len, buf.rxPos, buf.rxPos);
+            len = ((buf->txPos - pos) / 16) * 16;
+            ret = mbedtls_gcm_update(&ctx, len, pos, pos);
             if (ret != 0) {
                 DPS_ERRPRINT("Cipher update failed: %s\n", TLSErrTxt(ret));
                 goto Exit;
             }
-            buf.rxPos += len;
-
-            if (DPS_RxBufferAvail(&buf)) {
-                if ((i + 1) < numBufs) {
-                    uint8_t* pos;
-                    size_t borrow;
-                    /*
-                     * Copy and borrow to make a 16 byte buffer for update
-                     */
-                    len = DPS_RxBufferAvail(&buf);
-                    assert(len <= 16);
-                    pos = buf.rxPos;
-                    memcpy(tmp, pos, len);
-
-                    DPS_TxBufferToRx(&bufs[i + 1], &buf);
-                    borrow = DPS_RxBufferAvail(&buf);
-                    if (borrow > (16 - len)) {
-                        borrow = 16 - len;
-                    }
-                    memcpy(&tmp[len], buf.rxPos, borrow);
-                    ret = mbedtls_gcm_update(&ctx, len + borrow, tmp, tmp);
-                    if (ret != 0) {
-                        DPS_ERRPRINT("Cipher update failed: %s\n", TLSErrTxt(ret));
-                        goto Exit;
-                    }
-                    /*
-                     * Copy 16 byte buffer back into place
-                     */
-                    memcpy(pos, tmp, len);
-                    memcpy(buf.rxPos, &tmp[len], borrow);
-                    buf.rxPos += borrow;
-                } else {
-                    /*
-                     * Last update can be less than 16 bytes
-                     */
-                    len = DPS_RxBufferAvail(&buf);
-                    ret = mbedtls_gcm_update(&ctx, len, buf.rxPos, buf.rxPos);
-                    if (ret != 0) {
-                        DPS_ERRPRINT("Cipher update failed: %s\n", TLSErrTxt(ret));
-                        goto Exit;
-                    }
+            pos += len;
+            if (pos < buf->txPos) {
+                /*
+                 * Copy and borrow to make a 16 byte buffer for update,
+                 * then copy encrypted data back into place
+                 */
+                len = BorrowBytes(tmp, buf, &bufs[numBufs], pos);
+                ret = mbedtls_gcm_update(&ctx, len, tmp, tmp);
+                if (ret != 0) {
+                    DPS_ERRPRINT("Cipher update failed: %s\n", TLSErrTxt(ret));
+                    goto Exit;
                 }
-            } else if ((i + 1) < numBufs) {
-                DPS_TxBufferToRx(&bufs[i + 1], &buf);
+                ReturnBytes(&pos, &buf, &bufs[numBufs], tmp, len);
+            } else {
+                ++buf;
+                pos = buf->base;
             }
         }
     }

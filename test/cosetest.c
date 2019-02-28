@@ -138,9 +138,10 @@ static DPS_Status EphemeralKeyHandler(DPS_KeyStoreRequest* request, const DPS_Ke
 static void GCM_Raw(void)
 {
     DPS_Status ret;
-    uint8_t buf[2][512];
-    DPS_RxBuffer msgBuf[2];
-    DPS_TxBuffer payload[2];
+    size_t n;
+    uint8_t buf[3][512];
+    DPS_RxBuffer msgBuf[3];
+    DPS_TxBuffer payload[3];
     DPS_TxBuffer tag;
     DPS_TxBuffer cipherText;
     DPS_TxBuffer plainText;
@@ -149,11 +150,12 @@ static void GCM_Raw(void)
     size_t i;
     size_t test;
 
-    for (test = 0; test < 7; ++test) {
+    for (test = 0; test < 8; ++test) {
         switch (test) {
         case 0:
             DPS_RxBufferInit(&msgBuf[0], (uint8_t*)msg, sizeof(msg));
             DPS_RxBufferInit(&msgBuf[1], NULL, 0);
+            n = 2;
             break;
         case 1:
             for (i = 0; i < 16; ++i) {
@@ -161,6 +163,7 @@ static void GCM_Raw(void)
             }
             DPS_RxBufferInit(&msgBuf[0], buf[0], 16);
             DPS_RxBufferInit(&msgBuf[1], buf[1], 0);
+            n = 2;
             break;
         case 2:
             for (i = 0; i < 16; ++i) {
@@ -171,6 +174,7 @@ static void GCM_Raw(void)
             }
             DPS_RxBufferInit(&msgBuf[0], buf[0], 16);
             DPS_RxBufferInit(&msgBuf[1], buf[1], 4);
+            n = 2;
             break;
         case 3:
             for (i = 0; i < 16; ++i) {
@@ -181,6 +185,7 @@ static void GCM_Raw(void)
             }
             DPS_RxBufferInit(&msgBuf[0], buf[0], 16);
             DPS_RxBufferInit(&msgBuf[1], buf[1], 20);
+            n = 2;
             break;
         case 4:
             for (i = 0; i < 20; ++i) {
@@ -191,6 +196,7 @@ static void GCM_Raw(void)
             }
             DPS_RxBufferInit(&msgBuf[0], buf[0], 20);
             DPS_RxBufferInit(&msgBuf[1], buf[1], 4);
+            n = 2;
             break;
         case 5:
             for (i = 0; i < 20; ++i) {
@@ -201,6 +207,7 @@ static void GCM_Raw(void)
             }
             DPS_RxBufferInit(&msgBuf[0], buf[0], 20);
             DPS_RxBufferInit(&msgBuf[1], buf[1], 20);
+            n = 2;
             break;
         case 6:
             for (i = 0; i < 4; ++i) {
@@ -211,17 +218,36 @@ static void GCM_Raw(void)
             }
             DPS_RxBufferInit(&msgBuf[0], buf[0], 4);
             DPS_RxBufferInit(&msgBuf[1], buf[1], 20);
+            n = 2;
+            break;
+        case 7:
+            for (i = 0; i < 4; ++i) {
+                buf[0][i] = i;
+            }
+            for (i = 0; i < 11; ++i) {
+                buf[1][i] = i;
+            }
+            for (i = 0; i < 9; ++i) {
+                buf[2][i] = i;
+            }
+            DPS_RxBufferInit(&msgBuf[0], buf[0], 4);
+            DPS_RxBufferInit(&msgBuf[1], buf[1], 11);
+            DPS_RxBufferInit(&msgBuf[2], buf[2], 9);
+            n = 3;
+            break;
+        default:
+            ASSERT(0);
             break;
         }
-        for (i = 0; i < 2; ++i) {
+        for (i = 0; i < n; ++i) {
             DPS_TxBufferInit(&payload[i], NULL, DPS_RxBufferAvail(&msgBuf[i]));
             DPS_TxBufferAppend(&payload[i], msgBuf[i].base, DPS_RxBufferAvail(&msgBuf[i]));
         }
         DPS_TxBufferInit(&tag, NULL, 16);
-        ret = Encrypt_GCM(key.symmetric.key, nonce, payload, 2, &tag, aad, sizeof(aad));
+        ret = Encrypt_GCM(key.symmetric.key, nonce, payload, n, &tag, aad, sizeof(aad));
         ASSERT(ret == DPS_OK);
         DPS_TxBufferInit(&cipherText, NULL, 512);
-        for (i = 0; i < 2; ++i) {
+        for (i = 0; i < n; ++i) {
             DPS_TxBufferAppend(&cipherText, payload[i].base, DPS_TxBufferUsed(&payload[i]));
         }
         DPS_TxBufferAppend(&cipherText, tag.base, DPS_TxBufferUsed(&tag));
@@ -230,14 +256,17 @@ static void GCM_Raw(void)
                           aad, sizeof(aad), &plainText);
         ASSERT(ret == DPS_OK);
 
-        ptLen = (msgBuf[0].eod - msgBuf[0].base) + (msgBuf[1].eod - msgBuf[1].base);
-        memcpy(&pt[0], msgBuf[0].base, msgBuf[0].eod - msgBuf[0].base);
-        memcpy(&pt[msgBuf[0].eod - msgBuf[0].base], msgBuf[1].base, msgBuf[1].eod - msgBuf[1].base);
+        ptLen = 0;
+        for (i = 0; i < n; ++i) {
+            memcpy(&pt[ptLen], msgBuf[i].base, msgBuf[i].eod - msgBuf[i].base);
+            ptLen += msgBuf[i].eod - msgBuf[i].base;
+        }
         ASSERT(DPS_TxBufferUsed(&plainText) == ptLen);
         ASSERT(memcmp(plainText.base, pt, ptLen) == 0);
 
-        DPS_TxBufferFree(&payload[1]);
-        DPS_TxBufferFree(&payload[0]);
+        for (i = 0; i < n; ++i) {
+            DPS_TxBufferFree(&payload[i]);
+        }
         DPS_TxBufferFree(&tag);
         DPS_TxBufferFree(&cipherText);
         DPS_TxBufferFree(&plainText);
