@@ -137,7 +137,7 @@ DPS_Status DPS_SendAcknowledgement(PublicationAck* ack, RemoteNode* ackNode)
      * See if this is an ACK for a local publication
      */
     for (pub = node->publications; pub != NULL; pub = pub->next) {
-        if (DPS_UUIDCompare(&pub->pubId, &ack->pub->pubId) == 0) {
+        if ((pub->flags & PUB_FLAG_LOCAL) && (DPS_UUIDCompare(&pub->pubId, &ack->pub->pubId) == 0)) {
             loopback = DPS_TRUE;
             break;
         }
