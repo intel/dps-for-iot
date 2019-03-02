@@ -119,16 +119,13 @@ typedef struct {
  * buffer so the buffer must not be freed until the parsed packet is no longer
  * needed.
  *
- * @param buf       The buffer containing a CoAP packet
- * @param bufLen    The length of the CoAP packet
+ * @param rxBuf     The buffer containing a CoAP packet
  * @param coap      Data structure to return the parsed CoAP packet
- * @param payload   Returns the CoAP payload
  *
  * @return  Returns DPS_OK if the packet was successfully parsed or an error
  *          code if the packet was not successfully parsed.
  */
-DPS_Status CoAP_Parse(const uint8_t* buf, size_t bufLen, CoAP_Parsed* coap,
-                      DPS_RxBuffer* payload);
+DPS_Status CoAP_Parse(DPS_RxBuffer* rxBuf, CoAP_Parsed* coap);
 
 /**
  * Free resources allocated for a parsed CoAP packet

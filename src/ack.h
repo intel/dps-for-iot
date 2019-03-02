@@ -74,7 +74,7 @@ typedef struct _PublicationAck {
  *
  * @return DPS_OK if decoding and processing is successful, an error otherwise
  */
-DPS_Status DPS_DecodeAcknowledgement(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuffer* buffer);
+DPS_Status DPS_DecodeAcknowledgement(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxBuffer* buffer);
 
 /**
  * Send an previously serialized acknowledgement

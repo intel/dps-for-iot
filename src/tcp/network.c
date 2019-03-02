@@ -62,9 +62,8 @@ typedef struct _DPS_NetConnection {
     uv_shutdown_t shutdownReq;
     /* Rx side */
     uint8_t lenBuf[CBOR_SIZEOF(uint32_t)]; /* pre-allocated buffer for deserializing message length */
-    size_t msgLen;  /* size of the message */
     size_t readLen; /* how much data has already been read */
-    char* msgBuf;
+    DPS_NetRxBuffer* msgBuf;
     /* Tx side */
     uv_connect_t connectReq;
     DPS_Queue sendQueue;
@@ -85,10 +84,9 @@ static void AllocBuffer(uv_handle_t* handle, size_t suggestedSize, uv_buf_t* buf
 {
     DPS_NetConnection* cn = (DPS_NetConnection*)handle->data;
 
-    if (cn->msgLen) {
-        assert(cn->msgBuf);
-        buf->len = (uint32_t)(cn->msgLen - cn->readLen);
-        buf->base = cn->msgBuf + cn->readLen;
+    if (cn->msgBuf) {
+        buf->len = DPS_RxBufferAvail(&cn->msgBuf->rx);
+        buf->base = (char*)cn->msgBuf->rx.rxPos;
     } else {
         buf->len = (uint32_t)(sizeof(cn->lenBuf) - cn->readLen);
         buf->base = (char*)(cn->lenBuf + cn->readLen);
@@ -137,9 +135,8 @@ static void FreeConnection(DPS_NetConnection* cn)
      */
     CancelPendingSends(cn);
     SendCompleted(cn);
-    if (cn->msgBuf) {
-        free(cn->msgBuf);
-    }
+    DPS_NetRxBufferDecRef(cn->msgBuf);
+    cn->msgBuf = NULL;
     free(cn);
 }
 
@@ -209,21 +206,21 @@ static void OnData(uv_stream_t* socket, ssize_t nread, const uv_buf_t* buf)
     }
     if (nread < 0) {
         uv_read_stop(socket);
-        netCtx->receiveCB(cn->node, &cn->peerEp, nread == UV_EOF ? DPS_ERR_EOF : DPS_ERR_NETWORK, NULL, 0);
+        netCtx->receiveCB(cn->node, &cn->peerEp, nread == UV_EOF ? DPS_ERR_EOF : DPS_ERR_NETWORK, NULL);
         return;
     }
     assert(socket == (uv_stream_t*)&cn->socket);
 
-    cn->readLen += nread;
     /*
      * Parse out the message length
      */
-    if (!cn->msgLen) {
+    if (!cn->msgBuf) {
         DPS_RxBuffer lenBuf;
         uint32_t msgLen;
         /*
          * Keep reading if we don't have enough data to parse the length
          */
+        cn->readLen += nread;
         if (cn->readLen < MIN_READ_SIZE) {
             return;
         }
@@ -231,14 +228,13 @@ static void OnData(uv_stream_t* socket, ssize_t nread, const uv_buf_t* buf)
         DPS_RxBufferInit(&lenBuf, cn->lenBuf, cn->readLen);
         ret = CBOR_DecodeUint32(&lenBuf, &msgLen);
         if (ret == DPS_OK) {
-            cn->msgBuf = malloc(msgLen);
+            cn->msgBuf = DPS_CreateNetRxBuffer(msgLen);
             if (cn->msgBuf) {
-                cn->msgLen = msgLen;
                 /*
                  * Copy message bytes if any
                  */
-                cn->readLen = DPS_RxBufferAvail(&lenBuf);
-                memcpy_s(cn->msgBuf, msgLen, lenBuf.rxPos, cn->readLen);
+                memcpy(cn->msgBuf->rx.rxPos, lenBuf.rxPos, DPS_RxBufferAvail(&lenBuf));
+                cn->msgBuf->rx.rxPos += DPS_RxBufferAvail(&lenBuf);
             } else {
                 ret = DPS_ERR_RESOURCES;
             }
@@ -247,24 +243,27 @@ static void OnData(uv_stream_t* socket, ssize_t nread, const uv_buf_t* buf)
             /*
              * Report error to receive callback
              */
-            netCtx->receiveCB(cn->node, &cn->peerEp, ret, NULL, 0);
+            netCtx->receiveCB(cn->node, &cn->peerEp, ret, NULL);
         }
+    } else {
+        cn->msgBuf->rx.rxPos += nread;
     }
-    if (cn->msgLen) {
+    if (cn->msgBuf) {
         /*
          * Keep reading if we don't have a complete message
          */
-        if (cn->readLen < cn->msgLen) {
+        if (DPS_RxBufferAvail(&cn->msgBuf->rx)) {
             return;
         }
-        DPS_DBGPRINT("Received message of length %zd\n", cn->msgLen);
-        ret = netCtx->receiveCB(cn->node, &cn->peerEp, DPS_OK, (uint8_t*)cn->msgBuf, cn->msgLen);
+        DPS_DBGPRINT("Received message of length %zd\n", cn->msgBuf->rx.eod - cn->msgBuf->rx.base);
+        /*
+         * Reset rxPos to beginning of complete message before passing up
+         */
+        cn->msgBuf->rx.rxPos = cn->msgBuf->rx.base;
+        ret = netCtx->receiveCB(cn->node, &cn->peerEp, DPS_OK, cn->msgBuf);
     }
-    if (cn->msgBuf) {
-        free(cn->msgBuf);
-        cn->msgBuf = NULL;
-    }
-    cn->msgLen = 0;
+    DPS_NetRxBufferDecRef(cn->msgBuf);
+    cn->msgBuf = NULL;
     cn->readLen = 0;
     /*
      * Stop reading if we got an error

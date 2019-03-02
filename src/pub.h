@@ -109,7 +109,7 @@ void DPS_UpdatePubs(DPS_Node* node);
  *
  * @return DPS_OK if decoding and processing is successful, an error otherwise
  */
-DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuffer* buffer, int multicast);
+DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxBuffer* buffer, int multicast);
 
 /**
  * A request to DPS_Publish()
@@ -124,6 +124,7 @@ typedef struct _DPS_PublishRequest {
     DPS_Status status;                  /**< Result of the publish */
     size_t refCount;                    /**< Prevent request from being freed while in use */
     uint32_t sequenceNum;               /**< Sequence number for this request */
+    DPS_NetRxBuffer* rxBuf;             /**< The fields may be aliased to a received message */
     size_t numBufs;                     /**< Number of buffers */
     /**
      * Publication fields.

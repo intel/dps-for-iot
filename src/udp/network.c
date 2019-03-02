@@ -40,14 +40,18 @@ struct _DPS_NetContext {
     uv_udp_t rxSocket;
     DPS_Node* node;
     DPS_OnReceive receiveCB;
-    char buffer[MAX_READ_LEN];
 };
 
-static void AllocBuffer(uv_handle_t* handle, size_t suggestedSize, uv_buf_t* buf)
+static void AllocBuffer(uv_handle_t* handle, size_t suggestedSize, uv_buf_t* uvBuf)
 {
-    DPS_NetContext* netCtx = (DPS_NetContext*)handle->data;
-    buf->len = MAX_READ_LEN;
-    buf->base = netCtx->buffer;
+    DPS_NetRxBuffer* buf = DPS_CreateNetRxBuffer(suggestedSize);
+    if (buf) {
+        uvBuf->base = (char*)buf->rx.base;
+        uvBuf->len = DPS_RxBufferAvail(&buf->rx);
+    } else {
+        uvBuf->base = NULL;
+        uvBuf->len = 0;
+    }
 }
 
 static void RxHandleClosed(uv_handle_t* handle)
@@ -56,37 +60,42 @@ static void RxHandleClosed(uv_handle_t* handle)
     free(handle->data);
 }
 
-static void OnData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, const struct sockaddr* addr,
+static void OnData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* uvBuf, const struct sockaddr* addr,
                    unsigned flags)
 {
-    DPS_NetEndpoint ep;
     DPS_NetContext* netCtx = (DPS_NetContext*)socket->data;
+    DPS_NetRxBuffer* buf = NULL;
+    DPS_NetEndpoint ep;
 
-    DPS_DBGTRACEA("socket=%p,nread=%d,buf={base=%p,len=%d},addr=%p,flags=0x%x\n", socket, nread,
-                  buf->base, buf->len, addr, flags);
+    DPS_DBGTRACEA("socket=%p,nread=%d,uvBuf={base=%p,len=%d},addr=%p,flags=0x%x\n", socket, nread,
+                  uvBuf->base, uvBuf->len, addr, flags);
 
+    if (!uvBuf) {
+        DPS_ERRPRINT("OnData no buffer\n");
+        goto Exit;
+    }
+    buf = DPS_UvToNetRxBuffer(uvBuf);
     if (nread < 0) {
         DPS_ERRPRINT("OnData error %s\n", uv_err_name((int)nread));
-        return;
+        goto Exit;
     }
+    buf->rx.eod = &buf->rx.base[nread];
     if (!nread) {
-        return;
-    }
-    if (!buf) {
-        DPS_ERRPRINT("OnData no buffer\n");
-        return;
-    }
-    if (!addr) {
-        DPS_ERRPRINT("OnData no address\n");
-        return;
+        goto Exit;
     }
     if (flags & UV_UDP_PARTIAL) {
         DPS_ERRPRINT("Dropping partial message, read buffer too small\n");
-        return;
+        goto Exit;
+    }
+    if (!addr) {
+        DPS_ERRPRINT("OnData no address\n");
+        goto Exit;
     }
     ep.cn = NULL;
     DPS_SetAddress(&ep.addr, addr);
-    netCtx->receiveCB(netCtx->node, &ep, DPS_OK, (uint8_t*)buf->base, nread);
+    netCtx->receiveCB(netCtx->node, &ep, DPS_OK, buf);
+Exit:
+    DPS_NetRxBufferDecRef(buf);
 }
 
 DPS_NetContext* DPS_NetStart(DPS_Node* node, uint16_t port, DPS_OnReceive cb)

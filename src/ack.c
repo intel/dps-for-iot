@@ -276,10 +276,19 @@ static DPS_Status SerializeAck(const DPS_Publication* pub, PublicationAck* ack, 
     return ret;
 }
 
-DPS_Status DPS_DecodeAcknowledgement(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuffer* buf)
+static void OnSendComplete(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf_t* bufs, size_t numBufs,
+                           DPS_Status status)
+{
+    DPS_LockNode(node);
+    DPS_SendComplete(node, ep ? &ep->addr : NULL, NULL, 0, status);
+    DPS_UnlockNode(node);
+}
+
+DPS_Status DPS_DecodeAcknowledgement(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxBuffer* buf)
 {
     static const int32_t ProtectedKeys[] = { DPS_CBOR_KEY_PUB_ID, DPS_CBOR_KEY_ACK_SEQ_NUM };
     static const int32_t EncryptedKeys[] = { DPS_CBOR_KEY_DATA };
+    DPS_RxBuffer* rxBuf = (DPS_RxBuffer*)buf;
     DPS_Status ret;
     DPS_Publication* pub;
     CBOR_MapState mapState;
@@ -297,7 +306,7 @@ DPS_Status DPS_DecodeAcknowledgement(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Rx
     /*
      * Skip the (empty) unprotected map
      */
-    ret = CBOR_Skip(buf, &maj, &len);
+    ret = CBOR_Skip(rxBuf, &maj, &len);
     if (ret != DPS_OK) {
         return ret;
     }
@@ -308,8 +317,8 @@ DPS_Status DPS_DecodeAcknowledgement(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Rx
     /*
      * Decode the protected map
      */
-    aadPos = buf->rxPos;
-    ret = DPS_ParseMapInit(&mapState, buf, ProtectedKeys, A_SIZEOF(ProtectedKeys), NULL, 0);
+    aadPos = rxBuf->rxPos;
+    ret = DPS_ParseMapInit(&mapState, rxBuf, ProtectedKeys, A_SIZEOF(ProtectedKeys), NULL, 0);
     if (ret != DPS_OK) {
         return ret;
     }
@@ -321,7 +330,7 @@ DPS_Status DPS_DecodeAcknowledgement(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Rx
         }
         switch (key) {
         case DPS_CBOR_KEY_PUB_ID:
-            ret = CBOR_DecodeBytes(buf, &bytes, &len);
+            ret = CBOR_DecodeBytes(rxBuf, &bytes, &len);
             if (ret == DPS_OK) {
                 if (len != sizeof(DPS_UUID)) {
                     ret = DPS_ERR_INVALID;
@@ -332,7 +341,7 @@ DPS_Status DPS_DecodeAcknowledgement(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Rx
             }
             break;
         case DPS_CBOR_KEY_ACK_SEQ_NUM:
-            ret = CBOR_DecodeUint32(buf, &sequenceNum);
+            ret = CBOR_DecodeUint32(rxBuf, &sequenceNum);
             if ((ret == DPS_OK) && (sequenceNum == 0)) {
                 ret = DPS_ERR_INVALID;
             }
@@ -369,8 +378,8 @@ DPS_Status DPS_DecodeAcknowledgement(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Rx
          * Try to decrypt the acknowledgement
          */
         DPS_MakeNonce(&pubId, sequenceNum, DPS_MSG_TYPE_ACK, nonce);
-        DPS_RxBufferInit(&aadBuf, aadPos, buf->rxPos - aadPos);
-        DPS_RxBufferInit(&cipherTextBuf, buf->rxPos, DPS_RxBufferAvail(buf));
+        DPS_RxBufferInit(&aadBuf, aadPos, rxBuf->rxPos - aadPos);
+        DPS_RxBufferInit(&cipherTextBuf, rxBuf->rxPos, DPS_RxBufferAvail(rxBuf));
         DPS_TxBufferClear(&plainTextBuf);
         ret = CBOR_Peek(&cipherTextBuf, &type, &tag);
         if ((ret == DPS_OK) && (type == CBOR_TAG)) {
@@ -448,16 +457,12 @@ DPS_Status DPS_DecodeAcknowledgement(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Rx
             /*
              * The ACK is forwarded exactly as received
              */
-            uvBuf.len = (uint32_t)(buf->eod - buf->base);
-            uvBuf.base = malloc(uvBuf.len);
-            if (uvBuf.base) {
-                memcpy_s(uvBuf.base, uvBuf.len, buf->base, uvBuf.len);
-                ret = DPS_NetSend(node, NULL, &ackNode->ep, &uvBuf, 1, DPS_OnSendComplete);
-                if (ret != DPS_OK) {
-                    DPS_SendComplete(node, &ackNode->ep.addr, &uvBuf, 1, ret);
-                }
+            uvBuf = uv_buf_init((char*)rxBuf->base, rxBuf->eod - rxBuf->base);
+            ret = DPS_NetSend(node, NULL, &ackNode->ep, &uvBuf, 1, OnSendComplete);
+            if (ret == DPS_OK) {
+                DPS_NetRxBufferIncRef(buf);
             } else {
-                ret = DPS_ERR_RESOURCES;
+                DPS_SendComplete(node, &ackNode->ep.addr, NULL, 0, ret);
             }
         }
         DPS_UnlockNode(node);

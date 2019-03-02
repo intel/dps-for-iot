@@ -879,8 +879,9 @@ void DPS_QueuePublicationAck(DPS_Node* node, PublicationAck* ack)
     DPS_UnlockNode(node);
 }
 
-static DPS_Status DecodeRequest(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuffer* buf, int multicast)
+static DPS_Status DecodeRequest(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxBuffer* buf, int multicast)
 {
+    DPS_RxBuffer* rxBuf = (DPS_RxBuffer*)buf;
     DPS_Status ret;
     uint8_t msgVersion;
     uint8_t msgType;
@@ -889,13 +890,13 @@ static DPS_Status DecodeRequest(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuffe
     DPS_DBGTRACEA("node=%p,ep={addr=%s,cn=%p},buf=%p,multicast=%d\n",
                   node, DPS_NodeAddrToString(&ep->addr), ep->cn, buf, multicast);
 
-    CBOR_Dump("Request in", buf->rxPos, DPS_RxBufferAvail(buf));
-    ret = CBOR_DecodeArray(buf, &len);
+    CBOR_Dump("Request in", rxBuf->rxPos, DPS_RxBufferAvail(rxBuf));
+    ret = CBOR_DecodeArray(rxBuf, &len);
     if (ret != DPS_OK || (len != 5)) {
         DPS_ERRPRINT("Expected a CBOR array of 5 elements\n");
         return ret;
     }
-    ret = CBOR_DecodeUint8(buf, &msgVersion);
+    ret = CBOR_DecodeUint8(rxBuf, &msgVersion);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Expected a message type\n");
         return ret;
@@ -904,7 +905,7 @@ static DPS_Status DecodeRequest(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuffe
         DPS_ERRPRINT("Expected message version %d, received %d\n", DPS_MSG_VERSION, msgVersion);
         return DPS_ERR_NOT_IMPLEMENTED;
     }
-    ret = CBOR_DecodeUint8(buf, &msgType);
+    ret = CBOR_DecodeUint8(rxBuf, &msgType);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Expected a message type\n");
         return ret;
@@ -955,17 +956,14 @@ static DPS_Status DecodeRequest(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuffe
 /*
  * Using CoAP packetization for receiving multicast subscription requests
  */
-static DPS_Status OnMulticastReceive(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Status status, const uint8_t* data, size_t len)
+static DPS_Status OnMulticastReceive(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Status status,
+                                     DPS_NetRxBuffer* buf)
 {
-    DPS_RxBuffer payload;
     DPS_Status ret;
     CoAP_Parsed coap;
 
     DPS_DBGTRACE();
 
-    if (!data || !len) {
-        return DPS_OK;
-    }
     /*
      * Fail input that comes in when the node is no longer running
      */
@@ -977,9 +975,9 @@ static DPS_Status OnMulticastReceive(DPS_Node* node, DPS_NetEndpoint* ep, DPS_St
     DPS_UnlockNode(node);
 
     memset(&coap, 0, sizeof(coap));
-    ret = CoAP_Parse(data, len, &coap, &payload);
+    ret = CoAP_Parse(&buf->rx, &coap);
     if (ret != DPS_OK) {
-        DPS_ERRPRINT("Discarding garbage multicast packet len=%zu\n", len);
+        DPS_ERRPRINT("Discarding garbage multicast packet len=%zu\n", buf->rx.eod - buf->rx.base);
         goto Exit;
     }
     /*
@@ -990,18 +988,16 @@ static DPS_Status OnMulticastReceive(DPS_Node* node, DPS_NetEndpoint* ep, DPS_St
         ret = DPS_ERR_INVALID;
         goto Exit;
     }
-    ret = DecodeRequest(node, ep, &payload, DPS_TRUE);
+    ret = DecodeRequest(node, ep, buf, DPS_TRUE);
 Exit:
     CoAP_Free(&coap);
     return ret;
 }
 
-static DPS_Status OnNetReceive(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Status status, const uint8_t* data, size_t len)
+static DPS_Status OnNetReceive(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Status status, DPS_NetRxBuffer* buf)
 {
-    DPS_RxBuffer payload;
-
-    DPS_DBGTRACEA("node=%p,ep={addr=%s,cn=%p},status=%s,data=%p,len=%d\n",
-                  node, DPS_NodeAddrToString(&ep->addr), ep->cn, DPS_ErrTxt(status), data, len);
+    DPS_DBGTRACEA("node=%p,ep={addr=%s,cn=%p},status=%s,buf=%p\n", node, DPS_NodeAddrToString(&ep->addr),
+                  ep->cn, DPS_ErrTxt(status), buf);
 
     /*
      * Fail input that comes in when the node is no longer running
@@ -1025,8 +1021,7 @@ static DPS_Status OnNetReceive(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Status s
         DPS_UnlockNode(node);
         return status;
     }
-    DPS_RxBufferInit(&payload, (uint8_t*)data, len);
-    return DecodeRequest(node, ep, &payload, DPS_FALSE);
+    return DecodeRequest(node, ep, buf, DPS_FALSE);
 }
 
 DPS_Status DPS_LoopbackSend(DPS_Node* node, uv_buf_t* bufs, size_t numBufs)
@@ -1034,8 +1029,7 @@ DPS_Status DPS_LoopbackSend(DPS_Node* node, uv_buf_t* bufs, size_t numBufs)
     DPS_Status ret;
     struct sockaddr_in saddr;
     DPS_NetEndpoint ep;
-    DPS_TxBuffer txBuf;
-    DPS_RxBuffer rxBuf;
+    DPS_NetRxBuffer* buf = NULL;
     size_t len = 0;
     size_t i;
 
@@ -1048,28 +1042,28 @@ DPS_Status DPS_LoopbackSend(DPS_Node* node, uv_buf_t* bufs, size_t numBufs)
     DPS_SetAddress(&ep.addr, (const struct sockaddr*)&saddr);
     ep.cn = NULL;
 
-    DPS_TxBufferClear(&txBuf);
+    /*
+     * TODO DecodeRequest expects a contiguous buffer, so no choice
+     * except to copy.
+     */
     for (i = 0; i < numBufs; ++i) {
         len += bufs[i].len;
     }
-    ret = DPS_TxBufferInit(&txBuf, NULL, len);
-    if (ret != DPS_OK) {
+    buf = DPS_CreateNetRxBuffer(len);
+    if (!buf) {
+        ret = DPS_ERR_RESOURCES;
         DPS_ERRPRINT("DPS_TxBufferInit failed - %s\n", DPS_ErrTxt(ret));
         goto Exit;
     }
     for (i = 0; i < numBufs; ++i) {
-        ret = DPS_TxBufferAppend(&txBuf, (const uint8_t*)bufs[i].base, bufs[i].len);
-        if (ret != DPS_OK) {
-            DPS_ERRPRINT("DPS_TxBufferAppend failed - %s\n", DPS_ErrTxt(ret));
-            goto Exit;
-        }
+        memcpy(buf->rx.rxPos, bufs[i].base, bufs[i].len);
+        buf->rx.rxPos += bufs[i].len;
     }
-
-    DPS_TxBufferToRx(&txBuf, &rxBuf);
-    ret = DecodeRequest(node, &ep, &rxBuf, DPS_FALSE);
+    buf->rx.rxPos = buf->rx.base;
+    ret = DecodeRequest(node, &ep, buf, DPS_FALSE);
 
  Exit:
-    DPS_TxBufferFree(&txBuf);
+    DPS_NetRxBufferDecRef(buf);
     return ret;
 }
 

@@ -72,29 +72,40 @@ static int UseInterface(uint8_t ipVersions, uv_interface_address_t* ifn)
     }
 }
 
-static void AllocBuffer(uv_handle_t* handle, size_t suggestedSize, uv_buf_t* buf)
+static void AllocBuffer(uv_handle_t* handle, size_t suggestedSize, uv_buf_t* uvBuf)
 {
-    buf->len = (uint32_t)suggestedSize;
-    buf->base = malloc(buf->len);
+    DPS_NetRxBuffer* buf = DPS_CreateNetRxBuffer(suggestedSize);
+    if (buf) {
+        uvBuf->base = (char*)buf->rx.base;
+        uvBuf->len = DPS_RxBufferAvail(&buf->rx);
+    } else {
+        uvBuf->base = NULL;
+        uvBuf->len = 0;
+    }
 }
 
-static void OnMcastRx(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf, const struct sockaddr* addr,
+static void OnMcastRx(uv_udp_t* handle, ssize_t nread, const uv_buf_t* uvBuf, const struct sockaddr* addr,
                       unsigned flags)
 {
     DPS_MulticastReceiver* receiver = (DPS_MulticastReceiver*)handle->data;
+    DPS_NetRxBuffer* buf = NULL;
     DPS_NetEndpoint ep;
 
-    if (nread == 0 && !addr) {
-        /* No more data to read, free the buffer */
+    DPS_DBGTRACEA("handle=%p,nread=%d,buf={base=%p,len=%d},addr=%p,flags=0x%x\n", handle, nread,
+                  uvBuf->base, uvBuf->len, addr, flags);
+
+    if (!uvBuf) {
+        DPS_ERRPRINT("No buffer\n");
         goto Exit;
     }
-
-    DPS_DBGTRACEA("handle=%p,nread=%d,buf={base=%p,len=%d},addr=%p,flags=0x%x\n", handle, nread,
-                  buf->base, buf->len, addr, flags);
-
+    buf = DPS_UvToNetRxBuffer(uvBuf);
     if (nread < 0) {
         DPS_ERRPRINT("Read error %s\n", uv_err_name((int)nread));
         uv_close((uv_handle_t*)handle, NULL);
+        goto Exit;
+    }
+    buf->rx.eod = &buf->rx.base[nread];
+    if (!nread) {
         goto Exit;
     }
     if (flags & UV_UDP_PARTIAL) {
@@ -106,9 +117,9 @@ static void OnMcastRx(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf, cons
     }
     ep.cn = NULL;
     DPS_SetAddress(&ep.addr, addr);
-    receiver->cb(receiver->node, &ep, DPS_OK, (uint8_t*)buf->base, nread);
+    receiver->cb(receiver->node, &ep, DPS_OK, buf);
 Exit:
-    free(buf->base);
+    DPS_NetRxBufferDecRef(buf);
 }
 
 static DPS_Status MulticastRxInit(DPS_MulticastReceiver* receiver)

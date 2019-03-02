@@ -199,13 +199,23 @@ static void FreeTopics(DPS_Publication* pub)
 void DPS_DestroyPublishRequest(DPS_PublishRequest* req)
 {
     if (req) {
-        DPS_TxBufferFree(&req->bufs[0]);
-        DPS_TxBufferFree(&req->bufs[1]);
-        DPS_TxBufferFree(&req->bufs[2]);
-        DPS_TxBufferFree(&req->bufs[req->numBufs - 1]);
-        /*
-         * Any additional buffers belong to the application
-         */
+        if (req->rxBuf) {
+            /*
+             * The request buffers are aliased to the received message buffer.
+             */
+            DPS_NetRxBufferDecRef(req->rxBuf);
+        } else {
+            /*
+             * The request buffers are not aliased.
+             */
+            DPS_TxBufferFree(&req->bufs[0]);
+            DPS_TxBufferFree(&req->bufs[1]);
+            DPS_TxBufferFree(&req->bufs[2]);
+            /*
+             * Request buffers [3, req->numBufs - 1) belong to the application
+             */
+            DPS_TxBufferFree(&req->bufs[req->numBufs - 1]);
+        }
         free(req);
     }
 }
@@ -635,11 +645,12 @@ static DPS_Publication* LookupRetained(DPS_Node* node, DPS_UUID* pubId)
     return pub;
 }
 
-DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuffer* buf, int multicast)
+DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxBuffer* buf, int multicast)
 {
     static const int32_t UnprotectedKeys[] = { DPS_CBOR_KEY_PORT, DPS_CBOR_KEY_TTL };
     static const int32_t ProtectedKeys[] = { DPS_CBOR_KEY_TTL, DPS_CBOR_KEY_PUB_ID, DPS_CBOR_KEY_SEQ_NUM,
                                              DPS_CBOR_KEY_ACK_REQ, DPS_CBOR_KEY_BLOOM_FILTER };
+    DPS_RxBuffer* rxBuf = (DPS_RxBuffer*)buf;
     DPS_Status ret;
     RemoteNode* pubNode = NULL;
     uint16_t port;
@@ -658,11 +669,11 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
 
     DPS_DBGTRACE();
 
-    CBOR_Dump("Pub in", buf->rxPos, DPS_RxBufferAvail(buf));
+    CBOR_Dump("Pub in", rxBuf->rxPos, DPS_RxBufferAvail(rxBuf));
     /*
      * Parse keys from unprotected map
      */
-    ret = DPS_ParseMapInit(&mapState, buf, UnprotectedKeys, A_SIZEOF(UnprotectedKeys), NULL, 0);
+    ret = DPS_ParseMapInit(&mapState, rxBuf, UnprotectedKeys, A_SIZEOF(UnprotectedKeys), NULL, 0);
     if (ret != DPS_OK) {
         return ret;
     }
@@ -674,10 +685,10 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
         }
         switch (key) {
         case DPS_CBOR_KEY_PORT:
-            ret = CBOR_DecodeUint16(buf, &port);
+            ret = CBOR_DecodeUint16(rxBuf, &port);
             break;
         case DPS_CBOR_KEY_TTL:
-            ret = CBOR_DecodeInt16(buf, &ttl);
+            ret = CBOR_DecodeInt16(rxBuf, &ttl);
             break;
         }
         if (ret != DPS_OK) {
@@ -690,11 +701,11 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
     /*
      * Start of publication protected map
      */
-    protectedPtr = buf->rxPos;
+    protectedPtr = rxBuf->rxPos;
     /*
      * Parse keys from protected map
      */
-    ret = DPS_ParseMapInit(&mapState, buf, ProtectedKeys, A_SIZEOF(ProtectedKeys), NULL, 0);
+    ret = DPS_ParseMapInit(&mapState, rxBuf, ProtectedKeys, A_SIZEOF(ProtectedKeys), NULL, 0);
     if (ret != DPS_OK) {
         return ret;
     }
@@ -709,7 +720,7 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
         }
         switch (key) {
         case DPS_CBOR_KEY_TTL:
-            ret = CBOR_DecodeInt16(buf, &baseTTL);
+            ret = CBOR_DecodeInt16(rxBuf, &baseTTL);
             /*
              * Validate the current TTL against the base TTL
              */
@@ -721,7 +732,7 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
             }
             break;
         case DPS_CBOR_KEY_PUB_ID:
-            ret = CBOR_DecodeBytes(buf, &bytes, &len);
+            ret = CBOR_DecodeBytes(rxBuf, &bytes, &len);
             if ((ret == DPS_OK) && (len != sizeof(DPS_UUID))) {
                 ret = DPS_ERR_INVALID;
             }
@@ -730,21 +741,21 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
             }
             break;
         case DPS_CBOR_KEY_SEQ_NUM:
-            ret = CBOR_DecodeUint32(buf, &sequenceNum);
+            ret = CBOR_DecodeUint32(rxBuf, &sequenceNum);
             if ((ret == DPS_OK) && (sequenceNum == 0)) {
                 ret = DPS_ERR_INVALID;
             }
             break;
         case DPS_CBOR_KEY_ACK_REQ:
-            ret = CBOR_DecodeBoolean(buf, &ackRequested);
+            ret = CBOR_DecodeBoolean(rxBuf, &ackRequested);
             break;
         case DPS_CBOR_KEY_BLOOM_FILTER:
             /*
              * Skip the bloom filter for now
              */
-            ret = CBOR_Skip(buf, NULL, &len);
+            ret = CBOR_Skip(rxBuf, NULL, &len);
             if (ret == DPS_OK) {
-                DPS_RxBufferInit(&bfBuf, buf->rxPos - len, len);
+                DPS_RxBufferInit(&bfBuf, rxBuf->rxPos - len, len);
             }
             break;
         }
@@ -850,16 +861,12 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuff
     }
     req->status = DPS_ERR_NO_ROUTE;
     req->sequenceNum = sequenceNum;
-    ret = DPS_TxBufferInit(&req->bufs[0], NULL, buf->rxPos - protectedPtr);
-    if (ret != DPS_OK) {
-        goto Exit;
-    }
-    ret = DPS_TxBufferInit(&req->bufs[1], NULL, DPS_RxBufferAvail(buf));
-    if (ret != DPS_OK) {
-        goto Exit;
-    }
-    DPS_TxBufferAppend(&req->bufs[0], protectedPtr, buf->rxPos - protectedPtr);
-    DPS_TxBufferAppend(&req->bufs[1], buf->rxPos, DPS_RxBufferAvail(buf));
+    req->rxBuf = buf;
+    DPS_NetRxBufferIncRef(buf);
+    DPS_TxBufferInit(&req->bufs[0], protectedPtr, rxBuf->rxPos - protectedPtr);
+    req->bufs[0].txPos = req->bufs[0].eob;
+    DPS_TxBufferInit(&req->bufs[1], rxBuf->rxPos, DPS_RxBufferAvail(rxBuf));
+    req->bufs[1].txPos = req->bufs[1].eob;
     /*
      * A negative TTL is a forced expiration. We don't call local handlers.
      */
@@ -1113,6 +1120,7 @@ DPS_PublishRequest* DPS_CreatePublishRequest(DPS_Publication* pub, size_t numBuf
     req->completeCB = cb;
     req->data = data;
     req->status = DPS_ERR_FAILURE;
+    req->rxBuf = NULL;
     req->numBufs = numBufs;
     return req;
 }

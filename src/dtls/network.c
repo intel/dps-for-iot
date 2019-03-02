@@ -191,9 +191,6 @@ struct _DPS_NetContext {
     DPS_Node* node;
     DPS_OnReceive receiveCB;
     DPS_NetConnection* cns;
-
-    /* Scratch buffer used to store the decrypted content. */
-    char plainBuffer[MAX_READ_LEN];
 };
 
 /*
@@ -1183,9 +1180,8 @@ static void TLSSend(DPS_NetConnection* cn)
 static void TLSRecv(DPS_NetConnection* cn)
 {
     DPS_NetContext* netCtx = cn->netCtx;
+    DPS_NetRxBuffer* buf = NULL;
     int ret;
-    uint8_t* data = NULL;
-    size_t len = 0;
     DPS_Status status;
 
     /*
@@ -1194,7 +1190,12 @@ static void TLSRecv(DPS_NetConnection* cn)
      */
     DPS_NetConnectionAddRef(cn);
 
-    ret = mbedtls_ssl_read(&cn->ssl, (unsigned char*)netCtx->plainBuffer, sizeof(netCtx->plainBuffer) - 1);
+    buf = DPS_CreateNetRxBuffer(MAX_READ_LEN);
+    if (!buf) {
+        DPS_ERRPRINT("Create buffer failed: %s\n", DPS_ErrTxt(DPS_ERR_RESOURCES));
+        goto Exit;
+    }
+    ret = mbedtls_ssl_read(&cn->ssl, buf->rx.base, DPS_RxBufferAvail(&buf->rx));
     if (ret < 0) {
         if (ret == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY) {
             DPS_DBGPRINT("Connection was closed gracefully\n");
@@ -1217,15 +1218,14 @@ static void TLSRecv(DPS_NetConnection* cn)
             status = DPS_ERR_NETWORK;
         }
     } else {
-        DPS_DBGPRINT("Decrypted into %d bytes of plaintext\n", ret);
-        DPS_DBGBYTES((const uint8_t*)netCtx->plainBuffer, ret);
+        buf->rx.eod = &buf->rx.base[ret];
+        DPS_DBGPRINT("Decrypted into %d bytes of plaintext\n", buf->rx.eod - buf->rx.base);
+        DPS_DBGBYTES(buf->rx.base, buf->rx.eod - buf->rx.base);
 
         status = DPS_OK;
-        data = (uint8_t*)netCtx->plainBuffer;
-        len = ret;
     }
 
-    ret = netCtx->receiveCB(netCtx->node, &cn->peer, status, data, len);
+    ret = netCtx->receiveCB(netCtx->node, &cn->peer, status, buf);
 
     /*
      * See comment in TLSHandshake about holding onto a reference
@@ -1239,8 +1239,7 @@ static void TLSRecv(DPS_NetConnection* cn)
     }
 
 Exit:
-    memset(netCtx->plainBuffer, 0, sizeof(netCtx->plainBuffer));
-
+    DPS_NetRxBufferDecRef(buf);
     DPS_NetConnectionDecRef(cn);
 }
 

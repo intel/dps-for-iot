@@ -69,20 +69,60 @@ typedef struct _DPS_MulticastReceiver DPS_MulticastReceiver;
 void DPS_NetFreeBufs(uv_buf_t* bufs, size_t numBufs);
 
 /**
+ * A reference counted receive buffer
+ */
+typedef struct _DPS_NetRxBuffer {
+    DPS_RxBuffer rx;            /**< The receive buffer */
+    uint32_t refCount;          /**< The reference count */
+    uint8_t data[1];            /**< The buffer data */
+} DPS_NetRxBuffer;
+
+/**
+ * Allocate a buffer for receiving data.
+ *
+ * The buffer is created with a reference count of 1.
+ * DPS_NetRxBufferDecRef() must be called to free it.
+ *
+ * @param len The desired length
+ *
+ * @return The created buffer or NULL if the allocation failed
+ */
+DPS_NetRxBuffer* DPS_CreateNetRxBuffer(size_t len);
+
+/**
+ * Increment the reference count of a buffer.
+ *
+ * @param buf The buffer
+ */
+void DPS_NetRxBufferIncRef(DPS_NetRxBuffer* buf);
+
+/**
+ * Decrement the reference count of a buffer.
+ *
+ * @param buf The buffer
+ */
+void DPS_NetRxBufferDecRef(DPS_NetRxBuffer* buf);
+
+/**
+ * Return a DPS_RxBuffer* from a uv_buf_t*
+ */
+#define DPS_UvToNetRxBuffer(uvBuf)                            \
+    ((DPS_NetRxBuffer*)(((uvBuf)->base) - offsetof(DPS_NetRxBuffer, data)))
+
+/**
  * Function prototype for handler to be called on receiving data from a remote node
  *
  * @param node      The node that received the data
  * @param endpoint  The endpoint that received the data
  * @param status    Indicates if the receive was successful or there was a network layer error
- * @param data      The raw data
- * @param len       Length of the raw data
+ * @param rxBuf     The data
  *
  * @return
  * - DPS_OK if the message was correctly parsed
  * - An error code indicating the data received was invalid
  */
 typedef DPS_Status (*DPS_OnReceive)(DPS_Node* node, DPS_NetEndpoint* endpoint, DPS_Status status,
-                                    const uint8_t* data, size_t len);
+                                    DPS_NetRxBuffer* rxBuf);
 
 /**
  * Set the port number on a network endpoint.
