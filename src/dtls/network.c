@@ -336,7 +336,7 @@ static void CancelPending(DPS_NetConnection* cn)
     /*
      * Protect connection while we are modifying the queues.
      */
-    DPS_NetConnectionAddRef(cn);
+    DPS_NetConnectionIncRef(cn);
 
     while (!DPS_QueueEmpty(&cn->sendQueue)) {
         SendRequest* req = (SendRequest*)DPS_QueueFront(&cn->sendQueue);
@@ -487,7 +487,7 @@ static void OnTLSTimerSet(void* data, uint32_t int_ms, uint32_t fin_ms)
     }
     uv_timer_start(&cn->timer, OnTimeout, int_ms, fin_ms - int_ms);
     if (!active) {
-        DPS_NetConnectionAddRef(cn);
+        DPS_NetConnectionIncRef(cn);
     }
 }
 
@@ -636,7 +636,7 @@ static int OnTLSSend(void* data, const unsigned char *buf, size_t len)
         DPS_ERRPRINT("Send failed: %s\n", uv_err_name(err));
         goto ErrorExit;
     }
-    DPS_NetConnectionAddRef(cn);
+    DPS_NetConnectionIncRef(cn);
 
     return (int) len;
 
@@ -1113,7 +1113,7 @@ static void TLSSend(DPS_NetConnection* cn)
         /*
          * Add a ref while OnIdleForSendCallbacks is pending.
          */
-        DPS_NetConnectionAddRef(cn);
+        DPS_NetConnectionIncRef(cn);
     }
     DPS_DBGPRINT("Using pending send with %d bufs\n", req->numBufs);
 
@@ -1149,7 +1149,7 @@ static void TLSSend(DPS_NetConnection* cn)
      * Protect cn since mbedtls_ssl_write may consume all the
      * references.
      */
-    DPS_NetConnectionAddRef(cn);
+    DPS_NetConnectionIncRef(cn);
 
     /*
      * HERE: there's no data pointer to make a connection between this
@@ -1188,7 +1188,7 @@ static void TLSRecv(DPS_NetConnection* cn)
      * Protect cn since mbedtls_ssl_read may consume all the
      * references.
      */
-    DPS_NetConnectionAddRef(cn);
+    DPS_NetConnectionIncRef(cn);
 
     buf = DPS_CreateNetRxBuffer(MAX_READ_LEN);
     if (!buf) {
@@ -1265,7 +1265,7 @@ static int TLSHandshake(DPS_NetConnection* cn)
     case MBEDTLS_ERR_SSL_WANT_WRITE:
         break;
     default:
-        DPS_NetConnectionAddRef(cn);
+        DPS_NetConnectionIncRef(cn);
         break;
     }
 
@@ -1420,7 +1420,7 @@ static void OnUdpData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, cons
 
     DPS_QueuePushBack(&cn->recvQueue, &data->queue);
     data = NULL;
-    DPS_NetConnectionAddRef(cn);
+    DPS_NetConnectionIncRef(cn);
 
     if (!cn->handshakeDone) {
         int ret = TLSHandshake(cn);
@@ -1567,7 +1567,7 @@ DPS_Status DPS_NetSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf
         req->cn = ep->cn;
         queueEmpty= DPS_QueueEmpty(&ep->cn->sendQueue);
         DPS_QueuePushBack(&ep->cn->sendQueue, &req->queue);
-        DPS_NetConnectionAddRef(ep->cn);
+        DPS_NetConnectionIncRef(ep->cn);
         if (queueEmpty && ep->cn->handshakeDone) {
             TLSSend(ep->cn);
         }
@@ -1589,12 +1589,12 @@ DPS_Status DPS_NetSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf
     req->cn = ep->cn;
     DPS_QueuePushBack(&ep->cn->sendQueue, &req->queue);
     req = NULL;
-    DPS_NetConnectionAddRef(ep->cn);
+    DPS_NetConnectionIncRef(ep->cn);
     if (ep->cn->handshakeDone) {
         ConsumePending(ep->cn);
     }
     /* The caller gets a ref count to own. */
-    DPS_NetConnectionAddRef(ep->cn);
+    DPS_NetConnectionIncRef(ep->cn);
     return DPS_OK;
 
  ErrorExit:
@@ -1606,7 +1606,7 @@ DPS_Status DPS_NetSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf
     return DPS_ERR_NETWORK;
 }
 
-void DPS_NetConnectionAddRef(DPS_NetConnection* cn)
+void DPS_NetConnectionIncRef(DPS_NetConnection* cn)
 {
     if (cn) {
         DPS_DBGTRACEA("cn=%p\n", cn);

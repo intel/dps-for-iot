@@ -287,7 +287,7 @@ DPS_Status DPS_NetSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* endpoint,
  *
  * @param cn    Connection to be add'refd
  */
-void DPS_NetConnectionAddRef(DPS_NetConnection* cn);
+void DPS_NetConnectionIncRef(DPS_NetConnection* cn);
 
 /**
  * Decrement the reference count on a connection potentially allowing an underlying connection to be

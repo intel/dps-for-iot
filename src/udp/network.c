@@ -231,7 +231,7 @@ DPS_Status DPS_NetSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf
     return DPS_OK;
 }
 
-void DPS_NetConnectionAddRef(DPS_NetConnection* cn)
+void DPS_NetConnectionIncRef(DPS_NetConnection* cn)
 {
     /* No-op for udp */
 }

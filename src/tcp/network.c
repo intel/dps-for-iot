@@ -272,7 +272,7 @@ static void OnData(uv_stream_t* socket, ssize_t nread, const uv_buf_t* buf)
         uv_read_stop(socket);
     }
     /*
-     * Shutdown the connection if the upper layer didn't AddRef to keep it alive
+     * Shutdown the connection if the upper layer didn't IncRef to keep it alive
      */
     if (cn->refCount == 0) {
         Shutdown(cn);
@@ -463,7 +463,7 @@ static void DoSend(DPS_NetConnection* cn)
         int r = uv_write(&req->writeReq, (uv_stream_t*)&cn->socket, req->bufs, (uint32_t)req->numBufs,
                          OnWriteComplete);
         if (r == 0) {
-            DPS_NetConnectionAddRef(cn);
+            DPS_NetConnectionIncRef(cn);
         } else {
             DPS_ERRPRINT("DoSend - write failed: %s\n", uv_err_name(r));
             req->status = DPS_ERR_NETWORK;
@@ -583,7 +583,7 @@ DPS_Status DPS_NetSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf
     ep->cn->peerEp.cn = ep->cn;
     DPS_QueuePushBack(&ep->cn->sendQueue, &req->queue);
     req->cn = ep->cn;
-    DPS_NetConnectionAddRef(ep->cn);
+    DPS_NetConnectionIncRef(ep->cn);
     return DPS_OK;
 
 ErrExit:
@@ -603,7 +603,7 @@ ErrExit:
     return DPS_ERR_NETWORK;
 }
 
-void DPS_NetConnectionAddRef(DPS_NetConnection* cn)
+void DPS_NetConnectionIncRef(DPS_NetConnection* cn)
 {
     if (cn) {
         DPS_DBGTRACE();

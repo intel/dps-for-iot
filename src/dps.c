@@ -519,10 +519,10 @@ DPS_Status DPS_AddRemoteNode(DPS_Node* node, DPS_NodeAddress* addr, DPS_NetConne
     if (remote) {
         *remoteOut = remote;
         /*
-         * AddRef a newly established connection
+         * IncRef a newly established connection
          */
         if (cn && !remote->ep.cn) {
-            DPS_NetConnectionAddRef(cn);
+            DPS_NetConnectionIncRef(cn);
             remote->ep.cn = cn;
         }
         return DPS_ERR_EXISTS;
@@ -542,7 +542,7 @@ DPS_Status DPS_AddRemoteNode(DPS_Node* node, DPS_NodeAddress* addr, DPS_NetConne
     /*
      * This tells the network layer to keep connection alive for this address
      */
-    DPS_NetConnectionAddRef(cn);
+    DPS_NetConnectionIncRef(cn);
     *remoteOut = remote;
     return DPS_OK;
 }
