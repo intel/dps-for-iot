@@ -484,7 +484,7 @@ DPS_Status DPS_MulticastSend(DPS_MulticastSender* sender, void* appCtx, uv_buf_t
             continue;
         }
 
-        sendReq = malloc(sizeof(*sendReq));
+        sendReq = malloc(sizeof(uv_udp_send_t));
         if (!sendReq) {
             DPS_ERRPRINT("uv_udp_send_t malloc failed\n");
             send->ret = DPS_ERR_RESOURCES;

@@ -176,7 +176,7 @@ static int ParseArgs(int argc, char** argv, Args* args)
 {
     const char* host = NULL;
 
-    memset(args, 0, sizeof(*args));
+    memset(args, 0, sizeof(Args));
     args->encrypt = 1;
     args->subsRate = DPS_SUBSCRIPTION_UPDATE_RATE;
     args->mcastPub = DPS_MCAST_PUB_DISABLED;

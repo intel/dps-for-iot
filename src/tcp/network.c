@@ -296,7 +296,7 @@ static void OnIncomingConnection(uv_stream_t* stream, int status)
         goto FailConnection;
     }
 
-    cn = calloc(1, sizeof(*cn));
+    cn = calloc(1, sizeof(DPS_NetConnection));
     if (!cn) {
         DPS_ERRPRINT("OnIncomingConnection malloc failed\n");
         goto FailConnection;
@@ -373,7 +373,7 @@ DPS_NetContext* DPS_NetStart(DPS_Node* node, uint16_t port, DPS_OnReceive cb)
     DPS_NetContext* netCtx;
     struct sockaddr_in6 addr;
 
-    netCtx = calloc(1, sizeof(*netCtx));
+    netCtx = calloc(1, sizeof(DPS_NetContext));
     if (!netCtx) {
         return NULL;
     }

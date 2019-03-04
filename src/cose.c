@@ -1411,7 +1411,7 @@ DPS_Status COSE_Decrypt(const uint8_t* nonce, COSE_Entity* recipient, DPS_RxBuff
     DPS_TxBufferClear(&kdfContext);
     memset(&sig, 0, sizeof(sig));
     if (signer) {
-        memset(signer, 0, sizeof(*signer));
+        memset(signer, 0, sizeof(COSE_Entity));
     }
 
     /*
@@ -1758,7 +1758,7 @@ DPS_Status COSE_Verify(DPS_RxBuffer* aad, DPS_RxBuffer* cipherText, DPS_KeyStore
     DPS_TxBufferClear(&toBeSigned);
     memset(&sig, 0, sizeof(sig));
     memset(&k, 0, sizeof(k));
-    memset(signer, 0, sizeof(*signer));
+    memset(signer, 0, sizeof(COSE_Entity));
 
     /*
      * Check this is a COSE payload

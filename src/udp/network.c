@@ -104,7 +104,7 @@ DPS_NetContext* DPS_NetStart(DPS_Node* node, uint16_t port, DPS_OnReceive cb)
     DPS_NetContext* netCtx;
     struct sockaddr_storage addr;
 
-    netCtx = calloc(1, sizeof(*netCtx));
+    netCtx = calloc(1, sizeof(DPS_NetContext));
     if (!netCtx) {
         return NULL;
     }
