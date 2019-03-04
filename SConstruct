@@ -106,7 +106,8 @@ elif env['PLATFORM'] == 'posix':
     if env['target'] == 'yocto':
         env['PY_CPPPATH'] = [os.getenv('SYSROOT') + '/usr/include/python2.7']
     else:
-        env['PY_CPPPATH'] = ['/usr/include/python2.7']
+        py_cpppath = os.popen('python-config --includes').read().split()
+        env['PY_CPPPATH'] = map(lambda inc: inc[2:], py_cpppath)
     env['PY_LIBPATH'] = []
 
     env['DPS_LIBS'] = ['pthread']

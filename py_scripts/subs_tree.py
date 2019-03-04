@@ -31,23 +31,23 @@ dps.set_content_key(key_store, key_id, key_data)
 dps.set_network_key(key_store, network_key_id, network_key)
 
 def on_pub(sub, pub, payload):
-    print "Received on port %d" % dps.get_port_number(dps.subscription_get_node(sub))
-    print "Pub %s(%d) matches:" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub))
-    print "  pub " + " | ".join(dps.publication_get_topics(pub))
-    print "  sub " + " | ".join(dps.subscription_get_topics(sub))
-    print payload
+    print("Received on port %d" % dps.get_port_number(dps.subscription_get_node(sub)))
+    print("Pub %s(%d) matches:" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub)))
+    print("  pub " + " | ".join(dps.publication_get_topics(pub)))
+    print("  sub " + " | ".join(dps.subscription_get_topics(sub)))
+    print(payload)
 
 def subscriber(topic, connect_port):
     node = dps.create_node("/", key_store, None)
     dps.start_node(node, 0, 0)
-    print "Subscriber is listening on port %d" % dps.get_port_number(node)
+    print("Subscriber is listening on port %d" % dps.get_port_number(node))
     sub = dps.create_subscription(node, [topic])
     dps.subscribe(sub, on_pub)
     if (connect_port != 0):
         addr = dps.create_address()
         ret = dps.link_to(node, None, connect_port, addr)
         if (ret == dps.OK):
-            print "Linked %d to %d" % (dps.get_port_number(node), connect_port)
+            print("Linked %d to %d" % (dps.get_port_number(node), connect_port))
         dps.destroy_address(addr)
     return node
 

@@ -114,7 +114,7 @@ if args.encryption == 0:
     node_id = None
     pub_key_id = None
 elif args.encryption == 1:
-    for i in xrange(len(key_id)):
+    for i in range(len(key_id)):
         dps.set_content_key(key_store, key_id[i], key_data[i])
     node_id = None
     pub_key_id = key_id[0]
@@ -134,22 +134,22 @@ elif args.encryption == 3:
 event = threading.Event()
 
 def on_ack(pub, payload):
-    print "Ack for pub UUID %s(%d) [%s]" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub), dps.ack_get_sender_key_id(pub))
-    print "    %s" % (payload)
+    print("Ack for pub UUID %s(%d) [%s]" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub), dps.ack_get_sender_key_id(pub)))
+    print("    %s" % (payload))
 
 def on_link(node, addr, status):
-    print "Publisher is linked to %s" % (addr)
+    print("Publisher is linked to %s" % (addr))
     event.set()
 
 def on_destroy(node):
-    print "Destroyed"
+    print("Destroyed")
     dps.destroy_key_store(key_store)
 
 if args.port != 0:
     mcast = dps.MCAST_PUB_DISABLED
 
 node = dps.create_node("/", key_store, node_id)
-print "Publisher is listening on port %d" % (dps.get_port_number(node))
+print("Publisher is listening on port %d" % (dps.get_port_number(node)))
 dps.start_node(node, mcast, args.listen)
 
 if args.port != 0:
@@ -161,7 +161,7 @@ if args.port != 0:
     if ret == dps.OK:
         event.wait()
     else:
-        print "link_to %d returned %s" % (args.port, dps.err_txt(ret))
+        print("link_to %d returned %s" % (args.port, dps.err_txt(ret)))
     dps.destroy_address(addr)
 elif args.host != None:
     sys.exit("Invalid argument: must provide port with host")
@@ -170,10 +170,10 @@ pub = dps.create_publication(node)
 dps.init_publication(pub, ['a/b/c'], False, None, on_ack)
 dps.publication_add_sub_id(pub, pub_key_id)
 dps.publish(pub, "hello")
-print "Pub UUID %s(%d)" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub))
+print("Pub UUID %s(%d)" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub)))
 time.sleep(0.1)
 dps.publish(pub, "world")
-print "Pub UUID %s(%d)" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub))
+print("Pub UUID %s(%d)" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub)))
 time.sleep(0.1)
 
 dps.destroy_publication(pub)

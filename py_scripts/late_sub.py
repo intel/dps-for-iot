@@ -4,14 +4,14 @@ import sys
 import time
 
 def on_pub(sub, pub, payload):
-    print "Pub %s(%d) matches:" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub))
-    print "  pub " + " | ".join(dps.publication_get_topics(pub))
-    print "  sub " + " | ".join(dps.subscription_get_topics(sub))
-    print payload
+    print("Pub %s(%d) matches:" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub)))
+    print("  pub " + " | ".join(dps.publication_get_topics(pub)))
+    print("  sub " + " | ".join(dps.subscription_get_topics(sub)))
+    print(payload)
     if dps.publication_is_ack_requested(pub):
         ack_msg = "This is an ACK from %d" % (dps.get_port_number(dps.publication_get_node(pub)))
-        print "Sending ack for pub UUID %s(%d)" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub))
-        print "    %s" % (ack_msg)
+        print("Sending ack for pub UUID %s(%d)" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub)))
+        print("    %s" % (ack_msg))
         dps.ack_publication(pub, ack_msg);
 
 import argparse
@@ -23,7 +23,7 @@ dps.cvar.debug = args.debug
 
 node = dps.create_node("/")
 dps.start_node(node, dps.MCAST_PUB_ENABLE_RECV + dps.MCAST_PUB_ENABLE_SEND, 0)
-print "Subscriber is listening on port %d" % (dps.get_port_number(node))
+print("Subscriber is listening on port %d" % (dps.get_port_number(node)))
 sub = dps.create_subscription(node, ['a/b/c']);
 dps.subscribe(sub, on_pub)
 

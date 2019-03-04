@@ -1,4 +1,5 @@
 #!/usr/bin/python
+import codecs
 import dps
 import os
 import sys
@@ -104,21 +105,26 @@ dps.cvar.debug = args.debug
 def compare(a, b):
     if a == None or b == None:
         return False
-    if len(a) != len(b):
+    elif len(a) != len(b):
         return False
-    if type(a) == type(b):
+    elif type(a) == type(b):
         return a == b
     elif type(b) is bytearray:
-        return bytearray(a) == b
+        if type(a) is str:
+            return bytearray(a, "utf-8") == b
+        else:
+            return bytearray(a) == b
     elif type(b) is str:
         return "".join(str(c) for c in a) == b
+    else:
+        return False
 def int_to_bytes(b, n):
     s = "%x" % b
     if len(s) & 1:
         s = "0" + s
     while len(s) != (n * 2):
         s = "0" + s
-    return s.decode("hex")
+    return codecs.decode(s, "hex")
 def on_key_and_id(request):
     return dps.set_key_and_id(request, dps.KeySymmetric(network_key), network_key_id);
 def on_key(request, id):
@@ -163,19 +169,19 @@ elif args.encryption == 2:
     node_id = subscriber_id
 
 def on_pub(sub, pub, payload):
-    print "Pub %s(%d) matches:" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub))
-    print "  pub " + " | ".join(dps.publication_get_topics(pub))
-    print "  sub " + " | ".join(dps.subscription_get_topics(sub))
-    print payload
+    print("Pub %s(%d) matches:" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub)))
+    print("  pub " + " | ".join(dps.publication_get_topics(pub)))
+    print("  sub " + " | ".join(dps.subscription_get_topics(sub)))
+    print(payload)
     if dps.publication_is_ack_requested(pub):
         ack_msg = "This is an ACK from %d" % (dps.get_port_number(dps.publication_get_node(pub)))
-        print "Sending ack for pub UUID %s(%d)" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub))
-        print "    %s" % (ack_msg)
+        print("Sending ack for pub UUID %s(%d)" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub)))
+        print("    %s" % (ack_msg))
         dps.ack_publication(pub, ack_msg);
 
 node = dps.create_node("/", key_store, node_id)
 dps.start_node(node, dps.MCAST_PUB_ENABLE_RECV, 0)
-print "Subscriber is listening on port %d" % (dps.get_port_number(node))
+print("Subscriber is listening on port %d" % (dps.get_port_number(node)))
 sub = dps.create_subscription(node, ['a/b/c']);
 dps.subscribe(sub, on_pub)
 

@@ -109,7 +109,7 @@ dps.set_network_key(key_store, network_key_id, network_key)
 if args.encryption == 0:
     node_id = None
 elif args.encryption == 1:
-    for i in xrange(len(key_id)):
+    for i in range(len(key_id)):
         dps.set_content_key(key_store, key_id[i], key_data[i])
     node_id = None
 elif args.encryption == 2:
@@ -119,19 +119,19 @@ elif args.encryption == 2:
     node_id = subscriber_id
 
 def on_pub(sub, pub, payload):
-    print "Pub %s(%d) [%s] matches:" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub), str(dps.publication_get_sender_key_id(pub)))
-    print "  pub " + " | ".join(dps.publication_get_topics(pub))
-    print "  sub " + " | ".join(dps.subscription_get_topics(sub))
-    print payload
+    print("Pub %s(%d) [%s] matches:" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub), str(dps.publication_get_sender_key_id(pub))))
+    print("  pub " + " | ".join(dps.publication_get_topics(pub)))
+    print("  sub " + " | ".join(dps.subscription_get_topics(sub)))
+    print(payload)
     if dps.publication_is_ack_requested(pub):
         ack_msg = "This is an ACK from %d" % (dps.get_port_number(dps.publication_get_node(pub)))
-        print "Sending ack for pub UUID %s(%d)" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub))
-        print "    %s" % (ack_msg)
+        print("Sending ack for pub UUID %s(%d)" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub)))
+        print("    %s" % (ack_msg))
         dps.ack_publication(pub, ack_msg);
 
 node = dps.create_node("/", key_store, node_id)
 dps.start_node(node, dps.MCAST_PUB_ENABLE_RECV, args.listen)
-print "Subscriber is listening on port %d" % (dps.get_port_number(node))
+print("Subscriber is listening on port %d" % (dps.get_port_number(node)))
 
 sub = dps.create_subscription(node, ['a/b/c']);
 dps.subscribe(sub, on_pub)
@@ -140,9 +140,9 @@ if args.port != 0:
     addr = dps.create_address()
     ret = dps.link_to(node, args.host, args.port, addr)
     if ret == dps.OK:
-        print "Subscriber is linked to %s" % (addr)
+        print("Subscriber is linked to %s" % (addr))
     else:
-        print "link_to %d returned %s" % (args.port, dps.err_txt(ret))
+        print("link_to %d returned %s" % (args.port, dps.err_txt(ret)))
     dps.destroy_address(addr)
 elif args.host != None:
     sys.exit("Invalid argument: must provide port with host")

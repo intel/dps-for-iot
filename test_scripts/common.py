@@ -65,8 +65,8 @@ def _spawn_helper(n, cmd, interpreter=[]):
     name = os.path.basename(cmd[0])
     log_name = 'out/{}{}.log'.format(name, n)
     log = open(log_name, 'wb')
-    log.write('=============================\n{}{} {}\n'.format(name, n, ' '.join(cmd[1:])))
-    log.write('=============================\n')
+    log.write('=============================\n{}{} {}\n'.format(name, n, ' '.join(cmd[1:])).encode())
+    log.write('=============================\n'.encode())
     child = popen_spawn.PopenSpawn(interpreter + cmd, env=_spawn_env(), logfile=log)
     child.linesep = os.linesep
     _children.append(child)
@@ -105,7 +105,7 @@ def _expect_linked(child, args):
         prev = curr
     while len(ports):
         _expect([child], ['is linked to \S+/(\d+){}'.format(child.linesep)])
-        ports.remove(child.match.group(1))
+        ports.remove(child.match.group(1).decode())
 
 def expect_linked(child, ports):
     if not isinstance(ports, collections.Sequence):
@@ -124,16 +124,16 @@ def _expect_pub(children, topics, allow_error=False, timeout=-1, signers=None):
                     i = child.expect(['ERROR'] + ['Pub [0-9a-f-]+\([0-9]+\) \[(.*)\] matches:'], timeout=timeout)
                     if i == 0:
                         raise RuntimeError('ERROR')
-                    signers.append(child.match.group(1))
+                    signers.append(child.match.group(1).decode())
                 i = child.expect(['ERROR'] + patterns, timeout=timeout)
                 if i == 0:
                     raise RuntimeError('ERROR')
             else:
                 if signers != None:
                     child.expect(['Pub [0-9a-f-]+\([0-9]+\) \[(.*)\] matches:'], timeout=timeout)
-                    signers.append(child.match.group(1))
+                    signers.append(child.match.group(1).decode())
                 child.expect(patterns, timeout=timeout)
-            patterns.remove(child.match.re.pattern)
+            patterns.remove(child.match.re.pattern.decode())
 
 def _expect_ack(children, allow_error=False, timeout=-1, signers=None):
     if signers != None:
@@ -147,7 +147,7 @@ def _expect_ack(children, allow_error=False, timeout=-1, signers=None):
         if i != 0:
             raise RuntimeError(pattern[i])
         if signers != None:
-            signers.append(child.match.group(1))
+            signers.append(child.match.group(1).decode())
 
 def cleanup():
     global _children
