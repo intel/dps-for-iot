@@ -497,11 +497,11 @@ void* DPS_GetNodeData(const DPS_Node* node);
  *
  * @param node         The node
  * @param mcastPub     Indicates if this node sends or listens for multicast publications
- * @param listenPort   If non-zero identifies specific port to listen on
+ * @param listenAddr   If non-NULL identifies specific address to listen on
  *
  * @return DPS_OK or various error status codes
  */
-DPS_Status DPS_StartNode(DPS_Node* node, int mcastPub, uint16_t listenPort);
+DPS_Status DPS_StartNode(DPS_Node* node, int mcastPub, DPS_NodeAddress* listenAddr);
 
 /**
  * Function prototype for callback function called when a node is destroyed.

@@ -25,11 +25,13 @@
 
 #include <assert.h>
 #include <math.h>
+#include <netinet/in.h>
 #include <safe_lib.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/socket.h>
 
 #include <dps/dbg.h>
 #include <dps/dps.h>

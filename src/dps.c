@@ -1313,7 +1313,7 @@ static void StopNodeTask(uv_async_t* handle)
     uv_stop(handle->loop);
 }
 
-DPS_Status DPS_StartNode(DPS_Node* node, int mcast, uint16_t rxPort)
+DPS_Status DPS_StartNode(DPS_Node* node, int mcast, DPS_NodeAddress* listenAddr)
 {
     DPS_Status ret = DPS_OK;
     int r;
@@ -1390,9 +1390,9 @@ DPS_Status DPS_StartNode(DPS_Node* node, int mcast, uint16_t rxPort)
     if (mcast & DPS_MCAST_PUB_ENABLE_SEND) {
         node->mcastSender = DPS_MulticastStartSend(node);
     }
-    node->netCtx = DPS_NetStart(node, rxPort, OnNetReceive);
+    node->netCtx = DPS_NetStart(node, listenAddr, OnNetReceive);
     if (!node->netCtx) {
-        DPS_ERRPRINT("Failed to initialize network context on port %d\n", rxPort);
+        DPS_ERRPRINT("Failed to initialize network context on %s\n", DPS_NodeAddrToString(listenAddr));
         ret = DPS_ERR_NETWORK;
         goto ErrExit;
     }
@@ -1566,7 +1566,11 @@ DPS_Status DPS_Unlink(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnUnlinkComplet
 
 const char* DPS_NodeAddrToString(const DPS_NodeAddress* addr)
 {
-    return DPS_NetAddrText((const struct sockaddr*)&addr->inaddr);
+    if (addr) {
+        return DPS_NetAddrText((const struct sockaddr*)&addr->inaddr);
+    } else {
+        return "NULL";
+    }
 }
 
 DPS_NodeAddress* DPS_CreateAddress()

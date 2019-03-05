@@ -22,14 +22,16 @@
 
 #include <assert.h>
 #include <ctype.h>
+#include <netinet/in.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/socket.h>
 #ifdef _WIN32
 #include <io.h>
 #else
 #include <unistd.h>
 #endif
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
 #include <dps/dbg.h>
 #include <dps/dps.h>
 #include <dps/event.h>
@@ -92,6 +94,8 @@ int main(int argc, char** argv)
     DPS_Event* nodeDestroyed = NULL;
     DPS_Subscription* subscription = NULL;
     int listenPort = 0;
+    DPS_NodeAddress* listenAddr = NULL;
+    struct sockaddr_in6 saddr;
     DPS_Node* node;
 
     DPS_Debug = DPS_FALSE;
@@ -114,7 +118,19 @@ int main(int argc, char** argv)
     node = DPS_CreateNode("/", NULL, NULL);
     nodeDestroyed = DPS_CreateEvent();
 
-    ret = DPS_StartNode(node, DPS_MCAST_PUB_ENABLE_RECV, listenPort);
+    node = DPS_CreateNode("/", NULL, NULL);
+    listenAddr = DPS_CreateAddress();
+    if (!listenAddr) {
+        ret = DPS_ERR_RESOURCES;
+        DPS_ERRPRINT("DPS_CreateAddress failed: %s\n", DPS_ErrTxt(ret));
+        goto Exit;
+    }
+    memset(&saddr, 0, sizeof(saddr));
+    saddr.sin6_family = AF_INET6;
+    saddr.sin6_port = htons(listenPort);
+    memcpy(&saddr.sin6_addr, &in6addr_any, sizeof(saddr.sin6_addr));
+    DPS_SetAddress(listenAddr, (const struct sockaddr*)&saddr);
+    ret = DPS_StartNode(node, DPS_MCAST_PUB_ENABLE_RECV, listenAddr);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
         goto Exit;
@@ -134,6 +150,7 @@ Exit:
     DPS_WaitForEvent(nodeDestroyed);
     DPS_DestroySubscription(subscription);
     DPS_DestroyEvent(nodeDestroyed);
+    DPS_DestroyAddress(listenAddr);
     return (ret == DPS_OK) ? EXIT_SUCCESS : EXIT_FAILURE;
 
 Usage:

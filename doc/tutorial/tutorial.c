@@ -359,8 +359,7 @@ static DPS_Status StartMulticastNode(DPS_Node* node)
 {
     /** [Starting a node] */
     int mcastPub = DPS_MCAST_PUB_ENABLE_SEND | DPS_MCAST_PUB_ENABLE_RECV;
-    uint16_t listenPort = 0;
-    DPS_Status ret = DPS_StartNode(node, mcastPub, listenPort);
+    DPS_Status ret = DPS_StartNode(node, mcastPub, NULL);
     if (ret != DPS_OK) {
         goto Exit;
     }
@@ -373,10 +372,21 @@ static DPS_Status StartMulticastNode(DPS_Node* node)
 
 static DPS_Status StartUnicastNode(DPS_Node* node, uint16_t port)
 {
+    DPS_Status ret;
     /** [Starting a unicast node] */
     int mcastPub = DPS_MCAST_PUB_DISABLED;
-    uint16_t listenPort = port;
-    DPS_Status ret = DPS_StartNode(node, mcastPub, listenPort);
+    DPS_NodeAddress* listenAddr = DPS_CreateAddress();
+    if (!listenAddr) {
+        ret = DPS_ERR_RESOURCES;
+        goto Exit;
+    }
+    struct sockaddr_in6 saddr;
+    memset(&saddr, 0, sizeof(saddr));
+    saddr.sin6_family = AF_INET6;
+    saddr.sin6_port = htons(port);
+    memcpy(&saddr.sin6_addr, &in6addr_any, sizeof(saddr.sin6_addr));
+    DPS_SetAddress(listenAddr, (const struct sockaddr*)&saddr);
+    ret = DPS_StartNode(node, mcastPub, listenAddr);
     if (ret != DPS_OK) {
         goto Exit;
     }
@@ -385,6 +395,7 @@ static DPS_Status StartUnicastNode(DPS_Node* node, uint16_t port)
     DPS_PRINT("Node is listening on port %d\n", portNum);
 
  Exit:
+    DPS_DestroyAddress(listenAddr);
     return ret;
 }
 

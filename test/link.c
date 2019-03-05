@@ -49,7 +49,7 @@ static DPS_Node* CreateNode(DPS_KeyStore* keyStore)
     DPS_Status ret;
 
     node = DPS_CreateNode("/.", keyStore, NULL);
-    ret = DPS_StartNode(node, DPS_MCAST_PUB_DISABLED, 0);
+    ret = DPS_StartNode(node, DPS_MCAST_PUB_DISABLED, NULL);
     ASSERT(ret == DPS_OK);
     return node;
 }

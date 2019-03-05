@@ -149,8 +149,10 @@ if args.port != 0:
     mcast = dps.MCAST_PUB_DISABLED
 
 node = dps.create_node("/", key_store, node_id)
+listen_addr = dps.create_address()
+dps.set_address(listen_addr, (None, args.listen))
+dps.start_node(node, mcast, listen_addr)
 print("Publisher is listening on port %d" % (dps.get_port_number(node)))
-dps.start_node(node, mcast, args.listen)
 
 if args.port != 0:
     addr = dps.create_address()
@@ -178,3 +180,4 @@ time.sleep(0.1)
 
 dps.destroy_publication(pub)
 dps.destroy_node(node, on_destroy)
+dps.destroy_address(listen_addr)

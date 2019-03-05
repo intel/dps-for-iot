@@ -198,7 +198,8 @@ int main(int argc, char** argv)
     int links[MAX_LINKS];
     size_t numLinks = 0;
     int listenPort = 0;
-
+    DPS_NodeAddress* listenAddr = NULL;
+    struct sockaddr_in6 saddr;
     DPS_Node* node = NULL;
     const Id* self = NULL;
     DPS_NodeAddress* addr = NULL;
@@ -269,7 +270,18 @@ int main(int argc, char** argv)
         ret = DPS_ERR_RESOURCES;
         goto Exit;
     }
-    ret = DPS_StartNode(node, mcast, listenPort);
+    listenAddr = DPS_CreateAddress();
+    if (!listenAddr) {
+        ret = DPS_ERR_RESOURCES;
+        DPS_ERRPRINT("DPS_CreateAddress failed: %s\n", DPS_ErrTxt(ret));
+        goto Exit;
+    }
+    memset(&saddr, 0, sizeof(saddr));
+    saddr.sin6_family = AF_INET6;
+    saddr.sin6_port = htons(listenPort);
+    memcpy(&saddr.sin6_addr, &in6addr_any, sizeof(saddr.sin6_addr));
+    DPS_SetAddress(listenAddr, (const struct sockaddr*)&saddr);
+    ret = DPS_StartNode(node, mcast, listenAddr);
     if (ret != DPS_OK) {
         goto Exit;
     }
@@ -328,27 +340,16 @@ int main(int argc, char** argv)
     Wait();
 
 Exit:
-    if (publication) {
-        DPS_DestroyPublication(publication);
+    DPS_DestroyPublication(publication);
+    DPS_DestroySubscription(subscription);
+    ret = DPS_DestroyNode(node, OnNodeDestroyed, event);
+    if (ret == DPS_OK) {
+        DPS_WaitForEvent(event);
     }
-    if (subscription) {
-        DPS_DestroySubscription(subscription);
-    }
-    if (node) {
-        ret = DPS_DestroyNode(node, OnNodeDestroyed, event);
-        if (ret == DPS_OK) {
-            DPS_WaitForEvent(event);
-        }
-    }
-    if (keyStore) {
-        DPS_DestroyMemoryKeyStore(keyStore);
-    }
-    if (event) {
-        DPS_DestroyEvent(event);
-    }
-    if (addr) {
-        DPS_DestroyAddress(addr);
-    }
+    DPS_DestroyMemoryKeyStore(keyStore);
+    DPS_DestroyEvent(event);
+    DPS_DestroyAddress(addr);
+    DPS_DestroyAddress(listenAddr);
     DPS_PRINT("Exiting\n");
     return ret;
 

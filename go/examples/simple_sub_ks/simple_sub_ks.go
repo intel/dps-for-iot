@@ -97,7 +97,7 @@ func main() {
 	}
 
 	node := dps.CreateNode("/", keyStore, nodeId)
-	dps.StartNode(node, dps.MCAST_PUB_ENABLE_RECV, 0)
+	dps.StartNode(node, dps.MCAST_PUB_ENABLE_RECV, nil)
 	fmt.Printf("Subscriber is listening on port %v\n", dps.GetPortNumber(node))
 
 	sub := dps.CreateSubscription(node, []string{"a/b/c"})

@@ -98,11 +98,12 @@ Exit:
     DPS_NetRxBufferDecRef(buf);
 }
 
-DPS_NetContext* DPS_NetStart(DPS_Node* node, uint16_t port, DPS_OnReceive cb)
+DPS_NetContext* DPS_NetStart(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnReceive cb)
 {
     int ret;
     DPS_NetContext* netCtx;
-    struct sockaddr_storage addr;
+    struct sockaddr* sa;
+    struct sockaddr_storage ss;
 
     netCtx = calloc(1, sizeof(DPS_NetContext));
     if (!netCtx) {
@@ -110,18 +111,23 @@ DPS_NetContext* DPS_NetStart(DPS_Node* node, uint16_t port, DPS_OnReceive cb)
     }
     ret = uv_udp_init(node->loop, &netCtx->rxSocket);
     if (ret) {
-        DPS_ERRPRINT("uv_tcp_init error=%s\n", uv_err_name(ret));
+        DPS_ERRPRINT("uv_udp_init error=%s\n", uv_err_name(ret));
         free(netCtx);
         return NULL;
     }
     netCtx->node = node;
     netCtx->receiveCB = cb;
-    ret = uv_ip6_addr("::", port, (struct sockaddr_in6*)&addr);
-    if (ret) {
-        goto ErrorExit;
+    if (addr) {
+        sa = (struct sockaddr*)&addr->inaddr;
+    } else {
+        ret = uv_ip6_addr("::", 0, (struct sockaddr_in6*)&ss);
+        if (ret) {
+            goto ErrorExit;
+        }
+        sa = (struct sockaddr*)&ss;
     }
     netCtx->rxSocket.data = netCtx;
-    ret = uv_udp_bind(&netCtx->rxSocket, (const struct sockaddr*)&addr, 0);
+    ret = uv_udp_bind(&netCtx->rxSocket, sa, 0);
     if (ret) {
         goto ErrorExit;
     }

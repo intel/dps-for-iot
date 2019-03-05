@@ -136,7 +136,7 @@ var dps = require("dps");
     }
 
     node = dps.createNode("/", keyStore, nodeId);
-    dps.startNode(node, dps.MCAST_PUB_ENABLE_SEND, 0);
+    dps.startNode(node, dps.MCAST_PUB_ENABLE_SEND, null);
     console.log("Publisher is listening on port " +  dps.getPortNumber(node));
 
     pub = dps.createPublication(node);

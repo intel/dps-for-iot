@@ -63,7 +63,7 @@ func main() {
 	}
 
 	node := dps.CreateNode("/", nil, nil)
-	dps.StartNode(node, mcast, 0)
+	dps.StartNode(node, mcast, nil)
 
 	if *port != 0 {
 		addr, err := dps.LinkTo(node, *host, uint16(*port))

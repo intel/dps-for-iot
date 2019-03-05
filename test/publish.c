@@ -317,7 +317,7 @@ static void TestBackToBackPublishSeparateNodes(DPS_Node* node, DPS_KeyStore* key
 
     subNode = DPS_CreateNode("/.", keyStore, NULL);
     ASSERT(subNode);
-    ret = DPS_StartNode(subNode, DPS_MCAST_PUB_DISABLED, 0);
+    ret = DPS_StartNode(subNode, DPS_MCAST_PUB_DISABLED, NULL);
     ASSERT(ret == DPS_OK);
 
     sub = DPS_CreateSubscription(subNode, topics, numTopics);
@@ -452,7 +452,7 @@ int main(int argc, char** argv)
         DPS_SetNetworkKey(memoryKeyStore, &NetworkKeyId, &NetworkKey);
         node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore), NULL);
         ASSERT(node);
-        ret = DPS_StartNode(node, DPS_MCAST_PUB_ENABLE_SEND | DPS_MCAST_PUB_ENABLE_RECV, 0);
+        ret = DPS_StartNode(node, DPS_MCAST_PUB_ENABLE_SEND | DPS_MCAST_PUB_ENABLE_RECV, NULL);
         ASSERT(ret == DPS_OK);
         (*test)(node, DPS_MemoryKeyStoreHandle(memoryKeyStore));
         DPS_DestroyNode(node, OnNodeDestroyed, event);

@@ -651,9 +651,10 @@ func CreateNode(separators string, keyStore KeyStore, keyId KeyId) *Node {
 	return (*Node)(C.DPS_CreateNode(cseparators, ckeyStore, ckeyId))
 }
 
-func StartNode(node *Node, mcastPub int, listenPort uint16) int {
+func StartNode(node *Node, mcastPub int, listenAddr *NodeAddress) int {
 	cnode := (*C.DPS_Node)(node)
-	return int(C.DPS_StartNode(cnode, C.int(mcastPub), C.uint16_t(listenPort)))
+	clistenAddr := (*C.DPS_NodeAddress)(listenAddr)
+	return int(C.DPS_StartNode(cnode, C.int(mcastPub), clistenAddr))
 }
 
 type OnNodeDestroyed func(*Node)

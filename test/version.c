@@ -266,7 +266,7 @@ int main(int argc, char** argv)
     nodeDestroyed = DPS_CreateEvent();
 
     node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore), NULL);
-    ret = DPS_StartNode(node, mcast, 0);
+    ret = DPS_StartNode(node, mcast, NULL);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
         return EXIT_FAILURE;

@@ -1,12 +1,36 @@
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
+/*
+ *******************************************************************
+ *
+ * Copyright 2016 Intel Corporation All rights reserved.
+ *
+ *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+ */
+
 #include <assert.h>
+#include <netinet/in.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/socket.h>
 #include <dps/dbg.h>
 #include <dps/dps.h>
-#include <dps/synchronous.h>
-#include <dps/registration.h>
 #include <dps/event.h>
+#include <dps/registration.h>
+#include <dps/synchronous.h>
 #include "keys.h"
 
 #define A_SIZEOF(a)  (sizeof(a) / sizeof((a)[0]))
@@ -146,6 +170,8 @@ int main(int argc, char** argv)
     DPS_Node* node;
     const char* host = "localhost";
     int listen = 0;
+    DPS_NodeAddress* listenAddr = NULL;
+    struct sockaddr_in6 saddr;
     int port = 0;
     int subsRate = DPS_SUBSCRIPTION_UPDATE_RATE;
     int timeout = DPS_REGISTRATION_GET_TIMEOUT;
@@ -215,7 +241,17 @@ int main(int argc, char** argv)
     node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore), NULL);
     DPS_SetNodeSubscriptionUpdateDelay(node, subsRate);
 
-    ret = DPS_StartNode(node, DPS_MCAST_PUB_DISABLED, listen);
+    listenAddr = DPS_CreateAddress();
+    if (!listenAddr) {
+        DPS_ERRPRINT("DPS_CreateAddress failed: %s\n", DPS_ErrTxt(DPS_ERR_RESOURCES));
+        return 1;
+    }
+    memset(&saddr, 0, sizeof(saddr));
+    saddr.sin6_family = AF_INET6;
+    saddr.sin6_port = htons(listen);
+    memcpy(&saddr.sin6_addr, &in6addr_any, sizeof(saddr.sin6_addr));
+    DPS_SetAddress(listenAddr, (const struct sockaddr*)&saddr);
+    ret = DPS_StartNode(node, DPS_MCAST_PUB_DISABLED, listenAddr);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
         return 1;
@@ -241,6 +277,7 @@ int main(int argc, char** argv)
     DPS_WaitForEvent(nodeDestroyed);
     DPS_DestroyEvent(nodeDestroyed);
     DPS_DestroyMemoryKeyStore(memoryKeyStore);
+    DPS_DestroyAddress(listenAddr);
     return 0;
 
 Usage:

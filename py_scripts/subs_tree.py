@@ -39,7 +39,7 @@ def on_pub(sub, pub, payload):
 
 def subscriber(topic, connect_port):
     node = dps.create_node("/", key_store, None)
-    dps.start_node(node, 0, 0)
+    dps.start_node(node, 0, None)
     print("Subscriber is listening on port %d" % dps.get_port_number(node))
     sub = dps.create_subscription(node, [topic])
     dps.subscribe(sub, on_pub)

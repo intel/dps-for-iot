@@ -222,12 +222,12 @@ DPS_Status DPS_MulticastSend(DPS_MulticastSender* sender, void* appCtx, uv_buf_t
  * Start listening and receiving data
  *
  * @param node  Opaque pointer to the DPS node
- * @param port  If non-zero the port number to listen on, if zero use an ephemeral port
+ * @param addr  If non-NULL the address to listen on, if NULL use an ephemeral address
  * @param cb    Function to call when data is received
  *
  * @return   Returns a pointer to an opaque data structure that holds the state of the netCtx.
  */
-DPS_NetContext* DPS_NetStart(DPS_Node* node, uint16_t port, DPS_OnReceive cb);
+DPS_NetContext* DPS_NetStart(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnReceive cb);
 
 /**
  * Get the port the netCtx is listening on

@@ -51,7 +51,9 @@ func main() {
 	}
 
 	node := dps.CreateNode("/", nil, nil)
-	dps.StartNode(node, dps.MCAST_PUB_ENABLE_RECV, uint16(*port))
+	listenAddr := dps.CreateAddress()
+	dps.SetAddress(listenAddr, fmt.Sprintf(":%v", *port))
+	dps.StartNode(node, dps.MCAST_PUB_ENABLE_RECV, listenAddr)
 	fmt.Printf("Subscriber is listening on port %v\n", dps.GetPortNumber(node))
 
 	if *payloadSize > 0 {
@@ -67,4 +69,5 @@ func main() {
 
 	dps.DestroySubscription(sub)
 	dps.DestroyNode(node, func(node *dps.Node) {})
+	dps.DestroyAddress(listenAddr)
 }

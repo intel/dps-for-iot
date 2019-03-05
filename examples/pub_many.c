@@ -161,7 +161,7 @@ int main(int argc, char** argv)
     }
 
     node = DPS_CreateNode("/.", NULL, NULL);
-    ret = DPS_StartNode(node, mcast, 0);
+    ret = DPS_StartNode(node, mcast, NULL);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("DPS_CreateNode failed: %s\n", DPS_ErrTxt(ret));
         return 1;

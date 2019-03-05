@@ -129,7 +129,7 @@ var dps = require("dps");
     }
 
     node = dps.createNode("/", keyStore, nodeId);
-    dps.startNode(node, dps.MCAST_PUB_ENABLE_RECV, 0);
+    dps.startNode(node, dps.MCAST_PUB_ENABLE_RECV, null);
     console.log("Subscriber is listening on port " +  dps.getPortNumber(node));
     sub = dps.createSubscription(node, ["a/b/c"]);
     dps.subscribe(sub, onPub);

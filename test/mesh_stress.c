@@ -389,7 +389,7 @@ int main(int argc, char** argv)
              */
             DPS_SetNodeSubscriptionUpdateDelay(node, 300);
 
-            ret = DPS_StartNode(node, DPS_FALSE, 0);
+            ret = DPS_StartNode(node, DPS_FALSE, NULL);
             if (ret != DPS_OK) {
                 DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
                 return EXIT_FAILURE;

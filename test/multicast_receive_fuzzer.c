@@ -78,7 +78,7 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t len)
     if (!node) {
         goto Exit;
     }
-    ret = DPS_StartNode(node, DPS_MCAST_PUB_ENABLE_SEND | DPS_MCAST_PUB_ENABLE_RECV, 0);
+    ret = DPS_StartNode(node, DPS_MCAST_PUB_ENABLE_SEND | DPS_MCAST_PUB_ENABLE_RECV, NULL);
     if (ret != DPS_OK) {
         goto Exit;
     }

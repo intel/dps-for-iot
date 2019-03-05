@@ -1438,13 +1438,14 @@ static void OnUdpData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, cons
     DPS_DestroyAddress(nodeAddr);
 }
 
-DPS_NetContext* DPS_NetStart(DPS_Node* node, uint16_t port, DPS_OnReceive cb)
+DPS_NetContext* DPS_NetStart(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnReceive cb)
 {
     int ret;
     DPS_NetContext* netCtx;
-    struct sockaddr_storage addr;
+    struct sockaddr* sa;
+    struct sockaddr_storage ss;
 
-    DPS_DBGTRACEA("node=%p,port=%d,cb=%p\n", node, port, cb);
+    DPS_DBGTRACEA("node=%p,addr=%s,cb=%p\n", node, DPS_NodeAddrToString(addr), cb);
 
     netCtx = calloc(1, sizeof(DPS_NetContext));
     if (!netCtx) {
@@ -1452,7 +1453,7 @@ DPS_NetContext* DPS_NetStart(DPS_Node* node, uint16_t port, DPS_OnReceive cb)
     }
     ret = uv_udp_init(node->loop, &netCtx->rxSocket);
     if (ret) {
-        DPS_ERRPRINT("UDP init failed- %s\n", uv_err_name(ret));
+        DPS_ERRPRINT("UDP init failed: %s\n", uv_err_name(ret));
         free(netCtx);
         return NULL;
     }
@@ -1461,12 +1462,17 @@ DPS_NetContext* DPS_NetStart(DPS_Node* node, uint16_t port, DPS_OnReceive cb)
     netCtx->handshakeTimeoutMax = MBEDTLS_SSL_DTLS_TIMEOUT_DFL_MAX;
     netCtx->node = node;
     netCtx->receiveCB = cb;
-    ret = uv_ip6_addr("::", port, (struct sockaddr_in6*)&addr);
-    if (ret) {
-        goto ErrorExit;
+    if (addr) {
+        sa = (struct sockaddr*)&addr->inaddr;
+    } else {
+        ret = uv_ip6_addr("::", 0, (struct sockaddr_in6*)&ss);
+        if (ret) {
+            goto ErrorExit;
+        }
+        sa = (struct sockaddr*)&ss;
     }
     netCtx->rxSocket.data = netCtx;
-    ret = uv_udp_bind(&netCtx->rxSocket, (const struct sockaddr*)&addr, 0);
+    ret = uv_udp_bind(&netCtx->rxSocket, sa, 0);
     if (ret) {
         goto ErrorExit;
     }

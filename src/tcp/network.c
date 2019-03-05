@@ -364,14 +364,14 @@ static int GetScopeId(struct sockaddr_in6* addr)
     return 0;
 }
 
-
 #define LISTEN_BACKLOG  2
 
-DPS_NetContext* DPS_NetStart(DPS_Node* node, uint16_t port, DPS_OnReceive cb)
+DPS_NetContext* DPS_NetStart(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnReceive cb)
 {
     int ret;
     DPS_NetContext* netCtx;
-    struct sockaddr_in6 addr;
+    struct sockaddr* sa;
+    struct sockaddr_storage ss;
 
     netCtx = calloc(1, sizeof(DPS_NetContext));
     if (!netCtx) {
@@ -385,11 +385,16 @@ DPS_NetContext* DPS_NetStart(DPS_Node* node, uint16_t port, DPS_OnReceive cb)
     }
     netCtx->node = node;
     netCtx->receiveCB = cb;
-    ret = uv_ip6_addr("::", port, &addr);
-    if (ret) {
-        goto ErrorExit;
+    if (addr) {
+        sa = (struct sockaddr*)&addr->inaddr;
+    } else {
+        ret = uv_ip6_addr("::", 0, (struct sockaddr_in6*)&ss);
+        if (ret) {
+            goto ErrorExit;
+        }
+        sa = (struct sockaddr*)&ss;
     }
-    ret = uv_tcp_bind(&netCtx->socket, (const struct sockaddr*)&addr, 0);
+    ret = uv_tcp_bind(&netCtx->socket, sa, 0);
     if (ret) {
         goto ErrorExit;
     }

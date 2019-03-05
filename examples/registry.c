@@ -20,15 +20,17 @@
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  */
 
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
 #include <assert.h>
+#include <netinet/in.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/socket.h>
 #include <dps/dbg.h>
 #include <dps/dps.h>
-#include <dps/synchronous.h>
-#include <dps/registration.h>
 #include <dps/event.h>
+#include <dps/registration.h>
+#include <dps/synchronous.h>
 #include "keys.h"
 
 static void OnNodeDestroyed(DPS_Node* node, void* data)
@@ -81,6 +83,8 @@ int main(int argc, char** argv)
     const char* topics[1];
     DPS_Subscription* subscription;
     int listenPort = 0;
+    DPS_NodeAddress* listenAddr = NULL;
+    struct sockaddr_in6 saddr;
     int subsRate = DPS_SUBSCRIPTION_UPDATE_RATE;
 
     DPS_Debug = DPS_FALSE;
@@ -106,7 +110,18 @@ int main(int argc, char** argv)
     DPS_SetNetworkKey(memoryKeyStore, &NetworkKeyId, &NetworkKey);
     node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore), NULL);
     DPS_SetNodeSubscriptionUpdateDelay(node, subsRate);
-    ret = DPS_StartNode(node, 0, listenPort);
+
+    listenAddr = DPS_CreateAddress();
+    if (!listenAddr) {
+        DPS_ERRPRINT("DPS_CreateAddress failed: %s\n", DPS_ErrTxt(DPS_ERR_RESOURCES));
+        return 1;
+    }
+    memset(&saddr, 0, sizeof(saddr));
+    saddr.sin6_family = AF_INET6;
+    saddr.sin6_port = htons(listenPort);
+    memcpy(&saddr.sin6_addr, &in6addr_any, sizeof(saddr.sin6_addr));
+    DPS_SetAddress(listenAddr, (const struct sockaddr*)&saddr);
+    ret = DPS_StartNode(node, 0, listenAddr);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
         return 1;
@@ -125,6 +140,7 @@ int main(int argc, char** argv)
     DPS_WaitForEvent(nodeDestroyed);
     DPS_DestroyEvent(nodeDestroyed);
     DPS_DestroyMemoryKeyStore(memoryKeyStore);
+    DPS_DestroyAddress(listenAddr);
     return 0;
 
 Usage:

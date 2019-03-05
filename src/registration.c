@@ -323,7 +323,7 @@ DPS_Status DPS_Registration_Put(DPS_Node* node, const char* host, uint16_t port,
         goto Exit;
     }
 
-    ret = DPS_StartNode(regPut->node, DPS_MCAST_PUB_DISABLED, 0);
+    ret = DPS_StartNode(regPut->node, DPS_MCAST_PUB_DISABLED, NULL);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
     } else {
@@ -607,7 +607,7 @@ DPS_Status DPS_Registration_Get(DPS_Node* node, const char* host, uint16_t port,
         ret = DPS_ERR_RESOURCES;
         goto Exit;
     }
-    ret = DPS_StartNode(regGet->node, DPS_MCAST_PUB_DISABLED, 0);
+    ret = DPS_StartNode(regGet->node, DPS_MCAST_PUB_DISABLED, NULL);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
     } else {

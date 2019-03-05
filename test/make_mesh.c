@@ -588,7 +588,7 @@ int main(int argc, char** argv)
          */
         node->subsRate = (FastLinkProbe.probeTO) / 4;
 
-        ret = DPS_StartNode(node, DPS_FALSE, 0);
+        ret = DPS_StartNode(node, DPS_FALSE, NULL);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
             return 1;

@@ -116,7 +116,7 @@ static Node* CreateNode()
         goto ErrorExit;
     }
     DPS_SetNodeSubscriptionUpdateDelay(node->node, 10);
-    ret = DPS_StartNode(node->node, DPS_MCAST_PUB_ENABLE_SEND | DPS_MCAST_PUB_ENABLE_RECV, 0);
+    ret = DPS_StartNode(node->node, DPS_MCAST_PUB_ENABLE_SEND | DPS_MCAST_PUB_ENABLE_RECV, NULL);
     if (ret != DPS_OK) {
         goto ErrorExit;
     }

@@ -20,17 +20,19 @@
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  */
 
-#include <string.h>
-#include <stdlib.h>
-#include <limits.h>
-#include <stdio.h>
-#include <time.h>
-#include <ctype.h>
 #include <assert.h>
+#include <ctype.h>
+#include <limits.h>
+#include <netinet/in.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <time.h>
 #include <dps/dbg.h>
 #include <dps/dps.h>
-#include <dps/synchronous.h>
 #include <dps/event.h>
+#include <dps/synchronous.h>
 
 #define MAX_LINKS  64
 
@@ -122,6 +124,8 @@ int main(int argc, char** argv)
     int payloadSize = 0;
     int mcast = DPS_MCAST_PUB_ENABLE_SEND;
     int listenPort = 0;
+    DPS_NodeAddress* listenAddr = NULL;
+    struct sockaddr_in6 saddr;
     DPS_NodeAddress* addr = NULL;
     DPS_Publication* pub = NULL;
     int rtMin = INT_MAX;
@@ -164,7 +168,17 @@ int main(int argc, char** argv)
     }
 
     node = DPS_CreateNode("/", NULL, NULL);
-    ret = DPS_StartNode(node, mcast, listenPort);
+    listenAddr = DPS_CreateAddress();
+    if (!listenAddr) {
+        DPS_ERRPRINT("DPS_CreateAddress failed: %s\n", DPS_ErrTxt(DPS_ERR_RESOURCES));
+        return 1;
+    }
+    memset(&saddr, 0, sizeof(saddr));
+    saddr.sin6_family = AF_INET6;
+    saddr.sin6_port = htons(listenPort);
+    memcpy(&saddr.sin6_addr, &in6addr_any, sizeof(saddr.sin6_addr));
+    DPS_SetAddress(listenAddr, (const struct sockaddr*)&saddr);
+    ret = DPS_StartNode(node, mcast, listenAddr);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("DPS_StartNode failed: %s\n", DPS_ErrTxt(ret));
         return 1;
@@ -224,6 +238,7 @@ int main(int argc, char** argv)
 
     DPS_WaitForEvent(nodeDestroyed);
     DPS_DestroyEvent(nodeDestroyed);
+    DPS_DestroyAddress(listenAddr);
     return 0;
 
 Usage:

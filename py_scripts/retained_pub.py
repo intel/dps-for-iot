@@ -25,7 +25,7 @@ args = parser.parse_args()
 dps.cvar.debug = args.debug
 
 node = dps.create_node("/")
-dps.start_node(node, dps.MCAST_PUB_ENABLE_SEND + dps.MCAST_PUB_ENABLE_RECV, 0)
+dps.start_node(node, dps.MCAST_PUB_ENABLE_SEND + dps.MCAST_PUB_ENABLE_RECV, None)
 print("Publisher is listening on port %d" % (dps.get_port_number(node)))
 
 pub = dps.create_publication(node)

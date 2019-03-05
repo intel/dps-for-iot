@@ -130,7 +130,9 @@ def on_pub(sub, pub, payload):
         dps.ack_publication(pub, ack_msg);
 
 node = dps.create_node("/", key_store, node_id)
-dps.start_node(node, dps.MCAST_PUB_ENABLE_RECV, args.listen)
+listen_addr = dps.create_address()
+dps.set_address(listen_addr, (None, args.listen))
+dps.start_node(node, dps.MCAST_PUB_ENABLE_RECV, listen_addr)
 print("Subscriber is listening on port %d" % (dps.get_port_number(node)))
 
 sub = dps.create_subscription(node, ['a/b/c']);

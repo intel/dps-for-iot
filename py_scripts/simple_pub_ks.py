@@ -180,7 +180,7 @@ def on_destroy(node):
     dps.destroy_key_store(key_store)
 
 node = dps.create_node("/", key_store, node_id)
-dps.start_node(node, dps.MCAST_PUB_ENABLE_SEND, 0)
+dps.start_node(node, dps.MCAST_PUB_ENABLE_SEND, None)
 print("Publisher is listening on port %d" % (dps.get_port_number(node)))
 pub = dps.create_publication(node)
 
