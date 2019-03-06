@@ -322,7 +322,7 @@ public:
     const DPS_Node* m_node;
     DPS_NodeAddress* m_addr;
     Handler* m_handler;
-    NodeAddressCompleteCallback(DPS_Node* node, DPS_NodeAddress* addr, void* data)
+    NodeAddressCompleteCallback(DPS_Node* node, const DPS_NodeAddress* addr, void* data)
         : m_node(node), m_addr(DPS_CreateAddress()), m_handler((Handler*)data) {
         DPS_CopyAddress(m_addr, addr);
     }
@@ -339,7 +339,7 @@ public:
     }
 };
 
-static void OnNodeAddressComplete(DPS_Node* node, DPS_NodeAddress* addr, void* data)
+static void OnNodeAddressComplete(DPS_Node* node, const DPS_NodeAddress* addr, void* data)
 {
     sync_send(new NodeAddressCompleteCallback(node, addr, data));
 }

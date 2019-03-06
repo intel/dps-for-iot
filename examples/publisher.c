@@ -259,7 +259,7 @@ int main(int argc, char** argv)
     DPS_Node* node;
     char** arg = argv + 1;
     const char* host = NULL;
-    int linkPort[MAX_LINKS];
+    const char* linkPort[MAX_LINKS] = { NULL };
     const char* linkHosts[MAX_LINKS];
     int numLinks = 0;
     int wait = 0;
@@ -276,7 +276,12 @@ int main(int argc, char** argv)
 
     DPS_Debug = DPS_FALSE;
     while (--argc) {
-        if (IntArg("-p", &arg, &argc, &linkPort[numLinks], 1, UINT16_MAX)) {
+        if (strcmp(*arg, "-p") == 0) {
+            ++arg;
+            if (!--argc) {
+                goto Usage;
+            }
+            linkPort[numLinks] = *arg++;
             linkHosts[numLinks] = host;
             ++numLinks;
             continue;
@@ -389,7 +394,12 @@ int main(int argc, char** argv)
     DPS_PRINT("Publisher is listening on %s\n", DPS_NodeAddrToString(DPS_GetListenAddress(node)));
 
     for (i = 0; i < numLinks; ++i) {
-        ret = DPS_LinkTo(node, linkHosts[i], linkPort[i], addr);
+        ret = DPS_ResolveAddressSyn(node, linkHosts[i], linkPort[i], addr);
+        if (ret != DPS_OK) {
+            DPS_ERRPRINT("DPS_ResolveAddress returned %s\n", DPS_ErrTxt(ret));
+            return 1;
+        }
+        ret = DPS_LinkTo(node, addr);
         if (ret == DPS_OK) {
             DPS_PRINT("Publisher is linked to %s\n", DPS_NodeAddrToString(addr));
         } else {

@@ -193,7 +193,7 @@ DPS_Status DPS_Registration_GetSyn(DPS_Node* node, const char* host, uint16_t po
  * @param data    Caller supplied data passed into the DPS_Registration_LinkTo()
  *
  */
-typedef void (*DPS_OnRegLinkToComplete)(DPS_Node* node, DPS_RegistrationList* regs, DPS_NodeAddress* addr, DPS_Status status, void* data);
+typedef void (*DPS_OnRegLinkToComplete)(DPS_Node* node, DPS_RegistrationList* regs, const DPS_NodeAddress* addr, DPS_Status status, void* data);
 
 /**
  * Randomly select a remote candidate to link to.

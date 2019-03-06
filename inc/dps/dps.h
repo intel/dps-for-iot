@@ -578,7 +578,7 @@ DPS_Status DPS_Link(DPS_Node* node, const DPS_NodeAddress* addr, DPS_OnLinkCompl
  * @param addr   The address of the remote node that was unlinked
  * @param data   Application data passed in the call to DPS_Unlink()
  */
-typedef void (*DPS_OnUnlinkComplete)(DPS_Node* node, DPS_NodeAddress* addr, void* data);
+typedef void (*DPS_OnUnlinkComplete)(DPS_Node* node, const DPS_NodeAddress* addr, void* data);
 
 /**
  * Unlink the local node from a remote node
@@ -590,7 +590,7 @@ typedef void (*DPS_OnUnlinkComplete)(DPS_Node* node, DPS_NodeAddress* addr, void
  *
  * @return DPS_OK or an error status. If an error status is returned the callback function will not be called.
  */
-DPS_Status DPS_Unlink(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnUnlinkComplete cb, void* data);
+DPS_Status DPS_Unlink(DPS_Node* node, const DPS_NodeAddress* addr, DPS_OnUnlinkComplete cb, void* data);
 
 /**
  * Function prototype for function called when a DPS_ResolveAddress() completes.
@@ -599,7 +599,7 @@ DPS_Status DPS_Unlink(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnUnlinkComplet
  * @param addr   The resolved address or NULL if the address could not be resolved
  * @param data   Application data passed in the call to DPS_ResolveAddress()
  */
-typedef void (*DPS_OnResolveAddressComplete)(DPS_Node* node, DPS_NodeAddress* addr, void* data);
+typedef void (*DPS_OnResolveAddressComplete)(DPS_Node* node, const DPS_NodeAddress* addr, void* data);
 
 /**
  * Resolve a host name or IP address and service name or port number.

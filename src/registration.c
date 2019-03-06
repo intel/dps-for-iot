@@ -53,7 +53,7 @@ const char* DPS_RegistryTopicString = "dps/registration_service";
 #define AddrGetPort(a)     (((struct sockaddr_in*)(a))->sin_port)
 #define AddrSetPort(a, p)  (((struct sockaddr_in*)(a))->sin_port = (p))
 
-static int IsLocalAddr(DPS_NodeAddress* addr, uint16_t port)
+static int IsLocalAddr(const DPS_NodeAddress* addr, uint16_t port)
 {
     int local = DPS_FALSE;
     uv_interface_address_t* ifsAddrs;
@@ -111,7 +111,7 @@ static void RegPutCB(RegPut* regPut)
     free(regPut);
 }
 
-static void OnPutUnlinkCB(DPS_Node* node, DPS_NodeAddress* addr, void* data)
+static void OnPutUnlinkCB(DPS_Node* node, const DPS_NodeAddress* addr, void* data)
 {
     DPS_DBGTRACE();
     RegPutCB((RegPut*)data);
@@ -229,7 +229,7 @@ Exit:
     }
 }
 
-static void OnResolvePut(DPS_Node* node, DPS_NodeAddress* addr, void* data)
+static void OnResolvePut(DPS_Node* node, const DPS_NodeAddress* addr, void* data)
 {
     RegPut* regPut = (RegPut*)data;
     if (addr) {
@@ -417,7 +417,7 @@ static void RegGetCB(RegGet* regGet)
     free(regGet);
 }
 
-static void OnGetUnlinkCB(DPS_Node* node, DPS_NodeAddress* addr, void* data)
+static void OnGetUnlinkCB(DPS_Node* node, const DPS_NodeAddress* addr, void* data)
 {
     DPS_DBGTRACE();
     RegGetCB((RegGet*)data);
@@ -564,7 +564,7 @@ static void OnLinkedGet(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status ret, v
     }
 }
 
-static void OnResolveGet(DPS_Node* node, DPS_NodeAddress* addr, void* data)
+static void OnResolveGet(DPS_Node* node, const DPS_NodeAddress* addr, void* data)
 {
     RegGet* regGet = (RegGet*)data;
 
@@ -708,7 +708,7 @@ static void OnLinked(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, v
     free(linkTo);
 }
 
-static void OnResolve(DPS_Node* node, DPS_NodeAddress* addr, void* data)
+static void OnResolve(DPS_Node* node, const DPS_NodeAddress* addr, void* data)
 {
     DPS_Status ret = DPS_ERR_NO_ROUTE;
     LinkTo* linkTo = (LinkTo*)data;
@@ -785,7 +785,7 @@ typedef struct {
     DPS_NodeAddress* addr;
 } LinkResult;
 
-static void OnRegLinkTo(DPS_Node* node, DPS_RegistrationList* regs, DPS_NodeAddress* addr, DPS_Status status, void* data)
+static void OnRegLinkTo(DPS_Node* node, DPS_RegistrationList* regs, const DPS_NodeAddress* addr, DPS_Status status, void* data)
 {
     LinkResult* linkResult = (LinkResult*)data;
 

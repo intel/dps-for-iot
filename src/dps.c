@@ -1510,7 +1510,7 @@ DPS_Status DPS_Link(DPS_Node* node, const DPS_NodeAddress* addr, DPS_OnLinkCompl
     return DPS_OK;
 }
 
-DPS_Status DPS_Unlink(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnUnlinkComplete cb, void* data)
+DPS_Status DPS_Unlink(DPS_Node* node, const DPS_NodeAddress* addr, DPS_OnUnlinkComplete cb, void* data)
 {
     RemoteNode* remote;
 

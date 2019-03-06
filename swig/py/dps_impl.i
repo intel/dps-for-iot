@@ -235,7 +235,7 @@ static void OnLinkComplete(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status sta
     PyGILState_Release(gilState);
 }
 
-static void OnNodeAddressComplete(DPS_Node* node, DPS_NodeAddress* addr, void* data)
+static void OnNodeAddressComplete(DPS_Node* node, const DPS_NodeAddress* addr, void* data)
 {
     Handler* handler = (Handler*)data;
     PyObject* nodeObj;

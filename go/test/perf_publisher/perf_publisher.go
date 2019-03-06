@@ -14,7 +14,7 @@ import (
 
 var (
 	debug = flag.Bool("d", false, "enable debug output if built for debug")
-	port = flag.Int("p", 0, "port to link")
+	port = flag.String("p", "0", "port to link")
 	host = flag.String("h", "", "host to link")
 	payloadSize = flag.Int("s", 0, "size of PUB payload")
 	numPubs = flag.Int("n", 1000, "number of publications to send")
@@ -58,17 +58,22 @@ func main() {
 	}
 
 	mcast := dps.MCAST_PUB_ENABLE_SEND
-	if *port != 0 {
+	if *port != "0" {
 		mcast = dps.MCAST_PUB_DISALBED
 	}
 
 	node := dps.CreateNode("/", nil, nil)
 	dps.StartNode(node, mcast, nil)
 
-	if *port != 0 {
-		addr, err := dps.LinkTo(node, *host, uint16(*port))
+	if *port != "0" {
+		addr, err := dps.ResolveAddressSyn(node, *host, *port)
 		if err != dps.OK {
-			fmt.Printf("dps.LinkTo %v returned %s\n", *port, dps.ErrTxt(err))
+			fmt.Printf("dps.ResolveAddress %v:%v returned %s\n", *host, *port, dps.ErrTxt(err))
+			return
+		}
+		err = dps.LinkTo(node, addr)
+		if err != dps.OK {
+			fmt.Printf("dps.LinkTo %v returned %s\n", dps.NodeAddrToString(addr), dps.ErrTxt(err))
 			return
 		}
 		dps.DestroyAddress(addr)

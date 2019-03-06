@@ -130,7 +130,7 @@ static DPS_Status CAHandler(DPS_KeyStoreRequest* request);
 
 static void OnNodeDestroyed(DPS_Node* node, void* data);
 static void OnLinkComplete(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, void* data);
-static void OnNodeAddressComplete(DPS_Node* node, DPS_NodeAddress* addr, void* data);
+static void OnNodeAddressComplete(DPS_Node* node, const DPS_NodeAddress* addr, void* data);
 
 static void AcknowledgementHandler(DPS_Publication* pub, uint8_t* payload, size_t len);
 

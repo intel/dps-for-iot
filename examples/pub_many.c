@@ -101,7 +101,7 @@ int main(int argc, char** argv)
     DPS_Node* node;
     char** arg = argv + 1;
     const char* host = NULL;
-    int linkPort = 0;
+    const char* linkPort = NULL;
     char* msg = NULL;
     int mcast = DPS_MCAST_PUB_ENABLE_SEND;
     DPS_NodeAddress* addr = NULL;
@@ -109,7 +109,12 @@ int main(int argc, char** argv)
     DPS_Debug = 0;
 
     while (--argc) {
-        if (IntArg("-p", &arg, &argc, &linkPort, 1, UINT16_MAX)) {
+        if (strcmp(*arg, "-p") == 0) {
+            ++arg;
+            if (!--argc) {
+                goto Usage;
+            }
+            linkPort = *arg++;
             continue;
         }
         if (strcmp(*arg, "-h") == 0) {
@@ -169,11 +174,17 @@ int main(int argc, char** argv)
 
     if (linkPort) {
         addr = DPS_CreateAddress();
-        ret = DPS_LinkTo(node, host, linkPort, addr);
+        ret = DPS_ResolveAddressSyn(node, host, linkPort, addr);
+        if (ret != DPS_OK) {
+            DPS_ERRPRINT("DPS_ResolveAddress returned %s\n", DPS_ErrTxt(ret));
+            return 1;
+        }
+        ret = DPS_LinkTo(node, addr);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("DPS_LinkTo returned %s\n", DPS_ErrTxt(ret));
             return 1;
         }
+        DPS_DestroyAddress(addr);
     }
 
     pub = DPS_CreatePublication(node);

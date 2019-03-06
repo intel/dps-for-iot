@@ -314,7 +314,7 @@ static void OnLinkComplete(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status sta
     }
 }
 
-static void OnResolveAddressComplete(DPS_Node* node, DPS_NodeAddress* addr, void* data)
+static void OnResolveAddressComplete(DPS_Node* node, const DPS_NodeAddress* addr, void* data)
 {
     DPS_Status ret;
 

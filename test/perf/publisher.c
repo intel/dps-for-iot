@@ -114,7 +114,7 @@ int main(int argc, char** argv)
     DPS_Node* node;
     char** arg = argv + 1;
     const char* host = NULL;
-    int linkPort[MAX_LINKS];
+    const char* linkPort[MAX_LINKS] = { NULL };
     const char* linkHosts[MAX_LINKS];
     int numLinks = 0;
     int numPubs = 1000; /* default */
@@ -139,7 +139,12 @@ int main(int argc, char** argv)
             DPS_Debug = DPS_TRUE;
             continue;
         }
-        if (IntArg("-p", &arg, &argc, &linkPort[numLinks], 1, UINT16_MAX)) {
+        if (strcmp(*arg, "-p") == 0) {
+            ++arg;
+            if (!--argc) {
+                goto Usage;
+            }
+            linkPort[numLinks] = *arg++;
             linkHosts[numLinks] = host;
             ++numLinks;
             continue;
@@ -185,7 +190,12 @@ int main(int argc, char** argv)
     }
 
     for (i = 0; i < numLinks; ++i) {
-        ret = DPS_LinkTo(node, linkHosts[i], linkPort[i], addr);
+        ret = DPS_ResolveAddressSyn(node, linkHosts[i], linkPort[i], addr);
+        if (ret != DPS_OK) {
+            DPS_ERRPRINT("DPS_ResolveAddress %s:%s returned %s\n", linkHosts[i], linkPort[i], DPS_ErrTxt(ret));
+            return 1;
+        }
+        ret = DPS_LinkTo(node, addr);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("DPS_LinkTo %d returned %s\n", linkPort[i], DPS_ErrTxt(ret));
             return 1;

@@ -195,7 +195,7 @@ int main(int argc, char** argv)
     char* pubs[MAX_TOPICS];
     size_t numPubs = 0;
     DPS_AcknowledgementHandler ackHandler = AcknowledgementHandler;
-    int links[MAX_LINKS];
+    const char* links[MAX_LINKS] = { NULL };
     size_t numLinks = 0;
     int listenPort = 0;
     DPS_NodeAddress* listenAddr = NULL;
@@ -233,8 +233,12 @@ int main(int argc, char** argv)
                 goto Usage;
             }
             pubs[numPubs++] = *arg++;
-        } else if (IntArg("-c", &arg, &argc, &links[numLinks], 1, UINT16_MAX)) {
-            ++numLinks;
+        } else if (strcmp(*arg, "-c") == 0) {
+            ++arg;
+            if (!--argc) {
+                goto Usage;
+            }
+            links[numLinks++] = *arg++;
         } else if (IntArg("-l", &arg, &argc, &listenPort, 1000, UINT16_MAX)) {
         } else {
             goto Usage;
@@ -319,7 +323,11 @@ int main(int argc, char** argv)
     }
 
     for (i = 0; i < numLinks; ++i) {
-        ret = DPS_LinkTo(node, NULL, links[i], addr);
+        ret = DPS_ResolveAddressSyn(node, NULL, links[i], addr);
+        if (ret != DPS_OK) {
+            goto Exit;
+        }
+        ret = DPS_LinkTo(node, addr);
         if (ret != DPS_OK) {
             goto Exit;
         }

@@ -141,18 +141,18 @@ import (
  }
 
  extern void goOnUnlinkComplete(DPS_Node* node, DPS_NodeAddress* addr, uintptr_t data);
- static void onUnlinkComplete(DPS_Node* node, DPS_NodeAddress* addr, void* data) {
-         goOnUnlinkComplete(node, addr, (uintptr_t)data);
+ static void onUnlinkComplete(DPS_Node* node, const DPS_NodeAddress* addr, void* data) {
+         goOnUnlinkComplete(node, (DPS_NodeAddress*)addr, (uintptr_t)data);
  }
 
  // mangle the name to avoid conflicts with mingw
- static DPS_Status unlink_(DPS_Node* node, DPS_NodeAddress* addr, uintptr_t data) {
+ static DPS_Status unlink_(DPS_Node* node, const DPS_NodeAddress* addr, uintptr_t data) {
          return DPS_Unlink(node, addr, onUnlinkComplete, (void*)data);
  }
 
  extern void goOnResolveAddressComplete(DPS_Node* node, DPS_NodeAddress* addr, uintptr_t data);
- static void onResolveAddressComplete(DPS_Node* node, DPS_NodeAddress* addr, void* data) {
-         goOnResolveAddressComplete(node, addr, (uintptr_t)data);
+ static void onResolveAddressComplete(DPS_Node* node, const DPS_NodeAddress* addr, void* data) {
+         goOnResolveAddressComplete(node, (DPS_NodeAddress*)addr, (uintptr_t)data);
  }
 
  static DPS_Status resolveAddress(DPS_Node* node, char* host, char* service, uintptr_t data) {
@@ -1063,21 +1063,32 @@ func CBOR2JSON(cbor []byte, pretty bool) (json string, err int) {
 	return
 }
 
-func LinkTo(node *Node, host string, port uint16) (addr *NodeAddress, err int) {
+func ResolveAddressSyn(node *Node, host, service string) (addr *NodeAddress, err int) {
 	cnode := (*C.DPS_Node)(node)
 	var chost *C.char
 	if len(host) > 0 {
 		chost = C.CString(host)
 	}
 	defer C.free(unsafe.Pointer(chost))
+	var cservice *C.char
+	if len(service) > 0 {
+		cservice = C.CString(service)
+	}
+	defer C.free(unsafe.Pointer(cservice))
 	caddr := C.DPS_CreateAddress()
-	err = int(C.DPS_LinkTo(cnode, chost, C.uint16_t(port), caddr))
+	err = int(C.DPS_ResolveAddressSyn(cnode, chost, cservice, caddr))
 	if err == OK {
 		addr = (*NodeAddress)(caddr)
 	} else {
 		C.DPS_DestroyAddress(caddr)
 	}
 	return
+}
+
+func LinkTo(node *Node, addr *NodeAddress) int {
+	cnode := (*C.DPS_Node)(node)
+	caddr := (*C.DPS_NodeAddress)(addr)
+	return int(C.DPS_LinkTo(cnode, caddr))
 }
 
 func UnlinkFrom(node *Node, addr *NodeAddress) int {
