@@ -63,6 +63,16 @@ extern "C" {
 typedef void (*DPS_AcknowledgementHandler)(DPS_Publication* pub, uint8_t* payload, size_t len);
 
 /**
+  * Function prototype for a publication send complete callback.
+  *
+  * @param pub     The publication that was sent
+  * @param data    The data payload for the publication, it can now be freed
+  * @param status  DPS_OK if the publication was sent to the network, otherwise and error status code.
+  */
+
+typedef void (*DPS_PublicationSendComplete)(DPS_Publication* pub, const uint8_t* data, DPS_Status status);
+
+/**
  * Struct for a publication
  */
 struct _DPS_Publication {
@@ -80,6 +90,8 @@ struct _DPS_Publication {
     size_t numTopics;                           /**< Number of topic strings */
     COSE_Entity sender;                         /**< Publication sender ID */
     COSE_Entity ack;                            /**< For ack messages - the ack sender ID */
+    DPS_PublicationSendComplete sendCompleteCB; /**< Publication completion callback */
+    uint8_t* payload;                           /**< Saved pointer for payload to pass to completion callback */
     DPS_Publication* next;                      /**< Linked list of publications */
 };
 
@@ -124,14 +136,16 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NodeAddress* from, DPS_RxBu
 /**
  * Send a publication
  *
- * @param pub       The publication to send
- * @param data      An optional payload to send with the publication
- * @param len       Size of the payload
- * @param ttl       Time for the publication to remain deliverable
+ * @param pub             The publication to send
+ * @param payload         An optional payload to send with the publication. The pointer to data must
+ *                        remain valid until the send complete callback is called.
+ * @param len             Size of the payload
+ * @param ttl             Time for the publication to remain deliverable
+ * @param sendCompleteCB  Function called when the publication has been sent.
  *
  * @return DPS_OK if sending is successful, an error otherwise
  */
-DPS_Status DPS_Publish(DPS_Publication* pub, const uint8_t* data, size_t len, int16_t ttl);
+DPS_Status DPS_Publish(DPS_Publication* pub, const uint8_t* payload, size_t len, int16_t ttl, DPS_PublicationSendComplete sendCompleteCB);
 
 /**
  * Look for a publication matching the ID and sequence number.

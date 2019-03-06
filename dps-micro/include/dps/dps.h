@@ -92,6 +92,12 @@ DPS_Status DPS_Start(DPS_Node* node);
   */
 void DPS_DestroyNode(DPS_Node* node);
 
+/**
+  * Get the port number the node is listening on
+  */
+uint16_t DPS_GetPortNumber(DPS_Node* node);
+
+
 #ifdef __cplusplus
 }
 #endif

@@ -185,3 +185,9 @@ void DPS_MakeNonce(const DPS_UUID* uuid, uint32_t seqNum, uint8_t msgType, uint8
         p[0] |= 0x80;
     }
 }
+
+
+uint16_t DPS_GetPortNumber(DPS_Node* node)
+{
+    return node->port;
+}

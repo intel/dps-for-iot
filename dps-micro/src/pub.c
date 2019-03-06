@@ -517,7 +517,7 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NodeAddress* from, DPS_RxBu
             goto Exit;
         }
         DPS_PRINT("Deserialize\n");
-        DPS_BitVectorDump(&pub->bf, DPS_TRUE);
+        //DPS_BitVectorDump(&pub->bf, DPS_TRUE);
         /*
          * Initialize the protected and encrypted buffers
          */
@@ -788,7 +788,7 @@ static DPS_Status SerializePub(DPS_Node* node, DPS_Publication* pub, const uint8
         return ret;
     }
     DPS_PRINT("Serialize\n");
-    DPS_BitVectorDump(&pub->bf, DPS_TRUE);
+    //DPS_BitVectorDump(&pub->bf, DPS_TRUE);
     DPS_TxBufferCommit(&protectedBuf);
     /*
      * If the data is not encrypted can be serialized directly into the TX pool
@@ -847,7 +847,23 @@ static DPS_Status SerializePub(DPS_Node* node, DPS_Publication* pub, const uint8
     return ret;
 }
 
-DPS_Status DPS_Publish(DPS_Publication* pub, const uint8_t* payload, size_t len, int16_t ttl)
+
+static void PubComplete(DPS_Node* node, uint8_t* appCtx, DPS_Status status)
+{
+    DPS_Publication* pub = (DPS_Publication*)appCtx;
+    DPS_PublicationSendComplete cb = pub->sendCompleteCB;
+
+    DPS_DBGTRACE();
+
+    if (cb) {
+        pub->sendCompleteCB = NULL;
+        cb(pub, pub->payload, status);
+    } else {
+        DPS_ERRPRINT("Pub callback is missing\n");
+    }
+}
+
+DPS_Status DPS_Publish(DPS_Publication* pub, const uint8_t* payload, size_t len, int16_t ttl, DPS_PublicationSendComplete sendCompleteCB)
 {
     DPS_Status ret;
 
@@ -855,6 +871,12 @@ DPS_Status DPS_Publish(DPS_Publication* pub, const uint8_t* payload, size_t len,
 
     if (!pub) {
         return DPS_ERR_NULL;
+    }
+    if (!sendCompleteCB) {
+        return DPS_ERR_ARGS;
+    }
+    if (pub->sendCompleteCB) {
+        return DPS_ERR_BUSY;
     }
 
     /* Reset the Tx buffer pools */
@@ -866,7 +888,13 @@ DPS_Status DPS_Publish(DPS_Publication* pub, const uint8_t* payload, size_t len,
     if (ret == DPS_OK) {
         ret = CoAP_InsertHeader(pub->node, pub->node->txLen);
         if (ret == DPS_OK) {
-            ret = DPS_MCastSend(pub->node, NULL, NULL);
+            pub->sendCompleteCB = sendCompleteCB;
+            pub->payload = (void*)payload;
+            ret = DPS_MCastSend(pub->node, pub, PubComplete);
+            if (ret != DPS_OK) {
+                pub->sendCompleteCB = NULL;
+                pub->payload = NULL;
+            }
         }
     }
     return ret;

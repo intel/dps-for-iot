@@ -51,6 +51,11 @@ static void OnPub(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* pa
 
 }
 
+static void PubSendComplete(DPS_Publication* pub, const uint8_t* data, DPS_Status status)
+{
+    DPS_PRINT("PubSendComplete %s\n", DPS_ErrTxt(status));
+}
+
 int main(int argc, char** argv)
 {
     DPS_Node* node;
@@ -104,7 +109,7 @@ int main(int argc, char** argv)
     CHECK(status == DPS_OK);
 
     for (i = 0; i < numPubs; ++i) {
-        status = DPS_Publish(&pub, (const uint8_t*)testString, strlen(testString) + 1, 0);
+        status = DPS_Publish(&pub, (const uint8_t*)testString, strlen(testString) + 1, 0, PubSendComplete);
         CHECK(status == DPS_OK);
         SLEEP(5000);
     }
