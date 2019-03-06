@@ -32,7 +32,7 @@
 /*
  * Debug control for this module
  */
-DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
+DPS_DEBUG_CONTROL(DPS_DEBUG_OFF);
 
 #if __BYTE_ORDER != __LITTLE_ENDIAN
    #define ENDIAN_SWAP
@@ -140,9 +140,6 @@ void DPS_BitVectorBloomInsert(DPS_BitVector* bv, const uint8_t* data, size_t len
     uint32_t index;
 
     DPS_Sha2((uint8_t*)hashes, data, len);
-#if 1
-    DPS_PRINT("%.*s   (%zu)\n", (int)len, data, len);
-#endif
     for (h = 0; h < BITVEC_CONFIG_HASHES; ++h) {
 #ifdef ENDIAN_SWAP
         index = BSWAP_32(hashes[h]) % BITVEC_CONFIG_BIT_LEN;

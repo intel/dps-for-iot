@@ -79,7 +79,7 @@ DPS_Status DPS_InitSubscription(DPS_Node* node, DPS_Subscription* sub, const cha
         sub->topics[i] = topics[i];
         ++sub->numTopics;
     }
-    DPS_BitVectorDump(&sub->bf, DPS_TRUE);
+    //DPS_BitVectorDump(&sub->bf, DPS_TRUE);
     return ret;
 }
 
@@ -119,8 +119,8 @@ DPS_Status DPS_UpdateSubs(DPS_Node* node)
             }
         }
     }
-    DPS_BitVectorDump(&node->interests, DPS_TRUE);
-    DPS_BitVectorFuzzyHash(&node->needs, &node->interests);
+    //DPS_BitVectorDump(&node->interests, DPS_TRUE);
+    //DPS_BitVectorFuzzyHash(&node->needs, &node->interests);
     ++node->revision;
     return ret;
 }
@@ -229,7 +229,7 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NodeAddress* from, DPS_RxB
         }
     }
     if (ret != DPS_OK) {
-        goto DiscardAndExit;
+        goto DecodeSubExit;
     }
     /*
      * We identify the remote by the port the node is listening on
@@ -243,11 +243,11 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NodeAddress* from, DPS_RxB
             node->linked = DPS_FALSE;
         }
         ret = SendSubscriptionAck(node, from, revision, DPS_FALSE);
-        goto DiscardAndExit;
+        goto DecodeSubExit;
     }
     if ((keysMask & WantKeysMask) != WantKeysMask) {
         ret = DPS_ERR_INVALID;
-        goto DiscardAndExit;
+        goto DecodeSubExit;
     }
     if (node->linked && !DPS_SameNodeAddress(from, node->remoteNode)) {
         /*
@@ -256,21 +256,21 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NodeAddress* from, DPS_RxB
          * TODO - implement an NACK capability
          */
         ret = SendSubscriptionAck(node, from, revision, DPS_FALSE);
-        goto DiscardAndExit;
+        goto DecodeSubExit;
     }
     /*
      * Discard stale subscriptions
      */
     if (revision < node->remoteRevision) {
         DPS_DBGPRINT("Stale subscription %d (expected %d)\n", revision, node->revision + 1);
-        goto DiscardAndExit;
+        goto DecodeSubExit;
     }
     /*
      * Duplicate - presumably an ACK got lost
      */
     if (revision == node->remoteRevision) {
         ret = SendSubscriptionAck(node, from, revision, DPS_TRUE);
-        goto DiscardAndExit;
+        goto DecodeSubExit;
     }
     /*
      * We don't expect a delta from an unlinked node
@@ -278,7 +278,7 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NodeAddress* from, DPS_RxB
     if (flags & DPS_SUB_FLAG_DELTA_IND && !node->linked) {
         DPS_ERRPRINT("Subscription delta was not expected\n");
         ret = DPS_ERR_INVALID;
-        goto DiscardAndExit;
+        goto DecodeSubExit;
     }
     ret = SendSubscriptionAck(node, from, revision, DPS_TRUE);
     if (ret == DPS_OK) {
@@ -294,14 +294,8 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NodeAddress* from, DPS_RxB
         }
         DPS_FHBitVectorDup(&node->needs, &sub->needs);
     }
-    DPS_Free(sub, DPS_ALLOC_BRIEF);
-    return ret;
 
-DiscardAndExit:
-
-    if (ret != DPS_OK) {
-        DPS_ERRPRINT("Subscription was discarded %s\n", DPS_ErrTxt(ret));
-    }
+DecodeSubExit:
     DPS_Free(sub, DPS_ALLOC_BRIEF);
     return ret;
 }

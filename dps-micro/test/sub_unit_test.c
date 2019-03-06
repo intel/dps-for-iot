@@ -100,6 +100,8 @@ int main(int argc, char** argv)
     status = DPS_Start(node);
     CHECK(status == DPS_OK);
 
+    DPS_PRINT("Listening on port %d\n", DPS_GetPortNumber(node));
+
     status = DPS_InitSubscription(node, &sub, topics, 1);
     CHECK(status == DPS_OK);
 

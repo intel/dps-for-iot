@@ -56,11 +56,48 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 #define IPV4  0
 #define IPV6  1
 
-#define MAX_MCAST_INTERFACES  64
+#define MAX_MCAST_TX_SOCKS  64
 
 struct _DPS_NodeAddress {
     struct sockaddr_storage inaddr;
 };
+
+/* Struct for MCast send */
+typedef struct _MCastTx {
+    ADDRESS_FAMILY family;
+    SOCKET sendSock;
+    WSAOVERLAPPED sendOL;
+} MCastTx;
+
+#define NUM_RECV_SOCKS  3
+
+typedef enum {
+    DTLS_DISABLED,
+    DTLS_IN_HANDSHAKE,
+    DTLS_CONNECTED
+} DTLS_State;
+
+struct _DPS_Network {
+    SOCKET mcastRecvSock[2];             /* IPv4 and IPv6 multicast recv sockets */
+    SOCKET udpSock;                      /* The UDP unicast socket */ 
+    uint8_t rxBuffer[NUM_RECV_SOCKS][RX_BUFFER_SIZE]; /* need separate buffers for each recv socket */
+    DTLS_State dtlsState;
+    DWORD txLen;
+    DPS_OnReceive recvCB;
+    uint16_t numMcastTxSocks;
+    MCastTx mcastTx[MAX_MCAST_TX_SOCKS];
+    struct sockaddr_in addrCOAP4;
+    struct sockaddr_in6 addrCOAP6;
+    DPS_NodeAddress remoteNode;
+    WSAOVERLAPPED sendOL;
+    DPS_SendComplete sendCB;
+    void* appData;
+};
+
+static DPS_Network netContext;
+
+static HANDLE recvThreadHandle;
+static HANDLE cbThreadHandle;
 
 void DPS_NodeAddressSetPort(DPS_NodeAddress* addr, uint16_t port)
 {
@@ -124,35 +161,6 @@ int DPS_SameNodeAddress(const DPS_NodeAddress* addr1, const DPS_NodeAddress* add
         return DPS_FALSE;
     }
 }
-
-/* Identifies which interface to send on */
-typedef struct _InterfaceSpec {
-    ADDRESS_FAMILY family;
-    union {
-        ULONG scope_id; /* for IPv6 */
-        int32_t addr;   /* IPv4 address */
-    };
-} InterfaceSpec;
-
-#define NUM_RECV_SOCKS  3
-
-struct _DPS_Network {
-    SOCKET mcastRecvSock[2];             /* IPv4 and IPv6 multicast recv sockets */
-    SOCKET mcastSendSock[2];             /* IPv4 and IPv6 multicast send sockets */
-    SOCKET udpSock;                      /* The UDP unicast socket */ 
-    uint8_t rxBuffer[NUM_RECV_SOCKS][RX_BUFFER_SIZE]; /* need separate buffers for each recv socket */
-    DWORD txLen;
-    DPS_OnReceive recvCB;
-    uint16_t numMcastIfs;
-    InterfaceSpec mcastIf[MAX_MCAST_INTERFACES];
-    struct sockaddr_in addrCOAP4;
-    struct sockaddr_in6 addrCOAP6;
-    DPS_NodeAddress remoteNode;
-};
-
-static DPS_Network netContext;
-
-static HANDLE recvThreadHandle;
 
 static DWORD WINAPI RecvThread(LPVOID lpParam)
 {
@@ -257,6 +265,71 @@ Exit:
     return -1;
 }
 
+/*
+ * Thread for monitoring multicast send completion
+ */
+static DWORD WINAPI MulticastCBThread(LPVOID lpParam)
+{
+    DPS_Node* node = (DPS_Node*)lpParam;
+    DPS_Network* net = node->network;
+    WSAEVENT events[MAX_MCAST_TX_SOCKS];
+    int i;
+
+    /* Get events into a contiguous array */
+    for (i = 0; i < net->numMcastTxSocks; ++i) {
+        events[i] = net->mcastTx[i].sendOL.hEvent;
+    }
+    while (DPS_TRUE) {
+        DPS_SendComplete sendCB;
+        /* Wait for all of the interfaces to be signaled */
+        int ret = WSAWaitForMultipleEvents(net->numMcastTxSocks, events, DPS_TRUE, WSA_INFINITE, DPS_FALSE);
+        /* Clear all events an re-prime the overlapped structs */
+        for (i = 0; i < net->numMcastTxSocks; ++i) {
+            WSAResetEvent(events[i]);
+            memset(&net->mcastTx[i].sendOL, 0, sizeof(WSAOVERLAPPED));
+            net->mcastTx[i].sendOL.hEvent = events[i];
+        }
+        sendCB = net->sendCB;
+        net->sendCB = NULL;
+        if (sendCB) {
+            if (ret == WSA_WAIT_FAILED) {
+                sendCB(node, net->appData, DPS_ERR_NETWORK);
+            } else {
+                sendCB(node, net->appData, DPS_OK);
+            }
+        }
+    }
+    return 0;
+}
+
+/*
+ * Thread for monitoring unicast send completion
+ */
+static DWORD WINAPI UnicastCBThread(LPVOID lpParam)
+{
+    DPS_Node* node = (DPS_Node*)lpParam;
+    DPS_Network* net = node->network;
+    WSAEVENT event = net->sendOL.hEvent;
+    DPS_SendComplete sendCB;
+
+    /* Wait for all of the interfaces to be signaled */
+    int ret = WSAWaitForMultipleEvents(1, &net->sendOL.hEvent, DPS_TRUE, WSA_INFINITE, DPS_FALSE);
+    /* Clear all events an re-prime the overlapped structs */
+    WSAResetEvent(event);
+    memset(&net->sendOL, 0, sizeof(WSAOVERLAPPED));
+    net->sendOL.hEvent = event;
+
+    sendCB = net->sendCB;
+    net->sendCB = NULL;
+    if (sendCB) {
+        if (ret == WSA_WAIT_FAILED) {
+            sendCB(node, net->appData, DPS_ERR_NETWORK);
+        } else {
+            sendCB(node, net->appData, DPS_OK);
+        }
+    }
+    return 0;
+}
 
 static SOCKET BindSock(int family, int port)
 {
@@ -269,7 +342,7 @@ static SOCKET BindSock(int family, int port)
     } else {
         ULONG yes = 1;
         /* Set SO_REUSEADDR on the socket. */
-        ret = setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char*)&yes, sizeof yes);
+        ret = setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char*)&yes, sizeof(yes));
         if (ret == SOCKET_ERROR) {
             DPS_ERRPRINT("%s: setsockopt SO_REUSEADDR failed. WSAGetLastError()=0x%x\n", __FUNCTION__, WSAGetLastError());
         }
@@ -317,17 +390,17 @@ DPS_Status DPS_NetworkInit(DPS_Node* node)
     ret = getsockname(node->network->udpSock, (struct sockaddr*)&addr, &addrSize);
     if (ret) {
         DPS_ERRPRINT("getsockname() failed with error: %d\n", WSAGetLastError());
-        return status = DPS_ERR_NETWORK;
-    }
-    if (addr.ss_family == AF_INET6) {
-        struct sockaddr_in6* sa6 = (struct sockaddr_in6*)&addr;
-        node->port = ntohs(sa6->sin6_port);
+        status = DPS_ERR_NETWORK;
     } else {
-        struct sockaddr_in* sa4 = (struct sockaddr_in*)&addr;
-        node->port = ntohs(sa4->sin_port);
+        if (addr.ss_family == AF_INET6) {
+            struct sockaddr_in6* sa6 = (struct sockaddr_in6*)&addr;
+            node->port = ntohs(sa6->sin6_port);
+        } else {
+            struct sockaddr_in* sa4 = (struct sockaddr_in*)&addr;
+            node->port = ntohs(sa4->sin_port);
+        }
+        DPS_DBGPRINT("Network listening on port %d\n", node->port);
     }
-    DPS_DBGPRINT("Network listening on port %d\n", node->port);
-
     return status;
 }
 
@@ -372,9 +445,6 @@ DPS_Status DPS_NetworkStart(DPS_Node* node, DPS_OnReceive cb)
     /* Bind the IPv4 and IPv6 recv sockets */
     network->mcastRecvSock[IPV4] = BindSock(AF_INET, COAP_UDP_PORT);
     network->mcastRecvSock[IPV6] = BindSock(AF_INET6, COAP_UDP_PORT);
-
-    network->mcastSendSock[IPV4] = BindSock(AF_INET, 0);
-    network->mcastSendSock[IPV6] = BindSock(AF_INET6, 0);
 
     /* OK if we have at least one network family */
     if (network->mcastRecvSock[IPV4] == INVALID_SOCKET && network->mcastRecvSock[IPV6] == INVALID_SOCKET) {
@@ -434,7 +504,7 @@ DPS_Status DPS_NetworkStart(DPS_Node* node, DPS_OnReceive cb)
             } else {
                 DPS_DBGPRINT("MCAST_JOIN_GOUP IPv4 sucessful\n");
             }
-        } 
+        }
         if (network->mcastRecvSock[IPV6] != INVALID_SOCKET) {
             req6.gr_interface = adapter->IfIndex;
             ret = setsockopt(network->mcastRecvSock[IPV6], IPPROTO_IPV6, MCAST_JOIN_GROUP, (char*)&req6, sizeof(req6));
@@ -443,37 +513,69 @@ DPS_Status DPS_NetworkStart(DPS_Node* node, DPS_OnReceive cb)
             } else {
                 DPS_DBGPRINT("MCAST_JOIN_GOUP IPv6 sucessful\n");
             }
-        } 
+        }
         /* Accumulate addresses for multicast send */
         for (addr = adapter->FirstUnicastAddress; addr != NULL; addr = addr->Next) {
+            SOCKET sock;
             struct sockaddr* sa = addr->Address.lpSockaddr;
-            if (network->numMcastIfs >= MAX_MCAST_INTERFACES) {
+            if (network->numMcastTxSocks >= MAX_MCAST_TX_SOCKS) {
                 DPS_DBGPRINT("Too many interfaces\n");
                 break;
             }
-            InterfaceSpec* ifs = &network->mcastIf[network->numMcastIfs];
-            ifs->family = sa->sa_family;
-            if (sa->sa_family == AF_INET6) {
+            MCastTx* mtx = &network->mcastTx[network->numMcastTxSocks];
+            mtx->family = sa->sa_family;
+            mtx->sendOL.hEvent = WSACreateEvent();
+
+            /* Bind a send socket for this interface */
+            sock = BindSock(mtx->family, 0);
+
+            if (mtx->family == AF_INET6) {
                 struct sockaddr_in6* sin6 = (struct sockaddr_in6*)sa;
-                ifs->scope_id = sin6->sin6_scope_id;
+                ret = setsockopt(sock, IPPROTO_IPV6, IPV6_MULTICAST_IF, (char*)&sin6->sin6_scope_id, sizeof(sin6->sin6_scope_id));
+                if (ret == SOCKET_ERROR) {
+                    DPS_ERRPRINT("setsockopt IP_MULICAST_IF failed %d\n", WSAGetLastError());
+                }
             } else {
                 struct sockaddr_in* sin = (struct sockaddr_in*)sa;
-                memcpy(&ifs->addr, &sin->sin_addr, sizeof(ifs->addr));
+                ret = setsockopt(sock, IPPROTO_IP, IP_MULTICAST_IF, (char*)&sin->sin_addr, sizeof(sin->sin_addr));
+                if (ret == SOCKET_ERROR) {
+                    DPS_ERRPRINT("setsockopt IP_MULICAST_IF failed %d\n", WSAGetLastError());
+                }
             }
-            ++network->numMcastIfs;
+            if (ret == SOCKET_ERROR) {
+                closesocket(sock);
+            } else {
+                mtx->sendSock = sock;
+                ++network->numMcastTxSocks;
+            }
         }
     }
     network->recvCB = cb;
     free(adapterList);
     adapterList = NULL;
-
+    /* We need at least one interface for sending multicast data */
+    if (network->numMcastTxSocks == 0) {
+        DPS_ERRPRINT("Failed to configure multicast on any interface\n");
+        goto ErrorExit;
+    }
     /* Start the recv thread */
     recvThreadHandle = CreateThread(NULL, 0, RecvThread, node, 0, NULL);
     if (recvThreadHandle == NULL) {
-        DPS_DBGPRINT("Failed to start multicast receive thread\n");
+        DPS_ERRPRINT("Failed to start multicast receive thread\n");
         goto ErrorExit;
     }
-
+    /* Start the multicast send completion thread */
+    cbThreadHandle = CreateThread(NULL, 0, MulticastCBThread, node, 0, NULL);
+    if (cbThreadHandle == NULL) {
+        DPS_ERRPRINT("Failed to start multicast send completion thread\n");
+        goto ErrorExit;
+    }
+    /* Start the unicast send completion thread */
+    cbThreadHandle = CreateThread(NULL, 0, UnicastCBThread, node, 0, NULL);
+    if (cbThreadHandle == NULL) {
+        DPS_ERRPRINT("Failed to start unicast send completion thread\n");
+        goto ErrorExit;
+    }
     return DPS_OK;
 
 ErrorExit:
@@ -491,53 +593,83 @@ ErrorExit:
 DPS_Status DPS_MCastSend(DPS_Node* node, void* appCtx, DPS_SendComplete sendCompleteCB)
 {
     DPS_Network* net = node->network;
-    DWORD sent;
     WSABUF buf;
-    int ret;
     int i;
+
+    if (net->sendCB) {
+        return DPS_ERR_BUSY;
+    }
 
     buf.len = (LONG)(node->txLen + node->txHdrLen);
     buf.buf = node->txBuffer + DPS_TX_HEADER_SIZE - node->txHdrLen;
 
-    for (i = 0; i < net->numMcastIfs; ++i) {
-        InterfaceSpec* ifs = &net->mcastIf[i];
-        if (net->mcastIf[i].family == AF_INET6) {
-            ret = setsockopt(net->mcastSendSock[IPV6], IPPROTO_IPV6, IPV6_MULTICAST_IF, (char*)&ifs->scope_id, sizeof(ifs->scope_id));
-            if (ret == SOCKET_ERROR) {
-                DPS_ERRPRINT("setsockopt IP_MULICAST_IF failed %d\n", WSAGetLastError());
-            } else {
-                ret = WSASendTo(net->mcastSendSock[IPV6], &buf, 1, &sent, 0, (SOCKADDR*)&net->addrCOAP6, sizeof(net->addrCOAP6), NULL, NULL);
-            }
+    net->sendCB = sendCompleteCB;
+    net->appData = appCtx;
+    /*
+     * Multicast on each interface
+     */
+    for (i = 0; i < net->numMcastTxSocks; ++i) {
+        int ret;
+        MCastTx* mtx = &net->mcastTx[i];
+        if (mtx->family == AF_INET6) {
+            ret = WSASendTo(mtx->sendSock, &buf, 1, NULL, 0, (SOCKADDR*)&net->addrCOAP6, sizeof(net->addrCOAP6), &mtx->sendOL, NULL);
         } else {
-            ret = setsockopt(net->mcastSendSock[IPV4], IPPROTO_IP, IP_MULTICAST_IF, (char*)&ifs->addr, sizeof(ifs->addr));
-            if (ret == SOCKET_ERROR) {
-                DPS_ERRPRINT("setsockopt IP_MULICAST_IF failed %d\n", WSAGetLastError());
-            } else {
-                ret = WSASendTo(net->mcastSendSock[IPV4], &buf, 1, &sent, 0, (SOCKADDR*)&net->addrCOAP4, sizeof(net->addrCOAP4), NULL, NULL);
-            }
+            ret = WSASendTo(mtx->sendSock, &buf, 1, NULL, 0, (SOCKADDR*)&net->addrCOAP4, sizeof(net->addrCOAP4), &mtx->sendOL, NULL);
         }
         if (ret == SOCKET_ERROR) {
-            DPS_ERRPRINT("WSASEndTo failed %d\n", WSAGetLastError());
+            int err = WSAGetLastError();
+            if (err == WSA_IO_PENDING) {
+                DPS_DBGPRINT("WSASEndTo I/O pending\n");
+            } else {
+                DPS_ERRPRINT("WSASEndTo failed %d\n", err);
+                /* Set the event for the callback thread */
+                WSASetEvent(mtx->sendOL.hEvent);
+            }
         }
     }
     return DPS_OK;
+}
+
+static void CALLBACK UnicastSendComplete(DWORD dwError, DWORD cbTransferred, LPWSAOVERLAPPED lpOverlapped, DWORD dwFlags)
+{
+    DPS_Node* node = (DPS_Node*)lpOverlapped->hEvent;
+    DPS_Network* net = node->network;
+    DPS_SendComplete cb = net->sendCB;
+
+    net->sendCB = NULL;
+    cb(node, net->appData, dwError ? DPS_ERR_NETWORK : DPS_OK);
 }
 
 DPS_Status DPS_UnicastSend(DPS_Node* node, DPS_NodeAddress* dest, void* appCtx, DPS_SendComplete sendCompleteCB)
 {
     DPS_Status status = DPS_OK;
     DPS_Network* net = node->network;
-    DWORD sent;
-    WSABUF buf;
-    int ret;
 
-    buf.len = (LONG)(node->txLen + node->txHdrLen);
-    buf.buf = node->txBuffer + DPS_TX_HEADER_SIZE - node->txHdrLen;
+    if (net->sendCB) {
+        return DPS_ERR_BUSY;
+    }
+    net->sendCB = sendCompleteCB;
+    net->appData = appCtx;
 
-    ret = WSASendTo(net->udpSock, &buf, 1, &sent, 0, (SOCKADDR*)dest, sizeof(DPS_NodeAddress), NULL, NULL);
-    if (ret == SOCKET_ERROR) {
-        DPS_ERRPRINT("WSASEndTo failed %d\n", WSAGetLastError());
-        status = DPS_ERR_NETWORK;
+    if (net->dtlsState == DTLS_DISABLED || net->dtlsState == DTLS_CONNECTED) {
+        int ret;
+        WSABUF buf;
+
+        buf.len = (LONG)(node->txLen + node->txHdrLen);
+        buf.buf = node->txBuffer + DPS_TX_HEADER_SIZE - node->txHdrLen;
+
+        ret = WSASendTo(net->udpSock, &buf, 1, NULL, 0, (SOCKADDR*)dest, sizeof(DPS_NodeAddress), &net->sendOL, NULL);
+        if (ret == SOCKET_ERROR) {
+            int err = WSAGetLastError();
+            if (err != WSA_IO_PENDING) {
+                DPS_ERRPRINT("WSASEndTo failed %d\n", err);
+                status = DPS_ERR_NETWORK;
+            }
+        }
+    }
+    if (status != DPS_OK) {
+        net->sendCB = NULL;
+        net->appData = NULL;
     }
     return status;
 }
