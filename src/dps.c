@@ -418,7 +418,7 @@ DPS_Status DPS_MuteRemoteNode(DPS_Node* node, RemoteNode* remote)
 
     assert(!remote->outbound.muted);
 
-    DPS_DBGPRINT("%d muting %s\n", node->port, DESCRIBE(remote));
+    DPS_DBGPRINT("%s muting %s\n", node->addrStr, DESCRIBE(remote));
 
     remote->outbound.muted = DPS_TRUE;
     remote->outbound.meshId = DPS_MaxMeshId;
@@ -445,7 +445,7 @@ DPS_Status DPS_UnmuteRemoteNode(DPS_Node* node, RemoteNode* remote)
 
     assert(remote->outbound.muted);
 
-    DPS_DBGPRINT("%d unmuting %s\n", node->port, DESCRIBE(remote));
+    DPS_DBGPRINT("%s unmuting %s\n", node->addrStr, DESCRIBE(remote));
 
     remote->outbound.muted = DPS_FALSE;
     remote->inbound.muted = DPS_FALSE;
@@ -480,7 +480,7 @@ int DPS_MeshHasLoop(DPS_Node* node, RemoteNode* src, DPS_UUID* meshId)
     }
 }
 
-RemoteNode* DPS_LookupRemoteNode(DPS_Node* node, DPS_NodeAddress* addr)
+RemoteNode* DPS_LookupRemoteNode(DPS_Node* node, const DPS_NodeAddress* addr)
 {
     RemoteNode* remote;
 
@@ -513,7 +513,8 @@ static OnOpCompletion* AllocCompletion(DPS_Node* node, RemoteNode* remote, OpTyp
 /*
  * Add a remote node or return an existing one
  */
-DPS_Status DPS_AddRemoteNode(DPS_Node* node, DPS_NodeAddress* addr, DPS_NetConnection* cn, RemoteNode** remoteOut)
+DPS_Status DPS_AddRemoteNode(DPS_Node* node, const DPS_NodeAddress* addr, DPS_NetConnection* cn,
+                             RemoteNode** remoteOut)
 {
     RemoteNode* remote = DPS_LookupRemoteNode(node, addr);
     if (remote) {
@@ -1027,7 +1028,6 @@ static DPS_Status OnNetReceive(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Status s
 DPS_Status DPS_LoopbackSend(DPS_Node* node, uv_buf_t* bufs, size_t numBufs)
 {
     DPS_Status ret;
-    struct sockaddr_in saddr;
     DPS_NetEndpoint ep;
     DPS_NetRxBuffer* buf = NULL;
     size_t len = 0;
@@ -1035,11 +1035,7 @@ DPS_Status DPS_LoopbackSend(DPS_Node* node, uv_buf_t* bufs, size_t numBufs)
 
     assert(node->state == DPS_NODE_RUNNING);
 
-    memset(&saddr, 0, sizeof(saddr));
-    saddr.sin_family = AF_INET;
-    saddr.sin_port = htons(DPS_GetPortNumber(node));
-    saddr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-    DPS_SetAddress(&ep.addr, (const struct sockaddr*)&saddr);
+    DPS_CopyAddress(&ep.addr, DPS_GetListenAddress(node));
     ep.cn = NULL;
 
     /*
@@ -1397,10 +1393,11 @@ DPS_Status DPS_StartNode(DPS_Node* node, int mcast, DPS_NodeAddress* listenAddr)
         goto ErrExit;
     }
     /*
-     * Make sure have the listenting port before we return
+     * Make sure have the listening address before we return
      */
-    node->port = DPS_NetGetListenerPort(node->netCtx);
-    assert(node->port);
+    DPS_NetGetListenAddress(&node->addr, node->netCtx);
+    strncpy_s(node->addrStr, sizeof(node->addrStr),
+              DPS_NodeAddrToString(&node->addr), DPS_NODE_ADDRESS_MAX_STRING_LEN);
     /*
      *  The node loop gets its own thread to run on
      */
@@ -1427,16 +1424,9 @@ DPS_NetContext* DPS_GetNetContext(DPS_Node* node)
     return node->netCtx;
 }
 
-uint16_t DPS_GetPortNumber(DPS_Node* node)
+const DPS_NodeAddress* DPS_GetListenAddress(DPS_Node* node)
 {
-    DPS_DBGTRACE();
-
-    if (node) {
-        return node->port;
-    } else {
-        return 0;
-    }
-
+    return &node->addr;
 }
 
 DPS_Status DPS_DestroyNode(DPS_Node* node, DPS_OnNodeDestroyed cb, void* data)
@@ -1477,7 +1467,7 @@ void DPS_SetNodeSubscriptionUpdateDelay(DPS_Node* node, uint32_t subsRateMsecs)
     node->subsRate = subsRateMsecs;
 }
 
-DPS_Status DPS_Link(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnLinkComplete cb, void* data)
+DPS_Status DPS_Link(DPS_Node* node, const DPS_NodeAddress* addr, DPS_OnLinkComplete cb, void* data)
 {
     DPS_Status ret = DPS_OK;
     RemoteNode* remote = NULL;

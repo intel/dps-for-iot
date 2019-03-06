@@ -97,6 +97,8 @@ static void DestroyNode(Node* node)
 static Node* CreateNode()
 {
     Node* node = NULL;
+    DPS_NodeAddress* listenAddr = NULL;
+    struct sockaddr_in6 saddr;
     DPS_Status ret;
 
     node = calloc(1, sizeof(Node));
@@ -116,13 +118,24 @@ static Node* CreateNode()
         goto ErrorExit;
     }
     DPS_SetNodeSubscriptionUpdateDelay(node->node, 10);
-    ret = DPS_StartNode(node->node, DPS_MCAST_PUB_ENABLE_SEND | DPS_MCAST_PUB_ENABLE_RECV, NULL);
+    listenAddr = DPS_CreateAddress();
+    if (!listenAddr) {
+        goto ErrorExit;
+    }
+    memset(&saddr, 0, sizeof(saddr));
+    saddr.sin6_family = AF_INET6;
+    saddr.sin6_port = 0;
+    memcpy(&saddr.sin6_addr, &in6addr_loopback, sizeof(saddr.sin6_addr));
+    DPS_SetAddress(listenAddr, (const struct sockaddr*)&saddr);
+    ret = DPS_StartNode(node->node, DPS_MCAST_PUB_ENABLE_SEND | DPS_MCAST_PUB_ENABLE_RECV, listenAddr);
+    DPS_DestroyAddress(listenAddr);
     if (ret != DPS_OK) {
         goto ErrorExit;
     }
     return node;
 
 ErrorExit:
+    DPS_DestroyAddress(listenAddr);
     DestroyNode(node);
     return NULL;
 }
@@ -177,6 +190,13 @@ int LLVMFuzzerInitialize(int *argc, char ***argv)
     return 0;
 }
 
+static void OnLinked(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, void* data)
+{
+    if (data) {
+        DPS_SignalEvent((DPS_Event*)data, status);
+    }
+}
+
 int LLVMFuzzerTestOneInput(const uint8_t* data, size_t len)
 {
     Node* server = NULL;
@@ -184,7 +204,7 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t len)
     DPS_Subscription* sub = NULL;
     DPS_Publication* pub = NULL;
     const char *topic = "T";
-    DPS_NodeAddress* addr = NULL;
+    DPS_Event* event = NULL;
     DPS_Status ret;
 
     fuzzData.base = (char*)data;
@@ -228,15 +248,18 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t len)
         goto Exit;
     }
 
-    addr = DPS_CreateAddress();
-    if (!addr) {
+    event = DPS_CreateEvent();
+    if (!event) {
         goto Exit;
     }
-    DPS_LinkTo(client->node, NULL, DPS_GetPortNumber(server->node), addr);
+    ret = DPS_Link(client->node, DPS_GetListenAddress(server->node), OnLinked, event);
+    if (ret == DPS_OK) {
+        DPS_WaitForEvent(event);
+    }
 
 Exit:
-    if (addr) {
-        DPS_DestroyAddress(addr);
+    if (event) {
+        DPS_DestroyEvent(event);
     }
     if (pub) {
         DPS_DestroyPublication(pub);

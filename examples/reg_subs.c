@@ -90,7 +90,7 @@ static DPS_Status RegisterAndJoin(DPS_Node* node, const char* host, uint16_t por
 {
     DPS_Status ret;
     DPS_RegistrationList* regs;
-    DPS_NodeAddress* remoteAddr = DPS_CreateAddress();
+    DPS_NodeAddress* remoteAddr = NULL;
     size_t i;
 
     regs = DPS_CreateRegistrationList(count);
@@ -123,8 +123,16 @@ static DPS_Status RegisterAndJoin(DPS_Node* node, const char* host, uint16_t por
     remoteAddr = DPS_CreateAddress();
     ret = DPS_Registration_LinkToSyn(node, regs, remoteAddr);
     if (ret == DPS_OK) {
-        DPS_PRINT("%d is linked to %s\n", DPS_GetPortNumber(node), DPS_NodeAddrToString(remoteAddr));
-        goto Exit;
+        char* str = NULL;
+        /*
+         * DPS_NodeAddrToString uses a static buffer, so dup one of
+         * the strs used below.
+         */
+        str = strdup(DPS_NodeAddrToString(DPS_GetListenAddress(node)));
+        DPS_PRINT("%s is linked to %s\n", str, DPS_NodeAddrToString(remoteAddr));
+        if (str) {
+            free(str);
+        }
     }
 
 Exit:
@@ -256,7 +264,7 @@ int main(int argc, char** argv)
         DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
         return 1;
     }
-    DPS_PRINT("Subscriber is listening on port %d\n", DPS_GetPortNumber(node));
+    DPS_PRINT("Subscriber is listening on %s\n", DPS_NodeAddrToString(DPS_GetListenAddress(node)));
 
     nodeDestroyed = DPS_CreateEvent();
 

@@ -144,19 +144,22 @@ ErrorExit:
     return NULL;
 }
 
-uint16_t DPS_NetGetListenerPort(DPS_NetContext* netCtx)
+DPS_NodeAddress* DPS_NetGetListenAddress(DPS_NodeAddress* addr, DPS_NetContext* netCtx)
 {
-    struct sockaddr_in6 addr;
-    int len = sizeof(addr);
+    int len;
 
+    DPS_DBGTRACEA("netCtx=%p\n", netCtx);
+
+    memzero_s(addr, sizeof(DPS_NodeAddress));
     if (!netCtx) {
-        return 0;
+        return addr;
     }
-    if (uv_udp_getsockname(&netCtx->rxSocket, (struct sockaddr*)&addr, &len)) {
-        return 0;
+    len = sizeof(struct sockaddr_in6);
+    if (uv_udp_getsockname(&netCtx->rxSocket, (struct sockaddr*)&addr->inaddr, &len)) {
+        return addr;
     }
-    DPS_DBGPRINT("Listener port = %d\n", ntohs(addr.sin6_port));
-    return ntohs(addr.sin6_port);
+    DPS_DBGPRINT("Listener address = %s\n", DPS_NetAddrText((const struct sockaddr*)&addr->inaddr));
+    return addr;
 }
 
 void DPS_NetStop(DPS_NetContext* netCtx)

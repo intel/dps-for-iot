@@ -364,7 +364,7 @@ static DPS_Status StartMulticastNode(DPS_Node* node)
         goto Exit;
     }
     /** [Starting a node] */
-    DPS_PRINT("Node is listening on port %d\n", DPS_GetPortNumber(node));
+    DPS_PRINT("Node is listening on %s\n", DPS_NodeAddrToString(DPS_GetListenAddress(node)));
 
  Exit:
     return ret;
@@ -390,9 +390,8 @@ static DPS_Status StartUnicastNode(DPS_Node* node, uint16_t port)
     if (ret != DPS_OK) {
         goto Exit;
     }
-    uint16_t portNum = DPS_GetPortNumber(node);
     /** [Starting a unicast node] */
-    DPS_PRINT("Node is listening on port %d\n", portNum);
+    DPS_PRINT("Node is listening on %s\n", DPS_NodeAddrToString(DPS_GetListenAddress(node)));
 
  Exit:
     DPS_DestroyAddress(listenAddr);

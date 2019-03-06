@@ -128,14 +128,14 @@ int main(int argc, char** argv)
     memset(&saddr, 0, sizeof(saddr));
     saddr.sin6_family = AF_INET6;
     saddr.sin6_port = htons(listenPort);
-    memcpy(&saddr.sin6_addr, &in6addr_any, sizeof(saddr.sin6_addr));
+    memcpy(&saddr.sin6_addr, &in6addr_loopback, sizeof(saddr.sin6_addr));
     DPS_SetAddress(listenAddr, (const struct sockaddr*)&saddr);
     ret = DPS_StartNode(node, DPS_MCAST_PUB_ENABLE_RECV, listenAddr);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
         goto Exit;
     }
-    DPS_PRINT("Subscriber is listening on port %d\n", DPS_GetPortNumber(node));
+    DPS_PRINT("Subscriber is listening on %s\n", DPS_NodeAddrToString(DPS_GetListenAddress(node)));
 
     if (payloadSize > 0) {
         payload = malloc(payloadSize);

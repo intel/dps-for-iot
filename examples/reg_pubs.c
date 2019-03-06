@@ -181,7 +181,16 @@ static DPS_Status FindAndLink(DPS_Node* node, const char* host, uint16_t port, c
     }
     ret = DPS_Registration_LinkToSyn(node, regs, remoteAddr);
     if (ret == DPS_OK) {
-        DPS_PRINT("%d is linked to %s\n", DPS_GetPortNumber(node), DPS_NodeAddrToString(remoteAddr));
+        char* str = NULL;
+        /*
+         * DPS_NodeAddrToString uses a static buffer, so dup one of
+         * the strs used below.
+         */
+        str = strdup(DPS_NodeAddrToString(DPS_GetListenAddress(node)));
+        DPS_PRINT("%s is linked to %s\n", str, DPS_NodeAddrToString(remoteAddr));
+        if (str) {
+            free(str);
+        }
     }
     DPS_DestroyRegistrationList(regs);
     return ret;
@@ -311,7 +320,7 @@ int main(int argc, char** argv)
         DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
         return 1;
     }
-    DPS_PRINT("Publisher is listening on port %d\n", DPS_GetPortNumber(node));
+    DPS_PRINT("Publisher is listening on %s\n", DPS_NodeAddrToString(DPS_GetListenAddress(node)));
 
     remoteAddr = DPS_CreateAddress();
 

@@ -44,8 +44,8 @@
 static int quiet = DPS_FALSE;
 static int json = DPS_FALSE;
 
-static const char AckFmt[] = "This is an ACK from %d";
-static const char JSONAckFmt[] = "{\"msg\":\"ACK Message\",\"port\":%d}";
+static const char AckFmt[] = "This is an ACK from %s";
+static const char JSONAckFmt[] = "{\"msg\":\"ACK Message\",\"address\":%s}";
 
 static void OnNodeDestroyed(DPS_Node* node, void* data)
 {
@@ -96,22 +96,29 @@ static void OnPubMatch(DPS_Subscription* sub, const DPS_Publication* pub, uint8_
         }
     }
     if (DPS_PublicationIsAckRequested(pub)) {
-        uint8_t ackMsg[64];
+        const DPS_NodeAddress* listenAddr = DPS_GetListenAddress(DPS_PublicationGetNode(pub));
+        uint8_t ackMsg[128];
         size_t len;
-        DPS_PRINT("Sending ack for pub UUID %s(%d)\n", DPS_UUIDToString(DPS_PublicationGetUUID(pub)), DPS_PublicationGetSequenceNum(pub));
+        DPS_PRINT("Sending ack for pub UUID %s(%d)\n", DPS_UUIDToString(DPS_PublicationGetUUID(pub)),
+                  DPS_PublicationGetSequenceNum(pub));
         if (json) {
-            sprintf(jsonStr, JSONAckFmt, DPS_GetPortNumber(DPS_PublicationGetNode(pub)));
+            sprintf(jsonStr, JSONAckFmt, DPS_NodeAddrToString(listenAddr));
             DPS_PRINT("    %s\n", jsonStr);
             ret = DPS_JSON2CBOR(jsonStr, ackMsg, sizeof(ackMsg), &len);
-            assert(ret == DPS_OK);
+            if (ret != DPS_OK) {
+                DPS_PRINT("Failed to convert json %s\n", DPS_ErrTxt(ret));
+            }
         } else {
-            sprintf((char*)ackMsg, AckFmt, DPS_GetPortNumber(DPS_PublicationGetNode(pub)));
+            sprintf((char*)ackMsg, AckFmt, DPS_NodeAddrToString(listenAddr));
             DPS_PRINT("    %s\n", ackMsg);
             len = strnlen((char*)ackMsg, sizeof(ackMsg));
+            ret = DPS_OK;
         }
-        ret = DPS_AckPublication(pub, ackMsg, len);
-        if (ret != DPS_OK) {
-            DPS_PRINT("Failed to ack pub %s\n", DPS_ErrTxt(ret));
+        if (ret == DPS_OK) {
+            ret = DPS_AckPublication(pub, ackMsg, len);
+            if (ret != DPS_OK) {
+                DPS_PRINT("Failed to ack pub %s\n", DPS_ErrTxt(ret));
+            }
         }
     }
 }
@@ -443,7 +450,8 @@ int main(int argc, char** argv)
         DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
         goto Exit;
     }
-    DPS_PRINT("Subscriber is listening on port %d\n", DPS_GetPortNumber(subscriber.node));
+    DPS_PRINT("Subscriber is listening on %s\n",
+              DPS_NodeAddrToString(DPS_GetListenAddress(subscriber.node)));
 
     if (args.wait) {
         /*

@@ -679,9 +679,9 @@ func SetNodeSubscriptionUpdateDelay(node *Node, subsRateMsecs uint32) {
 	C.DPS_SetNodeSubscriptionUpdateDelay(cnode, C.uint32_t(subsRateMsecs))
 }
 
-func GetPortNumber(node *Node) uint16 {
+func GetListenAddress(node *Node) *NodeAddress {
 	cnode := (*C.DPS_Node)(node)
-	return uint16(C.DPS_GetPortNumber(cnode))
+	return (*NodeAddress)(C.DPS_GetListenAddress(cnode))
 }
 
 type OnLinkComplete func(node *Node, addr *NodeAddress, status int)

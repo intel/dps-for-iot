@@ -62,9 +62,14 @@ void DPS_NetStop(DPS_NetContext* netCtx)
     free(netCtx);
 }
 
-uint16_t DPS_NetGetListenerPort(DPS_NetContext* netCtx)
+DPS_NodeAddress* DPS_NetGetListenAddress(DPS_NodeAddress* addr, DPS_NetContext* netCtx)
 {
-    return 10000;
+    struct sockaddr_in6* saddr = &addr->inaddr;
+    memzero_s(addr, sizeof(DPS_NodeAddress));
+    saddr->sin6_family = AF_INET6;
+    saddr->sin6_port = 10000;
+    memcpy(&saddr->sin6_addr, &in6addr_any, sizeof(saddr->sin6_addr));
+    return addr;
 }
 
 DPS_Status DPS_NetSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* endpoint,

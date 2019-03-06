@@ -541,13 +541,13 @@ DPS_Status DPS_DestroyNode(DPS_Node* node, DPS_OnNodeDestroyed cb, void* data);
 void DPS_SetNodeSubscriptionUpdateDelay(DPS_Node* node, uint32_t subsRateMsecs);
 
 /**
- * Get the port number this node is listening for connections on
+ * Get the address this node is listening for connections on
  *
- * @param node     The local node to use
+ * @param node     The node
  *
- * @return The port number
+ * @return The address
  */
-uint16_t DPS_GetPortNumber(DPS_Node* node);
+const DPS_NodeAddress* DPS_GetListenAddress(DPS_Node* node);
 
 /**
  * Function prototype for function called when a DPS_Link() completes.
@@ -569,7 +569,7 @@ typedef void (*DPS_OnLinkComplete)(DPS_Node* node, DPS_NodeAddress* addr, DPS_St
  *
  * @return DPS_OK or an error status. If an error status is returned the callback function will not be called.
  */
-DPS_Status DPS_Link(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnLinkComplete cb, void* data);
+DPS_Status DPS_Link(DPS_Node* node, const DPS_NodeAddress* addr, DPS_OnLinkComplete cb, void* data);
 
 /**
  * Function prototype for function called when a DPS_Unlink() completes.

@@ -65,6 +65,11 @@ extern "C" {
 #define DPS_SECS_TO_MS(t)   ((uint64_t)(t) * 1000ull)
 
 /**
+ * Maximum length of address text is of the form: "[IPv6]:PORT"
+ */
+#define DPS_NODE_ADDRESS_MAX_STRING_LEN (INET6_ADDRSTRLEN + 2 + 8)
+
+/**
  * Address type
  */
 typedef struct _DPS_NodeAddress {

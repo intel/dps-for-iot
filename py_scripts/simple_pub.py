@@ -152,7 +152,7 @@ node = dps.create_node("/", key_store, node_id)
 listen_addr = dps.create_address()
 dps.set_address(listen_addr, (None, args.listen))
 dps.start_node(node, mcast, listen_addr)
-print("Publisher is listening on port %d" % (dps.get_port_number(node)))
+print("Publisher is listening on %s" % (dps.get_listen_address(node)))
 
 if args.port != 0:
     addr = dps.create_address()

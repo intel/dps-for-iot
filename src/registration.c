@@ -293,6 +293,20 @@ Exit:
     return ret;
 }
 
+static uint16_t GetPortNumber(DPS_Node* node)
+{
+    uint16_t port = 0;
+    const DPS_NodeAddress* addr = DPS_GetListenAddress(node);
+    if (addr->inaddr.ss_family == AF_INET6) {
+        const struct sockaddr_in6* ip6 = (const struct sockaddr_in6*)&addr->inaddr;
+        port = ntohs(ip6->sin6_port);
+    } else {
+        const struct sockaddr_in* ip4 = (const struct sockaddr_in*)&addr->inaddr;
+        port = ntohs(ip4->sin_port);
+    }
+    return port;
+}
+
 DPS_Status DPS_Registration_Put(DPS_Node* node, const char* host, uint16_t port, const char* tenantString, uint16_t timeout, DPS_OnRegPutComplete cb, void* data)
 {
     DPS_Status ret;
@@ -301,7 +315,7 @@ DPS_Status DPS_Registration_Put(DPS_Node* node, const char* host, uint16_t port,
 
     DPS_DBGTRACE();
 
-    localPort = DPS_GetPortNumber(node);
+    localPort = GetPortNumber(node);
     if (!localPort) {
         return DPS_ERR_INVALID;
     }
@@ -580,7 +594,7 @@ DPS_Status DPS_Registration_Get(DPS_Node* node, const char* host, uint16_t port,
     if (regs->size < 1) {
         return DPS_ERR_INVALID;
     }
-    localPort = DPS_GetPortNumber(node);
+    localPort = GetPortNumber(node);
     if (!localPort) {
         return DPS_ERR_INVALID;
     }
@@ -701,7 +715,7 @@ static void OnResolve(DPS_Node* node, DPS_NodeAddress* addr, void* data)
 
     DPS_DBGTRACE();
     if (addr) {
-        if (IsLocalAddr(addr, DPS_GetPortNumber(node))) {
+        if (IsLocalAddr(addr, GetPortNumber(node))) {
             DPS_DBGPRINT("Candidate %d INVALID\n", linkTo->candidate);
             linkTo->regs->list[linkTo->candidate].flags = DPS_CANDIDATE_FAILED;
         } else {

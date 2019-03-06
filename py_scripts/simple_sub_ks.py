@@ -174,14 +174,14 @@ def on_pub(sub, pub, payload):
     print("  sub " + " | ".join(dps.subscription_get_topics(sub)))
     print(payload)
     if dps.publication_is_ack_requested(pub):
-        ack_msg = "This is an ACK from %d" % (dps.get_port_number(dps.publication_get_node(pub)))
+        ack_msg = "This is an ACK from %d" % (dps.get_listen_address(dps.publication_get_node(pub)))
         print("Sending ack for pub UUID %s(%d)" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub)))
         print("    %s" % (ack_msg))
         dps.ack_publication(pub, ack_msg);
 
 node = dps.create_node("/", key_store, node_id)
 dps.start_node(node, dps.MCAST_PUB_ENABLE_RECV, None)
-print("Subscriber is listening on port %d" % (dps.get_port_number(node)))
+print("Subscriber is listening on %s" % (dps.get_listen_address(node)))
 sub = dps.create_subscription(node, ['a/b/c']);
 dps.subscribe(sub, on_pub)
 

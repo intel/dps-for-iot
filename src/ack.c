@@ -127,7 +127,8 @@ DPS_Status DPS_SendAcknowledgement(PublicationAck* ack, RemoteNode* ackNode)
     DPS_Status ret;
     size_t i;
 
-    DPS_DBGPRINT("SendAcknowledgement from %d to %s\n", node->port, DPS_NodeAddrToString(&ackNode->ep.addr));
+    DPS_DBGPRINT("SendAcknowledgement from %s to %s\n", node->addrStr,
+                 DPS_NodeAddrToString(&ackNode->ep.addr));
 
     for (i = 0; i < ack->numBufs; ++i) {
         uvBufs[i] = uv_buf_init((char*)ack->bufs[i].base, DPS_TxBufferUsed(&ack->bufs[i]));

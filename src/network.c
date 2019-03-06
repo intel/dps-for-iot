@@ -45,22 +45,19 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_OFF);
 const char* DPS_NetAddrText(const struct sockaddr* addr)
 {
     if (addr) {
+        const char* fmt;
         char name[INET6_ADDRSTRLEN];
-        static THREAD char txt[sizeof(name) + 8];
+        static THREAD char txt[DPS_NODE_ADDRESS_MAX_STRING_LEN];
         uint16_t port;
         int ret;
         if (addr->sa_family == AF_INET6) {
             ret = uv_ip6_name((const struct sockaddr_in6*)addr, name, sizeof(name));
             port = ((const struct sockaddr_in6*)addr)->sin6_port;
-            if (strcmp(name, "::ffff:127.0.0.1") == 0 || strcmp(name, "::1") == 0) {
-                strncpy_s(name, INET6_ADDRSTRLEN, "<localhost>", sizeof(name));
-            }
+            fmt = "[%s]:%d";
         } else {
             ret = uv_ip4_name((const struct sockaddr_in*)addr, name, sizeof(name));
             port = ((const struct sockaddr_in*)addr)->sin_port;
-            if (strcmp(name, "127.0.0.1") == 0) {
-                strncpy_s(name, INET6_ADDRSTRLEN, "<localhost>", sizeof(name));
-            }
+            fmt = "%s:%d";
         }
         if (ret) {
             return "Invalid address";
@@ -69,11 +66,25 @@ const char* DPS_NetAddrText(const struct sockaddr* addr)
          * Make sure name is NUL terminated
          */
         name[sizeof(name) - 1] = 0;
-        snprintf(txt, sizeof(txt), "%s/%d", name, ntohs(port));
+        snprintf(txt, sizeof(txt), fmt, name, ntohs(port));
         return txt;
     } else {
         return "NULL";
     }
+}
+
+uint16_t DPS_NetAddrPort(const struct sockaddr* addr)
+{
+    const struct sockaddr_storage* ss = (const struct sockaddr_storage*)addr;
+    uint16_t port = 0;
+    if (ss->ss_family == AF_INET6) {
+        const struct sockaddr_in6* ip6 = (const struct sockaddr_in6*)addr;
+        port = ntohs(ip6->sin6_port);
+    } else {
+        const struct sockaddr_in* ip4 = (const struct sockaddr_in*)addr;
+        port = ntohs(ip4->sin_port);
+    }
+    return port;
 }
 
 static const uint8_t IP4as6[16] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 0, 0, 0, 0 };

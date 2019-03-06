@@ -93,7 +93,7 @@ def _expect(children, pattern, allow_error=False, timeout=-1):
             raise RuntimeError(pattern[i])
 
 def _expect_listening(child):
-    _expect([child], ['is listening on port (\d+){}'.format(child.linesep)])
+    _expect([child], ['is listening on [0-9a-z.:%[\]]+:(\d+){}'.format(child.linesep)])
     child.port = int(child.match.group(1))
 
 def _expect_linked(child, args):
@@ -104,7 +104,7 @@ def _expect_linked(child, args):
             ports.append(curr)
         prev = curr
     while len(ports):
-        _expect([child], ['is linked to \S+/(\d+){}'.format(child.linesep)])
+        _expect([child], ['is linked to [0-9a-z.:%[\]]+:(\d+){}'.format(child.linesep)])
         ports.remove(child.match.group(1).decode())
 
 def expect_linked(child, ports):
@@ -136,8 +136,9 @@ def _expect_pub(children, topics, allow_error=False, timeout=-1, signers=None):
             patterns.remove(child.match.re.pattern.decode())
 
 def _expect_ack(children, allow_error=False, timeout=-1, signers=None):
+    linesep = (children[0] if children else None).linesep
     if signers != None:
-        pattern = ['Ack for pub UUID [0-9a-f-]+\([0-9]+\) \[(.*)\]']
+        pattern = ['Ack for pub UUID [0-9a-f-]+\([0-9]+\) \[(.*)\]{}'.format(linesep)]
     else:
         pattern = ['Ack for pub']
     if not allow_error:
@@ -390,7 +391,7 @@ def topic_match(pattern, args=''):
 def expect_reg_linked(children):
     if not isinstance(children, collections.Sequence):
         children = [children]
-    _expect(children, ['is linked to \S+/\d+'])
+    _expect(children, ['is linked to [0-9a-z.:%[\]]+:\d+'])
 
 def mesh_stress(args=''):
     global _ms

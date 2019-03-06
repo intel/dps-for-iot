@@ -54,7 +54,7 @@ func main() {
 	listenAddr := dps.CreateAddress()
 	dps.SetAddress(listenAddr, fmt.Sprintf(":%v", *port))
 	dps.StartNode(node, dps.MCAST_PUB_ENABLE_RECV, listenAddr)
-	fmt.Printf("Subscriber is listening on port %v\n", dps.GetPortNumber(node))
+	fmt.Printf("Subscriber is listening on %v\n", dps.NodeAddrToString(dps.GetListenAddress(node)))
 
 	if *payloadSize > 0 {
 		payload = make([]byte, *payloadSize)

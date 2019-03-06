@@ -126,7 +126,8 @@ int main(int argc, char** argv)
         DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
         return 1;
     }
-    DPS_PRINT("Registration services is listening on port %d\n", DPS_GetPortNumber(node));
+    DPS_PRINT("Registration services is listening on %s\n",
+              DPS_NodeAddrToString(DPS_GetListenAddress(node)));
 
     nodeDestroyed = DPS_CreateEvent();
 

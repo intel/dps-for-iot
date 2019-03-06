@@ -386,7 +386,7 @@ int main(int argc, char** argv)
         DPS_ERRPRINT("DPS_CreateNode failed: %s\n", DPS_ErrTxt(ret));
         return 1;
     }
-    DPS_PRINT("Publisher is listening on port %d\n", DPS_GetPortNumber(node));
+    DPS_PRINT("Publisher is listening on %s\n", DPS_NodeAddrToString(DPS_GetListenAddress(node)));
 
     for (i = 0; i < numLinks; ++i) {
         ret = DPS_LinkTo(node, linkHosts[i], linkPort[i], addr);

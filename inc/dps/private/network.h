@@ -230,13 +230,14 @@ DPS_Status DPS_MulticastSend(DPS_MulticastSender* sender, void* appCtx, uv_buf_t
 DPS_NetContext* DPS_NetStart(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnReceive cb);
 
 /**
- * Get the port the netCtx is listening on
+ * Get the address the netCtx is listening on
  *
+ * @param addr    The address to set
  * @param netCtx  Pointer to an opaque data structure that holds the state of the netCtx.
  *
- * @return the port
+ * @return The addr passed in.
  */
-uint16_t DPS_NetGetListenerPort(DPS_NetContext* netCtx);
+DPS_NodeAddress* DPS_NetGetListenAddress(DPS_NodeAddress* addr, DPS_NetContext* netCtx);
 
 /**
  * Stop listening for data
@@ -317,6 +318,15 @@ int DPS_SameAddr(const DPS_NodeAddress* addr1, const DPS_NodeAddress* addr2);
  * @return The text
  */
 const char* DPS_NetAddrText(const struct sockaddr* addr);
+
+/**
+ * Returns port of an address
+ *
+ * @param addr  The address
+ *
+ * @return The port
+ */
+uint16_t DPS_NetAddrPort(const struct sockaddr* addr);
 
 /**
  * Maps the supplied address to a v6 address if needed.

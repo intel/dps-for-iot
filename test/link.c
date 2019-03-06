@@ -54,6 +54,20 @@ static DPS_Node* CreateNode(DPS_KeyStore* keyStore)
     return node;
 }
 
+static uint16_t GetPortNumber(DPS_Node* node)
+{
+    uint16_t port = 0;
+    const DPS_NodeAddress* addr = DPS_GetListenAddress(node);
+    if (addr->inaddr.ss_family == AF_INET6) {
+        const struct sockaddr_in6* ip6 = (const struct sockaddr_in6*)&addr->inaddr;
+        port = ntohs(ip6->sin6_port);
+    } else {
+        const struct sockaddr_in* ip4 = (const struct sockaddr_in*)&addr->inaddr;
+        port = ntohs(ip4->sin_port);
+    }
+    return port;
+}
+
 static void TestRemoteLinkedAlready(void)
 {
     DPS_MemoryKeyStore* memoryKeyStore = NULL;
@@ -69,12 +83,12 @@ static void TestRemoteLinkedAlready(void)
     b = CreateNode(DPS_MemoryKeyStoreHandle(memoryKeyStore));
 
     addr = DPS_CreateAddress();
-    ret = DPS_LinkTo(a, NULL, DPS_GetPortNumber(b), addr);
+    ret = DPS_LinkTo(a, NULL, GetPortNumber(b), addr);
     ASSERT(ret == DPS_OK);
     DPS_DestroyAddress(addr);
 
     addr = DPS_CreateAddress();
-    ret = DPS_LinkTo(b, NULL, DPS_GetPortNumber(a), addr);
+    ret = DPS_LinkTo(b, NULL, GetPortNumber(a), addr);
     ASSERT(ret == DPS_OK);
     DPS_DestroyAddress(addr);
 

@@ -271,7 +271,7 @@ int main(int argc, char** argv)
         DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
         return EXIT_FAILURE;
     }
-    DPS_PRINT("Node is listening on port %d\n", DPS_GetPortNumber(node));
+    DPS_PRINT("Node is listening on %s\n", DPS_NodeAddrToString(DPS_GetListenAddress(node)));
     NetSend(node, &ep, version, type);
 
     DPS_TimedWaitForEvent(nodeDestroyed, 2000);

@@ -1043,7 +1043,7 @@ DPS_Status DPS_SendPublication(DPS_PublishRequest* req, DPS_Publication* pub, Re
         ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_PORT);
     }
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeUint16(&buf, node->port);
+        ret = CBOR_EncodeUint16(&buf, DPS_NetAddrPort((const struct sockaddr*)&node->addr.inaddr));
     }
     if (ret == DPS_OK) {
         ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_TTL);
@@ -1726,7 +1726,7 @@ void DPS_DumpPubs(DPS_Node* node)
 {
     if (DPS_Debug) {
         DPS_Publication* pub;
-        DPS_PRINT("Node %d:\n", node->port);
+        DPS_PRINT("Node %s:\n", DPS_NodeAddrToString(&node->addr));
         for (pub = node->publications; pub; pub = pub->next) {
             int16_t ttl = 0;
             if (!DPS_QueueEmpty(&pub->retainedQueue)) {

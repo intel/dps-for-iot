@@ -294,7 +294,7 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote)
         ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_PORT);
     }
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeInt16(&buf, node->port);
+        ret = CBOR_EncodeInt16(&buf, DPS_NetAddrPort((const struct sockaddr*)&node->addr.inaddr));
     }
     if (ret == DPS_OK) {
         ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_SEQ_NUM);
@@ -437,7 +437,7 @@ static DPS_Status SendSubscriptionAck(DPS_Node* node, RemoteNode* remote, uint32
         ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_PORT);
     }
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeInt16(&buf, node->port);
+        ret = CBOR_EncodeInt16(&buf, DPS_NetAddrPort((const struct sockaddr*)&node->addr.inaddr));
     }
     if (includeSub) {
         if (ret == DPS_OK) {
@@ -653,7 +653,8 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRx
      * out the resynchronization code.
      */
     if (((DPS_Rand() % SIMULATE_PACKET_LOSS) == 1)) {
-        DPS_PRINT("%d Simulating lost subscription from %s\n", node->port, DPS_NodeAddrToString(&ep->addr));
+        DPS_PRINT("%s Simulating lost subscription from %s\n", node->addrStr,
+                  DPS_NodeAddrToString(&ep->addr));
         return DPS_OK;
     }
 #endif
@@ -700,7 +701,8 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRx
      * Discard stale subscriptions
      */
     if (revision < remote->inbound.revision) {
-        DPS_DBGPRINT("%d Stale subscription %d from %s (expected %d)\n", node->port, revision, DESCRIBE(remote), remote->inbound.revision + 1);
+        DPS_DBGPRINT("%s Stale subscription %d from %s (expected %d)\n", node->addrStr, revision,
+                     DESCRIBE(remote), remote->inbound.revision + 1);
         goto DiscardAndExit;
     }
     /*
@@ -712,7 +714,8 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRx
     }
     remote->inbound.revision = revision;
 
-    DPS_DBGPRINT("Node %d received mesh id %08x from %s\n", node->port, UUID_32(&meshId), DESCRIBE(remote));
+    DPS_DBGPRINT("Node %s received mesh id %08x from %s\n", node->addrStr, UUID_32(&meshId),
+                 DESCRIBE(remote));
     /*
      * Loops can be detected by either end of a link and corrective action is required
      * to prevent interests from propagating around the loop. The corrective action is
@@ -728,7 +731,7 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRx
         DPS_DBGPRINT("Remote %s has unumuted\n", DESCRIBE(remote));
         ret = DPS_UnmuteRemoteNode(node, remote);
     } else if (DPS_MeshHasLoop(node, remote, &meshId)) {
-        DPS_DBGPRINT("Loop detected by %d for %s\n", node->port, DESCRIBE(remote));
+        DPS_DBGPRINT("Loop detected by %s for %s\n", node->addrStr, DESCRIBE(remote));
         if (!remote->outbound.muted) {
             DPS_MuteRemoteNode(node, remote);
         }
@@ -833,7 +836,8 @@ DPS_Status DPS_DecodeSubscriptionAck(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
      * out the resynchronization code.
      */
     if (((DPS_Rand() % SIMULATE_PACKET_LOSS) == 1)) {
-        DPS_PRINT("%d Simulating lost sub ack from %s\n", node->port, DPS_NodeAddrToString(&ep->addr));
+        DPS_PRINT("%s Simulating lost sub ack from %s\n", node->addrStr,
+                  DPS_NodeAddrToString(&ep->addr));
         return DPS_OK;
     }
 #endif
@@ -902,7 +906,7 @@ DPS_Status DPS_Subscribe(DPS_Subscription* sub, DPS_PublicationHandler handler)
      */
     if (!node->subscriptions) {
         DPS_GenerateUUID(&node->meshId);
-        DPS_DBGPRINT("Node mesh id for %d: %08x\n", node->port, UUID_32(&node->meshId));
+        DPS_DBGPRINT("Node mesh id for %s: %08x\n", node->addrStr, UUID_32(&node->meshId));
     }
     sub->next = node->subscriptions;
     node->subscriptions = sub;
