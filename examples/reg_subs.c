@@ -86,7 +86,8 @@ static void OnPubMatch(DPS_Subscription* sub, const DPS_Publication* pub, uint8_
     }
 }
 
-static DPS_Status RegisterAndJoin(DPS_Node* node, const char* host, uint16_t port, const char* tenant, uint8_t count, uint16_t timeout)
+static DPS_Status RegisterAndJoin(DPS_Node* node, const char* host, uint16_t port, const char* tenant,
+                                  uint8_t count, uint16_t timeout)
 {
     DPS_Status ret;
     DPS_RegistrationList* regs;
@@ -118,7 +119,7 @@ static DPS_Status RegisterAndJoin(DPS_Node* node, const char* host, uint16_t por
         goto Exit;
     }
     for (i = 0; i < regs->count; ++i) {
-        DPS_PRINT("  %s:%d\n", regs->list[i].host, regs->list[i].port);
+        DPS_PRINT("  %s\n", regs->list[i].addrText);
     }
     remoteAddr = DPS_CreateAddress();
     ret = DPS_Registration_LinkToSyn(node, regs, remoteAddr);
@@ -179,7 +180,7 @@ int main(int argc, char** argv)
     const char* host = "localhost";
     int listen = 0;
     DPS_NodeAddress* listenAddr = NULL;
-    struct sockaddr_in6 saddr;
+    char addrText[24];
     int port = 0;
     int subsRate = DPS_SUBSCRIPTION_UPDATE_RATE;
     int timeout = DPS_REGISTRATION_GET_TIMEOUT;
@@ -254,11 +255,8 @@ int main(int argc, char** argv)
         DPS_ERRPRINT("DPS_CreateAddress failed: %s\n", DPS_ErrTxt(DPS_ERR_RESOURCES));
         return 1;
     }
-    memset(&saddr, 0, sizeof(saddr));
-    saddr.sin6_family = AF_INET6;
-    saddr.sin6_port = htons(listen);
-    memcpy(&saddr.sin6_addr, &in6addr_any, sizeof(saddr.sin6_addr));
-    DPS_SetAddress(listenAddr, (const struct sockaddr*)&saddr);
+    snprintf(addrText, sizeof(addrText), "[::]:%d", listen);
+    DPS_SetAddress(listenAddr, addrText);
     ret = DPS_StartNode(node, DPS_MCAST_PUB_DISABLED, listenAddr);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));

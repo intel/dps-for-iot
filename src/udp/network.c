@@ -92,7 +92,7 @@ static void OnData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* uvBuf, const
         goto Exit;
     }
     ep.cn = NULL;
-    DPS_SetAddress(&ep.addr, addr);
+    DPS_NetSetAddr(&ep.addr, addr);
     netCtx->receiveCB(netCtx->node, &ep, DPS_OK, buf);
 Exit:
     DPS_NetRxBufferDecRef(buf);

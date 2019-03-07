@@ -329,6 +329,16 @@ const char* DPS_NetAddrText(const struct sockaddr* addr);
 uint16_t DPS_NetAddrPort(const struct sockaddr* addr);
 
 /**
+ * Set a node address
+ *
+ * @param addr  The address to set
+ * @param sa    The value to set
+ *
+ * @return The addr passed in.
+ */
+DPS_NodeAddress* DPS_NetSetAddr(DPS_NodeAddress* addr, const struct sockaddr* sa);
+
+/**
  * Maps the supplied address to a v6 address if needed.
  *
  * This is necessary when using dual-stack sockets.
@@ -336,6 +346,20 @@ uint16_t DPS_NetAddrPort(const struct sockaddr* addr);
  * @param addr  The address
  */
 void DPS_MapAddrToV6(struct sockaddr* addr);
+
+/**
+ * Split address text into host and service parts
+ *
+ * @param addrText The address text
+ * @param host The host part
+ * @param hostLen Size of the host part
+ * @param service The service part
+ * @param serviceLen Size of the service part
+ *
+ * @return DPS_OK if the split succeeds, an error otherwise
+ */
+DPS_Status DPS_SplitAddress(const char* addrText, char* host, size_t hostLen,
+                            char* service, size_t serviceLen);
 
 #ifdef __cplusplus
 }

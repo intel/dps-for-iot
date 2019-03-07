@@ -161,29 +161,6 @@ static void OnPutAck(DPS_Publication* pub, uint8_t* data, size_t len)
     uv_close((uv_handle_t*)&regPut->timer, OnPutTimerClosedOK);
 }
 
-static DPS_Status EncodeAddr(DPS_TxBuffer* buf, struct sockaddr* addr, uint16_t port)
-{
-    int r;
-    DPS_Status ret;
-    char txt[INET6_ADDRSTRLEN + 1];
-
-    if (addr->sa_family == AF_INET6) {
-        r  = uv_ip6_name((const struct sockaddr_in6*)addr, txt, sizeof(txt));
-    } else {
-        r  = uv_ip4_name((const struct sockaddr_in*)addr, txt, sizeof(txt));
-    }
-    if (r) {
-        DPS_ERRPRINT("Could not encode address %s\n", uv_err_name(r));
-        return DPS_ERR_INVALID;
-    }
-    DPS_DBGPRINT("EncodeAddr %s/%d\n", txt, port);
-    ret = CBOR_EncodeUint16(buf, port);
-    if (ret == DPS_OK) {
-        ret = CBOR_EncodeString(buf, txt);
-    }
-    return ret;
-}
-
 static void OnLinkedPut(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status ret, void* data)
 {
     RegPut* regPut = (RegPut*)data;
@@ -275,6 +252,7 @@ static DPS_Status BuildPutPayload(DPS_TxBuffer* payload, uint16_t port)
     DPS_DBGPRINT("Encoding %d addresses\n", extIfs);
     ret = CBOR_EncodeUint8(payload, (uint8_t)extIfs);
     assert(ret == DPS_OK);
+    port = htons(port);
     for (i = 0; i < numIfs; ++i) {
         uv_interface_address_t* ifn = &ifsAddrs[i];
         struct sockaddr* addr = (struct sockaddr*)&ifn->address;
@@ -282,7 +260,8 @@ static DPS_Status BuildPutPayload(DPS_TxBuffer* payload, uint16_t port)
             ((addr->sa_family == AF_INET6) && IN6_IS_ADDR_LINKLOCAL(&((const struct sockaddr_in6*)addr)->sin6_addr))) {
             continue;
         }
-        ret = EncodeAddr(payload, addr, port);
+        AddrSetPort(addr, port);
+        ret = CBOR_EncodeString(payload, DPS_NetAddrText(addr));
         if (ret != DPS_OK) {
             break;
         }
@@ -307,7 +286,9 @@ static uint16_t GetPortNumber(DPS_Node* node)
     return port;
 }
 
-DPS_Status DPS_Registration_Put(DPS_Node* node, const char* host, uint16_t port, const char* tenantString, uint16_t timeout, DPS_OnRegPutComplete cb, void* data)
+DPS_Status DPS_Registration_Put(DPS_Node* node, const char* host, uint16_t port,
+                                const char* tenantString, uint16_t timeout, DPS_OnRegPutComplete cb,
+                                void* data)
 {
     DPS_Status ret;
     RegPut* regPut;
@@ -371,7 +352,8 @@ static void OnPutComplete(DPS_Status status, void* data)
     DPS_SignalEvent(event, status);
 }
 
-DPS_Status DPS_Registration_PutSyn(DPS_Node* node, const char* host, uint16_t port, const char* tenantString, uint16_t timeout)
+DPS_Status DPS_Registration_PutSyn(DPS_Node* node, const char* host, uint16_t port,
+                                   const char* tenantString, uint16_t timeout)
 {
     DPS_Status ret;
     DPS_Event* event = DPS_CreateEvent();
@@ -460,9 +442,6 @@ static void OnPub(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* da
         uint8_t count;
         DPS_RxBuffer buf;
         DPS_NodeAddress* addr = NULL;
-        struct sockaddr_storage saddr;
-        struct sockaddr_in* in = (struct sockaddr_in*)&saddr;
-        struct sockaddr_in6* in6 = (struct sockaddr_in6*)&saddr;
 
         addr = DPS_CreateAddress();
         if (!addr) {
@@ -476,9 +455,8 @@ static void OnPub(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* da
         ret = CBOR_DecodeUint8(&buf, &count);
         if (ret == DPS_OK) {
             while (count--) {
-                uint16_t port;
-                char* host;
-                size_t hLen;
+                char* addrText;
+                size_t len;
                 /*
                  * Stop if we have reached the max registrations
                  */
@@ -489,35 +467,20 @@ static void OnPub(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* da
                     uv_close((uv_handle_t*)&regGet->timer, OnGetTimerClosed);
                     break;
                 }
-                if (CBOR_DecodeUint16(&buf, &port) != DPS_OK) {
+                if (CBOR_DecodeString(&buf, &addrText, &len) != DPS_OK) {
                     break;
                 }
-                if (CBOR_DecodeString(&buf, &host, &hLen) != DPS_OK) {
+                addrText = strndup(addrText, len);
+                if (!addrText) {
                     break;
                 }
-                host = strndup(host, hLen);
-                if (!host) {
-                    DPS_ERRPRINT("Failed to copy host - %s\n", DPS_ErrTxt(DPS_ERR_RESOURCES));
-                    break;
-                }
-                /*
-                 * Skip addresses we can determine are local to the requesting node.
-                 */
-                if (uv_inet_pton(AF_INET, host, &in->sin_addr) == 0) {
-                    in->sin_family = AF_INET;
-                    in->sin_port = htons(port);
-                    DPS_SetAddress(addr, (const struct sockaddr*)in);
-                } else if (uv_inet_pton(AF_INET6, host, &in6->sin6_addr) == 0) {
-                    in6->sin6_family = AF_INET6;
-                    in6->sin6_port = htons(port);
-                    DPS_SetAddress(addr, (const struct sockaddr*)in6);
-                }
+                DPS_SetAddress(addr, addrText);
                 if (!IsLocalAddr(addr, regGet->port)) {
-                    regGet->regs->list[regGet->regs->count].port = port;
-                    regGet->regs->list[regGet->regs->count].host = strndup(host, hLen);
+                    regGet->regs->list[regGet->regs->count].addrText = addrText;
                     ++regGet->regs->count;
+                } else {
+                    free(addrText);
                 }
-                free(host);
             }
         }
         DPS_DestroyAddress(addr);
@@ -755,7 +718,8 @@ DPS_Status DPS_Registration_LinkTo(DPS_Node* node, DPS_RegistrationList* regs, D
     while (untried) {
         uint32_t r = DPS_Rand() % regs->count;
         if (regs->list[r].flags == 0) {
-            char portStr[8];
+            char host[256];
+            char service[8];
             LinkTo* linkTo = malloc(sizeof(LinkTo));
 
             linkTo->cb = cb;
@@ -765,8 +729,10 @@ DPS_Status DPS_Registration_LinkTo(DPS_Node* node, DPS_RegistrationList* regs, D
 
             regs->list[r].flags = DPS_CANDIDATE_TRYING;
             DPS_DBGPRINT("Candidate %d TRYING\n", linkTo->candidate);
-            snprintf(portStr, sizeof(portStr), "%d", regs->list[r].port);
-            ret = DPS_ResolveAddress(node, regs->list[r].host, portStr, OnResolve, linkTo);
+            ret = DPS_SplitAddress(regs->list[r].addrText, host, sizeof(host), service, sizeof(service));
+            if (ret == DPS_OK) {
+                ret = DPS_ResolveAddress(node, host, service, OnResolve, linkTo);
+            }
             if (ret == DPS_OK) {
                 break;
             }
@@ -836,8 +802,8 @@ void DPS_DestroyRegistrationList(DPS_RegistrationList* regs)
 
     if (regs) {
         while (regs->size--) {
-            if (regs->list[regs->size].host) {
-                free(regs->list[regs->size].host);
+            if (regs->list[regs->size].addrText) {
+                free(regs->list[regs->size].addrText);
             }
         }
         free(regs);

@@ -1,8 +1,6 @@
 package dps
 
 import (
-	"net"
-	"strconv"
 	"sync"
 	"unsafe"
 )
@@ -15,24 +13,6 @@ import (
  #include <dps/dps.h>
  #include <dps/json.h>
  #include <dps/synchronous.h>
-
- static DPS_NodeAddress* setAddress(DPS_NodeAddress* addr, const char* host, uint16_t port) {
-         DPS_NodeAddress* ret;
-         struct sockaddr_storage ss;
-         struct sockaddr_in* sin = (struct sockaddr_in*)&ss;
-         if (uv_inet_pton(AF_INET, host, &sin->sin_addr) == 0) {
-                 sin->sin_family = AF_INET;
-                 sin->sin_port = htons(port);
-                 return DPS_SetAddress(addr, (struct sockaddr*)sin);
-         }
-         struct sockaddr_in6* sin6 = (struct sockaddr_in6*)&ss;
-         if (uv_inet_pton(AF_INET6, host, &sin6->sin6_addr) == 0) {
-                 sin6->sin6_family = AF_INET6;
-                 sin6->sin6_port = htons(port);
-                 return DPS_SetAddress(addr, (struct sockaddr*)sin6);
-         }
-         return NULL;
- }
 
  extern DPS_Status goKeyAndIdHandler(DPS_KeyStoreRequest* request);
  static DPS_Status keyAndIdHandler(DPS_KeyStoreRequest* request) {
@@ -273,17 +253,9 @@ func CreateAddress() *NodeAddress {
 }
 func SetAddress(addr *NodeAddress, hostport string) *NodeAddress {
 	caddr := (*C.DPS_NodeAddress)(addr)
-	host, port, err := net.SplitHostPort(hostport)
-	if err != nil {
-		return nil
-	}
-	cport, err := strconv.Atoi(port)
-	if err != nil {
-		return nil
-	}
-	chost := C.CString(host)
-	defer C.free(unsafe.Pointer(chost))
-	return (*NodeAddress)(C.setAddress(caddr, chost, C.uint16_t(cport)))
+	chostport := C.CString(hostport)
+	defer C.free(unsafe.Pointer(chostport))
+	return (*NodeAddress)(C.DPS_SetAddress(caddr, chostport))
 }
 func CopyAddress(dest *NodeAddress, src *NodeAddress) {
 	cdest := (*C.DPS_NodeAddress)(dest)

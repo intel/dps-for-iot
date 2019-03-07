@@ -64,7 +64,7 @@ void DPS_NetStop(DPS_NetContext* netCtx)
 
 DPS_NodeAddress* DPS_NetGetListenAddress(DPS_NodeAddress* addr, DPS_NetContext* netCtx)
 {
-    struct sockaddr_in6* saddr = &addr->inaddr;
+    struct sockaddr_in6* saddr = (struct sockaddr_in6*)&addr->inaddr;
     memzero_s(addr, sizeof(DPS_NodeAddress));
     saddr->sin6_family = AF_INET6;
     saddr->sin6_port = 10000;
@@ -132,7 +132,7 @@ void Fuzz_OnNetReceive(DPS_Node* node, const uint8_t* data, size_t len)
     DPS_NetRxBuffer* buf;
     sa.sin_family = AF_INET;
     sa.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-    DPS_SetAddress(&ep.addr, (const struct sockaddr *)&sa);
+    DPS_NetSetAddr(&ep.addr, (const struct sockaddr *)&sa);
     DPS_EndpointSetPort(&ep, 10001);
     ep.cn = NULL;
     buf = DPS_CreateNetRxBuffer(len);
@@ -152,7 +152,7 @@ void Fuzz_OnMulticastReceive(DPS_Node* node, const uint8_t* data, size_t len)
     DPS_NetRxBuffer* buf;
     sa.sin_family = AF_INET;
     sa.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-    DPS_SetAddress(&ep.addr, (const struct sockaddr *)&sa);
+    DPS_NetSetAddr(&ep.addr, (const struct sockaddr *)&sa);
     DPS_EndpointSetPort(&ep, 10001);
     ep.cn = NULL;
     buf = DPS_CreateNetRxBuffer(len);

@@ -248,10 +248,7 @@ int main(int argc, char** argv)
     memset(&ep, 0, sizeof(ep));
     if (port) {
         mcast = DPS_MCAST_PUB_DISABLED;
-        struct sockaddr_in sa;
-        sa.sin_family = AF_INET;
-        sa.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-        DPS_SetAddress(&ep.addr, (const struct sockaddr *) &sa);
+        DPS_SetAddress(&ep.addr, "127.0.0.1");
         DPS_EndpointSetPort(&ep, port);
     }
     if (encrypt) {

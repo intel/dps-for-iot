@@ -511,7 +511,6 @@ int main(int argc, char** argv)
     uint16_t killList[MAX_KILLS];
     int i;
     DPS_NodeAddress* listenAddr = NULL;
-    struct sockaddr_in6 saddr;
 
     DPS_Debug = 0;
 
@@ -580,11 +579,7 @@ int main(int argc, char** argv)
             DPS_ERRPRINT("Failed to create address: %s\n", DPS_ErrTxt(DPS_ERR_RESOURCES));
             return 1;
         }
-        memset(&saddr, 0, sizeof(saddr));
-        saddr.sin6_family = AF_INET6;
-        saddr.sin6_port = 0;
-        memcpy(&saddr.sin6_addr, &in6addr_loopback, sizeof(saddr.sin6_addr));
-        DPS_SetAddress(listenAddr, (const struct sockaddr*)&saddr);
+        DPS_SetAddress(listenAddr, "[::1]:0");
         ret = DPS_StartNode(node, DPS_FALSE, listenAddr);
         DPS_DestroyAddress(listenAddr);
         if (ret != DPS_OK) {

@@ -75,12 +75,12 @@ DPS_NodeAddress* DPS_CreateAddress(void);
 /**
  * Set a node address
  *
- * @param addr  The address to set
- * @param sa    The value to set
+ * @param addr        The address to set
+ * @param addrText    The text string for the address
  *
- * @return The addr passed in.
+ * @return The addr passed in, or NULL if an error occurred
  */
-DPS_NodeAddress* DPS_SetAddress(DPS_NodeAddress* addr, const struct sockaddr* sa);
+DPS_NodeAddress* DPS_SetAddress(DPS_NodeAddress* addr, const char* addrText);
 
 /**
  * Copy a node address

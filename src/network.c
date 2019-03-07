@@ -87,6 +87,19 @@ uint16_t DPS_NetAddrPort(const struct sockaddr* addr)
     return port;
 }
 
+DPS_NodeAddress* DPS_NetSetAddr(DPS_NodeAddress* addr, const struct sockaddr* sa)
+{
+    memzero_s(addr, sizeof(DPS_NodeAddress));
+    if (sa) {
+        if (sa->sa_family == AF_INET) {
+            memcpy_s(&addr->inaddr, sizeof(addr->inaddr), sa, sizeof(struct sockaddr_in));
+        } else if (sa->sa_family == AF_INET6) {
+            memcpy_s(&addr->inaddr, sizeof(addr->inaddr), sa, sizeof(struct sockaddr_in6));
+        }
+    }
+    return addr;
+}
+
 static const uint8_t IP4as6[16] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 0, 0, 0, 0 };
 
 int DPS_SameAddr(const DPS_NodeAddress* addr1, const DPS_NodeAddress* addr2)
@@ -128,19 +141,151 @@ int DPS_SameAddr(const DPS_NodeAddress* addr1, const DPS_NodeAddress* addr2)
     }
 }
 
-DPS_NodeAddress* DPS_SetAddress(DPS_NodeAddress* addr, const struct sockaddr* sa)
+/*
+ * addrText may be one of "host", "[host]", "host:service", or "[host]:service".
+ */
+DPS_Status DPS_SplitAddress(const char* addrText, char* host, size_t hostLen,
+                            char* service, size_t serviceLen)
 {
-    DPS_DBGTRACE();
+    const char *src = addrText;
+    const char *end;
+    char *dst;
 
-    memzero_s(addr, sizeof(DPS_NodeAddress));
-    if (sa) {
-        if (sa->sa_family == AF_INET) {
-            memcpy_s(&addr->inaddr, sizeof(addr->inaddr), sa, sizeof(struct sockaddr_in));
-        } else if (sa->sa_family == AF_INET6) {
-            memcpy_s(&addr->inaddr, sizeof(addr->inaddr), sa, sizeof(struct sockaddr_in6));
+    assert(hostLen > 0);
+    assert(serviceLen > 0);
+    host[0] = 0;
+    service[0] = 0;
+
+    /*
+     * Parse host
+     */
+    enum {
+          BEGIN,
+          IPV4_BEGIN,
+          IPV6_BEGIN,
+          IPV6_END,
+          END
+    } hostState = BEGIN;
+    dst = host;
+    end = &host[hostLen];
+    while (*src && (dst < end)) {
+        switch (hostState) {
+        case BEGIN:
+            if (*src == '[') {
+                src++;
+                hostState = IPV6_BEGIN;
+            } else {
+                hostState = IPV4_BEGIN;
+            }
+            break;
+        case IPV6_BEGIN:
+            if (*src == ']') {
+                src++;
+                hostState = IPV6_END;
+            } else {
+                *dst++ = *src++;
+            }
+            break;
+        case IPV6_END:
+            if (*src == ':') {
+                src++;
+                hostState = END;
+            } else {
+                return DPS_ERR_INVALID;
+            }
+            break;
+        case IPV4_BEGIN:
+            if (*src == ':') {
+                src++;
+                hostState = END;
+            } else {
+                *dst++ = *src++;
+            }
+            break;
+        case END:
+            goto Done;
         }
     }
+ Done:
+    if (dst == end) {
+        return DPS_ERR_OVERFLOW;
+    }
+    *dst = 0;
+    /*
+     * Parse service
+     */
+    dst = service;
+    end = &service[serviceLen];
+    while (*src && (dst < end)) {
+        *dst++ = *src++;
+    }
+    if (dst == end) {
+        return DPS_ERR_OVERFLOW;
+    }
+    *dst = 0;
+    return DPS_OK;
+}
+
+/*
+ * This is here for two reasons:
+ * 1. uv_inet_pton() will ignore scope IDs, so is not suitable for
+ *    link-local IPv6 addresses.
+ * 2. uv_getaddrinfo() provides a synchronous version, but still
+ *    requires a uv_loop_t argument which we don't have or need in
+ *    DPS_SetAddress().
+ */
+static DPS_Status GetAddrInfo(const char* host, const char* service, struct sockaddr_storage* inaddr)
+{
+    struct addrinfo hints;
+    struct addrinfo *ai = NULL;
+    int err;
+
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_flags = AI_NUMERICHOST | AI_NUMERICSERV;
+    err = getaddrinfo(host, service, &hints, &ai);
+    if (err) {
+        return DPS_ERR_NETWORK;
+    }
+    switch (ai->ai_family) {
+    case AF_INET:
+        memcpy(inaddr, ai->ai_addr, sizeof(struct sockaddr_in));
+        break;
+    case AF_INET6:
+        memcpy(inaddr, ai->ai_addr, sizeof(struct sockaddr_in6));
+        break;
+    default:
+        err = 1;
+        break;
+    }
+    freeaddrinfo(ai);
+    return err ? DPS_ERR_NETWORK : DPS_OK;
+}
+
+DPS_NodeAddress* DPS_SetAddress(DPS_NodeAddress* addr, const char* addrText)
+{
+    char host[INET6_ADDRSTRLEN + 2];
+    char service[8];
+    DPS_Status ret;
+
+    DPS_DBGTRACE();
+
+    if (!addr || !addrText) {
+        goto ErrorExit;
+    }
+    memset(addr, 0, sizeof(DPS_NodeAddress));
+    ret = DPS_SplitAddress(addrText, host, sizeof(host), service, sizeof(service));
+    if (ret != DPS_OK) {
+        goto ErrorExit;
+    }
+    ret = GetAddrInfo(host, service, &addr->u.inaddr);
+    if (ret != DPS_OK) {
+        goto ErrorExit;
+    }
     return addr;
+
+ErrorExit:
+    DPS_ERRPRINT("Invalid address %s\n", addrText);
+    return NULL;
 }
 
 void DPS_EndpointSetPort(DPS_NetEndpoint* ep, uint16_t port)

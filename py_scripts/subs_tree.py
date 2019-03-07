@@ -41,7 +41,7 @@ def on_pub(sub, pub, payload):
 def subscriber(topic, connect_addr):
     node = dps.create_node("/", key_store, None)
     addr = dps.create_address()
-    dps.set_address(addr, ('127.0.0.1', 0))
+    dps.set_address(addr, "127.0.0.1:0")
     dps.start_node(node, 0, addr)
     dps.destroy_address(addr)
     print("Subscriber is listening on %s" % dps.get_listen_address(node))

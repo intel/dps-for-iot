@@ -66,8 +66,7 @@ extern const char* DPS_RegistryTopicString;
  */
 typedef struct _DPS_Registration {
     uint8_t flags; /**< Registration entry flags */
-    uint16_t port; /**< The registered port */
-    char* host; /**< The registered host name or IP address */
+    char* addrText; /**< The registered address text */
 } DPS_Registration;
 
 /**

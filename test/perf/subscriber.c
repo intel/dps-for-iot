@@ -95,7 +95,7 @@ int main(int argc, char** argv)
     DPS_Subscription* subscription = NULL;
     int listenPort = 0;
     DPS_NodeAddress* listenAddr = NULL;
-    struct sockaddr_in6 saddr;
+    char addrText[24];
     DPS_Node* node;
 
     DPS_Debug = DPS_FALSE;
@@ -125,11 +125,8 @@ int main(int argc, char** argv)
         DPS_ERRPRINT("DPS_CreateAddress failed: %s\n", DPS_ErrTxt(ret));
         goto Exit;
     }
-    memset(&saddr, 0, sizeof(saddr));
-    saddr.sin6_family = AF_INET6;
-    saddr.sin6_port = htons(listenPort);
-    memcpy(&saddr.sin6_addr, &in6addr_loopback, sizeof(saddr.sin6_addr));
-    DPS_SetAddress(listenAddr, (const struct sockaddr*)&saddr);
+    snprintf(addrText, sizeof(addrText), "[::]:%d", listenPort);
+    DPS_SetAddress(listenAddr, addrText);
     ret = DPS_StartNode(node, DPS_MCAST_PUB_ENABLE_RECV, listenAddr);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));

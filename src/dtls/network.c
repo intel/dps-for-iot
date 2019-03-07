@@ -900,7 +900,7 @@ static DPS_NetConnection* CreateConnection(DPS_Node* node, const struct sockaddr
     cn->node = node;
     cn->type = type;
     cn->peerAddr = DPS_CreateAddress();
-    DPS_SetAddress(cn->peerAddr, addr);
+    DPS_NetSetAddr(cn->peerAddr, addr);
 
     uv_timer_init(node->loop, &cn->timer);
     cn->timerStatus = -1;
@@ -1385,7 +1385,7 @@ static void OnUdpData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, cons
     }
 
     nodeAddr = DPS_CreateAddress();
-    DPS_SetAddress(nodeAddr, addr);
+    DPS_NetSetAddr(nodeAddr, addr);
 
     cn = LookupConnection(netCtx, nodeAddr);
     if (!cn) {

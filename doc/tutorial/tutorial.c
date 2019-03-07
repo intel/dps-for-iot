@@ -208,13 +208,9 @@ int main(int argc, char** argv)
             goto Exit;
         }
 
-        struct sockaddr_in saddr;
-        memset(&saddr, 0, sizeof(saddr));
-        saddr.sin_family = AF_INET;
-        saddr.sin_port = htons(linkPort);
-        saddr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-
-        DPS_SetAddress(addr, (const struct sockaddr*)&saddr);
+        char addrText[24];
+        snprintf(addrText, sizeof(addrText), "127.0.0.1:%d", linkPort);
+        DPS_SetAddress(addr, addrText);
 
         ret = DPS_Link(node, addr, LinkComplete, NULL);
         DPS_DestroyAddress(addr);
@@ -373,6 +369,7 @@ static DPS_Status StartMulticastNode(DPS_Node* node)
 static DPS_Status StartUnicastNode(DPS_Node* node, uint16_t port)
 {
     DPS_Status ret;
+    char addrText[24];
     /** [Starting a unicast node] */
     int mcastPub = DPS_MCAST_PUB_DISABLED;
     DPS_NodeAddress* listenAddr = DPS_CreateAddress();
@@ -380,12 +377,8 @@ static DPS_Status StartUnicastNode(DPS_Node* node, uint16_t port)
         ret = DPS_ERR_RESOURCES;
         goto Exit;
     }
-    struct sockaddr_in6 saddr;
-    memset(&saddr, 0, sizeof(saddr));
-    saddr.sin6_family = AF_INET6;
-    saddr.sin6_port = htons(port);
-    memcpy(&saddr.sin6_addr, &in6addr_any, sizeof(saddr.sin6_addr));
-    DPS_SetAddress(listenAddr, (const struct sockaddr*)&saddr);
+    snprintf(addrText, sizeof(addrText), "[::]:%d", port);
+    DPS_SetAddress(listenAddr, addrText);
     ret = DPS_StartNode(node, mcastPub, listenAddr);
     if (ret != DPS_OK) {
         goto Exit;

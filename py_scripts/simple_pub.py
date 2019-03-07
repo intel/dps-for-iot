@@ -150,7 +150,7 @@ if args.port != 0:
 
 node = dps.create_node("/", key_store, node_id)
 listen_addr = dps.create_address()
-dps.set_address(listen_addr, (None, args.listen))
+dps.set_address(listen_addr, "[::]:%d" % (args.listen))
 dps.start_node(node, mcast, listen_addr)
 print("Publisher is listening on %s" % (dps.get_listen_address(node)))
 
@@ -158,7 +158,7 @@ if args.port != 0:
     addr = dps.create_address()
     if args.host == None:
         args.host = "127.0.0.1"
-    dps.set_address(addr, (args.host, args.port))
+    dps.set_address(addr, "%s:%d" % (args.host, args.port))
     ret = dps.link(node, addr, on_link)
     if ret == dps.OK:
         event.wait()

@@ -199,7 +199,7 @@ int main(int argc, char** argv)
     size_t numLinks = 0;
     int listenPort = 0;
     DPS_NodeAddress* listenAddr = NULL;
-    struct sockaddr_in6 saddr;
+    char addrText[24];
     DPS_Node* node = NULL;
     const Id* self = NULL;
     DPS_NodeAddress* addr = NULL;
@@ -280,11 +280,8 @@ int main(int argc, char** argv)
         DPS_ERRPRINT("DPS_CreateAddress failed: %s\n", DPS_ErrTxt(ret));
         goto Exit;
     }
-    memset(&saddr, 0, sizeof(saddr));
-    saddr.sin6_family = AF_INET6;
-    saddr.sin6_port = htons(listenPort);
-    memcpy(&saddr.sin6_addr, &in6addr_any, sizeof(saddr.sin6_addr));
-    DPS_SetAddress(listenAddr, (const struct sockaddr*)&saddr);
+    snprintf(addrText, sizeof(addrText), "[::]:%d", listenPort);
+    DPS_SetAddress(listenAddr, addrText);
     ret = DPS_StartNode(node, mcast, listenAddr);
     if (ret != DPS_OK) {
         goto Exit;

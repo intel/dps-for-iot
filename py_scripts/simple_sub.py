@@ -131,7 +131,7 @@ def on_pub(sub, pub, payload):
 
 node = dps.create_node("/", key_store, node_id)
 listen_addr = dps.create_address()
-dps.set_address(listen_addr, (None, args.listen))
+dps.set_address(listen_addr, "[::]:%d" % (args.listen))
 dps.start_node(node, dps.MCAST_PUB_ENABLE_RECV, listen_addr)
 print("Subscriber is listening on %s" % (dps.get_listen_address(node)))
 
