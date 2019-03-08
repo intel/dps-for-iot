@@ -1557,10 +1557,18 @@ DPS_Status DPS_Unlink(DPS_Node* node, const DPS_NodeAddress* addr, DPS_OnUnlinkC
 const char* DPS_NodeAddrToString(const DPS_NodeAddress* addr)
 {
     if (addr) {
-        return DPS_NetAddrText((const struct sockaddr*)&addr->inaddr);
-    } else {
-        return "NULL";
+        switch (addr->type) {
+        case DPS_DTLS:
+        case DPS_TCP:
+        case DPS_UDP:
+            return DPS_NetAddrText((const struct sockaddr*)&addr->u.inaddr);
+        case DPS_PIPE:
+            return addr->u.path;
+        default:
+            break;
+        }
     }
+    return "NULL";
 }
 
 DPS_NodeAddress* DPS_CreateAddress()

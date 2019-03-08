@@ -87,14 +87,16 @@ uint16_t DPS_NetAddrPort(const struct sockaddr* addr)
     return port;
 }
 
-DPS_NodeAddress* DPS_NetSetAddr(DPS_NodeAddress* addr, const struct sockaddr* sa)
+DPS_NodeAddress* DPS_NetSetAddr(DPS_NodeAddress* addr, DPS_NodeAddressType type,
+                                const struct sockaddr* sa)
 {
     memzero_s(addr, sizeof(DPS_NodeAddress));
+    addr->type = type;
     if (sa) {
         if (sa->sa_family == AF_INET) {
-            memcpy_s(&addr->inaddr, sizeof(addr->inaddr), sa, sizeof(struct sockaddr_in));
+            memcpy_s(&addr->u.inaddr, sizeof(addr->u.inaddr), sa, sizeof(struct sockaddr_in));
         } else if (sa->sa_family == AF_INET6) {
-            memcpy_s(&addr->inaddr, sizeof(addr->inaddr), sa, sizeof(struct sockaddr_in6));
+            memcpy_s(&addr->u.inaddr, sizeof(addr->u.inaddr), sa, sizeof(struct sockaddr_in6));
         }
     }
     return addr;
@@ -104,39 +106,51 @@ static const uint8_t IP4as6[16] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 0,
 
 int DPS_SameAddr(const DPS_NodeAddress* addr1, const DPS_NodeAddress* addr2)
 {
-    const struct sockaddr* a = (const struct sockaddr*)&addr1->inaddr;
-    const struct sockaddr* b = (const struct sockaddr*)&addr2->inaddr;
+    const struct sockaddr* a = (const struct sockaddr*)&addr1->u.inaddr;
+    const struct sockaddr* b = (const struct sockaddr*)&addr2->u.inaddr;
     struct sockaddr_in6 tmp;
 
-    if (a->sa_family != b->sa_family) {
-        uint32_t ip;
-        tmp.sin6_family = AF_INET6;
-        if (a->sa_family == AF_INET6) {
-            const struct sockaddr_in* ipb = (const struct sockaddr_in*)b;
-            tmp.sin6_port = ipb->sin_port;
-            ip = ipb->sin_addr.s_addr;
-        } else {
-            const struct sockaddr_in* ipa = (const struct sockaddr_in*)a;
-            tmp.sin6_port = ipa->sin_port;
-            ip = ipa->sin_addr.s_addr;
-        }
-        memcpy_s(&tmp.sin6_addr, sizeof(tmp.sin6_addr), IP4as6, 12);
-        memcpy_s((uint8_t*)&tmp.sin6_addr + 12, sizeof(tmp.sin6_addr) - 12, &ip, 4);
-        if (a->sa_family == AF_INET6) {
-            b = (const struct sockaddr*)&tmp;
-        } else {
-            a = (const struct sockaddr*)&tmp;
-        }
+    if (addr1->type != addr2->type) {
+        return DPS_FALSE;
     }
-    if (a->sa_family == AF_INET6 && b->sa_family == AF_INET6) {
-        const struct sockaddr_in6* ip6a = (const struct sockaddr_in6*)a;
-        const struct sockaddr_in6* ip6b = (const struct sockaddr_in6*)b;
-        return (ip6a->sin6_port == ip6b->sin6_port) && (memcmp(&ip6a->sin6_addr, &ip6b->sin6_addr, 16) == 0);
-    } else if (a->sa_family == AF_INET && b->sa_family == AF_INET) {
-        const struct sockaddr_in* ipa = (const struct sockaddr_in*)a;
-        const struct sockaddr_in* ipb = (const struct sockaddr_in*)b;
-        return (ipa->sin_port == ipb->sin_port) && (ipa->sin_addr.s_addr == ipb->sin_addr.s_addr);
-    } else {
+    switch (addr1->type) {
+    case DPS_DTLS:
+    case DPS_TCP:
+    case DPS_UDP:
+        if (a->sa_family != b->sa_family) {
+            uint32_t ip;
+            tmp.sin6_family = AF_INET6;
+            if (a->sa_family == AF_INET6) {
+                const struct sockaddr_in* ipb = (const struct sockaddr_in*)b;
+                tmp.sin6_port = ipb->sin_port;
+                ip = ipb->sin_addr.s_addr;
+            } else {
+                const struct sockaddr_in* ipa = (const struct sockaddr_in*)a;
+                tmp.sin6_port = ipa->sin_port;
+                ip = ipa->sin_addr.s_addr;
+            }
+            memcpy_s(&tmp.sin6_addr, sizeof(tmp.sin6_addr), IP4as6, 12);
+            memcpy_s((uint8_t*)&tmp.sin6_addr + 12, sizeof(tmp.sin6_addr) - 12, &ip, 4);
+            if (a->sa_family == AF_INET6) {
+                b = (const struct sockaddr*)&tmp;
+            } else {
+                a = (const struct sockaddr*)&tmp;
+            }
+        }
+        if (a->sa_family == AF_INET6 && b->sa_family == AF_INET6) {
+            const struct sockaddr_in6* ip6a = (const struct sockaddr_in6*)a;
+            const struct sockaddr_in6* ip6b = (const struct sockaddr_in6*)b;
+            return (ip6a->sin6_port == ip6b->sin6_port) &&
+                (memcmp(&ip6a->sin6_addr, &ip6b->sin6_addr, 16) == 0);
+        } else if (a->sa_family == AF_INET && b->sa_family == AF_INET) {
+            const struct sockaddr_in* ipa = (const struct sockaddr_in*)a;
+            const struct sockaddr_in* ipb = (const struct sockaddr_in*)b;
+            return (ipa->sin_port == ipb->sin_port) && (ipa->sin_addr.s_addr == ipb->sin_addr.s_addr);
+        }
+        return DPS_FALSE;
+    case DPS_PIPE:
+        return !strcmp(addr1->u.path, addr2->u.path);
+    default:
         return DPS_FALSE;
     }
 }
@@ -272,16 +286,36 @@ DPS_NodeAddress* DPS_SetAddress(DPS_NodeAddress* addr, const char* addrText)
     if (!addr || !addrText) {
         goto ErrorExit;
     }
+
     memset(addr, 0, sizeof(DPS_NodeAddress));
-    ret = DPS_SplitAddress(addrText, host, sizeof(host), service, sizeof(service));
-    if (ret != DPS_OK) {
-        goto ErrorExit;
+#if defined(DPS_USE_DTLS)
+    addr->type = DPS_DTLS;
+#elif defined(DPS_USE_TCP)
+    addr->type = DPS_TCP;
+#elif defined(DPS_USE_UDP)
+    addr->type = DPS_UDP;
+#elif defined(DPS_USE_PIPE)
+    addr->type = DPS_PIPE;
+#endif
+    switch (addr->type) {
+    case DPS_DTLS:
+    case DPS_TCP:
+    case DPS_UDP:
+        ret = DPS_SplitAddress(addrText, host, sizeof(host), service, sizeof(service));
+        if (ret != DPS_OK) {
+            goto ErrorExit;
+        }
+        ret = GetAddrInfo(host, service, &addr->u.inaddr);
+        if (ret != DPS_OK) {
+            goto ErrorExit;
+        }
+        return addr;
+    case DPS_PIPE:
+        strncpy(addr->u.path, addrText, DPS_NODE_ADDRESS_PATH_MAX - 1);
+        return addr;
+    default:
+        break;
     }
-    ret = GetAddrInfo(host, service, &addr->u.inaddr);
-    if (ret != DPS_OK) {
-        goto ErrorExit;
-    }
-    return addr;
 
 ErrorExit:
     DPS_ERRPRINT("Invalid address %s\n", addrText);
@@ -290,15 +324,22 @@ ErrorExit:
 
 void DPS_EndpointSetPort(DPS_NetEndpoint* ep, uint16_t port)
 {
-    if (!ep->cn) {
-        port = htons(port);
-        if (ep->addr.inaddr.ss_family == AF_INET6) {
-            struct sockaddr_in6* ip6 = (struct sockaddr_in6*)&ep->addr.inaddr;
-            ip6->sin6_port = port;
-        } else {
-            struct sockaddr_in* ip4 = (struct sockaddr_in*)&ep->addr.inaddr;
-            ip4->sin_port = port;
+    switch (ep->addr.type) {
+    case DPS_UDP:
+        if (!ep->cn) {
+            port = htons(port);
+            if (ep->addr.u.inaddr.ss_family == AF_INET6) {
+                struct sockaddr_in6* ip6 = (struct sockaddr_in6*)&ep->addr.u.inaddr;
+                ip6->sin6_port = port;
+            } else {
+                struct sockaddr_in* ip4 = (struct sockaddr_in*)&ep->addr.u.inaddr;
+                ip4->sin_port = port;
+            }
         }
+        break;
+    default:
+        assert(ep->cn);
+        break;
     }
 }
 

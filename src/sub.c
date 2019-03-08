@@ -255,8 +255,8 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote)
      * The unprotected map
      */
     len += CBOR_SIZEOF_MAP(2) + 2 * CBOR_SIZEOF(uint8_t) +
-           CBOR_SIZEOF(uint16_t) +
-           CBOR_SIZEOF(uint32_t);
+           CBOR_SIZEOF(uint16_t) + /* port */
+           CBOR_SIZEOF(uint32_t);  /* seq_num */
     if (!remote->unlink) {
         interests = remote->outbound.deltaInd ? remote->outbound.delta : remote->outbound.interests;
         len += 4 * CBOR_SIZEOF(uint8_t) +
@@ -290,11 +290,25 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote)
     if (ret == DPS_OK) {
         ret = CBOR_EncodeMap(&buf, remote->unlink ? 2 : 6);
     }
-    if (ret == DPS_OK) {
-        ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_PORT);
-    }
-    if (ret == DPS_OK) {
-        ret = CBOR_EncodeInt16(&buf, DPS_NetAddrPort((const struct sockaddr*)&node->addr.inaddr));
+    /* TODO encode addrText here instead? */
+    switch (node->addr.type) {
+    case DPS_DTLS:
+    case DPS_TCP:
+    case DPS_UDP:
+        if (ret == DPS_OK) {
+            ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_PORT);
+        }
+        if (ret == DPS_OK) {
+            ret = CBOR_EncodeUint16(&buf,
+                                    DPS_NetAddrPort((const struct sockaddr*)&node->addr.u.inaddr));
+        }
+        break;
+    case DPS_PIPE:
+        /* TODO */
+        break;
+    default:
+        ret = DPS_ERR_INVALID;
+        break;
     }
     if (ret == DPS_OK) {
         ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_SEQ_NUM);
@@ -398,8 +412,8 @@ static DPS_Status SendSubscriptionAck(DPS_Node* node, RemoteNode* remote, uint32
      * The unprotected map
      */
     len += CBOR_SIZEOF_MAP(2) + 2 * CBOR_SIZEOF(uint8_t) +
-        CBOR_SIZEOF(uint16_t) +
-        CBOR_SIZEOF(uint32_t);
+        CBOR_SIZEOF(uint16_t) + /* port */
+        CBOR_SIZEOF(uint32_t);  /* ack_seq_num */
     if (includeSub) {
         len += CBOR_SIZEOF(uint8_t) + CBOR_SIZEOF(uint32_t);
         interests = remote->outbound.deltaInd ? remote->outbound.delta : remote->outbound.interests;
@@ -433,11 +447,25 @@ static DPS_Status SendSubscriptionAck(DPS_Node* node, RemoteNode* remote, uint32
     if (ret == DPS_OK) {
         ret = CBOR_EncodeMap(&buf, includeSub ? 7 : 2);
     }
-    if (ret == DPS_OK) {
-        ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_PORT);
-    }
-    if (ret == DPS_OK) {
-        ret = CBOR_EncodeInt16(&buf, DPS_NetAddrPort((const struct sockaddr*)&node->addr.inaddr));
+    /* TODO encode addrText here instead? */
+    switch (node->addr.type) {
+    case DPS_DTLS:
+    case DPS_TCP:
+    case DPS_UDP:
+        if (ret == DPS_OK) {
+            ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_PORT);
+        }
+        if (ret == DPS_OK) {
+            ret = CBOR_EncodeUint16(&buf,
+                                    DPS_NetAddrPort((const struct sockaddr*)&node->addr.u.inaddr));
+        }
+        break;
+    case DPS_PIPE:
+        /* TODO */
+        break;
+    default:
+        ret = DPS_ERR_INVALID;
+        break;
     }
     if (includeSub) {
         if (ret == DPS_OK) {

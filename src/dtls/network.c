@@ -628,10 +628,11 @@ static int OnTLSSend(void* data, const unsigned char *buf, size_t len)
     DPS_DBGPRINT("Created sendReq=%p\n", sendReq);
 
     struct sockaddr_storage inaddr;
-    memcpy_s(&inaddr, sizeof(inaddr), &cn->peer.addr.inaddr, sizeof(cn->peer.addr.inaddr));
+    memcpy_s(&inaddr, sizeof(inaddr), &cn->peer.addr.u.inaddr, sizeof(cn->peer.addr.u.inaddr));
     DPS_MapAddrToV6((struct sockaddr *)&inaddr);
 
-    int err = uv_udp_send(&sendReq->uvReq, GetSocket(cn), &sendReq->buf, 1, (const struct sockaddr *)&inaddr, OnSendComplete);
+    int err = uv_udp_send(&sendReq->uvReq, GetSocket(cn), &sendReq->buf, 1,
+                          (const struct sockaddr *)&inaddr, OnSendComplete);
     if (err) {
         DPS_ERRPRINT("Send failed: %s\n", uv_err_name(err));
         goto ErrorExit;
@@ -900,7 +901,7 @@ static DPS_NetConnection* CreateConnection(DPS_Node* node, const struct sockaddr
     cn->node = node;
     cn->type = type;
     cn->peerAddr = DPS_CreateAddress();
-    DPS_NetSetAddr(cn->peerAddr, addr);
+    DPS_NetSetAddr(cn->peerAddr, DPS_DTLS, addr);
 
     uv_timer_init(node->loop, &cn->timer);
     cn->timerStatus = -1;
@@ -1274,7 +1275,7 @@ static int TLSHandshake(DPS_NetConnection* cn)
 
     if (ret == MBEDTLS_ERR_SSL_HELLO_VERIFY_REQUIRED) {
         DPS_DBGPRINT("Hello verification required, resetting cn=%p\n", cn);
-        ret = ResetConnection(cn, (const struct sockaddr*)&cn->peer.addr.inaddr);
+        ret = ResetConnection(cn, (const struct sockaddr*)&cn->peer.addr.u.inaddr);
         if (ret != 0) {
             DPS_ERRPRINT("Reset connection failed - %s\n", TLSErrTxt(ret));
             ret = 0;
@@ -1385,7 +1386,7 @@ static void OnUdpData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, cons
     }
 
     nodeAddr = DPS_CreateAddress();
-    DPS_NetSetAddr(nodeAddr, addr);
+    DPS_NetSetAddr(nodeAddr, DPS_DTLS, addr);
 
     cn = LookupConnection(netCtx, nodeAddr);
     if (!cn) {
@@ -1463,7 +1464,7 @@ DPS_NetContext* DPS_NetStart(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnReceiv
     netCtx->node = node;
     netCtx->receiveCB = cb;
     if (addr) {
-        sa = (struct sockaddr*)&addr->inaddr;
+        sa = (struct sockaddr*)&addr->u.inaddr;
     } else {
         ret = uv_ip6_addr("::", 0, (struct sockaddr_in6*)&ss);
         if (ret) {
@@ -1503,11 +1504,12 @@ DPS_NodeAddress* DPS_NetGetListenAddress(DPS_NodeAddress* addr, DPS_NetContext* 
     if (!netCtx) {
         return addr;
     }
+    addr->type = DPS_DTLS;
     len = sizeof(struct sockaddr_in6);
-    if (uv_udp_getsockname(&netCtx->rxSocket, (struct sockaddr*)&addr->inaddr, &len)) {
+    if (uv_udp_getsockname(&netCtx->rxSocket, (struct sockaddr*)&addr->u.inaddr, &len)) {
         return addr;
     }
-    DPS_DBGPRINT("Listener address = %s\n", DPS_NetAddrText((const struct sockaddr*)&addr->inaddr));
+    DPS_DBGPRINT("Listener address = %s\n", DPS_NodeAddrToString(addr));
     return addr;
 }
 
@@ -1580,7 +1582,7 @@ DPS_Status DPS_NetSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf
         }
         return DPS_OK;
     }
-    ep->cn = CreateConnection(node, (const struct sockaddr*)&ep->addr.inaddr, MBEDTLS_SSL_IS_CLIENT);
+    ep->cn = CreateConnection(node, (const struct sockaddr*)&ep->addr.u.inaddr, MBEDTLS_SSL_IS_CLIENT);
     if (!ep->cn) {
         goto ErrorExit;
     }

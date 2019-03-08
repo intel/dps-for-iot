@@ -278,7 +278,7 @@ static uint16_t GetPortNumber(DPS_Node* node)
 {
     uint16_t port = 0;
     const DPS_NodeAddress* addr = DPS_GetListenAddress(node);
-    const struct sockaddr* sa = (const struct sockaddr*)&addr->inaddr;
+    const struct sockaddr* sa = (const struct sockaddr*)&addr->u.inaddr;
     if (sa->sa_family == AF_INET6) {
         port = ntohs(((const struct sockaddr_in6*)sa)->sin6_port);
     } else {

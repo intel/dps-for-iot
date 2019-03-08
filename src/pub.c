@@ -1021,8 +1021,8 @@ DPS_Status DPS_SendPublication(DPS_PublishRequest* req, DPS_Publication* pub, Re
         CBOR_SIZEOF(uint8_t) +
         CBOR_SIZEOF(uint8_t) +
         CBOR_SIZEOF_MAP(2) + 2 * CBOR_SIZEOF(uint8_t) +
-        CBOR_SIZEOF(uint16_t) +
-        CBOR_SIZEOF(int16_t);
+        CBOR_SIZEOF(uint16_t) + /* port */
+        CBOR_SIZEOF(int16_t);   /* ttl */
     ret = DPS_TxBufferInit(&buf, NULL, len);
     if (ret == DPS_OK) {
         ret = CBOR_EncodeArray(&buf, 5);
@@ -1039,11 +1039,25 @@ DPS_Status DPS_SendPublication(DPS_PublishRequest* req, DPS_Publication* pub, Re
     if (ret == DPS_OK) {
         ret = CBOR_EncodeMap(&buf, 2);
     }
-    if (ret == DPS_OK) {
-        ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_PORT);
-    }
-    if (ret == DPS_OK) {
-        ret = CBOR_EncodeUint16(&buf, DPS_NetAddrPort((const struct sockaddr*)&node->addr.inaddr));
+    /* TODO encode addrText here instead? */
+    switch (node->addr.type) {
+    case DPS_DTLS:
+    case DPS_TCP:
+    case DPS_UDP:
+        if (ret == DPS_OK) {
+            ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_PORT);
+        }
+        if (ret == DPS_OK) {
+            ret = CBOR_EncodeUint16(&buf,
+                                    DPS_NetAddrPort((const struct sockaddr*)&node->addr.u.inaddr));
+        }
+        break;
+    case DPS_PIPE:
+        /* TODO */
+        break;
+    default:
+        ret = DPS_ERR_INVALID;
+        break;
     }
     if (ret == DPS_OK) {
         ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_TTL);

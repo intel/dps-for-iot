@@ -70,10 +70,33 @@ extern "C" {
 #define DPS_NODE_ADDRESS_MAX_STRING_LEN (1 + INET6_ADDRSTRLEN + 1 + UV_IF_NAMESIZE + 2 + 8)
 
 /**
+ * Address types
+ *
+ * These correspond to the supported transports.
+ */
+typedef enum {
+    DPS_UNKNOWN = 0,            /**< Unknown type */
+    DPS_DTLS,                   /**< DTLS */
+    DPS_TCP,                    /**< TCP */
+    DPS_UDP,                    /**< UDP */
+    DPS_PIPE,                   /**< Named pipe */
+} DPS_NodeAddressType;
+
+#ifdef _WIN32
+#define DPS_NODE_ADDRESS_PATH_MAX 256 /**< Maximum pipe name length */
+#else
+#define DPS_NODE_ADDRESS_PATH_MAX 108 /**< Maximum pipe name length */
+#endif
+
+/**
  * Address type
  */
 typedef struct _DPS_NodeAddress {
-    struct sockaddr_storage inaddr; /**< Storage for socket address type */
+    DPS_NodeAddressType type;      /**< Type of address */
+    union {
+        struct sockaddr_storage inaddr; /**< Storage for IP address type */
+        char path[DPS_NODE_ADDRESS_PATH_MAX]; /**< Storage for pipe name */
+    } u; /**< Type specific storage */
 } DPS_NodeAddress;
 
 /**

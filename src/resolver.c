@@ -53,10 +53,17 @@ static void GetAddrInfoCB(uv_getaddrinfo_t* req, int status, struct addrinfo* re
 
     if (status == 0) {
         DPS_NodeAddress addr;
+#if defined(DPS_USE_DTLS)
+        addr.type = DPS_DTLS;
+#elif defined(DPS_USE_TCP)
+        addr.type = DPS_TCP;
+#elif defined(DPS_USE_UDP)
+        addr.type = DPS_UDP;
+#endif
         if (res->ai_family == AF_INET6) {
-            memcpy_s(&addr.inaddr, sizeof(addr.inaddr), res->ai_addr, sizeof(struct sockaddr_in6));
+            memcpy_s(&addr.u.inaddr, sizeof(addr.u.inaddr), res->ai_addr, sizeof(struct sockaddr_in6));
         } else {
-            memcpy_s(&addr.inaddr, sizeof(addr.inaddr), res->ai_addr, sizeof(struct sockaddr_in));
+            memcpy_s(&addr.u.inaddr, sizeof(addr.u.inaddr), res->ai_addr, sizeof(struct sockaddr_in));
         }
         resolver->cb(resolver->node, &addr, resolver->data);
         uv_freeaddrinfo(res);

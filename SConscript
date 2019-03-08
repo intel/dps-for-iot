@@ -68,6 +68,9 @@ elif env['transport'] == 'dtls':
 elif env['transport'] == 'tcp':
     srcs.extend(['src/multicast/network.c',
                  'src/tcp/network.c'])
+elif env['transport'] == 'pipe':
+    srcs.extend(['src/multicast/network.c',
+                 'src/pipe/network.c'])
 elif env['transport'] == 'fuzzer':
     srcs.extend(['src/fuzzer/network.c'])
 
@@ -256,8 +259,6 @@ testenv.Append(LIBS = [lib, env['DPS_LIBS']])
 if extUV: testenv.Append(CPPPATH = ['#/ext/libuv/include'])
 
 testsrcs = ['test/hist_unit.c',
-            'test/make_mesh.c',
-            'test/mesh_stress.c',
             'test/countvec.c',
             'test/rle_compression.c',
             'test/topic_match.c',
@@ -268,6 +269,11 @@ testsrcs = ['test/hist_unit.c',
             'test/jsontest.c',
             'test/version.c',
             'test/keystoretest.c']
+
+# TODO fix these for pipes
+if testenv['transport'] == 'udp' or testenv['transport'] == 'tcp' or testenv['transport'] == 'dtls':
+    testsrcs.extend(['test/make_mesh.c',
+                     'test/mesh_stress.c'])
 
 Depends(testsrcs, ext_objs)
 

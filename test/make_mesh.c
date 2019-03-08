@@ -178,7 +178,7 @@ static int IntArg(char* opt, char*** argp, int* argcp, int* val, int min, int ma
 
 static uint16_t GetPort(const DPS_NodeAddress* nodeAddr)
 {
-    const struct sockaddr* addr = (const struct sockaddr*)&nodeAddr->inaddr;
+    const struct sockaddr* addr = (const struct sockaddr*)&nodeAddr->u.inaddr;
     if (addr->sa_family == AF_INET6) {
         return ntohs(((const struct sockaddr_in6*)addr)->sin6_port);
     } else {

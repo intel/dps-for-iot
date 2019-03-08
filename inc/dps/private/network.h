@@ -332,11 +332,13 @@ uint16_t DPS_NetAddrPort(const struct sockaddr* addr);
  * Set a node address
  *
  * @param addr  The address to set
+ * @param type  The IP address type
  * @param sa    The value to set
  *
  * @return The addr passed in.
  */
-DPS_NodeAddress* DPS_NetSetAddr(DPS_NodeAddress* addr, const struct sockaddr* sa);
+DPS_NodeAddress* DPS_NetSetAddr(DPS_NodeAddress* addr, DPS_NodeAddressType type,
+                                const struct sockaddr* sa);
 
 /**
  * Maps the supplied address to a v6 address if needed.

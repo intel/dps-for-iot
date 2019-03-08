@@ -114,7 +114,7 @@ static void OnMcastRx(uv_udp_t* handle, ssize_t nread, const uv_buf_t* uvBuf, co
         DPS_DBGPRINT("Received buffer of size %zd from %s\n", nread, DPS_NetAddrText(addr));
     }
     ep.cn = NULL;
-    DPS_NetSetAddr(&ep.addr, addr);
+    DPS_NetSetAddr(&ep.addr, DPS_UDP, addr);
     receiver->cb(receiver->node, &ep, DPS_OK, buf);
 Exit:
     DPS_NetRxBufferDecRef(buf);
