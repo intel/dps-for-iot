@@ -83,6 +83,24 @@ DPS_NodeAddress* DPS_CreateAddress(void);
 DPS_NodeAddress* DPS_SetAddress(DPS_NodeAddress* addr, const char* addrText);
 
 /**
+ * Split text string for address into host and service parts.
+ *
+ * The address text may be one of "host", "[host]", "host:service", or
+ * "[host]:service".  The result of this function will be "host" and
+ * "service" for all the cases.
+ *
+ * @param addrText    The text string for the address
+ * @param host        The host result
+ * @param hostLen     The size of @c host
+ * @param service     The service result
+ * @param serviceLen  The size of @c service
+ *
+ * @return DPS_OK if successful, an error otherwise
+ */
+DPS_Status DPS_SplitAddress(const char* addrText, char* host, size_t hostLen, char* service,
+                            size_t serviceLen);
+
+/**
  * Copy a node address
  *
  * @param dest The address to copy to.

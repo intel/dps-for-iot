@@ -155,9 +155,6 @@ int DPS_SameAddr(const DPS_NodeAddress* addr1, const DPS_NodeAddress* addr2)
     }
 }
 
-/*
- * addrText may be one of "host", "[host]", "host:service", or "[host]:service".
- */
 DPS_Status DPS_SplitAddress(const char* addrText, char* host, size_t hostLen,
                             char* service, size_t serviceLen)
 {
@@ -165,8 +162,11 @@ DPS_Status DPS_SplitAddress(const char* addrText, char* host, size_t hostLen,
     const char *end;
     char *dst;
 
-    assert(hostLen > 0);
-    assert(serviceLen > 0);
+    DPS_DBGTRACE();
+
+    if (!host || !hostLen || !service || !serviceLen) {
+        return DPS_ERR_ARGS;
+    }
     host[0] = 0;
     service[0] = 0;
 

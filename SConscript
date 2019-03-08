@@ -346,7 +346,9 @@ Depends(examplesrcs, ext_objs)
 
 exampleprogs = []
 for example in examplesrcs:
-    exampleprogs.append(exampleenv.Program([example, 'examples/keys.c']))
+    exampleprogs.append(exampleenv.Program([example,
+                                            'examples/keys.c',
+                                            'examples/common.c']))
 
 exampleenv.Install('#/build/dist/bin', exampleprogs)
 

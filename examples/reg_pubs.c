@@ -30,6 +30,7 @@
 #include <dps/synchronous.h>
 #include <dps/registration.h>
 #include <dps/event.h>
+#include "common.h"
 #include "keys.h"
 
 #define A_SIZEOF(a)  (sizeof(a) / sizeof((a)[0]))
@@ -194,31 +195,6 @@ static DPS_Status FindAndLink(DPS_Node* node, const char* host, uint16_t port, c
     }
     DPS_DestroyRegistrationList(regs);
     return ret;
-}
-
-static int IntArg(char* opt, char*** argp, int* argcp, int* val, int min, int max)
-{
-    char* p;
-    char** arg = *argp;
-    int argc = *argcp;
-
-    if (strcmp(*arg++, opt) != 0) {
-        return 0;
-    }
-    if (!--argc) {
-        return 0;
-    }
-    *val = strtol(*arg++, &p, 10);
-    if (*p) {
-        return 0;
-    }
-    if (*val < min || *val > max) {
-        DPS_PRINT("Value for option %s must be in range %d..%d\n", opt, min, max);
-        return 0;
-    }
-    *argp = arg;
-    *argcp = argc;
-    return 1;
 }
 
 int main(int argc, char** argv)
