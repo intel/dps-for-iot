@@ -111,7 +111,7 @@ typedef void (*DPS_OnRegPutComplete)(DPS_Status status, void* data);
  *
  * @param node          The local node to register
  * @param host          The host name or IP address to register with
- * @param port          The port number
+ * @param service       The port or service name
  * @param tenantString  Topic string identifying the tenant
  * @param timeout       Timeout in milliseconds
  * @param cb            Callback called when the registration completes.
@@ -120,7 +120,7 @@ typedef void (*DPS_OnRegPutComplete)(DPS_Status status, void* data);
  * @return DPS_OK if the registration put request was successfully initiated, otherwise returns an
  *         error status and the callback function will not be called.
  */
-DPS_Status DPS_Registration_Put(DPS_Node* node, const char* host, uint16_t port, const char* tenantString, uint16_t timeout, DPS_OnRegPutComplete cb, void* data);
+DPS_Status DPS_Registration_Put(DPS_Node* node, const char* host, const char* service, const char* tenantString, uint16_t timeout, DPS_OnRegPutComplete cb, void* data);
 
 /**
  * Synchronous version of DPS_RegistrationPut(). This function blocks until the operations is
@@ -128,13 +128,13 @@ DPS_Status DPS_Registration_Put(DPS_Node* node, const char* host, uint16_t port,
  *
  * @param node          The local node to register
  * @param host          The host name or IP address to register with
- * @param port          The port number
+ * @param service       The port or service name
  * @param tenantString  Topic string identifying the tenant
  * @param timeout       Timeout in milliseconds
  *
  * @return DPS_OK if the put request succeeded or and error status for the failure.
  */
-DPS_Status DPS_Registration_PutSyn(DPS_Node* node, const char* host, uint16_t port, const char* tenantString, uint16_t timeout);
+DPS_Status DPS_Registration_PutSyn(DPS_Node* node, const char* host, const char* service, const char* tenantString, uint16_t timeout);
 
 /**
  * Function prototype for callback called when DPS_Registration_Get() completes
@@ -151,7 +151,7 @@ typedef void (*DPS_OnRegGetComplete)(DPS_RegistrationList* regs, DPS_Status stat
  *
  * @param node          The node
  * @param host          The host name or IP address to register with
- * @param port          The port number
+ * @param service       The port or service name
  * @param tenantString  Topic string identifying the tenant
  * @param regs          Registration list for accumulating the results. The count field must be
  *                      initialized with the maximum number of registrations to be returned. The
@@ -163,7 +163,7 @@ typedef void (*DPS_OnRegGetComplete)(DPS_RegistrationList* regs, DPS_Status stat
  * @return DPS_OK if the registration get request was successfully initiated, otherwise returns an
  *         error status and the callback function will not be called.
  */
-DPS_Status DPS_Registration_Get(DPS_Node* node, const char* host, uint16_t port, const char* tenantString, DPS_RegistrationList* regs, uint16_t timeout, DPS_OnRegGetComplete cb, void* data);
+DPS_Status DPS_Registration_Get(DPS_Node* node, const char* host, const char* service, const char* tenantString, DPS_RegistrationList* regs, uint16_t timeout, DPS_OnRegGetComplete cb, void* data);
 
 /**
  * A synchronous version of DPS_RegistrationGet() this function blocks until the candidate list has
@@ -171,14 +171,14 @@ DPS_Status DPS_Registration_Get(DPS_Node* node, const char* host, uint16_t port,
  *
  * @param node          The node
  * @param host          The host name or IP address to register with
- * @param port          The port number
+ * @param service       The port or service name
  * @param tenantString  Topic string identifying the tenant
  * @param regs          Registration list for accumulating the results.
  * @param timeout       Timeout in milliseconds
  *
  * @return DPS_OK if the get request succeeded or and error status for the failure.
  */
-DPS_Status DPS_Registration_GetSyn(DPS_Node* node, const char* host, uint16_t port, const char* tenantString, DPS_RegistrationList* regs, uint16_t timeout);
+DPS_Status DPS_Registration_GetSyn(DPS_Node* node, const char* host, const char* service, const char* tenantString, DPS_RegistrationList* regs, uint16_t timeout);
 
 /**
  * Function prototype for callback called when DPS_Registration_LinkTo() completes

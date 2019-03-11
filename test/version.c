@@ -124,7 +124,7 @@ static void NetSendTask(uv_async_t* handle)
         uv_buf_init((char*)buf.base, DPS_TxBufferUsed(&buf))
     };
 
-    if (((struct sockaddr_in*)&data->remote->ep.addr)->sin_port) {
+    if (((struct sockaddr_in*)&data->remote->ep.addr.u.inaddr)->sin_port) {
         ret = DPS_NetSend(data->node, NULL, &data->remote->ep, bufs, A_SIZEOF(bufs), OnNetSendComplete);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("DPS_NetSend failed: %s\n", DPS_ErrTxt(ret));

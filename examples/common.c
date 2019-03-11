@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <dps/dbg.h>
+#include <dps/synchronous.h>
 
 int IntArg(char* opt, char*** argp, int* argcp, int* val, int min, int max)
 {
@@ -109,12 +110,45 @@ int LinkArg(char*** argp, int* argcp, char** addrText, int* numAddrText)
     return DPS_TRUE;
 }
 
-void DestroyLinkArg(char **addrText, int numAddrText)
+DPS_Status Link(DPS_Node* node, char** addrText, DPS_NodeAddress** addr, int numAddr)
+{
+    DPS_Status ret;
+    int i;
+
+    for (i = 0; i < numAddr; ++i) {
+        addr[i] = DPS_CreateAddress();
+        if (!addr[i]) {
+            ret = DPS_ERR_RESOURCES;
+            goto Exit;
+        }
+        ret = DPS_LinkTo(node, addrText[i], addr[i]);
+        if (ret == DPS_OK) {
+            DPS_PRINT("Publisher is linked to %s\n", DPS_NodeAddrToString(addr[i]));
+        } else {
+            DPS_ERRPRINT("DPS_LinkTo %s returned %s\n", addrText[i], DPS_ErrTxt(ret));
+        }
+    }
+    ret = DPS_OK;
+
+Exit:
+    return ret;
+}
+
+void Unlink(DPS_Node* node, DPS_NodeAddress** addr, int numAddr)
 {
     int i;
-    for (i = 0; i < numAddrText; ++i) {
+    for (i = 0; i < numAddr; ++i) {
+        DPS_UnlinkFrom(node, addr[i]);
+    }
+}
+
+void DestroyLinkArg(char **addrText, DPS_NodeAddress** addr, int numAddr)
+{
+    int i;
+    for (i = 0; i < numAddr; ++i) {
         if (addrText[i]) {
             free(addrText[i]);
         }
+        DPS_DestroyAddress(addr[i]);
     }
 }

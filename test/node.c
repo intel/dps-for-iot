@@ -320,11 +320,7 @@ int main(int argc, char** argv)
     }
 
     for (i = 0; i < numLinks; ++i) {
-        ret = DPS_ResolveAddressSyn(node, NULL, links[i], addr);
-        if (ret != DPS_OK) {
-            goto Exit;
-        }
-        ret = DPS_LinkTo(node, addr);
+        ret = DPS_LinkTo(node, links[i], addr);
         if (ret != DPS_OK) {
             goto Exit;
         }

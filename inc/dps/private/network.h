@@ -36,6 +36,9 @@
 extern "C" {
 #endif
 
+#define DPS_MAX_HOST_LEN    256  /**< Per RFC 1034/1035 */
+#define DPS_MAX_SERVICE_LEN  16  /**< Per RFC 6335 section 5.1 */
+
 /**
  * Opaque data structure for network-specific state
  */

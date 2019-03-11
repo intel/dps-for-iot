@@ -232,21 +232,20 @@ int main(int argc, char** argv)
     const DPS_KeyId* nodeKeyId = NULL;
     DPS_Node* node;
     char** arg = argv + 1;
-    char* linkAddr[MAX_LINKS] = { NULL };
+    DPS_NodeAddress* linkAddr[MAX_LINKS] = { NULL };
+    char* linkText[MAX_LINKS] = { NULL };
     int numLinks = 0;
     int wait = 0;
     int encrypt = 1;
     int ttl = 0;
     int subsRate = DPS_SUBSCRIPTION_UPDATE_RATE;
-    int i;
     char* msg = NULL;
     int mcast = DPS_MCAST_PUB_ENABLE_SEND;
     DPS_NodeAddress* listenAddr = NULL;
-    DPS_NodeAddress* addr = NULL;
 
     DPS_Debug = DPS_FALSE;
     while (--argc) {
-        if (LinkArg(&arg, &argc, linkAddr, &numLinks)) {
+        if (LinkArg(&arg, &argc, linkText, &numLinks)) {
             continue;
         }
         if (strcmp(*arg, "-j") == 0) {
@@ -305,7 +304,6 @@ int main(int argc, char** argv)
      */
     if (numLinks) {
         mcast = DPS_MCAST_PUB_DISABLED;
-        addr = DPS_CreateAddress();
     }
 
     memoryKeyStore = DPS_CreateMemoryKeyStore();
@@ -338,29 +336,10 @@ int main(int argc, char** argv)
     }
     DPS_PRINT("Publisher is listening on %s\n", DPS_NodeAddrToString(DPS_GetListenAddress(node)));
 
-    for (i = 0; i < numLinks; ++i) {
-#if defined(DPS_USE_PIPE)
-        DPS_SetAddress(addr, linkAddr[i]);
-#else
-        char host[256];
-        char service[256];
-        ret = DPS_SplitAddress(linkAddr[i], host, sizeof(host), service, sizeof(service));
-        if (ret != DPS_OK) {
-            DPS_ERRPRINT("DPS_SplitAddress returned %s\n", DPS_ErrTxt(ret));
-            return 1;
-        }
-        ret = DPS_ResolveAddressSyn(node, host, service, addr);
-        if (ret != DPS_OK) {
-            DPS_ERRPRINT("DPS_ResolveAddress returned %s\n", DPS_ErrTxt(ret));
-            return 1;
-        }
-#endif
-        ret = DPS_LinkTo(node, addr);
-        if (ret == DPS_OK) {
-            DPS_PRINT("Publisher is linked to %s\n", DPS_NodeAddrToString(addr));
-        } else {
-            DPS_ERRPRINT("DPS_LinkTo %s returned %s\n", linkAddr[i], DPS_ErrTxt(ret));
-        }
+    ret = Link(node, linkText, linkAddr, numLinks);
+    if (ret != DPS_OK) {
+        DPS_ERRPRINT("DPS_SplitAddress returned %s\n", DPS_ErrTxt(ret));
+        return 1;
     }
 
     nodeDestroyed = DPS_CreateEvent();
@@ -410,9 +389,8 @@ int main(int argc, char** argv)
          * gets sent and we have a chance to receive acks if requested
          */
         DPS_TimedWaitForEvent(nodeDestroyed, requestAck ? 2000 : 500);
-        if (addr) {
-            DPS_UnlinkFrom(node, addr);
-            DPS_DestroyAddress(addr);
+        if (numLinks) {
+            Unlink(node, linkAddr, numLinks);
         }
         if (listenAddr) {
             DPS_PRINT("Waiting for remote to link\n");
@@ -427,18 +405,18 @@ int main(int argc, char** argv)
     DPS_DestroyEvent(nodeDestroyed);
     DPS_DestroyMemoryKeyStore(memoryKeyStore);
     DPS_DestroyAddress(listenAddr);
-    DestroyLinkArg(linkAddr, numLinks);
+    DestroyLinkArg(linkText, linkAddr, numLinks);
     return 0;
 
 Usage:
-    DPS_PRINT("Usage %s [-d] [-x 0|1|2|3] [-a] [-w <seconds>] [-t <ttl>] [-p <portnum>] [-l <portnum>] [-m|-j <message>] [-r <milliseconds>] [topic1 topic2 ... topicN]\n", argv[0]);
+    DPS_PRINT("Usage %s [-d] [-x 0|1|2|3] [-a] [-w <seconds>] [-t <ttl>] [-p <address>] [-l <address>] [-m|-j <message>] [-r <milliseconds>] [topic1 topic2 ... topicN]\n", argv[0]);
     DPS_PRINT("       -d: Enable debug ouput if built for debug.\n");
     DPS_PRINT("       -x: Disable (0) or enable symmetric encryption (1), asymmetric encryption (2), or authentication (3). Default is symmetric encryption enabled.\n");
     DPS_PRINT("       -a: Request an acknowledgement\n");
     DPS_PRINT("       -t: Set a time-to-live on a publication\n");
     DPS_PRINT("       -w: Time to wait between linking to remote node and sending publication\n");
-    DPS_PRINT("       -l: Port number to listen on for incoming connections\n");
-    DPS_PRINT("       -p: port to link. Multiple -p options are permitted.\n");
+    DPS_PRINT("       -l: Address to listen on for incoming connections\n");
+    DPS_PRINT("       -p: Address to link. Multiple -p options are permitted.\n");
     DPS_PRINT("       -m: A string payload to accompany the publication.\n");
     DPS_PRINT("       -j: A JSON payload to accompany the publication.\n");
     DPS_PRINT("       -r: Time to delay between subscription updates.\n");

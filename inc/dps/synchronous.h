@@ -40,26 +40,15 @@ extern "C" {
  */
 
 /**
- * Synchronous helper that wraps DPS_ResolveAddress().
- *
- * @param node     The local node to use
- * @param host     The host name or IP address to resolve
- * @param service  The port or service name to resolve
- * @param addr     The resolved address
- *
- * @return DPS_OK if the resolution is successful, an error otherwise
- */
-DPS_Status DPS_ResolveAddressSyn(DPS_Node* node, const char* host, const char* service, DPS_NodeAddress* addr);
-
-/**
  * Synchronous helper that wraps DPS_Link().
  *
- * @param node  The local node to link from
- * @param addr  The address to link to
+ * @param node     The local node to link from
+ * @param addrText The text string of the address to link to
+ * @param addr     Returns the resolved address for the remote node
  *
  * @return DPS_OK if the link is successful, an error otherwise
  */
-DPS_Status DPS_LinkTo(DPS_Node* node, const DPS_NodeAddress* addr);
+DPS_Status DPS_LinkTo(DPS_Node* node, const char* addrText, DPS_NodeAddress* addr);
 
 /**
  * Synchronous helper that wraps DPS_Unlink().

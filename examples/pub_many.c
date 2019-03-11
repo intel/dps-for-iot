@@ -76,29 +76,16 @@ int main(int argc, char** argv)
     DPS_Publication* pub = NULL;
     DPS_Node* node;
     char** arg = argv + 1;
-    const char* host = NULL;
-    const char* linkPort = NULL;
+    DPS_NodeAddress* linkAddr[MAX_LINKS] = { NULL };
+    char* linkText[MAX_LINKS] = { NULL };
+    int numLinks = 0;
     char* msg = NULL;
     int mcast = DPS_MCAST_PUB_ENABLE_SEND;
-    DPS_NodeAddress* addr = NULL;
 
     DPS_Debug = 0;
 
     while (--argc) {
-        if (strcmp(*arg, "-p") == 0) {
-            ++arg;
-            if (!--argc) {
-                goto Usage;
-            }
-            linkPort = *arg++;
-            continue;
-        }
-        if (strcmp(*arg, "-h") == 0) {
-            ++arg;
-            if (!--argc) {
-                goto Usage;
-            }
-            host = *arg++;
+        if (LinkArg(&arg, &argc, linkText, &numLinks)) {
             continue;
         }
         if (strcmp(*arg, "-m") == 0) {
@@ -137,7 +124,7 @@ int main(int argc, char** argv)
     /*
      * Disable multicast publications if we have an explicit destination
      */
-    if (linkPort) {
+    if (numLinks) {
         mcast = DPS_MCAST_PUB_DISABLED;
     }
 
@@ -148,19 +135,10 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    if (linkPort) {
-        addr = DPS_CreateAddress();
-        ret = DPS_ResolveAddressSyn(node, host, linkPort, addr);
-        if (ret != DPS_OK) {
-            DPS_ERRPRINT("DPS_ResolveAddress returned %s\n", DPS_ErrTxt(ret));
-            return 1;
-        }
-        ret = DPS_LinkTo(node, addr);
-        if (ret != DPS_OK) {
-            DPS_ERRPRINT("DPS_LinkTo returned %s\n", DPS_ErrTxt(ret));
-            return 1;
-        }
-        DPS_DestroyAddress(addr);
+    ret = Link(node, linkText, linkAddr, numLinks);
+    if (ret != DPS_OK) {
+        DPS_ERRPRINT("DPS_ResolveAddress returned %s\n", DPS_ErrTxt(ret));
+        return 1;
     }
 
     pub = DPS_CreatePublication(node);
@@ -183,11 +161,12 @@ int main(int argc, char** argv)
 
     DPS_WaitForEvent(nodeDestroyed);
     DPS_DestroyEvent(nodeDestroyed);
+    DestroyLinkArg(linkText, linkAddr, numLinks);
 
     return 0;
 
 Usage:
-    DPS_PRINT("Usage %s [-d] [-p <port>] [-h <host>] [-m <message>] [-t <ttl>] [-c <count>] [topic1 topic2 ... topicN]\n", *argv);
+    DPS_PRINT("Usage %s [-d] [-p <address>] [-m <message>] [-t <ttl>] [-c <count>] [topic1 topic2 ... topicN]\n", *argv);
     return 1;
 }
 

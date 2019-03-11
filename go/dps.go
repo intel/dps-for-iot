@@ -1035,32 +1035,15 @@ func CBOR2JSON(cbor []byte, pretty bool) (json string, err int) {
 	return
 }
 
-func ResolveAddressSyn(node *Node, host, service string) (addr *NodeAddress, err int) {
+func LinkTo(node *Node, addrText string, addr *NodeAddress) int {
 	cnode := (*C.DPS_Node)(node)
-	var chost *C.char
-	if len(host) > 0 {
-		chost = C.CString(host)
+	var caddrText *C.char
+	if len(addrText) > 0 {
+		caddrText = C.CString(addrText)
 	}
-	defer C.free(unsafe.Pointer(chost))
-	var cservice *C.char
-	if len(service) > 0 {
-		cservice = C.CString(service)
-	}
-	defer C.free(unsafe.Pointer(cservice))
-	caddr := C.DPS_CreateAddress()
-	err = int(C.DPS_ResolveAddressSyn(cnode, chost, cservice, caddr))
-	if err == OK {
-		addr = (*NodeAddress)(caddr)
-	} else {
-		C.DPS_DestroyAddress(caddr)
-	}
-	return
-}
-
-func LinkTo(node *Node, addr *NodeAddress) int {
-	cnode := (*C.DPS_Node)(node)
+	defer C.free(unsafe.Pointer(caddrText))
 	caddr := (*C.DPS_NodeAddress)(addr)
-	return int(C.DPS_LinkTo(cnode, caddr))
+	return int(C.DPS_LinkTo(cnode, caddrText, caddr))
 }
 
 func UnlinkFrom(node *Node, addr *NodeAddress) int {

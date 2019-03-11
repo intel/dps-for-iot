@@ -202,7 +202,8 @@ static void OnLinkedPut(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status ret, v
         if (regPut->status != DPS_OK) {
             goto Exit;
         }
-        regPut->status = DPS_Publish(regPut->pub, regPut->payload.base, DPS_TxBufferUsed(&regPut->payload), REGISTRATION_TTL);
+        regPut->status = DPS_Publish(regPut->pub, regPut->payload.base,
+                                     DPS_TxBufferUsed(&regPut->payload), REGISTRATION_TTL);
         if (regPut->status != DPS_OK) {
             goto Exit;
         }
@@ -278,7 +279,7 @@ static DPS_Status BuildPutPayload(DPS_TxBuffer* payload, const DPS_NodeAddress* 
         DPS_DBGPRINT("Encoding %d addresses\n", extIfs);
         ret = CBOR_EncodeUint8(payload, (uint8_t)extIfs);
         assert(ret == DPS_OK);
-        port = htons(AddrGetPort(&addr->u.inaddr));
+        port = AddrGetPort(&addr->u.inaddr);
         for (i = 0; i < numIfs; ++i) {
             uv_interface_address_t* ifn = &ifsAddrs[i];
             struct sockaddr* sa = (struct sockaddr*)&ifn->address;
@@ -312,7 +313,7 @@ Exit:
     return ret;
 }
 
-DPS_Status DPS_Registration_Put(DPS_Node* node, const char* host, uint16_t port,
+DPS_Status DPS_Registration_Put(DPS_Node* node, const char* host, const char* service,
                                 const char* tenantString, uint16_t timeout, DPS_OnRegPutComplete cb,
                                 void* data)
 {
@@ -350,9 +351,7 @@ DPS_Status DPS_Registration_Put(DPS_Node* node, const char* host, uint16_t port,
     } else {
         ret = BuildPutPayload(&regPut->payload, localAddr);
         if (ret == DPS_OK) {
-            char portStr[8];
-            snprintf(portStr, sizeof(portStr), "%d", port);
-            ret = DPS_ResolveAddress(regPut->node, host, portStr, OnResolvePut, regPut);
+            ret = DPS_ResolveAddress(regPut->node, host, service, OnResolvePut, regPut);
         }
     }
 
@@ -378,7 +377,7 @@ static void OnPutComplete(DPS_Status status, void* data)
     DPS_SignalEvent(event, status);
 }
 
-DPS_Status DPS_Registration_PutSyn(DPS_Node* node, const char* host, uint16_t port,
+DPS_Status DPS_Registration_PutSyn(DPS_Node* node, const char* host, const char* service,
                                    const char* tenantString, uint16_t timeout)
 {
     DPS_Status ret;
@@ -389,7 +388,7 @@ DPS_Status DPS_Registration_PutSyn(DPS_Node* node, const char* host, uint16_t po
     if (!event) {
         return DPS_ERR_RESOURCES;
     }
-    ret = DPS_Registration_Put(node, host, port, tenantString, timeout, OnPutComplete, event);
+    ret = DPS_Registration_Put(node, host, service, tenantString, timeout, OnPutComplete, event);
     if (ret == DPS_OK) {
         ret = DPS_WaitForEvent(event);
     }
@@ -569,7 +568,9 @@ static void OnResolveGet(DPS_Node* node, const DPS_NodeAddress* addr, void* data
     }
 }
 
-DPS_Status DPS_Registration_Get(DPS_Node* node, const char* host, uint16_t port, const char* tenantString, DPS_RegistrationList* regs, uint16_t timeout, DPS_OnRegGetComplete cb, void* data)
+DPS_Status DPS_Registration_Get(DPS_Node* node, const char* host, const char* service,
+                                const char* tenantString, DPS_RegistrationList* regs, uint16_t timeout,
+                                DPS_OnRegGetComplete cb, void* data)
 {
     DPS_Status ret;
     RegGet* regGet;
@@ -614,9 +615,7 @@ DPS_Status DPS_Registration_Get(DPS_Node* node, const char* host, uint16_t port,
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
     } else {
-        char portStr[8];
-        snprintf(portStr, sizeof(portStr), "%d", port);
-        ret = DPS_ResolveAddress(regGet->node, host, portStr, OnResolveGet, regGet);
+        ret = DPS_ResolveAddress(regGet->node, host, service, OnResolveGet, regGet);
     }
 
 Exit:
@@ -645,7 +644,9 @@ static void OnGetComplete(DPS_RegistrationList* regs, DPS_Status status, void* d
     DPS_SignalEvent(getResult->event, status);
 }
 
-DPS_Status DPS_Registration_GetSyn(DPS_Node* node, const char* host, uint16_t port, const char* tenantString, DPS_RegistrationList* regs, uint16_t timeout)
+DPS_Status DPS_Registration_GetSyn(DPS_Node* node, const char* host, const char* service,
+                                   const char* tenantString, DPS_RegistrationList* regs,
+                                   uint16_t timeout)
 {
     DPS_Status ret;
     GetResult getResult;
@@ -658,7 +659,8 @@ DPS_Status DPS_Registration_GetSyn(DPS_Node* node, const char* host, uint16_t po
     if (!getResult.event) {
         return DPS_ERR_RESOURCES;
     }
-    ret = DPS_Registration_Get(node, host, port, tenantString, regs, timeout, OnGetComplete, &getResult);
+    ret = DPS_Registration_Get(node, host, service, tenantString, regs, timeout, OnGetComplete,
+                               &getResult);
     if (ret == DPS_OK) {
         ret = DPS_WaitForEvent(getResult.event);
     }
@@ -724,7 +726,8 @@ static void OnResolve(DPS_Node* node, const DPS_NodeAddress* addr, void* data)
     }
 }
 
-DPS_Status DPS_Registration_LinkTo(DPS_Node* node, DPS_RegistrationList* regs, DPS_OnRegLinkToComplete cb, void* data)
+DPS_Status DPS_Registration_LinkTo(DPS_Node* node, DPS_RegistrationList* regs,
+                                   DPS_OnRegLinkToComplete cb, void* data)
 {
     DPS_Status ret = DPS_ERR_NO_ROUTE;
     size_t i;
@@ -755,7 +758,8 @@ DPS_Status DPS_Registration_LinkTo(DPS_Node* node, DPS_RegistrationList* regs, D
 
             regs->list[r].flags = DPS_CANDIDATE_TRYING;
             DPS_DBGPRINT("Candidate %d TRYING\n", linkTo->candidate);
-            ret = DPS_SplitAddress(regs->list[r].addrText, host, sizeof(host), service, sizeof(service));
+            ret = DPS_SplitAddress(regs->list[r].addrText, host, sizeof(host), service,
+                                   sizeof(service));
             if (ret == DPS_OK) {
                 ret = DPS_ResolveAddress(node, host, service, OnResolve, linkTo);
             }
@@ -777,7 +781,8 @@ typedef struct {
     DPS_NodeAddress* addr;
 } LinkResult;
 
-static void OnRegLinkTo(DPS_Node* node, DPS_RegistrationList* regs, const DPS_NodeAddress* addr, DPS_Status status, void* data)
+static void OnRegLinkTo(DPS_Node* node, DPS_RegistrationList* regs, const DPS_NodeAddress* addr,
+                        DPS_Status status, void* data)
 {
     LinkResult* linkResult = (LinkResult*)data;
 

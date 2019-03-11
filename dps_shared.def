@@ -62,7 +62,6 @@ DPS_Registration_Put
 DPS_Registration_PutSyn
 DPS_RegistryTopicString
 DPS_ResolveAddress
-DPS_ResolveAddressSyn
 DPS_SetAddress
 DPS_SetCA
 DPS_SetCertificate

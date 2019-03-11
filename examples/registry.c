@@ -58,15 +58,13 @@ int main(int argc, char** argv)
     DPS_Event* nodeDestroyed;
     const char* topics[1];
     DPS_Subscription* subscription;
-    int listenPort = 0;
     DPS_NodeAddress* listenAddr = NULL;
-    char addrText[24];
     int subsRate = DPS_SUBSCRIPTION_UPDATE_RATE;
 
     DPS_Debug = DPS_FALSE;
 
     while (--argc) {
-        if (IntArg("-l", &arg, &argc, &listenPort, 1, UINT16_MAX)) {
+        if (ListenArg(&arg, &argc, &listenAddr)) {
             continue;
         }
         if (strcmp(*arg, "-d") == 0) {
@@ -87,13 +85,6 @@ int main(int argc, char** argv)
     node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore), NULL);
     DPS_SetNodeSubscriptionUpdateDelay(node, subsRate);
 
-    listenAddr = DPS_CreateAddress();
-    if (!listenAddr) {
-        DPS_ERRPRINT("DPS_CreateAddress failed: %s\n", DPS_ErrTxt(DPS_ERR_RESOURCES));
-        return 1;
-    }
-    snprintf(addrText, sizeof(addrText), "[::]:%d", listenPort);
-    DPS_SetAddress(listenAddr, addrText);
     ret = DPS_StartNode(node, 0, listenAddr);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
@@ -118,6 +109,6 @@ int main(int argc, char** argv)
     return 0;
 
 Usage:
-    DPS_PRINT("Usage %s [-l <listen port] [-d]\n", *argv);
+    DPS_PRINT("Usage %s [-l <listen port>] [-d]\n", *argv);
     return 1;
 }

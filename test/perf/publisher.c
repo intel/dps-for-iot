@@ -113,9 +113,7 @@ int main(int argc, char** argv)
     DPS_Status ret;
     DPS_Node* node;
     char** arg = argv + 1;
-    const char* host = NULL;
-    const char* linkPort[MAX_LINKS] = { NULL };
-    const char* linkHosts[MAX_LINKS];
+    const char* linkText[MAX_LINKS] = { NULL };
     int numLinks = 0;
     int numPubs = 1000; /* default */
     int i;
@@ -126,7 +124,6 @@ int main(int argc, char** argv)
     int listenPort = 0;
     DPS_NodeAddress* listenAddr = NULL;
     char addrText[24];
-    DPS_NodeAddress* addr = NULL;
     DPS_Publication* pub = NULL;
     int rtMin = INT_MAX;
     int rtMax = 0;
@@ -144,17 +141,7 @@ int main(int argc, char** argv)
             if (!--argc) {
                 goto Usage;
             }
-            linkPort[numLinks] = *arg++;
-            linkHosts[numLinks] = host;
-            ++numLinks;
-            continue;
-        }
-        if (strcmp(*arg, "-h") == 0) {
-            ++arg;
-            if (!--argc) {
-                goto Usage;
-            }
-            host = *arg++;
+            linkText[numLinks++] = *arg++;
             continue;
         }
         if (IntArg("-s", &arg, &argc, &payloadSize, 0,  UINT16_MAX)) {
@@ -169,7 +156,6 @@ int main(int argc, char** argv)
      */
     if (numLinks) {
         mcast = DPS_MCAST_PUB_DISABLED;
-        addr = DPS_CreateAddress();
     }
 
     node = DPS_CreateNode("/", NULL, NULL);
@@ -187,14 +173,9 @@ int main(int argc, char** argv)
     }
 
     for (i = 0; i < numLinks; ++i) {
-        ret = DPS_ResolveAddressSyn(node, linkHosts[i], linkPort[i], addr);
+        ret = DPS_LinkTo(node, linkText[i], NULL);
         if (ret != DPS_OK) {
-            DPS_ERRPRINT("DPS_ResolveAddress %s:%s returned %s\n", linkHosts[i], linkPort[i], DPS_ErrTxt(ret));
-            return 1;
-        }
-        ret = DPS_LinkTo(node, addr);
-        if (ret != DPS_OK) {
-            DPS_ERRPRINT("DPS_LinkTo %d returned %s\n", linkPort[i], DPS_ErrTxt(ret));
+            DPS_ERRPRINT("DPS_LinkTo %s returned %s\n", linkText[i], DPS_ErrTxt(ret));
             return 1;
         }
     }

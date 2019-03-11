@@ -34,16 +34,13 @@
  */
 DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
-#define MAX_HOST_LEN    256  /* Per RFC 1034/1035 */
-#define MAX_SERVICE_LEN  16  /* Per RFC 6335 section 5.1 */
-
 typedef struct _ResolverInfo {
     DPS_Node* node;
     DPS_OnResolveAddressComplete cb;
     void* data;
     uv_getaddrinfo_t info;
-    char host[MAX_HOST_LEN + 1];
-    char service[MAX_SERVICE_LEN + 1];
+    char host[DPS_MAX_HOST_LEN + 1];
+    char service[DPS_MAX_SERVICE_LEN + 1];
     struct  _ResolverInfo* next;
 } ResolverInfo;
 
@@ -60,10 +57,22 @@ static void GetAddrInfoCB(uv_getaddrinfo_t* req, int status, struct addrinfo* re
 #elif defined(DPS_USE_UDP)
         addr.type = DPS_UDP;
 #endif
+        /*
+         * Resolve "any" address to loopback so it is a usable
+         * destination.
+         */
         if (res->ai_family == AF_INET6) {
+            struct sockaddr_in6* saddr = (struct sockaddr_in6*)&addr.u.inaddr;
             memcpy_s(&addr.u.inaddr, sizeof(addr.u.inaddr), res->ai_addr, sizeof(struct sockaddr_in6));
+            if (!memcmp(&saddr->sin6_addr, &in6addr_any, sizeof(struct in6_addr))) {
+                memcpy(&saddr->sin6_addr, &in6addr_loopback, sizeof(struct in6_addr));
+            }
         } else {
+            struct sockaddr_in* saddr = (struct sockaddr_in*)&addr.u.inaddr;
             memcpy_s(&addr.u.inaddr, sizeof(addr.u.inaddr), res->ai_addr, sizeof(struct sockaddr_in));
+            if (saddr->sin_addr.s_addr == htonl(INADDR_ANY)) {
+                saddr->sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+            }
         }
         resolver->cb(resolver->node, &addr, resolver->data);
         uv_freeaddrinfo(res);
@@ -93,7 +102,8 @@ void DPS_AsyncResolveAddress(uv_async_t* async)
             continue;
         }
         resolver->info.data = resolver;
-        r = uv_getaddrinfo(async->loop, &resolver->info, GetAddrInfoCB, resolver->host, resolver->service, NULL);
+        r = uv_getaddrinfo(async->loop, &resolver->info, GetAddrInfoCB, resolver->host,
+                           resolver->service, NULL);
         if (r) {
             DPS_ERRPRINT("uv_getaddrinfo call error %s\n", uv_err_name(r));
             resolver->cb(resolver->node, NULL, resolver->data);
@@ -104,7 +114,8 @@ void DPS_AsyncResolveAddress(uv_async_t* async)
     DPS_UnlockNode(node);
 }
 
-DPS_Status DPS_ResolveAddress(DPS_Node* node, const char* host, const char* service, DPS_OnResolveAddressComplete cb, void* data)
+DPS_Status DPS_ResolveAddress(DPS_Node* node, const char* host, const char* service,
+                              DPS_OnResolveAddressComplete cb, void* data)
 {
     DPS_Status ret;
     ResolverInfo* resolver;

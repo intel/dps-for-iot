@@ -54,25 +54,6 @@ static DPS_Node* CreateNode(DPS_KeyStore* keyStore)
     return node;
 }
 
-#if defined(DPS_USE_DTLS) || defined(DPS_USE_TCP) || defined(DPS_USE_UDP)
-static const char* GetService(DPS_Node* node)
-{
-    static char service[8];
-    uint16_t port = 0;
-
-    const DPS_NodeAddress* addr = DPS_GetListenAddress(node);
-    if (addr->u.inaddr.ss_family == AF_INET6) {
-        const struct sockaddr_in6* ip6 = (const struct sockaddr_in6*)&addr->u.inaddr;
-        port = ntohs(ip6->sin6_port);
-    } else {
-        const struct sockaddr_in* ip4 = (const struct sockaddr_in*)&addr->u.inaddr;
-        port = ntohs(ip4->sin_port);
-    }
-    snprintf(service, sizeof(service), "%d", port);
-    return service;
-}
-#endif
-
 static void TestRemoteLinkedAlready(void)
 {
     DPS_MemoryKeyStore* memoryKeyStore = NULL;
@@ -87,32 +68,15 @@ static void TestRemoteLinkedAlready(void)
     a = CreateNode(DPS_MemoryKeyStoreHandle(memoryKeyStore));
     b = CreateNode(DPS_MemoryKeyStoreHandle(memoryKeyStore));
 
-    /* TODO until DPS_Resolve gets sorted out for pipes */
-#if defined(DPS_USE_DTLS) || defined(DPS_USE_TCP) || defined(DPS_USE_UDP)
     addr = DPS_CreateAddress();
-    ret = DPS_ResolveAddressSyn(a, NULL, GetService(b), addr);
+    ret = DPS_LinkTo(a, DPS_NodeAddrToString(DPS_GetListenAddress(b)), addr);
     ASSERT(ret == DPS_OK);
-#elif defined(DPS_USE_PIPE)
-    addr = (DPS_NodeAddress*)DPS_GetListenAddress(b);
-#endif
-    ret = DPS_LinkTo(a, addr);
-    ASSERT(ret == DPS_OK);
-#if defined(DPS_USE_DTLS) || defined(DPS_USE_TCP) || defined(DPS_USE_UDP)
     DPS_DestroyAddress(addr);
-#endif
 
-#if defined(DPS_USE_DTLS) || defined(DPS_USE_TCP) || defined(DPS_USE_UDP)
     addr = DPS_CreateAddress();
-    ret = DPS_ResolveAddressSyn(b, NULL, GetService(a), addr);
+    ret = DPS_LinkTo(b, DPS_NodeAddrToString(DPS_GetListenAddress(a)), addr);
     ASSERT(ret == DPS_OK);
-#elif defined(DPS_USE_PIPE)
-    addr = (DPS_NodeAddress*)DPS_GetListenAddress(a);
-#endif
-    ret = DPS_LinkTo(b, addr);
-    ASSERT(ret == DPS_OK);
-#if defined(DPS_USE_DTLS) || defined(DPS_USE_TCP) || defined(DPS_USE_UDP)
     DPS_DestroyAddress(addr);
-#endif
 
     DestroyNode(b);
     DestroyNode(a);

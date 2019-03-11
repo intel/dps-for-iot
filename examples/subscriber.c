@@ -128,8 +128,9 @@ typedef struct _Args {
     int numTopics;
     char* topicList[64];
     DPS_NodeAddress* listenAddr;
+    DPS_NodeAddress* linkAddr[MAX_LINKS];
+    char* linkText[MAX_LINKS];
     int numLinks;
-    char* linkAddr[MAX_LINKS];
     int wait;
     int encrypt;
     int subsRate;
@@ -169,7 +170,7 @@ static int ParseArgs(int argc, char** argv, Args* args)
             if (ListenArg(&argv, &argc, &args->listenAddr)) {
                 continue;
             }
-            if (LinkArg(&argv, &argc, args->linkAddr, &args->numLinks)) {
+            if (LinkArg(&argv, &argc, args->linkText, &args->numLinks)) {
                 continue;
             }
             if (strcmp(*argv, "-q") == 0) {
@@ -290,14 +291,19 @@ static int LinkTo(Subscriber* subscriber, Args* args)
         for (i = 0; i < args->numLinks; ++i, ++subscriber->numAddrs) {
             char host[256];
             char service[256];
-            ret = DPS_SplitAddress(args->linkAddr[i], host, sizeof(host), service, sizeof(service));
+            ret = DPS_SplitAddress(args->linkText[i], host, sizeof(host), service, sizeof(service));
             if (ret != DPS_OK) {
                 DPS_ERRPRINT("DPS_SplitAddress returned %s\n", DPS_ErrTxt(ret));
                 return DPS_FALSE;
             }
-            ret = DPS_ResolveAddress(subscriber->node, host, service, OnResolveAddressComplete, NULL);
+            args->linkAddr[i] = DPS_CreateAddress();
+            if (!args->linkAddr[i]) {
+                DPS_ERRPRINT("DPS_CreateAddress failed\n");
+                return DPS_FALSE;
+            }
+            ret = DPS_ResolveAddress(subscriber->node, host, service, OnResolveAddressComplete, &args->linkAddr[i]);
             if (ret != DPS_OK) {
-                DPS_ERRPRINT("DPS_ResolveAddress %s returned %s\n", args->linkAddr[i], DPS_ErrTxt(ret));
+                DPS_ERRPRINT("DPS_ResolveAddress %s returned %s\n", args->linkText[i], DPS_ErrTxt(ret));
                 return DPS_FALSE;
             }
         }
@@ -428,18 +434,18 @@ Exit:
     DPS_DestroyEvent(nodeDestroyed);
     DPS_DestroyMemoryKeyStore(memoryKeyStore);
     DPS_DestroyAddress(args.listenAddr);
-    DestroyLinkArg(args.linkAddr, args.numLinks);
+    DestroyLinkArg(args.linkText, args.linkAddr, args.numLinks);
     return (ret == DPS_OK) ? EXIT_SUCCESS : EXIT_FAILURE;
 
 Usage:
-    DPS_PRINT("Usage %s [-d] [-q] [-m] [-w <seconds>] [-x 0|1|2|3] [-p <portnum>] [-l <listen port] [-j] [-r <milliseconds>] [[-s] topic1 ... topicN]\n", argv[0]);
+    DPS_PRINT("Usage %s [-d] [-q] [-m] [-w <seconds>] [-x 0|1|2|3] [-p <address>] [-l <address] [-j] [-r <milliseconds>] [[-s] topic1 ... topicN]\n", argv[0]);
     DPS_PRINT("       -d: Enable debug ouput if built for debug.\n");
     DPS_PRINT("       -q: Quiet - suppresses output about received publications.\n");
     DPS_PRINT("       -x: Disable (0) or enable symmetric encryption (1), asymmetric encryption (2), or authentication (3). Default is symmetric encryption enabled.\n");
     DPS_PRINT("       -w: Time to wait before establishing links\n");
-    DPS_PRINT("       -p: A port to link. Multiple -p options are permitted.\n");
+    DPS_PRINT("       -p: An address to link. Multiple -p options are permitted.\n");
     DPS_PRINT("       -m: Enable multicast receive. Enabled by default is there are no -p options.\n");
-    DPS_PRINT("       -l: port to listen on. Default is an ephemeral port.\n");
+    DPS_PRINT("       -l: Address listen on.\n");
     DPS_PRINT("       -r: Time to delay between subscription updates.\n");
     DPS_PRINT("       -s: list of subscription topic strings. Multiple -s options are permitted\n");
     DPS_PRINT("       -j: Treat payload as CBOR and attempt to decode an display as JSON\n");
