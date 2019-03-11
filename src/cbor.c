@@ -873,24 +873,36 @@ DPS_Status DPS_ParseMapNext(CBOR_MapState* mapState, int32_t* key)
         if (mapState->result != DPS_OK) {
             break;
         }
-        if (mapState->needKeys && k == mapState->needs[0]) {
-            ++mapState->needs;
-            --mapState->needKeys;
-            *key = k;
-            break;
+        if (mapState->needKeys) {
+            if (k < mapState->needs[0]) {
+                /*
+                 * Nothing to do
+                 */
+            } else if (k == mapState->needs[0]) {
+                ++mapState->needs;
+                --mapState->needKeys;
+                *key = k;
+                goto Exit;
+            } else {
+                /*
+                 * Keys must be in ascending order
+                 */
+                mapState->result = DPS_ERR_MISSING;
+                break;
+            }
         }
-        if (mapState->wantKeys && k == mapState->wants[0]) {
-            ++mapState->wants;
-            --mapState->wantKeys;
-            *key = k;
-            break;
-        }
-        /*
-         * Keys must be in ascending order
-         */
-        if (mapState->needKeys && k > mapState->needs[0]) {
-            mapState->result = DPS_ERR_MISSING;
-            break;
+        while (mapState->wantKeys) {
+            if (k < mapState->wants[0]) {
+                break;
+            } else if (k == mapState->wants[0]) {
+                ++mapState->wants;
+                --mapState->wantKeys;
+                *key = k;
+                goto Exit;
+            } else {
+                ++mapState->wants;
+                --mapState->wantKeys;
+            }
         }
         /*
          * Skip map entries for keys we are not looking for
@@ -900,6 +912,7 @@ DPS_Status DPS_ParseMapNext(CBOR_MapState* mapState, int32_t* key)
             break;
         }
     }
+Exit:
     if (mapState->result != DPS_OK) {
         return mapState->result;
     }

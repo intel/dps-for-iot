@@ -339,6 +339,9 @@ int main(int argc, char** argv)
     DPS_PRINT("Publisher is listening on %s\n", DPS_NodeAddrToString(DPS_GetListenAddress(node)));
 
     for (i = 0; i < numLinks; ++i) {
+#if defined(DPS_USE_PIPE)
+        DPS_SetAddress(addr, linkAddr[i]);
+#else
         char host[256];
         char service[256];
         ret = DPS_SplitAddress(linkAddr[i], host, sizeof(host), service, sizeof(service));
@@ -351,6 +354,7 @@ int main(int argc, char** argv)
             DPS_ERRPRINT("DPS_ResolveAddress returned %s\n", DPS_ErrTxt(ret));
             return 1;
         }
+#endif
         ret = DPS_LinkTo(node, addr);
         if (ret == DPS_OK) {
             DPS_PRINT("Publisher is linked to %s\n", DPS_NodeAddrToString(addr));

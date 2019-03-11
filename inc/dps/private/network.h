@@ -138,6 +138,15 @@ typedef DPS_Status (*DPS_OnReceive)(DPS_Node* node, DPS_NetEndpoint* endpoint, D
 void DPS_EndpointSetPort(DPS_NetEndpoint* endpoint, uint16_t port);
 
 /**
+ * Set the path on a network endpoint.
+ *
+ * @param endpoint  The endpoint to set
+ * @param path      The path to set on the endpoint
+ * @param pathLen   The size of the path
+ */
+void DPS_EndpointSetPath(DPS_NetEndpoint* endpoint, char* path, size_t pathLen);
+
+/**
  * Send a message locally, short-circuiting the transport layer.
  *
  * @param node The node sending and receiving the message

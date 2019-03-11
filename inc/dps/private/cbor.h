@@ -601,8 +601,8 @@ typedef struct {
  *
  * @return DPS_OK if parsing the map is successful, an error otherwise
  */
-DPS_Status DPS_ParseMapInit(CBOR_MapState* mapState, DPS_RxBuffer* buffer, const int32_t* keys, size_t numKeys,
-                            const int32_t* optKeys, size_t numOptKeys);
+DPS_Status DPS_ParseMapInit(CBOR_MapState* mapState, DPS_RxBuffer* buffer, const int32_t* keys,
+                            size_t numKeys, const int32_t* optKeys, size_t numOptKeys);
 
 /**
  * Find the next matching key and return it. The value for the key can be

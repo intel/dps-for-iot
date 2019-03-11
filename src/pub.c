@@ -647,13 +647,14 @@ static DPS_Publication* LookupRetained(DPS_Node* node, DPS_UUID* pubId)
 
 DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxBuffer* buf, int multicast)
 {
-    static const int32_t UnprotectedKeys[] = { DPS_CBOR_KEY_PORT, DPS_CBOR_KEY_TTL };
+    static const int32_t UnprotectedKeys[] = { DPS_CBOR_KEY_TTL };
+    static const int32_t UnprotectedOptKeys[] = { DPS_CBOR_KEY_PORT, DPS_CBOR_KEY_PATH };
     static const int32_t ProtectedKeys[] = { DPS_CBOR_KEY_TTL, DPS_CBOR_KEY_PUB_ID, DPS_CBOR_KEY_SEQ_NUM,
                                              DPS_CBOR_KEY_ACK_REQ, DPS_CBOR_KEY_BLOOM_FILTER };
     DPS_RxBuffer* rxBuf = (DPS_RxBuffer*)buf;
     DPS_Status ret;
     RemoteNode* pubNode = NULL;
-    uint16_t port;
+    uint16_t port = 0;
     DPS_Publication* pub = NULL;
     DPS_PublishRequest* req = NULL;
     uint8_t* bytes = NULL;
@@ -666,6 +667,9 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxB
     int16_t baseTTL;
     int ackRequested;
     size_t len;
+    char* path = NULL;
+    size_t pathLen;
+    uint16_t keysMask;
 
     DPS_DBGTRACE();
 
@@ -673,10 +677,12 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxB
     /*
      * Parse keys from unprotected map
      */
-    ret = DPS_ParseMapInit(&mapState, rxBuf, UnprotectedKeys, A_SIZEOF(UnprotectedKeys), NULL, 0);
+    ret = DPS_ParseMapInit(&mapState, rxBuf, UnprotectedKeys, A_SIZEOF(UnprotectedKeys),
+                           UnprotectedOptKeys, A_SIZEOF(UnprotectedOptKeys));
     if (ret != DPS_OK) {
         return ret;
     }
+    keysMask = 0;
     while (!DPS_ParseMapDone(&mapState)) {
         int32_t key;
         ret = DPS_ParseMapNext(&mapState, &key);
@@ -685,10 +691,18 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxB
         }
         switch (key) {
         case DPS_CBOR_KEY_PORT:
+            keysMask |= (1 << key);
             ret = CBOR_DecodeUint16(rxBuf, &port);
             break;
         case DPS_CBOR_KEY_TTL:
             ret = CBOR_DecodeInt16(rxBuf, &ttl);
+            break;
+        case DPS_CBOR_KEY_PATH:
+            keysMask |= (1 << key);
+            ret = CBOR_DecodeString(rxBuf, &path, &pathLen);
+            if ((ret == DPS_OK) && (pathLen >= DPS_NODE_ADDRESS_PATH_MAX)) {
+                ret = DPS_ERR_INVALID;
+            }
             break;
         }
         if (ret != DPS_OK) {
@@ -697,6 +711,10 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxB
     }
     if (ret != DPS_OK) {
         return ret;
+    }
+    if ((keysMask & ((1 << DPS_CBOR_KEY_PORT) | (1 << DPS_CBOR_KEY_PATH))) == 0) {
+        DPS_WARNPRINT("Missing required key\n");
+        return DPS_ERR_INVALID;
     }
     /*
      * Start of publication protected map
@@ -769,7 +787,12 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxB
     /*
      * Record which port the sender is listening on
      */
-    DPS_EndpointSetPort(ep, port);
+    if (keysMask & (1 << DPS_CBOR_KEY_PORT)) {
+        DPS_EndpointSetPort(ep, port);
+    } else {
+        assert(keysMask & (1 << DPS_CBOR_KEY_PATH));
+        DPS_EndpointSetPath(ep, path, pathLen);
+    }
 
     DPS_LockNode(node);
     /*
@@ -1021,8 +1044,19 @@ DPS_Status DPS_SendPublication(DPS_PublishRequest* req, DPS_Publication* pub, Re
         CBOR_SIZEOF(uint8_t) +
         CBOR_SIZEOF(uint8_t) +
         CBOR_SIZEOF_MAP(2) + 2 * CBOR_SIZEOF(uint8_t) +
-        CBOR_SIZEOF(uint16_t) + /* port */
         CBOR_SIZEOF(int16_t);   /* ttl */
+    switch (node->addr.type) {
+    case DPS_DTLS:
+    case DPS_TCP:
+    case DPS_UDP:
+        len += CBOR_SIZEOF(uint16_t); /* port */
+        break;
+    case DPS_PIPE:
+        len += CBOR_SIZEOF_STRING(node->addr.u.path); /* path */
+        break;
+    default:
+        return DPS_ERR_INVALID;
+    }
     ret = DPS_TxBufferInit(&buf, NULL, len);
     if (ret == DPS_OK) {
         ret = CBOR_EncodeArray(&buf, 5);
@@ -1039,7 +1073,6 @@ DPS_Status DPS_SendPublication(DPS_PublishRequest* req, DPS_Publication* pub, Re
     if (ret == DPS_OK) {
         ret = CBOR_EncodeMap(&buf, 2);
     }
-    /* TODO encode addrText here instead? */
     switch (node->addr.type) {
     case DPS_DTLS:
     case DPS_TCP:
@@ -1052,11 +1085,7 @@ DPS_Status DPS_SendPublication(DPS_PublishRequest* req, DPS_Publication* pub, Re
                                     DPS_NetAddrPort((const struct sockaddr*)&node->addr.u.inaddr));
         }
         break;
-    case DPS_PIPE:
-        /* TODO */
-        break;
     default:
-        ret = DPS_ERR_INVALID;
         break;
     }
     if (ret == DPS_OK) {
@@ -1064,6 +1093,18 @@ DPS_Status DPS_SendPublication(DPS_PublishRequest* req, DPS_Publication* pub, Re
     }
     if (ret == DPS_OK) {
         ret = CBOR_EncodeInt16(&buf, ttl);
+    }
+    switch (node->addr.type) {
+    case DPS_PIPE:
+        if (ret == DPS_OK) {
+            ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_PATH);
+        }
+        if (ret == DPS_OK) {
+            ret = CBOR_EncodeString(&buf, node->addr.u.path);
+        }
+        break;
+    default:
+        break;
     }
     /*
      * Protected and encrypted maps are already serialized

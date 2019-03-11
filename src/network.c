@@ -343,6 +343,23 @@ void DPS_EndpointSetPort(DPS_NetEndpoint* ep, uint16_t port)
     }
 }
 
+void DPS_EndpointSetPath(DPS_NetEndpoint* ep, char* path, size_t pathLen)
+{
+    switch (ep->addr.type) {
+    case DPS_UDP:
+        if (!ep->cn) {
+            ep->addr.type = DPS_PIPE;
+            assert (pathLen < DPS_NODE_ADDRESS_PATH_MAX);
+            memcpy(ep->addr.u.path, path, pathLen);
+            ep->addr.u.path[pathLen] = 0;
+        }
+        break;
+    default:
+        assert(ep->cn);
+        break;
+    }
+}
+
 void DPS_NetFreeBufs(uv_buf_t* bufs, size_t numBufs)
 {
     while (numBufs--) {

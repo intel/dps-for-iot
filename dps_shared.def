@@ -62,6 +62,7 @@ DPS_Registration_Put
 DPS_Registration_PutSyn
 DPS_RegistryTopicString
 DPS_ResolveAddress
+DPS_ResolveAddressSyn
 DPS_SetAddress
 DPS_SetCA
 DPS_SetCertificate
@@ -77,6 +78,7 @@ DPS_SetPublicationData
 DPS_SetSubscriptionData
 DPS_SetTrustedCA
 DPS_SignalEvent
+DPS_SplitAddress
 DPS_StartNode
 DPS_Subscribe
 DPS_SubscriptionGetNode
