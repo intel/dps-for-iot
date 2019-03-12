@@ -18,6 +18,7 @@ sources = [
     './safestring/safeclib/safe_str_constraint.c',
     './safestring/safeclib/memset_s.c',
     './safestring/safeclib/memzero_s.c',
+    './safestring/safeclib/strcat_s.c',
     './safestring/safeclib/strcmp_s.c',
     './safestring/safeclib/strnlen_s.c',
     './safestring/safeclib/mem_primitives_lib.c'

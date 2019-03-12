@@ -373,9 +373,9 @@ static int GetScopeId(struct sockaddr_in6* addr)
 
 DPS_NetContext* DPS_NetStart(DPS_Node* node, const DPS_NodeAddress* addr, DPS_OnReceive cb)
 {
-    char tempPath[DPS_NODE_ADDRESS_PATH_MAX] = "dps_pipe_XXXXXX";
+    char path[DPS_NODE_ADDRESS_PATH_MAX];
+    size_t len;
     DPS_NetContext* netCtx = NULL;
-    const char* path = NULL;
     DPS_UUID uuid;
     int ret;
 
@@ -393,21 +393,29 @@ DPS_NetContext* DPS_NetStart(DPS_Node* node, const DPS_NodeAddress* addr, DPS_On
     netCtx->node = node;
     netCtx->receiveCB = cb;
     if (addr) {
-        path = addr->u.path;
+        ret = uv_pipe_bind(&netCtx->socket, addr->u.path);
     } else {
-#ifdef _WIN32
-#error mkdtemp
-#else
-        if (!mkdtemp(tempPath)) {
-            goto ErrorExit;
-        }
-        DPS_GenerateUUID(&uuid);
-        strcat(tempPath, PATH_SEP);
-        strcat(tempPath, DPS_UUIDToString(&uuid));
-        path = tempPath;
-#endif
+        /*
+         * Create a unique temporary path
+         */
+        do {
+            len = sizeof(path);
+            ret = uv_os_tmpdir(path, &len);
+            if (ret) {
+                goto ErrorExit;
+            }
+            DPS_GenerateUUID(&uuid);
+            ret = strcat_s(path, sizeof(path), PATH_SEP);
+            if (ret != EOK) {
+                goto ErrorExit;
+            }
+            ret = strcat_s(path, sizeof(path), DPS_UUIDToString(&uuid));
+            if (ret != EOK) {
+                goto ErrorExit;
+            }
+            ret = uv_pipe_bind(&netCtx->socket, path);
+        } while (ret == EADDRINUSE);
     }
-    ret = uv_pipe_bind(&netCtx->socket, path);
     if (ret) {
         goto ErrorExit;
     }
