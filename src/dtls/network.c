@@ -1439,7 +1439,7 @@ static void OnUdpData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, cons
     DPS_DestroyAddress(nodeAddr);
 }
 
-DPS_NetContext* DPS_NetStart(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnReceive cb)
+DPS_NetContext* DPS_NetStart(DPS_Node* node, const DPS_NodeAddress* addr, DPS_OnReceive cb)
 {
     int ret;
     DPS_NetContext* netCtx;

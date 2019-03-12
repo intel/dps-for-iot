@@ -93,21 +93,14 @@ static DPS_Status RegisterAndJoin(DPS_Node* node, char** linkText, int numLink,
     DPS_Status ret = DPS_OK;
     DPS_RegistrationList* regs = NULL;
     DPS_NodeAddress* remoteAddr = NULL;
-    char host[256];
-    char service[256];
     int i;
 
     for (i = 0; i < numLink; ++i) {
         /*
          * Register with the registration service
          */
-        ret = DPS_SplitAddress(linkText[i], host, sizeof(host), service, sizeof(service));
-        if (ret != DPS_OK) {
-            DPS_ERRPRINT("DPS_SplitAddress returned %s\n", DPS_ErrTxt(ret));
-            return ret;
-        }
         regs = DPS_CreateRegistrationList(count);
-        ret = DPS_Registration_PutSyn(node, host, service, tenant, DPS_REGISTRATION_PUT_TIMEOUT);
+        ret = DPS_Registration_PutSyn(node, linkText[i], tenant, DPS_REGISTRATION_PUT_TIMEOUT);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("Failed to register with registration service: %s\n", DPS_ErrTxt(ret));
             return ret;
@@ -115,7 +108,7 @@ static DPS_Status RegisterAndJoin(DPS_Node* node, char** linkText, int numLink,
         /*
          * Find nodes to join
          */
-        ret = DPS_Registration_GetSyn(node, host, service, tenant, regs, timeout);
+        ret = DPS_Registration_GetSyn(node, linkText[i], tenant, regs, timeout);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("Registration service lookup failed: %s\n", DPS_ErrTxt(ret));
             return ret;

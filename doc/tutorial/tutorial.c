@@ -78,6 +78,7 @@ static DPS_Node* CreateNodeWithAsymmetricKeyStore(void);
 static DPS_Node* CreateNodeWithAuthenticatedSender(const DPS_KeyId* nodeId);
 static DPS_Status StartMulticastNode(DPS_Node* node);
 static DPS_Status StartUnicastNode(DPS_Node* node, uint16_t listenPort);
+static DPS_Status StartNode(DPS_Node* node, int mcastPub, const char* listenText);
 static void LinkComplete(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, void* data);
 static DPS_Status Publish(DPS_Node* node, const char* security, DPS_Publication** createdPub);
 static DPS_Status PublishAck(DPS_Node* node, const char* security, DPS_Publication** createdPub);
@@ -121,9 +122,12 @@ int main(int argc, char** argv)
     int subscribe = DPS_FALSE;
     int ack = DPS_FALSE;
     int listenPort = -1;
+    const char* listenText = NULL;
     int linkPort = 0;
+    const char* linkText = NULL;
     const char *security = 0;
     int auth = DPS_FALSE;
+    char* endp;
     int i;
     DPS_Status ret;
 
@@ -136,10 +140,16 @@ int main(int argc, char** argv)
         } else if (!strcmp(argv[i], "ack")) {
             ack = DPS_TRUE;
         } else if (!strcmp(argv[i], "-l") && ((i + 1) < argc)) {
-            listenPort = atoi(argv[i + 1]);
+            listenPort = strtol(argv[i + 1], &endp, 10);
+            if (*endp) {
+                listenText = argv[i + 1];
+            }
             ++i;
         } else if (!strcmp(argv[i], "-p") && ((i + 1) < argc)) {
-            linkPort = atoi(argv[i + 1]);
+            linkPort = strtol(argv[i + 1], &endp, 10);
+            if (*endp) {
+                linkText = argv[i + 1];
+            }
             ++i;
         } else if (!strcmp(argv[i], "-x") && ((i + 1) < argc)) {
             security = argv[i + 1];
@@ -189,7 +199,9 @@ int main(int argc, char** argv)
         goto Exit;
     }
 
-    if (linkPort || (listenPort >= 0)) {
+    if (linkText || listenText) {
+        ret = StartNode(node, DPS_MCAST_PUB_DISABLED, listenText);
+    } else if (linkPort || (listenPort >= 0)) {
         if (listenPort == -1) {
             listenPort = 0;
         }
@@ -201,7 +213,20 @@ int main(int argc, char** argv)
         goto Exit;
     }
 
-    if (linkPort) {
+    if (linkText) {
+        DPS_NodeAddress* addr = DPS_CreateAddress();
+        if (!addr) {
+            goto Exit;
+        }
+        DPS_SetAddress(addr, linkText);
+        ret = DPS_Link(node, addr, LinkComplete, NULL);
+        DPS_DestroyAddress(addr);
+        if (ret != DPS_OK) {
+            goto Exit;
+        }
+        /* Wait for link to complete */
+        SLEEP(1000);
+    } else if (linkPort) {
         /** [Linking to a node] */
         DPS_NodeAddress* addr = DPS_CreateAddress();
         if (!addr) {
@@ -349,6 +374,30 @@ static DPS_Node* CreateNodeWithAuthenticatedSender(const DPS_KeyId* nodeId)
 
 Exit:
     return node;
+}
+
+static DPS_Status StartNode(DPS_Node* node, int mcastPub, const char* listenText)
+{
+    DPS_Status ret;
+    DPS_NodeAddress* listenAddr = NULL;
+
+    if (listenText) {
+        listenAddr = DPS_CreateAddress();
+        if (!listenAddr) {
+            ret = DPS_ERR_RESOURCES;
+            goto Exit;
+        }
+        DPS_SetAddress(listenAddr, listenText);
+    }
+    ret = DPS_StartNode(node, mcastPub, listenAddr);
+    if (ret != DPS_OK) {
+        goto Exit;
+    }
+    DPS_PRINT("Node is listening on %s\n", DPS_NodeAddrToString(DPS_GetListenAddress(node)));
+
+ Exit:
+    DPS_DestroyAddress(listenAddr);
+    return ret;
 }
 
 static DPS_Status StartMulticastNode(DPS_Node* node)

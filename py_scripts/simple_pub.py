@@ -97,8 +97,8 @@ parser.add_argument("-d", "--debug", action='store_true',
                     help="Enable debug ouput if built for debug.")
 parser.add_argument("-x", "--encryption", type=int, choices=[0,1,2,3], default=1,
                     help="Disable (0) or enable symmetric encryption (1), asymmetric encryption (2), or authentication (3). Default is symmetric encryption enabled.")
-parser.add_argument("-l", "--listen", type=int, default=0,
-                    help="Port number to listen on for incoming connections.")
+parser.add_argument("-l", "--listen", default=None,
+                    help="Address to listen on for incoming connections.")
 parser.add_argument("-o", "--host", default=None,
                     help="Host to link to.")
 parser.add_argument("-p", "--port", type=int, default=0,
@@ -149,8 +149,13 @@ if args.port != 0:
     mcast = dps.MCAST_PUB_DISABLED
 
 node = dps.create_node("/", key_store, node_id)
-listen_addr = dps.create_address()
-dps.set_address(listen_addr, "[::]:%d" % (args.listen))
+listen_addr = None
+if args.listen != None:
+    listen_addr = dps.create_address()
+    try:
+        dps.set_address(listen_addr, "[::]:%d" % (int(args.listen)))
+    except ValueError:
+        dps.set_address(listen_addr, args.listen)
 dps.start_node(node, mcast, listen_addr)
 print("Publisher is listening on %s" % (dps.get_listen_address(node)))
 

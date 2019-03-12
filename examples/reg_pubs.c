@@ -166,21 +166,14 @@ static DPS_Status FindAndLink(DPS_Node* node, char** linkText, int numLinks, con
 {
     DPS_Status ret = DPS_OK;
     DPS_RegistrationList* regs = NULL;
-    char host[256];
-    char service[256];
     int i;
 
     for (i = 0; i < numLinks; ++i) {
         /*
          * Find nodes to link to
          */
-        ret = DPS_SplitAddress(linkText[i], host, sizeof(host), service, sizeof(service));
-        if (ret != DPS_OK) {
-            DPS_ERRPRINT("DPS_SplitAddress returned %s\n", DPS_ErrTxt(ret));
-            return ret;
-        }
         regs = DPS_CreateRegistrationList(count);
-        ret = DPS_Registration_GetSyn(node, host, service, tenant, regs, timeout);
+        ret = DPS_Registration_GetSyn(node, linkText[i], tenant, regs, timeout);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("Registration service lookup failed: %s\n", DPS_ErrTxt(ret));
             return ret;

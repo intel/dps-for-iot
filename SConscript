@@ -258,37 +258,48 @@ testenv.Append(CPPPATH = ['#/ext/safestring/include', 'src'])
 testenv.Append(LIBS = [lib, env['DPS_LIBS']])
 if extUV: testenv.Append(CPPPATH = ['#/ext/libuv/include'])
 
-testsrcs = ['test/hist_unit.c',
+testsrcs = ['test/cbortest.c',
+            'test/cosetest.c',
             'test/countvec.c',
+            'test/hist_unit.c',
+            'test/jsontest.c',
+            'test/keystoretest.c',
+            'test/make_mesh.c',
+            'test/mesh_stress.c',
+            'test/packtest.c',
+            'test/pubsub.c',
             'test/rle_compression.c',
             'test/topic_match.c',
-            'test/pubsub.c',
-            'test/packtest.c',
-            'test/cbortest.c',
-            'test/cosetest.c',
-            'test/jsontest.c',
-            'test/version.c',
-            'test/keystoretest.c']
-
-# TODO fix these for pipes
-if testenv['transport'] == 'udp' or testenv['transport'] == 'tcp' or testenv['transport'] == 'dtls':
-    testsrcs.extend(['test/make_mesh.c',
-                     'test/mesh_stress.c'])
+            'test/version.c']
 
 Depends(testsrcs, ext_objs)
 
+testobjs = testenv.Object(['test/keys.c',
+                           'test/test.c'])
+
 testprogs = []
 for test in testsrcs:
-    testprogs.append(testenv.Program(test))
+    testprogs.append(testenv.Program([test, testobjs]))
 
 testsrcs = ['test/link.c',
             'test/node.c',
             'test/publish.c']
 
 for test in testsrcs:
-    testprogs.append(testenv.Program([test, 'test/keys.c']))
+    testprogs.append(testenv.Program([test, testobjs]))
 
 testenv.Install('#/build/test/bin', testprogs)
+
+psrcs = ['test/perf/publisher.c',
+         'test/perf/subscriber.c']
+
+Depends(psrcs, ext_objs)
+
+pprogs = []
+for test in psrcs:
+    pprogs.append(testenv.Program([test, testobjs]))
+
+testenv.Install('#/build/test/perf/bin', pprogs)
 
 # Fuzz tests
 if env['PLATFORM'] == 'posix' and env['fsan'] == True:
@@ -314,23 +325,6 @@ if env['PLATFORM'] == 'posix' and env['fsan'] == True:
 
     fenv.Install('#/build/test/bin', fprogs)
 
-# Performance tests
-penv = commonenv.Clone()
-penv.Append(CPPPATH = ['#/ext/safestring/include', 'src'])
-penv.Append(LIBS = [lib, env['DPS_LIBS']])
-if extUV: penv.Append(CPPPATH = ['#/ext/libuv/include'])
-
-psrcs = ['test/perf/publisher.c',
-         'test/perf/subscriber.c']
-
-Depends(psrcs, ext_objs)
-
-pprogs = []
-for test in psrcs:
-    pprogs.append(penv.Program(test))
-
-penv.Install('#/build/test/perf/bin', pprogs)
-
 # Examples
 exampleenv = commonenv.Clone()
 exampleenv.Append(LIBS = [lib, env['DPS_LIBS']])
@@ -346,9 +340,7 @@ Depends(examplesrcs, ext_objs)
 
 exampleprogs = []
 for example in examplesrcs:
-    exampleprogs.append(exampleenv.Program([example,
-                                            'examples/keys.c',
-                                            'examples/common.c']))
+    exampleprogs.append(exampleenv.Program([example, 'examples/keys.c', 'examples/common.c']))
 
 exampleenv.Install('#/build/dist/bin', exampleprogs)
 

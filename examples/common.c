@@ -123,7 +123,7 @@ DPS_Status Link(DPS_Node* node, char** addrText, DPS_NodeAddress** addr, int num
         }
         ret = DPS_LinkTo(node, addrText[i], addr[i]);
         if (ret == DPS_OK) {
-            DPS_PRINT("Publisher is linked to %s\n", DPS_NodeAddrToString(addr[i]));
+            DPS_PRINT("Node is linked to %s\n", DPS_NodeAddrToString(addr[i]));
         } else {
             DPS_ERRPRINT("DPS_LinkTo %s returned %s\n", addrText[i], DPS_ErrTxt(ret));
         }

@@ -52,4 +52,7 @@
 
 #define ASSERT(cond) do { assert(cond); if (!(cond)) exit(EXIT_FAILURE); } while (0)
 
+int IntArg(char* opt, char*** argp, int* argcp, int* val, int min, int max);
+int AddressArg(char* opt, char*** argp, int* argcp, DPS_NodeAddress** addr);
+
 #endif

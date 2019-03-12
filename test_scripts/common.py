@@ -93,8 +93,15 @@ def _expect(children, pattern, allow_error=False, timeout=-1):
             raise RuntimeError(pattern[i])
 
 def _expect_listening(child):
-    _expect([child], ['is listening on [0-9a-z.:%[\]]+:(\d+){}'.format(child.linesep)])
-    child.port = int(child.match.group(1))
+    _expect([child], ['is listening on ([0-9A-Za-z.:%_\-/\\[\]]+){}'.format(child.linesep)])
+    child.port = child.match.group(1)
+    # Rewrite INADDR_ANY to INADDR_LOOPBACK
+    m = re.match('(.*)(:[0-9]+)', child.port)
+    if m != None:
+        if m.group(1) == '[::]':
+            child.port = '[::1]' + m.group(2)
+        elif m.group(1) == '0.0.0.0':
+            child.port = '127.0.0.1' + m.group(2)
 
 def _expect_linked(child, args):
     ports = []
@@ -104,11 +111,11 @@ def _expect_linked(child, args):
             ports.append(curr)
         prev = curr
     while len(ports):
-        _expect([child], ['is linked to [0-9a-z.:%[\]]+:(\d+){}'.format(child.linesep)])
+        _expect([child], ['is linked to ([0-9A-Za-z.:%_\-/\\[\]]+){}'.format(child.linesep)])
         ports.remove(child.match.group(1).decode())
 
 def expect_linked(child, ports):
-    if not isinstance(ports, collections.Sequence):
+    if isinstance(ports, basestring) or not isinstance(ports, collections.Sequence):
         ports = [ports]
     _expect_linked(child, ('-p {} ' * len(ports)).format(*ports))
 
@@ -391,7 +398,7 @@ def topic_match(pattern, args=''):
 def expect_reg_linked(children):
     if not isinstance(children, collections.Sequence):
         children = [children]
-    _expect(children, ['is linked to [0-9a-z.:%[\]]+:\d+'])
+    _expect(children, ['is linked to [0-9A-Za-z.:%_\-/\\[\]]+'])
 
 def mesh_stress(args=''):
     global _ms
@@ -400,7 +407,7 @@ def mesh_stress(args=''):
     return _spawn(_ms, cmd)
 
 def link(child, ports):
-    if not isinstance(ports, collections.Sequence):
+    if isinstance(ports, basestring) or not isinstance(ports, collections.Sequence):
         ports = [ports]
     child.sendline(('-p {} ' * len(ports)).format(*ports))
 

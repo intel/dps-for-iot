@@ -128,7 +128,6 @@ typedef struct _Args {
     int numTopics;
     char* topicList[64];
     DPS_NodeAddress* listenAddr;
-    DPS_NodeAddress* linkAddr[MAX_LINKS];
     char* linkText[MAX_LINKS];
     int numLinks;
     int wait;
@@ -285,42 +284,25 @@ static void OnResolveAddressComplete(DPS_Node* node, const DPS_NodeAddress* addr
 static int LinkTo(Subscriber* subscriber, Args* args)
 {
     DPS_Status ret;
-    int i;
+    int numAddrs;
 
-    if (args->numLinks) {
-        for (i = 0; i < args->numLinks; ++i, ++subscriber->numAddrs) {
-            char host[256];
-            char service[256];
-            ret = DPS_SplitAddress(args->linkText[i], host, sizeof(host), service, sizeof(service));
-            if (ret != DPS_OK) {
-                DPS_ERRPRINT("DPS_SplitAddress returned %s\n", DPS_ErrTxt(ret));
-                return DPS_FALSE;
-            }
-            args->linkAddr[i] = DPS_CreateAddress();
-            if (!args->linkAddr[i]) {
-                DPS_ERRPRINT("DPS_CreateAddress failed\n");
-                return DPS_FALSE;
-            }
-            ret = DPS_ResolveAddress(subscriber->node, host, service, OnResolveAddressComplete, &args->linkAddr[i]);
-            if (ret != DPS_OK) {
-                DPS_ERRPRINT("DPS_ResolveAddress %s returned %s\n", args->linkText[i], DPS_ErrTxt(ret));
-                return DPS_FALSE;
-            }
-        }
+    numAddrs = A_SIZEOF(subscriber->addrs) - subscriber->numAddrs;
+    if (numAddrs <= 0) {
+        return DPS_FALSE;
     }
-    return DPS_TRUE;
+    numAddrs = (numAddrs < args->numLinks) ? numAddrs : args->numLinks;
+    ret = Link(subscriber->node, args->linkText, &subscriber->addrs[subscriber->numAddrs], numAddrs);
+    if (ret == DPS_OK) {
+        subscriber->numAddrs += numAddrs;
+        return DPS_TRUE;
+    } else {
+        return DPS_FALSE;
+    }
 }
 
 static void UnlinkFrom(Subscriber* subscriber)
 {
-    int i;
-    for (i = 0; i < subscriber->numAddrs; ++i) {
-        DPS_Status unlinkRet = DPS_UnlinkFrom(subscriber->node, subscriber->addrs[i]);
-        DPS_DestroyAddress(subscriber->addrs[i]);
-        if (unlinkRet != DPS_OK) {
-            DPS_ERRPRINT("DPS_UnlinkFrom %s returned %s\n", DPS_NodeAddrToString(subscriber->addrs[i]), DPS_ErrTxt(unlinkRet));
-        }
-    }
+    Unlink(subscriber->node, subscriber->addrs, subscriber->numAddrs);
 }
 
 #define MAX_LINE_LEN 256
@@ -434,7 +416,8 @@ Exit:
     DPS_DestroyEvent(nodeDestroyed);
     DPS_DestroyMemoryKeyStore(memoryKeyStore);
     DPS_DestroyAddress(args.listenAddr);
-    DestroyLinkArg(args.linkText, args.linkAddr, args.numLinks);
+    DestroyLinkArg(args.linkText, NULL, args.numLinks);
+    DestroyLinkArg(NULL, subscriber.addrs, subscriber.numAddrs);
     return (ret == DPS_OK) ? EXIT_SUCCESS : EXIT_FAILURE;
 
 Usage:

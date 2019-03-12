@@ -45,7 +45,7 @@ struct _DPS_MulticastSender {
     DPS_Node* node;
 };
 
-DPS_NetContext* DPS_NetStart(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnReceive cb)
+DPS_NetContext* DPS_NetStart(DPS_Node* node, const DPS_NodeAddress* addr, DPS_OnReceive cb)
 {
     DPS_NetContext* netCtx = NULL;
 

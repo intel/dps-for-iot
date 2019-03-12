@@ -239,7 +239,7 @@ DPS_Status DPS_MulticastSend(DPS_MulticastSender* sender, void* appCtx, uv_buf_t
  *
  * @return   Returns a pointer to an opaque data structure that holds the state of the netCtx.
  */
-DPS_NetContext* DPS_NetStart(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnReceive cb);
+DPS_NetContext* DPS_NetStart(DPS_Node* node, const DPS_NodeAddress* addr, DPS_OnReceive cb);
 
 /**
  * Get the address the netCtx is listening on

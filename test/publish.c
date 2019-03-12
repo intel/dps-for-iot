@@ -438,7 +438,6 @@ int main(int argc, char** argv)
     DPS_Event* event = NULL;
     DPS_MemoryKeyStore* memoryKeyStore = NULL;
     DPS_Node *node = NULL;
-    DPS_NodeAddress* listenAddr = NULL;
     DPS_Status ret;
 
     DPS_Debug = DPS_FALSE;
@@ -457,12 +456,8 @@ int main(int argc, char** argv)
         DPS_SetNetworkKey(memoryKeyStore, &NetworkKeyId, &NetworkKey);
         node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore), NULL);
         ASSERT(node);
-        listenAddr = DPS_CreateAddress();
-        ASSERT(listenAddr);
-        DPS_SetAddress(listenAddr, "[::1]:0");
-        ret = DPS_StartNode(node, DPS_MCAST_PUB_ENABLE_SEND | DPS_MCAST_PUB_ENABLE_RECV, listenAddr);
+        ret = DPS_StartNode(node, DPS_MCAST_PUB_ENABLE_SEND | DPS_MCAST_PUB_ENABLE_RECV, NULL);
         ASSERT(ret == DPS_OK);
-        DPS_DestroyAddress(listenAddr);
         (*test)(node, DPS_MemoryKeyStoreHandle(memoryKeyStore));
         DPS_DestroyNode(node, OnNodeDestroyed, event);
         DPS_WaitForEvent(event);

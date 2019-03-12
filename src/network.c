@@ -347,15 +347,13 @@ void DPS_EndpointSetPath(DPS_NetEndpoint* ep, char* path, size_t pathLen)
 {
     switch (ep->addr.type) {
     case DPS_UDP:
-        if (!ep->cn) {
-            ep->addr.type = DPS_PIPE;
-            assert (pathLen < DPS_NODE_ADDRESS_PATH_MAX);
-            memcpy(ep->addr.u.path, path, pathLen);
-            ep->addr.u.path[pathLen] = 0;
-        }
+    case DPS_PIPE:
+        ep->addr.type = DPS_PIPE;
+        assert(pathLen < DPS_NODE_ADDRESS_PATH_MAX);
+        memcpy(ep->addr.u.path, path, pathLen);
+        ep->addr.u.path[pathLen] = 0;
         break;
     default:
-        assert(ep->cn);
         break;
     }
 }

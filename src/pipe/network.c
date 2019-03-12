@@ -33,8 +33,11 @@
 
 #ifdef _WIN32
 #include <netioapi.h>
+#define PATH_SEP "\\"
 #else
 #include <net/if.h>
+#include <sys/un.h>
+#define PATH_SEP "/"
 #endif
 
 /*
@@ -56,7 +59,7 @@ typedef struct _SendRequest {
 
 typedef struct _DPS_NetConnection {
     DPS_Node* node;
-    uv_tcp_t socket;
+    uv_pipe_t socket;
     DPS_NetEndpoint peerEp;
     int refCount;
     uv_shutdown_t shutdownReq;
@@ -72,7 +75,7 @@ typedef struct _DPS_NetConnection {
 } DPS_NetConnection;
 
 struct _DPS_NetContext {
-    uv_tcp_t socket;   /* the listen socket */
+    uv_pipe_t socket;   /* the listen socket */
     DPS_Node* node;
     DPS_OnReceive receiveCB;
 };
@@ -115,8 +118,8 @@ static void SendCompleted(DPS_NetConnection* cn)
     while (!DPS_QueueEmpty(&cn->sendCompletedQueue)) {
         SendRequest* req = (SendRequest*)DPS_QueueFront(&cn->sendCompletedQueue);
         DPS_QueueRemove(&req->queue);
-        req->onSendComplete(req->cn->node, req->appCtx, &req->cn->peerEp, req->bufs + 1, req->numBufs - 1,
-                            req->status);
+        req->onSendComplete(req->cn->node, req->appCtx, &req->cn->peerEp, req->bufs + 1,
+                            req->numBufs - 1, req->status);
         free(req);
     }
 }
@@ -284,7 +287,7 @@ static void OnIncomingConnection(uv_stream_t* stream, int status)
     int ret;
     DPS_NetContext* netCtx = (DPS_NetContext*)stream->data;
     DPS_NetConnection* cn;
-    int sz = sizeof(cn->peerEp.addr.u.inaddr);
+    size_t sz;
 
     DPS_DBGTRACE();
 
@@ -301,9 +304,9 @@ static void OnIncomingConnection(uv_stream_t* stream, int status)
         DPS_ERRPRINT("OnIncomingConnection malloc failed\n");
         goto FailConnection;
     }
-    ret = uv_tcp_init(stream->loop, &cn->socket);
+    ret = uv_pipe_init(stream->loop, &cn->socket, 0);
     if (ret) {
-        DPS_ERRPRINT("uv_tcp_init error=%s\n", uv_err_name(ret));
+        DPS_ERRPRINT("uv_pipe_init error=%s\n", uv_err_name(ret));
         free(cn);
         goto FailConnection;
     }
@@ -320,8 +323,9 @@ static void OnIncomingConnection(uv_stream_t* stream, int status)
         DPS_ERRPRINT("OnIncomingConnection accept %s\n", uv_strerror(ret));
         goto FailConnection;
     }
-    cn->peerEp.addr.type = DPS_TCP;
-    uv_tcp_getpeername((uv_tcp_t*)&cn->socket, (struct sockaddr*)&cn->peerEp.addr.u.inaddr, &sz);
+    cn->peerEp.addr.type = DPS_PIPE;
+    sz = sizeof(cn->peerEp.addr.u.path);
+    uv_pipe_getpeername((uv_pipe_t*)&cn->socket, cn->peerEp.addr.u.path, &sz);
     ret = uv_read_start((uv_stream_t*)&cn->socket, AllocBuffer, OnData);
     if (ret) {
         DPS_ERRPRINT("OnIncomingConnection read start %s\n", uv_strerror(ret));
@@ -369,37 +373,44 @@ static int GetScopeId(struct sockaddr_in6* addr)
 
 DPS_NetContext* DPS_NetStart(DPS_Node* node, const DPS_NodeAddress* addr, DPS_OnReceive cb)
 {
+    char tempPath[DPS_NODE_ADDRESS_PATH_MAX] = "dps_pipe_XXXXXX";
+    DPS_NetContext* netCtx = NULL;
+    const char* path = NULL;
+    DPS_UUID uuid;
     int ret;
-    DPS_NetContext* netCtx;
-    struct sockaddr* sa;
-    struct sockaddr_storage ss;
 
     netCtx = calloc(1, sizeof(DPS_NetContext));
     if (!netCtx) {
         return NULL;
     }
-    ret = uv_tcp_init(node->loop, &netCtx->socket);
+    ret = uv_pipe_init(node->loop, &netCtx->socket, 0);
     if (ret) {
-        DPS_ERRPRINT("uv_tcp_init error=%s\n", uv_err_name(ret));
+        DPS_ERRPRINT("uv_pipe_init error=%s\n", uv_err_name(ret));
         free(netCtx);
         return NULL;
     }
+    netCtx->socket.data = netCtx;
     netCtx->node = node;
     netCtx->receiveCB = cb;
     if (addr) {
-        sa = (struct sockaddr*)&addr->u.inaddr;
+        path = addr->u.path;
     } else {
-        ret = uv_ip6_addr("::", 0, (struct sockaddr_in6*)&ss);
-        if (ret) {
+#ifdef _WIN32
+#error mkdtemp
+#else
+        if (!mkdtemp(tempPath)) {
             goto ErrorExit;
         }
-        sa = (struct sockaddr*)&ss;
+        DPS_GenerateUUID(&uuid);
+        strcat(tempPath, PATH_SEP);
+        strcat(tempPath, DPS_UUIDToString(&uuid));
+        path = tempPath;
+#endif
     }
-    ret = uv_tcp_bind(&netCtx->socket, sa, 0);
+    ret = uv_pipe_bind(&netCtx->socket, path);
     if (ret) {
         goto ErrorExit;
     }
-    netCtx->socket.data = netCtx;
     ret = uv_listen((uv_stream_t*)&netCtx->socket, LISTEN_BACKLOG, OnIncomingConnection);
     if (ret) {
         goto ErrorExit;
@@ -414,16 +425,14 @@ DPS_NetContext* DPS_NetStart(DPS_Node* node, const DPS_NodeAddress* addr, DPS_On
     return netCtx;
 
 ErrorExit:
-
     DPS_ERRPRINT("Failed to start net netCtx: error=%s\n", uv_err_name(ret));
-    netCtx->socket.data = netCtx;
     uv_close((uv_handle_t*)&netCtx->socket, ListenSocketClosed);
     return NULL;
 }
 
 DPS_NodeAddress* DPS_NetGetListenAddress(DPS_NodeAddress* addr, DPS_NetContext* netCtx)
 {
-    int len;
+    size_t len;
 
     DPS_DBGTRACEA("netCtx=%p\n", netCtx);
 
@@ -431,12 +440,12 @@ DPS_NodeAddress* DPS_NetGetListenAddress(DPS_NodeAddress* addr, DPS_NetContext* 
     if (!netCtx) {
         return addr;
     }
-    addr->type = DPS_TCP;
-    len = sizeof(struct sockaddr_in6);
-    if (uv_tcp_getsockname(&netCtx->socket, (struct sockaddr*)&addr->u.inaddr, &len)) {
+    addr->type = DPS_PIPE;
+    len = sizeof(addr->u.path);
+    if (uv_pipe_getsockname(&netCtx->socket, (char*)&addr->u.path, &len)) {
         return addr;
     }
-    DPS_DBGPRINT("Listener address = %s\n", DPS_NodeAddrToString(addr));
+    DPS_DBGPRINT("Listener address = %s\n", addr->u.path);
     return addr;
 }
 
@@ -492,8 +501,8 @@ static void OnOutgoingConnection(uv_connect_t *req, int status)
     if (status == 0) {
         DoSend(cn);
     } else {
-        DPS_ERRPRINT("OnOutgoingConnection - connect %s failed: %s\n", DPS_NodeAddrToString(&cn->peerEp.addr),
-                     uv_err_name(status));
+        DPS_ERRPRINT("OnOutgoingConnection - connect %s failed: %s\n",
+                     DPS_NodeAddrToString(&cn->peerEp.addr), uv_err_name(status));
         assert(!DPS_QueueEmpty(&cn->sendQueue));
         CancelPendingSends(cn);
     }
@@ -565,7 +574,7 @@ DPS_Status DPS_NetSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf
     if (!ep->cn) {
         goto ErrExit;
     }
-    r = uv_tcp_init(node->loop, &ep->cn->socket);
+    r = uv_pipe_init(node->loop, &ep->cn->socket, 0);
     if (r) {
         goto ErrExit;
     }
@@ -577,19 +586,8 @@ DPS_Status DPS_NetSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf
     ep->cn->idle.data = ep->cn;
     socket = (uv_handle_t*)&ep->cn->socket;
 
-    if (ep->addr.u.inaddr.ss_family == AF_INET6) {
-        struct sockaddr_in6* in6 = (struct sockaddr_in6*)&ep->addr.u.inaddr;
-        if (!in6->sin6_scope_id) {
-            in6->sin6_scope_id = GetScopeId(in6);
-        }
-    }
     ep->cn->connectReq.data = ep->cn;
-    r = uv_tcp_connect(&ep->cn->connectReq, &ep->cn->socket, (struct sockaddr*)&ep->addr.u.inaddr,
-                       OnOutgoingConnection);
-    if (r) {
-        DPS_ERRPRINT("uv_tcp_connect %s error=%s\n", DPS_NodeAddrToString(&ep->addr), uv_err_name(r));
-        goto ErrExit;
-    }
+    uv_pipe_connect(&ep->cn->connectReq, &ep->cn->socket, ep->addr.u.path, OnOutgoingConnection);
     ep->cn->peerEp.cn = ep->cn;
     DPS_QueuePushBack(&ep->cn->sendQueue, &req->queue);
     req->cn = ep->cn;

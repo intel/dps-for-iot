@@ -151,31 +151,6 @@ static int StrArg(char* opt, char*** argp, int* argcp, const char** val)
     return 1;
 }
 
-static int IntArg(char* opt, char*** argp, int* argcp, int* val, int min, int max)
-{
-    char* p;
-    char** arg = *argp;
-    int argc = *argcp;
-
-    if (strcmp(*arg++, opt) != 0) {
-        return 0;
-    }
-    if (!--argc) {
-        return 0;
-    }
-    *val = strtol(*arg++, &p, 10);
-    if (*p) {
-        return 0;
-    }
-    if (*val < min || *val > max) {
-        DPS_PRINT("Value for option %s must be in range %d..%d\n", opt, min, max);
-        return 0;
-    }
-    *argp = arg;
-    *argcp = argc;
-    return 1;
-}
-
 static uint16_t GetPort(const DPS_NodeAddress* nodeAddr)
 {
     const struct sockaddr* addr = (const struct sockaddr*)&nodeAddr->u.inaddr;

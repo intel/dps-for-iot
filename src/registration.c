@@ -246,7 +246,7 @@ static DPS_Status BuildPutPayload(DPS_TxBuffer* payload, const DPS_NodeAddress* 
     DPS_Status ret;
     uv_interface_address_t* ifsAddrs = NULL;
     int numIfs = 0;
-    int extIfs = 0;
+    uint8_t extIfs = 0;
     uint16_t port;
     int r;
     int i;
@@ -269,7 +269,8 @@ static DPS_Status BuildPutPayload(DPS_TxBuffer* payload, const DPS_NodeAddress* 
                 ++extIfs;
             }
         }
-        ret = DPS_TxBufferInit(payload, NULL, 8 + extIfs * DPS_NODE_ADDRESS_MAX_STRING_LEN);
+        ret = DPS_TxBufferInit(payload, NULL, CBOR_SIZEOF_UINT(extIfs) +
+                               extIfs * DPS_NODE_ADDRESS_MAX_STRING_LEN);
         if (ret != DPS_OK) {
             goto Exit;
         }
@@ -296,6 +297,10 @@ static DPS_Status BuildPutPayload(DPS_TxBuffer* payload, const DPS_NodeAddress* 
         }
         break;
     case DPS_PIPE:
+        ret = DPS_TxBufferInit(payload, NULL, CBOR_SIZEOF_UINT(1) + DPS_NODE_ADDRESS_MAX_STRING_LEN);
+        if (ret != DPS_OK) {
+            goto Exit;
+        }
         DPS_DBGPRINT("Encoding 1 addresses\n");
         ret = CBOR_EncodeUint8(payload, 1);
         assert(ret == DPS_OK);
@@ -313,9 +318,8 @@ Exit:
     return ret;
 }
 
-DPS_Status DPS_Registration_Put(DPS_Node* node, const char* host, const char* service,
-                                const char* tenantString, uint16_t timeout, DPS_OnRegPutComplete cb,
-                                void* data)
+DPS_Status DPS_Registration_Put(DPS_Node* node, const char* addrText, const char* tenantString,
+                                uint16_t timeout, DPS_OnRegPutComplete cb, void* data)
 {
     DPS_Status ret;
     RegPut* regPut;
@@ -351,7 +355,17 @@ DPS_Status DPS_Registration_Put(DPS_Node* node, const char* host, const char* se
     } else {
         ret = BuildPutPayload(&regPut->payload, localAddr);
         if (ret == DPS_OK) {
-            ret = DPS_ResolveAddress(regPut->node, host, service, OnResolvePut, regPut);
+#if defined(DPS_USE_DTLS) || defined(DPS_USE_TCP) || defined(DPS_USE_UDP)
+            char host[DPS_MAX_HOST_LEN + 1];
+            char service[DPS_MAX_SERVICE_LEN + 1];
+            ret = DPS_SplitAddress(addrText, host, sizeof(host), service, sizeof(service));
+            if (ret == DPS_OK) {
+                ret = DPS_ResolveAddress(regPut->node, host, service, OnResolvePut, regPut);
+            }
+#elif defined(DPS_USE_PIPE)
+            DPS_SetAddress(&regPut->addr, addrText);
+            ret = DPS_Link(regPut->node, &regPut->addr, OnLinkedPut, regPut);
+#endif
         }
     }
 
@@ -377,8 +391,8 @@ static void OnPutComplete(DPS_Status status, void* data)
     DPS_SignalEvent(event, status);
 }
 
-DPS_Status DPS_Registration_PutSyn(DPS_Node* node, const char* host, const char* service,
-                                   const char* tenantString, uint16_t timeout)
+DPS_Status DPS_Registration_PutSyn(DPS_Node* node, const char* addrText, const char* tenantString,
+                                   uint16_t timeout)
 {
     DPS_Status ret;
     DPS_Event* event = DPS_CreateEvent();
@@ -388,7 +402,7 @@ DPS_Status DPS_Registration_PutSyn(DPS_Node* node, const char* host, const char*
     if (!event) {
         return DPS_ERR_RESOURCES;
     }
-    ret = DPS_Registration_Put(node, host, service, tenantString, timeout, OnPutComplete, event);
+    ret = DPS_Registration_Put(node, addrText, tenantString, timeout, OnPutComplete, event);
     if (ret == DPS_OK) {
         ret = DPS_WaitForEvent(event);
     }
@@ -568,9 +582,9 @@ static void OnResolveGet(DPS_Node* node, const DPS_NodeAddress* addr, void* data
     }
 }
 
-DPS_Status DPS_Registration_Get(DPS_Node* node, const char* host, const char* service,
-                                const char* tenantString, DPS_RegistrationList* regs, uint16_t timeout,
-                                DPS_OnRegGetComplete cb, void* data)
+DPS_Status DPS_Registration_Get(DPS_Node* node, const char* addrText, const char* tenantString,
+                                DPS_RegistrationList* regs, uint16_t timeout, DPS_OnRegGetComplete cb,
+                                void* data)
 {
     DPS_Status ret;
     RegGet* regGet;
@@ -615,7 +629,17 @@ DPS_Status DPS_Registration_Get(DPS_Node* node, const char* host, const char* se
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
     } else {
-        ret = DPS_ResolveAddress(regGet->node, host, service, OnResolveGet, regGet);
+#if defined(DPS_USE_DTLS) || defined(DPS_USE_TCP) || defined(DPS_USE_UDP)
+            char host[DPS_MAX_HOST_LEN + 1];
+            char service[DPS_MAX_SERVICE_LEN + 1];
+            ret = DPS_SplitAddress(addrText, host, sizeof(host), service, sizeof(service));
+            if (ret == DPS_OK) {
+                ret = DPS_ResolveAddress(regGet->node, host, service, OnResolveGet, regGet);
+            }
+#elif defined(DPS_USE_PIPE)
+            DPS_SetAddress(&regGet->addr, addrText);
+            ret = DPS_Link(regGet->node, &regGet->addr, OnLinkedGet, regGet);
+#endif
     }
 
 Exit:
@@ -644,9 +668,8 @@ static void OnGetComplete(DPS_RegistrationList* regs, DPS_Status status, void* d
     DPS_SignalEvent(getResult->event, status);
 }
 
-DPS_Status DPS_Registration_GetSyn(DPS_Node* node, const char* host, const char* service,
-                                   const char* tenantString, DPS_RegistrationList* regs,
-                                   uint16_t timeout)
+DPS_Status DPS_Registration_GetSyn(DPS_Node* node, const char* addrText, const char* tenantString,
+                                   DPS_RegistrationList* regs, uint16_t timeout)
 {
     DPS_Status ret;
     GetResult getResult;
@@ -659,8 +682,7 @@ DPS_Status DPS_Registration_GetSyn(DPS_Node* node, const char* host, const char*
     if (!getResult.event) {
         return DPS_ERR_RESOURCES;
     }
-    ret = DPS_Registration_Get(node, host, service, tenantString, regs, timeout, OnGetComplete,
-                               &getResult);
+    ret = DPS_Registration_Get(node, addrText, tenantString, regs, timeout, OnGetComplete, &getResult);
     if (ret == DPS_OK) {
         ret = DPS_WaitForEvent(getResult.event);
     }
@@ -699,12 +721,10 @@ static void OnLinked(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, v
     free(linkTo);
 }
 
-static void OnResolve(DPS_Node* node, const DPS_NodeAddress* addr, void* data)
+static DPS_Status Link(DPS_Node* node, const DPS_NodeAddress* addr, LinkTo* linkTo)
 {
     DPS_Status ret = DPS_ERR_NO_ROUTE;
-    LinkTo* linkTo = (LinkTo*)data;
 
-    DPS_DBGTRACE();
     if (addr) {
         if (IsLocalAddr(addr, DPS_GetListenAddress(node))) {
             DPS_DBGPRINT("Candidate %d INVALID\n", linkTo->candidate);
@@ -713,6 +733,16 @@ static void OnResolve(DPS_Node* node, const DPS_NodeAddress* addr, void* data)
             ret = DPS_Link(node, addr, OnLinked, linkTo);
         }
     }
+    return ret;
+}
+
+static void OnResolve(DPS_Node* node, const DPS_NodeAddress* addr, void* data)
+{
+    DPS_Status ret = DPS_ERR_NO_ROUTE;
+    LinkTo* linkTo = (LinkTo*)data;
+
+    DPS_DBGTRACE();
+    ret = Link(node, addr, linkTo);
     if (ret != DPS_OK) {
         /*
          * Keep trying other registrations
@@ -747,27 +777,38 @@ DPS_Status DPS_Registration_LinkTo(DPS_Node* node, DPS_RegistrationList* regs,
     while (untried) {
         uint32_t r = DPS_Rand() % regs->count;
         if (regs->list[r].flags == 0) {
-            char host[256];
-            char service[8];
             LinkTo* linkTo = malloc(sizeof(LinkTo));
+            if (linkTo) {
+                linkTo->cb = cb;
+                linkTo->data = data;
+                linkTo->regs = regs;
+                linkTo->candidate = r;
 
-            linkTo->cb = cb;
-            linkTo->data = data;
-            linkTo->regs = regs;
-            linkTo->candidate = r;
-
-            regs->list[r].flags = DPS_CANDIDATE_TRYING;
-            DPS_DBGPRINT("Candidate %d TRYING\n", linkTo->candidate);
-            ret = DPS_SplitAddress(regs->list[r].addrText, host, sizeof(host), service,
-                                   sizeof(service));
+                regs->list[r].flags = DPS_CANDIDATE_TRYING;
+                DPS_DBGPRINT("Candidate %d TRYING\n", linkTo->candidate);
+                ret = DPS_OK;
+            } else {
+                ret = DPS_ERR_RESOURCES;
+            }
             if (ret == DPS_OK) {
-                ret = DPS_ResolveAddress(node, host, service, OnResolve, linkTo);
+#if defined(DPS_USE_DTLS) || defined(DPS_USE_TCP) || defined(DPS_USE_UDP)
+                char host[DPS_MAX_HOST_LEN + 1];
+                char service[DPS_MAX_SERVICE_LEN + 1];
+                ret = DPS_SplitAddress(regs->list[r].addrText, host, sizeof(host), service,
+                                       sizeof(service));
+                if (ret == DPS_OK) {
+                    ret = DPS_ResolveAddress(node, host, service, OnResolve, linkTo);
+                }
+#elif defined(DPS_USE_PIPE)
+                DPS_NodeAddress addr;
+                DPS_SetAddress(&addr, regs->list[r].addrText);
+                ret = Link(node, &addr, linkTo);
+#endif
             }
             if (ret == DPS_OK) {
                 break;
             }
-            DPS_ERRPRINT("DPS_ResolveAddress returned %s\n", DPS_ErrTxt(ret));
-            DPS_DBGPRINT("Candidate %d FAILED\n", linkTo->candidate);
+            DPS_DBGPRINT("Candidate %d FAILED %s\n", linkTo->candidate, DPS_ErrTxt(ret));
             regs->list[r].flags = DPS_CANDIDATE_FAILED;
             free(linkTo);
             --untried;

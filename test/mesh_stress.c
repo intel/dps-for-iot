@@ -24,11 +24,6 @@
 #include "node.h"
 
 /*
- * This is just test code so to make it easy port numbers maps 1:1 into this array
- */
-static uint16_t PortMap[UINT16_MAX];
-
-/*
  * Maps node id's to DPS nodes
  */
 static DPS_Node* NodeMap[UINT16_MAX];
@@ -148,31 +143,6 @@ static int StrArg(char* opt, char*** argp, int* argcp, const char** val)
     return 1;
 }
 
-static int IntArg(char* opt, char*** argp, int* argcp, int* val, int min, int max)
-{
-    char* p;
-    char** arg = *argp;
-    int argc = *argcp;
-
-    if (strcmp(*arg++, opt) != 0) {
-        return 0;
-    }
-    if (!--argc) {
-        return 0;
-    }
-    *val = strtol(*arg++, &p, 10);
-    if (*p) {
-        return 0;
-    }
-    if (*val < min || *val > max) {
-        DPS_PRINT("Value for option %s must be in range %d..%d\n", opt, min, max);
-        return 0;
-    }
-    *argp = arg;
-    *argcp = argc;
-    return 1;
-}
-
 static int CountMutedLinks(void)
 {
     int numMuted = 0;
@@ -274,19 +244,6 @@ static volatile int LinksFailed;
 
 static uv_mutex_t lock;
 
-static uint16_t GetPortNumber(DPS_Node* node)
-{
-    uint16_t port = 0;
-    const DPS_NodeAddress* addr = DPS_GetListenAddress(node);
-    const struct sockaddr* sa = (const struct sockaddr*)&addr->u.inaddr;
-    if (sa->sa_family == AF_INET6) {
-        port = ntohs(((const struct sockaddr_in6*)sa)->sin6_port);
-    } else {
-        port = ntohs(((const struct sockaddr_in*)sa)->sin_port);
-    }
-    return port;
-}
-
 static void OnLinked(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, void* data)
 {
     uv_mutex_lock(&lock);
@@ -326,7 +283,6 @@ int main(int argc, char** argv)
     int expMuted;
     const char* inFn = NULL;
     int i;
-    DPS_NodeAddress* listenAddr = NULL;
 
     DPS_Debug = 0;
 
@@ -383,19 +339,11 @@ int main(int argc, char** argv)
              */
             DPS_SetNodeSubscriptionUpdateDelay(node, 300);
 
-            listenAddr = DPS_CreateAddress();
-            if (!listenAddr) {
-                DPS_ERRPRINT("Failed to create address: %s\n", DPS_ErrTxt(DPS_ERR_RESOURCES));
-                return EXIT_FAILURE;
-            }
-            DPS_SetAddress(listenAddr, "[::1]:0");
-            ret = DPS_StartNode(node, DPS_FALSE, listenAddr);
-            DPS_DestroyAddress(listenAddr);
+            ret = DPS_StartNode(node, DPS_FALSE, NULL);
             if (ret != DPS_OK) {
                 DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
                 return EXIT_FAILURE;
             }
-            PortMap[GetPortNumber(node)] = NodeList[i];
             NodeMap[NodeList[i]] = node;
             /*
              * Set slow link monitor probes because we are
