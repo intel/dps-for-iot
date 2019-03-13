@@ -71,10 +71,10 @@ typedef struct _OnOpCompletion {
 const DPS_UUID DPS_MaxMeshId = { .val64 = { UINT64_MAX, UINT64_MAX } };
 
 /*
- * We just need a unique pointer here to represent LoopbackNode.  The
- * actual value doesn't matter since it is not a real RemoteNode.
+ * We just need a unique pointer here to represent DPS_LoopbackNode.
+ * The actual value doesn't matter since it is not a real RemoteNode.
  */
-RemoteNode* LoopbackNode = (RemoteNode*)&LoopbackNode;
+RemoteNode* DPS_LoopbackNode = (RemoteNode*)&DPS_LoopbackNode;
 
 static void SendSubsTimer(uv_timer_t* handle);
 
@@ -658,7 +658,7 @@ static void SendPubsTask(uv_async_t* handle)
                  */
                 for (sub = node->subscriptions; sub != NULL; sub = sub->next) {
                     if (DPS_BitVectorIncludes(pub->bf, sub->bf)) {
-                        ret = DPS_SendPublication(req, pub, LoopbackNode);
+                        ret = DPS_SendPublication(req, pub, DPS_LoopbackNode);
                         if (ret != DPS_OK) {
                             DPS_ERRPRINT("SendPublication (loopback) returned %s\n", DPS_ErrTxt(ret));
                         }

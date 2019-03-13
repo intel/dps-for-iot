@@ -170,7 +170,7 @@ void DPS_DestroyPublishRequest(DPS_PublishRequest* req);
  * @param req            The publication send request
  * @param pub            The publication to send
  * @param remote         The remote node to send the publication to,
- *                       LoopbackNode for loopback, or NULL for multicast
+ *                       DPS_LoopbackNode for loopback, or NULL for multicast
  *
  * @return DPS_OK if sending is successful, an error otherwise
  */

@@ -1061,7 +1061,7 @@ DPS_Status DPS_SendPublication(DPS_PublishRequest* req, DPS_Publication* pub, Re
             bufs[1 + i] = uv_buf_init((char*)req->bufs[i].base, DPS_TxBufferUsed(&req->bufs[i]));
         }
         ++req->refCount;
-        if (remote == LoopbackNode) {
+        if (remote == DPS_LoopbackNode) {
             ret = DPS_LoopbackSend(node, bufs, 1 + req->numBufs);
             SendComplete(req, NULL, bufs, 1 + req->numBufs, ret);
         } else if (remote) {
