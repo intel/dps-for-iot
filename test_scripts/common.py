@@ -95,7 +95,7 @@ def _expect(children, pattern, allow_error=False, timeout=-1):
 def _expect_listening(child):
     _expect([child], ['is listening on ([0-9A-Za-z.:%_\-/\\[\]]+){}'.format(child.linesep)])
     child.port = child.match.group(1)
-    # Rewrite INADDR_ANY to INADDR_LOOPBACK
+    # Rewrite the any address to the loopback address
     m = re.match('(.*)(:[0-9]+)', child.port)
     if m != None:
         if m.group(1) == '[::]':
@@ -112,7 +112,18 @@ def _expect_linked(child, args):
         prev = curr
     while len(ports):
         _expect([child], ['is linked to ([0-9A-Za-z.:%_\-/\\[\]]+){}'.format(child.linesep)])
-        ports.remove(child.match.group(1).decode())
+        # The loopback address may have been resolved to either the IPv4 or IPv6 variant
+        addr = child.match.group(1).decode()
+        try:
+            ports.remove(addr)
+        except ValueError:
+            m = re.match('(.*)(:[0-9]+)', addr)
+            if m != None:
+                if m.group(1) == '[::1]':
+                    addr = '127.0.0.1' + m.group(2)
+                elif m.group(1) == '127.0.0.1':
+                    addr = '[::1]' + m.group(2)
+            ports.remove(addr)
 
 def expect_linked(child, ports):
     if isinstance(ports, basestring) or not isinstance(ports, collections.Sequence):

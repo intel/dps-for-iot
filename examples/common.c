@@ -72,7 +72,14 @@ int ListenArg(char*** argp, int* argcp, DPS_NodeAddress** addr)
         return DPS_FALSE;
     }
     *addr = DPS_CreateAddress();
-    DPS_SetAddress(*addr, str);
+    if (!*addr) {
+        return DPS_FALSE;
+    }
+    if (!DPS_SetAddress(*addr, str)) {
+        DPS_DestroyAddress(*addr);
+        *addr = NULL;
+        return DPS_FALSE;
+    }
     *argp = arg;
     *argcp = argc;
     return DPS_TRUE;

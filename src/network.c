@@ -241,12 +241,13 @@ DPS_Status DPS_SplitAddress(const char* addrText, char* host, size_t hostLen,
 }
 
 /*
- * This is here for two reasons:
+ * This is here for a few reasons:
  * 1. uv_inet_pton() will ignore scope IDs, so is not suitable for
  *    link-local IPv6 addresses.
  * 2. uv_getaddrinfo() provides a synchronous version, but still
  *    requires a uv_loop_t argument which we don't have or need in
  *    DPS_SetAddress().
+ * 3. IPv6 localhost (::1) will not work on an IPv4-only host.
  */
 static DPS_Status GetAddrInfo(const char* host, const char* service, struct sockaddr_storage* inaddr)
 {
@@ -255,9 +256,20 @@ static DPS_Status GetAddrInfo(const char* host, const char* service, struct sock
     int err;
 
     memset(&hints, 0, sizeof(hints));
-    hints.ai_flags = AI_NUMERICHOST | AI_NUMERICSERV;
+    hints.ai_flags = AI_NUMERICHOST | AI_NUMERICSERV | AI_ADDRCONFIG;
     err = getaddrinfo(host, service, &hints, &ai);
+    if (err == EAI_ADDRFAMILY) {
+        /*
+         * Try again with the other address family for localhost
+         */
+        if (host && !strcmp(host, "::1")) {
+            err = getaddrinfo("127.0.0.1", service, &hints, &ai);
+        } else if (host && !strcmp(host, "127.0.0.1")) {
+            err = getaddrinfo("::1", service, &hints, &ai);
+        }
+    }
     if (err) {
+        DPS_ERRPRINT("getaddrinfo failed: %s\n", gai_strerror(err));
         return DPS_ERR_NETWORK;
     }
     switch (ai->ai_family) {

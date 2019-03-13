@@ -19,6 +19,8 @@ commonenv.Append(CPPPATH = ['#/inc'])
 libenv = commonenv.Clone()
 
 libenv.Append(CPPDEFINES = ['MBEDTLS_USER_CONFIG_FILE=\\"mbedtls_config.h\\"'])
+if env['PLATFORM'] == 'posix':
+    libenv.Append(CPPDEFINES = ['_GNU_SOURCE'])
 libenv.Append(CPPPATH = ['#/ext/safestring/include', '#/ext', '#/ext/mbedtls/include'])
 if extUV: libenv.Append(CPPPATH = ['#/ext/libuv/include'])
 
