@@ -147,6 +147,10 @@ else:
     # uncomment to test for C90 (with gnu extensions) compatibility
     #env.Append(CCFLAGS = ['-std=gnu90'])
 
+    if 'clang' in env['CC']:
+        # clang complains about the CBOR_SIZEOF_UINT() macro when the arg is a uint8_t
+        env.Append(CCFLAGS = ['-Wno-tautological-constant-out-of-range-compare'])
+
     # Enable address sanitizer
     if env['asan'] == True:
         env.Append(CCFLAGS = ['-fno-omit-frame-pointer', '-fsanitize=address'])

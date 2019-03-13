@@ -97,8 +97,6 @@ static void DestroyNode(Node* node)
 static Node* CreateNode()
 {
     Node* node = NULL;
-    DPS_NodeAddress* listenAddr = NULL;
-    struct sockaddr_in6 saddr;
     DPS_Status ret;
 
     node = calloc(1, sizeof(Node));
@@ -118,24 +116,13 @@ static Node* CreateNode()
         goto ErrorExit;
     }
     DPS_SetNodeSubscriptionUpdateDelay(node->node, 10);
-    listenAddr = DPS_CreateAddress();
-    if (!listenAddr) {
-        goto ErrorExit;
-    }
-    memset(&saddr, 0, sizeof(saddr));
-    saddr.sin6_family = AF_INET6;
-    saddr.sin6_port = 0;
-    memcpy(&saddr.sin6_addr, &in6addr_loopback, sizeof(saddr.sin6_addr));
-    DPS_SetAddress(listenAddr, (const struct sockaddr*)&saddr);
-    ret = DPS_StartNode(node->node, DPS_MCAST_PUB_ENABLE_SEND | DPS_MCAST_PUB_ENABLE_RECV, listenAddr);
-    DPS_DestroyAddress(listenAddr);
+    ret = DPS_StartNode(node->node, DPS_MCAST_PUB_ENABLE_SEND | DPS_MCAST_PUB_ENABLE_RECV, NULL);
     if (ret != DPS_OK) {
         goto ErrorExit;
     }
     return node;
 
 ErrorExit:
-    DPS_DestroyAddress(listenAddr);
     DestroyNode(node);
     return NULL;
 }
