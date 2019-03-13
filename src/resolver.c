@@ -57,22 +57,10 @@ static void GetAddrInfoCB(uv_getaddrinfo_t* req, int status, struct addrinfo* re
 #elif defined(DPS_USE_UDP)
         addr.type = DPS_UDP;
 #endif
-        /*
-         * Resolve "any" address to loopback so it is a usable
-         * destination.
-         */
         if (res->ai_family == AF_INET6) {
-            struct sockaddr_in6* saddr = (struct sockaddr_in6*)&addr.u.inaddr;
             memcpy_s(&addr.u.inaddr, sizeof(addr.u.inaddr), res->ai_addr, sizeof(struct sockaddr_in6));
-            if (!memcmp(&saddr->sin6_addr, &in6addr_any, sizeof(struct in6_addr))) {
-                memcpy(&saddr->sin6_addr, &in6addr_loopback, sizeof(struct in6_addr));
-            }
         } else {
-            struct sockaddr_in* saddr = (struct sockaddr_in*)&addr.u.inaddr;
             memcpy_s(&addr.u.inaddr, sizeof(addr.u.inaddr), res->ai_addr, sizeof(struct sockaddr_in));
-            if (saddr->sin_addr.s_addr == htonl(INADDR_ANY)) {
-                saddr->sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-            }
         }
         resolver->cb(resolver->node, &addr, resolver->data);
         uv_freeaddrinfo(res);
@@ -129,7 +117,11 @@ DPS_Status DPS_ResolveAddress(DPS_Node* node, const char* host, const char* serv
     if (!service || !cb) {
         return DPS_ERR_NULL;
     }
-    if (!host) {
+    /*
+     * Resolve NULL or "any" address to localhost so it is a usable
+     * destination.
+     */
+    if (!host || !strcmp(host, "0.0.0.0") || !strcmp(host, "::")) {
         host = "localhost";
     }
     resolver = calloc(1, sizeof(ResolverInfo));
