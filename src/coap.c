@@ -31,56 +31,54 @@
  */
 DPS_DEBUG_CONTROL(DPS_DEBUG_OFF);
 
-static int ParseOpt(const uint8_t* buf, size_t bufLen, int prevOpt, CoAP_Option* opt)
+static int ParseOpt(DPS_RxBuffer* rxBuf, int prevOpt, CoAP_Option* opt)
 {
-    const uint8_t* head = buf;
+    const uint8_t* head = rxBuf->rxPos;
     uint8_t lFlag = head[0] & 0xF;
     uint8_t dFlag = head[0] >> 4;
+    int len;
 
-    if (bufLen < 2) {
+    if (DPS_RxBufferAvail(rxBuf) < 2) {
         return -1;
     }
     if (dFlag == 0xF || lFlag == 0xF) {
         return 0;
     }
-    buf += 1;
-    bufLen -= 1;
+    rxBuf->rxPos += 1;
     if (dFlag < 13) {
         opt->id = prevOpt + dFlag;
     } else if (dFlag == 13) {
-        opt->id = 13 + prevOpt + buf[0];
-        buf += 1;
-        bufLen -= 1;
+        opt->id = 13 + prevOpt + rxBuf->rxPos[0];
+        rxBuf->rxPos += 1;
     } else {
-        if (bufLen < 2) {
+        if (DPS_RxBufferAvail(rxBuf) < 2) {
             return -1;
         }
-        opt->id = 269 + prevOpt + (buf[0] << 8) + buf[1];
-        buf += 2;
-        bufLen -= 2;
+        opt->id = 269 + prevOpt + (rxBuf->rxPos[0] << 8) + rxBuf->rxPos[1];
+        rxBuf->rxPos += 2;
     }
     if (lFlag < 13) {
         opt->len = lFlag;
     } else if (lFlag == 13) {
-        if (bufLen < 1) {
+        if (DPS_RxBufferAvail(rxBuf) < 1) {
             return -1;
         }
-        opt->len = 13 + buf[0];
-        buf += 1;
-        bufLen -= 1;
+        opt->len = 13 + rxBuf->rxPos[0];
+        rxBuf->rxPos += 1;
     } else {
-        if (bufLen < 2) {
+        if (DPS_RxBufferAvail(rxBuf) < 2) {
             return -1;
         }
-        opt->len = 269 + (buf[0] << 8) + buf[1];
-        buf += 2;
-        bufLen -= 2;
+        opt->len = 269 + (rxBuf->rxPos[0] << 8) + rxBuf->rxPos[1];
+        rxBuf->rxPos += 2;
     }
-    if (bufLen < opt->len) {
+    if (DPS_RxBufferAvail(rxBuf) < opt->len) {
         return -1;
     }
-    opt->val = buf;
-    return (int)(opt->len + (buf - head));
+    opt->val = rxBuf->rxPos;
+    len = (opt->len + (rxBuf->rxPos - head));
+    rxBuf->rxPos += opt->len;
+    return len;
 }
 
 void CoAP_Free(CoAP_Parsed* coap)
@@ -90,49 +88,41 @@ void CoAP_Free(CoAP_Parsed* coap)
     }
 }
 
-DPS_Status CoAP_Parse(const uint8_t* buffer, size_t bufLen, CoAP_Parsed* coap, DPS_RxBuffer* payload)
+DPS_Status CoAP_Parse(DPS_RxBuffer* rxBuf, CoAP_Parsed* coap)
 {
-    const uint8_t* p;
-    size_t len;
     int prevOptId = 0;
 
-    if (bufLen < 5) {
+    if (DPS_RxBufferAvail(rxBuf) < 5) {
         return DPS_ERR_RESOURCES;
     }
-    coap->version = buffer[0] >> 6;
-    coap->type = buffer[0] >> 4 & 0x3;
-    coap->tokenLen = buffer[0] & 0xF;
-    coap->code = buffer[1];
-    coap->msgId = buffer[2] << 8 | buffer[3];
-    bufLen -= 4;
-    buffer += 4;
-    if (bufLen < coap->tokenLen) {
+    coap->version = rxBuf->rxPos[0] >> 6;
+    coap->type = rxBuf->rxPos[0] >> 4 & 0x3;
+    coap->tokenLen = rxBuf->rxPos[0] & 0xF;
+    coap->code = rxBuf->rxPos[1];
+    coap->msgId = rxBuf->rxPos[2] << 8 | rxBuf->rxPos[3];
+    rxBuf->rxPos += 4;
+    if (DPS_RxBufferAvail(rxBuf) < coap->tokenLen) {
         return DPS_ERR_INVALID;
     }
     if (coap->tokenLen) {
-        if (memcpy_s(coap->token, sizeof(coap->token), buffer, coap->tokenLen) != EOK) {
+        if (memcpy_s(coap->token, sizeof(coap->token), rxBuf->rxPos, coap->tokenLen) != EOK) {
             return DPS_ERR_INVALID;
         }
-        bufLen -= coap->tokenLen;
-        buffer += coap->tokenLen;
+        rxBuf->rxPos += coap->tokenLen;
     }
     /*
      * Count opts
      */
     coap->numOpts = 0;
-    p = buffer;
-    len = bufLen;
-    while (len) {
+    while (DPS_RxBufferAvail(rxBuf)) {
         CoAP_Option opt;
-        int optSize = ParseOpt(p, len, 0, &opt);
+        int optSize = ParseOpt(rxBuf, 0, &opt);
         if (optSize == 0) {
             break;
         }
         if (optSize < 0) {
             return DPS_ERR_INVALID;
         }
-        len -= optSize;
-        p += optSize;
         ++coap->numOpts;
     }
     coap->opts = malloc(coap->numOpts * sizeof(CoAP_Option));
@@ -140,10 +130,8 @@ DPS_Status CoAP_Parse(const uint8_t* buffer, size_t bufLen, CoAP_Parsed* coap, D
      * Parse opts
      */
     coap->numOpts = 0;
-    p = buffer;
-    len = bufLen;
-    while (len) {
-        int optSize = ParseOpt(p, len, prevOptId, &coap->opts[coap->numOpts]);
+    while (DPS_RxBufferAvail(rxBuf)) {
+        int optSize = ParseOpt(rxBuf, prevOptId, &coap->opts[coap->numOpts]);
         if (optSize == 0) {
             break;
         }
@@ -151,28 +139,24 @@ DPS_Status CoAP_Parse(const uint8_t* buffer, size_t bufLen, CoAP_Parsed* coap, D
             return DPS_ERR_INVALID;
         }
         prevOptId = coap->opts[coap->numOpts].id;
-        len -= optSize;
-        p += optSize;
         ++coap->numOpts;
     }
     /*
      * If we are at the end of the buffer there is no payload
      */
-    if (len == 0) {
-        DPS_RxBufferInit(payload, NULL, 0);
+    if (DPS_RxBufferAvail(rxBuf) == 0) {
         return DPS_OK;
     }
     /*
      * We expect an end-of-options marker followed by at least one payload byte
      */
-    if (len < 2 || p[0] != COAP_END_OF_OPTS) {
+    if (DPS_RxBufferAvail(rxBuf) < 2 || rxBuf->rxPos[0] != COAP_END_OF_OPTS) {
         return DPS_ERR_EOD;
     }
+    ++rxBuf->rxPos;
     /*
      * Everything else is payload
      */
-    DPS_RxBufferInit(payload, (uint8_t*)(p + 1), len -1);
-
     return DPS_OK;
 }
 
@@ -334,7 +318,7 @@ DPS_Status CoAP_Wrap(uv_buf_t* bufs, size_t numBufs)
     for (i = 1; i < numBufs; ++i) {
         len += bufs[i].len;
     }
-    ret =  CoAP_Compose(COAP_CODE(COAP_REQUEST, COAP_PUT), opts, A_SIZEOF(opts), len, &coap);
+    ret = CoAP_Compose(COAP_CODE(COAP_REQUEST, COAP_PUT), opts, A_SIZEOF(opts), len, &coap);
     if (ret == DPS_OK) {
         bufs[0].base = (void*)coap.base;
         bufs[0].len = DPS_TxBufferUsed(&coap);

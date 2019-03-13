@@ -138,34 +138,153 @@ static DPS_Status EphemeralKeyHandler(DPS_KeyStoreRequest* request, const DPS_Ke
 static void GCM_Raw(void)
 {
     DPS_Status ret;
+    size_t n;
+    uint8_t buf[3][512];
+    DPS_RxBuffer msgBuf[3];
+    DPS_TxBuffer payload[3];
+    DPS_TxBuffer tag;
     DPS_TxBuffer cipherText;
     DPS_TxBuffer plainText;
+    uint8_t pt[1024];
+    size_t ptLen;
+    size_t i;
+    size_t test;
 
-    DPS_TxBufferInit(&cipherText, NULL, 512);
-    DPS_TxBufferInit(&plainText, NULL, 512);
+    for (test = 0; test < 8; ++test) {
+        switch (test) {
+        case 0:
+            DPS_RxBufferInit(&msgBuf[0], (uint8_t*)msg, sizeof(msg));
+            DPS_RxBufferInit(&msgBuf[1], NULL, 0);
+            n = 2;
+            break;
+        case 1:
+            for (i = 0; i < 16; ++i) {
+                buf[0][i] = i;
+            }
+            DPS_RxBufferInit(&msgBuf[0], buf[0], 16);
+            DPS_RxBufferInit(&msgBuf[1], buf[1], 0);
+            n = 2;
+            break;
+        case 2:
+            for (i = 0; i < 16; ++i) {
+                buf[0][i] = i;
+            }
+            for (i = 0; i < 4; ++i) {
+                buf[1][i] = i;
+            }
+            DPS_RxBufferInit(&msgBuf[0], buf[0], 16);
+            DPS_RxBufferInit(&msgBuf[1], buf[1], 4);
+            n = 2;
+            break;
+        case 3:
+            for (i = 0; i < 16; ++i) {
+                buf[0][i] = i;
+            }
+            for (i = 0; i < 20; ++i) {
+                buf[1][i] = i;
+            }
+            DPS_RxBufferInit(&msgBuf[0], buf[0], 16);
+            DPS_RxBufferInit(&msgBuf[1], buf[1], 20);
+            n = 2;
+            break;
+        case 4:
+            for (i = 0; i < 20; ++i) {
+                buf[0][i] = i;
+            }
+            for (i = 0; i < 4; ++i) {
+                buf[1][i] = i;
+            }
+            DPS_RxBufferInit(&msgBuf[0], buf[0], 20);
+            DPS_RxBufferInit(&msgBuf[1], buf[1], 4);
+            n = 2;
+            break;
+        case 5:
+            for (i = 0; i < 20; ++i) {
+                buf[0][i] = i;
+            }
+            for (i = 0; i < 20; ++i) {
+                buf[1][i] = i;
+            }
+            DPS_RxBufferInit(&msgBuf[0], buf[0], 20);
+            DPS_RxBufferInit(&msgBuf[1], buf[1], 20);
+            n = 2;
+            break;
+        case 6:
+            for (i = 0; i < 4; ++i) {
+                buf[0][i] = i;
+            }
+            for (i = 0; i < 20; ++i) {
+                buf[1][i] = i;
+            }
+            DPS_RxBufferInit(&msgBuf[0], buf[0], 4);
+            DPS_RxBufferInit(&msgBuf[1], buf[1], 20);
+            n = 2;
+            break;
+        case 7:
+            for (i = 0; i < 4; ++i) {
+                buf[0][i] = i;
+            }
+            for (i = 0; i < 11; ++i) {
+                buf[1][i] = i;
+            }
+            for (i = 0; i < 9; ++i) {
+                buf[2][i] = i;
+            }
+            DPS_RxBufferInit(&msgBuf[0], buf[0], 4);
+            DPS_RxBufferInit(&msgBuf[1], buf[1], 11);
+            DPS_RxBufferInit(&msgBuf[2], buf[2], 9);
+            n = 3;
+            break;
+        default:
+            ASSERT(0);
+            break;
+        }
+        for (i = 0; i < n; ++i) {
+            DPS_TxBufferInit(&payload[i], NULL, DPS_RxBufferAvail(&msgBuf[i]));
+            DPS_TxBufferAppend(&payload[i], msgBuf[i].base, DPS_RxBufferAvail(&msgBuf[i]));
+        }
+        DPS_TxBufferInit(&tag, NULL, 16);
+        ret = Encrypt_GCM(key.symmetric.key, nonce, payload, n, &tag, aad, sizeof(aad));
+        ASSERT(ret == DPS_OK);
+        DPS_TxBufferInit(&cipherText, NULL, 512);
+        for (i = 0; i < n; ++i) {
+            DPS_TxBufferAppend(&cipherText, payload[i].base, DPS_TxBufferUsed(&payload[i]));
+        }
+        DPS_TxBufferAppend(&cipherText, tag.base, DPS_TxBufferUsed(&tag));
+        DPS_TxBufferInit(&plainText, NULL, 512);
+        ret = Decrypt_GCM(key.symmetric.key, nonce, cipherText.base, DPS_TxBufferUsed(&cipherText),
+                          aad, sizeof(aad), &plainText);
+        ASSERT(ret == DPS_OK);
 
-    ret = Encrypt_GCM(key.symmetric.key, nonce, (uint8_t*)msg, sizeof(msg), aad, sizeof(aad), &cipherText);
-    ASSERT(ret == DPS_OK);
-    ret = Decrypt_GCM(key.symmetric.key, nonce, cipherText.base, DPS_TxBufferUsed(&cipherText), aad, sizeof(aad), &plainText);
-    ASSERT(ret == DPS_OK);
+        ptLen = 0;
+        for (i = 0; i < n; ++i) {
+            memcpy(&pt[ptLen], msgBuf[i].base, msgBuf[i].eod - msgBuf[i].base);
+            ptLen += msgBuf[i].eod - msgBuf[i].base;
+        }
+        ASSERT(DPS_TxBufferUsed(&plainText) == ptLen);
+        ASSERT(memcmp(plainText.base, pt, ptLen) == 0);
 
-    ASSERT(DPS_TxBufferUsed(&plainText) == sizeof(msg));
-    ASSERT(memcmp(plainText.base, msg, sizeof(msg)) == 0);
-
-    DPS_TxBufferFree(&cipherText);
-    DPS_TxBufferFree(&plainText);
+        for (i = 0; i < n; ++i) {
+            DPS_TxBufferFree(&payload[i]);
+        }
+        DPS_TxBufferFree(&tag);
+        DPS_TxBufferFree(&cipherText);
+        DPS_TxBufferFree(&plainText);
+    }
 }
 
 static void ECDSA_VerifyCurve(DPS_ECCurve crv, uint8_t* x, uint8_t* y, uint8_t* d, uint8_t* data, size_t dataLen)
 {
     DPS_Status ret;
+    DPS_RxBuffer dataBuf;
     DPS_TxBuffer buf;
 
+    DPS_RxBufferInit(&dataBuf, data, dataLen);
     DPS_TxBufferInit(&buf, NULL, 512);
-    ret = Sign_ECDSA(crv, d, data, dataLen, &buf);
+    ret = Sign_ECDSA(crv, d, &dataBuf, 1, &buf);
     ASSERT(ret == DPS_OK);
 
-    ret = Verify_ECDSA(crv, x, y, data, dataLen, buf.base, DPS_TxBufferUsed(&buf));
+    ret = Verify_ECDSA(crv, x, y, &dataBuf, 1, buf.base, DPS_TxBufferUsed(&buf));
     ASSERT(ret == DPS_OK);
 
     DPS_TxBufferFree(&buf);
@@ -236,7 +355,9 @@ static void ECDSA_Raw(void)
             0x53, 0x3c, 0x49, 0x89, 0xd3, 0xac, 0x38, 0xc3, 0x8b, 0x71, 0x48, 0x1c, 0xc3, 0x43, 0x0c, 0x9d,
             0x65, 0xe7, 0xdd, 0xff
         };
-        ret = Verify_ECDSA(crv, x, y, data, sizeof(data), sig, sizeof(sig));
+        DPS_RxBuffer dataBuf;
+        DPS_RxBufferInit(&dataBuf, data, sizeof(data));
+        ret = Verify_ECDSA(crv, x, y, &dataBuf, 1, sig, sizeof(sig));
         ASSERT(ret == DPS_OK);
         ECDSA_VerifyCurve(crv, x, y, d, data, sizeof(data));
     }
@@ -288,30 +409,43 @@ int main(int argc, char** argv)
     KeyWrap_Raw();
 
     DPS_RxBuffer aadBuf;
-    DPS_RxBuffer msgBuf;
 
     /*
      * Encryption and decryption
      */
     uint8_t alg = COSE_ALG_A256GCM;
     COSE_Entity recipient;
-    DPS_TxBuffer cipherText;
+    DPS_TxBuffer cipherText[3];
     DPS_TxBuffer plainText;
+    DPS_TxBuffer txBuf;
     DPS_RxBuffer input;
+    size_t ctLen;
     DPS_RxBufferInit(&aadBuf, (uint8_t*)aad, sizeof(aad));
-    DPS_RxBufferInit(&msgBuf, (uint8_t*)msg, sizeof(msg));
+    DPS_TxBufferInit(&cipherText[1], NULL, sizeof(msg));
+    DPS_TxBufferAppend(&cipherText[1], (uint8_t*)msg, sizeof(msg));
     recipient.alg = COSE_ALG_A256KW;
     recipient.kid = keyId;
-    ret = COSE_Encrypt(alg, nonce, NULL, &recipient, 1, &aadBuf, &msgBuf, keyStore, &cipherText);
+    ret = COSE_Encrypt(alg, nonce, NULL, &recipient, 1, &aadBuf, &cipherText[0], &cipherText[1], 1, &cipherText[2],
+                       keyStore);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("COSE_Encrypt failed: %s\n", DPS_ErrTxt(ret));
         return EXIT_FAILURE;
     }
-    Dump("CipherText", cipherText.base, DPS_TxBufferUsed(&cipherText));
+    for (i = 0; i < 3; ++i) {
+        Dump("CipherText", cipherText[i].base, DPS_TxBufferUsed(&cipherText[i]));
+    }
     /*
      * Turn output buffers into input buffers
      */
-    DPS_TxBufferToRx(&cipherText, &input);
+    ctLen = 0;
+    for (i = 0; i < 3; ++i) {
+        ctLen += DPS_TxBufferUsed(&cipherText[i]);
+    }
+    DPS_TxBufferInit(&txBuf, NULL, ctLen);
+    for (i = 0; i < 3; ++i) {
+        DPS_TxBufferAppend(&txBuf, cipherText[i].base, DPS_TxBufferUsed(&cipherText[i]));
+    }
+    DPS_TxBufferToRx(&txBuf, &input);
     DPS_RxBufferInit(&aadBuf, (uint8_t*)aad, sizeof(aad));
     ret = COSE_Decrypt(nonce, &recipient, &aadBuf, &input, keyStore, NULL, &plainText);
     if (ret != DPS_OK) {
@@ -320,8 +454,12 @@ int main(int argc, char** argv)
     }
     ASSERT(DPS_TxBufferUsed(&plainText) == sizeof(msg));
     ASSERT(memcmp(plainText.base, msg, sizeof(msg)) == 0);
-    DPS_TxBufferFree(&cipherText);
+    for (i = 0; i < 3; ++i) {
+        DPS_TxBufferFree(&cipherText[i]);
+    }
+    DPS_TxBufferFree(&cipherText[1]);
     DPS_TxBufferFree(&plainText);
+    DPS_TxBufferFree(&txBuf);
 
     /*
      * Signing and verification
@@ -330,29 +468,42 @@ int main(int argc, char** argv)
     signer.alg = COSE_ALG_ES512;
     signer.kid = signerId;
     DPS_RxBufferInit(&aadBuf, (uint8_t*)aad, sizeof(aad));
-    DPS_RxBufferInit(&msgBuf, (uint8_t*)msg, sizeof(msg));
-    ret = COSE_Sign(&signer, &aadBuf, &msgBuf, keyStore, &cipherText);
+    DPS_TxBufferInit(&cipherText[1], NULL, sizeof(msg));
+    DPS_TxBufferAppend(&cipherText[1], (uint8_t*)msg, sizeof(msg));
+    ret = COSE_Sign(&signer, &aadBuf, &cipherText[0], &cipherText[1], 1, &cipherText[2], keyStore);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("COSE_Sign failed: %s\n", DPS_ErrTxt(ret));
         return EXIT_FAILURE;
     }
-    Dump("CipherText", cipherText.base, DPS_TxBufferUsed(&cipherText));
+    for (i = 0; i < 3; ++i) {
+        Dump("CipherText", cipherText[i].base, DPS_TxBufferUsed(&cipherText[i]));
+    }
     /*
      * Turn output buffers into input buffers
      */
-    DPS_TxBufferToRx(&cipherText, &input);
+    ctLen = 0;
+    for (i = 0; i < 3; ++i) {
+        ctLen += DPS_TxBufferUsed(&cipherText[i]);
+    }
+    DPS_TxBufferInit(&txBuf, NULL, ctLen);
+    for (i = 0; i < 3; ++i) {
+        DPS_TxBufferAppend(&txBuf, cipherText[i].base, DPS_TxBufferUsed(&cipherText[i]));
+    }
+    DPS_TxBufferToRx(&txBuf, &input);
     DPS_RxBufferInit(&aadBuf, (uint8_t*)aad, sizeof(aad));
     memset(&signer, 0, sizeof(signer));
-    ret = COSE_Verify(&aadBuf, &input, keyStore, &signer, &plainText);
+    ret = COSE_Verify(&aadBuf, &input, keyStore, &signer);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("COSE_Verify failed: %s\n", DPS_ErrTxt(ret));
         return EXIT_FAILURE;
     }
     ASSERT(signer.kid.len == signerId.len);
     ASSERT(memcmp(signer.kid.id, signerId.id, signer.kid.len) == 0);
-    ASSERT(DPS_TxBufferUsed(&plainText) == sizeof(msg));
-    DPS_TxBufferFree(&cipherText);
-    DPS_TxBufferFree(&plainText);
+    ASSERT(DPS_RxBufferAvail(&input) == sizeof(msg));
+    for (i = 0; i < 3; ++i) {
+        DPS_TxBufferFree(&cipherText[i]);
+    }
+    DPS_TxBufferFree(&txBuf);
 
     DPS_PRINT("Passed\n");
     DPS_DestroyKeyStore(keyStore);

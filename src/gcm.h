@@ -48,14 +48,13 @@ extern "C" {
  * Implements AES-GCM (Galois/Counter Mode) encryption. The message is
  * encrypted in place.
  *
- * @param key        The AES-256 encryption key
- * @param nonce      The nonce (must be 12 bytes in this implementation)
- * @param plainText  Plaintext to be encrypted,
- * @param ptLen      The length of the plaintext
- * @param aad        The auxiliary data that will be authenticated but not encrypted
- * @param aadLen     The length of the auxiliary data
- * @param cipherText Returns the cipher text. The buffer must have room to append
- *                   (ptLen + 16) bytes.
+ * @param key          The AES-256 encryption key
+ * @param nonce        The nonce (must be 12 bytes in this implementation)
+ * @param bufs         The buffers to be encrypted
+ * @param numBufs      The number of buffers
+ * @param tag          The authentication tag buffer
+ * @param aad          The auxiliary data that will be authenticated but not encrypted
+ * @param aadLen       The length of the auxiliary data
  *
  * @return
  * - DPS_OK if the GCM context is initialized
@@ -63,11 +62,9 @@ extern "C" {
  */
 DPS_Status Encrypt_GCM(const uint8_t key[AES_256_KEY_LEN],
                        const uint8_t nonce[AES_GCM_NONCE_LEN],
-                       const uint8_t* plainText,
-                       size_t ptLen,
-                       const uint8_t* aad,
-                       size_t aadLen,
-                       DPS_TxBuffer* cipherText);
+                       DPS_TxBuffer* bufs, size_t numBufs,
+                       DPS_TxBuffer* tag,
+                       const uint8_t* aad, size_t aadLen);
 
 /**
  * Implements AES-GCM (Galois/Counter Mode) decryption. The message is
@@ -89,10 +86,8 @@ DPS_Status Encrypt_GCM(const uint8_t key[AES_256_KEY_LEN],
  */
 DPS_Status Decrypt_GCM(const uint8_t key[AES_256_KEY_LEN],
                        const uint8_t nonce[AES_GCM_NONCE_LEN],
-                       const uint8_t* cipherText,
-                       size_t ctLen,
-                       const uint8_t* aad,
-                       size_t aadLen,
+                       const uint8_t* cipherText, size_t ctLen,
+                       const uint8_t* aad, size_t aadLen,
                        DPS_TxBuffer* plainText);
 
 #ifdef __cplusplus

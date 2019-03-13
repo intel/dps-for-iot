@@ -57,6 +57,7 @@ static void OnNodeDestroyed(DPS_Node* node, void* data)
 static int AddTopics(char* topicList, char** msg, int* keep, int* ttl, int* encrypt)
 {
     size_t i;
+    int len;
 
     for (i = 0; i < numTopics; ++i) {
         free(topics[i]);
@@ -67,28 +68,28 @@ static int AddTopics(char* topicList, char** msg, int* keep, int* ttl, int* encr
     *encrypt = 1;
     numTopics = 0;
     while (numTopics < MAX_TOPICS) {
-        size_t len = strcspn(topicList, " ");
+        len = strcspn(topicList, " ");
         if (!len) {
             len = strnlen(topicList, MAX_TOPIC_LEN + 1);
-            if (len > MAX_TOPIC_LEN) {
-                return 0;
-            }
+        }
+        if (len > MAX_TOPIC_LEN) {
+            return 0;
+        } else if (!len) {
+            return 1;
         }
         if (topicList[0] == '-') {
             switch(topicList[1]) {
             case 't':
-                if (!sscanf(topicList, "-t %d", ttl) || *ttl <= 0) {
-                    DPS_PRINT("-t requires a positive integer\n");
+                if (!sscanf(topicList, "-t %d%n", ttl, &len) || (*ttl < -1)) {
+                    DPS_PRINT("-t requires -1..65535\n");
                     return 0;
                 }
-                topicList += 3;
                 break;
             case 'x':
-                if (!sscanf(topicList, "-x %d", encrypt) || (*encrypt < 0) || (*encrypt > 3)) {
+                if (!sscanf(topicList, "-x %d%n", encrypt, &len) || (*encrypt < 0) || (*encrypt > 3)) {
                     DPS_PRINT("-x requires 0..3\n");
                     return 0;
                 }
-                topicList += 3;
                 *keep = 0;
                 break;
             case 'j':
@@ -114,10 +115,6 @@ static int AddTopics(char* topicList, char** msg, int* keep, int* ttl, int* encr
                 DPS_PRINT("        -m: Everything after the -m is the string payload for the publication.\n");
                 DPS_PRINT("        -j: Everything after the -j is the JSON payload for the publication.\n");
                 DPS_PRINT("  If there are no topic strings sends previous publication with a new sequence number\n");
-                return 0;
-            }
-            len = strcspn(topicList, " ");
-            if (!len) {
                 return 0;
             }
         } else {

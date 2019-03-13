@@ -121,28 +121,22 @@ static void NetSendTask(uv_async_t* handle)
         ret = CBOR_EncodeMap(&buf, 0);
     }
     uv_buf_t bufs[] = {
-        uv_buf_init(NULL, 0),
         uv_buf_init((char*)buf.base, DPS_TxBufferUsed(&buf))
     };
 
     if (((struct sockaddr_in*)&data->remote->ep.addr)->sin_port) {
-        ret = DPS_NetSend(data->node, NULL, &data->remote->ep, bufs + 1, A_SIZEOF(bufs) - 1, OnNetSendComplete);
+        ret = DPS_NetSend(data->node, NULL, &data->remote->ep, bufs, A_SIZEOF(bufs), OnNetSendComplete);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("DPS_NetSend failed: %s\n", DPS_ErrTxt(ret));
             exit(EXIT_FAILURE);
         }
     } else {
-        ret = CoAP_Wrap(bufs, A_SIZEOF(bufs));
-        if (ret != DPS_OK) {
-            DPS_ERRPRINT("CoAP_Wrap failed: %s\n", DPS_ErrTxt(ret));
-            exit(EXIT_FAILURE);
-        }
         ret = DPS_MulticastSend(data->node->mcastSender, NULL, bufs, A_SIZEOF(bufs), NULL);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("DPS_MulticastSend failed: %s\n", DPS_ErrTxt(ret));
             exit(EXIT_FAILURE);
         }
-        DPS_NetFreeBufs(bufs, 2);
+        DPS_NetFreeBufs(bufs, 1);
     }
 
     uv_close((uv_handle_t*)handle, NetSendTaskClose);

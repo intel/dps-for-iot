@@ -52,13 +52,21 @@ static int AsVal_bytes(Handle obj, uint8_t** bytes, size_t* len)
         }
     } else if (obj->IsString()) {
         v8::Local<v8::String> str = v8::Local<v8::String>::Cast(obj);
-        (*len) =str->Utf8Length();
+        (*len) = str->Utf8Length();
         (*bytes) = new uint8_t[*len + 1];
         str->WriteUtf8((char*)(*bytes));
     } else if (!obj->IsNull()) {
         return SWIG_TypeError;
     }
     return SWIG_NEWOBJ;
+}
+
+/*
+ * AsVal_bytes always returns a mutable object
+ */
+static int AsSafeVal_bytes(Handle obj, uint8_t** bytes, size_t* len)
+{
+    return AsVal_bytes(obj, bytes, len);
 }
 
 static Handle From_bytes(const uint8_t* bytes, size_t len)

@@ -25,6 +25,7 @@
 #include "mbedtls/ecdsa.h"
 #include "mbedtls/ecdh.h"
 #include "mbedtls/error.h"
+#include "mbedtls/md.h"
 #include "mbedtls/pk.h"
 #include "mbedtls/x509_crt.h"
 #include "ec.h"
@@ -138,7 +139,7 @@ static int SetKeypair(mbedtls_ecp_keypair* keypair, mbedtls_ecp_group_id id, siz
 }
 
 DPS_Status Verify_ECDSA(DPS_ECCurve curve, const uint8_t* x, const uint8_t* y,
-                        const uint8_t* data, size_t dataLen,
+                        const DPS_RxBuffer* buf, size_t numBuf,
                         const uint8_t* sig, size_t sigLen)
 {
     mbedtls_ecp_keypair keypair;
@@ -147,7 +148,9 @@ DPS_Status Verify_ECDSA(DPS_ECCurve curve, const uint8_t* x, const uint8_t* y,
     size_t len;
     mbedtls_md_type_t hash;
     const mbedtls_md_info_t* md;
+    mbedtls_md_context_t ctx;
     uint8_t digest[MBEDTLS_MD_MAX_SIZE];
+    size_t i;
     int ret;
 
     mbedtls_ecp_keypair_init(&keypair);
@@ -180,7 +183,29 @@ DPS_Status Verify_ECDSA(DPS_ECCurve curve, const uint8_t* x, const uint8_t* y,
         ret = -1;
         goto Exit;
     }
-    mbedtls_md(md, data, dataLen, digest);
+    mbedtls_md_init(&ctx);
+    ret = mbedtls_md_setup(&ctx, md, 0);
+    if (ret != 0) {
+        DPS_ERRPRINT("Initialize digest context failed: %s\n", TLSErrTxt(ret));
+        goto Exit;
+    }
+    ret = mbedtls_md_starts(&ctx);
+    if (ret != 0) {
+        DPS_ERRPRINT("Start digest failed: %s\n", TLSErrTxt(ret));
+        goto Exit;
+    }
+    for (i = 0; i < numBuf; ++i) {
+        ret = mbedtls_md_update(&ctx, buf[i].base, DPS_RxBufferAvail(&buf[i]));
+        if (ret != 0) {
+            DPS_ERRPRINT("Update digest failed: %s\n", TLSErrTxt(ret));
+            goto Exit;
+        }
+    }
+    ret = mbedtls_md_finish(&ctx, digest);
+    if (ret != 0) {
+        DPS_ERRPRINT("Finish digest failed: %s\n", TLSErrTxt(ret));
+        goto Exit;
+    }
 
     ret = mbedtls_mpi_read_binary(&r, sig, len);
     if (ret != 0) {
@@ -203,6 +228,7 @@ Exit:
     mbedtls_mpi_free(&s);
     mbedtls_mpi_free(&r);
     mbedtls_ecp_keypair_free(&keypair);
+    mbedtls_md_free(&ctx);
     if (ret == 0) {
         return DPS_OK;
     } else {
@@ -211,7 +237,7 @@ Exit:
 }
 
 DPS_Status Sign_ECDSA(DPS_ECCurve curve, const uint8_t* d,
-                      const uint8_t* data, size_t dataLen,
+                      DPS_RxBuffer* buf, size_t numBuf,
                       DPS_TxBuffer* sig)
 {
     mbedtls_ecp_keypair keypair;
@@ -220,7 +246,9 @@ DPS_Status Sign_ECDSA(DPS_ECCurve curve, const uint8_t* d,
     size_t len;
     mbedtls_md_type_t hash;
     const mbedtls_md_info_t* md;
+    mbedtls_md_context_t ctx;
     uint8_t digest[MBEDTLS_MD_MAX_SIZE];
+    size_t i;
     int ret;
 
     mbedtls_ecp_keypair_init(&keypair);
@@ -253,7 +281,29 @@ DPS_Status Sign_ECDSA(DPS_ECCurve curve, const uint8_t* d,
         ret = -1;
         goto Exit;
     }
-    mbedtls_md(md, data, dataLen, digest);
+    mbedtls_md_init(&ctx);
+    ret = mbedtls_md_setup(&ctx, md, 0);
+    if (ret != 0) {
+        DPS_ERRPRINT("Initialize digest context failed: %s\n", TLSErrTxt(ret));
+        goto Exit;
+    }
+    ret = mbedtls_md_starts(&ctx);
+    if (ret != 0) {
+        DPS_ERRPRINT("Start digest failed: %s\n", TLSErrTxt(ret));
+        goto Exit;
+    }
+    for (i = 0; i < numBuf; ++i) {
+        ret = mbedtls_md_update(&ctx, buf[i].base, DPS_RxBufferAvail(&buf[i]));
+        if (ret != 0) {
+            DPS_ERRPRINT("Update digest failed: %s\n", TLSErrTxt(ret));
+            goto Exit;
+        }
+    }
+    ret = mbedtls_md_finish(&ctx, digest);
+    if (ret != 0) {
+        DPS_ERRPRINT("Finish digest failed: %s\n", TLSErrTxt(ret));
+        goto Exit;
+    }
 
     ret = mbedtls_ecdsa_sign_det(&keypair.grp, &r, &s, &keypair.d, digest, mbedtls_md_get_size(md), hash);
     if (ret != 0) {
@@ -278,6 +328,7 @@ Exit:
     mbedtls_mpi_free(&s);
     mbedtls_mpi_free(&r);
     mbedtls_ecp_keypair_free(&keypair);
+    mbedtls_md_free(&ctx);
     if (ret == 0) {
         return DPS_OK;
     } else {

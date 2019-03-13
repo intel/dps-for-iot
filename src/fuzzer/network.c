@@ -21,6 +21,7 @@
  */
 
 #include <stdlib.h>
+#include <string.h>
 #include <dps/dbg.h>
 #include <dps/private/network.h>
 #include "../node.h"
@@ -123,22 +124,38 @@ void Fuzz_OnNetReceive(DPS_Node* node, const uint8_t* data, size_t len)
 {
     DPS_NetEndpoint ep;
     struct sockaddr_in sa;
+    DPS_NetRxBuffer* buf;
     sa.sin_family = AF_INET;
     sa.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
     DPS_SetAddress(&ep.addr, (const struct sockaddr *)&sa);
     DPS_EndpointSetPort(&ep, 10001);
     ep.cn = NULL;
-    node->netCtx->receiveCB(node, &ep, DPS_OK, data, len);
+    buf = DPS_CreateNetRxBuffer(len);
+    if (!buf) {
+        DPS_ERRPRINT("Create buffer failed\n");
+        return;
+    }
+    memcpy(buf->rx.rxPos, data, len);
+    node->netCtx->receiveCB(node, &ep, DPS_OK, buf);
+    DPS_NetRxBufferDecRef(buf);
 }
 
 void Fuzz_OnMulticastReceive(DPS_Node* node, const uint8_t* data, size_t len)
 {
     DPS_NetEndpoint ep;
     struct sockaddr_in sa;
+    DPS_NetRxBuffer* buf;
     sa.sin_family = AF_INET;
     sa.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
     DPS_SetAddress(&ep.addr, (const struct sockaddr *)&sa);
     DPS_EndpointSetPort(&ep, 10001);
     ep.cn = NULL;
-    node->mcastReceiver->receiveCB(node, &ep, DPS_OK, data, len);
+    buf = DPS_CreateNetRxBuffer(len);
+    if (!buf) {
+        DPS_ERRPRINT("Create buffer failed\n");
+        return;
+    }
+    memcpy(buf->rx.rxPos, data, len);
+    node->mcastReceiver->receiveCB(node, &ep, DPS_OK, buf);
+    DPS_NetRxBufferDecRef(buf);
 }

@@ -188,3 +188,33 @@ void DPS_MapAddrToV6(struct sockaddr* addr)
     /* Linux does not require mapping v4 addresses to v6 addresses for dual stack sockets */
 #endif
 }
+
+DPS_NetRxBuffer* DPS_CreateNetRxBuffer(size_t len)
+{
+    DPS_NetRxBuffer* buf = NULL;
+
+    buf = (DPS_NetRxBuffer*)malloc(sizeof(DPS_NetRxBuffer) + len - 1);
+    if (!buf) {
+        return NULL;
+    }
+    DPS_RxBufferInit(&buf->rx, buf->data, len);
+    buf->refCount = 1;
+    return buf;
+}
+
+void DPS_NetRxBufferIncRef(DPS_NetRxBuffer* buf)
+{
+    if (buf) {
+        ++buf->refCount;
+    }
+}
+
+void DPS_NetRxBufferDecRef(DPS_NetRxBuffer* buf)
+{
+    if (buf) {
+        assert(buf->refCount > 0);
+        if (--buf->refCount == 0) {
+            free(buf);
+        }
+    }
+}

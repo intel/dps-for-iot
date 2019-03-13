@@ -46,12 +46,16 @@
 
 
 %{
+#include <dps/private/dps.h>
+
 typedef PyObject* Handle;
 
 class Handler {
 public:
-    Handler(PyObject* obj) : m_obj(obj) { Py_INCREF(m_obj); }
+    Handler() : m_obj(nullptr) { }
+    Handler(PyObject* obj) { Set(obj); }
     ~Handler() { Py_XDECREF(m_obj); }
+    void Set(PyObject* obj) { m_obj = obj; Py_XINCREF(m_obj); }
     PyObject* m_obj;
 };
 %}
@@ -202,6 +206,40 @@ public:
             delete[] $1[i];
         }
         free($1);
+    }
+}
+
+%typemap(in) (Buffer* bufs, size_t numBufs) {
+    /*
+     * We will need to copy immutable (String or Bytes) objects as
+     * encryption is done in-place to avoid excessive allocation.
+     *
+     * TODO Using arg1 directly here is not ideal, but I don't know of
+     * any other way in SWIG to get to the publication argument.
+     */
+    int safe = DPS_PublicationIsEncrypted(arg1);
+    Py_ssize_t sz;
+    Py_ssize_t i;
+    if (PyList_Check($input)) {
+        sz = PyList_GET_SIZE($input);
+        if (sz) {
+            $1 = new Buffer[sz];
+            $2 = sz;
+            for (i = 0; i < sz; ++i) {
+                int res = safe ? $1[i].SetSafe(PyList_GET_ITEM($input, i)) :
+                    $1[i].Set(PyList_GET_ITEM($input, i));
+                if (!SWIG_IsOK(res)) {
+                    SWIG_exception_fail(SWIG_ArgError(res), "in method '" "$symname" "', argument " "$argnum"" of type '" "$1_type""'");
+                }
+            }
+        }
+    } else {
+        $1 = new Buffer[1];
+        $2 = 1;
+        int res = safe ? $1[0].SetSafe($input) : $1[0].Set($input);
+        if (!SWIG_IsOK(res)) {
+            SWIG_exception_fail(SWIG_ArgError(res), "in method '" "$symname" "', argument " "$argnum"" of type '" "$1_type""'");
+        }
     }
 }
 

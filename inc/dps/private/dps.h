@@ -36,6 +36,12 @@ extern "C" {
 
 #define A_SIZEOF(a)  (sizeof(a) / sizeof((a)[0])) /**< Helper macro to compute array size */
 
+/**
+ * Maximum number of application buffers when using DPS_PublishBufs()
+ * and friends
+ */
+#define DPS_BUFS_MAX 16
+
 /*
  * Map keys for CBOR serialization of DPS messages
  */
@@ -238,6 +244,15 @@ struct _DPS_KeyStore {
  * @return a non-secure random number
  */
 uint32_t DPS_Rand(void);
+
+/**
+ * Returns if publication is encrypted.
+ *
+ * @param pub The publication
+ *
+ * @return DPS_TRUE if encrypted, DPS_FALSE otherwise
+ */
+int DPS_PublicationIsEncrypted(const DPS_Publication* pub);
 
 #ifdef __cplusplus
 }

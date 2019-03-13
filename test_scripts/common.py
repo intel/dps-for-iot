@@ -36,7 +36,7 @@ _children = []
 _logs = []
 if os.environ['USE_DTLS'] == '1':
     _subs_rate = ['-r', '800']
-    _pub_wait = ['-w', '3']
+    _pub_wait = ['-w', '4']
 else:
     _subs_rate = ['-r', '100']
     _pub_wait = ['-w', '1']

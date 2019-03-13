@@ -740,7 +740,7 @@ void* DPS_GetPublicationData(const DPS_Publication* pub);
  *
  * @param pub      Opaque handle for the publication that was received
  * @param payload  Payload accompanying the acknowledgement if any
- * @param len   Length of the payload
+ * @param len      Length of the payload
  */
 typedef void (*DPS_AcknowledgementHandler)(DPS_Publication* pub, uint8_t* payload, size_t len);
 
@@ -768,24 +768,6 @@ DPS_Status DPS_InitPublication(DPS_Publication* pub,
                                int noWildCard,
                                const DPS_KeyId* keyId,
                                DPS_AcknowledgementHandler handler);
-
-/**
- * The Quality-of-Service (QoS) parameters
- */
-typedef struct _DPS_QoS {
-    /** The maximum number of past and future publications to keep in this series. */
-     size_t historyDepth;
-} DPS_QoS;
-
-/**
- * Configure the Quality-of-Service (QoS) parameters of a publication.
- *
- * @param pub          The publication to initialize
- * @param qos          The QoS parameters
- *
- * @return DPS_OK if configuration is successful, an error otherwise
- */
-DPS_Status DPS_PublicationConfigureQoS(DPS_Publication* pub, const DPS_QoS* qos);
 
 /**
  * Adds a key identifier to use for encrypted publications.
@@ -824,6 +806,52 @@ void DPS_PublicationRemoveSubId(DPS_Publication* pub, const DPS_KeyId* keyId);
 DPS_Status DPS_Publish(DPS_Publication* pub, const uint8_t* pubPayload, size_t len, int16_t ttl);
 
 /**
+ * A buffer.
+ */
+typedef struct _DPS_Buffer {
+    uint8_t* base;              /**< Pointer to the base of the buffer */
+    size_t len;                 /**< Length of the buffer */
+} DPS_Buffer;
+
+/**
+ * Called when DPS_PublishBufs() completes.
+ *
+ * @param pub     The publication
+ * @param bufs    The payload buffers passed to DPS_PublishBufs()
+ * @param numBufs The number of payload buffers passed to DPS_PublishBufs()
+ * @param status  The status of the publish
+ * @param data    Application data passed to DPS_PublishBufs()
+ */
+typedef void (*DPS_PublishBufsComplete)(DPS_Publication* pub, const DPS_Buffer* bufs, size_t numBufs,
+                                        DPS_Status status, void* data);
+
+/**
+ * Publish a set of topics along with an optional payload. The topics will be published immediately
+ * to matching subscribers and then re-published whenever a new matching subscription is received.
+ *
+ * Call the accessor function DPS_PublicationGetUUID() to get the UUID for this publication.  Call
+ * the accessor function DPS_PublicationGetSequenceNum() to get the current sequence number for this
+ * publication. The sequence number is incremented each time DPS_Publish() is called for the same
+ * publication.
+ *
+ * @note When the ttl is greater than zero, the callback function will not be called until the
+ * publication expires, is replaced by a subsequent call to DPS_PublishBufs(), is canceled, or is
+ * destroyed.
+ *
+ * @param pub          The publication to send
+ * @param bufs         Optional payload buffers - this memory must remain valid until the callback
+ *                     function is called
+ * @param numBufs      The number of buffers
+ * @param ttl          Time to live in seconds - maximum TTL is about 9 hours
+ * @param cb           Callback function called when the publish is complete
+ * @param data         Data to be passed to the callback function
+ *
+ * @return DPS_OK if the topics were successfully published
+ */
+DPS_Status DPS_PublishBufs(DPS_Publication* pub, const DPS_Buffer* bufs, size_t numBufs, int16_t ttl,
+                           DPS_PublishBufsComplete cb, void* data);
+
+/**
  * Delete a publication and frees any resources allocated. This does not cancel retained publications
  * that have an unexpired TTL. To expire a retained publication call DPS_Publish() with a zero TTL.
  *
@@ -849,6 +877,36 @@ DPS_Status DPS_DestroyPublication(DPS_Publication* pub);
  * @return DPS_OK if acknowledge is successful, an error otherwise
  */
 DPS_Status DPS_AckPublication(const DPS_Publication* pub, const uint8_t* ackPayload, size_t len);
+
+/**
+ * Called when DPS_AckPublicationBufs() completes.
+ *
+ * @param pub     The publication
+ * @param bufs    The payload buffers passed to DPS_AckPublicationBufs()
+ * @param numBufs The number of payload buffers passed to DPS_AckPublicationBufs()
+ * @param status  The status of the publish
+ * @param data    Application data passed to DPS_AckPublicationBufs()
+ */
+typedef void (*DPS_AckPublicationBufsComplete)(DPS_Publication* pub, const DPS_Buffer* bufs, size_t numBufs,
+                                               DPS_Status status, void* data);
+
+/**
+ * Acknowledge a publication. A publication should be acknowledged as soon as possible after receipt,
+ * ideally from within the publication handler callback function. If the publication cannot be
+ * acknowledged immediately in the publication handler callback, call DPS_CopyPublication() to make a
+ * partial copy of the publication that can be passed to this function at a later time.
+ *
+ * @param pub           The publication to acknowledge
+ * @param bufs          Optional payload buffers - this memory must remain valid until the callback
+ *                      function is called
+ * @param numBufs       The number of buffers
+ * @param cb            Callback function called when the acknowledge is complete
+ * @param data          Data to be passed to the callback function
+ *
+ * @return DPS_OK if acknowledge is successful, an error otherwise
+ */
+DPS_Status DPS_AckPublicationBufs(const DPS_Publication* pub, const DPS_Buffer* bufs, size_t numBufs,
+                                  DPS_AckPublicationBufsComplete cb, void* data);
 
 /**
  * Get the key identifier of an acknowledgement, only valid with the

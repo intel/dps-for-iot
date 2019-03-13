@@ -32,22 +32,37 @@
 #include <stddef.h>
 #include <dps/private/dps.h>
 #include "node.h"
-
+#include "queue.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+#define NUM_INTERNAL_ACK_BUFS 4 /**< Additional buffers needed for message serialization */
+
 /**
  * Acknowledgement packet queued to be sent on node loop
  */
 typedef struct _PublicationAck {
-    DPS_TxBuffer buf;               /**< Headers, unprotected, and protected fields */
-    DPS_TxBuffer encryptedBuf;      /**< Encrypted fields */
-    DPS_NodeAddress destAddr;       /**< Destination of acknowledgement */
-    uint32_t sequenceNum;           /**< Sequence number being acknowledged */
-    DPS_UUID pubId;                 /**< The UUID of the publication */
-    struct _PublicationAck* next;   /**< Next acknowledgement in the queue */
+    DPS_Queue queue;                    /**< Ack queue */
+    DPS_Publication* pub;               /**< The publication being acknowledged */
+    DPS_NodeAddress destAddr;           /**< Destination of acknowledgement */
+    uint32_t sequenceNum;               /**< Sequence number being acknowledged */
+    DPS_PublishBufsComplete completeCB; /**< The completion callback */
+    void* data;                         /**< Context pointer */
+    DPS_Status status;                  /**< Result of the publish */
+    size_t numBufs;                     /**< Number of buffers */
+    /**
+     * Ack fields.
+     *
+     * Usage of the buffers is as follows:
+     * 0:            DPS headers, unprotected, and protected fields
+     * 1:            COSE headers (may be empty)
+     * 2:            Payload headers
+     * 3..numBufs-2: Payload
+     * numBufs-1:    COSE footers (may be empty)
+     */
+    DPS_TxBuffer bufs[1];
 } PublicationAck;
 
 /**
@@ -59,27 +74,26 @@ typedef struct _PublicationAck {
  *
  * @return DPS_OK if decoding and processing is successful, an error otherwise
  */
-DPS_Status DPS_DecodeAcknowledgement(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuffer* buffer);
+DPS_Status DPS_DecodeAcknowledgement(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxBuffer* buffer);
 
 /**
  * Send an previously serialized acknowledgement
  *
  * Must be called with the node lock held.
  *
- * @param node    The local node
  * @param ack     The acknowledgement to send
  * @param ackNode The remote node to send the acknowledgement to
  *
  * @return DPS_OK if sending is successful, an error otherwise
  */
-DPS_Status DPS_SendAcknowledgement(DPS_Node*node, PublicationAck* ack, RemoteNode* ackNode);
+DPS_Status DPS_SendAcknowledgement(PublicationAck* ack, RemoteNode* ackNode);
 
 /**
- * Free resources associated with an acknowledgement
+ * Complete the ack when finished.
  *
- * @param ack   The acknowledgement to destroy.
+ * @param ack The acknowledgement
  */
-void DPS_DestroyAck(PublicationAck* ack);
+void DPS_AckPublicationCompletion(PublicationAck* ack);
 
 #ifdef __cplusplus
 }

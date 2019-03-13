@@ -72,29 +72,40 @@ static int UseInterface(uint8_t ipVersions, uv_interface_address_t* ifn)
     }
 }
 
-static void AllocBuffer(uv_handle_t* handle, size_t suggestedSize, uv_buf_t* buf)
+static void AllocBuffer(uv_handle_t* handle, size_t suggestedSize, uv_buf_t* uvBuf)
 {
-    buf->len = (uint32_t)suggestedSize;
-    buf->base = malloc(buf->len);
+    DPS_NetRxBuffer* buf = DPS_CreateNetRxBuffer(suggestedSize);
+    if (buf) {
+        uvBuf->base = (char*)buf->rx.base;
+        uvBuf->len = DPS_RxBufferAvail(&buf->rx);
+    } else {
+        uvBuf->base = NULL;
+        uvBuf->len = 0;
+    }
 }
 
-static void OnMcastRx(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf, const struct sockaddr* addr,
+static void OnMcastRx(uv_udp_t* handle, ssize_t nread, const uv_buf_t* uvBuf, const struct sockaddr* addr,
                       unsigned flags)
 {
     DPS_MulticastReceiver* receiver = (DPS_MulticastReceiver*)handle->data;
+    DPS_NetRxBuffer* buf = NULL;
     DPS_NetEndpoint ep;
 
-    if (nread == 0 && !addr) {
-        /* No more data to read, free the buffer */
+    DPS_DBGTRACEA("handle=%p,nread=%d,buf={base=%p,len=%d},addr=%p,flags=0x%x\n", handle, nread,
+                  uvBuf->base, uvBuf->len, addr, flags);
+
+    if (!uvBuf) {
+        DPS_ERRPRINT("No buffer\n");
         goto Exit;
     }
-
-    DPS_DBGTRACEA("handle=%p,nread=%d,buf={base=%p,len=%d},addr=%p,flags=0x%x\n", handle, nread,
-                  buf->base, buf->len, addr, flags);
-
+    buf = DPS_UvToNetRxBuffer(uvBuf);
     if (nread < 0) {
         DPS_ERRPRINT("Read error %s\n", uv_err_name((int)nread));
         uv_close((uv_handle_t*)handle, NULL);
+        goto Exit;
+    }
+    buf->rx.eod = &buf->rx.base[nread];
+    if (!nread) {
         goto Exit;
     }
     if (flags & UV_UDP_PARTIAL) {
@@ -106,9 +117,9 @@ static void OnMcastRx(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf, cons
     }
     ep.cn = NULL;
     DPS_SetAddress(&ep.addr, addr);
-    receiver->cb(receiver->node, &ep, DPS_OK, (uint8_t*)buf->base, nread);
+    receiver->cb(receiver->node, &ep, DPS_OK, buf);
 Exit:
-    free(buf->base);
+    DPS_NetRxBufferDecRef(buf);
 }
 
 static DPS_Status MulticastRxInit(DPS_MulticastReceiver* receiver)
@@ -410,17 +421,20 @@ static void MulticastSendComplete(uv_udp_send_t* req, int status)
     }
     if (--send->numTx == 0) {
         if (send->onSendComplete) {
-            send->onSendComplete(send->sender, send->appCtx, send->bufs, send->numBufs, send->ret);
+            send->onSendComplete(send->sender, send->appCtx, &send->bufs[1], send->numBufs - 1, send->ret);
         }
+        DPS_NetFreeBufs(send->bufs, 1);
         free(send);
     }
     free(req);
 }
 
-DPS_Status DPS_MulticastSend(DPS_MulticastSender* sender, void* appCtx, uv_buf_t* bufs, size_t numBufs, DPS_MulticastSendComplete sendCompleteCB)
+DPS_Status DPS_MulticastSend(DPS_MulticastSender* sender, void* appCtx, uv_buf_t* bufs, size_t numBufs,
+                             DPS_MulticastSendComplete sendCompleteCB)
 {
     MulticastSend* send = NULL;
     size_t i;
+    DPS_Status ret;
 
 #ifdef DPS_DEBUG
     size_t len = 0;
@@ -437,7 +451,7 @@ DPS_Status DPS_MulticastSend(DPS_MulticastSender* sender, void* appCtx, uv_buf_t
         return DPS_ERR_NO_ROUTE;
     }
 
-    send = malloc(sizeof(MulticastSend) + (numBufs - 1) * sizeof(uv_buf_t));
+    send = malloc(sizeof(MulticastSend) + numBufs * sizeof(uv_buf_t));
     if (!send) {
         return DPS_ERR_RESOURCES;
     }
@@ -446,8 +460,13 @@ DPS_Status DPS_MulticastSend(DPS_MulticastSender* sender, void* appCtx, uv_buf_t
     send->onSendComplete = sendCompleteCB;
     send->ret = DPS_OK;
     send->numTx = 0;
-    memcpy_s(send->bufs, numBufs * sizeof(uv_buf_t), bufs, numBufs * sizeof(uv_buf_t));
-    send->numBufs = numBufs;
+    memcpy_s(&send->bufs[1], numBufs * sizeof(uv_buf_t), bufs, numBufs * sizeof(uv_buf_t));
+    send->numBufs = numBufs + 1;
+    ret = CoAP_Wrap(send->bufs, send->numBufs);
+    if (ret != DPS_OK) {
+        free(send);
+        return ret;
+    }
 
     /*
      * Send on each interface
@@ -473,12 +492,15 @@ DPS_Status DPS_MulticastSend(DPS_MulticastSender* sender, void* appCtx, uv_buf_t
         }
         sendReq->data = send;
 
-        ret = uv_udp_send(sendReq, &sender->udpTx[i].udp, send->bufs, (unsigned int)numBufs, (struct sockaddr*)&addr, MulticastSendComplete);
+        ret = uv_udp_send(sendReq, &sender->udpTx[i].udp, send->bufs, (unsigned int)send->numBufs,
+                          (struct sockaddr*)&addr, MulticastSendComplete);
         if (ret) {
-            DPS_ERRPRINT("uv_udp_send to %s failed: %s\n", DPS_NetAddrText((struct sockaddr*)&addr), uv_err_name(ret));
+            DPS_ERRPRINT("uv_udp_send to %s failed: %s\n", DPS_NetAddrText((struct sockaddr*)&addr),
+                         uv_err_name(ret));
             free(sendReq);
         } else {
-            DPS_DBGPRINT("DPS_MulticastSend total %zu bytes to %s\n", len, DPS_NetAddrText((struct sockaddr*)&addr));
+            DPS_DBGPRINT("DPS_MulticastSend total %zu bytes to %s\n", len,
+                         DPS_NetAddrText((struct sockaddr*)&addr));
             ++send->numTx;
         }
     }
@@ -486,6 +508,7 @@ DPS_Status DPS_MulticastSend(DPS_MulticastSender* sender, void* appCtx, uv_buf_t
         /*
          * Not a single send was successful
          */
+        DPS_NetFreeBufs(send->bufs, 1);
         free(send);
         return DPS_ERR_NETWORK;
     }

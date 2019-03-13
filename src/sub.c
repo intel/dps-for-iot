@@ -359,7 +359,7 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote)
             assert(remote->outbound.ackCountdown);
         } else {
             DPS_ERRPRINT("Failed to send subscription request %s\n", DPS_ErrTxt(ret));
-            DPS_SendFailed(node, &remote->ep.addr, &uvBuf, 1, ret);
+            DPS_SendComplete(node, &remote->ep.addr, &uvBuf, 1, ret);
         }
     } else {
         DPS_TxBufferFree(&buf);
@@ -510,7 +510,7 @@ static DPS_Status SendSubscriptionAck(DPS_Node* node, RemoteNode* remote, uint32
             }
         } else {
             DPS_ERRPRINT("Failed to send subscription ack %s\n", DPS_ErrTxt(ret));
-            DPS_SendFailed(node, &remote->ep.addr, &uvBuf, 1, ret);
+            DPS_SendComplete(node, &remote->ep.addr, &uvBuf, 1, ret);
         }
     } else {
         DPS_TxBufferFree(&buf);
@@ -553,11 +553,12 @@ static DPS_Status UpdateInboundInterests(DPS_Node* node, RemoteNode* remote, DPS
 /*
  *
  */
-DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuffer* buf)
+DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxBuffer* buf)
 {
     static const int32_t NeedKeys[] = { DPS_CBOR_KEY_PORT, DPS_CBOR_KEY_SEQ_NUM };
     static const int32_t WantKeys[] = { DPS_CBOR_KEY_SUB_FLAGS, DPS_CBOR_KEY_MESH_ID, DPS_CBOR_KEY_NEEDS, DPS_CBOR_KEY_INTERESTS };
     static const int32_t WantKeysMask = (1 << DPS_CBOR_KEY_SUB_FLAGS) | (1 << DPS_CBOR_KEY_MESH_ID) | (1 << DPS_CBOR_KEY_NEEDS) | (1 << DPS_CBOR_KEY_INTERESTS);
+    DPS_RxBuffer* rxBuf = (DPS_RxBuffer*)buf;
     DPS_Status ret;
     DPS_BitVector* interests = NULL;
     DPS_BitVector* needs = NULL;
@@ -573,11 +574,11 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
 
     DPS_DBGTRACE();
 
-    CBOR_Dump("Sub in", buf->rxPos, DPS_RxBufferAvail(buf));
+    CBOR_Dump("Sub in", rxBuf->rxPos, DPS_RxBufferAvail(rxBuf));
     /*
      * Parse keys from unprotected map
      */
-    ret = DPS_ParseMapInit(&mapState, buf, NeedKeys, A_SIZEOF(NeedKeys), WantKeys, A_SIZEOF(WantKeys));
+    ret = DPS_ParseMapInit(&mapState, rxBuf, NeedKeys, A_SIZEOF(NeedKeys), WantKeys, A_SIZEOF(WantKeys));
     if (ret != DPS_OK) {
         return ret;
     }
@@ -591,18 +592,18 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
         }
         switch (key) {
         case DPS_CBOR_KEY_PORT:
-            ret = CBOR_DecodeUint16(buf, &port);
+            ret = CBOR_DecodeUint16(rxBuf, &port);
             break;
         case DPS_CBOR_KEY_SEQ_NUM:
-            ret = CBOR_DecodeUint32(buf, &revision);
+            ret = CBOR_DecodeUint32(rxBuf, &revision);
             break;
         case DPS_CBOR_KEY_SUB_FLAGS:
             keysMask |= (1 << key);
-            ret = CBOR_DecodeUint8(buf, &flags);
+            ret = CBOR_DecodeUint8(rxBuf, &flags);
             break;
         case DPS_CBOR_KEY_MESH_ID:
             keysMask |= (1 << key);
-            ret = CBOR_DecodeBytes(buf, (uint8_t**)&bytes, &len);
+            ret = CBOR_DecodeBytes(rxBuf, (uint8_t**)&bytes, &len);
             if ((ret == DPS_OK) && (len != sizeof(DPS_UUID))) {
                 ret = DPS_ERR_INVALID;
             } else if (memcpy_s(meshId.val, sizeof(meshId.val), bytes, len) != EOK) {
@@ -616,7 +617,7 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
             } else {
                 interests = DPS_BitVectorAlloc();
                 if (interests) {
-                    ret = DPS_BitVectorDeserialize(interests, buf);
+                    ret = DPS_BitVectorDeserialize(interests, rxBuf);
                 } else {
                     ret = DPS_ERR_RESOURCES;
                 }
@@ -629,7 +630,7 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
             } else {
                 needs = DPS_BitVectorAllocFH();
                 if (needs) {
-                    ret = DPS_BitVectorDeserializeFH(needs, buf);
+                    ret = DPS_BitVectorDeserializeFH(needs, rxBuf);
                 } else {
                     ret = DPS_ERR_RESOURCES;
                 }
@@ -741,7 +742,7 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuf
          * Evaluate impact of the change in interests
          */
         if (ret == DPS_OK) {
-            DPS_UpdatePubs(node, NULL);
+            DPS_UpdatePubs(node);
         }
     } else {
         DPS_BitVectorFree(interests);
@@ -777,28 +778,30 @@ DiscardAndExit:
     return ret;
 }
 
-DPS_Status DPS_DecodeSubscriptionAck(DPS_Node* node, DPS_NetEndpoint* ep, DPS_RxBuffer* buf)
+DPS_Status DPS_DecodeSubscriptionAck(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxBuffer* buf)
 {
     static const int32_t UnprotectedKeys[] = { DPS_CBOR_KEY_PORT, DPS_CBOR_KEY_ACK_SEQ_NUM };
+    DPS_RxBuffer* rxBuf = (DPS_RxBuffer*)buf;
+    uint8_t* rxPos;
     DPS_Status ret;
     uint16_t port;
     uint32_t revision = 0;
     RemoteNode* remote = NULL;
     CBOR_MapState mapState;
-    uint8_t* rxPos = buf->rxPos;
 
     DPS_DBGTRACE();
 
     /*
      * Decode subscription fields if they are present
      */
+    rxPos = rxBuf->rxPos;
     ret = DPS_DecodeSubscription(node, ep, buf);
-    buf->rxPos = rxPos;
+    rxBuf->rxPos = rxPos;
 
     /*
      * Parse keys from unprotected map
      */
-    ret = DPS_ParseMapInit(&mapState, buf, UnprotectedKeys, A_SIZEOF(UnprotectedKeys), NULL, 0);
+    ret = DPS_ParseMapInit(&mapState, rxBuf, UnprotectedKeys, A_SIZEOF(UnprotectedKeys), NULL, 0);
     if (ret != DPS_OK) {
         return ret;
     }
@@ -810,10 +813,10 @@ DPS_Status DPS_DecodeSubscriptionAck(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Rx
         }
         switch (key) {
         case DPS_CBOR_KEY_PORT:
-            ret = CBOR_DecodeUint16(buf, &port);
+            ret = CBOR_DecodeUint16(rxBuf, &port);
             break;
         case DPS_CBOR_KEY_ACK_SEQ_NUM:
-            ret = CBOR_DecodeUint32(buf, &revision);
+            ret = CBOR_DecodeUint32(rxBuf, &revision);
             break;
         }
         if (ret != DPS_OK) {

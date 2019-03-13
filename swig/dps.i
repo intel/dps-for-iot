@@ -27,6 +27,7 @@
  */
 #pragma SWIG nowarn=312
 
+%ignore DPS_AckPublicationBufs;
 %ignore DPS_CBOR2JSON;
 %ignore DPS_DestroyKeyStore;
 %ignore DPS_DestroyPublication;
@@ -42,6 +43,7 @@
 %ignore DPS_NodeAddrToString;
 %ignore DPS_PublicationGetNumTopics;
 %ignore DPS_PublicationGetTopic;
+%ignore DPS_PublishBufs;
 %ignore DPS_SetKeyStoreData;
 %ignore DPS_SetNodeData;
 %ignore DPS_SetPublicationData;
@@ -49,6 +51,7 @@
 %ignore DPS_SubscriptionGetNumTopics;
 %ignore DPS_SubscriptionGetTopic;
 %ignore DPS_UUIDToString;
+%ignore _DPS_Buffer;
 %ignore _DPS_Key;
 %ignore _DPS_KeyId;
 
@@ -116,6 +119,7 @@ public:
 };
 
 static int AsVal_bytes(Handle obj, uint8_t** bytes, size_t* len);
+static int AsSafeVal_bytes(Handle obj, uint8_t** bytes, size_t* len);
 static Handle From_bytes(const uint8_t* bytes, size_t len);
 static Handle From_topics(const char** topics, size_t len);
 
@@ -635,6 +639,83 @@ DPS_Status CBOR2JSON(const uint8_t* cbor, size_t len, int pretty, char** json);
 %typemap(argout) DPS_UUID* {
     $result = SWIG_NewPointerObj(SWIG_as_voidptr($1), SWIGTYPE_p__DPS_UUID, SWIG_POINTER_OWN);
 }
+
+%typemap(default) (Buffer* bufs, size_t numBufs) (bool deleteBufs = true) {
+    $1 = NULL;
+    $2 = 0;
+}
+%typemap(argout) (Buffer* bufs, size_t numBufs) {
+    if (result == DPS_OK) {
+        deleteBufs$argnum = false;
+    }
+}
+%typemap(freearg) (Buffer* bufs, size_t numBufs) {
+    if (deleteBufs$argnum) {
+        delete[] $1;
+    }
+}
+%typemap(default) (int16_t ttl) {
+    $1 = 0;
+}
+
+%{
+class Buffer {
+public:
+    Buffer() : m_alloc(SWIG_OK) { m_buf.base = nullptr; m_buf.len = 0; }
+    ~Buffer() { if (SWIG_IsNewObj(m_alloc)) delete[] m_buf.base; }
+    int Set(Handle obj) {
+        m_obj.Set(obj);
+        m_alloc = AsVal_bytes(obj, &m_buf.base, &m_buf.len);
+        return m_alloc;
+    }
+    int SetSafe(Handle obj) {
+        m_obj.Set(obj);
+        m_alloc = AsSafeVal_bytes(obj, &m_buf.base, &m_buf.len);
+        return m_alloc;
+    }
+    Handler m_obj;
+    DPS_Buffer m_buf;
+    int m_alloc;
+};
+
+static void PublishBufsComplete(DPS_Publication* pub, const DPS_Buffer*, size_t numBufs,
+                                DPS_Status status, void* data)
+{
+    Buffer* bufs = reinterpret_cast<Buffer*>(data);
+    delete[] bufs;
+}
+
+DPS_Status PublishBufs(DPS_Publication* pub, Buffer* bufs, size_t numBufs, int16_t ttl)
+{
+    DPS_Buffer dpsBufs[numBufs];
+    size_t i;
+
+    for (i = 0; i < numBufs; ++i) {
+        dpsBufs[i] = bufs[i].m_buf;
+    }
+    return DPS_PublishBufs(pub, dpsBufs, numBufs, ttl, PublishBufsComplete, bufs);
+}
+
+static void AckPublicationBufsComplete(DPS_Publication* pub, const DPS_Buffer*, size_t numBufs,
+                                       DPS_Status status, void* data)
+{
+    Buffer* bufs = reinterpret_cast<Buffer*>(data);
+    delete[] bufs;
+}
+
+DPS_Status AckPublicationBufs(DPS_Publication* pub, Buffer* bufs, size_t numBufs)
+{
+    DPS_Buffer dpsBufs[numBufs];
+    size_t i;
+
+    for (i = 0; i < numBufs; ++i) {
+        dpsBufs[i] = bufs[i].m_buf;
+    }
+    return DPS_AckPublicationBufs(pub, dpsBufs, numBufs, AckPublicationBufsComplete, bufs);
+}
+%}
+DPS_Status PublishBufs(DPS_Publication* pub, Buffer* bufs, size_t numBufs, int16_t ttl);
+DPS_Status AckPublicationBufs(DPS_Publication* pub, Buffer* bufs, size_t numBufs);
 
 %include <dps/dbg.h>
 %include <dps/dps.h>

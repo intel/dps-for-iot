@@ -149,6 +149,7 @@ static void OnProbeTimeout(uv_timer_t* handle)
 {
     DPS_Status ret = DPS_ERR_TIMEOUT;
     LinkMonitor* monitor = (LinkMonitor*)handle->data;
+    DPS_PublishRequest* req = NULL;
 
     DPS_DBGTRACE();
 
@@ -182,27 +183,38 @@ static void OnProbeTimeout(uv_timer_t* handle)
      * Send a next probe
      */
     if (ret == DPS_OK) {
+        req = DPS_CreatePublishRequest(monitor->pub, 0, NULL, NULL);
+        if (!req) {
+            ret = DPS_ERR_RESOURCES;
+        }
+    }
+    if (ret == DPS_OK) {
         /*
          * Publications are not normally sent to muted noded so we have
          * to call the lower layer APIs for force the probe publication
          * to be sent.
          */
-        ++monitor->pub->sequenceNum;
-        ret = DPS_SerializePub(monitor->node, monitor->pub, NULL, 0, 0);
-        if (ret == DPS_OK) {
-            DPS_DBGPRINT("Send link probe from %d to %s\n", monitor->node->port, DESCRIBE(monitor->remote));
-            ret = DPS_SendPublication(monitor->node, monitor->pub, monitor->remote, DPS_FALSE);
-            /*
-             * We have to delete the publication history for the probe otherwise
-             * it will look like a duplicate and will be discarded.
-             */
-            DPS_DeletePubHistory(&monitor->node->history, &monitor->pub->shared->pubId);
-        }
+        req->sequenceNum = ++monitor->pub->sequenceNum;
+        ret = DPS_SerializePub(req, NULL, 0, 0);
     }
-
+    if (ret == DPS_OK) {
+        DPS_DBGPRINT("Send link probe from %d to %s\n", monitor->node->port, DESCRIBE(monitor->remote));
+        ret = DPS_SendPublication(req, monitor->pub, monitor->remote);
+        /*
+         * We have to delete the publication history for the probe otherwise
+         * it will look like a duplicate and will be discarded.
+         */
+        DPS_DeletePubHistory(&monitor->node->history, &monitor->pub->pubId);
+    }
     if (ret != DPS_OK) {
         DPS_DBGPRINT("Link probe failed on retry %d\n", monitor->retries);
         DPS_UnmuteRemoteNode(monitor->node, monitor->remote);
+    }
+
+    if (ret == DPS_OK) {
+        DPS_PublishCompletion(req);
+    } else {
+        DPS_DestroyPublishRequest(req);
     }
 
     DPS_UnlockNode(monitor->node);
