@@ -135,7 +135,6 @@ static void TestLoopbackAckLargeMessage(DPS_Node* node, DPS_KeyStore* keyStore)
     static const uint8_t message[8*1024] = { 0 };
     DPS_Publication* pub = NULL;
     DPS_Subscription* sub = NULL;
-    DPS_Event* event = NULL;
     int receivedMessage = DPS_FALSE;
     DPS_Event* ackEvent = NULL;
     DPS_Status ret;
@@ -155,14 +154,11 @@ static void TestLoopbackAckLargeMessage(DPS_Node* node, DPS_KeyStore* keyStore)
     ret = DPS_Subscribe(sub, LoopbackAckLargeMessageHandler);
     ASSERT(ret == DPS_OK);
 
-    event = DPS_CreateEvent();
-    ASSERT(event);
     ret = DPS_Publish(pub, message, A_SIZEOF(message), 0);
     ASSERT(ret == DPS_OK);
     ret = DPS_WaitForEvent(ackEvent);
     ASSERT(ret == DPS_OK);
 
-    DPS_DestroyEvent(event);
     DPS_DestroySubscription(sub);
     DPS_DestroyEvent(ackEvent);
     DPS_DestroyPublication(pub);

@@ -249,7 +249,8 @@ DPS_Status DPS_SplitAddress(const char* addrText, char* host, size_t hostLen,
  * 2. uv_getaddrinfo() provides a synchronous version, but still
  *    requires a uv_loop_t argument which we don't have or need in
  *    DPS_SetAddress().
- * 3. IPv6 localhost (::1) will not work on an IPv4-only host.
+ * 3. IPv6 any (::) or localhost (::1) will not work on an IPv4-only
+ *    host.
  */
 static DPS_Status GetScope(const char* host, const char* service, struct sockaddr_storage* inaddr)
 {
@@ -260,14 +261,18 @@ static DPS_Status GetScope(const char* host, const char* service, struct sockadd
     memset(&hints, 0, sizeof(hints));
     hints.ai_flags = AI_NUMERICHOST | AI_NUMERICSERV | AI_ADDRCONFIG;
     err = getaddrinfo(host, service, &hints, &ai);
-    if (err == EAI_ADDRFAMILY) {
+    if ((err == EAI_ADDRFAMILY) && host) {
         /*
          * Try again with the other address family for localhost
          */
-        if (host && !strcmp(host, "::1")) {
+        if (!strcmp(host, "::1")) {
             err = getaddrinfo("127.0.0.1", service, &hints, &ai);
-        } else if (host && !strcmp(host, "127.0.0.1")) {
+        } else if (!strcmp(host, "127.0.0.1")) {
             err = getaddrinfo("::1", service, &hints, &ai);
+        } else if (!strcmp(host, "::")) {
+            err = getaddrinfo("0.0.0.0", service, &hints, &ai);
+        } else if (!strcmp(host, "0.0.0.0")) {
+            err = getaddrinfo("::", service, &hints, &ai);
         }
     }
     if (err) {
@@ -334,6 +339,30 @@ DPS_NodeAddress* DPS_SetAddress(DPS_NodeAddress* addr, const char* addrText)
 ErrorExit:
     DPS_ERRPRINT("Invalid address %s\n", addrText);
     return NULL;
+}
+
+DPS_Status DPS_GetLoopbackAddress(DPS_NodeAddress* addr, DPS_Node* node)
+{
+    DPS_Status ret;
+    char service[8];
+
+    DPS_CopyAddress(addr, DPS_GetListenAddress(node));
+    switch (addr->type) {
+    case DPS_DTLS:
+    case DPS_TCP:
+    case DPS_UDP:
+        snprintf(service, sizeof(service), "%d",
+                 ntohs(((struct sockaddr_in*)(&addr->u.inaddr))->sin_port));
+        ret = GetScope(NULL, service, &addr->u.inaddr);
+        if (ret != DPS_OK) {
+            break;
+        }
+        break;
+    default:
+        ret = DPS_OK;
+        break;
+    }
+    return ret;
 }
 
 void DPS_EndpointSetPort(DPS_NetEndpoint* ep, uint16_t port)

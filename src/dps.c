@@ -1035,7 +1035,10 @@ DPS_Status DPS_LoopbackSend(DPS_Node* node, uv_buf_t* bufs, size_t numBufs)
 
     assert(node->state == DPS_NODE_RUNNING);
 
-    DPS_CopyAddress(&ep.addr, DPS_GetListenAddress(node));
+    ret = DPS_GetLoopbackAddress(&ep.addr, node);
+    if (ret != DPS_OK) {
+        goto Exit;
+    }
     ep.cn = NULL;
 
     /*

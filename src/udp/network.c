@@ -103,7 +103,7 @@ DPS_NetContext* DPS_NetStart(DPS_Node* node, const DPS_NodeAddress* addr, DPS_On
     int ret;
     DPS_NetContext* netCtx;
     struct sockaddr* sa;
-    struct sockaddr_storage ss;
+    DPS_NodeAddress any;
 
     netCtx = calloc(1, sizeof(DPS_NetContext));
     if (!netCtx) {
@@ -120,11 +120,10 @@ DPS_NetContext* DPS_NetStart(DPS_Node* node, const DPS_NodeAddress* addr, DPS_On
     if (addr) {
         sa = (struct sockaddr*)&addr->u.inaddr;
     } else {
-        ret = uv_ip6_addr("::", 0, (struct sockaddr_in6*)&ss);
-        if (ret) {
+        if (!DPS_SetAddress(&any, "[::]:0")) {
             goto ErrorExit;
         }
-        sa = (struct sockaddr*)&ss;
+        sa = (struct sockaddr*)&any.u.inaddr;
     }
     netCtx->rxSocket.data = netCtx;
     ret = uv_udp_bind(&netCtx->rxSocket, sa, 0);

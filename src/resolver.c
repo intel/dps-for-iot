@@ -88,6 +88,12 @@ static void TryGetAddrInfoCB(uv_getaddrinfo_t* req, int status, struct addrinfo*
         } else if (!strcmp(resolver->host, "127.0.0.1")) {
             status = uv_getaddrinfo(req->loop, &resolver->info, GetAddrInfoCB, "::1",
                                     resolver->service, &hints);
+        } else if (!strcmp(resolver->host, "::")) {
+            status = uv_getaddrinfo(req->loop, &resolver->info, GetAddrInfoCB, "0.0.0.0",
+                                    resolver->service, &hints);
+        } else if (!strcmp(resolver->host, "0.0.0.0")) {
+            status = uv_getaddrinfo(req->loop, &resolver->info, GetAddrInfoCB, "::",
+                                    resolver->service, &hints);
         }
         if (status == 0) {
             return;

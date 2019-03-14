@@ -101,6 +101,16 @@ typedef struct _DPS_NodeAddress {
 } DPS_NodeAddress;
 
 /**
+ * Get the loopback address of the node's listening address.
+ *
+ * @param addr The loopback address
+ * @param node The node
+ *
+ * @return DPS_OK if successful, an error otherwise
+ */
+DPS_Status DPS_GetLoopbackAddress(DPS_NodeAddress* addr, DPS_Node* node);
+
+/**
  * For managing data that has been received
  */
 typedef struct _DPS_RxBuffer {
