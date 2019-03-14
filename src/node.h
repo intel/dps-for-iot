@@ -187,7 +187,7 @@ typedef struct _RemoteNode {
  * An opaque pointer of a remote node representing the loopback
  * destination.
  */
-extern RemoteNode* LoopbackNode;
+extern RemoteNode* DPS_LoopbackNode;
 
 /**
  * Request to asynchronously updates subscriptions
