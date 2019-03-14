@@ -20,14 +20,13 @@
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  */
 
+#include <safe_lib.h>
 #include <assert.h>
 #include <ctype.h>
 #include <limits.h>
-#include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/socket.h>
 #include <time.h>
 #include <dps/dbg.h>
 #include <dps/dps.h>

@@ -21,11 +21,9 @@
  */
 
 #include <assert.h>
-#include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/socket.h>
 #include <dps/dbg.h>
 #include <dps/dps.h>
 #include <dps/event.h>

@@ -22,11 +22,9 @@
 
 #include <assert.h>
 #include <ctype.h>
-#include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/socket.h>
 #ifdef _WIN32
 #include <io.h>
 #else

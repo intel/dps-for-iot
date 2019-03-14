@@ -1052,8 +1052,10 @@ DPS_Status DPS_LoopbackSend(DPS_Node* node, uv_buf_t* bufs, size_t numBufs)
         goto Exit;
     }
     for (i = 0; i < numBufs; ++i) {
-        memcpy(buf->rx.rxPos, bufs[i].base, bufs[i].len);
-        buf->rx.rxPos += bufs[i].len;
+        if (bufs[i].len) {
+            memcpy(buf->rx.rxPos, bufs[i].base, bufs[i].len);
+            buf->rx.rxPos += bufs[i].len;
+        }
     }
     buf->rx.rxPos = buf->rx.base;
     ret = DecodeRequest(node, &ep, buf, DPS_FALSE);

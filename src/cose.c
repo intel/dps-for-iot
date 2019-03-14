@@ -1464,7 +1464,7 @@ DPS_Status COSE_Decrypt(const uint8_t* nonce, COSE_Entity* recipient, DPS_RxBuff
      */
     if (sig.sigLen) {
         DPS_RxBufferInit(&contentBuf, content, contentLen);
-        ret = VerifySignature(tag, alg, &sig, NULL, 0, &contentBuf, keyStore, signer);
+        ret = VerifySignature((uint8_t)tag, alg, &sig, NULL, 0, &contentBuf, keyStore, signer);
         if (ret != DPS_OK) {
             DPS_WARNPRINT("Failed to verify signature: %s\n", DPS_ErrTxt(ret));
             /*
@@ -1814,7 +1814,7 @@ DPS_Status COSE_Verify(DPS_RxBuffer* aad, DPS_RxBuffer* cipherText, DPS_KeyStore
      * Verify signature of encrypted content
      */
     DPS_RxBufferInit(&contentBuf, content, contentLen);
-    ret = VerifySignature(tag, sig.alg, &sig, aad->base, DPS_RxBufferAvail(aad), &contentBuf,
+    ret = VerifySignature((uint8_t)tag, sig.alg, &sig, aad->base, DPS_RxBufferAvail(aad), &contentBuf,
                           keyStore, signer);
     if (ret != DPS_OK) {
         DPS_WARNPRINT("Failed to verify signature: %s\n", DPS_ErrTxt(ret));

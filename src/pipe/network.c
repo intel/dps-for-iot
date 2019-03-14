@@ -20,10 +20,10 @@
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  */
 
+#include <safe_lib.h>
 #include <assert.h>
 #include <string.h>
 #include <stdlib.h>
-#include <safe_lib.h>
 #include <dps/dbg.h>
 #include <dps/dps.h>
 #include <dps/private/network.h>
@@ -326,6 +326,11 @@ static void OnIncomingConnection(uv_stream_t* stream, int status)
     cn->peerEp.addr.type = DPS_PIPE;
     sz = sizeof(cn->peerEp.addr.u.path);
     uv_pipe_getpeername((uv_pipe_t*)&cn->socket, cn->peerEp.addr.u.path, &sz);
+#ifdef _WIN32
+    if (!strncmp(cn->peerEp.addr.u.path, "\\\\?", 3)) {
+        cn->peerEp.addr.u.path[2] = '.';
+    }
+#endif
     ret = uv_read_start((uv_stream_t*)&cn->socket, AllocBuffer, OnData);
     if (ret) {
         DPS_ERRPRINT("OnIncomingConnection read start %s\n", uv_strerror(ret));
@@ -373,8 +378,7 @@ static int GetScopeId(struct sockaddr_in6* addr)
 
 DPS_NetContext* DPS_NetStart(DPS_Node* node, const DPS_NodeAddress* addr, DPS_OnReceive cb)
 {
-    char path[DPS_NODE_ADDRESS_PATH_MAX];
-    size_t len;
+    char path[DPS_NODE_ADDRESS_PATH_MAX] = { 0 };
     DPS_NetContext* netCtx = NULL;
     DPS_UUID uuid;
     int ret;
@@ -399,8 +403,12 @@ DPS_NetContext* DPS_NetStart(DPS_Node* node, const DPS_NodeAddress* addr, DPS_On
          * Create a unique temporary path
          */
         do {
-            len = sizeof(path);
+#ifdef _WIN32
+            ret = strcat_s(path, sizeof(path), "\\\\.\\pipe");
+#else
+            size_t len = sizeof(path);
             ret = uv_os_tmpdir(path, &len);
+#endif
             if (ret) {
                 goto ErrorExit;
             }
@@ -450,9 +458,14 @@ DPS_NodeAddress* DPS_NetGetListenAddress(DPS_NodeAddress* addr, DPS_NetContext* 
     }
     addr->type = DPS_PIPE;
     len = sizeof(addr->u.path);
-    if (uv_pipe_getsockname(&netCtx->socket, (char*)&addr->u.path, &len)) {
+    if (uv_pipe_getsockname(&netCtx->socket, addr->u.path, &len)) {
         return addr;
     }
+#ifdef _WIN32
+    if (!strncmp(addr->u.path, "\\\\?", 3)) {
+        addr->u.path[2] = '.';
+    }
+#endif
     DPS_DBGPRINT("Listener address = %s\n", addr->u.path);
     return addr;
 }

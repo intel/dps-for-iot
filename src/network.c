@@ -24,8 +24,10 @@
 #include <safe_lib.h>
 #ifdef _WIN32
 #include <winsock2.h>
+#include <ws2tcpip.h>
 #include <ws2ipdef.h>
 #include <mstcpip.h>
+#define EAI_ADDRFAMILY WSAEAFNOSUPPORT
 #endif
 
 #include <assert.h>
@@ -249,7 +251,7 @@ DPS_Status DPS_SplitAddress(const char* addrText, char* host, size_t hostLen,
  *    DPS_SetAddress().
  * 3. IPv6 localhost (::1) will not work on an IPv4-only host.
  */
-static DPS_Status GetAddrInfo(const char* host, const char* service, struct sockaddr_storage* inaddr)
+static DPS_Status GetScope(const char* host, const char* service, struct sockaddr_storage* inaddr)
 {
     struct addrinfo hints;
     struct addrinfo *ai = NULL;
@@ -317,7 +319,7 @@ DPS_NodeAddress* DPS_SetAddress(DPS_NodeAddress* addr, const char* addrText)
         if (ret != DPS_OK) {
             goto ErrorExit;
         }
-        ret = GetAddrInfo(host, service, &addr->u.inaddr);
+        ret = GetScope(host, service, &addr->u.inaddr);
         if (ret != DPS_OK) {
             goto ErrorExit;
         }
@@ -337,6 +339,8 @@ ErrorExit:
 void DPS_EndpointSetPort(DPS_NetEndpoint* ep, uint16_t port)
 {
     switch (ep->addr.type) {
+    case DPS_DTLS:
+    case DPS_TCP:
     case DPS_UDP:
         if (!ep->cn) {
             port = htons(port);

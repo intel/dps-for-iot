@@ -5,6 +5,12 @@ Import(['env'])
 
 mtenv = env.Clone()
 
+# mbedtls uses gmtime_s, so we need the secure lib here
+try:
+    mtenv['CPPDEFINES'].remove('__STDC_WANT_SECURE_LIB__=0')
+except ValueError:
+    pass
+
 git = mtenv.Command('./mbedtls/.git', None,
                     ['git clone -n https://github.com/ARMmbed/mbedtls ext/mbedtls'])
 

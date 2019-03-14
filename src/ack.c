@@ -458,7 +458,7 @@ DPS_Status DPS_DecodeAcknowledgement(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
             /*
              * The ACK is forwarded exactly as received
              */
-            uvBuf = uv_buf_init((char*)rxBuf->base, rxBuf->eod - rxBuf->base);
+            uvBuf = uv_buf_init((char*)rxBuf->base, (uint32_t)(rxBuf->eod - rxBuf->base));
             ret = DPS_NetSend(node, NULL, &ackNode->ep, &uvBuf, 1, OnSendComplete);
             if (ret == DPS_OK) {
                 DPS_NetRxBufferIncRef(buf);

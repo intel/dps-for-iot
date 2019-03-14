@@ -159,7 +159,7 @@ static void GCM_Raw(void)
             break;
         case 1:
             for (i = 0; i < 16; ++i) {
-                buf[0][i] = i;
+                buf[0][i] = (uint8_t)i;
             }
             DPS_RxBufferInit(&msgBuf[0], buf[0], 16);
             DPS_RxBufferInit(&msgBuf[1], buf[1], 0);
@@ -167,10 +167,10 @@ static void GCM_Raw(void)
             break;
         case 2:
             for (i = 0; i < 16; ++i) {
-                buf[0][i] = i;
+                buf[0][i] = (uint8_t)i;
             }
             for (i = 0; i < 4; ++i) {
-                buf[1][i] = i;
+                buf[1][i] = (uint8_t)i;
             }
             DPS_RxBufferInit(&msgBuf[0], buf[0], 16);
             DPS_RxBufferInit(&msgBuf[1], buf[1], 4);
@@ -178,10 +178,10 @@ static void GCM_Raw(void)
             break;
         case 3:
             for (i = 0; i < 16; ++i) {
-                buf[0][i] = i;
+                buf[0][i] = (uint8_t)i;
             }
             for (i = 0; i < 20; ++i) {
-                buf[1][i] = i;
+                buf[1][i] = (uint8_t)i;
             }
             DPS_RxBufferInit(&msgBuf[0], buf[0], 16);
             DPS_RxBufferInit(&msgBuf[1], buf[1], 20);
@@ -189,10 +189,10 @@ static void GCM_Raw(void)
             break;
         case 4:
             for (i = 0; i < 20; ++i) {
-                buf[0][i] = i;
+                buf[0][i] = (uint8_t)i;
             }
             for (i = 0; i < 4; ++i) {
-                buf[1][i] = i;
+                buf[1][i] = (uint8_t)i;
             }
             DPS_RxBufferInit(&msgBuf[0], buf[0], 20);
             DPS_RxBufferInit(&msgBuf[1], buf[1], 4);
@@ -200,10 +200,10 @@ static void GCM_Raw(void)
             break;
         case 5:
             for (i = 0; i < 20; ++i) {
-                buf[0][i] = i;
+                buf[0][i] = (uint8_t)i;
             }
             for (i = 0; i < 20; ++i) {
-                buf[1][i] = i;
+                buf[1][i] = (uint8_t)i;
             }
             DPS_RxBufferInit(&msgBuf[0], buf[0], 20);
             DPS_RxBufferInit(&msgBuf[1], buf[1], 20);
@@ -211,10 +211,10 @@ static void GCM_Raw(void)
             break;
         case 6:
             for (i = 0; i < 4; ++i) {
-                buf[0][i] = i;
+                buf[0][i] = (uint8_t)i;
             }
             for (i = 0; i < 20; ++i) {
-                buf[1][i] = i;
+                buf[1][i] = (uint8_t)i;
             }
             DPS_RxBufferInit(&msgBuf[0], buf[0], 4);
             DPS_RxBufferInit(&msgBuf[1], buf[1], 20);
@@ -222,13 +222,13 @@ static void GCM_Raw(void)
             break;
         case 7:
             for (i = 0; i < 4; ++i) {
-                buf[0][i] = i;
+                buf[0][i] = (uint8_t)i;
             }
             for (i = 0; i < 11; ++i) {
-                buf[1][i] = i;
+                buf[1][i] = (uint8_t)i;
             }
             for (i = 0; i < 9; ++i) {
-                buf[2][i] = i;
+                buf[2][i] = (uint8_t)i;
             }
             DPS_RxBufferInit(&msgBuf[0], buf[0], 4);
             DPS_RxBufferInit(&msgBuf[1], buf[1], 11);

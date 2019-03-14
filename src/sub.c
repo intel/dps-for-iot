@@ -632,8 +632,8 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRx
     uint8_t flags = 0;
     uint16_t keysMask;
     int remoteIsNew = DPS_FALSE;
-    char* path;
-    size_t pathLen;
+    char* path = NULL;
+    size_t pathLen = 0;
 
     DPS_DBGTRACE();
 

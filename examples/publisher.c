@@ -22,11 +22,9 @@
 
 #include <assert.h>
 #include <ctype.h>
-#include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/socket.h>
 #include <dps/dbg.h>
 #include <dps/dps.h>
 #include <dps/event.h>
@@ -60,7 +58,8 @@ static void OnNodeDestroyed(DPS_Node* node, void* data)
 static int AddTopics(char* topicList, char** msg, int* keep, int* ttl, int* encrypt)
 {
     size_t i;
-    int len;
+    size_t len;
+    int n;
 
     for (i = 0; i < numTopics; ++i) {
         free(topics[i]);
@@ -83,16 +82,18 @@ static int AddTopics(char* topicList, char** msg, int* keep, int* ttl, int* encr
         if (topicList[0] == '-') {
             switch(topicList[1]) {
             case 't':
-                if (!sscanf(topicList, "-t %d%n", ttl, &len) || (*ttl < -1)) {
+                if (!sscanf(topicList, "-t %d%n", ttl, &n) || (*ttl < -1)) {
                     DPS_PRINT("-t requires -1..65535\n");
                     return 0;
                 }
+                len = n;
                 break;
             case 'x':
-                if (!sscanf(topicList, "-x %d%n", encrypt, &len) || (*encrypt < 0) || (*encrypt > 3)) {
+                if (!sscanf(topicList, "-x %d%n", encrypt, &n) || (*encrypt < 0) || (*encrypt > 3)) {
                     DPS_PRINT("-x requires 0..3\n");
                     return 0;
                 }
+                len = n;
                 *keep = 0;
                 break;
             case 'j':
