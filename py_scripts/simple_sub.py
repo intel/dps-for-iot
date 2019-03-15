@@ -1,6 +1,7 @@
 #!/usr/bin/python
 import dps
 import sys
+import threading
 import time
 
 # Pre-shared keys for testing only. DO NOT USE THESE KEYS IN A REAL APPLICATION!
@@ -97,10 +98,8 @@ parser.add_argument("-x", "--encryption", type=int, choices=[0,1,2], default=1,
                     help="Disable (0) or enable symmetric (1) or asymmetric(2) encryption. Default is symmetric encryption enabled.")
 parser.add_argument("-l", "--listen", default=None,
                     help="Address to listen on for incoming connections.")
-parser.add_argument("-o", "--host", default=None,
-                    help="Host to link to.")
-parser.add_argument("-p", "--port", type=int, default=0,
-                    help="Port to link to.")
+parser.add_argument("-p", "--port", default=None,
+                    help="Address to link to.")
 args = parser.parse_args()
 dps.cvar.debug = args.debug
 
@@ -129,6 +128,15 @@ def on_pub(sub, pub, payload):
         print("    %s" % (ack_msg))
         dps.ack_publication(pub, ack_msg);
 
+event = threading.Event()
+
+def on_link(node, addr, status):
+    if status == dps.OK:
+        print("Subscriber is linked to %s" % (addr))
+    else:
+        print("link %s returned %s" % (addr, dps.err_txt(status)))
+    event.set()
+
 node = dps.create_node("/", key_store, node_id)
 listen_addr = None
 if args.listen != None:
@@ -143,16 +151,20 @@ print("Subscriber is listening on %s" % (dps.get_listen_address(node)))
 sub = dps.create_subscription(node, ['a/b/c']);
 dps.subscribe(sub, on_pub)
 
-if args.port != 0:
+if args.port != None:
     addr = dps.create_address()
-    ret = dps.link_to(node, args.host, args.port, addr)
+    try:
+        addr_text = int(args.port)
+        addr_text = "[::1]:" + addr_text
+    except ValueError:
+        addr_text = args.port
+    dps.set_address(addr, addr_text)
+    ret = dps.link(node, addr, on_link)
     if ret == dps.OK:
-        print("Subscriber is linked to %s" % (addr))
+        event.wait()
     else:
-        print("link_to %d returned %s" % (args.port, dps.err_txt(ret)))
+        print("link %s returned %s" % (addr_text, dps.err_txt(ret)))
     dps.destroy_address(addr)
-elif args.host != None:
-    sys.exit("Invalid argument: must provide port with host")
 
 if not sys.flags.interactive:
     while True:

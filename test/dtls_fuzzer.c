@@ -177,13 +177,6 @@ int LLVMFuzzerInitialize(int *argc, char ***argv)
     return 0;
 }
 
-static void OnLinked(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, void* data)
-{
-    if (data) {
-        DPS_SignalEvent((DPS_Event*)data, status);
-    }
-}
-
 int LLVMFuzzerTestOneInput(const uint8_t* data, size_t len)
 {
     Node* server = NULL;
@@ -191,7 +184,7 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t len)
     DPS_Subscription* sub = NULL;
     DPS_Publication* pub = NULL;
     const char *topic = "T";
-    DPS_Event* event = NULL;
+    DPS_NodeAddress* addr = NULL;
     DPS_Status ret;
 
     fuzzData.base = (char*)data;
@@ -235,26 +228,17 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t len)
         goto Exit;
     }
 
-    event = DPS_CreateEvent();
-    if (!event) {
+    addr = DPS_CreateAddress();
+    if (!addr) {
         goto Exit;
     }
-    ret = DPS_Link(client->node, DPS_GetListenAddress(server->node), OnLinked, event);
-    if (ret == DPS_OK) {
-        DPS_WaitForEvent(event);
-    }
+    DPS_LinkTo(client->node, DPS_NodeAddrToString(DPS_GetListenAddress(server->node)), addr);
 
 Exit:
-    if (event) {
-        DPS_DestroyEvent(event);
-    }
-    if (pub) {
-        DPS_DestroyPublication(pub);
-    }
+    DPS_DestroyAddress(addr);
+    DPS_DestroyPublication(pub);
     DestroyNode(client);
-    if (sub) {
-        DPS_DestroySubscription(sub);
-    }
+    DPS_DestroySubscription(sub);
     DestroyNode(server);
     return 0;
 }

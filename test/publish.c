@@ -305,6 +305,7 @@ static void TestBackToBackPublishSeparateNodes(DPS_Node* node, DPS_KeyStore* key
     DPS_Event* event = NULL;
     DPS_Node* subNode = NULL;
     DPS_Subscription* sub = NULL;
+    DPS_NodeAddress* addr = NULL;
     uint32_t seqNum;
     DPS_Status ret;
     size_t i;
@@ -328,9 +329,9 @@ static void TestBackToBackPublishSeparateNodes(DPS_Node* node, DPS_KeyStore* key
     ret = DPS_Subscribe(sub, BackToBackPublishHandler);
     ASSERT(ret == DPS_OK);
 
-    ret = DPS_Link(subNode, DPS_GetListenAddress(node), OnLinkComplete, event);
-    ASSERT(ret == DPS_OK);
-    ret = DPS_WaitForEvent(event);
+    addr = DPS_CreateAddress();
+    ASSERT(addr);
+    ret = DPS_LinkTo(subNode, DPS_NodeAddrToString(DPS_GetListenAddress(node)), addr);
     ASSERT(ret == DPS_OK);
 
     seqNum = DPS_PublicationGetSequenceNum(pub) + 1;
@@ -345,6 +346,7 @@ static void TestBackToBackPublishSeparateNodes(DPS_Node* node, DPS_KeyStore* key
      */
     SLEEP(1000);
 
+    DPS_DestroyAddress(addr);
     DPS_DestroySubscription(sub);
     DPS_DestroyNode(subNode, OnNodeDestroyed, event);
     DPS_WaitForEvent(event);

@@ -38,20 +38,17 @@ def on_pub(sub, pub, payload):
     print("  sub " + " | ".join(dps.subscription_get_topics(sub)))
     print(payload)
 
-def subscriber(topic, connect_addr):
+def subscriber(topic, remote_listen_addr):
     node = dps.create_node("/", key_store, None)
     dps.start_node(node, 0, None)
     print("Subscriber is listening on %s" % dps.get_listen_address(node))
     sub = dps.create_subscription(node, [topic])
     dps.subscribe(sub, on_pub)
-    if connect_addr != None:
-        event = threading.Event()
-        def on_link(node, addr, status):
-            if status == dps.OK:
-                print("Linked %s to %s" % (dps.get_listen_address(node), addr))
-            event.set()
-        dps.link(node, connect_addr, on_link)
-        event.wait()
+    if remote_listen_addr != None:
+        addr = dps.create_address()
+        ret = dps.link_to(node, str(remote_listen_addr), addr)
+        if ret == dps.OK:
+            print("Linked %s to %s" % (dps.get_listen_address(node), addr))
     return node
 
 import argparse

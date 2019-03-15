@@ -99,10 +99,8 @@ parser.add_argument("-x", "--encryption", type=int, choices=[0,1,2,3], default=1
                     help="Disable (0) or enable symmetric encryption (1), asymmetric encryption (2), or authentication (3). Default is symmetric encryption enabled.")
 parser.add_argument("-l", "--listen", default=None,
                     help="Address to listen on for incoming connections.")
-parser.add_argument("-o", "--host", default=None,
-                    help="Host to link to.")
-parser.add_argument("-p", "--port", type=int, default=0,
-                    help="Port to link to.")
+parser.add_argument("-p", "--port", default=None,
+                    help="Address to link to.")
 
 args = parser.parse_args()
 dps.cvar.debug = args.debug
@@ -138,14 +136,17 @@ def on_ack(pub, payload):
     print("    %s" % (payload))
 
 def on_link(node, addr, status):
-    print("Publisher is linked to %s" % (addr))
+    if status == dps.OK:
+        print("Publisher is linked to %s" % (addr))
+    else:
+        print("link %s returned %s" % (addr, dps.err_txt(status)))
     event.set()
 
 def on_destroy(node):
     print("Destroyed")
     dps.destroy_key_store(key_store)
 
-if args.port != 0:
+if args.port != None:
     mcast = dps.MCAST_PUB_DISABLED
 
 node = dps.create_node("/", key_store, node_id)
@@ -159,19 +160,20 @@ if args.listen != None:
 dps.start_node(node, mcast, listen_addr)
 print("Publisher is listening on %s" % (dps.get_listen_address(node)))
 
-if args.port != 0:
+if args.port != None:
     addr = dps.create_address()
-    if args.host == None:
-        args.host = "127.0.0.1"
-    dps.set_address(addr, "%s:%d" % (args.host, args.port))
+    try:
+        addr_text = int(args.port)
+        addr_text = "[::1]:" + addr_text
+    except ValueError:
+        addr_text = args.port
+    dps.set_address(addr, addr_text)
     ret = dps.link(node, addr, on_link)
     if ret == dps.OK:
         event.wait()
     else:
-        print("link_to %d returned %s" % (args.port, dps.err_txt(ret)))
+        print("link %s returned %s" % (addr_text, dps.err_txt(ret)))
     dps.destroy_address(addr)
-elif args.host != None:
-    sys.exit("Invalid argument: must provide port with host")
 
 pub = dps.create_publication(node)
 dps.init_publication(pub, ['a/b/c'], False, None, on_ack)

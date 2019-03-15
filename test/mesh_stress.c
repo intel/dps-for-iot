@@ -333,13 +333,21 @@ int main(int argc, char** argv)
          * Start the nodes
          */
         for (i = 0; i < numIds; ++i) {
+            DPS_NodeAddress* listenAddr = NULL;
             DPS_Node* node = DPS_CreateNode("/.", NULL, NULL);
             /*
              * For test purposes we only want a short subscription delay
              */
             DPS_SetNodeSubscriptionUpdateDelay(node, 300);
 
-            ret = DPS_StartNode(node, DPS_FALSE, NULL);
+            listenAddr = DPS_CreateAddress();
+            if (!listenAddr) {
+                DPS_ERRPRINT("Failed to create address: %s\n", DPS_ErrTxt(DPS_ERR_RESOURCES));
+                return EXIT_FAILURE;
+            }
+            DPS_SetAddress(listenAddr, "[::1]:0");
+            ret = DPS_StartNode(node, DPS_FALSE, listenAddr);
+            DPS_DestroyAddress(listenAddr);
             if (ret != DPS_OK) {
                 DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
                 return EXIT_FAILURE;
