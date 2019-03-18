@@ -152,19 +152,16 @@ sub = dps.create_subscription(node, ['a/b/c']);
 dps.subscribe(sub, on_pub)
 
 if args.port != None:
-    addr = dps.create_address()
     try:
         addr_text = int(args.port)
         addr_text = "[::1]:" + addr_text
     except ValueError:
         addr_text = args.port
-    dps.set_address(addr, addr_text)
-    ret = dps.link(node, addr, on_link)
+    ret = dps.link(node, addr_text, on_link)
     if ret == dps.OK:
         event.wait()
     else:
         print("link %s returned %s" % (addr_text, dps.err_txt(ret)))
-    dps.destroy_address(addr)
 
 if not sys.flags.interactive:
     while True:

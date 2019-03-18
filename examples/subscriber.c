@@ -262,38 +262,42 @@ static int Subscribe(Subscriber* subscriber, Args* args)
 
 static void OnLinkComplete(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, void* data)
 {
+    DPS_NodeAddress* outAddr = (DPS_NodeAddress*)data;
+
     if (status == DPS_OK) {
+        DPS_CopyAddress(outAddr, addr);
         DPS_PRINT("Subscriber is linked to %s\n", DPS_NodeAddrToString(addr));
     } else {
         DPS_ERRPRINT("DPS_Link %s returned %s\n", DPS_NodeAddrToString(addr), DPS_ErrTxt(status));
     }
 }
 
-static void OnResolveAddressComplete(DPS_Node* node, const DPS_NodeAddress* addr, void* data)
-{
-    DPS_Status ret;
-
-    ret = DPS_Link(node, addr, OnLinkComplete, NULL);
-    if (ret != DPS_OK) {
-        DPS_ERRPRINT("DPS_ResolveAddress %s returned %s\n", DPS_NodeAddrToString(addr), DPS_ErrTxt(ret));
-    }
-}
-
 static int LinkTo(Subscriber* subscriber, Args* args)
 {
     DPS_Status ret;
-    int numAddrs;
+    int numAddrs, i, j;
 
     numAddrs = A_SIZEOF(subscriber->addrs) - subscriber->numAddrs;
     if (numAddrs <= 0) {
         return DPS_FALSE;
     }
     numAddrs = (numAddrs < args->numLinks) ? numAddrs : args->numLinks;
-    ret = Link(subscriber->node, args->linkText, &subscriber->addrs[subscriber->numAddrs], numAddrs);
+
+    ret = DPS_OK;
+    for (i = 0, j = subscriber->numAddrs; (ret == DPS_OK) && (i < numAddrs); ++i, ++j) {
+        subscriber->addrs[j] = DPS_CreateAddress();
+        if (!subscriber->addrs[j]) {
+            ret = DPS_ERR_RESOURCES;
+        }
+        if (ret == DPS_OK) {
+            ret = DPS_Link(subscriber->node, args->linkText[j], OnLinkComplete, &subscriber->addrs[j]);
+        }
+    }
     if (ret == DPS_OK) {
-        subscriber->numAddrs += numAddrs;
+        subscriber->numAddrs += j;
         return DPS_TRUE;
     } else {
+        DPS_ERRPRINT("DPS_Link %s returned %s\n", args->linkText[j], DPS_ErrTxt(ret));
         return DPS_FALSE;
     }
 }

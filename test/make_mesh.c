@@ -446,7 +446,7 @@ static void OnLinked(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, v
 static DPS_Status LinkNodes(DPS_Node* src, DPS_Node* dst)
 {
     DPS_Status ret;
-    ret = DPS_Link(src, DPS_GetListenAddress(dst), OnLinked, NULL);
+    ret = DPS_Link(src, DPS_NodeAddrToString(DPS_GetListenAddress(dst)), OnLinked, NULL);
     if (ret != DPS_OK) {
         uv_mutex_lock(&lock);
         DPS_ERRPRINT("DPS_Link for %s returned %s\n", DPS_NodeAddrToString(DPS_GetListenAddress(dst)),

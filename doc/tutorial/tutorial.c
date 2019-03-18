@@ -214,13 +214,7 @@ int main(int argc, char** argv)
     }
 
     if (linkText) {
-        DPS_NodeAddress* addr = DPS_CreateAddress();
-        if (!addr) {
-            goto Exit;
-        }
-        DPS_SetAddress(addr, linkText);
-        ret = DPS_Link(node, addr, LinkComplete, NULL);
-        DPS_DestroyAddress(addr);
+        ret = DPS_Link(node, linkText, LinkComplete, NULL);
         if (ret != DPS_OK) {
             goto Exit;
         }
@@ -228,17 +222,9 @@ int main(int argc, char** argv)
         SLEEP(1000);
     } else if (linkPort) {
         /** [Linking to a node] */
-        DPS_NodeAddress* addr = DPS_CreateAddress();
-        if (!addr) {
-            goto Exit;
-        }
-
         char addrText[24];
         snprintf(addrText, sizeof(addrText), "127.0.0.1:%d", linkPort);
-        DPS_SetAddress(addr, addrText);
-
-        ret = DPS_Link(node, addr, LinkComplete, NULL);
-        DPS_DestroyAddress(addr);
+        ret = DPS_Link(node, addrText, LinkComplete, NULL);
         if (ret != DPS_OK) {
             goto Exit;
         }

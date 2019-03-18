@@ -116,8 +116,8 @@ import (
          goOnLinkComplete(node, addr, status, (uintptr_t)data);
  }
 
- static DPS_Status link(DPS_Node* node, DPS_NodeAddress* addr, uintptr_t data) {
-         return DPS_Link(node, addr, onLinkComplete, (void*)data);
+ static DPS_Status link(DPS_Node* node, const char* addrText, uintptr_t data) {
+         return DPS_Link(node, addrText, onLinkComplete, (void*)data);
  }
 
  extern void goOnUnlinkComplete(DPS_Node* node, DPS_NodeAddress* addr, uintptr_t data);
@@ -658,11 +658,12 @@ func GetListenAddress(node *Node) *NodeAddress {
 
 type OnLinkComplete func(node *Node, addr *NodeAddress, status int)
 
-func Link(node *Node, addr *NodeAddress, cb OnLinkComplete) int {
+func Link(node *Node, addrText string, cb OnLinkComplete) int {
 	cnode := (*C.DPS_Node)(node)
-	caddr := (*C.DPS_NodeAddress)(addr)
+	caddrText := C.CString(addrText)
+	defer C.free(unsafe.Pointer(caddrText))
 	handle := reg.register(cb)
-	return int(C.link(cnode, caddr, C.uintptr_t(handle)))
+	return int(C.link(cnode, caddrText, C.uintptr_t(handle)))
 }
 
 //export goOnLinkComplete

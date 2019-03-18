@@ -42,13 +42,7 @@ publisher to link to the forwarding node.
 Now that we know the host (@c localhost in this example) and
 listening port of the forwarding node, we can call DPS_Link() to
 create the link from the subscriber and publisher to the forwarding
-node.  In order to do this we must first create a @ref
-DPS_NodeAddress and set its value to the host and port of the
-forwarding node.
-
-Once we call DPS_Link() we can destroy the @ref DPS_NodeAddress as
-we don't need it anymore while we wait for the asynchronous link to
-complete.
+node.
 
 @snippet tutorial.c Linking complete
 

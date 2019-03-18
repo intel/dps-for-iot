@@ -65,7 +65,6 @@ typedef struct _OnOpCompletion {
         DPS_OnUnlinkComplete unlink;
         void* cb;
     } on;
-    struct _OnOpCompletion* next;
 } OnOpCompletion;
 
 const DPS_UUID DPS_MaxMeshId = { .val64 = { UINT64_MAX, UINT64_MAX } };
@@ -495,7 +494,8 @@ RemoteNode* DPS_LookupRemoteNode(DPS_Node* node, const DPS_NodeAddress* addr)
     return NULL;
 }
 
-static OnOpCompletion* AllocCompletion(DPS_Node* node, RemoteNode* remote, OpType op, void* data, void* cb)
+static OnOpCompletion* AllocCompletion(DPS_Node* node, RemoteNode* remote, OpType op, void* data,
+                                       void* cb)
 {
     OnOpCompletion* cpn;
 
@@ -1472,47 +1472,115 @@ void DPS_SetNodeSubscriptionUpdateDelay(DPS_Node* node, uint32_t subsRateMsecs)
     node->subsRate = subsRateMsecs;
 }
 
-DPS_Status DPS_Link(DPS_Node* node, const DPS_NodeAddress* addr, DPS_OnLinkComplete cb, void* data)
+static DPS_Status Link(DPS_Node* node, const DPS_NodeAddress* addr, OnOpCompletion* completion)
 {
-    DPS_Status ret = DPS_OK;
     RemoteNode* remote = NULL;
+    DPS_Status ret;
 
-    DPS_DBGTRACE();
-
-    if (!addr || !node || !cb) {
-        return DPS_ERR_NULL;
-    }
     DPS_LockNode(node);
+    if (!addr) {
+        ret = DPS_ERR_UNRESOLVED;
+        goto Exit;
+    }
     ret = DPS_AddRemoteNode(node, addr, NULL, &remote);
     if (ret != DPS_OK && ret != DPS_ERR_EXISTS) {
-        DPS_UnlockNode(node);
-        return ret;
+        goto Exit;
     }
+    completion->remote = remote;
     /*
      * Remote may already exist due to incoming data which is ok,
      * but if we already linked it we return an error.
      */
     if (remote->linked) {
         DPS_ERRPRINT("Node at %s already linked\n", DPS_NodeAddrToString(addr));
-        DPS_UnlockNode(node);
-        return DPS_ERR_EXISTS;
+        ret = DPS_ERR_EXISTS;
+        goto Exit;
     }
     assert(!remote->completion);
     remote->linked = DPS_TRUE;
-    remote->completion = AllocCompletion(node, remote, LINK_OP, data, cb);
-    if (!remote->completion) {
-        DPS_DeleteRemoteNode(node, remote);
-        DPS_UnlockNode(node);
-        return DPS_ERR_RESOURCES;
-    }
+    remote->completion = completion;
+    ret = DPS_OK;
+Exit:
     DPS_UnlockNode(node);
-    /*
-     * This will cause an initial subscription to be sent to the remote node
-     * or trigger the completion if we have no new outbound interests for the
-     * remote node (i.e. the remote node is already linked to us).
-     */
-    DPS_UpdateSubs(node);
-    return DPS_OK;
+    if (ret == DPS_OK) {
+        /*
+         * This will cause an initial subscription to be sent to the remote node
+         * or trigger the completion if we have no new outbound interests for the
+         * remote node (i.e. the remote node is already linked to us).
+         */
+        DPS_UpdateSubs(node);
+    }
+    return ret;
+}
+
+static void OnResolve(DPS_Node* node, const DPS_NodeAddress* addr, void* data)
+{
+    OnOpCompletion* completion = (OnOpCompletion*)data;
+    DPS_Status ret;
+
+    ret = Link(node, addr, completion);
+    if (ret != DPS_OK) {
+        DPS_RemoteCompletion(node, completion->remote, ret);
+    }
+}
+
+DPS_Status DPS_Link(DPS_Node* node, const char* addrText, DPS_OnLinkComplete cb, void* data)
+{
+    DPS_Status ret = DPS_OK;
+    OnOpCompletion* completion = NULL;
+    DPS_NodeAddress* addr = NULL;
+#if defined(DPS_USE_DTLS) || defined(DPS_USE_TCP) || defined(DPS_USE_UDP)
+    char host[DPS_MAX_HOST_LEN + 1];
+    char service[DPS_MAX_SERVICE_LEN + 1];
+#endif
+
+    DPS_DBGTRACE();
+
+    if (!addrText || !node || !cb) {
+        return DPS_ERR_NULL;
+    }
+
+    completion = AllocCompletion(node, NULL, LINK_OP, data, cb);
+    if (!completion) {
+        ret = DPS_ERR_RESOURCES;
+        goto Exit;
+    }
+#if defined(DPS_USE_DTLS) || defined(DPS_USE_TCP) || defined(DPS_USE_UDP)
+    ret = DPS_SplitAddress(addrText, host, sizeof(host), service, sizeof(service));
+    if (ret != DPS_OK) {
+        DPS_ERRPRINT("DPS_SplitAddress returned %s\n", DPS_ErrTxt(ret));
+        goto Exit;
+    }
+    ret = DPS_ResolveAddress(node, host, service, OnResolve, completion);
+    if (ret != DPS_OK) {
+        DPS_ERRPRINT("DPS_ResolveAddress returned %s\n", DPS_ErrTxt(ret));
+        goto Exit;
+    }
+#elif defined(DPS_USE_PIPE)
+    addr = DPS_CreateAddress();
+    if (!addr) {
+        ret = DPS_ERR_RESOURCES;
+        goto Exit;
+    }
+    if (DPS_SetAddress(addr, addrText) == NULL) {
+        DPS_ERRPRINT("DPS_SetAddress failed\n");
+        ret = DPS_ERR_INVALID;
+        goto Exit;
+    }
+    ret = Link(node, addr, completion);
+    if (ret != DPS_OK) {
+        DPS_ERRPRINT("Link returned %s\n", DPS_ErrTxt(ret));
+        goto Exit;
+    }
+#endif
+Exit:
+    DPS_DestroyAddress(addr);
+    if (ret != DPS_OK) {
+        if (completion) {
+            free(completion);
+        }
+    }
+    return ret;
 }
 
 DPS_Status DPS_Unlink(DPS_Node* node, const DPS_NodeAddress* addr, DPS_OnUnlinkComplete cb, void* data)

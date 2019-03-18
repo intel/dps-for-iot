@@ -83,24 +83,6 @@ DPS_NodeAddress* DPS_CreateAddress(void);
 DPS_NodeAddress* DPS_SetAddress(DPS_NodeAddress* addr, const char* addrText);
 
 /**
- * Split text string for address into host and service parts.
- *
- * The address text may be one of "host", "[host]", "host:service", or
- * "[host]:service".  The result of this function will be "host" and
- * "service" for all the cases.
- *
- * @param addrText    The text string for the address
- * @param host        The host result
- * @param hostLen     The size of @c host
- * @param service     The service result
- * @param serviceLen  The size of @c service
- *
- * @return DPS_OK if successful, an error otherwise
- */
-DPS_Status DPS_SplitAddress(const char* addrText, char* host, size_t hostLen, char* service,
-                            size_t serviceLen);
-
-/**
  * Copy a node address
  *
  * @param dest The address to copy to.
@@ -580,14 +562,14 @@ typedef void (*DPS_OnLinkComplete)(DPS_Node* node, DPS_NodeAddress* addr, DPS_St
 /**
  * Link the local node to a remote node
  *
- * @param node   The local node to use
- * @param addr   The address of the remote node to link to
- * @param cb     The callback function to call on completion, can be NULL which case the function is synchronous
- * @param data   Application data to be passed to the callback
+ * @param node     The local node to use
+ * @param addrText The text string of the address to link to
+ * @param cb       The callback function to call on completion, can be NULL which case the function is synchronous
+ * @param data     Application data to be passed to the callback
  *
  * @return DPS_OK or an error status. If an error status is returned the callback function will not be called.
  */
-DPS_Status DPS_Link(DPS_Node* node, const DPS_NodeAddress* addr, DPS_OnLinkComplete cb, void* data);
+DPS_Status DPS_Link(DPS_Node* node, const char* addrText, DPS_OnLinkComplete cb, void* data);
 
 /**
  * Function prototype for function called when a DPS_Unlink() completes.

@@ -296,8 +296,8 @@ static DPS_Status GetScope(const char* host, const char* service, struct sockadd
 
 DPS_NodeAddress* DPS_SetAddress(DPS_NodeAddress* addr, const char* addrText)
 {
-    char host[INET6_ADDRSTRLEN + 2];
-    char service[8];
+    char host[DPS_MAX_HOST_LEN + 1];
+    char service[DPS_MAX_SERVICE_LEN + 1];
     DPS_Status ret;
 
     DPS_DBGTRACE();

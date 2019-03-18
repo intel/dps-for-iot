@@ -77,7 +77,6 @@ DPS_SetPublicationData
 DPS_SetSubscriptionData
 DPS_SetTrustedCA
 DPS_SignalEvent
-DPS_SplitAddress
 DPS_StartNode
 DPS_Subscribe
 DPS_SubscriptionGetNode

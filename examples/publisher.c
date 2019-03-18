@@ -339,7 +339,7 @@ int main(int argc, char** argv)
 
     ret = Link(node, linkText, linkAddr, numLinks);
     if (ret != DPS_OK) {
-        DPS_ERRPRINT("DPS_SplitAddress returned %s\n", DPS_ErrTxt(ret));
+        DPS_ERRPRINT("Link returned %s\n", DPS_ErrTxt(ret));
         return 1;
     }
 

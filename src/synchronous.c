@@ -35,64 +35,27 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 static void OnLinked(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, void* data)
 {
     DPS_Event* event = (DPS_Event*)data;
-    DPS_SignalEvent(event, status);
-}
 
-static void OnResolve(DPS_Node* node, const DPS_NodeAddress* addr, void* data)
-{
-    DPS_Status ret;
-    DPS_Event* event = (DPS_Event*)data;
-
-    if (addr) {
+    if (status == DPS_OK) {
         DPS_NodeAddress* outAddr = (DPS_NodeAddress*)DPS_GetEventData(event);
         DPS_CopyAddress(outAddr, addr);
-        ret = DPS_OK;
-    } else {
-        ret = DPS_ERR_UNRESOLVED;
     }
-    DPS_SignalEvent(event, ret);
+    DPS_SignalEvent(event, status);
 }
 
 DPS_Status DPS_LinkTo(DPS_Node* node, const char* addrText, DPS_NodeAddress* addr)
 {
+    DPS_Event* event = NULL;
     DPS_Status ret;
-    DPS_Event* event = DPS_CreateEvent();
-#if defined(DPS_USE_DTLS) || defined(DPS_USE_TCP) || defined(DPS_USE_UDP)
-    char host[DPS_MAX_HOST_LEN + 1];
-    char service[DPS_MAX_SERVICE_LEN + 1];
-#endif
 
     DPS_DBGTRACE();
 
+    event = DPS_CreateEvent();
     if (!event) {
         return DPS_ERR_RESOURCES;
     }
-
-#if defined(DPS_USE_DTLS) || defined(DPS_USE_TCP) || defined(DPS_USE_UDP)
-    ret = DPS_SplitAddress(addrText, host, sizeof(host), service, sizeof(service));
-    if (ret != DPS_OK) {
-        DPS_ERRPRINT("DPS_SplitAddress returned %s\n", DPS_ErrTxt(ret));
-        goto Exit;
-    }
     DPS_SetEventData(event, addr);
-    ret = DPS_ResolveAddress(node, host, service, OnResolve, event);
-    if (ret != DPS_OK) {
-        DPS_ERRPRINT("DPS_ResolveAddress returned %s\n", DPS_ErrTxt(ret));
-        goto Exit;
-    }
-    ret = DPS_WaitForEvent(event);
-    if (ret != DPS_OK) {
-        DPS_ERRPRINT("Failed to resolve %s\n", addrText);
-        goto Exit;
-    }
-#elif defined(DPS_USE_PIPE)
-    if (DPS_SetAddress(addr, addrText) == NULL) {
-        DPS_ERRPRINT("DPS_SetAddress failed\n");
-        ret = DPS_ERR_INVALID;
-        goto Exit;
-    }
-#endif
-    ret = DPS_Link(node, addr, OnLinked, event);
+    ret = DPS_Link(node, addrText, OnLinked, event);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("DPS_Link returned: %s\n", DPS_ErrTxt(ret));
         goto Exit;
