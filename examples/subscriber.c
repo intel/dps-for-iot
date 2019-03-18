@@ -290,7 +290,7 @@ static int LinkTo(Subscriber* subscriber, Args* args)
             ret = DPS_ERR_RESOURCES;
         }
         if (ret == DPS_OK) {
-            ret = DPS_Link(subscriber->node, args->linkText[j], OnLinkComplete, &subscriber->addrs[j]);
+            ret = DPS_Link(subscriber->node, args->linkText[j], OnLinkComplete, subscriber->addrs[j]);
         }
     }
     if (ret == DPS_OK) {
