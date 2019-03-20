@@ -1,4 +1,5 @@
 #!/usr/bin/python
+
 import dps
 import threading
 import time
@@ -36,7 +37,13 @@ def on_pub(sub, pub, payload):
     print("Pub %s(%d) matches:" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub)))
     print("  pub " + " | ".join(dps.publication_get_topics(pub)))
     print("  sub " + " | ".join(dps.subscription_get_topics(sub)))
-    print(payload)
+    print(payload.tobytes())
+
+event = threading.Event()
+def on_link(node, addr, status):
+    if status == dps.OK:
+        print("Linked %s to %s" % (dps.get_listen_address(node), addr))
+    event.set()
 
 def subscriber(topic, remote_listen_addr):
     node = dps.create_node("/", key_store, None)
@@ -45,10 +52,9 @@ def subscriber(topic, remote_listen_addr):
     sub = dps.create_subscription(node, [topic])
     dps.subscribe(sub, on_pub)
     if remote_listen_addr != None:
-        addr = dps.create_address()
-        ret = dps.link_to(node, str(remote_listen_addr), addr)
+        ret = dps.link(node, str(remote_listen_addr), on_link)
         if ret == dps.OK:
-            print("Linked %s to %s" % (dps.get_listen_address(node), addr))
+            event.wait()
     return node
 
 import argparse

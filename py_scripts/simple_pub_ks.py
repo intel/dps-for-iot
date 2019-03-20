@@ -173,7 +173,7 @@ elif args.encryption == 2:
 
 def on_ack(pub, payload):
     print("Ack for pub UUID %s(%d)" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub)))
-    print("    %s" % (payload))
+    print("    %s" % (payload.tobytes()))
 
 def on_destroy(node):
     print("Destroyed")

@@ -488,6 +488,7 @@ static DPS_Status DecryptAndParsePub(DPS_PublishRequest* req, DPS_TxBuffer* plai
                 if (ret == DPS_OK) {
                     DPS_DBGPRINT("Publication was verified\n");
                     encryptedBuf = cipherTextBuf;
+                    pub->rxBuf = req->rxBuf;
                 }
             } else {
                 ret = DPS_ERR_INVALID;
@@ -498,6 +499,7 @@ static DPS_Status DecryptAndParsePub(DPS_PublishRequest* req, DPS_TxBuffer* plai
              * The payload was not encrypted
              */
             DPS_TxBufferToRx(&req->bufs[1], &encryptedBuf);
+            pub->rxBuf = req->rxBuf;
             ret = DPS_OK;
         }
     }
@@ -581,7 +583,6 @@ static DPS_Status CallPubHandlers(DPS_PublishRequest* req)
     DPS_DBGTRACE();
 
     DPS_TxBufferClear(&plainTextBuf);
-
     /*
      * Iterate over the candidates and check that the pub strings are a match
      */
@@ -625,6 +626,7 @@ static DPS_Status CallPubHandlers(DPS_PublishRequest* req)
     Next:
         DPS_SubscriptionDecRef(sub);
     }
+    pub->rxBuf = NULL;
     DPS_TxBufferFree(&plainTextBuf);
     /* Publication topics will be invalid now if the publication was encrypted */
     FreeTopics(pub);
@@ -1772,6 +1774,14 @@ DPS_Publication* DPS_LookupAckHandler(DPS_Node* node, const DPS_UUID* pubId, uin
                 return pub;
             }
         }
+    }
+    return NULL;
+}
+
+DPS_NetRxBuffer* DPS_PublicationGetNetRxBuffer(const DPS_Publication* pub)
+{
+    if (pub) {
+        return pub->rxBuf;
     }
     return NULL;
 }

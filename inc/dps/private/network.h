@@ -76,6 +76,7 @@ void DPS_NetFreeBufs(uv_buf_t* bufs, size_t numBufs);
  */
 typedef struct _DPS_NetRxBuffer {
     DPS_RxBuffer rx;            /**< The receive buffer */
+    void* userData;             /**< Custom allocator data */
     uint32_t refCount;          /**< The reference count */
     uint8_t data[1];            /**< The buffer data */
 } DPS_NetRxBuffer;
@@ -111,6 +112,33 @@ void DPS_NetRxBufferDecRef(DPS_NetRxBuffer* buf);
  */
 #define DPS_UvToNetRxBuffer(uvBuf)                            \
     ((DPS_NetRxBuffer*)(((uvBuf)->base) - offsetof(DPS_NetRxBuffer, data)))
+
+/**
+ * Custom DPS_NetRxBuffer allocate handler
+ *
+ * @param len The number of bytes requested
+ *
+ * @return a DPS_NetRxBuffer.  Only the userData needs to be
+ *         initialized by the handler, the other fields are
+ *         initialized by the caller.
+ */
+typedef DPS_NetRxBuffer* (*DPS_AllocNetRxBufferHandler)(size_t len);
+
+/**
+ * Custom DPS_NetRxBuffer free handler
+ *
+ * @param buf The buf to free
+ */
+typedef void (*DPS_FreeNetRxBufferHandler)(DPS_NetRxBuffer* buf);
+
+/**
+ * Installs custom allocate and free handlers for DPS_NetRxBuffers.
+ *
+ * @param allocHandler The allocate handler
+ * @param freeHandler The free handler
+ */
+void DPS_SetNetRxBufferHandlers(DPS_AllocNetRxBufferHandler allocHandler,
+                                DPS_FreeNetRxBufferHandler freeHandler);
 
 /**
  * Function prototype for handler to be called on receiving data from a remote node

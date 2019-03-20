@@ -446,11 +446,31 @@ void DPS_MapAddrToV6(struct sockaddr* addr)
 #endif
 }
 
+static DPS_NetRxBuffer* AllocNetRxBufferHandler(size_t len)
+{
+    return (DPS_NetRxBuffer*)malloc(len);
+}
+
+static void FreeNetRxBufferHandler(DPS_NetRxBuffer* buf)
+{
+    free(buf);
+}
+
+static DPS_AllocNetRxBufferHandler allocNetRxBufferHandler = AllocNetRxBufferHandler;
+static DPS_FreeNetRxBufferHandler freeNetRxBufferHandler = FreeNetRxBufferHandler;
+
+void DPS_SetNetRxBufferHandlers(DPS_AllocNetRxBufferHandler allocHandler,
+                                DPS_FreeNetRxBufferHandler freeHandler)
+{
+    allocNetRxBufferHandler = allocHandler;
+    freeNetRxBufferHandler = freeHandler;
+}
+
 DPS_NetRxBuffer* DPS_CreateNetRxBuffer(size_t len)
 {
     DPS_NetRxBuffer* buf = NULL;
 
-    buf = (DPS_NetRxBuffer*)malloc(sizeof(DPS_NetRxBuffer) + len - 1);
+    buf = allocNetRxBufferHandler(sizeof(DPS_NetRxBuffer) + len - 1);
     if (!buf) {
         return NULL;
     }
@@ -471,7 +491,7 @@ void DPS_NetRxBufferDecRef(DPS_NetRxBuffer* buf)
     if (buf) {
         assert(buf->refCount > 0);
         if (--buf->refCount == 0) {
-            free(buf);
+            freeNetRxBufferHandler(buf);
         }
     }
 }
