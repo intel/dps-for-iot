@@ -135,7 +135,6 @@ static void TestLoopbackAckLargeMessage(DPS_Node* node, DPS_KeyStore* keyStore)
     static const uint8_t message[8*1024] = { 0 };
     DPS_Publication* pub = NULL;
     DPS_Subscription* sub = NULL;
-    DPS_Event* event = NULL;
     int receivedMessage = DPS_FALSE;
     DPS_Event* ackEvent = NULL;
     DPS_Status ret;
@@ -155,14 +154,11 @@ static void TestLoopbackAckLargeMessage(DPS_Node* node, DPS_KeyStore* keyStore)
     ret = DPS_Subscribe(sub, LoopbackAckLargeMessageHandler);
     ASSERT(ret == DPS_OK);
 
-    event = DPS_CreateEvent();
-    ASSERT(event);
     ret = DPS_Publish(pub, message, A_SIZEOF(message), 0);
     ASSERT(ret == DPS_OK);
     ret = DPS_WaitForEvent(ackEvent);
     ASSERT(ret == DPS_OK);
 
-    DPS_DestroyEvent(event);
     DPS_DestroySubscription(sub);
     DPS_DestroyEvent(ackEvent);
     DPS_DestroyPublication(pub);
@@ -294,6 +290,12 @@ static void TestBackToBackPublish(DPS_Node* node, DPS_KeyStore* keyStore)
 }
 
 #if defined(DPS_USE_TCP)
+static void OnLinkComplete(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, void* data)
+{
+    if (data) {
+        DPS_SignalEvent((DPS_Event*)data, status);
+    }
+}
 static void TestBackToBackPublishSeparateNodes(DPS_Node* node, DPS_KeyStore* keyStore)
 {
     static const char* topics[] = { __FUNCTION__ };
@@ -317,7 +319,7 @@ static void TestBackToBackPublishSeparateNodes(DPS_Node* node, DPS_KeyStore* key
 
     subNode = DPS_CreateNode("/.", keyStore, NULL);
     ASSERT(subNode);
-    ret = DPS_StartNode(subNode, DPS_MCAST_PUB_DISABLED, 0);
+    ret = DPS_StartNode(subNode, DPS_MCAST_PUB_DISABLED, NULL);
     ASSERT(ret == DPS_OK);
 
     sub = DPS_CreateSubscription(subNode, topics, numTopics);
@@ -329,7 +331,7 @@ static void TestBackToBackPublishSeparateNodes(DPS_Node* node, DPS_KeyStore* key
 
     addr = DPS_CreateAddress();
     ASSERT(addr);
-    ret = DPS_LinkTo(subNode, NULL, DPS_GetPortNumber(node), addr);
+    ret = DPS_LinkTo(subNode, DPS_GetListenAddressString(node), addr);
     ASSERT(ret == DPS_OK);
 
     seqNum = DPS_PublicationGetSequenceNum(pub) + 1;
@@ -452,7 +454,7 @@ int main(int argc, char** argv)
         DPS_SetNetworkKey(memoryKeyStore, &NetworkKeyId, &NetworkKey);
         node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore), NULL);
         ASSERT(node);
-        ret = DPS_StartNode(node, DPS_MCAST_PUB_ENABLE_SEND | DPS_MCAST_PUB_ENABLE_RECV, 0);
+        ret = DPS_StartNode(node, DPS_MCAST_PUB_ENABLE_SEND | DPS_MCAST_PUB_ENABLE_RECV, NULL);
         ASSERT(ret == DPS_OK);
         (*test)(node, DPS_MemoryKeyStoreHandle(memoryKeyStore));
         DPS_DestroyNode(node, OnNodeDestroyed, event);

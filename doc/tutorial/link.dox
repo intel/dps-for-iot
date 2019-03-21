@@ -26,12 +26,14 @@ receiving for our three nodes by using @ref DPS_MCAST_PUB_DISABLED for
 the @c mcastPub parameter of DPS_StartNode().  All publications and
 subscriptions will go through the forwarding node.
 
-The second thing we do is specify the @c listenPort parameter to
-DPS_StartNode().  A value of zero lets DPS assign an ephemeral
-listening port.  A value of non-zero requests a specific port.
+The second thing we do is specify the @c listenAddr parameter to
+DPS_StartNode().  In this instance we bind the node to all available
+interfaces at the port provided.  A port value of zero lets DPS assign
+an ephemeral listening port.  A value of non-zero requests a specific
+port.
 
-The last thing we do is get the ephemeral port DPS has chosen with
-DPS_GetPortNumber().  This will be used by the subscriber and
+The last thing we do is get the port DPS has chosen with
+DPS_GetListenAddress().  This will be used by the subscriber and
 publisher to link to the forwarding node.
 
 @section linking Linking to a node
@@ -40,13 +42,7 @@ publisher to link to the forwarding node.
 Now that we know the host (@c localhost in this example) and
 listening port of the forwarding node, we can call DPS_Link() to
 create the link from the subscriber and publisher to the forwarding
-node.  In order to do this we must first create a @ref
-DPS_NodeAddress and set its value to the host and port of the
-forwarding node.
-
-Once we call DPS_Link() we can destroy the @ref DPS_NodeAddress as
-we don't need it anymore while we wait for the asynchronous link to
-complete.
+node.
 
 @snippet tutorial.c Linking complete
 

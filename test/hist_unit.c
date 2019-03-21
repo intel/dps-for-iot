@@ -51,7 +51,18 @@ int main(int argc, char** argv)
     }
 
     memset(&addr, 0, sizeof(addr));
-    addr.inaddr.ss_family = AF_INET6;
+#if defined(DPS_USE_DTLS)
+    addr.type = DPS_DTLS;
+    addr.u.inaddr.ss_family = AF_INET6;
+#elif defined(DPS_USE_TCP)
+    addr.type = DPS_TCP;
+    addr.u.inaddr.ss_family = AF_INET6;
+#elif defined(DPS_USE_UDP)
+    addr.type = DPS_UDP;
+    addr.u.inaddr.ss_family = AF_INET6;
+#elif defined(DPS_USE_PIPE)
+    addr.type = DPS_PIPE;
+#endif
 
     ret = DPS_InitUUID();
     if (ret != DPS_OK) {

@@ -24,11 +24,6 @@
 #include "node.h"
 
 /*
- * This is just test code so to make it easy port numbers maps 1:1 into this array
- */
-static uint16_t PortMap[UINT16_MAX];
-
-/*
  * Maps node id's to DPS nodes
  */
 static DPS_Node* NodeMap[UINT16_MAX];
@@ -40,7 +35,7 @@ static uint16_t NodeList[UINT16_MAX];
 
 static void OnPubMatch(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* data, size_t len)
 {
-    static const char AckFmt[] = "This is an ACK from %d";
+    static const char AckFmt[] = "This is an ACK from %s";
     DPS_Status ret;
     const DPS_UUID* pubId = DPS_PublicationGetUUID(pub);
     uint32_t sn = DPS_PublicationGetSequenceNum(pub);
@@ -71,10 +66,9 @@ static void OnPubMatch(DPS_Subscription* sub, const DPS_Publication* pub, uint8_
     }
 
     if (DPS_PublicationIsAckRequested(pub)) {
-        char ackMsg[sizeof(AckFmt) + 8];
-
-        sprintf(ackMsg, AckFmt, DPS_GetPortNumber(DPS_PublicationGetNode(pub)));
-
+        char ackMsg[sizeof(AckFmt) + 64];
+        sprintf(ackMsg, AckFmt,
+                DPS_GetListenAddressString(DPS_PublicationGetNode(pub)));
         ret = DPS_AckPublication(pub, (uint8_t*)ackMsg, sizeof(ackMsg));
         if (ret != DPS_OK) {
             DPS_PRINT("Failed to ack pub %s\n", DPS_ErrTxt(ret));
@@ -142,31 +136,6 @@ static int StrArg(char* opt, char*** argp, int* argcp, const char** val)
     *val = *arg++;
     if (**val == '-') {
         DPS_PRINT("Value for option %s must be a string\n", opt);
-        return 0;
-    }
-    *argp = arg;
-    *argcp = argc;
-    return 1;
-}
-
-static int IntArg(char* opt, char*** argp, int* argcp, int* val, int min, int max)
-{
-    char* p;
-    char** arg = *argp;
-    int argc = *argcp;
-
-    if (strcmp(*arg++, opt) != 0) {
-        return 0;
-    }
-    if (!--argc) {
-        return 0;
-    }
-    *val = strtol(*arg++, &p, 10);
-    if (*p) {
-        return 0;
-    }
-    if (*val < min || *val > max) {
-        DPS_PRINT("Value for option %s must be in range %d..%d\n", opt, min, max);
         return 0;
     }
     *argp = arg;
@@ -281,39 +250,20 @@ static void OnLinked(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, v
     if (status == DPS_OK) {
         ++LinksUp;
     } else {
-        DPS_ERRPRINT("Failed to Link to %d - %s\n", DPS_GetPortNumber((DPS_Node*)data), DPS_ErrTxt(status));
+        DPS_ERRPRINT("Failed to Link to %s - %s\n", DPS_NodeAddrToString(addr), DPS_ErrTxt(status));
         ++LinksFailed;
     }
     uv_mutex_unlock(&lock);
 }
 
-static void OnResolve(DPS_Node* node, DPS_NodeAddress* addr, void* data)
-{
-    if (addr) {
-        DPS_Status ret = DPS_Link(node, addr, OnLinked, data);
-        if (ret != DPS_OK) {
-            uv_mutex_lock(&lock);
-            DPS_ERRPRINT("DPS_Link for %d returned %s\n", DPS_GetPortNumber((DPS_Node*)data), DPS_ErrTxt(ret));
-            ++LinksFailed;
-            uv_mutex_unlock(&lock);
-        }
-    } else {
-        uv_mutex_lock(&lock);
-        DPS_ERRPRINT("Failed to resolve address for %d\n", DPS_GetPortNumber((DPS_Node*)data));
-        ++LinksFailed;
-        uv_mutex_unlock(&lock);
-    }
-}
-
 static DPS_Status LinkNodes(DPS_Node* src, DPS_Node* dst)
 {
     DPS_Status ret;
-    char port[8];
-    snprintf(port, sizeof(port), "%d", DPS_GetPortNumber(dst));
-
-    ret = DPS_ResolveAddress(src, NULL, port, OnResolve, dst);
+    ret = DPS_Link(src, DPS_GetListenAddressString(dst), OnLinked, NULL);
     if (ret != DPS_OK) {
         uv_mutex_lock(&lock);
+        DPS_ERRPRINT("DPS_Link for %s returned %s\n", DPS_GetListenAddressString(dst),
+                     DPS_ErrTxt(ret));
         ++LinksFailed;
         uv_mutex_unlock(&lock);
     }
@@ -383,18 +333,25 @@ int main(int argc, char** argv)
          * Start the nodes
          */
         for (i = 0; i < numIds; ++i) {
+            DPS_NodeAddress* listenAddr = NULL;
             DPS_Node* node = DPS_CreateNode("/.", NULL, NULL);
             /*
              * For test purposes we only want a short subscription delay
              */
             DPS_SetNodeSubscriptionUpdateDelay(node, 300);
 
-            ret = DPS_StartNode(node, DPS_FALSE, 0);
+            listenAddr = DPS_CreateAddress();
+            if (!listenAddr) {
+                DPS_ERRPRINT("Failed to create address: %s\n", DPS_ErrTxt(DPS_ERR_RESOURCES));
+                return EXIT_FAILURE;
+            }
+            DPS_SetAddress(listenAddr, "[::1]:0");
+            ret = DPS_StartNode(node, DPS_FALSE, listenAddr);
+            DPS_DestroyAddress(listenAddr);
             if (ret != DPS_OK) {
                 DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
                 return EXIT_FAILURE;
             }
-            PortMap[DPS_GetPortNumber(node)] = NodeList[i];
             NodeMap[NodeList[i]] = node;
             /*
              * Set slow link monitor probes because we are

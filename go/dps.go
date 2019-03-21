@@ -1,8 +1,6 @@
 package dps
 
 import (
-	"net"
-	"strconv"
 	"sync"
 	"unsafe"
 )
@@ -15,24 +13,6 @@ import (
  #include <dps/dps.h>
  #include <dps/json.h>
  #include <dps/synchronous.h>
-
- static DPS_NodeAddress* setAddress(DPS_NodeAddress* addr, const char* host, uint16_t port) {
-         DPS_NodeAddress* ret;
-         struct sockaddr_storage ss;
-         struct sockaddr_in* sin = (struct sockaddr_in*)&ss;
-         if (uv_inet_pton(AF_INET, host, &sin->sin_addr) == 0) {
-                 sin->sin_family = AF_INET;
-                 sin->sin_port = htons(port);
-                 return DPS_SetAddress(addr, (struct sockaddr*)sin);
-         }
-         struct sockaddr_in6* sin6 = (struct sockaddr_in6*)&ss;
-         if (uv_inet_pton(AF_INET6, host, &sin6->sin6_addr) == 0) {
-                 sin6->sin6_family = AF_INET6;
-                 sin6->sin6_port = htons(port);
-                 return DPS_SetAddress(addr, (struct sockaddr*)sin6);
-         }
-         return NULL;
- }
 
  extern DPS_Status goKeyAndIdHandler(DPS_KeyStoreRequest* request);
  static DPS_Status keyAndIdHandler(DPS_KeyStoreRequest* request) {
@@ -136,23 +116,23 @@ import (
          goOnLinkComplete(node, addr, status, (uintptr_t)data);
  }
 
- static DPS_Status link(DPS_Node* node, DPS_NodeAddress* addr, uintptr_t data) {
-         return DPS_Link(node, addr, onLinkComplete, (void*)data);
+ static DPS_Status link(DPS_Node* node, const char* addrText, uintptr_t data) {
+         return DPS_Link(node, addrText, onLinkComplete, (void*)data);
  }
 
  extern void goOnUnlinkComplete(DPS_Node* node, DPS_NodeAddress* addr, uintptr_t data);
- static void onUnlinkComplete(DPS_Node* node, DPS_NodeAddress* addr, void* data) {
-         goOnUnlinkComplete(node, addr, (uintptr_t)data);
+ static void onUnlinkComplete(DPS_Node* node, const DPS_NodeAddress* addr, void* data) {
+         goOnUnlinkComplete(node, (DPS_NodeAddress*)addr, (uintptr_t)data);
  }
 
  // mangle the name to avoid conflicts with mingw
- static DPS_Status unlink_(DPS_Node* node, DPS_NodeAddress* addr, uintptr_t data) {
+ static DPS_Status unlink_(DPS_Node* node, const DPS_NodeAddress* addr, uintptr_t data) {
          return DPS_Unlink(node, addr, onUnlinkComplete, (void*)data);
  }
 
  extern void goOnResolveAddressComplete(DPS_Node* node, DPS_NodeAddress* addr, uintptr_t data);
- static void onResolveAddressComplete(DPS_Node* node, DPS_NodeAddress* addr, void* data) {
-         goOnResolveAddressComplete(node, addr, (uintptr_t)data);
+ static void onResolveAddressComplete(DPS_Node* node, const DPS_NodeAddress* addr, void* data) {
+         goOnResolveAddressComplete(node, (DPS_NodeAddress*)addr, (uintptr_t)data);
  }
 
  static DPS_Status resolveAddress(DPS_Node* node, char* host, char* service, uintptr_t data) {
@@ -273,17 +253,9 @@ func CreateAddress() *NodeAddress {
 }
 func SetAddress(addr *NodeAddress, hostport string) *NodeAddress {
 	caddr := (*C.DPS_NodeAddress)(addr)
-	host, port, err := net.SplitHostPort(hostport)
-	if err != nil {
-		return nil
-	}
-	cport, err := strconv.Atoi(port)
-	if err != nil {
-		return nil
-	}
-	chost := C.CString(host)
-	defer C.free(unsafe.Pointer(chost))
-	return (*NodeAddress)(C.setAddress(caddr, chost, C.uint16_t(cport)))
+	chostport := C.CString(hostport)
+	defer C.free(unsafe.Pointer(chostport))
+	return (*NodeAddress)(C.DPS_SetAddress(caddr, chostport))
 }
 func CopyAddress(dest *NodeAddress, src *NodeAddress) {
 	cdest := (*C.DPS_NodeAddress)(dest)
@@ -651,9 +623,10 @@ func CreateNode(separators string, keyStore KeyStore, keyId KeyId) *Node {
 	return (*Node)(C.DPS_CreateNode(cseparators, ckeyStore, ckeyId))
 }
 
-func StartNode(node *Node, mcastPub int, listenPort uint16) int {
+func StartNode(node *Node, mcastPub int, listenAddr *NodeAddress) int {
 	cnode := (*C.DPS_Node)(node)
-	return int(C.DPS_StartNode(cnode, C.int(mcastPub), C.uint16_t(listenPort)))
+	clistenAddr := (*C.DPS_NodeAddress)(listenAddr)
+	return int(C.DPS_StartNode(cnode, C.int(mcastPub), clistenAddr))
 }
 
 type OnNodeDestroyed func(*Node)
@@ -678,18 +651,24 @@ func SetNodeSubscriptionUpdateDelay(node *Node, subsRateMsecs uint32) {
 	C.DPS_SetNodeSubscriptionUpdateDelay(cnode, C.uint32_t(subsRateMsecs))
 }
 
-func GetPortNumber(node *Node) uint16 {
+func GetListenAddress(node *Node) *NodeAddress {
 	cnode := (*C.DPS_Node)(node)
-	return uint16(C.DPS_GetPortNumber(cnode))
+	return (*NodeAddress)(C.DPS_GetListenAddress(cnode))
+}
+
+func GetListenAddressString(node *Node) string {
+	cnode := (*C.DPS_Node)(node)
+	return C.GoString(C.DPS_GetListenAddressString(cnode))
 }
 
 type OnLinkComplete func(node *Node, addr *NodeAddress, status int)
 
-func Link(node *Node, addr *NodeAddress, cb OnLinkComplete) int {
+func Link(node *Node, addrText string, cb OnLinkComplete) int {
 	cnode := (*C.DPS_Node)(node)
-	caddr := (*C.DPS_NodeAddress)(addr)
+	caddrText := C.CString(addrText)
+	defer C.free(unsafe.Pointer(caddrText))
 	handle := reg.register(cb)
-	return int(C.link(cnode, caddr, C.uintptr_t(handle)))
+	return int(C.link(cnode, caddrText, C.uintptr_t(handle)))
 }
 
 //export goOnLinkComplete
@@ -1062,21 +1041,15 @@ func CBOR2JSON(cbor []byte, pretty bool) (json string, err int) {
 	return
 }
 
-func LinkTo(node *Node, host string, port uint16) (addr *NodeAddress, err int) {
+func LinkTo(node *Node, addrText string, addr *NodeAddress) int {
 	cnode := (*C.DPS_Node)(node)
-	var chost *C.char
-	if len(host) > 0 {
-		chost = C.CString(host)
+	var caddrText *C.char
+	if len(addrText) > 0 {
+		caddrText = C.CString(addrText)
 	}
-	defer C.free(unsafe.Pointer(chost))
-	caddr := C.DPS_CreateAddress()
-	err = int(C.DPS_LinkTo(cnode, chost, C.uint16_t(port), caddr))
-	if err == OK {
-		addr = (*NodeAddress)(caddr)
-	} else {
-		C.DPS_DestroyAddress(caddr)
-	}
-	return
+	defer C.free(unsafe.Pointer(caddrText))
+	caddr := (*C.DPS_NodeAddress)(addr)
+	return int(C.DPS_LinkTo(cnode, caddrText, caddr))
 }
 
 func UnlinkFrom(node *Node, addr *NodeAddress) int {

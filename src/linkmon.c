@@ -140,7 +140,8 @@ ErrorExit:
 void DPS_LinkMonitorStop(RemoteNode* remote)
 {
     if (remote->monitor) {
-        DPS_DBGPRINT("Node %d no longer monitoring %s\n", remote->monitor->node->port, DESCRIBE(remote));
+        DPS_DBGPRINT("Node %s no longer monitoring %s\n", remote->monitor->node->addrStr,
+                     DESCRIBE(remote));
         DestroyLinkMonitor(remote->monitor);
     }
 }
@@ -198,7 +199,8 @@ static void OnProbeTimeout(uv_timer_t* handle)
         ret = DPS_SerializePub(req, NULL, 0, 0);
     }
     if (ret == DPS_OK) {
-        DPS_DBGPRINT("Send link probe from %d to %s\n", monitor->node->port, DESCRIBE(monitor->remote));
+        DPS_DBGPRINT("Send link probe from %s to %s\n", monitor->node->addrStr,
+                     DESCRIBE(monitor->remote));
         ret = DPS_SendPublication(req, monitor->pub, monitor->remote);
         /*
          * We have to delete the publication history for the probe otherwise
@@ -238,7 +240,7 @@ DPS_Status DPS_LinkMonitorStart(DPS_Node* node, RemoteNode* remote)
     }
     assert(!remote->monitor);
 
-    DPS_DBGPRINT("Node %d is monitoring %s\n", node->port, DESCRIBE(remote));
+    DPS_DBGPRINT("Node %s is monitoring %s\n", node->addrStr, DESCRIBE(remote));
 
     monitor = calloc(1, sizeof(LinkMonitor));
     if (!monitor) {

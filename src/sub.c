@@ -255,8 +255,19 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote)
      * The unprotected map
      */
     len += CBOR_SIZEOF_MAP(2) + 2 * CBOR_SIZEOF(uint8_t) +
-           CBOR_SIZEOF(uint16_t) +
-           CBOR_SIZEOF(uint32_t);
+           CBOR_SIZEOF(uint32_t);  /* seq_num */
+    switch (node->addr.type) {
+    case DPS_DTLS:
+    case DPS_TCP:
+    case DPS_UDP:
+        len += CBOR_SIZEOF(uint16_t); /* port */
+        break;
+    case DPS_PIPE:
+        len += CBOR_SIZEOF_STRING(node->addr.u.path); /* path */
+        break;
+    default:
+        return DPS_ERR_INVALID;
+    }
     if (!remote->unlink) {
         interests = remote->outbound.deltaInd ? remote->outbound.delta : remote->outbound.interests;
         len += 4 * CBOR_SIZEOF(uint8_t) +
@@ -290,11 +301,20 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote)
     if (ret == DPS_OK) {
         ret = CBOR_EncodeMap(&buf, remote->unlink ? 2 : 6);
     }
-    if (ret == DPS_OK) {
-        ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_PORT);
-    }
-    if (ret == DPS_OK) {
-        ret = CBOR_EncodeInt16(&buf, node->port);
+    switch (node->addr.type) {
+    case DPS_DTLS:
+    case DPS_TCP:
+    case DPS_UDP:
+        if (ret == DPS_OK) {
+            ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_PORT);
+        }
+        if (ret == DPS_OK) {
+            ret = CBOR_EncodeUint16(&buf,
+                                    DPS_NetAddrPort((const struct sockaddr*)&node->addr.u.inaddr));
+        }
+        break;
+    default:
+        break;
     }
     if (ret == DPS_OK) {
         ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_SEQ_NUM);
@@ -331,6 +351,18 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote)
         if (ret == DPS_OK) {
             ret = DPS_BitVectorSerialize(interests, &buf);
         }
+    }
+    switch (node->addr.type) {
+    case DPS_PIPE:
+        if (ret == DPS_OK) {
+            ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_PATH);
+        }
+        if (ret == DPS_OK) {
+            ret = CBOR_EncodeString(&buf, node->addr.u.path);
+        }
+        break;
+    default:
+        break;
     }
     /*
      * Encode the (empty) protected map
@@ -398,8 +430,19 @@ static DPS_Status SendSubscriptionAck(DPS_Node* node, RemoteNode* remote, uint32
      * The unprotected map
      */
     len += CBOR_SIZEOF_MAP(2) + 2 * CBOR_SIZEOF(uint8_t) +
-        CBOR_SIZEOF(uint16_t) +
-        CBOR_SIZEOF(uint32_t);
+        CBOR_SIZEOF(uint32_t);  /* ack_seq_num */
+    switch (node->addr.type) {
+    case DPS_DTLS:
+    case DPS_TCP:
+    case DPS_UDP:
+        len += CBOR_SIZEOF(uint16_t); /* port */
+        break;
+    case DPS_PIPE:
+        len += CBOR_SIZEOF_STRING(node->addr.u.path); /* path */
+        break;
+    default:
+        return DPS_ERR_INVALID;
+    }
     if (includeSub) {
         len += CBOR_SIZEOF(uint8_t) + CBOR_SIZEOF(uint32_t);
         interests = remote->outbound.deltaInd ? remote->outbound.delta : remote->outbound.interests;
@@ -433,11 +476,20 @@ static DPS_Status SendSubscriptionAck(DPS_Node* node, RemoteNode* remote, uint32
     if (ret == DPS_OK) {
         ret = CBOR_EncodeMap(&buf, includeSub ? 7 : 2);
     }
-    if (ret == DPS_OK) {
-        ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_PORT);
-    }
-    if (ret == DPS_OK) {
-        ret = CBOR_EncodeInt16(&buf, node->port);
+    switch (node->addr.type) {
+    case DPS_DTLS:
+    case DPS_TCP:
+    case DPS_UDP:
+        if (ret == DPS_OK) {
+            ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_PORT);
+        }
+        if (ret == DPS_OK) {
+            ret = CBOR_EncodeUint16(&buf,
+                                    DPS_NetAddrPort((const struct sockaddr*)&node->addr.u.inaddr));
+        }
+        break;
+    default:
+        break;
     }
     if (includeSub) {
         if (ret == DPS_OK) {
@@ -480,6 +532,18 @@ static DPS_Status SendSubscriptionAck(DPS_Node* node, RemoteNode* remote, uint32
     }
     if (ret == DPS_OK) {
         ret = CBOR_EncodeUint32(&buf, revision);
+    }
+    switch (node->addr.type) {
+    case DPS_PIPE:
+        if (ret == DPS_OK) {
+            ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_PATH);
+        }
+        if (ret == DPS_OK) {
+            ret = CBOR_EncodeString(&buf, node->addr.u.path);
+        }
+        break;
+    default:
+        break;
     }
     /*
      * Encode the (empty) protected map
@@ -550,13 +614,10 @@ static DPS_Status UpdateInboundInterests(DPS_Node* node, RemoteNode* remote, DPS
     return DPS_OK;
 }
 
-/*
- *
- */
 DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxBuffer* buf)
 {
-    static const int32_t NeedKeys[] = { DPS_CBOR_KEY_PORT, DPS_CBOR_KEY_SEQ_NUM };
-    static const int32_t WantKeys[] = { DPS_CBOR_KEY_SUB_FLAGS, DPS_CBOR_KEY_MESH_ID, DPS_CBOR_KEY_NEEDS, DPS_CBOR_KEY_INTERESTS };
+    static const int32_t NeedKeys[] = { DPS_CBOR_KEY_SEQ_NUM };
+    static const int32_t WantKeys[] = { DPS_CBOR_KEY_PORT, DPS_CBOR_KEY_SUB_FLAGS, DPS_CBOR_KEY_MESH_ID, DPS_CBOR_KEY_NEEDS, DPS_CBOR_KEY_INTERESTS, DPS_CBOR_KEY_PATH };
     static const int32_t WantKeysMask = (1 << DPS_CBOR_KEY_SUB_FLAGS) | (1 << DPS_CBOR_KEY_MESH_ID) | (1 << DPS_CBOR_KEY_NEEDS) | (1 << DPS_CBOR_KEY_INTERESTS);
     DPS_RxBuffer* rxBuf = (DPS_RxBuffer*)buf;
     DPS_Status ret;
@@ -571,6 +632,8 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRx
     uint8_t flags = 0;
     uint16_t keysMask;
     int remoteIsNew = DPS_FALSE;
+    char* path = NULL;
+    size_t pathLen = 0;
 
     DPS_DBGTRACE();
 
@@ -592,6 +655,7 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRx
         }
         switch (key) {
         case DPS_CBOR_KEY_PORT:
+            keysMask |= (1 << key);
             ret = CBOR_DecodeUint16(rxBuf, &port);
             break;
         case DPS_CBOR_KEY_SEQ_NUM:
@@ -636,24 +700,45 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRx
                 }
             }
             break;
+        case DPS_CBOR_KEY_PATH:
+            keysMask |= (1 << key);
+            ret = CBOR_DecodeString(rxBuf, &path, &pathLen);
+            if ((ret == DPS_OK) && (pathLen >= DPS_NODE_ADDRESS_PATH_MAX)) {
+                ret = DPS_ERR_INVALID;
+            }
+            break;
         }
         if (ret != DPS_OK) {
             break;
         }
+    }
+    if ((keysMask & ((1 << DPS_CBOR_KEY_PORT) | (1 << DPS_CBOR_KEY_PATH))) == 0) {
+        DPS_WARNPRINT("Missing required key\n");
+        ret = DPS_ERR_INVALID;
     }
     if (ret != DPS_OK) {
         DPS_BitVectorFree(interests);
         DPS_BitVectorFree(needs);
         return ret;
     }
-    DPS_EndpointSetPort(ep, port);
+    /*
+     * Record which port the sender is listening on
+     */
+    if (keysMask & (1 << DPS_CBOR_KEY_PORT)) {
+        DPS_EndpointSetPort(ep, port);
+    } else {
+        assert(keysMask & (1 << DPS_CBOR_KEY_PATH));
+        DPS_EndpointSetPath(ep, path, pathLen);
+    }
+    keysMask &= ~((1 << DPS_CBOR_KEY_PORT) | (1 << DPS_CBOR_KEY_PATH));
 #if SIMULATE_PACKET_LOSS
     /*
      * Enable this code to simulate lost subscriptions to test
      * out the resynchronization code.
      */
     if (((DPS_Rand() % SIMULATE_PACKET_LOSS) == 1)) {
-        DPS_PRINT("%d Simulating lost subscription from %s\n", node->port, DPS_NodeAddrToString(&ep->addr));
+        DPS_PRINT("%s Simulating lost subscription from %s\n", node->addrStr,
+                  DPS_NodeAddrToString(&ep->addr));
         return DPS_OK;
     }
 #endif
@@ -700,7 +785,8 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRx
      * Discard stale subscriptions
      */
     if (revision < remote->inbound.revision) {
-        DPS_DBGPRINT("%d Stale subscription %d from %s (expected %d)\n", node->port, revision, DESCRIBE(remote), remote->inbound.revision + 1);
+        DPS_DBGPRINT("%s Stale subscription %d from %s (expected %d)\n", node->addrStr, revision,
+                     DESCRIBE(remote), remote->inbound.revision + 1);
         goto DiscardAndExit;
     }
     /*
@@ -712,7 +798,8 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRx
     }
     remote->inbound.revision = revision;
 
-    DPS_DBGPRINT("Node %d received mesh id %08x from %s\n", node->port, UUID_32(&meshId), DESCRIBE(remote));
+    DPS_DBGPRINT("Node %s received mesh id %08x from %s\n", node->addrStr, UUID_32(&meshId),
+                 DESCRIBE(remote));
     /*
      * Loops can be detected by either end of a link and corrective action is required
      * to prevent interests from propagating around the loop. The corrective action is
@@ -728,7 +815,7 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRx
         DPS_DBGPRINT("Remote %s has unumuted\n", DESCRIBE(remote));
         ret = DPS_UnmuteRemoteNode(node, remote);
     } else if (DPS_MeshHasLoop(node, remote, &meshId)) {
-        DPS_DBGPRINT("Loop detected by %d for %s\n", node->port, DESCRIBE(remote));
+        DPS_DBGPRINT("Loop detected by %s for %s\n", node->addrStr, DESCRIBE(remote));
         if (!remote->outbound.muted) {
             DPS_MuteRemoteNode(node, remote);
         }
@@ -780,7 +867,8 @@ DiscardAndExit:
 
 DPS_Status DPS_DecodeSubscriptionAck(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxBuffer* buf)
 {
-    static const int32_t UnprotectedKeys[] = { DPS_CBOR_KEY_PORT, DPS_CBOR_KEY_ACK_SEQ_NUM };
+    static const int32_t UnprotectedKeys[] = { DPS_CBOR_KEY_ACK_SEQ_NUM };
+    static const int32_t UnprotectedOptKeys[] = { DPS_CBOR_KEY_PORT, DPS_CBOR_KEY_PATH };
     DPS_RxBuffer* rxBuf = (DPS_RxBuffer*)buf;
     uint8_t* rxPos;
     DPS_Status ret;
@@ -788,6 +876,9 @@ DPS_Status DPS_DecodeSubscriptionAck(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
     uint32_t revision = 0;
     RemoteNode* remote = NULL;
     CBOR_MapState mapState;
+    char* path = NULL;
+    size_t pathLen;
+    uint16_t keysMask;
 
     DPS_DBGTRACE();
 
@@ -801,10 +892,12 @@ DPS_Status DPS_DecodeSubscriptionAck(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
     /*
      * Parse keys from unprotected map
      */
-    ret = DPS_ParseMapInit(&mapState, rxBuf, UnprotectedKeys, A_SIZEOF(UnprotectedKeys), NULL, 0);
+    ret = DPS_ParseMapInit(&mapState, rxBuf, UnprotectedKeys, A_SIZEOF(UnprotectedKeys),
+                           UnprotectedOptKeys, A_SIZEOF(UnprotectedOptKeys));
     if (ret != DPS_OK) {
         return ret;
     }
+    keysMask = 0;
     while (!DPS_ParseMapDone(&mapState)) {
         int32_t key;
         ret = DPS_ParseMapNext(&mapState, &key);
@@ -813,10 +906,18 @@ DPS_Status DPS_DecodeSubscriptionAck(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
         }
         switch (key) {
         case DPS_CBOR_KEY_PORT:
+            keysMask |= (1 << key);
             ret = CBOR_DecodeUint16(rxBuf, &port);
             break;
         case DPS_CBOR_KEY_ACK_SEQ_NUM:
             ret = CBOR_DecodeUint32(rxBuf, &revision);
+            break;
+        case DPS_CBOR_KEY_PATH:
+            keysMask |= (1 << key);
+            ret = CBOR_DecodeString(rxBuf, &path, &pathLen);
+            if ((ret == DPS_OK) && (pathLen >= DPS_NODE_ADDRESS_PATH_MAX)) {
+                ret = DPS_ERR_INVALID;
+            }
             break;
         }
         if (ret != DPS_OK) {
@@ -826,14 +927,27 @@ DPS_Status DPS_DecodeSubscriptionAck(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
     if (ret != DPS_OK) {
         return ret;
     }
-    DPS_EndpointSetPort(ep, port);
+    if ((keysMask & ((1 << DPS_CBOR_KEY_PORT) | (1 << DPS_CBOR_KEY_PATH))) == 0) {
+        DPS_WARNPRINT("Missing required key\n");
+        return DPS_ERR_INVALID;
+    }
+    /*
+     * Record which port the sender is listening on
+     */
+    if (keysMask & (1 << DPS_CBOR_KEY_PORT)) {
+        DPS_EndpointSetPort(ep, port);
+    } else {
+        assert(keysMask & (1 << DPS_CBOR_KEY_PATH));
+        DPS_EndpointSetPath(ep, path, pathLen);
+    }
 #if SIMULATE_PACKET_LOSS
     /*
      * Enable this code to simulate lost subscriptions to test
      * out the resynchronization code.
      */
     if (((DPS_Rand() % SIMULATE_PACKET_LOSS) == 1)) {
-        DPS_PRINT("%d Simulating lost sub ack from %s\n", node->port, DPS_NodeAddrToString(&ep->addr));
+        DPS_PRINT("%s Simulating lost sub ack from %s\n", node->addrStr,
+                  DPS_NodeAddrToString(&ep->addr));
         return DPS_OK;
     }
 #endif
@@ -902,7 +1016,7 @@ DPS_Status DPS_Subscribe(DPS_Subscription* sub, DPS_PublicationHandler handler)
      */
     if (!node->subscriptions) {
         DPS_GenerateUUID(&node->meshId);
-        DPS_DBGPRINT("Node mesh id for %d: %08x\n", node->port, UUID_32(&node->meshId));
+        DPS_DBGPRINT("Node mesh id for %s: %08x\n", node->addrStr, UUID_32(&node->meshId));
     }
     sub->next = node->subscriptions;
     node->subscriptions = sub;

@@ -57,7 +57,8 @@ extern "C" {
 typedef struct _DPS_NodeAddress DPS_NodeAddress;
 
 /**
- * Get text representation of an address. This function uses a static string buffer so is not thread safe.
+ * Get text representation of an address. This function uses a static
+ * string buffer so is not thread safe.
  *
  * @param addr to get the text for
  *
@@ -75,12 +76,12 @@ DPS_NodeAddress* DPS_CreateAddress(void);
 /**
  * Set a node address
  *
- * @param addr  The address to set
- * @param sa    The value to set
+ * @param addr        The address to set
+ * @param addrText    The text string for the address
  *
- * @return The addr passed in.
+ * @return The addr passed in, or NULL if an error occurred
  */
-DPS_NodeAddress* DPS_SetAddress(DPS_NodeAddress* addr, const struct sockaddr* sa);
+DPS_NodeAddress* DPS_SetAddress(DPS_NodeAddress* addr, const char* addrText);
 
 /**
  * Copy a node address
@@ -497,11 +498,11 @@ void* DPS_GetNodeData(const DPS_Node* node);
  *
  * @param node         The node
  * @param mcastPub     Indicates if this node sends or listens for multicast publications
- * @param listenPort   If non-zero identifies specific port to listen on
+ * @param listenAddr   If non-NULL identifies specific address to listen on
  *
  * @return DPS_OK or various error status codes
  */
-DPS_Status DPS_StartNode(DPS_Node* node, int mcastPub, uint16_t listenPort);
+DPS_Status DPS_StartNode(DPS_Node* node, int mcastPub, DPS_NodeAddress* listenAddr);
 
 /**
  * Function prototype for callback function called when a node is destroyed.
@@ -541,13 +542,24 @@ DPS_Status DPS_DestroyNode(DPS_Node* node, DPS_OnNodeDestroyed cb, void* data);
 void DPS_SetNodeSubscriptionUpdateDelay(DPS_Node* node, uint32_t subsRateMsecs);
 
 /**
- * Get the port number this node is listening for connections on
+ * Get the address this node is listening for connections on
  *
- * @param node     The local node to use
+ * @param node     The node
  *
- * @return The port number
+ * @return The address
  */
-uint16_t DPS_GetPortNumber(DPS_Node* node);
+const DPS_NodeAddress* DPS_GetListenAddress(DPS_Node* node);
+
+/**
+ * Get text representation of the address this node is listening for
+ * connections on. This function uses a static string buffer so is not
+ * thread safe.
+ *
+ * @param node     The node
+ *
+ * @return A text string for the address
+ */
+const char* DPS_GetListenAddressString(DPS_Node* node);
 
 /**
  * Function prototype for function called when a DPS_Link() completes.
@@ -562,14 +574,14 @@ typedef void (*DPS_OnLinkComplete)(DPS_Node* node, DPS_NodeAddress* addr, DPS_St
 /**
  * Link the local node to a remote node
  *
- * @param node   The local node to use
- * @param addr   The address of the remote node to link to
- * @param cb     The callback function to call on completion, can be NULL which case the function is synchronous
- * @param data   Application data to be passed to the callback
+ * @param node     The local node to use
+ * @param addrText The text string of the address to link to
+ * @param cb       The callback function to call on completion, can be NULL which case the function is synchronous
+ * @param data     Application data to be passed to the callback
  *
  * @return DPS_OK or an error status. If an error status is returned the callback function will not be called.
  */
-DPS_Status DPS_Link(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnLinkComplete cb, void* data);
+DPS_Status DPS_Link(DPS_Node* node, const char* addrText, DPS_OnLinkComplete cb, void* data);
 
 /**
  * Function prototype for function called when a DPS_Unlink() completes.
@@ -578,7 +590,7 @@ DPS_Status DPS_Link(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnLinkComplete cb
  * @param addr   The address of the remote node that was unlinked
  * @param data   Application data passed in the call to DPS_Unlink()
  */
-typedef void (*DPS_OnUnlinkComplete)(DPS_Node* node, DPS_NodeAddress* addr, void* data);
+typedef void (*DPS_OnUnlinkComplete)(DPS_Node* node, const DPS_NodeAddress* addr, void* data);
 
 /**
  * Unlink the local node from a remote node
@@ -590,7 +602,7 @@ typedef void (*DPS_OnUnlinkComplete)(DPS_Node* node, DPS_NodeAddress* addr, void
  *
  * @return DPS_OK or an error status. If an error status is returned the callback function will not be called.
  */
-DPS_Status DPS_Unlink(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnUnlinkComplete cb, void* data);
+DPS_Status DPS_Unlink(DPS_Node* node, const DPS_NodeAddress* addr, DPS_OnUnlinkComplete cb, void* data);
 
 /**
  * Function prototype for function called when a DPS_ResolveAddress() completes.
@@ -599,7 +611,7 @@ DPS_Status DPS_Unlink(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnUnlinkComplet
  * @param addr   The resolved address or NULL if the address could not be resolved
  * @param data   Application data passed in the call to DPS_ResolveAddress()
  */
-typedef void (*DPS_OnResolveAddressComplete)(DPS_Node* node, DPS_NodeAddress* addr, void* data);
+typedef void (*DPS_OnResolveAddressComplete)(DPS_Node* node, const DPS_NodeAddress* addr, void* data);
 
 /**
  * Resolve a host name or IP address and service name or port number.

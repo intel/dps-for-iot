@@ -20,16 +20,17 @@
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  */
 
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <ctype.h>
 #include <assert.h>
+#include <ctype.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <dps/dbg.h>
 #include <dps/dps.h>
-#include <dps/synchronous.h>
 #include <dps/event.h>
 #include <dps/json.h>
+#include <dps/synchronous.h>
+#include "common.h"
 #include "keys.h"
 
 #define A_SIZEOF(a)  (sizeof(a) / sizeof((a)[0]))
@@ -57,7 +58,8 @@ static void OnNodeDestroyed(DPS_Node* node, void* data)
 static int AddTopics(char* topicList, char** msg, int* keep, int* ttl, int* encrypt)
 {
     size_t i;
-    int len;
+    size_t len;
+    int n;
 
     for (i = 0; i < numTopics; ++i) {
         free(topics[i]);
@@ -80,16 +82,18 @@ static int AddTopics(char* topicList, char** msg, int* keep, int* ttl, int* encr
         if (topicList[0] == '-') {
             switch(topicList[1]) {
             case 't':
-                if (!sscanf(topicList, "-t %d%n", ttl, &len) || (*ttl < -1)) {
+                if (!sscanf(topicList, "-t %d%n", ttl, &n) || (*ttl < -1)) {
                     DPS_PRINT("-t requires -1..65535\n");
                     return 0;
                 }
+                len = n;
                 break;
             case 'x':
-                if (!sscanf(topicList, "-x %d%n", encrypt, &len) || (*encrypt < 0) || (*encrypt > 3)) {
+                if (!sscanf(topicList, "-x %d%n", encrypt, &n) || (*encrypt < 0) || (*encrypt > 3)) {
                     DPS_PRINT("-x requires 0..3\n");
                     return 0;
                 }
+                len = n;
                 *keep = 0;
                 break;
             case 'j':
@@ -222,33 +226,6 @@ static void ReadStdin(DPS_Node* node)
     DPS_DestroyNode(node, OnNodeDestroyed, NULL);
 }
 
-static int IntArg(char* opt, char*** argp, int* argcp, int* val, int min, int max)
-{
-    char* p;
-    char** arg = *argp;
-    int argc = *argcp;
-
-    if (strcmp(*arg++, opt) != 0) {
-        return 0;
-    }
-    if (!--argc) {
-        return 0;
-    }
-    *val = strtol(*arg++, &p, 10);
-    if (*p) {
-        return 0;
-    }
-    if (*val < min || *val > max) {
-        DPS_PRINT("Value for option %s must be in range %d..%d\n", opt, min, max);
-        return 0;
-    }
-    *argp = arg;
-    *argcp = argc;
-    return 1;
-}
-
-#define MAX_LINKS  8
-
 int main(int argc, char** argv)
 {
     DPS_Status ret;
@@ -256,33 +233,20 @@ int main(int argc, char** argv)
     const DPS_KeyId* nodeKeyId = NULL;
     DPS_Node* node;
     char** arg = argv + 1;
-    const char* host = NULL;
-    int linkPort[MAX_LINKS];
-    const char* linkHosts[MAX_LINKS];
+    DPS_NodeAddress* linkAddr[MAX_LINKS] = { NULL };
+    char* linkText[MAX_LINKS] = { NULL };
     int numLinks = 0;
     int wait = 0;
     int encrypt = 1;
     int ttl = 0;
     int subsRate = DPS_SUBSCRIPTION_UPDATE_RATE;
-    int i;
     char* msg = NULL;
     int mcast = DPS_MCAST_PUB_ENABLE_SEND;
-    int listenPort = 0;
-    DPS_NodeAddress* addr = NULL;
+    DPS_NodeAddress* listenAddr = NULL;
 
     DPS_Debug = DPS_FALSE;
     while (--argc) {
-        if (IntArg("-p", &arg, &argc, &linkPort[numLinks], 1, UINT16_MAX)) {
-            linkHosts[numLinks] = host;
-            ++numLinks;
-            continue;
-        }
-        if (strcmp(*arg, "-h") == 0) {
-            ++arg;
-            if (!--argc) {
-                goto Usage;
-            }
-            host = *arg++;
+        if (LinkArg(&arg, &argc, linkText, &numLinks)) {
             continue;
         }
         if (strcmp(*arg, "-j") == 0) {
@@ -302,7 +266,7 @@ int main(int argc, char** argv)
             msg = *arg++;
             continue;
         }
-        if (IntArg("-l", &arg, &argc, &listenPort, 1000, UINT16_MAX)) {
+        if (ListenArg(&arg, &argc, &listenAddr)) {
             continue;
         }
         if (IntArg("-w", &arg, &argc, &wait, 0, 30)) {
@@ -341,7 +305,6 @@ int main(int argc, char** argv)
      */
     if (numLinks) {
         mcast = DPS_MCAST_PUB_DISABLED;
-        addr = DPS_CreateAddress();
     }
 
     memoryKeyStore = DPS_CreateMemoryKeyStore();
@@ -367,20 +330,17 @@ int main(int argc, char** argv)
     node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore), nodeKeyId);
     DPS_SetNodeSubscriptionUpdateDelay(node, subsRate);
 
-    ret = DPS_StartNode(node, mcast, listenPort);
+    ret = DPS_StartNode(node, mcast, listenAddr);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("DPS_CreateNode failed: %s\n", DPS_ErrTxt(ret));
         return 1;
     }
-    DPS_PRINT("Publisher is listening on port %d\n", DPS_GetPortNumber(node));
+    DPS_PRINT("Publisher is listening on %s\n", DPS_GetListenAddressString(node));
 
-    for (i = 0; i < numLinks; ++i) {
-        ret = DPS_LinkTo(node, linkHosts[i], linkPort[i], addr);
-        if (ret == DPS_OK) {
-            DPS_PRINT("Publisher is linked to %s\n", DPS_NodeAddrToString(addr));
-        } else {
-            DPS_ERRPRINT("DPS_LinkTo %d returned %s\n", linkPort[i], DPS_ErrTxt(ret));
-        }
+    ret = Link(node, linkText, linkAddr, numLinks);
+    if (ret != DPS_OK) {
+        DPS_ERRPRINT("Link returned %s\n", DPS_ErrTxt(ret));
+        return 1;
     }
 
     nodeDestroyed = DPS_CreateEvent();
@@ -430,11 +390,10 @@ int main(int argc, char** argv)
          * gets sent and we have a chance to receive acks if requested
          */
         DPS_TimedWaitForEvent(nodeDestroyed, requestAck ? 2000 : 500);
-        if (addr) {
-            DPS_UnlinkFrom(node, addr);
-            DPS_DestroyAddress(addr);
+        if (numLinks) {
+            Unlink(node, linkAddr, numLinks);
         }
-        if (listenPort) {
+        if (listenAddr) {
             DPS_PRINT("Waiting for remote to link\n");
             DPS_TimedWaitForEvent(nodeDestroyed, 60 * 1000);
         }
@@ -446,18 +405,19 @@ int main(int argc, char** argv)
     DPS_WaitForEvent(nodeDestroyed);
     DPS_DestroyEvent(nodeDestroyed);
     DPS_DestroyMemoryKeyStore(memoryKeyStore);
+    DPS_DestroyAddress(listenAddr);
+    DestroyLinkArg(linkText, linkAddr, numLinks);
     return 0;
 
 Usage:
-    DPS_PRINT("Usage %s [-d] [-x 0|1|2|3] [-a] [-w <seconds>] [-t <ttl>] [[-h <hostname>] -p <portnum>] [-l <portnum>] [-m|-j <message>] [-r <milliseconds>] [topic1 topic2 ... topicN]\n", argv[0]);
+    DPS_PRINT("Usage %s [-d] [-x 0|1|2|3] [-a] [-w <seconds>] [-t <ttl>] [-p <address>] [-l <address>] [-m|-j <message>] [-r <milliseconds>] [topic1 topic2 ... topicN]\n", argv[0]);
     DPS_PRINT("       -d: Enable debug ouput if built for debug.\n");
     DPS_PRINT("       -x: Disable (0) or enable symmetric encryption (1), asymmetric encryption (2), or authentication (3). Default is symmetric encryption enabled.\n");
     DPS_PRINT("       -a: Request an acknowledgement\n");
     DPS_PRINT("       -t: Set a time-to-live on a publication\n");
     DPS_PRINT("       -w: Time to wait between linking to remote node and sending publication\n");
-    DPS_PRINT("       -l: Port number to listen on for incoming connections\n");
-    DPS_PRINT("       -h: Specifies host (localhost is default). Mutiple -h options are permitted.\n");
-    DPS_PRINT("       -p: port to link. Multiple -p options are permitted.\n");
+    DPS_PRINT("       -l: Address to listen on for incoming connections\n");
+    DPS_PRINT("       -p: Address to link. Multiple -p options are permitted.\n");
     DPS_PRINT("       -m: A string payload to accompany the publication.\n");
     DPS_PRINT("       -j: A JSON payload to accompany the publication.\n");
     DPS_PRINT("       -r: Time to delay between subscription updates.\n");

@@ -65,8 +65,8 @@ def _spawn_helper(n, cmd, interpreter=[]):
     name = os.path.basename(cmd[0])
     log_name = 'out/{}{}.log'.format(name, n)
     log = open(log_name, 'wb')
-    log.write('=============================\n{}{} {}\n'.format(name, n, ' '.join(cmd[1:])))
-    log.write('=============================\n')
+    log.write('=============================\n{}{} {}\n'.format(name, n, ' '.join(cmd[1:])).encode())
+    log.write('=============================\n'.encode())
     child = popen_spawn.PopenSpawn(interpreter + cmd, env=_spawn_env(), logfile=log)
     child.linesep = os.linesep
     _children.append(child)
@@ -93,8 +93,15 @@ def _expect(children, pattern, allow_error=False, timeout=-1):
             raise RuntimeError(pattern[i])
 
 def _expect_listening(child):
-    _expect([child], ['is listening on port (\d+){}'.format(child.linesep)])
-    child.port = int(child.match.group(1))
+    _expect([child], ['is listening on ([0-9A-Za-z.:%_\-/\\[\]]+){}'.format(child.linesep)])
+    child.port = child.match.group(1)
+    # Rewrite the any address to the loopback address
+    m = re.match('(.*)(:[0-9]+)', child.port)
+    if m != None:
+        if m.group(1) == '[::]':
+            child.port = '[::1]' + m.group(2)
+        elif m.group(1) == '0.0.0.0':
+            child.port = '127.0.0.1' + m.group(2)
 
 def _expect_linked(child, args):
     ports = []
@@ -104,11 +111,22 @@ def _expect_linked(child, args):
             ports.append(curr)
         prev = curr
     while len(ports):
-        _expect([child], ['is linked to \S+/(\d+){}'.format(child.linesep)])
-        ports.remove(child.match.group(1))
+        _expect([child], ['is linked to ([0-9A-Za-z.:%_\-/\\[\]]+){}'.format(child.linesep)])
+        # The loopback address may have been resolved to either the IPv4 or IPv6 variant
+        addr = child.match.group(1).decode()
+        try:
+            ports.remove(addr)
+        except ValueError:
+            m = re.match('(.*)(:[0-9]+)', addr)
+            if m != None:
+                if m.group(1) == '[::1]':
+                    addr = '127.0.0.1' + m.group(2)
+                elif m.group(1) == '127.0.0.1':
+                    addr = '[::1]' + m.group(2)
+            ports.remove(addr)
 
 def expect_linked(child, ports):
-    if not isinstance(ports, collections.Sequence):
+    if isinstance(ports, basestring) or not isinstance(ports, collections.Sequence):
         ports = [ports]
     _expect_linked(child, ('-p {} ' * len(ports)).format(*ports))
 
@@ -124,20 +142,21 @@ def _expect_pub(children, topics, allow_error=False, timeout=-1, signers=None):
                     i = child.expect(['ERROR'] + ['Pub [0-9a-f-]+\([0-9]+\) \[(.*)\] matches:'], timeout=timeout)
                     if i == 0:
                         raise RuntimeError('ERROR')
-                    signers.append(child.match.group(1))
+                    signers.append(child.match.group(1).decode())
                 i = child.expect(['ERROR'] + patterns, timeout=timeout)
                 if i == 0:
                     raise RuntimeError('ERROR')
             else:
                 if signers != None:
                     child.expect(['Pub [0-9a-f-]+\([0-9]+\) \[(.*)\] matches:'], timeout=timeout)
-                    signers.append(child.match.group(1))
+                    signers.append(child.match.group(1).decode())
                 child.expect(patterns, timeout=timeout)
-            patterns.remove(child.match.re.pattern)
+            patterns.remove(child.match.re.pattern.decode())
 
 def _expect_ack(children, allow_error=False, timeout=-1, signers=None):
+    linesep = (children[0] if children else None).linesep
     if signers != None:
-        pattern = ['Ack for pub UUID [0-9a-f-]+\([0-9]+\) \[(.*)\]']
+        pattern = ['Ack for pub UUID [0-9a-f-]+\([0-9]+\) \[(.*)\]{}'.format(linesep)]
     else:
         pattern = ['Ack for pub']
     if not allow_error:
@@ -147,7 +166,7 @@ def _expect_ack(children, allow_error=False, timeout=-1, signers=None):
         if i != 0:
             raise RuntimeError(pattern[i])
         if signers != None:
-            signers.append(child.match.group(1))
+            signers.append(child.match.group(1).decode())
 
 def cleanup():
     global _children
@@ -390,7 +409,7 @@ def topic_match(pattern, args=''):
 def expect_reg_linked(children):
     if not isinstance(children, collections.Sequence):
         children = [children]
-    _expect(children, ['is linked to \S+/\d+'])
+    _expect(children, ['is linked to [0-9A-Za-z.:%_\-/\\[\]]+'])
 
 def mesh_stress(args=''):
     global _ms
@@ -399,7 +418,7 @@ def mesh_stress(args=''):
     return _spawn(_ms, cmd)
 
 def link(child, ports):
-    if not isinstance(ports, collections.Sequence):
+    if isinstance(ports, basestring) or not isinstance(ports, collections.Sequence):
         ports = [ports]
     child.sendline(('-p {} ' * len(ports)).format(*ports))
 

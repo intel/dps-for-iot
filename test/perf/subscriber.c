@@ -20,19 +20,21 @@
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  */
 
+#include <safe_lib.h>
 #include <assert.h>
 #include <ctype.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #ifdef _WIN32
 #include <io.h>
 #else
 #include <unistd.h>
 #endif
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
 #include <dps/dbg.h>
 #include <dps/dps.h>
 #include <dps/event.h>
+#include "../test.h"
 
 static const char* topic = "dps/roundtrip";
 static int payloadSize = 0;
@@ -60,31 +62,6 @@ static void OnPubMatch(DPS_Subscription* sub, const DPS_Publication* pub, uint8_
     }
 }
 
-static int IntArg(char* opt, char*** argp, int* argcp, int* val, int min, int max)
-{
-    char* p;
-    char** arg = *argp;
-    int argc = *argcp;
-
-    if (strcmp(*arg++, opt) != 0) {
-        return 0;
-    }
-    if (!--argc) {
-        return 0;
-    }
-    *val = strtol(*arg++, &p, 10);
-    if (*p) {
-        return 0;
-    }
-    if (*val < min || *val > max) {
-        DPS_PRINT("Value for option %s must be in range %d..%d\n", opt, min, max);
-        return 0;
-    }
-    *argp = arg;
-    *argcp = argc;
-    return 1;
-}
-
 int main(int argc, char** argv)
 {
     DPS_Status ret;
@@ -92,6 +69,8 @@ int main(int argc, char** argv)
     DPS_Event* nodeDestroyed = NULL;
     DPS_Subscription* subscription = NULL;
     int listenPort = 0;
+    DPS_NodeAddress* listenAddr = NULL;
+    char addrText[24];
     DPS_Node* node;
 
     DPS_Debug = DPS_FALSE;
@@ -114,12 +93,21 @@ int main(int argc, char** argv)
     node = DPS_CreateNode("/", NULL, NULL);
     nodeDestroyed = DPS_CreateEvent();
 
-    ret = DPS_StartNode(node, DPS_MCAST_PUB_ENABLE_RECV, listenPort);
+    node = DPS_CreateNode("/", NULL, NULL);
+    listenAddr = DPS_CreateAddress();
+    if (!listenAddr) {
+        ret = DPS_ERR_RESOURCES;
+        DPS_ERRPRINT("DPS_CreateAddress failed: %s\n", DPS_ErrTxt(ret));
+        goto Exit;
+    }
+    snprintf(addrText, sizeof(addrText), "[::]:%d", listenPort);
+    DPS_SetAddress(listenAddr, addrText);
+    ret = DPS_StartNode(node, DPS_MCAST_PUB_ENABLE_RECV, listenAddr);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
         goto Exit;
     }
-    DPS_PRINT("Subscriber is listening on port %d\n", DPS_GetPortNumber(node));
+    DPS_PRINT("Subscriber is listening on %s\n", DPS_GetListenAddressString(node));
 
     if (payloadSize > 0) {
         payload = malloc(payloadSize);
@@ -134,6 +122,7 @@ Exit:
     DPS_WaitForEvent(nodeDestroyed);
     DPS_DestroySubscription(subscription);
     DPS_DestroyEvent(nodeDestroyed);
+    DPS_DestroyAddress(listenAddr);
     return (ret == DPS_OK) ? EXIT_SUCCESS : EXIT_FAILURE;
 
 Usage:

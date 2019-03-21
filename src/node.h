@@ -91,7 +91,8 @@ typedef struct _DPS_Node {
     void* userData;                       /**< Application provided user data */
 
     uint8_t subsPending;                  /**< Used to rate-limit subscription messages */
-    uint16_t port;                        /**< Listening port */
+    DPS_NodeAddress addr;                 /**< Listening address */
+    char addrStr[DPS_NODE_ADDRESS_MAX_STRING_LEN]; /**< Text of listening address */
     DPS_UUID meshId;                      /**< Randomly allocated mesh id for this node */
     DPS_UUID minMeshId;                   /**< Minimum mesh id seen by this node */
     char separators[13];                  /**< List of separator characters */
@@ -270,7 +271,7 @@ void DPS_OnSendComplete(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_bu
  *          - DPS_ERR_EXISTS if the node already exists
  *          - Other status codes indicating an error
  */
-DPS_Status DPS_AddRemoteNode(DPS_Node* node, DPS_NodeAddress* addr, DPS_NetConnection* cn, RemoteNode** remoteOut);
+DPS_Status DPS_AddRemoteNode(DPS_Node* node, const DPS_NodeAddress* addr, DPS_NetConnection* cn, RemoteNode** remoteOut);
 
 /**
  * Lookup a remote node by address.
@@ -282,7 +283,7 @@ DPS_Status DPS_AddRemoteNode(DPS_Node* node, DPS_NodeAddress* addr, DPS_NetConne
  *
  * @return  A pointer to the remote node or NULL if the lookup failed.
  */
-RemoteNode* DPS_LookupRemoteNode(DPS_Node* node, DPS_NodeAddress* addr);
+RemoteNode* DPS_LookupRemoteNode(DPS_Node* node, const DPS_NodeAddress* addr);
 
 /**
  * Must be called with the node lock held.

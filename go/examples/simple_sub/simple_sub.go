@@ -40,8 +40,8 @@ func main() {
 	}
 
 	node := dps.CreateNode("/", keyStore, nodeId)
-	dps.StartNode(node, dps.MCAST_PUB_ENABLE_RECV, 0)
-	fmt.Printf("Subscriber is listening on port %v\n", dps.GetPortNumber(node))
+	dps.StartNode(node, dps.MCAST_PUB_ENABLE_RECV, nil)
+	fmt.Printf("Subscriber is listening on %v\n", dps.GetListenAddressString(node))
 
 	sub := dps.CreateSubscription(node, []string{"a/b/c"})
 	dps.Subscribe(sub, func(sub *dps.Subscription, pub *dps.Publication, payload []byte) {
@@ -50,7 +50,7 @@ func main() {
 		fmt.Printf("  sub %v\n", strings.Join(dps.SubscriptionGetTopics(sub), " | "))
 		fmt.Printf("%v\n", string(payload))
 		if dps.PublicationIsAckRequested(pub) {
-			ackMsg := fmt.Sprintf("This is an ACK from %v", dps.GetPortNumber(dps.PublicationGetNode(pub)))
+			ackMsg := fmt.Sprintf("This is an ACK from %v", dps.GetListenAddressString(node))
 			fmt.Printf("Sending ack for pub UUID %v(%v)\n", dps.PublicationGetUUID(pub), dps.PublicationGetSequenceNum(pub))
 			fmt.Printf("    %v\n", ackMsg)
 			dps.AckPublication(pub, []byte(ackMsg))

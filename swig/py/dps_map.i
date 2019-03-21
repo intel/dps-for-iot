@@ -91,14 +91,18 @@ public:
         /*
          * Address
          */
-        res = SWIG_AsCharPtrAndSize(tuple[0], &addr, NULL, &alloc);
-        if (!SWIG_IsOK(res)) {
-            SWIG_exception_fail(SWIG_ArgError(res), "in method '" "$symname" "', argument " "$argnum"" of type '" "$1_type""'");
+        if (tuple[0] != Py_None) {
+            res = SWIG_AsCharPtrAndSize(tuple[0], &addr, NULL, &alloc);
+            if (!SWIG_IsOK(res)) {
+                SWIG_exception_fail(SWIG_ArgError(res), "in method '" "$symname" "', argument " "$argnum"" of type '" "$1_type""'");
+            }
+            if (uv_inet_pton(AF_INET, addr, &in->sin_addr) != 0) {
+                SWIG_exception_fail(SWIG_ArgError(SWIG_ValueError), "in method '" "$symname" "', argument " "$argnum"" of type '" "$1_type""'");
+            }
+            if (alloc == SWIG_NEWOBJ) delete[] addr;
+        } else {
+            in->sin_addr.s_addr = INADDR_ANY;
         }
-        if (uv_inet_pton(AF_INET, addr, &in->sin_addr) != 0) {
-            SWIG_exception_fail(SWIG_ArgError(SWIG_ValueError), "in method '" "$symname" "', argument " "$argnum"" of type '" "$1_type""'");
-        }
-        if (alloc == SWIG_NEWOBJ) delete[] addr;
         /*
          * Port
          */
@@ -133,14 +137,18 @@ public:
         /*
          * Address
          */
-        res = SWIG_AsCharPtrAndSize(tuple[0], &addr, NULL, &alloc);
-        if (!SWIG_IsOK(res)) {
-            SWIG_exception_fail(SWIG_ArgError(res), "in method '" "$symname" "', argument " "$argnum"" of type '" "$1_type""'");
+        if (tuple[0] != Py_None) {
+            res = SWIG_AsCharPtrAndSize(tuple[0], &addr, NULL, &alloc);
+            if (!SWIG_IsOK(res)) {
+                SWIG_exception_fail(SWIG_ArgError(res), "in method '" "$symname" "', argument " "$argnum"" of type '" "$1_type""'");
+            }
+            if (uv_inet_pton(AF_INET6, addr, &in->sin6_addr) != 0) {
+                SWIG_exception_fail(SWIG_ArgError(SWIG_ValueError), "in method '" "$symname" "', argument " "$argnum"" of type '" "$1_type""'");
+            }
+            if (alloc == SWIG_NEWOBJ) delete[] addr;
+        } else {
+            memcpy(&in->sin6_addr, &in6addr_any, sizeof(in->sin6_addr));
         }
-        if (uv_inet_pton(AF_INET6, addr, &in->sin6_addr) != 0) {
-            SWIG_exception_fail(SWIG_ArgError(SWIG_ValueError), "in method '" "$symname" "', argument " "$argnum"" of type '" "$1_type""'");
-        }
-        if (alloc == SWIG_NEWOBJ) delete[] addr;
         /*
          * Port
          */

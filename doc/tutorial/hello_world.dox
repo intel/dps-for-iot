@@ -36,7 +36,7 @@ For this example, we are going to be sending and receiving
 multicast publications so we enable both and let DPS assign the
 listening port.
 
-@see DPS_MCAST_PUB_DISABLED, DPS_GetPortNumber()
+@see DPS_MCAST_PUB_DISABLED, DPS_GetListenAddress()
 
 @section publishing Publishing
 

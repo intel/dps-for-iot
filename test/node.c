@@ -25,7 +25,6 @@
 
 #define MAX_TOPICS 64
 #define MAX_RECIPIENTS 8
-#define MAX_LINKS  8
 
 typedef struct _AccessControlEntry {
     const char *topic;
@@ -160,31 +159,6 @@ static DPS_MemoryKeyStore* CreateKeyStore(const Id* self)
     return keyStore;
 }
 
-static int IntArg(char* opt, char*** argp, int* argcp, int* val, int min, int max)
-{
-    char* p;
-    char** arg = *argp;
-    int argc = *argcp;
-
-    if (strcmp(*arg++, opt) != 0) {
-        return 0;
-    }
-    if (!--argc) {
-        return 0;
-    }
-    *val = strtol(*arg++, &p, 10);
-    if (*p) {
-        return 0;
-    }
-    if (*val < min || *val > max) {
-        DPS_PRINT("Value for option %s must be in range %d..%d\n", opt, min, max);
-        return 0;
-    }
-    *argp = arg;
-    *argcp = argc;
-    return 1;
-}
-
 int main(int argc, char** argv)
 {
     char** arg = argv + 1;
@@ -195,19 +169,14 @@ int main(int argc, char** argv)
     char* pubs[MAX_TOPICS];
     size_t numPubs = 0;
     DPS_AcknowledgementHandler ackHandler = AcknowledgementHandler;
-    int links[MAX_LINKS];
-    size_t numLinks = 0;
-    int listenPort = 0;
-
+    DPS_NodeAddress* listenAddr = NULL;
     DPS_Node* node = NULL;
     const Id* self = NULL;
-    DPS_NodeAddress* addr = NULL;
     DPS_MemoryKeyStore* keyStore = NULL;
     DPS_Subscription* subscription = NULL;
     DPS_Publication* publication = NULL;
     const Id* id;
     DPS_Status ret = DPS_OK;
-    size_t i;
 
     DPS_Debug = DPS_FALSE;
     while (--argc) {
@@ -232,19 +201,10 @@ int main(int argc, char** argv)
                 goto Usage;
             }
             pubs[numPubs++] = *arg++;
-        } else if (IntArg("-c", &arg, &argc, &links[numLinks], 1, UINT16_MAX)) {
-            ++numLinks;
-        } else if (IntArg("-l", &arg, &argc, &listenPort, 1000, UINT16_MAX)) {
+        } else if (AddressArg("-l", &arg, &argc, &listenAddr)) {
         } else {
             goto Usage;
         }
-    }
-    /*
-     * Disable multicast publications if we have an explicit destination
-     */
-    if (numLinks) {
-        mcast = DPS_MCAST_PUB_DISABLED;
-        addr = DPS_CreateAddress();
     }
 
     event = DPS_CreateEvent();
@@ -269,7 +229,7 @@ int main(int argc, char** argv)
         ret = DPS_ERR_RESOURCES;
         goto Exit;
     }
-    ret = DPS_StartNode(node, mcast, listenPort);
+    ret = DPS_StartNode(node, mcast, listenAddr);
     if (ret != DPS_OK) {
         goto Exit;
     }
@@ -306,17 +266,6 @@ int main(int argc, char** argv)
         }
     }
 
-    for (i = 0; i < numLinks; ++i) {
-        ret = DPS_LinkTo(node, NULL, links[i], addr);
-        if (ret != DPS_OK) {
-            goto Exit;
-        }
-    }
-    if (numLinks) {
-        /* Wait for links to settle */
-        TimedWait(500);
-    }
-
     if (publication) {
         ret = DPS_Publish(publication, NULL, 0, 0);
         if (ret != DPS_OK) {
@@ -328,37 +277,24 @@ int main(int argc, char** argv)
     Wait();
 
 Exit:
-    if (publication) {
-        DPS_DestroyPublication(publication);
+    DPS_DestroyPublication(publication);
+    DPS_DestroySubscription(subscription);
+    ret = DPS_DestroyNode(node, OnNodeDestroyed, event);
+    if (ret == DPS_OK) {
+        DPS_WaitForEvent(event);
     }
-    if (subscription) {
-        DPS_DestroySubscription(subscription);
-    }
-    if (node) {
-        ret = DPS_DestroyNode(node, OnNodeDestroyed, event);
-        if (ret == DPS_OK) {
-            DPS_WaitForEvent(event);
-        }
-    }
-    if (keyStore) {
-        DPS_DestroyMemoryKeyStore(keyStore);
-    }
-    if (event) {
-        DPS_DestroyEvent(event);
-    }
-    if (addr) {
-        DPS_DestroyAddress(addr);
-    }
+    DPS_DestroyMemoryKeyStore(keyStore);
+    DPS_DestroyEvent(event);
+    DPS_DestroyAddress(listenAddr);
     DPS_PRINT("Exiting\n");
     return ret;
 
 Usage:
-    DPS_PRINT("Usage %s [-d] [-u <user>] [-s <topic>] [-p <topic>] [-l <portnum>] [-c <portnum>]\n", argv[0]);
+    DPS_PRINT("Usage %s [-d] [-u <user>] [-s <topic>] [-p <topic>] [-l <address>]\n", argv[0]);
     DPS_PRINT("       -d: Enable debug ouput if built for debug.\n");
     DPS_PRINT("       -u: Set user ID.\n");
     DPS_PRINT("       -s: Subscribe to topic.  May be repeated.\n");
     DPS_PRINT("       -p: Publish to topic.  May be repeated.\n");
-    DPS_PRINT("       -l: Port number to listen on for incoming connections.\n");
-    DPS_PRINT("       -c: Port to link to.  May be repeated.\n");
+    DPS_PRINT("       -l: Address to listen on for incoming connections.\n");
     return DPS_ERR_FAILURE;
 }

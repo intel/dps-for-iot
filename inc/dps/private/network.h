@@ -36,6 +36,9 @@
 extern "C" {
 #endif
 
+#define DPS_MAX_HOST_LEN    256  /**< Per RFC 1034/1035 */
+#define DPS_MAX_SERVICE_LEN  16  /**< Per RFC 6335 section 5.1 */
+
 /**
  * Opaque data structure for network-specific state
  */
@@ -138,6 +141,15 @@ typedef DPS_Status (*DPS_OnReceive)(DPS_Node* node, DPS_NetEndpoint* endpoint, D
 void DPS_EndpointSetPort(DPS_NetEndpoint* endpoint, uint16_t port);
 
 /**
+ * Set the path on a network endpoint.
+ *
+ * @param endpoint  The endpoint to set
+ * @param path      The path to set on the endpoint
+ * @param pathLen   The size of the path
+ */
+void DPS_EndpointSetPath(DPS_NetEndpoint* endpoint, char* path, size_t pathLen);
+
+/**
  * Send a message locally, short-circuiting the transport layer.
  *
  * @param node The node sending and receiving the message
@@ -222,21 +234,22 @@ DPS_Status DPS_MulticastSend(DPS_MulticastSender* sender, void* appCtx, uv_buf_t
  * Start listening and receiving data
  *
  * @param node  Opaque pointer to the DPS node
- * @param port  If non-zero the port number to listen on, if zero use an ephemeral port
+ * @param addr  If non-NULL the address to listen on, if NULL use an ephemeral address
  * @param cb    Function to call when data is received
  *
  * @return   Returns a pointer to an opaque data structure that holds the state of the netCtx.
  */
-DPS_NetContext* DPS_NetStart(DPS_Node* node, uint16_t port, DPS_OnReceive cb);
+DPS_NetContext* DPS_NetStart(DPS_Node* node, const DPS_NodeAddress* addr, DPS_OnReceive cb);
 
 /**
- * Get the port the netCtx is listening on
+ * Get the address the netCtx is listening on
  *
+ * @param addr    The address to set
  * @param netCtx  Pointer to an opaque data structure that holds the state of the netCtx.
  *
- * @return the port
+ * @return The addr passed in.
  */
-uint16_t DPS_NetGetListenerPort(DPS_NetContext* netCtx);
+DPS_NodeAddress* DPS_NetGetListenAddress(DPS_NodeAddress* addr, DPS_NetContext* netCtx);
 
 /**
  * Stop listening for data
@@ -287,7 +300,7 @@ DPS_Status DPS_NetSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* endpoint,
  *
  * @param cn    Connection to be add'refd
  */
-void DPS_NetConnectionAddRef(DPS_NetConnection* cn);
+void DPS_NetConnectionIncRef(DPS_NetConnection* cn);
 
 /**
  * Decrement the reference count on a connection potentially allowing an underlying connection to be
@@ -319,6 +332,27 @@ int DPS_SameAddr(const DPS_NodeAddress* addr1, const DPS_NodeAddress* addr2);
 const char* DPS_NetAddrText(const struct sockaddr* addr);
 
 /**
+ * Returns port of an address
+ *
+ * @param addr  The address
+ *
+ * @return The port
+ */
+uint16_t DPS_NetAddrPort(const struct sockaddr* addr);
+
+/**
+ * Set a node address
+ *
+ * @param addr  The address to set
+ * @param type  The IP address type
+ * @param sa    The value to set
+ *
+ * @return The addr passed in.
+ */
+DPS_NodeAddress* DPS_NetSetAddr(DPS_NodeAddress* addr, DPS_NodeAddressType type,
+                                const struct sockaddr* sa);
+
+/**
  * Maps the supplied address to a v6 address if needed.
  *
  * This is necessary when using dual-stack sockets.
@@ -326,6 +360,20 @@ const char* DPS_NetAddrText(const struct sockaddr* addr);
  * @param addr  The address
  */
 void DPS_MapAddrToV6(struct sockaddr* addr);
+
+/**
+ * Split address text into host and service parts
+ *
+ * @param addrText The address text
+ * @param host The host part
+ * @param hostLen Size of the host part
+ * @param service The service part
+ * @param serviceLen Size of the service part
+ *
+ * @return DPS_OK if the split succeeds, an error otherwise
+ */
+DPS_Status DPS_SplitAddress(const char* addrText, char* host, size_t hostLen,
+                            char* service, size_t serviceLen);
 
 #ifdef __cplusplus
 }

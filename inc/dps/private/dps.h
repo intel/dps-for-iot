@@ -58,6 +58,7 @@ extern "C" {
 #define DPS_CBOR_KEY_TOPICS        11   /**< array (tstr) */
 #define DPS_CBOR_KEY_DATA          12   /**< bstr */
 #define DPS_CBOR_KEY_ACK_SEQ_NUM   13   /**< uint */
+#define DPS_CBOR_KEY_PATH          14   /**< tstr */
 
 /**
  * Convert seconds to milliseconds
@@ -65,11 +66,49 @@ extern "C" {
 #define DPS_SECS_TO_MS(t)   ((uint64_t)(t) * 1000ull)
 
 /**
+ * Maximum length of address text is of the form: "[IPv6%IFNAME]:PORT"
+ */
+#define DPS_NODE_ADDRESS_MAX_STRING_LEN (1 + INET6_ADDRSTRLEN + 1 + UV_IF_NAMESIZE + 2 + 8)
+
+/**
+ * Address types
+ *
+ * These correspond to the supported transports.
+ */
+typedef enum {
+    DPS_UNKNOWN = 0,            /**< Unknown type */
+    DPS_DTLS,                   /**< DTLS */
+    DPS_TCP,                    /**< TCP */
+    DPS_UDP,                    /**< UDP */
+    DPS_PIPE,                   /**< Named pipe */
+} DPS_NodeAddressType;
+
+#ifdef _WIN32
+#define DPS_NODE_ADDRESS_PATH_MAX 256 /**< Maximum pipe name length */
+#else
+#define DPS_NODE_ADDRESS_PATH_MAX 108 /**< Maximum pipe name length */
+#endif
+
+/**
  * Address type
  */
 typedef struct _DPS_NodeAddress {
-    struct sockaddr_storage inaddr; /**< Storage for socket address type */
+    DPS_NodeAddressType type;      /**< Type of address */
+    union {
+        struct sockaddr_storage inaddr; /**< Storage for IP address type */
+        char path[DPS_NODE_ADDRESS_PATH_MAX]; /**< Storage for pipe name */
+    } u; /**< Type specific storage */
 } DPS_NodeAddress;
+
+/**
+ * Get the loopback address of the node's listening address.
+ *
+ * @param addr The loopback address
+ * @param node The node
+ *
+ * @return DPS_OK if successful, an error otherwise
+ */
+DPS_Status DPS_GetLoopbackAddress(DPS_NodeAddress* addr, DPS_Node* node);
 
 /**
  * For managing data that has been received

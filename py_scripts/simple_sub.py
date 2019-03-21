@@ -1,6 +1,7 @@
 #!/usr/bin/python
 import dps
 import sys
+import threading
 import time
 
 # Pre-shared keys for testing only. DO NOT USE THESE KEYS IN A REAL APPLICATION!
@@ -95,12 +96,10 @@ parser.add_argument("-d", "--debug", action='store_true',
                     help="Enable debug ouput if built for debug.")
 parser.add_argument("-x", "--encryption", type=int, choices=[0,1,2], default=1,
                     help="Disable (0) or enable symmetric (1) or asymmetric(2) encryption. Default is symmetric encryption enabled.")
-parser.add_argument("-l", "--listen", type=int, default=0,
-                    help="Port number to listen on for incoming connections.")
-parser.add_argument("-o", "--host", default=None,
-                    help="Host to link to.")
-parser.add_argument("-p", "--port", type=int, default=0,
-                    help="Port to link to.")
+parser.add_argument("-l", "--listen", default=None,
+                    help="Address to listen on for incoming connections.")
+parser.add_argument("-p", "--port", default=None,
+                    help="Address to link to.")
 args = parser.parse_args()
 dps.cvar.debug = args.debug
 
@@ -109,7 +108,7 @@ dps.set_network_key(key_store, network_key_id, network_key)
 if args.encryption == 0:
     node_id = None
 elif args.encryption == 1:
-    for i in xrange(len(key_id)):
+    for i in range(len(key_id)):
         dps.set_content_key(key_store, key_id[i], key_data[i])
     node_id = None
 elif args.encryption == 2:
@@ -119,33 +118,50 @@ elif args.encryption == 2:
     node_id = subscriber_id
 
 def on_pub(sub, pub, payload):
-    print "Pub %s(%d) [%s] matches:" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub), str(dps.publication_get_sender_key_id(pub)))
-    print "  pub " + " | ".join(dps.publication_get_topics(pub))
-    print "  sub " + " | ".join(dps.subscription_get_topics(sub))
-    print payload
+    print("Pub %s(%d) [%s] matches:" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub), str(dps.publication_get_sender_key_id(pub))))
+    print("  pub " + " | ".join(dps.publication_get_topics(pub)))
+    print("  sub " + " | ".join(dps.subscription_get_topics(sub)))
+    print(payload)
     if dps.publication_is_ack_requested(pub):
-        ack_msg = "This is an ACK from %d" % (dps.get_port_number(dps.publication_get_node(pub)))
-        print "Sending ack for pub UUID %s(%d)" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub))
-        print "    %s" % (ack_msg)
+        ack_msg = "This is an ACK from %s" % (dps.get_listen_address(dps.publication_get_node(pub)))
+        print("Sending ack for pub UUID %s(%d)" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub)))
+        print("    %s" % (ack_msg))
         dps.ack_publication(pub, ack_msg);
 
+event = threading.Event()
+
+def on_link(node, addr, status):
+    if status == dps.OK:
+        print("Subscriber is linked to %s" % (addr))
+    else:
+        print("link %s returned %s" % (addr, dps.err_txt(status)))
+    event.set()
+
 node = dps.create_node("/", key_store, node_id)
-dps.start_node(node, dps.MCAST_PUB_ENABLE_RECV, args.listen)
-print "Subscriber is listening on port %d" % (dps.get_port_number(node))
+listen_addr = None
+if args.listen != None:
+    listen_addr = dps.create_address()
+    try:
+        dps.set_address(listen_addr, "[::]:%d" % (int(args.listen)))
+    except ValueError:
+        dps.set_address(listen_addr, args.listen)
+dps.start_node(node, dps.MCAST_PUB_ENABLE_RECV, listen_addr)
+print("Subscriber is listening on %s" % (dps.get_listen_address(node)))
 
 sub = dps.create_subscription(node, ['a/b/c']);
 dps.subscribe(sub, on_pub)
 
-if args.port != 0:
-    addr = dps.create_address()
-    ret = dps.link_to(node, args.host, args.port, addr)
+if args.port != None:
+    try:
+        addr_text = int(args.port)
+        addr_text = "[::1]:" + addr_text
+    except ValueError:
+        addr_text = args.port
+    ret = dps.link(node, addr_text, on_link)
     if ret == dps.OK:
-        print "Subscriber is linked to %s" % (addr)
+        event.wait()
     else:
-        print "link_to %d returned %s" % (args.port, dps.err_txt(ret))
-    dps.destroy_address(addr)
-elif args.host != None:
-    sys.exit("Invalid argument: must provide port with host")
+        print("link %s returned %s" % (addr_text, dps.err_txt(ret)))
 
 if not sys.flags.interactive:
     while True:

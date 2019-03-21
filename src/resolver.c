@@ -34,16 +34,13 @@
  */
 DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
-#define MAX_HOST_LEN    256  /* Per RFC 1034/1035 */
-#define MAX_SERVICE_LEN  16  /* Per RFC 6335 section 5.1 */
-
 typedef struct _ResolverInfo {
     DPS_Node* node;
     DPS_OnResolveAddressComplete cb;
     void* data;
     uv_getaddrinfo_t info;
-    char host[MAX_HOST_LEN + 1];
-    char service[MAX_SERVICE_LEN + 1];
+    char host[DPS_MAX_HOST_LEN + 1];
+    char service[DPS_MAX_SERVICE_LEN + 1];
     struct  _ResolverInfo* next;
 } ResolverInfo;
 
@@ -53,10 +50,17 @@ static void GetAddrInfoCB(uv_getaddrinfo_t* req, int status, struct addrinfo* re
 
     if (status == 0) {
         DPS_NodeAddress addr;
+#if defined(DPS_USE_DTLS)
+        addr.type = DPS_DTLS;
+#elif defined(DPS_USE_TCP)
+        addr.type = DPS_TCP;
+#elif defined(DPS_USE_UDP)
+        addr.type = DPS_UDP;
+#endif
         if (res->ai_family == AF_INET6) {
-            memcpy_s(&addr.inaddr, sizeof(addr.inaddr), res->ai_addr, sizeof(struct sockaddr_in6));
+            memcpy_s(&addr.u.inaddr, sizeof(addr.u.inaddr), res->ai_addr, sizeof(struct sockaddr_in6));
         } else {
-            memcpy_s(&addr.inaddr, sizeof(addr.inaddr), res->ai_addr, sizeof(struct sockaddr_in));
+            memcpy_s(&addr.u.inaddr, sizeof(addr.u.inaddr), res->ai_addr, sizeof(struct sockaddr_in));
         }
         resolver->cb(resolver->node, &addr, resolver->data);
         uv_freeaddrinfo(res);
@@ -65,6 +69,37 @@ static void GetAddrInfoCB(uv_getaddrinfo_t* req, int status, struct addrinfo* re
         resolver->cb(resolver->node, NULL, resolver->data);
     }
     free(resolver);
+}
+
+static void TryGetAddrInfoCB(uv_getaddrinfo_t* req, int status, struct addrinfo* res)
+{
+    ResolverInfo* resolver = (ResolverInfo*)req->data;
+
+    if (status == UV_EAI_ADDRFAMILY) {
+        /*
+         * Try again with the other address family for localhost
+         */
+        struct addrinfo hints;
+        memset(&hints, 0, sizeof(hints));
+        hints.ai_flags = AI_ADDRCONFIG;
+        if (!strcmp(resolver->host, "::1")) {
+            status = uv_getaddrinfo(req->loop, &resolver->info, GetAddrInfoCB, "127.0.0.1",
+                                    resolver->service, &hints);
+        } else if (!strcmp(resolver->host, "127.0.0.1")) {
+            status = uv_getaddrinfo(req->loop, &resolver->info, GetAddrInfoCB, "::1",
+                                    resolver->service, &hints);
+        } else if (!strcmp(resolver->host, "::")) {
+            status = uv_getaddrinfo(req->loop, &resolver->info, GetAddrInfoCB, "0.0.0.0",
+                                    resolver->service, &hints);
+        } else if (!strcmp(resolver->host, "0.0.0.0")) {
+            status = uv_getaddrinfo(req->loop, &resolver->info, GetAddrInfoCB, "::",
+                                    resolver->service, &hints);
+        }
+        if (status == 0) {
+            return;
+        }
+    }
+    GetAddrInfoCB(req, status, res);
 }
 
 void DPS_AsyncResolveAddress(uv_async_t* async)
@@ -77,6 +112,7 @@ void DPS_AsyncResolveAddress(uv_async_t* async)
 
     while (node->resolverList) {
         int r;
+        struct addrinfo hints;
         ResolverInfo* resolver = node->resolverList;
         node->resolverList = resolver->next;
 
@@ -86,7 +122,10 @@ void DPS_AsyncResolveAddress(uv_async_t* async)
             continue;
         }
         resolver->info.data = resolver;
-        r = uv_getaddrinfo(async->loop, &resolver->info, GetAddrInfoCB, resolver->host, resolver->service, NULL);
+        memset(&hints, 0, sizeof(hints));
+        hints.ai_flags = AI_ADDRCONFIG;
+        r = uv_getaddrinfo(async->loop, &resolver->info, TryGetAddrInfoCB, resolver->host,
+                           resolver->service, &hints);
         if (r) {
             DPS_ERRPRINT("uv_getaddrinfo call error %s\n", uv_err_name(r));
             resolver->cb(resolver->node, NULL, resolver->data);
@@ -97,7 +136,8 @@ void DPS_AsyncResolveAddress(uv_async_t* async)
     DPS_UnlockNode(node);
 }
 
-DPS_Status DPS_ResolveAddress(DPS_Node* node, const char* host, const char* service, DPS_OnResolveAddressComplete cb, void* data)
+DPS_Status DPS_ResolveAddress(DPS_Node* node, const char* host, const char* service,
+                              DPS_OnResolveAddressComplete cb, void* data)
 {
     DPS_Status ret;
     ResolverInfo* resolver;
@@ -111,8 +151,12 @@ DPS_Status DPS_ResolveAddress(DPS_Node* node, const char* host, const char* serv
     if (!service || !cb) {
         return DPS_ERR_NULL;
     }
-    if (!host) {
-        host = "localhost";
+    /*
+     * Resolve NULL or "any" address to localhost so it is a usable
+     * destination.
+     */
+    if (!host || !strcmp(host, "0.0.0.0") || !strcmp(host, "::")) {
+        host = "::1";
     }
     resolver = calloc(1, sizeof(ResolverInfo));
     if (!resolver) {

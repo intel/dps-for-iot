@@ -65,7 +65,6 @@ typedef struct _OnOpCompletion {
         DPS_OnUnlinkComplete unlink;
         void* cb;
     } on;
-    struct _OnOpCompletion* next;
 } OnOpCompletion;
 
 const DPS_UUID DPS_MaxMeshId = { .val64 = { UINT64_MAX, UINT64_MAX } };
@@ -418,7 +417,7 @@ DPS_Status DPS_MuteRemoteNode(DPS_Node* node, RemoteNode* remote)
 
     assert(!remote->outbound.muted);
 
-    DPS_DBGPRINT("%d muting %s\n", node->port, DESCRIBE(remote));
+    DPS_DBGPRINT("%s muting %s\n", node->addrStr, DESCRIBE(remote));
 
     remote->outbound.muted = DPS_TRUE;
     remote->outbound.meshId = DPS_MaxMeshId;
@@ -445,7 +444,7 @@ DPS_Status DPS_UnmuteRemoteNode(DPS_Node* node, RemoteNode* remote)
 
     assert(remote->outbound.muted);
 
-    DPS_DBGPRINT("%d unmuting %s\n", node->port, DESCRIBE(remote));
+    DPS_DBGPRINT("%s unmuting %s\n", node->addrStr, DESCRIBE(remote));
 
     remote->outbound.muted = DPS_FALSE;
     remote->inbound.muted = DPS_FALSE;
@@ -480,7 +479,7 @@ int DPS_MeshHasLoop(DPS_Node* node, RemoteNode* src, DPS_UUID* meshId)
     }
 }
 
-RemoteNode* DPS_LookupRemoteNode(DPS_Node* node, DPS_NodeAddress* addr)
+RemoteNode* DPS_LookupRemoteNode(DPS_Node* node, const DPS_NodeAddress* addr)
 {
     RemoteNode* remote;
 
@@ -495,7 +494,8 @@ RemoteNode* DPS_LookupRemoteNode(DPS_Node* node, DPS_NodeAddress* addr)
     return NULL;
 }
 
-static OnOpCompletion* AllocCompletion(DPS_Node* node, RemoteNode* remote, OpType op, void* data, void* cb)
+static OnOpCompletion* AllocCompletion(DPS_Node* node, RemoteNode* remote, OpType op, void* data,
+                                       void* cb)
 {
     OnOpCompletion* cpn;
 
@@ -513,16 +513,17 @@ static OnOpCompletion* AllocCompletion(DPS_Node* node, RemoteNode* remote, OpTyp
 /*
  * Add a remote node or return an existing one
  */
-DPS_Status DPS_AddRemoteNode(DPS_Node* node, DPS_NodeAddress* addr, DPS_NetConnection* cn, RemoteNode** remoteOut)
+DPS_Status DPS_AddRemoteNode(DPS_Node* node, const DPS_NodeAddress* addr, DPS_NetConnection* cn,
+                             RemoteNode** remoteOut)
 {
     RemoteNode* remote = DPS_LookupRemoteNode(node, addr);
     if (remote) {
         *remoteOut = remote;
         /*
-         * AddRef a newly established connection
+         * IncRef a newly established connection
          */
         if (cn && !remote->ep.cn) {
-            DPS_NetConnectionAddRef(cn);
+            DPS_NetConnectionIncRef(cn);
             remote->ep.cn = cn;
         }
         return DPS_ERR_EXISTS;
@@ -542,7 +543,7 @@ DPS_Status DPS_AddRemoteNode(DPS_Node* node, DPS_NodeAddress* addr, DPS_NetConne
     /*
      * This tells the network layer to keep connection alive for this address
      */
-    DPS_NetConnectionAddRef(cn);
+    DPS_NetConnectionIncRef(cn);
     *remoteOut = remote;
     return DPS_OK;
 }
@@ -1027,7 +1028,6 @@ static DPS_Status OnNetReceive(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Status s
 DPS_Status DPS_LoopbackSend(DPS_Node* node, uv_buf_t* bufs, size_t numBufs)
 {
     DPS_Status ret;
-    struct sockaddr_in saddr;
     DPS_NetEndpoint ep;
     DPS_NetRxBuffer* buf = NULL;
     size_t len = 0;
@@ -1035,11 +1035,10 @@ DPS_Status DPS_LoopbackSend(DPS_Node* node, uv_buf_t* bufs, size_t numBufs)
 
     assert(node->state == DPS_NODE_RUNNING);
 
-    memset(&saddr, 0, sizeof(saddr));
-    saddr.sin_family = AF_INET;
-    saddr.sin_port = htons(DPS_GetPortNumber(node));
-    saddr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-    DPS_SetAddress(&ep.addr, (const struct sockaddr*)&saddr);
+    ret = DPS_GetLoopbackAddress(&ep.addr, node);
+    if (ret != DPS_OK) {
+        goto Exit;
+    }
     ep.cn = NULL;
 
     /*
@@ -1056,8 +1055,10 @@ DPS_Status DPS_LoopbackSend(DPS_Node* node, uv_buf_t* bufs, size_t numBufs)
         goto Exit;
     }
     for (i = 0; i < numBufs; ++i) {
-        memcpy(buf->rx.rxPos, bufs[i].base, bufs[i].len);
-        buf->rx.rxPos += bufs[i].len;
+        if (bufs[i].len) {
+            memcpy(buf->rx.rxPos, bufs[i].base, bufs[i].len);
+            buf->rx.rxPos += bufs[i].len;
+        }
     }
     buf->rx.rxPos = buf->rx.base;
     ret = DecodeRequest(node, &ep, buf, DPS_FALSE);
@@ -1313,7 +1314,7 @@ static void StopNodeTask(uv_async_t* handle)
     uv_stop(handle->loop);
 }
 
-DPS_Status DPS_StartNode(DPS_Node* node, int mcast, uint16_t rxPort)
+DPS_Status DPS_StartNode(DPS_Node* node, int mcast, DPS_NodeAddress* listenAddr)
 {
     DPS_Status ret = DPS_OK;
     int r;
@@ -1390,17 +1391,18 @@ DPS_Status DPS_StartNode(DPS_Node* node, int mcast, uint16_t rxPort)
     if (mcast & DPS_MCAST_PUB_ENABLE_SEND) {
         node->mcastSender = DPS_MulticastStartSend(node);
     }
-    node->netCtx = DPS_NetStart(node, rxPort, OnNetReceive);
+    node->netCtx = DPS_NetStart(node, listenAddr, OnNetReceive);
     if (!node->netCtx) {
-        DPS_ERRPRINT("Failed to initialize network context on port %d\n", rxPort);
+        DPS_ERRPRINT("Failed to initialize network context on %s\n", DPS_NodeAddrToString(listenAddr));
         ret = DPS_ERR_NETWORK;
         goto ErrExit;
     }
     /*
-     * Make sure have the listenting port before we return
+     * Make sure have the listening address before we return
      */
-    node->port = DPS_NetGetListenerPort(node->netCtx);
-    assert(node->port);
+    DPS_NetGetListenAddress(&node->addr, node->netCtx);
+    strncpy_s(node->addrStr, sizeof(node->addrStr),
+              DPS_NodeAddrToString(&node->addr), DPS_NODE_ADDRESS_MAX_STRING_LEN);
     /*
      *  The node loop gets its own thread to run on
      */
@@ -1427,16 +1429,14 @@ DPS_NetContext* DPS_GetNetContext(DPS_Node* node)
     return node->netCtx;
 }
 
-uint16_t DPS_GetPortNumber(DPS_Node* node)
+const DPS_NodeAddress* DPS_GetListenAddress(DPS_Node* node)
 {
-    DPS_DBGTRACE();
+    return &node->addr;
+}
 
-    if (node) {
-        return node->port;
-    } else {
-        return 0;
-    }
-
+const char* DPS_GetListenAddressString(DPS_Node* node)
+{
+    return DPS_NodeAddrToString(&node->addr);
 }
 
 DPS_Status DPS_DestroyNode(DPS_Node* node, DPS_OnNodeDestroyed cb, void* data)
@@ -1477,50 +1477,118 @@ void DPS_SetNodeSubscriptionUpdateDelay(DPS_Node* node, uint32_t subsRateMsecs)
     node->subsRate = subsRateMsecs;
 }
 
-DPS_Status DPS_Link(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnLinkComplete cb, void* data)
+static DPS_Status Link(DPS_Node* node, const DPS_NodeAddress* addr, OnOpCompletion* completion)
 {
-    DPS_Status ret = DPS_OK;
     RemoteNode* remote = NULL;
+    DPS_Status ret;
 
-    DPS_DBGTRACE();
-
-    if (!addr || !node || !cb) {
-        return DPS_ERR_NULL;
-    }
     DPS_LockNode(node);
+    if (!addr) {
+        ret = DPS_ERR_UNRESOLVED;
+        goto Exit;
+    }
     ret = DPS_AddRemoteNode(node, addr, NULL, &remote);
     if (ret != DPS_OK && ret != DPS_ERR_EXISTS) {
-        DPS_UnlockNode(node);
-        return ret;
+        goto Exit;
     }
+    completion->remote = remote;
     /*
      * Remote may already exist due to incoming data which is ok,
      * but if we already linked it we return an error.
      */
     if (remote->linked) {
         DPS_ERRPRINT("Node at %s already linked\n", DPS_NodeAddrToString(addr));
-        DPS_UnlockNode(node);
-        return DPS_ERR_EXISTS;
+        ret = DPS_ERR_EXISTS;
+        goto Exit;
     }
     assert(!remote->completion);
     remote->linked = DPS_TRUE;
-    remote->completion = AllocCompletion(node, remote, LINK_OP, data, cb);
-    if (!remote->completion) {
-        DPS_DeleteRemoteNode(node, remote);
-        DPS_UnlockNode(node);
-        return DPS_ERR_RESOURCES;
-    }
+    remote->completion = completion;
+    ret = DPS_OK;
+Exit:
     DPS_UnlockNode(node);
-    /*
-     * This will cause an initial subscription to be sent to the remote node
-     * or trigger the completion if we have no new outbound interests for the
-     * remote node (i.e. the remote node is already linked to us).
-     */
-    DPS_UpdateSubs(node);
-    return DPS_OK;
+    if (ret == DPS_OK) {
+        /*
+         * This will cause an initial subscription to be sent to the remote node
+         * or trigger the completion if we have no new outbound interests for the
+         * remote node (i.e. the remote node is already linked to us).
+         */
+        DPS_UpdateSubs(node);
+    }
+    return ret;
 }
 
-DPS_Status DPS_Unlink(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnUnlinkComplete cb, void* data)
+static void OnResolve(DPS_Node* node, const DPS_NodeAddress* addr, void* data)
+{
+    OnOpCompletion* completion = (OnOpCompletion*)data;
+    DPS_Status ret;
+
+    ret = Link(node, addr, completion);
+    if (ret != DPS_OK) {
+        DPS_RemoteCompletion(node, completion->remote, ret);
+    }
+}
+
+DPS_Status DPS_Link(DPS_Node* node, const char* addrText, DPS_OnLinkComplete cb, void* data)
+{
+    DPS_Status ret = DPS_OK;
+    OnOpCompletion* completion = NULL;
+    DPS_NodeAddress* addr = NULL;
+#if defined(DPS_USE_DTLS) || defined(DPS_USE_TCP) || defined(DPS_USE_UDP)
+    char host[DPS_MAX_HOST_LEN + 1];
+    char service[DPS_MAX_SERVICE_LEN + 1];
+#endif
+
+    DPS_DBGTRACE();
+
+    if (!addrText || !node || !cb) {
+        return DPS_ERR_NULL;
+    }
+
+    completion = AllocCompletion(node, NULL, LINK_OP, data, cb);
+    if (!completion) {
+        ret = DPS_ERR_RESOURCES;
+        goto Exit;
+    }
+#if defined(DPS_USE_DTLS) || defined(DPS_USE_TCP) || defined(DPS_USE_UDP)
+    ret = DPS_SplitAddress(addrText, host, sizeof(host), service, sizeof(service));
+    if (ret != DPS_OK) {
+        DPS_ERRPRINT("DPS_SplitAddress returned %s\n", DPS_ErrTxt(ret));
+        goto Exit;
+    }
+    ret = DPS_ResolveAddress(node, host, service, OnResolve, completion);
+    if (ret != DPS_OK) {
+        DPS_ERRPRINT("DPS_ResolveAddress returned %s\n", DPS_ErrTxt(ret));
+        goto Exit;
+    }
+#elif defined(DPS_USE_PIPE)
+    addr = DPS_CreateAddress();
+    if (!addr) {
+        ret = DPS_ERR_RESOURCES;
+        goto Exit;
+    }
+    if (DPS_SetAddress(addr, addrText) == NULL) {
+        DPS_ERRPRINT("DPS_SetAddress failed\n");
+        ret = DPS_ERR_INVALID;
+        goto Exit;
+    }
+    ret = Link(node, addr, completion);
+    if (ret != DPS_OK) {
+        DPS_ERRPRINT("Link returned %s\n", DPS_ErrTxt(ret));
+        goto Exit;
+    }
+#endif
+Exit:
+    DPS_DestroyAddress(addr);
+    if (ret != DPS_OK) {
+        if (completion) {
+            free(completion);
+        }
+    }
+    return ret;
+}
+
+DPS_Status DPS_Unlink(DPS_Node* node, const DPS_NodeAddress* addr, DPS_OnUnlinkComplete cb, void* data)
 {
     RemoteNode* remote;
 
@@ -1566,7 +1634,19 @@ DPS_Status DPS_Unlink(DPS_Node* node, DPS_NodeAddress* addr, DPS_OnUnlinkComplet
 
 const char* DPS_NodeAddrToString(const DPS_NodeAddress* addr)
 {
-    return DPS_NetAddrText((const struct sockaddr*)&addr->inaddr);
+    if (addr) {
+        switch (addr->type) {
+        case DPS_DTLS:
+        case DPS_TCP:
+        case DPS_UDP:
+            return DPS_NetAddrText((const struct sockaddr*)&addr->u.inaddr);
+        case DPS_PIPE:
+            return addr->u.path;
+        default:
+            break;
+        }
+    }
+    return "NULL";
 }
 
 DPS_NodeAddress* DPS_CreateAddress()

@@ -92,36 +92,41 @@ static void OnData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* uvBuf, const
         goto Exit;
     }
     ep.cn = NULL;
-    DPS_SetAddress(&ep.addr, addr);
+    DPS_NetSetAddr(&ep.addr, DPS_UDP, addr);
     netCtx->receiveCB(netCtx->node, &ep, DPS_OK, buf);
 Exit:
     DPS_NetRxBufferDecRef(buf);
 }
 
-DPS_NetContext* DPS_NetStart(DPS_Node* node, uint16_t port, DPS_OnReceive cb)
+DPS_NetContext* DPS_NetStart(DPS_Node* node, const DPS_NodeAddress* addr, DPS_OnReceive cb)
 {
     int ret;
     DPS_NetContext* netCtx;
-    struct sockaddr_storage addr;
+    struct sockaddr* sa;
+    DPS_NodeAddress any;
 
-    netCtx = calloc(1, sizeof(*netCtx));
+    netCtx = calloc(1, sizeof(DPS_NetContext));
     if (!netCtx) {
         return NULL;
     }
     ret = uv_udp_init(node->loop, &netCtx->rxSocket);
     if (ret) {
-        DPS_ERRPRINT("uv_tcp_init error=%s\n", uv_err_name(ret));
+        DPS_ERRPRINT("uv_udp_init error=%s\n", uv_err_name(ret));
         free(netCtx);
         return NULL;
     }
     netCtx->node = node;
     netCtx->receiveCB = cb;
-    ret = uv_ip6_addr("::", port, (struct sockaddr_in6*)&addr);
-    if (ret) {
-        goto ErrorExit;
+    if (addr) {
+        sa = (struct sockaddr*)&addr->u.inaddr;
+    } else {
+        if (!DPS_SetAddress(&any, "[::]:0")) {
+            goto ErrorExit;
+        }
+        sa = (struct sockaddr*)&any.u.inaddr;
     }
     netCtx->rxSocket.data = netCtx;
-    ret = uv_udp_bind(&netCtx->rxSocket, (const struct sockaddr*)&addr, 0);
+    ret = uv_udp_bind(&netCtx->rxSocket, sa, 0);
     if (ret) {
         goto ErrorExit;
     }
@@ -138,19 +143,23 @@ ErrorExit:
     return NULL;
 }
 
-uint16_t DPS_NetGetListenerPort(DPS_NetContext* netCtx)
+DPS_NodeAddress* DPS_NetGetListenAddress(DPS_NodeAddress* addr, DPS_NetContext* netCtx)
 {
-    struct sockaddr_in6 addr;
-    int len = sizeof(addr);
+    int len;
 
+    DPS_DBGTRACEA("netCtx=%p\n", netCtx);
+
+    memzero_s(addr, sizeof(DPS_NodeAddress));
     if (!netCtx) {
-        return 0;
+        return addr;
     }
-    if (uv_udp_getsockname(&netCtx->rxSocket, (struct sockaddr*)&addr, &len)) {
-        return 0;
+    addr->type = DPS_UDP;
+    len = sizeof(struct sockaddr_in6);
+    if (uv_udp_getsockname(&netCtx->rxSocket, (struct sockaddr*)&addr->u.inaddr, &len)) {
+        return addr;
     }
-    DPS_DBGPRINT("Listener port = %d\n", ntohs(addr.sin6_port));
-    return ntohs(addr.sin6_port);
+    DPS_DBGPRINT("Listener address = %s\n", DPS_NodeAddrToString(addr));
+    return addr;
 }
 
 void DPS_NetStop(DPS_NetContext* netCtx)
@@ -219,10 +228,11 @@ DPS_Status DPS_NetSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf
     send->numBufs = numBufs;
 
     struct sockaddr_storage inaddr;
-    memcpy_s(&inaddr, sizeof(inaddr), &ep->addr.inaddr, sizeof(ep->addr.inaddr));
+    memcpy_s(&inaddr, sizeof(inaddr), &ep->addr.u.inaddr, sizeof(ep->addr.u.inaddr));
     DPS_MapAddrToV6((struct sockaddr *)&inaddr);
 
-    ret = uv_udp_send(&send->sendReq, &node->netCtx->rxSocket, send->bufs, (uint32_t)numBufs, (const struct sockaddr *)&inaddr, OnSendComplete);
+    ret = uv_udp_send(&send->sendReq, &node->netCtx->rxSocket, send->bufs, (uint32_t)numBufs,
+                      (const struct sockaddr *)&inaddr, OnSendComplete);
     if (ret) {
         DPS_ERRPRINT("DPS_NetSend status=%s\n", uv_err_name(ret));
         free(send);
@@ -231,7 +241,7 @@ DPS_Status DPS_NetSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf
     return DPS_OK;
 }
 
-void DPS_NetConnectionAddRef(DPS_NetConnection* cn)
+void DPS_NetConnectionIncRef(DPS_NetConnection* cn)
 {
     /* No-op for udp */
 }

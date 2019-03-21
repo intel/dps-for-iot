@@ -116,7 +116,7 @@ static Node* CreateNode()
         goto ErrorExit;
     }
     DPS_SetNodeSubscriptionUpdateDelay(node->node, 10);
-    ret = DPS_StartNode(node->node, DPS_MCAST_PUB_ENABLE_SEND | DPS_MCAST_PUB_ENABLE_RECV, 0);
+    ret = DPS_StartNode(node->node, DPS_MCAST_PUB_ENABLE_SEND | DPS_MCAST_PUB_ENABLE_RECV, NULL);
     if (ret != DPS_OK) {
         goto ErrorExit;
     }
@@ -232,19 +232,13 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t len)
     if (!addr) {
         goto Exit;
     }
-    DPS_LinkTo(client->node, NULL, DPS_GetPortNumber(server->node), addr);
+    DPS_LinkTo(client->node, DPS_GetListenAddressString(server->node), addr);
 
 Exit:
-    if (addr) {
-        DPS_DestroyAddress(addr);
-    }
-    if (pub) {
-        DPS_DestroyPublication(pub);
-    }
+    DPS_DestroyAddress(addr);
+    DPS_DestroyPublication(pub);
     DestroyNode(client);
-    if (sub) {
-        DPS_DestroySubscription(sub);
-    }
+    DPS_DestroySubscription(sub);
     DestroyNode(server);
     return 0;
 }

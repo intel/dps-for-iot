@@ -22,19 +22,20 @@
 
 #include <assert.h>
 #include <ctype.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #ifdef _WIN32
 #include <io.h>
 #else
 #include <unistd.h>
 #endif
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
 #include <dps/dbg.h>
 #include <dps/dps.h>
-#include <dps/synchronous.h>
 #include <dps/event.h>
 #include <dps/json.h>
+#include <dps/synchronous.h>
+#include "common.h"
 #include "keys.h"
 
 #define A_SIZEOF(a)  (sizeof(a) / sizeof((a)[0]))
@@ -42,8 +43,8 @@
 static int quiet = DPS_FALSE;
 static int json = DPS_FALSE;
 
-static const char AckFmt[] = "This is an ACK from %d";
-static const char JSONAckFmt[] = "{\"msg\":\"ACK Message\",\"port\":%d}";
+static const char AckFmt[] = "This is an ACK from %s";
+static const char JSONAckFmt[] = "{\"msg\":\"ACK Message\",\"address\":%s}";
 
 static void OnNodeDestroyed(DPS_Node* node, void* data)
 {
@@ -94,60 +95,39 @@ static void OnPubMatch(DPS_Subscription* sub, const DPS_Publication* pub, uint8_
         }
     }
     if (DPS_PublicationIsAckRequested(pub)) {
-        uint8_t ackMsg[64];
+        const DPS_NodeAddress* listenAddr = DPS_GetListenAddress(DPS_PublicationGetNode(pub));
+        uint8_t ackMsg[128];
         size_t len;
-        DPS_PRINT("Sending ack for pub UUID %s(%d)\n", DPS_UUIDToString(DPS_PublicationGetUUID(pub)), DPS_PublicationGetSequenceNum(pub));
+        DPS_PRINT("Sending ack for pub UUID %s(%d)\n", DPS_UUIDToString(DPS_PublicationGetUUID(pub)),
+                  DPS_PublicationGetSequenceNum(pub));
         if (json) {
-            sprintf(jsonStr, JSONAckFmt, DPS_GetPortNumber(DPS_PublicationGetNode(pub)));
+            sprintf(jsonStr, JSONAckFmt, DPS_NodeAddrToString(listenAddr));
             DPS_PRINT("    %s\n", jsonStr);
             ret = DPS_JSON2CBOR(jsonStr, ackMsg, sizeof(ackMsg), &len);
-            assert(ret == DPS_OK);
+            if (ret != DPS_OK) {
+                DPS_PRINT("Failed to convert json %s\n", DPS_ErrTxt(ret));
+            }
         } else {
-            sprintf((char*)ackMsg, AckFmt, DPS_GetPortNumber(DPS_PublicationGetNode(pub)));
+            sprintf((char*)ackMsg, AckFmt, DPS_NodeAddrToString(listenAddr));
             DPS_PRINT("    %s\n", ackMsg);
             len = strnlen((char*)ackMsg, sizeof(ackMsg));
+            ret = DPS_OK;
         }
-        ret = DPS_AckPublication(pub, ackMsg, len);
-        if (ret != DPS_OK) {
-            DPS_PRINT("Failed to ack pub %s\n", DPS_ErrTxt(ret));
+        if (ret == DPS_OK) {
+            ret = DPS_AckPublication(pub, ackMsg, len);
+            if (ret != DPS_OK) {
+                DPS_PRINT("Failed to ack pub %s\n", DPS_ErrTxt(ret));
+            }
         }
     }
 }
-
-static int IntArg(char* opt, char*** argp, int* argcp, int* val, int min, int max)
-{
-    char* p;
-    char** arg = *argp;
-    int argc = *argcp;
-
-    if (strcmp(*arg++, opt) != 0) {
-        return 0;
-    }
-    if (!--argc) {
-        return 0;
-    }
-    *val = strtol(*arg++, &p, 10);
-    if (*p) {
-        return 0;
-    }
-    if (*val < min || *val > max) {
-        DPS_PRINT("Value for option %s must be in range %d..%d\n", opt, min, max);
-        return 0;
-    }
-    *argp = arg;
-    *argcp = argc;
-    return 1;
-}
-
-#define MAX_LINKS 16
 
 typedef struct _Args {
     int numTopics;
     char* topicList[64];
-    int listenPort;
+    DPS_NodeAddress* listenAddr;
+    char* linkText[MAX_LINKS];
     int numLinks;
-    int linkPort[MAX_LINKS];
-    const char* linkHosts[MAX_LINKS];
     int wait;
     int encrypt;
     int subsRate;
@@ -174,9 +154,7 @@ static int IsInteractive(Args* args)
 
 static int ParseArgs(int argc, char** argv, Args* args)
 {
-    const char* host = NULL;
-
-    memset(args, 0, sizeof(*args));
+    memset(args, 0, sizeof(Args));
     args->encrypt = 1;
     args->subsRate = DPS_SUBSCRIPTION_UPDATE_RATE;
     args->mcastPub = DPS_MCAST_PUB_DISABLED;
@@ -186,24 +164,10 @@ static int ParseArgs(int argc, char** argv, Args* args)
          * Topics must come last
          */
         if (args->numTopics == 0) {
-            if (IntArg("-l", &argv, &argc, &args->listenPort, 1, UINT16_MAX)) {
+            if (ListenArg(&argv, &argc, &args->listenAddr)) {
                 continue;
             }
-            if (IntArg("-p", &argv, &argc, &args->linkPort[args->numLinks], 1, UINT16_MAX)) {
-                if (args->numLinks == (MAX_LINKS - 1)) {
-                    DPS_PRINT("Too many -p options\n");
-                    return DPS_FALSE;
-                }
-                args->linkHosts[args->numLinks] = host;
-                ++args->numLinks;
-                continue;
-            }
-            if (strcmp(*argv, "-h") == 0) {
-                ++argv;
-                if (!--argc) {
-                    return DPS_FALSE;
-                }
-                host = *argv++;
+            if (LinkArg(&argv, &argc, args->linkText, &args->numLinks)) {
                 continue;
             }
             if (strcmp(*argv, "-q") == 0) {
@@ -298,56 +262,49 @@ static int Subscribe(Subscriber* subscriber, Args* args)
 
 static void OnLinkComplete(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, void* data)
 {
+    DPS_NodeAddress* outAddr = (DPS_NodeAddress*)data;
+
     if (status == DPS_OK) {
+        DPS_CopyAddress(outAddr, addr);
         DPS_PRINT("Subscriber is linked to %s\n", DPS_NodeAddrToString(addr));
     } else {
         DPS_ERRPRINT("DPS_Link %s returned %s\n", DPS_NodeAddrToString(addr), DPS_ErrTxt(status));
     }
 }
 
-static void OnResolveAddressComplete(DPS_Node* node, DPS_NodeAddress* addr, void* data)
-{
-    DPS_Status ret;
-
-    ret = DPS_Link(node, addr, OnLinkComplete, NULL);
-    if (ret != DPS_OK) {
-        DPS_ERRPRINT("DPS_ResolveAddress %s returned %s\n", DPS_NodeAddrToString(addr), DPS_ErrTxt(ret));
-    }
-}
-
 static int LinkTo(Subscriber* subscriber, Args* args)
 {
     DPS_Status ret;
-    int i;
+    int numAddrs, i, j;
 
-    if (args->numLinks) {
-        for (i = 0; i < args->numLinks; ++i, ++subscriber->numAddrs) {
-            const char* host = args->linkHosts[i];
-            if (!host) {
-                host = "localhost";
-            }
-            char service[6] = { 0 };
-            snprintf(service, 6, "%d", args->linkPort[i]);
-            ret = DPS_ResolveAddress(subscriber->node, host, service, OnResolveAddressComplete, NULL);
-            if (ret != DPS_OK) {
-                DPS_ERRPRINT("DPS_ResolveAddress %d returned %s\n", args->linkPort[i], DPS_ErrTxt(ret));
-                return DPS_FALSE;
-            }
+    numAddrs = A_SIZEOF(subscriber->addrs) - subscriber->numAddrs;
+    if (numAddrs <= 0) {
+        return DPS_FALSE;
+    }
+    numAddrs = (numAddrs < args->numLinks) ? numAddrs : args->numLinks;
+
+    ret = DPS_OK;
+    for (i = 0, j = subscriber->numAddrs; (ret == DPS_OK) && (i < numAddrs); ++i, ++j) {
+        subscriber->addrs[j] = DPS_CreateAddress();
+        if (!subscriber->addrs[j]) {
+            ret = DPS_ERR_RESOURCES;
+        }
+        if (ret == DPS_OK) {
+            ret = DPS_Link(subscriber->node, args->linkText[j], OnLinkComplete, subscriber->addrs[j]);
         }
     }
-    return DPS_TRUE;
+    if (ret == DPS_OK) {
+        subscriber->numAddrs += j;
+        return DPS_TRUE;
+    } else {
+        DPS_ERRPRINT("DPS_Link %s returned %s\n", args->linkText[j], DPS_ErrTxt(ret));
+        return DPS_FALSE;
+    }
 }
 
 static void UnlinkFrom(Subscriber* subscriber)
 {
-    int i;
-    for (i = 0; i < subscriber->numAddrs; ++i) {
-        DPS_Status unlinkRet = DPS_UnlinkFrom(subscriber->node, subscriber->addrs[i]);
-        DPS_DestroyAddress(subscriber->addrs[i]);
-        if (unlinkRet != DPS_OK) {
-            DPS_ERRPRINT("DPS_UnlinkFrom %s returned %s\n", DPS_NodeAddrToString(subscriber->addrs[i]), DPS_ErrTxt(unlinkRet));
-        }
-    }
+    Unlink(subscriber->node, subscriber->addrs, subscriber->numAddrs);
 }
 
 #define MAX_LINE_LEN 256
@@ -423,12 +380,13 @@ int main(int argc, char** argv)
 
     nodeDestroyed = DPS_CreateEvent();
 
-    ret = DPS_StartNode(subscriber.node, args.mcastPub, args.listenPort);
+    ret = DPS_StartNode(subscriber.node, args.mcastPub, args.listenAddr);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
         goto Exit;
     }
-    DPS_PRINT("Subscriber is listening on port %d\n", DPS_GetPortNumber(subscriber.node));
+    DPS_PRINT("Subscriber is listening on %s\n",
+              DPS_GetListenAddressString(subscriber.node));
 
     if (args.wait) {
         /*
@@ -459,18 +417,20 @@ Exit:
     DPS_WaitForEvent(nodeDestroyed);
     DPS_DestroyEvent(nodeDestroyed);
     DPS_DestroyMemoryKeyStore(memoryKeyStore);
+    DPS_DestroyAddress(args.listenAddr);
+    DestroyLinkArg(args.linkText, NULL, args.numLinks);
+    DestroyLinkArg(NULL, subscriber.addrs, subscriber.numAddrs);
     return (ret == DPS_OK) ? EXIT_SUCCESS : EXIT_FAILURE;
 
 Usage:
-    DPS_PRINT("Usage %s [-d] [-q] [-m] [-w <seconds>] [-x 0|1|2|3] [[-h <hostname>] -p <portnum>] [-l <listen port] [-j] [-r <milliseconds>] [[-s] topic1 ... topicN]\n", argv[0]);
+    DPS_PRINT("Usage %s [-d] [-q] [-m] [-w <seconds>] [-x 0|1|2|3] [-p <address>] [-l <address] [-j] [-r <milliseconds>] [[-s] topic1 ... topicN]\n", argv[0]);
     DPS_PRINT("       -d: Enable debug ouput if built for debug.\n");
     DPS_PRINT("       -q: Quiet - suppresses output about received publications.\n");
     DPS_PRINT("       -x: Disable (0) or enable symmetric encryption (1), asymmetric encryption (2), or authentication (3). Default is symmetric encryption enabled.\n");
-    DPS_PRINT("       -h: Specifies host (localhost is default). Mutiple -h options are permitted.\n");
     DPS_PRINT("       -w: Time to wait before establishing links\n");
-    DPS_PRINT("       -p: A port to link. Multiple -p options are permitted.\n");
+    DPS_PRINT("       -p: An address to link. Multiple -p options are permitted.\n");
     DPS_PRINT("       -m: Enable multicast receive. Enabled by default is there are no -p options.\n");
-    DPS_PRINT("       -l: port to listen on. Default is an ephemeral port.\n");
+    DPS_PRINT("       -l: Address listen on.\n");
     DPS_PRINT("       -r: Time to delay between subscription updates.\n");
     DPS_PRINT("       -s: list of subscription topic strings. Multiple -s options are permitted\n");
     DPS_PRINT("       -j: Treat payload as CBOR and attempt to decode an display as JSON\n");

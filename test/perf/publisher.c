@@ -20,17 +20,19 @@
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  */
 
-#include <string.h>
-#include <stdlib.h>
+#include <safe_lib.h>
+#include <assert.h>
+#include <ctype.h>
 #include <limits.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <time.h>
-#include <ctype.h>
-#include <assert.h>
 #include <dps/dbg.h>
 #include <dps/dps.h>
-#include <dps/synchronous.h>
 #include <dps/event.h>
+#include <dps/synchronous.h>
+#include "../test.h"
 
 #define MAX_LINKS  64
 
@@ -81,39 +83,12 @@ static void OnAck(DPS_Publication* pub, uint8_t* data, size_t len)
     DPS_SignalEvent(ackReceived, DPS_OK);
 }
 
-static int IntArg(char* opt, char*** argp, int* argcp, int* val, int min, int max)
-{
-    char* p;
-    char** arg = *argp;
-    int argc = *argcp;
-
-    if (strcmp(*arg++, opt) != 0) {
-        return 0;
-    }
-    if (!--argc) {
-        return 0;
-    }
-    *val = strtol(*arg++, &p, 10);
-    if (*p) {
-        return 0;
-    }
-    if (*val < min || *val > max) {
-        DPS_PRINT("Value for option %s must be in range %d..%d\n", opt, min, max);
-        return 0;
-    }
-    *argp = arg;
-    *argcp = argc;
-    return 1;
-}
-
 int main(int argc, char** argv)
 {
     DPS_Status ret;
     DPS_Node* node;
     char** arg = argv + 1;
-    const char* host = NULL;
-    int linkPort[MAX_LINKS];
-    const char* linkHosts[MAX_LINKS];
+    const char* linkText[MAX_LINKS] = { NULL };
     int numLinks = 0;
     int numPubs = 1000; /* default */
     int i;
@@ -122,7 +97,8 @@ int main(int argc, char** argv)
     int payloadSize = 0;
     int mcast = DPS_MCAST_PUB_ENABLE_SEND;
     int listenPort = 0;
-    DPS_NodeAddress* addr = NULL;
+    DPS_NodeAddress* listenAddr = NULL;
+    char addrText[24];
     DPS_Publication* pub = NULL;
     int rtMin = INT_MAX;
     int rtMax = 0;
@@ -135,17 +111,12 @@ int main(int argc, char** argv)
             DPS_Debug = DPS_TRUE;
             continue;
         }
-        if (IntArg("-p", &arg, &argc, &linkPort[numLinks], 1, UINT16_MAX)) {
-            linkHosts[numLinks] = host;
-            ++numLinks;
-            continue;
-        }
-        if (strcmp(*arg, "-h") == 0) {
+        if (strcmp(*arg, "-p") == 0) {
             ++arg;
             if (!--argc) {
                 goto Usage;
             }
-            host = *arg++;
+            linkText[numLinks++] = *arg++;
             continue;
         }
         if (IntArg("-s", &arg, &argc, &payloadSize, 0,  UINT16_MAX)) {
@@ -160,20 +131,26 @@ int main(int argc, char** argv)
      */
     if (numLinks) {
         mcast = DPS_MCAST_PUB_DISABLED;
-        addr = DPS_CreateAddress();
     }
 
     node = DPS_CreateNode("/", NULL, NULL);
-    ret = DPS_StartNode(node, mcast, listenPort);
+    listenAddr = DPS_CreateAddress();
+    if (!listenAddr) {
+        DPS_ERRPRINT("DPS_CreateAddress failed: %s\n", DPS_ErrTxt(DPS_ERR_RESOURCES));
+        return 1;
+    }
+    snprintf(addrText, sizeof(addrText), "[::]:%d", listenPort);
+    DPS_SetAddress(listenAddr, addrText);
+    ret = DPS_StartNode(node, mcast, listenAddr);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("DPS_StartNode failed: %s\n", DPS_ErrTxt(ret));
         return 1;
     }
 
     for (i = 0; i < numLinks; ++i) {
-        ret = DPS_LinkTo(node, linkHosts[i], linkPort[i], addr);
+        ret = DPS_LinkTo(node, linkText[i], NULL);
         if (ret != DPS_OK) {
-            DPS_ERRPRINT("DPS_LinkTo %d returned %s\n", linkPort[i], DPS_ErrTxt(ret));
+            DPS_ERRPRINT("DPS_LinkTo %s returned %s\n", linkText[i], DPS_ErrTxt(ret));
             return 1;
         }
     }
@@ -224,6 +201,7 @@ int main(int argc, char** argv)
 
     DPS_WaitForEvent(nodeDestroyed);
     DPS_DestroyEvent(nodeDestroyed);
+    DPS_DestroyAddress(listenAddr);
     return 0;
 
 Usage:

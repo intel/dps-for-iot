@@ -30,6 +30,7 @@
 #include <dps/synchronous.h>
 #include <dps/registration.h>
 #include <dps/event.h>
+#include "common.h"
 #include "keys.h"
 
 #define A_SIZEOF(a)  (sizeof(a) / sizeof((a)[0]))
@@ -160,56 +161,47 @@ static void ReadStdin(DPS_Node* node)
     }
 }
 
-
-static DPS_Status FindAndLink(DPS_Node* node, const char* host, uint16_t port, const char* tenant, uint8_t count, uint16_t timeout, DPS_NodeAddress* remoteAddr)
+static DPS_Status FindAndLink(DPS_Node* node, char** linkText, int numLinks, const char* tenant,
+                              uint8_t count, uint16_t timeout, DPS_NodeAddress** linkAddr)
 {
-    DPS_Status ret;
-    DPS_RegistrationList* regs = DPS_CreateRegistrationList(count);
+    DPS_Status ret = DPS_OK;
+    DPS_RegistrationList* regs = NULL;
+    int i;
 
-    /*
-     * Find nodes to link to
-     */
-    ret = DPS_Registration_GetSyn(node, host, port, tenant, regs, timeout);
-    if (ret != DPS_OK) {
-        DPS_ERRPRINT("Registration service lookup failed: %s\n", DPS_ErrTxt(ret));
-        return ret;
+    for (i = 0; i < numLinks; ++i) {
+        /*
+         * Find nodes to link to
+         */
+        regs = DPS_CreateRegistrationList(count);
+        ret = DPS_Registration_GetSyn(node, linkText[i], tenant, regs, timeout);
+        if (ret != DPS_OK) {
+            DPS_ERRPRINT("Registration service lookup failed: %s\n", DPS_ErrTxt(ret));
+            return ret;
+        }
+        DPS_PRINT("Found %d remote nodes\n", regs->count);
+        if (regs->count == 0) {
+            return DPS_ERR_NO_ROUTE;
+        }
+        linkAddr[i] = DPS_CreateAddress();
+        if (!linkAddr[i]) {
+            return DPS_ERR_RESOURCES;
+        }
+        ret = DPS_Registration_LinkToSyn(node, regs, linkAddr[i]);
+        if (ret == DPS_OK) {
+            char* str = NULL;
+            /*
+             * DPS_NodeAddrToString uses a static buffer, so dup one of
+             * the strs used below.
+             */
+            str = strdup(DPS_GetListenAddressString(node));
+            DPS_PRINT("%s is linked to %s\n", str, DPS_NodeAddrToString(linkAddr[i]));
+            if (str) {
+                free(str);
+            }
+        }
+        DPS_DestroyRegistrationList(regs);
     }
-    DPS_PRINT("Found %d remote nodes\n", regs->count);
-
-    if (regs->count == 0) {
-        return DPS_ERR_NO_ROUTE;
-    }
-    ret = DPS_Registration_LinkToSyn(node, regs, remoteAddr);
-    if (ret == DPS_OK) {
-        DPS_PRINT("%d is linked to %s\n", DPS_GetPortNumber(node), DPS_NodeAddrToString(remoteAddr));
-    }
-    DPS_DestroyRegistrationList(regs);
     return ret;
-}
-
-static int IntArg(char* opt, char*** argp, int* argcp, int* val, int min, int max)
-{
-    char* p;
-    char** arg = *argp;
-    int argc = *argcp;
-
-    if (strcmp(*arg++, opt) != 0) {
-        return 0;
-    }
-    if (!--argc) {
-        return 0;
-    }
-    *val = strtol(*arg++, &p, 10);
-    if (*p) {
-        return 0;
-    }
-    if (*val < min || *val > max) {
-        DPS_PRINT("Value for option %s must be in range %d..%d\n", opt, min, max);
-        return 0;
-    }
-    *argp = arg;
-    *argcp = argc;
-    return 1;
 }
 
 int main(int argc, char** argv)
@@ -221,28 +213,20 @@ int main(int argc, char** argv)
     size_t numTopics = 0;
     DPS_MemoryKeyStore* memoryKeyStore = NULL;
     DPS_Node* node;
-    DPS_NodeAddress* remoteAddr;
     int mcastPub = DPS_MCAST_PUB_DISABLED;
-    const char* host = "localhost";
     char* msg = NULL;
     int ttl = 0;
-    int port = 0;
     int wait = 0;
     int subsRate = DPS_SUBSCRIPTION_UPDATE_RATE;
     int timeout = DPS_REGISTRATION_GET_TIMEOUT;
     int count = 16;
+    DPS_NodeAddress* linkAddr[MAX_LINKS] = { NULL };
+    char* linkText[MAX_LINKS] = { NULL };
+    int numLinks = 0;
 
     DPS_Debug = DPS_FALSE;
     while (--argc) {
-        if (IntArg("-p", &arg, &argc, &port, 1, UINT16_MAX)) {
-            continue;
-        }
-        if (strcmp(*arg, "-h") == 0) {
-            ++arg;
-            if (!--argc) {
-                goto Usage;
-            }
-            host = *arg++;
+        if (LinkArg(&arg, &argc, linkText, &numLinks)) {
             continue;
         }
         if (strcmp(*arg, "-m") == 0) {
@@ -296,8 +280,8 @@ int main(int argc, char** argv)
         topics[numTopics++] = *arg++;
     }
 
-    if (!host || !port) {
-        DPS_PRINT("Need host name and port\n");
+    if (!numLinks) {
+        DPS_PRINT("Need link addresses\n");
         goto Usage;
     }
 
@@ -306,18 +290,16 @@ int main(int argc, char** argv)
     node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore), NULL);
     DPS_SetNodeSubscriptionUpdateDelay(node, subsRate);
 
-    ret = DPS_StartNode(node, mcastPub, 0);
+    ret = DPS_StartNode(node, mcastPub, NULL);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
         return 1;
     }
-    DPS_PRINT("Publisher is listening on port %d\n", DPS_GetPortNumber(node));
-
-    remoteAddr = DPS_CreateAddress();
+    DPS_PRINT("Publisher is listening on %s\n", DPS_GetListenAddressString(node));
 
     nodeDestroyed = DPS_CreateEvent();
 
-    ret = FindAndLink(node, host, port, tenant, count, timeout, remoteAddr);
+    ret = FindAndLink(node, linkText, numLinks, tenant, count, timeout, linkAddr);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to link to node: %s\n", DPS_ErrTxt(ret));
         goto Exit;
@@ -348,8 +330,7 @@ int main(int argc, char** argv)
          * gets sent and we have a chance to receive acks if requested
          */
         DPS_TimedWaitForEvent(nodeDestroyed, requestAck ? 2000 : 500);
-        DPS_UnlinkFrom(node, remoteAddr);
-        DPS_DestroyAddress(remoteAddr);
+        Unlink(node, linkAddr, numLinks);
     } else {
         DPS_PRINT("Running in interactive mode\n");
         ReadStdin(node);
@@ -360,16 +341,16 @@ Exit:
     DPS_WaitForEvent(nodeDestroyed);
     DPS_DestroyEvent(nodeDestroyed);
     DPS_DestroyMemoryKeyStore(memoryKeyStore);
+    DestroyLinkArg(linkText, linkAddr, numLinks);
     return 0;
 
 Usage:
-    DPS_PRINT("Usage %s [-d] [-a] [-w <seconds>] [-t <pub ttl>] [[-h <hostname>] -p <portnum>] [--tenant <tenant string>] [-c <count>] [--timeout <milliseconds>] [-m <message>] [-r <milliseconds>] [topic1 topic2 ... topicN]\n", *argv);
+    DPS_PRINT("Usage %s [-d] [-a] [-w <seconds>] [-t <pub ttl>] [-p <address>] [--tenant <tenant string>] [-c <count>] [--timeout <milliseconds>] [-m <message>] [-r <milliseconds>] [topic1 topic2 ... topicN]\n", *argv);
     DPS_PRINT("       -d: Enable debug ouput if built for debug.\n");
     DPS_PRINT("       -a: Request an acknowledgement\n");
     DPS_PRINT("       -t: Set a time-to-live on a publication\n");
     DPS_PRINT("       -w: Time to wait between linking to remote node and sending publication\n");
-    DPS_PRINT("       -h: Specifies host (localhost is default). Mutiple -h options are permitted.\n");
-    DPS_PRINT("       -p: Port to link. Multiple -p options are permitted.\n");
+    DPS_PRINT("       -p: Address to link. Multiple -p options are permitted.\n");
     DPS_PRINT("       -m: A payload message to accompany the publication.\n");
     DPS_PRINT("       -r: Time to delay between subscription updates.\n");
     DPS_PRINT("       --tenant: Tenant string to use.\n");

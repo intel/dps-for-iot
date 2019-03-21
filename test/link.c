@@ -49,7 +49,7 @@ static DPS_Node* CreateNode(DPS_KeyStore* keyStore)
     DPS_Status ret;
 
     node = DPS_CreateNode("/.", keyStore, NULL);
-    ret = DPS_StartNode(node, DPS_MCAST_PUB_DISABLED, 0);
+    ret = DPS_StartNode(node, DPS_MCAST_PUB_DISABLED, NULL);
     ASSERT(ret == DPS_OK);
     return node;
 }
@@ -69,12 +69,12 @@ static void TestRemoteLinkedAlready(void)
     b = CreateNode(DPS_MemoryKeyStoreHandle(memoryKeyStore));
 
     addr = DPS_CreateAddress();
-    ret = DPS_LinkTo(a, NULL, DPS_GetPortNumber(b), addr);
+    ret = DPS_LinkTo(a, DPS_GetListenAddressString(b), addr);
     ASSERT(ret == DPS_OK);
     DPS_DestroyAddress(addr);
 
     addr = DPS_CreateAddress();
-    ret = DPS_LinkTo(b, NULL, DPS_GetPortNumber(a), addr);
+    ret = DPS_LinkTo(b, DPS_GetListenAddressString(a), addr);
     ASSERT(ret == DPS_OK);
     DPS_DestroyAddress(addr);
 

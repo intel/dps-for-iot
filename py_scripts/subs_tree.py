@@ -1,5 +1,6 @@
 #!/usr/bin/python
 import dps
+import threading
 import time
 
 #  Builds this subscription tree
@@ -31,24 +32,23 @@ dps.set_content_key(key_store, key_id, key_data)
 dps.set_network_key(key_store, network_key_id, network_key)
 
 def on_pub(sub, pub, payload):
-    print "Received on port %d" % dps.get_port_number(dps.subscription_get_node(sub))
-    print "Pub %s(%d) matches:" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub))
-    print "  pub " + " | ".join(dps.publication_get_topics(pub))
-    print "  sub " + " | ".join(dps.subscription_get_topics(sub))
-    print payload
+    print("Received on %s" % dps.get_listen_address(dps.subscription_get_node(sub)))
+    print("Pub %s(%d) matches:" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub)))
+    print("  pub " + " | ".join(dps.publication_get_topics(pub)))
+    print("  sub " + " | ".join(dps.subscription_get_topics(sub)))
+    print(payload)
 
-def subscriber(topic, connect_port):
+def subscriber(topic, remote_listen_addr):
     node = dps.create_node("/", key_store, None)
-    dps.start_node(node, 0, 0)
-    print "Subscriber is listening on port %d" % dps.get_port_number(node)
+    dps.start_node(node, 0, None)
+    print("Subscriber is listening on %s" % dps.get_listen_address(node))
     sub = dps.create_subscription(node, [topic])
     dps.subscribe(sub, on_pub)
-    if (connect_port != 0):
+    if remote_listen_addr != None:
         addr = dps.create_address()
-        ret = dps.link_to(node, None, connect_port, addr)
-        if (ret == dps.OK):
-            print "Linked %d to %d" % (dps.get_port_number(node), connect_port)
-        dps.destroy_address(addr)
+        ret = dps.link_to(node, str(remote_listen_addr), addr)
+        if ret == dps.OK:
+            print("Linked %s to %s" % (dps.get_listen_address(node), addr))
     return node
 
 import argparse
@@ -58,20 +58,20 @@ parser.add_argument("-d", "--debug", action='store_true',
 args = parser.parse_args()
 dps.cvar.debug = args.debug
 
-sub1 = subscriber('B/B', 0)
-sub2 = subscriber('A/A', dps.get_port_number(sub1))
-sub3 = subscriber('C/C', dps.get_port_number(sub1))
+sub1 = subscriber('B/B', None)
+sub2 = subscriber('A/A', dps.get_listen_address(sub1))
+sub3 = subscriber('C/C', dps.get_listen_address(sub1))
 
-sub4 = subscriber('a/b/c', dps.get_port_number(sub2))
-sub5 = subscriber('d/e/f', dps.get_port_number(sub2))
-sub6 = subscriber('g/h/i', dps.get_port_number(sub2))
+sub4 = subscriber('a/b/c', dps.get_listen_address(sub2))
+sub5 = subscriber('d/e/f', dps.get_listen_address(sub2))
+sub6 = subscriber('g/h/i', dps.get_listen_address(sub2))
 
-sub7 = subscriber('1/2/3', dps.get_port_number(sub3))
-sub8 = subscriber('4/5/6', dps.get_port_number(sub3))
-sub9 = subscriber('7/8/9', dps.get_port_number(sub3))
-
-time.sleep(15)
-sub10 = subscriber('+/#', dps.get_port_number(sub7))
+sub7 = subscriber('1/2/3', dps.get_listen_address(sub3))
+sub8 = subscriber('4/5/6', dps.get_listen_address(sub3))
+sub9 = subscriber('7/8/9', dps.get_listen_address(sub3))
 
 time.sleep(15)
-sub11 = subscriber('+/#', dps.get_port_number(sub1))
+sub10 = subscriber('+/#', dps.get_listen_address(sub7))
+
+time.sleep(15)
+sub11 = subscriber('+/#', dps.get_listen_address(sub1))

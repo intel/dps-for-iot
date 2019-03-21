@@ -78,6 +78,7 @@
 #include <dps/json.h>
 #include <dps/synchronous.h>
 #include <dps/uuid.h>
+#include <dps/private/dps.h>
 
 static const char* NodeAddrToString(const DPS_NodeAddress* addr, int depth = 0, void* opts = NULL)
 {
@@ -130,7 +131,7 @@ static DPS_Status CAHandler(DPS_KeyStoreRequest* request);
 
 static void OnNodeDestroyed(DPS_Node* node, void* data);
 static void OnLinkComplete(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, void* data);
-static void OnNodeAddressComplete(DPS_Node* node, DPS_NodeAddress* addr, void* data);
+static void OnNodeAddressComplete(DPS_Node* node, const DPS_NodeAddress* addr, void* data);
 
 static void AcknowledgementHandler(DPS_Publication* pub, uint8_t* payload, size_t len);
 
@@ -687,7 +688,7 @@ static void PublishBufsComplete(DPS_Publication* pub, const DPS_Buffer*, size_t 
 
 DPS_Status PublishBufs(DPS_Publication* pub, Buffer* bufs, size_t numBufs, int16_t ttl)
 {
-    DPS_Buffer dpsBufs[numBufs];
+    DPS_Buffer dpsBufs[DPS_BUFS_MAX];
     size_t i;
 
     for (i = 0; i < numBufs; ++i) {
@@ -705,7 +706,7 @@ static void AckPublicationBufsComplete(DPS_Publication* pub, const DPS_Buffer*, 
 
 DPS_Status AckPublicationBufs(DPS_Publication* pub, Buffer* bufs, size_t numBufs)
 {
-    DPS_Buffer dpsBufs[numBufs];
+    DPS_Buffer dpsBufs[DPS_BUFS_MAX];
     size_t i;
 
     for (i = 0; i < numBufs; ++i) {

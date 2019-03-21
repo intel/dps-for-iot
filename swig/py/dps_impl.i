@@ -212,9 +212,8 @@ static void OnNodeDestroyed(DPS_Node* node, void* data)
     ret = PyObject_CallFunction(handler->m_obj, (char*)"O", nodeObj);
     Py_XDECREF(ret);
     Py_XDECREF(nodeObj);
-    PyGILState_Release(gilState);
-
     delete handler;
+    PyGILState_Release(gilState);
 }
 
 static void OnLinkComplete(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, void* data)
@@ -232,12 +231,11 @@ static void OnLinkComplete(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status sta
     Py_XDECREF(ret);
     Py_XDECREF(addrObj);
     Py_XDECREF(nodeObj);
-    PyGILState_Release(gilState);
-
     delete handler;
+    PyGILState_Release(gilState);
 }
 
-static void OnNodeAddressComplete(DPS_Node* node, DPS_NodeAddress* addr, void* data)
+static void OnNodeAddressComplete(DPS_Node* node, const DPS_NodeAddress* addr, void* data)
 {
     Handler* handler = (Handler*)data;
     PyObject* nodeObj;
@@ -252,9 +250,8 @@ static void OnNodeAddressComplete(DPS_Node* node, DPS_NodeAddress* addr, void* d
     Py_XDECREF(ret);
     Py_XDECREF(addrObj);
     Py_XDECREF(nodeObj);
-    PyGILState_Release(gilState);
-
     delete handler;
+    PyGILState_Release(gilState);
 }
 
 static void AcknowledgementHandler(DPS_Publication* pub, uint8_t* payload, size_t len)

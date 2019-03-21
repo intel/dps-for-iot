@@ -36,7 +36,7 @@ static int ParseOpt(DPS_RxBuffer* rxBuf, int prevOpt, CoAP_Option* opt)
     const uint8_t* head = rxBuf->rxPos;
     uint8_t lFlag = head[0] & 0xF;
     uint8_t dFlag = head[0] >> 4;
-    int len;
+    size_t len;
 
     if (DPS_RxBufferAvail(rxBuf) < 2) {
         return -1;
@@ -76,9 +76,9 @@ static int ParseOpt(DPS_RxBuffer* rxBuf, int prevOpt, CoAP_Option* opt)
         return -1;
     }
     opt->val = rxBuf->rxPos;
-    len = (opt->len + (rxBuf->rxPos - head));
+    len = opt->len + (rxBuf->rxPos - head);
     rxBuf->rxPos += opt->len;
-    return len;
+    return (int)len;
 }
 
 void CoAP_Free(CoAP_Parsed* coap)

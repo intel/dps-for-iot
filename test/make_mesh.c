@@ -42,7 +42,7 @@ static uint8_t SubsList[UINT16_MAX];
 
 static void OnPubMatch(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* data, size_t len)
 {
-    static const char AckFmt[] = "This is an ACK from %d";
+    static const char AckFmt[] = "This is an ACK from %s";
     DPS_Status ret;
     const DPS_UUID* pubId = DPS_PublicationGetUUID(pub);
     uint32_t sn = DPS_PublicationGetSequenceNum(pub);
@@ -73,10 +73,9 @@ static void OnPubMatch(DPS_Subscription* sub, const DPS_Publication* pub, uint8_
     }
 
     if (DPS_PublicationIsAckRequested(pub)) {
-        char ackMsg[sizeof(AckFmt) + 8];
-
-        sprintf(ackMsg, AckFmt, DPS_GetPortNumber(DPS_PublicationGetNode(pub)));
-
+        char ackMsg[sizeof(AckFmt) + 64];
+        sprintf(ackMsg, AckFmt,
+                DPS_GetListenAddressString(DPS_PublicationGetNode(pub)));
         ret = DPS_AckPublication(pub, (uint8_t*)ackMsg, sizeof(ackMsg));
         if (ret != DPS_OK) {
             DPS_PRINT("Failed to ack pub %s\n", DPS_ErrTxt(ret));
@@ -152,34 +151,9 @@ static int StrArg(char* opt, char*** argp, int* argcp, const char** val)
     return 1;
 }
 
-static int IntArg(char* opt, char*** argp, int* argcp, int* val, int min, int max)
+static uint16_t GetPort(const DPS_NodeAddress* nodeAddr)
 {
-    char* p;
-    char** arg = *argp;
-    int argc = *argcp;
-
-    if (strcmp(*arg++, opt) != 0) {
-        return 0;
-    }
-    if (!--argc) {
-        return 0;
-    }
-    *val = strtol(*arg++, &p, 10);
-    if (*p) {
-        return 0;
-    }
-    if (*val < min || *val > max) {
-        DPS_PRINT("Value for option %s must be in range %d..%d\n", opt, min, max);
-        return 0;
-    }
-    *argp = arg;
-    *argcp = argc;
-    return 1;
-}
-
-static uint16_t GetPort(DPS_NodeAddress* nodeAddr)
-{
-    const struct sockaddr* addr = (const struct sockaddr*)&nodeAddr->inaddr;
+    const struct sockaddr* addr = (const struct sockaddr*)&nodeAddr->u.inaddr;
     if (addr->sa_family == AF_INET6) {
         return ntohs(((const struct sockaddr_in6*)addr)->sin6_port);
     } else {
@@ -187,11 +161,16 @@ static uint16_t GetPort(DPS_NodeAddress* nodeAddr)
     }
 }
 
+static uint16_t GetPortNumber(DPS_Node* node)
+{
+    return GetPort(DPS_GetListenAddress(node));
+}
+
 static int AddLinksForNode(DPS_Node* node)
 {
     RemoteNode* remote;
     int numMuted = 0;
-    uint16_t nodeId = PortMap[DPS_GetPortNumber(node)];
+    uint16_t nodeId = PortMap[GetPortNumber(node)];
 
     for (remote = node->remoteNodes; remote != NULL; remote = remote->next) {
         uint16_t port = GetPort(&remote->ep.addr);
@@ -407,7 +386,7 @@ static void DumpPortMap(size_t numIds)
     for (i = 0; i < numIds; ++i) {
         uint16_t id = NodeList[i];
         DPS_Node* node = NodeMap[id];
-        DPS_PRINT("Node[%d] = %d\n", id, DPS_GetPortNumber(node));
+        DPS_PRINT("Node[%d] = %d\n", id, GetPortNumber(node));
     }
 }
 
@@ -458,39 +437,20 @@ static void OnLinked(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, v
     if (status == DPS_OK) {
         ++LinksUp;
     } else {
-        DPS_ERRPRINT("Failed to Link to %d - %s\n", DPS_GetPortNumber((DPS_Node*)data), DPS_ErrTxt(status));
+        DPS_ERRPRINT("Failed to Link to %s - %s\n", DPS_NodeAddrToString(addr), DPS_ErrTxt(status));
         ++LinksFailed;
     }
     uv_mutex_unlock(&lock);
 }
 
-static void OnResolve(DPS_Node* node, DPS_NodeAddress* addr, void* data)
-{
-    if (addr) {
-        DPS_Status ret = DPS_Link(node, addr, OnLinked, data);
-        if (ret != DPS_OK) {
-            uv_mutex_lock(&lock);
-            DPS_ERRPRINT("DPS_Link for %d returned %s\n", DPS_GetPortNumber((DPS_Node*)data), DPS_ErrTxt(ret));
-            ++LinksFailed;
-            uv_mutex_unlock(&lock);
-        }
-    } else {
-        uv_mutex_lock(&lock);
-        DPS_ERRPRINT("Failed to resolve address for %d\n", DPS_GetPortNumber((DPS_Node*)data));
-        ++LinksFailed;
-        uv_mutex_unlock(&lock);
-    }
-}
-
 static DPS_Status LinkNodes(DPS_Node* src, DPS_Node* dst)
 {
     DPS_Status ret;
-    char port[8];
-    snprintf(port, sizeof(port), "%d", DPS_GetPortNumber(dst));
-
-    ret = DPS_ResolveAddress(src, NULL, port, OnResolve, dst);
+    ret = DPS_Link(src, DPS_GetListenAddressString(dst), OnLinked, NULL);
     if (ret != DPS_OK) {
         uv_mutex_lock(&lock);
+        DPS_ERRPRINT("DPS_Link for %s returned %s\n", DPS_GetListenAddressString(dst),
+                     DPS_ErrTxt(ret));
         ++LinksFailed;
         uv_mutex_unlock(&lock);
     }
@@ -525,6 +485,7 @@ int main(int argc, char** argv)
     const char* outFn = NULL;
     uint16_t killList[MAX_KILLS];
     int i;
+    DPS_NodeAddress* listenAddr = NULL;
 
     DPS_Debug = 0;
 
@@ -588,12 +549,19 @@ int main(int argc, char** argv)
          */
         node->subsRate = (FastLinkProbe.probeTO) / 4;
 
-        ret = DPS_StartNode(node, DPS_FALSE, 0);
+        listenAddr = DPS_CreateAddress();
+        if (!listenAddr) {
+            DPS_ERRPRINT("Failed to create address: %s\n", DPS_ErrTxt(DPS_ERR_RESOURCES));
+            return 1;
+        }
+        DPS_SetAddress(listenAddr, "[::1]:0");
+        ret = DPS_StartNode(node, DPS_FALSE, listenAddr);
+        DPS_DestroyAddress(listenAddr);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
             return 1;
         }
-        PortMap[DPS_GetPortNumber(node)] = NodeList[i];
+        PortMap[GetPortNumber(node)] = NodeList[i];
         NodeMap[NodeList[i]] = node;
     }
     DumpPortMap(numIds);
@@ -725,7 +693,7 @@ int main(int argc, char** argv)
             uint16_t goner = killList[i];
             DPS_Node* n = NodeMap[goner];
             if (n) {
-                DPS_PRINT("Killing node %d (%d)\n", goner, DPS_GetPortNumber(n));
+                DPS_PRINT("Killing node %d (%d)\n", goner, GetPortNumber(n));
                 DPS_DestroyNode(n, OnNodeDestroyed, &killList[i]);
                 NodeMap[goner] = NULL;
             }

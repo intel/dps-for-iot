@@ -1,7 +1,7 @@
 /*
  *******************************************************************
  *
- * Copyright 2017 Intel Corporation All rights reserved.
+ * Copyright 2018 Intel Corporation All rights reserved.
  *
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  *
@@ -20,37 +20,30 @@
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  */
 
-#ifndef _TEST_H
-#define _TEST_H
+#ifndef _COMMON_H
+#define _COMMON_H
 
-#include <safe_lib.h>
-#include <assert.h>
-#include <math.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include <dps/dbg.h>
 #include <dps/dps.h>
-#include <dps/err.h>
-#include <dps/event.h>
-#include <dps/synchronous.h>
-#include <dps/uuid.h>
 
-#include <dps/private/cbor.h>
-#include <dps/private/dps.h>
-
-#ifdef _WIN32
-#define SLEEP(t) Sleep(t)
-#else
-#include <unistd.h>
-#define SLEEP(t) usleep((t) * 1000)
+#if defined(_MSC_VER)
+#define strdup _strdup
 #endif
 
-#define ASSERT(cond) do { assert(cond); if (!(cond)) exit(EXIT_FAILURE); } while (0)
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#define MAX_LINKS 16
 
 int IntArg(char* opt, char*** argp, int* argcp, int* val, int min, int max);
-int AddressArg(char* opt, char*** argp, int* argcp, DPS_NodeAddress** addr);
+int ListenArg(char*** argp, int* argcp, DPS_NodeAddress** addr);
+int LinkArg(char*** argp, int* argcp, char** addrText, int* numAddrText);
+DPS_Status Link(DPS_Node* node, char** addrText, DPS_NodeAddress** addr, int numAddr);
+void Unlink(DPS_Node* node, DPS_NodeAddress** addr, int numAddr);
+void DestroyLinkArg(char **addrText, DPS_NodeAddress** addr, int numAddr);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

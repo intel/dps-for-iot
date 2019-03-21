@@ -96,7 +96,7 @@ var dps = require("dps");
         console.log("  sub " + dps.subscriptionGetTopics(sub).join(" | "));
         console.log(payload);
         if (dps.publicationIsAckRequested(pub)) {
-            ackMsg = "This is an ACK from " + dps.getPortNumber(dps.publicationGetNode(pub));
+            ackMsg = "This is an ACK from " + dps.getListenAddress(dps.publicationGetNode(pub));
             console.log("Sending ack for pub UUID " + dps.publicationGetUUID(pub) + "(" + dps.publicationGetSequenceNum(pub) + ")");
             console.log("    " + ackMsg);
             dps.ackPublication(pub, ackMsg);
@@ -129,8 +129,8 @@ var dps = require("dps");
     }
 
     node = dps.createNode("/", keyStore, nodeId);
-    dps.startNode(node, dps.MCAST_PUB_ENABLE_RECV, 0);
-    console.log("Subscriber is listening on port " +  dps.getPortNumber(node));
+    dps.startNode(node, dps.MCAST_PUB_ENABLE_RECV, null);
+    console.log("Subscriber is listening on " +  dps.getListenAddress(node));
     sub = dps.createSubscription(node, ["a/b/c"]);
     dps.subscribe(sub, onPub);
 }());

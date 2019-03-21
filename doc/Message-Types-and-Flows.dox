@@ -68,6 +68,7 @@ field = (
   ? 11 => [ + topic: tstr ], ; # topics - the topic strings
   ? 12 => bstr,              ; # data - payload data
   ? 13 => uint               ; # ack-seq-num - sequence number for an acknowledgement
+  ? 14 => tstr               ; # path - path sender is listening on
 )
 @endverbatim
 
@@ -126,7 +127,8 @@ sub-flags = &(
 pub = 1
 @endverbatim
 
-@em port and @em ttl are mandatory in the @em unprotected section.
+@em ttl and one of @em port or @em path are mandatory in the @em
+unprotected section.
 
 @em ttl, @em pub-id, @em seq-num, @em ack-req and @em bloom-filter are
 mandatory in the @em protected section.
@@ -139,7 +141,8 @@ mandatory in the @em protected section.
 sub = 2
 @endverbatim
 
-@em port and @em seq-num are mandatory in the @em unprotected section.
+@em seq-num and one of @em port or @em path are mandatory in the @em
+unprotected section.
 
 Additionally, in a regular subscription message, @em sub-flags, @em
 mesh-id, @em needs and @em interests are mandatory in the @em
@@ -162,5 +165,6 @@ ack = 3
 sak = 4
 @endverbatim
 
-@em port and @em ack-seq-num are mandatory in the @em unprotected section.
+@em ack-seq-num and one of @em port or @em path are mandatory in the @em
+unprotected section.
  */

@@ -20,15 +20,16 @@
  *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  */
 
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
 #include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <dps/dbg.h>
 #include <dps/dps.h>
-#include <dps/synchronous.h>
-#include <dps/registration.h>
 #include <dps/event.h>
+#include <dps/registration.h>
+#include <dps/synchronous.h>
+#include "common.h"
 #include "keys.h"
 
 static void OnNodeDestroyed(DPS_Node* node, void* data)
@@ -46,31 +47,6 @@ static void OnPubMatch(DPS_Subscription* sub, const DPS_Publication* pub, uint8_
     }
 }
 
-static int IntArg(char* opt, char*** argp, int* argcp, int* val, int min, int max)
-{
-    char* p;
-    char** arg = *argp;
-    int argc = *argcp;
-
-    if (strcmp(*arg++, opt) != 0) {
-        return 0;
-    }
-    if (!--argc) {
-        return 0;
-    }
-    *val = strtol(*arg++, &p, 10);
-    if (*p) {
-        return 0;
-    }
-    if (*val < min || *val > max) {
-        DPS_PRINT("Value for option %s must be in range %d..%d\n", opt, min, max);
-        return 0;
-    }
-    *argp = arg;
-    *argcp = argc;
-    return 1;
-}
-
 int main(int argc, char** argv)
 {
     DPS_Status ret;
@@ -80,13 +56,13 @@ int main(int argc, char** argv)
     DPS_Event* nodeDestroyed;
     const char* topics[1];
     DPS_Subscription* subscription;
-    int listenPort = 0;
+    DPS_NodeAddress* listenAddr = NULL;
     int subsRate = DPS_SUBSCRIPTION_UPDATE_RATE;
 
     DPS_Debug = DPS_FALSE;
 
     while (--argc) {
-        if (IntArg("-l", &arg, &argc, &listenPort, 1, UINT16_MAX)) {
+        if (ListenArg(&arg, &argc, &listenAddr)) {
             continue;
         }
         if (strcmp(*arg, "-d") == 0) {
@@ -106,12 +82,14 @@ int main(int argc, char** argv)
     DPS_SetNetworkKey(memoryKeyStore, &NetworkKeyId, &NetworkKey);
     node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore), NULL);
     DPS_SetNodeSubscriptionUpdateDelay(node, subsRate);
-    ret = DPS_StartNode(node, 0, listenPort);
+
+    ret = DPS_StartNode(node, 0, listenAddr);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
         return 1;
     }
-    DPS_PRINT("Registration services is listening on port %d\n", DPS_GetPortNumber(node));
+    DPS_PRINT("Registration services is listening on %s\n",
+              DPS_GetListenAddressString(node));
 
     nodeDestroyed = DPS_CreateEvent();
 
@@ -125,9 +103,10 @@ int main(int argc, char** argv)
     DPS_WaitForEvent(nodeDestroyed);
     DPS_DestroyEvent(nodeDestroyed);
     DPS_DestroyMemoryKeyStore(memoryKeyStore);
+    DPS_DestroyAddress(listenAddr);
     return 0;
 
 Usage:
-    DPS_PRINT("Usage %s [-l <listen port] [-d]\n", *argv);
+    DPS_PRINT("Usage %s [-l <listen port>] [-d]\n", *argv);
     return 1;
 }

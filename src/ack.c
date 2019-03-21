@@ -127,7 +127,8 @@ DPS_Status DPS_SendAcknowledgement(PublicationAck* ack, RemoteNode* ackNode)
     DPS_Status ret;
     size_t i;
 
-    DPS_DBGPRINT("SendAcknowledgement from %d to %s\n", node->port, DPS_NodeAddrToString(&ackNode->ep.addr));
+    DPS_DBGPRINT("SendAcknowledgement from %s to %s\n", node->addrStr,
+                 DPS_NodeAddrToString(&ackNode->ep.addr));
 
     for (i = 0; i < ack->numBufs; ++i) {
         uvBufs[i] = uv_buf_init((char*)ack->bufs[i].base, DPS_TxBufferUsed(&ack->bufs[i]));
@@ -457,7 +458,7 @@ DPS_Status DPS_DecodeAcknowledgement(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
             /*
              * The ACK is forwarded exactly as received
              */
-            uvBuf = uv_buf_init((char*)rxBuf->base, rxBuf->eod - rxBuf->base);
+            uvBuf = uv_buf_init((char*)rxBuf->base, (uint32_t)(rxBuf->eod - rxBuf->base));
             ret = DPS_NetSend(node, NULL, &ackNode->ep, &uvBuf, 1, OnSendComplete);
             if (ret == DPS_OK) {
                 DPS_NetRxBufferIncRef(buf);

@@ -21,10 +21,11 @@
  */
 
 #include <safe_lib.h>
-#include <dps/dps.h>
 #include <dps/dbg.h>
-#include <dps/synchronous.h>
+#include <dps/dps.h>
 #include <dps/event.h>
+#include <dps/synchronous.h>
+#include <dps/private/network.h>
 
 /*
  * Debug control for this module
@@ -34,75 +35,51 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 static void OnLinked(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, void* data)
 {
     DPS_Event* event = (DPS_Event*)data;
+
+    if (status == DPS_OK) {
+        DPS_NodeAddress* outAddr = (DPS_NodeAddress*)DPS_GetEventData(event);
+        DPS_CopyAddress(outAddr, addr);
+    }
     DPS_SignalEvent(event, status);
 }
 
-static void OnResolve(DPS_Node* node, DPS_NodeAddress* addr, void* data)
+DPS_Status DPS_LinkTo(DPS_Node* node, const char* addrText, DPS_NodeAddress* addr)
 {
+    DPS_Event* event = NULL;
     DPS_Status ret;
-    DPS_Event* event = (DPS_Event*)data;
-
-    if (addr) {
-        DPS_NodeAddress* outAddr = (DPS_NodeAddress*)DPS_GetEventData(event);
-        DPS_CopyAddress(outAddr, addr);
-        ret = DPS_OK;
-    } else {
-        ret = DPS_ERR_UNRESOLVED;
-    }
-    DPS_SignalEvent(event, ret);
-}
-
-DPS_Status DPS_LinkTo(DPS_Node* node, const char* host, uint16_t port, DPS_NodeAddress* addr)
-{
-    DPS_Status ret;
-    char portStr[8];
-    DPS_Event* event = DPS_CreateEvent();
 
     DPS_DBGTRACE();
 
+    event = DPS_CreateEvent();
     if (!event) {
         return DPS_ERR_RESOURCES;
     }
-
-    snprintf(portStr, sizeof(portStr), "%d", port);
-
     DPS_SetEventData(event, addr);
-    ret = DPS_ResolveAddress(node, host, portStr, OnResolve, event);
-    if (ret != DPS_OK) {
-        DPS_ERRPRINT("DPS_ResolveAddress returned %s\n", DPS_ErrTxt(ret));
-        goto Exit;
-    }
-    ret = DPS_WaitForEvent(event);
-    if (ret != DPS_OK) {
-        DPS_ERRPRINT("Failed to resolve %s/%d\n", host ? host : "<localhost>", port);
-        goto Exit;
-    }
-    ret = DPS_Link(node, addr, OnLinked, event);
+    ret = DPS_Link(node, addrText, OnLinked, event);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("DPS_Link returned: %s\n", DPS_ErrTxt(ret));
         goto Exit;
     }
     ret = DPS_WaitForEvent(event);
     if (ret != DPS_OK) {
-        DPS_ERRPRINT("Failed to link to %s/%d\n", host ? host : "<localhost>", port);
+        DPS_ERRPRINT("Failed to link to %s\n", DPS_NodeAddrToString(addr));
         goto Exit;
     }
 
-    DPS_DBGPRINT("Resolved address for %s/%d\n", host ? host : "<localhost>", port);
+    DPS_DBGPRINT("Linked to %s\n", DPS_NodeAddrToString(addr));
 
 Exit:
-
     DPS_DestroyEvent(event);
     return ret;
 }
 
-static void OnUnlinked(DPS_Node* node, DPS_NodeAddress* addr, void* data)
+static void OnUnlinked(DPS_Node* node, const DPS_NodeAddress* addr, void* data)
 {
     DPS_Event* event = (DPS_Event*)data;
     DPS_SignalEvent(event, DPS_OK);
 }
 
-DPS_Status DPS_UnlinkFrom(DPS_Node* node, DPS_NodeAddress* addr)
+DPS_Status DPS_UnlinkFrom(DPS_Node* node, const DPS_NodeAddress* addr)
 {
     DPS_Status ret;
     DPS_Event* event = DPS_CreateEvent();

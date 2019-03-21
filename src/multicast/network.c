@@ -38,8 +38,6 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 #define USE_IPV4       0x10
 #define USE_IPV6       0x01
 
-#define MAX_INTERFACE_NAME_LEN   64
-
 struct _DPS_MulticastReceiver {
     uint8_t ipVersions;
     uv_udp_t udp6Rx;
@@ -116,7 +114,7 @@ static void OnMcastRx(uv_udp_t* handle, ssize_t nread, const uv_buf_t* uvBuf, co
         DPS_DBGPRINT("Received buffer of size %zd from %s\n", nread, DPS_NetAddrText(addr));
     }
     ep.cn = NULL;
-    DPS_SetAddress(&ep.addr, addr);
+    DPS_NetSetAddr(&ep.addr, DPS_UDP, addr);
     receiver->cb(receiver->node, &ep, DPS_OK, buf);
 Exit:
     DPS_NetRxBufferDecRef(buf);
@@ -173,7 +171,7 @@ static DPS_Status MulticastRxInit(DPS_MulticastReceiver* receiver)
             continue;
         }
         if (ifn->address.address4.sin_family == AF_INET6) {
-            char ifaddr[INET6_ADDRSTRLEN + MAX_INTERFACE_NAME_LEN + 2];
+            char ifaddr[INET6_ADDRSTRLEN + UV_IF_NAMESIZE + 2];
             ret = uv_ip6_name((struct sockaddr_in6*)&ifn->address, name, sizeof(name));
             assert(ret == 0);
             name[sizeof(name) - 1] = 0;
@@ -287,7 +285,7 @@ static DPS_Status MulticastTxInit(DPS_MulticastSender* sender)
      */
     for (i = 0; i < numIfs; ++i) {
         struct sockaddr_storage addr;
-        char ifaddr[INET6_ADDRSTRLEN + MAX_INTERFACE_NAME_LEN + 2];
+        char ifaddr[INET6_ADDRSTRLEN + UV_IF_NAMESIZE + 2];
         uv_interface_address_t* ifn = &ifsAddrs[i];
         if (!UseInterface(sender->ipVersions, ifn)) {
             continue;
@@ -484,7 +482,7 @@ DPS_Status DPS_MulticastSend(DPS_MulticastSender* sender, void* appCtx, uv_buf_t
             continue;
         }
 
-        sendReq = malloc(sizeof(*sendReq));
+        sendReq = malloc(sizeof(uv_udp_send_t));
         if (!sendReq) {
             DPS_ERRPRINT("uv_udp_send_t malloc failed\n");
             send->ret = DPS_ERR_RESOURCES;
