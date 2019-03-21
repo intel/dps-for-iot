@@ -26,6 +26,7 @@ srcs = [
         'src/ack.c',
         'src/bitvec.c',
         'src/dps.c',
+        'src/dtls.c',
         'src/coap.c',
         'src/cbor.c',
         'src/cose.c',
@@ -48,6 +49,7 @@ if platform == 'win32':
     srcs.append('src/win32/network.c')
     srcs.append('src/win32/dbg.c')
     srcs.append('src/win32/malloc.c')
+    srcs.append('src/win32/timer.c')
 
 Depends(srcs, ext_libs)
 

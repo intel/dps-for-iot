@@ -86,6 +86,7 @@ typedef struct _DPS_Node {
     DPS_KeyStore* keyStore;
     DPS_Subscription* subscriptions;  /* Linked list of this node's subscriptions */
     DPS_Publication* publications;    /* Linked list of this node's publications */
+    DPS_RxBuffer* rxBuf;              /* Current receive buffer */
 } DPS_Node;
 
 /**
