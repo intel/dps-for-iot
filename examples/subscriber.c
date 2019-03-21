@@ -386,7 +386,7 @@ int main(int argc, char** argv)
         goto Exit;
     }
     DPS_PRINT("Subscriber is listening on %s\n",
-              DPS_NodeAddrToString(DPS_GetListenAddress(subscriber.node)));
+              DPS_GetListenAddressString(subscriber.node));
 
     if (args.wait) {
         /*

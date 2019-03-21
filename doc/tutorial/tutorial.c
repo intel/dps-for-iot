@@ -379,7 +379,7 @@ static DPS_Status StartNode(DPS_Node* node, int mcastPub, const char* listenText
     if (ret != DPS_OK) {
         goto Exit;
     }
-    DPS_PRINT("Node is listening on %s\n", DPS_NodeAddrToString(DPS_GetListenAddress(node)));
+    DPS_PRINT("Node is listening on %s\n", DPS_GetListenAddressString(node));
 
  Exit:
     DPS_DestroyAddress(listenAddr);
@@ -395,7 +395,7 @@ static DPS_Status StartMulticastNode(DPS_Node* node)
         goto Exit;
     }
     /** [Starting a node] */
-    DPS_PRINT("Node is listening on %s\n", DPS_NodeAddrToString(DPS_GetListenAddress(node)));
+    DPS_PRINT("Node is listening on %s\n", DPS_GetListenAddressString(node));
 
  Exit:
     return ret;
@@ -419,7 +419,7 @@ static DPS_Status StartUnicastNode(DPS_Node* node, uint16_t port)
         goto Exit;
     }
     /** [Starting a unicast node] */
-    DPS_PRINT("Node is listening on %s\n", DPS_NodeAddrToString(DPS_GetListenAddress(node)));
+    DPS_PRINT("Node is listening on %s\n", DPS_GetListenAddressString(node));
 
  Exit:
     DPS_DestroyAddress(listenAddr);

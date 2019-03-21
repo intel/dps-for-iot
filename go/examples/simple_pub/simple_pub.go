@@ -43,7 +43,7 @@ func main() {
 
 	node := dps.CreateNode("/", keyStore, nodeId)
 	dps.StartNode(node, dps.MCAST_PUB_ENABLE_SEND, nil)
-	fmt.Printf("Publisher is listening on %v\n", dps.NodeAddrToString(dps.GetListenAddress(node)))
+	fmt.Printf("Publisher is listening on %v\n", dps.GetListenAddressString(node))
 
 	pub := dps.CreatePublication(node)
 

@@ -335,7 +335,7 @@ int main(int argc, char** argv)
         DPS_ERRPRINT("DPS_CreateNode failed: %s\n", DPS_ErrTxt(ret));
         return 1;
     }
-    DPS_PRINT("Publisher is listening on %s\n", DPS_NodeAddrToString(DPS_GetListenAddress(node)));
+    DPS_PRINT("Publisher is listening on %s\n", DPS_GetListenAddressString(node));
 
     ret = Link(node, linkText, linkAddr, numLinks);
     if (ret != DPS_OK) {

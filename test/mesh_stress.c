@@ -68,7 +68,7 @@ static void OnPubMatch(DPS_Subscription* sub, const DPS_Publication* pub, uint8_
     if (DPS_PublicationIsAckRequested(pub)) {
         char ackMsg[sizeof(AckFmt) + 64];
         sprintf(ackMsg, AckFmt,
-                DPS_NodeAddrToString(DPS_GetListenAddress(DPS_PublicationGetNode(pub))));
+                DPS_GetListenAddressString(DPS_PublicationGetNode(pub)));
         ret = DPS_AckPublication(pub, (uint8_t*)ackMsg, sizeof(ackMsg));
         if (ret != DPS_OK) {
             DPS_PRINT("Failed to ack pub %s\n", DPS_ErrTxt(ret));
@@ -259,10 +259,10 @@ static void OnLinked(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, v
 static DPS_Status LinkNodes(DPS_Node* src, DPS_Node* dst)
 {
     DPS_Status ret;
-    ret = DPS_Link(src, DPS_NodeAddrToString(DPS_GetListenAddress(dst)), OnLinked, NULL);
+    ret = DPS_Link(src, DPS_GetListenAddressString(dst), OnLinked, NULL);
     if (ret != DPS_OK) {
         uv_mutex_lock(&lock);
-        DPS_ERRPRINT("DPS_Link for %s returned %s\n", DPS_NodeAddrToString(DPS_GetListenAddress(dst)),
+        DPS_ERRPRINT("DPS_Link for %s returned %s\n", DPS_GetListenAddressString(dst),
                      DPS_ErrTxt(ret));
         ++LinksFailed;
         uv_mutex_unlock(&lock);

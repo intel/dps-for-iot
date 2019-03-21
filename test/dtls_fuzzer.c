@@ -232,7 +232,7 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t len)
     if (!addr) {
         goto Exit;
     }
-    DPS_LinkTo(client->node, DPS_NodeAddrToString(DPS_GetListenAddress(server->node)), addr);
+    DPS_LinkTo(client->node, DPS_GetListenAddressString(server->node), addr);
 
 Exit:
     DPS_DestroyAddress(addr);

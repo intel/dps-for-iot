@@ -1434,6 +1434,11 @@ const DPS_NodeAddress* DPS_GetListenAddress(DPS_Node* node)
     return &node->addr;
 }
 
+const char* DPS_GetListenAddressString(DPS_Node* node)
+{
+    return DPS_NodeAddrToString(&node->addr);
+}
+
 DPS_Status DPS_DestroyNode(DPS_Node* node, DPS_OnNodeDestroyed cb, void* data)
 {
     DPS_DBGTRACE();

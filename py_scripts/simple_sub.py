@@ -123,7 +123,7 @@ def on_pub(sub, pub, payload):
     print("  sub " + " | ".join(dps.subscription_get_topics(sub)))
     print(payload)
     if dps.publication_is_ack_requested(pub):
-        ack_msg = "This is an ACK from %d" % (dps.get_listen_address(dps.publication_get_node(pub)))
+        ack_msg = "This is an ACK from %s" % (dps.get_listen_address(dps.publication_get_node(pub)))
         print("Sending ack for pub UUID %s(%d)" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub)))
         print("    %s" % (ack_msg))
         dps.ack_publication(pub, ack_msg);

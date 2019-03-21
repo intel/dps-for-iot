@@ -107,7 +107,7 @@ int main(int argc, char** argv)
         DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
         goto Exit;
     }
-    DPS_PRINT("Subscriber is listening on %s\n", DPS_NodeAddrToString(DPS_GetListenAddress(node)));
+    DPS_PRINT("Subscriber is listening on %s\n", DPS_GetListenAddressString(node));
 
     if (payloadSize > 0) {
         payload = malloc(payloadSize);

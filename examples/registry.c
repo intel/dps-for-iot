@@ -89,7 +89,7 @@ int main(int argc, char** argv)
         return 1;
     }
     DPS_PRINT("Registration services is listening on %s\n",
-              DPS_NodeAddrToString(DPS_GetListenAddress(node)));
+              DPS_GetListenAddressString(node));
 
     nodeDestroyed = DPS_CreateEvent();
 

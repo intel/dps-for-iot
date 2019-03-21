@@ -656,6 +656,11 @@ func GetListenAddress(node *Node) *NodeAddress {
 	return (*NodeAddress)(C.DPS_GetListenAddress(cnode))
 }
 
+func GetListenAddressString(node *Node) string {
+	cnode := (*C.DPS_Node)(node)
+	return C.GoString(C.DPS_GetListenAddressString(cnode))
+}
+
 type OnLinkComplete func(node *Node, addr *NodeAddress, status int)
 
 func Link(node *Node, addrText string, cb OnLinkComplete) int {

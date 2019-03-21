@@ -331,7 +331,7 @@ static void TestBackToBackPublishSeparateNodes(DPS_Node* node, DPS_KeyStore* key
 
     addr = DPS_CreateAddress();
     ASSERT(addr);
-    ret = DPS_LinkTo(subNode, DPS_NodeAddrToString(DPS_GetListenAddress(node)), addr);
+    ret = DPS_LinkTo(subNode, DPS_GetListenAddressString(node), addr);
     ASSERT(ret == DPS_OK);
 
     seqNum = DPS_PublicationGetSequenceNum(pub) + 1;

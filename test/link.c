@@ -69,12 +69,12 @@ static void TestRemoteLinkedAlready(void)
     b = CreateNode(DPS_MemoryKeyStoreHandle(memoryKeyStore));
 
     addr = DPS_CreateAddress();
-    ret = DPS_LinkTo(a, DPS_NodeAddrToString(DPS_GetListenAddress(b)), addr);
+    ret = DPS_LinkTo(a, DPS_GetListenAddressString(b), addr);
     ASSERT(ret == DPS_OK);
     DPS_DestroyAddress(addr);
 
     addr = DPS_CreateAddress();
-    ret = DPS_LinkTo(b, DPS_NodeAddrToString(DPS_GetListenAddress(a)), addr);
+    ret = DPS_LinkTo(b, DPS_GetListenAddressString(a), addr);
     ASSERT(ret == DPS_OK);
     DPS_DestroyAddress(addr);
 

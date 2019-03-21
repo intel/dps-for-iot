@@ -57,7 +57,8 @@ extern "C" {
 typedef struct _DPS_NodeAddress DPS_NodeAddress;
 
 /**
- * Get text representation of an address. This function uses a static string buffer so is not thread safe.
+ * Get text representation of an address. This function uses a static
+ * string buffer so is not thread safe.
  *
  * @param addr to get the text for
  *
@@ -548,6 +549,17 @@ void DPS_SetNodeSubscriptionUpdateDelay(DPS_Node* node, uint32_t subsRateMsecs);
  * @return The address
  */
 const DPS_NodeAddress* DPS_GetListenAddress(DPS_Node* node);
+
+/**
+ * Get text representation of the address this node is listening for
+ * connections on. This function uses a static string buffer so is not
+ * thread safe.
+ *
+ * @param node     The node
+ *
+ * @return A text string for the address
+ */
+const char* DPS_GetListenAddressString(DPS_Node* node);
 
 /**
  * Function prototype for function called when a DPS_Link() completes.

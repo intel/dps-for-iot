@@ -193,7 +193,7 @@ static DPS_Status FindAndLink(DPS_Node* node, char** linkText, int numLinks, con
              * DPS_NodeAddrToString uses a static buffer, so dup one of
              * the strs used below.
              */
-            str = strdup(DPS_NodeAddrToString(DPS_GetListenAddress(node)));
+            str = strdup(DPS_GetListenAddressString(node));
             DPS_PRINT("%s is linked to %s\n", str, DPS_NodeAddrToString(linkAddr[i]));
             if (str) {
                 free(str);
@@ -295,7 +295,7 @@ int main(int argc, char** argv)
         DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
         return 1;
     }
-    DPS_PRINT("Publisher is listening on %s\n", DPS_NodeAddrToString(DPS_GetListenAddress(node)));
+    DPS_PRINT("Publisher is listening on %s\n", DPS_GetListenAddressString(node));
 
     nodeDestroyed = DPS_CreateEvent();
 

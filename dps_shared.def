@@ -30,6 +30,7 @@ DPS_GenerateUUID
 DPS_GetEventData
 DPS_GetKeyStoreData
 DPS_GetListenAddress
+DPS_GetListenAddressString
 DPS_GetNodeData
 DPS_GetPublicationData
 DPS_GetSubscriptionData
