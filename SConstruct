@@ -270,6 +270,9 @@ if extUV:
     objs, shobjs = env.SConscript('ext/SConscript.libuv', exports=['env'])
     ext_objs.append(objs)
     ext_shobjs.append(shobjs)
+objs, shobjs = env.SConscript('ext/SConscript.intel-ipsec-mb', exports=['env'])
+ext_objs.append(objs)
+ext_shobjs.append(shobjs)
 
 version = '0.9.0'
 

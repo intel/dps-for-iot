@@ -3,6 +3,9 @@
 
 #define MBEDTLS_DEPRECATED_REMOVED
 #define MBEDTLS_NIST_KW_C
+#if defined(__AVX__) || defined(__SSE__)
+#define MBEDTLS_SHA512_PROCESS_ALT
+#endif
 
 #undef MBEDTLS_ARC4_C
 #undef MBEDTLS_BLOWFISH_C
