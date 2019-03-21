@@ -153,8 +153,7 @@ dps.subscribe(sub, on_pub)
 
 if args.port != None:
     try:
-        addr_text = int(args.port)
-        addr_text = "[::1]:" + addr_text
+        addr_text = "[::1]:%d" % (int(args.port))
     except ValueError:
         addr_text = args.port
     ret = dps.link(node, addr_text, on_link)
