@@ -68,6 +68,7 @@ int main(int argc, char** argv)
     DPS_KeyStore* keyStore = NULL;
     DPS_Subscription sub;
     DPS_Status status;
+    int dtls = DPS_TRUE;
     int i;
 
 #if DPS_TARGET == DPS_TARGET_WINDOWS || DPS_TARGET == DPS_TARGET_LINUX
@@ -78,6 +79,11 @@ int main(int argc, char** argv)
         if (strcmp(*arg, "-d") == 0) {
             ++arg;
             DPS_Debug = DPS_TRUE;
+            continue;
+        }
+        if (strcmp(*arg, "-s") == 0) {
+            ++arg;
+            dtls = DPS_FALSE;
             continue;
         }
         goto Usage;
@@ -101,6 +107,11 @@ int main(int argc, char** argv)
     CHECK(status == DPS_OK);
 
     DPS_PRINT("Listening on port %d\n", DPS_GetPortNumber(node));
+
+    if (!dtls) {
+        DPS_PRINT("DTLS is disabled\n");
+        DPS_DisableDTLS(node);
+    }
 
     status = DPS_InitSubscription(node, &sub, topics, 1);
     CHECK(status == DPS_OK);

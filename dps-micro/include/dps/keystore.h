@@ -164,7 +164,7 @@ DPS_Status DPS_SetNetworkKey(DPS_KeyStore* keyStore, const DPS_KeyId* keyId, con
 /**
  * Create or replace the trusted CA(s) in the key store.
  *
- * @param mks An in-memory key store
+ * @param keyStore   The key store to access
  * @param ca The CA chain in PEM format
  *
  * @return DPS_OK or an error
@@ -185,8 +185,6 @@ DPS_Status DPS_SetCertificate(DPS_KeyStore* keyStore,
                               const char* cert,
                               const char* key,
                               const char* password);
-
-
 
 /** 
  * Protoype for callback function called to deliver a key to the requestor.
@@ -255,7 +253,6 @@ typedef DPS_Status (*DPS_KeyAndIdRequest)(DPS_KeyStore* keyStore, DPS_KeyRespons
  */
 typedef DPS_Status (*DPS_EphemeralKeyRequest)(DPS_KeyStore* keyStore, const DPS_Key* key, DPS_KeyResponse response, void* data); 
 
-
 /**
  * Function prototype for a key store handler called when the trusted
  * CA chain is requested.
@@ -269,8 +266,6 @@ typedef DPS_Status (*DPS_EphemeralKeyRequest)(DPS_KeyStore* keyStore, const DPS_
  */
 typedef DPS_Status (*DPS_CAChainRequest)(DPS_KeyStore* keyStore, DPS_CAChainResponse response, void* data);
 
-
-
 /**
  * Abstract interface for a key store.
  */
@@ -280,7 +275,6 @@ struct _DPS_KeyStore {
     DPS_EphemeralKeyRequest ephemeralKeyRequest; /**< Called when an ephemeral key is requested */
     DPS_CAChainRequest caChainRequest;           /**< Called when a CA chain is requested */
 };
-
 
 /**
   * Create a key store

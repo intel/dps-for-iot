@@ -45,11 +45,21 @@
 #include <dps/private/node.h>
 #include <dps/private/coap.h>
 #include <dps/private/network.h>
+#include <dps/private/dtls.h>
 
 /*
  * Debug control for this module
  */
 DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
+
+/*
+ * Controls debug output from the mbedtls library, ranges from 0 (no
+ * debug) to 4 (verbose).
+ */
+#define DEBUG_MBEDTLS_LEVEL 1
+
+/* Personalization string for the DRBG */
+static const unsigned char PERSONALIZATION_STRING[] = "DPS_DRBG";
 
 #define RX_BUFFER_SIZE 2048
 
@@ -71,17 +81,10 @@ typedef struct _MCastTx {
 
 #define NUM_RECV_SOCKS  3
 
-typedef enum {
-    DTLS_DISABLED,
-    DTLS_IN_HANDSHAKE,
-    DTLS_CONNECTED
-} DTLS_State;
-
 struct _DPS_Network {
     SOCKET mcastRecvSock[2];             /* IPv4 and IPv6 multicast recv sockets */
     SOCKET udpSock;                      /* The UDP unicast socket */ 
     uint8_t rxBuffer[NUM_RECV_SOCKS][RX_BUFFER_SIZE]; /* need separate buffers for each recv socket */
-    DTLS_State dtlsState;
     DWORD txLen;
     DPS_OnReceive recvCB;
     uint16_t numMcastTxSocks;
@@ -92,12 +95,27 @@ struct _DPS_Network {
     WSAOVERLAPPED sendOL;
     DPS_SendComplete sendCB;
     void* appData;
+    DPS_DTLS dtls;
 };
 
 static DPS_Network netContext;
 
 static HANDLE recvThreadHandle;
 static HANDLE cbThreadHandle;
+
+
+const char* DPS_AddrToText(DPS_NodeAddress* addr)
+{
+    static char txt[INET6_ADDRSTRLEN];
+    struct sockaddr* sa = (struct sockaddr*)&addr->inaddr;
+
+    if (!InetNtop(sa->sa_family, sa, txt, sizeof(txt))) {
+        DPS_ERRPRINT("Convert addr to string failed\n");
+        return NULL;
+    } else {
+        return txt;
+    }
+}
 
 void DPS_NodeAddressSetPort(DPS_NodeAddress* addr, uint16_t port)
 {
@@ -172,8 +190,8 @@ static DWORD WINAPI RecvThread(LPVOID lpParam)
     WSAEVENT event[NUM_RECV_SOCKS];
     WSABUF buf[NUM_RECV_SOCKS];
     SOCKET socks[NUM_RECV_SOCKS];
-    DWORD flags;
     DWORD recvd;
+    DWORD flags = 0;
     int ret;
     int i;
 
@@ -189,26 +207,23 @@ static DWORD WINAPI RecvThread(LPVOID lpParam)
         memset(&overlapped[i], 0, sizeof(WSAOVERLAPPED));
         overlapped[i].hEvent = event[i] = WSACreateEvent();
         if (socks[i] != INVALID_SOCKET) {
+            int addrLen = (int)sizeof(rxAddr);
             buf[i].buf = net->rxBuffer[i];
             buf[i].len = RX_BUFFER_SIZE;
-            /* Loop while there is data immediately available */
-            while (TRUE) {
-                int len = (int)sizeof(rxAddr);
-                flags = 0;
-                if (WSARecvFrom(socks[i], &buf[i], 1, &recvd, &flags, (SOCKADDR*)&rxAddr, &len, &overlapped[i], NULL)) {
-                    break;
+            /* Post an initial read */
+            if (WSARecvFrom(socks[i], &buf[i], 1, &recvd, &flags, (SOCKADDR*)&rxAddr, &addrLen, &overlapped[i], NULL)) {
+                if (WSAGetLastError() != WSA_IO_PENDING) {
+                    DPS_ERRPRINT("WSARecvFrom for %s returned %d\n", i ? "IPv6" : "IPv4", WSAGetLastError());
+                    socks[i] = INVALID_SOCKET;
                 }
-                DPS_RxBufferInit(&rxBuf, net->rxBuffer[i], recvd);
-                net->recvCB(node, &rxAddr, i <= 1, &rxBuf, DPS_OK);
-            }
-            if (WSAGetLastError() != WSA_IO_PENDING) {
-                DPS_ERRPRINT("WSARecvFrom for %s returned %d\n", i ? "IPv6" : "IPv4", WSAGetLastError());
-                socks[i] = INVALID_SOCKET;
+            } else {
+                WSASetEvent(event[i]);
             }
         }
     }
 
     while (net) {
+        int multicast;
         ret = WSAWaitForMultipleEvents(NUM_RECV_SOCKS, event, FALSE, INFINITE, TRUE);
         if (ret == WSA_WAIT_FAILED) {
             DPS_ERRPRINT("WSAWaitForMultipleEvents failed %d\n", WSAGetLastError());
@@ -222,6 +237,7 @@ static DWORD WINAPI RecvThread(LPVOID lpParam)
             DPS_ERRPRINT("WSAWaitForMultipleEvents returned unexpected value %d\n", ret);
             goto Exit;
         }
+        multicast = (i <= 1);
         ret = WSAResetEvent(event[i]);
         if (ret == FALSE) {
             DPS_DBGPRINT("WSAResetEvent failed %d\n", WSAGetLastError());
@@ -233,12 +249,16 @@ static DWORD WINAPI RecvThread(LPVOID lpParam)
             goto Exit;
         }
         while (TRUE) {
-            int len = (int)sizeof(rxAddr);
+            DPS_Status status = DPS_OK;
+            DWORD flags = 0;
+            int addrLen = (int)sizeof(rxAddr);
             DPS_RxBufferInit(&rxBuf, net->rxBuffer[i], recvd);
-            net->recvCB(node, &rxAddr, i <= 1, &rxBuf, DPS_OK);
-            flags = 0;
+            if (!multicast && net->dtls.state != DTLS_DISABLED) {
+                status = DPS_DTLSRecv(node, &rxBuf);
+            }
+            net->recvCB(node, &rxAddr, multicast, &rxBuf, status);
             /* Loop while there is data immediately available */
-            if (WSARecvFrom(socks[i], &buf[i], 1, &recvd, &flags, (SOCKADDR*)&rxAddr, &len, &overlapped[i], NULL)) {
+            if (WSARecvFrom(socks[i], &buf[i], 1, &recvd, &flags, (SOCKADDR*)&rxAddr, &addrLen, &overlapped[i], NULL)) {
                 break;
             }
         }
@@ -312,9 +332,8 @@ static DWORD WINAPI UnicastCBThread(LPVOID lpParam)
     WSAEVENT event = net->sendOL.hEvent;
     DPS_SendComplete sendCB;
 
-    /* Wait for all of the interfaces to be signaled */
     int ret = WSAWaitForMultipleEvents(1, &net->sendOL.hEvent, DPS_TRUE, WSA_INFINITE, DPS_FALSE);
-    /* Clear all events an re-prime the overlapped structs */
+    /* Clear events and re-prime the overlapped struct */
     WSAResetEvent(event);
     memset(&net->sendOL, 0, sizeof(WSAOVERLAPPED));
     net->sendOL.hEvent = event;
@@ -385,6 +404,9 @@ DPS_Status DPS_NetworkInit(DPS_Node* node)
     memset(&netContext, 0, sizeof(netContext));
     node->network = &netContext;
     node->remoteNode = &netContext.remoteNode;
+
+    /* By default DTLS is enabled and we are in the DTLS disconnected state */
+    node->network->dtls.state = DTLS_DISCONNECTED;
 
     node->network->udpSock = BindSock(AF_INET6, 0);
     ret = getsockname(node->network->udpSock, (struct sockaddr*)&addr, &addrSize);
@@ -640,6 +662,50 @@ static void CALLBACK UnicastSendComplete(DWORD dwError, DWORD cbTransferred, LPW
     cb(node, net->appData, dwError ? DPS_ERR_NETWORK : DPS_OK);
 }
 
+DPS_Status DPS_UnicastWrite(DPS_Node* node, DPS_NodeAddress* dest, void* data, size_t len)
+{
+    DPS_Status status = DPS_OK;
+    DPS_Network* net = node->network;
+    int ret;
+    DWORD sent;
+    WSABUF buf;
+
+    buf.len = (LONG)(node->txLen + node->txHdrLen);
+    buf.buf = node->txBuffer + DPS_TX_HEADER_SIZE - node->txHdrLen;
+
+    ret = WSASendTo(net->udpSock, &buf, 1, &sent, 0, (SOCKADDR*)dest, sizeof(DPS_NodeAddress), NULL, NULL);
+    if (ret == SOCKET_ERROR) {
+        DPS_ERRPRINT("WSASEndTo failed %d\n", WSAGetLastError());
+        status = DPS_ERR_NETWORK;
+    }
+    if (status != DPS_OK) {
+        net->sendCB = NULL;
+        net->appData = NULL;
+    }
+    return status;
+}
+
+DPS_Status DPS_UnicastWriteAsync(DPS_Node* node, DPS_NodeAddress* dest, void* data, size_t len)
+{
+    DPS_Status status = DPS_OK;
+    DPS_Network* net = node->network;
+    int ret;
+    WSABUF buf;
+
+    buf.len = (LONG)len;
+    buf.buf = data;
+
+    ret = WSASendTo(net->udpSock, &buf, 1, NULL, 0, (SOCKADDR*)dest, sizeof(DPS_NodeAddress), &net->sendOL, NULL);
+    if (ret == SOCKET_ERROR) {
+        int err = WSAGetLastError();
+        if (err != WSA_IO_PENDING) {
+            DPS_ERRPRINT("WSASEndTo failed %d\n", err);
+            status = DPS_ERR_NETWORK;
+        }
+    }
+    return status;
+}
+
 DPS_Status DPS_UnicastSend(DPS_Node* node, DPS_NodeAddress* dest, void* appCtx, DPS_SendComplete sendCompleteCB)
 {
     DPS_Status status = DPS_OK;
@@ -648,24 +714,35 @@ DPS_Status DPS_UnicastSend(DPS_Node* node, DPS_NodeAddress* dest, void* appCtx, 
     if (net->sendCB) {
         return DPS_ERR_BUSY;
     }
+
     net->sendCB = sendCompleteCB;
     net->appData = appCtx;
 
-    if (net->dtlsState == DTLS_DISABLED || net->dtlsState == DTLS_CONNECTED) {
-        int ret;
-        WSABUF buf;
-
-        buf.len = (LONG)(node->txLen + node->txHdrLen);
-        buf.buf = node->txBuffer + DPS_TX_HEADER_SIZE - node->txHdrLen;
-
-        ret = WSASendTo(net->udpSock, &buf, 1, NULL, 0, (SOCKADDR*)dest, sizeof(DPS_NodeAddress), &net->sendOL, NULL);
-        if (ret == SOCKET_ERROR) {
-            int err = WSAGetLastError();
-            if (err != WSA_IO_PENDING) {
-                DPS_ERRPRINT("WSASEndTo failed %d\n", err);
-                status = DPS_ERR_NETWORK;
-            }
+    switch (net->dtls.state) {
+    case DTLS_DISABLED:
+        /*
+         * DTLS is not being used
+         */
+        { 
+            size_t len = (LONG)(node->txLen + node->txHdrLen);
+            void* data = node->txBuffer + DPS_TX_HEADER_SIZE - node->txHdrLen;
+            status = DPS_UnicastWriteAsync(node, dest, data, len);
         }
+        break;
+    case DTLS_DISCONNECTED:
+        /*
+         * This kicks off the DTLS client-side handshake
+         */
+        status = DPS_DTLSHandshake(node, dest, MBEDTLS_SSL_IS_CLIENT);
+        break;
+    case DTLS_CONNECTED:
+        /*
+         * DTLS needs to encrypt the packet
+         */
+        status = DPS_DTLSSend(node);
+        break;
+    default:
+        assert(0);
     }
     if (status != DPS_OK) {
         net->sendCB = NULL;
@@ -673,3 +750,21 @@ DPS_Status DPS_UnicastSend(DPS_Node* node, DPS_NodeAddress* dest, void* appCtx, 
     }
     return status;
 }
+
+DPS_DTLS* DPS_GetDTLS(DPS_Network* net)
+{
+    return &net->dtls;
+}
+
+int DPS_UnicastWritePending(DPS_Network* net)
+{
+    return net->sendCB != NULL;
+}
+
+void DPS_DisableDTLS(DPS_Node* node)
+{
+    if (node->network->dtls.state == DTLS_DISCONNECTED) {
+        node->network->dtls.state = DTLS_DISABLED;
+    }
+}
+

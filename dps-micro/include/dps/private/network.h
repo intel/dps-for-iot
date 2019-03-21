@@ -37,6 +37,15 @@
 extern "C" {
 #endif
 
+/**
+  * Abstract type for network state information
+  */
+typedef struct _DPS_Network DPS_Network;
+
+/**
+  * Abstract type for DTLS state information
+  */
+typedef struct _DPS_DTLS DPS_DTLS;
     
 /**
   * Abstract type for a DPS node address
@@ -57,6 +66,11 @@ void DPS_CopyNodeAddress(DPS_NodeAddress* dest, const DPS_NodeAddress* src);
   * Compare to addresses
   */
 int DPS_SameNodeAddress(const DPS_NodeAddress* addr1, const DPS_NodeAddress* addr2);
+
+/**
+  * Returns text string for a specified node address.
+  */
+const char* DPS_AddrToText(DPS_NodeAddress* addr);
 
 /**
   * Allocate a node address from the requested pool. Call DPS_Free() to free the memory
@@ -139,7 +153,7 @@ DPS_Status DPS_UnicastStart(DPS_Node* node, uint16_t port, DPS_OnReceive cb);
 void DPS_UnicastStop(DPS_Node* node);
 
 /**
- * Unicast data in the node transmit buffer
+ * Unicast the data in the node transmit buffer
  *
  * @param node            Pointer to the DPS node
  * @param dest            Destination address
@@ -149,6 +163,54 @@ void DPS_UnicastStop(DPS_Node* node);
  * @return DPS_OK if the send is successful, an error otherwise
  */
 DPS_Status DPS_UnicastSend(DPS_Node* node, DPS_NodeAddress* dest, void* appCtx, DPS_SendComplete sendCompleteCB);
+
+/**
+  * Write data synchronously. This is API is called during the DTLS handshake.
+  *
+  * @param node       Pointer to the DPS node
+  * @param dest       Destination address
+  * @param data       The data to write
+  * @param len        Length of the data to write
+  */
+DPS_Status DPS_UnicastWrite(DPS_Node* node, DPS_NodeAddress* dest, void* data, size_t len);
+
+/**
+  * Write data asynchronously.
+  * @param node       Pointer to the DPS node
+  * @param dest       Destination address
+  * @param data       The data to write
+  * @param len        Length of the data to write
+  */
+DPS_Status DPS_UnicastWriteAsync(DPS_Node* node, DPS_NodeAddress* dest, void* data, size_t len);
+
+/**
+  * Read data synchronously. This is API is called during the DTLS handshake.
+  *
+  * @param node       Pointer to the DPS node
+  * @param data       Returns pointer to received data
+  * @param len        Returns length of the data received
+  * @param timeout    The timeout in milliseconds
+  */
+DPS_Status DPS_UnicastRead(DPS_Node* node, void** data, size_t* len, int timeout);
+
+/**
+  * Get pointer to the DTLS state
+  *
+  * @param net  Pointer to abstract network state structure
+  *
+  * @return  Pointer to abstract DTLS state structure
+  */
+DPS_DTLS* DPS_GetDTLS(DPS_Network* net);
+
+/**
+  * Return TRUE if there is a unicast write pending
+  */
+int DPS_UnicastWritePending(DPS_Network* net);
+
+/**
+  * Disable DTLS - this should be called before any DTLS connections are established
+  */
+void DPS_DisableDTLS(DPS_Node* node);
 
 #ifdef __cplusplus
 }
