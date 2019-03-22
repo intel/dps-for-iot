@@ -45,6 +45,7 @@ def on_link(node, addr, status):
         print("Linked %s to %s" % (dps.get_listen_address(node), addr))
     event.set()
 
+nodes = []
 def subscriber(topic, remote_listen_addr):
     node = dps.create_node("/", key_store, None)
     dps.start_node(node, 0, None)
@@ -55,6 +56,7 @@ def subscriber(topic, remote_listen_addr):
         ret = dps.link(node, str(remote_listen_addr), on_link)
         if ret == dps.OK:
             event.wait()
+    nodes.append(node)
     return node
 
 import argparse
@@ -81,3 +83,6 @@ sub10 = subscriber('+/#', dps.get_listen_address(sub7))
 
 time.sleep(15)
 sub11 = subscriber('+/#', dps.get_listen_address(sub1))
+
+for node in nodes:
+    dps.destroy_node(node)
