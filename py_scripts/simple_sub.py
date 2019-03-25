@@ -156,6 +156,7 @@ if args.port != None:
         addr_text = "[::1]:%d" % (int(args.port))
     except ValueError:
         addr_text = args.port
+    event.clear()
     ret = dps.link(node, addr_text, on_link)
     if ret == dps.OK:
         event.wait()

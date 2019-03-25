@@ -53,6 +53,7 @@ def subscriber(topic, remote_listen_addr):
     sub = dps.create_subscription(node, [topic])
     dps.subscribe(sub, on_pub)
     if remote_listen_addr != None:
+        event.clear()
         ret = dps.link(node, str(remote_listen_addr), on_link)
         if ret == dps.OK:
             event.wait()
