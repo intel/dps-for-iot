@@ -397,6 +397,7 @@ DPS_Status DPS_DecodeAcknowledgement(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
                 if (ret == DPS_OK) {
                     DPS_DBGPRINT("Ack was COSE verified\n");
                     encryptedBuf = cipherTextBuf;
+                    pub->rxBuf = buf;
                 }
             } else {
                 ret = DPS_ERR_INVALID;
@@ -405,6 +406,7 @@ DPS_Status DPS_DecodeAcknowledgement(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
         } else {
             DPS_DBGPRINT("Ack was not a COSE object\n");
             encryptedBuf = cipherTextBuf;
+            pub->rxBuf = buf;
             ret = DPS_OK;
         }
         if (ret == DPS_OK) {
@@ -435,6 +437,7 @@ DPS_Status DPS_DecodeAcknowledgement(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
                 }
             }
         }
+        pub->rxBuf = NULL;
         DPS_TxBufferFree(&plainTextBuf);
         /* Ack ID will be invalid now */
         memset(&pub->ack, 0, sizeof(pub->ack));

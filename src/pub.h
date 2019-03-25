@@ -79,6 +79,7 @@ typedef struct _DPS_Publication {
     COSE_Entity ack;                /**< For ack messages - the ack sender ID */
     DPS_Queue sendQueue;            /**< Publication send requests */
     DPS_Queue retainedQueue;        /**< The retained publication send requests */
+    DPS_NetRxBuffer* rxBuf;         /**< For publication or ack handlers - the receive buffer being handled */
 
     uint8_t flags;                  /**< Internal state flags */
     uint32_t refCount;              /**< Ref count to prevent publication from being free while a send is in progress */

@@ -133,7 +133,7 @@ event = threading.Event()
 
 def on_ack(pub, payload):
     print("Ack for pub UUID %s(%d) [%s]" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub), dps.ack_get_sender_key_id(pub)))
-    print("    %s" % (payload))
+    print("    %s" % (payload.tobytes()))
 
 def on_link(node, addr, status):
     if status == dps.OK:
@@ -162,10 +162,10 @@ print("Publisher is listening on %s" % (dps.get_listen_address(node)))
 
 if args.port != None:
     try:
-        addr_text = int(args.port)
-        addr_text = "[::1]:" + addr_text
+        addr_text = "[::1]:%d" % (int(args.port))
     except ValueError:
         addr_text = args.port
+    event.clear()
     ret = dps.link(node, addr_text, on_link)
     if ret == dps.OK:
         event.wait()

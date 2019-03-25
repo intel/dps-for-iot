@@ -121,7 +121,7 @@ def on_pub(sub, pub, payload):
     print("Pub %s(%d) [%s] matches:" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub), str(dps.publication_get_sender_key_id(pub))))
     print("  pub " + " | ".join(dps.publication_get_topics(pub)))
     print("  sub " + " | ".join(dps.subscription_get_topics(sub)))
-    print(payload)
+    print(payload.tobytes())
     if dps.publication_is_ack_requested(pub):
         ack_msg = "This is an ACK from %s" % (dps.get_listen_address(dps.publication_get_node(pub)))
         print("Sending ack for pub UUID %s(%d)" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub)))
@@ -153,10 +153,10 @@ dps.subscribe(sub, on_pub)
 
 if args.port != None:
     try:
-        addr_text = int(args.port)
-        addr_text = "[::1]:" + addr_text
+        addr_text = "[::1]:%d" % (int(args.port))
     except ValueError:
         addr_text = args.port
+    event.clear()
     ret = dps.link(node, addr_text, on_link)
     if ret == dps.OK:
         event.wait()

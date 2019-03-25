@@ -293,6 +293,19 @@ uint32_t DPS_Rand(void);
  */
 int DPS_PublicationIsEncrypted(const DPS_Publication* pub);
 
+/** @copydoc DPS_NetRxBuffer */
+typedef struct _DPS_NetRxBuffer DPS_NetRxBuffer;
+
+/**
+ * Inside a DPS_PublicationHandler, call this to receive the
+ * underlying buffer that the payload is in.
+ *
+ * @param pub The publication
+ *
+ * @return the DPS_NetRxBuffer
+ */
+DPS_NetRxBuffer* DPS_PublicationGetNetRxBuffer(const DPS_Publication* pub);
+
 #ifdef __cplusplus
 }
 #endif

@@ -256,3 +256,33 @@ public:
         return UUIDToString($self);
     }
 }
+
+%{
+static void OnNodeDestroyedSyn(DPS_Node* node, void* data)
+{
+    DPS_SignalEvent((DPS_Event*)data, DPS_OK);
+}
+
+DPS_Status DestroyNode(DPS_Node* node)
+{
+    DPS_Event* event = NULL;
+    DPS_Status ret;
+
+    event = DPS_CreateEvent();
+    if (!event) {
+        ret = DPS_ERR_RESOURCES;
+        goto Exit;
+    }
+    ret = DPS_DestroyNode(node, OnNodeDestroyedSyn, event);
+    if (ret != DPS_OK) {
+        goto Exit;
+    }
+    Py_BEGIN_ALLOW_THREADS
+    ret = DPS_WaitForEvent(event);
+    Py_END_ALLOW_THREADS
+Exit:
+    DPS_DestroyEvent(event);
+    return ret;
+}
+%}
+DPS_Status DestroyNode(DPS_Node* node);

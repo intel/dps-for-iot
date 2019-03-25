@@ -20,6 +20,8 @@
  */
 
 %{
+#include <dps/private/network.h>
+
 static int AsVal_bytes(Handle obj, uint8_t** bytes, size_t* len, int alloc)
 {
     if (SWIG_IsOK(SWIG_AsCharPtrAndSize(obj, (char**)bytes, len, &alloc))) {
@@ -102,7 +104,7 @@ static DPS_Status KeyAndIdHandler(DPS_KeyStoreRequest* request)
 
     gilState = PyGILState_Ensure();
     requestObj = SWIG_NewPointerObj(SWIG_as_voidptr(request), SWIGTYPE_p__DPS_KeyStoreRequest, 0);
-    ret = PyObject_CallFunction(keyStore->m_keyAndIdHandler->m_obj, (char*)"O", requestObj);
+    ret = PyObject_CallFunctionObjArgs(keyStore->m_keyAndIdHandler->m_obj, requestObj, NULL);
     if (ret) {
         SWIG_AsVal_int(ret, &status);
     }
@@ -129,7 +131,7 @@ static DPS_Status KeyHandler(DPS_KeyStoreRequest* request, const DPS_KeyId* keyI
     } else {
         keyIdObj = From_bytes(NULL, 0);
     }
-    ret = PyObject_CallFunction(keyStore->m_keyHandler->m_obj, (char*)"OO", requestObj, keyIdObj);
+    ret = PyObject_CallFunctionObjArgs(keyStore->m_keyHandler->m_obj, requestObj, keyIdObj, NULL);
     if (ret) {
         SWIG_AsVal_int(ret, &status);
     }
@@ -166,7 +168,7 @@ static DPS_Status EphemeralKeyHandler(DPS_KeyStoreRequest* request, const DPS_Ke
     default:
         goto Exit;
     }
-    ret = PyObject_CallFunction(keyStore->m_ephemeralKeyHandler->m_obj, (char*)"OO", requestObj, keyObj);
+    ret = PyObject_CallFunctionObjArgs(keyStore->m_ephemeralKeyHandler->m_obj, requestObj, keyObj, NULL);
     if (ret) {
         SWIG_AsVal_int(ret, &status);
     }
@@ -189,7 +191,7 @@ static DPS_Status CAHandler(DPS_KeyStoreRequest* request)
 
     gilState = PyGILState_Ensure();
     requestObj = SWIG_NewPointerObj(SWIG_as_voidptr(request), SWIGTYPE_p__DPS_KeyStoreRequest, 0);
-    ret = PyObject_CallFunction(keyStore->m_caHandler->m_obj, (char*)"O", requestObj);
+    ret = PyObject_CallFunctionObjArgs(keyStore->m_caHandler->m_obj, requestObj, NULL);
     if (ret) {
         SWIG_AsVal_int(ret, &status);
     }
@@ -209,7 +211,7 @@ static void OnNodeDestroyed(DPS_Node* node, void* data)
 
     gilState = PyGILState_Ensure();
     nodeObj = SWIG_NewPointerObj(SWIG_as_voidptr(node), SWIGTYPE_p__DPS_Node, 0);
-    ret = PyObject_CallFunction(handler->m_obj, (char*)"O", nodeObj);
+    ret = PyObject_CallFunctionObjArgs(handler->m_obj, nodeObj, NULL);
     Py_XDECREF(ret);
     Py_XDECREF(nodeObj);
     delete handler;
@@ -246,12 +248,42 @@ static void OnNodeAddressComplete(DPS_Node* node, const DPS_NodeAddress* addr, v
     gilState = PyGILState_Ensure();
     nodeObj = SWIG_NewPointerObj(SWIG_as_voidptr(node), SWIGTYPE_p__DPS_Node, 0);
     addrObj = SWIG_NewPointerObj(SWIG_as_voidptr(addr), SWIGTYPE_p__DPS_NodeAddress, 0);
-    ret = PyObject_CallFunction(handler->m_obj, (char*)"OO", nodeObj, addrObj);
+    ret = PyObject_CallFunctionObjArgs(handler->m_obj, nodeObj, addrObj, NULL);
     Py_XDECREF(ret);
     Py_XDECREF(addrObj);
     Py_XDECREF(nodeObj);
     delete handler;
     PyGILState_Release(gilState);
+}
+
+static PyObject* GetPayloadObject(const DPS_Publication* pub, uint8_t* payload, size_t len)
+{
+    DPS_NetRxBuffer* buf;
+    PyObject* payloadObj = NULL;
+
+    buf = DPS_PublicationGetNetRxBuffer(pub);
+    if (buf) {
+        Py_buffer* view;
+        payloadObj = PyMemoryView_FromObject((PyObject*)(buf->userData));
+        view = PyMemoryView_GET_BUFFER(payloadObj);
+        /*
+         * Assert that [payload,len) is within the view and then slice the
+         * view to just the payload.
+         */
+        assert((view->buf <= payload) && ((payload + len) <= ((uint8_t*)(view->buf) + view->len)));
+        view->buf = payload;
+        view->len = len;
+    } else {
+        Py_buffer view;
+        int err;
+        err = PyBuffer_FillInfo(&view, NULL, payload, len, 0, PyBUF_CONTIG);
+        if (!err) {
+            payloadObj = PyMemoryView_FromBuffer(&view);
+        } else {
+            DPS_ERRPRINT("PyBuffer_FillInfo failed: %d\n", err);
+        }
+    }
+    return payloadObj;
 }
 
 static void AcknowledgementHandler(DPS_Publication* pub, uint8_t* payload, size_t len)
@@ -264,8 +296,8 @@ static void AcknowledgementHandler(DPS_Publication* pub, uint8_t* payload, size_
 
     gilState = PyGILState_Ensure();
     pubObj = SWIG_NewPointerObj(SWIG_as_voidptr(pub), SWIGTYPE_p__DPS_Publication, 0);
-    payloadObj = From_bytes(payload, len);
-    ret = PyObject_CallFunction(handler->m_obj, (char*)"OO", pubObj, payloadObj);
+    payloadObj = GetPayloadObject(pub, payload, len);
+    ret = PyObject_CallFunctionObjArgs(handler->m_obj, pubObj, payloadObj, NULL);
     Py_XDECREF(ret);
     Py_XDECREF(payloadObj);
     Py_XDECREF(pubObj);
@@ -284,8 +316,8 @@ static void PublicationHandler(DPS_Subscription* sub, const DPS_Publication* pub
     gilState = PyGILState_Ensure();
     subObj = SWIG_NewPointerObj(SWIG_as_voidptr(sub), SWIGTYPE_p__DPS_Subscription, 0);
     pubObj = SWIG_NewPointerObj(SWIG_as_voidptr(pub), SWIGTYPE_p__DPS_Publication, 0);
-    payloadObj = From_bytes(payload, len);
-    ret = PyObject_CallFunction(handler->m_obj, (char*)"OOO", subObj, pubObj, payloadObj);
+    payloadObj = GetPayloadObject(pub, payload, len);
+    ret = PyObject_CallFunctionObjArgs(handler->m_obj, subObj, pubObj, payloadObj, NULL);
     Py_XDECREF(ret);
     Py_XDECREF(payloadObj);
     Py_XDECREF(pubObj);
@@ -293,9 +325,48 @@ static void PublicationHandler(DPS_Subscription* sub, const DPS_Publication* pub
     PyGILState_Release(gilState);
 }
 
+static DPS_NetRxBuffer* AllocNetRxBufferHandler(size_t len)
+{
+    PyGILState_STATE gilState;
+    DPS_NetRxBuffer* buf = NULL;
+    PyObject* obj = NULL;
+    Py_buffer view;
+    int err;
+
+    memset(&view, 0, sizeof(Py_buffer));
+    gilState = PyGILState_Ensure();
+    obj = PyByteArray_FromStringAndSize(NULL, len);
+    if (!obj) {
+        goto Exit;
+    }
+    err = PyObject_GetBuffer(obj, &view, PyBUF_CONTIG);
+    if (err) {
+        goto Exit;
+    }
+    buf = (DPS_NetRxBuffer*)(view.buf);
+    buf->userData = obj;
+    obj = NULL; /* obj belongs to buf now */
+
+ Exit:
+    PyBuffer_Release(&view);
+    Py_XDECREF(obj);
+    PyGILState_Release(gilState);
+    return buf;
+}
+
+static void FreeNetRxBufferHandler(DPS_NetRxBuffer* buf)
+{
+    PyGILState_STATE gilState;
+
+    gilState = PyGILState_Ensure();
+    Py_XDECREF((PyObject*)(buf->userData));
+    PyGILState_Release(gilState);
+}
+
 static void InitializeModule()
 {
     PyEval_InitThreads();
     DPS_Debug = 0;
+    DPS_SetNetRxBufferHandlers(AllocNetRxBufferHandler, FreeNetRxBufferHandler);
 }
 %}

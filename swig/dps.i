@@ -76,7 +76,6 @@
 #include <dps/err.h>
 #include <dps/event.h>
 #include <dps/json.h>
-#include <dps/synchronous.h>
 #include <dps/uuid.h>
 #include <dps/private/dps.h>
 
@@ -723,7 +722,6 @@ DPS_Status AckPublicationBufs(DPS_Publication* pub, Buffer* bufs, size_t numBufs
 %include <dps/err.h>
 %include <dps/event.h>
 %include <dps/json.h>
-%include <dps/synchronous.h>
 %include <dps/uuid.h>
 
 %include "dps_impl.i"
