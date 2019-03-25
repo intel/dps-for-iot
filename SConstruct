@@ -31,6 +31,7 @@ if platform.system() == 'Windows':
         PathVariable('PYTHON_PATH', 'Path to Python', 'C:\Python27', PathVariable.PathAccept),
         PathVariable('UV_PATH', 'Path where libuv is installed', 'ext\libuv', PathVariable.PathAccept),
         PathVariable('SWIG', 'Path to SWIG executable', 'C:\swigwin-3.0.10\swig.exe', PathVariable.PathAccept),
+        PathVariable('NASM_PATH', 'Path to where NASM is installed', 'C:\Program Files\NASM', PathVariable.PathAccept),
         PathVariable('DEF_FILE', 'Path to external defs for dll', 'dps_shared.def', PathVariable.PathIsFile))
 
 tools = GetOption('tools')
@@ -81,6 +82,7 @@ print("Building for " + env['variant'])
 
 if env['PLATFORM'] == 'win32':
     env.AppendENVPath('PATH', env['GIT_PATH'] + '\cmd')
+    env.AppendENVPath('PATH', env['NASM_PATH'])
 
     env.Append(CPPDEFINES = ['WIN32_LEAN_AND_MEAN', '_WIN32_WINNT=0x0600'])
     # We are getting our secure memory and string functions from
