@@ -22,6 +22,10 @@
 
   SWIG is only required if building the Python or JavaScript bindings.
 
+- [NASM](https://www.nasm.us/)
+
+  NASM is only required to build the optimized SHA-512 implementation.
+
 @subsection prerequisites-windows Windows
 
 - [Visual Studio](https://www.visualstudio.com/downloads/)
@@ -58,6 +62,12 @@
 - [MinGW](http://www.mingw.org/wiki/Getting_Started)
 
   MinGW is only required if building the Go binding.
+  [Chocolatey](https://chocolatey.org/) provides another means to
+  install this dependency.
+
+- [NASM](https://www.nasm.us/)
+
+  NASM is only required to build the optimized SHA-512 implementation.
   [Chocolatey](https://chocolatey.org/) provides another means to
   install this dependency.
 
