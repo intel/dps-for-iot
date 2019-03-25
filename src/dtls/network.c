@@ -754,7 +754,10 @@ static void DestroyConnection(DPS_NetConnection* cn)
     case CN_CLOSE_NOTIFIED:
         cn->state = CN_CLOSING;
         assert(!uv_is_active((uv_handle_t*)&cn->timer));
-        uv_idle_stop(&cn->idleForSendCallbacks);
+        if (uv_is_active((uv_handle_t*)&cn->idleForSendCallbacks)) {
+            uv_idle_stop(&cn->idleForSendCallbacks);
+            DPS_NetConnectionDecRef(cn);
+        }
         if (cn->type == MBEDTLS_SSL_IS_CLIENT) {
             uv_udp_recv_stop(&cn->socket);
         }
@@ -1109,12 +1112,14 @@ static void TLSSend(DPS_NetConnection* cn)
     DPS_QueueRemove(&req->queue);
 
     DPS_QueuePushBack(&cn->sendCompletedQueue, &req->queue);
-    ret = uv_idle_start(&cn->idleForSendCallbacks, OnIdleForSendCallbacks);
-    if (ret == 0) {
-        /*
-         * Add a ref while OnIdleForSendCallbacks is pending.
-         */
-        DPS_NetConnectionIncRef(cn);
+    if (!uv_is_active((uv_handle_t*)&cn->idleForSendCallbacks)) {
+        ret = uv_idle_start(&cn->idleForSendCallbacks, OnIdleForSendCallbacks);
+        if (ret == 0) {
+            /*
+             * Add a ref while OnIdleForSendCallbacks is pending.
+             */
+            DPS_NetConnectionIncRef(cn);
+        }
     }
     DPS_DBGPRINT("Using pending send with %d bufs\n", req->numBufs);
 
