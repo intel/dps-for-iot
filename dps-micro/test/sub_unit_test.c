@@ -103,6 +103,14 @@ int main(int argc, char** argv)
         CHECK(status == DPS_OK);
     }
 
+    status = DPS_SetNetworkKey(keyStore, &NetworkKeyId, &NetworkKey);
+    CHECK(status == DPS_OK);
+
+    status = DPS_SetTrustedCA(keyStore, TrustedCAs);
+    CHECK(status == DPS_OK);
+    status = DPS_SetCertificate(keyStore, Ids[SUB_ID].cert, Ids[SUB_ID].privateKey, Ids[SUB_ID].password);
+    CHECK(status == DPS_OK);
+
     status = DPS_Start(node);
     CHECK(status == DPS_OK);
 

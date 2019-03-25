@@ -5,27 +5,17 @@ platform = extEnv['PLATFORM']
 
 # Pull down mbedtls from github and build the library
 
-env = extEnv.Clone()
+mtenv = extEnv.Clone()
 
-git = env.Command('./mbedtls/.git', None,
+git = mtenv.Command('./mbedtls/.git', None,
                    ['git clone -n https://github.com/ARMmbed/mbedtls ext/mbedtls'])
 
-dep = env.Command('./mbedtls/Makefile', git,
-                   ['git checkout tags/mbedtls-2.8.0'],
+dep = mtenv.Command('./mbedtls/Makefile', git,
+                   ['git fetch', 'git checkout -q tags/mbedtls-2.16.0'],
                      chdir = 'ext/mbedtls')
 
-env.Append(
-    CPPPATH = [
-        './',
-        './mbedtls/include/',
-    ],
-    CPPDEFINES = [
-        'MBEDTLS_USER_CONFIG_FILE=\\"mbedtls_config.h\\"',
-    ]
-)
-
-if env['PLATFORM'] == 'posix':
-   env.Append(CFLAGS = ['-fPIC', "-g"])
+mtenv.Append(CPPPATH = ['.', './mbedtls/include/',])
+mtenv.Append(CPPDEFINES = ['MBEDTLS_USER_CONFIG_FILE=\\"mbedtls_config.h\\"',])
 
 sources = [
      './mbedtls/library/aes.c',
@@ -46,16 +36,19 @@ sources = [
      './mbedtls/library/entropy_poll.c',
      './mbedtls/library/error.c',
      './mbedtls/library/gcm.c',
+     './mbedtls/library/hkdf.c',
      './mbedtls/library/hmac_drbg.c',
      './mbedtls/library/md.c',
      './mbedtls/library/md_wrap.c',
      './mbedtls/library/md5.c',
+     './mbedtls/library/nist_kw.c',
      './mbedtls/library/oid.c',
      './mbedtls/library/pem.c',
      './mbedtls/library/pk.c',
      './mbedtls/library/pk_wrap.c',
      './mbedtls/library/pkparse.c',
      './mbedtls/library/platform.c',
+     './mbedtls/library/platform_util.c',
      './mbedtls/library/sha256.c',
      './mbedtls/library/sha512.c',
      './mbedtls/library/timing.c',
@@ -72,10 +65,10 @@ sources += [
      './mbedtls/library/ssl_tls.c',
 ]
 
-objects = env.Object(sources)
+objects = mtenv.Object(sources)
 
 Depends(sources, dep)
 Depends(objects, './mbedtls_config.h')
 
-libs = [env.Library('lib/libmbedtls', objects)]
+libs = [mtenv.Library('lib/libmbedtls', objects)]
 Return('libs')

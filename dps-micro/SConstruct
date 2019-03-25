@@ -160,20 +160,6 @@ elif env['PLATFORM'] == 'posix':
     else:
         env.Append(CCFLAGS = ['-O3', '-DNDEBUG'])
 
-    # Where to find Python.h
-    if env['target'] == 'yocto':
-        env['PY_CPPPATH'] = [os.getenv('SYSROOT') + '/usr/include/python2.7']
-    else:
-        env['PY_CPPPATH'] = ['/usr/include/python2.7']
-    env['PY_LIBPATH'] = []
-
-    env['DPS_LIBS'] = ['pthread']
-
-    # Check if we need to build libuv
-    conf = env.Configure()
-    extUV = not conf.CheckLib('uv', symbol='uv_mutex_init_recursive')
-    env = conf.Finish()
-
     # Linux target
     env.Append(CPPDEFINES = ['DPS_TARGET=DPS_TARGET_LINUX'])
 

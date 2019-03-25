@@ -54,6 +54,9 @@ typedef struct _Id {
 
 extern const Id Ids[];
 
+#define PUB_ID  4
+#define SUB_ID  5
+
 #ifdef __cplusplus
 }
 #endif

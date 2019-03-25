@@ -91,7 +91,7 @@ DPS_Status DPS_DTLSSend(DPS_Node* node);
 /*
  * Called when data has been received and is in the RxBuffer
  */
-DPS_Status DPS_DTLSRecv(DPS_Node* node, DPS_RxBuffer* buf);
+DPS_Status DPS_DTLSRecv(DPS_Node* node, DPS_NodeAddress* addr, DPS_RxBuffer* rxBuf);
 
 
 #ifdef __cplusplus
