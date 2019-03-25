@@ -19,14 +19,22 @@ if env.Detect('nasm') != None:
         './intel-ipsec-mb/avx/sha512_one_block_avx.asm'
     ]
 
-    mbenv['ASFLAGS'] = [
-        '-felf64',
-        '-Xgnu',
-        '-gdwarf',
-        '-DLINUX',
-        '-D__linux__',
-        '-I./ext/intel-ipsec-mb/'
-    ]
+    if mbenv['PLATFORM'] == 'win32':
+        mbenv['ASFLAGS'] = [
+            '-fwin64',
+            '-Xvc',
+            '-DWIN_ABI',
+            '-I./ext/intel-ipsec-mb/'
+        ]
+    else:
+        mbenv['ASFLAGS'] = [
+            '-felf64',
+            '-Xgnu',
+            '-gdwarf',
+            '-DLINUX',
+            '-D__linux__',
+            '-I./ext/intel-ipsec-mb/'
+        ]
 
     objs = mbenv.Object(sources)
     shobjs = mbenv.SharedObject(sources)
