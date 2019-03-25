@@ -82,7 +82,7 @@ const char TrustedCAs[] =
 
 const Id Ids[] = {
     {
-        { "alice", sizeof("alice") - 1 },
+        { (const uint8_t*)"alice", sizeof("alice") - 1 },
         "-----BEGIN CERTIFICATE-----\r\n"
         "MIIBzTCCAS4CCQCu4kaR9/HCiDAKBggqhkjOPQQDBDAqMQswCQYDVQQGEwJVUzEM\r\n"
         "MAoGA1UECgwDRFBTMQ0wCwYDVQQDDARyb290MB4XDTE4MDMwMTE4MTIyMVoXDTI4\r\n"
@@ -108,7 +108,7 @@ const Id Ids[] = {
         "alice"
     },
     {
-        { "bob", sizeof("bob") - 1 },
+        { (const uint8_t*)"bob", sizeof("bob") - 1 },
         "-----BEGIN CERTIFICATE-----\r\n"
         "MIIByjCCASwCCQCu4kaR9/HCiTAKBggqhkjOPQQDBDAqMQswCQYDVQQGEwJVUzEM\r\n"
         "MAoGA1UECgwDRFBTMQ0wCwYDVQQDDARyb290MB4XDTE4MDMwMTE4MTIyMVoXDTI4\r\n"
@@ -134,7 +134,7 @@ const Id Ids[] = {
         "bob"
     },
     {
-        { "eve", sizeof("eve") - 1 },
+        { (const uint8_t*)"eve", sizeof("eve") - 1 },
         "-----BEGIN CERTIFICATE-----\r\n"
         "MIIByzCCASwCCQCu4kaR9/HCijAKBggqhkjOPQQDBDAqMQswCQYDVQQGEwJVUzEM\r\n"
         "MAoGA1UECgwDRFBTMQ0wCwYDVQQDDARyb290MB4XDTE4MDMwMTE4MTIyMVoXDTI4\r\n"
@@ -160,7 +160,7 @@ const Id Ids[] = {
         "eve"
     },
     {
-        { "trudy", sizeof("trudy") - 1 },
+        { (const uint8_t*)"trudy", sizeof("trudy") - 1 },
         "-----BEGIN CERTIFICATE-----\r\n"
         "MIIBzTCCAS4CCQCu4kaR9/HCizAKBggqhkjOPQQDBDAqMQswCQYDVQQGEwJVUzEM\r\n"
         "MAoGA1UECgwDRFBTMQ0wCwYDVQQDDARyb290MB4XDTE4MDMwMTE4MTIyMVoXDTI4\r\n"
@@ -186,49 +186,58 @@ const Id Ids[] = {
         "trudy"
     },
     {
-        { "DPS Test Publisher", sizeof("DPS Test Publisher") - 1 },
+        { (const uint8_t*)"DPS Test Publisher", sizeof("DPS Test Publisher") - 1 },
         "-----BEGIN CERTIFICATE-----\r\n"
-        "MIIBiDCCAS0CCQCzbzjgbS2buTAKBggqhkjOPQQDAjBIMQswCQYDVQQGEwJVUzEV\r\n"
-        "MBMGA1UEBwwMRGVmYXVsdCBDaXR5MQwwCgYDVQQKDANEUFMxFDASBgNVBAMMC0RQ\r\n"
-        "UyBUZXN0IENBMB4XDTE4MDEwNTE3NDIyNVoXDTI4MDEwMzE3NDIyNVowTzELMAkG\r\n"
-        "A1UEBhMCVVMxFTATBgNVBAcMDERlZmF1bHQgQ2l0eTEMMAoGA1UECgwDRFBTMRsw\r\n"
-        "GQYDVQQDDBJEUFMgVGVzdCBQdWJsaXNoZXIwWTATBgcqhkjOPQIBBggqhkjOPQMB\r\n"
-        "BwNCAAT9zFcF+A/Hp8mD4DZSUrbmbyQlj81LjGm7o7IBqF4mjlV7sgNtyAFvQYI7\r\n"
-        "3BJYbcR15byhqNYT7oM6i4WvPCH0MAoGCCqGSM49BAMCA0kAMEYCIQCX7IHcB54O\r\n"
-        "VBD7MQwf6aoKDHrLBA2oAk60Stxcfx5RdAIhAL3Dwkrz9BTjK7YbUPScMBUPO/8k\r\n"
-        "68kLmXJncgz0HCAl\r\n"
+        "MIIB2jCCATsCCQDtkL14u3NJRDAKBggqhkjOPQQDBDAqMQswCQYDVQQGEwJVUzEM\r\n"
+        "MAoGA1UECgwDRFBTMQ0wCwYDVQQDDARyb290MB4XDTE4MDMwMTE4MTQzMloXDTI4\r\n"
+        "MDIyNzE4MTQzMlowODELMAkGA1UEBhMCVVMxDDAKBgNVBAoMA0RQUzEbMBkGA1UE\r\n"
+        "AwwSRFBTIFRlc3QgUHVibGlzaGVyMIGbMBAGByqGSM49AgEGBSuBBAAjA4GGAAQB\r\n"
+        "igbpvXYHms+7wTa1BcAf3PQF3/6R/J92HcbiPtPGVNlPYdpCnyYEF7DoNvgI/Iag\r\n"
+        "EqUjryMWoxwi+KghG1BwA2MAKhn/ta4TAXfASPr9gzYK5g+pKFnOXqc4sWut/o8D\r\n"
+        "se6LU2D3PsQBs5/kCkbjz1/sKQVbDJGT5eTHQvC5nxjToZcwCgYIKoZIzj0EAwQD\r\n"
+        "gYwAMIGIAkIBIEo4NfnSh60U4srn2iSR/u5VFHi4Yy3PjlKlkmRDo+ClPVHPOK7y\r\n"
+        "8/82J1qlTw5GSR0snR4R5663D2s3w2e9fIwCQgCp3K8Y7fTPdpwOy91clBr3OFHK\r\n"
+        "sMt3kjq1vrcbVzZy50hGyGxjUqZHUi87/KuhkcMKSqDC6U7jEiEpv/WNH/VrZQ==\r\n"
         "-----END CERTIFICATE-----\r\n",
         "-----BEGIN EC PRIVATE KEY-----\r\n"
         "Proc-Type: 4,ENCRYPTED\r\n"
-        "DEK-Info: AES-256-CBC,1015081BA68E2CFF939DD7F15415B0A8\r\n"
+        "DEK-Info: AES-256-CBC,F0004AF499EA7B8A7252B286E3274508\r\n"
         "\r\n"
-        "Fqu58/SuC8tFL5gpje6JI+Raq9DiCo/xWu32RzHastU20xie/8xO5ts+aLXQHPO+\r\n"
-        "y/mogXxVnkfLBelgz3BhxitMOM2jEm3P8BwXzDWvm3BK5AneUaQMROHTMzU/pDlD\r\n"
-        "DFcbIyQqLTFp0QLrvzplZWsFBAKXLs2bxcuyqRv4+h4=\r\n"
+        "M5Du62n9VNOQjomIiToNODHeUexM6/kd/BJv5htLIKK+IuWhbz7uKiDa1ULrxz5x\r\n"
+        "KVEh6b0h3WjQ5Z+tlHGGedD4uarwWcUDaw9j2kTpaN33HuCmQAEgH7Lqtq4BnI4S\r\n"
+        "7FDtpoXtMOWGBs/AhQlUXQE0lFENacZ3PLkbafHVzcm19hWZk19ANpZOPbRNgMdQ\r\n"
+        "vPIAyubRAwG+M+wtCxoG9kvwA2TpriwTPb3HaTtefXcaxM8ijS/VQa5mFjphSeUn\r\n"
+        "BcrDGodlTMw9klV0eJpmDKUrpiXqExhzCsS33jK9YuM=\r\n"
         "-----END EC PRIVATE KEY-----\r\n",
         "DPS Test Publisher"
     },
     {
-        { "DPS Test Subscriber", sizeof("DPS Test Subscriber") - 1 },
+        { (const uint8_t*)"DPS Test Subscriber", sizeof("DPS Test Subscriber") - 1 },
         "-----BEGIN CERTIFICATE-----\r\n"
-        "MIIBiTCCAS4CCQCzbzjgbS2bujAKBggqhkjOPQQDAjBIMQswCQYDVQQGEwJVUzEV\r\n"
-        "MBMGA1UEBwwMRGVmYXVsdCBDaXR5MQwwCgYDVQQKDANEUFMxFDASBgNVBAMMC0RQ\r\n"
-        "UyBUZXN0IENBMB4XDTE4MDEwNTE3NDI0NloXDTI4MDEwMzE3NDI0NlowUDELMAkG\r\n"
-        "A1UEBhMCVVMxFTATBgNVBAcMDERlZmF1bHQgQ2l0eTEMMAoGA1UECgwDRFBTMRww\r\n"
-        "GgYDVQQDDBNEUFMgVGVzdCBTdWJzY3JpYmVyMFkwEwYHKoZIzj0CAQYIKoZIzj0D\r\n"
-        "AQcDQgAEbrDkznbJynaPPfKnnkx14nLX782a2SiPZHYFrDseHwoLOqWe6TI2bcIm\r\n"
-        "rPEDasOnc8fywObXDwEKyRgIR1gqLDAKBggqhkjOPQQDAgNJADBGAiEAj7V5KV3y\r\n"
-        "SwVLhWGC4tey6zs7G+IQMNPQF0A/+Ic1hLICIQD7TumHocAG2SG42IE4WcwllrBG\r\n"
-        "LmXKOg4TBaBxS5GrDg==\r\n"
+        "MIIB2jCCATwCCQDtkL14u3NJRTAKBggqhkjOPQQDBDAqMQswCQYDVQQGEwJVUzEM\r\n"
+        "MAoGA1UECgwDRFBTMQ0wCwYDVQQDDARyb290MB4XDTE4MDMwMTE4MTQzMloXDTI4\r\n"
+        "MDIyNzE4MTQzMlowOTELMAkGA1UEBhMCVVMxDDAKBgNVBAoMA0RQUzEcMBoGA1UE\r\n"
+        "AwwTRFBTIFRlc3QgU3Vic2NyaWJlcjCBmzAQBgcqhkjOPQIBBgUrgQQAIwOBhgAE\r\n"
+        "AdPlr3YCutvRP0agz6KRmVVY4HuzS5zmEaBzkTCSWFkhugDgwmMgszDCAD5maqe5\r\n"
+        "nAHammIc/MSw1UK+JFLFzSffAB48lbymUgTtE41sXWx82gc6vwvU25DqnNxHgS0L\r\n"
+        "K0bVQweaXa4toICC3SLZD0iRDI1jUqZPwDCkbpF9LyDDa181MAoGCCqGSM49BAME\r\n"
+        "A4GLADCBhwJBP7gFuL3dePSkYG4LoBg1atH6+2xfJWg51ZV8diRXWIgRlC5u3kCQ\r\n"
+        "R+AJhf+Slik1tMQePTB5OojwrRYjw40iEDoCQgE6rg0vAE2AZVLYfVsz01we+Rov\r\n"
+        "L8bFbjmY7xtqNCqRgCP7Nb/DLED8ahqo+uI7tPx5EqxDWj0FdxewZnbnBorBug==\r\n"
         "-----END CERTIFICATE-----\r\n",
         "-----BEGIN EC PRIVATE KEY-----\r\n"
         "Proc-Type: 4,ENCRYPTED\r\n"
-        "DEK-Info: AES-256-CBC,7F349D976187178514F51358734287B2\r\n"
+        "DEK-Info: AES-256-CBC,65E2556079AC9649D58B8CC72AE4A43E\r\n"
         "\r\n"
-        "uc2MV05GoQf5WKC62U1n5dX9O11OehzpxKVKQiiMoqB+PnkyFR8+eS/CLdhtHPC9\r\n"
-        "cU6HJDaPdUFZlV0L+Dhl3L1vm0zBvRpIZUivZGzB3h6RMptvhoZ5rey1f1Kyq7oj\r\n"
-        "1rEBHuMR4LT4PCrDQ4DpvOvAiJGpPMEaEovKhy+IneQ=\r\n"
+        "qWEHBFDO16P65LBjQecIrcql5bWuUx2SO87Qgllm576xolusU+iTExRVENjtO3Nl\r\n"
+        "Vil2EqdMX2KHdv9p282lW1Drl069SesP69LiOo0sMYJefWJZRSnbRL7e7tDTXuUz\r\n"
+        "p038ythZg7Ho6UggO6cvy08JomqMuJtwpJ6RTTFAsQMsEqCF8m0e26EdxrFUpkrM\r\n"
+        "imwGuJ3hGzJKTZYaqK8i17LK+m4W0FzXETXp+qDyp9LBuZTqBISJ7MH+LOnY4neZ\r\n"
+        "a/F20EFCFwL47sfQlZMsOYHw140IS2+YOyzOD051Gbw=\r\n"
         "-----END EC PRIVATE KEY-----\r\n",
         "DPS Test Subscriber"
+    },
+    {
+        { { 0 }, 0 }, NULL, NULL, NULL
     }
 };

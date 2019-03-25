@@ -223,6 +223,9 @@ static DWORD WINAPI RecvThread(LPVOID lpParam)
     }
 
     while (net) {
+        DPS_Status status = DPS_OK;
+        DWORD flags = 0;
+        int addrLen = (int)sizeof(rxAddr);
         int multicast;
         ret = WSAWaitForMultipleEvents(NUM_RECV_SOCKS, event, FALSE, INFINITE, TRUE);
         if (ret == WSA_WAIT_FAILED) {
@@ -248,22 +251,22 @@ static DWORD WINAPI RecvThread(LPVOID lpParam)
             DPS_DBGPRINT("WSAGetOverlappedResult failed %d\n", WSAGetLastError());
             goto Exit;
         }
-        while (TRUE) {
-            DPS_Status status = DPS_OK;
-            DWORD flags = 0;
-            int addrLen = (int)sizeof(rxAddr);
+        if (recvd) {
             DPS_RxBufferInit(&rxBuf, net->rxBuffer[i], recvd);
             if (!multicast && net->dtls.state != DTLS_DISABLED) {
-                status = DPS_DTLSRecv(node, &rxBuf);
+                status = DPS_DTLSRecv(node, &rxAddr, &rxBuf);
             }
-            net->recvCB(node, &rxAddr, multicast, &rxBuf, status);
-            /* Loop while there is data immediately available */
-            if (WSARecvFrom(socks[i], &buf[i], 1, &recvd, &flags, (SOCKADDR*)&rxAddr, &addrLen, &overlapped[i], NULL)) {
-                break;
+            if (net->dtls.state == DTLS_DISABLED || net->dtls.state == DTLS_CONNECTED) {
+                net->recvCB(node, &rxAddr, multicast, &rxBuf, status);
             }
         }
-        if (WSAGetLastError() != WSA_IO_PENDING) {
-            DPS_DBGPRINT("WSARecvFrom returned %d\n", WSAGetLastError());
+        /* Loop while there is data immediately available */
+        if (WSARecvFrom(socks[i], &buf[i], 1, &recvd, &flags, (SOCKADDR*)&rxAddr, &addrLen, &overlapped[i], NULL)) {
+            if (WSAGetLastError() != WSA_IO_PENDING) {
+                DPS_DBGPRINT("WSARecvFrom returned %d\n", WSAGetLastError());
+            }
+        } else {
+            WSASetEvent(event[i]);
         }
     }
 
@@ -332,19 +335,21 @@ static DWORD WINAPI UnicastCBThread(LPVOID lpParam)
     WSAEVENT event = net->sendOL.hEvent;
     DPS_SendComplete sendCB;
 
-    int ret = WSAWaitForMultipleEvents(1, &net->sendOL.hEvent, DPS_TRUE, WSA_INFINITE, DPS_FALSE);
-    /* Clear events and re-prime the overlapped struct */
-    WSAResetEvent(event);
-    memset(&net->sendOL, 0, sizeof(WSAOVERLAPPED));
-    net->sendOL.hEvent = event;
+    while (DPS_TRUE) {
+        int ret = WSAWaitForMultipleEvents(1, &net->sendOL.hEvent, DPS_TRUE, WSA_INFINITE, DPS_FALSE);
+        /* Clear events and re-prime the overlapped struct */
+        WSAResetEvent(event);
+        memset(&net->sendOL, 0, sizeof(WSAOVERLAPPED));
+        net->sendOL.hEvent = event;
 
-    sendCB = net->sendCB;
-    net->sendCB = NULL;
-    if (sendCB) {
-        if (ret == WSA_WAIT_FAILED) {
-            sendCB(node, net->appData, DPS_ERR_NETWORK);
-        } else {
-            sendCB(node, net->appData, DPS_OK);
+        sendCB = net->sendCB;
+        net->sendCB = NULL;
+        if (sendCB) {
+            if (ret == WSA_WAIT_FAILED) {
+                sendCB(node, net->appData, DPS_ERR_NETWORK);
+            } else {
+                sendCB(node, net->appData, DPS_OK);
+            }
         }
     }
     return 0;
@@ -692,6 +697,9 @@ DPS_Status DPS_UnicastWriteAsync(DPS_Node* node, DPS_NodeAddress* dest, void* da
     int ret;
     WSABUF buf;
 
+    DPS_DBGTRACE();
+    DPS_DBGPRINT("Writing %d bytes\n", len);
+
     buf.len = (LONG)len;
     buf.buf = data;
 
@@ -741,8 +749,12 @@ DPS_Status DPS_UnicastSend(DPS_Node* node, DPS_NodeAddress* dest, void* appCtx, 
          */
         status = DPS_DTLSSend(node);
         break;
-    default:
-        assert(0);
+    case DTLS_IN_HANDSHAKE:
+        /*
+         * Already in a server side handshake due to an incoming packet
+         */
+        status = DPS_ERR_BUSY;
+        break;
     }
     if (status != DPS_OK) {
         net->sendCB = NULL;
