@@ -209,8 +209,7 @@ else:
     # Fortify source:
     env.Append(CPPDEFINES = ['_FORTIFY_SOURCE=2'])
 
-    # gcc option -mmsse4.2 is to enble generation of popcountq instruction
-    env.Append(CCFLAGS = ['-ggdb', '-msse4.2'])
+    env.Append(CCFLAGS = ['-ggdb', '-march=native'])
 
     if env['profile'] == True:
         env.Append(CCFLAGS = ['-pg'])
