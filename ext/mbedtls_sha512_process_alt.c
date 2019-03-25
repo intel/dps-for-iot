@@ -22,7 +22,7 @@
 
 #include <mbedtls/sha512.h>
 
-#if defined(__AVX__)
+#if defined(__AVX2__) || defined(__AVX__)
 
 extern void sha512_block_avx( const void *,
                               void * );
@@ -34,7 +34,7 @@ int mbedtls_internal_sha512_process( mbedtls_sha512_context *ctx,
     return ( 0 );
 }
 
-#elif defined(__SSE__)
+#elif defined(__SSE__) || defined(_M_X64) || defined(_M_AMD64)
 
 extern void sha512_block_sse( const void *,
                               void * );
