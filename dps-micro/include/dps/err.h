@@ -70,6 +70,7 @@ typedef int DPS_Status; /**< The status code type */
 #define DPS_ERR_STOPPING          26 /**< The current node is stopping */
 #define DPS_ERR_RANGE             27 /**< A value is out of range */
 #define DPS_ERR_LOST_PRECISION    28 /**< Precision was lost when converting a value */
+#define DPS_ERR_NO_DATA           29 /**< There is no data available */
 
 /**
  * The text string representation of the status code.

@@ -45,7 +45,7 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
  * Controls debug output from the mbedtls library,
  * ranges from 0 (no debug) to 4 (verbose).
  */
-#define DEBUG_MBEDTLS_LEVEL 4
+#define DEBUG_MBEDTLS_LEVEL 3
 
 /* Personalization string for the DRBG */
 static const unsigned char PERSONALIZATION_STRING[] = "DPS_DRBG";
@@ -122,7 +122,7 @@ static void OnTimeout(DPS_Timer* timer, void* data)
         DPS_TimerCancel(timer);
         dtls->timer = NULL;
         /*
-         * TODO - resend
+         * Re-do the last handshake step
          */
         ret = mbedtls_ssl_handshake_step(&dtls->ssl);
         if (ret) {
@@ -135,7 +135,16 @@ static void OnTimeout(DPS_Timer* timer, void* data)
             }
             if (ret) {
                 DPS_WARNPRINT("Handshake failed - %s\n", TLSErrTxt(ret));
+                mbedtls_ssl_session_reset(&dtls->ssl);
                 dtls->state = DTLS_DISCONNECTED;
+            }
+        }
+        if (dtls->ssl.state == MBEDTLS_SSL_HANDSHAKE_OVER) {
+            dtls->state = DTLS_CONNECTED;
+            if (DPS_UnicastWritePending(node->network)) {
+                assert(dtls->sslType == MBEDTLS_SSL_IS_CLIENT);
+                /* Send the packet that was delayed by the DTLS handshake */
+                DPS_DTLSSend(node);
             }
         }
     }
@@ -285,13 +294,17 @@ DPS_Status DPS_DTLSRecv(DPS_Node* node, DPS_NodeAddress* addr, DPS_RxBuffer* rxB
 
     node->rxBuf = rxBuf;
 
-    if (dtls->state == DTLS_DISCONNECTED) {
-        return DPS_DTLSHandshake(node, addr, MBEDTLS_SSL_IS_SERVER);
-    }
-    
-    if (dtls->state == DTLS_CONNECTED) {
+    switch (dtls->state) {
+    case DTLS_DISCONNECTED:
+        status = DPS_DTLSHandshake(node, addr, MBEDTLS_SSL_IS_SERVER);
+        /* Let caller know there is no data */
+        if (status == DPS_OK) {
+            status = DPS_ERR_NO_DATA;
+        }
+        break;
+    case DTLS_CONNECTED:
         assert(dtls->ssl.state == MBEDTLS_SSL_HANDSHAKE_OVER);
-        ret = mbedtls_ssl_read(&dtls->ssl, node->tmpBuffer, sizeof(node->tmpBuffer));
+        ret = mbedtls_ssl_read(&dtls->ssl, dtls->tmpBuffer, sizeof(dtls->tmpBuffer));
         if (ret < 0) {
             if (ret == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY) {
                 DPS_DBGPRINT("Connection was closed gracefully\n");
@@ -303,14 +316,14 @@ DPS_Status DPS_DTLSRecv(DPS_Node* node, DPS_NodeAddress* addr, DPS_RxBuffer* rxB
         } else {
             DPS_DBGPRINT("Decrypted into %d bytes of plaintext\n", ret);
             /* Update the buffer to point to the plaintext data */
-            DPS_RxBufferInit(rxBuf, node->tmpBuffer, ret);
+            DPS_RxBufferInit(rxBuf, dtls->tmpBuffer, ret);
         }
-    } else {
-        assert(dtls->state == DTLS_IN_HANDSHAKE);
+        break;
+    case DTLS_IN_HANDSHAKE:
         /*
-         * Perform a single step of the DTLS handshake
+         * Run the DTLS handshake for a while
          */
-        ret = mbedtls_ssl_handshake_step(&dtls->ssl);
+        ret = mbedtls_ssl_handshake(&dtls->ssl);
         if (ret) {
             if (ret == MBEDTLS_ERR_SSL_HELLO_VERIFY_REQUIRED) {
                 DPS_DBGPRINT("In handshake hello verify required\n");
@@ -334,11 +347,18 @@ DPS_Status DPS_DTLSRecv(DPS_Node* node, DPS_NodeAddress* addr, DPS_RxBuffer* rxB
         if (dtls->ssl.state == MBEDTLS_SSL_HANDSHAKE_OVER) {
             dtls->state = DTLS_CONNECTED;
             if (DPS_UnicastWritePending(node->network)) {
-                assert(dtls->sslType == MBEDTLS_SSL_IS_CLIENT); 
+                assert(dtls->sslType == MBEDTLS_SSL_IS_CLIENT);
                 /* Send the packet that was delayed by the DTLS handshake */
                 status = DPS_DTLSSend(node);
             }
         }
+        /* Let caller know there is no data */
+        if (status == DPS_OK) {
+            status = DPS_ERR_NO_DATA;
+        }
+        break;
+    default:
+        status = DPS_ERR_FAILURE;
     }
     return status;
 }
@@ -350,11 +370,17 @@ static int OnDTLSRecv(void* data, unsigned char *buf, size_t len)
 
     DPS_DBGTRACE();
 
-    if (rxLen > len) {
-        return MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL;
+    if (rxLen) {
+        if (rxLen > len) {
+            return MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL;
+        } else {
+            memcpy(buf, node->rxBuf->rxPos, rxLen);
+            /* Consume all the data in buffer */
+            node->rxBuf->rxPos += rxLen;
+            return (int)rxLen;
+        }
     } else {
-        memcpy(buf, node->rxBuf->rxPos, rxLen);
-        return (int)rxLen;
+        return MBEDTLS_ERR_SSL_WANT_READ;
     }
 }
 
@@ -510,7 +536,7 @@ DPS_Status DPS_DTLSHandshake(DPS_Node* node, DPS_NodeAddress* addr, int sslType)
     /*
      * How much debug output do we want?
      */
-    mbedtls_debug_set_threshold(5);
+    mbedtls_debug_set_threshold(DEBUG_MBEDTLS_LEVEL);
     /*
      * Kick off the first step of the DTLS handshake
      */

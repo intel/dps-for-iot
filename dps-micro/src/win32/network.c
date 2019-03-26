@@ -83,7 +83,7 @@ typedef struct _MCastTx {
 
 struct _DPS_Network {
     SOCKET mcastRecvSock[2];             /* IPv4 and IPv6 multicast recv sockets */
-    SOCKET udpSock;                      /* The UDP unicast socket */ 
+    SOCKET udpSock;                      /* The UDP unicast socket */
     uint8_t rxBuffer[NUM_RECV_SOCKS][RX_BUFFER_SIZE]; /* need separate buffers for each recv socket */
     DWORD txLen;
     DPS_OnReceive recvCB;
@@ -256,16 +256,16 @@ static DWORD WINAPI RecvThread(LPVOID lpParam)
             if (!multicast && net->dtls.state != DTLS_DISABLED) {
                 status = DPS_DTLSRecv(node, &rxAddr, &rxBuf);
             }
-            if (net->dtls.state == DTLS_DISABLED || net->dtls.state == DTLS_CONNECTED) {
+            if (status != DPS_ERR_NO_DATA) {
                 net->recvCB(node, &rxAddr, multicast, &rxBuf, status);
             }
         }
-        /* Loop while there is data immediately available */
         if (WSARecvFrom(socks[i], &buf[i], 1, &recvd, &flags, (SOCKADDR*)&rxAddr, &addrLen, &overlapped[i], NULL)) {
             if (WSAGetLastError() != WSA_IO_PENDING) {
                 DPS_DBGPRINT("WSARecvFrom returned %d\n", WSAGetLastError());
             }
         } else {
+            /* Data was immediately available so set the event */
             WSASetEvent(event[i]);
         }
     }
@@ -731,7 +731,7 @@ DPS_Status DPS_UnicastSend(DPS_Node* node, DPS_NodeAddress* dest, void* appCtx, 
         /*
          * DTLS is not being used
          */
-        { 
+        {
             size_t len = (LONG)(node->txLen + node->txHdrLen);
             void* data = node->txBuffer + DPS_TX_HEADER_SIZE - node->txHdrLen;
             status = DPS_UnicastWriteAsync(node, dest, data, len);
