@@ -55,6 +55,7 @@ typedef enum {
 } DTLS_State;
 
 typedef struct _DPS_DTLS {
+    uint8_t tmpBuffer[DPS_TMP_BUFFER_SIZE];
     /*
      * mbedtls uses different logic for client and server, so keep
      * track of the role in a connection.

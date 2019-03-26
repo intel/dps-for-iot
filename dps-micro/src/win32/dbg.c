@@ -22,11 +22,23 @@
 
 #include <stdarg.h>
 #include <dps/dbg.h>
+#include <sys\timeb.h>
 
 int DPS_Debug = 1;
 
-/* TODO - platform dependent timestamp */
-#define DPS_DBG_TIME   0
+static uint32_t Timestamp()
+{
+    static struct timeb start;
+    struct timeb t;
+    ftime(&t);
+
+    if (!start.time) {
+        start = t;
+    }
+    return (uint32_t)((t.time - start.time) * 1000 + (t.millitm - start.millitm));
+}
+
+#define DPS_DBG_TIME  Timestamp()
 
 static const char* LevelTxt[] = { "ERROR", "WARNING", "" /* PRINT */, "" /* PRINTT */, "TRACE", "DEBUG" };
 

@@ -28,7 +28,6 @@
 
 void DPS_RxBufferInit(DPS_RxBuffer* buffer, uint8_t* storage, size_t size)
 {
-    assert(storage);
     buffer->base = storage;
     buffer->rxPos = storage;
     buffer->eod = storage + size;
