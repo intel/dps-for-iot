@@ -1529,15 +1529,14 @@ static void OnResolve(DPS_Node* node, const DPS_NodeAddress* addr, void* data)
     }
 }
 
-DPS_Status DPS_Link(DPS_Node* node, const char* addrText, DPS_OnLinkComplete cb, void* data)
+DPS_Status DPS_Link(DPS_Node* node, const char* network, const char* addrText,
+                    DPS_OnLinkComplete cb, void* data)
 {
     DPS_Status ret = DPS_OK;
     OnOpCompletion* completion = NULL;
     DPS_NodeAddress* addr = NULL;
-#if defined(DPS_USE_DTLS) || defined(DPS_USE_TCP) || defined(DPS_USE_UDP)
     char host[DPS_MAX_HOST_LEN + 1];
     char service[DPS_MAX_SERVICE_LEN + 1];
-#endif
 
     DPS_DBGTRACE();
 
@@ -1550,34 +1549,45 @@ DPS_Status DPS_Link(DPS_Node* node, const char* addrText, DPS_OnLinkComplete cb,
         ret = DPS_ERR_RESOURCES;
         goto Exit;
     }
-#if defined(DPS_USE_DTLS) || defined(DPS_USE_TCP) || defined(DPS_USE_UDP)
-    ret = DPS_SplitAddress(addrText, host, sizeof(host), service, sizeof(service));
-    if (ret != DPS_OK) {
-        DPS_ERRPRINT("DPS_SplitAddress returned %s\n", DPS_ErrTxt(ret));
-        goto Exit;
+    switch (DPS_NetAddressType(network)) {
+    case DPS_UNKNOWN:
+        network = "udp";
+        /* FALLTHROUGH */
+    case DPS_DTLS:
+    case DPS_TCP:
+    case DPS_UDP:
+        ret = DPS_SplitAddress(addrText, host, sizeof(host), service, sizeof(service));
+        if (ret != DPS_OK) {
+            DPS_ERRPRINT("DPS_SplitAddress returned %s\n", DPS_ErrTxt(ret));
+            goto Exit;
+        }
+        ret = DPS_ResolveAddress(node, network, host, service, OnResolve, completion);
+        if (ret != DPS_OK) {
+            DPS_ERRPRINT("DPS_ResolveAddress returned %s\n", DPS_ErrTxt(ret));
+            goto Exit;
+        }
+        break;
+    case DPS_PIPE:
+        addr = DPS_CreateAddress();
+        if (!addr) {
+            ret = DPS_ERR_RESOURCES;
+            goto Exit;
+        }
+        if (DPS_SetAddress(addr, "pipe", addrText) == NULL) {
+            DPS_ERRPRINT("DPS_SetAddress failed\n");
+            ret = DPS_ERR_INVALID;
+            goto Exit;
+        }
+        ret = Link(node, addr, completion);
+        if (ret != DPS_OK) {
+            DPS_ERRPRINT("Link returned %s\n", DPS_ErrTxt(ret));
+            goto Exit;
+        }
+        break;
+    default:
+        ret = DPS_ERR_ARGS;
+        break;
     }
-    ret = DPS_ResolveAddress(node, host, service, OnResolve, completion);
-    if (ret != DPS_OK) {
-        DPS_ERRPRINT("DPS_ResolveAddress returned %s\n", DPS_ErrTxt(ret));
-        goto Exit;
-    }
-#elif defined(DPS_USE_PIPE)
-    addr = DPS_CreateAddress();
-    if (!addr) {
-        ret = DPS_ERR_RESOURCES;
-        goto Exit;
-    }
-    if (DPS_SetAddress(addr, addrText) == NULL) {
-        DPS_ERRPRINT("DPS_SetAddress failed\n");
-        ret = DPS_ERR_INVALID;
-        goto Exit;
-    }
-    ret = Link(node, addr, completion);
-    if (ret != DPS_OK) {
-        DPS_ERRPRINT("Link returned %s\n", DPS_ErrTxt(ret));
-        goto Exit;
-    }
-#endif
 Exit:
     DPS_DestroyAddress(addr);
     if (ret != DPS_OK) {
@@ -1647,6 +1657,12 @@ const char* DPS_NodeAddrToString(const DPS_NodeAddress* addr)
         }
     }
     return "NULL";
+}
+
+const char* DPS_NodeAddrNetwork(const DPS_NodeAddress* addr)
+{
+    static const char* txt[] = { NULL, "dtls", "tcp", "udp", "pipe" };
+    return txt[addr->type];
 }
 
 DPS_NodeAddress* DPS_CreateAddress()

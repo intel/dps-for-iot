@@ -5,6 +5,7 @@ AddOption('--tool', action='append', dest='tools', help='Add tool to the environ
 
 vars = Variables()
 
+transports = Split('udp tcp dtls pipe fuzzer')
 bindings = Split('python nodejs go')
 
 # Generic build variables
@@ -16,7 +17,7 @@ vars.AddVariables(
     BoolVariable('fsan', 'Enable fuzzer sanitizer?', False),
     BoolVariable('cov', 'Enable code coverage?', False),
     EnumVariable('variant', 'Build variant', default='release', allowed_values=('debug', 'release'), ignorecase=2),
-    EnumVariable('transport', 'Transport protocol', default='udp', allowed_values=('udp', 'tcp', 'dtls', 'pipe', 'fuzzer'), ignorecase=2),
+    ListVariable('transports', 'Transport protocol', [t for t in transports if t != 'fuzzer'], transports),
     EnumVariable('target', 'Build target', default='local', allowed_values=('local', 'yocto'), ignorecase=2),
     ListVariable('bindings', 'Bindings to build', bindings, bindings),
     PathVariable('application', 'Application to build', '', PathVariable.PathAccept),
@@ -63,16 +64,20 @@ for key, val in ARGLIST:
 for b in bindings:
     env[b] = b in env['bindings']
 
-if env['transport'] == 'udp':
+# Unpack transports into individually testable booleans
+for t in transports:
+    env[t] = t in env['transports']
+
+if env['udp']:
     env['USE_UDP'] = 'true'
     env.Append(CPPDEFINES = ['DPS_USE_UDP'])
-elif env['transport'] == 'tcp':
+if env['tcp']:
     env['USE_TCP'] = 'true'
     env.Append(CPPDEFINES = ['DPS_USE_TCP'])
-elif env['transport'] == 'dtls':
+if env['dtls']:
     env['USE_DTLS'] = 'true'
     env.Append(CPPDEFINES = ['DPS_USE_DTLS'])
-elif env['transport'] == 'pipe':
+if env['pipe']:
     env['USE_PIPE'] = 'true'
     env.Append(CPPDEFINES = ['DPS_USE_PIPE'])
 

@@ -61,19 +61,17 @@ srcs = ['src/bitvec.c',
         'src/mbedtls.c',
         'src/queue.c']
 
-if env['transport'] == 'udp':
-    srcs.extend(['src/multicast/network.c',
-                 'src/udp/network.c'])
-elif env['transport'] == 'dtls':
-    srcs.extend(['src/multicast/network.c',
-                 'src/dtls/network.c'])
-elif env['transport'] == 'tcp':
-    srcs.extend(['src/multicast/network.c',
-                 'src/tcp/network.c'])
-elif env['transport'] == 'pipe':
-    srcs.extend(['src/multicast/network.c',
-                 'src/pipe/network.c'])
-elif env['transport'] == 'fuzzer':
+if env['udp'] or env['dtls'] or env['tcp'] or env['pipe']:
+    srcs.extend(['src/multicast/network.c'])
+if env['udp']:
+    srcs.extend(['src/udp/network.c'])
+if env['dtls']:
+    srcs.extend(['src/dtls/network.c'])
+if env['tcp']:
+    srcs.extend(['src/tcp/network.c'])
+if env['pipe']:
+    srcs.extend(['src/pipe/network.c'])
+if env['fuzzer']:
     srcs.extend(['src/fuzzer/network.c'])
 
 Depends(srcs, ext_objs)

@@ -125,7 +125,8 @@ static void OnPubMatch(DPS_Subscription* sub, const DPS_Publication* pub, uint8_
 typedef struct _Args {
     int numTopics;
     char* topicList[64];
-    DPS_NodeAddress* listenAddr;
+    char* listenText;
+    char* network;
     char* linkText[MAX_LINKS];
     int numLinks;
     int wait;
@@ -164,7 +165,15 @@ static int ParseArgs(int argc, char** argv, Args* args)
          * Topics must come last
          */
         if (args->numTopics == 0) {
-            if (ListenArg(&argv, &argc, &args->listenAddr)) {
+            if (strcmp(*argv, "-n") == 0) {
+                ++argv;
+                if (!--argc) {
+                    return DPS_FALSE;
+                }
+                args->network = *argv++;
+                continue;
+            }
+            if (AddressArg("-l", &argv, &argc, &args->listenText)) {
                 continue;
             }
             if (LinkArg(&argv, &argc, args->linkText, &args->numLinks)) {
@@ -290,7 +299,8 @@ static int LinkTo(Subscriber* subscriber, Args* args)
             ret = DPS_ERR_RESOURCES;
         }
         if (ret == DPS_OK) {
-            ret = DPS_Link(subscriber->node, args->linkText[j], OnLinkComplete, subscriber->addrs[j]);
+            ret = DPS_Link(subscriber->node, args->network, args->linkText[j], OnLinkComplete,
+                           subscriber->addrs[j]);
         }
     }
     if (ret == DPS_OK) {
@@ -346,6 +356,7 @@ int main(int argc, char** argv)
     const DPS_KeyId* nodeKeyId = NULL;
     DPS_Event* nodeDestroyed = NULL;
     Subscriber subscriber;
+    DPS_NodeAddress* listenAddr = NULL;
 
     DPS_Debug = DPS_FALSE;
     memset(&subscriber, 0, sizeof(subscriber));
@@ -380,13 +391,18 @@ int main(int argc, char** argv)
 
     nodeDestroyed = DPS_CreateEvent();
 
-    ret = DPS_StartNode(subscriber.node, args.mcastPub, args.listenAddr);
+    listenAddr = CreateAddressFromArg(args.network, args.listenText);
+    if (!listenAddr) {
+        DPS_ERRPRINT("CreateAddressFromArg returned NULL\n");
+        ret = DPS_ERR_RESOURCES;
+        goto Exit;
+    }
+    ret = DPS_StartNode(subscriber.node, args.mcastPub, listenAddr);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
         goto Exit;
     }
-    DPS_PRINT("Subscriber is listening on %s\n",
-              DPS_GetListenAddressString(subscriber.node));
+    DPS_PRINT("Subscriber is listening on %s\n", DPS_GetListenAddressString(subscriber.node));
 
     if (args.wait) {
         /*
@@ -417,7 +433,7 @@ Exit:
     DPS_WaitForEvent(nodeDestroyed);
     DPS_DestroyEvent(nodeDestroyed);
     DPS_DestroyMemoryKeyStore(memoryKeyStore);
-    DPS_DestroyAddress(args.listenAddr);
+    DestroyAddressArg(args.listenText, listenAddr);
     DestroyLinkArg(args.linkText, NULL, args.numLinks);
     DestroyLinkArg(NULL, subscriber.addrs, subscriber.numAddrs);
     return (ret == DPS_OK) ? EXIT_SUCCESS : EXIT_FAILURE;

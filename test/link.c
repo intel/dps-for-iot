@@ -59,6 +59,7 @@ static void TestRemoteLinkedAlready(void)
     DPS_MemoryKeyStore* memoryKeyStore = NULL;
     DPS_Node* a = NULL;
     DPS_Node* b = NULL;
+    const DPS_NodeAddress* dst = NULL;
     DPS_NodeAddress* addr = NULL;
     DPS_Status ret;
 
@@ -68,13 +69,15 @@ static void TestRemoteLinkedAlready(void)
     a = CreateNode(DPS_MemoryKeyStoreHandle(memoryKeyStore));
     b = CreateNode(DPS_MemoryKeyStoreHandle(memoryKeyStore));
 
+    dst = DPS_GetListenAddress(a);
     addr = DPS_CreateAddress();
-    ret = DPS_LinkTo(a, DPS_GetListenAddressString(b), addr);
+    ret = DPS_LinkTo(a, DPS_NodeAddrNetwork(dst), DPS_NodeAddrToString(dst), addr);
     ASSERT(ret == DPS_OK);
     DPS_DestroyAddress(addr);
 
+    dst = DPS_GetListenAddress(b);
     addr = DPS_CreateAddress();
-    ret = DPS_LinkTo(b, DPS_GetListenAddressString(a), addr);
+    ret = DPS_LinkTo(b, DPS_NodeAddrNetwork(dst), DPS_NodeAddrToString(dst), addr);
     ASSERT(ret == DPS_OK);
     DPS_DestroyAddress(addr);
 

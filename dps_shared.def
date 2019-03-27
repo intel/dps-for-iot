@@ -43,6 +43,7 @@ DPS_LinkTo
 DPS_Log
 DPS_LogBytes
 DPS_MemoryKeyStoreHandle
+DPS_NodeAddrNetwork
 DPS_NodeAddrToString
 DPS_PublicationAddSubId
 DPS_PublicationGetNode

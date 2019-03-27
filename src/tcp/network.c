@@ -42,9 +42,11 @@
  */
 DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
+typedef struct _DPS_NetTcpConnection DPS_NetTcpConnection;
+
 typedef struct _SendRequest {
     DPS_Queue queue;
-    DPS_NetConnection* cn;
+    DPS_NetTcpConnection* cn;
     uv_write_t writeReq;
     DPS_NetSendComplete onSendComplete;
     void* appCtx;
@@ -54,7 +56,8 @@ typedef struct _SendRequest {
     uv_buf_t bufs[1];
 } SendRequest;
 
-typedef struct _DPS_NetConnection {
+typedef struct _DPS_NetTcpConnection {
+    DPS_NetConnection cn;
     DPS_Node* node;
     uv_tcp_t socket;
     DPS_NetEndpoint peerEp;
@@ -69,20 +72,48 @@ typedef struct _DPS_NetConnection {
     DPS_Queue sendQueue;
     DPS_Queue sendCompletedQueue;
     uv_idle_t idle;
-} DPS_NetConnection;
+} DPS_NetTcpConnection;
 
-struct _DPS_NetContext {
+typedef struct _DPS_NetTcpContext {
+    DPS_NetContext ctx;
     uv_tcp_t socket;   /* the listen socket */
     DPS_Node* node;
     DPS_OnReceive receiveCB;
-};
+} DPS_NetTcpContext;
 
 #define MIN_BUF_ALLOC_SIZE   512
 #define MIN_READ_SIZE        CBOR_SIZEOF(uint32_t)
 
+DPS_NodeAddress* DPS_NetTcpGetListenAddress(DPS_NodeAddress* addr, DPS_NetContext* netCtx);
+void DPS_NetTcpStop(DPS_NetContext* netCtx);
+DPS_Status DPS_NetTcpSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf_t* bufs, size_t numBufs,
+                          DPS_NetSendComplete sendCompleteCB);
+void DPS_NetTcpConnectionIncRef(DPS_NetConnection* cn);
+void DPS_NetTcpConnectionDecRef(DPS_NetConnection* cn);
+static void Shutdown(DPS_NetTcpConnection* cn);
+
+static void ConnectionIncRef(DPS_NetTcpConnection* cn)
+{
+    if (cn) {
+        DPS_DBGTRACE();
+        ++cn->refCount;
+    }
+}
+
+static void ConnectionDecRef(DPS_NetTcpConnection* cn)
+{
+    if (cn) {
+        DPS_DBGTRACE();
+        assert(cn->refCount > 0);
+        if (--cn->refCount == 0) {
+            Shutdown(cn);
+        }
+    }
+}
+
 static void AllocBuffer(uv_handle_t* handle, size_t suggestedSize, uv_buf_t* buf)
 {
-    DPS_NetConnection* cn = (DPS_NetConnection*)handle->data;
+    DPS_NetTcpConnection* cn = (DPS_NetTcpConnection*)handle->data;
 
     if (cn->msgBuf) {
         buf->len = DPS_RxBufferAvail(&cn->msgBuf->rx);
@@ -99,7 +130,7 @@ static void ListenSocketClosed(uv_handle_t* handle)
     free(handle->data);
 }
 
-static void CancelPendingSends(DPS_NetConnection* cn)
+static void CancelPendingSends(DPS_NetTcpConnection* cn)
 {
     while (!DPS_QueueEmpty(&cn->sendQueue)) {
         SendRequest* req = (SendRequest*)DPS_QueueFront(&cn->sendQueue);
@@ -110,7 +141,7 @@ static void CancelPendingSends(DPS_NetConnection* cn)
     }
 }
 
-static void SendCompleted(DPS_NetConnection* cn)
+static void SendCompleted(DPS_NetTcpConnection* cn)
 {
     while (!DPS_QueueEmpty(&cn->sendCompletedQueue)) {
         SendRequest* req = (SendRequest*)DPS_QueueFront(&cn->sendCompletedQueue);
@@ -123,12 +154,12 @@ static void SendCompleted(DPS_NetConnection* cn)
 
 static void SendCompletedTask(uv_idle_t* idle)
 {
-    DPS_NetConnection* cn = idle->data;
+    DPS_NetTcpConnection* cn = idle->data;
     SendCompleted(cn);
     uv_idle_stop(idle);
 }
 
-static void FreeConnection(DPS_NetConnection* cn)
+static void FreeConnection(DPS_NetTcpConnection* cn)
 {
     /*
      * Free memory for any pending sends
@@ -142,13 +173,13 @@ static void FreeConnection(DPS_NetConnection* cn)
 
 static void IdleClosed(uv_handle_t* handle)
 {
-    DPS_NetConnection* cn = handle->data;
+    DPS_NetTcpConnection* cn = handle->data;
     FreeConnection(cn);
 }
 
 static void StreamClosed(uv_handle_t* handle)
 {
-    DPS_NetConnection* cn = (DPS_NetConnection*)handle->data;
+    DPS_NetTcpConnection* cn = (DPS_NetTcpConnection*)handle->data;
 
     DPS_DBGPRINT("Closed stream handle %p\n", handle);
     if (!uv_is_closing((uv_handle_t*)&cn->idle)) {
@@ -158,7 +189,7 @@ static void StreamClosed(uv_handle_t* handle)
 
 static void OnShutdownComplete(uv_shutdown_t* req, int status)
 {
-    DPS_NetConnection* cn = (DPS_NetConnection*)req->data;
+    DPS_NetTcpConnection* cn = (DPS_NetTcpConnection*)req->data;
 
     DPS_DBGPRINT("Shutdown complete handle %p\n", req->handle);
     if (!uv_is_closing((uv_handle_t*)req->handle)) {
@@ -167,7 +198,7 @@ static void OnShutdownComplete(uv_shutdown_t* req, int status)
     }
 }
 
-static void Shutdown(DPS_NetConnection* cn)
+static void Shutdown(DPS_NetTcpConnection* cn)
 {
     if (!cn->shutdownReq.data) {
         int r;
@@ -188,8 +219,8 @@ static void Shutdown(DPS_NetConnection* cn)
 static void OnData(uv_stream_t* socket, ssize_t nread, const uv_buf_t* buf)
 {
     DPS_Status ret = DPS_OK;
-    DPS_NetConnection* cn = (DPS_NetConnection*)socket->data;
-    DPS_NetContext* netCtx = cn->node->netCtx;
+    DPS_NetTcpConnection* cn = (DPS_NetTcpConnection*)socket->data;
+    DPS_NetTcpContext* netCtx = (DPS_NetTcpContext*)cn->node->netCtx;
 
     DPS_DBGTRACE();
     /*
@@ -282,8 +313,8 @@ static void OnData(uv_stream_t* socket, ssize_t nread, const uv_buf_t* buf)
 static void OnIncomingConnection(uv_stream_t* stream, int status)
 {
     int ret;
-    DPS_NetContext* netCtx = (DPS_NetContext*)stream->data;
-    DPS_NetConnection* cn;
+    DPS_NetTcpContext* netCtx = (DPS_NetTcpContext*)stream->data;
+    DPS_NetTcpConnection* cn;
     int sz = sizeof(cn->peerEp.addr.u.inaddr);
 
     DPS_DBGTRACE();
@@ -296,11 +327,13 @@ static void OnIncomingConnection(uv_stream_t* stream, int status)
         goto FailConnection;
     }
 
-    cn = calloc(1, sizeof(DPS_NetConnection));
+    cn = calloc(1, sizeof(DPS_NetTcpConnection));
     if (!cn) {
         DPS_ERRPRINT("OnIncomingConnection malloc failed\n");
         goto FailConnection;
     }
+    cn->cn.incRef = DPS_NetTcpConnectionIncRef;
+    cn->cn.decRef = DPS_NetTcpConnectionDecRef;
     ret = uv_tcp_init(stream->loop, &cn->socket);
     if (ret) {
         DPS_ERRPRINT("uv_tcp_init error=%s\n", uv_err_name(ret));
@@ -309,7 +342,7 @@ static void OnIncomingConnection(uv_stream_t* stream, int status)
     }
     cn->node = netCtx->node;
     cn->socket.data = cn;
-    cn->peerEp.cn = cn;
+    cn->peerEp.cn = (DPS_NetConnection*)cn;
     DPS_QueueInit(&cn->sendQueue);
     DPS_QueueInit(&cn->sendCompletedQueue);
     uv_idle_init(stream->loop, &cn->idle);
@@ -367,17 +400,21 @@ static int GetScopeId(struct sockaddr_in6* addr)
 
 #define LISTEN_BACKLOG  2
 
-DPS_NetContext* DPS_NetStart(DPS_Node* node, const DPS_NodeAddress* addr, DPS_OnReceive cb)
+DPS_NetContext* DPS_NetTcpStart(DPS_Node* node, const DPS_NodeAddress* addr, DPS_OnReceive cb)
 {
+    static struct sockaddr_storage sszero = { 0 };
     int ret;
-    DPS_NetContext* netCtx;
+    DPS_NetTcpContext* netCtx;
     struct sockaddr* sa;
     DPS_NodeAddress any;
 
-    netCtx = calloc(1, sizeof(DPS_NetContext));
+    netCtx = calloc(1, sizeof(DPS_NetTcpContext));
     if (!netCtx) {
         return NULL;
     }
+    netCtx->ctx.getListenAddress = DPS_NetTcpGetListenAddress;
+    netCtx->ctx.stop = DPS_NetTcpStop;
+    netCtx->ctx.send = DPS_NetTcpSend;
     ret = uv_tcp_init(node->loop, &netCtx->socket);
     if (ret) {
         DPS_ERRPRINT("uv_tcp_init error=%s\n", uv_err_name(ret));
@@ -386,10 +423,10 @@ DPS_NetContext* DPS_NetStart(DPS_Node* node, const DPS_NodeAddress* addr, DPS_On
     }
     netCtx->node = node;
     netCtx->receiveCB = cb;
-    if (addr) {
+    if (addr && memcmp(&addr->u.inaddr, &sszero, sizeof(struct sockaddr_storage))) {
         sa = (struct sockaddr*)&addr->u.inaddr;
     } else {
-        if (!DPS_SetAddress(&any, "[::]:0")) {
+        if (!DPS_SetAddress(&any, "tcp", "[::]:0")) {
             goto ErrorExit;
         }
         sa = (struct sockaddr*)&any.u.inaddr;
@@ -410,7 +447,7 @@ DPS_NetContext* DPS_NetStart(DPS_Node* node, const DPS_NodeAddress* addr, DPS_On
      */
     signal(SIGPIPE, SIG_IGN);
 #endif
-    return netCtx;
+    return (DPS_NetContext*)netCtx;
 
 ErrorExit:
 
@@ -420,8 +457,9 @@ ErrorExit:
     return NULL;
 }
 
-DPS_NodeAddress* DPS_NetGetListenAddress(DPS_NodeAddress* addr, DPS_NetContext* netCtx)
+DPS_NodeAddress* DPS_NetTcpGetListenAddress(DPS_NodeAddress* addr, DPS_NetContext* ctx)
 {
+    DPS_NetTcpContext* netCtx = (DPS_NetTcpContext*)ctx;
     int len;
 
     DPS_DBGTRACEA("netCtx=%p\n", netCtx);
@@ -439,8 +477,10 @@ DPS_NodeAddress* DPS_NetGetListenAddress(DPS_NodeAddress* addr, DPS_NetContext* 
     return addr;
 }
 
-void DPS_NetStop(DPS_NetContext* netCtx)
+void DPS_NetTcpStop(DPS_NetContext* ctx)
 {
+    DPS_NetTcpContext* netCtx = (DPS_NetTcpContext*)ctx;
+
     if (netCtx) {
         netCtx->socket.data = netCtx;
         uv_close((uv_handle_t*)&netCtx->socket, ListenSocketClosed);
@@ -450,7 +490,7 @@ void DPS_NetStop(DPS_NetContext* netCtx)
 static void OnWriteComplete(uv_write_t* writeReq, int status)
 {
     SendRequest* req = (SendRequest*)writeReq->data;
-    DPS_NetConnection* cn = req->cn;
+    DPS_NetTcpConnection* cn = req->cn;
 
     if (status) {
         DPS_DBGPRINT("OnWriteComplete status=%s\n", uv_err_name(status));
@@ -460,10 +500,10 @@ static void OnWriteComplete(uv_write_t* writeReq, int status)
     }
     DPS_QueuePushBack(&cn->sendCompletedQueue, &req->queue);
     SendCompleted(cn);
-    DPS_NetConnectionDecRef(cn);
+    ConnectionDecRef(cn);
 }
 
-static void DoSend(DPS_NetConnection* cn)
+static void DoSend(DPS_NetTcpConnection* cn)
 {
     while (!DPS_QueueEmpty(&cn->sendQueue)) {
         SendRequest* req = (SendRequest*)DPS_QueueFront(&cn->sendQueue);
@@ -472,7 +512,7 @@ static void DoSend(DPS_NetConnection* cn)
         int r = uv_write(&req->writeReq, (uv_stream_t*)&cn->socket, req->bufs, (uint32_t)req->numBufs,
                          OnWriteComplete);
         if (r == 0) {
-            DPS_NetConnectionIncRef(cn);
+            ConnectionIncRef(cn);
         } else {
             DPS_ERRPRINT("DoSend - write failed: %s\n", uv_err_name(r));
             req->status = DPS_ERR_NETWORK;
@@ -483,7 +523,7 @@ static void DoSend(DPS_NetConnection* cn)
 
 static void OnOutgoingConnection(uv_connect_t *req, int status)
 {
-    DPS_NetConnection* cn = (DPS_NetConnection*)req->data;
+    DPS_NetTcpConnection* cn = (DPS_NetTcpConnection*)req->data;
     if (status == 0) {
         cn->socket.data = cn;
         status = uv_read_start((uv_stream_t*)&cn->socket, AllocBuffer, OnData);
@@ -499,12 +539,13 @@ static void OnOutgoingConnection(uv_connect_t *req, int status)
     SendCompleted(cn);
 }
 
-DPS_Status DPS_NetSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf_t* bufs,
-                       size_t numBufs, DPS_NetSendComplete sendCompleteCB)
+DPS_Status DPS_NetTcpSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf_t* bufs,
+                          size_t numBufs, DPS_NetSendComplete sendCompleteCB)
 {
     DPS_Status ret;
     DPS_TxBuffer lenBuf;
     SendRequest* req;
+    DPS_NetTcpConnection* cn = NULL;
     uv_handle_t* socket = NULL;
     int r;
     size_t i;
@@ -546,35 +587,38 @@ DPS_Status DPS_NetSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf
      * See if we already have a connection
      */
     if (ep->cn) {
-        req->cn = ep->cn;
+        cn = (DPS_NetTcpConnection*)ep->cn;
+        req->cn = cn;
         /*
          * If there are pending sends the connection is not up yet
          */
-        if (!DPS_QueueEmpty(&ep->cn->sendQueue)) {
-            DPS_QueuePushBack(&ep->cn->sendQueue, &req->queue);
+        if (!DPS_QueueEmpty(&cn->sendQueue)) {
+            DPS_QueuePushBack(&cn->sendQueue, &req->queue);
             return DPS_OK;
         }
-        DPS_QueuePushBack(&ep->cn->sendQueue, &req->queue);
-        DoSend(ep->cn);
-        uv_idle_start(&ep->cn->idle, SendCompletedTask);
+        DPS_QueuePushBack(&cn->sendQueue, &req->queue);
+        DoSend(cn);
+        uv_idle_start(&cn->idle, SendCompletedTask);
         return DPS_OK;
     }
 
-    ep->cn = calloc(1, sizeof(DPS_NetConnection));
-    if (!ep->cn) {
+    cn = calloc(1, sizeof(DPS_NetTcpConnection));
+    if (!cn) {
         goto ErrExit;
     }
-    r = uv_tcp_init(node->loop, &ep->cn->socket);
+    cn->cn.incRef = DPS_NetTcpConnectionIncRef;
+    cn->cn.decRef = DPS_NetTcpConnectionDecRef;
+    r = uv_tcp_init(node->loop, &cn->socket);
     if (r) {
         goto ErrExit;
     }
-    ep->cn->peerEp.addr = ep->addr;
-    ep->cn->node = node;
-    DPS_QueueInit(&ep->cn->sendQueue);
-    DPS_QueueInit(&ep->cn->sendCompletedQueue);
-    uv_idle_init(node->loop, &ep->cn->idle);
-    ep->cn->idle.data = ep->cn;
-    socket = (uv_handle_t*)&ep->cn->socket;
+    cn->peerEp.addr = ep->addr;
+    cn->node = node;
+    DPS_QueueInit(&cn->sendQueue);
+    DPS_QueueInit(&cn->sendCompletedQueue);
+    uv_idle_init(node->loop, &cn->idle);
+    cn->idle.data = cn;
+    socket = (uv_handle_t*)&cn->socket;
 
     if (ep->addr.u.inaddr.ss_family == AF_INET6) {
         struct sockaddr_in6* in6 = (struct sockaddr_in6*)&ep->addr.u.inaddr;
@@ -582,17 +626,18 @@ DPS_Status DPS_NetSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf
             in6->sin6_scope_id = GetScopeId(in6);
         }
     }
-    ep->cn->connectReq.data = ep->cn;
-    r = uv_tcp_connect(&ep->cn->connectReq, &ep->cn->socket, (struct sockaddr*)&ep->addr.u.inaddr,
+    cn->connectReq.data = cn;
+    r = uv_tcp_connect(&cn->connectReq, &cn->socket, (struct sockaddr*)&ep->addr.u.inaddr,
                        OnOutgoingConnection);
     if (r) {
         DPS_ERRPRINT("uv_tcp_connect %s error=%s\n", DPS_NodeAddrToString(&ep->addr), uv_err_name(r));
         goto ErrExit;
     }
-    ep->cn->peerEp.cn = ep->cn;
-    DPS_QueuePushBack(&ep->cn->sendQueue, &req->queue);
-    req->cn = ep->cn;
-    DPS_NetConnectionIncRef(ep->cn);
+    cn->peerEp.cn = (DPS_NetConnection*)cn;
+    DPS_QueuePushBack(&cn->sendQueue, &req->queue);
+    req->cn = cn;
+    ConnectionIncRef(cn);
+    ep->cn = (DPS_NetConnection*)cn;
     return DPS_OK;
 
 ErrExit:
@@ -601,32 +646,28 @@ ErrExit:
         free(req);
     }
     if (socket) {
-        socket->data = ep->cn;
+        socket->data = cn;
         uv_close(socket, StreamClosed);
     } else {
-        if (ep->cn) {
-            free(ep->cn);
+        if (cn) {
+            free(cn);
         }
     }
     ep->cn = NULL;
     return DPS_ERR_NETWORK;
 }
 
-void DPS_NetConnectionIncRef(DPS_NetConnection* cn)
+void DPS_NetTcpConnectionIncRef(DPS_NetConnection* cn)
 {
-    if (cn) {
-        DPS_DBGTRACE();
-        ++cn->refCount;
-    }
+    ConnectionIncRef((DPS_NetTcpConnection*)cn);
 }
 
-void DPS_NetConnectionDecRef(DPS_NetConnection* cn)
+void DPS_NetTcpConnectionDecRef(DPS_NetConnection* cn)
 {
-    if (cn) {
-        DPS_DBGTRACE();
-        assert(cn->refCount > 0);
-        if (--cn->refCount == 0) {
-            Shutdown(cn);
-        }
-    }
+    ConnectionDecRef((DPS_NetTcpConnection*)cn);
 }
+
+DPS_NetTransport DPS_NetTcpTransport = {
+    DPS_TCP,
+    DPS_NetTcpStart
+};

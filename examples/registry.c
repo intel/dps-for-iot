@@ -56,13 +56,23 @@ int main(int argc, char** argv)
     DPS_Event* nodeDestroyed;
     const char* topics[1];
     DPS_Subscription* subscription;
+    char* network = NULL;
+    char* listenText = NULL;
     DPS_NodeAddress* listenAddr = NULL;
     int subsRate = DPS_SUBSCRIPTION_UPDATE_RATE;
 
     DPS_Debug = DPS_FALSE;
 
     while (--argc) {
-        if (ListenArg(&arg, &argc, &listenAddr)) {
+        if (strcmp(*arg, "-n") == 0) {
+            ++arg;
+            if (!--argc) {
+                goto Usage;
+            }
+            network = *arg++;
+            continue;
+        }
+        if (AddressArg("-l", &arg, &argc, &listenText)) {
             continue;
         }
         if (strcmp(*arg, "-d") == 0) {
@@ -83,13 +93,17 @@ int main(int argc, char** argv)
     node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore), NULL);
     DPS_SetNodeSubscriptionUpdateDelay(node, subsRate);
 
+    listenAddr = CreateAddressFromArg(network, listenText);
+    if (!listenAddr) {
+        DPS_ERRPRINT("CreateAddressFromArg returned NULL\n");
+        return 1;
+    }
     ret = DPS_StartNode(node, 0, listenAddr);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
         return 1;
     }
-    DPS_PRINT("Registration services is listening on %s\n",
-              DPS_GetListenAddressString(node));
+    DPS_PRINT("Registration services is listening on %s\n", DPS_GetListenAddressString(node));
 
     nodeDestroyed = DPS_CreateEvent();
 
@@ -103,7 +117,7 @@ int main(int argc, char** argv)
     DPS_WaitForEvent(nodeDestroyed);
     DPS_DestroyEvent(nodeDestroyed);
     DPS_DestroyMemoryKeyStore(memoryKeyStore);
-    DPS_DestroyAddress(listenAddr);
+    DestroyAddressArg(listenText, listenAddr);
     return 0;
 
 Usage:

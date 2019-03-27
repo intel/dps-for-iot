@@ -294,7 +294,7 @@ static DPS_Status GetScope(const char* host, const char* service, struct sockadd
     return err ? DPS_ERR_NETWORK : DPS_OK;
 }
 
-DPS_NodeAddress* DPS_SetAddress(DPS_NodeAddress* addr, const char* addrText)
+DPS_NodeAddress* DPS_SetAddress(DPS_NodeAddress* addr, const char* network, const char* addrText)
 {
     char host[DPS_MAX_HOST_LEN + 1];
     char service[DPS_MAX_SERVICE_LEN + 1];
@@ -302,35 +302,34 @@ DPS_NodeAddress* DPS_SetAddress(DPS_NodeAddress* addr, const char* addrText)
 
     DPS_DBGTRACE();
 
-    if (!addr || !addrText) {
+    if (!addr) {
         goto ErrorExit;
     }
 
     memset(addr, 0, sizeof(DPS_NodeAddress));
-#if defined(DPS_USE_DTLS)
-    addr->type = DPS_DTLS;
-#elif defined(DPS_USE_TCP)
-    addr->type = DPS_TCP;
-#elif defined(DPS_USE_UDP)
-    addr->type = DPS_UDP;
-#elif defined(DPS_USE_PIPE)
-    addr->type = DPS_PIPE;
-#endif
+    addr->type = DPS_NetAddressType(network);
     switch (addr->type) {
+    case DPS_UNKNOWN:
+        addr->type = DPS_UDP;
+        /* FALLTHROUGH */
     case DPS_DTLS:
     case DPS_TCP:
     case DPS_UDP:
-        ret = DPS_SplitAddress(addrText, host, sizeof(host), service, sizeof(service));
-        if (ret != DPS_OK) {
-            goto ErrorExit;
-        }
-        ret = GetScope(host, service, &addr->u.inaddr);
-        if (ret != DPS_OK) {
-            goto ErrorExit;
+        if (addrText) {
+            ret = DPS_SplitAddress(addrText, host, sizeof(host), service, sizeof(service));
+            if (ret != DPS_OK) {
+                goto ErrorExit;
+            }
+            ret = GetScope(host, service, &addr->u.inaddr);
+            if (ret != DPS_OK) {
+                goto ErrorExit;
+            }
         }
         return addr;
     case DPS_PIPE:
-        strncpy(addr->u.path, addrText, DPS_NODE_ADDRESS_PATH_MAX - 1);
+        if (addrText) {
+            strncpy(addr->u.path, addrText, DPS_NODE_ADDRESS_PATH_MAX - 1);
+        }
         return addr;
     default:
         break;
@@ -493,5 +492,71 @@ void DPS_NetRxBufferDecRef(DPS_NetRxBuffer* buf)
         if (--buf->refCount == 0) {
             freeNetRxBufferHandler(buf);
         }
+    }
+}
+
+DPS_NodeAddressType DPS_NetAddressType(const char* network)
+{
+    if (!network) {
+        return DPS_UNKNOWN;
+    } else if (!strcmp(network, "dtls")) {
+        return DPS_DTLS;
+    } else if (!strcmp(network, "tcp")) {
+        return DPS_TCP;
+    } else if (!strcmp(network, "udp")) {
+        return DPS_UDP;
+    } else if (!strcmp(network, "pipe")) {
+        return DPS_PIPE;
+    } else {
+        return DPS_UNKNOWN;
+    }
+}
+
+DPS_NetContext* DPS_NetStart(DPS_Node* node, const DPS_NodeAddress* addr, DPS_OnReceive cb)
+{
+    DPS_NodeAddressType type = addr ? addr->type : DPS_UNKNOWN;
+
+    switch (type) {
+    case DPS_DTLS:
+        return DPS_NetDtlsTransport.start(node, addr, cb);
+    case DPS_TCP:
+        return DPS_NetTcpTransport.start(node, addr, cb);
+    case DPS_UDP:
+    case DPS_UNKNOWN:
+        return DPS_NetUdpTransport.start(node, addr, cb);
+    case DPS_PIPE:
+        return DPS_NetPipeTransport.start(node, addr, cb);
+    default:
+        return NULL;
+    }
+}
+
+DPS_NodeAddress* DPS_NetGetListenAddress(DPS_NodeAddress* addr, DPS_NetContext* netCtx)
+{
+    return netCtx->getListenAddress(addr, netCtx);
+}
+
+void DPS_NetStop(DPS_NetContext* netCtx)
+{
+    netCtx->stop(netCtx);
+}
+
+DPS_Status DPS_NetSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* endpoint, uv_buf_t* bufs,
+                       size_t numBufs, DPS_NetSendComplete sendCompleteCB)
+{
+    return node->netCtx->send(node, appCtx, endpoint, bufs, numBufs, sendCompleteCB);
+}
+
+void DPS_NetConnectionIncRef(DPS_NetConnection* cn)
+{
+    if (cn) {
+        cn->incRef(cn);
+    }
+}
+
+void DPS_NetConnectionDecRef(DPS_NetConnection* cn)
+{
+    if (cn) {
+        cn->decRef(cn);
     }
 }

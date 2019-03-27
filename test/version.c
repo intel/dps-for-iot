@@ -158,6 +158,8 @@ int main(int argc, char** argv)
     int encrypt = DPS_TRUE;
     int mcast = DPS_MCAST_PUB_ENABLE_SEND;
     DPS_MemoryKeyStore* memoryKeyStore = NULL;
+    char* network = NULL;
+    char* addrText = NULL;
     DPS_NodeAddress* addr = NULL;
     DPS_NetEndpoint ep;
     DPS_Node *node = NULL;
@@ -172,7 +174,15 @@ int main(int argc, char** argv)
         if (IntArg("-t", &arg, &argc, &type, 1, UINT8_MAX)) {
             continue;
         }
-        if (AddressArg("-p", &arg, &argc, &addr)) {
+        if (strcmp(*arg, "-n") == 0) {
+            ++arg;
+            if (!--argc) {
+                goto Usage;
+            }
+            network = *arg++;
+            continue;
+        }
+        if (AddressArg("-p", &arg, &argc, &addrText)) {
             continue;
         }
         if (IntArg("-x", &arg, &argc, &encrypt, 0, 1)) {
@@ -188,7 +198,12 @@ int main(int argc, char** argv)
         }
     }
     memset(&ep, 0, sizeof(ep));
-    if (addr) {
+    if (network || addr) {
+        addr = CreateAddressFromArg(network, addrText);
+        if (!addr) {
+            DPS_ERRPRINT("Failed to create address\n");
+            return EXIT_FAILURE;
+        }
         mcast = DPS_MCAST_PUB_DISABLED;
         DPS_CopyAddress(&ep.addr, addr);
     }

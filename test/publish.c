@@ -289,7 +289,6 @@ static void TestBackToBackPublish(DPS_Node* node, DPS_KeyStore* keyStore)
     DPS_DestroyPublication(pub);
 }
 
-#if defined(DPS_USE_TCP)
 static void OnLinkComplete(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, void* data)
 {
     if (data) {
@@ -309,6 +308,10 @@ static void TestBackToBackPublishSeparateNodes(DPS_Node* node, DPS_KeyStore* key
     uint32_t seqNum;
     DPS_Status ret;
     size_t i;
+
+    if (strcmp(DPS_NodeAddrNetwork(DPS_GetListenAddress(node)), "tcp")) {
+        return;
+    }
 
     DPS_PRINT("%s\n", __FUNCTION__);
 
@@ -331,7 +334,7 @@ static void TestBackToBackPublishSeparateNodes(DPS_Node* node, DPS_KeyStore* key
 
     addr = DPS_CreateAddress();
     ASSERT(addr);
-    ret = DPS_LinkTo(subNode, DPS_GetListenAddressString(node), addr);
+    ret = DPS_LinkTo(subNode, "tcp", DPS_GetListenAddressString(node), addr);
     ASSERT(ret == DPS_OK);
 
     seqNum = DPS_PublicationGetSequenceNum(pub) + 1;
@@ -353,7 +356,6 @@ static void TestBackToBackPublishSeparateNodes(DPS_Node* node, DPS_KeyStore* key
     DPS_DestroyEvent(event);
     DPS_DestroyPublication(pub);
 }
-#endif
 
 static void TestRetainedMessage(DPS_Node* node, DPS_KeyStore* keyStore)
 {

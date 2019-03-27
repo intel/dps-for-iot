@@ -77,6 +77,7 @@ int main(int argc, char** argv)
     DPS_Node* node;
     char** arg = argv + 1;
     DPS_NodeAddress* linkAddr[MAX_LINKS] = { NULL };
+    char* network = NULL;
     char* linkText[MAX_LINKS] = { NULL };
     int numLinks = 0;
     char* msg = NULL;
@@ -85,6 +86,14 @@ int main(int argc, char** argv)
     DPS_Debug = 0;
 
     while (--argc) {
+        if (strcmp(*arg, "-n") == 0) {
+            ++arg;
+            if (!--argc) {
+                goto Usage;
+            }
+            network = *arg++;
+            continue;
+        }
         if (LinkArg(&arg, &argc, linkText, &numLinks)) {
             continue;
         }
@@ -135,7 +144,7 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    ret = Link(node, linkText, linkAddr, numLinks);
+    ret = Link(node, network, linkText, linkAddr, numLinks);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("DPS_ResolveAddress returned %s\n", DPS_ErrTxt(ret));
         return 1;

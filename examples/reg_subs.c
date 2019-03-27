@@ -85,7 +85,7 @@ static void OnPubMatch(DPS_Subscription* sub, const DPS_Publication* pub, uint8_
     }
 }
 
-static DPS_Status RegisterAndJoin(DPS_Node* node, char** linkText, int numLink,
+static DPS_Status RegisterAndJoin(DPS_Node* node, char* network, char** linkText, int numLink,
                                   const char* tenant, uint8_t count, uint16_t timeout)
 {
     DPS_Status ret = DPS_OK;
@@ -98,7 +98,7 @@ static DPS_Status RegisterAndJoin(DPS_Node* node, char** linkText, int numLink,
          * Register with the registration service
          */
         regs = DPS_CreateRegistrationList(count);
-        ret = DPS_Registration_PutSyn(node, linkText[i], tenant, DPS_REGISTRATION_PUT_TIMEOUT);
+        ret = DPS_Registration_PutSyn(node, network, linkText[i], tenant, DPS_REGISTRATION_PUT_TIMEOUT);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("Failed to register with registration service: %s\n", DPS_ErrTxt(ret));
             return ret;
@@ -106,7 +106,7 @@ static DPS_Status RegisterAndJoin(DPS_Node* node, char** linkText, int numLink,
         /*
          * Find nodes to join
          */
-        ret = DPS_Registration_GetSyn(node, linkText[i], tenant, regs, timeout);
+        ret = DPS_Registration_GetSyn(node, network, linkText[i], tenant, regs, timeout);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("Registration service lookup failed: %s\n", DPS_ErrTxt(ret));
             return ret;
@@ -149,18 +149,28 @@ int main(int argc, char** argv)
     size_t numTopics = 0;
     DPS_MemoryKeyStore* memoryKeyStore = NULL;
     DPS_Node* node;
+    char* listenText = NULL;
     DPS_NodeAddress* listenAddr = NULL;
     int subsRate = DPS_SUBSCRIPTION_UPDATE_RATE;
     int timeout = DPS_REGISTRATION_GET_TIMEOUT;
     int count = 16;
     DPS_NodeAddress* linkAddr[MAX_LINKS] = { NULL };
+    char* network = NULL;
     char* linkText[MAX_LINKS] = { NULL };
     int numLinks = 0;
 
     DPS_Debug = DPS_FALSE;
 
     while (--argc) {
-        if (ListenArg(&arg, &argc, &listenAddr)) {
+        if (strcmp(*arg, "-n") == 0) {
+            ++arg;
+            if (!--argc) {
+                goto Usage;
+            }
+            network = *arg++;
+            continue;
+        }
+        if (AddressArg("-l", &arg, &argc, &listenText)) {
             continue;
         }
         if (LinkArg(&arg, &argc, linkText, &numLinks)) {
@@ -213,6 +223,11 @@ int main(int argc, char** argv)
     node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore), NULL);
     DPS_SetNodeSubscriptionUpdateDelay(node, subsRate);
 
+    listenAddr = CreateAddressFromArg(network, listenText);
+    if (!listenAddr) {
+        DPS_ERRPRINT("CreateAddressFromArg returned NULL\n");
+        return 1;
+    }
     ret = DPS_StartNode(node, DPS_MCAST_PUB_DISABLED, listenAddr);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
@@ -222,7 +237,7 @@ int main(int argc, char** argv)
 
     nodeDestroyed = DPS_CreateEvent();
 
-    ret = RegisterAndJoin(node, linkText, numLinks, tenant, count, timeout);
+    ret = RegisterAndJoin(node, network, linkText, numLinks, tenant, count, timeout);
     if (ret != DPS_OK) {
         DPS_PRINT("Failed to link with any other \"%s\" nodes - continuing\n", tenant);
     }
@@ -239,7 +254,7 @@ int main(int argc, char** argv)
     DPS_WaitForEvent(nodeDestroyed);
     DPS_DestroyEvent(nodeDestroyed);
     DPS_DestroyMemoryKeyStore(memoryKeyStore);
-    DPS_DestroyAddress(listenAddr);
+    DestroyAddressArg(listenText, listenAddr);
     DestroyLinkArg(linkText, linkAddr, numLinks);
     return 0;
 

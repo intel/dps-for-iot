@@ -51,64 +51,22 @@ int IntArg(char* opt, char*** argp, int* argcp, int* val, int min, int max)
     return DPS_TRUE;
 }
 
-int ListenArg(char*** argp, int* argcp, DPS_NodeAddress** addr)
+int AddressArg(char* opt, char*** argp, int* argcp, char** addrText)
 {
     char** arg = *argp;
     int argc = *argcp;
     int port = 0;
     char str[256];
 
-    strcpy(str, "[::]:0");
-
-    if (IntArg("-l", &arg, &argc, &port, 1000, UINT16_MAX)) {
-        snprintf(str, sizeof(str), "[::]:%d", port);
-    } else if (strcmp(*arg, "-l") == 0) {
-        ++arg;
-        if (!--argc) {
-            return DPS_FALSE;
-        }
-        strncpy(str, *arg++, sizeof(str));
-    } else {
-        return DPS_FALSE;
-    }
-    *addr = DPS_CreateAddress();
-    if (!*addr) {
-        return DPS_FALSE;
-    }
-    if (!DPS_SetAddress(*addr, str)) {
-        DPS_DestroyAddress(*addr);
-        *addr = NULL;
-        return DPS_FALSE;
-    }
-    *argp = arg;
-    *argcp = argc;
-    return DPS_TRUE;
-}
-
-int LinkArg(char*** argp, int* argcp, char** addrText, int* numAddrText)
-{
-    char** arg = *argp;
-    int argc = *argcp;
-    int port = 0;
-    char str[256];
-
-    if (IntArg("-p", &arg, &argc, &port, 1000, UINT16_MAX)) {
-        if ((*numAddrText) == (MAX_LINKS - 1)) {
-            DPS_PRINT("Too many -p options\n");
-            return DPS_FALSE;
-        }
+    if (IntArg(opt, &arg, &argc, &port, 1000, UINT16_MAX)) {
         snprintf(str, sizeof(str), "[::1]:%d", port);
-        addrText[(*numAddrText)++] = strdup(str);
-    } else if (strcmp(*arg, "-p") == 0) {
-        if ((*numAddrText) == (MAX_LINKS - 1)) {
-            DPS_PRINT("Too many -p options\n");
-            return DPS_FALSE;
-        }
+        *addrText = strdup(str);
+    } else if (strcmp(*arg, opt) == 0) {
         ++arg;
         if (!--argc) {
             return DPS_FALSE;
         }
-        addrText[(*numAddrText)++] = strdup(*arg++);
+        *addrText = strdup(*arg++);
     } else {
         return DPS_FALSE;
     }
@@ -117,18 +75,58 @@ int LinkArg(char*** argp, int* argcp, char** addrText, int* numAddrText)
     return DPS_TRUE;
 }
 
-DPS_Status Link(DPS_Node* node, char** addrText, DPS_NodeAddress** addr, int numAddr)
+void DestroyAddressArg(char* addrText, DPS_NodeAddress* addr)
+{
+    if (addrText) {
+        free(addrText);
+    }
+    DPS_DestroyAddress(addr);
+}
+
+DPS_NodeAddress* CreateAddressFromArg(char* network, char* addrText)
+{
+    DPS_NodeAddress* addr = NULL;
+
+    addr = DPS_CreateAddress();
+    if (!addr) {
+        return NULL;
+    }
+    if (!DPS_SetAddress(addr, network, addrText)) {
+        DPS_DestroyAddress(addr);
+        return NULL;
+    }
+    return addr;
+}
+
+int LinkArg(char*** argp, int* argcp, char** addrText, int* count)
+{
+    char* text;
+
+    if (AddressArg("-p", argp, argcp, &text)) {
+        if ((*count) == (MAX_LINKS - 1)) {
+            DPS_PRINT("Too many -p options\n");
+            return DPS_FALSE;
+        }
+        addrText[*count] = text;
+        ++(*count);
+        return DPS_TRUE;
+    } else {
+        return DPS_FALSE;
+    }
+}
+
+DPS_Status Link(DPS_Node* node, char* network, char** addrText, DPS_NodeAddress** addr, int count)
 {
     DPS_Status ret;
     int i;
 
-    for (i = 0; i < numAddr; ++i) {
+    for (i = 0; i < count; ++i) {
         addr[i] = DPS_CreateAddress();
         if (!addr[i]) {
             ret = DPS_ERR_RESOURCES;
             goto Exit;
         }
-        ret = DPS_LinkTo(node, addrText[i], addr[i]);
+        ret = DPS_LinkTo(node, network, addrText[i], addr[i]);
         if (ret == DPS_OK) {
             DPS_PRINT("Node is linked to %s\n", DPS_NodeAddrToString(addr[i]));
         } else {
@@ -141,21 +139,18 @@ Exit:
     return ret;
 }
 
-void Unlink(DPS_Node* node, DPS_NodeAddress** addr, int numAddr)
+void Unlink(DPS_Node* node, DPS_NodeAddress** addr, int count)
 {
     int i;
-    for (i = 0; i < numAddr; ++i) {
+    for (i = 0; i < count; ++i) {
         DPS_UnlinkFrom(node, addr[i]);
     }
 }
 
-void DestroyLinkArg(char **addrText, DPS_NodeAddress** addr, int numAddr)
+void DestroyLinkArg(char** addrText, DPS_NodeAddress** addr, int count)
 {
     int i;
-    for (i = 0; i < numAddr; ++i) {
-        if (addrText[i]) {
-            free(addrText[i]);
-        }
-        DPS_DestroyAddress(addr[i]);
+    for (i = 0; i < count; ++i) {
+        DestroyAddressArg(addrText ? addrText[i]: NULL, addr ? addr[i] : NULL);
     }
 }

@@ -96,6 +96,7 @@ int main(int argc, char** argv)
     uint8_t* payload = NULL;
     int payloadSize = 0;
     int mcast = DPS_MCAST_PUB_ENABLE_SEND;
+    char* network = NULL;
     int listenPort = 0;
     DPS_NodeAddress* listenAddr = NULL;
     char addrText[24];
@@ -109,6 +110,14 @@ int main(int argc, char** argv)
         if (strcmp(*arg, "-d") == 0) {
             ++arg;
             DPS_Debug = DPS_TRUE;
+            continue;
+        }
+        if (strcmp(*arg, "--network") == 0) {
+            ++arg;
+            if (!--argc) {
+                goto Usage;
+            }
+            network = *arg++;
             continue;
         }
         if (strcmp(*arg, "-p") == 0) {
@@ -140,7 +149,7 @@ int main(int argc, char** argv)
         return 1;
     }
     snprintf(addrText, sizeof(addrText), "[::]:%d", listenPort);
-    DPS_SetAddress(listenAddr, addrText);
+    DPS_SetAddress(listenAddr, network, addrText);
     ret = DPS_StartNode(node, mcast, listenAddr);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("DPS_StartNode failed: %s\n", DPS_ErrTxt(ret));
@@ -148,7 +157,7 @@ int main(int argc, char** argv)
     }
 
     for (i = 0; i < numLinks; ++i) {
-        ret = DPS_LinkTo(node, linkText[i], NULL);
+        ret = DPS_LinkTo(node, network, linkText[i], NULL);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("DPS_LinkTo %s returned %s\n", linkText[i], DPS_ErrTxt(ret));
             return 1;

@@ -169,6 +169,8 @@ int main(int argc, char** argv)
     char* pubs[MAX_TOPICS];
     size_t numPubs = 0;
     DPS_AcknowledgementHandler ackHandler = AcknowledgementHandler;
+    char* network = NULL;
+    char* listenText = NULL;
     DPS_NodeAddress* listenAddr = NULL;
     DPS_Node* node = NULL;
     const Id* self = NULL;
@@ -201,7 +203,13 @@ int main(int argc, char** argv)
                 goto Usage;
             }
             pubs[numPubs++] = *arg++;
-        } else if (AddressArg("-l", &arg, &argc, &listenAddr)) {
+        } else if (strcmp(*arg, "-n") == 0) {
+            ++arg;
+            if (!--argc) {
+                goto Usage;
+            }
+            network = *arg++;
+        } else if (AddressArg("-l", &arg, &argc, &listenText)) {
         } else {
             goto Usage;
         }
@@ -226,6 +234,11 @@ int main(int argc, char** argv)
 
     node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(keyStore), &self->keyId);
     if (!node) {
+        ret = DPS_ERR_RESOURCES;
+        goto Exit;
+    }
+    listenAddr = CreateAddressFromArg(network, listenText);
+    if (!listenAddr) {
         ret = DPS_ERR_RESOURCES;
         goto Exit;
     }

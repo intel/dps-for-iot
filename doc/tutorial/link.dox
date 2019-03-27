@@ -27,10 +27,10 @@ the @c mcastPub parameter of DPS_StartNode().  All publications and
 subscriptions will go through the forwarding node.
 
 The second thing we do is specify the @c listenAddr parameter to
-DPS_StartNode().  In this instance we bind the node to all available
-interfaces at the port provided.  A port value of zero lets DPS assign
-an ephemeral listening port.  A value of non-zero requests a specific
-port.
+DPS_StartNode().  In this instance we select UDP and bind the node to
+all available interfaces at the port provided.  A port value of zero
+lets DPS assign an ephemeral listening port.  A value of non-zero
+requests a specific port.
 
 The last thing we do is get the port DPS has chosen with
 DPS_GetListenAddress().  This will be used by the subscriber and

@@ -74,8 +74,7 @@ static void OnPubMatch(DPS_Subscription* sub, const DPS_Publication* pub, uint8_
 
     if (DPS_PublicationIsAckRequested(pub)) {
         char ackMsg[sizeof(AckFmt) + 64];
-        sprintf(ackMsg, AckFmt,
-                DPS_GetListenAddressString(DPS_PublicationGetNode(pub)));
+        sprintf(ackMsg, AckFmt, DPS_GetListenAddressString(DPS_PublicationGetNode(pub)));
         ret = DPS_AckPublication(pub, (uint8_t*)ackMsg, sizeof(ackMsg));
         if (ret != DPS_OK) {
             DPS_PRINT("Failed to ack pub %s\n", DPS_ErrTxt(ret));
@@ -446,11 +445,12 @@ static void OnLinked(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, v
 static DPS_Status LinkNodes(DPS_Node* src, DPS_Node* dst)
 {
     DPS_Status ret;
-    ret = DPS_Link(src, DPS_GetListenAddressString(dst), OnLinked, NULL);
+    const DPS_NodeAddress* addr;
+    addr = DPS_GetListenAddress(dst);
+    ret = DPS_Link(src, DPS_NodeAddrNetwork(addr), DPS_NodeAddrToString(addr), OnLinked, NULL);
     if (ret != DPS_OK) {
         uv_mutex_lock(&lock);
-        DPS_ERRPRINT("DPS_Link for %s returned %s\n", DPS_GetListenAddressString(dst),
-                     DPS_ErrTxt(ret));
+        DPS_ERRPRINT("DPS_Link for %s returned %s\n", DPS_NodeAddrToString(addr), DPS_ErrTxt(ret));
         ++LinksFailed;
         uv_mutex_unlock(&lock);
     }
@@ -481,6 +481,7 @@ int main(int argc, char** argv)
     int expMuted;
     int l1 = 0;
     int l2 = 0;
+    const char* network = NULL;
     const char* inFn = NULL;
     const char* outFn = NULL;
     uint16_t killList[MAX_KILLS];
@@ -490,6 +491,9 @@ int main(int argc, char** argv)
     DPS_Debug = 0;
 
     while (--argc) {
+        if (StrArg("-f", &arg, &argc, &network)) {
+            continue;
+        }
         if (StrArg("-f", &arg, &argc, &inFn)) {
             continue;
         }
@@ -554,7 +558,7 @@ int main(int argc, char** argv)
             DPS_ERRPRINT("Failed to create address: %s\n", DPS_ErrTxt(DPS_ERR_RESOURCES));
             return 1;
         }
-        DPS_SetAddress(listenAddr, "[::1]:0");
+        DPS_SetAddress(listenAddr, network, NULL);
         ret = DPS_StartNode(node, DPS_FALSE, listenAddr);
         DPS_DestroyAddress(listenAddr);
         if (ret != DPS_OK) {

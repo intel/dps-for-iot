@@ -43,12 +43,13 @@ extern "C" {
  * Synchronous helper that wraps DPS_Link().
  *
  * @param node     The local node to link from
+ * @param network  The name of the network the address is on
  * @param addrText The text string of the address to link to
  * @param addr     Returns the resolved address for the remote node
  *
  * @return DPS_OK if the link is successful, an error otherwise
  */
-DPS_Status DPS_LinkTo(DPS_Node* node, const char* addrText, DPS_NodeAddress* addr);
+DPS_Status DPS_LinkTo(DPS_Node* node, const char* network, const char* addrText, DPS_NodeAddress* addr);
 
 /**
  * Synchronous helper that wraps DPS_Unlink().

@@ -161,8 +161,9 @@ static void ReadStdin(DPS_Node* node)
     }
 }
 
-static DPS_Status FindAndLink(DPS_Node* node, char** linkText, int numLinks, const char* tenant,
-                              uint8_t count, uint16_t timeout, DPS_NodeAddress** linkAddr)
+static DPS_Status FindAndLink(DPS_Node* node, char* network, char** linkText, int numLinks,
+                              const char* tenant, uint8_t count, uint16_t timeout,
+                              DPS_NodeAddress** linkAddr)
 {
     DPS_Status ret = DPS_OK;
     DPS_RegistrationList* regs = NULL;
@@ -173,7 +174,7 @@ static DPS_Status FindAndLink(DPS_Node* node, char** linkText, int numLinks, con
          * Find nodes to link to
          */
         regs = DPS_CreateRegistrationList(count);
-        ret = DPS_Registration_GetSyn(node, linkText[i], tenant, regs, timeout);
+        ret = DPS_Registration_GetSyn(node, network, linkText[i], tenant, regs, timeout);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("Registration service lookup failed: %s\n", DPS_ErrTxt(ret));
             return ret;
@@ -221,11 +222,20 @@ int main(int argc, char** argv)
     int timeout = DPS_REGISTRATION_GET_TIMEOUT;
     int count = 16;
     DPS_NodeAddress* linkAddr[MAX_LINKS] = { NULL };
+    char* network = NULL;
     char* linkText[MAX_LINKS] = { NULL };
     int numLinks = 0;
 
     DPS_Debug = DPS_FALSE;
     while (--argc) {
+        if (strcmp(*arg, "-n") == 0) {
+            ++arg;
+            if (!--argc) {
+                goto Usage;
+            }
+            network = *arg++;
+            continue;
+        }
         if (LinkArg(&arg, &argc, linkText, &numLinks)) {
             continue;
         }
@@ -299,7 +309,7 @@ int main(int argc, char** argv)
 
     nodeDestroyed = DPS_CreateEvent();
 
-    ret = FindAndLink(node, linkText, numLinks, tenant, count, timeout, linkAddr);
+    ret = FindAndLink(node, network, linkText, numLinks, tenant, count, timeout, linkAddr);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to link to node: %s\n", DPS_ErrTxt(ret));
         goto Exit;

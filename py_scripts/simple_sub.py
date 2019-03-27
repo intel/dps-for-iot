@@ -96,6 +96,8 @@ parser.add_argument("-d", "--debug", action='store_true',
                     help="Enable debug ouput if built for debug.")
 parser.add_argument("-x", "--encryption", type=int, choices=[0,1,2], default=1,
                     help="Disable (0) or enable symmetric (1) or asymmetric(2) encryption. Default is symmetric encryption enabled.")
+parser.add_argument("-n", "--network", default="udp",
+                    help="Network of listen and link addresses.")
 parser.add_argument("-l", "--listen", default=None,
                     help="Address to listen on for incoming connections.")
 parser.add_argument("-p", "--port", default=None,
@@ -142,9 +144,9 @@ listen_addr = None
 if args.listen != None:
     listen_addr = dps.create_address()
     try:
-        dps.set_address(listen_addr, "[::]:%d" % (int(args.listen)))
+        dps.set_address(listen_addr, args.network, "[::]:%d" % (int(args.listen)))
     except ValueError:
-        dps.set_address(listen_addr, args.listen)
+        dps.set_address(listen_addr, args.network, args.listen)
 dps.start_node(node, dps.MCAST_PUB_ENABLE_RECV, listen_addr)
 print("Subscriber is listening on %s" % (dps.get_listen_address(node)))
 
@@ -157,7 +159,7 @@ if args.port != None:
     except ValueError:
         addr_text = args.port
     event.clear()
-    ret = dps.link(node, addr_text, on_link)
+    ret = dps.link(node, args.network, addr_text, on_link)
     if ret == dps.OK:
         event.wait()
     else:
