@@ -103,8 +103,7 @@ static DPS_Network netContext;
 static HANDLE recvThreadHandle;
 static HANDLE cbThreadHandle;
 
-
-const char* DPS_AddrToText(DPS_NodeAddress* addr)
+const char* DPS_AddrToText(const DPS_NodeAddress* addr)
 {
     static char txt[INET6_ADDRSTRLEN];
     struct sockaddr* sa = (struct sockaddr*)&addr->inaddr;
@@ -690,7 +689,7 @@ DPS_Status DPS_UnicastWrite(DPS_Node* node, DPS_NodeAddress* dest, void* data, s
     return status;
 }
 
-DPS_Status DPS_UnicastWriteAsync(DPS_Node* node, DPS_NodeAddress* dest, void* data, size_t len)
+DPS_Status DPS_UnicastWriteAsync(DPS_Node* node, const DPS_NodeAddress* dest, void* data, size_t len)
 {
     DPS_Status status = DPS_OK;
     DPS_Network* net = node->network;
@@ -714,7 +713,7 @@ DPS_Status DPS_UnicastWriteAsync(DPS_Node* node, DPS_NodeAddress* dest, void* da
     return status;
 }
 
-DPS_Status DPS_UnicastSend(DPS_Node* node, DPS_NodeAddress* dest, void* appCtx, DPS_SendComplete sendCompleteCB)
+DPS_Status DPS_UnicastSend(DPS_Node* node, const DPS_NodeAddress* dest, void* appCtx, DPS_SendComplete sendCompleteCB)
 {
     DPS_Status status = DPS_OK;
     DPS_Network* net = node->network;
@@ -741,7 +740,7 @@ DPS_Status DPS_UnicastSend(DPS_Node* node, DPS_NodeAddress* dest, void* appCtx, 
         /*
          * This kicks off the DTLS client-side handshake
          */
-        status = DPS_DTLSHandshake(node, dest, MBEDTLS_SSL_IS_CLIENT);
+        status = DPS_DTLSStartHandshake(node, dest, MBEDTLS_SSL_IS_CLIENT);
         break;
     case DTLS_CONNECTED:
         /*

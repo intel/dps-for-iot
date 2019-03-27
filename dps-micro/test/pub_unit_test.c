@@ -63,6 +63,7 @@ int main(int argc, char** argv)
     DPS_Publication pub;
     DPS_Subscription sub;
     DPS_Status status;
+    int dtls = DPS_TRUE;
     int i;
     int numPubs;
 
@@ -74,6 +75,11 @@ int main(int argc, char** argv)
         if (strcmp(*arg, "-d") == 0) {
             ++arg;
             DPS_Debug = DPS_TRUE;
+            continue;
+        }
+        if (strcmp(*arg, "-s") == 0) {
+            ++arg;
+            dtls = DPS_FALSE;
             continue;
         }
         goto Usage;
@@ -94,6 +100,15 @@ int main(int argc, char** argv)
         status = DPS_SetContentKey(keyStore, &PskId[i], &Psk[i]);
         CHECK(status == DPS_OK);
     }
+
+    /* Network key for DTLS */
+    status = DPS_SetNetworkKey(keyStore, &NetworkKeyId, &NetworkKey);
+    CHECK(status == DPS_OK);
+
+    status = DPS_SetTrustedCA(keyStore, TrustedCAs);
+    CHECK(status == DPS_OK);
+    status = DPS_SetCertificate(keyStore, Ids[PUB_ID].cert, Ids[PUB_ID].privateKey, Ids[PUB_ID].password);
+    CHECK(status == DPS_OK);
 
     status = DPS_Start(node);
     CHECK(status == DPS_OK);
@@ -125,7 +140,7 @@ failed:
 #else
     return 1;
 Usage:
-    DPS_PRINT("Usage %s: [-d]\n", argv[0]);
+    DPS_PRINT("Usage %s: [-d] [-s] [-h <host-addr>] [-p <port>]\n", argv[0]);
 #endif
     return 1;
 }

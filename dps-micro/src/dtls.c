@@ -239,7 +239,7 @@ static DPS_Status KeyResponse(const DPS_Key* key, const DPS_KeyId* keyId, void* 
     return DPS_OK;
 }
 
-static int ResetConnection(DPS_DTLS* dtls, DPS_NodeAddress* addr)
+static int ResetConnection(DPS_DTLS* dtls, const DPS_NodeAddress* addr)
 {
     const char* clientId = DPS_AddrToText(addr);
     int ret;
@@ -284,7 +284,7 @@ DPS_Status DPS_DTLSSend(DPS_Node* node)
     return DPS_OK;
 }
 
-DPS_Status DPS_DTLSRecv(DPS_Node* node, DPS_NodeAddress* addr, DPS_RxBuffer* rxBuf)
+DPS_Status DPS_DTLSRecv(DPS_Node* node, const DPS_NodeAddress* addr, DPS_RxBuffer* rxBuf)
 {
     DPS_Status status = DPS_OK;
     DPS_DTLS* dtls = DPS_GetDTLS(node->network);
@@ -296,7 +296,7 @@ DPS_Status DPS_DTLSRecv(DPS_Node* node, DPS_NodeAddress* addr, DPS_RxBuffer* rxB
 
     switch (dtls->state) {
     case DTLS_DISCONNECTED:
-        status = DPS_DTLSHandshake(node, addr, MBEDTLS_SSL_IS_SERVER);
+        status = DPS_DTLSStartHandshake(node, addr, MBEDTLS_SSL_IS_SERVER);
         /* Let caller know there is no data */
         if (status == DPS_OK) {
             status = DPS_ERR_NO_DATA;
@@ -439,7 +439,7 @@ static int OnTLSPSKGet(void *data, mbedtls_ssl_context* ssl, const uint8_t* id, 
     return 0;
 }
 
-DPS_Status DPS_DTLSHandshake(DPS_Node* node, DPS_NodeAddress* addr, int sslType)
+DPS_Status DPS_DTLSStartHandshake(DPS_Node* node, const DPS_NodeAddress* addr, int sslType)
 {
     DPS_Network* net = node->network;
     DPS_KeyStore* keyStore = node->keyStore;

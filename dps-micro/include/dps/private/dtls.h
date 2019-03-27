@@ -82,7 +82,7 @@ typedef struct _DPS_DTLS {
 /**
  * Start the DTLS handshake
  */
-DPS_Status DPS_DTLSHandshake(DPS_Node* node, DPS_NodeAddress* addr, int sslType);
+DPS_Status DPS_DTLSStartHandshake(DPS_Node* node, const DPS_NodeAddress* addr, int sslType);
 
 /*
  * Send the data in the tx buffer to the secured DTLS endpoint.
@@ -92,7 +92,7 @@ DPS_Status DPS_DTLSSend(DPS_Node* node);
 /*
  * Called when data has been received and is in the RxBuffer
  */
-DPS_Status DPS_DTLSRecv(DPS_Node* node, DPS_NodeAddress* addr, DPS_RxBuffer* rxBuf);
+DPS_Status DPS_DTLSRecv(DPS_Node* node, const DPS_NodeAddress* addr, DPS_RxBuffer* rxBuf);
 
 
 #ifdef __cplusplus

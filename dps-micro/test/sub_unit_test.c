@@ -103,6 +103,7 @@ int main(int argc, char** argv)
         CHECK(status == DPS_OK);
     }
 
+    /* Network key for DTLS */
     status = DPS_SetNetworkKey(keyStore, &NetworkKeyId, &NetworkKey);
     CHECK(status == DPS_OK);
 
@@ -140,7 +141,7 @@ failed:
 #else
     return 1;
 Usage:
-    DPS_PRINT("Usage %s: [-d]\n", argv[0]);
+    DPS_PRINT("Usage %s: [-d] [-s]\n", argv[0]);
 #endif
     return 1;
 }
