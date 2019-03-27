@@ -82,6 +82,7 @@ struct _DPS_Publication {
     DPS_AcknowledgementHandler handler;         /**< Called when an acknowledgement is received from a subscriber */
     DPS_UUID pubId;                             /**< Unique publication identifier */
     DPS_NodeAddress* sendAddr;                  /**< Address of node that sent the publication */
+    DPS_NodeAddress* destAddr;                  /**< Address of node to send the publication to */
     uint32_t sequenceNum;                       /**< Sequence number for this publication */
     COSE_Entity recipients[MAX_PUB_RECIPIENTS]; /**< Publication recipient IDs */
     size_t numRecipients;                       /**< Number of recipients IDs */
@@ -91,7 +92,7 @@ struct _DPS_Publication {
     COSE_Entity sender;                         /**< Publication sender ID */
     COSE_Entity ack;                            /**< For ack messages - the ack sender ID */
     DPS_PublicationSendComplete sendCompleteCB; /**< Publication completion callback */
-    uint8_t* payload;                           /**< Saved pointer for payload to pass to completion callback */
+    const uint8_t* payload;                     /**< Saved pointer for payload to pass to completion callback */
     DPS_Publication* next;                      /**< Linked list of publications */
 };
 
@@ -115,46 +116,57 @@ DPS_Status DPS_InitPublication(DPS_Node* node,
                                const DPS_KeyId* keyId,
                                DPS_AcknowledgementHandler handler);
 
+/**
+  * Set a destination node address for a publication. If the address is non-null the
+  * publication will be unicast to the specified node.
+  *
+  * @param pub    The publication to set the addresss on.
+  * @param dest   The destination address for the publication, NULL to revert to multicast.
+  * 
+  * @return DPS_OK if the address was set.
+  */
+DPS_Status DPS_SetPublicationAddr(DPS_Publication* pub, const DPS_NodeAddress* dest);
 
 /**
   * Remove the publication and free any resources allocated for it.
 
-  * @param pub        The publication to remove
+  * @param pub        The publication to remove.
   */
 DPS_Status DPS_RemovePublication(DPS_Publication* pub);
 
 /**
- * Decode and process a received publication
+ * Decode and process a received publication.
  *
- * @param node       The local node
- * @param pub        The publication struct to receive the decoded publication
+ * @param node       The local node.
+ * @param pub        The publication struct to receive the decoded publication.
  *
- * @return DPS_OK if decoding and processing is successful, an error otherwise
+ * @return DPS_OK if decoding and processing is successful, an error otherwise.
  */
 DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NodeAddress* from, DPS_RxBuffer* buf);
 
 /**
- * Send a publication
+ * Send a publication. The publication will be multicast unless an address has been
+ * set by calling DPS_SetPublicationAddr().
  *
- * @param pub             The publication to send
- * @param payload         An optional payload to send with the publication. The pointer to data must
+ * @param pub             The publication to send.
+ * @param payload         An optional payload to send with the publication. The pointer to data must.
  *                        remain valid until the send complete callback is called.
- * @param len             Size of the payload
- * @param ttl             Time for the publication to remain deliverable
+ * @param len             Size of the payload.
+ * @param ttl             Time for the publication to remain deliverable.
  * @param sendCompleteCB  Function called when the publication has been sent.
  *
- * @return DPS_OK if sending is successful, an error otherwise
+ * @return DPS_OK if sending is successful, an error otherwise.
  */
 DPS_Status DPS_Publish(DPS_Publication* pub, const uint8_t* payload, size_t len, int16_t ttl, DPS_PublicationSendComplete sendCompleteCB);
 
 /**
  * Look for a publication matching the ID and sequence number.
  *
- * @param node The node
- * @param pubId The ID to look for
- * @param sequenceNum The sequence number to look for
+ * @param node The node.
+ * @param pubId The ID to look for.
+ * @param sequenceNum The sequence number to look for.
  *
- * @return The matching publication or NULL
+ * @return The matching publication or NULL.
  */
 DPS_Publication* DPS_LookupAckHandler(DPS_Node* node, const DPS_UUID* pubId, uint32_t sequenceNum);
 
@@ -168,7 +180,6 @@ DPS_Publication* DPS_LookupAckHandler(DPS_Node* node, const DPS_UUID* pubId, uin
   * @return DPS_OK if sending is successful, an error otherwise
   */
 DPS_Status DPS_AckPublication(const DPS_Publication* pub, const uint8_t* data, size_t len);
-
 
 /**
   * Did the sender of the publication request an ACK

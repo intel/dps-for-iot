@@ -70,7 +70,7 @@ int DPS_SameNodeAddress(const DPS_NodeAddress* addr1, const DPS_NodeAddress* add
 /**
   * Returns text string for a specified node address.
   */
-const char* DPS_AddrToText(DPS_NodeAddress* addr);
+const char* DPS_AddrToText(const DPS_NodeAddress* addr);
 
 /**
   * Allocate a node address from the requested pool. Call DPS_Free() to free the memory
@@ -162,17 +162,7 @@ void DPS_UnicastStop(DPS_Node* node);
  *
  * @return DPS_OK if the send is successful, an error otherwise
  */
-DPS_Status DPS_UnicastSend(DPS_Node* node, DPS_NodeAddress* dest, void* appCtx, DPS_SendComplete sendCompleteCB);
-
-/**
-  * Write data synchronously. This is API is called during the DTLS handshake.
-  *
-  * @param node       Pointer to the DPS node
-  * @param dest       Destination address
-  * @param data       The data to write
-  * @param len        Length of the data to write
-  */
-DPS_Status DPS_UnicastWrite(DPS_Node* node, DPS_NodeAddress* dest, void* data, size_t len);
+DPS_Status DPS_UnicastSend(DPS_Node* node, const DPS_NodeAddress* dest, void* appCtx, DPS_SendComplete sendCompleteCB);
 
 /**
   * Write data asynchronously.
@@ -181,7 +171,7 @@ DPS_Status DPS_UnicastWrite(DPS_Node* node, DPS_NodeAddress* dest, void* data, s
   * @param data       The data to write
   * @param len        Length of the data to write
   */
-DPS_Status DPS_UnicastWriteAsync(DPS_Node* node, DPS_NodeAddress* dest, void* data, size_t len);
+DPS_Status DPS_UnicastWriteAsync(DPS_Node* node, const DPS_NodeAddress* dest, void* data, size_t len);
 
 /**
   * Read data synchronously. This is API is called during the DTLS handshake.

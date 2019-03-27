@@ -914,3 +914,22 @@ void* DPS_GetPublicationData(const DPS_Publication* pub)
 {
     return pub ?  pub->userData : NULL;
 }
+
+DPS_Status DPS_SetPublicationAddr(DPS_Publication* pub, const DPS_NodeAddress* dest)
+{
+    if (dest) {
+        if (!pub->destAddr) {
+            pub->destAddr = DPS_AllocNodeAddress(DPS_ALLOC_LONG_TERM);
+        }
+        if (!pub->destAddr) {
+            return DPS_ERR_RESOURCES;
+        }
+        DPS_CopyNodeAddress(pub->destAddr, dest);
+    } else {
+        if (pub->destAddr) {
+            DPS_Free(pub->destAddr, DPS_ALLOC_LONG_TERM);
+            pub->destAddr = NULL;
+        }
+    }
+    return DPS_OK;
+}
