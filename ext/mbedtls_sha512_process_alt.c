@@ -22,6 +22,8 @@
 
 #include <mbedtls/sha512.h>
 
+#if defined(DPS_USE_NASM)
+
 #if defined(__AVX2__) || defined(__AVX__)
 
 extern void sha512_block_avx( const void *,
@@ -47,3 +49,5 @@ int mbedtls_internal_sha512_process( mbedtls_sha512_context *ctx,
 }
 
 #endif
+
+#endif /* DPS_USE_NASM */

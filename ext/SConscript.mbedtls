@@ -20,6 +20,9 @@ dep = mtenv.Command('./mbedtls/Makefile', git,
 
 mtenv.Append(CPPPATH = ['.', './mbedtls/include/',])
 mtenv.Append(CPPDEFINES = ['MBEDTLS_USER_CONFIG_FILE=\\"mbedtls_config.h\\"',])
+# optimized sha512 requires nasm
+if env.Detect('nasm') != None:
+    mtenv.Append(CPPDEFINES = ['DPS_USE_NASM'])
 
 sources = [
     './mbedtls/library/aes.c',

@@ -3,7 +3,7 @@
 
 #define MBEDTLS_DEPRECATED_REMOVED
 #define MBEDTLS_NIST_KW_C
-#if defined(__AVX2__) || defined(__AVX__) || defined(__SSE__) || defined(_M_X64) || defined(_M_AMD64)
+#if defined(DPS_USE_NASM) && (defined(__AVX2__) || defined(__AVX__) || defined(__SSE__) || defined(_M_X64) || defined(_M_AMD64))
 #define MBEDTLS_SHA512_PROCESS_ALT
 #endif
 
