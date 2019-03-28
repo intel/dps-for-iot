@@ -1,0 +1,48 @@
+import os
+Import(['env'])
+
+# Pull down intel-ipsec-mb from github and build the library
+
+# nasm is optional
+if env.Detect('nasm') != None:
+    mbenv = env.Clone(tools=['nasm'])
+
+    git = mbenv.Command('./intel-ipsec-mb/.git', None,
+                        ['git clone -n https://github.com/intel/intel-ipsec-mb.git ext/intel-ipsec-mb'])
+
+    dep = mbenv.Command('./intel-ipsec-mb/README', git,
+                        ['git fetch', 'git checkout master'],
+                        chdir = 'ext/intel-ipsec-mb')
+
+    sources = [
+        './intel-ipsec-mb/sse/sha512_one_block_sse.asm',
+        './intel-ipsec-mb/avx/sha512_one_block_avx.asm'
+    ]
+
+    if mbenv['PLATFORM'] == 'win32':
+        mbenv['ASFLAGS'] = [
+            '-fwin64',
+            '-Xvc',
+            '-DWIN_ABI',
+            '-I./ext/intel-ipsec-mb/'
+        ]
+    else:
+        mbenv['ASFLAGS'] = [
+            '-felf64',
+            '-Xgnu',
+            '-gdwarf',
+            '-DLINUX',
+            '-D__linux__',
+            '-I./ext/intel-ipsec-mb/'
+        ]
+
+    objs = mbenv.Object(sources)
+    shobjs = mbenv.SharedObject(sources)
+
+    Depends(sources, dep)
+
+else:
+    objs = []
+    shobjs = []
+
+Return('objs shobjs')

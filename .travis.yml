@@ -40,6 +40,7 @@ addons:
       - clang-6.0
       - doxygen
       - g++-7
+      - nasm
       - zlib1g-dev
 
 before_install:
