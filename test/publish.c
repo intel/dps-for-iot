@@ -322,8 +322,12 @@ static void TestBackToBackPublishSeparateNodes(DPS_Node* node, DPS_KeyStore* key
 
     subNode = DPS_CreateNode("/.", keyStore, NULL);
     ASSERT(subNode);
-    ret = DPS_StartNode(subNode, DPS_MCAST_PUB_DISABLED, NULL);
+    addr = DPS_CreateAddress();
+    ASSERT(addr);
+    DPS_SetAddress(addr, "tcp", NULL);
+    ret = DPS_StartNode(subNode, DPS_MCAST_PUB_DISABLED, addr);
     ASSERT(ret == DPS_OK);
+    DPS_DestroyAddress(addr);
 
     sub = DPS_CreateSubscription(subNode, topics, numTopics);
     ASSERT(sub);
@@ -336,6 +340,7 @@ static void TestBackToBackPublishSeparateNodes(DPS_Node* node, DPS_KeyStore* key
     ASSERT(addr);
     ret = DPS_LinkTo(subNode, "tcp", DPS_GetListenAddressString(node), addr);
     ASSERT(ret == DPS_OK);
+    DPS_DestroyAddress(addr);
 
     seqNum = DPS_PublicationGetSequenceNum(pub) + 1;
     for (i = 0; i < depth; ++i) {
@@ -349,7 +354,6 @@ static void TestBackToBackPublishSeparateNodes(DPS_Node* node, DPS_KeyStore* key
      */
     SLEEP(1000);
 
-    DPS_DestroyAddress(addr);
     DPS_DestroySubscription(sub);
     DPS_DestroyNode(subNode, OnNodeDestroyed, event);
     DPS_WaitForEvent(event);
@@ -438,6 +442,8 @@ int main(int argc, char** argv)
     DPS_Event* event = NULL;
     DPS_MemoryKeyStore* memoryKeyStore = NULL;
     DPS_Node *node = NULL;
+    char* network = NULL;
+    DPS_NodeAddress* addr = NULL;
     DPS_Status ret;
 
     DPS_Debug = DPS_FALSE;
@@ -445,6 +451,12 @@ int main(int argc, char** argv)
         if (strcmp(*arg, "-d") == 0) {
             ++arg;
             DPS_Debug = DPS_TRUE;
+        } else if (strcmp(*arg, "-n") == 0) {
+            ++arg;
+            if (!--argc) {
+                return EXIT_FAILURE;
+            }
+            network = *arg++;
         }
     }
 
@@ -456,8 +468,12 @@ int main(int argc, char** argv)
         DPS_SetNetworkKey(memoryKeyStore, &NetworkKeyId, &NetworkKey);
         node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore), NULL);
         ASSERT(node);
-        ret = DPS_StartNode(node, DPS_MCAST_PUB_ENABLE_SEND | DPS_MCAST_PUB_ENABLE_RECV, NULL);
+        addr = DPS_CreateAddress();
+        ASSERT(addr);
+        DPS_SetAddress(addr, network, NULL);
+        ret = DPS_StartNode(node, DPS_MCAST_PUB_ENABLE_SEND | DPS_MCAST_PUB_ENABLE_RECV, addr);
         ASSERT(ret == DPS_OK);
+        DPS_DestroyAddress(addr);
         (*test)(node, DPS_MemoryKeyStoreHandle(memoryKeyStore));
         DPS_DestroyNode(node, OnNodeDestroyed, event);
         DPS_WaitForEvent(event);
