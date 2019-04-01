@@ -495,8 +495,8 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NodeAddress* from, DPS_RxBu
             ret = DPS_ERR_RESOURCES;
             goto Exit;
         }
-        pub->sendAddr = DPS_AllocNodeAddress(DPS_ALLOC_BRIEF);
-        if (!pub->sendAddr) {
+        pub->fromAddr = DPS_AllocNodeAddress(DPS_ALLOC_BRIEF);
+        if (!pub->fromAddr) {
             ret = DPS_ERR_RESOURCES;
             goto Exit;
         }
@@ -507,8 +507,8 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NodeAddress* from, DPS_RxBu
         /*
          * Record the sender's address and port
          */
-        DPS_CopyNodeAddress(pub->sendAddr, from);
-        DPS_NodeAddressSetPort(pub->sendAddr, port);
+        DPS_CopyNodeAddress(pub->fromAddr, from);
+        DPS_NodeAddressSetPort(pub->fromAddr, port);
         /*
          * Now we can deserialize the bloom filter
          */
@@ -527,7 +527,7 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NodeAddress* from, DPS_RxBu
         if (ret != DPS_OK) {
             goto Exit;
         }
-        DPS_Free(pub->sendAddr, DPS_ALLOC_BRIEF);
+        DPS_Free(pub->fromAddr, DPS_ALLOC_BRIEF);
         DPS_Free(pub, DPS_ALLOC_BRIEF);
     }
     return DPS_OK;
@@ -535,8 +535,8 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NodeAddress* from, DPS_RxBu
 Exit:
 
     if (pub) {
-        if (pub->sendAddr) {
-            DPS_Free(pub->sendAddr, DPS_ALLOC_BRIEF);
+        if (pub->fromAddr) {
+            DPS_Free(pub->fromAddr, DPS_ALLOC_BRIEF);
         }
         DPS_Free(pub, DPS_ALLOC_BRIEF);
     }
@@ -863,7 +863,12 @@ static void PubComplete(DPS_Node* node, uint8_t* appCtx, DPS_Status status)
     }
 }
 
-DPS_Status DPS_Publish(DPS_Publication* pub, const uint8_t* payload, size_t len, int16_t ttl, DPS_PublicationSendComplete sendCompleteCB)
+DPS_Status DPS_Publish(DPS_Publication* pub,
+                       const DPS_NodeAddress* dest,
+                       const uint8_t* payload,
+                       size_t len,
+                       int16_t ttl,
+                       DPS_PublicationSendComplete sendCompleteCB)
 {
     DPS_Status ret;
 
@@ -886,15 +891,19 @@ DPS_Status DPS_Publish(DPS_Publication* pub, const uint8_t* payload, size_t len,
 
     ret = SerializePub(pub->node, pub, payload, len, ttl);
     if (ret == DPS_OK) {
-        ret = CoAP_InsertHeader(pub->node, pub->node->txLen);
-        if (ret == DPS_OK) {
-            pub->sendCompleteCB = sendCompleteCB;
-            pub->payload = (void*)payload;
-            ret = DPS_MCastSend(pub->node, pub, PubComplete);
-            if (ret != DPS_OK) {
-                pub->sendCompleteCB = NULL;
-                pub->payload = NULL;
+        pub->sendCompleteCB = sendCompleteCB;
+        pub->payload = (void*)payload;
+        if (dest) {
+            ret = DPS_UnicastSend(pub->node, dest, pub, PubComplete);
+        } else {
+            ret = CoAP_InsertHeader(pub->node, pub->node->txLen);
+            if (ret == DPS_OK) {
+                ret = DPS_MCastSend(pub->node, pub, PubComplete);
             }
+        }
+        if (ret != DPS_OK) {
+            pub->sendCompleteCB = NULL;
+            pub->payload = NULL;
         }
     }
     return ret;
@@ -913,23 +922,4 @@ DPS_Status DPS_SetPublicationData(DPS_Publication* pub, void* data)
 void* DPS_GetPublicationData(const DPS_Publication* pub)
 {
     return pub ?  pub->userData : NULL;
-}
-
-DPS_Status DPS_SetPublicationAddr(DPS_Publication* pub, const DPS_NodeAddress* dest)
-{
-    if (dest) {
-        if (!pub->destAddr) {
-            pub->destAddr = DPS_AllocNodeAddress(DPS_ALLOC_LONG_TERM);
-        }
-        if (!pub->destAddr) {
-            return DPS_ERR_RESOURCES;
-        }
-        DPS_CopyNodeAddress(pub->destAddr, dest);
-    } else {
-        if (pub->destAddr) {
-            DPS_Free(pub->destAddr, DPS_ALLOC_LONG_TERM);
-            pub->destAddr = NULL;
-        }
-    }
-    return DPS_OK;
 }

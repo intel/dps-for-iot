@@ -81,8 +81,7 @@ struct _DPS_Publication {
     uint8_t ackRequested;                       /**< TRUE if an ack was requested by the publisher */
     DPS_AcknowledgementHandler handler;         /**< Called when an acknowledgement is received from a subscriber */
     DPS_UUID pubId;                             /**< Unique publication identifier */
-    DPS_NodeAddress* sendAddr;                  /**< Address of node that sent the publication */
-    DPS_NodeAddress* destAddr;                  /**< Address of node to send the publication to */
+    DPS_NodeAddress* fromAddr;                  /**< Address of node that sent the publication */
     uint32_t sequenceNum;                       /**< Sequence number for this publication */
     COSE_Entity recipients[MAX_PUB_RECIPIENTS]; /**< Publication recipient IDs */
     size_t numRecipients;                       /**< Number of recipients IDs */
@@ -125,7 +124,7 @@ DPS_Status DPS_InitPublication(DPS_Node* node,
   * 
   * @return DPS_OK if the address was set.
   */
-DPS_Status DPS_SetPublicationAddr(DPS_Publication* pub, const DPS_NodeAddress* dest);
+DPS_Status DPS_SetPublicationDestNode(DPS_Publication* pub, const DPS_NodeAddress* dest);
 
 /**
   * Remove the publication and free any resources allocated for it.
@@ -149,6 +148,8 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NodeAddress* from, DPS_RxBu
  * set by calling DPS_SetPublicationAddr().
  *
  * @param pub             The publication to send.
+ * @Param dest            An optional destination address, if non-NULL the publication is sent to
+ *                        the specified node, otherwise it sent using IP multicast.
  * @param payload         An optional payload to send with the publication. The pointer to data must.
  *                        remain valid until the send complete callback is called.
  * @param len             Size of the payload.
@@ -157,7 +158,12 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NodeAddress* from, DPS_RxBu
  *
  * @return DPS_OK if sending is successful, an error otherwise.
  */
-DPS_Status DPS_Publish(DPS_Publication* pub, const uint8_t* payload, size_t len, int16_t ttl, DPS_PublicationSendComplete sendCompleteCB);
+DPS_Status DPS_Publish(DPS_Publication* pub,
+                       const DPS_NodeAddress* dest,
+                       const uint8_t* payload,
+                       size_t len,
+                       int16_t ttl,
+                       DPS_PublicationSendComplete sendCompleteCB);
 
 /**
  * Look for a publication matching the ID and sequence number.

@@ -129,9 +129,6 @@ static void OnTimeout(DPS_Timer* timer, void* data)
             if (ret == MBEDTLS_ERR_SSL_WANT_READ) {
                 DPS_DBGPRINT("In handshake want read\n");
                 ret = 0;
-            } else if (ret == MBEDTLS_ERR_SSL_WANT_WRITE) {
-                DPS_DBGPRINT("In handshake want write\n");
-                ret = 0;
             }
             if (ret) {
                 DPS_WARNPRINT("Handshake failed - %s\n", TLSErrTxt(ret));
@@ -313,6 +310,7 @@ DPS_Status DPS_DTLSRecv(DPS_Node* node, const DPS_NodeAddress* addr, DPS_RxBuffe
                 DPS_WARNPRINT("Failed - %s\n", TLSErrTxt(ret));
                 status = DPS_ERR_NETWORK;
             }
+            dtls->state = DTLS_DISCONNECTED;
         } else {
             DPS_DBGPRINT("Decrypted into %d bytes of plaintext\n", ret);
             /* Update the buffer to point to the plaintext data */
@@ -333,9 +331,6 @@ DPS_Status DPS_DTLSRecv(DPS_Node* node, const DPS_NodeAddress* addr, DPS_RxBuffe
                 }
             } else if (ret == MBEDTLS_ERR_SSL_WANT_READ) {
                 DPS_DBGPRINT("In handshake want read\n");
-                ret = 0;
-            } else if (ret == MBEDTLS_ERR_SSL_WANT_WRITE) {
-                DPS_DBGPRINT("In handshake want write\n");
                 ret = 0;
             }
             if (ret) {
@@ -360,13 +355,15 @@ DPS_Status DPS_DTLSRecv(DPS_Node* node, const DPS_NodeAddress* addr, DPS_RxBuffe
     default:
         status = DPS_ERR_FAILURE;
     }
+
+    node->rxBuf = NULL;
     return status;
 }
 
 static int OnDTLSRecv(void* data, unsigned char *buf, size_t len)
 {
     DPS_Node* node = (DPS_Node*)data;
-    size_t rxLen = DPS_RxBufferAvail(node->rxBuf);
+    size_t rxLen = node->rxBuf ? DPS_RxBufferAvail(node->rxBuf) : 0;
 
     DPS_DBGTRACE();
 
@@ -454,6 +451,7 @@ DPS_Status DPS_DTLSStartHandshake(DPS_Node* node, const DPS_NodeAddress* addr, i
         return DPS_ERR_NULL;
     }
 
+    dtls->state = DTLS_IN_HANDSHAKE;
     dtls->sslType = sslType;
 
     mbedtls_entropy_init(&dtls->entropy);
@@ -538,24 +536,43 @@ DPS_Status DPS_DTLSStartHandshake(DPS_Node* node, const DPS_NodeAddress* addr, i
      */
     mbedtls_debug_set_threshold(DEBUG_MBEDTLS_LEVEL);
     /*
-     * Kick off the first step of the DTLS handshake
+     * Kick off the DTLS handshake
      */
-    ret = mbedtls_ssl_handshake_step(&dtls->ssl);
+    DPS_DBGPRINT("Kick off DTLS handshake\n");
+    if (dtls->sslType == MBEDTLS_SSL_IS_SERVER) {
+        ret = mbedtls_ssl_handshake_step(&dtls->ssl);
+    } else {
+        ret = mbedtls_ssl_handshake(&dtls->ssl);
+    }
     if (ret) {
         if (ret == MBEDTLS_ERR_SSL_WANT_READ) {
             DPS_DBGPRINT("In handshake want read\n");
-        } else if (ret == MBEDTLS_ERR_SSL_WANT_WRITE) {
-            DPS_DBGPRINT("In handshake want write\n");
         } else {
             DPS_WARNPRINT("Handshake failed - %s\n", TLSErrTxt(ret));
             goto ErrorExit;
         }
     }
-    dtls->state = DTLS_IN_HANDSHAKE;
     return DPS_OK;
 
 ErrorExit:
 
+    dtls->state = DTLS_DISCONNECTED;
     mbedtls_ssl_session_reset(&dtls->ssl);
     return DPS_ERR_NETWORK;
+}
+
+
+DPS_Status DPS_DisableDTLS(DPS_Node* node)
+{
+    DPS_DTLS* dtls = node ? DPS_GetDTLS(node->network) : NULL;
+
+    if (!dtls) {
+        return DPS_ERR_NULL;
+    }
+    if (dtls->state == DTLS_DISCONNECTED) {
+        dtls->state = DTLS_DISABLED;
+        return DPS_OK;
+    } else {
+        return DPS_ERR_INVALID;
+    }
 }

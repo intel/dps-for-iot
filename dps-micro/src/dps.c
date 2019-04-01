@@ -116,6 +116,12 @@ static DPS_Status OnReceive(DPS_Node* node, DPS_NodeAddress* from, int mcast, DP
     DPS_Status ret = DPS_OK;
     DPS_DBGTRACEA("Received %d bytes\n", DPS_RxBufferAvail(rxBuf));
 
+    if (status != DPS_OK) {
+        if (node->linked && from && DPS_SameNodeAddress(from, node->remoteNode)) {
+            node->linked = DPS_FALSE;
+        }
+        return DPS_OK;
+    }
     if (mcast) {
         CoAP_Parsed coap;
         ret = CoAP_Parse(rxBuf->base, DPS_RxBufferAvail(rxBuf), &coap, rxBuf);

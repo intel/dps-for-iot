@@ -29,7 +29,6 @@
 #include <dps/private/sub.h>
 
 
-
 static char testString[] = "This is a test string from " DPS_TARGET_NAME;
 static char ackString[] = "This is an ack string from " DPS_TARGET_NAME;
 
@@ -118,8 +117,9 @@ int main(int argc, char** argv)
     DPS_PRINT("Listening on port %d\n", DPS_GetPortNumber(node));
 
     if (!dtls) {
+        status = DPS_DisableDTLS(node);
+        CHECK(status == DPS_OK);
         DPS_PRINT("DTLS is disabled\n");
-        DPS_DisableDTLS(node);
     }
 
     status = DPS_InitSubscription(node, &sub, topics, 1);

@@ -106,13 +106,55 @@ static HANDLE cbThreadHandle;
 const char* DPS_AddrToText(const DPS_NodeAddress* addr)
 {
     static char txt[INET6_ADDRSTRLEN];
-    struct sockaddr* sa = (struct sockaddr*)&addr->inaddr;
 
-    if (!InetNtop(sa->sa_family, sa, txt, sizeof(txt))) {
-        DPS_ERRPRINT("Convert addr to string failed\n");
+    if (addr->inaddr.ss_family == AF_INET) {
+        struct sockaddr_in* sa4 = (struct sockaddr_in*)&addr->inaddr;
+        return InetNtop(AF_INET, &sa4->sin_addr, txt, sizeof(txt));
+    } else {
+        struct sockaddr_in6* sa6 = (struct sockaddr_in6*)&addr->inaddr;
+        return InetNtop(AF_INET6, &sa6->sin6_addr, txt, sizeof(txt));
+    }
+}
+
+const DPS_NodeAddress* DPS_TextToAddr(const char* addrStr, uint16_t port)
+{
+    static DPS_NodeAddress addr;
+    int family = AF_INET;
+    int ret;
+
+    if (addrStr) {
+        const char* p = addrStr;
+        while (*p) {
+            if (*p++ == ':') {
+                family = AF_INET6;
+                break;
+            }
+        }
+    } else {
+        family = AF_INET6;
+        addrStr = "::1";
+    }
+
+    memset(&addr, 0, sizeof(DPS_NodeAddress));
+
+    if (family == AF_INET) {
+        struct sockaddr_in* sa4 = (struct sockaddr_in*)&addr.inaddr;
+        sa4->sin_family = AF_INET;
+        sa4->sin_port = htons(port);
+        ret = InetPton(family, addrStr, &sa4->sin_addr);
+    } else {
+        struct sockaddr_in6* sa6 = (struct sockaddr_in6*)&addr.inaddr;
+        sa6->sin6_family = AF_INET6;
+        sa6->sin6_port = htons(port);
+        ret = InetPton(family, addrStr, &sa6->sin6_addr);
+    }
+    if (ret <= 0) {
+        if (ret < 1) {
+            DPS_ERRPRINT("InetPton returned %d\n", WSAGetLastError());
+        }
         return NULL;
     } else {
-        return txt;
+        return &addr;
     }
 }
 
@@ -331,23 +373,25 @@ static DWORD WINAPI UnicastCBThread(LPVOID lpParam)
 {
     DPS_Node* node = (DPS_Node*)lpParam;
     DPS_Network* net = node->network;
-    WSAEVENT event = net->sendOL.hEvent;
-    DPS_SendComplete sendCB;
+    WSAEVENT event = WSACreateEvent();
 
+    net->sendOL.hEvent = event;
     while (DPS_TRUE) {
         int ret = WSAWaitForMultipleEvents(1, &net->sendOL.hEvent, DPS_TRUE, WSA_INFINITE, DPS_FALSE);
         /* Clear events and re-prime the overlapped struct */
         WSAResetEvent(event);
         memset(&net->sendOL, 0, sizeof(WSAOVERLAPPED));
         net->sendOL.hEvent = event;
-
-        sendCB = net->sendCB;
-        net->sendCB = NULL;
-        if (sendCB) {
-            if (ret == WSA_WAIT_FAILED) {
-                sendCB(node, net->appData, DPS_ERR_NETWORK);
-            } else {
-                sendCB(node, net->appData, DPS_OK);
+        /* Ignore completion while we are in the DTLS handshake */
+        if (net->dtls.state != DTLS_IN_HANDSHAKE) {
+            DPS_SendComplete sendCB = net->sendCB;
+            net->sendCB = NULL;
+            if (sendCB) {
+                if (ret == WSA_WAIT_FAILED) {
+                    sendCB(node, net->appData, DPS_ERR_NETWORK);
+                } else {
+                    sendCB(node, net->appData, DPS_OK);
+                }
             }
         }
     }
@@ -656,39 +700,6 @@ DPS_Status DPS_MCastSend(DPS_Node* node, void* appCtx, DPS_SendComplete sendComp
     return DPS_OK;
 }
 
-static void CALLBACK UnicastSendComplete(DWORD dwError, DWORD cbTransferred, LPWSAOVERLAPPED lpOverlapped, DWORD dwFlags)
-{
-    DPS_Node* node = (DPS_Node*)lpOverlapped->hEvent;
-    DPS_Network* net = node->network;
-    DPS_SendComplete cb = net->sendCB;
-
-    net->sendCB = NULL;
-    cb(node, net->appData, dwError ? DPS_ERR_NETWORK : DPS_OK);
-}
-
-DPS_Status DPS_UnicastWrite(DPS_Node* node, DPS_NodeAddress* dest, void* data, size_t len)
-{
-    DPS_Status status = DPS_OK;
-    DPS_Network* net = node->network;
-    int ret;
-    DWORD sent;
-    WSABUF buf;
-
-    buf.len = (LONG)(node->txLen + node->txHdrLen);
-    buf.buf = node->txBuffer + DPS_TX_HEADER_SIZE - node->txHdrLen;
-
-    ret = WSASendTo(net->udpSock, &buf, 1, &sent, 0, (SOCKADDR*)dest, sizeof(DPS_NodeAddress), NULL, NULL);
-    if (ret == SOCKET_ERROR) {
-        DPS_ERRPRINT("WSASEndTo failed %d\n", WSAGetLastError());
-        status = DPS_ERR_NETWORK;
-    }
-    if (status != DPS_OK) {
-        net->sendCB = NULL;
-        net->appData = NULL;
-    }
-    return status;
-}
-
 DPS_Status DPS_UnicastWriteAsync(DPS_Node* node, const DPS_NodeAddress* dest, void* data, size_t len)
 {
     DPS_Status status = DPS_OK;
@@ -717,6 +728,9 @@ DPS_Status DPS_UnicastSend(DPS_Node* node, const DPS_NodeAddress* dest, void* ap
 {
     DPS_Status status = DPS_OK;
     DPS_Network* net = node->network;
+
+    DPS_DBGTRACE();
+    DPS_DBGPRINT("DTLS state = %d\n", net->dtls.state);
 
     if (net->sendCB) {
         return DPS_ERR_BUSY;
@@ -762,20 +776,17 @@ DPS_Status DPS_UnicastSend(DPS_Node* node, const DPS_NodeAddress* dest, void* ap
     return status;
 }
 
-DPS_DTLS* DPS_GetDTLS(DPS_Network* net)
-{
-    return &net->dtls;
-}
-
 int DPS_UnicastWritePending(DPS_Network* net)
 {
     return net->sendCB != NULL;
 }
 
-void DPS_DisableDTLS(DPS_Node* node)
+DPS_DTLS* DPS_GetDTLS(DPS_Network* net)
 {
-    if (node->network->dtls.state == DTLS_DISCONNECTED) {
-        node->network->dtls.state = DTLS_DISABLED;
+    if (net) {
+        return &net->dtls;
+    } else {
+        return NULL;
     }
 }
 

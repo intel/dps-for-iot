@@ -66,6 +66,9 @@ int main(int argc, char** argv)
     int dtls = DPS_TRUE;
     int i;
     int numPubs;
+    char* host = NULL;
+    int port = 0;
+    const DPS_NodeAddress* destAddr = NULL;
 
 #if DPS_TARGET == DPS_TARGET_WINDOWS || DPS_TARGET == DPS_TARGET_LINUX
     char** arg = argv + 1;
@@ -82,6 +85,22 @@ int main(int argc, char** argv)
             dtls = DPS_FALSE;
             continue;
         }
+        if (strcmp(*arg, "-h") == 0) {
+            ++arg;
+            if (--argc == 0) {
+                goto Usage;
+            }
+            host = *arg++;
+            continue;
+        }
+        if (strcmp(*arg, "-p") == 0) {
+            ++arg;
+            if (--argc == 0) {
+                goto Usage;
+            }
+            sscanf(*arg++, "%d", &port);
+            continue;
+        }
         goto Usage;
     }
     numPubs = 10;
@@ -89,6 +108,14 @@ int main(int argc, char** argv)
     DPS_Debug = DPS_TRUE;
     numPubs = INT_MAX;
 #endif
+
+    if (port) {
+        destAddr = DPS_TextToAddr(host, (uint16_t)port);
+        if (!destAddr) {
+            goto Usage;
+        }
+        DPS_PRINT("Will publish to destination node %s:%d\n", DPS_AddrToText(destAddr), (uint16_t)port);
+    }
 
     DPS_PRINT("Starting pub unit test\n");
 
@@ -113,6 +140,12 @@ int main(int argc, char** argv)
     status = DPS_Start(node);
     CHECK(status == DPS_OK);
 
+    if (!dtls) {
+        status = DPS_DisableDTLS(node);
+        CHECK(status == DPS_OK);
+        DPS_PRINT("DTLS is disabled\n");
+    }
+
     /* Initialize publication with a pre-shared key */
     status = DPS_InitPublication(node, &pub, topics, NUM_TOPICS, DPS_FALSE, &PskId[1], NULL);
     CHECK(status == DPS_OK);
@@ -124,7 +157,7 @@ int main(int argc, char** argv)
     CHECK(status == DPS_OK);
 
     for (i = 0; i < numPubs; ++i) {
-        status = DPS_Publish(&pub, (const uint8_t*)testString, strlen(testString) + 1, 0, PubSendComplete);
+        status = DPS_Publish(&pub, destAddr, (const uint8_t*)testString, strlen(testString) + 1, 0, PubSendComplete);
         CHECK(status == DPS_OK);
         SLEEP(5000);
     }
