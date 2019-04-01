@@ -6,6 +6,7 @@ import copy
 import os
 import pexpect
 from pexpect import popen_spawn
+import random
 import re
 import signal
 import shutil
@@ -15,6 +16,9 @@ import sys
 os.environ['PYTHONPATH'] = os.path.join('build', 'dist', 'py')
 os.environ['NODE_PATH'] = os.path.join('build', 'dist', 'js')
 os.environ['LSAN_OPTIONS'] = 'suppressions={}/asan.supp'.format(os.getcwd())
+def _set_mcast_port():
+    os.environ['DPS_MCAST_PORT'] = str(random.randint(49152, 65536))
+_set_mcast_port()
 
 _parser = argparse.ArgumentParser()
 _parser.add_argument("-d", "--debug", action='store_true',
@@ -47,6 +51,7 @@ _s = 0
 _t = 0
 _tm = 0
 _v = 0
+_test_name = ''
 
 def _spawn_env():
     spawn_env = os.environ.copy()
@@ -57,9 +62,10 @@ def _spawn_env():
     return spawn_env
 
 def _spawn_helper(n, cmd, interpreter=[]):
-    global _children, _logs
+    global _children, _logs, _test_name
     name = os.path.basename(cmd[0])
-    log_name = 'out/{}{}.log'.format(name, n)
+    log_dir = os.path.join('out', _test_name)
+    log_name = os.path.join(log_dir, '{}{}.log'.format(name, n))
     log = open(log_name, 'wb')
     log.write('=============================\n{}{} {}\n'.format(name, n, ' '.join(cmd[1:])).encode())
     log.write('=============================\n'.encode())
@@ -178,8 +184,8 @@ def cleanup():
     for log in _logs:
         log.close()
 
-def reset_logs():
-    global _ms, _n, _p, _r, _rp, _rs, _s, _t, _tm, _v
+def reset_logs(test_name=sys.argv[0]):
+    global _ms, _n, _p, _r, _rp, _rs, _s, _t, _test_name, _tm, _v
     _ms = 0
     _n = 0
     _p = 0
@@ -188,18 +194,22 @@ def reset_logs():
     _rs = 0
     _s = 0
     _t = 0
+    _test_name = test_name
     _tm = 0
     _v = 0
     cleanup()
-    shutil.rmtree('out', ignore_errors=True)
+    log_dir = os.path.join('out', _test_name)
+    shutil.rmtree(log_dir, ignore_errors=True)
     try:
-        os.makedirs('out')
+        os.makedirs(log_dir)
     except OSError:
-        if not os.path.isdir('out'):
+        if not os.path.isdir(log_dir):
             raise
 
 def bin(cmd):
-    global _children
+    global _children, _test_name
+    _test_name = cmd[0]
+    _set_mcast_port()
     child = _spawn(1, cmd)
     buf = child.read(8192)
     while buf:
@@ -209,7 +219,9 @@ def bin(cmd):
     return status
 
 def py(cmd):
-    global _children
+    global _children, _test_name
+    _test_name = cmd[0]
+    _set_mcast_port()
     child = _py_spawn(1, cmd)
     child.expect(pexpect.EOF, timeout=300)
     status = child.wait()

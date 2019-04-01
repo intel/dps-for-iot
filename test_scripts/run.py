@@ -62,8 +62,9 @@ ok = 0
 failed = 0
 failed_tests = ''
 
-def _dump_logs():
-    for log in glob.glob('out/*.log'):
+def _dump_logs(test_name):
+    log_dir = os.path.join('out', test_name)
+    for log in glob.glob(os.path.join(log_dir, '*.log')):
         size = os.path.getsize(log)
         with open(log, 'r') as l:
             print('==> {} <=='.format(log))
@@ -72,7 +73,7 @@ def _dump_logs():
             print(l.read(), end='')
 
 for test in tests:
-    reset_logs()
+    reset_logs(test)
     print('[ RUN      ] ' + test)
     if test.startswith('test_scripts'):
         child = popen_spawn.PopenSpawn(['python', test] + sys.argv[1:], logfile=sys.stdout)
@@ -89,7 +90,7 @@ for test in tests:
         print('[   FAILED ] ' + test)
         failed = failed + 1
         failed_tests += '[   FAILED ] ' + test + '\n'
-        _dump_logs()
+        _dump_logs(test)
 
 print('[==========] {} tests ran.'.format(ok + failed))
 if ok > 0:
