@@ -68,14 +68,32 @@ void DPS_CopyNodeAddress(DPS_NodeAddress* dest, const DPS_NodeAddress* src);
 int DPS_SameNodeAddress(const DPS_NodeAddress* addr1, const DPS_NodeAddress* addr2);
 
 /**
-  * Returns text string for a specified node address.
+  * Returns text string for a specified node address. This function is
+  * not thread-safe.
   */
 const char* DPS_AddrToText(const DPS_NodeAddress* addr);
 
 /**
-  * Allocate a node address from the requested pool. Call DPS_Free() to free the memory
+  * Returns node address from text form of an IP address and port. This function is
+  * not thread-safe.
+  *
+  * @param addrStr   An IPv4 or IPv6 address. NULL is interpreted as localhost.
+  * @param port      Port number for the address.
+  *
+  * @return DPS_OK if the address was initialized or DPS_ERR_INVALID if the
+  *         text string was not a valid address.
   */
-DPS_NodeAddress* DPS_AllocNodeAddress(DPS_AllocPool pool);
+const DPS_NodeAddress* DPS_TextToAddr(const char* addrStr, uint16_t port);
+
+/**
+  * Allocate a node address.
+  */
+DPS_NodeAddress* DPS_AllocNodeAddress();
+
+/**
+  * Free a node address previously allocated by DPS_AllocNodeAddress()
+  */
+void DPS_FreeNodeAddress(DPS_NodeAddress* addr);
 
 /**
  * Function prototype for handler to be called on receiving data from a remote node
@@ -196,11 +214,6 @@ DPS_DTLS* DPS_GetDTLS(DPS_Network* net);
   * Return TRUE if there is a unicast write pending
   */
 int DPS_UnicastWritePending(DPS_Network* net);
-
-/**
-  * Disable DTLS - this should be called before any DTLS connections are established
-  */
-void DPS_DisableDTLS(DPS_Node* node);
 
 #ifdef __cplusplus
 }

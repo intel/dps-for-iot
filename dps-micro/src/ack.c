@@ -311,8 +311,7 @@ DPS_Status DPS_AckPublication(const DPS_Publication* pub, const uint8_t* data, s
 
     ret = SerializeAck(pub, data, dataLen);
     if (ret == DPS_OK) {
-        ret = DPS_UnicastSend(pub->node, pub->sendAddr, NULL, NULL);
+        ret = DPS_UnicastSend(pub->node, pub->fromAddr, NULL, NULL);
     }
     return ret;
 }
-

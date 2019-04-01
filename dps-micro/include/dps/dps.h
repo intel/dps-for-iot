@@ -97,6 +97,10 @@ void DPS_DestroyNode(DPS_Node* node);
   */
 uint16_t DPS_GetPortNumber(DPS_Node* node);
 
+/**
+  * Disable DTLS - this should be called before any DTLS connections are established
+  */
+DPS_Status DPS_DisableDTLS(DPS_Node* node);
 
 #ifdef __cplusplus
 }
