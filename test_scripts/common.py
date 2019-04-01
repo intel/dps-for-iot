@@ -23,7 +23,7 @@ _set_mcast_port()
 _parser = argparse.ArgumentParser()
 _parser.add_argument("-d", "--debug", action='store_true',
                      help="Enable debug ouput if built for debug.")
-_parser.add_argument("-n", "--network", default="udp",
+_parser.add_argument("-n", "--network", default=None,
                      help="Network of addresses.")
 args = _parser.parse_args()
 _cmd_args = []
@@ -51,7 +51,7 @@ _s = 0
 _t = 0
 _tm = 0
 _v = 0
-_test_name = ''
+_log_dir = 'out'
 
 def _spawn_env():
     spawn_env = os.environ.copy()
@@ -62,10 +62,9 @@ def _spawn_env():
     return spawn_env
 
 def _spawn_helper(n, cmd, interpreter=[]):
-    global _children, _logs, _test_name
+    global _children, _logs, _log_dir
     name = os.path.basename(cmd[0])
-    log_dir = os.path.join('out', _test_name)
-    log_name = os.path.join(log_dir, '{}{}.log'.format(name, n))
+    log_name = os.path.join(_log_dir, '{}{}.log'.format(name, n))
     log = open(log_name, 'wb')
     log.write('=============================\n{}{} {}\n'.format(name, n, ' '.join(cmd[1:])).encode())
     log.write('=============================\n'.encode())
@@ -184,8 +183,8 @@ def cleanup():
     for log in _logs:
         log.close()
 
-def reset_logs(test_name=sys.argv[0]):
-    global _ms, _n, _p, _r, _rp, _rs, _s, _t, _test_name, _tm, _v
+def reset_logs(transport_name=args.network, test_name=sys.argv[0]):
+    global _ms, _n, _p, _r, _rp, _rs, _s, _t, _log_dir, _tm, _v
     _ms = 0
     _n = 0
     _p = 0
@@ -194,21 +193,27 @@ def reset_logs(test_name=sys.argv[0]):
     _rs = 0
     _s = 0
     _t = 0
-    _test_name = test_name
+    if transport_name:
+        _log_dir = os.path.join('out', transport_name, test_name)
+    else:
+        _log_dir = os.path.join('out', test_name)
     _tm = 0
     _v = 0
     cleanup()
-    log_dir = os.path.join('out', _test_name)
-    shutil.rmtree(log_dir, ignore_errors=True)
+    shutil.rmtree(_log_dir, ignore_errors=True)
     try:
-        os.makedirs(log_dir)
+        os.makedirs(_log_dir)
     except OSError:
-        if not os.path.isdir(log_dir):
+        if not os.path.isdir(_log_dir):
             raise
 
 def bin(cmd):
-    global _children, _test_name
-    _test_name = cmd[0]
+    global _children, _log_dir
+    try:
+        i = cmd.index('-n')
+        _log_dir = os.path.join('out', cmd[i + 1], cmd[0])
+    except ValueError:
+        _log_dir = os.path.join('out', cmd[0])
     _set_mcast_port()
     child = _spawn(1, cmd)
     buf = child.read(8192)
@@ -219,8 +224,12 @@ def bin(cmd):
     return status
 
 def py(cmd):
-    global _children, _test_name
-    _test_name = cmd[0]
+    global _children, _log_dir
+    try:
+        i = cmd.index('-n')
+        _log_dir = os.path.join('out', cmd[i + 1], cmd[0])
+    except ValueError:
+        _log_dir = os.path.join('out', cmd[0])
     _set_mcast_port()
     child = _py_spawn(1, cmd)
     child.expect(pexpect.EOF, timeout=300)

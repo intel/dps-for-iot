@@ -4,6 +4,8 @@ from __future__ import print_function
 from common import *
 import glob
 import os
+import multiprocessing
+from multiprocessing import Pool
 import pexpect
 from pexpect import popen_spawn
 import platform
@@ -58,10 +60,6 @@ if 'FSAN' not in os.environ or os.environ['FSAN'] == 'no':
 else:
     tests = [os.path.join('test_scripts', 'fuzzer_check.py')]
 
-ok = 0
-failed = 0
-failed_tests = ''
-
 def _dump_logs(test_name):
     log_dir = os.path.join('out', test_name)
     for log in glob.glob(os.path.join(log_dir, '*.log')):
@@ -72,25 +70,44 @@ def _dump_logs(test_name):
                 l.seek(-32768, os.SEEK_END)
             print(l.read(), end='')
 
-for test in tests:
-    reset_logs(test)
-    print('[ RUN      ] ' + test)
+def run_test(args):
+    (transport, test) = args
+    reset_logs(transport, test)
+    name = os.path.join(transport, test)
+    print('[ RUN      ] ' + name)
     if test.startswith('test_scripts'):
-        child = popen_spawn.PopenSpawn(['python', test] + sys.argv[1:], logfile=sys.stdout)
+        child = popen_spawn.PopenSpawn(['python', test, '-n', transport] + sys.argv[1:], logfile=sys.stdout)
         child.expect(pexpect.EOF, timeout=300)
         status = child.wait()
     elif test.startswith('py_scripts'):
-        status = py([test] + sys.argv[1:])
+        status = py([test, '-n', transport] + sys.argv[1:])
     else:
-        status = bin([test] + sys.argv[1:])
+        status = bin([test, '-n', transport] + sys.argv[1:])
     if status == 0:
-        print('[       OK ] ' + test)
+        print('[       OK ] ' + name)
+    else:
+        print('[   FAILED ] ' + name)
+        _dump_logs(name)
+    return (name, status)
+
+args = []
+for transport in os.environ['TRANSPORT'].split(','):
+    for test in tests:
+        args = args + [(transport, test)]
+
+pool = Pool()
+results = pool.map(run_test, args)
+
+ok = 0
+failed = 0
+failed_tests = ''
+for result in results:
+    (name, status) = result
+    if status == 0:
         ok = ok + 1
     else:
-        print('[   FAILED ] ' + test)
         failed = failed + 1
-        failed_tests += '[   FAILED ] ' + test + '\n'
-        _dump_logs(test)
+        failed_tests += '[   FAILED ] ' + name + '\n'
 
 print('[==========] {} tests ran.'.format(ok + failed))
 if ok > 0:
