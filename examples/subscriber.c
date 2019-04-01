@@ -155,7 +155,6 @@ static int IsInteractive(Args* args)
 
 static int ParseArgs(int argc, char** argv, Args* args)
 {
-    memset(args, 0, sizeof(Args));
     args->encrypt = 1;
     args->subsRate = DPS_SUBSCRIPTION_UPDATE_RATE;
     args->mcastPub = DPS_MCAST_PUB_DISABLED;
@@ -321,7 +320,7 @@ static void UnlinkFrom(Subscriber* subscriber)
 #define MAX_TOPICS 64
 #define MAX_ARGS (32 + MAX_TOPICS)
 
-static void ReadStdin(Subscriber* subscriber)
+static void ReadStdin(Args* mainArgs, Subscriber* subscriber)
 {
     char lineBuf[MAX_LINE_LEN + 1];
 
@@ -340,6 +339,11 @@ static void ReadStdin(Subscriber* subscriber)
                 argv[argc++] = tok;
             }
         }
+        /*
+         * Inherit network argument from command line
+         */
+        memset(&args, 0, sizeof(Args));
+        args.network = mainArgs->network;
         if (!ParseArgs(argc, argv, &args)) {
             continue;
         }
@@ -361,6 +365,7 @@ int main(int argc, char** argv)
     DPS_Debug = DPS_FALSE;
     memset(&subscriber, 0, sizeof(subscriber));
 
+    memset(&args, 0, sizeof(Args));
     if (!ParseArgs(argc - 1, argv + 1, &args)) {
         goto Usage;
     }
@@ -421,7 +426,7 @@ int main(int argc, char** argv)
     }
     if (IsInteractive(&args)) {
         DPS_PRINT("Running in interactive mode\n");
-        ReadStdin(&subscriber);
+        ReadStdin(&args, &subscriber);
         UnlinkFrom(&subscriber);
         DPS_DestroyNode(subscriber.node, OnNodeDestroyed, nodeDestroyed);
     }
