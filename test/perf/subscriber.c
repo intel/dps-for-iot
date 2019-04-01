@@ -82,7 +82,7 @@ int main(int argc, char** argv)
             DPS_Debug = DPS_TRUE;
             continue;
         }
-        if (strcmp(*arg, "--network") == 0) {
+        if (strcmp(*arg, "-n") == 0) {
             ++arg;
             if (!--argc) {
                 goto Usage;
@@ -135,8 +135,9 @@ Exit:
     return (ret == DPS_OK) ? EXIT_SUCCESS : EXIT_FAILURE;
 
 Usage:
-    DPS_PRINT("Usage %s [-d] [-s <size>]\n", argv[0]);
+    DPS_PRINT("Usage %s [-d] [-n <network>] [-p <port>] [-s <size>]\n", argv[0]);
     DPS_PRINT("       -d: Enable debug ouput if built for debug.\n");
+    DPS_PRINT("       -n: Network of listen and link addresses.\n");
     DPS_PRINT("       -p: port to listen on.\n");
     DPS_PRINT("       -s: Size of ACK payload.\n");
     return EXIT_FAILURE;

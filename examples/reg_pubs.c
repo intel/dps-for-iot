@@ -221,6 +221,7 @@ int main(int argc, char** argv)
     int subsRate = DPS_SUBSCRIPTION_UPDATE_RATE;
     int timeout = DPS_REGISTRATION_GET_TIMEOUT;
     int count = 16;
+    DPS_NodeAddress* listenAddr = NULL;
     DPS_NodeAddress* linkAddr[MAX_LINKS] = { NULL };
     char* network = NULL;
     char* linkText[MAX_LINKS] = { NULL };
@@ -300,7 +301,12 @@ int main(int argc, char** argv)
     node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore), NULL);
     DPS_SetNodeSubscriptionUpdateDelay(node, subsRate);
 
-    ret = DPS_StartNode(node, mcastPub, NULL);
+    listenAddr = CreateAddressFromArg(network, NULL);
+    if (!listenAddr) {
+        DPS_ERRPRINT("CreateAddressFromArg failed\n");
+        return 1;
+    }
+    ret = DPS_StartNode(node, mcastPub, listenAddr);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
         return 1;
@@ -352,14 +358,16 @@ Exit:
     DPS_DestroyEvent(nodeDestroyed);
     DPS_DestroyMemoryKeyStore(memoryKeyStore);
     DestroyLinkArg(linkText, linkAddr, numLinks);
+    DestroyAddressArg(NULL, listenAddr);
     return 0;
 
 Usage:
-    DPS_PRINT("Usage %s [-d] [-a] [-w <seconds>] [-t <pub ttl>] [-p <address>] [--tenant <tenant string>] [-c <count>] [--timeout <milliseconds>] [-m <message>] [-r <milliseconds>] [topic1 topic2 ... topicN]\n", *argv);
+    DPS_PRINT("Usage %s [-d] [-a] [-w <seconds>] [-t <pub ttl>] [-n <network>] [-p <address>] [--tenant <tenant string>] [-c <count>] [--timeout <milliseconds>] [-m <message>] [-r <milliseconds>] [topic1 topic2 ... topicN]\n", *argv);
     DPS_PRINT("       -d: Enable debug ouput if built for debug.\n");
     DPS_PRINT("       -a: Request an acknowledgement\n");
     DPS_PRINT("       -t: Set a time-to-live on a publication\n");
     DPS_PRINT("       -w: Time to wait between linking to remote node and sending publication\n");
+    DPS_PRINT("       -n: Network of listen and link addresses.\n");
     DPS_PRINT("       -p: Address to link. Multiple -p options are permitted.\n");
     DPS_PRINT("       -m: A payload message to accompany the publication.\n");
     DPS_PRINT("       -r: Time to delay between subscription updates.\n");

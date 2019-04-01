@@ -21,11 +21,15 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("-d", "--debug", action='store_true',
                     help="Enable debug ouput if built for debug.")
+parser.add_argument("-n", "--network", default="udp",
+                    help="Network of listen and link addresses.")
 args = parser.parse_args()
 dps.cvar.debug = args.debug
 
 node = dps.create_node("/")
-dps.start_node(node, dps.MCAST_PUB_ENABLE_SEND + dps.MCAST_PUB_ENABLE_RECV, None)
+addr = dps.create_address()
+dps.set_address(addr, args.network, None)
+dps.start_node(node, dps.MCAST_PUB_ENABLE_SEND + dps.MCAST_PUB_ENABLE_RECV, addr)
 print("Publisher is listening on %s" % (dps.get_listen_address(node)))
 
 pub = dps.create_publication(node)

@@ -90,6 +90,8 @@ var crypto = require("crypto");
     var pubKeyId;
     var i;
     var encryption;
+    var network = null;
+    var addr;
 
     var compare = function(a, b) {
         var i;
@@ -193,6 +195,8 @@ var crypto = require("crypto");
     for (i = 0; i < process.argv.length; ++i) {
         if (process.argv[i] == "-x") {
             encryption = process.argv[++i];
+        } else if (process.argv[i] == "-n") {
+            network = process.argv[++i];
         } else if (process.argv[i] == "-d") {
             dps.debug = 1;
         }
@@ -213,7 +217,10 @@ var crypto = require("crypto");
     }
 
     node = dps.createNode("/", keyStore, nodeId);
-    dps.startNode(node, dps.MCAST_PUB_ENABLE_SEND, null);
+    addr = dps.createAddress()
+    dps.setAddress(addr, network, null);
+    dps.startNode(node, dps.MCAST_PUB_ENABLE_SEND, addr);
+    dps.destroyAddress(addr);
     console.log("Publisher is listening on " +  dps.getListenAddress(node));
     pub = dps.createPublication(node);
 

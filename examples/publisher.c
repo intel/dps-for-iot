@@ -408,7 +408,7 @@ int main(int argc, char** argv)
         if (numLinks) {
             Unlink(node, linkAddr, numLinks);
         }
-        if (listenAddr) {
+        if (listenText) {
             DPS_PRINT("Waiting for remote to link\n");
             DPS_TimedWaitForEvent(nodeDestroyed, 60 * 1000);
         }
@@ -425,12 +425,13 @@ int main(int argc, char** argv)
     return 0;
 
 Usage:
-    DPS_PRINT("Usage %s [-d] [-x 0|1|2|3] [-a] [-w <seconds>] [-t <ttl>] [-p <address>] [-l <address>] [-m|-j <message>] [-r <milliseconds>] [topic1 topic2 ... topicN]\n", argv[0]);
+    DPS_PRINT("Usage %s [-d] [-x 0|1|2|3] [-a] [-w <seconds>] [-t <ttl>] [-n <network>] [-p <address>] [-l <address>] [-m|-j <message>] [-r <milliseconds>] [topic1 topic2 ... topicN]\n", argv[0]);
     DPS_PRINT("       -d: Enable debug ouput if built for debug.\n");
     DPS_PRINT("       -x: Disable (0) or enable symmetric encryption (1), asymmetric encryption (2), or authentication (3). Default is symmetric encryption enabled.\n");
     DPS_PRINT("       -a: Request an acknowledgement\n");
     DPS_PRINT("       -t: Set a time-to-live on a publication\n");
     DPS_PRINT("       -w: Time to wait between linking to remote node and sending publication\n");
+    DPS_PRINT("       -n: Network of listen and link addresses.\n");
     DPS_PRINT("       -l: Address to listen on for incoming connections\n");
     DPS_PRINT("       -p: Address to link. Multiple -p options are permitted.\n");
     DPS_PRINT("       -m: A string payload to accompany the publication.\n");

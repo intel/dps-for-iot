@@ -259,8 +259,9 @@ int main(int argc, char** argv)
     return 0;
 
 Usage:
-    DPS_PRINT("Usage %s [-d] [-l <address>] [-p <address>] [-t <tenant string>] [-r <milliseconds>] [-c <count>] [--timeout <milliseconds>] topic1 topic2 ... topicN\n", *argv);
+    DPS_PRINT("Usage %s [-d] [-l <address>] [-n <network>] [-p <address>] [-t <tenant string>] [-r <milliseconds>] [-c <count>] [--timeout <milliseconds>] topic1 topic2 ... topicN\n", *argv);
     DPS_PRINT("       -d: Enable debug ouput if built for debug.\n");
+    DPS_PRINT("       -n: Network of listen and link addresses.\n");
     DPS_PRINT("       -l: Address to listen on.\n");
     DPS_PRINT("       -p: Address to link.\n");
     DPS_PRINT("       -t: Tenant string to use.\n");

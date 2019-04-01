@@ -374,6 +374,7 @@ DPS_Status DPS_Registration_Put(DPS_Node* node, const char* network, const char*
     DPS_Status ret;
     RegPut* regPut;
     const DPS_NodeAddress* localAddr;
+    DPS_NodeAddress* addr = NULL;
 
     DPS_DBGTRACE();
 
@@ -399,7 +400,16 @@ DPS_Status DPS_Registration_Put(DPS_Node* node, const char* network, const char*
         goto Exit;
     }
 
-    ret = DPS_StartNode(regPut->node, DPS_MCAST_PUB_DISABLED, NULL);
+    addr = DPS_CreateAddress();
+    if (!addr) {
+        ret = DPS_ERR_RESOURCES;
+        goto Exit;
+    }
+    if (!DPS_SetAddress(addr, DPS_NodeAddrNetwork(localAddr), NULL)) {
+        ret = DPS_ERR_FAILURE;
+        goto Exit;
+    }
+    ret = DPS_StartNode(regPut->node, DPS_MCAST_PUB_DISABLED, addr);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
     } else {
@@ -422,6 +432,7 @@ Exit:
         }
         free(regPut);
     }
+    DPS_DestroyAddress(addr);
     return ret;
 }
 
@@ -632,6 +643,7 @@ DPS_Status DPS_Registration_Get(DPS_Node* node, const char* network, const char*
     DPS_Status ret;
     RegGet* regGet;
     const DPS_NodeAddress* localAddr;
+    DPS_NodeAddress* addr = NULL;
 
     DPS_DBGTRACE();
 
@@ -668,7 +680,16 @@ DPS_Status DPS_Registration_Get(DPS_Node* node, const char* network, const char*
         ret = DPS_ERR_RESOURCES;
         goto Exit;
     }
-    ret = DPS_StartNode(regGet->node, DPS_MCAST_PUB_DISABLED, NULL);
+    addr = DPS_CreateAddress();
+    if (!addr) {
+        ret = DPS_ERR_RESOURCES;
+        goto Exit;
+    }
+    if (!DPS_SetAddress(addr, DPS_NodeAddrNetwork(localAddr), NULL)) {
+        ret = DPS_ERR_FAILURE;
+        goto Exit;
+    }
+    ret = DPS_StartNode(regGet->node, DPS_MCAST_PUB_DISABLED, addr);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
     } else {
@@ -685,6 +706,7 @@ Exit:
         }
         free(regGet);
     }
+    DPS_DestroyAddress(addr);
     return ret;
 }
 

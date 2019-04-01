@@ -53,7 +53,8 @@ func main() {
 
 	node := dps.CreateNode("/", nil, nil)
 	listenAddr := dps.CreateAddress()
-	dps.SetAddress(listenAddr, *network, fmt.Sprintf(":%v", *listenText))
+	addrText := fmt.Sprintf(":%v", *listenText)
+	dps.SetAddress(listenAddr, network, &addrText)
 	dps.StartNode(node, dps.MCAST_PUB_ENABLE_RECV, listenAddr)
 	fmt.Printf("Subscriber is listening on %v\n", dps.GetListenAddressString(node))
 

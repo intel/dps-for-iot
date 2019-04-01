@@ -92,6 +92,15 @@ int main(int argc, char** argv)
             continue;
         }
         if (strcmp(*arg, "-n") == 0) {
+            /* Ignore the network argument for compatibility with other tests */
+            ++arg;
+            if (!--argc) {
+                goto Usage;
+            }
+            ++arg;
+            continue;
+        }
+        if (strcmp(*arg, "-w") == 0) {
             ++arg;
             noWildCard = DPS_TRUE;
             continue;

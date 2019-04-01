@@ -121,6 +121,6 @@ int main(int argc, char** argv)
     return 0;
 
 Usage:
-    DPS_PRINT("Usage %s [-l <listen port>] [-d]\n", *argv);
+    DPS_PRINT("Usage %s [-n <network>] [-l <listen port>] [-d]\n", *argv);
     return 1;
 }

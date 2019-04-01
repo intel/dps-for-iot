@@ -112,7 +112,7 @@ int main(int argc, char** argv)
             DPS_Debug = DPS_TRUE;
             continue;
         }
-        if (strcmp(*arg, "--network") == 0) {
+        if (strcmp(*arg, "-n") == 0) {
             ++arg;
             if (!--argc) {
                 goto Usage;
@@ -131,7 +131,7 @@ int main(int argc, char** argv)
         if (IntArg("-s", &arg, &argc, &payloadSize, 0,  UINT16_MAX)) {
             continue;
         }
-        if (IntArg("-n", &arg, &argc, &numPubs, 1,  1000000)) {
+        if (IntArg("-c", &arg, &argc, &numPubs, 1,  1000000)) {
             continue;
         }
     }
@@ -214,9 +214,10 @@ int main(int argc, char** argv)
     return 0;
 
 Usage:
-    DPS_PRINT("Usage %s [-d] [-n <count>] [-p <portnum>] [-s <size>]\n", argv[0]);
+    DPS_PRINT("Usage %s [-d] [-c <count>] [-n <network>] [-p <portnum>] [-s <size>]\n", argv[0]);
     DPS_PRINT("       -d: Enable debug ouput if built for debug.\n");
-    DPS_PRINT("       -n: Number of publications to send.\n");
+    DPS_PRINT("       -c: Number of publications to send.\n");
+    DPS_PRINT("       -n: Network of listen and link addresses.\n");
     DPS_PRINT("       -p: port to link.\n");
     DPS_PRINT("       -s: Size of PUB payload.\n");
     return 1;

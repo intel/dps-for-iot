@@ -140,13 +140,11 @@ def on_link(node, addr, status):
     event.set()
 
 node = dps.create_node("/", key_store, node_id)
-listen_addr = None
-if args.listen != None:
-    listen_addr = dps.create_address()
-    try:
-        dps.set_address(listen_addr, args.network, "[::]:%d" % (int(args.listen)))
-    except ValueError:
-        dps.set_address(listen_addr, args.network, args.listen)
+listen_addr = dps.create_address()
+try:
+    dps.set_address(listen_addr, args.network, "[::]:%d" % (int(args.listen)))
+except:
+    dps.set_address(listen_addr, args.network, args.listen)
 dps.start_node(node, dps.MCAST_PUB_ENABLE_RECV, listen_addr)
 print("Subscriber is listening on %s" % (dps.get_listen_address(node)))
 

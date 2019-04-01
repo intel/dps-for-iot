@@ -255,12 +255,17 @@ func NodeAddrNetwork(addr *NodeAddress) string {
 func CreateAddress() *NodeAddress {
 	return (*NodeAddress)(C.DPS_CreateAddress())
 }
-func SetAddress(addr *NodeAddress, network, addrText string) *NodeAddress {
+func SetAddress(addr *NodeAddress, network, addrText *string) *NodeAddress {
 	caddr := (*C.DPS_NodeAddress)(addr)
-	cnetwork := C.CString(network)
-	defer C.free(unsafe.Pointer(cnetwork))
-	caddrText := C.CString(addrText)
-	defer C.free(unsafe.Pointer(caddrText))
+	var cnetwork, caddrText *C.char
+	if network != nil {
+		cnetwork = C.CString(*network)
+		defer C.free(unsafe.Pointer(cnetwork))
+	}
+	if addrText != nil {
+		caddrText = C.CString(*addrText)
+		defer C.free(unsafe.Pointer(caddrText))
+	}
 	return (*NodeAddress)(C.DPS_SetAddress(caddr, cnetwork, caddrText))
 }
 func CopyAddress(dest *NodeAddress, src *NodeAddress) {

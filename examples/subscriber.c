@@ -439,11 +439,12 @@ Exit:
     return (ret == DPS_OK) ? EXIT_SUCCESS : EXIT_FAILURE;
 
 Usage:
-    DPS_PRINT("Usage %s [-d] [-q] [-m] [-w <seconds>] [-x 0|1|2|3] [-p <address>] [-l <address] [-j] [-r <milliseconds>] [[-s] topic1 ... topicN]\n", argv[0]);
+    DPS_PRINT("Usage %s [-d] [-q] [-m] [-w <seconds>] [-x 0|1|2|3] [-n <network>] [-p <address>] [-l <address] [-j] [-r <milliseconds>] [[-s] topic1 ... topicN]\n", argv[0]);
     DPS_PRINT("       -d: Enable debug ouput if built for debug.\n");
     DPS_PRINT("       -q: Quiet - suppresses output about received publications.\n");
     DPS_PRINT("       -x: Disable (0) or enable symmetric encryption (1), asymmetric encryption (2), or authentication (3). Default is symmetric encryption enabled.\n");
     DPS_PRINT("       -w: Time to wait before establishing links\n");
+    DPS_PRINT("       -n: Network of listen and link addresses.\n");
     DPS_PRINT("       -p: An address to link. Multiple -p options are permitted.\n");
     DPS_PRINT("       -m: Enable multicast receive. Enabled by default is there are no -p options.\n");
     DPS_PRINT("       -l: Address listen on.\n");

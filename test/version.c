@@ -163,6 +163,7 @@ int main(int argc, char** argv)
     DPS_NodeAddress* addr = NULL;
     DPS_NetEndpoint ep;
     DPS_Node *node = NULL;
+    DPS_NodeAddress* listenAddr = NULL;
     DPS_Event* nodeDestroyed = NULL;
     DPS_Status ret;
 
@@ -198,7 +199,7 @@ int main(int argc, char** argv)
         }
     }
     memset(&ep, 0, sizeof(ep));
-    if (network || addr) {
+    if (addrText) {
         addr = CreateAddressFromArg(network, addrText);
         if (!addr) {
             DPS_ERRPRINT("Failed to create address\n");
@@ -219,7 +220,12 @@ int main(int argc, char** argv)
     nodeDestroyed = DPS_CreateEvent();
 
     node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore), NULL);
-    ret = DPS_StartNode(node, mcast, NULL);
+    listenAddr = CreateAddressFromArg(network, NULL);
+    if (!listenAddr) {
+        DPS_ERRPRINT("CreateAddressFromArg failed\n");
+        return EXIT_FAILURE;
+    }
+    ret = DPS_StartNode(node, mcast, listenAddr);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
         return EXIT_FAILURE;
@@ -233,13 +239,15 @@ int main(int argc, char** argv)
     DPS_WaitForEvent(nodeDestroyed);
     DPS_DestroyEvent(nodeDestroyed);
     DPS_DestroyMemoryKeyStore(memoryKeyStore);
+    DPS_DestroyAddress(listenAddr);
     DPS_DestroyAddress(addr);
     return EXIT_SUCCESS;
 
 Usage:
-    DPS_PRINT("Usage %s [-d] [-x 0/1] [-p <address>] [-v version] [-t type]\n", argv[0]);
+    DPS_PRINT("Usage %s [-d] [-x 0/1] [-n <network>] [-p <address>] [-v version] [-t type]\n", argv[0]);
     DPS_PRINT("       -d: Enable debug ouput if built for debug.\n");
     DPS_PRINT("       -x: Enable or disable encryption. Default is encryption enabled.\n");
+    DPS_PRINT("       -n: Network of listen and link addresses.\n");
     DPS_PRINT("       -p: An address to send to.\n");
     DPS_PRINT("       -v: The version number to send.\n");
     DPS_PRINT("       -t: The message type to send.\n");

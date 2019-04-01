@@ -118,6 +118,7 @@ public:
     Handler* m_caHandler;
 };
 
+static int AsCharOrNullPtr(Handle obj, char** cptr, int *alloc);
 static int AsVal_bytes(Handle obj, uint8_t** bytes, size_t* len);
 static int AsSafeVal_bytes(Handle obj, uint8_t** bytes, size_t* len);
 static Handle From_bytes(const uint8_t* bytes, size_t len);
@@ -656,6 +657,30 @@ DPS_Status CBOR2JSON(const uint8_t* cbor, size_t len, int pretty, char** json);
 }
 %typemap(default) (int16_t ttl) {
     $1 = 0;
+}
+
+/*
+ * Strings that may be NULL need special handling.
+ */
+
+%typemap(in) const char* network (int res = 0) {
+    res = AsCharOrNullPtr($input, &$1);
+    if (!SWIG_IsOK(res)) {
+        SWIG_exception_fail(SWIG_ArgError(res), "in method '" "$symname" "', argument " "$argnum"" of type '" "$1_type""'");
+    }
+}
+%typemap(freearg) const char* network {
+    if (SWIG_IsNewObj(res$argnum)) delete[] $1;
+}
+
+%typemap(in) const char* addrText (int res = 0) {
+    res = AsCharOrNullPtr($input, &$1);
+    if (!SWIG_IsOK(res)) {
+        SWIG_exception_fail(SWIG_ArgError(res), "in method '" "$symname" "', argument " "$argnum"" of type '" "$1_type""'");
+    }
+}
+%typemap(freearg) const char* addrText {
+    if (SWIG_IsNewObj(res$argnum)) delete[] $1;
 }
 
 %{

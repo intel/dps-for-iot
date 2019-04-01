@@ -85,7 +85,7 @@ int main(int argc, char** argv)
             }
             continue;
         }
-        if (strcmp(*arg, "-n") == 0) {
+        if (strcmp(*arg, "-c") == 0) {
             ++arg;
             if (!--argc) {
                 goto Usage;
@@ -99,6 +99,15 @@ int main(int argc, char** argv)
         if (strcmp(*arg, "-d") == 0) {
             ++arg;
             DPS_Debug = DPS_TRUE;
+            continue;
+        }
+        if (strcmp(*arg, "-n") == 0) {
+            /* Ignore the network argument for compatibility with other tests */
+            ++arg;
+            if (!--argc) {
+                goto Usage;
+            }
+            ++arg;
             continue;
         }
         goto Usage;
@@ -178,6 +187,6 @@ int main(int argc, char** argv)
     return EXIT_SUCCESS;
 
 Usage:
-    DPS_PRINT("Usage %s: [-r] [-b <filter-bits>] [-n <num-hashes>]\n", argv[0]);
+    DPS_PRINT("Usage %s: [-r] [-b <filter-bits>] [-c <num-hashes>]\n", argv[0]);
     return EXIT_FAILURE;
 }

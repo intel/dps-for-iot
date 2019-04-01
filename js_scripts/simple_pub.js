@@ -89,6 +89,8 @@ var dps = require("dps");
     var pubKeyId;
     var i;
     var encryption;
+    var network = null;
+    var addr;
 
     var onAck = function (pub, payload) {
         console.log("Ack for pub UUID " + dps.publicationGetUUID(pub) + "(" + dps.publicationGetSequenceNum(pub) + ")");
@@ -111,6 +113,8 @@ var dps = require("dps");
     for (i = 0; i < process.argv.length; ++i) {
         if (process.argv[i] == "-x") {
             encryption = process.argv[++i];
+        } else if (process.argv[i] == "-n") {
+            network = process.argv[++i];
         } else if (process.argv[i] == "-d") {
             dps.debug = 1;
         }
@@ -136,7 +140,10 @@ var dps = require("dps");
     }
 
     node = dps.createNode("/", keyStore, nodeId);
-    dps.startNode(node, dps.MCAST_PUB_ENABLE_SEND, null);
+    addr = dps.createAddress()
+    dps.setAddress(addr, network, null);
+    dps.startNode(node, dps.MCAST_PUB_ENABLE_SEND, addr);
+    dps.destroyAddress(addr);
     console.log("Publisher is listening on " +  dps.getListenAddress(node));
 
     pub = dps.createPublication(node);

@@ -76,6 +76,7 @@ int main(int argc, char** argv)
     DPS_Publication* pub = NULL;
     DPS_Node* node;
     char** arg = argv + 1;
+    DPS_NodeAddress* listenAddr = NULL;
     DPS_NodeAddress* linkAddr[MAX_LINKS] = { NULL };
     char* network = NULL;
     char* linkText[MAX_LINKS] = { NULL };
@@ -138,7 +139,12 @@ int main(int argc, char** argv)
     }
 
     node = DPS_CreateNode("/.", NULL, NULL);
-    ret = DPS_StartNode(node, mcast, NULL);
+    listenAddr = CreateAddressFromArg(network, NULL);
+    if (!listenAddr) {
+        DPS_ERRPRINT("CreateAddressFromArg failed\n");
+        return 1;
+    }
+    ret = DPS_StartNode(node, mcast, listenAddr);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("DPS_CreateNode failed: %s\n", DPS_ErrTxt(ret));
         return 1;
@@ -171,11 +177,12 @@ int main(int argc, char** argv)
     DPS_WaitForEvent(nodeDestroyed);
     DPS_DestroyEvent(nodeDestroyed);
     DestroyLinkArg(linkText, linkAddr, numLinks);
+    DestroyAddressArg(NULL, listenAddr);
 
     return 0;
 
 Usage:
-    DPS_PRINT("Usage %s [-d] [-p <address>] [-m <message>] [-t <ttl>] [-c <count>] [topic1 topic2 ... topicN]\n", *argv);
+    DPS_PRINT("Usage %s [-d] [-n <network>] [-p <address>] [-m <message>] [-t <ttl>] [-c <count>] [topic1 topic2 ... topicN]\n", *argv);
     return 1;
 }
 

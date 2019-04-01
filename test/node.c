@@ -303,11 +303,12 @@ Exit:
     return ret;
 
 Usage:
-    DPS_PRINT("Usage %s [-d] [-u <user>] [-s <topic>] [-p <topic>] [-l <address>]\n", argv[0]);
+    DPS_PRINT("Usage %s [-d] [-u <user>] [-s <topic>] [-p <topic>] [-n <network>] [-l <address>]\n", argv[0]);
     DPS_PRINT("       -d: Enable debug ouput if built for debug.\n");
     DPS_PRINT("       -u: Set user ID.\n");
     DPS_PRINT("       -s: Subscribe to topic.  May be repeated.\n");
     DPS_PRINT("       -p: Publish to topic.  May be repeated.\n");
+    DPS_PRINT("       -n: Network of listen and link addresses.\n");
     DPS_PRINT("       -l: Address to listen on for incoming connections.\n");
     return DPS_ERR_FAILURE;
 }
