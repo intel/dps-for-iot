@@ -81,7 +81,7 @@ def run_test(args):
     return (name, status)
 
 args = []
-for transport in os.environ['TRANSPORT'].split(','):
+for transport in os.environ['TRANSPORTS'].split(','):
     for test in tests:
         args = args + [(transport, test)]
 

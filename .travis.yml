@@ -7,23 +7,23 @@ compiler:
   - gcc
 
 env:
-  - VARIANT=debug TRANSPORT=udp,tcp,dtls,pipe BINDINGS=all ASAN=yes FSAN=no
-  - VARIANT=release TRANSPORT=udp,tcp,dtls,pipe BINDINGS=all ASAN=yes FSAN=no
-  - VARIANT=release TRANSPORT=dtls BINDINGS=python,nodejs ASAN=yes FSAN=yes
-  - VARIANT=release TRANSPORT=fuzzer BINDINGS=python,nodejs ASAN=yes FSAN=yes
+  - VARIANT=debug TRANSPORTS=udp,tcp,dtls,pipe BINDINGS=all ASAN=yes FSAN=no
+  - VARIANT=release TRANSPORTS=udp,tcp,dtls,pipe BINDINGS=all ASAN=yes FSAN=no
+  - VARIANT=release TRANSPORTS=dtls BINDINGS=python,nodejs ASAN=yes FSAN=yes
+  - VARIANT=release TRANSPORTS=fuzzer BINDINGS=python,nodejs ASAN=yes FSAN=yes
 
 matrix:
   exclude:
     - compiler: clang
     - compiler: gcc
-      env: VARIANT=release TRANSPORT=dtls BINDINGS=python,nodejs ASAN=yes FSAN=yes
+      env: VARIANT=release TRANSPORTS=dtls BINDINGS=python,nodejs ASAN=yes FSAN=yes
     - compiler: gcc
-      env: VARIANT=release TRANSPORT=fuzzer BINDINGS=python,nodejs ASAN=yes FSAN=yes
+      env: VARIANT=release TRANSPORTS=fuzzer BINDINGS=python,nodejs ASAN=yes FSAN=yes
   include:
     - compiler: clang
-      env: VARIANT=release TRANSPORT=dtls BINDINGS=python,nodejs ASAN=yes FSAN=yes
+      env: VARIANT=release TRANSPORTS=dtls BINDINGS=python,nodejs ASAN=yes FSAN=yes
     - compiler: clang
-      env: VARIANT=release TRANSPORT=fuzzer BINDINGS=python,nodejs ASAN=yes FSAN=yes
+      env: VARIANT=release TRANSPORTS=fuzzer BINDINGS=python,nodejs ASAN=yes FSAN=yes
 
 addons:
   apt:
@@ -48,5 +48,5 @@ install:
   - pip install --user pexpect
 
 script:
-  - scons CC=$CC CXX=$CXX variant=$VARIANT transports=$TRANSPORT bindings=$BINDINGS asan=$ASAN ubsan=yes fsan=$FSAN
+  - scons CC=$CC CXX=$CXX variant=$VARIANT transports=$TRANSPORTS bindings=$BINDINGS asan=$ASAN ubsan=yes fsan=$FSAN
   - ./test_scripts/run.py -d
