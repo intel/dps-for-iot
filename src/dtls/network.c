@@ -366,7 +366,7 @@ static void DestroySendRequest(SendRequest* req)
     }
 }
 
-static void CancelPending(DPS_NetDtlsConnection* cn)
+static void CancelPendingSend(DPS_NetDtlsConnection* cn)
 {
     /*
      * Protect connection while we are modifying the queues.
@@ -387,6 +387,24 @@ static void CancelPending(DPS_NetDtlsConnection* cn)
         ConnectionDecRef(cn);
         DestroySendRequest(req);
     }
+
+    ConnectionDecRef(cn);
+}
+
+static void CancelPending(DPS_NetDtlsConnection* cn)
+{
+    /*
+     * Protect connection while we are modifying the queues.
+     */
+    ConnectionIncRef(cn);
+
+    while (!DPS_QueueEmpty(&cn->recvQueue)) {
+        RecvData* data = (RecvData*)DPS_QueueFront(&cn->recvQueue);
+        DPS_QueueRemove(&data->queue);
+        ConnectionDecRef(cn);
+        DestroyRecvData(data);
+    }
+    CancelPendingSend(cn);
 
     ConnectionDecRef(cn);
 }
@@ -484,9 +502,9 @@ static void OnTimeout(uv_timer_t* timer)
          * perform a handshake step.
          */
         ret = TLSHandshake(cn);
-        if (ret == DPS_TRUE && cn->handshakeDone) {
+        if (ret == 0 && cn->handshakeDone) {
             ConsumePending(cn);
-        } else if (ret == DPS_FALSE) {
+        } else if (ret != 0) {
             CancelPending(cn);
         }
         ConnectionDecRef(cn);
@@ -764,8 +782,7 @@ static void DestroyConnection(DPS_NetDtlsConnection* cn)
     assert(DPS_QueueEmpty(&cn->sendQueue));
     assert(DPS_QueueEmpty(&cn->sendCompletedQueue));
     assert(cn->handshake != MBEDTLS_ERR_SSL_HELLO_VERIFY_REQUIRED &&
-           cn->handshake != MBEDTLS_ERR_SSL_WANT_READ &&
-           cn->handshake != MBEDTLS_ERR_SSL_WANT_WRITE);
+           cn->handshake != MBEDTLS_ERR_SSL_WANT_READ);
 
     switch (cn->state) {
     case CN_OPEN:
@@ -774,6 +791,7 @@ static void DestroyConnection(DPS_NetDtlsConnection* cn)
         if (ret != 0) {
             DPS_ERRPRINT("Close notify failed: %s\n", TLSErrTxt(ret));
         }
+        DPS_DBGPRINT("OPEN -> CLOSE_NOTIFIED cn=%p\n", cn);
         /*
          * The ref count may be non-0 now if mbedtls has work to do
          * for the close notify above.
@@ -784,6 +802,7 @@ static void DestroyConnection(DPS_NetDtlsConnection* cn)
         /* FALLTHROUGH */
     case CN_CLOSE_NOTIFIED:
         cn->state = CN_CLOSING;
+        DPS_DBGPRINT("CLOSE_NOTIFIED -> CLOSING cn=%p\n", cn);
         assert(!uv_is_active((uv_handle_t*)&cn->timer));
         if (uv_is_active((uv_handle_t*)&cn->idleForSendCallbacks)) {
             uv_idle_stop(&cn->idleForSendCallbacks);
@@ -1215,7 +1234,7 @@ static void TLSSend(DPS_NetDtlsConnection* cn)
     }
 }
 
-static void TLSRecv(DPS_NetDtlsConnection* cn)
+static int TLSRecv(DPS_NetDtlsConnection* cn)
 {
     DPS_NetDtlsContext* netCtx = cn->netCtx;
     DPS_NetRxBuffer* buf = NULL;
@@ -1231,6 +1250,7 @@ static void TLSRecv(DPS_NetDtlsConnection* cn)
     buf = DPS_CreateNetRxBuffer(MAX_READ_LEN);
     if (!buf) {
         DPS_ERRPRINT("Create buffer failed: %s\n", DPS_ErrTxt(DPS_ERR_RESOURCES));
+        ret = -1;
         goto Exit;
     }
     ret = mbedtls_ssl_read(&cn->ssl, buf->rx.base, DPS_RxBufferAvail(&buf->rx));
@@ -1240,6 +1260,7 @@ static void TLSRecv(DPS_NetDtlsConnection* cn)
             switch (cn->state) {
             case CN_OPEN:
                 cn->state = CN_CLOSE_NOTIFIED;
+                DPS_DBGPRINT("OPEN -> CLOSE_NOTIFIED cn=%p\n", cn);
             case CN_CLOSE_NOTIFIED:
             case CN_CLOSING:
                 break;
@@ -1247,11 +1268,10 @@ static void TLSRecv(DPS_NetDtlsConnection* cn)
             status = DPS_ERR_EOF;
         } else if (ret == MBEDTLS_ERR_SSL_WANT_READ) {
             DPS_DBGPRINT("Want read cn=%p\n", cn);
-            goto Exit;
-        } else if (ret == MBEDTLS_ERR_SSL_WANT_WRITE) {
-            DPS_DBGPRINT("Want write cn=%p\n", cn);
+            ret = 0;
             goto Exit;
         } else {
+            assert(ret != MBEDTLS_ERR_SSL_WANT_WRITE); /* Writes never block */
             DPS_WARNPRINT("Failed - %s\n", TLSErrTxt(ret));
             status = DPS_ERR_NETWORK;
         }
@@ -1263,7 +1283,7 @@ static void TLSRecv(DPS_NetDtlsConnection* cn)
         status = DPS_OK;
     }
 
-    ret = netCtx->receiveCB(netCtx->node, &cn->peer, status, buf);
+    netCtx->receiveCB(netCtx->node, &cn->peer, status, buf);
 
     /*
      * See comment in TLSHandshake about holding onto a reference
@@ -1279,6 +1299,7 @@ static void TLSRecv(DPS_NetDtlsConnection* cn)
 Exit:
     DPS_NetRxBufferDecRef(buf);
     ConnectionDecRef(cn);
+    return ret;
 }
 
 static int TLSHandshake(DPS_NetDtlsConnection* cn)
@@ -1300,7 +1321,6 @@ static int TLSHandshake(DPS_NetDtlsConnection* cn)
     switch (cn->handshake) {
     case MBEDTLS_ERR_SSL_HELLO_VERIFY_REQUIRED:
     case MBEDTLS_ERR_SSL_WANT_READ:
-    case MBEDTLS_ERR_SSL_WANT_WRITE:
         break;
     default:
         ConnectionIncRef(cn);
@@ -1308,6 +1328,7 @@ static int TLSHandshake(DPS_NetDtlsConnection* cn)
     }
 
     ret = mbedtls_ssl_handshake(&cn->ssl);
+    assert(ret != MBEDTLS_ERR_SSL_WANT_WRITE); /* Writes never block */
     cn->handshake = ret;
 
     if (ret == MBEDTLS_ERR_SSL_HELLO_VERIFY_REQUIRED) {
@@ -1321,16 +1342,11 @@ static int TLSHandshake(DPS_NetDtlsConnection* cn)
     }
 
     /*
-     * The two cases below just let us know that handshake is waiting for more
+     * The case below just lets us know that handshake is waiting for more
      * data to be sent or received.
      */
     if (ret == MBEDTLS_ERR_SSL_WANT_READ) {
         DPS_DBGPRINT("Want read cn=%p\n", cn);
-        ret = 0;
-        goto Exit;
-    }
-    if (ret == MBEDTLS_ERR_SSL_WANT_WRITE) {
-        DPS_DBGPRINT("Want write cn=%p\n", cn);
         ret = 0;
         goto Exit;
     }
@@ -1365,24 +1381,29 @@ static int TLSHandshake(DPS_NetDtlsConnection* cn)
     switch (cn->handshake) {
     case MBEDTLS_ERR_SSL_HELLO_VERIFY_REQUIRED:
     case MBEDTLS_ERR_SSL_WANT_READ:
-    case MBEDTLS_ERR_SSL_WANT_WRITE:
         break;
     default:
         ConnectionDecRef(cn);
         break;
     }
-    return !ret;
+    return ret;
 }
 
 static void ConsumePending(DPS_NetDtlsConnection* cn)
 {
     assert(cn->handshakeDone);
     while (!DPS_QueueEmpty(&cn->recvQueue)) {
-        TLSRecv(cn);
+        int ret = TLSRecv(cn);
+        if (ret != 0) {
+            goto Exit;
+        }
     }
     while (!DPS_QueueEmpty(&cn->sendQueue)) {
         TLSSend(cn);
     }
+
+Exit:
+    CancelPending(cn);
 }
 
 static void OnUdpData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, const struct sockaddr* addr, unsigned flags)
@@ -1462,13 +1483,16 @@ static void OnUdpData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, cons
 
     if (!cn->handshakeDone) {
         int ret = TLSHandshake(cn);
-        if (ret == DPS_TRUE && cn->handshakeDone) {
+        if (ret == 0 && cn->handshakeDone) {
             ConsumePending(cn);
-        } else if (ret == DPS_FALSE) {
+        } else if (ret != 0) {
             CancelPending(cn);
         }
     } else {
-        TLSRecv(cn);
+        int ret = TLSRecv(cn);
+        if (ret != 0) {
+            CancelPending(cn);
+        }
     }
 
  Exit:
@@ -1575,7 +1599,7 @@ void DPS_NetDtlsStop(DPS_NetContext* ctx)
         while (cns) {
             DPS_NetDtlsConnection* cn = cns;
             cns = cns->next;
-            CancelPending(cn);
+            CancelPendingSend(cn);
         }
         /*
          * When no connections are active we can close the rxSocket
@@ -1631,7 +1655,7 @@ DPS_Status DPS_NetDtlsSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv
         goto ErrorExit;
     }
     cn->peer = *ep;
-    if (!TLSHandshake(cn)) {
+    if (TLSHandshake(cn) != 0) {
         goto ErrorExit;
     }
     /*
