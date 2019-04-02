@@ -7,15 +7,9 @@ compiler:
   - gcc
 
 env:
-  - VARIANT=debug TRANSPORT=udp BINDINGS=all ASAN=yes FSAN=no
-  - VARIANT=debug TRANSPORT=tcp BINDINGS=all ASAN=yes FSAN=no
-  - VARIANT=debug TRANSPORT=dtls BINDINGS=all ASAN=yes FSAN=no
-  - VARIANT=debug TRANSPORT=pipe BINDINGS=all ASAN=yes FSAN=no
-  - VARIANT=release TRANSPORT=udp BINDINGS=all ASAN=yes FSAN=no
-  - VARIANT=release TRANSPORT=tcp BINDINGS=all ASAN=yes FSAN=no
-  - VARIANT=release TRANSPORT=dtls BINDINGS=all ASAN=yes FSAN=no
+  - VARIANT=debug TRANSPORT=udp,tcp,dtls,pipe BINDINGS=all ASAN=yes FSAN=no
+  - VARIANT=release TRANSPORT=udp,tcp,dtls,pipe BINDINGS=all ASAN=yes FSAN=no
   - VARIANT=release TRANSPORT=dtls BINDINGS=python,nodejs ASAN=yes FSAN=yes
-  - VARIANT=release TRANSPORT=pipe BINDINGS=all ASAN=yes FSAN=no
   - VARIANT=release TRANSPORT=fuzzer BINDINGS=python,nodejs ASAN=yes FSAN=yes
 
 matrix:
