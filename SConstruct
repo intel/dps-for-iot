@@ -17,7 +17,7 @@ vars.AddVariables(
     BoolVariable('fsan', 'Enable fuzzer sanitizer?', False),
     BoolVariable('cov', 'Enable code coverage?', False),
     EnumVariable('variant', 'Build variant', default='release', allowed_values=('debug', 'release'), ignorecase=2),
-    ListVariable('transports', 'Transport protocol', [t for t in transports if t != 'fuzzer'], transports),
+    ListVariable(['transports', 'transport'], 'Transport protocol', [t for t in transports if t != 'fuzzer'], transports),
     EnumVariable('target', 'Build target', default='local', allowed_values=('local', 'yocto'), ignorecase=2),
     ListVariable('bindings', 'Bindings to build', bindings, bindings),
     PathVariable('application', 'Application to build', '', PathVariable.PathAccept),
