@@ -16,7 +16,7 @@ The first step to enabling network layer security is to build with
 a transport that supports it.
 
 @code
-$ scons transport=dtls
+$ scons transports=dtls
 @endcode
 
 The DTLS transport supports two mechanisms for securing the

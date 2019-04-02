@@ -54,5 +54,5 @@ install:
   - pip install --user pexpect
 
 script:
-  - scons CC=$CC CXX=$CXX variant=$VARIANT transport=$TRANSPORT bindings=$BINDINGS asan=$ASAN ubsan=yes fsan=$FSAN
+  - scons CC=$CC CXX=$CXX variant=$VARIANT transports=$TRANSPORT bindings=$BINDINGS asan=$ASAN ubsan=yes fsan=$FSAN
   - ./test_scripts/run.py -d

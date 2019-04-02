@@ -3,9 +3,9 @@
 # run all the fuzzers to generate more test cases
 #
 # example:
-# $ scons ... transport=fuzzer
+# $ scons ... transports=fuzzer
 # $ ./fuzzer_run
-# $ scons ... transport=dtls
+# $ scons ... transports=dtls
 # $ USE_DTLS=1 ./fuzzer_run
 #
 

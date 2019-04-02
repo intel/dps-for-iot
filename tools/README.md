@@ -69,9 +69,9 @@ fuzzer_cov directory.
 Example:
 ```
 $ rm *.profraw
-$ scons ... transport=fuzzer cov=yes
+$ scons ... transports=fuzzer cov=yes
 $ ./fuzzer_cov
-$ scons ... transport=dtls cov=yes
+$ scons ... transports=dtls cov=yes
 $ USE_DTLS=1 ./fuzzer_cov
 ```
 
@@ -83,9 +83,9 @@ Runs all the fuzzers to generate more test cases.
 
 Example:
 ```
-$ scons ... transport=fuzzer
+$ scons ... transports=fuzzer
 $ ./fuzzer_run
-$ scons ... transport=dtls
+$ scons ... transports=dtls
 $ USE_DTLS=1 ./fuzzer_run
 ```
 

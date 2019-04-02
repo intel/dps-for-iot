@@ -4,9 +4,9 @@
 #
 # example:
 # $ rm *.profraw
-# $ scons ... transport=fuzzer cov=yes
+# $ scons ... transports=fuzzer cov=yes
 # $ ./fuzzer_cov
-# $ scons ... transport=dtls cov=yes
+# $ scons ... transports=dtls cov=yes
 # $ USE_DTLS=1 ./fuzzer_cov
 #
 
