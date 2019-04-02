@@ -1,8 +1,10 @@
 #!/usr/bin/python
 
+from __future__ import print_function
 import argparse
 import collections
 import copy
+import glob
 import os
 import pexpect
 from pexpect import popen_spawn
@@ -56,9 +58,10 @@ _log_dir = 'out'
 def _spawn_env():
     spawn_env = os.environ.copy()
     if 'ASAN' in os.environ and os.environ['ASAN'] == 'yes':
-        match = re.search('libasan.*', check_output('ldconfig -p', shell=True))
-        libasan = match.group(0).split()[-1]
-        spawn_env.update({'LD_PRELOAD': libasan})
+        if 'FSAN' not in os.environ or os.environ['FSAN'] == 'no':
+            match = re.search('libasan.*', check_output('ldconfig -p', shell=True))
+            libasan = match.group(0).split()[-1]
+            spawn_env.update({'LD_PRELOAD': libasan})
     return spawn_env
 
 def _spawn_helper(n, cmd, interpreter=[]):
@@ -207,13 +210,9 @@ def reset_logs(transport_name=args.network, test_name=sys.argv[0]):
         if not os.path.isdir(_log_dir):
             raise
 
-def bin(cmd):
+def bin_log(log_dir, cmd):
     global _children, _log_dir
-    try:
-        i = cmd.index('-n')
-        _log_dir = os.path.join('out', cmd[i + 1], cmd[0])
-    except ValueError:
-        _log_dir = os.path.join('out', cmd[0])
+    _log_dir = log_dir
     _set_mcast_port()
     child = _spawn(1, cmd)
     buf = child.read(8192)
@@ -222,6 +221,14 @@ def bin(cmd):
     status = child.wait()
     _children.remove(child)
     return status
+
+def bin(cmd):
+    global _children, _log_dir
+    try:
+        i = cmd.index('-n')
+        return bin_log(os.path.join('out', cmd[i + 1], cmd[0]), cmd)
+    except ValueError:
+        return bin_log(os.path.join('out', cmd[0]), cmd)
 
 def py(cmd):
     global _children, _log_dir
@@ -467,5 +474,15 @@ def expect_pub_not_received(children, topic, allow_error=False):
 
 def expect_error(children, error):
     expect(children, 'ERROR.*{}'.format(error), allow_error=True)
+
+def dump_logs(test_name):
+    log_dir = os.path.join('out', test_name)
+    for log in glob.glob(os.path.join(log_dir, '*.log')):
+        size = os.path.getsize(log)
+        with open(log, 'r') as l:
+            print('==> {} <=='.format(log))
+            if size > 32768:
+                l.seek(-32768, os.SEEK_END)
+            print(l.read(), end='')
 
 reset_logs()

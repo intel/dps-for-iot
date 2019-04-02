@@ -31,10 +31,11 @@
  */
 DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
-struct _DPS_NetContext {
+typedef struct _DPS_NetFuzzerContext {
+    DPS_NetContext ctx;
     DPS_Node* node;
     DPS_OnReceive receiveCB;
-};
+} DPS_NetFuzzerContext;
 
 struct _DPS_MulticastReceiver {
     DPS_Node* node;
@@ -45,24 +46,32 @@ struct _DPS_MulticastSender {
     DPS_Node* node;
 };
 
-DPS_NetContext* DPS_NetStart(DPS_Node* node, const DPS_NodeAddress* addr, DPS_OnReceive cb)
-{
-    DPS_NetContext* netCtx = NULL;
+DPS_NodeAddress* DPS_NetFuzzerGetListenAddress(DPS_NodeAddress* addr, DPS_NetContext* netCtx);
+void DPS_NetFuzzerStop(DPS_NetContext* netCtx);
+DPS_Status DPS_NetFuzzerSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* endpoint, uv_buf_t* bufs,
+                             size_t numBufs, DPS_NetSendComplete sendCompleteCB);
 
-    netCtx = malloc(sizeof(DPS_NetContext));
+DPS_NetContext* DPS_NetFuzzerStart(DPS_Node* node, const DPS_NodeAddress* addr, DPS_OnReceive cb)
+{
+    DPS_NetFuzzerContext* netCtx = NULL;
+
+    netCtx = malloc(sizeof(DPS_NetFuzzerContext));
     if (netCtx) {
+        netCtx->ctx.getListenAddress = DPS_NetFuzzerGetListenAddress;
+        netCtx->ctx.stop = DPS_NetFuzzerStop;
+        netCtx->ctx.send = DPS_NetFuzzerSend;
         netCtx->node = node;
         netCtx->receiveCB = cb;
     }
-    return netCtx;
+    return (DPS_NetContext*)netCtx;
 }
 
-void DPS_NetStop(DPS_NetContext* netCtx)
+void DPS_NetFuzzerStop(DPS_NetContext* netCtx)
 {
     free(netCtx);
 }
 
-DPS_NodeAddress* DPS_NetGetListenAddress(DPS_NodeAddress* addr, DPS_NetContext* netCtx)
+DPS_NodeAddress* DPS_NetFuzzerGetListenAddress(DPS_NodeAddress* addr, DPS_NetContext* netCtx)
 {
     struct sockaddr_in6* saddr;
 
@@ -75,20 +84,17 @@ DPS_NodeAddress* DPS_NetGetListenAddress(DPS_NodeAddress* addr, DPS_NetContext* 
     return addr;
 }
 
-DPS_Status DPS_NetSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* endpoint,
-                       uv_buf_t* bufs, size_t numBufs,
-                       DPS_NetSendComplete sendCompleteCB)
+DPS_Status DPS_NetFuzzerSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* endpoint,
+                             uv_buf_t* bufs, size_t numBufs,
+                             DPS_NetSendComplete sendCompleteCB)
 {
     return DPS_ERR_NOT_IMPLEMENTED;
 }
 
-void DPS_NetConnectionIncRef(DPS_NetConnection* cn)
-{
-}
-
-void DPS_NetConnectionDecRef(DPS_NetConnection* cn)
-{
-}
+DPS_NetTransport DPS_NetFuzzerTransport = {
+    DPS_UNKNOWN,
+    DPS_NetFuzzerStart
+};
 
 DPS_MulticastReceiver* DPS_MulticastStartReceive(DPS_Node* node, DPS_OnReceive cb)
 {
@@ -130,6 +136,7 @@ DPS_Status DPS_MulticastSend(DPS_MulticastSender* sender, void* appCtx, uv_buf_t
 
 void Fuzz_OnNetReceive(DPS_Node* node, const uint8_t* data, size_t len)
 {
+    DPS_NetFuzzerContext* netCtx = (DPS_NetFuzzerContext*)node->netCtx;
     DPS_NetEndpoint ep;
     struct sockaddr_in sa;
     DPS_NetRxBuffer* buf;
@@ -144,7 +151,7 @@ void Fuzz_OnNetReceive(DPS_Node* node, const uint8_t* data, size_t len)
         return;
     }
     memcpy(buf->rx.rxPos, data, len);
-    node->netCtx->receiveCB(node, &ep, DPS_OK, buf);
+    netCtx->receiveCB(node, &ep, DPS_OK, buf);
     DPS_NetRxBufferDecRef(buf);
 }
 

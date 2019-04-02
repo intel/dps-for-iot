@@ -60,16 +60,6 @@ if 'FSAN' not in os.environ or os.environ['FSAN'] == 'no':
 else:
     tests = [os.path.join('test_scripts', 'fuzzer_check.py')]
 
-def _dump_logs(test_name):
-    log_dir = os.path.join('out', test_name)
-    for log in glob.glob(os.path.join(log_dir, '*.log')):
-        size = os.path.getsize(log)
-        with open(log, 'r') as l:
-            print('==> {} <=='.format(log))
-            if size > 32768:
-                l.seek(-32768, os.SEEK_END)
-            print(l.read(), end='')
-
 def run_test(args):
     (transport, test) = args
     reset_logs(transport, test)
@@ -87,7 +77,7 @@ def run_test(args):
         print('[       OK ] ' + name)
     else:
         print('[   FAILED ] ' + name)
-        _dump_logs(name)
+        dump_logs(name)
     return (name, status)
 
 args = []

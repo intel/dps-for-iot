@@ -1678,7 +1678,7 @@ DPS_NetTransport DPS_NetDtlsTransport = {
 #ifdef DPS_USE_FUZZ
 uv_udp_recv_cb Fuzz_OnData(DPS_Node* node, uv_udp_recv_cb cb)
 {
-    DPS_NetDtlsContext* netCtx = node->netCtx;
+    DPS_NetDtlsContext* netCtx = (DPS_NetDtlsContext*)node->netCtx;
     uv_udp_recv_cb ret;
 
     /*

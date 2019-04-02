@@ -449,10 +449,21 @@ typedef struct _DPS_NetTransport {
     DPS_NetStartHandler start;                       /**< DPS_NetStart */
 } DPS_NetTransport;
 
+#ifdef DPS_USE_UDP
 extern DPS_NetTransport DPS_NetUdpTransport;  /**< The UDP transport */
+#endif
+#ifdef DPS_USE_TCP
 extern DPS_NetTransport DPS_NetTcpTransport;  /**< The TCP transport */
+#endif
+#ifdef DPS_USE_DTLS
 extern DPS_NetTransport DPS_NetDtlsTransport; /**< The DTLS transport */
+#endif
+#ifdef DPS_USE_PIPE
 extern DPS_NetTransport DPS_NetPipeTransport; /**< The pipe transport */
+#endif
+#ifdef DPS_USE_FUZZ
+extern DPS_NetTransport DPS_NetFuzzerTransport; /**< The fuzz transport */
+#endif
 
 #ifdef __cplusplus
 }

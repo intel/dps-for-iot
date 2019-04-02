@@ -135,7 +135,7 @@ if env['python']:
         elif 'gcc' in pyenv['CC']:
             pyenv.Append(CCFLAGS = ['-Wno-ignored-qualifiers', '-Wno-cast-function-type'])
         elif 'clang' in pyenv['CC']:
-            pyenv.Append(CCFLAGS = ['-Wno-deprecated-register', '-Wno-ignored-qualifiers'])
+            pyenv.Append(CCFLAGS = ['-std=c++11', '-Wno-deprecated-register', '-Wno-ignored-qualifiers'])
 
         pyenv.Append(SWIGFLAGS = ['-python', '-c++', '-Wextra', '-Werror', '-v', '-O'], SWIGPATH = ['#/inc', './swig/py'])
         pyenv.Append(CPPPATH = ['swig', 'swig/py'])
@@ -311,9 +311,9 @@ if env['PLATFORM'] == 'posix' and env['fsan'] == True:
     fenv.Append(LIBS = [lib, env['DPS_LIBS']])
 
     fsrcs = ['test/fuzzer/cbor_fuzzer.c']
-    if env['transport'] == 'dtls':
+    if 'dtls' in env['transports']:
         fsrcs.extend(['test/fuzzer/dtls_fuzzer.c'])
-    elif env['transport'] == 'fuzzer':
+    elif 'fuzzer' in env['transports']:
         fsrcs.extend(['test/fuzzer/net_receive_fuzzer.c',
                       'test/fuzzer/multicast_receive_fuzzer.c'])
 

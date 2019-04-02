@@ -517,15 +517,29 @@ DPS_NetContext* DPS_NetStart(DPS_Node* node, const DPS_NodeAddress* addr, DPS_On
     DPS_NodeAddressType type = addr ? addr->type : DPS_UNKNOWN;
 
     switch (type) {
+#ifdef DPS_USE_DTLS
     case DPS_DTLS:
         return DPS_NetDtlsTransport.start(node, addr, cb);
+#endif
+#ifdef DPS_USE_TCP
     case DPS_TCP:
         return DPS_NetTcpTransport.start(node, addr, cb);
+#endif
+#ifdef DPS_USE_UDP
     case DPS_UDP:
     case DPS_UNKNOWN:
         return DPS_NetUdpTransport.start(node, addr, cb);
+#endif
+#ifdef DPS_USE_PIPE
     case DPS_PIPE:
         return DPS_NetPipeTransport.start(node, addr, cb);
+#endif
+
+#if defined(DPS_USE_FUZZ) && !defined(DPS_USE_DTLS)
+    case DPS_UNKNOWN:
+        return DPS_NetFuzzerTransport.start(node, addr, cb);
+#endif
+
     default:
         return NULL;
     }
