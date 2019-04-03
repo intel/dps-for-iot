@@ -34,7 +34,8 @@
  */
 DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
-typedef struct _ResolverInfo {
+typedef struct _ResolverRequest {
+    DPS_Queue queue;
     DPS_Node* node;
     DPS_OnResolveAddressComplete cb;
     void* data;
@@ -42,12 +43,11 @@ typedef struct _ResolverInfo {
     DPS_NodeAddressType network;
     char host[DPS_MAX_HOST_LEN + 1];
     char service[DPS_MAX_SERVICE_LEN + 1];
-    struct  _ResolverInfo* next;
-} ResolverInfo;
+} ResolverRequest;
 
 static void GetAddrInfoCB(uv_getaddrinfo_t* req, int status, struct addrinfo* res)
 {
-    ResolverInfo* resolver = (ResolverInfo*)req->data;
+    ResolverRequest* resolver = (ResolverRequest*)req->data;
 
     if (status == 0) {
         DPS_NodeAddress addr;
@@ -68,7 +68,7 @@ static void GetAddrInfoCB(uv_getaddrinfo_t* req, int status, struct addrinfo* re
 
 static void TryGetAddrInfoCB(uv_getaddrinfo_t* req, int status, struct addrinfo* res)
 {
-    ResolverInfo* resolver = (ResolverInfo*)req->data;
+    ResolverRequest* resolver = (ResolverRequest*)req->data;
 
     if (status == UV_EAI_ADDRFAMILY) {
         /*
@@ -105,11 +105,11 @@ void DPS_AsyncResolveAddress(uv_async_t* async)
 
     DPS_LockNode(node);
 
-    while (node->resolverList) {
+    while (!DPS_QueueEmpty(&node->resolverQueue)) {
         int r;
         struct addrinfo hints;
-        ResolverInfo* resolver = node->resolverList;
-        node->resolverList = resolver->next;
+        ResolverRequest* resolver = (ResolverRequest*)DPS_QueueFront(&node->resolverQueue);
+        DPS_QueueRemove(&resolver->queue);
 
         if (node->state != DPS_NODE_RUNNING) {
             resolver->cb(resolver->node, NULL, resolver->data);
@@ -135,7 +135,7 @@ DPS_Status DPS_ResolveAddress(DPS_Node* node, const char* network, const char* h
                               DPS_OnResolveAddressComplete cb, void* data)
 {
     DPS_Status ret;
-    ResolverInfo* resolver;
+    ResolverRequest* resolver;
 
     DPS_DBGTRACE();
 
@@ -153,7 +153,7 @@ DPS_Status DPS_ResolveAddress(DPS_Node* node, const char* network, const char* h
     if (!host || !strcmp(host, "0.0.0.0") || !strcmp(host, "::")) {
         host = "::1";
     }
-    resolver = calloc(1, sizeof(ResolverInfo));
+    resolver = calloc(1, sizeof(ResolverRequest));
     if (!resolver) {
         return DPS_ERR_RESOURCES;
     }
@@ -173,8 +173,7 @@ DPS_Status DPS_ResolveAddress(DPS_Node* node, const char* network, const char* h
         free(resolver);
         ret = DPS_ERR_FAILURE;
     } else {
-        resolver->next = node->resolverList;
-        node->resolverList = resolver;
+        DPS_QueuePushBack(&node->resolverQueue, &resolver->queue);
         ret = DPS_OK;
     }
     DPS_UnlockNode(node);

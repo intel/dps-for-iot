@@ -1282,6 +1282,7 @@ DPS_Node* DPS_CreateNode(const char* separators, DPS_KeyStore* keyStore, const D
     strncpy_s(node->separators, sizeof(node->separators), separators, sizeof(node->separators) - 1);
     node->keyStore = keyStore;
     DPS_QueueInit(&node->ackQueue);
+    DPS_QueueInit(&node->resolverQueue);
     /*
      * Set default probe configuration and subscription rate parameters
      */
