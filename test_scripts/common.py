@@ -12,6 +12,7 @@ import random
 import re
 import signal
 import shutil
+import socket
 from subprocess import check_output
 import sys
 
@@ -19,7 +20,12 @@ os.environ['PYTHONPATH'] = os.path.join('build', 'dist', 'py')
 os.environ['NODE_PATH'] = os.path.join('build', 'dist', 'js')
 os.environ['LSAN_OPTIONS'] = 'suppressions={}/asan.supp'.format(os.getcwd())
 def _set_mcast_port():
-    os.environ['DPS_MCAST_PORT'] = str(random.randint(49152, 65536))
+    global _sock
+    _sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+    _sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    _sock.bind(('', 0))
+    host, port = _sock.getsockname()
+    os.environ['DPS_MCAST_PORT'] = str(port)
 _set_mcast_port()
 
 _parser = argparse.ArgumentParser()
@@ -173,7 +179,7 @@ def _expect_ack(children, allow_error=False, timeout=-1, signers=None):
             signers.append(child.match.group(1).decode())
 
 def cleanup():
-    global _children
+    global _children, _sock
     for child in _children:
         if sys.platform == 'win32':
             child.kill(signal.SIGBREAK)
@@ -185,6 +191,7 @@ def cleanup():
     _children = []
     for log in _logs:
         log.close()
+    _sock.close()
 
 def reset_logs(transport_name=args.network, test_name=sys.argv[0]):
     global _ms, _n, _p, _r, _rp, _rs, _s, _t, _log_dir, _tm, _v
