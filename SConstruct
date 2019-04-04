@@ -26,12 +26,12 @@ vars.AddVariables(
 # Windows-specific command line variables
 if platform.system() == 'Windows':
     vars.AddVariables(
-        PathVariable('DOXYGEN_PATH', 'Path to Doxygen', 'C:\Program Files\Doxygen', PathVariable.PathAccept),
-        PathVariable('GIT_PATH', 'Path where git is installed', 'C:\Program Files\Git', PathVariable.PathAccept),
-        PathVariable('PYTHON_PATH', 'Path to Python', 'C:\Python27', PathVariable.PathAccept),
-        PathVariable('UV_PATH', 'Path where libuv is installed', 'ext\libuv', PathVariable.PathAccept),
-        PathVariable('SWIG', 'Path to SWIG executable', 'C:\swigwin-3.0.10\swig.exe', PathVariable.PathAccept),
-        PathVariable('NASM_PATH', 'Path to where NASM is installed', 'C:\Program Files\NASM', PathVariable.PathAccept),
+        PathVariable('DOXYGEN_PATH', 'Path to Doxygen', 'C:\\Program Files\\Doxygen', PathVariable.PathAccept),
+        PathVariable('GIT_PATH', 'Path where git is installed', 'C:\\Program Files\\Git', PathVariable.PathAccept),
+        PathVariable('PYTHON_PATH', 'Path to Python', 'C:\\Python27', PathVariable.PathAccept),
+        PathVariable('UV_PATH', 'Path where libuv is installed', 'ext\\libuv', PathVariable.PathAccept),
+        PathVariable('SWIG', 'Path to SWIG executable', 'C:\\swigwin-3.0.10\\swig.exe', PathVariable.PathAccept),
+        PathVariable('NASM_PATH', 'Path to where NASM is installed', 'C:\\Program Files\\NASM', PathVariable.PathAccept),
         PathVariable('DEF_FILE', 'Path to external defs for dll', 'dps_shared.def', PathVariable.PathIsFile))
 
 tools = GetOption('tools')
@@ -81,7 +81,7 @@ print("Building for " + env['variant'])
 # Platform specific configuration
 
 if env['PLATFORM'] == 'win32':
-    env.AppendENVPath('PATH', env['GIT_PATH'] + '\cmd')
+    env.AppendENVPath('PATH', env['GIT_PATH'] + '\\cmd')
     env.AppendENVPath('PATH', env['NASM_PATH'])
 
     env.Append(CPPDEFINES = ['WIN32_LEAN_AND_MEAN', '_WIN32_WINNT=0x0600'])
@@ -90,16 +90,16 @@ if env['PLATFORM'] == 'win32':
     env.Append(CPPDEFINES = ['__STDC_WANT_SECURE_LIB__=0', '_STRALIGN_USE_SECURE_CRT=0', '_CRT_SECURE_NO_WARNINGS'])
 
     # Where to find Python.h
-    env['PY_CPPPATH'] = [env['PYTHON_PATH'] + '\include']
-    env['PY_LIBPATH'] = [env['PYTHON_PATH'] + '\libs']
+    env['PY_CPPPATH'] = [env['PYTHON_PATH'] + '\\include']
+    env['PY_LIBPATH'] = [env['PYTHON_PATH'] + '\\libs']
 
     env['DPS_LIBS'] = ['ws2_32', 'psapi', 'iphlpapi', 'shell32', 'userenv', 'user32', 'advapi32']
 
     # Check if we need to build libuv
-    extUV = env['UV_PATH'] == 'ext\libuv'
+    extUV = env['UV_PATH'] == 'ext\\libuv'
     if not extUV:
         env.Append(DPS_LIBS=['libuv'])
-        env.Append(CPPPATH=[env['UV_PATH'] + '\include'])
+        env.Append(CPPPATH=[env['UV_PATH'] + '\\include'])
         env.Append(LIBPATH=[env['UV_PATH']])
 
     # Doxygen needs to be added to default path if available
