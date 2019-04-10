@@ -309,9 +309,6 @@ DPS_NodeAddress* DPS_SetAddress(DPS_NodeAddress* addr, const char* network, cons
     memset(addr, 0, sizeof(DPS_NodeAddress));
     addr->type = DPS_NetAddressType(network);
     switch (addr->type) {
-    case DPS_UNKNOWN:
-        addr->type = DPS_UDP;
-        /* FALLTHROUGH */
     case DPS_DTLS:
     case DPS_TCP:
     case DPS_UDP:
@@ -495,10 +492,22 @@ void DPS_NetRxBufferDecRef(DPS_NetRxBuffer* buf)
     }
 }
 
+static const DPS_NodeAddressType AddressDefaultType =
+#if defined(DPS_USE_UDP)
+    DPS_UDP
+#elif defined(DPS_USE_TCP)
+    DPS_TCP
+#elif defined(DPS_USE_PIPE)
+    DPS_PIPE
+#elif defined(DPS_USE_DTLS)
+    DPS_DTLS
+#endif
+    ;
+
 DPS_NodeAddressType DPS_NetAddressType(const char* network)
 {
     if (!network) {
-        return DPS_UNKNOWN;
+        return AddressDefaultType;
     } else if (!strcmp(network, "dtls")) {
         return DPS_DTLS;
     } else if (!strcmp(network, "tcp")) {
@@ -514,7 +523,7 @@ DPS_NodeAddressType DPS_NetAddressType(const char* network)
 
 DPS_NetContext* DPS_NetStart(DPS_Node* node, const DPS_NodeAddress* addr, DPS_OnReceive cb)
 {
-    DPS_NodeAddressType type = addr ? addr->type : DPS_UNKNOWN;
+    DPS_NodeAddressType type = addr ? addr->type : AddressDefaultType;
 
     switch (type) {
 #ifdef DPS_USE_DTLS
@@ -527,7 +536,6 @@ DPS_NetContext* DPS_NetStart(DPS_Node* node, const DPS_NodeAddress* addr, DPS_On
 #endif
 #ifdef DPS_USE_UDP
     case DPS_UDP:
-    case DPS_UNKNOWN:
         return DPS_NetUdpTransport.start(node, addr, cb);
 #endif
 #ifdef DPS_USE_PIPE

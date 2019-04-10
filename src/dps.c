@@ -1551,9 +1551,6 @@ DPS_Status DPS_Link(DPS_Node* node, const char* network, const char* addrText,
         goto Exit;
     }
     switch (DPS_NetAddressType(network)) {
-    case DPS_UNKNOWN:
-        network = "udp";
-        /* FALLTHROUGH */
     case DPS_DTLS:
     case DPS_TCP:
     case DPS_UDP:
