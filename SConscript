@@ -15,6 +15,20 @@ else:
     commonenv.Append(CFLAGS = ['-Wstrict-prototypes'])
 commonenv.Append(CPPPATH = ['#/inc'])
 
+# Additional transport defines for these files
+if commonenv['udp']:
+    commonenv['USE_UDP'] = 'true'
+    commonenv.Append(CPPDEFINES = ['DPS_USE_UDP'])
+if commonenv['tcp']:
+    commonenv['USE_TCP'] = 'true'
+    commonenv.Append(CPPDEFINES = ['DPS_USE_TCP'])
+if commonenv['dtls']:
+    commonenv['USE_DTLS'] = 'true'
+    commonenv.Append(CPPDEFINES = ['DPS_USE_DTLS'])
+if commonenv['pipe']:
+    commonenv['USE_PIPE'] = 'true'
+    commonenv.Append(CPPDEFINES = ['DPS_USE_PIPE'])
+
 # Core libraries
 libenv = commonenv.Clone()
 

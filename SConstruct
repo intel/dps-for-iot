@@ -68,19 +68,6 @@ for b in bindings:
 for t in transports:
     env[t] = t in env['transports']
 
-if env['udp']:
-    env['USE_UDP'] = 'true'
-    env.Append(CPPDEFINES = ['DPS_USE_UDP'])
-if env['tcp']:
-    env['USE_TCP'] = 'true'
-    env.Append(CPPDEFINES = ['DPS_USE_TCP'])
-if env['dtls']:
-    env['USE_DTLS'] = 'true'
-    env.Append(CPPDEFINES = ['DPS_USE_DTLS'])
-if env['pipe']:
-    env['USE_PIPE'] = 'true'
-    env.Append(CPPDEFINES = ['DPS_USE_PIPE'])
-
 print("Building for " + env['variant'])
 
 # Platform specific configuration
