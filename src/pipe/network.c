@@ -47,6 +47,9 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
 typedef struct _DPS_NetPipeConnection DPS_NetPipeConnection;
 
+#define SIZEOF_HEADER CBOR_SIZEOF(uint32_t) +                   \
+    CBOR_SIZEOF_STRING_AND_LENGTH(DPS_NODE_ADDRESS_PATH_MAX)
+
 typedef struct _SendRequest {
     DPS_Queue queue;
     DPS_NetPipeConnection* cn;
@@ -55,7 +58,7 @@ typedef struct _SendRequest {
     void* appCtx;
     DPS_Status status;
     size_t numBufs;
-    uint8_t lenBuf[CBOR_SIZEOF(uint32_t)]; /* pre-allocated buffer for serializing message length */
+    uint8_t hdrBuf[SIZEOF_HEADER]; /* pre-allocated buffer for serializing message header */
     uv_buf_t bufs[1];
 } SendRequest;
 
@@ -67,7 +70,7 @@ typedef struct _DPS_NetPipeConnection {
     int refCount;
     uv_shutdown_t shutdownReq;
     /* Rx side */
-    uint8_t lenBuf[CBOR_SIZEOF(uint32_t)]; /* pre-allocated buffer for deserializing message length */
+    uint8_t hdrBuf[SIZEOF_HEADER]; /* pre-allocated buffer for deserializing message header */
     size_t readLen; /* how much data has already been read */
     DPS_NetRxBuffer* msgBuf;
     /* Tx side */
@@ -83,9 +86,6 @@ typedef struct _DPS_NetPipeContext {
     DPS_Node* node;
     DPS_OnReceive receiveCB;
 } DPS_NetPipeContext;
-
-#define MIN_BUF_ALLOC_SIZE   512
-#define MIN_READ_SIZE        CBOR_SIZEOF(uint32_t)
 
 DPS_NodeAddress* DPS_NetPipeGetListenAddress(DPS_NodeAddress* addr, DPS_NetContext* netCtx);
 void DPS_NetPipeStop(DPS_NetContext* netCtx);
@@ -122,8 +122,8 @@ static void AllocBuffer(uv_handle_t* handle, size_t suggestedSize, uv_buf_t* buf
         buf->len = DPS_RxBufferAvail(&cn->msgBuf->rx);
         buf->base = (char*)cn->msgBuf->rx.rxPos;
     } else {
-        buf->len = (uint32_t)(sizeof(cn->lenBuf) - cn->readLen);
-        buf->base = (char*)(cn->lenBuf + cn->readLen);
+        buf->len = (uint32_t)(sizeof(cn->hdrBuf) - cn->readLen);
+        buf->base = (char*)(cn->hdrBuf + cn->readLen);
     }
 }
 
@@ -224,8 +224,11 @@ static void OnData(uv_stream_t* socket, ssize_t nread, const uv_buf_t* buf)
     DPS_Status ret = DPS_OK;
     DPS_NetPipeConnection* cn = (DPS_NetPipeConnection*)socket->data;
     DPS_NetPipeContext* netCtx = (DPS_NetPipeContext*)cn->node->netCtx;
+    DPS_RxBuffer hdrBuf;
 
     DPS_DBGTRACE();
+
+    DPS_RxBufferClear(&hdrBuf);
     /*
      * netCtx will be null if we are shutting down
      */
@@ -239,77 +242,100 @@ static void OnData(uv_stream_t* socket, ssize_t nread, const uv_buf_t* buf)
         return;
     }
     if (nread < 0) {
-        uv_read_stop(socket);
-        netCtx->receiveCB(cn->node, &cn->peerEp, nread == UV_EOF ? DPS_ERR_EOF : DPS_ERR_NETWORK, NULL);
-        return;
+        ret = nread == UV_EOF ? DPS_ERR_EOF : DPS_ERR_NETWORK;
+        goto Done;
     }
     assert(socket == (uv_stream_t*)&cn->socket);
 
-    /*
-     * Parse out the message length
-     */
-    if (!cn->msgBuf) {
-        DPS_RxBuffer lenBuf;
-        uint32_t msgLen;
+    while (nread && (ret == DPS_OK)) {
         /*
-         * Keep reading if we don't have enough data to parse the length
+         * Parse out the message length
          */
-        cn->readLen += nread;
-        if (cn->readLen < MIN_READ_SIZE) {
-            return;
-        }
-        assert(cn->readLen == MIN_READ_SIZE);
-        DPS_RxBufferInit(&lenBuf, cn->lenBuf, cn->readLen);
-        ret = CBOR_DecodeUint32(&lenBuf, &msgLen);
-        if (ret == DPS_OK) {
+        if (!cn->msgBuf) {
+            uint32_t msgLen;
+            uint8_t* pos;
+            char* path;
+            size_t size;
+            cn->readLen += nread;
+            DPS_RxBufferInit(&hdrBuf, cn->hdrBuf, cn->readLen);
+            ret = CBOR_DecodeUint32(&hdrBuf, &msgLen);
+            if (ret == DPS_ERR_EOD) {
+                /*
+                 * Keep reading if we don't have enough data to parse the length
+                 */
+                return;
+            } else if (ret != DPS_OK) {
+                goto Done;
+            }
+            pos = hdrBuf.rxPos;
+            ret = CBOR_DecodeString(&hdrBuf, &path, &size);
+            if (ret == DPS_ERR_EOD) {
+                return;
+            } else if (ret != DPS_OK) {
+                goto Done;
+            }
+            if (memcpy_s(cn->peerEp.addr.u.path, DPS_NODE_ADDRESS_PATH_MAX, path, size) != EOK) {
+                ret = DPS_ERR_INVALID;
+                goto Done;
+            }
+            cn->peerEp.addr.type = DPS_PIPE;
+            msgLen -= hdrBuf.rxPos - pos;
             cn->msgBuf = DPS_CreateNetRxBuffer(msgLen);
             if (cn->msgBuf) {
                 /*
                  * Copy message bytes if any
                  */
-                memcpy(cn->msgBuf->rx.rxPos, lenBuf.rxPos, DPS_RxBufferAvail(&lenBuf));
-                cn->msgBuf->rx.rxPos += DPS_RxBufferAvail(&lenBuf);
+                size = (msgLen < DPS_RxBufferAvail(&hdrBuf)) ? msgLen : DPS_RxBufferAvail(&hdrBuf);
+                memcpy(cn->msgBuf->rx.rxPos, hdrBuf.rxPos, size);
+                cn->msgBuf->rx.rxPos += size;
+                hdrBuf.rxPos += size;
             } else {
                 ret = DPS_ERR_RESOURCES;
             }
+        } else {
+            cn->msgBuf->rx.rxPos += nread;
         }
-        if (ret != DPS_OK) {
+        if (cn->msgBuf) {
             /*
-             * Report error to receive callback
+             * Keep reading if we don't have a complete message
              */
-            netCtx->receiveCB(cn->node, &cn->peerEp, ret, NULL);
+            if (DPS_RxBufferAvail(&cn->msgBuf->rx)) {
+                return;
+            }
+            DPS_DBGPRINT("Received message of length %zd\n", cn->msgBuf->rx.eod - cn->msgBuf->rx.base);
+            cn->msgBuf->rx.rxPos = cn->msgBuf->rx.base;
         }
-    } else {
-        cn->msgBuf->rx.rxPos += nread;
-    }
-    if (cn->msgBuf) {
+    Done:
         /*
-         * Keep reading if we don't have a complete message
+         * Issue callback if we've received enough to have a valid
+         * peer endpoint.
          */
-        if (DPS_RxBufferAvail(&cn->msgBuf->rx)) {
-            return;
+        if (cn->peerEp.addr.type == DPS_PIPE) {
+            netCtx->receiveCB(cn->node, &cn->peerEp, ret, cn->msgBuf);
         }
-        DPS_DBGPRINT("Received message of length %zd\n", cn->msgBuf->rx.eod - cn->msgBuf->rx.base);
+        DPS_NetRxBufferDecRef(cn->msgBuf);
+        cn->msgBuf = NULL;
+        cn->readLen = 0;
         /*
-         * Reset rxPos to beginning of complete message before passing up
+         * Stop reading if we got an error
          */
-        cn->msgBuf->rx.rxPos = cn->msgBuf->rx.base;
-        ret = netCtx->receiveCB(cn->node, &cn->peerEp, DPS_OK, cn->msgBuf);
-    }
-    DPS_NetRxBufferDecRef(cn->msgBuf);
-    cn->msgBuf = NULL;
-    cn->readLen = 0;
-    /*
-     * Stop reading if we got an error
-     */
-    if (ret != DPS_OK) {
-        uv_read_stop(socket);
-    }
-    /*
-     * Shutdown the connection if the upper layer didn't IncRef to keep it alive
-     */
-    if (cn->refCount == 0) {
-        Shutdown(cn);
+        if (ret != DPS_OK) {
+            uv_read_stop(socket);
+        }
+        /*
+         * Shutdown the connection if the upper layer didn't IncRef to keep it alive
+         */
+        if (cn->refCount == 0) {
+            Shutdown(cn);
+        }
+
+        /*
+         * If there's leftover data in the hdrBuf, we'll loop back and consume it
+         */
+        nread = DPS_RxBufferAvail(&hdrBuf);
+        if (nread) {
+            memmove(hdrBuf.base, hdrBuf.rxPos, nread);
+        }
     }
 }
 
@@ -318,7 +344,6 @@ static void OnIncomingConnection(uv_stream_t* stream, int status)
     int ret;
     DPS_NetPipeContext* netCtx = (DPS_NetPipeContext*)stream->data;
     DPS_NetPipeConnection* cn;
-    size_t sz;
 
     DPS_DBGTRACE();
 
@@ -356,14 +381,6 @@ static void OnIncomingConnection(uv_stream_t* stream, int status)
         DPS_ERRPRINT("OnIncomingConnection accept %s\n", uv_strerror(ret));
         goto FailConnection;
     }
-    cn->peerEp.addr.type = DPS_PIPE;
-    sz = sizeof(cn->peerEp.addr.u.path);
-    uv_pipe_getpeername((uv_pipe_t*)&cn->socket, cn->peerEp.addr.u.path, &sz);
-#ifdef _WIN32
-    if (!strncmp(cn->peerEp.addr.u.path, "\\\\?", 3)) {
-        cn->peerEp.addr.u.path[2] = '.';
-    }
-#endif
     ret = uv_read_start((uv_stream_t*)&cn->socket, AllocBuffer, OnData);
     if (ret) {
         DPS_ERRPRINT("OnIncomingConnection read start %s\n", uv_strerror(ret));
@@ -573,7 +590,7 @@ DPS_Status DPS_NetPipeSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv
                            size_t numBufs, DPS_NetSendComplete sendCompleteCB)
 {
     DPS_Status ret;
-    DPS_TxBuffer lenBuf;
+    DPS_TxBuffer hdrBuf;
     SendRequest* req;
     DPS_NetPipeConnection* cn = NULL;
     uv_handle_t* socket = NULL;
@@ -581,6 +598,7 @@ DPS_Status DPS_NetPipeSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv
     size_t i;
     size_t len = 0;
 
+    len += CBOR_SIZEOF_STRING(node->addr.u.path);
     for (i = 0; i < numBufs; ++i) {
         len += bufs[i].len;
     }
@@ -595,15 +613,23 @@ DPS_Status DPS_NetPipeSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv
         return DPS_ERR_RESOURCES;
     }
     /*
-     * Write total message length
+     * Write message header
      */
-    DPS_TxBufferInit(&lenBuf, req->lenBuf, sizeof(req->lenBuf));
-    ret = CBOR_EncodeUint32(&lenBuf, len);
+    DPS_TxBufferInit(&hdrBuf, req->hdrBuf, sizeof(req->hdrBuf));
+    ret = CBOR_EncodeUint32(&hdrBuf, len);
     if (ret != DPS_OK) {
         goto ErrExit;
     }
-    req->bufs[0].base = (char*)req->lenBuf;
-    req->bufs[0].len = DPS_TxBufferUsed(&lenBuf);
+    /*
+     * Include our listening address, otherwise all clients will look
+     * the same to the server since the socket peername is unnamed
+     */
+    ret = CBOR_EncodeString(&hdrBuf, node->addr.u.path);
+    if (ret != DPS_OK) {
+        goto ErrExit;
+    }
+    req->bufs[0].base = (char*)req->hdrBuf;
+    req->bufs[0].len = DPS_TxBufferUsed(&hdrBuf);
     /*
      * Copy other uvbufs into the send request
      */
