@@ -81,7 +81,6 @@ typedef struct _DPS_NetTcpContext {
     DPS_OnReceive receiveCB;
 } DPS_NetTcpContext;
 
-#define MIN_BUF_ALLOC_SIZE   512
 #define MIN_READ_SIZE        CBOR_SIZEOF(uint32_t)
 
 DPS_NodeAddress* DPS_NetTcpGetListenAddress(DPS_NodeAddress* addr, DPS_NetContext* netCtx);
