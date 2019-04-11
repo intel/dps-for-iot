@@ -44,8 +44,8 @@ if 'FSAN' not in os.environ or os.environ['FSAN'] == 'no':
     if 'BINDINGS' not in os.environ or 'all' in os.environ['BINDINGS'] or 'python' in os.environ['BINDINGS']:
         tests.extend([
             os.path.join('py_scripts', 'subs_tree.py'),
-             os.path.join('test_scripts', 'simple_py_test.py'),
-             os.path.join('test_scripts', 'simple_py_ks_test.py')
+            os.path.join('test_scripts', 'simple_py_test.py'),
+            os.path.join('test_scripts', 'simple_py_ks_test.py')
         ])
     if 'BINDINGS' not in os.environ or 'all' in os.environ['BINDINGS'] or 'nodejs' in os.environ['BINDINGS']:
         tests.extend([
