@@ -206,14 +206,14 @@ static DPS_Status CertResponse(const DPS_Key* key, const DPS_KeyId* keyId, void*
         return DPS_ERR_MISSING;
     }
     len = strlen(key->cert.cert) + 1;
-    ret = mbedtls_x509_crt_parse(&dtls->cert, key->cert.cert, len);
+    ret = mbedtls_x509_crt_parse(&dtls->cert, (const unsigned char*)key->cert.cert, len);
     if (ret != 0) {
         DPS_WARNPRINT("Parsing certificate failed: %s\n", TLSErrTxt(ret));
         return DPS_ERR_MISSING;
     }
     len = strlen(key->cert.privateKey) + 1;
     pwLen = key->cert.password ? strlen(key->cert.password) : 0;
-    ret =  mbedtls_pk_parse_key(&dtls->pkey, key->cert.privateKey, len, key->cert.password, pwLen);
+    ret =  mbedtls_pk_parse_key(&dtls->pkey, (const unsigned char*)key->cert.privateKey, len, (const unsigned char*)key->cert.password, pwLen);
     if (ret != 0) {
         DPS_WARNPRINT("Parse private key failed: %s\n", TLSErrTxt(ret));
         return DPS_ERR_MISSING;
@@ -228,7 +228,7 @@ static DPS_Status KeyResponse(const DPS_Key* key, const DPS_KeyId* keyId, void* 
 
     DPS_DBGTRACE();
 
-    ret = mbedtls_ssl_conf_psk(&dtls->conf, key->symmetric.key, key->symmetric.len, keyId->id, keyId->len);
+    ret = mbedtls_ssl_conf_psk(&dtls->conf, (const uint8_t*)key->symmetric.key, key->symmetric.len, (const uint8_t*)keyId->id, keyId->len);
     if (ret != 0) {
         DPS_WARNPRINT("Set PSK failed: %s\n", TLSErrTxt(ret));
         return DPS_ERR_MISSING;
@@ -252,7 +252,7 @@ static int ResetConnection(DPS_DTLS* dtls, const DPS_NodeAddress* addr)
     if (ret) {
         DPS_ERRPRINT("Session reset failed: %s\n", TLSErrTxt(ret));
     } else {
-        ret = mbedtls_ssl_set_client_transport_id(&dtls->ssl, clientId, strlen(clientId));
+        ret = mbedtls_ssl_set_client_transport_id(&dtls->ssl, (const unsigned char*)clientId, strlen(clientId));
         if (ret) {
             DPS_ERRPRINT("Set client transport ID failed: %s\n", TLSErrTxt(ret));
         }
@@ -263,7 +263,7 @@ static int ResetConnection(DPS_DTLS* dtls, const DPS_NodeAddress* addr)
 DPS_Status DPS_DTLSSend(DPS_Node* node)
 {
     DPS_DTLS* dtls = DPS_GetDTLS(node->network);
-    size_t len = (LONG)(node->txLen + node->txHdrLen);
+    size_t len = (size_t)(node->txLen + node->txHdrLen);
     uint8_t* data = node->txBuffer + DPS_TX_HEADER_SIZE - node->txHdrLen;
     int ret;
 
@@ -385,7 +385,6 @@ static int OnDTLSSend(void* data, const unsigned char *buf, size_t len)
 {
     DPS_Status status;
     DPS_Node* node = (DPS_Node*)data;
-    DPS_DTLS* dtls = DPS_GetDTLS(node->network);
 
     DPS_DBGTRACE();
 
@@ -403,7 +402,7 @@ static DPS_Status PskResponse(const DPS_Key* key, const DPS_KeyId* keyId, void* 
 
     DPS_DBGTRACE();
 
-    int ret = mbedtls_ssl_set_hs_psk(ssl, key->symmetric.key, key->symmetric.len);
+    int ret = mbedtls_ssl_set_hs_psk(ssl, (const unsigned char*)key->symmetric.key, key->symmetric.len);
     if (ret != 0) {
         DPS_ERRPRINT("Set PSK failed: %s\n", TLSErrTxt(ret));
         return DPS_ERR_MISSING;
@@ -441,7 +440,6 @@ DPS_Status DPS_DTLSStartHandshake(DPS_Node* node, const DPS_NodeAddress* addr, i
     DPS_Network* net = node->network;
     DPS_KeyStore* keyStore = node->keyStore;
     int ret;
-    const char* ca = NULL;
     const int* ciphersuites = PskCipherSuites;
     DPS_DTLS* dtls = DPS_GetDTLS(net);
 
@@ -464,7 +462,7 @@ DPS_Status DPS_DTLSStartHandshake(DPS_Node* node, const DPS_NodeAddress* addr, i
     mbedtls_pk_init(&dtls->pkey);
     mbedtls_ssl_init(&dtls->ssl);
 
-    ret = mbedtls_ctr_drbg_seed(&dtls->drbg, mbedtls_entropy_func, &dtls->entropy, PERSONALIZATION_STRING, sizeof(PERSONALIZATION_STRING) - 1);
+    ret = mbedtls_ctr_drbg_seed(&dtls->drbg, mbedtls_entropy_func, &dtls->entropy, (const unsigned char*)PERSONALIZATION_STRING, sizeof(PERSONALIZATION_STRING) - 1);
     if (ret != 0) {
         DPS_ERRPRINT("Seeding mbedtls random byte generator failed: %s\n", TLSErrTxt(ret));
         goto ErrorExit;
