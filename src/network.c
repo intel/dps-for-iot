@@ -501,6 +501,8 @@ static const DPS_NodeAddressType AddressDefaultType =
     DPS_PIPE
 #elif defined(DPS_USE_DTLS)
     DPS_DTLS
+#else
+    DPS_UNKNOWN
 #endif
     ;
 
