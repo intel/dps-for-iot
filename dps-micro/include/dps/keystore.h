@@ -128,8 +128,8 @@ typedef struct _DPS_Key {
  * An identifier of a key in a key store.
  */
 typedef struct _DPS_KeyId {
-    uint8_t id[DPS_MAX_KEY_ID_LEN]; /**< the identifier of the key */
-    size_t len;                     /**< the length of the identifier, in bytes */
+    char id[DPS_MAX_KEY_ID_LEN]; /**< the identifier of the key */
+    size_t len;                  /**< the length of the identifier, in bytes */
 } DPS_KeyId;
 
 /**

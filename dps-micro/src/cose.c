@@ -223,7 +223,7 @@ static DPS_Status EncodeUnprotectedMap(DPS_TxBuffer* buf, const uint8_t* kid, si
             ret = EncodeProtectedMap(buf, sig->alg);
         }
         if (ret == DPS_OK) {
-            ret = EncodeUnprotectedMap(buf, sig->kid.id, sig->kid.len, NULL, 0, NULL);
+            ret = EncodeUnprotectedMap(buf, (const uint8_t*)sig->kid.id, sig->kid.len, NULL, 0, NULL);
         }
         if (ret == DPS_OK) {
             ret = CBOR_EncodeBytes(buf, sig->sig, sig->sigLen);
@@ -315,7 +315,7 @@ static DPS_Status EncodeRecipient(DPS_TxBuffer* buf, int8_t alg, const DPS_KeyId
         ret = CBOR_EncodeInt8(buf, COSE_HDR_KID);
     }
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeBytes(buf, kid->id, kid->len);
+        ret = CBOR_EncodeBytes(buf, (const uint8_t*)kid->id, kid->len);
     }
     /*
      * [3] Encrypted byte string

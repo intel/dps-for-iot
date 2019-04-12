@@ -52,15 +52,6 @@
  */
 DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
-/*
- * Controls debug output from the mbedtls library, ranges from 0 (no
- * debug) to 4 (verbose).
- */
-#define DEBUG_MBEDTLS_LEVEL 1
-
-/* Personalization string for the DRBG */
-static const unsigned char PERSONALIZATION_STRING[] = "DPS_DRBG";
-
 #define RX_BUFFER_SIZE 2048
 
 #define IPV4  0

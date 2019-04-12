@@ -82,7 +82,7 @@ const char TrustedCAs[] =
 
 const Id Ids[] = {
     {
-        { (const uint8_t*)"alice", sizeof("alice") - 1 },
+        { "alice", sizeof("alice") - 1 },
         "-----BEGIN CERTIFICATE-----\r\n"
         "MIIBzTCCAS4CCQCu4kaR9/HCiDAKBggqhkjOPQQDBDAqMQswCQYDVQQGEwJVUzEM\r\n"
         "MAoGA1UECgwDRFBTMQ0wCwYDVQQDDARyb290MB4XDTE4MDMwMTE4MTIyMVoXDTI4\r\n"
@@ -108,7 +108,7 @@ const Id Ids[] = {
         "alice"
     },
     {
-        { (const uint8_t*)"bob", sizeof("bob") - 1 },
+        { "bob", sizeof("bob") - 1 },
         "-----BEGIN CERTIFICATE-----\r\n"
         "MIIByjCCASwCCQCu4kaR9/HCiTAKBggqhkjOPQQDBDAqMQswCQYDVQQGEwJVUzEM\r\n"
         "MAoGA1UECgwDRFBTMQ0wCwYDVQQDDARyb290MB4XDTE4MDMwMTE4MTIyMVoXDTI4\r\n"
@@ -134,7 +134,7 @@ const Id Ids[] = {
         "bob"
     },
     {
-        { (const uint8_t*)"eve", sizeof("eve") - 1 },
+        { "eve", sizeof("eve") - 1 },
         "-----BEGIN CERTIFICATE-----\r\n"
         "MIIByzCCASwCCQCu4kaR9/HCijAKBggqhkjOPQQDBDAqMQswCQYDVQQGEwJVUzEM\r\n"
         "MAoGA1UECgwDRFBTMQ0wCwYDVQQDDARyb290MB4XDTE4MDMwMTE4MTIyMVoXDTI4\r\n"
@@ -160,7 +160,7 @@ const Id Ids[] = {
         "eve"
     },
     {
-        { (const uint8_t*)"trudy", sizeof("trudy") - 1 },
+        { "trudy", sizeof("trudy") - 1 },
         "-----BEGIN CERTIFICATE-----\r\n"
         "MIIBzTCCAS4CCQCu4kaR9/HCizAKBggqhkjOPQQDBDAqMQswCQYDVQQGEwJVUzEM\r\n"
         "MAoGA1UECgwDRFBTMQ0wCwYDVQQDDARyb290MB4XDTE4MDMwMTE4MTIyMVoXDTI4\r\n"
@@ -186,7 +186,7 @@ const Id Ids[] = {
         "trudy"
     },
     {
-        { (const uint8_t*)"DPS Test Publisher", sizeof("DPS Test Publisher") - 1 },
+        { "DPS Test Publisher", sizeof("DPS Test Publisher") - 1 },
         "-----BEGIN CERTIFICATE-----\r\n"
         "MIIB2jCCATsCCQDtkL14u3NJRDAKBggqhkjOPQQDBDAqMQswCQYDVQQGEwJVUzEM\r\n"
         "MAoGA1UECgwDRFBTMQ0wCwYDVQQDDARyb290MB4XDTE4MDMwMTE4MTQzMloXDTI4\r\n"
@@ -212,7 +212,7 @@ const Id Ids[] = {
         "DPS Test Publisher"
     },
     {
-        { (const uint8_t*)"DPS Test Subscriber", sizeof("DPS Test Subscriber") - 1 },
+        { "DPS Test Subscriber", sizeof("DPS Test Subscriber") - 1 },
         "-----BEGIN CERTIFICATE-----\r\n"
         "MIIB2jCCATwCCQDtkL14u3NJRTAKBggqhkjOPQQDBDAqMQswCQYDVQQGEwJVUzEM\r\n"
         "MAoGA1UECgwDRFBTMQ0wCwYDVQQDDARyb290MB4XDTE4MDMwMTE4MTQzMloXDTI4\r\n"

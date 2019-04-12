@@ -848,7 +848,7 @@ static DPS_Status SerializePub(DPS_Node* node, DPS_Publication* pub, const uint8
 }
 
 
-static void PubComplete(DPS_Node* node, uint8_t* appCtx, DPS_Status status)
+static void PubComplete(DPS_Node* node, void* appCtx, DPS_Status status)
 {
     DPS_Publication* pub = (DPS_Publication*)appCtx;
     DPS_PublicationSendComplete cb = pub->sendCompleteCB;
