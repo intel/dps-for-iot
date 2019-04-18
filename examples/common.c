@@ -83,7 +83,7 @@ void DestroyAddressArg(char* addrText, DPS_NodeAddress* addr)
     DPS_DestroyAddress(addr);
 }
 
-DPS_NodeAddress* CreateAddressFromArg(char* network, char* addrText)
+DPS_NodeAddress* CreateAddressFromArg(const char* network, const char* addrText)
 {
     DPS_NodeAddress* addr = NULL;
 
@@ -115,7 +115,7 @@ int LinkArg(char*** argp, int* argcp, char** addrText, int* count)
     }
 }
 
-DPS_Status Link(DPS_Node* node, char* network, char** addrText, DPS_NodeAddress** addr, int count)
+DPS_Status Link(DPS_Node* node, const char* network, char** addrText, DPS_NodeAddress** addr, int count)
 {
     DPS_Status ret;
     int i;

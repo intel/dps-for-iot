@@ -161,7 +161,7 @@ static void ReadStdin(DPS_Node* node)
     }
 }
 
-static DPS_Status FindAndLink(DPS_Node* node, char* network, char** linkText, int numLinks,
+static DPS_Status FindAndLink(DPS_Node* node, const char* network, char** linkText, int numLinks,
                               const char* tenant, uint8_t count, uint16_t timeout,
                               DPS_NodeAddress** linkAddr)
 {

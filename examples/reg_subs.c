@@ -85,7 +85,7 @@ static void OnPubMatch(DPS_Subscription* sub, const DPS_Publication* pub, uint8_
     }
 }
 
-static DPS_Status RegisterAndJoin(DPS_Node* node, char* network, char** linkText, int numLink,
+static DPS_Status RegisterAndJoin(DPS_Node* node, const char* network, char** linkText, int numLink,
                                   const char* tenant, uint8_t count, uint16_t timeout)
 {
     DPS_Status ret = DPS_OK;

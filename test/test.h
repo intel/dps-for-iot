@@ -52,6 +52,6 @@
 
 int IntArg(char* opt, char*** argp, int* argcp, int* val, int min, int max);
 int AddressArg(char* opt, char*** argp, int* argcp, char** addrText);
-DPS_NodeAddress* CreateAddressFromArg(char* network, char* addrText);
+DPS_NodeAddress* CreateAddressFromArg(const char* network, const char* addrText);
 
 #endif

@@ -135,7 +135,7 @@ import (
          goOnResolveAddressComplete(node, (DPS_NodeAddress*)addr, (uintptr_t)data);
  }
 
- static DPS_Status resolveAddress(DPS_Node* node, char* network, char* host, char* service, uintptr_t data) {
+ static DPS_Status resolveAddress(DPS_Node* node, const char* network, char* host, char* service, uintptr_t data) {
          return DPS_ResolveAddress(node, network, host, service, onResolveAddressComplete, (void*)data);
  }
 

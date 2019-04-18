@@ -71,7 +71,7 @@ int AddressArg(char* opt, char*** argp, int* argcp, char** addrText)
     return DPS_TRUE;
 }
 
-DPS_NodeAddress* CreateAddressFromArg(char* network, char* addrText)
+DPS_NodeAddress* CreateAddressFromArg(const char* network, const char* addrText)
 {
     DPS_NodeAddress* addr = NULL;
 
