@@ -33,6 +33,9 @@ if platform.system() == 'Windows':
         PathVariable('SWIG', 'Path to SWIG executable', 'C:\\swigwin-3.0.10\\swig.exe', PathVariable.PathAccept),
         PathVariable('NASM_PATH', 'Path to where NASM is installed', 'C:\\Program Files\\NASM', PathVariable.PathAccept),
         PathVariable('DEF_FILE', 'Path to external defs for dll', 'dps_shared.def', PathVariable.PathIsFile))
+else:
+    vars.AddVariables(
+        PathVariable('DEF_FILE', 'Path to external defs for dll', 'libdps_shared.map', PathVariable.PathIsFile))
 
 tools = GetOption('tools')
 if tools == None:
@@ -204,7 +207,7 @@ else:
             exit();
 
     env.Append(CPPDEFINES = ['_FILE_OFFSET_BITS=64'])
-    env.Append(CCFLAGS = ['-fPIC', '-fvisibility=hidden'])
+    env.Append(CCFLAGS = ['-fPIC'])
 
     # Fortify source:
     env.Append(CPPDEFINES = ['_FORTIFY_SOURCE=2'])

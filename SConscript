@@ -89,7 +89,8 @@ if libenv['CC'] == 'cl':
 elif libenv['PLATFORM'] == 'win32':
     shlib = libenv.SharedLibrary('lib/dps_shared', shobjs, LIBS = env['DPS_LIBS'])
 else:
-    shlib = libenv.SharedLibrary('lib/dps_shared', shobjs, LIBS = env['DPS_LIBS'], SHLIBVERSION = version)
+    shlib = libenv.SharedLibrary('lib/dps_shared', shobjs, LIBS = env['DPS_LIBS'], SHLIBVERSION = version,
+                                 SHLINKFLAGS = '$SHLINKFLAGS -Wl,--version-script=' + env['DEF_FILE'])
 libenv.InstallVersionedLib('#/build/dist/lib', shlib, SHLIBVERSION = version)
 
 ns3srcs = ['src/bitvec.c',
