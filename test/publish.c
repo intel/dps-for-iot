@@ -167,6 +167,7 @@ static void TestLoopbackAckLargeMessage(DPS_Node* node, DPS_KeyStore* keyStore)
 #define HISTORY_CAP 10
 
 static DPS_Publication* pubs[HISTORY_CAP + 1];
+static uint32_t expectedAckSequenceNum;
 
 static void HistoryHandler(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* payload, size_t len)
 {
@@ -181,10 +182,13 @@ static void HistoryHandler(DPS_Subscription* sub, const DPS_Publication* pub, ui
 static void HistoryAckHandler(DPS_Publication* pub, uint8_t* payload, size_t len)
 {
     DPS_Event* event = (DPS_Event*)DPS_GetPublicationData(pub);
+    uint32_t ackSequenceNum = DPS_AckGetSequenceNum(pub);
+
+    ASSERT(ackSequenceNum == expectedAckSequenceNum);
     DPS_SignalEvent(event, DPS_OK);
 }
 
-static void TestOutOfOrderAck(DPS_Node* node, DPS_KeyStore* keyStore)
+static void TestDelayedAck(DPS_Node* node, DPS_KeyStore* keyStore)
 {
     static const char* topics[] = { __FUNCTION__ };
     static const size_t numTopics = 1;
@@ -221,19 +225,13 @@ static void TestOutOfOrderAck(DPS_Node* node, DPS_KeyStore* keyStore)
         ASSERT(ret == DPS_OK);
     }
 
-    for (i = HISTORY_CAP; i > HISTORY_CAP / 2; --i) {
+    for (i = 1; i <= HISTORY_CAP; ++i) {
+        expectedAckSequenceNum = DPS_PublicationGetSequenceNum(pubs[i]);
         ret = DPS_AckPublication(pubs[i], NULL, 0);
         ASSERT(ret == DPS_OK);
         DPS_DestroyPublication(pubs[i]);
         ret = DPS_WaitForEvent(ackEvent);
         ASSERT(ret == DPS_OK);
-    }
-    for (; i > 0; --i) {
-        ret = DPS_AckPublication(pubs[i], NULL, 0);
-        ASSERT(ret == DPS_OK);
-        DPS_DestroyPublication(pubs[i]);
-        ret = DPS_TimedWaitForEvent(ackEvent, 100);
-        ASSERT(ret == DPS_ERR_TIMEOUT);
     }
 
     DPS_DestroySubscription(sub);
@@ -418,7 +416,7 @@ int main(int argc, char** argv)
         TestCreateDestroy,
         TestLoopbackLargeMessage,
         TestLoopbackAckLargeMessage,
-        // TODO TestOutOfOrderAck,
+        TestDelayedAck,
         /*
          * Reliability is only expected for loopback and reliable
          * transports.

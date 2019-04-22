@@ -3,6 +3,7 @@ LIBRARY dps_shared
 EXPORTS
 
 DPS_AckGetSenderKeyId
+DPS_AckGetSequenceNum
 DPS_AckPublication
 DPS_AckPublicationBufs
 DPS_CBOR2JSON

@@ -921,6 +921,16 @@ DPS_Status DPS_AckPublicationBufs(const DPS_Publication* pub, const DPS_Buffer* 
                                   DPS_AckPublicationBufsComplete cb, void* data);
 
 /**
+ * Get the sequence number being acknowledged, only valid with the
+ * body of the DPS_AcknowledgementHandler function.
+ *
+ * @param pub   The pub parameter of DPS_AcknowledgementHandler
+ *
+ * @return The sequence number of the acknowledged publication.
+ */
+uint32_t DPS_AckGetSequenceNum(const DPS_Publication* pub);
+
+/**
  * Get the key identifier of an acknowledgement, only valid with the
  * body of the DPS_AcknowledgementHandler function.
  *

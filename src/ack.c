@@ -385,7 +385,7 @@ DPS_Status DPS_DecodeAcknowledgement(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
         ret = CBOR_Peek(&cipherTextBuf, &type, &tag);
         if ((ret == DPS_OK) && (type == CBOR_TAG)) {
             if ((tag == COSE_TAG_ENCRYPT0) || (tag == COSE_TAG_ENCRYPT)) {
-                ret = COSE_Decrypt(nonce, &unused, &aadBuf, &cipherTextBuf, node->keyStore, &pub->ack,
+                ret = COSE_Decrypt(nonce, &unused, &aadBuf, &cipherTextBuf, node->keyStore, &pub->ack.sender,
                                    &plainTextBuf);
                 if (ret == DPS_OK) {
                     DPS_DBGPRINT("Ack was COSE decrypted\n");
@@ -393,7 +393,7 @@ DPS_Status DPS_DecodeAcknowledgement(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
                     DPS_TxBufferToRx(&plainTextBuf, &encryptedBuf);
                 }
             } else if (tag == COSE_TAG_SIGN1) {
-                ret = COSE_Verify(&aadBuf, &cipherTextBuf, node->keyStore, &pub->ack);
+                ret = COSE_Verify(&aadBuf, &cipherTextBuf, node->keyStore, &pub->ack.sender);
                 if (ret == DPS_OK) {
                     DPS_DBGPRINT("Ack was COSE verified\n");
                     encryptedBuf = cipherTextBuf;
@@ -433,13 +433,14 @@ DPS_Status DPS_DecodeAcknowledgement(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
                     }
                 }
                 if (ret == DPS_OK) {
+                    pub->ack.sequenceNum = sequenceNum;
                     pub->handler(pub, data, dataLen);
                 }
             }
         }
         pub->rxBuf = NULL;
         DPS_TxBufferFree(&plainTextBuf);
-        /* Ack ID will be invalid now */
+        /* Ack context will be invalid now */
         memset(&pub->ack, 0, sizeof(pub->ack));
         DPS_LockNode(node);
         DPS_PublicationDecRef(pub);

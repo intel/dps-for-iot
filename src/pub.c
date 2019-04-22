@@ -360,11 +360,20 @@ const DPS_KeyId* DPS_PublicationGetSenderKeyId(const DPS_Publication* pub)
     }
 }
 
+uint32_t DPS_AckGetSequenceNum(const DPS_Publication* pub)
+{
+    if ((IsValidPub(pub) || (pub && (pub->flags & PUB_FLAG_IS_COPY)))) {
+        return pub->ack.sequenceNum;
+    } else {
+        return 0;
+    }
+}
+
 const DPS_KeyId* DPS_AckGetSenderKeyId(const DPS_Publication* pub)
 {
     if ((IsValidPub(pub) || (pub && (pub->flags & PUB_FLAG_IS_COPY))) &&
-        (pub->ack.alg != COSE_ALG_RESERVED)) {
-        return &pub->ack.kid;
+        (pub->ack.sender.alg != COSE_ALG_RESERVED)) {
+        return &pub->ack.sender.kid;
     } else {
         return NULL;
     }
@@ -1240,6 +1249,7 @@ DPS_Publication* DPS_CreatePublication(DPS_Node* node)
 static void DestroyCopy(DPS_Publication* copy)
 {
     if (copy && copy->refCount == 0) {
+        DPS_ClearKeyId(&copy->ack.sender.kid);
         FreeTopics(copy);
         FreeRecipients(copy);
         free(copy);
@@ -1286,6 +1296,12 @@ DPS_Publication* DPS_CopyPublication(const DPS_Publication* pub)
         for (i = 0; i < pub->numTopics; i++) {
             copy->topics[i] = strndup(pub->topics[i], DPS_MAX_TOPIC_STRLEN);
         }
+    }
+    copy->ack.sequenceNum = pub->ack.sequenceNum;
+    copy->ack.sender.alg = pub->ack.sender.alg;
+    if (!DPS_CopyKeyId(&copy->ack.sender.kid, &pub->ack.sender.kid)) {
+        DPS_ERRPRINT("malloc failure: no memory\n");
+        goto Exit;
     }
     ret = DPS_OK;
 
@@ -1770,7 +1786,7 @@ DPS_Publication* DPS_LookupAckHandler(DPS_Node* node, const DPS_UUID* pubId, uin
 
     for (pub = node->publications; pub != NULL; pub = pub->next) {
         if (pub->handler && (DPS_UUIDCompare(&pub->pubId, pubId) == 0)) {
-            if (pub->sequenceNum == sequenceNum) {
+            if (sequenceNum <= pub->sequenceNum) {
                 return pub;
             }
         }
