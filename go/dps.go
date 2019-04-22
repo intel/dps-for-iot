@@ -905,6 +905,10 @@ func AckPublicationBufs(pub *Publication, bufs [][]byte) int {
 	return int(C.ackPublicationBufs(pub.cpub, cbufs, cnumBufs, C.uintptr_t(handle)))
 }
 
+func AckGetSequenceNum(pub *Publication) uint32 {
+	return uint32(C.DPS_AckGetSequenceNum(pub.cpub))
+}
+
 func AckGetSenderKeyId(pub *Publication) (keyId KeyId) {
 	ckeyId := C.DPS_AckGetSenderKeyId(pub.cpub)
 	if ckeyId != nil && ckeyId.id != nil {

@@ -76,7 +76,10 @@ typedef struct _DPS_Publication {
 
     COSE_Entity sender;             /**< Publication sender ID */
     DPS_NodeAddress senderAddr;     /**< For retained messages - the sender address */
-    COSE_Entity ack;                /**< For ack messages - the ack sender ID */
+    struct {
+        uint32_t sequenceNum;       /**< The ack'd sequence number */
+        COSE_Entity sender;         /**< The ack sender ID */
+    } ack;                          /**< For ack messages */
     DPS_Queue sendQueue;            /**< Publication send requests */
     DPS_Queue retainedQueue;        /**< The retained publication send requests */
     DPS_NetRxBuffer* rxBuf;         /**< For publication or ack handlers - the receive buffer being handled */
