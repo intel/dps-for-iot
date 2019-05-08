@@ -47,7 +47,7 @@ Control over sending and receiving multicast messages is provided via
 the @em mcastPub parameter of DPS_StartNode().
 
 @subsection Unicast
-DPS implements three different transports for sending and receiving
+DPS implements four different transports for sending and receiving
 unicast messages.
 
 Unicast endpoints may be explicitly created and destroyed with
@@ -70,6 +70,13 @@ above UDP.  Each DPS message is contained in a single DTLS datagram.
 
 DPS does not perform segmentation and reassembly of application
 payloads that do not fit into a single DTLS fragment.
+
+@subsubsection Pipe
+Pipe transports messages over local domain sockets on Unix and named
+pipes on Windows.
+
+Each DPS message is prefixed with the length of the message encoded as
+a CBOR unsigned integer value.
 
 @see @ref enabling-network-layer-security
  */

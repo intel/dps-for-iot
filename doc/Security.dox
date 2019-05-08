@@ -2,30 +2,29 @@
 @page security Security
 @tableofcontents
 
-DPS has two security mechanisms: end-to-end encryption/signing and
-link-layer encryption. Publication and acknowledgement messages can be
-encrypted/signed end-to-end.  Messages are encrypted/signed using
-[COSE](https://tools.ietf.org/html/rfc8152).
+DPS has two security mechanisms: end-to-end encryption and/or signing
+and link-layer encryption. Publication and acknowledgement messages
+can be encrypted and/or signed end-to-end.  Messages are encrypted
+and/or signed using [COSE](https://tools.ietf.org/html/rfc8152).
 
 For privacy and to protect the network hop-by-hop links DPS uses link
-layer encryption where possible: DTLS for UDP, TLS for TCP, and
-transport-specific encryption for over non-IP networks. IP multicast
-packets do not use link-layer encryption. Because DPS is fundamentally
-a multi-hop mesh protocol payloads are secured end-to-end.
+layer encryption where possible. IP multicast packets do not use
+link-layer encryption. Because DPS is fundamentally a multi-hop mesh
+protocol payloads are secured end-to-end.
 
 As noted above publications and acknowledgement messages can be
-encrypted/signed using COSE. The protection in this case is
+encrypted and/or signed using COSE. The protection in this case is
 end-to-end, the trust relationship is directly between the publishing
 node and the subscribing node, and intermediate nodes that simply
 route packets over the DPS mesh do not require a trust relationship
 with either the publishers or subscribers and do not hold keys. The
-publication or acknowledgement data payload is encrypted/signed,
-publications also carry the publication topic strings: these are
-included in the encrypted/signed payload. Message fields required for
-routing messages are integrity checked but obviously cannot be
-encrypted.  The sending port number and TTL change on each hop so
-cannot be included in the end-to-end integrity check. The COSE format
-includes an optional KID (key-identifier) field. Encrypted DPS
+publication or acknowledgement data payload is encrypted and/or
+signed, publications also carry the publication topic strings: these
+are included in the encrypted and/or signed payload. Message fields
+required for routing messages are integrity checked but obviously
+cannot be encrypted.  The sending port number and TTL change on each
+hop so cannot be included in the end-to-end integrity check. The COSE
+format includes an optional KID (key-identifier) field. Encrypted DPS
 messages always have a KID which allows the different publications to
 use different encryption keys.
 
@@ -55,7 +54,7 @@ content encryption algorithm and is replaced by a COSE object, one of
 @em COSE_Encrypt_Tagged, @em COSE_Encrypt0_Tagged, or @em
 COSE_Sign1_Tagged.
 
-The implemented content encryption algorithms is @em A256GCM.
+The implemented content encryption algorithm is @em A256GCM.
 
 @section content-key-distribution Content Key Distribution
 The encryption key is determined by the recipient algorithm.  DPS
