@@ -15,7 +15,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="78" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" bodystart="78" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="77" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" bodystart="77" bodyend="-1"/>
       </memberdef>
       <memberdef kind="variable" id="struct___d_p_s___registration_list_1a7090074f00b35189ff64c21d5bc40535" prot="public" static="no" mutable="no">
         <type><ref refid="group__registration_1gac06db7e10b2626b06bacd09414e7d740" kindref="member">DPS_Registration</ref></type>
@@ -28,7 +28,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="79" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" bodystart="79" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="78" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" bodystart="78" bodyend="-1"/>
       </memberdef>
       <memberdef kind="variable" id="struct___d_p_s___registration_list_1a9aeb3177f17c29a6af6a702d3994b39d" prot="public" static="no" mutable="no">
         <type>uint8_t</type>
@@ -41,7 +41,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="77" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" bodystart="77" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="76" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" bodystart="76" bodyend="-1"/>
       </memberdef>
       </sectiondef>
     <briefdescription>
@@ -61,7 +61,7 @@
         <link refid="struct___d_p_s___registration"/>
       </node>
     </collaborationgraph>
-    <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="76" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" bodystart="76" bodyend="80"/>
+    <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="75" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" bodystart="75" bodyend="79"/>
     <listofallmembers>
       <member refid="struct___d_p_s___registration_list_1a3cf76d39d9ec5bee027f8dae52c1982d" prot="public" virt="non-virtual"><scope>_DPS_RegistrationList</scope><name>count</name></member>
       <member refid="struct___d_p_s___registration_list_1a7090074f00b35189ff64c21d5bc40535" prot="public" virt="non-virtual"><scope>_DPS_RegistrationList</scope><name>list</name></member>

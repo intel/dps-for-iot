@@ -47,10 +47,10 @@
       </node>
     </incdepgraph>
       <sectiondef kind="func">
-      <memberdef kind="function" id="group__node_1ga0bd13b2bd395bbc7807ecc899a8862f1" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+      <memberdef kind="function" id="group__node_1ga69325fd8127687c469e503763a29f6d8" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
         <definition>DPS_Status DPS_LinkTo</definition>
-        <argsstring>(DPS_Node *node, const char *host, uint16_t port, DPS_NodeAddress *addr)</argsstring>
+        <argsstring>(DPS_Node *node, const char *addrText, DPS_NodeAddress *addr)</argsstring>
         <name>DPS_LinkTo</name>
         <param>
           <type><ref refid="group__node_1ga4dd612ab965134321bb57fdb065f121c" kindref="member">DPS_Node</ref> *</type>
@@ -58,18 +58,14 @@
         </param>
         <param>
           <type>const char *</type>
-          <declname>host</declname>
-        </param>
-        <param>
-          <type>uint16_t</type>
-          <declname>port</declname>
+          <declname>addrText</declname>
         </param>
         <param>
           <type><ref refid="group__nodeaddress_1ga9e9f56aa38e82b4edcef7eb81e9f5bd2" kindref="member">DPS_NodeAddress</ref> *</type>
           <declname>addr</declname>
         </param>
         <briefdescription>
-<para>Synchronous helper that wraps <ref refid="group__node_1ga5064c63b8ce76bf34402e0c80183234b" kindref="member">DPS_Link()</ref>. </para>        </briefdescription>
+<para>Synchronous helper that wraps <ref refid="group__node_1gab7616642a79f637aa146b3b1a4ed0af8" kindref="member">DPS_Link()</ref>. </para>        </briefdescription>
         <detaileddescription>
 <para><parameterlist kind="param"><parameteritem>
 <parameternamelist>
@@ -80,17 +76,10 @@
 </parameteritem>
 <parameteritem>
 <parameternamelist>
-<parametername>host</parametername>
+<parametername>addrText</parametername>
 </parameternamelist>
 <parameterdescription>
-<para>The host name or IP address to link to. A NULL host indicates localhost. </para></parameterdescription>
-</parameteritem>
-<parameteritem>
-<parameternamelist>
-<parametername>port</parametername>
-</parameternamelist>
-<parameterdescription>
-<para>The port number </para></parameterdescription>
+<para>The text string of the address to link to </para></parameterdescription>
 </parameteritem>
 <parameteritem>
 <parameternamelist>
@@ -104,23 +93,23 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/synchronous.h" line="52" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/synchronous.h" line="51" column="1"/>
       </memberdef>
-      <memberdef kind="function" id="group__node_1ga2d5bb0528c2a171991ad6355cbadac69" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+      <memberdef kind="function" id="group__node_1gae16f5ff85ac57a6f5567db73343c8af1" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
         <definition>DPS_Status DPS_UnlinkFrom</definition>
-        <argsstring>(DPS_Node *node, DPS_NodeAddress *addr)</argsstring>
+        <argsstring>(DPS_Node *node, const DPS_NodeAddress *addr)</argsstring>
         <name>DPS_UnlinkFrom</name>
         <param>
           <type><ref refid="group__node_1ga4dd612ab965134321bb57fdb065f121c" kindref="member">DPS_Node</ref> *</type>
           <declname>node</declname>
         </param>
         <param>
-          <type><ref refid="group__nodeaddress_1ga9e9f56aa38e82b4edcef7eb81e9f5bd2" kindref="member">DPS_NodeAddress</ref> *</type>
+          <type>const <ref refid="group__nodeaddress_1ga9e9f56aa38e82b4edcef7eb81e9f5bd2" kindref="member">DPS_NodeAddress</ref> *</type>
           <declname>addr</declname>
         </param>
         <briefdescription>
-<para>Synchronous helper that wraps <ref refid="group__node_1ga79c86c3c0c5d6438b953a9acaab0ab0b" kindref="member">DPS_Unlink()</ref>. </para>        </briefdescription>
+<para>Synchronous helper that wraps <ref refid="group__node_1ga18398ef1e81c5dba98a95da6d18b937e" kindref="member">DPS_Unlink()</ref>. </para>        </briefdescription>
         <detaileddescription>
 <para><parameterlist kind="param"><parameteritem>
 <parameternamelist>
@@ -141,7 +130,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/synchronous.h" line="62" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/synchronous.h" line="61" column="1"/>
       </memberdef>
       </sectiondef>
     <briefdescription>

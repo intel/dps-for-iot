@@ -99,8 +99,8 @@ $(document).ready(function(){initNavTree('group__publication.html','');});
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="nested-classes"></a>
 Data Structures</h2></td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct___d_p_s___qo_s.html">_DPS_QoS</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">The Quality-of-Service (QoS) parameters.  <a href="struct___d_p_s___qo_s.html#details">More...</a><br /></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct___d_p_s___buffer.html">_DPS_Buffer</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A buffer.  <a href="struct___d_p_s___buffer.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="typedef-members"></a>
@@ -108,23 +108,35 @@ Typedefs</h2></td></tr>
 <tr class="memitem:gaf8615f0bcd3d95859cd7f2cdbf772e23"><td class="memItemLeft" align="right" valign="top">typedef void(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#gaf8615f0bcd3d95859cd7f2cdbf772e23">DPS_AcknowledgementHandler</a>) (<a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub, uint8_t *payload, size_t len)</td></tr>
 <tr class="memdesc:gaf8615f0bcd3d95859cd7f2cdbf772e23"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function prototype for a publication acknowledgement handler called when an acknowledgement for a publication is received from a remote subscriber.  <a href="#gaf8615f0bcd3d95859cd7f2cdbf772e23">More...</a><br /></td></tr>
 <tr class="separator:gaf8615f0bcd3d95859cd7f2cdbf772e23"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga5d62f70df03e7faf06494e89d74e346c"><td class="memItemLeft" align="right" valign="top">typedef void(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#ga5d62f70df03e7faf06494e89d74e346c">DPS_AckPublicationBufsComplete</a>) (<a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub, const <a class="el" href="group__publication.html#gaf93282d11ef2e1fbbfc66c57851f43a6">DPS_Buffer</a> *bufs, size_t numBufs, <a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a> status, void *data)</td></tr>
+<tr class="memdesc:ga5d62f70df03e7faf06494e89d74e346c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Called when <a class="el" href="group__publication.html#gad1de82b1bebeb8f47cd755d5f7b6fadb" title="Acknowledge a publication. ">DPS_AckPublicationBufs()</a> completes.  <a href="#ga5d62f70df03e7faf06494e89d74e346c">More...</a><br /></td></tr>
+<tr class="separator:ga5d62f70df03e7faf06494e89d74e346c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gaf93282d11ef2e1fbbfc66c57851f43a6"><td class="memItemLeft" align="right" valign="top"><a id="gaf93282d11ef2e1fbbfc66c57851f43a6"></a>
+typedef struct <a class="el" href="struct___d_p_s___buffer.html">_DPS_Buffer</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#gaf93282d11ef2e1fbbfc66c57851f43a6">DPS_Buffer</a></td></tr>
+<tr class="memdesc:gaf93282d11ef2e1fbbfc66c57851f43a6"><td class="mdescLeft">&#160;</td><td class="mdescRight">A buffer. <br /></td></tr>
+<tr class="separator:gaf93282d11ef2e1fbbfc66c57851f43a6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga0d439693474aa54e27f3d45a054696ac"><td class="memItemLeft" align="right" valign="top"><a id="ga0d439693474aa54e27f3d45a054696ac"></a>
 typedef struct _DPS_Publication&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a></td></tr>
 <tr class="memdesc:ga0d439693474aa54e27f3d45a054696ac"><td class="mdescLeft">&#160;</td><td class="mdescRight">Opaque type for a publication. <br /></td></tr>
 <tr class="separator:ga0d439693474aa54e27f3d45a054696ac"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga875f9462225b198bbf7dd1c4a5390017"><td class="memItemLeft" align="right" valign="top"><a id="ga875f9462225b198bbf7dd1c4a5390017"></a>
-typedef struct <a class="el" href="struct___d_p_s___qo_s.html">_DPS_QoS</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#ga875f9462225b198bbf7dd1c4a5390017">DPS_QoS</a></td></tr>
-<tr class="memdesc:ga875f9462225b198bbf7dd1c4a5390017"><td class="mdescLeft">&#160;</td><td class="mdescRight">The Quality-of-Service (QoS) parameters. <br /></td></tr>
-<tr class="separator:ga875f9462225b198bbf7dd1c4a5390017"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gaf1b7a008b10280f94a673e1b8e938e72"><td class="memItemLeft" align="right" valign="top">typedef void(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#gaf1b7a008b10280f94a673e1b8e938e72">DPS_PublishBufsComplete</a>) (<a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub, const <a class="el" href="group__publication.html#gaf93282d11ef2e1fbbfc66c57851f43a6">DPS_Buffer</a> *bufs, size_t numBufs, <a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a> status, void *data)</td></tr>
+<tr class="memdesc:gaf1b7a008b10280f94a673e1b8e938e72"><td class="mdescLeft">&#160;</td><td class="mdescRight">Called when <a class="el" href="group__publication.html#gad0efefd35f178638f0fd4decdc28e6a6" title="Publish a set of topics along with an optional payload. ">DPS_PublishBufs()</a> completes.  <a href="#gaf1b7a008b10280f94a673e1b8e938e72">More...</a><br /></td></tr>
+<tr class="separator:gaf1b7a008b10280f94a673e1b8e938e72"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
 <tr class="memitem:ga9190b8fa3bad848fb428acd6c0c2b210"><td class="memItemLeft" align="right" valign="top">const <a class="el" href="group__keystore.html#ga4345e29dd2ad5d7fd88a1e988787bd72">DPS_KeyId</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#ga9190b8fa3bad848fb428acd6c0c2b210">DPS_AckGetSenderKeyId</a> (const <a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub)</td></tr>
 <tr class="memdesc:ga9190b8fa3bad848fb428acd6c0c2b210"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the key identifier of an acknowledgement, only valid with the body of the DPS_AcknowledgementHandler function.  <a href="#ga9190b8fa3bad848fb428acd6c0c2b210">More...</a><br /></td></tr>
 <tr class="separator:ga9190b8fa3bad848fb428acd6c0c2b210"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gac6d2481a76f2e14df45a6ed5d87ba070"><td class="memItemLeft" align="right" valign="top">uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#gac6d2481a76f2e14df45a6ed5d87ba070">DPS_AckGetSequenceNum</a> (const <a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub)</td></tr>
+<tr class="memdesc:gac6d2481a76f2e14df45a6ed5d87ba070"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the sequence number being acknowledged, only valid with the body of the DPS_AcknowledgementHandler function.  <a href="#gac6d2481a76f2e14df45a6ed5d87ba070">More...</a><br /></td></tr>
+<tr class="separator:gac6d2481a76f2e14df45a6ed5d87ba070"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga308074429a566ffb8d04d55bae520b04"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#ga308074429a566ffb8d04d55bae520b04">DPS_AckPublication</a> (const <a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub, const uint8_t *ackPayload, size_t len)</td></tr>
 <tr class="memdesc:ga308074429a566ffb8d04d55bae520b04"><td class="mdescLeft">&#160;</td><td class="mdescRight">Acknowledge a publication.  <a href="#ga308074429a566ffb8d04d55bae520b04">More...</a><br /></td></tr>
 <tr class="separator:ga308074429a566ffb8d04d55bae520b04"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gad1de82b1bebeb8f47cd755d5f7b6fadb"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#gad1de82b1bebeb8f47cd755d5f7b6fadb">DPS_AckPublicationBufs</a> (const <a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub, const <a class="el" href="group__publication.html#gaf93282d11ef2e1fbbfc66c57851f43a6">DPS_Buffer</a> *bufs, size_t numBufs, <a class="el" href="group__publication.html#ga5d62f70df03e7faf06494e89d74e346c">DPS_AckPublicationBufsComplete</a> cb, void *data)</td></tr>
+<tr class="memdesc:gad1de82b1bebeb8f47cd755d5f7b6fadb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Acknowledge a publication.  <a href="#gad1de82b1bebeb8f47cd755d5f7b6fadb">More...</a><br /></td></tr>
+<tr class="separator:gad1de82b1bebeb8f47cd755d5f7b6fadb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga41f31a8b63558e13d73d96de6086e5c4"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#ga41f31a8b63558e13d73d96de6086e5c4">DPS_CopyPublication</a> (const <a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub)</td></tr>
 <tr class="memdesc:ga41f31a8b63558e13d73d96de6086e5c4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a partial copy of a publication that can be used to acknowledge the publication.  <a href="#ga41f31a8b63558e13d73d96de6086e5c4">More...</a><br /></td></tr>
 <tr class="separator:ga41f31a8b63558e13d73d96de6086e5c4"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -143,9 +155,6 @@ Functions</h2></td></tr>
 <tr class="memitem:ga91471ddf6f66798e255b28b3e913144b"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#ga91471ddf6f66798e255b28b3e913144b">DPS_PublicationAddSubId</a> (<a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub, const <a class="el" href="group__keystore.html#ga4345e29dd2ad5d7fd88a1e988787bd72">DPS_KeyId</a> *keyId)</td></tr>
 <tr class="memdesc:ga91471ddf6f66798e255b28b3e913144b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Adds a key identifier to use for encrypted publications.  <a href="#ga91471ddf6f66798e255b28b3e913144b">More...</a><br /></td></tr>
 <tr class="separator:ga91471ddf6f66798e255b28b3e913144b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga027a7ee80859f47a3263e29d8c989c40"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#ga027a7ee80859f47a3263e29d8c989c40">DPS_PublicationConfigureQoS</a> (<a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub, const <a class="el" href="group__publication.html#ga875f9462225b198bbf7dd1c4a5390017">DPS_QoS</a> *qos)</td></tr>
-<tr class="memdesc:ga027a7ee80859f47a3263e29d8c989c40"><td class="mdescLeft">&#160;</td><td class="mdescRight">Configure the Quality-of-Service (QoS) parameters of a publication.  <a href="#ga027a7ee80859f47a3263e29d8c989c40">More...</a><br /></td></tr>
-<tr class="separator:ga027a7ee80859f47a3263e29d8c989c40"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gad2a37d52f12c93434b431eefd732f363"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#gad2a37d52f12c93434b431eefd732f363">DPS_PublicationGetNode</a> (const <a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub)</td></tr>
 <tr class="memdesc:gad2a37d52f12c93434b431eefd732f363"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the local node associated with a publication.  <a href="#gad2a37d52f12c93434b431eefd732f363">More...</a><br /></td></tr>
 <tr class="separator:gad2a37d52f12c93434b431eefd732f363"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -173,6 +182,9 @@ Functions</h2></td></tr>
 <tr class="memitem:ga828a4efc5c235c48a81f6460cc3fe416"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#ga828a4efc5c235c48a81f6460cc3fe416">DPS_Publish</a> (<a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub, const uint8_t *pubPayload, size_t len, int16_t ttl)</td></tr>
 <tr class="memdesc:ga828a4efc5c235c48a81f6460cc3fe416"><td class="mdescLeft">&#160;</td><td class="mdescRight">Publish a set of topics along with an optional payload.  <a href="#ga828a4efc5c235c48a81f6460cc3fe416">More...</a><br /></td></tr>
 <tr class="separator:ga828a4efc5c235c48a81f6460cc3fe416"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gad0efefd35f178638f0fd4decdc28e6a6"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#gad0efefd35f178638f0fd4decdc28e6a6">DPS_PublishBufs</a> (<a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub, const <a class="el" href="group__publication.html#gaf93282d11ef2e1fbbfc66c57851f43a6">DPS_Buffer</a> *bufs, size_t numBufs, int16_t ttl, <a class="el" href="group__publication.html#gaf1b7a008b10280f94a673e1b8e938e72">DPS_PublishBufsComplete</a> cb, void *data)</td></tr>
+<tr class="memdesc:gad0efefd35f178638f0fd4decdc28e6a6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Publish a set of topics along with an optional payload.  <a href="#gad0efefd35f178638f0fd4decdc28e6a6">More...</a><br /></td></tr>
+<tr class="separator:gad0efefd35f178638f0fd4decdc28e6a6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga91c46ccb6df7f4bb99ca5d9d35cc5a4a"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#ga91c46ccb6df7f4bb99ca5d9d35cc5a4a">DPS_SetPublicationData</a> (<a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub, void *data)</td></tr>
 <tr class="memdesc:ga91c46ccb6df7f4bb99ca5d9d35cc5a4a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Store a pointer to application data in a publication.  <a href="#ga91c46ccb6df7f4bb99ca5d9d35cc5a4a">More...</a><br /></td></tr>
 <tr class="separator:ga91c46ccb6df7f4bb99ca5d9d35cc5a4a"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -205,6 +217,58 @@ Functions</h2></td></tr>
 
 </div>
 </div>
+<a id="ga5d62f70df03e7faf06494e89d74e346c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga5d62f70df03e7faf06494e89d74e346c">&#9670;&nbsp;</a></span>DPS_AckPublicationBufsComplete</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">typedef void(* DPS_AckPublicationBufsComplete) (<a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub, const <a class="el" href="group__publication.html#gaf93282d11ef2e1fbbfc66c57851f43a6">DPS_Buffer</a> *bufs, size_t numBufs, <a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a> status, void *data)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Called when <a class="el" href="group__publication.html#gad1de82b1bebeb8f47cd755d5f7b6fadb" title="Acknowledge a publication. ">DPS_AckPublicationBufs()</a> completes. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">pub</td><td>The publication </td></tr>
+    <tr><td class="paramname">bufs</td><td>The payload buffers passed to <a class="el" href="group__publication.html#gad1de82b1bebeb8f47cd755d5f7b6fadb" title="Acknowledge a publication. ">DPS_AckPublicationBufs()</a> </td></tr>
+    <tr><td class="paramname">numBufs</td><td>The number of payload buffers passed to <a class="el" href="group__publication.html#gad1de82b1bebeb8f47cd755d5f7b6fadb" title="Acknowledge a publication. ">DPS_AckPublicationBufs()</a> </td></tr>
+    <tr><td class="paramname">status</td><td>The status of the publish </td></tr>
+    <tr><td class="paramname">data</td><td>Application data passed to <a class="el" href="group__publication.html#gad1de82b1bebeb8f47cd755d5f7b6fadb" title="Acknowledge a publication. ">DPS_AckPublicationBufs()</a> </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="gaf1b7a008b10280f94a673e1b8e938e72"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#gaf1b7a008b10280f94a673e1b8e938e72">&#9670;&nbsp;</a></span>DPS_PublishBufsComplete</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">typedef void(* DPS_PublishBufsComplete) (<a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub, const <a class="el" href="group__publication.html#gaf93282d11ef2e1fbbfc66c57851f43a6">DPS_Buffer</a> *bufs, size_t numBufs, <a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a> status, void *data)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Called when <a class="el" href="group__publication.html#gad0efefd35f178638f0fd4decdc28e6a6" title="Publish a set of topics along with an optional payload. ">DPS_PublishBufs()</a> completes. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">pub</td><td>The publication </td></tr>
+    <tr><td class="paramname">bufs</td><td>The payload buffers passed to <a class="el" href="group__publication.html#gad0efefd35f178638f0fd4decdc28e6a6" title="Publish a set of topics along with an optional payload. ">DPS_PublishBufs()</a> </td></tr>
+    <tr><td class="paramname">numBufs</td><td>The number of payload buffers passed to <a class="el" href="group__publication.html#gad0efefd35f178638f0fd4decdc28e6a6" title="Publish a set of topics along with an optional payload. ">DPS_PublishBufs()</a> </td></tr>
+    <tr><td class="paramname">status</td><td>The status of the publish </td></tr>
+    <tr><td class="paramname">data</td><td>Application data passed to <a class="el" href="group__publication.html#gad0efefd35f178638f0fd4decdc28e6a6" title="Publish a set of topics along with an optional payload. ">DPS_PublishBufs()</a> </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
 <h2 class="groupheader">Function Documentation</h2>
 <a id="ga9190b8fa3bad848fb428acd6c0c2b210"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ga9190b8fa3bad848fb428acd6c0c2b210">&#9670;&nbsp;</a></span>DPS_AckGetSenderKeyId()</h2>
@@ -230,6 +294,33 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>The key identifier of the subscriber, may be NULL </dd></dl>
+
+</div>
+</div>
+<a id="gac6d2481a76f2e14df45a6ed5d87ba070"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#gac6d2481a76f2e14df45a6ed5d87ba070">&#9670;&nbsp;</a></span>DPS_AckGetSequenceNum()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint32_t DPS_AckGetSequenceNum </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *&#160;</td>
+          <td class="paramname"><em>pub</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Get the sequence number being acknowledged, only valid with the body of the DPS_AcknowledgementHandler function. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">pub</td><td>The pub parameter of DPS_AcknowledgementHandler</td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>The sequence number of the acknowledged publication. </dd></dl>
 
 </div>
 </div>
@@ -272,6 +363,66 @@ Functions</h2></td></tr>
     <tr><td class="paramname">pub</td><td>The publication to acknowledge </td></tr>
     <tr><td class="paramname">ackPayload</td><td>Optional payload to accompany the acknowledgement </td></tr>
     <tr><td class="paramname">len</td><td>The length of the payload</td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>DPS_OK if acknowledge is successful, an error otherwise </dd></dl>
+
+</div>
+</div>
+<a id="gad1de82b1bebeb8f47cd755d5f7b6fadb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#gad1de82b1bebeb8f47cd755d5f7b6fadb">&#9670;&nbsp;</a></span>DPS_AckPublicationBufs()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a> DPS_AckPublicationBufs </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *&#160;</td>
+          <td class="paramname"><em>pub</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="group__publication.html#gaf93282d11ef2e1fbbfc66c57851f43a6">DPS_Buffer</a> *&#160;</td>
+          <td class="paramname"><em>bufs</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>numBufs</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="group__publication.html#ga5d62f70df03e7faf06494e89d74e346c">DPS_AckPublicationBufsComplete</a>&#160;</td>
+          <td class="paramname"><em>cb</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">void *&#160;</td>
+          <td class="paramname"><em>data</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Acknowledge a publication. </p>
+<p>A publication should be acknowledged as soon as possible after receipt, ideally from within the publication handler callback function. If the publication cannot be acknowledged immediately in the publication handler callback, call <a class="el" href="group__publication.html#ga41f31a8b63558e13d73d96de6086e5c4" title="Creates a partial copy of a publication that can be used to acknowledge the publication. ">DPS_CopyPublication()</a> to make a partial copy of the publication that can be passed to this function at a later time.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">pub</td><td>The publication to acknowledge </td></tr>
+    <tr><td class="paramname">bufs</td><td>Optional payload buffers - this memory must remain valid until the callback function is called </td></tr>
+    <tr><td class="paramname">numBufs</td><td>The number of buffers </td></tr>
+    <tr><td class="paramname">cb</td><td>Callback function called when the acknowledge is complete </td></tr>
+    <tr><td class="paramname">data</td><td>Data to be passed to the callback function</td></tr>
   </table>
   </dd>
 </dl>
@@ -494,44 +645,6 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>DPS_OK if addition is successful, an error otherwise </dd></dl>
-
-</div>
-</div>
-<a id="ga027a7ee80859f47a3263e29d8c989c40"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga027a7ee80859f47a3263e29d8c989c40">&#9670;&nbsp;</a></span>DPS_PublicationConfigureQoS()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a> DPS_PublicationConfigureQoS </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *&#160;</td>
-          <td class="paramname"><em>pub</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const <a class="el" href="group__publication.html#ga875f9462225b198bbf7dd1c4a5390017">DPS_QoS</a> *&#160;</td>
-          <td class="paramname"><em>qos</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Configure the Quality-of-Service (QoS) parameters of a publication. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">pub</td><td>The publication to initialize </td></tr>
-    <tr><td class="paramname">qos</td><td>The QoS parameters</td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>DPS_OK if configuration is successful, an error otherwise </dd></dl>
 
 </div>
 </div>
@@ -827,6 +940,75 @@ Functions</h2></td></tr>
 
 </div>
 </div>
+<a id="gad0efefd35f178638f0fd4decdc28e6a6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#gad0efefd35f178638f0fd4decdc28e6a6">&#9670;&nbsp;</a></span>DPS_PublishBufs()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a> DPS_PublishBufs </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *&#160;</td>
+          <td class="paramname"><em>pub</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="group__publication.html#gaf93282d11ef2e1fbbfc66c57851f43a6">DPS_Buffer</a> *&#160;</td>
+          <td class="paramname"><em>bufs</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>numBufs</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int16_t&#160;</td>
+          <td class="paramname"><em>ttl</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="group__publication.html#gaf1b7a008b10280f94a673e1b8e938e72">DPS_PublishBufsComplete</a>&#160;</td>
+          <td class="paramname"><em>cb</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">void *&#160;</td>
+          <td class="paramname"><em>data</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Publish a set of topics along with an optional payload. </p>
+<p>The topics will be published immediately to matching subscribers and then re-published whenever a new matching subscription is received.</p>
+<p>Call the accessor function <a class="el" href="group__publication.html#gaba1ad3ee807b75a1281d334be06a12f7" title="Get the UUID for a publication. ">DPS_PublicationGetUUID()</a> to get the UUID for this publication. Call the accessor function <a class="el" href="group__publication.html#ga875b48217d861d4a9fa5471419d354e9" title="Get the sequence number for a publication. ">DPS_PublicationGetSequenceNum()</a> to get the current sequence number for this publication. The sequence number is incremented each time <a class="el" href="group__publication.html#ga828a4efc5c235c48a81f6460cc3fe416" title="Publish a set of topics along with an optional payload. ">DPS_Publish()</a> is called for the same publication.</p>
+<dl class="section note"><dt>Note</dt><dd>When the ttl is greater than zero, the callback function will not be called until the publication expires, is replaced by a subsequent call to <a class="el" href="group__publication.html#gad0efefd35f178638f0fd4decdc28e6a6" title="Publish a set of topics along with an optional payload. ">DPS_PublishBufs()</a>, is canceled, or is destroyed.</dd></dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">pub</td><td>The publication to send </td></tr>
+    <tr><td class="paramname">bufs</td><td>Optional payload buffers - this memory must remain valid until the callback function is called </td></tr>
+    <tr><td class="paramname">numBufs</td><td>The number of buffers </td></tr>
+    <tr><td class="paramname">ttl</td><td>Time to live in seconds - maximum TTL is about 9 hours </td></tr>
+    <tr><td class="paramname">cb</td><td>Callback function called when the publish is complete </td></tr>
+    <tr><td class="paramname">data</td><td>Data to be passed to the callback function</td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>DPS_OK if the topics were successfully published </dd></dl>
+
+</div>
+</div>
 <a id="ga91c46ccb6df7f4bb99ca5d9d35cc5a4a"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ga91c46ccb6df7f4bb99ca5d9d35cc5a4a">&#9670;&nbsp;</a></span>DPS_SetPublicationData()</h2>
 
@@ -869,7 +1051,7 @@ Functions</h2></td></tr>
 </div><!-- doc-content -->
 <div class="navpath" id="nav-path">
   <ul>
-    <li class="footer" style="float:left"><b>Distributed Publish & Subscribe for IoT</b></li> <li class="footer">Generated Thu Jan 10 2019 15:50:17</li>
+    <li class="footer" style="float:left"><b>Distributed Publish & Subscribe for IoT</b></li> <li class="footer">Generated Wed May 15 2019 11:59:58</li>
   </ul>
 </div>
 </body>

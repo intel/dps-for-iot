@@ -53,7 +53,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="91" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="92" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__nodeaddress_1ga8c6228133cac7601597f3c6160de5aab" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__nodeaddress_1ga9e9f56aa38e82b4edcef7eb81e9f5bd2" kindref="member">DPS_NodeAddress</ref> *</type>
@@ -70,7 +70,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="73" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="74" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__nodeaddress_1ga1f373831e8009ff5959ccb02b8c3fb14" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>void</type>
@@ -95,7 +95,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="98" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="99" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__nodeaddress_1gafc7b21048f92370ca29325d6245b576d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>const char *</type>
@@ -121,20 +121,20 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="66" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="67" column="1"/>
       </memberdef>
-      <memberdef kind="function" id="group__nodeaddress_1ga6231c243c483bd2d282f7df734a98946" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+      <memberdef kind="function" id="group__nodeaddress_1ga1492aff0a8789c4b8a7cc47c84ca1b1f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__nodeaddress_1ga9e9f56aa38e82b4edcef7eb81e9f5bd2" kindref="member">DPS_NodeAddress</ref> *</type>
         <definition>DPS_NodeAddress* DPS_SetAddress</definition>
-        <argsstring>(DPS_NodeAddress *addr, const struct sockaddr *sa)</argsstring>
+        <argsstring>(DPS_NodeAddress *addr, const char *addrText)</argsstring>
         <name>DPS_SetAddress</name>
         <param>
           <type><ref refid="group__nodeaddress_1ga9e9f56aa38e82b4edcef7eb81e9f5bd2" kindref="member">DPS_NodeAddress</ref> *</type>
           <declname>addr</declname>
         </param>
         <param>
-          <type>const struct sockaddr *</type>
-          <declname>sa</declname>
+          <type>const char *</type>
+          <declname>addrText</declname>
         </param>
         <briefdescription>
 <para>Set a node address. </para>        </briefdescription>
@@ -148,17 +148,17 @@
 </parameteritem>
 <parameteritem>
 <parameternamelist>
-<parametername>sa</parametername>
+<parametername>addrText</parametername>
 </parameternamelist>
 <parameterdescription>
-<para>The value to set</para></parameterdescription>
+<para>The text string for the address</para></parameterdescription>
 </parameteritem>
 </parameterlist>
-<simplesect kind="return"><para>The addr passed in. </para></simplesect>
+<simplesect kind="return"><para>The addr passed in, or NULL if an error occurred </para></simplesect>
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="83" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="84" column="1"/>
       </memberdef>
       </sectiondef>
     <briefdescription>

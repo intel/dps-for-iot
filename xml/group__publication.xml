@@ -3,7 +3,7 @@
   <compounddef id="group__publication" kind="group">
     <compoundname>publication</compoundname>
     <title>Publication</title>
-    <innerclass refid="struct___d_p_s___qo_s" prot="public">_DPS_QoS</innerclass>
+    <innerclass refid="struct___d_p_s___buffer" prot="public">_DPS_Buffer</innerclass>
       <sectiondef kind="typedef">
       <memberdef kind="typedef" id="group__publication_1gaf8615f0bcd3d95859cd7f2cdbf772e23" prot="public" static="no">
         <type>void(*</type>
@@ -38,7 +38,69 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="745" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="745" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="757" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="757" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="group__publication_1ga5d62f70df03e7faf06494e89d74e346c" prot="public" static="no">
+        <type>void(*</type>
+        <definition>typedef void(* DPS_AckPublicationBufsComplete) (DPS_Publication *pub, const DPS_Buffer *bufs, size_t numBufs, DPS_Status status, void *data)</definition>
+        <argsstring>)(DPS_Publication *pub, const DPS_Buffer *bufs, size_t numBufs, DPS_Status status, void *data)</argsstring>
+        <name>DPS_AckPublicationBufsComplete</name>
+        <briefdescription>
+<para>Called when <ref refid="group__publication_1gad1de82b1bebeb8f47cd755d5f7b6fadb" kindref="member">DPS_AckPublicationBufs()</ref> completes. </para>        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>pub</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The publication </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>bufs</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The payload buffers passed to <ref refid="group__publication_1gad1de82b1bebeb8f47cd755d5f7b6fadb" kindref="member">DPS_AckPublicationBufs()</ref> </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>numBufs</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The number of payload buffers passed to <ref refid="group__publication_1gad1de82b1bebeb8f47cd755d5f7b6fadb" kindref="member">DPS_AckPublicationBufs()</ref> </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>status</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The status of the publish </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>data</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Application data passed to <ref refid="group__publication_1gad1de82b1bebeb8f47cd755d5f7b6fadb" kindref="member">DPS_AckPublicationBufs()</ref> </para></parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="902" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="902" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="group__publication_1gaf93282d11ef2e1fbbfc66c57851f43a6" prot="public" static="no">
+        <type>struct <ref refid="struct___d_p_s___buffer" kindref="compound">_DPS_Buffer</ref></type>
+        <definition>typedef struct _DPS_Buffer  DPS_Buffer</definition>
+        <argsstring></argsstring>
+        <name>DPS_Buffer</name>
+        <briefdescription>
+<para>A buffer. </para>        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="826" column="1"/>
       </memberdef>
       <memberdef kind="typedef" id="group__publication_1ga0d439693474aa54e27f3d45a054696ac" prot="public" static="no">
         <type>struct _DPS_Publication</type>
@@ -51,20 +113,56 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="615" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="628" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="627" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="640" bodyend="-1"/>
       </memberdef>
-      <memberdef kind="typedef" id="group__publication_1ga875f9462225b198bbf7dd1c4a5390017" prot="public" static="no">
-        <type>struct <ref refid="struct___d_p_s___qo_s" kindref="compound">_DPS_QoS</ref></type>
-        <definition>typedef struct _DPS_QoS  DPS_QoS</definition>
-        <argsstring></argsstring>
-        <name>DPS_QoS</name>
+      <memberdef kind="typedef" id="group__publication_1gaf1b7a008b10280f94a673e1b8e938e72" prot="public" static="no">
+        <type>void(*</type>
+        <definition>typedef void(* DPS_PublishBufsComplete) (DPS_Publication *pub, const DPS_Buffer *bufs, size_t numBufs, DPS_Status status, void *data)</definition>
+        <argsstring>)(DPS_Publication *pub, const DPS_Buffer *bufs, size_t numBufs, DPS_Status status, void *data)</argsstring>
+        <name>DPS_PublishBufsComplete</name>
         <briefdescription>
-<para>The Quality-of-Service (QoS) parameters. </para>        </briefdescription>
+<para>Called when <ref refid="group__publication_1gad0efefd35f178638f0fd4decdc28e6a6" kindref="member">DPS_PublishBufs()</ref> completes. </para>        </briefdescription>
         <detaileddescription>
-        </detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>pub</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The publication </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>bufs</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The payload buffers passed to <ref refid="group__publication_1gad0efefd35f178638f0fd4decdc28e6a6" kindref="member">DPS_PublishBufs()</ref> </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>numBufs</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The number of payload buffers passed to <ref refid="group__publication_1gad0efefd35f178638f0fd4decdc28e6a6" kindref="member">DPS_PublishBufs()</ref> </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>status</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The status of the publish </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>data</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Application data passed to <ref refid="group__publication_1gad0efefd35f178638f0fd4decdc28e6a6" kindref="member">DPS_PublishBufs()</ref> </para></parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="778" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="837" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="837" bodyend="-1"/>
       </memberdef>
       </sectiondef>
       <sectiondef kind="func">
@@ -92,7 +190,33 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="861" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="941" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="group__publication_1gac6d2481a76f2e14df45a6ed5d87ba070" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>uint32_t</type>
+        <definition>uint32_t DPS_AckGetSequenceNum</definition>
+        <argsstring>(const DPS_Publication *pub)</argsstring>
+        <name>DPS_AckGetSequenceNum</name>
+        <param>
+          <type>const <ref refid="group__publication_1ga0d439693474aa54e27f3d45a054696ac" kindref="member">DPS_Publication</ref> *</type>
+          <declname>pub</declname>
+        </param>
+        <briefdescription>
+<para>Get the sequence number being acknowledged, only valid with the body of the DPS_AcknowledgementHandler function. </para>        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>pub</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The pub parameter of DPS_AcknowledgementHandler</para></parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>The sequence number of the acknowledged publication. </para></simplesect>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="931" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__publication_1ga308074429a566ffb8d04d55bae520b04" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
@@ -140,7 +264,77 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="851" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="891" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="group__publication_1gad1de82b1bebeb8f47cd755d5f7b6fadb" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
+        <definition>DPS_Status DPS_AckPublicationBufs</definition>
+        <argsstring>(const DPS_Publication *pub, const DPS_Buffer *bufs, size_t numBufs, DPS_AckPublicationBufsComplete cb, void *data)</argsstring>
+        <name>DPS_AckPublicationBufs</name>
+        <param>
+          <type>const <ref refid="group__publication_1ga0d439693474aa54e27f3d45a054696ac" kindref="member">DPS_Publication</ref> *</type>
+          <declname>pub</declname>
+        </param>
+        <param>
+          <type>const <ref refid="group__publication_1gaf93282d11ef2e1fbbfc66c57851f43a6" kindref="member">DPS_Buffer</ref> *</type>
+          <declname>bufs</declname>
+        </param>
+        <param>
+          <type>size_t</type>
+          <declname>numBufs</declname>
+        </param>
+        <param>
+          <type><ref refid="group__publication_1ga5d62f70df03e7faf06494e89d74e346c" kindref="member">DPS_AckPublicationBufsComplete</ref></type>
+          <declname>cb</declname>
+        </param>
+        <param>
+          <type>void *</type>
+          <declname>data</declname>
+        </param>
+        <briefdescription>
+<para>Acknowledge a publication. </para>        </briefdescription>
+        <detaileddescription>
+<para>A publication should be acknowledged as soon as possible after receipt, ideally from within the publication handler callback function. If the publication cannot be acknowledged immediately in the publication handler callback, call <ref refid="group__publication_1ga41f31a8b63558e13d73d96de6086e5c4" kindref="member">DPS_CopyPublication()</ref> to make a partial copy of the publication that can be passed to this function at a later time.</para><para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>pub</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The publication to acknowledge </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>bufs</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Optional payload buffers - this memory must remain valid until the callback function is called </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>numBufs</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The number of buffers </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>cb</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Callback function called when the acknowledge is complete </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>data</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Data to be passed to the callback function</para></parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>DPS_OK if acknowledge is successful, an error otherwise </para></simplesect>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="920" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__publication_1ga41f31a8b63558e13d73d96de6086e5c4" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__publication_1ga0d439693474aa54e27f3d45a054696ac" kindref="member">DPS_Publication</ref> *</type>
@@ -166,7 +360,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="714" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="726" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__publication_1gaca070a96a6374e99a05d647c10737962" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__publication_1ga0d439693474aa54e27f3d45a054696ac" kindref="member">DPS_Publication</ref> *</type>
@@ -192,7 +386,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="701" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="713" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__publication_1ga17bb01c949aaaf3bafd53323c9effd5f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
@@ -218,7 +412,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="837" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="877" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__publication_1gaa8bee35089ac62289c9ba0e6a0568ca0" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>void *</type>
@@ -244,7 +438,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="733" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="745" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__publication_1ga7b0709e28cb34d5a30b90e4142cd6c19" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
@@ -325,7 +519,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="765" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="777" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__publication_1ga91471ddf6f66798e255b28b3e913144b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
@@ -362,44 +556,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="798" column="1"/>
-      </memberdef>
-      <memberdef kind="function" id="group__publication_1ga027a7ee80859f47a3263e29d8c989c40" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
-        <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
-        <definition>DPS_Status DPS_PublicationConfigureQoS</definition>
-        <argsstring>(DPS_Publication *pub, const DPS_QoS *qos)</argsstring>
-        <name>DPS_PublicationConfigureQoS</name>
-        <param>
-          <type><ref refid="group__publication_1ga0d439693474aa54e27f3d45a054696ac" kindref="member">DPS_Publication</ref> *</type>
-          <declname>pub</declname>
-        </param>
-        <param>
-          <type>const <ref refid="group__publication_1ga875f9462225b198bbf7dd1c4a5390017" kindref="member">DPS_QoS</ref> *</type>
-          <declname>qos</declname>
-        </param>
-        <briefdescription>
-<para>Configure the Quality-of-Service (QoS) parameters of a publication. </para>        </briefdescription>
-        <detaileddescription>
-<para><parameterlist kind="param"><parameteritem>
-<parameternamelist>
-<parametername>pub</parametername>
-</parameternamelist>
-<parameterdescription>
-<para>The publication to initialize </para></parameterdescription>
-</parameteritem>
-<parameteritem>
-<parameternamelist>
-<parametername>qos</parametername>
-</parameternamelist>
-<parameterdescription>
-<para>The QoS parameters</para></parameterdescription>
-</parameteritem>
-</parameterlist>
-<simplesect kind="return"><para>DPS_OK if configuration is successful, an error otherwise </para></simplesect>
-</para>        </detaileddescription>
-        <inbodydescription>
-        </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="788" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="792" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__publication_1gad2a37d52f12c93434b431eefd732f363" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__node_1ga4dd612ab965134321bb57fdb065f121c" kindref="member">DPS_Node</ref> *</type>
@@ -425,7 +582,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="692" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="704" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__publication_1gaee6fc3b13484faacff0d26646778f777" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>size_t</type>
@@ -451,7 +608,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="665" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="677" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__publication_1ga1d7e81c2f0b19736a4f7a7195e5bd98d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>const <ref refid="group__keystore_1ga4345e29dd2ad5d7fd88a1e988787bd72" kindref="member">DPS_KeyId</ref> *</type>
@@ -477,7 +634,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="683" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="695" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__publication_1ga875b48217d861d4a9fa5471419d354e9" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>uint32_t</type>
@@ -503,7 +660,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="646" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="658" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__publication_1ga143a5c6fbe0bdf1725e841f122582432" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>const char *</type>
@@ -540,7 +697,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="656" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="668" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__publication_1gaba1ad3ee807b75a1281d334be06a12f7" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>const <ref refid="group__uuid_1gaef1d03afcc6410602ade1d48f24c3997" kindref="member">DPS_UUID</ref> *</type>
@@ -566,7 +723,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="637" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="649" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__publication_1ga516f7f314c7b95210751d00285758b9b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>int</type>
@@ -592,7 +749,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="674" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="686" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__publication_1gaa5225be2733d6ebfd01f9475e3fc06f5" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>void</type>
@@ -628,7 +785,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="806" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="800" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__publication_1ga828a4efc5c235c48a81f6460cc3fe416" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
@@ -687,7 +844,89 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="824" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="818" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="group__publication_1gad0efefd35f178638f0fd4decdc28e6a6" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
+        <definition>DPS_Status DPS_PublishBufs</definition>
+        <argsstring>(DPS_Publication *pub, const DPS_Buffer *bufs, size_t numBufs, int16_t ttl, DPS_PublishBufsComplete cb, void *data)</argsstring>
+        <name>DPS_PublishBufs</name>
+        <param>
+          <type><ref refid="group__publication_1ga0d439693474aa54e27f3d45a054696ac" kindref="member">DPS_Publication</ref> *</type>
+          <declname>pub</declname>
+        </param>
+        <param>
+          <type>const <ref refid="group__publication_1gaf93282d11ef2e1fbbfc66c57851f43a6" kindref="member">DPS_Buffer</ref> *</type>
+          <declname>bufs</declname>
+        </param>
+        <param>
+          <type>size_t</type>
+          <declname>numBufs</declname>
+        </param>
+        <param>
+          <type>int16_t</type>
+          <declname>ttl</declname>
+        </param>
+        <param>
+          <type><ref refid="group__publication_1gaf1b7a008b10280f94a673e1b8e938e72" kindref="member">DPS_PublishBufsComplete</ref></type>
+          <declname>cb</declname>
+        </param>
+        <param>
+          <type>void *</type>
+          <declname>data</declname>
+        </param>
+        <briefdescription>
+<para>Publish a set of topics along with an optional payload. </para>        </briefdescription>
+        <detaileddescription>
+<para>The topics will be published immediately to matching subscribers and then re-published whenever a new matching subscription is received.</para><para>Call the accessor function <ref refid="group__publication_1gaba1ad3ee807b75a1281d334be06a12f7" kindref="member">DPS_PublicationGetUUID()</ref> to get the UUID for this publication. Call the accessor function <ref refid="group__publication_1ga875b48217d861d4a9fa5471419d354e9" kindref="member">DPS_PublicationGetSequenceNum()</ref> to get the current sequence number for this publication. The sequence number is incremented each time <ref refid="group__publication_1ga828a4efc5c235c48a81f6460cc3fe416" kindref="member">DPS_Publish()</ref> is called for the same publication.</para><para><simplesect kind="note"><para>When the ttl is greater than zero, the callback function will not be called until the publication expires, is replaced by a subsequent call to <ref refid="group__publication_1gad0efefd35f178638f0fd4decdc28e6a6" kindref="member">DPS_PublishBufs()</ref>, is canceled, or is destroyed.</para></simplesect>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>pub</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The publication to send </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>bufs</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Optional payload buffers - this memory must remain valid until the callback function is called </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>numBufs</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The number of buffers </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>ttl</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Time to live in seconds - maximum TTL is about 9 hours </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>cb</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Callback function called when the publish is complete </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>data</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Data to be passed to the callback function</para></parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>DPS_OK if the topics were successfully published </para></simplesect>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="863" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__publication_1ga91c46ccb6df7f4bb99ca5d9d35cc5a4a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
@@ -724,7 +963,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="724" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="736" column="1"/>
       </memberdef>
       </sectiondef>
     <briefdescription>

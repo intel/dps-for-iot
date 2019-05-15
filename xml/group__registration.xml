@@ -12,14 +12,14 @@
         <argsstring>)(DPS_RegistrationList *regs, DPS_Status status, void *data)</argsstring>
         <name>DPS_OnRegGetComplete</name>
         <briefdescription>
-<para>Function prototype for callback called when <ref refid="group__registration_1ga2321a01538e7983ad7685683a16df8c8" kindref="member">DPS_Registration_Get()</ref> completes. </para>        </briefdescription>
+<para>Function prototype for callback called when <ref refid="group__registration_1gabf1584c9da76f2cb82ca3c635bcd6b4b" kindref="member">DPS_Registration_Get()</ref> completes. </para>        </briefdescription>
         <detaileddescription>
 <para><parameterlist kind="param"><parameteritem>
 <parameternamelist>
 <parametername>regs</parametername>
 </parameternamelist>
 <parameterdescription>
-<para>Struct containing the list of candidate passed in to <ref refid="group__registration_1ga2321a01538e7983ad7685683a16df8c8" kindref="member">DPS_Registration_Get()</ref> </para></parameterdescription>
+<para>Struct containing the list of candidate passed in to <ref refid="group__registration_1gabf1584c9da76f2cb82ca3c635bcd6b4b" kindref="member">DPS_Registration_Get()</ref> </para></parameterdescription>
 </parameteritem>
 <parameteritem>
 <parameternamelist>
@@ -33,18 +33,18 @@
 <parametername>data</parametername>
 </parameternamelist>
 <parameterdescription>
-<para>Caller supplied data passed into the <ref refid="group__registration_1ga2321a01538e7983ad7685683a16df8c8" kindref="member">DPS_Registration_Get()</ref> </para></parameterdescription>
+<para>Caller supplied data passed into the <ref refid="group__registration_1gabf1584c9da76f2cb82ca3c635bcd6b4b" kindref="member">DPS_Registration_Get()</ref> </para></parameterdescription>
 </parameteritem>
 </parameterlist>
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="147" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" bodystart="147" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="145" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" bodystart="145" bodyend="-1"/>
       </memberdef>
-      <memberdef kind="typedef" id="group__registration_1gaaa0a8c9235e57aaf3e95dc3ecbf13c53" prot="public" static="no">
+      <memberdef kind="typedef" id="group__registration_1ga05d1d7333298410786f19f9aa1d3e5bc" prot="public" static="no">
         <type>void(*</type>
-        <definition>typedef void(* DPS_OnRegLinkToComplete) (DPS_Node *node, DPS_RegistrationList *regs, DPS_NodeAddress *addr, DPS_Status status, void *data)</definition>
-        <argsstring>)(DPS_Node *node, DPS_RegistrationList *regs, DPS_NodeAddress *addr, DPS_Status status, void *data)</argsstring>
+        <definition>typedef void(* DPS_OnRegLinkToComplete) (DPS_Node *node, DPS_RegistrationList *regs, const DPS_NodeAddress *addr, DPS_Status status, void *data)</definition>
+        <argsstring>)(DPS_Node *node, DPS_RegistrationList *regs, const DPS_NodeAddress *addr, DPS_Status status, void *data)</argsstring>
         <name>DPS_OnRegLinkToComplete</name>
         <briefdescription>
 <para>Function prototype for callback called when <ref refid="group__registration_1ga73550318aa9625aff612e549e9854e0c" kindref="member">DPS_Registration_LinkTo()</ref> completes. </para>        </briefdescription>
@@ -83,7 +83,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="196" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" bodystart="196" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="194" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" bodystart="194" bodyend="-1"/>
       </memberdef>
       <memberdef kind="typedef" id="group__registration_1ga8f1d316de08b7dea7dfe55ae814e0219" prot="public" static="no">
         <type>void(*</type>
@@ -91,7 +91,7 @@
         <argsstring>)(DPS_Status status, void *data)</argsstring>
         <name>DPS_OnRegPutComplete</name>
         <briefdescription>
-<para>Function prototype for callback called when <ref refid="group__registration_1ga29a03abc318fd39e11847d7b4f7bf520" kindref="member">DPS_Registration_Put()</ref> completes. </para>        </briefdescription>
+<para>Function prototype for callback called when <ref refid="group__registration_1ga5c9662a8a91edb074cd458482b4ee53b" kindref="member">DPS_Registration_Put()</ref> completes. </para>        </briefdescription>
         <detaileddescription>
 <para><parameterlist kind="param"><parameteritem>
 <parameternamelist>
@@ -107,13 +107,13 @@
 <parametername>data</parametername>
 </parameternamelist>
 <parameterdescription>
-<para>Caller supplied data passed into the <ref refid="group__registration_1ga29a03abc318fd39e11847d7b4f7bf520" kindref="member">DPS_Registration_Put()</ref> </para></parameterdescription>
+<para>Caller supplied data passed into the <ref refid="group__registration_1ga5c9662a8a91edb074cd458482b4ee53b" kindref="member">DPS_Registration_Put()</ref> </para></parameterdescription>
 </parameteritem>
 </parameterlist>
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="107" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" bodystart="107" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="106" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" bodystart="106" bodyend="-1"/>
       </memberdef>
       <memberdef kind="typedef" id="group__registration_1gac06db7e10b2626b06bacd09414e7d740" prot="public" static="no">
         <type>struct <ref refid="struct___d_p_s___registration" kindref="compound">_DPS_Registration</ref></type>
@@ -126,7 +126,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="71" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="70" column="1"/>
       </memberdef>
       <memberdef kind="typedef" id="group__registration_1ga2b9489ff306ad253d24b03c418a6eda0" prot="public" static="no">
         <type>struct <ref refid="struct___d_p_s___registration_list" kindref="compound">_DPS_RegistrationList</ref></type>
@@ -139,7 +139,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="80" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="79" column="1"/>
       </memberdef>
       </sectiondef>
       <sectiondef kind="var">
@@ -182,7 +182,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="89" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="88" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__registration_1ga0dbaa5dbea47290035a11dc22fc45f2d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>void</type>
@@ -207,12 +207,12 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="96" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="95" column="1"/>
       </memberdef>
-      <memberdef kind="function" id="group__registration_1ga2321a01538e7983ad7685683a16df8c8" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+      <memberdef kind="function" id="group__registration_1gabf1584c9da76f2cb82ca3c635bcd6b4b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
         <definition>DPS_Status DPS_Registration_Get</definition>
-        <argsstring>(DPS_Node *node, const char *host, uint16_t port, const char *tenantString, DPS_RegistrationList *regs, uint16_t timeout, DPS_OnRegGetComplete cb, void *data)</argsstring>
+        <argsstring>(DPS_Node *node, const char *addrText, const char *tenantString, DPS_RegistrationList *regs, uint16_t timeout, DPS_OnRegGetComplete cb, void *data)</argsstring>
         <name>DPS_Registration_Get</name>
         <param>
           <type><ref refid="group__node_1ga4dd612ab965134321bb57fdb065f121c" kindref="member">DPS_Node</ref> *</type>
@@ -220,11 +220,7 @@
         </param>
         <param>
           <type>const char *</type>
-          <declname>host</declname>
-        </param>
-        <param>
-          <type>uint16_t</type>
-          <declname>port</declname>
+          <declname>addrText</declname>
         </param>
         <param>
           <type>const char *</type>
@@ -247,7 +243,7 @@
           <declname>data</declname>
         </param>
         <briefdescription>
-<para>Resolve the host and port of a registration service and lookup the addresses registered with that service. </para>        </briefdescription>
+<para>Lookup the addresses registered with a registration service. </para>        </briefdescription>
         <detaileddescription>
 <para><parameterlist kind="param"><parameteritem>
 <parameternamelist>
@@ -258,17 +254,10 @@
 </parameteritem>
 <parameteritem>
 <parameternamelist>
-<parametername>host</parametername>
+<parametername>addrText</parametername>
 </parameternamelist>
 <parameterdescription>
-<para>The host name or IP address to register with </para></parameterdescription>
-</parameteritem>
-<parameteritem>
-<parameternamelist>
-<parametername>port</parametername>
-</parameternamelist>
-<parameterdescription>
-<para>The port number </para></parameterdescription>
+<para>The text string of the registration service address </para></parameterdescription>
 </parameteritem>
 <parameteritem>
 <parameternamelist>
@@ -310,12 +299,12 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="167" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="163" column="1"/>
       </memberdef>
-      <memberdef kind="function" id="group__registration_1ga8d4821485ce50e028e3057fc47d62e4a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+      <memberdef kind="function" id="group__registration_1ga3d70931a0e92d8ed633ed8dc86921413" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
         <definition>DPS_Status DPS_Registration_GetSyn</definition>
-        <argsstring>(DPS_Node *node, const char *host, uint16_t port, const char *tenantString, DPS_RegistrationList *regs, uint16_t timeout)</argsstring>
+        <argsstring>(DPS_Node *node, const char *addrText, const char *tenantString, DPS_RegistrationList *regs, uint16_t timeout)</argsstring>
         <name>DPS_Registration_GetSyn</name>
         <param>
           <type><ref refid="group__node_1ga4dd612ab965134321bb57fdb065f121c" kindref="member">DPS_Node</ref> *</type>
@@ -323,11 +312,7 @@
         </param>
         <param>
           <type>const char *</type>
-          <declname>host</declname>
-        </param>
-        <param>
-          <type>uint16_t</type>
-          <declname>port</declname>
+          <declname>addrText</declname>
         </param>
         <param>
           <type>const char *</type>
@@ -353,17 +338,10 @@
 </parameteritem>
 <parameteritem>
 <parameternamelist>
-<parametername>host</parametername>
+<parametername>addrText</parametername>
 </parameternamelist>
 <parameterdescription>
-<para>The host name or IP address to register with </para></parameterdescription>
-</parameteritem>
-<parameteritem>
-<parameternamelist>
-<parametername>port</parametername>
-</parameternamelist>
-<parameterdescription>
-<para>The port number </para></parameterdescription>
+<para>The text string of the registration service address </para></parameterdescription>
 </parameteritem>
 <parameteritem>
 <parameternamelist>
@@ -391,7 +369,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="182" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="179" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__registration_1ga73550318aa9625aff612e549e9854e0c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
@@ -407,7 +385,7 @@
           <declname>regs</declname>
         </param>
         <param>
-          <type><ref refid="group__registration_1gaaa0a8c9235e57aaf3e95dc3ecbf13c53" kindref="member">DPS_OnRegLinkToComplete</ref></type>
+          <type><ref refid="group__registration_1ga05d1d7333298410786f19f9aa1d3e5bc" kindref="member">DPS_OnRegLinkToComplete</ref></type>
           <declname>cb</declname>
         </param>
         <param>
@@ -452,7 +430,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="211" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="209" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__registration_1gab50e1fb04be97888ec759b1f0b3df1e6" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
@@ -502,12 +480,12 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="225" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="223" column="1"/>
       </memberdef>
-      <memberdef kind="function" id="group__registration_1ga29a03abc318fd39e11847d7b4f7bf520" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+      <memberdef kind="function" id="group__registration_1ga5c9662a8a91edb074cd458482b4ee53b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
         <definition>DPS_Status DPS_Registration_Put</definition>
-        <argsstring>(DPS_Node *node, const char *host, uint16_t port, const char *tenantString, uint16_t timeout, DPS_OnRegPutComplete cb, void *data)</argsstring>
+        <argsstring>(DPS_Node *node, const char *addrText, const char *tenantString, uint16_t timeout, DPS_OnRegPutComplete cb, void *data)</argsstring>
         <name>DPS_Registration_Put</name>
         <param>
           <type><ref refid="group__node_1ga4dd612ab965134321bb57fdb065f121c" kindref="member">DPS_Node</ref> *</type>
@@ -515,11 +493,7 @@
         </param>
         <param>
           <type>const char *</type>
-          <declname>host</declname>
-        </param>
-        <param>
-          <type>uint16_t</type>
-          <declname>port</declname>
+          <declname>addrText</declname>
         </param>
         <param>
           <type>const char *</type>
@@ -538,7 +512,7 @@
           <declname>data</declname>
         </param>
         <briefdescription>
-<para>Resolve the host and port of a registration service and register a local node with that service. </para>        </briefdescription>
+<para>Register a local node with a registration service. </para>        </briefdescription>
         <detaileddescription>
 <para><parameterlist kind="param"><parameteritem>
 <parameternamelist>
@@ -549,17 +523,10 @@
 </parameteritem>
 <parameteritem>
 <parameternamelist>
-<parametername>host</parametername>
+<parametername>addrText</parametername>
 </parameternamelist>
 <parameterdescription>
-<para>The host name or IP address to register with </para></parameterdescription>
-</parameteritem>
-<parameteritem>
-<parameternamelist>
-<parametername>port</parametername>
-</parameternamelist>
-<parameterdescription>
-<para>The port number </para></parameterdescription>
+<para>The text string of the registration service address </para></parameterdescription>
 </parameteritem>
 <parameteritem>
 <parameternamelist>
@@ -594,12 +561,12 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="124" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="121" column="1"/>
       </memberdef>
-      <memberdef kind="function" id="group__registration_1ga5f1d9eac3ac7ac4869e40b2e33c8ae12" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+      <memberdef kind="function" id="group__registration_1ga6322e280f49b13dd8d99e942a903ea04" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
         <definition>DPS_Status DPS_Registration_PutSyn</definition>
-        <argsstring>(DPS_Node *node, const char *host, uint16_t port, const char *tenantString, uint16_t timeout)</argsstring>
+        <argsstring>(DPS_Node *node, const char *addrText, const char *tenantString, uint16_t timeout)</argsstring>
         <name>DPS_Registration_PutSyn</name>
         <param>
           <type><ref refid="group__node_1ga4dd612ab965134321bb57fdb065f121c" kindref="member">DPS_Node</ref> *</type>
@@ -607,11 +574,7 @@
         </param>
         <param>
           <type>const char *</type>
-          <declname>host</declname>
-        </param>
-        <param>
-          <type>uint16_t</type>
-          <declname>port</declname>
+          <declname>addrText</declname>
         </param>
         <param>
           <type>const char *</type>
@@ -633,17 +596,10 @@
 </parameteritem>
 <parameteritem>
 <parameternamelist>
-<parametername>host</parametername>
+<parametername>addrText</parametername>
 </parameternamelist>
 <parameterdescription>
-<para>The host name or IP address to register with </para></parameterdescription>
-</parameteritem>
-<parameteritem>
-<parameternamelist>
-<parametername>port</parametername>
-</parameternamelist>
-<parameterdescription>
-<para>The port number </para></parameterdescription>
+<para>The text string of the registration service address </para></parameterdescription>
 </parameteritem>
 <parameteritem>
 <parameternamelist>
@@ -664,7 +620,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="138" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="135" column="1"/>
       </memberdef>
       </sectiondef>
       <sectiondef kind="define">

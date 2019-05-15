@@ -34,6 +34,7 @@
   ? 11 =&gt; [ + topic: tstr ], ; # topics - the topic strings
   ? 12 =&gt; bstr,              ; # data - payload data
   ? 13 =&gt; uint               ; # ack-seq-num - sequence number for an acknowledgement
+  ? 14 =&gt; tstr               ; # path - path sender is listening on
 )
 </verbatim></para><para>The description of each message type includes what fields are mandatory or optional for each section.</para></sect2>
 <sect2 id="message-types-and-flow_1uuid">
@@ -66,11 +67,11 @@
 <sect1 id="message-types-and-flow_1publication-message">
 <title>Publication message</title>
 <para><verbatim>pub = 1
-</verbatim></para><para><emphasis>port</emphasis> and <emphasis>ttl</emphasis> are mandatory in the <emphasis>unprotected</emphasis> section.</para><para><emphasis>ttl</emphasis>, <emphasis>pub-id</emphasis>, <emphasis>seq-num</emphasis>, <emphasis>ack-req</emphasis> and <emphasis>bloom-filter</emphasis> are mandatory in the <emphasis>protected</emphasis> section.</para><para><emphasis>topics</emphasis> and <emphasis>data</emphasis> are mandatory in the <emphasis>encrypted</emphasis> section.</para></sect1>
+</verbatim></para><para><emphasis>ttl</emphasis> and one of <emphasis>port</emphasis> or <emphasis>path</emphasis> are mandatory in the <emphasis>unprotected</emphasis> section.</para><para><emphasis>ttl</emphasis>, <emphasis>pub-id</emphasis>, <emphasis>seq-num</emphasis>, <emphasis>ack-req</emphasis> and <emphasis>bloom-filter</emphasis> are mandatory in the <emphasis>protected</emphasis> section.</para><para><emphasis>topics</emphasis> and <emphasis>data</emphasis> are mandatory in the <emphasis>encrypted</emphasis> section.</para></sect1>
 <sect1 id="message-types-and-flow_1subscription-message">
 <title>Subscription message</title>
 <para><verbatim>sub = 2
-</verbatim></para><para><emphasis>port</emphasis> and <emphasis>seq-num</emphasis> are mandatory in the <emphasis>unprotected</emphasis> section.</para><para>Additionally, in a regular subscription message, <emphasis>sub-flags</emphasis>, <emphasis>mesh-id</emphasis>, <emphasis>needs</emphasis> and <emphasis>interests</emphasis> are mandatory in the <emphasis>unprotected</emphasis> section. In an unlink subscription message those fields shall be absent.</para></sect1>
+</verbatim></para><para><emphasis>seq-num</emphasis> and one of <emphasis>port</emphasis> or <emphasis>path</emphasis> are mandatory in the <emphasis>unprotected</emphasis> section.</para><para>Additionally, in a regular subscription message, <emphasis>sub-flags</emphasis>, <emphasis>mesh-id</emphasis>, <emphasis>needs</emphasis> and <emphasis>interests</emphasis> are mandatory in the <emphasis>unprotected</emphasis> section. In an unlink subscription message those fields shall be absent.</para></sect1>
 <sect1 id="message-types-and-flow_1acknowledgement-message">
 <title>Acknowledgement message</title>
 <para><verbatim>ack = 3
@@ -78,7 +79,7 @@
 <sect1 id="message-types-and-flow_1subscription-acknowledgement-message">
 <title>Subscription acknowledgement message</title>
 <para><verbatim>sak = 4
-</verbatim></para><para><emphasis>port</emphasis> and <emphasis>ack-seq-num</emphasis> are mandatory in the <emphasis>unprotected</emphasis> section. </para></sect1>
+</verbatim></para><para><emphasis>ack-seq-num</emphasis> and one of <emphasis>port</emphasis> or <emphasis>path</emphasis> are mandatory in the <emphasis>unprotected</emphasis> section. </para></sect1>
     </detaileddescription>
   </compounddef>
 </doxygen>

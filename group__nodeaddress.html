@@ -117,9 +117,9 @@ Functions</h2></td></tr>
 <tr class="memitem:gafc7b21048f92370ca29325d6245b576d"><td class="memItemLeft" align="right" valign="top">const char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__nodeaddress.html#gafc7b21048f92370ca29325d6245b576d">DPS_NodeAddrToString</a> (const <a class="el" href="group__nodeaddress.html#ga9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *addr)</td></tr>
 <tr class="memdesc:gafc7b21048f92370ca29325d6245b576d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get text representation of an address.  <a href="#gafc7b21048f92370ca29325d6245b576d">More...</a><br /></td></tr>
 <tr class="separator:gafc7b21048f92370ca29325d6245b576d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga6231c243c483bd2d282f7df734a98946"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__nodeaddress.html#ga9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__nodeaddress.html#ga6231c243c483bd2d282f7df734a98946">DPS_SetAddress</a> (<a class="el" href="group__nodeaddress.html#ga9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *addr, const struct sockaddr *sa)</td></tr>
-<tr class="memdesc:ga6231c243c483bd2d282f7df734a98946"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set a node address.  <a href="#ga6231c243c483bd2d282f7df734a98946">More...</a><br /></td></tr>
-<tr class="separator:ga6231c243c483bd2d282f7df734a98946"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga1492aff0a8789c4b8a7cc47c84ca1b1f"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__nodeaddress.html#ga9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__nodeaddress.html#ga1492aff0a8789c4b8a7cc47c84ca1b1f">DPS_SetAddress</a> (<a class="el" href="group__nodeaddress.html#ga9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *addr, const char *addrText)</td></tr>
+<tr class="memdesc:ga1492aff0a8789c4b8a7cc47c84ca1b1f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set a node address.  <a href="#ga1492aff0a8789c4b8a7cc47c84ca1b1f">More...</a><br /></td></tr>
+<tr class="separator:ga1492aff0a8789c4b8a7cc47c84ca1b1f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <p>Remote node addresses. </p>
@@ -236,8 +236,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="ga6231c243c483bd2d282f7df734a98946"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga6231c243c483bd2d282f7df734a98946">&#9670;&nbsp;</a></span>DPS_SetAddress()</h2>
+<a id="ga1492aff0a8789c4b8a7cc47c84ca1b1f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga1492aff0a8789c4b8a7cc47c84ca1b1f">&#9670;&nbsp;</a></span>DPS_SetAddress()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -251,8 +251,8 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const struct sockaddr *&#160;</td>
-          <td class="paramname"><em>sa</em>&#160;</td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>addrText</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -266,11 +266,11 @@ Functions</h2></td></tr>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">addr</td><td>The address to set </td></tr>
-    <tr><td class="paramname">sa</td><td>The value to set</td></tr>
+    <tr><td class="paramname">addrText</td><td>The text string for the address</td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>The addr passed in. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>The addr passed in, or NULL if an error occurred </dd></dl>
 
 </div>
 </div>
@@ -278,7 +278,7 @@ Functions</h2></td></tr>
 </div><!-- doc-content -->
 <div class="navpath" id="nav-path">
   <ul>
-    <li class="footer" style="float:left"><b>Distributed Publish & Subscribe for IoT</b></li> <li class="footer">Generated Thu Jan 10 2019 15:50:17</li>
+    <li class="footer" style="float:left"><b>Distributed Publish & Subscribe for IoT</b></li> <li class="footer">Generated Wed May 15 2019 11:59:58</li>
   </ul>
 </div>
 </body>

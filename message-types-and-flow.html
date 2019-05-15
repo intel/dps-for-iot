@@ -137,6 +137,7 @@ Field member keys</h2>
   ? 11 =&gt; [ + topic: tstr ], ; # topics - the topic strings
   ? 12 =&gt; bstr,              ; # data - payload data
   ? 13 =&gt; uint               ; # ack-seq-num - sequence number for an acknowledgement
+  ? 14 =&gt; tstr               ; # path - path sender is listening on
 )
 </pre><p>The description of each message type includes what fields are mandatory or optional for each section.</p>
 <h2><a class="anchor" id="uuid"></a>
@@ -168,13 +169,13 @@ Subscription flags</h2>
 </pre><h1><a class="anchor" id="publication-message"></a>
 Publication message</h1>
 <pre class="fragment">pub = 1
-</pre><p><em>port</em> and <em>ttl</em> are mandatory in the <em>unprotected</em> section.</p>
+</pre><p><em>ttl</em> and one of <em>port</em> or <em>path</em> are mandatory in the <em>unprotected</em> section.</p>
 <p><em>ttl</em>, <em>pub-id</em>, <em>seq-num</em>, <em>ack-req</em> and <em>bloom-filter</em> are mandatory in the <em>protected</em> section.</p>
 <p><em>topics</em> and <em>data</em> are mandatory in the <em>encrypted</em> section.</p>
 <h1><a class="anchor" id="subscription-message"></a>
 Subscription message</h1>
 <pre class="fragment">sub = 2
-</pre><p><em>port</em> and <em>seq-num</em> are mandatory in the <em>unprotected</em> section.</p>
+</pre><p><em>seq-num</em> and one of <em>port</em> or <em>path</em> are mandatory in the <em>unprotected</em> section.</p>
 <p>Additionally, in a regular subscription message, <em>sub-flags</em>, <em>mesh-id</em>, <em>needs</em> and <em>interests</em> are mandatory in the <em>unprotected</em> section. In an unlink subscription message those fields shall be absent.</p>
 <h1><a class="anchor" id="acknowledgement-message"></a>
 Acknowledgement message</h1>
@@ -184,12 +185,12 @@ Acknowledgement message</h1>
 <h1><a class="anchor" id="subscription-acknowledgement-message"></a>
 Subscription acknowledgement message</h1>
 <pre class="fragment">sak = 4
-</pre><p><em>port</em> and <em>ack-seq-num</em> are mandatory in the <em>unprotected</em> section. </p>
+</pre><p><em>ack-seq-num</em> and one of <em>port</em> or <em>path</em> are mandatory in the <em>unprotected</em> section. </p>
 </div></div><!-- contents -->
 </div><!-- doc-content -->
 <div class="navpath" id="nav-path">
   <ul>
-    <li class="footer" style="float:left"><b>Distributed Publish & Subscribe for IoT</b></li> <li class="footer">Generated Thu Jan 10 2019 15:50:17</li>
+    <li class="footer" style="float:left"><b>Distributed Publish & Subscribe for IoT</b></li> <li class="footer">Generated Wed May 15 2019 11:59:58</li>
   </ul>
 </div>
 </body>

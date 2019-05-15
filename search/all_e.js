@@ -1,6 +1,6 @@
 var searchData=
 [
-  ['registration',['Registration',['../group__registration.html',1,'']]],
-  ['registration_2eh',['registration.h',['../registration_8h.html',1,'']]],
-  ['retained_20publications',['Retained Publications',['../retained-publications.html',1,'index']]]
+  ['password',['password',['../struct___d_p_s___key_cert.html#a18f3f492b66fbeb3de6a09aff54369cf',1,'_DPS_KeyCert']]],
+  ['privatekey',['privateKey',['../struct___d_p_s___key_cert.html#a0ba1842f3982c930ba76469349b0812d',1,'_DPS_KeyCert']]],
+  ['publication',['Publication',['../group__publication.html',1,'']]]
 ];

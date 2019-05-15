@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['building_20and_20running',['Building and Running',['../building-and-running.html',1,'']]],
-  ['building_20a_20dps_20network',['Building a DPS network',['../tutorials-link.html',1,'tutorials']]]
+  ['addrtext',['addrText',['../struct___d_p_s___registration.html#a89f5b9832f379bcb2954cbe9563a49d5',1,'_DPS_Registration']]]
 ];

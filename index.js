@@ -33,6 +33,7 @@ var index =
         [ "Key Derivation Functions", "security.html#key-derivation-functions", null ]
       ] ],
       [ "Counter Signatures", "security.html#counter-signatures", null ],
+      [ "Signatures", "security.html#signatures", null ],
       [ "Examples", "security.html#examples", null ]
     ] ]
 ];

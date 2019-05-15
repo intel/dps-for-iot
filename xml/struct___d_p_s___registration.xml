@@ -4,6 +4,19 @@
     <compoundname>_DPS_Registration</compoundname>
     <includes refid="registration_8h" local="no">registration.h</includes>
       <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="struct___d_p_s___registration_1a89f5b9832f379bcb2954cbe9563a49d5" prot="public" static="no" mutable="no">
+        <type>char *</type>
+        <definition>char* _DPS_Registration::addrText</definition>
+        <argsstring></argsstring>
+        <name>addrText</name>
+        <briefdescription>
+<para>The registered address text. </para>        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="69" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" bodystart="69" bodyend="-1"/>
+      </memberdef>
       <memberdef kind="variable" id="struct___d_p_s___registration_1a0201a3f33b4b0ad0ed7134607ccc7ecb" prot="public" static="no" mutable="no">
         <type>uint8_t</type>
         <definition>uint8_t _DPS_Registration::flags</definition>
@@ -17,42 +30,15 @@
         </inbodydescription>
         <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="68" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" bodystart="68" bodyend="-1"/>
       </memberdef>
-      <memberdef kind="variable" id="struct___d_p_s___registration_1ae78f74ba04a5f9cf7a48d4aa39a3e774" prot="public" static="no" mutable="no">
-        <type>char *</type>
-        <definition>char* _DPS_Registration::host</definition>
-        <argsstring></argsstring>
-        <name>host</name>
-        <briefdescription>
-<para>The registered host name or IP address. </para>        </briefdescription>
-        <detaileddescription>
-        </detaileddescription>
-        <inbodydescription>
-        </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="70" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" bodystart="70" bodyend="-1"/>
-      </memberdef>
-      <memberdef kind="variable" id="struct___d_p_s___registration_1ab9ca063a4985209066220ac048085a57" prot="public" static="no" mutable="no">
-        <type>uint16_t</type>
-        <definition>uint16_t _DPS_Registration::port</definition>
-        <argsstring></argsstring>
-        <name>port</name>
-        <briefdescription>
-<para>The registered port. </para>        </briefdescription>
-        <detaileddescription>
-        </detaileddescription>
-        <inbodydescription>
-        </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="69" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" bodystart="69" bodyend="-1"/>
-      </memberdef>
       </sectiondef>
     <briefdescription>
 <para>Registration entry. </para>    </briefdescription>
     <detaileddescription>
     </detaileddescription>
-    <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="67" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" bodystart="67" bodyend="71"/>
+    <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="67" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" bodystart="67" bodyend="70"/>
     <listofallmembers>
+      <member refid="struct___d_p_s___registration_1a89f5b9832f379bcb2954cbe9563a49d5" prot="public" virt="non-virtual"><scope>_DPS_Registration</scope><name>addrText</name></member>
       <member refid="struct___d_p_s___registration_1a0201a3f33b4b0ad0ed7134607ccc7ecb" prot="public" virt="non-virtual"><scope>_DPS_Registration</scope><name>flags</name></member>
-      <member refid="struct___d_p_s___registration_1ae78f74ba04a5f9cf7a48d4aa39a3e774" prot="public" virt="non-virtual"><scope>_DPS_Registration</scope><name>host</name></member>
-      <member refid="struct___d_p_s___registration_1ab9ca063a4985209066220ac048085a57" prot="public" virt="non-virtual"><scope>_DPS_Registration</scope><name>port</name></member>
     </listofallmembers>
   </compounddef>
 </doxygen>

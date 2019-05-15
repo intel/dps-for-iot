@@ -118,26 +118,28 @@ Multicast</h2>
 <li>Uri-Path: <em>dps/pub</em> </li>
 <li>Content-Format: <em>application/cbor</em> </li>
 </ul>
-<p>Control over sending and receiving multicast messages is provided via the <em>mcastPub</em> parameter of <a class="el" href="group__node.html#ga160d504bfaeb0d3711e0259000340fe3" title="Initialized and starts running a local node. ">DPS_StartNode()</a>.</p>
+<p>Control over sending and receiving multicast messages is provided via the <em>mcastPub</em> parameter of <a class="el" href="group__node.html#ga538588a1e2ea805377a90ac22ee6bc82" title="Initialized and starts running a local node. ">DPS_StartNode()</a>.</p>
 <h2><a class="anchor" id="Unicast"></a>
 Unicast</h2>
 <p>DPS implements three different transports for sending and receiving unicast messages.</p>
-<p>Unicast endpoints may be explicitly created and destroyed with <a class="el" href="group__node.html#ga5064c63b8ce76bf34402e0c80183234b" title="Link the local node to a remote node. ">DPS_Link()</a> and <a class="el" href="group__node.html#ga79c86c3c0c5d6438b953a9acaab0ab0b" title="Unlink the local node from a remote node. ">DPS_Unlink()</a>. The port used in unicast communication is provided via the <em>listenPort</em> parameter of <a class="el" href="group__node.html#ga160d504bfaeb0d3711e0259000340fe3" title="Initialized and starts running a local node. ">DPS_StartNode()</a>.</p>
+<p>Unicast endpoints may be explicitly created and destroyed with <a class="el" href="group__node.html#gab7616642a79f637aa146b3b1a4ed0af8" title="Link the local node to a remote node. ">DPS_Link()</a> and <a class="el" href="group__node.html#ga18398ef1e81c5dba98a95da6d18b937e" title="Unlink the local node from a remote node. ">DPS_Unlink()</a>. The port used in unicast communication is provided via the <em>listenPort</em> parameter of <a class="el" href="group__node.html#ga538588a1e2ea805377a90ac22ee6bc82" title="Initialized and starts running a local node. ">DPS_StartNode()</a>.</p>
 <h3><a class="anchor" id="UDP"></a>
 UDP</h3>
 <p>Each DPS message is contained in a single UDP datagram.</p>
+<p>DPS does not perform segmentation and reassembly of application payloads that do not fit into a single UDP datagram.</p>
 <h3><a class="anchor" id="TCP"></a>
 TCP</h3>
 <p>Each DPS message is prefixed with the length of the message encoded as a CBOR unsigned integer value.</p>
 <h3><a class="anchor" id="DTLS"></a>
 DTLS</h3>
 <p>DTLS provides message authentication, integrity and confidentiality above UDP. Each DPS message is contained in a single DTLS datagram.</p>
+<p>DPS does not perform segmentation and reassembly of application payloads that do not fit into a single DTLS fragment.</p>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="tutorials-security.html#enabling-network-layer-security">Enabling network layer security</a> </dd></dl>
 </div></div><!-- contents -->
 </div><!-- doc-content -->
 <div class="navpath" id="nav-path">
   <ul>
-    <li class="footer" style="float:left"><b>Distributed Publish & Subscribe for IoT</b></li> <li class="footer">Generated Thu Jan 10 2019 15:50:17</li>
+    <li class="footer" style="float:left"><b>Distributed Publish & Subscribe for IoT</b></li> <li class="footer">Generated Wed May 15 2019 11:59:58</li>
   </ul>
 </div>
 </body>

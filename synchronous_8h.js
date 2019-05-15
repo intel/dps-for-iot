@@ -1,5 +1,5 @@
 var synchronous_8h =
 [
-    [ "DPS_LinkTo", "group__node.html#ga0bd13b2bd395bbc7807ecc899a8862f1", null ],
-    [ "DPS_UnlinkFrom", "group__node.html#ga2d5bb0528c2a171991ad6355cbadac69", null ]
+    [ "DPS_LinkTo", "group__node.html#ga69325fd8127687c469e503763a29f6d8", null ],
+    [ "DPS_UnlinkFrom", "group__node.html#gae16f5ff85ac57a6f5567db73343c8af1", null ]
 ];

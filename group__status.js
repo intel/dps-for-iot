@@ -13,6 +13,7 @@ var group__status =
     [ "DPS_ERR_NETWORK", "group__status.html#ga80a0ccafe770ca4149e65300d870c0d9", null ],
     [ "DPS_ERR_NO_ROUTE", "group__status.html#ga934517e91f6e214fb6cab5089d5acc92", null ],
     [ "DPS_ERR_NODE_DESTROYED", "group__status.html#ga9047d1e219f2a62a948845d922582ec5", null ],
+    [ "DPS_ERR_NOT_COSE", "group__status.html#gac8f7574a1036052de3e6cd6d6447f226", null ],
     [ "DPS_ERR_NOT_ENCRYPTED", "group__status.html#gac13dac4973f6700ff95461171148c1c8", null ],
     [ "DPS_ERR_NOT_IMPLEMENTED", "group__status.html#gad175cd9050dec5f3a214bc62c3c7473c", null ],
     [ "DPS_ERR_NOT_INITIALIZED", "group__status.html#ga92b1c68aa4f1526347ccb76aa9382d76", null ],
