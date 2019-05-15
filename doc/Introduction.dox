@@ -8,7 +8,7 @@ communication pattern.
 The pub/sub pattern for device to device communication is simple and
 powerful. There are several existing pub/sub protocols seeing heavy
 use in IoT applications, perhaps most notably MQTT and DDS but there
-are numerous other. Two characteristics of pub/sub that make it
+are numerous others. Two characteristics of pub/sub that make it
 attractive for IoT uses cases are support for loose coupling between
 publishers and subscribers, and inherent support for
 point-to-multipoint messaging. There are generally two implementation
