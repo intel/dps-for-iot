@@ -94,6 +94,7 @@ $(document).ready(function(){initNavTree('mesh-network.html','');});
 <li class="level2"><a href="#Unicast">Unicast</a><ul><li class="level3"><a href="#UDP">UDP</a></li>
 <li class="level3"><a href="#TCP">TCP</a></li>
 <li class="level3"><a href="#DTLS">DTLS</a></li>
+<li class="level3"><a href="#Pipe">Pipe</a></li>
 </ul>
 </li>
 </ul>
@@ -121,7 +122,7 @@ Multicast</h2>
 <p>Control over sending and receiving multicast messages is provided via the <em>mcastPub</em> parameter of <a class="el" href="group__node.html#ga538588a1e2ea805377a90ac22ee6bc82" title="Initialized and starts running a local node. ">DPS_StartNode()</a>.</p>
 <h2><a class="anchor" id="Unicast"></a>
 Unicast</h2>
-<p>DPS implements three different transports for sending and receiving unicast messages.</p>
+<p>DPS implements four different transports for sending and receiving unicast messages.</p>
 <p>Unicast endpoints may be explicitly created and destroyed with <a class="el" href="group__node.html#gab7616642a79f637aa146b3b1a4ed0af8" title="Link the local node to a remote node. ">DPS_Link()</a> and <a class="el" href="group__node.html#ga18398ef1e81c5dba98a95da6d18b937e" title="Unlink the local node from a remote node. ">DPS_Unlink()</a>. The port used in unicast communication is provided via the <em>listenPort</em> parameter of <a class="el" href="group__node.html#ga538588a1e2ea805377a90ac22ee6bc82" title="Initialized and starts running a local node. ">DPS_StartNode()</a>.</p>
 <h3><a class="anchor" id="UDP"></a>
 UDP</h3>
@@ -134,12 +135,16 @@ TCP</h3>
 DTLS</h3>
 <p>DTLS provides message authentication, integrity and confidentiality above UDP. Each DPS message is contained in a single DTLS datagram.</p>
 <p>DPS does not perform segmentation and reassembly of application payloads that do not fit into a single DTLS fragment.</p>
+<h3><a class="anchor" id="Pipe"></a>
+Pipe</h3>
+<p>Pipe transports messages over local domain sockets on Unix and named pipes on Windows.</p>
+<p>Each DPS message is prefixed with the length of the message encoded as a CBOR unsigned integer value.</p>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="tutorials-security.html#enabling-network-layer-security">Enabling network layer security</a> </dd></dl>
 </div></div><!-- contents -->
 </div><!-- doc-content -->
 <div class="navpath" id="nav-path">
   <ul>
-    <li class="footer" style="float:left"><b>Distributed Publish & Subscribe for IoT</b></li> <li class="footer">Generated Wed May 15 2019 11:59:58</li>
+    <li class="footer" style="float:left"><b>Distributed Publish & Subscribe for IoT</b></li> <li class="footer">Generated Wed May 15 2019 12:06:23</li>
   </ul>
 </div>
 </body>

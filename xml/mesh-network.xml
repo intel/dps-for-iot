@@ -20,7 +20,7 @@
 </para><para>Control over sending and receiving multicast messages is provided via the <emphasis>mcastPub</emphasis> parameter of <ref refid="group__node_1ga538588a1e2ea805377a90ac22ee6bc82" kindref="member">DPS_StartNode()</ref>.</para></sect2>
 <sect2 id="mesh-network_1Unicast">
 <title>Unicast</title>
-<para>DPS implements three different transports for sending and receiving unicast messages.</para><para>Unicast endpoints may be explicitly created and destroyed with <ref refid="group__node_1gab7616642a79f637aa146b3b1a4ed0af8" kindref="member">DPS_Link()</ref> and <ref refid="group__node_1ga18398ef1e81c5dba98a95da6d18b937e" kindref="member">DPS_Unlink()</ref>. The port used in unicast communication is provided via the <emphasis>listenPort</emphasis> parameter of <ref refid="group__node_1ga538588a1e2ea805377a90ac22ee6bc82" kindref="member">DPS_StartNode()</ref>.</para><sect3 id="mesh-network_1UDP">
+<para>DPS implements four different transports for sending and receiving unicast messages.</para><para>Unicast endpoints may be explicitly created and destroyed with <ref refid="group__node_1gab7616642a79f637aa146b3b1a4ed0af8" kindref="member">DPS_Link()</ref> and <ref refid="group__node_1ga18398ef1e81c5dba98a95da6d18b937e" kindref="member">DPS_Unlink()</ref>. The port used in unicast communication is provided via the <emphasis>listenPort</emphasis> parameter of <ref refid="group__node_1ga538588a1e2ea805377a90ac22ee6bc82" kindref="member">DPS_StartNode()</ref>.</para><sect3 id="mesh-network_1UDP">
 <title>UDP</title>
 <para>Each DPS message is contained in a single UDP datagram.</para><para>DPS does not perform segmentation and reassembly of application payloads that do not fit into a single UDP datagram.</para></sect3>
 <sect3 id="mesh-network_1TCP">
@@ -28,7 +28,10 @@
 <para>Each DPS message is prefixed with the length of the message encoded as a CBOR unsigned integer value.</para></sect3>
 <sect3 id="mesh-network_1DTLS">
 <title>DTLS</title>
-<para>DTLS provides message authentication, integrity and confidentiality above UDP. Each DPS message is contained in a single DTLS datagram.</para><para>DPS does not perform segmentation and reassembly of application payloads that do not fit into a single DTLS fragment.</para><para><simplesect kind="see"><para><ref refid="tutorials-security_1enabling-network-layer-security" kindref="member">Enabling network layer security</ref> </para></simplesect>
+<para>DTLS provides message authentication, integrity and confidentiality above UDP. Each DPS message is contained in a single DTLS datagram.</para><para>DPS does not perform segmentation and reassembly of application payloads that do not fit into a single DTLS fragment.</para></sect3>
+<sect3 id="mesh-network_1Pipe">
+<title>Pipe</title>
+<para>Pipe transports messages over local domain sockets on Unix and named pipes on Windows.</para><para>Each DPS message is prefixed with the length of the message encoded as a CBOR unsigned integer value.</para><para><simplesect kind="see"><para><ref refid="tutorials-security_1enabling-network-layer-security" kindref="member">Enabling network layer security</ref> </para></simplesect>
 </para></sect3>
 </sect2>
 </sect1>

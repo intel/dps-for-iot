@@ -70,7 +70,7 @@ var NAVTREEINDEX =
 [
 "annotated.html",
 "group__publication.html#ga91471ddf6f66798e255b28b3e913144b",
-"tutorials-hello-world.html#receiving-a-publication"
+"tutorials-hello-world.html#publishing"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronisation';

@@ -7,7 +7,8 @@ var index =
         [ "Unicast", "mesh-network.html#Unicast", [
           [ "UDP", "mesh-network.html#UDP", null ],
           [ "TCP", "mesh-network.html#TCP", null ],
-          [ "DTLS", "mesh-network.html#DTLS", null ]
+          [ "DTLS", "mesh-network.html#DTLS", null ],
+          [ "Pipe", "mesh-network.html#Pipe", null ]
         ] ]
       ] ]
     ] ],

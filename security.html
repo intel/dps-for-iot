@@ -101,17 +101,17 @@ $(document).ready(function(){initNavTree('security.html','');});
 </ul>
 </div>
 <div class="textblock"><p><br />
- DPS has two security mechanisms: end-to-end encryption/signing and link-layer encryption.</p>
-<p>Publication and acknowledgement messages can be encrypted/signed end-to-end. Messages are encrypted/signed using <a href="https://tools.ietf.org/html/rfc8152">COSE</a>.</p>
-<p>For privacy and to protect the network hop-by-hop links DPS uses link layer encryption where possible: DTLS for UDP, TLS for TCP, and transport-specific encryption for over non-IP networks. IP multicast packets do not use link-layer encryption. Because DPS is fundamentally a multi-hop mesh protocol payloads are secured end-to-end.</p>
-<p>As noted above publications and acknowledgement messages can be encrypted/signed using COSE. The protection in this case is end-to-end, the trust relationship is directly between the publishing node and the subscribing node, and intermediate nodes that simply route packets over the DPS mesh do not require a trust relationship with either the publishers or subscribers and do not hold keys. The publication or acknowledgement data payload is encrypted/signed, publications also carry the publication topic strings: these are included in the encrypted/signed payload. Message fields required for routing messages are integrity checked but obviously cannot be encrypted. The sending port number and TTL change on each hop so cannot be included in the end-to-end integrity check. The COSE format includes an optional KID (key-identifier) field. Encrypted DPS messages always have a KID which allows the different publications to use different encryption keys.</p>
+ DPS has two security mechanisms: end-to-end encryption and/or signing and link-layer encryption.</p>
+<p>Publication and acknowledgement messages can be encrypted and/or signed end-to-end. Messages are encrypted and/or signed using <a href="https://tools.ietf.org/html/rfc8152">COSE</a>.</p>
+<p>For privacy and to protect the network hop-by-hop links DPS uses link layer encryption where possible. IP multicast packets do not use link-layer encryption. Because DPS is fundamentally a multi-hop mesh protocol payloads are secured end-to-end.</p>
+<p>As noted above publications and acknowledgement messages can be encrypted and/or signed using COSE. The protection in this case is end-to-end, the trust relationship is directly between the publishing node and the subscribing node, and intermediate nodes that simply route packets over the DPS mesh do not require a trust relationship with either the publishers or subscribers and do not hold keys. The publication or acknowledgement data payload is encrypted and/or signed, publications also carry the publication topic strings: these are included in the encrypted and/or signed payload. Message fields required for routing messages are integrity checked but obviously cannot be encrypted. The sending port number and TTL change on each hop so cannot be included in the end-to-end integrity check. The COSE format includes an optional KID (key-identifier) field. Encrypted DPS messages always have a KID which allows the different publications to use different encryption keys.</p>
 <p>Subscriptions do not carry payload data and the bit vectors carried in the payloads get recomputed at each hop. Unlike publications and acknowledgements, subscriptions do not use COSE and rely solely on encryption at the link-layer.</p>
 <p>Even when data is encrypted there are attack vectors based on traffic analysis. Traffic analysis is harder on a multi-hop mesh but because publications contain routing information that cannot be encrypted end-to-end. Specifically an attacker with access to a compromised node could use a dictionary attack to identify the topic strings in the publications and subscriptions flowing through that node. Where this is a concern the publishing and subscribing end-points can agree on a shared private encoding of topic strings, for example HMAC with a shared seed.</p>
 <p>The following sections assume you are already familiar with the <a class="el" href="message-types-and-flow.html#message-encoding">message encoding </a>.</p>
 <h1><a class="anchor" id="content-encryption"></a>
 Content Encryption</h1>
 <p>The <em>protected</em> section of a DPS message forms the protected attributes from the application as identified in COSE. The <em>encrypted</em> section of a DPS message is the plaintext provided to the content encryption algorithm and is replaced by a COSE object, one of <em>COSE_Encrypt_Tagged</em>, <em>COSE_Encrypt0_Tagged</em>, or <em>COSE_Sign1_Tagged</em>.</p>
-<p>The implemented content encryption algorithms is <em>A256GCM</em>.</p>
+<p>The implemented content encryption algorithm is <em>A256GCM</em>.</p>
 <h1><a class="anchor" id="content-key-distribution"></a>
 Content Key Distribution</h1>
 <p>The encryption key is determined by the recipient algorithm. DPS supports the <em>direct</em>, <em>A256KW</em>, and <em>ECDH-ES + A256KW</em> recipient algorithms.</p>
@@ -220,7 +220,7 @@ Examples</h1>
 </div><!-- doc-content -->
 <div class="navpath" id="nav-path">
   <ul>
-    <li class="footer" style="float:left"><b>Distributed Publish & Subscribe for IoT</b></li> <li class="footer">Generated Wed May 15 2019 11:59:58</li>
+    <li class="footer" style="float:left"><b>Distributed Publish & Subscribe for IoT</b></li> <li class="footer">Generated Wed May 15 2019 12:06:23</li>
   </ul>
 </div>
 </body>

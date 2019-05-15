@@ -1,5 +1,6 @@
 var NAVTREEINDEX2 =
 {
+"tutorials-hello-world.html#publishing":[2,0,3],
 "tutorials-hello-world.html#receiving-a-publication":[2,0,4,1],
 "tutorials-hello-world.html#receiving-an-acknowledgement":[2,0,5,2],
 "tutorials-hello-world.html#requesting-an-acknowledgement":[2,0,5,0],
