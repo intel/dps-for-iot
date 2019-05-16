@@ -21,7 +21,8 @@ vars.AddVariables(
     ListVariable('bindings', 'Bindings to build', bindings, bindings),
     PathVariable('application', 'Application to build', '', PathVariable.PathAccept),
     ('CC', 'C compiler to use'),
-    ('CXX', 'C++ compiler to use'))
+    ('CXX', 'C++ compiler to use'),
+    ('TARGET_ARCH', 'Target architecture'))
 
 # Windows-specific command line variables
 if platform.system() == 'Windows':
@@ -151,6 +152,10 @@ if env['CC'] == 'cl':
 else:
     # uncomment to test for C90 (with gnu extensions) compatibility
     #env.Append(CCFLAGS = ['-std=gnu90'])
+
+    if env['TARGET_ARCH'] == 'x86':
+        env.Append(CCFLAGS = ['-m32'])
+        env.Append(LINKFLAGS = ['-m32'])
 
     if 'clang' in env['CC']:
         # clang complains about the CBOR_SIZEOF_UINT() macro when the arg is a uint8_t

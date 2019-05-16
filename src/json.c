@@ -460,7 +460,7 @@ static DPS_Status ToJSON(JSONBuffer* json, DPS_RxBuffer* cbor, int pretty, int i
     char* str = numStr;
     DPS_Status status = DPS_OK;
     size_t size = 0;
-    uint64_t len;
+    size_t len;
     uint8_t* bytes;
     uint8_t maj;
     int64_t i64;
@@ -479,7 +479,7 @@ static DPS_Status ToJSON(JSONBuffer* json, DPS_RxBuffer* cbor, int pretty, int i
     case CBOR_UINT:
         status = CBOR_DecodeUint(cbor, &u64);
         if (status == DPS_OK) {
-            size = snprintf(json->str, json->len, "%zu", u64);
+            size = snprintf(json->str, json->len, "%"PRIu64, u64);
             if (size >= json->len) {
                 status = DPS_ERR_OVERFLOW;
             } else {
@@ -491,7 +491,7 @@ static DPS_Status ToJSON(JSONBuffer* json, DPS_RxBuffer* cbor, int pretty, int i
     case CBOR_NEG:
         status = CBOR_DecodeInt(cbor, &i64);
         if (status == DPS_OK) {
-            size = snprintf(json->str, json->len, "%zi", i64);
+            size = snprintf(json->str, json->len, "%"PRId64, i64);
             if (size >= json->len) {
                 status = DPS_ERR_OVERFLOW;
             } else {
