@@ -87,6 +87,21 @@ static Handle From_topics(const char** topics, size_t len)
     return arr;
 }
 
+static int AsCharOrNullPtr(Handle obj, char** cptr)
+{
+    if (obj->IsNull()) {
+        *cptr = NULL;
+        return SWIG_OK;
+    } else {
+        int alloc;
+        int res = SWIG_AsCharPtrAndSize(obj, cptr, NULL, &alloc);
+        if (SWIG_IsOK(res)) {
+            return alloc;
+        }
+        return res;
+    }
+}
+
 class Callback {
 public:
     std::condition_variable* m_cond;

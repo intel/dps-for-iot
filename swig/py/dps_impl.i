@@ -94,6 +94,21 @@ static Handle From_topics(const char** topics, size_t len)
     return list;
 }
 
+static int AsCharOrNullPtr(Handle obj, char** cptr)
+{
+    if (obj == Py_None) {
+        *cptr = NULL;
+        return SWIG_OK;
+    } else {
+        int alloc;
+        int res = SWIG_AsCharPtrAndSize(obj, cptr, NULL, &alloc);
+        if (SWIG_IsOK(res)) {
+            return alloc;
+        }
+        return res;
+    }
+}
+
 static DPS_Status KeyAndIdHandler(DPS_KeyStoreRequest* request)
 {
     KeyStore* keyStore = (KeyStore*)DPS_GetKeyStoreData(DPS_KeyStoreHandle(request));

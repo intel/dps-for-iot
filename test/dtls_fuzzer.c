@@ -97,6 +97,7 @@ static void DestroyNode(Node* node)
 static Node* CreateNode()
 {
     Node* node = NULL;
+    DPS_NodeAddress* addr = NULL;
     DPS_Status ret;
 
     node = calloc(1, sizeof(Node));
@@ -116,13 +117,22 @@ static Node* CreateNode()
         goto ErrorExit;
     }
     DPS_SetNodeSubscriptionUpdateDelay(node->node, 10);
-    ret = DPS_StartNode(node->node, DPS_MCAST_PUB_ENABLE_SEND | DPS_MCAST_PUB_ENABLE_RECV, NULL);
+    addr = DPS_CreateAddress();
+    if (!addr) {
+        goto ErrorExit;
+    }
+    if (!DPS_SetAddress(addr, "dtls", NULL)) {
+        goto ErrorExit;
+    }
+    ret = DPS_StartNode(node->node, DPS_MCAST_PUB_ENABLE_SEND | DPS_MCAST_PUB_ENABLE_RECV, addr);
     if (ret != DPS_OK) {
         goto ErrorExit;
     }
+    DPS_DestroyAddress(addr);
     return node;
 
 ErrorExit:
+    DPS_DestroyAddress(addr);
     DestroyNode(node);
     return NULL;
 }
@@ -184,6 +194,7 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t len)
     DPS_Subscription* sub = NULL;
     DPS_Publication* pub = NULL;
     const char *topic = "T";
+    const DPS_NodeAddress* serverAddr = NULL;
     DPS_NodeAddress* addr = NULL;
     DPS_Status ret;
 
@@ -228,11 +239,12 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t len)
         goto Exit;
     }
 
+    serverAddr = DPS_GetListenAddress(server->node);
     addr = DPS_CreateAddress();
     if (!addr) {
         goto Exit;
     }
-    DPS_LinkTo(client->node, DPS_GetListenAddressString(server->node), addr);
+    DPS_LinkTo(client->node, DPS_NodeAddrNetwork(serverAddr), DPS_NodeAddrToString(serverAddr), addr);
 
 Exit:
     DPS_DestroyAddress(addr);

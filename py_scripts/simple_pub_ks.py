@@ -97,6 +97,8 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("-d", "--debug", action='store_true',
                     help="Enable debug ouput if built for debug.")
+parser.add_argument("-n", "--network", default="udp",
+                    help="Network of listen and link addresses.")
 parser.add_argument("-x", "--encryption", type=int, choices=[0,1,2], default=1,
                     help="Disable (0) or enable symmetric (1) or asymmetric(2) encryption. Default is symmetric encryption enabled.")
 args = parser.parse_args()
@@ -180,7 +182,9 @@ def on_destroy(node):
     dps.destroy_key_store(key_store)
 
 node = dps.create_node("/", key_store, node_id)
-dps.start_node(node, dps.MCAST_PUB_ENABLE_SEND, None)
+addr = dps.create_address()
+dps.set_address(addr, args.network, None)
+dps.start_node(node, dps.MCAST_PUB_ENABLE_SEND, addr)
 print("Publisher is listening on %s" % (dps.get_listen_address(node)))
 pub = dps.create_publication(node)
 
@@ -195,3 +199,4 @@ time.sleep(1)
 
 dps.destroy_publication(pub)
 dps.destroy_node(node, on_destroy)
+dps.destroy_addr(addr)

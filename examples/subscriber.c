@@ -125,7 +125,8 @@ static void OnPubMatch(DPS_Subscription* sub, const DPS_Publication* pub, uint8_
 typedef struct _Args {
     int numTopics;
     char* topicList[64];
-    DPS_NodeAddress* listenAddr;
+    char* listenText;
+    char* network;
     char* linkText[MAX_LINKS];
     int numLinks;
     int wait;
@@ -154,7 +155,6 @@ static int IsInteractive(Args* args)
 
 static int ParseArgs(int argc, char** argv, Args* args)
 {
-    memset(args, 0, sizeof(Args));
     args->encrypt = 1;
     args->subsRate = DPS_SUBSCRIPTION_UPDATE_RATE;
     args->mcastPub = DPS_MCAST_PUB_DISABLED;
@@ -164,7 +164,15 @@ static int ParseArgs(int argc, char** argv, Args* args)
          * Topics must come last
          */
         if (args->numTopics == 0) {
-            if (ListenArg(&argv, &argc, &args->listenAddr)) {
+            if (strcmp(*argv, "-n") == 0) {
+                ++argv;
+                if (!--argc) {
+                    return DPS_FALSE;
+                }
+                args->network = *argv++;
+                continue;
+            }
+            if (AddressArg("-l", &argv, &argc, &args->listenText)) {
                 continue;
             }
             if (LinkArg(&argv, &argc, args->linkText, &args->numLinks)) {
@@ -290,7 +298,8 @@ static int LinkTo(Subscriber* subscriber, Args* args)
             ret = DPS_ERR_RESOURCES;
         }
         if (ret == DPS_OK) {
-            ret = DPS_Link(subscriber->node, args->linkText[j], OnLinkComplete, subscriber->addrs[j]);
+            ret = DPS_Link(subscriber->node, args->network, args->linkText[j], OnLinkComplete,
+                           subscriber->addrs[j]);
         }
     }
     if (ret == DPS_OK) {
@@ -311,7 +320,7 @@ static void UnlinkFrom(Subscriber* subscriber)
 #define MAX_TOPICS 64
 #define MAX_ARGS (32 + MAX_TOPICS)
 
-static void ReadStdin(Subscriber* subscriber)
+static void ReadStdin(Args* mainArgs, Subscriber* subscriber)
 {
     char lineBuf[MAX_LINE_LEN + 1];
 
@@ -330,6 +339,11 @@ static void ReadStdin(Subscriber* subscriber)
                 argv[argc++] = tok;
             }
         }
+        /*
+         * Inherit network argument from command line
+         */
+        memset(&args, 0, sizeof(Args));
+        args.network = mainArgs->network;
         if (!ParseArgs(argc, argv, &args)) {
             continue;
         }
@@ -346,10 +360,12 @@ int main(int argc, char** argv)
     const DPS_KeyId* nodeKeyId = NULL;
     DPS_Event* nodeDestroyed = NULL;
     Subscriber subscriber;
+    DPS_NodeAddress* listenAddr = NULL;
 
     DPS_Debug = DPS_FALSE;
     memset(&subscriber, 0, sizeof(subscriber));
 
+    memset(&args, 0, sizeof(Args));
     if (!ParseArgs(argc - 1, argv + 1, &args)) {
         goto Usage;
     }
@@ -380,13 +396,18 @@ int main(int argc, char** argv)
 
     nodeDestroyed = DPS_CreateEvent();
 
-    ret = DPS_StartNode(subscriber.node, args.mcastPub, args.listenAddr);
+    listenAddr = CreateAddressFromArg(args.network, args.listenText);
+    if (!listenAddr) {
+        DPS_ERRPRINT("CreateAddressFromArg returned NULL\n");
+        ret = DPS_ERR_RESOURCES;
+        goto Exit;
+    }
+    ret = DPS_StartNode(subscriber.node, args.mcastPub, listenAddr);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
         goto Exit;
     }
-    DPS_PRINT("Subscriber is listening on %s\n",
-              DPS_GetListenAddressString(subscriber.node));
+    DPS_PRINT("Subscriber is listening on %s\n", DPS_GetListenAddressString(subscriber.node));
 
     if (args.wait) {
         /*
@@ -405,7 +426,7 @@ int main(int argc, char** argv)
     }
     if (IsInteractive(&args)) {
         DPS_PRINT("Running in interactive mode\n");
-        ReadStdin(&subscriber);
+        ReadStdin(&args, &subscriber);
         UnlinkFrom(&subscriber);
         DPS_DestroyNode(subscriber.node, OnNodeDestroyed, nodeDestroyed);
     }
@@ -417,17 +438,18 @@ Exit:
     DPS_WaitForEvent(nodeDestroyed);
     DPS_DestroyEvent(nodeDestroyed);
     DPS_DestroyMemoryKeyStore(memoryKeyStore);
-    DPS_DestroyAddress(args.listenAddr);
+    DestroyAddressArg(args.listenText, listenAddr);
     DestroyLinkArg(args.linkText, NULL, args.numLinks);
     DestroyLinkArg(NULL, subscriber.addrs, subscriber.numAddrs);
     return (ret == DPS_OK) ? EXIT_SUCCESS : EXIT_FAILURE;
 
 Usage:
-    DPS_PRINT("Usage %s [-d] [-q] [-m] [-w <seconds>] [-x 0|1|2|3] [-p <address>] [-l <address] [-j] [-r <milliseconds>] [[-s] topic1 ... topicN]\n", argv[0]);
+    DPS_PRINT("Usage %s [-d] [-q] [-m] [-w <seconds>] [-x 0|1|2|3] [-n <network>] [-p <address>] [-l <address] [-j] [-r <milliseconds>] [[-s] topic1 ... topicN]\n", argv[0]);
     DPS_PRINT("       -d: Enable debug ouput if built for debug.\n");
     DPS_PRINT("       -q: Quiet - suppresses output about received publications.\n");
     DPS_PRINT("       -x: Disable (0) or enable symmetric encryption (1), asymmetric encryption (2), or authentication (3). Default is symmetric encryption enabled.\n");
     DPS_PRINT("       -w: Time to wait before establishing links\n");
+    DPS_PRINT("       -n: Network of listen and link addresses.\n");
     DPS_PRINT("       -p: An address to link. Multiple -p options are permitted.\n");
     DPS_PRINT("       -m: Enable multicast receive. Enabled by default is there are no -p options.\n");
     DPS_PRINT("       -l: Address listen on.\n");

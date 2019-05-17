@@ -43,7 +43,7 @@ static void OnLinked(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, v
     DPS_SignalEvent(event, status);
 }
 
-DPS_Status DPS_LinkTo(DPS_Node* node, const char* addrText, DPS_NodeAddress* addr)
+DPS_Status DPS_LinkTo(DPS_Node* node, const char* network, const char* addrText, DPS_NodeAddress* addr)
 {
     DPS_Event* event = NULL;
     DPS_Status ret;
@@ -55,7 +55,7 @@ DPS_Status DPS_LinkTo(DPS_Node* node, const char* addrText, DPS_NodeAddress* add
         return DPS_ERR_RESOURCES;
     }
     DPS_SetEventData(event, addr);
-    ret = DPS_Link(node, addrText, OnLinked, event);
+    ret = DPS_Link(node, network, addrText, OnLinked, event);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("DPS_Link returned: %s\n", DPS_ErrTxt(ret));
         goto Exit;

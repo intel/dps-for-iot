@@ -14,6 +14,7 @@ import (
 
 var (
 	debug = flag.Bool("d", false, "enable debug output if built for debug")
+	network = flag.String("n", "udp", "network to link")
 	linkText = flag.String("p", "", "address to link")
 	payloadSize = flag.Int("s", 0, "size of PUB payload")
 	numPubs = flag.Int("n", 1000, "number of publications to send")
@@ -65,7 +66,7 @@ func main() {
 	dps.StartNode(node, mcast, nil)
 
 	if *linkText != "" {
-		err := dps.LinkTo(node, *linkText, nil)
+		err := dps.LinkTo(node, *network, *linkText, nil)
 		if err != dps.OK {
 			fmt.Printf("dps.LinkTo %v returned %s\n", *linkText, dps.ErrTxt(err))
 			return

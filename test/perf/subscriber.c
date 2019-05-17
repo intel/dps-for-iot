@@ -68,6 +68,7 @@ int main(int argc, char** argv)
     char** arg = argv + 1;
     DPS_Event* nodeDestroyed = NULL;
     DPS_Subscription* subscription = NULL;
+    char* network = NULL;
     int listenPort = 0;
     DPS_NodeAddress* listenAddr = NULL;
     char addrText[24];
@@ -79,6 +80,14 @@ int main(int argc, char** argv)
         if (strcmp(*arg, "-d") == 0) {
             ++arg;
             DPS_Debug = DPS_TRUE;
+            continue;
+        }
+        if (strcmp(*arg, "-n") == 0) {
+            ++arg;
+            if (!--argc) {
+                goto Usage;
+            }
+            network = *arg++;
             continue;
         }
         if (IntArg("-s", &arg, &argc, &payloadSize, -1,  UINT16_MAX)) {
@@ -101,7 +110,7 @@ int main(int argc, char** argv)
         goto Exit;
     }
     snprintf(addrText, sizeof(addrText), "[::]:%d", listenPort);
-    DPS_SetAddress(listenAddr, addrText);
+    DPS_SetAddress(listenAddr, network, addrText);
     ret = DPS_StartNode(node, DPS_MCAST_PUB_ENABLE_RECV, listenAddr);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
@@ -126,8 +135,9 @@ Exit:
     return (ret == DPS_OK) ? EXIT_SUCCESS : EXIT_FAILURE;
 
 Usage:
-    DPS_PRINT("Usage %s [-d] [-s <size>]\n", argv[0]);
+    DPS_PRINT("Usage %s [-d] [-n <network>] [-p <port>] [-s <size>]\n", argv[0]);
     DPS_PRINT("       -d: Enable debug ouput if built for debug.\n");
+    DPS_PRINT("       -n: Network of listen and link addresses.\n");
     DPS_PRINT("       -p: port to listen on.\n");
     DPS_PRINT("       -s: Size of ACK payload.\n");
     return EXIT_FAILURE;

@@ -32,9 +32,9 @@ parameter value allows both @c / and @c . as separators.
 Once created, a node must be started.  Starting a node enables it
 to begin sending and receiving DPS messages in the network.
 
-For this example, we are going to be sending and receiving
-multicast publications so we enable both and let DPS assign the
-listening port.
+For this example, we are going to be sending and receiving multicast
+publications so we enable both and let DPS assign the listening
+address for the chosen network.
 
 @see DPS_MCAST_PUB_DISABLED, DPS_GetListenAddress()
 

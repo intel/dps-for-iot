@@ -36,11 +36,17 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
 #define MAX_READ_LEN   65536
 
-struct _DPS_NetContext {
+typedef struct _DPS_NetUdpContext {
+    DPS_NetContext ctx;
     uv_udp_t rxSocket;
     DPS_Node* node;
     DPS_OnReceive receiveCB;
-};
+} DPS_NetUdpContext;
+
+DPS_NodeAddress* DPS_NetUdpGetListenAddress(DPS_NodeAddress* addr, DPS_NetContext* netCtx);
+void DPS_NetUdpStop(DPS_NetContext* netCtx);
+DPS_Status DPS_NetUdpSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf_t* bufs,
+                          size_t numBufs, DPS_NetSendComplete sendCompleteCB);
 
 static void AllocBuffer(uv_handle_t* handle, size_t suggestedSize, uv_buf_t* uvBuf)
 {
@@ -63,7 +69,7 @@ static void RxHandleClosed(uv_handle_t* handle)
 static void OnData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* uvBuf, const struct sockaddr* addr,
                    unsigned flags)
 {
-    DPS_NetContext* netCtx = (DPS_NetContext*)socket->data;
+    DPS_NetUdpContext* netCtx = (DPS_NetUdpContext*)socket->data;
     DPS_NetRxBuffer* buf = NULL;
     DPS_NetEndpoint ep;
 
@@ -98,17 +104,21 @@ Exit:
     DPS_NetRxBufferDecRef(buf);
 }
 
-DPS_NetContext* DPS_NetStart(DPS_Node* node, const DPS_NodeAddress* addr, DPS_OnReceive cb)
+DPS_NetContext* DPS_NetUdpStart(DPS_Node* node, const DPS_NodeAddress* addr, DPS_OnReceive cb)
 {
+    static struct sockaddr_storage sszero = { 0 };
     int ret;
-    DPS_NetContext* netCtx;
+    DPS_NetUdpContext* netCtx;
     struct sockaddr* sa;
     DPS_NodeAddress any;
 
-    netCtx = calloc(1, sizeof(DPS_NetContext));
+    netCtx = calloc(1, sizeof(DPS_NetUdpContext));
     if (!netCtx) {
         return NULL;
     }
+    netCtx->ctx.getListenAddress = DPS_NetUdpGetListenAddress;
+    netCtx->ctx.stop = DPS_NetUdpStop;
+    netCtx->ctx.send = DPS_NetUdpSend;
     ret = uv_udp_init(node->loop, &netCtx->rxSocket);
     if (ret) {
         DPS_ERRPRINT("uv_udp_init error=%s\n", uv_err_name(ret));
@@ -117,10 +127,10 @@ DPS_NetContext* DPS_NetStart(DPS_Node* node, const DPS_NodeAddress* addr, DPS_On
     }
     netCtx->node = node;
     netCtx->receiveCB = cb;
-    if (addr) {
+    if (addr && memcmp(&addr->u.inaddr, &sszero, sizeof(struct sockaddr_storage))) {
         sa = (struct sockaddr*)&addr->u.inaddr;
     } else {
-        if (!DPS_SetAddress(&any, "[::]:0")) {
+        if (!DPS_SetAddress(&any, "udp", "[::]:0")) {
             goto ErrorExit;
         }
         sa = (struct sockaddr*)&any.u.inaddr;
@@ -134,7 +144,7 @@ DPS_NetContext* DPS_NetStart(DPS_Node* node, const DPS_NodeAddress* addr, DPS_On
     if (ret) {
         goto ErrorExit;
     }
-    return netCtx;
+    return (DPS_NetContext*)netCtx;
 
 ErrorExit:
 
@@ -143,8 +153,9 @@ ErrorExit:
     return NULL;
 }
 
-DPS_NodeAddress* DPS_NetGetListenAddress(DPS_NodeAddress* addr, DPS_NetContext* netCtx)
+DPS_NodeAddress* DPS_NetUdpGetListenAddress(DPS_NodeAddress* addr, DPS_NetContext* ctx)
 {
+    DPS_NetUdpContext* netCtx = (DPS_NetUdpContext*)ctx;
     int len;
 
     DPS_DBGTRACEA("netCtx=%p\n", netCtx);
@@ -162,8 +173,10 @@ DPS_NodeAddress* DPS_NetGetListenAddress(DPS_NodeAddress* addr, DPS_NetContext* 
     return addr;
 }
 
-void DPS_NetStop(DPS_NetContext* netCtx)
+void DPS_NetUdpStop(DPS_NetContext* ctx)
 {
+    DPS_NetUdpContext* netCtx = (DPS_NetUdpContext*)ctx;
+
     if (netCtx) {
         uv_udp_recv_stop(&netCtx->rxSocket);
         uv_close((uv_handle_t*)&netCtx->rxSocket, RxHandleClosed);
@@ -195,8 +208,10 @@ static void OnSendComplete(uv_udp_send_t* req, int status)
     free(send);
 }
 
-DPS_Status DPS_NetSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf_t* bufs, size_t numBufs, DPS_NetSendComplete sendCompleteCB)
+DPS_Status DPS_NetUdpSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf_t* bufs,
+                          size_t numBufs, DPS_NetSendComplete sendCompleteCB)
 {
+    DPS_NetUdpContext* netCtx = (DPS_NetUdpContext*)node->netCtx;
     int ret;
     NetSend* send;
 
@@ -231,7 +246,7 @@ DPS_Status DPS_NetSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf
     memcpy_s(&inaddr, sizeof(inaddr), &ep->addr.u.inaddr, sizeof(ep->addr.u.inaddr));
     DPS_MapAddrToV6((struct sockaddr *)&inaddr);
 
-    ret = uv_udp_send(&send->sendReq, &node->netCtx->rxSocket, send->bufs, (uint32_t)numBufs,
+    ret = uv_udp_send(&send->sendReq, &netCtx->rxSocket, send->bufs, (uint32_t)numBufs,
                       (const struct sockaddr *)&inaddr, OnSendComplete);
     if (ret) {
         DPS_ERRPRINT("DPS_NetSend status=%s\n", uv_err_name(ret));
@@ -241,12 +256,7 @@ DPS_Status DPS_NetSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf
     return DPS_OK;
 }
 
-void DPS_NetConnectionIncRef(DPS_NetConnection* cn)
-{
-    /* No-op for udp */
-}
-
-void DPS_NetConnectionDecRef(DPS_NetConnection* cn)
-{
-    /* No-op for udp */
-}
+DPS_NetTransport DPS_NetUdpTransport = {
+    DPS_UDP,
+    DPS_NetUdpStart
+};

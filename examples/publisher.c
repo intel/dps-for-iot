@@ -234,6 +234,7 @@ int main(int argc, char** argv)
     DPS_Node* node;
     char** arg = argv + 1;
     DPS_NodeAddress* linkAddr[MAX_LINKS] = { NULL };
+    char* network = NULL;
     char* linkText[MAX_LINKS] = { NULL };
     int numLinks = 0;
     int wait = 0;
@@ -242,10 +243,19 @@ int main(int argc, char** argv)
     int subsRate = DPS_SUBSCRIPTION_UPDATE_RATE;
     char* msg = NULL;
     int mcast = DPS_MCAST_PUB_ENABLE_SEND;
+    char* listenText = NULL;
     DPS_NodeAddress* listenAddr = NULL;
 
     DPS_Debug = DPS_FALSE;
     while (--argc) {
+        if (strcmp(*arg, "-n") == 0) {
+            ++arg;
+            if (!--argc) {
+                goto Usage;
+            }
+            network = *arg++;
+            continue;
+        }
         if (LinkArg(&arg, &argc, linkText, &numLinks)) {
             continue;
         }
@@ -266,7 +276,7 @@ int main(int argc, char** argv)
             msg = *arg++;
             continue;
         }
-        if (ListenArg(&arg, &argc, &listenAddr)) {
+        if (AddressArg("-l", &arg, &argc, &listenText)) {
             continue;
         }
         if (IntArg("-w", &arg, &argc, &wait, 0, 30)) {
@@ -330,14 +340,19 @@ int main(int argc, char** argv)
     node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore), nodeKeyId);
     DPS_SetNodeSubscriptionUpdateDelay(node, subsRate);
 
+    listenAddr = CreateAddressFromArg(network, listenText);
+    if (!listenAddr) {
+        DPS_ERRPRINT("CreateAddressFromArg returned NULL\n");
+        return 1;
+    }
     ret = DPS_StartNode(node, mcast, listenAddr);
     if (ret != DPS_OK) {
-        DPS_ERRPRINT("DPS_CreateNode failed: %s\n", DPS_ErrTxt(ret));
+        DPS_ERRPRINT("DPS_StartNode failed: %s\n", DPS_ErrTxt(ret));
         return 1;
     }
     DPS_PRINT("Publisher is listening on %s\n", DPS_GetListenAddressString(node));
 
-    ret = Link(node, linkText, linkAddr, numLinks);
+    ret = Link(node, network, linkText, linkAddr, numLinks);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Link returned %s\n", DPS_ErrTxt(ret));
         return 1;
@@ -393,7 +408,7 @@ int main(int argc, char** argv)
         if (numLinks) {
             Unlink(node, linkAddr, numLinks);
         }
-        if (listenAddr) {
+        if (listenText) {
             DPS_PRINT("Waiting for remote to link\n");
             DPS_TimedWaitForEvent(nodeDestroyed, 60 * 1000);
         }
@@ -405,17 +420,18 @@ int main(int argc, char** argv)
     DPS_WaitForEvent(nodeDestroyed);
     DPS_DestroyEvent(nodeDestroyed);
     DPS_DestroyMemoryKeyStore(memoryKeyStore);
-    DPS_DestroyAddress(listenAddr);
+    DestroyAddressArg(listenText, listenAddr);
     DestroyLinkArg(linkText, linkAddr, numLinks);
     return 0;
 
 Usage:
-    DPS_PRINT("Usage %s [-d] [-x 0|1|2|3] [-a] [-w <seconds>] [-t <ttl>] [-p <address>] [-l <address>] [-m|-j <message>] [-r <milliseconds>] [topic1 topic2 ... topicN]\n", argv[0]);
+    DPS_PRINT("Usage %s [-d] [-x 0|1|2|3] [-a] [-w <seconds>] [-t <ttl>] [-n <network>] [-p <address>] [-l <address>] [-m|-j <message>] [-r <milliseconds>] [topic1 topic2 ... topicN]\n", argv[0]);
     DPS_PRINT("       -d: Enable debug ouput if built for debug.\n");
     DPS_PRINT("       -x: Disable (0) or enable symmetric encryption (1), asymmetric encryption (2), or authentication (3). Default is symmetric encryption enabled.\n");
     DPS_PRINT("       -a: Request an acknowledgement\n");
     DPS_PRINT("       -t: Set a time-to-live on a publication\n");
     DPS_PRINT("       -w: Time to wait between linking to remote node and sending publication\n");
+    DPS_PRINT("       -n: Network of listen and link addresses.\n");
     DPS_PRINT("       -l: Address to listen on for incoming connections\n");
     DPS_PRINT("       -p: Address to link. Multiple -p options are permitted.\n");
     DPS_PRINT("       -m: A string payload to accompany the publication.\n");

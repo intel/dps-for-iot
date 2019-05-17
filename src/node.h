@@ -71,11 +71,6 @@ typedef struct _LinkMonitor LinkMonitor;
 typedef struct _OnOpCompletion OnOpCompletion;
 
 /**
- * Context for network address resolution
- */
-typedef struct _ResolverInfo ResolverInfo;
-
-/**
  * Link monitor configuration values. All times are in milliseconds.
  */
 typedef struct _LinkMonitorConfig {
@@ -141,7 +136,7 @@ typedef struct _DPS_Node {
     LinkMonitorConfig linkMonitorConfig;  /**< Configuration parameters for mesh probe publications */
 
     uv_async_t resolverAsync;             /**< Async handler for address resolver */
-    ResolverInfo* resolverList;           /**< Linked list of address resolution requests */
+    DPS_Queue resolverQueue;              /**< Queue of address resolution requests */
 
 } DPS_Node;
 

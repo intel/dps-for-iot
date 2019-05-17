@@ -96,6 +96,7 @@ int main(int argc, char** argv)
     uint8_t* payload = NULL;
     int payloadSize = 0;
     int mcast = DPS_MCAST_PUB_ENABLE_SEND;
+    char* network = NULL;
     int listenPort = 0;
     DPS_NodeAddress* listenAddr = NULL;
     char addrText[24];
@@ -111,6 +112,14 @@ int main(int argc, char** argv)
             DPS_Debug = DPS_TRUE;
             continue;
         }
+        if (strcmp(*arg, "-n") == 0) {
+            ++arg;
+            if (!--argc) {
+                goto Usage;
+            }
+            network = *arg++;
+            continue;
+        }
         if (strcmp(*arg, "-p") == 0) {
             ++arg;
             if (!--argc) {
@@ -122,7 +131,7 @@ int main(int argc, char** argv)
         if (IntArg("-s", &arg, &argc, &payloadSize, 0,  UINT16_MAX)) {
             continue;
         }
-        if (IntArg("-n", &arg, &argc, &numPubs, 1,  1000000)) {
+        if (IntArg("-c", &arg, &argc, &numPubs, 1,  1000000)) {
             continue;
         }
     }
@@ -140,7 +149,7 @@ int main(int argc, char** argv)
         return 1;
     }
     snprintf(addrText, sizeof(addrText), "[::]:%d", listenPort);
-    DPS_SetAddress(listenAddr, addrText);
+    DPS_SetAddress(listenAddr, network, addrText);
     ret = DPS_StartNode(node, mcast, listenAddr);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("DPS_StartNode failed: %s\n", DPS_ErrTxt(ret));
@@ -148,7 +157,7 @@ int main(int argc, char** argv)
     }
 
     for (i = 0; i < numLinks; ++i) {
-        ret = DPS_LinkTo(node, linkText[i], NULL);
+        ret = DPS_LinkTo(node, network, linkText[i], NULL);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("DPS_LinkTo %s returned %s\n", linkText[i], DPS_ErrTxt(ret));
             return 1;
@@ -205,9 +214,10 @@ int main(int argc, char** argv)
     return 0;
 
 Usage:
-    DPS_PRINT("Usage %s [-d] [-n <count>] [-p <portnum>] [-s <size>]\n", argv[0]);
+    DPS_PRINT("Usage %s [-d] [-c <count>] [-n <network>] [-p <portnum>] [-s <size>]\n", argv[0]);
     DPS_PRINT("       -d: Enable debug ouput if built for debug.\n");
-    DPS_PRINT("       -n: Number of publications to send.\n");
+    DPS_PRINT("       -c: Number of publications to send.\n");
+    DPS_PRINT("       -n: Network of listen and link addresses.\n");
     DPS_PRINT("       -p: port to link.\n");
     DPS_PRINT("       -s: Size of PUB payload.\n");
     return 1;

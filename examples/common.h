@@ -36,11 +36,13 @@ extern "C" {
 #define MAX_LINKS 16
 
 int IntArg(char* opt, char*** argp, int* argcp, int* val, int min, int max);
-int ListenArg(char*** argp, int* argcp, DPS_NodeAddress** addr);
-int LinkArg(char*** argp, int* argcp, char** addrText, int* numAddrText);
-DPS_Status Link(DPS_Node* node, char** addrText, DPS_NodeAddress** addr, int numAddr);
-void Unlink(DPS_Node* node, DPS_NodeAddress** addr, int numAddr);
-void DestroyLinkArg(char **addrText, DPS_NodeAddress** addr, int numAddr);
+int AddressArg(char* opt, char*** argp, int* argcp, char** addrText);
+DPS_NodeAddress* CreateAddressFromArg(const char* network, const char* addrText);
+void DestroyAddressArg(char* addrText, DPS_NodeAddress* addr);
+int LinkArg(char*** argp, int* argcp, char** addrText, int* count);
+DPS_Status Link(DPS_Node* node, const char* network, char** addrText, DPS_NodeAddress** addr, int count);
+void Unlink(DPS_Node* node, DPS_NodeAddress** addr, int count);
+void DestroyLinkArg(char** addrText, DPS_NodeAddress** addr, int count);
 
 #ifdef __cplusplus
 }

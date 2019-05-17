@@ -14,6 +14,15 @@ import time
 #                               |
 #                              +/#
 
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument("-d", "--debug", action='store_true',
+                    help="Enable debug ouput if built for debug.")
+parser.add_argument("-n", "--network", default="udp",
+                    help="Network of listen and link addresses.")
+args = parser.parse_args()
+dps.cvar.debug = args.debug
+
 key_id = [
     0xed,0x54,0x14,0xa8,0x5c,0x4d,0x4d,0x15,0xb6,0x9f,0x0e,0x99,0x8a,0xb1,0x71,0xf2
 ]
@@ -48,24 +57,21 @@ def on_link(node, addr, status):
 nodes = []
 def subscriber(topic, remote_listen_addr):
     node = dps.create_node("/", key_store, None)
-    dps.start_node(node, 0, None)
+    addr = dps.create_address()
+    dps.set_address(addr, args.network, None)
+    dps.start_node(node, 0, addr)
+    dps.destroy_address(addr)
     print("Subscriber is listening on %s" % dps.get_listen_address(node))
     sub = dps.create_subscription(node, [topic])
     dps.subscribe(sub, on_pub)
     if remote_listen_addr != None:
         event.clear()
-        ret = dps.link(node, str(remote_listen_addr), on_link)
+        ret = dps.link(node, dps.node_addr_network(remote_listen_addr), str(remote_listen_addr),
+                       on_link)
         if ret == dps.OK:
             event.wait()
     nodes.append(node)
     return node
-
-import argparse
-parser = argparse.ArgumentParser()
-parser.add_argument("-d", "--debug", action='store_true',
-                    help="Enable debug ouput if built for debug.")
-args = parser.parse_args()
-dps.cvar.debug = args.debug
 
 sub1 = subscriber('B/B', None)
 sub2 = subscriber('A/A', dps.get_listen_address(sub1))

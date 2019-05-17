@@ -12,6 +12,7 @@ import (
 
 var (
 	debug = flag.Bool("d", false, "enable debug output if built for debug")
+	network = flag.String("n", "udp", "network to link")
 	listenText = flag.Int("p", 0, "address to link")
 	payloadSize = flag.Int("s", 0, "size of PUB payload")
 	cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
@@ -52,7 +53,8 @@ func main() {
 
 	node := dps.CreateNode("/", nil, nil)
 	listenAddr := dps.CreateAddress()
-	dps.SetAddress(listenAddr, fmt.Sprintf(":%v", *listenText))
+	addrText := fmt.Sprintf(":%v", *listenText)
+	dps.SetAddress(listenAddr, network, &addrText)
 	dps.StartNode(node, dps.MCAST_PUB_ENABLE_RECV, listenAddr)
 	fmt.Printf("Subscriber is listening on %v\n", dps.GetListenAddressString(node))
 

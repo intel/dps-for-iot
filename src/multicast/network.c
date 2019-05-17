@@ -40,6 +40,7 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
 struct _DPS_MulticastReceiver {
     uint8_t ipVersions;
+    uint16_t port;
     uv_udp_t udp6Rx;
     uv_udp_t udp4Rx;
     DPS_Node* node;
@@ -53,10 +54,27 @@ typedef struct {
 
 struct _DPS_MulticastSender {
     uint8_t ipVersions;
+    uint16_t port;
     TxSocket* udpTx;  /* Array of Tx sockets - one per interface */
     size_t numTx;     /* Number of Tx sockets */
     DPS_Node* node;
 };
+
+static uint16_t GetPort(void)
+{
+    char str[DPS_MAX_SERVICE_LEN + 1];
+    size_t sz = DPS_MAX_SERVICE_LEN + 1;
+    char* endp;
+    uint16_t port;
+
+    if (uv_os_getenv("DPS_MCAST_PORT", str, &sz) == 0) {
+        port = strtol(str, &endp, 10);
+        if (*endp == 0) {
+            return port;
+        }
+    }
+    return COAP_UDP_PORT;
+}
 
 static int UseInterface(uint8_t ipVersions, uv_interface_address_t* ifn)
 {
@@ -129,7 +147,7 @@ static DPS_Status MulticastRxInit(DPS_MulticastReceiver* receiver)
     int numIfs = 0;
     int i;
 
-    DPS_DBGPRINT("MulticastRxInit UDP port %d\n", COAP_UDP_PORT);
+    DPS_DBGPRINT("MulticastRxInit UDP port %d\n", receiver->port);
 
     /*
      * Initialize v4 udp multicast listener
@@ -137,7 +155,7 @@ static DPS_Status MulticastRxInit(DPS_MulticastReceiver* receiver)
     if (receiver->ipVersions & USE_IPV4) {
         ret = uv_udp_init(uv, &receiver->udp4Rx);
         assert(ret == 0);
-        ret = uv_ip4_addr("0.0.0.0", COAP_UDP_PORT, (struct sockaddr_in*)&recv_addr);
+        ret = uv_ip4_addr("0.0.0.0", receiver->port, (struct sockaddr_in*)&recv_addr);
         ret = uv_udp_bind(&receiver->udp4Rx, (const struct sockaddr *)&recv_addr, UV_UDP_REUSEADDR);
         if (ret) {
             DPS_ERRPRINT("UDP IPv6 bind failed %s\n", uv_err_name(ret));
@@ -150,7 +168,7 @@ static DPS_Status MulticastRxInit(DPS_MulticastReceiver* receiver)
     if (receiver->ipVersions & USE_IPV6) {
         ret = uv_udp_init(uv, &receiver->udp6Rx);
         if (ret == 0) {
-            ret = uv_ip6_addr("::", COAP_UDP_PORT, (struct sockaddr_in6*)&recv_addr);
+            ret = uv_ip6_addr("::", receiver->port, (struct sockaddr_in6*)&recv_addr);
         }
         if (ret == 0) {
             ret = uv_udp_bind(&receiver->udp6Rx, (const struct sockaddr *)&recv_addr, UV_UDP_REUSEADDR);
@@ -214,6 +232,7 @@ DPS_MulticastReceiver* DPS_MulticastStartReceive(DPS_Node* node, DPS_OnReceive c
         return NULL;
     }
     receiver->ipVersions = USE_IPV6 | USE_IPV4;
+    receiver->port = GetPort();
     receiver->cb = cb;
     receiver->node = node;
 
@@ -351,6 +370,7 @@ DPS_MulticastSender* DPS_MulticastStartSend(DPS_Node* node)
         return NULL;
     }
     sender->ipVersions = USE_IPV6 | USE_IPV4;
+    sender->port = GetPort();
     sender->node = node;
 
     ret = MulticastTxInit(sender);
@@ -474,9 +494,9 @@ DPS_Status DPS_MulticastSend(DPS_MulticastSender* sender, void* appCtx, uv_buf_t
         struct sockaddr_storage addr;
         uv_udp_send_t* sendReq;
         if (sender->udpTx[i].family == AF_INET6) {
-            ret = uv_ip6_addr(COAP_MCAST_ALL_NODES_LINK_LOCAL_6, COAP_UDP_PORT, (struct sockaddr_in6*)&addr);
+            ret = uv_ip6_addr(COAP_MCAST_ALL_NODES_LINK_LOCAL_6, sender->port, (struct sockaddr_in6*)&addr);
         } else {
-            ret = uv_ip4_addr(COAP_MCAST_ALL_NODES_LINK_LOCAL_4, COAP_UDP_PORT, (struct sockaddr_in*)&addr);
+            ret = uv_ip4_addr(COAP_MCAST_ALL_NODES_LINK_LOCAL_4, sender->port, (struct sockaddr_in*)&addr);
         }
         if (ret) {
             continue;

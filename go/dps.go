@@ -116,8 +116,8 @@ import (
          goOnLinkComplete(node, addr, status, (uintptr_t)data);
  }
 
- static DPS_Status link(DPS_Node* node, const char* addrText, uintptr_t data) {
-         return DPS_Link(node, addrText, onLinkComplete, (void*)data);
+ static DPS_Status link(DPS_Node* node, const char* network, const char* addrText, uintptr_t data) {
+         return DPS_Link(node, network, addrText, onLinkComplete, (void*)data);
  }
 
  extern void goOnUnlinkComplete(DPS_Node* node, DPS_NodeAddress* addr, uintptr_t data);
@@ -135,8 +135,8 @@ import (
          goOnResolveAddressComplete(node, (DPS_NodeAddress*)addr, (uintptr_t)data);
  }
 
- static DPS_Status resolveAddress(DPS_Node* node, char* host, char* service, uintptr_t data) {
-         return DPS_ResolveAddress(node, host, service, onResolveAddressComplete, (void*)data);
+ static DPS_Status resolveAddress(DPS_Node* node, const char* network, char* host, char* service, uintptr_t data) {
+         return DPS_ResolveAddress(node, network, host, service, onResolveAddressComplete, (void*)data);
  }
 
  static char** makeTopics(size_t n) {
@@ -248,14 +248,25 @@ func NodeAddrToString(addr *NodeAddress) string {
 	caddr := (*C.DPS_NodeAddress)(addr)
 	return C.GoString(C.DPS_NodeAddrToString(caddr))
 }
+func NodeAddrNetwork(addr *NodeAddress) string {
+	caddr := (*C.DPS_NodeAddress)(addr)
+	return C.GoString(C.DPS_NodeAddrNetwork(caddr))
+}
 func CreateAddress() *NodeAddress {
 	return (*NodeAddress)(C.DPS_CreateAddress())
 }
-func SetAddress(addr *NodeAddress, hostport string) *NodeAddress {
+func SetAddress(addr *NodeAddress, network, addrText *string) *NodeAddress {
 	caddr := (*C.DPS_NodeAddress)(addr)
-	chostport := C.CString(hostport)
-	defer C.free(unsafe.Pointer(chostport))
-	return (*NodeAddress)(C.DPS_SetAddress(caddr, chostport))
+	var cnetwork, caddrText *C.char
+	if network != nil {
+		cnetwork = C.CString(*network)
+		defer C.free(unsafe.Pointer(cnetwork))
+	}
+	if addrText != nil {
+		caddrText = C.CString(*addrText)
+		defer C.free(unsafe.Pointer(caddrText))
+	}
+	return (*NodeAddress)(C.DPS_SetAddress(caddr, cnetwork, caddrText))
 }
 func CopyAddress(dest *NodeAddress, src *NodeAddress) {
 	cdest := (*C.DPS_NodeAddress)(dest)
@@ -663,12 +674,14 @@ func GetListenAddressString(node *Node) string {
 
 type OnLinkComplete func(node *Node, addr *NodeAddress, status int)
 
-func Link(node *Node, addrText string, cb OnLinkComplete) int {
+func Link(node *Node, network, addrText string, cb OnLinkComplete) int {
 	cnode := (*C.DPS_Node)(node)
+	cnetwork := C.CString(network)
+	defer C.free(unsafe.Pointer(cnetwork))
 	caddrText := C.CString(addrText)
 	defer C.free(unsafe.Pointer(caddrText))
 	handle := reg.register(cb)
-	return int(C.link(cnode, caddrText, C.uintptr_t(handle)))
+	return int(C.link(cnode, cnetwork, caddrText, C.uintptr_t(handle)))
 }
 
 //export goOnLinkComplete
@@ -704,14 +717,16 @@ func goOnUnlinkComplete(cnode *C.DPS_Node, caddr *C.DPS_NodeAddress, handle uint
 
 type OnResolveAddressComplete func(node *Node, addr *NodeAddress)
 
-func ResolveAddress(node *Node, host string, service string, cb OnResolveAddressComplete) int {
+func ResolveAddress(node *Node, network, host, service string, cb OnResolveAddressComplete) int {
 	cnode := (*C.DPS_Node)(node)
+	cnetwork := C.CString(network)
+	defer C.free(unsafe.Pointer(cnetwork))
 	chost := C.CString(host)
 	defer C.free(unsafe.Pointer(chost))
 	cservice := C.CString(service)
 	defer C.free(unsafe.Pointer(cservice))
 	handle := reg.register(cb)
-	return int(C.resolveAddress(cnode, chost, cservice, C.uintptr_t(handle)))
+	return int(C.resolveAddress(cnode, cnetwork, chost, cservice, C.uintptr_t(handle)))
 }
 
 //export goOnResolveAddressComplete
@@ -1045,15 +1060,17 @@ func CBOR2JSON(cbor []byte, pretty bool) (json string, err int) {
 	return
 }
 
-func LinkTo(node *Node, addrText string, addr *NodeAddress) int {
+func LinkTo(node *Node, network, addrText string, addr *NodeAddress) int {
 	cnode := (*C.DPS_Node)(node)
+	cnetwork := C.CString(network)
+	defer C.free(unsafe.Pointer(cnetwork))
 	var caddrText *C.char
 	if len(addrText) > 0 {
 		caddrText = C.CString(addrText)
 	}
 	defer C.free(unsafe.Pointer(caddrText))
 	caddr := (*C.DPS_NodeAddress)(addr)
-	return int(C.DPS_LinkTo(cnode, caddrText, caddr))
+	return int(C.DPS_LinkTo(cnode, cnetwork, caddrText, caddr))
 }
 
 func UnlinkFrom(node *Node, addr *NodeAddress) int {

@@ -27,4 +27,4 @@ environment:
 
 build_script:
 - cd C:\projects\dps-for-iot
-- scons variant=%VARIANT% transport=%TRANSPORT% PYTHON_PATH=C:\Python27-x64 SWIG=C:\ProgramData\chocolatey\bin\swig.exe
+- scons variant=%VARIANT% transports=%TRANSPORT% PYTHON_PATH=C:\Python27-x64 SWIG=C:\ProgramData\chocolatey\bin\swig.exe

@@ -161,8 +161,9 @@ static void ReadStdin(DPS_Node* node)
     }
 }
 
-static DPS_Status FindAndLink(DPS_Node* node, char** linkText, int numLinks, const char* tenant,
-                              uint8_t count, uint16_t timeout, DPS_NodeAddress** linkAddr)
+static DPS_Status FindAndLink(DPS_Node* node, const char* network, char** linkText, int numLinks,
+                              const char* tenant, uint8_t count, uint16_t timeout,
+                              DPS_NodeAddress** linkAddr)
 {
     DPS_Status ret = DPS_OK;
     DPS_RegistrationList* regs = NULL;
@@ -173,7 +174,7 @@ static DPS_Status FindAndLink(DPS_Node* node, char** linkText, int numLinks, con
          * Find nodes to link to
          */
         regs = DPS_CreateRegistrationList(count);
-        ret = DPS_Registration_GetSyn(node, linkText[i], tenant, regs, timeout);
+        ret = DPS_Registration_GetSyn(node, network, linkText[i], tenant, regs, timeout);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("Registration service lookup failed: %s\n", DPS_ErrTxt(ret));
             return ret;
@@ -220,12 +221,22 @@ int main(int argc, char** argv)
     int subsRate = DPS_SUBSCRIPTION_UPDATE_RATE;
     int timeout = DPS_REGISTRATION_GET_TIMEOUT;
     int count = 16;
+    DPS_NodeAddress* listenAddr = NULL;
     DPS_NodeAddress* linkAddr[MAX_LINKS] = { NULL };
+    char* network = NULL;
     char* linkText[MAX_LINKS] = { NULL };
     int numLinks = 0;
 
     DPS_Debug = DPS_FALSE;
     while (--argc) {
+        if (strcmp(*arg, "-n") == 0) {
+            ++arg;
+            if (!--argc) {
+                goto Usage;
+            }
+            network = *arg++;
+            continue;
+        }
         if (LinkArg(&arg, &argc, linkText, &numLinks)) {
             continue;
         }
@@ -290,7 +301,12 @@ int main(int argc, char** argv)
     node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore), NULL);
     DPS_SetNodeSubscriptionUpdateDelay(node, subsRate);
 
-    ret = DPS_StartNode(node, mcastPub, NULL);
+    listenAddr = CreateAddressFromArg(network, NULL);
+    if (!listenAddr) {
+        DPS_ERRPRINT("CreateAddressFromArg failed\n");
+        return 1;
+    }
+    ret = DPS_StartNode(node, mcastPub, listenAddr);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
         return 1;
@@ -299,7 +315,7 @@ int main(int argc, char** argv)
 
     nodeDestroyed = DPS_CreateEvent();
 
-    ret = FindAndLink(node, linkText, numLinks, tenant, count, timeout, linkAddr);
+    ret = FindAndLink(node, network, linkText, numLinks, tenant, count, timeout, linkAddr);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to link to node: %s\n", DPS_ErrTxt(ret));
         goto Exit;
@@ -342,14 +358,16 @@ Exit:
     DPS_DestroyEvent(nodeDestroyed);
     DPS_DestroyMemoryKeyStore(memoryKeyStore);
     DestroyLinkArg(linkText, linkAddr, numLinks);
+    DestroyAddressArg(NULL, listenAddr);
     return 0;
 
 Usage:
-    DPS_PRINT("Usage %s [-d] [-a] [-w <seconds>] [-t <pub ttl>] [-p <address>] [--tenant <tenant string>] [-c <count>] [--timeout <milliseconds>] [-m <message>] [-r <milliseconds>] [topic1 topic2 ... topicN]\n", *argv);
+    DPS_PRINT("Usage %s [-d] [-a] [-w <seconds>] [-t <pub ttl>] [-n <network>] [-p <address>] [--tenant <tenant string>] [-c <count>] [--timeout <milliseconds>] [-m <message>] [-r <milliseconds>] [topic1 topic2 ... topicN]\n", *argv);
     DPS_PRINT("       -d: Enable debug ouput if built for debug.\n");
     DPS_PRINT("       -a: Request an acknowledgement\n");
     DPS_PRINT("       -t: Set a time-to-live on a publication\n");
     DPS_PRINT("       -w: Time to wait between linking to remote node and sending publication\n");
+    DPS_PRINT("       -n: Network of listen and link addresses.\n");
     DPS_PRINT("       -p: Address to link. Multiple -p options are permitted.\n");
     DPS_PRINT("       -m: A payload message to accompany the publication.\n");
     DPS_PRINT("       -r: Time to delay between subscription updates.\n");

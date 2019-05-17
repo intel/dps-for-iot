@@ -38,16 +38,58 @@ extern "C" {
 
 #define DPS_MAX_HOST_LEN    256  /**< Per RFC 1034/1035 */
 #define DPS_MAX_SERVICE_LEN  16  /**< Per RFC 6335 section 5.1 */
+#define DPS_MAX_NETWORK_LEN   4  /**< Network/transport name */
 
-/**
- * Opaque data structure for network-specific state
- */
 typedef struct _DPS_NetContext DPS_NetContext;
+typedef struct _DPS_NetEndpoint DPS_NetEndpoint;
+typedef struct _DPS_NetConnection DPS_NetConnection;
 
 /**
- * Opaque type for managing connection state for connection-oriented transports
+ * Prototype for function called when a send completes.
+ *
+ * @param node     Opaque pointer to the DPS node
+ * @param appCtx   Application context pointer that was passed into
+ *                 DPS_NetSend()
+ * @param endpoint The endpoint for which the send was complete
+ * @param bufs     Array holding pointers to the buffers passed in the
+ *                 send API call. The data in these buffers can now be
+ *                 freed.
+ * @param numBufs  The length of the bufs array
+ * @param status   Indicates if the send was successful or not
  */
-typedef struct _DPS_NetConnection DPS_NetConnection;
+typedef void (*DPS_NetSendComplete)(DPS_Node* node, void* appCtx, DPS_NetEndpoint* endpoint,
+                                    uv_buf_t* bufs, size_t numBufs, DPS_Status status);
+
+/** @copydoc DPS_NetGetListenAddress() */
+typedef DPS_NodeAddress* (*DPS_NetGetListenAddressHandler)(DPS_NodeAddress* addr, DPS_NetContext* netCtx);
+/** @copydoc DPS_NetStop() */
+typedef void (*DPS_NetStopHandler)(DPS_NetContext* netCtx);
+/** @copydoc DPS_NetSend() */
+typedef DPS_Status (*DPS_NetSendHandler)(DPS_Node* node, void* appCtx, DPS_NetEndpoint* endpoint,
+                                         uv_buf_t* bufs, size_t numBufs,
+                                         DPS_NetSendComplete sendCompleteCB);
+
+/**
+ * Data structure for network-specific state
+ */
+typedef struct _DPS_NetContext {
+    DPS_NetGetListenAddressHandler getListenAddress; /**< DPS_GetListenAddress */
+    DPS_NetStopHandler stop;                         /**< DPS_NetStop */
+    DPS_NetSendHandler send;                         /**< DPS_NetSend */
+} DPS_NetContext;
+
+/** @copydoc DPS_NetConnectionIncRef() */
+typedef void (*DPS_NetConnectionIncRefHandler)(DPS_NetConnection* cn);
+/** @copydoc DPS_NetConnectionDecRef() */
+typedef void (*DPS_NetConnectionDecRefHandler)(DPS_NetConnection* cn);
+
+/**
+ * Type for managing connection state for connection-oriented transports
+ */
+typedef struct _DPS_NetConnection {
+    DPS_NetConnectionIncRefHandler incRef; /**< DPS_NetConnectIncRef */
+    DPS_NetConnectionDecRefHandler decRef; /**< DPS_NetConnectionDecRef */
+} DPS_NetConnection;
 
 /**
  * Type for a remote network endpoint. This provides an abstraction connectionless and
@@ -288,22 +330,6 @@ DPS_NodeAddress* DPS_NetGetListenAddress(DPS_NodeAddress* addr, DPS_NetContext* 
 void DPS_NetStop(DPS_NetContext* netCtx);
 
 /**
- * Prototype for function called when a send completes.
- *
- * @param node     Opaque pointer to the DPS node
- * @param appCtx   Application context pointer that was passed into
- *                 DPS_NetSend()
- * @param endpoint The endpoint for which the send was complete
- * @param bufs     Array holding pointers to the buffers passed in the
- *                 send API call. The data in these buffers can now be
- *                 freed.
- * @param numBufs  The length of the bufs array
- * @param status   Indicates if the send was successful or not
- */
-typedef void (*DPS_NetSendComplete)(DPS_Node* node, void* appCtx, DPS_NetEndpoint* endpoint,
-                                    uv_buf_t* bufs, size_t numBufs, DPS_Status status);
-
-/**
  * Send data to a specific endpoint.
  *
  * @param node            Pointer to the DPS node
@@ -402,6 +428,42 @@ void DPS_MapAddrToV6(struct sockaddr* addr);
  */
 DPS_Status DPS_SplitAddress(const char* addrText, char* host, size_t hostLen,
                             char* service, size_t serviceLen);
+
+/**
+ * Return address type of transport.
+ *
+ * @param network The network name
+ *
+ * @return the address type
+ */
+DPS_NodeAddressType DPS_NetAddressType(const char* network);
+
+/** @copydoc DPS_NetStart() */
+typedef DPS_NetContext* (*DPS_NetStartHandler)(DPS_Node* node, const DPS_NodeAddress* addr,
+                                               DPS_OnReceive cb);
+/**
+ * A transport definition.
+ */
+typedef struct _DPS_NetTransport {
+    DPS_NodeAddressType type;                        /**< Transport type */
+    DPS_NetStartHandler start;                       /**< DPS_NetStart */
+} DPS_NetTransport;
+
+#ifdef DPS_USE_UDP
+extern DPS_NetTransport DPS_NetUdpTransport;  /**< The UDP transport */
+#endif
+#ifdef DPS_USE_TCP
+extern DPS_NetTransport DPS_NetTcpTransport;  /**< The TCP transport */
+#endif
+#ifdef DPS_USE_DTLS
+extern DPS_NetTransport DPS_NetDtlsTransport; /**< The DTLS transport */
+#endif
+#ifdef DPS_USE_PIPE
+extern DPS_NetTransport DPS_NetPipeTransport; /**< The pipe transport */
+#endif
+#ifdef DPS_USE_FUZZ
+extern DPS_NetTransport DPS_NetFuzzerTransport; /**< The fuzz transport */
+#endif
 
 #ifdef __cplusplus
 }

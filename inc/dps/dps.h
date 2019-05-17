@@ -67,6 +67,15 @@ typedef struct _DPS_NodeAddress DPS_NodeAddress;
 const char* DPS_NodeAddrToString(const DPS_NodeAddress* addr);
 
 /**
+ * Get text representation of an address's network.
+ *
+ * @param addr to get the network for
+ *
+ * @return A text string for the network
+ */
+const char* DPS_NodeAddrNetwork(const DPS_NodeAddress* addr);
+
+/**
  * Creates a node address.
  *
  * @return The created address, or NULL if creation failed
@@ -77,11 +86,12 @@ DPS_NodeAddress* DPS_CreateAddress(void);
  * Set a node address
  *
  * @param addr        The address to set
+ * @param network     The name of the network the address is on
  * @param addrText    The text string for the address
  *
  * @return The addr passed in, or NULL if an error occurred
  */
-DPS_NodeAddress* DPS_SetAddress(DPS_NodeAddress* addr, const char* addrText);
+DPS_NodeAddress* DPS_SetAddress(DPS_NodeAddress* addr, const char* network, const char* addrText);
 
 /**
  * Copy a node address
@@ -575,13 +585,14 @@ typedef void (*DPS_OnLinkComplete)(DPS_Node* node, DPS_NodeAddress* addr, DPS_St
  * Link the local node to a remote node
  *
  * @param node     The local node to use
+ * @param network  The name of the network the address is on
  * @param addrText The text string of the address to link to
  * @param cb       The callback function to call on completion, can be NULL which case the function is synchronous
- * @param data     Application data to be passed to the callback
+ * @param data      Application data to be passed to the callback
  *
  * @return DPS_OK or an error status. If an error status is returned the callback function will not be called.
  */
-DPS_Status DPS_Link(DPS_Node* node, const char* addrText, DPS_OnLinkComplete cb, void* data);
+DPS_Status DPS_Link(DPS_Node* node, const char* network, const char* addrText, DPS_OnLinkComplete cb, void* data);
 
 /**
  * Function prototype for function called when a DPS_Unlink() completes.
@@ -617,6 +628,7 @@ typedef void (*DPS_OnResolveAddressComplete)(DPS_Node* node, const DPS_NodeAddre
  * Resolve a host name or IP address and service name or port number.
  *
  * @param node     The local node to use
+ * @param network  The name of the network the address to resolve is on
  * @param host     The host name or IP address to resolve
  * @param service  The port or service name to resolve
  * @param cb       The callback function to call on completion
@@ -624,7 +636,7 @@ typedef void (*DPS_OnResolveAddressComplete)(DPS_Node* node, const DPS_NodeAddre
  *
  * @return DPS_OK or an error status. If an error status is returned the callback function will not be called.
  */
-DPS_Status DPS_ResolveAddress(DPS_Node* node, const char* host, const char* service, DPS_OnResolveAddressComplete cb, void* data);
+DPS_Status DPS_ResolveAddress(DPS_Node* node, const char* network, const char* host, const char* service, DPS_OnResolveAddressComplete cb, void* data);
 
 /** @} */ /* end of node group */
 

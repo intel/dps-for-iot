@@ -1,40 +1,48 @@
 #!/usr/bin/python
 
+from __future__ import print_function
 import argparse
 import collections
 import copy
+import glob
 import os
 import pexpect
 from pexpect import popen_spawn
+import random
 import re
 import signal
 import shutil
+import socket
 from subprocess import check_output
 import sys
-
-os.environ['USE_DTLS'] = '0'
-try:
-    if os.environ['TRANSPORT'] == 'dtls':
-        os.environ['USE_DTLS'] = '1'
-except KeyError:
-    pass
 
 os.environ['PYTHONPATH'] = os.path.join('build', 'dist', 'py')
 os.environ['NODE_PATH'] = os.path.join('build', 'dist', 'js')
 os.environ['LSAN_OPTIONS'] = 'suppressions={}/asan.supp'.format(os.getcwd())
+def _set_mcast_port():
+    global _sock
+    _sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+    _sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    _sock.bind(('', 0))
+    host, port = _sock.getsockname()
+    os.environ['DPS_MCAST_PORT'] = str(port)
+_set_mcast_port()
 
 _parser = argparse.ArgumentParser()
 _parser.add_argument("-d", "--debug", action='store_true',
-                    help="Enable debug ouput if built for debug.")
-_args = _parser.parse_args()
-if _args.debug:
-    _debug = ['-d']
-else:
-    _debug = []
+                     help="Enable debug ouput if built for debug.")
+_parser.add_argument("-n", "--network", default=None,
+                     help="Network of addresses.")
+args = _parser.parse_args()
+_cmd_args = []
+if args.debug:
+    _cmd_args.extend(['-d'])
+if args.network:
+    _cmd_args.extend(['-n', args.network])
 
 _children = []
 _logs = []
-if os.environ['USE_DTLS'] == '1':
+if args.network == 'dtls':
     _subs_rate = ['-r', '800']
     _pub_wait = ['-w', '4']
 else:
@@ -51,19 +59,21 @@ _s = 0
 _t = 0
 _tm = 0
 _v = 0
+_log_dir = 'out'
 
 def _spawn_env():
     spawn_env = os.environ.copy()
     if 'ASAN' in os.environ and os.environ['ASAN'] == 'yes':
-        match = re.search('libasan.*', check_output('ldconfig -p', shell=True))
-        libasan = match.group(0).split()[-1]
-        spawn_env.update({'LD_PRELOAD': libasan})
+        if 'FSAN' not in os.environ or os.environ['FSAN'] == 'no':
+            match = re.search('libasan.*', check_output('ldconfig -p', shell=True))
+            libasan = match.group(0).split()[-1]
+            spawn_env.update({'LD_PRELOAD': libasan})
     return spawn_env
 
 def _spawn_helper(n, cmd, interpreter=[]):
-    global _children, _logs
+    global _children, _logs, _log_dir
     name = os.path.basename(cmd[0])
-    log_name = 'out/{}{}.log'.format(name, n)
+    log_name = os.path.join(_log_dir, '{}{}.log'.format(name, n))
     log = open(log_name, 'wb')
     log.write('=============================\n{}{} {}\n'.format(name, n, ' '.join(cmd[1:])).encode())
     log.write('=============================\n'.encode())
@@ -169,7 +179,7 @@ def _expect_ack(children, allow_error=False, timeout=-1, signers=None):
             signers.append(child.match.group(1).decode())
 
 def cleanup():
-    global _children
+    global _children, _sock
     for child in _children:
         if sys.platform == 'win32':
             child.kill(signal.SIGBREAK)
@@ -181,9 +191,10 @@ def cleanup():
     _children = []
     for log in _logs:
         log.close()
+    _sock.close()
 
-def reset_logs():
-    global _ms, _n, _p, _r, _rp, _rs, _s, _t, _tm, _v
+def reset_logs(transport_name=args.network, test_name=sys.argv[0]):
+    global _ms, _n, _p, _r, _rp, _rs, _s, _t, _log_dir, _tm, _v
     _ms = 0
     _n = 0
     _p = 0
@@ -192,18 +203,24 @@ def reset_logs():
     _rs = 0
     _s = 0
     _t = 0
+    if transport_name:
+        _log_dir = os.path.join('out', transport_name, test_name)
+    else:
+        _log_dir = os.path.join('out', test_name)
     _tm = 0
     _v = 0
     cleanup()
-    shutil.rmtree('out', ignore_errors=True)
+    shutil.rmtree(_log_dir, ignore_errors=True)
     try:
-        os.makedirs('out')
+        os.makedirs(_log_dir)
     except OSError:
-        if not os.path.isdir('out'):
+        if not os.path.isdir(_log_dir):
             raise
 
-def bin(cmd):
-    global _children
+def bin_log(log_dir, cmd):
+    global _children, _log_dir
+    _log_dir = log_dir
+    _set_mcast_port()
     child = _spawn(1, cmd)
     buf = child.read(8192)
     while buf:
@@ -212,8 +229,22 @@ def bin(cmd):
     _children.remove(child)
     return status
 
+def bin(cmd):
+    global _children, _log_dir
+    try:
+        i = cmd.index('-n')
+        return bin_log(os.path.join('out', cmd[i + 1], cmd[0]), cmd)
+    except ValueError:
+        return bin_log(os.path.join('out', cmd[0]), cmd)
+
 def py(cmd):
-    global _children
+    global _children, _log_dir
+    try:
+        i = cmd.index('-n')
+        _log_dir = os.path.join('out', cmd[i + 1], cmd[0])
+    except ValueError:
+        _log_dir = os.path.join('out', cmd[0])
+    _set_mcast_port()
     child = _py_spawn(1, cmd)
     child.expect(pexpect.EOF, timeout=300)
     status = child.wait()
@@ -223,7 +254,7 @@ def py(cmd):
 def node(args):
     global _n
     _n = _n + 1
-    cmd = [os.path.join('build', 'test', 'bin', 'node')] + _debug + args.split()
+    cmd = [os.path.join('build', 'test', 'bin', 'node')] + _cmd_args + args.split()
     child = _spawn(_n, cmd)
     _expect([child], ['Ready'])
     return child
@@ -231,7 +262,7 @@ def node(args):
 def sub(args=''):
     global _s
     _s = _s + 1
-    cmd = [os.path.join('build', 'dist', 'bin', 'subscriber')] + _debug + _subs_rate + args.split()
+    cmd = [os.path.join('build', 'dist', 'bin', 'subscriber')] + _cmd_args + _subs_rate + args.split()
     child = _spawn(_s, cmd)
     _expect_listening(child)
     _expect_linked(child, args)
@@ -240,7 +271,7 @@ def sub(args=''):
 def pub(args):
     global _p
     _p = _p + 1
-    cmd = [os.path.join('build', 'dist', 'bin', 'publisher')] + _debug + _subs_rate + _pub_wait + args.split()
+    cmd = [os.path.join('build', 'dist', 'bin', 'publisher')] + _cmd_args + _subs_rate + _pub_wait + args.split()
     child = _spawn(_p, cmd)
     _expect_listening(child)
     _expect_linked(child, args)
@@ -249,7 +280,7 @@ def pub(args):
 def py_sub(args=''):
     global _s
     _s = _s + 1
-    cmd = [os.path.join('py_scripts', 'simple_sub.py')] + _debug + args.split()
+    cmd = [os.path.join('py_scripts', 'simple_sub.py')] + _cmd_args + args.split()
     child = _py_spawn(_s, cmd)
     _expect_listening(child)
     return child
@@ -257,7 +288,7 @@ def py_sub(args=''):
 def py_pub(args=''):
     global _p
     _p = _p + 1
-    cmd = [os.path.join('py_scripts', 'simple_pub.py')] + _debug + args.split()
+    cmd = [os.path.join('py_scripts', 'simple_pub.py')] + _cmd_args + args.split()
     child = _py_spawn(_p, cmd)
     _expect_listening(child)
     return child
@@ -265,7 +296,7 @@ def py_pub(args=''):
 def py_late_sub():
     global _s
     _s = _s + 1
-    cmd = [os.path.join('py_scripts', 'late_sub.py')] + _debug
+    cmd = [os.path.join('py_scripts', 'late_sub.py')] + _cmd_args
     child = _py_spawn(_s, cmd)
     _expect_listening(child)
     return child
@@ -273,7 +304,7 @@ def py_late_sub():
 def py_retained_pub():
     global _p
     _p = _p + 1
-    cmd = [os.path.join('py_scripts', 'retained_pub.py')] + _debug
+    cmd = [os.path.join('py_scripts', 'retained_pub.py')] + _cmd_args
     child = _py_spawn(_p, cmd)
     _expect_listening(child)
     return child
@@ -281,7 +312,7 @@ def py_retained_pub():
 def py_sub_ks(args=''):
     global _s
     _s = _s + 1
-    cmd = [os.path.join('py_scripts', 'simple_sub_ks.py')] + _debug + args.split()
+    cmd = [os.path.join('py_scripts', 'simple_sub_ks.py')] + _cmd_args + args.split()
     child = _py_spawn(_s, cmd)
     _expect_listening(child)
     return child
@@ -289,7 +320,7 @@ def py_sub_ks(args=''):
 def py_pub_ks(args=''):
     global _p
     _p = _p + 1
-    cmd = [os.path.join('py_scripts', 'simple_pub_ks.py')] + _debug + args.split()
+    cmd = [os.path.join('py_scripts', 'simple_pub_ks.py')] + _cmd_args + args.split()
     child = _py_spawn(_p, cmd)
     _expect_listening(child)
     return child
@@ -297,7 +328,7 @@ def py_pub_ks(args=''):
 def js_sub(args=''):
     global _s
     _s = _s + 1
-    cmd = [os.path.join('js_scripts', 'simple_sub.js')] + _debug + args.split()
+    cmd = [os.path.join('js_scripts', 'simple_sub.js')] + _cmd_args + args.split()
     child = _js_spawn(_s, cmd)
     _expect_listening(child)
     return child
@@ -305,7 +336,7 @@ def js_sub(args=''):
 def js_pub(args=''):
     global _p
     _p = _p + 1
-    cmd = [os.path.join('js_scripts', 'simple_pub.js')] + _debug + args.split()
+    cmd = [os.path.join('js_scripts', 'simple_pub.js')] + _cmd_args + args.split()
     child = _js_spawn(_p, cmd)
     _expect_listening(child)
     return child
@@ -313,7 +344,7 @@ def js_pub(args=''):
 def js_sub_ks(args=''):
     global _s
     _s = _s + 1
-    cmd = [os.path.join('js_scripts', 'simple_sub_ks.js')] + _debug + args.split()
+    cmd = [os.path.join('js_scripts', 'simple_sub_ks.js')] + _cmd_args + args.split()
     child = _js_spawn(_s, cmd)
     _expect_listening(child)
     return child
@@ -321,7 +352,7 @@ def js_sub_ks(args=''):
 def js_pub_ks(args=''):
     global _p
     _p = _p + 1
-    cmd = [os.path.join('js_scripts', 'simple_pub_ks.js')] + _debug + args.split()
+    cmd = [os.path.join('js_scripts', 'simple_pub_ks.js')] + _cmd_args + args.split()
     child = _js_spawn(_p, cmd)
     _expect_listening(child)
     return child
@@ -329,7 +360,7 @@ def js_pub_ks(args=''):
 def go_sub(args=''):
     global _s
     _s = _s + 1
-    cmd = [os.path.join('build', 'dist', 'go', 'bin', 'simple_sub')] + _debug + args.split()
+    cmd = [os.path.join('build', 'dist', 'go', 'bin', 'simple_sub')] + _cmd_args + args.split()
     child = _spawn(_s, cmd)
     _expect_listening(child)
     return child
@@ -337,7 +368,7 @@ def go_sub(args=''):
 def go_pub(args=''):
     global _p
     _p = _p + 1
-    cmd = [os.path.join('build', 'dist', 'go', 'bin', 'simple_pub')] + _debug + args.split()
+    cmd = [os.path.join('build', 'dist', 'go', 'bin', 'simple_pub')] + _cmd_args + args.split()
     child = _spawn(_p, cmd)
     _expect_listening(child)
     return child
@@ -345,7 +376,7 @@ def go_pub(args=''):
 def go_sub_ks(args=''):
     global _s
     _s = _s + 1
-    cmd = [os.path.join('build', 'dist', 'go', 'bin', 'simple_sub_ks')] + _debug + args.split()
+    cmd = [os.path.join('build', 'dist', 'go', 'bin', 'simple_sub_ks')] + _cmd_args + args.split()
     child = _spawn(_s, cmd)
     _expect_listening(child)
     return child
@@ -353,7 +384,7 @@ def go_sub_ks(args=''):
 def go_pub_ks(args=''):
     global _p
     _p = _p + 1
-    cmd = [os.path.join('build', 'dist', 'go', 'bin', 'simple_pub_ks')] + _debug + args.split()
+    cmd = [os.path.join('build', 'dist', 'go', 'bin', 'simple_pub_ks')] + _cmd_args + args.split()
     child = _spawn(_p, cmd)
     _expect_listening(child)
     return child
@@ -361,7 +392,7 @@ def go_pub_ks(args=''):
 def tutorial(args=''):
     global _t
     _t = _t + 1
-    cmd = [os.path.join('build', 'dist', 'bin', 'tutorial')] + _debug + args.split()
+    cmd = [os.path.join('build', 'dist', 'bin', 'tutorial')] + _cmd_args + args.split()
     child = _spawn(_t, cmd)
     _expect_listening(child)
     _expect_linked(child, args)
@@ -370,7 +401,7 @@ def tutorial(args=''):
 def ver(args=''):
     global _v
     _v = _v + 1
-    cmd = [os.path.join('build', 'test', 'bin', 'version')] + _debug + args.split()
+    cmd = [os.path.join('build', 'test', 'bin', 'version')] + _cmd_args + args.split()
     child = _spawn(_v, cmd)
     _expect_listening(child)
     return child
@@ -378,7 +409,7 @@ def ver(args=''):
 def reg(args=''):
     global _r
     _r = _r + 1
-    cmd = [os.path.join('build', 'dist', 'bin', 'registry')] + _debug + _subs_rate + args.split()
+    cmd = [os.path.join('build', 'dist', 'bin', 'registry')] + _cmd_args + _subs_rate + args.split()
     child = _spawn(_r, cmd)
     _expect_listening(child)
     return child
@@ -386,7 +417,7 @@ def reg(args=''):
 def reg_subs(args=''):
     global _rs
     _rs = _rs + 1
-    cmd = [os.path.join('build', 'dist', 'bin', 'reg_subs')] + _debug + args.split()
+    cmd = [os.path.join('build', 'dist', 'bin', 'reg_subs')] + _cmd_args + args.split()
     child = _spawn(_rs, cmd)
     _expect_listening(child)
     return child
@@ -394,7 +425,7 @@ def reg_subs(args=''):
 def reg_pubs(args=''):
     global _rp
     _rp = _rp + 1
-    cmd = [os.path.join('build', 'dist', 'bin', 'reg_pubs')] + _debug + _pub_wait + args.split()
+    cmd = [os.path.join('build', 'dist', 'bin', 'reg_pubs')] + _cmd_args + _pub_wait + args.split()
     child = _spawn(_rp, cmd)
     _expect_listening(child)
     return child
@@ -402,7 +433,7 @@ def reg_pubs(args=''):
 def topic_match(pattern, args=''):
     global _tm
     _tm = _tm + 1
-    cmd = [os.path.join('build', 'test', 'bin', 'topic_match')] + _debug + args.split()
+    cmd = [os.path.join('build', 'test', 'bin', 'topic_match')] + _cmd_args + args.split()
     child = _spawn(_tm, cmd)
     _expect([child], [pattern])
 
@@ -414,7 +445,7 @@ def expect_reg_linked(children):
 def mesh_stress(args=''):
     global _ms
     _ms = _ms + 1
-    cmd = [os.path.join('build', 'test', 'bin', 'mesh_stress')] + _debug + args.split()
+    cmd = [os.path.join('build', 'test', 'bin', 'mesh_stress')] + _cmd_args + args.split()
     return _spawn(_ms, cmd)
 
 def link(child, ports):
@@ -450,5 +481,15 @@ def expect_pub_not_received(children, topic, allow_error=False):
 
 def expect_error(children, error):
     expect(children, 'ERROR.*{}'.format(error), allow_error=True)
+
+def dump_logs(test_name):
+    log_dir = os.path.join('out', test_name)
+    for log in glob.glob(os.path.join(log_dir, '*.log')):
+        size = os.path.getsize(log)
+        with open(log, 'r') as l:
+            print('==> {} <=='.format(log))
+            if size > 32768:
+                l.seek(-32768, os.SEEK_END)
+            print(l.read(), end='')
 
 reset_logs()

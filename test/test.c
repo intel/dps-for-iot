@@ -47,36 +47,41 @@ int IntArg(char* opt, char*** argp, int* argcp, int* val, int min, int max)
     return 1;
 }
 
-int AddressArg(char* opt, char*** argp, int* argcp, DPS_NodeAddress** addr)
+int AddressArg(char* opt, char*** argp, int* argcp, char** addrText)
 {
     char** arg = *argp;
     int argc = *argcp;
     int port = 0;
     char str[256];
 
-    strcpy(str, "[::]:0");
-
     if (IntArg(opt, &arg, &argc, &port, 1000, UINT16_MAX)) {
         snprintf(str, sizeof(str), "[::]:%d", port);
+        *addrText = strdup(str);
     } else if (strcmp(*arg, opt) == 0) {
         ++arg;
         if (!--argc) {
             return DPS_FALSE;
         }
-        strncpy(str, *arg++, sizeof(str));
+        *addrText = strdup(*arg++);
     } else {
-        return DPS_FALSE;
-    }
-    *addr = DPS_CreateAddress();
-    if (!*addr) {
-        return DPS_FALSE;
-    }
-    if (!DPS_SetAddress(*addr, str)) {
-        DPS_DestroyAddress(*addr);
-        *addr = NULL;
         return DPS_FALSE;
     }
     *argp = arg;
     *argcp = argc;
     return DPS_TRUE;
+}
+
+DPS_NodeAddress* CreateAddressFromArg(const char* network, const char* addrText)
+{
+    DPS_NodeAddress* addr = NULL;
+
+    addr = DPS_CreateAddress();
+    if (!addr) {
+        return NULL;
+    }
+    if (!DPS_SetAddress(addr, network, addrText)) {
+        DPS_DestroyAddress(addr);
+        return NULL;
+    }
+    return addr;
 }

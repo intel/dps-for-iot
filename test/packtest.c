@@ -173,9 +173,16 @@ int main(int argc, char** argv)
     int i = 1;
 
     DPS_Debug = DPS_FALSE;
-    if ((i < argc) && !strcmp(argv[i], "-d")) {
-        DPS_Debug = DPS_TRUE;
-        ++i;
+    while (i < argc) {
+        if (!strcmp(argv[i], "-d")) {
+            DPS_Debug = DPS_TRUE;
+            ++i;
+        } else if (!strcmp(argv[i], "-n") && ((i + 1) < argc)) {
+            /* Ignore the network argument for compatibility with other tests */
+            i += 2;
+        } else {
+            break;
+        }
     }
     if (i < argc) {
         filterBits = atoi(argv[i]);

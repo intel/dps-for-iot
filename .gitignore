@@ -10,3 +10,5 @@ out
 *.pdb
 go/bin/*
 go/pkg/*
+*.orig
+*.rej
