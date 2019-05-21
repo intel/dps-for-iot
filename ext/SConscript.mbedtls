@@ -20,8 +20,8 @@ dep = mtenv.Command('./mbedtls/Makefile', git,
 
 mtenv.Append(CPPPATH = ['.', './mbedtls/include/',])
 mtenv.Append(CPPDEFINES = ['MBEDTLS_USER_CONFIG_FILE=\\"mbedtls_config.h\\"',])
-# optimized sha512 requires nasm
-if env.Detect('nasm') != None:
+# optimized sha512 requires nasm and x86_64
+if env['TARGET_ARCH'] != 'x86' and env.Detect('nasm') != None:
     mtenv.Append(CPPDEFINES = ['DPS_USE_NASM'])
 
 sources = [
@@ -50,6 +50,7 @@ sources = [
     './mbedtls/library/md5.c',
     './mbedtls/library/nist_kw.c',
     './mbedtls/library/oid.c',
+    './mbedtls/library/padlock.c',
     './mbedtls/library/pem.c',
     './mbedtls/library/pk.c',
     './mbedtls/library/pk_wrap.c',

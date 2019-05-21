@@ -91,13 +91,29 @@ typedef count_t counter_t[CHUNK_SIZE];
 #if defined(__GNUC__) || defined(__MINGW64__)
 #define POPCOUNT(n)    __builtin_popcountll((chunk_t)n)
 #define COUNT_TZ(n)    __builtin_ctzll((chunk_t)n)
-#elif defined(_WIN32)
+#elif defined(_WIN64)
 #define POPCOUNT(n)    (uint32_t)(__popcnt64((chunk_t)n))
 static inline uint32_t COUNT_TZ(uint64_t n)
 {
     unsigned long index;
     if (_BitScanForward64(&index, n)) {
         return index;
+    } else {
+        return 0;
+    }
+}
+#elif defined(_WIN32)
+static inline uint32_t POPCOUNT(chunk_t n)
+{
+    return __popcnt((uint32_t)n) + __popcnt((uint32_t)(n >> 32));
+}
+static inline uint32_t COUNT_TZ(uint64_t n)
+{
+    unsigned long index;
+    if (_BitScanForward(&index, (uint32_t)n)) {
+        return index;
+    } else if (_BitScanForward(&index, (uint32_t)(n >> 32))) {
+        return index + 32;
     } else {
         return 0;
     }
@@ -622,7 +638,7 @@ static DPS_Status RunLengthEncode(DPS_BitVector* bv, DPS_TxBuffer* buffer, uint8
 
 static DPS_Status RunLengthDecode(uint8_t* packed, size_t packedSize, chunk_t* bits, size_t len)
 {
-    size_t bitPos = 0;
+    uint64_t bitPos = 0;
     uint64_t current;
     size_t currentBits = 0;
 

@@ -392,10 +392,10 @@ int main(int argc, char** argv)
         case 9:
         case 10:
             if (ret == DPS_ERR_LOST_PRECISION) {
-                printf("Decode %zi failed as expected %s\n", IntsAsDouble[i], DPS_ErrTxt(ret));
+                printf("Decode %"PRId64" failed as expected %s\n", IntsAsDouble[i], DPS_ErrTxt(ret));
                 ret = DPS_OK;
             } else {
-                printf("Decode %zi did not fail as expected\n", IntsAsDouble[i]);
+                printf("Decode %"PRId64" did not fail as expected\n", IntsAsDouble[i]);
                 ret = DPS_ERR_INVALID;
             }
             break;
@@ -414,10 +414,10 @@ int main(int argc, char** argv)
         case 7:
         case 8:
             if (ret == DPS_ERR_LOST_PRECISION) {
-                printf("Decode %zi failed as expected %s\n", IntsAsFloat[i], DPS_ErrTxt(ret));
+                printf("Decode %"PRId64" failed as expected %s\n", IntsAsFloat[i], DPS_ErrTxt(ret));
                 ret = DPS_OK;
             } else {
-                printf("Decode %zi did not fail as expected\n", IntsAsFloat[i]);
+                printf("Decode %"PRId64" did not fail as expected\n", IntsAsFloat[i]);
                 ret = DPS_ERR_INVALID;
             }
             break;

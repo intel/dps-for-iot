@@ -3,8 +3,8 @@ Import(['env'])
 
 # Pull down intel-ipsec-mb from github and build the library
 
-# nasm is optional
-if env.Detect('nasm') != None:
+# optimized sha512 requires nasm and x86_64
+if env['TARGET_ARCH'] != 'x86' and env.Detect('nasm') != None:
     mbenv = env.Clone(tools=['nasm'])
 
     git = mbenv.Command('./intel-ipsec-mb/.git', None,
