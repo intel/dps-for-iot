@@ -63,8 +63,8 @@ static int UseInterface(uint8_t ipVersions, uv_interface_address_t* ifn)
     if (ifn->is_internal) {
         return 0;
     }
-    if (ifn->address.address4.sin_family == AF_INET6) {
-        return ipVersions & USE_IPV6;
+    if (ifn->address.address6.sin6_family == AF_INET6) {
+        return (ipVersions & USE_IPV6) && IN6_IS_ADDR_LINKLOCAL(&ifn->address.address6.sin6_addr);
     } else {
         return ipVersions & USE_IPV4;
     }
