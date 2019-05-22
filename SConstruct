@@ -119,7 +119,7 @@ elif env['PLATFORM'] == 'posix':
         env['PY_CPPPATH'] = map(lambda inc: inc[2:], py_cpppath)
     env['PY_LIBPATH'] = []
 
-    env['DPS_LIBS'] = ['pthread']
+    env['DPS_LIBS'] = ['pthread', 'dl']
 
     # Check if we need to build libuv
     conf = env.Configure()
