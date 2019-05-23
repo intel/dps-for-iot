@@ -86,7 +86,7 @@ static DPS_PubHistory* Insert(DPS_History* history, DPS_PubHistory* add)
 {
     DPS_PubHistory* curr = history->root;
     DPS_PubHistory* parent = NULL;
-    int cmp;
+    int cmp = 0;
 
     while (curr) {
         cmp = DPS_UUIDCompare(&add->id, &curr->id);
