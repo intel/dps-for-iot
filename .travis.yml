@@ -17,7 +17,7 @@ env:
   - VARIANT=release TRANSPORT=dtls BINDINGS=python,nodejs ASAN=yes FSAN=yes
   - VARIANT=release TRANSPORT=pipe BINDINGS=all ASAN=yes FSAN=no
   - VARIANT=release TRANSPORT=fuzzer BINDINGS=python,nodejs ASAN=yes FSAN=yes
-
+  - FROM_UPSTREAM=true
 matrix:
   exclude:
     - compiler: clang
@@ -54,5 +54,9 @@ install:
   - pip install --user pexpect
 
 script:
-  - scons CC=$CC CXX=$CXX variant=$VARIANT transport=$TRANSPORT bindings=$BINDINGS asan=$ASAN ubsan=yes fsan=$FSAN
-  - ./test_scripts/run.py -d
+  - if [ "$FROM_UPSTREAM" != true ]; then 
+      scons CC=$CC CXX=$CXX variant=$VARIANT transport=$TRANSPORT bindings=$BINDINGS asan=$ASAN ubsan=yes fsan=$FSAN;
+      ./test_scripts/run.py -d;
+    else
+      ./.travis/upstream-check.sh;
+    fi
