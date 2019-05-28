@@ -323,7 +323,7 @@ static int ReadLinks(const char* fn)
     }
     while (1) {
         int ep1;
-        int ep2;
+        int ep2 = 0;
         ssize_t len;
         char line[32];
 
