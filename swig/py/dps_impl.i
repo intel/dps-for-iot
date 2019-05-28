@@ -274,14 +274,18 @@ static PyObject* GetPayloadObject(const DPS_Publication* pub, uint8_t* payload, 
         view->buf = payload;
         view->len = len;
     } else {
+#if PY_VERSION_HEX >= 0x03030000
+        payloadObj = PyMemoryView_FromMemory((char*)payload, len, PyBUF_READ);
+#else
         Py_buffer view;
         int err;
-        err = PyBuffer_FillInfo(&view, NULL, payload, len, 0, PyBUF_CONTIG);
+        err = PyBuffer_FillInfo(&view, NULL, payload, len, 1, PyBUF_FULL_RO);
         if (!err) {
             payloadObj = PyMemoryView_FromBuffer(&view);
         } else {
             DPS_ERRPRINT("PyBuffer_FillInfo failed: %d\n", err);
         }
+#endif
     }
     return payloadObj;
 }
