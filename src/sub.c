@@ -589,6 +589,13 @@ static DPS_Status UpdateInboundInterests(DPS_Node* node, RemoteNode* remote, DPS
 {
     DPS_DBGTRACE();
 
+    /*
+     * Inbound interests for the multicast remote node do not change.
+     */
+    if (remote == node->mcastNode) {
+        return DPS_OK;
+    }
+
     if (remote->inbound.interests) {
         if (isDelta) {
             DPS_DBGPRINT("Received interests delta\n");

@@ -115,6 +115,7 @@ typedef struct _DPS_Node {
     DPS_Queue ackQueue;                   /**< Queued acknowledgement packets */
 
     RemoteNode* remoteNodes;              /**< Linked list of remote nodes */
+    RemoteNode* mcastNode;                /**< Special-cased multicast remote node, note that remoteNodes includes this node */
 
     struct {
         DPS_BitVector* needs;             /**< Preallocated needs bit vector */
