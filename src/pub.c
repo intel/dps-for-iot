@@ -646,13 +646,23 @@ static DPS_Publication* LookupRetained(DPS_Node* node, DPS_UUID* pubId)
 {
     DPS_Publication* pub = NULL;
 
-    DPS_LockNode(node);
     for (pub = node->publications; pub != NULL; pub = pub->next) {
         if ((pub->flags & PUB_FLAG_RETAINED) && (DPS_UUIDCompare(&pub->pubId, pubId) == 0)) {
             break;
         }
     }
-    DPS_UnlockNode(node);
+    return pub;
+}
+
+static DPS_Publication* LookupPublication(DPS_Node* node, DPS_UUID* pubId)
+{
+    DPS_Publication* pub = NULL;
+
+    for (pub = node->publications; pub != NULL; pub = pub->next) {
+        if (((pub->flags & PUB_FLAG_LOCAL) == 0) && (DPS_UUIDCompare(&pub->pubId, pubId) == 0)) {
+            break;
+        }
+    }
     return pub;
 }
 
@@ -841,26 +851,31 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxB
             ret = DPS_ERR_STALE;
             goto Exit;
         }
-        pub = calloc(1, sizeof(DPS_Publication));
-        if (!pub) {
-            ret = DPS_ERR_RESOURCES;
-            goto Exit;
+        pub = LookupPublication(node, &pubId);
+        if (pub) {
+            DPS_PublicationIncRef(pub);
+        } else {
+            pub = calloc(1, sizeof(DPS_Publication));
+            if (!pub) {
+                ret = DPS_ERR_RESOURCES;
+                goto Exit;
+            }
+            pub->node = node;
+            DPS_QueueInit(&pub->sendQueue);
+            DPS_QueueInit(&pub->retainedQueue);
+            DPS_PublicationIncRef(pub);
+            pub->bf = DPS_BitVectorAlloc();
+            if (!pub->bf) {
+                ret = DPS_ERR_RESOURCES;
+                goto Exit;
+            }
+            memcpy_s(&pub->pubId, sizeof(pub->pubId), &pubId, sizeof(DPS_UUID));
+            /*
+             * Link in the pub
+             */
+            pub->next = node->publications;
+            node->publications = pub;
         }
-        pub->node = node;
-        DPS_QueueInit(&pub->sendQueue);
-        DPS_QueueInit(&pub->retainedQueue);
-        DPS_PublicationIncRef(pub);
-        pub->bf = DPS_BitVectorAlloc();
-        if (!pub->bf) {
-            ret = DPS_ERR_RESOURCES;
-            goto Exit;
-        }
-        memcpy_s(&pub->pubId, sizeof(pub->pubId), &pubId, sizeof(DPS_UUID));
-        /*
-         * Link in the pub
-         */
-        pub->next = node->publications;
-        node->publications = pub;
     }
     pub->sequenceNum = sequenceNum;
     pub->ackRequested = ackRequested;
