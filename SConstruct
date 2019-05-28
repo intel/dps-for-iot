@@ -93,9 +93,10 @@ if env['PLATFORM'] == 'win32':
     # SafeStringLib so need to disable the Windows supplied versions
     env.Append(CPPDEFINES = ['__STDC_WANT_SECURE_LIB__=0', '_STRALIGN_USE_SECURE_CRT=0', '_CRT_SECURE_NO_WARNINGS'])
 
-    # Where to find Python.h
-    env['PY_CPPPATH'] = [env['PYTHON_PATH'] + '\\include']
-    env['PY_LIBPATH'] = [env['PYTHON_PATH'] + '\\libs']
+    if env['python']:
+        # Where to find Python.h
+        env['PY_CPPPATH'] = [env['PYTHON_PATH'] + '\\include']
+        env['PY_LIBPATH'] = [env['PYTHON_PATH'] + '\\libs']
 
     env['DPS_LIBS'] = ['ws2_32', 'psapi', 'iphlpapi', 'shell32', 'userenv', 'user32', 'advapi32']
 
@@ -111,13 +112,14 @@ if env['PLATFORM'] == 'win32':
         env.PrependENVPath('PATH', env['DOXYGEN_PATH'] + '/bin')
 
 elif env['PLATFORM'] == 'posix':
-    # Where to find Python.h
-    if env['target'] == 'yocto':
-        env['PY_CPPPATH'] = [os.getenv('SYSROOT') + '/usr/include/python2.7']
-    else:
-        py_cpppath = os.popen('python-config --includes').read().split()
-        env['PY_CPPPATH'] = map(lambda inc: inc[2:], py_cpppath)
-    env['PY_LIBPATH'] = []
+    if env['python']:
+        # Where to find Python.h
+        if env['target'] == 'yocto':
+            env['PY_CPPPATH'] = [os.getenv('SYSROOT') + '/usr/include/python2.7']
+        else:
+            py_cpppath = os.popen('python-config --includes').read().split()
+            env['PY_CPPPATH'] = map(lambda inc: inc[2:], py_cpppath)
+            env['PY_LIBPATH'] = []
 
     env['DPS_LIBS'] = ['pthread', 'dl']
 
