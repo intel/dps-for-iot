@@ -12,6 +12,11 @@ import shutil
 from subprocess import check_output
 import sys
 
+try:
+    basestring
+except NameError:
+    basestring = str
+
 os.environ['USE_DTLS'] = '0'
 try:
     if os.environ['TRANSPORT'] == 'dtls':
@@ -94,7 +99,7 @@ def _expect(children, pattern, allow_error=False, timeout=-1):
 
 def _expect_listening(child):
     _expect([child], ['is listening on ([0-9A-Za-z.:%_\-/\\[\]]+){}'.format(child.linesep)])
-    child.port = child.match.group(1)
+    child.port = child.match.group(1).decode()
     # Rewrite the any address to the loopback address
     m = re.match('(.*)(:[0-9]+)', child.port)
     if m != None:
