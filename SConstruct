@@ -15,7 +15,7 @@ vars.AddVariables(
     BoolVariable('ubsan', 'Enable undefined behavior sanitizer?', False),
     BoolVariable('fsan', 'Enable fuzzer sanitizer?', False),
     BoolVariable('cov', 'Enable code coverage?', False),
-    EnumVariable('variant', 'Build variant', default='release', allowed_values=('debug', 'release'), ignorecase=2),
+    EnumVariable('variant', 'Build variant', default='release', allowed_values=('debug', 'release', 'min-size-release'), ignorecase=2),
     EnumVariable('transport', 'Transport protocol', default='udp', allowed_values=('udp', 'tcp', 'dtls', 'pipe', 'fuzzer'), ignorecase=2),
     EnumVariable('target', 'Build target', default='local', allowed_values=('local', 'yocto'), ignorecase=2),
     ListVariable('bindings', 'Bindings to build', bindings, bindings),
@@ -136,7 +136,7 @@ if env['CC'] == 'cl':
     if env['variant'] == 'debug':
         env.Append(CCFLAGS = ['/Zi', '/MT', '/Od', '-DDPS_DEBUG'])
         env.Append(LINKFLAGS = ['/DEBUG'])
-    else:
+    else: # release, min-size-release
         env.Append(CCFLAGS = ['/Gy', '/O2', '/GF', '/GL', '/MT'])
         env.Append(ARFLAGS = ['/LTCG'])
         env.Append(LINKFLAGS = ['/opt:ref', '/LTCG'])
@@ -225,8 +225,11 @@ else:
 
     if env['variant'] == 'debug':
         env.Append(CCFLAGS = ['-O', '-DDPS_DEBUG'])
-    else:
+    elif env['variant'] == 'release':
         env.Append(CCFLAGS = ['-O3', '-DNDEBUG'])
+    else: # min-size-release
+        env.Append(CCFLAGS = ['-Os', '-DNDEBUG', '-fdata-sections', '-ffunction-sections'])
+        env.Append(LINKFLAGS = ['-Wl,--gc-sections', '-Wl,--strip-all'])
 
 if env['PLATFORM'] == 'win32' and 'gcc' in env['CC']:
     env.Append(CPPDEFINES = ['__USE_MINGW_ANSI_STDIO=1'])
