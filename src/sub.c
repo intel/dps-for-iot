@@ -344,7 +344,7 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote)
             ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_MESH_ID);
         }
         if (ret == DPS_OK) {
-            ret = CBOR_EncodeBytes(&buf, (uint8_t*)&remote->outbound.meshId, sizeof(DPS_UUID));
+            ret = CBOR_EncodeUUID(&buf, &remote->outbound.meshId);
         }
         if (ret == DPS_OK) {
             ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_NEEDS);
@@ -526,7 +526,7 @@ static DPS_Status SendSubscriptionAck(DPS_Node* node, RemoteNode* remote, uint32
             ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_MESH_ID);
         }
         if (ret == DPS_OK) {
-            ret = CBOR_EncodeBytes(&buf, (uint8_t*)&remote->outbound.meshId, sizeof(DPS_UUID));
+            ret = CBOR_EncodeUUID(&buf, &remote->outbound.meshId);
         }
         if (ret == DPS_OK) {
             ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_NEEDS);
@@ -693,12 +693,7 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRx
             break;
         case DPS_CBOR_KEY_MESH_ID:
             keysMask |= (1 << key);
-            ret = CBOR_DecodeBytes(rxBuf, (uint8_t**)&bytes, &len);
-            if ((ret == DPS_OK) && (len != sizeof(DPS_UUID))) {
-                ret = DPS_ERR_INVALID;
-            } else if (memcpy_s(meshId.val, sizeof(meshId.val), bytes, len) != EOK) {
-                ret = DPS_ERR_INVALID;
-            }
+            ret = CBOR_DecodeUUID(rxBuf, &meshId);
             break;
         case DPS_CBOR_KEY_INTERESTS:
             keysMask |= (1 << key);
