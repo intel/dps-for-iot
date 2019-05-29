@@ -648,7 +648,6 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRx
     uint32_t revision = 0;
     RemoteNode* remote = NULL;
     CBOR_MapState mapState;
-    uint8_t* bytes = NULL;
     DPS_UUID meshId;
     uint8_t flags = 0;
     uint16_t keysMask;
@@ -674,7 +673,6 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRx
     keysMask = 0;
     while (!DPS_ParseMapDone(&mapState)) {
         int32_t key = 0;
-        size_t len;
         ret = DPS_ParseMapNext(&mapState, &key);
         if (ret != DPS_OK) {
             break;
