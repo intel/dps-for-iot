@@ -103,10 +103,11 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote);
  * @param node       The local node
  * @param ep         The endpoint the subscription was received on
  * @param buffer     The encoded subscription
+ * @param multicast  DPS_TRUE if subscription was multicast, DPS_FALSE if unicast
  *
  * @return DPS_OK if decoding and processing is successful, an error otherwise
  */
-DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxBuffer* buffer);
+DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxBuffer* buffer, int multicast);
 
 /**
  * Decode and process a received subscription acknowledgement

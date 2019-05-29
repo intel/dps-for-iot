@@ -355,7 +355,7 @@ int main(int argc, char** argv)
     }
 
     if (!args.numLinks) {
-        args.mcastPub = DPS_MCAST_PUB_ENABLE_RECV;
+        args.mcastPub = DPS_MCAST_PUB_ENABLE_RECV | DPS_MCAST_SUB_ENABLE_SEND;
     }
     memoryKeyStore = DPS_CreateMemoryKeyStore();
     DPS_SetNetworkKey(memoryKeyStore, &NetworkKeyId, &NetworkKey);

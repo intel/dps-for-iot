@@ -218,6 +218,13 @@ DPS_Status DPS_DestroySubscription(DPS_Subscription* sub)
     return DPS_OK;
 }
 
+static void OnMulticastSendComplete(DPS_MulticastSender* sender, void* appCtx, uv_buf_t* bufs,
+                                    size_t numBufs, DPS_Status status)
+{
+    DPS_Node* node = appCtx;
+    DPS_OnSendSubscriptionComplete(node, NULL, &node->mcastNode->ep, bufs, numBufs, status);
+}
+
 #ifdef DPS_DEBUG
 int _DPS_NumSubs = 0;
 #endif
@@ -379,19 +386,26 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote)
 
     if (ret == DPS_OK) {
         uv_buf_t uvBuf = uv_buf_init((char*)buf.base, DPS_TxBufferUsed(&buf));
+        DPS_NetEndpoint* ep = (remote == node->mcastNode) ? NULL : &remote->ep;
         CBOR_Dump("Sub out", (uint8_t*)uvBuf.base, uvBuf.len);
-        ret = DPS_NetSend(node, NULL, &remote->ep, &uvBuf, 1, DPS_OnSendSubscriptionComplete);
+        if (ep) {
+            ret = DPS_NetSend(node, NULL, ep, &uvBuf, 1, DPS_OnSendSubscriptionComplete);
+            if (ret == DPS_OK) {
+                if (remote->outbound.ackCountdown) {
+                    --remote->outbound.ackCountdown;
+                } else {
+                    remote->outbound.ackCountdown = 1 + DPS_MAX_SUBSCRIPTION_RETRIES;
+                }
+                assert(remote->outbound.ackCountdown);
+            }
+        } else {
+            ret = DPS_MulticastSend(node->mcastSender, node, &uvBuf, 1, OnMulticastSendComplete);
+        }
         if (ret == DPS_OK) {
             remote->outbound.subPending = DPS_TRUE;
-            if (remote->outbound.ackCountdown) {
-                --remote->outbound.ackCountdown;
-            } else {
-                remote->outbound.ackCountdown = 1 + DPS_MAX_SUBSCRIPTION_RETRIES;
-            }
-            assert(remote->outbound.ackCountdown);
         } else {
             DPS_ERRPRINT("Failed to send subscription request %s\n", DPS_ErrTxt(ret));
-            DPS_SendComplete(node, &remote->ep.addr, &uvBuf, 1, ret);
+            DPS_SendComplete(node, ep ? &ep->addr : NULL, &uvBuf, 1, ret);
         }
     } else {
         DPS_TxBufferFree(&buf);
@@ -621,7 +635,7 @@ static DPS_Status UpdateInboundInterests(DPS_Node* node, RemoteNode* remote, DPS
     return DPS_OK;
 }
 
-DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxBuffer* buf)
+DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxBuffer* buf, int multicast)
 {
     static const int32_t NeedKeys[] = { DPS_CBOR_KEY_SEQ_NUM };
     static const int32_t WantKeys[] = { DPS_CBOR_KEY_PORT, DPS_CBOR_KEY_SUB_FLAGS, DPS_CBOR_KEY_MESH_ID, DPS_CBOR_KEY_NEEDS, DPS_CBOR_KEY_INTERESTS, DPS_CBOR_KEY_PATH };
@@ -643,6 +657,11 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRx
     size_t pathLen = 0;
 
     DPS_DBGTRACE();
+
+    /* TODO */
+    if (multicast) {
+        return DPS_OK;
+    }
 
     CBOR_Dump("Sub in", rxBuf->rxPos, DPS_RxBufferAvail(rxBuf));
     /*
@@ -893,7 +912,7 @@ DPS_Status DPS_DecodeSubscriptionAck(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
      * Decode subscription fields if they are present
      */
     rxPos = rxBuf->rxPos;
-    ret = DPS_DecodeSubscription(node, ep, buf);
+    ret = DPS_DecodeSubscription(node, ep, buf, DPS_FALSE);
     rxBuf->rxPos = rxPos;
 
     /*

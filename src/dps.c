@@ -314,13 +314,6 @@ DPS_Status DPS_UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, uin
     DPS_DBGTRACE();
 
     /*
-     * Outbound interests for the multicast remote node do not change.
-     */
-    if (destNode == node->mcastNode) {
-        *send = DPS_FALSE;
-        return DPS_OK;
-    }
-    /*
      * We don't update interests if we are muted but if we are
      * half-muted we need to send a subscription.
      */
@@ -329,10 +322,10 @@ DPS_Status DPS_UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, uin
         return DPS_OK;
     }
     /*
-     * Inbound interests from the node we are updating are excluded from the
-     * recalculation of outbound interests
+     * Inbound interests from the node we are updating are excluded
+     * from the recalculation of outbound interests.
      */
-    if (destNode->inbound.interests) {
+    if (destNode->inbound.interests && (destNode != node->mcastNode)) {
         ret = DPS_CountVectorDel(node->interests, destNode->inbound.interests);
         if (ret != DPS_OK) {
             goto ErrExit;
@@ -352,7 +345,7 @@ DPS_Status DPS_UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, uin
             goto ErrExit;
         }
     } else {
-        assert(!destNode->inbound.needs);
+        assert(!destNode->inbound.needs || (destNode == node->mcastNode));
         newInterests = DPS_CountVectorToUnion(node->interests);
         newNeeds = DPS_CountVectorToIntersection(node->needs);
     }
@@ -363,6 +356,8 @@ DPS_Status DPS_UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, uin
     /*
      * Send a delta if we have previously sent interests. The needs vector
      * is small so it is not worth computing a delta.
+     *
+     * Note that outbound multicast interests are never a delta.
      */
     if (destNode->outbound.interests) {
         int same = DPS_FALSE;
@@ -380,7 +375,7 @@ DPS_Status DPS_UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, uin
         } else {
             *send = DPS_TRUE;
         }
-        destNode->outbound.deltaInd = DPS_TRUE;
+        destNode->outbound.deltaInd = (destNode != node->mcastNode);
     } else {
         /*
          * This is not a delta
@@ -401,7 +396,7 @@ DPS_Status DPS_UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, uin
          * cannot exist without interests so we can just send
          * the maximum mesh id.
          */
-        if (DPS_BitVectorIsClear(newInterests)) {
+        if (DPS_BitVectorIsClear(newInterests) || (destNode == node->mcastNode)) {
             destNode->outbound.meshId = DPS_MaxMeshId;
         } else {
             destNode->outbound.meshId = *(MinMeshId(node, destNode));
@@ -599,7 +594,7 @@ void DPS_OnSendSubscriptionComplete(DPS_Node* node, void* appCtx, DPS_NetEndpoin
                     node->subsPending = DPS_TRUE;
                     uv_timer_start(&node->subsTimer, SendSubsTimer, 0, 0);
                 }
-            } else {
+            } else if (remote != node->mcastNode) {
                 DPS_DBGPRINT("Removing node %s\n", DPS_NodeAddrToString(&ep->addr));
                 DPS_DeleteRemoteNode(node, remote);
             }
@@ -750,10 +745,6 @@ static void SendSubsTimer(uv_timer_t* handle)
         uint8_t send = DPS_FALSE;
         remoteNext = remote->next;
 
-        if (remote == node->mcastNode) {
-            continue;
-        }
-
         if (remote->unlink) {
             reschedule = DPS_TRUE;
             DPS_SendSubscription(node, remote);
@@ -799,8 +790,10 @@ static void SendSubsTimer(uv_timer_t* handle)
             reschedule = DPS_TRUE;
             ret = DPS_SendSubscription(node, remote);
             if (ret != DPS_OK) {
-                DPS_DeleteRemoteNode(node, remote);
                 DPS_ERRPRINT("Failed to send subscription request %s\n", DPS_ErrTxt(ret));
+                if (remote != node->mcastNode) {
+                    DPS_DeleteRemoteNode(node, remote);
+                }
                 /*
                  * Eat the error and continue
                  */
@@ -922,7 +915,7 @@ static DPS_Status DecodeRequest(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxBu
     ret = DPS_ERR_INVALID;
     switch (msgType) {
     case DPS_MSG_TYPE_SUB:
-        ret = DPS_DecodeSubscription(node, ep, buf);
+        ret = DPS_DecodeSubscription(node, ep, buf, multicast);
         if (ret != DPS_OK) {
             DPS_DBGPRINT("DecodeSubscription returned %s\n", DPS_ErrTxt(ret));
         }
@@ -1394,14 +1387,14 @@ DPS_Status DPS_StartNode(DPS_Node* node, int mcast, DPS_NodeAddress* listenAddr)
         ret = DPS_ERR_RESOURCES;
         goto ErrExit;
     }
-    if (mcast & DPS_MCAST_PUB_ENABLE_RECV) {
+    if (mcast & (DPS_MCAST_PUB_ENABLE_RECV | DPS_MCAST_SUB_ENABLE_RECV)) {
         node->mcastReceiver = DPS_MulticastStartReceive(node, OnMulticastReceive);
         if (!node->mcastReceiver) {
             ret = DPS_ERR_RESOURCES;
             goto ErrExit;
         }
     }
-    if (mcast & DPS_MCAST_PUB_ENABLE_SEND) {
+    if (mcast & (DPS_MCAST_PUB_ENABLE_SEND | DPS_MCAST_SUB_ENABLE_SEND)) {
         node->mcastSender = DPS_MulticastStartSend(node);
         if (!node->mcastSender) {
             ret = DPS_ERR_RESOURCES;

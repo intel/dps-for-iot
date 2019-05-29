@@ -479,30 +479,45 @@ DPS_Status DPS_SetNodeData(DPS_Node* node, void* data);
 void* DPS_GetNodeData(const DPS_Node* node);
 
 /**
- * Disable multicast send and receive on the node.  See @p mcastPub of DPS_StartNode().
+ * Disable multicast publication send and receive on the node.  See @p mcast of DPS_StartNode().
  */
 #define DPS_MCAST_PUB_DISABLED       0
 
 /**
- * Enable multicast send on the node.  See @p mcastPub of DPS_StartNode().
+ * Enable multicast publication send on the node.  See @p mcast of DPS_StartNode().
  */
 #define DPS_MCAST_PUB_ENABLE_SEND    1
 
 /**
- * Enable multicast receive on the node.  See @p mcastPub of DPS_StartNode().
+ * Enable multicast publication receive on the node.  See @p mcast of DPS_StartNode().
  */
 #define DPS_MCAST_PUB_ENABLE_RECV    2
+
+/**
+ * Disable multicast subscription send and receive on the node.  See @p mcast of DPS_StartNode().
+ */
+#define DPS_MCAST_SUB_DISABLED       0
+
+/**
+ * Enable multicast subscription send on the node.  See @p mcast of DPS_StartNode().
+ */
+#define DPS_MCAST_SUB_ENABLE_SEND    3
+
+/**
+ * Enable multicast subscription receive on the node.  See @p mcast of DPS_StartNode().
+ */
+#define DPS_MCAST_SUB_ENABLE_RECV    4
 
 /**
  * Initialized and starts running a local node. Node can only be started once.
  *
  * @param node         The node
- * @param mcastPub     Indicates if this node sends or listens for multicast publications
+ * @param mcast        Indicates if this node sends or listens for multicast
  * @param listenAddr   If non-NULL identifies specific address to listen on
  *
  * @return DPS_OK or various error status codes
  */
-DPS_Status DPS_StartNode(DPS_Node* node, int mcastPub, DPS_NodeAddress* listenAddr);
+DPS_Status DPS_StartNode(DPS_Node* node, int mcast, DPS_NodeAddress* listenAddr);
 
 /**
  * Function prototype for callback function called when a node is destroyed.
