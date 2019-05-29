@@ -311,7 +311,7 @@ DPS_Status DPS_UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, uin
     DPS_BitVector* newInterests = NULL;
     DPS_BitVector* newNeeds = NULL;
 
-    DPS_DBGTRACE();
+    DPS_DBGTRACEA("node=%p,destNode=%s,send=%p\n", node, DPS_NodeAddrToString(&destNode->ep.addr), send);
 
     /*
      * We don't update interests if we are muted but if we are
@@ -485,19 +485,36 @@ int DPS_MeshHasLoop(DPS_Node* node, RemoteNode* src, DPS_UUID* meshId)
     }
 }
 
-RemoteNode* DPS_LookupRemoteNode(DPS_Node* node, const DPS_NodeAddress* addr)
+static RemoteNode* LookupRemoteNode(DPS_Node* node, const DPS_UUID* nodeId, const DPS_NodeAddress* addr)
 {
-    RemoteNode* remote;
+    RemoteNode* remote = NULL;
+    RemoteNode* r;
 
     if (!addr) {
         return NULL;
     }
-    for (remote = node->remoteNodes; remote != NULL; remote = remote->next) {
-        if (DPS_SameAddr(&remote->ep.addr, addr)) {
-            return remote;
+    /*
+     * Try to locate a matching node identifier first, and only if
+     * that doesn't exist use the address.
+     *
+     * This allows us to use a single remote when we receive e.g. a
+     * single SUB over multiple interfaces.
+     */
+    for (r = node->remoteNodes; r != NULL; r = r->next) {
+        if (nodeId && (DPS_UUIDCompare(&r->id, nodeId) == 0)) {
+            remote = r;
+            break;
+        }
+        if (DPS_SameAddr(&r->ep.addr, addr)) {
+            remote = r;
         }
     }
-    return NULL;
+    return remote;
+}
+
+RemoteNode* DPS_LookupRemoteNode(DPS_Node* node, const DPS_NodeAddress* addr)
+{
+    return LookupRemoteNode(node, NULL, addr);
 }
 
 static OnOpCompletion* AllocCompletion(DPS_Node* node, RemoteNode* remote, OpType op, void* data,
@@ -519,10 +536,10 @@ static OnOpCompletion* AllocCompletion(DPS_Node* node, RemoteNode* remote, OpTyp
 /*
  * Add a remote node or return an existing one
  */
-DPS_Status DPS_AddRemoteNode(DPS_Node* node, const DPS_NodeAddress* addr, DPS_NetConnection* cn,
+DPS_Status DPS_AddRemoteNode(DPS_Node* node, const DPS_UUID* id, const DPS_NodeAddress* addr, DPS_NetConnection* cn,
                              RemoteNode** remoteOut)
 {
-    RemoteNode* remote = DPS_LookupRemoteNode(node, addr);
+    RemoteNode* remote = LookupRemoteNode(node, id, addr);
     if (remote) {
         *remoteOut = remote;
         /*
@@ -540,6 +557,9 @@ DPS_Status DPS_AddRemoteNode(DPS_Node* node, const DPS_NodeAddress* addr, DPS_Ne
         return DPS_ERR_RESOURCES;
     }
     DPS_DBGPRINT("Adding new remote node %s\n", DPS_NodeAddrToString(addr));
+    if (id) {
+        memcpy_s(&remote->id, sizeof(remote->id), id, sizeof(DPS_UUID));
+    }
     if (addr) {
         remote->ep.addr = *addr;
     }
@@ -618,7 +638,7 @@ static void SendAcksTask(uv_async_t* handle)
         ack = (PublicationAck*)DPS_QueueFront(&node->ackQueue);
         DPS_QueueRemove(&ack->queue);
         if (node->state == DPS_NODE_RUNNING) {
-            ret = DPS_AddRemoteNode(node, &ack->destAddr, NULL, &ackNode);
+            ret = DPS_AddRemoteNode(node, NULL, &ack->destAddr, NULL, &ackNode);
             if (ret == DPS_OK || ret == DPS_ERR_EXISTS) {
                 ret = DPS_SendAcknowledgement(ack, ackNode);
             }
@@ -1283,6 +1303,7 @@ DPS_Node* DPS_CreateNode(const char* separators, DPS_KeyStore* keyStore, const D
     }
     strncpy_s(node->separators, sizeof(node->separators), separators, sizeof(node->separators) - 1);
     node->keyStore = keyStore;
+    DPS_GenerateUUID(&node->id);
     DPS_QueueInit(&node->ackQueue);
     /*
      * Set default probe configuration and subscription rate parameters
@@ -1410,7 +1431,7 @@ DPS_Status DPS_StartNode(DPS_Node* node, int mcast, DPS_NodeAddress* listenAddr)
          */
         DPS_NodeAddress mcastAddr;
         DPS_SetAddress(&mcastAddr, "[::]:5683");
-        ret = DPS_AddRemoteNode(node, &mcastAddr, NULL, &node->mcastNode);
+        ret = DPS_AddRemoteNode(node, &node->id, &mcastAddr, NULL, &node->mcastNode);
         if (ret != DPS_OK) {
             goto ErrExit;
         }
@@ -1523,7 +1544,7 @@ static DPS_Status Link(DPS_Node* node, const DPS_NodeAddress* addr, OnOpCompleti
         ret = DPS_ERR_UNRESOLVED;
         goto Exit;
     }
-    ret = DPS_AddRemoteNode(node, addr, NULL, &remote);
+    ret = DPS_AddRemoteNode(node, NULL, addr, NULL, &remote);
     if (ret != DPS_OK && ret != DPS_ERR_EXISTS) {
         goto Exit;
     }

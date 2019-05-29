@@ -671,7 +671,7 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxB
     static const int32_t UnprotectedKeys[] = { DPS_CBOR_KEY_TTL };
     static const int32_t UnprotectedOptKeys[] = { DPS_CBOR_KEY_PORT, DPS_CBOR_KEY_PATH };
     static const int32_t ProtectedKeys[] = { DPS_CBOR_KEY_TTL, DPS_CBOR_KEY_PUB_ID, DPS_CBOR_KEY_SEQ_NUM,
-                                             DPS_CBOR_KEY_ACK_REQ, DPS_CBOR_KEY_BLOOM_FILTER };
+                                             DPS_CBOR_KEY_ACK_REQ, DPS_CBOR_KEY_BLOOM_FILTER, DPS_CBOR_KEY_NODE_ID };
     DPS_RxBuffer* rxBuf = (DPS_RxBuffer*)buf;
     DPS_Status ret;
     RemoteNode* pubNode = NULL;
@@ -690,6 +690,7 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxB
     char* path = NULL;
     size_t pathLen;
     uint16_t keysMask;
+    DPS_UUID nodeId;
 
     DPS_DBGTRACE();
 
@@ -790,6 +791,9 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxB
                 DPS_RxBufferInit(&bfBuf, rxBuf->rxPos - len, len);
             }
             break;
+        case DPS_CBOR_KEY_NODE_ID:
+            ret = CBOR_DecodeUUID(rxBuf, &nodeId);
+            break;
         }
         if (ret != DPS_OK) {
             break;
@@ -881,7 +885,7 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxB
      * We have no reason here to hold onto a node for multicast publishers
      */
     if (!multicast) {
-        ret = DPS_AddRemoteNode(node, &ep->addr, ep->cn, &pubNode);
+        ret = DPS_AddRemoteNode(node, &nodeId, &ep->addr, ep->cn, &pubNode);
         if (ret == DPS_ERR_EXISTS) {
             DPS_DBGPRINT("Updating existing node\n");
             ret = DPS_OK;
@@ -1504,17 +1508,18 @@ DPS_Status DPS_SerializePub(DPS_PublishRequest* req, const DPS_Buffer* bufs, siz
     /*
      * Encode the protected map
      */
-    len = CBOR_SIZEOF_MAP(5) + 5 * CBOR_SIZEOF(uint8_t) +
+    len = CBOR_SIZEOF_MAP(6) + 6 * CBOR_SIZEOF(uint8_t) +
         CBOR_SIZEOF_BYTES(sizeof(DPS_UUID)) +
         CBOR_SIZEOF(uint32_t) +
         CBOR_SIZEOF_BOOLEAN() +
         CBOR_SIZEOF_BYTES(bfLen) +
-        CBOR_SIZEOF(int16_t);
+        CBOR_SIZEOF(int16_t) +
+        CBOR_SIZEOF_BYTES(sizeof(DPS_UUID));
     ret = DPS_TxBufferInit(&req->bufs[0], NULL, len);
     if (ret != DPS_OK) {
         return DPS_ERR_RESOURCES;
     }
-    ret = CBOR_EncodeMap(&req->bufs[0], 5);
+    ret = CBOR_EncodeMap(&req->bufs[0], 6);
     if (ret == DPS_OK) {
         ret = CBOR_EncodeUint8(&req->bufs[0], DPS_CBOR_KEY_TTL);
     }
@@ -1544,6 +1549,12 @@ DPS_Status DPS_SerializePub(DPS_PublishRequest* req, const DPS_Buffer* bufs, siz
     }
     if (ret == DPS_OK) {
         ret = CBOR_Copy(&req->bufs[0], pub->bfBuf.base, bfLen);
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeUint8(&req->bufs[0], DPS_CBOR_KEY_NODE_ID);
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeUUID(&req->bufs[0], &node->id);
     }
     /*
      * Encode the encrypted map

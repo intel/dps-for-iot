@@ -69,6 +69,7 @@ field = (
   ? 12 => bstr,              ; # data - payload data
   ? 13 => uint               ; # ack-seq-num - sequence number for an acknowledgement
   ? 14 => tstr               ; # path - path sender is listening on
+  ? 15 => uuid,              ; # node-id - unique identifier for a node
 )
 @endverbatim
 
@@ -130,8 +131,8 @@ pub = 1
 @em ttl and one of @em port or @em path are mandatory in the @em
 unprotected section.
 
-@em ttl, @em pub-id, @em seq-num, @em ack-req and @em bloom-filter are
-mandatory in the @em protected section.
+@em ttl, @em pub-id, @em seq-num, @em ack-req, @em bloom-filter and
+@em node-id are mandatory in the @em protected section.
 
 @em topics and @em data are mandatory in the @em encrypted section.
 
@@ -145,9 +146,9 @@ sub = 2
 unprotected section.
 
 Additionally, in a regular subscription message, @em sub-flags, @em
-mesh-id, @em needs and @em interests are mandatory in the @em
-unprotected section.  In an unlink subscription message those fields
-shall be absent.
+mesh-id, @em needs, @em interests and @em node-id are mandatory in the
+@em unprotected section.  In an unlink subscription message those
+fields shall be absent.
 
 @section acknowledgement-message Acknowledgement message
 

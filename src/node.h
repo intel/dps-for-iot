@@ -90,6 +90,7 @@ typedef struct _LinkMonitorConfig {
 typedef struct _DPS_Node {
     void* userData;                       /**< Application provided user data */
 
+    DPS_UUID id;                          /**< Node identifier */
     uint8_t subsPending;                  /**< Used to rate-limit subscription messages */
     DPS_NodeAddress addr;                 /**< Listening address */
     char addrStr[DPS_NODE_ADDRESS_MAX_STRING_LEN]; /**< Text of listening address */
@@ -180,6 +181,7 @@ typedef struct _RemoteNode {
         DPS_BitVector* delta;          /**< Delta outbound bit vector sent to this remote node */
     } outbound;
     LinkMonitor* monitor;              /**< For monitoring muted links */
+    DPS_UUID id;                       /**< The node identifier of the remote */
     DPS_NetEndpoint ep;                /**< The endpoint of the remote */
     RemoteNode* next;                  /**< Remotes are a linked list attached to the local node */
 } RemoteNode;
@@ -263,6 +265,7 @@ void DPS_OnSendComplete(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_bu
  * Must be called with the node lock held.
  *
  * @param node      The local node
+ * @param id        The optional identifier of the remote node
  * @param addr      The address of the remote node
  * @param cn        Connection state information for the node
  * @param remoteOut Returns an existing or new remote node structure
@@ -272,7 +275,7 @@ void DPS_OnSendComplete(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_bu
  *          - DPS_ERR_EXISTS if the node already exists
  *          - Other status codes indicating an error
  */
-DPS_Status DPS_AddRemoteNode(DPS_Node* node, const DPS_NodeAddress* addr, DPS_NetConnection* cn, RemoteNode** remoteOut);
+DPS_Status DPS_AddRemoteNode(DPS_Node* node, const DPS_UUID* id, const DPS_NodeAddress* addr, DPS_NetConnection* cn, RemoteNode** remoteOut);
 
 /**
  * Lookup a remote node by address.

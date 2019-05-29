@@ -59,6 +59,7 @@ extern "C" {
 #define DPS_CBOR_KEY_DATA          12   /**< bstr */
 #define DPS_CBOR_KEY_ACK_SEQ_NUM   13   /**< uint */
 #define DPS_CBOR_KEY_PATH          14   /**< tstr */
+#define DPS_CBOR_KEY_NODE_ID       15   /**< bstr (UUID) */
 
 /**
  * Convert seconds to milliseconds

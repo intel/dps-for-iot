@@ -131,7 +131,7 @@ typedef struct _Args {
     int wait;
     int encrypt;
     int subsRate;
-    int mcastPub;
+    int mcast;
     int interactive;
 } Args;
 
@@ -157,7 +157,7 @@ static int ParseArgs(int argc, char** argv, Args* args)
     memset(args, 0, sizeof(Args));
     args->encrypt = 1;
     args->subsRate = DPS_SUBSCRIPTION_UPDATE_RATE;
-    args->mcastPub = DPS_MCAST_PUB_DISABLED;
+    args->mcast = DPS_MCAST_PUB_DISABLED;
 
     for (; argc; --argc) {
         /*
@@ -186,7 +186,7 @@ static int ParseArgs(int argc, char** argv, Args* args)
             }
             if (strcmp(*argv, "-m") == 0) {
                 ++argv;
-                args->mcastPub = DPS_MCAST_PUB_ENABLE_RECV;
+                args->mcast = DPS_MCAST_PUB_ENABLE_RECV;
                 continue;
             }
             if (strcmp(*argv, "-d") == 0) {
@@ -355,8 +355,9 @@ int main(int argc, char** argv)
     }
 
     if (!args.numLinks) {
-        args.mcastPub = DPS_MCAST_PUB_ENABLE_RECV | DPS_MCAST_SUB_ENABLE_SEND;
+        args.mcast = DPS_MCAST_PUB_ENABLE_RECV | DPS_MCAST_SUB_ENABLE_SEND;
     }
+    args.mcast |= DPS_MCAST_SUB_ENABLE_SEND;
     memoryKeyStore = DPS_CreateMemoryKeyStore();
     DPS_SetNetworkKey(memoryKeyStore, &NetworkKeyId, &NetworkKey);
     if (args.encrypt == 1) {
@@ -380,7 +381,7 @@ int main(int argc, char** argv)
 
     nodeDestroyed = DPS_CreateEvent();
 
-    ret = DPS_StartNode(subscriber.node, args.mcastPub, args.listenAddr);
+    ret = DPS_StartNode(subscriber.node, args.mcast, args.listenAddr);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
         goto Exit;

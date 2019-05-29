@@ -306,6 +306,7 @@ int main(int argc, char** argv)
     if (numLinks) {
         mcast = DPS_MCAST_PUB_DISABLED;
     }
+    mcast |= DPS_MCAST_SUB_ENABLE_RECV;
 
     memoryKeyStore = DPS_CreateMemoryKeyStore();
     DPS_SetNetworkKey(memoryKeyStore, &NetworkKeyId, &NetworkKey);

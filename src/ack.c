@@ -446,7 +446,7 @@ DPS_Status DPS_DecodeAcknowledgement(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
     if ((ret == DPS_OK) && (sequenceNum <= sn) && addr && !DPS_SameAddr(&ep->addr, addr)) {
         RemoteNode* ackNode;
         DPS_LockNode(node);
-        ret = DPS_AddRemoteNode(node, addr, NULL, &ackNode);
+        ret = DPS_AddRemoteNode(node, NULL, addr, NULL, &ackNode);
         if (ret == DPS_OK || ret == DPS_ERR_EXISTS) {
             uv_buf_t uvBuf;
             DPS_DBGPRINT("Forwarding acknowledgement for %s/%d to %s\n", DPS_UUIDToString(&pubId), sequenceNum, DPS_NodeAddrToString(addr));
