@@ -892,6 +892,16 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRx
         memcpy_s(&node->minMeshId, sizeof(node->minMeshId), &meshId, sizeof(DPS_UUID));
     }
     /*
+     * Prime the outbound interests of the multicast node so that we
+     * don't forward multicast subscriptions via the multicast node.
+     */
+    if (ret == DPS_OK) {
+        if (multicast && node->mcastNode) {
+            uint8_t unused;
+            DPS_UpdateOutboundInterests(node, node->mcastNode, &unused);
+        }
+    }
+    /*
      * All is good so send an ACK
      */
     if (ret == DPS_OK) {
