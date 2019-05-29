@@ -1010,7 +1010,7 @@ static DPS_Status OnNetReceive(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Status s
     }
     DPS_UnlockNode(node);
     /*
-     * Delete the remote node if the received failed
+     * Delete the remote node if the receive failed
      */
     if (status != DPS_OK) {
         RemoteNode* remote;

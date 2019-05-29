@@ -486,6 +486,16 @@ DPS_Status CBOR_EncodeFloat(DPS_TxBuffer* buffer, float f);
 DPS_Status CBOR_EncodeDouble(DPS_TxBuffer* buffer, double d);
 
 /**
+ * Encode a UUID byte string
+ *
+ * @param buffer   Buffer to append to
+ * @param uuid     The UUID
+ *
+ * @return DPS_OK if successful, an error otherwise
+ */
+DPS_Status CBOR_EncodeUUID(DPS_TxBuffer* buffer, const DPS_UUID* uuid);
+
+/**
  * Decode a byte string
  *
  * @param buffer  Buffer to decode from
@@ -531,7 +541,7 @@ DPS_Status CBOR_DecodeArray(DPS_RxBuffer* buffer, size_t* size);
 /**
  * Decode a float
  *
- * @param buffer   Buffer to append to
+ * @param buffer   Buffer to decode from
  * @param f        The float
  *
  * @return DPS_OK if successful, an error otherwise
@@ -541,12 +551,22 @@ DPS_Status CBOR_DecodeFloat(DPS_RxBuffer* buffer, float* f);
 /**
  * Decode a double
  *
- * @param buffer   Buffer to append to
+ * @param buffer   Buffer to decode from
  * @param d        The double
  *
  * @return DPS_OK if successful, an error otherwise
  */
 DPS_Status CBOR_DecodeDouble(DPS_RxBuffer* buffer, double* d);
+
+/**
+ * Decode a UUID byte string
+ *
+ * @param buffer   Buffer to decode from
+ * @param uuid     The UUID
+ *
+ * @return DPS_OK if successful, an error otherwise
+ */
+DPS_Status CBOR_DecodeUUID(DPS_RxBuffer* buffer, DPS_UUID* uuid);
 
 /**
  * Skip a CBOR value

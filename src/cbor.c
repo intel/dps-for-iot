@@ -412,6 +412,11 @@ DPS_Status CBOR_EncodeDouble(DPS_TxBuffer* buffer, double d)
     return DPS_OK;
 }
 
+DPS_Status CBOR_EncodeUUID(DPS_TxBuffer* buffer, const DPS_UUID* uuid)
+{
+    return CBOR_EncodeBytes(buffer, (const uint8_t*)uuid, sizeof(DPS_UUID));
+}
+
 DPS_Status CBOR_DecodeUint(DPS_RxBuffer* buffer, uint64_t* n)
 {
     return DecodeUint(buffer, n, CBOR_UINT);
@@ -746,6 +751,24 @@ DPS_Status CBOR_DecodeDouble(DPS_RxBuffer* buffer, double* d)
 #endif
     buffer->rxPos = p;
     return DPS_OK;
+}
+
+DPS_Status CBOR_DecodeUUID(DPS_RxBuffer* buffer, DPS_UUID* uuid)
+{
+    uint8_t* bytes;
+    size_t len;
+    DPS_Status ret;
+
+    ret = CBOR_DecodeBytes(buffer, &bytes, &len);
+    if (ret == DPS_OK) {
+        if (len != sizeof(DPS_UUID)) {
+            ret = DPS_ERR_INVALID;
+        }
+    }
+    if (ret == DPS_OK) {
+        memcpy(&uuid->val, bytes, sizeof(DPS_UUID));
+    }
+    return ret;
 }
 
 DPS_Status CBOR_Peek(DPS_RxBuffer* buffer, uint8_t* majOut, uint64_t* infoOut)
