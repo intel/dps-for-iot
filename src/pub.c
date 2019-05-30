@@ -397,12 +397,12 @@ DPS_Node* DPS_PublicationGetNode(const DPS_Publication* pub)
     }
 }
 
-static DPS_Status UpdatePubHistory(DPS_PublishRequest* req)
+static DPS_Status UpdatePubHistory(DPS_PublishRequest* req, DPS_NodeAddress* addr)
 {
     DPS_Publication* pub = req->pub;
     DPS_Node* node = pub->node;
     return DPS_UpdatePubHistory(&node->history, &pub->pubId, req->sequenceNum, pub->ackRequested,
-                                REQ_TTL(req), &pub->senderAddr);
+                                REQ_TTL(req), addr);
 }
 
 /*
@@ -627,7 +627,7 @@ static DPS_Status CallPubHandlers(DPS_PublishRequest* req)
         }
         if (match) {
             DPS_DBGPRINT("Matched subscription\n");
-            UpdatePubHistory(req);
+            UpdatePubHistory(req, &pub->senderAddr);
             DPS_UnlockNode(node);
             sub->handler(sub, pub, data, dataLen);
             DPS_LockNode(node);
@@ -942,7 +942,15 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxB
     }
     req->ttl = ttl;
     req->expires = uv_now(node->loop) + DPS_SECS_TO_MS(ttl);
-    UpdatePubHistory(req);
+    UpdatePubHistory(req, &pub->senderAddr);
+    /*
+     * Update history of multicast node so that we don't forward
+     * received multicast publications back out the multicast
+     * interfaces.
+     */
+    if (multicast && node->mcastNode) {
+        UpdatePubHistory(req, &node->mcastNode->ep.addr);
+    }
     DPS_QueuePushBack(&pub->sendQueue, &req->queue);
     ++req->refCount;
     uv_async_send(&node->pubsAsync);

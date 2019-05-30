@@ -324,12 +324,12 @@ DPS_Status DPS_UpdatePubHistory(DPS_History* history, DPS_UUID* pubId, uint32_t 
         }
         if (!(*phAddr)) {
             (*phAddr) = calloc(1, sizeof(DPS_NodeAddressList));
-            if ((*phAddr)) {
-                (*phAddr)->sn = sequenceNum;
-                (*phAddr)->addr = *addr;
-                DPS_DBGPRINT("Added %s to pub %s\n", DPS_NodeAddrToString(&(*phAddr)->addr),
-                             DPS_UUIDToString(pubId));
-            }
+        }
+        if ((*phAddr)) {
+            (*phAddr)->sn = sequenceNum;
+            (*phAddr)->addr = *addr;
+            DPS_DBGPRINT("Added %s to pub %s\n", DPS_NodeAddrToString(&(*phAddr)->addr),
+                         DPS_UUIDToString(pubId));
         }
     }
     ph->expiration = now + DPS_SECS_TO_MS(ttl) + PUB_HISTORY_LIFETIME;
