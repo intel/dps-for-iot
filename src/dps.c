@@ -233,19 +233,15 @@ DPS_Status DPS_ClearOutboundInterests(RemoteNode* remote)
 void DPS_ClearInboundInterests(DPS_Node* node, RemoteNode* remote)
 {
     if (remote->inbound.interests) {
-        if (remote != node->mcastNode) {
-            if (DPS_CountVectorDel(node->interests, remote->inbound.interests) != DPS_OK) {
-                assert(!"Count error");
-            }
+        if (DPS_CountVectorDel(node->interests, remote->inbound.interests) != DPS_OK) {
+            assert(!"Count error");
         }
         DPS_BitVectorFree(remote->inbound.interests);
         remote->inbound.interests = NULL;
     }
     if (remote->inbound.needs) {
-        if (remote != node->mcastNode) {
-            if (DPS_CountVectorDel(node->needs, remote->inbound.needs) != DPS_OK) {
-                assert(!"Count error");
-            }
+        if (DPS_CountVectorDel(node->needs, remote->inbound.needs) != DPS_OK) {
+            assert(!"Count error");
         }
         DPS_BitVectorFree(remote->inbound.needs);
         remote->inbound.needs = NULL;
@@ -674,6 +670,15 @@ static void SendPubsTask(uv_async_t* handle)
                         break;
                     }
                 }
+                /*
+                 * If the node is a multicast sender local publications are always multicast
+                 */
+                if (node->mcastSender) {
+                    ret = DPS_SendPublication(req, pub, NULL);
+                    if (ret != DPS_OK) {
+                        DPS_ERRPRINT("SendPublication (multicast) returned %s\n", DPS_ErrTxt(ret));
+                    }
+                }
             }
             for (remote = node->remoteNodes; remote != NULL; remote = nextRemote) {
                 nextRemote = remote->next;
@@ -734,15 +739,29 @@ static void SendSubsTimer(uv_timer_t* handle)
     RemoteNode* remote;
     RemoteNode* remoteNext;
     int reschedule = DPS_FALSE;
+    uint8_t send = DPS_FALSE;
 
     DPS_DBGTRACE();
 
     DPS_LockNode(node);
     /*
+     * Check for multicast subscriptions
+     */
+    if (node->mcastNode) {
+        ret = DPS_UpdateOutboundInterests(node, node->mcastNode, &send);
+        if (ret == DPS_OK) {
+            if (send) {
+                DPS_SendSubscription(node, node->mcastNode);
+            }
+        } else {
+            DPS_ERRPRINT("SendSubsTask (multicast) failed %s\n", DPS_ErrTxt(ret));
+        }
+    }
+    /*
      * Forward subscription to all remote nodes with interests
      */
     for (remote = node->remoteNodes; remote != NULL; remote = remoteNext) {
-        uint8_t send = DPS_FALSE;
+        send = DPS_FALSE;
         remoteNext = remote->next;
 
         if (remote->unlink) {
@@ -1084,7 +1103,6 @@ static void StopNode(DPS_Node* node)
         DPS_MulticastStopReceive(node->mcastReceiver);
         node->mcastReceiver = NULL;
     }
-    DPS_DeleteRemoteNode(node, node->mcastNode);
     if (node->mcastSender) {
         DPS_MulticastStopSend(node->mcastSender);
         node->mcastSender = NULL;
@@ -1110,6 +1128,8 @@ static void StopNode(DPS_Node* node)
     while (node->remoteNodes) {
         DPS_DeleteRemoteNode(node, node->remoteNodes);
     }
+    FreeOutboundInterests(node->mcastNode);
+    free(node->mcastNode);
     /*
      * Cleanup any unresolved acks
      */
@@ -1401,17 +1421,11 @@ DPS_Status DPS_StartNode(DPS_Node* node, int mcast, DPS_NodeAddress* listenAddr)
             goto ErrExit;
         }
         /*
-         * Create a special multicast remote node so that we don't
-         * redundantly multicast retained publications.
-         *
-         * The choice of address is not that important here, it just
-         * needs to be something valid and not NULL for the redundant
-         * send checking to work correctly.
+         * Create a special multicast remote node for sending multicast subscriptions.
          */
-        DPS_NodeAddress mcastAddr;
-        DPS_SetAddress(&mcastAddr, "[::]:5683");
-        ret = DPS_AddRemoteNode(node, &mcastAddr, NULL, &node->mcastNode);
-        if (ret != DPS_OK) {
+        node->mcastNode = calloc(1, sizeof(RemoteNode));
+        if (!node->mcastNode) {
+            ret = DPS_ERR_RESOURCES;
             goto ErrExit;
         }
         node->mcastNode->inbound.interests = DPS_BitVectorAlloc();
@@ -1427,6 +1441,7 @@ DPS_Status DPS_StartNode(DPS_Node* node, int mcast, DPS_NodeAddress* listenAddr)
          */
         DPS_BitVectorFill(node->mcastNode->inbound.interests);
     }
+
     node->netCtx = DPS_NetStart(node, listenAddr, OnNetReceive);
     if (!node->netCtx) {
         DPS_ERRPRINT("Failed to initialize network context on %s\n", DPS_NodeAddrToString(listenAddr));

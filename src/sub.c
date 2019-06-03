@@ -781,82 +781,90 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRx
         ret = DPS_ERR_INVALID;
         goto DiscardAndExit;
     }
-
+    /* 
+     * Multicast subscriptions stimulate retranmission of matching retained publications
+     */
     if (multicast) {
-        if (!node->mcastNode) {
-            ret = DPS_OK;
-            goto DiscardAndExit;
-        }
         remote = node->mcastNode;
-        remoteIsNew = DPS_TRUE;
-        /*
-         * Flush the multicast node history of retained publications
-         * to trigger a send again.
-         */
-        DPS_Publication* p;
-        for (p = node->publications; p != NULL; p = p->next) {
-            if (DPS_QueueEmpty(&p->retainedQueue)) {
-                continue;
+        if (remote) {
+            DPS_Publication* p;
+            remote->ep = *ep;
+            for (p = node->publications; p != NULL; p = p->next) {
+                /*
+                 * Only retained messages are sent in response to a solicited subscription
+                 */
+                if (DPS_QueueEmpty(&p->retainedQueue) || (p->flags & PUB_FLAG_EXPIRED)) {
+                    continue;
+                }
+                if (DPS_BitVectorIncludes(p->bf, interests)) {
+                    DPS_PublishRequest* r = (DPS_PublishRequest*)DPS_QueueFront(&p->retainedQueue);
+                    /*
+                     * Final check that the publication has not expired
+                     */
+                    if (REQ_TTL(r) <= 0) {
+                        continue;
+                    }
+                    assert(p->flags & PUB_FLAG_RETAINED);
+                    DPS_SendPublication(r, p, remote);
+                }
             }
-            DPS_PublishRequest* r = (DPS_PublishRequest*)DPS_QueueFront(&p->retainedQueue);
-            DPS_UpdatePubHistory(&node->history, &p->pubId, r->sequenceNum - 1, p->ackRequested,
-                                 REQ_TTL(r), &remote->ep.addr);
         }
+        ret = DPS_OK;
+        goto DiscardAndExit;
+    }
+    ret = DPS_AddRemoteNode(node, &ep->addr, ep->cn, &remote);
+    if (ret == DPS_ERR_EXISTS) {
+        ret = DPS_OK;
     } else {
-        ret = DPS_AddRemoteNode(node, &ep->addr, ep->cn, &remote);
-        if (ret == DPS_ERR_EXISTS) {
-            ret = DPS_OK;
-        } else {
-            ret = DPS_ClearOutboundInterests(remote);
-            remoteIsNew = DPS_TRUE;
+        ret = DPS_ClearOutboundInterests(remote);
+        remoteIsNew = DPS_TRUE;
+    }
+    if (ret != DPS_OK) {
+        goto DiscardAndExit;
+    }
+    /*
+     * Discard stale subscriptions
+     */
+    if (revision < remote->inbound.revision) {
+        DPS_DBGPRINT("%s Stale subscription %d from %s (expected %d)\n", node->addrStr, revision,
+                DESCRIBE(remote), remote->inbound.revision + 1);
+        goto DiscardAndExit;
+    }
+    /*
+     * Duplicate - presumably an ACK got lost
+     */
+    if (revision == remote->inbound.revision) {
+        ret = SendSubscriptionAck(node, remote, revision, remote->outbound.includeSub);
+        goto DiscardAndExit;
+    }
+    remote->inbound.revision = revision;
+    DPS_DBGPRINT("Node %s received mesh id %08x from %s\n", node->addrStr, UUID_32(&meshId),
+            DESCRIBE(remote));
+    /*
+     * Loops can be detected by either end of a link and corrective action is required
+     * to prevent interests from propagating around the loop. The corrective action is
+     * to mute the link by clearing all inbound and outbound interests from the remote.
+     */
+    if (flags & DPS_SUB_FLAG_MUTE_IND) {
+        remote->inbound.muted = DPS_TRUE;
+        if (!remote->outbound.muted) {
+            DPS_MuteRemoteNode(node, remote);
+            ret = DPS_LinkMonitorStart(node, remote);
         }
-        if (ret != DPS_OK) {
-            goto DiscardAndExit;
+    } else if (remote->inbound.muted) {
+        DPS_DBGPRINT("Remote %s has unumuted\n", DESCRIBE(remote));
+        ret = DPS_UnmuteRemoteNode(node, remote);
+    } else if (DPS_MeshHasLoop(node, remote, &meshId)) {
+        DPS_DBGPRINT("Loop detected by %s for %s\n", node->addrStr, DESCRIBE(remote));
+        if (!remote->outbound.muted) {
+            DPS_MuteRemoteNode(node, remote);
         }
-        /*
-         * Discard stale subscriptions
-         */
-        if (revision < remote->inbound.revision) {
-            DPS_DBGPRINT("%s Stale subscription %d from %s (expected %d)\n", node->addrStr, revision,
-                         DESCRIBE(remote), remote->inbound.revision + 1);
-            goto DiscardAndExit;
-        }
-        /*
-         * Duplicate - presumably an ACK got lost
-         */
-        if (revision == remote->inbound.revision) {
-            ret = SendSubscriptionAck(node, remote, revision, remote->outbound.includeSub);
-            goto DiscardAndExit;
-        }
-        remote->inbound.revision = revision;
-        DPS_DBGPRINT("Node %s received mesh id %08x from %s\n", node->addrStr, UUID_32(&meshId),
-                     DESCRIBE(remote));
-        /*
-         * Loops can be detected by either end of a link and corrective action is required
-         * to prevent interests from propagating around the loop. The corrective action is
-         * to mute the link by clearing all inbound and outbound interests from the remote.
-         */
-        if (flags & DPS_SUB_FLAG_MUTE_IND) {
-            remote->inbound.muted = DPS_TRUE;
-            if (!remote->outbound.muted) {
-                DPS_MuteRemoteNode(node, remote);
-                ret = DPS_LinkMonitorStart(node, remote);
-            }
-        } else if (remote->inbound.muted) {
-            DPS_DBGPRINT("Remote %s has unumuted\n", DESCRIBE(remote));
-            ret = DPS_UnmuteRemoteNode(node, remote);
-        } else if (DPS_MeshHasLoop(node, remote, &meshId)) {
-            DPS_DBGPRINT("Loop detected by %s for %s\n", node->addrStr, DESCRIBE(remote));
-            if (!remote->outbound.muted) {
-                DPS_MuteRemoteNode(node, remote);
-            }
-        }
-        /*
-         * Track the minimum mesh id we have seen
-         */
-        if (DPS_UUIDCompare(&meshId, &node->minMeshId) < 0) {
-            memcpy_s(&node->minMeshId, sizeof(node->minMeshId), &meshId, sizeof(DPS_UUID));
-        }
+    }
+    /*
+     * Track the minimum mesh id we have seen
+     */
+    if (DPS_UUIDCompare(&meshId, &node->minMeshId) < 0) {
+        memcpy_s(&node->minMeshId, sizeof(node->minMeshId), &meshId, sizeof(DPS_UUID));
     }
     if (!remote->outbound.muted) {
         int isDelta = (flags & DPS_SUB_FLAG_DELTA_IND) != 0;
@@ -931,7 +939,7 @@ DPS_Status DPS_DecodeSubscriptionAck(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
      * Parse keys from unprotected map
      */
     ret = DPS_ParseMapInit(&mapState, rxBuf, UnprotectedKeys, A_SIZEOF(UnprotectedKeys),
-                           UnprotectedOptKeys, A_SIZEOF(UnprotectedOptKeys));
+            UnprotectedOptKeys, A_SIZEOF(UnprotectedOptKeys));
     if (ret != DPS_OK) {
         return ret;
     }
@@ -985,7 +993,7 @@ DPS_Status DPS_DecodeSubscriptionAck(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
      */
     if (((DPS_Rand() % SIMULATE_PACKET_LOSS) == 1)) {
         DPS_PRINT("%s Simulating lost sub ack from %s\n", node->addrStr,
-                  DPS_NodeAddrToString(&ep->addr));
+                DPS_NodeAddrToString(&ep->addr));
         return DPS_OK;
     }
 #endif

@@ -1143,18 +1143,11 @@ DPS_Status DPS_SendPublication(DPS_PublishRequest* req, DPS_Publication* pub, Re
             bufs[1 + i] = uv_buf_init((char*)req->bufs[i].base, DPS_TxBufferUsed(&req->bufs[i]));
         }
         ++req->refCount;
-        assert(remote);
         if (remote == DPS_LoopbackNode) {
             ret = DPS_LoopbackSend(node, bufs, 1 + req->numBufs);
             SendComplete(req, NULL, bufs, 1 + req->numBufs, ret);
-        } else {
-            DPS_NetEndpoint* ep = (remote == node->mcastNode) ? NULL : &remote->ep;
-            if (ep) {
-                ret = DPS_NetSend(node, req, ep, bufs, 1 + req->numBufs, OnNetSendComplete);
-            } else {
-                ret = DPS_MulticastSend(node->mcastSender, req, bufs, 1 + req->numBufs,
-                                        OnMulticastSendComplete);
-            }
+        } else if (remote) {
+            ret = DPS_NetSend(node, req, &remote->ep, bufs, 1 + req->numBufs, OnNetSendComplete);
             if (ret == DPS_OK) {
                 /*
                  * Prevent the publication from being freed until the send completes.
@@ -1166,17 +1159,22 @@ DPS_Status DPS_SendPublication(DPS_PublishRequest* req, DPS_Publication* pub, Re
                 DPS_UpdatePubHistory(&node->history, &pub->pubId, req->sequenceNum,
                                      pub->ackRequested, REQ_TTL(req), &remote->ep.addr);
             } else {
-                if (!ep) {
-                    DPS_WARNPRINT("DPS_MulticastSend failed - %s\n", DPS_ErrTxt(ret));
-                    if (ret == DPS_ERR_NO_ROUTE) {
-                        /*
-                         * Rewrite the error to make DPS_SendPublication a no-op when
-                         * there are no multicast interfaces available.
-                         */
-                        ret = DPS_OK;
-                    }
+                SendComplete(req, &remote->ep, bufs, 1 + req->numBufs, ret);
+            }
+        } else {
+            ret = DPS_MulticastSend(node->mcastSender, req, bufs, 1 + req->numBufs, OnMulticastSendComplete);
+            if (ret == DPS_OK) {
+                DPS_PublicationIncRef(pub);
+            } else {
+                DPS_WARNPRINT("DPS_MulticastSend failed - %s\n", DPS_ErrTxt(ret));
+                if (ret == DPS_ERR_NO_ROUTE) {
+                    /*
+                     * Rewrite the error to make DPS_SendPublication a no-op when
+                     * there are no multicast interfaces available.
+                     */
+                    ret = DPS_OK;
                 }
-                SendComplete(req, ep, bufs, 1 + req->numBufs, ret);
+                SendComplete(req, NULL, bufs, 1 + req->numBufs, ret);
             }
         }
     } else {
