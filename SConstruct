@@ -159,6 +159,13 @@ else:
         env.Append(CCFLAGS = ['-m32'])
         env.Append(LINKFLAGS = ['-m32'])
 
+    cenv = env.Clone(CCFLAGS = ['-march=native'])
+    conf = cenv.Configure()
+    if conf.CheckCC():
+        env = conf.Finish()
+    else:
+        pass
+
     if 'clang' in env['CC']:
         # clang complains about the CBOR_SIZEOF_UINT() macro when the arg is a uint8_t
         env.Append(CCFLAGS = ['-Wno-tautological-constant-out-of-range-compare'])
@@ -219,7 +226,7 @@ else:
     # Fortify source:
     env.Append(CPPDEFINES = ['_FORTIFY_SOURCE=2'])
 
-    env.Append(CCFLAGS = ['-ggdb', '-march=native'])
+    env.Append(CCFLAGS = ['-ggdb'])
 
     if env['profile'] == True:
         env.Append(CCFLAGS = ['-pg'])
