@@ -486,12 +486,12 @@ void* DPS_GetNodeData(const DPS_Node* node);
 /**
  * Enable multicast publication send on the node.  See @p mcast of DPS_StartNode().
  */
-#define DPS_MCAST_PUB_ENABLE_SEND    1
+#define DPS_MCAST_PUB_ENABLE_SEND    (1<<0)
 
 /**
  * Enable multicast publication receive on the node.  See @p mcast of DPS_StartNode().
  */
-#define DPS_MCAST_PUB_ENABLE_RECV    2
+#define DPS_MCAST_PUB_ENABLE_RECV    (1<<1)
 
 /**
  * Disable multicast subscription send and receive on the node.  See @p mcast of DPS_StartNode().
@@ -501,12 +501,12 @@ void* DPS_GetNodeData(const DPS_Node* node);
 /**
  * Enable multicast subscription send on the node.  See @p mcast of DPS_StartNode().
  */
-#define DPS_MCAST_SUB_ENABLE_SEND    3
+#define DPS_MCAST_SUB_ENABLE_SEND    (1<<2)
 
 /**
  * Enable multicast subscription receive on the node.  See @p mcast of DPS_StartNode().
  */
-#define DPS_MCAST_SUB_ENABLE_RECV    4
+#define DPS_MCAST_SUB_ENABLE_RECV    (1<<3)
 
 /**
  * Initialized and starts running a local node. Node can only be started once.
