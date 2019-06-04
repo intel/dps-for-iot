@@ -213,7 +213,7 @@ static DPS_Status SerializeAck(const DPS_Publication* pub, PublicationAck* ack, 
         ret = CBOR_EncodeUint8(&ack->bufs[0], DPS_CBOR_KEY_PUB_ID);
     }
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeUUID(&ack->bufs[0], &pub->pubId);
+        ret = CBOR_EncodeUUID(&ack->bufs[0], &ack->pub->pubId);
     }
     if (ret == DPS_OK) {
         ret = CBOR_EncodeUint8(&ack->bufs[0], DPS_CBOR_KEY_ACK_SEQ_NUM);
