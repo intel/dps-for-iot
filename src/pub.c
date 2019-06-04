@@ -878,19 +878,6 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxB
      */
     FreeTopics(pub);
     /*
-     * We have no reason here to hold onto a node for multicast publishers
-     */
-    if (!multicast) {
-        ret = DPS_AddRemoteNode(node, &ep->addr, ep->cn, &pubNode);
-        if (ret == DPS_ERR_EXISTS) {
-            DPS_DBGPRINT("Updating existing node\n");
-            ret = DPS_OK;
-        }
-        if (ret != DPS_OK) {
-            goto Exit;
-        }
-    }
-    /*
      * Allocate the publish request for handling and forwarding
      *
      * The DPS_ERR_NO_ROUTE status will be reported in the completion
@@ -943,14 +930,6 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxB
     req->ttl = ttl;
     req->expires = uv_now(node->loop) + DPS_SECS_TO_MS(ttl);
     UpdatePubHistory(req, &pub->senderAddr);
-    /*
-     * Update history of multicast node so that we don't forward
-     * received multicast publications back out the multicast
-     * interfaces.
-     */
-    if (multicast && node->mcastNode) {
-        UpdatePubHistory(req, &node->mcastNode->ep.addr);
-    }
     DPS_QueuePushBack(&pub->sendQueue, &req->queue);
     ++req->refCount;
     uv_async_send(&node->pubsAsync);
