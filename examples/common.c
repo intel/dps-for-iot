@@ -153,9 +153,11 @@ void DestroyLinkArg(char **addrText, DPS_NodeAddress** addr, int numAddr)
 {
     int i;
     for (i = 0; i < numAddr; ++i) {
-        if (addrText[i]) {
+        if (addrText && addrText[i]) {
             free(addrText[i]);
         }
-        DPS_DestroyAddress(addr[i]);
+        if (addr) {
+            DPS_DestroyAddress(addr[i]);
+        }
     }
 }

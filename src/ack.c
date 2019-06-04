@@ -213,7 +213,7 @@ static DPS_Status SerializeAck(const DPS_Publication* pub, PublicationAck* ack, 
         ret = CBOR_EncodeUint8(&ack->bufs[0], DPS_CBOR_KEY_PUB_ID);
     }
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeBytes(&ack->bufs[0], (uint8_t*)&ack->pub->pubId, sizeof(ack->pub->pubId));
+        ret = CBOR_EncodeUUID(&ack->bufs[0], &ack->pub->pubId);
     }
     if (ret == DPS_OK) {
         ret = CBOR_EncodeUint8(&ack->bufs[0], DPS_CBOR_KEY_ACK_SEQ_NUM);
@@ -295,7 +295,6 @@ DPS_Status DPS_DecodeAcknowledgement(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
     CBOR_MapState mapState;
     uint32_t sn;
     uint32_t sequenceNum;
-    uint8_t* bytes = NULL;
     DPS_UUID pubId;
     DPS_NodeAddress* addr;
     uint8_t* aadPos;
@@ -331,15 +330,7 @@ DPS_Status DPS_DecodeAcknowledgement(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
         }
         switch (key) {
         case DPS_CBOR_KEY_PUB_ID:
-            ret = CBOR_DecodeBytes(rxBuf, &bytes, &len);
-            if (ret == DPS_OK) {
-                if (len != sizeof(DPS_UUID)) {
-                    ret = DPS_ERR_INVALID;
-                }
-            }
-            if (ret == DPS_OK) {
-                memcpy(&pubId.val, bytes, sizeof(DPS_UUID));
-            }
+            ret = CBOR_DecodeUUID(rxBuf, &pubId);
             break;
         case DPS_CBOR_KEY_ACK_SEQ_NUM:
             ret = CBOR_DecodeUint32(rxBuf, &sequenceNum);
