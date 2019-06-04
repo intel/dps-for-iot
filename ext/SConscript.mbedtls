@@ -12,10 +12,10 @@ except ValueError:
     pass
 
 git = mtenv.Command('./mbedtls/.git', None,
-                    ['git clone -n https://github.com/ARMmbed/mbedtls ext/mbedtls'])
+                    ['git clone -q -n https://github.com/ARMmbed/mbedtls ext/mbedtls'])
 
 dep = mtenv.Command('./mbedtls/Makefile', git,
-                    ['git fetch', 'git checkout -q tags/mbedtls-2.16.0'],
+                    ['git fetch -q', 'git checkout -q tags/mbedtls-2.16.0'],
                     chdir = 'ext/mbedtls')
 
 mtenv.Append(CPPPATH = ['.', './mbedtls/include/',])

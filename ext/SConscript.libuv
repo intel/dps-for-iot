@@ -9,10 +9,10 @@ if uvenv['CC'] == 'cl':
     uvenv.Append(CPPDEFINES = ['_CRT_NONSTDC_NO_DEPRECATE', '_GNU_SOURCE'])
 
 git = uvenv.Command('./libuv/.git', None,
-                    ['git clone -n https://github.com/libuv/libuv.git ext/libuv'])
+                    ['git clone -q -n https://github.com/libuv/libuv.git ext/libuv'])
 
 dep = uvenv.Command('./libuv/README', git,
-                    ['git fetch', 'git checkout -q tags/v1.23.2'],
+                    ['git fetch -q', 'git checkout -q tags/v1.23.2'],
                     chdir = 'ext/libuv')
 
 # Common source files

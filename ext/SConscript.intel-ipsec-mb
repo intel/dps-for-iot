@@ -8,10 +8,10 @@ if env['TARGET_ARCH'] != 'x86' and env.Detect('nasm') != None:
     mbenv = env.Clone(tools=['nasm'])
 
     git = mbenv.Command('./intel-ipsec-mb/.git', None,
-                        ['git clone -n https://github.com/intel/intel-ipsec-mb.git ext/intel-ipsec-mb'])
+                        ['git clone -q -n https://github.com/intel/intel-ipsec-mb.git ext/intel-ipsec-mb'])
 
     dep = mbenv.Command('./intel-ipsec-mb/README', git,
-                        ['git fetch', 'git checkout master'],
+                        ['git fetch -q', 'git checkout -q master'],
                         chdir = 'ext/intel-ipsec-mb')
 
     sources = [
