@@ -1128,8 +1128,10 @@ static void StopNode(DPS_Node* node)
     while (node->remoteNodes) {
         DPS_DeleteRemoteNode(node, node->remoteNodes);
     }
-    FreeOutboundInterests(node->mcastNode);
-    free(node->mcastNode);
+    if (node->mcastNode) {
+        FreeOutboundInterests(node->mcastNode);
+        free(node->mcastNode);
+    }
     /*
      * Cleanup any unresolved acks
      */
