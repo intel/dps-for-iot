@@ -22,8 +22,8 @@ vars.AddVariables(
     PathVariable('application', 'Application to build', '', PathVariable.PathAccept),
     ('CC', 'C compiler to use'),
     ('CXX', 'C++ compiler to use'),
-    ('CFLAGS', 'Additional C flags to use'),
-    ('CXXFLAGS', 'Additional C++ flags to use'),
+    ('CFLAGS', 'Additional C flags to use', None, None, Split),
+    ('CXXFLAGS', 'Additional C++ flags to use', None, None, Split),
     ('TARGET_ARCH', 'Target architecture'))
 
 # Windows-specific command line variables
