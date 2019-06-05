@@ -106,6 +106,7 @@ typedef struct _DPS_Node {
 
     uv_async_t acksAsync;                 /**< Async for sending acks */
     uv_async_t pubsAsync;                 /**< Async for sending publications */
+    uv_timer_t pubsTimer;                 /**< Timer for publication maintenance */
     uv_async_t stopAsync;                 /**< Async for shutting down the node */
     uv_async_t subsAsync;                 /**< Async for sending subscriptions */
 
