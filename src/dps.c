@@ -641,7 +641,7 @@ static void PubsTimer(uv_timer_t* handle)
         DPS_PublicationIncRef(pub);
         if (!DPS_QueueEmpty(&pub->retainedQueue)) {
             req = (DPS_PublishRequest*)DPS_QueueFront(&pub->retainedQueue);
-            if (req->expires < uv_now(node->loop)) {
+            if (req->expires <= uv_now(node->loop)) {
                 DPS_QueueRemove(&req->queue);
                 assert(req->refCount > 0);
                 --req->refCount;
