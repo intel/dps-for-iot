@@ -854,6 +854,20 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxB
         }
         DPS_PublicationIncRef(pub);
     } else {
+        if (ttl < 0) {
+            /*
+             * We only expect negative TTL's for retained publications.
+             *
+             * We can end up here if we receive the same multicast
+             * expiration twice, expire it when we decode the first
+             * one, then decode the second one.  In this case the
+             * publisher node is not sending bad data, so just drop
+             * the pub.
+             */
+            DPS_DBGPRINT("Ignoring expired pub %s/%d\n", DPS_UUIDToString(&pubId), sequenceNum);
+            ret = DPS_ERR_STALE;
+            goto Exit;
+        }
         /*
          * A stale publication is a publication that has the same or older sequence number than the
          * latest publication with the same pubId.
