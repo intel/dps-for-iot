@@ -43,7 +43,8 @@ extern "C" {
  */
 #define DPS_MAX_SUBSCRIPTION_RETRIES  8
 
-#define SUB_FLAG_WAS_FREED (0x01) /**< The subscription has been freed but has a non-zero ref count */
+#define SUB_FLAG_WAS_FREED      (0x01) /**< The subscription has been freed but has a non-zero ref count */
+#define SUB_FLAG_EXPIRED        (0x02) /**< Issue the callback function when a matching publication expires */
 
 /**
  * Struct to hold the state of a local subscription. We hold the

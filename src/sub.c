@@ -99,6 +99,19 @@ DPS_Node* DPS_SubscriptionGetNode(const DPS_Subscription* sub)
     }
 }
 
+DPS_Status DPS_SubscribeExpired(DPS_Subscription* sub, int enable)
+{
+    if (!sub) {
+        return DPS_ERR_ARGS;
+    }
+    if (enable) {
+        sub->flags |= SUB_FLAG_EXPIRED;
+    } else {
+        sub->flags &= ~SUB_FLAG_EXPIRED;
+    }
+    return DPS_OK;
+}
+
 static DPS_Subscription* FreeSubscription(DPS_Subscription* sub)
 {
     DPS_Node* node = sub->node;

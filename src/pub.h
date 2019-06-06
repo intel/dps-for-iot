@@ -87,6 +87,7 @@ typedef struct _DPS_Publication {
     uint8_t flags;                  /**< Internal state flags */
     uint32_t refCount;              /**< Ref count to prevent publication from being free while a send is in progress */
     uint32_t sequenceNum;           /**< Sequence number for this publication */
+    int16_t ttl;                    /**< Copy of publish request time to live */
 
     DPS_Publication* next;          /**< Next publication in list */
 } DPS_Publication;
@@ -233,6 +234,15 @@ void DPS_PublicationIncRef(DPS_Publication* pub);
  * @param pub The publication
  */
 void DPS_PublicationDecRef(DPS_Publication* pub);
+
+/**
+ * Check if there is a local subscription for this publication
+ *
+ * @param req The publish request
+ *
+ * @return DPS_OK or an error
+ */
+DPS_Status DPS_CallPubHandlers(DPS_PublishRequest* req);
 
 /**
  * Print publications of node

@@ -51,6 +51,7 @@ DPS_PublicationGetNumTopics
 DPS_PublicationGetSenderKeyId
 DPS_PublicationGetSequenceNum
 DPS_PublicationGetTopic
+DPS_PublicationGetTTL
 DPS_PublicationGetUUID
 DPS_PublicationIsAckRequested
 DPS_PublicationRemoveSubId
@@ -81,6 +82,7 @@ DPS_SetTrustedCA
 DPS_SignalEvent
 DPS_StartNode
 DPS_Subscribe
+DPS_SubscribeExpired
 DPS_SubscriptionGetNode
 DPS_SubscriptionGetNumTopics
 DPS_SubscriptionGetTopic

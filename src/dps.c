@@ -645,6 +645,12 @@ static void PubsTimer(uv_timer_t* handle)
                 DPS_QueueRemove(&req->queue);
                 assert(req->refCount > 0);
                 --req->refCount;
+                /*
+                 * Simulate an explicit forced expiration
+                 */
+                pub->flags |= PUB_FLAG_EXPIRED;
+                pub->ttl = -1;
+                DPS_CallPubHandlers(req);
                 DPS_PublishCompletion(req);
             }
             if (DPS_QueueEmpty(&pub->retainedQueue)) {

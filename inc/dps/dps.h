@@ -658,6 +658,15 @@ const DPS_UUID* DPS_PublicationGetUUID(const DPS_Publication* pub);
 uint32_t DPS_PublicationGetSequenceNum(const DPS_Publication* pub);
 
 /**
+ * Get the TTL for a publication.
+ *
+ * @param pub   The publication
+ *
+ * @return Time to live in seconds - maximum TTL is about 9 hours
+ */
+int16_t DPS_PublicationGetTTL(const DPS_Publication* pub);
+
+/**
  * Get a topic for a publication
  *
  * @param pub   The publication
@@ -865,7 +874,7 @@ DPS_Status DPS_PublishBufs(DPS_Publication* pub, const DPS_Buffer* bufs, size_t 
 
 /**
  * Delete a publication and frees any resources allocated. This does not cancel retained publications
- * that have an unexpired TTL. To expire a retained publication call DPS_Publish() with a zero TTL.
+ * that have an unexpired TTL. To expire a retained publication call DPS_Publish() with a negative TTL.
  *
  * This function should only be called for publications created by DPS_CreatePublication() or
  * DPS_CopyPublication().
@@ -1011,6 +1020,19 @@ void* DPS_GetSubscriptionData(DPS_Subscription* sub);
  * @return The node or NULL if the subscription is invalid
  */
 DPS_Node* DPS_SubscriptionGetNode(const DPS_Subscription* sub);
+
+/**
+ * Call the publication handler when a matching retained publication expires.
+ *
+ * DPS_PublicationGetTTL() will return a negative value when the
+ * publication is expired.
+ *
+ * @param sub     The subscription
+ * @param enable  DPS_TRUE to call handler, DPS_FALSE to not call handler
+ *
+ * @return DPS_OK or an error
+ */
+DPS_Status DPS_SubscribeExpired(DPS_Subscription* sub, int enable);
 
 /**
  * Function prototype for a publication handler called when a publication is received that
