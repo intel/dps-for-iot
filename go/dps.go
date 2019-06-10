@@ -739,6 +739,10 @@ func PublicationGetSequenceNum(pub *Publication) uint32 {
 	return uint32(C.DPS_PublicationGetSequenceNum(pub.cpub))
 }
 
+func PublicationGetTTL(pub *Publication) int16 {
+	return int16(C.DPS_PublicationGetTTL(pub.cpub))
+}
+
 func PublicationGetTopics(pub *Publication) (topics []string) {
 	numTopics := int(C.DPS_PublicationGetNumTopics(pub.cpub))
 	topics = make([]string, numTopics)
@@ -956,6 +960,10 @@ type PublicationHandler func(sub *Subscription, pub *Publication, payload []byte
 func Subscribe(sub *Subscription, handler PublicationHandler) int {
 	sub.handler = handler
 	return int(C.subscribe(sub.csub))
+}
+
+func SubscribeExpired(sub *Subscription, enable int) int {
+	return int(C.DPS_SubscribeExpired(sub.csub, C.int(enable)))
 }
 
 //export goPublicationHandler

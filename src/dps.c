@@ -76,6 +76,7 @@ const DPS_UUID DPS_MaxMeshId = { .val64 = { UINT64_MAX, UINT64_MAX } };
 RemoteNode* DPS_LoopbackNode = (RemoteNode*)&DPS_LoopbackNode;
 
 static void SendSubsTimer(uv_timer_t* handle);
+static void SendPubsTimer(uv_timer_t* handle);
 
 void DPS_LockNode(DPS_Node* node)
 {
@@ -624,9 +625,17 @@ static void SendAcksTask(uv_async_t* handle)
     DPS_UnlockNode(node);
 }
 
-static void SendPubsTask(uv_async_t* handle)
+static void PublishCompletion(DPS_PublishRequest* req)
 {
-    DPS_Node* node = (DPS_Node*)handle->data;
+    if (req) {
+        assert(req->refCount > 0);
+        --req->refCount;
+        DPS_PublishCompletion(req);
+    }
+}
+
+static void SendPubs(DPS_Node* node)
+{
     DPS_Publication* pub;
     DPS_Publication* nextPub;
     DPS_Subscription* sub;
@@ -634,23 +643,26 @@ static void SendPubsTask(uv_async_t* handle)
     RemoteNode* nextRemote;
     DPS_Status ret = DPS_OK;
     DPS_PublishRequest* req;
-
-    DPS_DBGTRACE();
+    DPS_PublishRequest* expired;
+    uint64_t now;
+    uint64_t reschedule = UINT64_MAX;
 
     DPS_LockNode(node);
+    now = uv_now(node->loop);
     /*
      * Check if any local or retained publications need to be forwarded to this subscriber
      */
     for (pub = node->publications; pub != NULL; pub = nextPub) {
         nextPub = pub->next;
         DPS_PublicationIncRef(pub);
+        expired = NULL;
         while (!DPS_QueueEmpty(&pub->sendQueue)) {
             req = (DPS_PublishRequest*)DPS_QueueFront(&pub->sendQueue);
             DPS_QueueRemove(&req->queue);
             assert(req->refCount > 0);
             --req->refCount;
             if (!req->expires) {
-                req->expires = uv_now(node->loop) + DPS_SECS_TO_MS(req->ttl);
+                req->expires = now + DPS_SECS_TO_MS(req->ttl);
             }
             if (pub->flags & PUB_FLAG_LOCAL) {
                 /*
@@ -707,25 +719,54 @@ static void SendPubsTask(uv_async_t* handle)
                 }
             }
             if (!DPS_QueueEmpty(&pub->retainedQueue)) {
-                DPS_PublishRequest* existing = (DPS_PublishRequest*)DPS_QueueFront(&pub->retainedQueue);
-                DPS_QueueRemove(&existing->queue);
-                assert(existing->refCount > 0);
-                --existing->refCount;
-                DPS_PublishCompletion(existing);
+                PublishCompletion(expired);
+                expired = (DPS_PublishRequest*)DPS_QueueFront(&pub->retainedQueue);
+                DPS_QueueRemove(&expired->queue);
             }
-            if (uv_now(node->loop) < req->expires) {
+            if (now < req->expires) {
                 DPS_QueuePushBack(&pub->retainedQueue, &req->queue);
                 ++req->refCount;
+                reschedule = (req->expires < reschedule) ? req->expires : reschedule;
             }
             DPS_PublishCompletion(req);
         }
+        if (!DPS_QueueEmpty(&pub->retainedQueue)) {
+            DPS_PublishRequest* retained = (DPS_PublishRequest*)DPS_QueueFront(&pub->retainedQueue);
+            if (retained->expires <= now) {
+                PublishCompletion(expired);
+                expired = (DPS_PublishRequest*)DPS_QueueFront(&pub->retainedQueue);
+                DPS_QueueRemove(&expired->queue);
+            }
+        }
         if (DPS_QueueEmpty(&pub->retainedQueue)) {
+            if (expired && ((pub->flags & PUB_FLAG_EXPIRED) == 0)) {
+                pub->flags |= PUB_FLAG_EXPIRED;
+                pub->ttl = expired->ttl = -1;
+                DPS_CallPubHandlers(expired);
+            }
             DPS_ExpirePub(node, pub);
         }
+        PublishCompletion(expired);
         DPS_PublicationDecRef(pub);
     }
     DPS_DumpPubs(node);
+    if (reschedule < UINT64_MAX) {
+        uv_timer_stop(&node->pubsTimer);
+        uv_timer_start(&node->pubsTimer, SendPubsTimer, (reschedule < now) ? 0 : (reschedule - now), 0);
+    }
     DPS_UnlockNode(node);
+}
+
+static void SendPubsTask(uv_async_t* handle)
+{
+    DPS_DBGTRACE();
+    SendPubs(handle->data);
+}
+
+static void SendPubsTimer(uv_timer_t* handle)
+{
+    DPS_DBGTRACE();
+    SendPubs(handle->data);
 }
 
 static void SendSubsTimer(uv_timer_t* handle)
@@ -1094,6 +1135,7 @@ static void StopNode(DPS_Node* node)
     assert(!uv_is_closing((uv_handle_t*)&node->stopAsync));
     uv_close((uv_handle_t*)&node->stopAsync, NULL);
     uv_close((uv_handle_t*)&node->pubsAsync, NULL);
+    uv_close((uv_handle_t*)&node->pubsTimer, NULL);
     uv_close((uv_handle_t*)&node->subsAsync, NULL);
     uv_close((uv_handle_t*)&node->acksAsync, NULL);
     uv_close((uv_handle_t*)&node->subsTimer, NULL);
@@ -1345,6 +1387,10 @@ DPS_Status DPS_StartNode(DPS_Node* node, int mcast, DPS_NodeAddress* listenAddr)
 
     node->pubsAsync.data = node;
     r = uv_async_init(node->loop, &node->pubsAsync, SendPubsTask);
+    assert(!r);
+
+    node->pubsTimer.data = node;
+    r = uv_timer_init(node->loop, &node->pubsTimer);
     assert(!r);
 
     node->subsAsync.data = node;

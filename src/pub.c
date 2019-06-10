@@ -332,6 +332,15 @@ uint32_t DPS_PublicationGetSequenceNum(const DPS_Publication* pub)
     }
 }
 
+int16_t DPS_PublicationGetTTL(const DPS_Publication* pub)
+{
+    if (IsValidPub(pub) || (pub && (pub->flags & PUB_FLAG_IS_COPY))) {
+        return pub->ttl;
+    } else {
+        return 0;
+    }
+}
+
 size_t DPS_PublicationGetNumTopics(const DPS_Publication* pub)
 {
     if (IsValidPub(pub) || (pub && (pub->flags & PUB_FLAG_IS_COPY))) {
@@ -572,11 +581,7 @@ static DPS_Status DecryptAndParsePub(DPS_PublishRequest* req, DPS_TxBuffer* plai
     return ret;
 }
 
-/*
- * Check if there is a local subscription for this publication
- * Note that we don't deliver expired publications to the handler.
- */
-static DPS_Status CallPubHandlers(DPS_PublishRequest* req)
+DPS_Status DPS_CallPubHandlers(DPS_PublishRequest* req)
 {
     DPS_Publication* pub = req->pub;
     DPS_Node* node = pub->node;
@@ -591,6 +596,13 @@ static DPS_Status CallPubHandlers(DPS_PublishRequest* req)
 
     DPS_DBGTRACE();
 
+    /*
+     * The bloom filter must already by deserialized
+     */
+    if (!pub->bf) {
+        return DPS_ERR_ARGS;
+    }
+
     DPS_TxBufferClear(&plainTextBuf);
     /*
      * Iterate over the candidates and check that the pub strings are a match
@@ -598,6 +610,13 @@ static DPS_Status CallPubHandlers(DPS_PublishRequest* req)
     for (sub = node->subscriptions; sub != NULL; sub = nextSub) {
         nextSub = sub->next;
         DPS_SubscriptionIncRef(sub);
+        if ((pub->flags & PUB_FLAG_EXPIRED) && ((sub->flags & SUB_FLAG_EXPIRED) == 0)) {
+            /*
+             * We don't call local handlers for expired publications
+             * unless specifically requested
+             */
+            goto Next;
+        }
         if (!DPS_BitVectorIncludes(pub->bf, sub->bf)) {
             goto Next;
         }
@@ -835,6 +854,20 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxB
         }
         DPS_PublicationIncRef(pub);
     } else {
+        if (ttl < 0) {
+            /*
+             * We only expect negative TTL's for retained publications.
+             *
+             * We can end up here if we receive the same multicast
+             * expiration twice, expire it when we decode the first
+             * one, then decode the second one.  In this case the
+             * publisher node is not sending bad data, so just drop
+             * the pub.
+             */
+            DPS_DBGPRINT("Ignoring expired pub %s/%d\n", DPS_UUIDToString(&pubId), sequenceNum);
+            ret = DPS_ERR_STALE;
+            goto Exit;
+        }
         /*
          * A stale publication is a publication that has the same or older sequence number than the
          * latest publication with the same pubId.
@@ -910,7 +943,7 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxB
     DPS_TxBufferInit(&req->bufs[1], rxBuf->rxPos, DPS_RxBufferAvail(rxBuf));
     req->bufs[1].txPos = req->bufs[1].eob;
     /*
-     * A negative TTL is a forced expiration. We don't call local handlers.
+     * A negative TTL is a forced expiration
      */
     if (ttl < 0) {
         /*
@@ -921,24 +954,25 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxB
             goto Exit;
         }
         pub->flags |= PUB_FLAG_EXPIRED;
-        ttl = 0;
+    } else if (ttl == 0) {
+        pub->flags &= ~PUB_FLAG_RETAINED;
     } else {
-        /*
-         * Now we can deserialize the bloom filter
-         */
-        ret = DPS_BitVectorDeserialize(pub->bf, &bfBuf);
-        if (ret != DPS_OK) {
-            goto Exit;
-        }
-        if (ttl > 0) {
-            pub->flags |= PUB_FLAG_RETAINED;
-        } else {
-            pub->flags &= ~PUB_FLAG_RETAINED;
-        }
-        ret = CallPubHandlers(req);
-        if (ret != DPS_OK) {
-            goto Exit;
-        }
+        pub->flags |= PUB_FLAG_RETAINED;
+    }
+    pub->ttl = ttl;
+    if (pub->flags & PUB_FLAG_EXPIRED) {
+        ttl = 0;
+    }
+    /*
+     * Now we can deserialize the bloom filter
+     */
+    ret = DPS_BitVectorDeserialize(pub->bf, &bfBuf);
+    if (ret != DPS_OK) {
+        goto Exit;
+    }
+    ret = DPS_CallPubHandlers(req);
+    if (ret != DPS_OK) {
+        goto Exit;
     }
     req->ttl = ttl;
     req->expires = uv_now(node->loop) + DPS_SECS_TO_MS(ttl);
@@ -1222,11 +1256,11 @@ void DPS_PublishCompletion(DPS_PublishRequest* req)
 
 void DPS_ExpirePub(DPS_Node* node, DPS_Publication* pub)
 {
+    DPS_DBGPRINT("Expiring %spub %s\n", pub->flags & PUB_FLAG_RETAINED ? "retained " : "",
+                 DPS_UUIDToString(&pub->pubId));
     if (pub->flags & PUB_FLAG_LOCAL) {
         pub->flags |= PUB_FLAG_EXPIRED;
     } else {
-        DPS_DBGPRINT("Expiring %spub %s\n", pub->flags & PUB_FLAG_RETAINED ? "retained " : "",
-                     DPS_UUIDToString(&pub->pubId));
         FreePublication(node, pub);
     }
 }
@@ -1281,6 +1315,7 @@ DPS_Publication* DPS_CopyPublication(const DPS_Publication* pub)
     }
     copy->flags = PUB_FLAG_IS_COPY;
     copy->sequenceNum = pub->sequenceNum;
+    copy->ttl = pub->ttl;
     copy->ackRequested = pub->ackRequested;
     copy->handler = pub->handler;
     copy->pubId = pub->pubId;
@@ -1684,7 +1719,7 @@ DPS_Status DPS_PublishBufs(DPS_Publication* pub, const DPS_Buffer* bufs, size_t 
         pub->flags |= PUB_FLAG_RETAINED;
         pub->flags &= ~PUB_FLAG_EXPIRED;
     }
-    req->ttl = ttl;
+    pub->ttl = req->ttl = ttl;
     req->sequenceNum = ++pub->sequenceNum;
     /*
      * Serialize the publication
