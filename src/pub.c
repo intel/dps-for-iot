@@ -685,7 +685,7 @@ static DPS_Publication* LookupPublication(DPS_Node* node, DPS_UUID* pubId)
     return pub;
 }
 
-DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxBuffer* buf, int multicast)
+DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxBuffer* buf, DPS_AddressType epType)
 {
     static const int32_t UnprotectedKeys[] = { DPS_CBOR_KEY_TTL };
     static const int32_t UnprotectedOptKeys[] = { DPS_CBOR_KEY_PORT, DPS_CBOR_KEY_PATH };
@@ -960,12 +960,17 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxB
     if (ret != DPS_OK) {
         goto Exit;
     }
-    req->ttl = ttl;
-    req->expires = uv_now(node->loop) + DPS_SECS_TO_MS(ttl);
-    UpdatePubHistory(req);
-    DPS_QueuePushBack(&pub->sendQueue, &req->queue);
-    ++req->refCount;
-    uv_async_send(&node->pubsAsync);
+    if (epType != DPS_LOOPBACK) {
+        req->ttl = ttl;
+        req->expires = uv_now(node->loop) + DPS_SECS_TO_MS(ttl);
+        UpdatePubHistory(req);
+        DPS_QueuePushBack(&pub->sendQueue, &req->queue);
+        ++req->refCount;
+        DPS_SendPubs(node);
+    } else {
+        req->status = ret;
+        DPS_DestroyPublishRequest(req);
+    }
     ret = DPS_OK;
 
 Exit:

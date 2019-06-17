@@ -105,16 +105,32 @@ typedef struct _DPS_Publication {
 void DPS_UpdatePubs(DPS_Node* node);
 
 /**
+ * Send any queued publications.
+ *
+ * @param node       The local node
+ */
+void DPS_SendPubs(DPS_Node* node);
+
+/**
+ * The address type of an endpoint
+ */
+typedef enum {
+    DPS_UNICAST,
+    DPS_MULTICAST,
+    DPS_LOOPBACK
+} DPS_AddressType;
+
+/**
  * Decode and process a received publication
  *
  * @param node       The local node
  * @param ep         The endpoint the publication was received on
  * @param buffer     The encoded publication
- * @param multicast  DPS_TRUE if publication was multicast, DPS_FALSE if unicast
+ * @param epType     The address type of the endpoint the publication was received on
  *
  * @return DPS_OK if decoding and processing is successful, an error otherwise
  */
-DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxBuffer* buffer, int multicast);
+DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxBuffer* buffer, DPS_AddressType epType);
 
 /**
  * A request to DPS_Publish()

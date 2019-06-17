@@ -634,7 +634,7 @@ static void PublishCompletion(DPS_PublishRequest* req)
     }
 }
 
-static void SendPubs(DPS_Node* node)
+void DPS_SendPubs(DPS_Node* node)
 {
     DPS_Publication* pub;
     DPS_Publication* nextPub;
@@ -647,7 +647,6 @@ static void SendPubs(DPS_Node* node)
     uint64_t now;
     uint64_t reschedule = UINT64_MAX;
 
-    DPS_LockNode(node);
     now = uv_now(node->loop);
     /*
      * Check if any local or retained publications need to be forwarded to this subscriber
@@ -754,19 +753,28 @@ static void SendPubs(DPS_Node* node)
         uv_timer_stop(&node->pubsTimer);
         uv_timer_start(&node->pubsTimer, SendPubsTimer, (reschedule < now) ? 0 : (reschedule - now), 0);
     }
-    DPS_UnlockNode(node);
 }
 
 static void SendPubsTask(uv_async_t* handle)
 {
+    DPS_Node* node = (DPS_Node*)handle->data;
+
     DPS_DBGTRACE();
-    SendPubs(handle->data);
+
+    DPS_LockNode(node);
+    DPS_SendPubs(node);
+    DPS_UnlockNode(node);
 }
 
 static void SendPubsTimer(uv_timer_t* handle)
 {
+    DPS_Node* node = (DPS_Node*)handle->data;
+
     DPS_DBGTRACE();
-    SendPubs(handle->data);
+
+    DPS_LockNode(node);
+    DPS_SendPubs(node);
+    DPS_UnlockNode(node);
 }
 
 static void SendSubsTimer(uv_timer_t* handle)
@@ -877,11 +885,6 @@ void DPS_UpdatePubs(DPS_Node* node)
 
     DPS_DBGTRACE();
 
-    DPS_LockNode(node);
-    if (node->state != DPS_NODE_RUNNING) {
-        DPS_UnlockNode(node);
-        return;
-    }
     for (pub = node->publications; pub != NULL; pub = nextPub) {
         nextPub = pub->next;
         if (!DPS_QueueEmpty(&pub->sendQueue)) {
@@ -897,9 +900,8 @@ void DPS_UpdatePubs(DPS_Node* node)
     }
     if (count) {
         DPS_DBGPRINT("DPS_UpdatePubs %d publications to send\n", count);
-        uv_async_send(&node->pubsAsync);
+        DPS_SendPubs(node);
     }
-    DPS_UnlockNode(node);
 }
 
 void DPS_UpdateSubs(DPS_Node* node)
@@ -921,7 +923,7 @@ void DPS_QueuePublicationAck(DPS_Node* node, PublicationAck* ack)
     DPS_UnlockNode(node);
 }
 
-static DPS_Status DecodeRequest(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxBuffer* buf, int multicast)
+static DPS_Status DecodeRequest(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxBuffer* buf, DPS_AddressType epType)
 {
     DPS_RxBuffer* rxBuf = (DPS_RxBuffer*)buf;
     DPS_Status ret;
@@ -929,8 +931,8 @@ static DPS_Status DecodeRequest(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxBu
     uint8_t msgType;
     size_t len;
 
-    DPS_DBGTRACEA("node=%p,ep={addr=%s,cn=%p},buf=%p,multicast=%d\n",
-                  node, DPS_NodeAddrToString(&ep->addr), ep->cn, buf, multicast);
+    DPS_DBGTRACEA("node=%p,ep={addr=%s,cn=%p},buf=%p,epType=%d\n",
+                  node, DPS_NodeAddrToString(&ep->addr), ep->cn, buf, epType);
 
     CBOR_Dump("Request in", rxBuf->rxPos, DPS_RxBufferAvail(rxBuf));
     ret = CBOR_DecodeArray(rxBuf, &len);
@@ -962,7 +964,7 @@ static DPS_Status DecodeRequest(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxBu
         break;
     case DPS_MSG_TYPE_PUB:
         DPS_DBGPRINT("Received publication via %s\n", DPS_NodeAddrToString(&ep->addr));
-        ret = DPS_DecodePublication(node, ep, buf, multicast);
+        ret = DPS_DecodePublication(node, ep, buf, epType);
         if (ret != DPS_OK) {
             DPS_DBGPRINT("DecodePublication returned %s\n", DPS_ErrTxt(ret));
         }
@@ -1030,7 +1032,7 @@ static DPS_Status OnMulticastReceive(DPS_Node* node, DPS_NetEndpoint* ep, DPS_St
         ret = DPS_ERR_INVALID;
         goto Exit;
     }
-    ret = DecodeRequest(node, ep, buf, DPS_TRUE);
+    ret = DecodeRequest(node, ep, buf, DPS_MULTICAST);
 Exit:
     CoAP_Free(&coap);
     return ret;
@@ -1063,7 +1065,7 @@ static DPS_Status OnNetReceive(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Status s
         DPS_UnlockNode(node);
         return status;
     }
-    return DecodeRequest(node, ep, buf, DPS_FALSE);
+    return DecodeRequest(node, ep, buf, DPS_UNICAST);
 }
 
 DPS_Status DPS_LoopbackSend(DPS_Node* node, uv_buf_t* bufs, size_t numBufs)
@@ -1102,7 +1104,7 @@ DPS_Status DPS_LoopbackSend(DPS_Node* node, uv_buf_t* bufs, size_t numBufs)
         }
     }
     buf->rx.rxPos = buf->rx.base;
-    ret = DecodeRequest(node, &ep, buf, DPS_FALSE);
+    ret = DecodeRequest(node, &ep, buf, DPS_LOOPBACK);
 
  Exit:
     DPS_NetRxBufferDecRef(buf);
