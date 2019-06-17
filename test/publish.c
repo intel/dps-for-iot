@@ -478,6 +478,48 @@ static void TestSequenceNumbers(DPS_Node* node, DPS_KeyStore* keyStore)
     DPS_DestroyPublication(pub);
 }
 
+static void PublishBufsComplete(DPS_Publication* pub, const DPS_Buffer* bufs, size_t numBufs,
+                                 DPS_Status status, void* data)
+{
+    DPS_SignalEvent((DPS_Event*)data, status);
+}
+
+static void TestPublishNoRoutes(DPS_Node* node, DPS_KeyStore* keyStore)
+{
+    static const char* topics[] = { __FUNCTION__ };
+    static const size_t numTopics = 1;
+    DPS_Event* event = NULL;
+    DPS_Node* pubNode = NULL;
+    DPS_Publication* pub = NULL;
+    DPS_Status ret;
+
+    DPS_PRINT("%s\n", __FUNCTION__);
+
+    event = DPS_CreateEvent();
+    ASSERT(event);
+
+    /*
+     * Create a node with multicast disabled and no subscribers.  This
+     * will result in no routes for the publication to be delivered
+     * to.
+     */
+    pubNode = DPS_CreateNode("/.", keyStore, NULL);
+    ASSERT(pubNode);
+    ret = DPS_StartNode(pubNode, DPS_MCAST_PUB_DISABLED, NULL);
+    ASSERT(ret == DPS_OK);
+
+    pub = CreatePublication(pubNode, topics, numTopics, NULL);
+    ret = DPS_PublishBufs(pub, NULL, 0, 0, PublishBufsComplete, event);
+    ASSERT(ret == DPS_OK);
+    ret = DPS_WaitForEvent(event);
+    ASSERT(ret == DPS_OK);
+
+    DPS_DestroyPublication(pub);
+    DPS_DestroyNode(pubNode, OnNodeDestroyed, event);
+    DPS_WaitForEvent(event);
+    DPS_DestroyEvent(event);
+}
+
 typedef void (*TEST)(DPS_Node*, DPS_KeyStore*);
 
 int main(int argc, char** argv)
@@ -498,6 +540,7 @@ int main(int argc, char** argv)
         TestRetainedMessage,
         TestRetainedExpired,
         TestSequenceNumbers,
+        TestPublishNoRoutes,
         NULL
     };
     TEST* test;
