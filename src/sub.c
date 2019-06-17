@@ -831,16 +831,11 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRx
         int isDelta = (flags & DPS_SUB_FLAG_DELTA_IND) != 0;
         memcpy_s(&remote->inbound.meshId, sizeof(remote->inbound.meshId), &meshId, sizeof(DPS_UUID));
         ret = UpdateInboundInterests(node, remote, interests, needs, isDelta);
-        /*
-         * Evaluate impact of the change in interests
-         */
-        if (ret == DPS_OK) {
-            DPS_UpdatePubs(node);
-        }
     } else {
         DPS_BitVectorFree(interests);
         DPS_BitVectorFree(needs);
     }
+
     /*
      * Track the minimum mesh id we have seen
      */
@@ -855,6 +850,14 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRx
             DPS_UpdateOutboundInterests(node, remote, &remote->outbound.includeSub);
         }
         ret = SendSubscriptionAck(node, remote, revision, remote->outbound.includeSub);
+    }
+    /*
+     * Evaluate impact of the change in interests
+     */
+    if (ret == DPS_OK) {
+        if (!remote->outbound.muted) {
+            DPS_UpdatePubs(node, remote);
+        }
     }
     DPS_UnlockNode(node);
     DPS_UpdateSubs(node);

@@ -101,15 +101,17 @@ typedef struct _DPS_Publication {
  * Run checks of the publications against the current subscriptions
  *
  * @param node       The local node
+ * @param remote     The remote node
  */
-void DPS_UpdatePubs(DPS_Node* node);
+void DPS_UpdatePubs(DPS_Node* node, RemoteNode* remote);
 
 /**
  * Send any queued publications.
  *
  * @param node       The local node
+ * @param remote     The optional remote node
  */
-void DPS_SendPubs(DPS_Node* node);
+void DPS_SendPubs(DPS_Node* node, RemoteNode* remote);
 
 /**
  * The address type of an endpoint

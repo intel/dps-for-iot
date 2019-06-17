@@ -966,7 +966,7 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxB
         UpdatePubHistory(req);
         DPS_QueuePushBack(&pub->sendQueue, &req->queue);
         ++req->refCount;
-        DPS_SendPubs(node);
+        DPS_SendPubs(node, NULL);
     } else {
         req->status = ret;
         DPS_DestroyPublishRequest(req);
