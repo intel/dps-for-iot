@@ -259,6 +259,7 @@ static RemoteNode* AllocRemoteNode(const DPS_NodeAddress* addr, DPS_NetConnectio
     }
     if (addr) {
         remote->ep.addr = *addr;
+        remote->ep.addr.next = NULL;
     }
     remote->ep.cn = cn;
     remote->inbound.meshId = DPS_MaxMeshId;
@@ -268,9 +269,16 @@ static RemoteNode* AllocRemoteNode(const DPS_NodeAddress* addr, DPS_NetConnectio
 
 static void FreeRemoteNode(DPS_Node* node, RemoteNode* remote)
 {
+    DPS_NodeAddress* addr;
+    DPS_NodeAddress* next;
+
     DPS_ClearInboundInterests(node, remote);
     FreeOutboundInterests(remote);
     DPS_BitVectorFree(remote->outbound.delta);
+    for (addr = remote->ep.addr.next; addr; addr = next) {
+        next = addr->next;
+        free(addr);
+    }
     /*
      * This tells the network layer we no longer need to keep connection alive for this address
      */
@@ -515,12 +523,37 @@ int DPS_MeshHasLoop(DPS_Node* node, RemoteNode* src, DPS_UUID* meshId)
 RemoteNode* DPS_LookupRemoteNode(DPS_Node* node, const DPS_NodeAddress* addr)
 {
     RemoteNode* remote;
+    DPS_NodeAddress* remoteAddr;
 
     if (!addr) {
         return NULL;
     }
     for (remote = node->remoteNodes; remote != NULL; remote = remote->next) {
-        if (DPS_SameAddr(&remote->ep.addr, addr)) {
+        int sameToken = DPS_FALSE;
+        for (remoteAddr = &remote->ep.addr; remoteAddr; remoteAddr = remoteAddr->next) {
+            if (DPS_SameAddr(remoteAddr, addr)) {
+                return remote;
+            } else if (DPS_SameToken(remoteAddr, addr)) {
+                sameToken = DPS_TRUE;
+            }
+        }
+        /*
+         * We didn't match the address but did match the token so addr belongs to the remote.
+         * Append the addr to the list here before returning.
+         */
+        if (sameToken) {
+            remoteAddr = &remote->ep.addr;
+            while (remoteAddr->next) {
+                remoteAddr = remoteAddr->next;
+            }
+            remoteAddr->next = malloc(sizeof(DPS_NodeAddress));
+            if (!remoteAddr->next) {
+                DPS_WARNPRINT("Failed to allocate node address: %s\n", DPS_ErrTxt(DPS_ERR_RESOURCES));
+            } else {
+                DPS_DBGPRINT("Adding %s to remote %p\n", DPS_NodeAddrToString(addr), remote);
+                memcpy(remoteAddr->next, addr, sizeof(DPS_NodeAddress));
+                remoteAddr->next->next = NULL;
+            }
             return remote;
         }
     }

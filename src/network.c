@@ -157,6 +157,22 @@ int DPS_SameAddr(const DPS_NodeAddress* addr1, const DPS_NodeAddress* addr2)
     }
 }
 
+int DPS_SameToken(const DPS_NodeAddress* addr1, const DPS_NodeAddress* addr2)
+{
+    if (addr1->type != addr2->type) {
+        return DPS_FALSE;
+    }
+    switch (addr1->type) {
+    case DPS_UDP:
+        if (*addr1->u.token && *addr2->u.token) {
+            return (memcmp(addr1->u.token, addr2->u.token, 8) == 0);
+        }
+        return DPS_FALSE;
+    default:
+        return DPS_FALSE;
+    }
+}
+
 DPS_Status DPS_SplitAddress(const char* addrText, char* host, size_t hostLen,
                             char* service, size_t serviceLen)
 {

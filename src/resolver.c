@@ -50,6 +50,7 @@ static void GetAddrInfoCB(uv_getaddrinfo_t* req, int status, struct addrinfo* re
 
     if (status == 0) {
         DPS_NodeAddress addr;
+        memzero_s(&addr, sizeof(DPS_NodeAddress));
 #if defined(DPS_USE_DTLS)
         addr.type = DPS_DTLS;
 #elif defined(DPS_USE_TCP)

@@ -131,6 +131,7 @@ static void OnMcastRx(uv_udp_t* handle, ssize_t nread, const uv_buf_t* uvBuf, co
         ret = DPS_ERR_INVALID;
         goto Exit;
     }
+    memcpy_s(ep.addr.u.token, sizeof(ep.addr.u.token), coap.token, coap.tokenLen);
     receiver->cb(receiver->node, &ep, DPS_OK, buf);
 Exit:
     CoAP_Free(&coap);

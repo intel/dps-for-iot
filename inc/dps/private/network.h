@@ -349,6 +349,16 @@ void DPS_NetConnectionDecRef(DPS_NetConnection* cn);
 int DPS_SameAddr(const DPS_NodeAddress* addr1, const DPS_NodeAddress* addr2);
 
 /**
+ * Compare the tokens of two addresses.
+ *
+ * @param addr1  The address to compare against
+ * @param addr2  The address to compare with addr1
+ *
+ * @return 0 if the tokens are different non-0 if they are the same
+ */
+int DPS_SameToken(const DPS_NodeAddress* addr1, const DPS_NodeAddress* addr2);
+
+/**
  * Generates text for an address
  *
  * @note This function uses a static string internally so is not thread-safe

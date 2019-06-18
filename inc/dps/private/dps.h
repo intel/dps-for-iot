@@ -95,9 +95,17 @@ typedef enum {
 typedef struct _DPS_NodeAddress {
     DPS_NodeAddressType type;      /**< Type of address */
     union {
-        struct sockaddr_storage inaddr; /**< Storage for IP address type */
+        /**
+         * Storage for IP address and optional multicast token to
+         * identify duplicate multicast messages.
+         */
+        struct {
+            struct sockaddr_storage inaddr; /**< Storage for IP address type */
+            uint8_t token[8];               /**< The multicast token */
+        };
         char path[DPS_NODE_ADDRESS_PATH_MAX]; /**< Storage for pipe name */
     } u; /**< Type specific storage */
+    struct _DPS_NodeAddress* next; /**< Next address in a list */
 } DPS_NodeAddress;
 
 /**
