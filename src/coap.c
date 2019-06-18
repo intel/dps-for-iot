@@ -24,7 +24,9 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <dps/dbg.h>
+#include <dps/private/cbor.h>
 #include "coap.h"
+#include "node.h"
 
 /*
  * Debug control for this module
@@ -298,6 +300,7 @@ void CoAP_DumpOpt(const CoAP_Option* opt)
 }
 
 static const char DPS_PublicationURI[] = "dps/pub";
+static const char DPS_SubscriptionURI[] = "dps/sub";
 static const uint8_t DPS_ContentFormat = COAP_FORMAT_APPLICATION_CBOR;
 
 DPS_Status CoAP_Wrap(uv_buf_t* bufs, size_t numBufs)
@@ -307,10 +310,37 @@ DPS_Status CoAP_Wrap(uv_buf_t* bufs, size_t numBufs)
     size_t i;
     size_t len = 0;
     CoAP_Option opts[2];
+    DPS_RxBuffer rxBuf;
+    uint8_t version;
+    uint8_t type;
+
+    if (numBufs < 2) {
+        return DPS_ERR_ARGS;
+    }
+    ret = DPS_RxBufferInit(&rxBuf, (uint8_t*)bufs[1].base, bufs[1].len);
+    if (ret == DPS_OK) {
+        ret = CBOR_DecodeArray(&rxBuf, &len);
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_DecodeUint8(&rxBuf, &version);
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_DecodeUint8(&rxBuf, &type);
+    }
+    if (ret != DPS_OK) {
+        return ret;
+    }
 
     opts[0].id = COAP_OPT_URI_PATH;
-    opts[0].val = (uint8_t*)DPS_PublicationURI;
-    opts[0].len = sizeof(DPS_PublicationURI);
+    if (type == DPS_MSG_TYPE_PUB) {
+        opts[0].val = (uint8_t*)DPS_PublicationURI;
+        opts[0].len = sizeof(DPS_PublicationURI);
+    } else if (type == DPS_MSG_TYPE_SUB) {
+        opts[0].val = (uint8_t*)DPS_SubscriptionURI;
+        opts[0].len = sizeof(DPS_SubscriptionURI);
+    } else {
+        return DPS_ERR_ARGS;
+    }
     opts[1].id = COAP_OPT_CONTENT_FORMAT;
     opts[1].val = (uint8_t*)&DPS_ContentFormat;
     opts[1].len = sizeof(DPS_ContentFormat);

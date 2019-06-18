@@ -46,13 +46,9 @@ expect_error(sub1, 'Expected message version 1, received 2')
 #
 # Verify that unsupported message type is dropped
 #
-# Multicast
-reset_logs()
 
-sub1 = sub('A')
-ver('-v 1 -t 5')
-
-expect_error(sub1, 'Invalid message type')
+# Multicast is excluded here as we will not send an unsupported
+# message type
 
 # Unicast
 reset_logs()
