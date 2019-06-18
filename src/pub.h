@@ -114,15 +114,6 @@ void DPS_UpdatePubs(DPS_Node* node, RemoteNode* remote);
 void DPS_SendPubs(DPS_Node* node, RemoteNode* remote);
 
 /**
- * The address type of an endpoint
- */
-typedef enum {
-    DPS_UNICAST,
-    DPS_MULTICAST,
-    DPS_LOOPBACK
-} DPS_AddressType;
-
-/**
  * Decode and process a received publication
  *
  * @param node       The local node

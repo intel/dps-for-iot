@@ -130,6 +130,7 @@ typedef struct _DPS_Node {
     DPS_Publication* publications;        /**< Linked list of local and retained publications */
     DPS_Subscription* subscriptions;      /**< Linked list of local subscriptions */
 
+    int mcast;                            /**< Multicast enable/disable flags */
     DPS_MulticastReceiver* mcastReceiver; /**< Multicast receiver context */
     DPS_MulticastSender* mcastSender;     /**< Multicast sender context */
     RemoteNode* mcastNode;                /**< Multicast remote node */

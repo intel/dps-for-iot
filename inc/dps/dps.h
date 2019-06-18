@@ -496,12 +496,12 @@ void* DPS_GetNodeData(const DPS_Node* node);
 /**
  * Enable multicast send on the node.  See @p mcast of DPS_StartNode().
  */
-#define DPS_MCAST_SUB_ENABLE_SEND    DPS_MCAST_PUB_ENABLE_SEND
+#define DPS_MCAST_SUB_ENABLE_SEND    (1<<2)
 
 /**
  * Enable multicast receive on the node.  See @p mcast of DPS_StartNode().
  */
-#define DPS_MCAST_SUB_ENABLE_RECV    DPS_MCAST_PUB_ENABLE_RECV
+#define DPS_MCAST_SUB_ENABLE_RECV    (1<<3)
 
 /**
  * Initialized and starts running a local node. Node can only be started once.

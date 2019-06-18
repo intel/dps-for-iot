@@ -1052,12 +1052,20 @@ static DPS_Status DecodeRequest(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxBu
     ret = DPS_ERR_INVALID;
     switch (msgType) {
     case DPS_MSG_TYPE_SUB:
-        ret = DPS_DecodeSubscription(node, ep, buf);
+        if ((epType == DPS_MULTICAST) && ((node->mcast & DPS_MCAST_SUB_ENABLE_RECV) == 0)) {
+            DPS_DBGPRINT("Ignoring multicast SUB\n");
+            break;
+        }
+        ret = DPS_DecodeSubscription(node, ep, buf, epType);
         if (ret != DPS_OK) {
             DPS_DBGPRINT("DecodeSubscription returned %s\n", DPS_ErrTxt(ret));
         }
         break;
     case DPS_MSG_TYPE_PUB:
+        if ((epType == DPS_MULTICAST) && ((node->mcast & DPS_MCAST_PUB_ENABLE_RECV) == 0)) {
+            DPS_DBGPRINT("Ignoring multicast PUB\n");
+            break;
+        }
         DPS_DBGPRINT("Received publication via %s\n", DPS_NodeAddrToString(&ep->addr));
         ret = DPS_DecodePublication(node, ep, buf, epType);
         if (ret != DPS_OK) {
@@ -1065,6 +1073,10 @@ static DPS_Status DecodeRequest(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxBu
         }
         break;
     case DPS_MSG_TYPE_ACK:
+        if (epType == DPS_MULTICAST) {
+            DPS_DBGPRINT("Ignoring multicast ACK\n");
+            break;
+        }
         DPS_DBGPRINT("Received acknowledgement via %s\n", DPS_NodeAddrToString(&ep->addr));
         ret = DPS_DecodeAcknowledgement(node, ep, buf);
         if (ret != DPS_OK) {
@@ -1072,6 +1084,10 @@ static DPS_Status DecodeRequest(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxBu
         }
         break;
     case DPS_MSG_TYPE_SAK:
+        if (epType == DPS_MULTICAST) {
+            DPS_DBGPRINT("Ignoring multicast SAK\n");
+            break;
+        }
         DPS_DBGPRINT("Received sub ack via %s\n", DPS_NodeAddrToString(&ep->addr));
         ret = DPS_DecodeSubscriptionAck(node, ep, buf);
         if (ret != DPS_OK) {
@@ -1512,21 +1528,22 @@ DPS_Status DPS_StartNode(DPS_Node* node, int mcast, DPS_NodeAddress* listenAddr)
         ret = DPS_ERR_RESOURCES;
         goto ErrExit;
     }
-    if (mcast & (DPS_MCAST_PUB_ENABLE_RECV | DPS_MCAST_SUB_ENABLE_RECV)) {
+    node->mcast = mcast;
+    if (node->mcast & (DPS_MCAST_PUB_ENABLE_RECV | DPS_MCAST_SUB_ENABLE_RECV)) {
         node->mcastReceiver = DPS_MulticastStartReceive(node, OnMulticastReceive);
         if (!node->mcastReceiver) {
             ret = DPS_ERR_RESOURCES;
             goto ErrExit;
         }
     }
-    if (mcast & (DPS_MCAST_PUB_ENABLE_SEND | DPS_MCAST_SUB_ENABLE_SEND)) {
+    if (node->mcast & (DPS_MCAST_PUB_ENABLE_SEND | DPS_MCAST_SUB_ENABLE_SEND)) {
         node->mcastSender = DPS_MulticastStartSend(node);
         if (!node->mcastSender) {
             ret = DPS_ERR_RESOURCES;
             goto ErrExit;
         }
     }
-    if (mcast & DPS_MCAST_SUB_ENABLE_SEND) {
+    if (node->mcast & DPS_MCAST_SUB_ENABLE_SEND) {
         node->mcastNode = AllocRemoteNode(NULL, NULL);
         if (!node->mcastNode) {
             ret = DPS_ERR_RESOURCES;

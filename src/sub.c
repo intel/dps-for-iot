@@ -644,7 +644,7 @@ static DPS_Status UpdateInboundInterests(DPS_Node* node, RemoteNode* remote, DPS
     return DPS_OK;
 }
 
-DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxBuffer* buf)
+DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxBuffer* buf, DPS_AddressType epType)
 {
     static const int32_t NeedKeys[] = { DPS_CBOR_KEY_SEQ_NUM };
     static const int32_t WantKeys[] = { DPS_CBOR_KEY_PORT, DPS_CBOR_KEY_SUB_FLAGS, DPS_CBOR_KEY_MESH_ID, DPS_CBOR_KEY_NEEDS, DPS_CBOR_KEY_INTERESTS, DPS_CBOR_KEY_PATH };
@@ -816,7 +816,9 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRx
      * Duplicate - presumably an ACK got lost
      */
     if (revision == remote->inbound.revision) {
-        ret = SendSubscriptionAck(node, remote, revision, remote->outbound.includeSub);
+        if (epType == DPS_UNICAST) {
+            ret = SendSubscriptionAck(node, remote, revision, remote->outbound.includeSub);
+        }
         goto DiscardAndExit;
     }
     remote->inbound.revision = revision;
@@ -866,7 +868,9 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRx
         if (remoteIsNew) {
             DPS_UpdateOutboundInterests(node, remote, &remote->outbound.includeSub);
         }
-        ret = SendSubscriptionAck(node, remote, revision, remote->outbound.includeSub);
+        if (epType == DPS_UNICAST) {
+            ret = SendSubscriptionAck(node, remote, revision, remote->outbound.includeSub);
+        }
     }
     /*
      * Evaluate impact of the change in interests
@@ -912,7 +916,7 @@ DPS_Status DPS_DecodeSubscriptionAck(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
      * Decode subscription fields if they are present
      */
     rxPos = rxBuf->rxPos;
-    ret = DPS_DecodeSubscription(node, ep, buf);
+    ret = DPS_DecodeSubscription(node, ep, buf, DPS_UNICAST);
     rxBuf->rxPos = rxPos;
 
     /*

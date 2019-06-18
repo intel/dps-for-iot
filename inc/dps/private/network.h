@@ -40,6 +40,15 @@ extern "C" {
 #define DPS_MAX_SERVICE_LEN  16  /**< Per RFC 6335 section 5.1 */
 
 /**
+ * The address type of an endpoint
+ */
+typedef enum {
+    DPS_UNICAST,
+    DPS_MULTICAST,
+    DPS_LOOPBACK
+} DPS_AddressType;
+
+/**
  * Opaque data structure for network-specific state
  */
 typedef struct _DPS_NetContext DPS_NetContext;
