@@ -231,6 +231,16 @@ DPS_Status DPS_DestroySubscription(DPS_Subscription* sub)
     return DPS_OK;
 }
 
+static void OnMulticastSendComplete(DPS_MulticastSender* sender, void* appCtx, uv_buf_t* bufs,
+                                    size_t numBufs, DPS_Status status)
+{
+    DPS_Node* node = appCtx;
+
+    DPS_DBGPRINT("Send complete %s\n", DPS_ErrTxt(status));
+    node->mcastNode->outbound.subPending = DPS_FALSE;
+    DPS_NetFreeBufs(bufs, numBufs);
+}
+
 #ifdef DPS_DEBUG
 int _DPS_NumSubs = 0;
 #endif
@@ -392,19 +402,26 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote)
 
     if (ret == DPS_OK) {
         uv_buf_t uvBuf = uv_buf_init((char*)buf.base, DPS_TxBufferUsed(&buf));
+        DPS_NetEndpoint* ep = (remote == node->mcastNode) ? NULL : &remote->ep;
         CBOR_Dump("Sub out", (uint8_t*)uvBuf.base, uvBuf.len);
-        ret = DPS_NetSend(node, NULL, &remote->ep, &uvBuf, 1, DPS_OnSendSubscriptionComplete);
+        if (ep) {
+            ret = DPS_NetSend(node, NULL, ep, &uvBuf, 1, DPS_OnSendSubscriptionComplete);
+            if (ret == DPS_OK) {
+                if (remote->outbound.ackCountdown) {
+                    --remote->outbound.ackCountdown;
+                } else {
+                    remote->outbound.ackCountdown = 1 + DPS_MAX_SUBSCRIPTION_RETRIES;
+                }
+                assert(remote->outbound.ackCountdown);
+            }
+        } else {
+            ret = DPS_MulticastSend(node->mcastSender, node, &uvBuf, 1, OnMulticastSendComplete);
+        }
         if (ret == DPS_OK) {
             remote->outbound.subPending = DPS_TRUE;
-            if (remote->outbound.ackCountdown) {
-                --remote->outbound.ackCountdown;
-            } else {
-                remote->outbound.ackCountdown = 1 + DPS_MAX_SUBSCRIPTION_RETRIES;
-            }
-            assert(remote->outbound.ackCountdown);
         } else {
             DPS_ERRPRINT("Failed to send subscription request %s\n", DPS_ErrTxt(ret));
-            DPS_SendComplete(node, &remote->ep.addr, &uvBuf, 1, ret);
+            DPS_SendComplete(node, ep ? &ep->addr : NULL, &uvBuf, 1, ret);
         }
     } else {
         DPS_TxBufferFree(&buf);

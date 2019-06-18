@@ -132,6 +132,7 @@ typedef struct _DPS_Node {
 
     DPS_MulticastReceiver* mcastReceiver; /**< Multicast receiver context */
     DPS_MulticastSender* mcastSender;     /**< Multicast sender context */
+    RemoteNode* mcastNode;                /**< Multicast remote node */
 
     DPS_NetContext* netCtx;               /**< Network context */
 

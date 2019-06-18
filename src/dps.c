@@ -249,6 +249,35 @@ void DPS_ClearInboundInterests(DPS_Node* node, RemoteNode* remote)
     }
 }
 
+static RemoteNode* AllocRemoteNode(const DPS_NodeAddress* addr, DPS_NetConnection* cn)
+{
+    RemoteNode* remote;
+
+    remote = calloc(1, sizeof(RemoteNode));
+    if (!remote) {
+        return NULL;
+    }
+    if (addr) {
+        remote->ep.addr = *addr;
+    }
+    remote->ep.cn = cn;
+    remote->inbound.meshId = DPS_MaxMeshId;
+    remote->outbound.meshId = DPS_MaxMeshId;
+    return remote;
+}
+
+static void FreeRemoteNode(DPS_Node* node, RemoteNode* remote)
+{
+    DPS_ClearInboundInterests(node, remote);
+    FreeOutboundInterests(remote);
+    DPS_BitVectorFree(remote->outbound.delta);
+    /*
+     * This tells the network layer we no longer need to keep connection alive for this address
+     */
+    DPS_NetConnectionDecRef(remote->ep.cn);
+    free(remote);
+}
+
 void DPS_DeleteRemoteNode(DPS_Node* node, RemoteNode* remote)
 {
     RemoteNode* next;
@@ -258,9 +287,11 @@ void DPS_DeleteRemoteNode(DPS_Node* node, RemoteNode* remote)
     if (!IsValidRemoteNode(node, remote)) {
         return;
     }
+
     if (remote->monitor) {
         DPS_LinkMonitorStop(remote);
     }
+
     next = remote->next;
     if (node->remoteNodes == remote) {
         node->remoteNodes = next;
@@ -272,18 +303,12 @@ void DPS_DeleteRemoteNode(DPS_Node* node, RemoteNode* remote)
         }
         prev->next = next;
     }
-    DPS_ClearInboundInterests(node, remote);
-    FreeOutboundInterests(remote);
-    DPS_BitVectorFree(remote->outbound.delta);
 
     if (remote->completion) {
         DPS_RemoteCompletion(node, remote, DPS_ERR_FAILURE);
     }
-    /*
-     * This tells the network layer we no longer need to keep connection alive for this address
-     */
-    DPS_NetConnectionDecRef(remote->ep.cn);
-    free(remote);
+
+    FreeRemoteNode(node, remote);
 }
 
 static const DPS_UUID* MinMeshId(DPS_Node* node, RemoteNode* excluded)
@@ -323,6 +348,7 @@ DPS_Status DPS_UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, uin
      * recalculation of outbound interests
      */
     if (destNode->inbound.interests) {
+        assert(destNode != node->mcastNode);
         ret = DPS_CountVectorDel(node->interests, destNode->inbound.interests);
         if (ret != DPS_OK) {
             goto ErrExit;
@@ -353,6 +379,8 @@ DPS_Status DPS_UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, uin
     /*
      * Send a delta if we have previously sent interests. The needs vector
      * is small so it is not worth computing a delta.
+     *
+     * Note that outbound multicast interests are never a delta.
      */
     if (destNode->outbound.interests) {
         int same = DPS_FALSE;
@@ -370,7 +398,11 @@ DPS_Status DPS_UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, uin
         } else {
             *send = DPS_TRUE;
         }
-        destNode->outbound.deltaInd = DPS_TRUE;
+        if (destNode == node->mcastNode) {
+            destNode->outbound.deltaInd = DPS_FALSE;
+        } else {
+            destNode->outbound.deltaInd = DPS_TRUE;
+        }
     } else {
         /*
          * This is not a delta
@@ -391,7 +423,7 @@ DPS_Status DPS_UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, uin
          * cannot exist without interests so we can just send
          * the maximum mesh id.
          */
-        if (DPS_BitVectorIsClear(newInterests)) {
+        if (DPS_BitVectorIsClear(newInterests) || (destNode == node->mcastNode)) {
             destNode->outbound.meshId = DPS_MaxMeshId;
         } else {
             destNode->outbound.meshId = *(MinMeshId(node, destNode));
@@ -529,18 +561,14 @@ DPS_Status DPS_AddRemoteNode(DPS_Node* node, const DPS_NodeAddress* addr, DPS_Ne
         }
         return DPS_ERR_EXISTS;
     }
-    remote = calloc(1, sizeof(RemoteNode));
+    remote = AllocRemoteNode(addr, cn);
     if (!remote) {
         *remoteOut = NULL;
         return DPS_ERR_RESOURCES;
     }
     DPS_DBGPRINT("Adding new remote node %s\n", DPS_NodeAddrToString(addr));
-    remote->ep.addr = *addr;
-    remote->ep.cn = cn;
     remote->next = node->remoteNodes;
     node->remoteNodes = remote;
-    remote->inbound.meshId = DPS_MaxMeshId;
-    remote->outbound.meshId = DPS_MaxMeshId;
     /*
      * This tells the network layer to keep connection alive for this address
      */
@@ -866,6 +894,23 @@ static void SendSubsTimer(uv_timer_t* handle)
             }
         }
     }
+    /*
+     * Multicast subscription when enabled
+     */
+    if (node->mcastNode) {
+        uint8_t send = DPS_FALSE;
+        ret = DPS_UpdateOutboundInterests(node, node->mcastNode, &send);
+        if ((ret == DPS_OK) && send) {
+            ret = DPS_SendSubscription(node, node->mcastNode);
+            if (ret != DPS_OK) {
+                DPS_ERRPRINT("Failed to send (multicast) subscription request %s\n", DPS_ErrTxt(ret));
+                /*
+                 * Eat the error and continue
+                 */
+                ret = DPS_OK;
+            }
+        }
+    }
     if (ret != DPS_OK) {
         DPS_ERRPRINT("SendSubsTask failed %s\n", DPS_ErrTxt(ret));
     }
@@ -1146,6 +1191,10 @@ static void StopNode(DPS_Node* node)
     if (node->mcastSender) {
         DPS_MulticastStopSend(node->mcastSender);
         node->mcastSender = NULL;
+    }
+    if (node->mcastNode) {
+        FreeRemoteNode(node, node->mcastNode);
+        node->mcastNode = NULL;
     }
     if (node->netCtx) {
         DPS_NetStop(node->netCtx);
@@ -1450,11 +1499,26 @@ DPS_Status DPS_StartNode(DPS_Node* node, int mcast, DPS_NodeAddress* listenAddr)
         ret = DPS_ERR_RESOURCES;
         goto ErrExit;
     }
-    if (mcast & DPS_MCAST_PUB_ENABLE_RECV) {
+    if (mcast & (DPS_MCAST_PUB_ENABLE_RECV | DPS_MCAST_SUB_ENABLE_RECV)) {
         node->mcastReceiver = DPS_MulticastStartReceive(node, OnMulticastReceive);
+        if (!node->mcastReceiver) {
+            ret = DPS_ERR_RESOURCES;
+            goto ErrExit;
+        }
     }
-    if (mcast & DPS_MCAST_PUB_ENABLE_SEND) {
+    if (mcast & (DPS_MCAST_PUB_ENABLE_SEND | DPS_MCAST_SUB_ENABLE_SEND)) {
         node->mcastSender = DPS_MulticastStartSend(node);
+        if (!node->mcastSender) {
+            ret = DPS_ERR_RESOURCES;
+            goto ErrExit;
+        }
+    }
+    if (mcast & DPS_MCAST_SUB_ENABLE_SEND) {
+        node->mcastNode = AllocRemoteNode(NULL, NULL);
+        if (!node->mcastNode) {
+            ret = DPS_ERR_RESOURCES;
+            goto ErrExit;
+        }
     }
     node->netCtx = DPS_NetStart(node, listenAddr, OnNetReceive);
     if (!node->netCtx) {
