@@ -1065,9 +1065,6 @@ static DPS_Status DecodeRequest(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxBu
 static DPS_Status OnMulticastReceive(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Status status,
                                      DPS_NetRxBuffer* buf)
 {
-    DPS_Status ret;
-    CoAP_Parsed coap;
-
     DPS_DBGTRACE();
 
     /*
@@ -1080,24 +1077,7 @@ static DPS_Status OnMulticastReceive(DPS_Node* node, DPS_NetEndpoint* ep, DPS_St
     }
     DPS_UnlockNode(node);
 
-    memset(&coap, 0, sizeof(coap));
-    ret = CoAP_Parse(&buf->rx, &coap);
-    if (ret != DPS_OK) {
-        DPS_ERRPRINT("Discarding garbage multicast packet len=%zu\n", buf->rx.eod - buf->rx.base);
-        goto Exit;
-    }
-    /*
-     * Multicast packets must be non-confirmable
-     */
-    if (coap.type != COAP_TYPE_NON_CONFIRMABLE) {
-        DPS_ERRPRINT("Discarding packet within bad type=%d\n", coap.type);
-        ret = DPS_ERR_INVALID;
-        goto Exit;
-    }
-    ret = DecodeRequest(node, ep, buf, DPS_MULTICAST);
-Exit:
-    CoAP_Free(&coap);
-    return ret;
+    return DecodeRequest(node, ep, buf, DPS_MULTICAST);
 }
 
 static DPS_Status OnNetReceive(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Status status, DPS_NetRxBuffer* buf)

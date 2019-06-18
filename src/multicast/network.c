@@ -88,10 +88,13 @@ static void OnMcastRx(uv_udp_t* handle, ssize_t nread, const uv_buf_t* uvBuf, co
     DPS_MulticastReceiver* receiver = (DPS_MulticastReceiver*)handle->data;
     DPS_NetRxBuffer* buf = NULL;
     DPS_NetEndpoint ep;
+    CoAP_Parsed coap;
+    DPS_Status ret;
 
     DPS_DBGTRACEA("handle=%p,nread=%d,buf={base=%p,len=%d},addr=%p,flags=0x%x\n", handle, nread,
                   uvBuf->base, uvBuf->len, addr, flags);
 
+    memset(&coap, 0, sizeof(coap));
     if (!uvBuf) {
         DPS_ERRPRINT("No buffer\n");
         goto Exit;
@@ -115,8 +118,22 @@ static void OnMcastRx(uv_udp_t* handle, ssize_t nread, const uv_buf_t* uvBuf, co
     }
     ep.cn = NULL;
     DPS_NetSetAddr(&ep.addr, DPS_UDP, addr);
+    ret = CoAP_Parse(&buf->rx, &coap);
+    if (ret != DPS_OK) {
+        DPS_ERRPRINT("Discarding garbage multicast packet len=%zu\n", buf->rx.eod - buf->rx.base);
+        goto Exit;
+    }
+    /*
+     * Multicast packets must be non-confirmable
+     */
+    if (coap.type != COAP_TYPE_NON_CONFIRMABLE) {
+        DPS_ERRPRINT("Discarding packet within bad type=%d\n", coap.type);
+        ret = DPS_ERR_INVALID;
+        goto Exit;
+    }
     receiver->cb(receiver->node, &ep, DPS_OK, buf);
 Exit:
+    CoAP_Free(&coap);
     DPS_NetRxBufferDecRef(buf);
 }
 
