@@ -35,7 +35,7 @@ addons:
   apt:
     sources:
       - ubuntu-toolchain-r-test
-      - llvm-toolchain-trusty-6.0
+      - llvm-toolchain-xenial-6.0
     packages:
       - clang-6.0
       - doxygen
