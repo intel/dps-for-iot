@@ -111,6 +111,8 @@ DPS_Status CoAP_Parse(DPS_RxBuffer* rxBuf, CoAP_Parsed* coap)
             return DPS_ERR_INVALID;
         }
         rxBuf->rxPos += coap->tokenLen;
+    } else {
+        coap->token[0] = 0;
     }
     /*
      * Count opts
@@ -162,16 +164,18 @@ DPS_Status CoAP_Parse(DPS_RxBuffer* rxBuf, CoAP_Parsed* coap)
     return DPS_OK;
 }
 
-DPS_Status CoAP_Compose(uint8_t code, const CoAP_Option* opts, size_t numOpts, size_t payloadLen, DPS_TxBuffer* buf)
+DPS_Status CoAP_Compose(uint8_t code, uint8_t* token, size_t tokenLen, const CoAP_Option* opts, size_t numOpts,
+                        size_t payloadLen, DPS_TxBuffer* buf)
 {
     static uint16_t msgId = 1;
     size_t i;
-    char token[] = "";
-    uint8_t tokenLen = (uint8_t)strnlen_s(token, sizeof(token));
     size_t optLen = 0;
     uint8_t optIdLast = 0;
     DPS_Status ret = DPS_OK;
 
+    if (8 < tokenLen) {
+        return DPS_ERR_ARGS;
+    }
     /*
      * Calculate the total length of options
      */
@@ -308,7 +312,8 @@ DPS_Status CoAP_Wrap(uv_buf_t* bufs, size_t numBufs)
     DPS_Status ret;
     DPS_TxBuffer coap;
     size_t i;
-    size_t len = 0;
+    size_t len;
+    DPS_UUID token;
     CoAP_Option opts[2];
     DPS_RxBuffer rxBuf;
     uint8_t version;
@@ -331,6 +336,8 @@ DPS_Status CoAP_Wrap(uv_buf_t* bufs, size_t numBufs)
         return ret;
     }
 
+    DPS_GenerateUUID(&token);
+
     opts[0].id = COAP_OPT_URI_PATH;
     if (type == DPS_MSG_TYPE_PUB) {
         opts[0].val = (uint8_t*)DPS_PublicationURI;
@@ -345,10 +352,12 @@ DPS_Status CoAP_Wrap(uv_buf_t* bufs, size_t numBufs)
     opts[1].val = (uint8_t*)&DPS_ContentFormat;
     opts[1].len = sizeof(DPS_ContentFormat);
 
+    len = 0;
     for (i = 1; i < numBufs; ++i) {
         len += bufs[i].len;
     }
-    ret = CoAP_Compose(COAP_CODE(COAP_REQUEST, COAP_PUT), opts, A_SIZEOF(opts), len, &coap);
+    ret = CoAP_Compose(COAP_CODE(COAP_REQUEST, COAP_PUT), token.val, 8, opts, A_SIZEOF(opts),
+                       len, &coap);
     if (ret == DPS_OK) {
         bufs[0].base = (void*)coap.base;
         bufs[0].len = DPS_TxBufferUsed(&coap);

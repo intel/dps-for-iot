@@ -138,6 +138,8 @@ void CoAP_Free(CoAP_Parsed* coap);
  * Compose a CoAP packet into a buffer.
  *
  * @param code       The CoAP command code
+ * @param token      The CoAP token
+ * @param tokenLen   The CoAP token length, must be less than or equal to 8
  * @param opts       CoAP options to serialize into the buffer
  * @param numOpts    The number of options to serialize
  * @param payloadLen The number of bytes in the payload
@@ -145,7 +147,8 @@ void CoAP_Free(CoAP_Parsed* coap);
  *
  * @return   Returns DPS_OK if the packet was composed or an error if the operation failed.
  */
-DPS_Status CoAP_Compose(uint8_t code, const CoAP_Option* opts, size_t numOpts, size_t payloadLen, DPS_TxBuffer* buf);
+DPS_Status CoAP_Compose(uint8_t code, uint8_t* token, size_t tokenLen, const CoAP_Option* opts, size_t numOpts,
+                        size_t payloadLen, DPS_TxBuffer* buf);
 
 /**
  * Print a CoAP option to stdout
