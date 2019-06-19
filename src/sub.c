@@ -234,11 +234,7 @@ DPS_Status DPS_DestroySubscription(DPS_Subscription* sub)
 static void OnMulticastSendComplete(DPS_MulticastSender* sender, void* appCtx, uv_buf_t* bufs,
                                     size_t numBufs, DPS_Status status)
 {
-    DPS_Node* node = appCtx;
-
-    DPS_DBGPRINT("Send complete %s\n", DPS_ErrTxt(status));
-    node->mcastNode->outbound.subPending = DPS_FALSE;
-    DPS_NetFreeBufs(bufs, numBufs);
+    DPS_OnSendSubscriptionComplete(appCtx, NULL, NULL, bufs, numBufs, status);
 }
 
 #ifdef DPS_DEBUG
@@ -416,6 +412,13 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote)
             }
         } else {
             ret = DPS_MulticastSend(node->mcastSender, node, &uvBuf, 1, OnMulticastSendComplete);
+            if (ret == DPS_OK) {
+                /*
+                 * Set the ackCountdown to a fixed value to trigger
+                 * retransmission of multicast SUBs.
+                 */
+                remote->outbound.ackCountdown = DPS_MAX_SUBSCRIPTION_RETRIES;
+            }
         }
         if (ret == DPS_OK) {
             remote->outbound.subPending = DPS_TRUE;

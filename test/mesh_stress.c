@@ -346,7 +346,7 @@ int main(int argc, char** argv)
                 return EXIT_FAILURE;
             }
             DPS_SetAddress(listenAddr, "[::1]:0");
-            ret = DPS_StartNode(node, DPS_FALSE, listenAddr);
+            ret = DPS_StartNode(node, 0, listenAddr);
             DPS_DestroyAddress(listenAddr);
             if (ret != DPS_OK) {
                 DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));

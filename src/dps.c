@@ -249,46 +249,11 @@ void DPS_ClearInboundInterests(DPS_Node* node, RemoteNode* remote)
     }
 }
 
-static RemoteNode* AllocRemoteNode(const DPS_NodeAddress* addr, DPS_NetConnection* cn)
+static void DeleteRemoteNode(DPS_Node* node, RemoteNode* remote)
 {
-    RemoteNode* remote;
-
-    remote = calloc(1, sizeof(RemoteNode));
-    if (!remote) {
-        return NULL;
-    }
-    if (addr) {
-        remote->ep.addr = *addr;
-        remote->ep.addr.next = NULL;
-    }
-    remote->ep.cn = cn;
-    remote->inbound.meshId = DPS_MaxMeshId;
-    remote->outbound.meshId = DPS_MaxMeshId;
-    return remote;
-}
-
-static void FreeRemoteNode(DPS_Node* node, RemoteNode* remote)
-{
+    RemoteNode* nextRemote;
     DPS_NodeAddress* addr;
-    DPS_NodeAddress* next;
-
-    DPS_ClearInboundInterests(node, remote);
-    FreeOutboundInterests(remote);
-    DPS_BitVectorFree(remote->outbound.delta);
-    for (addr = remote->ep.addr.next; addr; addr = next) {
-        next = addr->next;
-        free(addr);
-    }
-    /*
-     * This tells the network layer we no longer need to keep connection alive for this address
-     */
-    DPS_NetConnectionDecRef(remote->ep.cn);
-    free(remote);
-}
-
-void DPS_DeleteRemoteNode(DPS_Node* node, RemoteNode* remote)
-{
-    RemoteNode* next;
+    DPS_NodeAddress* nextAddr;
 
     DPS_DBGTRACE();
 
@@ -300,23 +265,41 @@ void DPS_DeleteRemoteNode(DPS_Node* node, RemoteNode* remote)
         DPS_LinkMonitorStop(remote);
     }
 
-    next = remote->next;
+    nextRemote = remote->next;
     if (node->remoteNodes == remote) {
-        node->remoteNodes = next;
+        node->remoteNodes = nextRemote;
     } else {
         RemoteNode* prev = node->remoteNodes;
         while (prev->next != remote) {
             prev = prev->next;
             assert(prev);
         }
-        prev->next = next;
+        prev->next = nextRemote;
     }
 
     if (remote->completion) {
         DPS_RemoteCompletion(node, remote, DPS_ERR_FAILURE);
     }
 
-    FreeRemoteNode(node, remote);
+    DPS_ClearInboundInterests(node, remote);
+    FreeOutboundInterests(remote);
+    DPS_BitVectorFree(remote->outbound.delta);
+    for (addr = remote->ep.addr.next; addr; addr = nextAddr) {
+        nextAddr = addr->next;
+        free(addr);
+    }
+    /*
+     * This tells the network layer we no longer need to keep connection alive for this address
+     */
+    DPS_NetConnectionDecRef(remote->ep.cn);
+    free(remote);
+}
+
+void DPS_DeleteRemoteNode(DPS_Node* node, RemoteNode* remote)
+{
+    if (remote != node->mcastNode) {
+        DeleteRemoteNode(node, remote);
+    }
 }
 
 static const DPS_UUID* MinMeshId(DPS_Node* node, RemoteNode* excluded)
@@ -441,6 +424,14 @@ DPS_Status DPS_UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, uin
     if (DPS_DEBUG_ENABLED() && *send) {
         DPS_DBGPRINT("New outbound interests for %s: ", DESCRIBE(destNode));
         DPS_DumpMatchingTopics(destNode->outbound.interests);
+    }
+    /*
+     * Always send out multicast subscriptions.  Note that the
+     * revision number has only changed if there was an actual change
+     * in outbound interests, so receivers will ignore duplicates.
+     */
+    if (destNode == node->mcastNode) {
+        *send = DPS_TRUE;
     }
     return DPS_OK;
 
@@ -594,11 +585,18 @@ DPS_Status DPS_AddRemoteNode(DPS_Node* node, const DPS_NodeAddress* addr, DPS_Ne
         }
         return DPS_ERR_EXISTS;
     }
-    remote = AllocRemoteNode(addr, cn);
+    remote = calloc(1, sizeof(RemoteNode));
     if (!remote) {
         *remoteOut = NULL;
         return DPS_ERR_RESOURCES;
     }
+    if (addr) {
+        remote->ep.addr = *addr;
+        remote->ep.addr.next = NULL;
+    }
+    remote->ep.cn = cn;
+    remote->inbound.meshId = DPS_MaxMeshId;
+    remote->outbound.meshId = DPS_MaxMeshId;
     DPS_DBGPRINT("Adding new remote node %s\n", DPS_NodeAddrToString(addr));
     remote->next = node->remoteNodes;
     node->remoteNodes = remote;
@@ -638,23 +636,21 @@ void DPS_OnSendSubscriptionComplete(DPS_Node* node, void* appCtx, DPS_NetEndpoin
     RemoteNode* remote;
 
     DPS_DBGPRINT("Send complete %s\n", DPS_ErrTxt(status));
-    if (ep) {
-        DPS_LockNode(node);
-        remote = DPS_LookupRemoteNode(node, &ep->addr);
-        if (remote) {
-            remote->outbound.subPending = DPS_FALSE;
-            if (status == DPS_OK) {
-                if ((node->state == DPS_NODE_RUNNING) && !node->subsPending) {
-                    node->subsPending = DPS_TRUE;
-                    uv_timer_start(&node->subsTimer, SendSubsTimer, 0, 0);
-                }
-            } else {
-                DPS_DBGPRINT("Removing node %s\n", DPS_NodeAddrToString(&ep->addr));
-                DPS_DeleteRemoteNode(node, remote);
+    DPS_LockNode(node);
+    remote = ep ? DPS_LookupRemoteNode(node, &ep->addr) : node->mcastNode;
+    if (remote) {
+        remote->outbound.subPending = DPS_FALSE;
+        if (status == DPS_OK) {
+            if ((node->state == DPS_NODE_RUNNING) && !node->subsPending) {
+                node->subsPending = DPS_TRUE;
+                uv_timer_start(&node->subsTimer, SendSubsTimer, 0, 0);
             }
+        } else {
+            DPS_DBGPRINT("Removing node %s\n", DPS_NodeAddrToString(&ep->addr));
+            DPS_DeleteRemoteNode(node, remote);
         }
-        DPS_UnlockNode(node);
     }
+    DPS_UnlockNode(node);
     DPS_NetFreeBufs(bufs, numBufs);
 }
 
@@ -699,6 +695,13 @@ static DPS_Status SendPub(DPS_PublishRequest* req, RemoteNode* remote)
 {
     DPS_Publication* pub = req->pub;
     DPS_Node* node = pub->node;
+
+    /*
+     * The multicast destination is handled specially for publications.
+     */
+    if (remote == node->mcastNode) {
+        return DPS_OK;
+    }
 
     DPS_DBGPRINT("%s muted=%d/%d,interests=%p\n", DESCRIBE(remote), remote->outbound.muted,
                  remote->inbound.muted, remote->inbound.interests);
@@ -927,23 +930,6 @@ static void SendSubsTimer(uv_timer_t* handle)
             }
         }
     }
-    /*
-     * Multicast subscription when enabled
-     */
-    if (node->mcastNode) {
-        uint8_t send = DPS_FALSE;
-        ret = DPS_UpdateOutboundInterests(node, node->mcastNode, &send);
-        if ((ret == DPS_OK) && send) {
-            ret = DPS_SendSubscription(node, node->mcastNode);
-            if (ret != DPS_OK) {
-                DPS_ERRPRINT("Failed to send (multicast) subscription request %s\n", DPS_ErrTxt(ret));
-                /*
-                 * Eat the error and continue
-                 */
-                ret = DPS_OK;
-            }
-        }
-    }
     if (ret != DPS_OK) {
         DPS_ERRPRINT("SendSubsTask failed %s\n", DPS_ErrTxt(ret));
     }
@@ -1002,6 +988,13 @@ void DPS_UpdatePubs(DPS_Node* node, RemoteNode* remote)
 void DPS_UpdateSubs(DPS_Node* node)
 {
     DPS_LockNode(node);
+    /*
+     * Trigger a check on any changes to the outbound multicast
+     * subscriptions.
+     */
+    if (node->mcastNode) {
+        node->mcastNode->outbound.ackCountdown = 0;
+    }
     if ((node->state == DPS_NODE_RUNNING) && !node->subsPending) {
         uv_async_send(&node->subsAsync);
     }
@@ -1221,10 +1214,6 @@ static void StopNode(DPS_Node* node)
         DPS_MulticastStopSend(node->mcastSender);
         node->mcastSender = NULL;
     }
-    if (node->mcastNode) {
-        FreeRemoteNode(node, node->mcastNode);
-        node->mcastNode = NULL;
-    }
     if (node->netCtx) {
         DPS_NetStop(node->netCtx);
         node->netCtx = NULL;
@@ -1245,7 +1234,7 @@ static void StopNode(DPS_Node* node)
      * Delete remote nodes and shutdown any connections.
      */
     while (node->remoteNodes) {
-        DPS_DeleteRemoteNode(node, node->remoteNodes);
+        DeleteRemoteNode(node, node->remoteNodes);
     }
     /*
      * Cleanup any unresolved acks
@@ -1544,8 +1533,8 @@ DPS_Status DPS_StartNode(DPS_Node* node, int mcast, DPS_NodeAddress* listenAddr)
         }
     }
     if (node->mcast & DPS_MCAST_SUB_ENABLE_SEND) {
-        node->mcastNode = AllocRemoteNode(NULL, NULL);
-        if (!node->mcastNode) {
+        ret = DPS_AddRemoteNode(node, NULL, NULL, &node->mcastNode);
+        if (ret != DPS_OK) {
             ret = DPS_ERR_RESOURCES;
             goto ErrExit;
         }
