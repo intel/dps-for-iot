@@ -41,6 +41,7 @@ addons:
       - doxygen
       - g++-7
       - nasm
+      - scons
       - zlib1g-dev
 
 before_install:
