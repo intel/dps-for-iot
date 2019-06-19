@@ -242,6 +242,7 @@ int main(int argc, char** argv)
     int subsRate = DPS_SUBSCRIPTION_UPDATE_RATE;
     char* msg = NULL;
     int mcast = DPS_MCAST_PUB_ENABLE_SEND;
+    int mcastOpt = -1;
     DPS_NodeAddress* listenAddr = NULL;
 
     DPS_Debug = DPS_FALSE;
@@ -281,6 +282,9 @@ int main(int argc, char** argv)
         if (IntArg("-x", &arg, &argc, &encrypt, 0, 3)) {
             continue;
         }
+        if (IntArg("-mc", &arg, &argc, &mcastOpt, 0, 15)) {
+            continue;
+        }
         if (strcmp(*arg, "-a") == 0) {
             ++arg;
             requestAck = DPS_TRUE;
@@ -300,10 +304,12 @@ int main(int argc, char** argv)
         }
         topics[numTopics++] = *arg++;
     }
-    /*
-     * Disable multicast publications if we have an explicit destination
-     */
-    if (numLinks) {
+    if (mcastOpt >= 0) {
+        mcast = mcastOpt;
+    } else if (numLinks) {
+        /*
+         * Disable multicast publications if we have an explicit destination
+         */
         mcast = DPS_MCAST_PUB_DISABLED;
     }
 
@@ -410,7 +416,7 @@ int main(int argc, char** argv)
     return 0;
 
 Usage:
-    DPS_PRINT("Usage %s [-d] [-x 0|1|2|3] [-a] [-w <seconds>] [-t <ttl>] [-p <address>] [-l <address>] [-m|-j <message>] [-r <milliseconds>] [topic1 topic2 ... topicN]\n", argv[0]);
+    DPS_PRINT("Usage %s [-d] [-x 0|1|2|3] [-a] [-w <seconds>] [-t <ttl>] [-p <address>] [-l <address>] [-m|-j <message>] [-r <milliseconds>] [-mc <multicast flags>] [topic1 topic2 ... topicN]\n", argv[0]);
     DPS_PRINT("       -d: Enable debug ouput if built for debug.\n");
     DPS_PRINT("       -x: Disable (0) or enable symmetric encryption (1), asymmetric encryption (2), or authentication (3). Default is symmetric encryption enabled.\n");
     DPS_PRINT("       -a: Request an acknowledgement\n");
@@ -421,6 +427,7 @@ Usage:
     DPS_PRINT("       -m: A string payload to accompany the publication.\n");
     DPS_PRINT("       -j: A JSON payload to accompany the publication.\n");
     DPS_PRINT("       -r: Time to delay between subscription updates.\n");
+    DPS_PRINT("      -mc: Multicast enable/disable flags.\n");
     DPS_PRINT("           Enters interactive mode if there are no topic strings on the command line.\n");
     DPS_PRINT("           In interactive mode type -h for commands.\n");
     return 1;

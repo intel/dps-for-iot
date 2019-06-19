@@ -479,27 +479,38 @@ DPS_Status DPS_SetNodeData(DPS_Node* node, void* data);
 void* DPS_GetNodeData(const DPS_Node* node);
 
 /**
- * Disable multicast send and receive on the node.  See @p mcast of DPS_StartNode().
+ * Disable multicast publication send and receive on the node.  See @p
+ * mcast of DPS_StartNode().
  */
 #define DPS_MCAST_PUB_DISABLED       0
 
 /**
- * Enable multicast send on the node.  See @p mcast of DPS_StartNode().
+ * Enable multicast publication send on the node.  See @p mcast of
+ * DPS_StartNode().
  */
 #define DPS_MCAST_PUB_ENABLE_SEND    (1<<0)
 
 /**
- * Enable multicast receive on the node.  See @p mcast of DPS_StartNode().
+ * Enable multicast publication receive on the node.  See @p mcast of
+ * DPS_StartNode().
  */
 #define DPS_MCAST_PUB_ENABLE_RECV    (1<<1)
 
 /**
- * Enable multicast send on the node.  See @p mcast of DPS_StartNode().
+ * Disable multicast subscription send and receive on the node.  See
+ * @p mcast of DPS_StartNode().
+ */
+#define DPS_MCAST_SUB_DISABLED       0
+
+/**
+ * Enable multicast subscription send on the node.  See @p mcast of
+ * DPS_StartNode().
  */
 #define DPS_MCAST_SUB_ENABLE_SEND    (1<<2)
 
 /**
- * Enable multicast receive on the node.  See @p mcast of DPS_StartNode().
+ * Enable multicast subscription receive on the node.  See @p mcast of
+ * DPS_StartNode().
  */
 #define DPS_MCAST_SUB_ENABLE_RECV    (1<<3)
 

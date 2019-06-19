@@ -1458,7 +1458,7 @@ DPS_Status DPS_StartNode(DPS_Node* node, int mcast, DPS_NodeAddress* listenAddr)
     DPS_Status ret = DPS_OK;
     int r;
 
-    DPS_DBGTRACE();
+    DPS_DBGTRACEA("node=%p,mcast=0x%x,listenAddr=%s\n", node, mcast, DPS_NodeAddrToString(listenAddr));
 
     if (!node) {
         return DPS_ERR_NULL;

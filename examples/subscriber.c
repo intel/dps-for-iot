@@ -154,6 +154,8 @@ static int IsInteractive(Args* args)
 
 static int ParseArgs(int argc, char** argv, Args* args)
 {
+    int mcast = -1;
+
     memset(args, 0, sizeof(Args));
     args->encrypt = 1;
     args->subsRate = DPS_SUBSCRIPTION_UPDATE_RATE;
@@ -182,6 +184,9 @@ static int ParseArgs(int argc, char** argv, Args* args)
                 continue;
             }
             if (IntArg("-r", &argv, &argc, &args->subsRate, 0, INT32_MAX)) {
+                continue;
+            }
+            if (IntArg("-mc", &argv, &argc, &mcast, 0, 15)) {
                 continue;
             }
             if (strcmp(*argv, "-m") == 0) {
@@ -225,6 +230,11 @@ static int ParseArgs(int argc, char** argv, Args* args)
             return DPS_FALSE;
         }
         args->topicList[args->numTopics++] = *argv++;
+    }
+    if (mcast >= 0) {
+        args->mcast |= mcast;
+    } else if (!args->numLinks) {
+        args->mcast = DPS_MCAST_PUB_ENABLE_RECV;
     }
     return DPS_TRUE;
 }
@@ -353,10 +363,6 @@ int main(int argc, char** argv)
     if (!ParseArgs(argc - 1, argv + 1, &args)) {
         goto Usage;
     }
-
-    if (!args.numLinks) {
-        args.mcast = DPS_MCAST_PUB_ENABLE_RECV;
-    }
     memoryKeyStore = DPS_CreateMemoryKeyStore();
     DPS_SetNetworkKey(memoryKeyStore, &NetworkKeyId, &NetworkKey);
     if (args.encrypt == 1) {
@@ -423,7 +429,7 @@ Exit:
     return (ret == DPS_OK) ? EXIT_SUCCESS : EXIT_FAILURE;
 
 Usage:
-    DPS_PRINT("Usage %s [-d] [-q] [-m] [-w <seconds>] [-x 0|1|2|3] [-p <address>] [-l <address] [-j] [-r <milliseconds>] [[-s] topic1 ... topicN]\n", argv[0]);
+    DPS_PRINT("Usage %s [-d] [-q] [-m] [-w <seconds>] [-x 0|1|2|3] [-p <address>] [-l <address] [-j] [-r <milliseconds>] [-mc <multicast flags>] [[-s] topic1 ... topicN]\n", argv[0]);
     DPS_PRINT("       -d: Enable debug ouput if built for debug.\n");
     DPS_PRINT("       -q: Quiet - suppresses output about received publications.\n");
     DPS_PRINT("       -x: Disable (0) or enable symmetric encryption (1), asymmetric encryption (2), or authentication (3). Default is symmetric encryption enabled.\n");
@@ -432,6 +438,7 @@ Usage:
     DPS_PRINT("       -m: Enable multicast receive. Enabled by default is there are no -p options.\n");
     DPS_PRINT("       -l: Address listen on.\n");
     DPS_PRINT("       -r: Time to delay between subscription updates.\n");
+    DPS_PRINT("      -mc: Multicast enable/disable flags.\n");
     DPS_PRINT("       -s: list of subscription topic strings. Multiple -s options are permitted\n");
     DPS_PRINT("       -j: Treat payload as CBOR and attempt to decode an display as JSON\n");
     return EXIT_FAILURE;
