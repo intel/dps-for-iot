@@ -153,7 +153,7 @@ static int CountMutedLinks(void)
         if (node) {
             RemoteNode* remote;
             for (remote = node->remoteNodes; remote != NULL; remote = remote->next) {
-                if (remote->outbound.muted && remote->linked) {
+                if (remote->outbound.muted && (remote->link == LINK_ACTIVE)) {
                     ++numMuted;
                 }
             }

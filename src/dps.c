@@ -1644,13 +1644,13 @@ static DPS_Status Link(DPS_Node* node, const DPS_NodeAddress* addr, OnOpCompleti
      * Remote may already exist due to incoming data which is ok,
      * but if we already linked it we return an error.
      */
-    if (remote->linked) {
+    if (remote->link == LINK_ACTIVE) {
         DPS_ERRPRINT("Node at %s already linked\n", DPS_NodeAddrToString(addr));
         ret = DPS_ERR_EXISTS;
         goto Exit;
     }
     assert(!remote->completion);
-    remote->linked = DPS_TRUE;
+    remote->link = LINK_ACTIVE;
     remote->completion = completion;
     ret = DPS_OK;
 Exit:
@@ -1747,7 +1747,7 @@ DPS_Status DPS_Unlink(DPS_Node* node, const DPS_NodeAddress* addr, DPS_OnUnlinkC
     }
     DPS_LockNode(node);
     remote = DPS_LookupRemoteNode(node, addr);
-    if (!remote || !remote->linked) {
+    if (!remote || !remote->link) {
         DPS_UnlockNode(node);
         return DPS_ERR_MISSING;
     }

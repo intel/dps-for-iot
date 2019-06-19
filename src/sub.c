@@ -873,6 +873,9 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRx
         }
         if (epType == DPS_UNICAST) {
             ret = SendSubscriptionAck(node, remote, revision, remote->outbound.includeSub);
+            if ((ret == DPS_OK) && (remote->link == LINK_UNLINKED)) {
+                remote->link = LINK_PASSIVE;
+            }
         }
     }
     /*

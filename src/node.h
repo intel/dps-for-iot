@@ -154,11 +154,20 @@ typedef struct _DPS_Node {
 extern const DPS_UUID DPS_MaxMeshId;
 
 /**
+ * Linked state of a remote node
+ */
+typedef enum {
+    LINK_UNLINKED = 0,               /**< Unlinked */
+    LINK_ACTIVE,                     /**< Node was explicitly linked */
+    LINK_PASSIVE                     /**< Node was implicitly linked */
+} LinkState;
+
+/**
  * A remote node
  */
 typedef struct _RemoteNode {
     OnOpCompletion* completion;        /**< Completion context for link and unlink operations */
-    uint8_t linked;                    /**< TRUE if this is a node that was explicitly linked */
+    LinkState link;                    /**< The link state of this node */
     uint8_t unlink;                    /**< TRUE if this node is about to be unlinked */
     /** Inbound state */
     struct {

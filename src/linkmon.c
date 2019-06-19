@@ -235,7 +235,7 @@ DPS_Status DPS_LinkMonitorStart(DPS_Node* node, RemoteNode* remote)
      * TODO - the linked flags may not be reliable - we
      * need a different tie breaker if possible.
      */
-    if (remote->linked) {
+    if (remote->link == LINK_ACTIVE) {
         return DPS_OK;
     }
     assert(!remote->monitor);
