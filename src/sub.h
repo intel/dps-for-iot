@@ -41,7 +41,13 @@ extern "C" {
  * Retry limit of sending subscriptions before deleting an
  * unresponsive remote node
  */
-#define DPS_MAX_SUBSCRIPTION_RETRIES  8
+#define DPS_SUBSCRIPTION_MAX_RETRIES  8
+
+/**
+ * Time to wait before deleting an unlinked remote node we have not
+ * received any subscriptions from
+ */
+#define DPS_SUBSCRIPTION_LIVENESS_THRESHOLD_MSECS  16000
 
 #define SUB_FLAG_WAS_FREED      (0x01) /**< The subscription has been freed but has a non-zero ref count */
 #define SUB_FLAG_EXPIRED        (0x02) /**< Issue the callback function when a matching publication expires */

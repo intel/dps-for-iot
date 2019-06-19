@@ -406,7 +406,7 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote)
                 if (remote->outbound.ackCountdown) {
                     --remote->outbound.ackCountdown;
                 } else {
-                    remote->outbound.ackCountdown = 1 + DPS_MAX_SUBSCRIPTION_RETRIES;
+                    remote->outbound.ackCountdown = 1 + DPS_SUBSCRIPTION_MAX_RETRIES;
                 }
                 assert(remote->outbound.ackCountdown);
             }
@@ -417,7 +417,7 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote)
                  * Set the ackCountdown to a fixed value to trigger
                  * retransmission of multicast SUBs.
                  */
-                remote->outbound.ackCountdown = DPS_MAX_SUBSCRIPTION_RETRIES;
+                remote->outbound.ackCountdown = DPS_SUBSCRIPTION_MAX_RETRIES;
             }
         }
         if (ret == DPS_OK) {
@@ -601,7 +601,7 @@ static DPS_Status SendSubscriptionAck(DPS_Node* node, RemoteNode* remote, uint32
                 if (remote->outbound.ackCountdown) {
                     --remote->outbound.ackCountdown;
                 } else {
-                    remote->outbound.ackCountdown = 1 + DPS_MAX_SUBSCRIPTION_RETRIES;
+                    remote->outbound.ackCountdown = 1 + DPS_SUBSCRIPTION_MAX_RETRIES;
                 }
                 assert(remote->outbound.ackCountdown);
             }
@@ -645,6 +645,30 @@ static DPS_Status UpdateInboundInterests(DPS_Node* node, RemoteNode* remote, DPS
     }
 
     return DPS_OK;
+}
+
+static void ExpiresTimer(uv_timer_t* handle)
+{
+    DPS_Node* node = handle->loop->data;
+    RemoteNode* remote = handle->data;
+
+    DPS_LockNode(node);
+    DPS_DeleteRemoteNode(node, remote);
+    DPS_UnlockNode(node);
+}
+
+static void ScheduleExpiresTimer(DPS_Node* node, RemoteNode* remote)
+{
+    int r;
+
+    if (!remote || (remote == node->mcastNode) || (remote->link != LINK_UNLINKED)) {
+        return;
+    }
+    uv_timer_stop(&remote->expiresTimer);
+    r = uv_timer_start(&remote->expiresTimer, ExpiresTimer, DPS_SUBSCRIPTION_LIVENESS_THRESHOLD_MSECS, 0);
+    if (r) {
+        DPS_ERRPRINT("Failed to start remote expiration timer: %s\n", uv_err_name(r));
+    }
 }
 
 DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxBuffer* buf, DPS_AddressType epType)
@@ -886,12 +910,14 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRx
             DPS_UpdatePubs(node, remote);
         }
     }
+    ScheduleExpiresTimer(node, remote);
     DPS_UnlockNode(node);
     DPS_UpdateSubs(node);
     return ret;
 
 DiscardAndExit:
 
+    ScheduleExpiresTimer(node, remote);
     DPS_UnlockNode(node);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Subscription was discarded %s\n", DPS_ErrTxt(ret));

@@ -264,6 +264,7 @@ static void DeleteRemoteNode(DPS_Node* node, RemoteNode* remote)
     if (remote->monitor) {
         DPS_LinkMonitorStop(remote);
     }
+    uv_close((uv_handle_t*)&remote->expiresTimer, NULL);
 
     nextRemote = remote->next;
     if (node->remoteNodes == remote) {
@@ -573,6 +574,7 @@ static OnOpCompletion* AllocCompletion(DPS_Node* node, RemoteNode* remote, OpTyp
 DPS_Status DPS_AddRemoteNode(DPS_Node* node, const DPS_NodeAddress* addr, DPS_NetConnection* cn,
                              RemoteNode** remoteOut)
 {
+    int r;
     RemoteNode* remote = DPS_LookupRemoteNode(node, addr);
     if (remote) {
         *remoteOut = remote;
@@ -589,6 +591,13 @@ DPS_Status DPS_AddRemoteNode(DPS_Node* node, const DPS_NodeAddress* addr, DPS_Ne
     if (!remote) {
         *remoteOut = NULL;
         return DPS_ERR_RESOURCES;
+    }
+    remote->expiresTimer.data = remote;
+    r = uv_timer_init(node->loop, &remote->expiresTimer);
+    if (r) {
+        free(remote);
+        *remoteOut = NULL;
+        return DPS_ERR_FAILURE;
     }
     if (addr) {
         remote->ep.addr = *addr;
@@ -899,7 +908,7 @@ static void SendSubsTimer(uv_timer_t* handle)
             /*
              * We don't start resending until we hit the retry threshold
              */
-            if (remote->outbound.ackCountdown > DPS_MAX_SUBSCRIPTION_RETRIES) {
+            if (remote->outbound.ackCountdown > DPS_SUBSCRIPTION_MAX_RETRIES) {
                 reschedule = DPS_TRUE;
                 --remote->outbound.ackCountdown;
                 continue;
@@ -1311,7 +1320,7 @@ static void NodeRun(void* arg)
      */
     r = uv_thread_detach(&thisThread);
     if (r) {
-        DPS_ERRPRINT("Failed to detatch thread: %s\n", uv_err_name(r));
+        DPS_ERRPRINT("Failed to detach thread: %s\n", uv_err_name(r));
     }
 }
 
@@ -1463,6 +1472,7 @@ DPS_Status DPS_StartNode(DPS_Node* node, int mcast, DPS_NodeAddress* listenAddr)
         node->history.loop = NULL;
         return DPS_ERR_FAILURE;
     }
+    node->loop->data = node;
     DPS_DBGPRINT("libuv version %s\n", uv_version_string());
     /*
      * Setup the asyncs for running background tasks

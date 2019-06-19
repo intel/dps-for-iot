@@ -174,8 +174,8 @@ typedef struct _RemoteNode {
         uint8_t muted;                 /**< TRUE if the remote informed us the that link is muted */
         uint32_t revision;             /**< Revision number of last subscription received from this node */
         DPS_UUID meshId;               /**< The mesh id received from this remote node */
-        DPS_BitVector* needs;          /**< Bit vector of needs received from  this remote node */
-        DPS_BitVector* interests;      /**< Bit vector of interests received from  this remote node */
+        DPS_BitVector* needs;          /**< Bit vector of needs received from this remote node */
+        DPS_BitVector* interests;      /**< Bit vector of interests received from this remote node */
     } inbound;
     /** Outbound state */
     struct {
@@ -192,6 +192,7 @@ typedef struct _RemoteNode {
     } outbound;
     LinkMonitor* monitor;              /**< For monitoring muted links */
     DPS_NetEndpoint ep;                /**< The endpoint of the remote */
+    uv_timer_t expiresTimer;           /**< Timer for deleting unlinked remote nodes */
     RemoteNode* next;                  /**< Remotes are a linked list attached to the local node */
 } RemoteNode;
 
