@@ -249,6 +249,12 @@ void DPS_ClearInboundInterests(DPS_Node* node, RemoteNode* remote)
     }
 }
 
+static void FreeRemoteNode(uv_handle_t* handle)
+{
+    RemoteNode* remote = handle->data;
+    free(remote);
+}
+
 static void DeleteRemoteNode(DPS_Node* node, RemoteNode* remote)
 {
     RemoteNode* nextRemote;
@@ -264,7 +270,6 @@ static void DeleteRemoteNode(DPS_Node* node, RemoteNode* remote)
     if (remote->monitor) {
         DPS_LinkMonitorStop(remote);
     }
-    uv_close((uv_handle_t*)&remote->expiresTimer, NULL);
 
     nextRemote = remote->next;
     if (node->remoteNodes == remote) {
@@ -293,7 +298,7 @@ static void DeleteRemoteNode(DPS_Node* node, RemoteNode* remote)
      * This tells the network layer we no longer need to keep connection alive for this address
      */
     DPS_NetConnectionDecRef(remote->ep.cn);
-    free(remote);
+    uv_close((uv_handle_t*)&remote->expiresTimer, FreeRemoteNode);
 }
 
 void DPS_DeleteRemoteNode(DPS_Node* node, RemoteNode* remote)
