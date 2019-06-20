@@ -1227,7 +1227,7 @@ DPS_PublishRequest* DPS_CreatePublishRequest(DPS_Publication* pub, size_t numBuf
     req->pub = pub;
     req->completeCB = cb;
     req->data = data;
-    req->status = DPS_ERR_FAILURE;
+    req->status = DPS_ERR_NO_ROUTE;
     req->rxBuf = NULL;
     req->numBufs = numBufs;
     return req;
@@ -1247,6 +1247,13 @@ void DPS_PublishCompletion(DPS_PublishRequest* req)
                     bufs[i].base = req->bufs[i + 3].base;
                     bufs[i].len = DPS_TxBufferUsed(&req->bufs[i + 3]);
                 }
+            }
+            /*
+             * A publish request succeeds when there are no
+             * subscribers
+             */
+            if (req->status == DPS_ERR_NO_ROUTE) {
+                req->status = DPS_OK;
             }
             req->completeCB(req->pub, numBufs ? bufs : NULL, numBufs, req->status, req->data);
         }
