@@ -671,7 +671,7 @@ static void ScheduleExpiresTimer(DPS_Node* node, RemoteNode* remote)
     }
 }
 
-DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxBuffer* buf, DPS_AddressType epType)
+DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxBuffer* buf, int multicast)
 {
     static const int32_t NeedKeys[] = { DPS_CBOR_KEY_SEQ_NUM };
     static const int32_t WantKeys[] = { DPS_CBOR_KEY_PORT, DPS_CBOR_KEY_SUB_FLAGS, DPS_CBOR_KEY_MESH_ID, DPS_CBOR_KEY_NEEDS, DPS_CBOR_KEY_INTERESTS, DPS_CBOR_KEY_PATH };
@@ -843,7 +843,7 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRx
      * Duplicate - presumably an ACK got lost
      */
     if (revision == remote->inbound.revision) {
-        if (epType == DPS_UNICAST) {
+        if (!multicast) {
             ret = SendSubscriptionAck(node, remote, revision, remote->outbound.includeSub);
         }
         goto DiscardAndExit;
@@ -895,7 +895,7 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRx
         if (remoteIsNew) {
             DPS_UpdateOutboundInterests(node, remote, &remote->outbound.includeSub);
         }
-        if (epType == DPS_UNICAST) {
+        if (!multicast) {
             ret = SendSubscriptionAck(node, remote, revision, remote->outbound.includeSub);
             if ((ret == DPS_OK) && (remote->link == LINK_UNLINKED)) {
                 remote->link = LINK_PASSIVE;
@@ -948,7 +948,7 @@ DPS_Status DPS_DecodeSubscriptionAck(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
      * Decode subscription fields if they are present
      */
     rxPos = rxBuf->rxPos;
-    ret = DPS_DecodeSubscription(node, ep, buf, DPS_UNICAST);
+    ret = DPS_DecodeSubscription(node, ep, buf, DPS_FALSE);
     rxBuf->rxPos = rxPos;
 
     /*
@@ -1086,6 +1086,7 @@ DPS_Status DPS_Subscribe(DPS_Subscription* sub, DPS_PublicationHandler handler)
     if (ret == DPS_OK) {
         ret = DPS_CountVectorAdd(node->needs, sub->needs);
     }
+    node->subsChanged = DPS_TRUE;
     DPS_UnlockNode(node);
     if (ret == DPS_OK) {
         DPS_UpdateSubs(node);

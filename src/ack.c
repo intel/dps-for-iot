@@ -43,8 +43,8 @@
  */
 DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
-static PublicationAck* CreateAck(const DPS_Publication* pub, size_t numBufs,
-                                 DPS_AckPublicationBufsComplete cb, void* data)
+static PublicationAck* CreateAck(const DPS_Publication* pub, const DPS_NodeAddress* addr,
+                                 size_t numBufs, DPS_AckPublicationBufsComplete cb, void* data)
 {
     PublicationAck* ack = NULL;
 
@@ -60,6 +60,9 @@ static PublicationAck* CreateAck(const DPS_Publication* pub, size_t numBufs,
     }
     ack->pub = (DPS_Publication*)pub;
     DPS_PublicationIncRef(ack->pub);
+    if (addr) {
+        ack->destAddr = *addr;
+    }
     ack->sequenceNum = pub->sequenceNum;
     ack->completeCB = cb;
     ack->data = data;
@@ -118,17 +121,18 @@ static void OnNetSendComplete(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep,
     DPS_UnlockNode(node);
 }
 
-DPS_Status DPS_SendAcknowledgement(PublicationAck* ack, RemoteNode* ackNode)
+DPS_Status DPS_SendAcknowledgement(PublicationAck* ack)
 {
     DPS_Node* node = ack->pub->node;
     uv_buf_t uvBufs[NUM_INTERNAL_ACK_BUFS + DPS_BUFS_MAX];
     int loopback = DPS_FALSE;
     DPS_Publication* pub;
+    RemoteNode* ackNode;
     DPS_Status ret;
     size_t i;
 
     DPS_DBGPRINT("SendAcknowledgement from %s to %s\n", node->addrStr,
-                 DPS_NodeAddrToString(&ackNode->ep.addr));
+                 DPS_NodeAddrToString(&ack->destAddr));
 
     for (i = 0; i < ack->numBufs; ++i) {
         uvBufs[i] = uv_buf_init((char*)ack->bufs[i].base, DPS_TxBufferUsed(&ack->bufs[i]));
@@ -148,7 +152,10 @@ DPS_Status DPS_SendAcknowledgement(PublicationAck* ack, RemoteNode* ackNode)
         ret = DPS_LoopbackSend(node, uvBufs, ack->numBufs);
         SendComplete(ack, uvBufs, ack->numBufs, ret);
     } else {
-        ret = DPS_NetSend(node, ack, &ackNode->ep, uvBufs, ack->numBufs, OnNetSendComplete);
+        ret = DPS_AddRemoteNode(node, &ack->destAddr, NULL, &ackNode);
+        if (ret == DPS_OK || ret == DPS_ERR_EXISTS) {
+            ret = DPS_NetSend(node, ack, &ackNode->ep, uvBufs, ack->numBufs, OnNetSendComplete);
+        }
         if (ret != DPS_OK) {
             SendComplete(ack, uvBufs, ack->numBufs, ret);
         }
@@ -296,7 +303,7 @@ DPS_Status DPS_DecodeAcknowledgement(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
     uint32_t sn;
     uint32_t sequenceNum;
     DPS_UUID pubId;
-    DPS_NodeAddress* addr;
+    const DPS_NodeAddress* addr;
     uint8_t* aadPos;
     uint8_t maj;
     size_t len;
@@ -470,8 +477,9 @@ DPS_Status DPS_AckPublicationBufs(const DPS_Publication* pub, const DPS_Buffer* 
                                   DPS_AckPublicationBufsComplete cb, void* data)
 {
     DPS_Status ret;
-    DPS_NodeAddress* addr = NULL;
+    const DPS_NodeAddress* addr = NULL;
     DPS_Node* node = pub ? pub->node : NULL;
+    DPS_Publication* sender;
     uint32_t unused;
     PublicationAck* ack;
 
@@ -480,28 +488,37 @@ DPS_Status DPS_AckPublicationBufs(const DPS_Publication* pub, const DPS_Buffer* 
     if (!node) {
         return DPS_ERR_NULL;
     }
-    if (pub->flags & PUB_FLAG_LOCAL) {
-        return DPS_ERR_INVALID;
-    }
     if ((!bufs && numBufs) || (numBufs > DPS_BUFS_MAX)) {
         return DPS_ERR_ARGS;
     }
-    ret = DPS_LookupPublisherForAck(&node->history, &pub->pubId, &unused, &addr);
-    if (ret != DPS_OK) {
-        return ret;
+    for (sender = node->publications; sender != NULL; sender = sender->next) {
+        if (DPS_UUIDCompare(&sender->pubId, &pub->pubId) == 0) {
+            if (sender->flags & PUB_FLAG_LOCAL) {
+                addr = NULL;
+                break;
+            } else {
+                addr = &pub->senderAddr;
+                break;
+            }
+        }
     }
-    if (!addr) {
-        return DPS_ERR_NO_ROUTE;
+    if (!sender) {
+        ret = DPS_LookupPublisherForAck(&node->history, &pub->pubId, &unused, &addr);
+        if (ret != DPS_OK) {
+            return ret;
+        }
+        if (!addr) {
+            return DPS_ERR_NO_ROUTE;
+        }
     }
     DPS_DBGPRINT("Queueing acknowledgement for %s/%d to %s\n", DPS_UUIDToString(&pub->pubId),
                  pub->sequenceNum, DPS_NodeAddrToString(addr));
-    ack = CreateAck(pub, numBufs, cb, data);
+    ack = CreateAck(pub, addr, numBufs, cb, data);
     if (!ack) {
         return DPS_ERR_RESOURCES;
     }
     ret = SerializeAck(pub, ack, bufs, numBufs);
     if (ret == DPS_OK) {
-        ack->destAddr = *addr;
         DPS_QueuePublicationAck(node, ack);
     } else {
         DestroyAck(ack);

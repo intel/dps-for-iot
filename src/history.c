@@ -371,7 +371,7 @@ void DPS_HistoryFree(DPS_History* history)
     history->count = 0;
 }
 
-DPS_Status DPS_LookupPublisherForAck(DPS_History* history, const DPS_UUID* pubId, uint32_t* sequenceNum, DPS_NodeAddress** addr)
+DPS_Status DPS_LookupPublisherForAck(DPS_History* history, const DPS_UUID* pubId, uint32_t* sequenceNum, const DPS_NodeAddress** addr)
 {
     DPS_Status ret;
     DPS_PubHistory* ph;

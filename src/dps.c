@@ -672,7 +672,6 @@ static void SendAcksTask(uv_async_t* handle)
 {
     DPS_Node* node = (DPS_Node*)handle->data;
     PublicationAck* ack;
-    RemoteNode* ackNode;
     DPS_Status ret;
 
     DPS_DBGTRACE();
@@ -682,10 +681,7 @@ static void SendAcksTask(uv_async_t* handle)
         ack = (PublicationAck*)DPS_QueueFront(&node->ackQueue);
         DPS_QueueRemove(&ack->queue);
         if (node->state == DPS_NODE_RUNNING) {
-            ret = DPS_AddRemoteNode(node, &ack->destAddr, NULL, &ackNode);
-            if (ret == DPS_OK || ret == DPS_ERR_EXISTS) {
-                ret = DPS_SendAcknowledgement(ack, ackNode);
-            }
+            ret = DPS_SendAcknowledgement(ack);
         } else {
             ret = DPS_ERR_NOT_STARTED;
         }
@@ -894,6 +890,14 @@ static void SendSubsTimer(uv_timer_t* handle)
 
     DPS_LockNode(node);
     /*
+     * A new local subscription has been added, so trigger a send for
+     * any local retained messages
+     */
+    if (node->subsChanged) {
+        node->subsChanged = DPS_FALSE;
+        DPS_UpdatePubs(node, DPS_LoopbackNode);
+    }
+    /*
      * Forward subscription to all remote nodes with interests
      */
     for (remote = node->remoteNodes; remote != NULL; remote = remoteNext) {
@@ -1035,7 +1039,7 @@ void DPS_QueuePublicationAck(DPS_Node* node, PublicationAck* ack)
     DPS_UnlockNode(node);
 }
 
-static DPS_Status DecodeRequest(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxBuffer* buf, DPS_AddressType epType)
+static DPS_Status DecodeRequest(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxBuffer* buf, int multicast)
 {
     DPS_RxBuffer* rxBuf = (DPS_RxBuffer*)buf;
     DPS_Status ret;
@@ -1043,8 +1047,8 @@ static DPS_Status DecodeRequest(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxBu
     uint8_t msgType;
     size_t len;
 
-    DPS_DBGTRACEA("node=%p,ep={addr=%s,cn=%p},buf=%p,epType=%d\n",
-                  node, DPS_NodeAddrToString(&ep->addr), ep->cn, buf, epType);
+    DPS_DBGTRACEA("node=%p,ep={addr=%s,cn=%p},buf=%p,multicast=%d\n",
+                  node, DPS_NodeAddrToString(&ep->addr), ep->cn, buf, multicast);
 
     CBOR_Dump("Request in", rxBuf->rxPos, DPS_RxBufferAvail(rxBuf));
     ret = CBOR_DecodeArray(rxBuf, &len);
@@ -1069,28 +1073,28 @@ static DPS_Status DecodeRequest(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxBu
     ret = DPS_ERR_INVALID;
     switch (msgType) {
     case DPS_MSG_TYPE_SUB:
-        if ((epType == DPS_MULTICAST) && ((node->mcast & DPS_MCAST_SUB_ENABLE_RECV) == 0)) {
+        if (multicast && ((node->mcast & DPS_MCAST_SUB_ENABLE_RECV) == 0)) {
             DPS_DBGPRINT("Ignoring multicast SUB\n");
             break;
         }
-        ret = DPS_DecodeSubscription(node, ep, buf, epType);
+        ret = DPS_DecodeSubscription(node, ep, buf, multicast);
         if (ret != DPS_OK) {
             DPS_DBGPRINT("DecodeSubscription returned %s\n", DPS_ErrTxt(ret));
         }
         break;
     case DPS_MSG_TYPE_PUB:
-        if ((epType == DPS_MULTICAST) && ((node->mcast & DPS_MCAST_PUB_ENABLE_RECV) == 0)) {
+        if (multicast && ((node->mcast & DPS_MCAST_PUB_ENABLE_RECV) == 0)) {
             DPS_DBGPRINT("Ignoring multicast PUB\n");
             break;
         }
         DPS_DBGPRINT("Received publication via %s\n", DPS_NodeAddrToString(&ep->addr));
-        ret = DPS_DecodePublication(node, ep, buf, epType);
+        ret = DPS_DecodePublication(node, ep, buf, multicast);
         if (ret != DPS_OK) {
             DPS_DBGPRINT("DecodePublication returned %s\n", DPS_ErrTxt(ret));
         }
         break;
     case DPS_MSG_TYPE_ACK:
-        if (epType == DPS_MULTICAST) {
+        if (multicast) {
             DPS_DBGPRINT("Ignoring multicast ACK\n");
             break;
         }
@@ -1101,7 +1105,7 @@ static DPS_Status DecodeRequest(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxBu
         }
         break;
     case DPS_MSG_TYPE_SAK:
-        if (epType == DPS_MULTICAST) {
+        if (multicast) {
             DPS_DBGPRINT("Ignoring multicast SAK\n");
             break;
         }
@@ -1143,7 +1147,7 @@ static DPS_Status OnMulticastReceive(DPS_Node* node, DPS_NetEndpoint* ep, DPS_St
     }
     DPS_UnlockNode(node);
 
-    return DecodeRequest(node, ep, buf, DPS_MULTICAST);
+    return DecodeRequest(node, ep, buf, DPS_TRUE);
 }
 
 static DPS_Status OnNetReceive(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Status status, DPS_NetRxBuffer* buf)
@@ -1173,7 +1177,7 @@ static DPS_Status OnNetReceive(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Status s
         DPS_UnlockNode(node);
         return status;
     }
-    return DecodeRequest(node, ep, buf, DPS_UNICAST);
+    return DecodeRequest(node, ep, buf, DPS_FALSE);
 }
 
 DPS_Status DPS_LoopbackSend(DPS_Node* node, uv_buf_t* bufs, size_t numBufs)
@@ -1212,7 +1216,7 @@ DPS_Status DPS_LoopbackSend(DPS_Node* node, uv_buf_t* bufs, size_t numBufs)
         }
     }
     buf->rx.rxPos = buf->rx.base;
-    ret = DecodeRequest(node, &ep, buf, DPS_LOOPBACK);
+    ret = DecodeRequest(node, &ep, buf, DPS_FALSE);
 
  Exit:
     DPS_NetRxBufferDecRef(buf);

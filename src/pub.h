@@ -119,11 +119,11 @@ void DPS_SendPubs(DPS_Node* node, RemoteNode* remote);
  * @param node       The local node
  * @param ep         The endpoint the publication was received on
  * @param buffer     The encoded publication
- * @param epType     The address type of the endpoint the publication was received on
+ * @param multicast  DPS_TRUE if publication was multicast, DPS_FALSE if unicast
  *
  * @return DPS_OK if decoding and processing is successful, an error otherwise
  */
-DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxBuffer* buffer, DPS_AddressType epType);
+DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxBuffer* buffer, int multicast);
 
 /**
  * A request to DPS_Publish()

@@ -141,7 +141,7 @@ DPS_Status DPS_DeletePubHistory(DPS_History* history, DPS_UUID* pubId);
  * @return DPS_OK if the sender was found in the history record
  *         DPS_ERR_MISSING if no sender was found in the history record
  */
-DPS_Status DPS_LookupPublisherForAck(DPS_History* history, const DPS_UUID* pubId, uint32_t* sequenceNum, DPS_NodeAddress** addr);
+DPS_Status DPS_LookupPublisherForAck(DPS_History* history, const DPS_UUID* pubId, uint32_t* sequenceNum, const DPS_NodeAddress** addr);
 
 /**
  * Determine if a publication has been received from the destination already.

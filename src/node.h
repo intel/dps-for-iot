@@ -112,6 +112,7 @@ typedef struct _DPS_Node {
 
     uint32_t subsRate;                    /**< Specifies time delay (in msecs) between subscription updates */
     uv_timer_t subsTimer;                 /**< Timer for sending subscriptions */
+    uint8_t subsChanged;                  /**< Flag to indicate that local subscriptions have changed */
 
     DPS_Queue ackQueue;                   /**< Queued acknowledgement packets */
 

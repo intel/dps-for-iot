@@ -41,7 +41,7 @@ int main(int argc, char** argv)
     uint32_t sn;
     DPS_UUID uuid[NUM_PUBS];
     DPS_NodeAddress addr;
-    DPS_NodeAddress* addrPtr;
+    const DPS_NodeAddress* addrPtr;
 
     DPS_Debug = DPS_FALSE;
     for (i = 1; i < argc; ++i) {

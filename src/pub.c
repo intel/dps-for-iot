@@ -220,10 +220,28 @@ void DPS_DestroyPublishRequest(DPS_PublishRequest* req)
     }
 }
 
+static void FreeCopy(DPS_Publication* copy)
+{
+    if (copy) {
+        copy->flags |= PUB_FLAG_WAS_FREED;
+    }
+    if (copy && copy->refCount == 0) {
+        DPS_ClearKeyId(&copy->ack.sender.kid);
+        FreeTopics(copy);
+        FreeRecipients(copy);
+        free(copy);
+    }
+}
+
 static DPS_Publication* FreePublication(DPS_Node* node, DPS_Publication* pub)
 {
     DPS_Publication* next = pub->next;
     DPS_PublishRequest* req;
+
+    if (pub->flags & PUB_FLAG_IS_COPY) {
+        FreeCopy(pub);
+        return NULL;
+    }
 
     if (!(pub->flags & PUB_FLAG_WAS_FREED)) {
         if (node->publications == pub) {
@@ -455,8 +473,9 @@ static DPS_Status DecryptAndParsePub(DPS_PublishRequest* req, DPS_TxBuffer* plai
     ret = CBOR_Peek(&cipherTextBuf, &type, &tag);
     if (ret == DPS_OK) {
         if (type == CBOR_TAG) {
+            COSE_Entity* sender = (pub->flags & PUB_FLAG_LOCAL) ? NULL : &pub->sender;
             if ((tag == COSE_TAG_ENCRYPT0) || (tag == COSE_TAG_ENCRYPT)) {
-                ret = COSE_Decrypt(nonce, &recipient, &aadBuf, &cipherTextBuf, keyStore, &pub->sender,
+                ret = COSE_Decrypt(nonce, &recipient, &aadBuf, &cipherTextBuf, keyStore, sender,
                                    plainTextBuf);
                 if (ret == DPS_OK) {
                     DPS_DBGPRINT("Publication was decrypted\n");
@@ -465,7 +484,7 @@ static DPS_Status DecryptAndParsePub(DPS_PublishRequest* req, DPS_TxBuffer* plai
                     /*
                      * We will use the same key id when we encrypt the acknowledgement
                      */
-                    if (pub->ackRequested) {
+                    if (sender && pub->ackRequested) {
                         /*
                          * Symmetric keys can use the recipient directly.
                          * Asymmetric keys must use the sender info if provided.
@@ -486,7 +505,7 @@ static DPS_Status DecryptAndParsePub(DPS_PublishRequest* req, DPS_TxBuffer* plai
                             }
                             break;
                         case COSE_ALG_ECDH_ES_A256KW:
-                            if (AddRecipient(pub, recipient.alg, &pub->sender.kid)) {
+                            if (AddRecipient(pub, recipient.alg, &sender->kid)) {
                                 ret = DPS_OK;
                             } else {
                                 ret = DPS_ERR_RESOURCES;
@@ -502,7 +521,7 @@ static DPS_Status DecryptAndParsePub(DPS_PublishRequest* req, DPS_TxBuffer* plai
                     }
                 }
             } else if (tag == COSE_TAG_SIGN1) {
-                ret = COSE_Verify(&aadBuf, &cipherTextBuf, keyStore, &pub->sender);
+                ret = COSE_Verify(&aadBuf, &cipherTextBuf, keyStore, sender);
                 if (ret == DPS_OK) {
                     DPS_DBGPRINT("Publication was verified\n");
                     encryptedBuf = cipherTextBuf;
@@ -537,33 +556,40 @@ static DPS_Status DecryptAndParsePub(DPS_PublishRequest* req, DPS_TxBuffer* plai
         }
         switch (key) {
         case DPS_CBOR_KEY_TOPICS:
-            /*
-             * Deserialize the topic strings
-             */
-            ret = CBOR_DecodeArray(&encryptedBuf, &pub->numTopics);
-            if (ret != DPS_OK) {
-                break;
-            }
-            if (pub->numTopics == 0) {
-                ret = DPS_ERR_INVALID;
-                break;
-            }
-            pub->topics = calloc(pub->numTopics, sizeof(char*));
-            if (!pub->topics) {
-                ret = DPS_ERR_RESOURCES;
-                break;
-            }
-            for (i = 0; i < pub->numTopics; ++i) {
-                char* str;
-                size_t sz;
-                ret = CBOR_DecodeString(&encryptedBuf, &str, &sz);
+            if (pub->flags & PUB_FLAG_LOCAL) {
+                ret = CBOR_Skip(&encryptedBuf, NULL, NULL);
                 if (ret != DPS_OK) {
                     break;
                 }
-                pub->topics[i] = strndup(str, sz);
+            } else {
+                /*
+                 * Deserialize the topic strings
+                 */
+                ret = CBOR_DecodeArray(&encryptedBuf, &pub->numTopics);
+                if (ret != DPS_OK) {
+                    break;
+                }
+                if (pub->numTopics == 0) {
+                    ret = DPS_ERR_INVALID;
+                    break;
+                }
+                pub->topics = calloc(pub->numTopics, sizeof(char*));
                 if (!pub->topics) {
                     ret = DPS_ERR_RESOURCES;
                     break;
+                }
+                for (i = 0; i < pub->numTopics; ++i) {
+                    char* str;
+                    size_t sz;
+                    ret = CBOR_DecodeString(&encryptedBuf, &str, &sz);
+                    if (ret != DPS_OK) {
+                        break;
+                    }
+                    pub->topics[i] = strndup(str, sz);
+                    if (!pub->topics) {
+                        ret = DPS_ERR_RESOURCES;
+                        break;
+                    }
                 }
             }
             break;
@@ -593,6 +619,7 @@ DPS_Status DPS_CallPubHandlers(DPS_PublishRequest* req)
     uint8_t* data = NULL;
     size_t dataLen = 0;
     int needsDecrypt = DPS_TRUE;
+    DPS_Publication* copy = NULL;
 
     DPS_DBGTRACE();
 
@@ -648,16 +675,39 @@ DPS_Status DPS_CallPubHandlers(DPS_PublishRequest* req)
             DPS_DBGPRINT("Matched subscription\n");
             UpdatePubHistory(req);
             DPS_UnlockNode(node);
-            sub->handler(sub, pub, data, dataLen);
+            if ((pub->flags & PUB_FLAG_LOCAL) == 0) {
+                sub->handler(sub, pub, data, dataLen);
+            } else {
+                /*
+                 * When the pub is local, I need to create a shallow
+                 * copy of the pub so that DPS_PublicationGetSequenceNum()
+                 * returns the sequence number of this request, not the
+                 * sequence number of the next publication in the series.
+                 */
+                if (!copy) {
+                    copy = DPS_CopyPublication(pub);
+                    if (!copy) {
+                        DPS_ERRPRINT("Failed to allocate copy of local publication: %s\n",
+                                     DPS_ErrTxt(DPS_ERR_RESOURCES));
+                    }
+                }
+                if (copy) {
+                    copy->sequenceNum = req->sequenceNum;
+                    sub->handler(sub, copy, data, dataLen);
+                }
+            }
             DPS_LockNode(node);
         }
     Next:
         DPS_SubscriptionDecRef(sub);
     }
+    DPS_DestroyPublication(copy);
     pub->rxBuf = NULL;
     DPS_TxBufferFree(&plainTextBuf);
-    /* Publication topics will be invalid now if the publication was encrypted */
-    FreeTopics(pub);
+    if ((pub->flags & PUB_FLAG_LOCAL) == 0) {
+        /* Publication topics will be invalid now if the publication was encrypted */
+        FreeTopics(pub);
+    }
     return ret;
 }
 
@@ -678,14 +728,14 @@ static DPS_Publication* LookupPublication(DPS_Node* node, DPS_UUID* pubId)
     DPS_Publication* pub = NULL;
 
     for (pub = node->publications; pub != NULL; pub = pub->next) {
-        if (((pub->flags & PUB_FLAG_LOCAL) == 0) && (DPS_UUIDCompare(&pub->pubId, pubId) == 0)) {
+        if (DPS_UUIDCompare(&pub->pubId, pubId) == 0) {
             break;
         }
     }
     return pub;
 }
 
-DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxBuffer* buf, DPS_AddressType epType)
+DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxBuffer* buf, int multicast)
 {
     static const int32_t UnprotectedKeys[] = { DPS_CBOR_KEY_TTL };
     static const int32_t UnprotectedOptKeys[] = { DPS_CBOR_KEY_PORT, DPS_CBOR_KEY_PATH };
@@ -836,12 +886,24 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxB
      */
     pub = LookupRetained(node, &pubId);
     if (pub) {
-        /*
-         * Retained publications can only be updated with newer revisions
-         */
-        if (sequenceNum <= pub->sequenceNum) {
-            DPS_DBGPRINT("Publication %s/%d is stale (/%d already retained)\n", DPS_UUIDToString(&pubId),
-                         sequenceNum, pub->sequenceNum);
+        if (pub->flags & PUB_FLAG_LOCAL) {
+            /*
+             * A local retained publication is stale if we've already
+             * looped it back (i.e. it is in the history).
+             */
+            if (DPS_PublicationIsStale(&node->history, &pubId, sequenceNum)) {
+                DPS_DBGPRINT("Publication %s/%d is stale\n", DPS_UUIDToString(&pubId), sequenceNum);
+                ret = DPS_ERR_STALE;
+                pub = NULL;
+                goto Exit;
+            }
+        } else if (sequenceNum <= pub->sequenceNum) {
+            /*
+             * A remote retained publication can only be updated with
+             * a newer revision.
+             */
+            DPS_DBGPRINT("Publication %s/%d is stale (/%d already retained)\n",
+                         DPS_UUIDToString(&pubId), sequenceNum, pub->sequenceNum);
             ret = DPS_ERR_STALE;
             /*
              * Set pub to NULL here so we don't delete it during
@@ -902,13 +964,15 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxB
             node->publications = pub;
         }
     }
-    pub->sequenceNum = sequenceNum;
-    pub->ackRequested = ackRequested;
-    pub->senderAddr = ep->addr;
-    /*
-     * The topics array has pointers into pub->encryptedBuf which are now invalid
-     */
-    FreeTopics(pub);
+    if ((pub->flags & PUB_FLAG_LOCAL) == 0) {
+        pub->sequenceNum = sequenceNum;
+        pub->ackRequested = ackRequested;
+        pub->senderAddr = ep->addr;
+        /*
+         * The topics array has pointers into pub->encryptedBuf which are now invalid
+         */
+        FreeTopics(pub);
+    }
     /*
      * Allocate the publish request for handling and forwarding
      *
@@ -928,39 +992,41 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxB
     req->bufs[0].txPos = req->bufs[0].eob;
     DPS_TxBufferInit(&req->bufs[1], rxBuf->rxPos, DPS_RxBufferAvail(rxBuf));
     req->bufs[1].txPos = req->bufs[1].eob;
-    /*
-     * A negative TTL is a forced expiration
-     */
-    if (ttl < 0) {
+    if ((pub->flags & PUB_FLAG_LOCAL) == 0) {
         /*
-         * We only expect negative TTL's for retained publications
+         * A negative TTL is a forced expiration
          */
-        if (!(pub->flags & PUB_FLAG_RETAINED)) {
-            ret = DPS_ERR_INVALID;
+        if (ttl < 0) {
+            /*
+             * We only expect negative TTL's for retained publications
+             */
+            if (!(pub->flags & PUB_FLAG_RETAINED)) {
+                ret = DPS_ERR_INVALID;
+                goto Exit;
+            }
+            pub->flags |= PUB_FLAG_EXPIRED;
+        } else if (ttl == 0) {
+            pub->flags &= ~PUB_FLAG_RETAINED;
+        } else {
+            pub->flags |= PUB_FLAG_RETAINED;
+        }
+        pub->ttl = ttl;
+        if (pub->flags & PUB_FLAG_EXPIRED) {
+            ttl = 0;
+        }
+        /*
+         * Now we can deserialize the bloom filter
+         */
+        ret = DPS_BitVectorDeserialize(pub->bf, &bfBuf);
+        if (ret != DPS_OK) {
             goto Exit;
         }
-        pub->flags |= PUB_FLAG_EXPIRED;
-    } else if (ttl == 0) {
-        pub->flags &= ~PUB_FLAG_RETAINED;
-    } else {
-        pub->flags |= PUB_FLAG_RETAINED;
-    }
-    pub->ttl = ttl;
-    if (pub->flags & PUB_FLAG_EXPIRED) {
-        ttl = 0;
-    }
-    /*
-     * Now we can deserialize the bloom filter
-     */
-    ret = DPS_BitVectorDeserialize(pub->bf, &bfBuf);
-    if (ret != DPS_OK) {
-        goto Exit;
     }
     ret = DPS_CallPubHandlers(req);
     if (ret != DPS_OK) {
         goto Exit;
     }
-    if (epType != DPS_LOOPBACK) {
+    if ((pub->flags & PUB_FLAG_LOCAL) == 0) {
         req->ttl = ttl;
         req->expires = uv_now(node->loop) + DPS_SECS_TO_MS(ttl);
         UpdatePubHistory(req);
@@ -980,7 +1046,7 @@ Exit:
         DPS_DestroyPublishRequest(req);
     }
     if (pub) {
-        if (ret != DPS_OK) {
+        if ((ret != DPS_OK) && ((pub->flags & PUB_FLAG_LOCAL) == 0)) {
             /*
              * TODO - should we be updating the pub history after an error?
              */
@@ -1279,16 +1345,6 @@ DPS_Publication* DPS_CreatePublication(DPS_Node* node)
     return pub;
 }
 
-static void DestroyCopy(DPS_Publication* copy)
-{
-    if (copy && copy->refCount == 0) {
-        DPS_ClearKeyId(&copy->ack.sender.kid);
-        FreeTopics(copy);
-        FreeRecipients(copy);
-        free(copy);
-    }
-}
-
 DPS_Publication* DPS_CopyPublication(const DPS_Publication* pub)
 {
     DPS_Publication* copy;
@@ -1311,6 +1367,7 @@ DPS_Publication* DPS_CopyPublication(const DPS_Publication* pub)
     copy->handler = pub->handler;
     copy->pubId = pub->pubId;
     copy->sender = pub->sender;
+    copy->senderAddr = pub->senderAddr;
     if (pub->ackRequested) {
         ret = CopyRecipients(copy, pub);
         if (ret != DPS_OK) {
@@ -1341,7 +1398,7 @@ DPS_Publication* DPS_CopyPublication(const DPS_Publication* pub)
 
 Exit:
     if (ret != DPS_OK) {
-        DestroyCopy(copy);
+        FreeCopy(copy);
         copy = NULL;
     }
     return copy;
@@ -1781,7 +1838,7 @@ DPS_Status DPS_DestroyPublication(DPS_Publication* pub)
      * Maybe destroying an uninitialized publication
      */
     if (!IsValidPub(pub) || (pub->flags & PUB_FLAG_IS_COPY)) {
-        DestroyCopy(pub);
+        FreeCopy(pub);
         ret = DPS_OK;
         goto Exit;
     }

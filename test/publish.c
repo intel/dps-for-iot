@@ -454,6 +454,63 @@ static void TestRetainedExpired(DPS_Node* node, DPS_KeyStore* keyStore)
     DPS_DestroyEvent(event);
 }
 
+static void RetainedLoopbackMessageHandler(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* payload, size_t len)
+{
+    DPS_Event* event = (DPS_Event*)DPS_GetSubscriptionData(sub);
+    DPS_SignalEvent(event, DPS_OK);
+}
+
+static void TestRetainedLoopback(DPS_Node* node, DPS_KeyStore* keyStore)
+{
+    static const char* topics[] = { __FUNCTION__ };
+    static const size_t numTopics = 1;
+    DPS_Event* event = NULL;
+    DPS_Subscription* sub = NULL;
+    DPS_Publication* pub = NULL;
+    DPS_Status ret;
+
+    DPS_PRINT("%s\n", __FUNCTION__);
+
+    event = DPS_CreateEvent();
+    ASSERT(event);
+
+    /*
+     * Subscribe before
+     */
+    sub = DPS_CreateSubscription(node, topics, numTopics);
+    ASSERT(sub);
+    ret = DPS_SetSubscriptionData(sub, event);
+    ASSERT(ret == DPS_OK);
+    ret = DPS_Subscribe(sub, RetainedLoopbackMessageHandler);
+    ASSERT(ret == DPS_OK);
+    pub = CreatePublication(node, topics, numTopics, NULL);
+    ret = DPS_Publish(pub, NULL, 0, 100);
+    ASSERT(ret == DPS_OK);
+    ret = DPS_WaitForEvent(event);
+    ASSERT(ret == DPS_OK);
+    DPS_DestroyPublication(pub);
+    DPS_DestroySubscription(sub);
+
+    /*
+     * Subscribe after
+     */
+    pub = CreatePublication(node, topics, numTopics, NULL);
+    ret = DPS_Publish(pub, NULL, 0, 100);
+    ASSERT(ret == DPS_OK);
+    sub = DPS_CreateSubscription(node, topics, numTopics);
+    ASSERT(sub);
+    ret = DPS_SetSubscriptionData(sub, event);
+    ASSERT(ret == DPS_OK);
+    ret = DPS_Subscribe(sub, RetainedLoopbackMessageHandler);
+    ASSERT(ret == DPS_OK);
+    ret = DPS_WaitForEvent(event);
+    ASSERT(ret == DPS_OK);
+    DPS_DestroyPublication(pub);
+    DPS_DestroySubscription(sub);
+
+    DPS_DestroyEvent(event);
+}
+
 static void TestSequenceNumbers(DPS_Node* node, DPS_KeyStore* keyStore)
 {
     static const char* topics[] = { __FUNCTION__ };
@@ -539,6 +596,7 @@ int main(int argc, char** argv)
 #endif
         TestRetainedMessage,
         TestRetainedExpired,
+        TestRetainedLoopback,
         TestSequenceNumbers,
         TestPublishNoRoutes,
         NULL
