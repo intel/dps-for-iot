@@ -464,6 +464,14 @@ static DPS_Status DecryptAndParsePub(DPS_PublishRequest* req, DPS_TxBuffer* plai
     size_t i;
 
     /*
+     * An expired local publication will not have a payload
+     */
+    if ((pub->flags & (PUB_FLAG_LOCAL | PUB_FLAG_EXPIRED)) == (PUB_FLAG_LOCAL | PUB_FLAG_EXPIRED)) {
+        *data = NULL;
+        *dataLen = 0;
+        return DPS_OK;
+    }
+    /*
      * Try to decrypt the publication
      */
     DPS_MakeNonce(&pub->pubId, req->sequenceNum, DPS_MSG_TYPE_PUB, nonce);
@@ -992,28 +1000,28 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxB
     req->bufs[0].txPos = req->bufs[0].eob;
     DPS_TxBufferInit(&req->bufs[1], rxBuf->rxPos, DPS_RxBufferAvail(rxBuf));
     req->bufs[1].txPos = req->bufs[1].eob;
-    if ((pub->flags & PUB_FLAG_LOCAL) == 0) {
+    /*
+     * A negative TTL is a forced expiration
+     */
+    if (ttl < 0) {
         /*
-         * A negative TTL is a forced expiration
+         * We only expect negative TTL's for retained publications
          */
-        if (ttl < 0) {
-            /*
-             * We only expect negative TTL's for retained publications
-             */
-            if (!(pub->flags & PUB_FLAG_RETAINED)) {
-                ret = DPS_ERR_INVALID;
-                goto Exit;
-            }
-            pub->flags |= PUB_FLAG_EXPIRED;
-        } else if (ttl == 0) {
-            pub->flags &= ~PUB_FLAG_RETAINED;
-        } else {
-            pub->flags |= PUB_FLAG_RETAINED;
+        if (!(pub->flags & PUB_FLAG_RETAINED)) {
+            ret = DPS_ERR_INVALID;
+            goto Exit;
         }
-        pub->ttl = ttl;
-        if (pub->flags & PUB_FLAG_EXPIRED) {
-            ttl = 0;
-        }
+        pub->flags |= PUB_FLAG_EXPIRED;
+    } else if (ttl == 0) {
+        pub->flags &= ~PUB_FLAG_RETAINED;
+    } else {
+        pub->flags |= PUB_FLAG_RETAINED;
+    }
+    pub->ttl = ttl;
+    if (pub->flags & PUB_FLAG_EXPIRED) {
+        ttl = 0;
+    }
+    if ((pub->flags & PUB_FLAG_LOCAL) == 0) {
         /*
          * Now we can deserialize the bloom filter
          */

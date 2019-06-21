@@ -394,25 +394,18 @@ static void RetainedExpiredMessageHandler(DPS_Subscription* sub, const DPS_Publi
     }
 }
 
-static void TestRetainedExpired(DPS_Node* node, DPS_KeyStore* keyStore)
+static void RetainedExpired(DPS_Node* node, DPS_KeyStore* keyStore, DPS_Node* subNode)
 {
     static const char* topics[] = { __FUNCTION__ };
     static const size_t numTopics = 1;
     DPS_Event* event = NULL;
-    DPS_Node* subNode = NULL;
     DPS_Subscription* sub = NULL;
     DPS_Publication* pub = NULL;
     DPS_Status ret;
 
-    DPS_PRINT("%s\n", __FUNCTION__);
-
     event = DPS_CreateEvent();
     ASSERT(event);
 
-    subNode = DPS_CreateNode("/.", keyStore, NULL);
-    ASSERT(subNode);
-    ret = DPS_StartNode(subNode, DPS_MCAST_PUB_ENABLE_RECV, NULL);
-    ASSERT(ret == DPS_OK);
     sub = DPS_CreateSubscription(subNode, topics, numTopics);
     ASSERT(sub);
     ret = DPS_SetSubscriptionData(sub, event);
@@ -449,6 +442,26 @@ static void TestRetainedExpired(DPS_Node* node, DPS_KeyStore* keyStore)
     DPS_DestroyPublication(pub);
 
     DPS_DestroySubscription(sub);
+    DPS_DestroyEvent(event);
+}
+
+static void TestRetainedExpired(DPS_Node* node, DPS_KeyStore* keyStore)
+{
+    DPS_Event* event = NULL;
+    DPS_Node* subNode = NULL;
+    DPS_Status ret;
+
+    DPS_PRINT("%s\n", __FUNCTION__);
+
+    event = DPS_CreateEvent();
+    ASSERT(event);
+
+    subNode = DPS_CreateNode("/.", keyStore, NULL);
+    ASSERT(subNode);
+    ret = DPS_StartNode(subNode, DPS_MCAST_PUB_ENABLE_RECV, NULL);
+    ASSERT(ret == DPS_OK);
+    RetainedExpired(node, keyStore, subNode);
+
     DPS_DestroyNode(subNode, OnNodeDestroyed, event);
     DPS_WaitForEvent(event);
     DPS_DestroyEvent(event);
@@ -509,6 +522,11 @@ static void TestRetainedLoopback(DPS_Node* node, DPS_KeyStore* keyStore)
     DPS_DestroySubscription(sub);
 
     DPS_DestroyEvent(event);
+
+    /*
+     * Expiration
+     */
+    RetainedExpired(node, keyStore, node);
 }
 
 static void TestSequenceNumbers(DPS_Node* node, DPS_KeyStore* keyStore)
