@@ -708,7 +708,7 @@ static DPS_Status SendPub(DPS_PublishRequest* req, RemoteNode* remote)
     DPS_Subscription* sub;
 
     if (remote == NULL) {
-        if (node->mcastSender) {
+        if ((node->mcast & DPS_MCAST_PUB_ENABLE_SEND) && node->mcastSender) {
             return DPS_SendPublication(req, pub, NULL);
         } else {
             return DPS_OK;
