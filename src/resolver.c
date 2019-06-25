@@ -47,7 +47,9 @@ typedef struct _ResolverInfo {
 static void GetAddrInfoCB(uv_getaddrinfo_t* req, int status, struct addrinfo* res)
 {
     ResolverInfo* resolver = (ResolverInfo*)req->data;
+    DPS_Node* node = resolver->node;
 
+    DPS_LockNode(node);
     if (status == 0) {
         DPS_NodeAddress addr;
         memzero_s(&addr, sizeof(DPS_NodeAddress));
@@ -63,13 +65,14 @@ static void GetAddrInfoCB(uv_getaddrinfo_t* req, int status, struct addrinfo* re
         } else {
             memcpy_s(&addr.u.inaddr, sizeof(addr.u.inaddr), res->ai_addr, sizeof(struct sockaddr_in));
         }
-        resolver->cb(resolver->node, &addr, resolver->data);
+        resolver->cb(node, &addr, resolver->data);
         uv_freeaddrinfo(res);
     } else {
         DPS_ERRPRINT("uv_getaddrinfo failed %s\n", uv_err_name(status));
-        resolver->cb(resolver->node, NULL, resolver->data);
+        resolver->cb(node, NULL, resolver->data);
     }
     free(resolver);
+    DPS_UnlockNode(node);
 }
 
 static void TryGetAddrInfoCB(uv_getaddrinfo_t* req, int status, struct addrinfo* res)
