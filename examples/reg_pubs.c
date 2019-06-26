@@ -143,7 +143,7 @@ static void ReadStdin(DPS_Node* node)
             keep = 0;
         }
         if (!keep) {
-            DPS_DestroyPublication(currentPub);
+            DPS_DestroyPublication(currentPub, NULL);
             currentPub = DPS_CreatePublication(node);
             ret = DPS_InitPublication(currentPub, (const char**)topics, numTopics, DPS_FALSE, NULL,
                                       requestAck ? OnAck : NULL);

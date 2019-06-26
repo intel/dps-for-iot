@@ -66,10 +66,20 @@ typedef struct _DPS_Subscription {
     DPS_Node* node;                 /**< Node for this subscription */
     uint32_t refCount;              /**< Ref count to prevent subscription from being freed while in use */
     uint8_t flags;                  /**< Internal state flags */
-    DPS_Subscription* next;         /**< Next subscription in list */
-    size_t numTopics;               /**< Number of subscription topics */
-    char* topics[1];                /**< Subscription topics */
+    DPS_OnSubscriptionDestroyed onDestroyed; /**< Optional on destroyed callback */
+    DPS_Subscription* next; /**< Next subscription in list */
+    size_t numTopics;       /**< Number of subscription topics */
+    char* topics[1];        /**< Subscription topics */
 } DPS_Subscription;
+
+/**
+ * Free a subscription
+ *
+ * @param sub The subscription
+ *
+ * @return The next subscription
+ */
+DPS_Subscription* DPS_FreeSubscription(DPS_Subscription* sub);
 
 /**
  * Free all subscriptions registered with this node

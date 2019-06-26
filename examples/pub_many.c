@@ -64,7 +64,7 @@ static void OnAck(DPS_Publication* pub, uint8_t* data, size_t len)
         }
         DPS_ERRPRINT("Failed to publish: %s\n", DPS_ErrTxt(ret));
     }
-    DPS_DestroyPublication(pub);
+    DPS_DestroyPublication(pub, NULL);
     DPS_DestroyNode(node, OnNodeDestroyed, NULL);
 }
 
@@ -155,7 +155,7 @@ int main(int argc, char** argv)
         DPS_PRINT("Pub UUID %s\n", DPS_UUIDToString(DPS_PublicationGetUUID(pub)));
     } else {
         DPS_ERRPRINT("Failed to publish topics - error=%d\n", ret);
-        DPS_DestroyPublication(pub);
+        DPS_DestroyPublication(pub, NULL);
         DPS_DestroyNode(node, OnNodeDestroyed, NULL);
     }
 

@@ -254,8 +254,8 @@ int main(int argc, char** argv)
     }
 
 Exit:
-    DPS_DestroyPublication(pub);
-    DPS_DestroySubscription(sub);
+    DPS_DestroyPublication(pub, NULL);
+    DPS_DestroySubscription(sub, NULL);
     DPS_KeyStore* keyStore = (DPS_KeyStore*)DPS_GetNodeData(node);
     DPS_DestroyKeyStore(keyStore);
     DestroyNode(node);

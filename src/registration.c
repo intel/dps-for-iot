@@ -169,17 +169,29 @@ typedef struct {
     uint16_t timeout;
 } RegPut;
 
-static void RegPutCB(RegPut* regPut)
+static void DestroyRegPut(RegPut* regPut)
 {
-    DPS_DBGTRACE();
-    if (regPut->pub) {
-        DPS_DestroyPublication(regPut->pub);
-    }
     DPS_DestroyNode(regPut->node, OnNodeDestroyed, NULL);
     free(regPut->tenant);
     free(regPut->payload.base);
     regPut->cb(regPut->status, regPut->data);
     free(regPut);
+}
+
+static void OnPubDestroyed(DPS_Publication* pub)
+{
+    RegPut* regPut = (RegPut*)DPS_GetPublicationData(pub);
+    DestroyRegPut(regPut);
+}
+
+static void RegPutCB(RegPut* regPut)
+{
+    DPS_DBGTRACE();
+    if (regPut->pub) {
+        DPS_DestroyPublication(regPut->pub, OnPubDestroyed);
+    } else {
+        DestroyRegPut(regPut);
+    }
 }
 
 static void OnPutUnlinkCB(DPS_Node* node, const DPS_NodeAddress* addr, void* data)
@@ -454,16 +466,28 @@ typedef struct {
     uint16_t timeout;
 } RegGet;
 
-static void RegGetCB(RegGet* regGet)
+static void DestroyRegGet(RegGet* regGet)
 {
-    DPS_DBGTRACE();
-    if (regGet->sub) {
-        DPS_DestroySubscription(regGet->sub);
-    }
     DPS_DestroyNode(regGet->node, OnNodeDestroyed, NULL);
     free(regGet->tenant);
     regGet->cb(regGet->regs, regGet->status, regGet->data);
     free(regGet);
+}
+
+static void OnSubDestroyed(DPS_Subscription* sub)
+{
+    RegGet* regGet = (RegGet*)DPS_GetSubscriptionData(sub);
+    DestroyRegGet(regGet);
+}
+
+static void RegGetCB(RegGet* regGet)
+{
+    DPS_DBGTRACE();
+    if (regGet->sub) {
+        DPS_DestroySubscription(regGet->sub, OnSubDestroyed);
+    } else {
+        DestroyRegGet(regGet);
+    }
 }
 
 static void OnGetUnlinkCB(DPS_Node* node, const DPS_NodeAddress* addr, void* data)
@@ -499,6 +523,14 @@ static void OnGetTimeout(uv_timer_t* timer)
     uv_close((uv_handle_t*)timer, OnGetTimerClosed);
 }
 
+static void OnSubStopped(DPS_Subscription* sub)
+{
+    RegGet* regGet = (RegGet*)DPS_GetSubscriptionData(sub);
+    regGet->sub = NULL;
+    uv_timer_stop(&regGet->timer);
+    uv_close((uv_handle_t*)&regGet->timer, OnGetTimerClosed);
+}
+
 static void OnPub(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* data, size_t len)
 {
     RegGet* regGet = (RegGet*)DPS_GetSubscriptionData(sub);
@@ -528,10 +560,7 @@ static void OnPub(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* da
                  * Stop if we have reached the max registrations
                  */
                 if (regGet->regs->count == regGet->regs->size) {
-                    DPS_DestroySubscription(regGet->sub);
-                    regGet->sub = NULL;
-                    uv_timer_stop(&regGet->timer);
-                    uv_close((uv_handle_t*)&regGet->timer, OnGetTimerClosed);
+                    DPS_DestroySubscription(regGet->sub, OnSubStopped);
                     break;
                 }
                 if (CBOR_DecodeString(&buf, &addrText, &len) != DPS_OK) {

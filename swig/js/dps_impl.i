@@ -359,12 +359,12 @@ public:
         delete[] m_payload;
     }
     void Call() {
-        Handler* handler = (Handler*)DPS_GetPublicationData(m_pub);
+        PublicationData* data = (PublicationData*)DPS_GetPublicationData(m_pub);
         int argc = 2;
         v8::Local<v8::Value> argv[argc];
         argv[0] = SWIG_NewPointerObj(SWIG_as_voidptr(m_pub), SWIGTYPE_p__DPS_Publication, 0);
         argv[1] = From_bytes(m_payload, m_len);
-        CallFunction(handler->m_val, argc, argv);
+        CallFunction(data->m_ackHandler->m_val, argc, argv);
     }
 };
 
@@ -387,23 +387,63 @@ public:
         m_len = len;
     }
     virtual ~PublicationCallback() {
-        DPS_DestroyPublication(m_pub);
+        DPS_DestroyPublication(m_pub, NULL);
         delete[] m_payload;
     }
     void Call() {
-        Handler* handler = (Handler*)DPS_GetSubscriptionData(m_sub);
+        SubscriptionData* data = (SubscriptionData*)DPS_GetSubscriptionData(m_sub);
         int argc = 3;
         v8::Local<v8::Value> argv[argc];
         argv[0] = SWIG_NewPointerObj(SWIG_as_voidptr(m_sub), SWIGTYPE_p__DPS_Subscription, 0);
         argv[1] = SWIG_NewPointerObj(SWIG_as_voidptr(m_pub), SWIGTYPE_p__DPS_Publication, 0);
         argv[2] = From_bytes(m_payload, m_len);
-        CallFunction(handler->m_val, argc, argv);
+        CallFunction(data->m_pubHandler->m_val, argc, argv);
     }
 };
 
 static void PublicationHandler(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* payload, size_t len)
 {
     sync_send(new PublicationCallback(sub, pub, payload, len));
+}
+
+class PublicationDestroyedCallback : public Callback {
+public:
+    const DPS_Publication* m_pub;
+    PublicationDestroyedCallback(DPS_Publication* pub) : m_pub(pub) { }
+    void Call() {
+        PublicationData* data = (PublicationData*)DPS_GetPublicationData(m_pub);
+        int argc = 1;
+        v8::Local<v8::Value> argv[argc];
+        argv[0] = SWIG_NewPointerObj(SWIG_as_voidptr(m_pub), SWIGTYPE_p__DPS_Publication, 0);
+        CallFunction(data->m_destroyedHandler->m_val, argc, argv);
+    }
+};
+
+static void OnPublicationDestroyed(DPS_Publication* pub)
+{
+    sync_send(new PublicationDestroyedCallback(pub));
+    PublicationData* data = (PublicationData*)DPS_GetPublicationData(pub);
+    delete data;
+}
+
+class SubscriptionDestroyedCallback : public Callback {
+public:
+    DPS_Subscription* m_sub;
+    SubscriptionDestroyedCallback(DPS_Subscription* sub) : m_sub(sub) { }
+    void Call() {
+        SubscriptionData* data = (SubscriptionData*)DPS_GetSubscriptionData(m_sub);
+        int argc = 1;
+        v8::Local<v8::Value> argv[argc];
+        argv[0] = SWIG_NewPointerObj(SWIG_as_voidptr(m_sub), SWIGTYPE_p__DPS_Subscription, 0);
+        CallFunction(data->m_destroyedHandler->m_val, argc, argv);
+    }
+};
+
+static void OnSubscriptionDestroyed(DPS_Subscription* sub)
+{
+    sync_send(new SubscriptionDestroyedCallback(sub));
+    SubscriptionData* data = (SubscriptionData*)DPS_GetSubscriptionData(sub);
+    delete data;
 }
 
 static void InitializeModule()

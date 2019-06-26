@@ -61,15 +61,26 @@ static void OnTimerClosed(uv_handle_t* handle)
     free(handle->data);
 }
 
+static void DestroyTimer(LinkMonitor* monitor)
+{
+    if (monitor->timer.data == monitor) {
+        uv_timer_stop(&monitor->timer);
+        uv_close((uv_handle_t*)&monitor->timer, OnTimerClosed);
+    } else {
+        free(monitor);
+    }
+}
+
+static void OnSubDestroyed(DPS_Subscription* sub)
+{
+    LinkMonitor* monitor = DPS_GetSubscriptionData(sub);
+    DestroyTimer(monitor);
+}
+
 static void DestroyLinkMonitor(LinkMonitor* monitor)
 {
     DPS_DBGTRACE();
-    if (monitor->pub) {
-        DPS_DestroyPublication(monitor->pub);
-    }
-    if (monitor->sub) {
-        DPS_DestroySubscription(monitor->sub);
-    }
+
     /*
      * Unlink from remote
      */
@@ -77,11 +88,16 @@ static void DestroyLinkMonitor(LinkMonitor* monitor)
         assert(monitor->remote->monitor == monitor);
         monitor->remote->monitor = NULL;
     }
-    if (monitor->timer.data == monitor) {
-        uv_timer_stop(&monitor->timer);
-        uv_close((uv_handle_t*)&monitor->timer, OnTimerClosed);
+    /*
+     * Free monitor resources
+     */
+    if (monitor->pub) {
+        DPS_DestroyPublication(monitor->pub, NULL);
+    }
+    if (monitor->sub) {
+        DPS_DestroySubscription(monitor->sub, OnSubDestroyed);
     } else {
-        free(monitor);
+        DestroyTimer(monitor);
     }
 }
 

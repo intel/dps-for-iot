@@ -220,16 +220,41 @@ void DPS_DestroyPublishRequest(DPS_PublishRequest* req)
     }
 }
 
+DPS_Publication* DPS_FreePublication(DPS_Publication* pub)
+{
+    DPS_Publication* next = pub->next;
+    assert((pub->flags & PUB_FLAG_WAS_FREED) && (pub->refCount == 0));
+    if (pub->onDestroyed) {
+        pub->onDestroyed(pub);
+    }
+    if (pub->flags & PUB_FLAG_IS_COPY) {
+        DPS_ClearKeyId(&pub->ack.sender.kid);
+    } else {
+        DPS_BitVectorFree(pub->bf);
+        DPS_TxBufferFree(&pub->bfBuf);
+        DPS_TxBufferFree(&pub->topicsBuf);
+    }
+    FreeRecipients(pub);
+    FreeTopics(pub);
+    free(pub);
+    return next;
+}
+
 static void FreeCopy(DPS_Publication* copy)
 {
-    if (copy) {
+    DPS_Node* node;
+
+    if (!copy) {
+        return;
+    }
+    node = copy->node;
+    if (!(copy->flags & PUB_FLAG_WAS_FREED)) {
+        copy->next = node->freePubs;
+        node->freePubs = copy;
         copy->flags |= PUB_FLAG_WAS_FREED;
     }
-    if (copy && copy->refCount == 0) {
-        DPS_ClearKeyId(&copy->ack.sender.kid);
-        FreeTopics(copy);
-        FreeRecipients(copy);
-        free(copy);
+    if (copy->refCount == 0) {
+        uv_async_send(&node->freeAsync);
     }
 }
 
@@ -255,7 +280,8 @@ static DPS_Publication* FreePublication(DPS_Node* node, DPS_Publication* pub)
                 prev->next = next;
             }
         }
-        pub->next = NULL;
+        pub->next = node->freePubs;
+        node->freePubs = pub;
         pub->flags = PUB_FLAG_WAS_FREED;
     }
     /*
@@ -281,14 +307,7 @@ static DPS_Publication* FreePublication(DPS_Node* node, DPS_Publication* pub)
             req->status = DPS_ERR_WRITE;
             DPS_PublishCompletion(req);
         }
-        FreeRecipients(pub);
-        if (pub->bf) {
-            DPS_BitVectorFree(pub->bf);
-        }
-        DPS_TxBufferFree(&pub->bfBuf);
-        DPS_TxBufferFree(&pub->topicsBuf);
-        FreeTopics(pub);
-        free(pub);
+        uv_async_send(&node->freeAsync);
     }
     return next;
 }
@@ -709,7 +728,7 @@ DPS_Status DPS_CallPubHandlers(DPS_PublishRequest* req)
     Next:
         DPS_SubscriptionDecRef(sub);
     }
-    DPS_DestroyPublication(copy);
+    DPS_DestroyPublication(copy, NULL);
     pub->rxBuf = NULL;
     DPS_TxBufferFree(&plainTextBuf);
     if ((pub->flags & PUB_FLAG_LOCAL) == 0) {
@@ -1830,7 +1849,7 @@ DPS_Status DPS_Publish(DPS_Publication* pub, const uint8_t* payload, size_t len,
     return ret;
 }
 
-DPS_Status DPS_DestroyPublication(DPS_Publication* pub)
+DPS_Status DPS_DestroyPublication(DPS_Publication* pub, DPS_OnPublicationDestroyed cb)
 {
     DPS_Node* node;
     DPS_Status ret;
@@ -1842,6 +1861,7 @@ DPS_Status DPS_DestroyPublication(DPS_Publication* pub)
     }
     node = pub->node;
     DPS_LockNode(node);
+    pub->onDestroyed = cb;
     /*
      * Maybe destroying an uninitialized publication
      */
