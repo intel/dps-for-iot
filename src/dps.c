@@ -1183,15 +1183,22 @@ static void StopNode(DPS_Node* node)
         free(request);
     }
     /*
-     * Run the event loop again to ensure that all cleanup is
-     * completed
+     * Cleanup any subscriptions or publications that may have a
+     * destroyed callback
      */
+    DPS_FreeSubscriptions(node);
+    DPS_FreePublications(node);
+    /*
+     * Run the event loop to ensure all cleanup is completed
+     */
+    while (node->publications || node->freePubs || node->subscriptions || node->freeSubs) {
+        uv_run(node->loop, UV_RUN_ONCE);
+    }
+    uv_close((uv_handle_t*)&node->freeAsync, NULL);
     uv_run(node->loop, UV_RUN_DEFAULT);
     /*
      * Free data structures
      */
-    DPS_FreeSubscriptions(node);
-    DPS_FreePublications(node);
     DPS_CountVectorFree(node->interests);
     DPS_CountVectorFree(node->needs);
     DPS_BitVectorFree(node->scratch.interests);
@@ -1449,6 +1456,32 @@ static void RunRequestsTask(uv_async_t* handle)
     DPS_UnlockNode(node);
 }
 
+static void FreeTask(uv_async_t* handle)
+{
+    DPS_Node* node = (DPS_Node*)handle->data;
+    DPS_Subscription** sub;
+    DPS_Publication** pub;
+
+    DPS_LockNode(node);
+    sub = &node->freeSubs;
+    while (*sub) {
+        if ((*sub)->refCount == 0) {
+            *sub = DPS_FreeSubscription(*sub);
+        } else {
+            sub = &(*sub)->next;
+        }
+    }
+    pub = &node->freePubs;
+    while (*pub) {
+        if ((*pub)->refCount == 0) {
+            *pub = DPS_FreePublication(*pub);
+        } else {
+            pub = &(*pub)->next;
+        }
+    }
+    DPS_UnlockNode(node);
+}
+
 DPS_Status DPS_StartNode(DPS_Node* node, int mcast, DPS_NodeAddress* listenAddr)
 {
     DPS_Status ret = DPS_OK;
@@ -1488,6 +1521,10 @@ DPS_Status DPS_StartNode(DPS_Node* node, int mcast, DPS_NodeAddress* listenAddr)
 
     node->subsAsync.data = node;
     r = uv_async_init(node->loop, &node->subsAsync, SendSubsTask);
+    assert(!r);
+
+    node->freeAsync.data = node;
+    r = uv_async_init(node->loop, &node->freeAsync, FreeTask);
     assert(!r);
 
     node->stopAsync.data = node;

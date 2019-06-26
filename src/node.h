@@ -176,6 +176,9 @@ typedef struct _DPS_Node {
 
     uv_async_t requestAsync;              /**< Async for running requests on the node thread */
     DPS_Queue requestQueue;               /**< Queue of requests */
+    uv_async_t freeAsync;                 /**< Async for freeing subscriptions and publications */
+    DPS_Publication* freePubs;            /**< Linked list of freed publications */
+    DPS_Subscription* freeSubs;           /**< Linked list of freed subscriptions */
 
 } DPS_Node;
 

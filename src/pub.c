@@ -220,10 +220,53 @@ void DPS_DestroyPublishRequest(DPS_PublishRequest* req)
     }
 }
 
+DPS_Publication* DPS_FreePublication(DPS_Publication* pub)
+{
+    DPS_Publication* next = pub->next;
+    assert((pub->flags & PUB_FLAG_WAS_FREED) && (pub->refCount == 0));
+    if (pub->onDestroyed) {
+        pub->onDestroyed(pub);
+    }
+    if (pub->flags & PUB_FLAG_IS_COPY) {
+        DPS_ClearKeyId(&pub->ack.sender.kid);
+    } else {
+        DPS_BitVectorFree(pub->bf);
+        DPS_TxBufferFree(&pub->bfBuf);
+        DPS_TxBufferFree(&pub->topicsBuf);
+    }
+    FreeRecipients(pub);
+    FreeTopics(pub);
+    free(pub);
+    return next;
+}
+
+static void FreeCopy(DPS_Publication* copy)
+{
+    DPS_Node* node;
+
+    if (!copy) {
+        return;
+    }
+    node = copy->node;
+    if (!(copy->flags & PUB_FLAG_WAS_FREED)) {
+        copy->next = node->freePubs;
+        node->freePubs = copy;
+        copy->flags |= PUB_FLAG_WAS_FREED;
+    }
+    if (copy->refCount == 0) {
+        uv_async_send(&node->freeAsync);
+    }
+}
+
 static DPS_Publication* FreePublication(DPS_Node* node, DPS_Publication* pub)
 {
     DPS_Publication* next = pub->next;
     DPS_PublishRequest* req;
+
+    if (pub->flags & PUB_FLAG_IS_COPY) {
+        FreeCopy(pub);
+        return NULL;
+    }
 
     if (!(pub->flags & PUB_FLAG_WAS_FREED)) {
         if (node->publications == pub) {
@@ -237,7 +280,8 @@ static DPS_Publication* FreePublication(DPS_Node* node, DPS_Publication* pub)
                 prev->next = next;
             }
         }
-        pub->next = NULL;
+        pub->next = node->freePubs;
+        node->freePubs = pub;
         pub->flags = PUB_FLAG_WAS_FREED;
     }
     /*
@@ -263,14 +307,7 @@ static DPS_Publication* FreePublication(DPS_Node* node, DPS_Publication* pub)
             req->status = DPS_ERR_WRITE;
             DPS_PublishCompletion(req);
         }
-        FreeRecipients(pub);
-        if (pub->bf) {
-            DPS_BitVectorFree(pub->bf);
-        }
-        DPS_TxBufferFree(&pub->bfBuf);
-        DPS_TxBufferFree(&pub->topicsBuf);
-        FreeTopics(pub);
-        free(pub);
+        uv_async_send(&node->freeAsync);
     }
     return next;
 }
@@ -611,6 +648,7 @@ DPS_Status DPS_CallPubHandlers(DPS_PublishRequest* req)
     uint8_t* data = NULL;
     size_t dataLen = 0;
     int needsDecrypt = DPS_TRUE;
+    DPS_Publication* copy = NULL;
 
     DPS_DBGTRACE();
 
@@ -666,12 +704,33 @@ DPS_Status DPS_CallPubHandlers(DPS_PublishRequest* req)
             DPS_DBGPRINT("Matched subscription\n");
             UpdatePubHistory(req);
             DPS_UnlockNode(node);
-            sub->handler(sub, pub, data, dataLen);
+            if ((pub->flags & PUB_FLAG_LOCAL) == 0) {
+                sub->handler(sub, pub, data, dataLen);
+            } else {
+                /*
+                 * When the pub is local, I need to create a shallow
+                 * copy of the pub so that DPS_PublicationGetSequenceNum()
+                 * returns the sequence number of this request, not the
+                 * sequence number of the next publication in the series.
+                 */
+                if (!copy) {
+                    copy = DPS_CopyPublication(pub);
+                    if (!copy) {
+                        DPS_ERRPRINT("Failed to allocate copy of local publication: %s\n",
+                                     DPS_ErrTxt(DPS_ERR_RESOURCES));
+                    }
+                }
+                if (copy) {
+                    copy->sequenceNum = req->sequenceNum;
+                    sub->handler(sub, copy, data, dataLen);
+                }
+            }
             DPS_LockNode(node);
         }
     Next:
         DPS_SubscriptionDecRef(sub);
     }
+    DPS_DestroyPublication(copy, NULL);
     pub->rxBuf = NULL;
     DPS_TxBufferFree(&plainTextBuf);
     /* Publication topics will be invalid now if the publication was encrypted */
@@ -1833,7 +1892,7 @@ DPS_Status DPS_Publish(DPS_Publication* pub, const uint8_t* payload, size_t len,
     return ret;
 }
 
-DPS_Status DPS_DestroyPublication(DPS_Publication* pub)
+DPS_Status DPS_DestroyPublication(DPS_Publication* pub, DPS_OnPublicationDestroyed cb)
 {
     DPS_Node* node;
     DPS_Status ret;
@@ -1845,6 +1904,7 @@ DPS_Status DPS_DestroyPublication(DPS_Publication* pub)
     }
     node = pub->node;
     DPS_LockNode(node);
+    pub->onDestroyed = cb;
     /*
      * Maybe destroying an uninitialized publication
      */

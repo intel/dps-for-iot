@@ -106,6 +106,6 @@ func main() {
 	fmt.Printf("Total pub sent = %v, payload size %v\n", *numPubs, *payloadSize)
 	fmt.Printf("Min RT = %v, Max RT = %v, Avg RT %v\n", rtMin, rtMax,
 		time.Duration(rtSum.Nanoseconds() / int64(*numPubs)))
-	dps.DestroyPublication(pub)
+	dps.DestroyPublication(pub, func(pub *dps.Publication) {})
 	dps.DestroyNode(node, func(node *dps.Node) {})
 }

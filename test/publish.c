@@ -56,14 +56,14 @@ static void TestCreateDestroy(DPS_Node* node, DPS_KeyStore* keyStore)
 
     pub = DPS_CreatePublication(node);
     ASSERT(pub);
-    ret = DPS_DestroyPublication(pub);
+    ret = DPS_DestroyPublication(pub, NULL);
     ASSERT(ret == DPS_OK);
 
     pub = DPS_CreatePublication(node);
     ASSERT(pub);
     ret = DPS_InitPublication(pub, topics, numTopics, DPS_FALSE, NULL, NULL);
     ASSERT(ret == DPS_OK);
-    ret = DPS_DestroyPublication(pub);
+    ret = DPS_DestroyPublication(pub, NULL);
     ASSERT(ret == DPS_OK);
 }
 
@@ -107,8 +107,8 @@ static void TestLoopbackLargeMessage(DPS_Node* node, DPS_KeyStore* keyStore)
     ASSERT(ret == DPS_OK);
 
     DPS_DestroyEvent(event);
-    DPS_DestroySubscription(sub);
-    DPS_DestroyPublication(pub);
+    DPS_DestroySubscription(sub, NULL);
+    DPS_DestroyPublication(pub, NULL);
 }
 
 static void LoopbackAckHandler(DPS_Publication* pub, uint8_t* payload, size_t len)
@@ -159,9 +159,9 @@ static void TestLoopbackAckLargeMessage(DPS_Node* node, DPS_KeyStore* keyStore)
     ret = DPS_WaitForEvent(ackEvent);
     ASSERT(ret == DPS_OK);
 
-    DPS_DestroySubscription(sub);
+    DPS_DestroySubscription(sub, NULL);
     DPS_DestroyEvent(ackEvent);
-    DPS_DestroyPublication(pub);
+    DPS_DestroyPublication(pub, NULL);
 }
 
 #define HISTORY_CAP 10
@@ -229,14 +229,14 @@ static void TestDelayedAck(DPS_Node* node, DPS_KeyStore* keyStore)
         expectedAckSequenceNum = DPS_PublicationGetSequenceNum(pubs[i]);
         ret = DPS_AckPublication(pubs[i], NULL, 0);
         ASSERT(ret == DPS_OK);
-        DPS_DestroyPublication(pubs[i]);
+        DPS_DestroyPublication(pubs[i], NULL);
         ret = DPS_WaitForEvent(ackEvent);
         ASSERT(ret == DPS_OK);
     }
 
-    DPS_DestroySubscription(sub);
+    DPS_DestroySubscription(sub, NULL);
     DPS_DestroyEvent(event);
-    DPS_DestroyPublication(pub);
+    DPS_DestroyPublication(pub, NULL);
     DPS_DestroyEvent(ackEvent);
 }
 
@@ -283,8 +283,8 @@ static void TestBackToBackPublish(DPS_Node* node, DPS_KeyStore* keyStore)
      */
     SLEEP(1000);
 
-    DPS_DestroySubscription(sub);
-    DPS_DestroyPublication(pub);
+    DPS_DestroySubscription(sub, NULL);
+    DPS_DestroyPublication(pub, NULL);
 }
 
 #if defined(DPS_USE_TCP)
@@ -345,11 +345,11 @@ static void TestBackToBackPublishSeparateNodes(DPS_Node* node, DPS_KeyStore* key
     SLEEP(1000);
 
     DPS_DestroyAddress(addr);
-    DPS_DestroySubscription(sub);
+    DPS_DestroySubscription(sub, NULL);
     DPS_DestroyNode(subNode, OnNodeDestroyed, event);
     DPS_WaitForEvent(event);
     DPS_DestroyEvent(event);
-    DPS_DestroyPublication(pub);
+    DPS_DestroyPublication(pub, NULL);
 }
 #endif
 
@@ -365,7 +365,7 @@ static void TestRetainedMessage(DPS_Node* node, DPS_KeyStore* keyStore)
     pub = CreatePublication(node, topics, numTopics, NULL);
     ret = DPS_Publish(pub, NULL, 0, -1);
     ASSERT(ret == DPS_ERR_INVALID);
-    DPS_DestroyPublication(pub);
+    DPS_DestroyPublication(pub, NULL);
 
     pub = CreatePublication(node, topics, numTopics, NULL);
     ret = DPS_Publish(pub, NULL, 0, 10);
@@ -374,14 +374,14 @@ static void TestRetainedMessage(DPS_Node* node, DPS_KeyStore* keyStore)
     ASSERT(ret == DPS_OK);
     ret = DPS_Publish(pub, NULL, 0, 0);
     ASSERT(ret == DPS_OK);
-    DPS_DestroyPublication(pub);
+    DPS_DestroyPublication(pub, NULL);
 
     pub = CreatePublication(node, topics, numTopics, NULL);
     ret = DPS_Publish(pub, NULL, 0, 10);
     ASSERT(ret == DPS_OK);
     ret = DPS_Publish(pub, NULL, 0, -1);
     ASSERT(ret == DPS_OK);
-    DPS_DestroyPublication(pub);
+    DPS_DestroyPublication(pub, NULL);
 }
 
 static void RetainedExpiredMessageHandler(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* payload, size_t len)
@@ -394,25 +394,18 @@ static void RetainedExpiredMessageHandler(DPS_Subscription* sub, const DPS_Publi
     }
 }
 
-static void TestRetainedExpired(DPS_Node* node, DPS_KeyStore* keyStore)
+static void RetainedExpired(DPS_Node* node, DPS_KeyStore* keyStore, DPS_Node* subNode)
 {
     static const char* topics[] = { __FUNCTION__ };
     static const size_t numTopics = 1;
     DPS_Event* event = NULL;
-    DPS_Node* subNode = NULL;
     DPS_Subscription* sub = NULL;
     DPS_Publication* pub = NULL;
     DPS_Status ret;
 
-    DPS_PRINT("%s\n", __FUNCTION__);
-
     event = DPS_CreateEvent();
     ASSERT(event);
 
-    subNode = DPS_CreateNode("/.", keyStore, NULL);
-    ASSERT(subNode);
-    ret = DPS_StartNode(subNode, DPS_MCAST_PUB_ENABLE_RECV, NULL);
-    ASSERT(ret == DPS_OK);
     sub = DPS_CreateSubscription(subNode, topics, numTopics);
     ASSERT(sub);
     ret = DPS_SetSubscriptionData(sub, event);
@@ -434,7 +427,7 @@ static void TestRetainedExpired(DPS_Node* node, DPS_KeyStore* keyStore)
     ASSERT(ret == DPS_OK);
     ret = DPS_WaitForEvent(event);
     ASSERT(ret == DPS_ERR_EXPIRED);
-    DPS_DestroyPublication(pub);
+    DPS_DestroyPublication(pub, NULL);
 
     /*
      * Timed expiration
@@ -446,12 +439,94 @@ static void TestRetainedExpired(DPS_Node* node, DPS_KeyStore* keyStore)
     ASSERT(ret == DPS_OK);
     ret = DPS_WaitForEvent(event);
     ASSERT(ret == DPS_ERR_EXPIRED);
-    DPS_DestroyPublication(pub);
+    DPS_DestroyPublication(pub, NULL);
 
-    DPS_DestroySubscription(sub);
+    DPS_DestroySubscription(sub, NULL);
+    DPS_DestroyEvent(event);
+}
+
+static void TestRetainedExpired(DPS_Node* node, DPS_KeyStore* keyStore)
+{
+    DPS_Event* event = NULL;
+    DPS_Node* subNode = NULL;
+    DPS_Status ret;
+
+    DPS_PRINT("%s\n", __FUNCTION__);
+
+    event = DPS_CreateEvent();
+    ASSERT(event);
+
+    subNode = DPS_CreateNode("/.", keyStore, NULL);
+    ASSERT(subNode);
+    ret = DPS_StartNode(subNode, DPS_MCAST_PUB_ENABLE_RECV, NULL);
+    ASSERT(ret == DPS_OK);
+    RetainedExpired(node, keyStore, subNode);
+
     DPS_DestroyNode(subNode, OnNodeDestroyed, event);
     DPS_WaitForEvent(event);
     DPS_DestroyEvent(event);
+}
+
+static void RetainedLoopbackMessageHandler(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* payload, size_t len)
+{
+    DPS_Event* event = (DPS_Event*)DPS_GetSubscriptionData(sub);
+    DPS_SignalEvent(event, DPS_OK);
+}
+
+static void TestRetainedLoopback(DPS_Node* node, DPS_KeyStore* keyStore)
+{
+    static const char* topics[] = { __FUNCTION__ };
+    static const size_t numTopics = 1;
+    DPS_Event* event = NULL;
+    DPS_Subscription* sub = NULL;
+    DPS_Publication* pub = NULL;
+    DPS_Status ret;
+
+    DPS_PRINT("%s\n", __FUNCTION__);
+
+    event = DPS_CreateEvent();
+    ASSERT(event);
+
+    /*
+     * Subscribe before
+     */
+    sub = DPS_CreateSubscription(node, topics, numTopics);
+    ASSERT(sub);
+    ret = DPS_SetSubscriptionData(sub, event);
+    ASSERT(ret == DPS_OK);
+    ret = DPS_Subscribe(sub, RetainedLoopbackMessageHandler);
+    ASSERT(ret == DPS_OK);
+    pub = CreatePublication(node, topics, numTopics, NULL);
+    ret = DPS_Publish(pub, NULL, 0, 100);
+    ASSERT(ret == DPS_OK);
+    ret = DPS_WaitForEvent(event);
+    ASSERT(ret == DPS_OK);
+    DPS_DestroyPublication(pub, NULL);
+    DPS_DestroySubscription(sub, NULL);
+
+    /*
+     * Subscribe after
+     */
+    pub = CreatePublication(node, topics, numTopics, NULL);
+    ret = DPS_Publish(pub, NULL, 0, 100);
+    ASSERT(ret == DPS_OK);
+    sub = DPS_CreateSubscription(node, topics, numTopics);
+    ASSERT(sub);
+    ret = DPS_SetSubscriptionData(sub, event);
+    ASSERT(ret == DPS_OK);
+    ret = DPS_Subscribe(sub, RetainedLoopbackMessageHandler);
+    ASSERT(ret == DPS_OK);
+    ret = DPS_WaitForEvent(event);
+    ASSERT(ret == DPS_OK);
+    DPS_DestroyPublication(pub, NULL);
+    DPS_DestroySubscription(sub, NULL);
+
+    DPS_DestroyEvent(event);
+
+    /*
+     * Expiration
+     */
+    RetainedExpired(node, keyStore, node);
 }
 
 static void TestSequenceNumbers(DPS_Node* node, DPS_KeyStore* keyStore)
@@ -475,7 +550,7 @@ static void TestSequenceNumbers(DPS_Node* node, DPS_KeyStore* keyStore)
         ASSERT(expectedSeqNum == DPS_PublicationGetSequenceNum(pub));
     }
 
-    DPS_DestroyPublication(pub);
+    DPS_DestroyPublication(pub, NULL);
 }
 
 static void PublishBufsComplete(DPS_Publication* pub, const DPS_Buffer* bufs, size_t numBufs,
@@ -514,7 +589,7 @@ static void TestPublishNoRoutes(DPS_Node* node, DPS_KeyStore* keyStore)
     ret = DPS_WaitForEvent(event);
     ASSERT(ret == DPS_OK);
 
-    DPS_DestroyPublication(pub);
+    DPS_DestroyPublication(pub, NULL);
     DPS_DestroyNode(pubNode, OnNodeDestroyed, event);
     DPS_WaitForEvent(event);
     DPS_DestroyEvent(event);

@@ -894,17 +894,26 @@ DPS_Status DPS_PublishBufs(DPS_Publication* pub, const DPS_Buffer* bufs, size_t 
                            DPS_PublishBufsComplete cb, void* data);
 
 /**
+ * Function prototype for callback function called when a publication is destroyed.
+ *
+ * @param pub    The publication that was destroyed. This is valid during
+ *               the callback.
+ */
+typedef void (*DPS_OnPublicationDestroyed)(DPS_Publication* pub);
+
+/**
  * Delete a publication and frees any resources allocated. This does not cancel retained publications
  * that have an unexpired TTL. To expire a retained publication call DPS_Publish() with a negative TTL.
  *
  * This function should only be called for publications created by DPS_CreatePublication() or
  * DPS_CopyPublication().
  *
- * @param pub         The publication to destroy
+ * @param pub   The publication to destroy
+ * @param cb    Callback function to be called when the publication is destroyed
  *
  * @return DPS_OK if destroy is successful, an error otherwise
  */
-DPS_Status DPS_DestroyPublication(DPS_Publication* pub);
+DPS_Status DPS_DestroyPublication(DPS_Publication* pub, DPS_OnPublicationDestroyed cb);
 
 /**
  * Acknowledge a publication. A publication should be acknowledged as soon as possible after receipt,
@@ -1110,13 +1119,22 @@ typedef void (*DPS_PublicationHandler)(DPS_Subscription* sub, const DPS_Publicat
 DPS_Status DPS_Subscribe(DPS_Subscription* sub, DPS_PublicationHandler handler);
 
 /**
+ * Function prototype for callback function called when a subscription is destroyed.
+ *
+ * @param sub    The subscription that was destroyed. This is valid during
+ *               the callback.
+ */
+typedef void (*DPS_OnSubscriptionDestroyed)(DPS_Subscription* sub);
+
+/**
  * Stop subscribing to the subscription topic and free resources allocated for the subscription
  *
- * @param sub   The subscription to cancel
+ * @param sub   The subscription to destroy
+ * @param cb    Callback function to be called when the subscription is destroyed
  *
  * @return DPS_OK if destroy is successful, an error otherwise
  */
-DPS_Status DPS_DestroySubscription(DPS_Subscription* sub);
+DPS_Status DPS_DestroySubscription(DPS_Subscription* sub, DPS_OnSubscriptionDestroyed cb);
 
 /**
  * Enables serialization on a per-subscription basis.

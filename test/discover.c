@@ -154,7 +154,7 @@ Exit:
             free(subs.base);
         }
     }
-    DPS_DestroyPublication(req->pub);
+    DPS_DestroyPublication(req->pub, NULL);
     uv_close((uv_handle_t*)req->timer, TimerCloseCb);
     free(req);
 }
@@ -186,7 +186,7 @@ static void Ack(void* data)
     }
  Exit:
     if (err) {
-        DPS_DestroyPublication(req->pub);
+        DPS_DestroyPublication(req->pub, NULL);
         if (req->timer) {
             uv_close((uv_handle_t*)req->timer, TimerCloseCb);
         }
@@ -220,7 +220,7 @@ static DPS_Status DiscoveryScheduleAck(DiscoveryService* service, const DPS_Publ
  Exit:
     if (ret != DPS_OK) {
         if (req) {
-            DPS_DestroyPublication(req->pub);
+            DPS_DestroyPublication(req->pub, NULL);
             free(req);
         }
     }
@@ -346,8 +346,8 @@ void DiscoveryStop(DiscoveryService* service)
         DPS_NodeScheduleRequest(service->node, DiscoveryStopTimer, service->timer);
         service->timer = NULL;
     }
-    DPS_DestroySubscription(service->sub);
-    DPS_DestroyPublication(service->pub);
+    DPS_DestroySubscription(service->sub, NULL);
+    DPS_DestroyPublication(service->pub, NULL);
 }
 
 static void OnNodeDestroyed(DPS_Node* node, void* data)
@@ -486,7 +486,7 @@ Exit:
         if (sub->topic) {
             free(sub->topic);
         }
-        DPS_DestroySubscription(sub->sub);
+        DPS_DestroySubscription(sub->sub, NULL);
         free(sub);
     }
     while (pubs) {
@@ -495,7 +495,7 @@ Exit:
         if (pub->topic) {
             free(pub->topic);
         }
-        DPS_DestroyPublication(pub->pub);
+        DPS_DestroyPublication(pub->pub, NULL);
         free(pub);
     }
     if (node) {

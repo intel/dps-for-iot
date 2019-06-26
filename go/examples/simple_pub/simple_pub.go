@@ -59,7 +59,7 @@ func main() {
 	fmt.Printf("Pub UUID %v(%v)\n", dps.PublicationGetUUID(pub), dps.PublicationGetSequenceNum(pub))
 	time.Sleep(100 * time.Millisecond)
 
-	dps.DestroyPublication(pub)
+	dps.DestroyPublication(pub, func(pub *dps.Publication) {})
 	dps.DestroyNode(node, func(node *dps.Node) {
 		dps.DestroyKeyStore(keyStore)
 	})

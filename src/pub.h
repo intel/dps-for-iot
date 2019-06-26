@@ -91,6 +91,8 @@ typedef struct _DPS_Publication {
     uint32_t sequenceNum;           /**< Sequence number for this publication */
     int16_t ttl;                    /**< Copy of publish request time to live */
 
+    DPS_OnPublicationDestroyed onDestroyed; /**< Optional on destroyed callback */
+
     DPS_Publication* next;          /**< Next publication in list */
 } DPS_Publication;
 
@@ -214,6 +216,15 @@ void DPS_PublishCompletion(DPS_PublishRequest* req);
  * @param pub The publication
  */
 void DPS_ExpirePub(DPS_Node* node, DPS_Publication* pub);
+
+/**
+ * Free a publication
+ *
+ * @param pub The publication
+ *
+ * @return The next publication
+ */
+DPS_Publication* DPS_FreePublication(DPS_Publication* pub);
 
 /**
  * Free publications of node

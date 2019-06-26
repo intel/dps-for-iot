@@ -112,6 +112,22 @@ DPS_Status DPS_SubscribeExpired(DPS_Subscription* sub, int enable)
     return DPS_OK;
 }
 
+DPS_Subscription* DPS_FreeSubscription(DPS_Subscription* sub)
+{
+    DPS_Subscription* next = sub->next;
+    assert((sub->flags & SUB_FLAG_WAS_FREED) && (sub->refCount == 0));
+    if (sub->onDestroyed) {
+        sub->onDestroyed(sub);
+    }
+    DPS_BitVectorFree(sub->bf);
+    DPS_BitVectorFree(sub->needs);
+    while (sub->numTopics) {
+        free(sub->topics[--sub->numTopics]);
+    }
+    free(sub);
+    return next;
+}
+
 static DPS_Subscription* FreeSubscription(DPS_Subscription* sub)
 {
     DPS_Node* node = sub->node;
@@ -146,17 +162,13 @@ static DPS_Subscription* FreeSubscription(DPS_Subscription* sub)
                 assert(!"Count error");
             }
         }
-        sub->next = NULL;
+        sub->next = node->freeSubs;
+        node->freeSubs = sub;
         sub->flags = SUB_FLAG_WAS_FREED;
     }
 
     if (sub->refCount == 0) {
-        DPS_BitVectorFree(sub->bf);
-        DPS_BitVectorFree(sub->needs);
-        while (sub->numTopics) {
-            free(sub->topics[--sub->numTopics]);
-        }
-        free(sub);
+        uv_async_send(&node->freeAsync);
     }
 
     return next;
@@ -209,7 +221,7 @@ DPS_Subscription* DPS_CreateSubscription(DPS_Node* node, const char** topics, si
     return sub;
 }
 
-DPS_Status DPS_DestroySubscription(DPS_Subscription* sub)
+DPS_Status DPS_DestroySubscription(DPS_Subscription* sub, DPS_OnSubscriptionDestroyed cb)
 {
     DPS_Node* node;
 
@@ -224,6 +236,7 @@ DPS_Status DPS_DestroySubscription(DPS_Subscription* sub)
      */
     DPS_LockNode(node);
     DPS_DBGPRINT("Unsubscribing from %zu topics\n", sub->numTopics);
+    sub->onDestroyed = cb;
     FreeSubscription(sub);
     DPS_UnlockNode(node);
 
