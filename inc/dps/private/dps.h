@@ -314,6 +314,24 @@ typedef struct _DPS_NetRxBuffer DPS_NetRxBuffer;
  */
 DPS_NetRxBuffer* DPS_PublicationGetNetRxBuffer(const DPS_Publication* pub);
 
+/**
+ * Update the inbound interests of a remote node that sent a publication.
+ *
+ * This can be used to configure the publication routing based on
+ * advertised subscriptions received from a remote node publication.
+ *
+ * @note Multicast publications must request an acknowledgement for
+ * the remote node lookup to succeed (the acknowledgement request
+ * causes the source path to be recorded in the node history).
+ *
+ * @param pub          The publication
+ * @param topics       The topic strings to match
+ * @param numTopics    The number of topic strings to match - must be >= 1
+ *
+ * @return DPS_OK or an error
+ */
+DPS_Status DPS_UpdateInboundInterests(const DPS_Publication* pub, const char** topics, size_t numTopics);
+
 #ifdef __cplusplus
 }
 #endif

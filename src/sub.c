@@ -1132,3 +1132,75 @@ void DPS_DumpSubscriptions(DPS_Node* node)
         }
     }
 }
+
+DPS_Status DPS_UpdateInboundInterests(const DPS_Publication* pub, const char** topics, size_t numTopics)
+{
+    DPS_Node* node = pub->node;
+    const DPS_NodeAddress* addr;
+    uint32_t sn;
+    RemoteNode* remote;
+    DPS_BitVector* interests = NULL;
+    DPS_BitVector* needs = NULL;
+    size_t i;
+    DPS_Status ret;
+
+    DPS_DBGTRACE();
+
+    DPS_LockNode(node);
+    ret = DPS_LookupPublisherForAck(&node->history, &pub->pubId, &sn, &addr);
+    if (ret != DPS_OK) {
+        goto Exit;
+    }
+    /*
+     * RemoteNode may not exist at time of receiving publication.
+     * That's OK: it would be created anyway on reception of a
+     * multicast SUB.
+     */
+    ret = DPS_AddRemoteNode(node, addr, NULL, &remote);
+    if (ret == DPS_ERR_EXISTS) {
+        ret = DPS_OK;
+    }
+    if (ret != DPS_OK) {
+        goto Exit;
+    }
+    interests = DPS_BitVectorAlloc();
+    if (!interests) {
+        ret = DPS_ERR_RESOURCES;
+        goto Exit;
+    }
+    for (i = 0; i < numTopics; ++i) {
+        ret = DPS_AddTopic(interests, topics[i], node->separators, DPS_SubTopic);
+        if (ret != DPS_OK) {
+            goto Exit;
+        }
+    }
+    needs = DPS_BitVectorAllocFH();
+    if (!needs) {
+        ret = DPS_ERR_RESOURCES;
+        goto Exit;
+    }
+    ret = DPS_BitVectorFuzzyHash(needs, interests);
+    if (ret != DPS_OK) {
+        goto Exit;
+    }
+    if (remote->inbound.interests) {
+        ret = DPS_BitVectorUnion(interests, remote->inbound.interests);
+        if (ret != DPS_OK) {
+            goto Exit;
+        }
+    }
+    if (remote->inbound.needs) {
+        ret = DPS_BitVectorIntersection(needs, needs, remote->inbound.needs);
+        if (ret != DPS_OK) {
+            goto Exit;
+        }
+    }
+    ret = UpdateInboundInterests(node, remote, interests, needs, DPS_FALSE);
+Exit:
+    if (ret != DPS_OK) {
+        DPS_BitVectorFree(needs);
+        DPS_BitVectorFree(interests);
+    }
+    DPS_UnlockNode(node);
+    return ret;
+}
