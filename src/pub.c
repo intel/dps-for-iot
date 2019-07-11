@@ -1288,8 +1288,13 @@ DPS_Publication* DPS_CreatePublication(DPS_Node* node)
     if (!pub) {
         return NULL;
     }
-    DPS_GenerateUUID(&pub->pubId);
+    DPS_LockNode(node);
     pub->node = node;
+    if (node->mcastSender) {
+        pub->flags |= PUB_FLAG_MULTICAST;
+    }
+    DPS_UnlockNode(node);
+    DPS_GenerateUUID(&pub->pubId);
     DPS_QueueInit(&pub->sendQueue);
     DPS_QueueInit(&pub->retainedQueue);
     return pub;
@@ -1521,6 +1526,32 @@ void DPS_PublicationRemoveSubId(DPS_Publication* pub, const DPS_KeyId* keyId)
     if (IsValidPub(pub)) {
         RemoveRecipient(pub, keyId);
     }
+}
+
+DPS_Status DPS_PublicationSetMulticast(DPS_Publication* pub, int mcastPub)
+{
+    DPS_Node* node = pub->node;
+
+    DPS_DBGTRACE();
+
+    if (!IsValidPub(pub) || !(pub->flags & PUB_FLAG_LOCAL)) {
+        return DPS_ERR_MISSING;
+    }
+
+    DPS_LockNode(node);
+    if (!node->mcastSender) {
+        node->mcastSender = DPS_MulticastStartSend(node);
+        if (!node->mcastSender) {
+            return DPS_ERR_NETWORK;
+        }
+    }
+    if (mcastPub) {
+        pub->flags |= PUB_FLAG_MULTICAST;
+    } else {
+        pub->flags &= ~PUB_FLAG_MULTICAST;
+    }
+    DPS_UnlockNode(node);
+    return DPS_OK;
 }
 
 int DPS_PublicationIsEncrypted(const DPS_Publication* pub)

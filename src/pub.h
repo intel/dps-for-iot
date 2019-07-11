@@ -44,6 +44,7 @@ extern "C" {
 #define PUB_FLAG_RETAINED  (0x04) /**< The publication had a non-zero TTL */
 #define PUB_FLAG_EXPIRED   (0x10) /**< The publication had a negative TTL */
 #define PUB_FLAG_WAS_FREED (0x20) /**< The publication has been freed but has a non-zero ref count */
+#define PUB_FLAG_MULTICAST (0x40) /**< The publication should be multicast */
 #define PUB_FLAG_IS_COPY   (0x80) /**< This publication is a copy and can only be used for acknowledgements */
 
 typedef struct _DPS_PublishRequest DPS_PublishRequest;

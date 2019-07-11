@@ -682,9 +682,9 @@ static void SendPubs(DPS_Node* node)
                     }
                 }
                 /*
-                 * If the node is a multicast sender local publications are always multicast
+                 * If the node is a multicast sender local publications may be multicast
                  */
-                if (node->mcastSender) {
+                if (node->mcastSender && (pub->flags & PUB_FLAG_MULTICAST)) {
                     ret = DPS_SendPublication(req, pub, NULL);
                     if (ret != DPS_OK) {
                         DPS_ERRPRINT("SendPublication (multicast) returned %s\n", DPS_ErrTxt(ret));

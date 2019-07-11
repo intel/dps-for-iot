@@ -774,7 +774,7 @@ typedef void (*DPS_AcknowledgementHandler)(DPS_Publication* pub, uint8_t* payloa
  *
  * Call the accessor function DPS_PublicationGetUUID() to get the UUID for this publication.
  *
- * @param pub         The the publication to initialize
+ * @param pub         The publication to initialize
  * @param topics      The topic strings to publish
  * @param numTopics   The number of topic strings to publish - must be >= 1
  * @param noWildCard  If TRUE the publication will not match wildcard subscriptions
@@ -793,7 +793,7 @@ DPS_Status DPS_InitPublication(DPS_Publication* pub,
 /**
  * Adds a key identifier to use for encrypted publications.
  *
- * @param pub         The the publication to initialize
+ * @param pub         The publication to initialize
  * @param keyId       Key identifier to use for encrypted publications
  *
  * @return DPS_OK if addition is successful, an error otherwise
@@ -803,10 +803,20 @@ DPS_Status DPS_PublicationAddSubId(DPS_Publication* pub, const DPS_KeyId* keyId)
 /**
  * Removes a key identifier to use for encrypted publications.
  *
- * @param pub         The the publication to initialize
+ * @param pub         The publication to initialize
  * @param keyId       Key identifier to remove
  */
 void DPS_PublicationRemoveSubId(DPS_Publication* pub, const DPS_KeyId* keyId);
+
+/**
+ * Enables multicast transmission on a per-publication basis.
+ *
+ * @param pub         The publication
+ * @param mcastPub    Indicates if this publication shall be multicast
+ *
+ * @return DPS_OK if addition is successful, an error otherwise
+ */
+DPS_Status DPS_PublicationSetMulticast(DPS_Publication* pub, int mcastPub);
 
 /**
  * Publish a set of topics along with an optional payload. The topics will be published immediately
