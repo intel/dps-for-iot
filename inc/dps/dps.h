@@ -704,6 +704,17 @@ int DPS_PublicationIsAckRequested(const DPS_Publication* pub);
 const DPS_KeyId* DPS_PublicationGetSenderKeyId(const DPS_Publication* pub);
 
 /**
+ * Get the sending address of a publication.
+ *
+ * The address is suitable for use with DPS_Link().
+ *
+ * @param pub   The publication
+ *
+ * @return The sending address of the publication, may be NULL
+ */
+const DPS_NodeAddress* DPS_PublicationGetSenderAddress(const DPS_Publication* pub);
+
+/**
  * Get the local node associated with a publication
  *
  * @param pub   The publication

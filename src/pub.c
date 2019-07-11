@@ -369,6 +369,15 @@ const DPS_KeyId* DPS_PublicationGetSenderKeyId(const DPS_Publication* pub)
     }
 }
 
+const DPS_NodeAddress* DPS_PublicationGetSenderAddress(const DPS_Publication* pub)
+{
+    if ((IsValidPub(pub) || (pub && (pub->flags & PUB_FLAG_IS_COPY)))) {
+        return &pub->senderAddr;
+    } else {
+        return NULL;
+    }
+}
+
 uint32_t DPS_AckGetSequenceNum(const DPS_Publication* pub)
 {
     if ((IsValidPub(pub) || (pub && (pub->flags & PUB_FLAG_IS_COPY)))) {
@@ -1332,6 +1341,7 @@ DPS_Publication* DPS_CopyPublication(const DPS_Publication* pub)
     copy->handler = pub->handler;
     copy->pubId = pub->pubId;
     copy->sender = pub->sender;
+    memcpy(&copy->senderAddr, &pub->senderAddr, sizeof(DPS_NodeAddress));
     if (pub->ackRequested) {
         ret = CopyRecipients(copy, pub);
         if (ret != DPS_OK) {
