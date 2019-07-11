@@ -168,23 +168,26 @@ void DPS_RxBufferToTx(const DPS_RxBuffer* rxBuffer, DPS_TxBuffer* txBuffer)
     txBuffer->txPos = rxBuffer->eod;
 }
 
-void DPS_RemoteCompletion(DPS_Node* node, RemoteNode* remote, DPS_Status status)
+void DPS_RemoteCompletion(DPS_Node* node, OnOpCompletion* completion, DPS_Status status)
 {
-    OnOpCompletion* cpn = remote->completion;
-    DPS_NodeAddress addr = remote->ep.addr;
+    RemoteNode* remote = completion->remote;
+    DPS_NodeAddress* addr = NULL;
 
     /*
      * See AllocCompletion() timer.data is only set if the timer handle
      * was successfully initialized
      */
-    remote->completion = NULL;
-    if (cpn->op == LINK_OP) {
-        cpn->on.link(node, &addr, status, cpn->data);
-    } else if (cpn->op == UNLINK_OP) {
-        cpn->on.unlink(node, &addr, cpn->data);
+    if (remote) {
+        remote->completion = NULL;
+        addr = &remote->ep.addr;
     }
-    free(cpn);
-    if (status != DPS_OK) {
+    if (completion->op == LINK_OP) {
+        completion->on.link(node, addr, status, completion->data);
+    } else if (completion->op == UNLINK_OP) {
+        completion->on.unlink(node, addr, completion->data);
+    }
+    free(completion);
+    if ((status != DPS_OK) && (status != DPS_ERR_EXISTS)) {
         DPS_DeleteRemoteNode(node, remote);
     }
 }
@@ -277,7 +280,7 @@ void DPS_DeleteRemoteNode(DPS_Node* node, RemoteNode* remote)
     DPS_BitVectorFree(remote->outbound.delta);
 
     if (remote->completion) {
-        DPS_RemoteCompletion(node, remote, DPS_ERR_FAILURE);
+        DPS_RemoteCompletion(node, remote->completion, DPS_ERR_FAILURE);
     }
     /*
      * This tells the network layer we no longer need to keep connection alive for this address
@@ -825,7 +828,7 @@ static void SendSubsTimer(uv_timer_t* handle)
              * See comment at end of DPS_Link for an explanation of this
              */
             if (!send && remote->completion) {
-                DPS_RemoteCompletion(node, remote, DPS_OK);
+                DPS_RemoteCompletion(node, remote->completion, DPS_OK);
             }
         }
         if (send) {
@@ -1571,7 +1574,7 @@ static void OnResolve(DPS_Node* node, const DPS_NodeAddress* addr, void* data)
 
     ret = Link(node, addr, completion);
     if (ret != DPS_OK) {
-        DPS_RemoteCompletion(node, completion->remote, ret);
+        DPS_RemoteCompletion(node, completion, ret);
     }
 }
 
@@ -1585,7 +1588,7 @@ DPS_Status DPS_Link(DPS_Node* node, const char* addrText, DPS_OnLinkComplete cb,
     char service[DPS_MAX_SERVICE_LEN + 1];
 #endif
 
-    DPS_DBGTRACE();
+    DPS_DBGTRACEA("node=%p,addrText=%s,cb=%p,data=%p\n", node, addrText, cb, data);
 
     if (!addrText || !node || !cb) {
         return DPS_ERR_NULL;

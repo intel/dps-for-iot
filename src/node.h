@@ -308,11 +308,11 @@ void DPS_DeleteRemoteNode(DPS_Node* node, RemoteNode* remote);
 /**
  * Complete an asynchronous operation on a remote node
  *
- * @param node    The local node
- * @param remote  The remote node to complete
- * @param status  Status code indicating the success or failure of the operation
+ * @param node        The local node
+ * @param completion  The operation completion
+ * @param status      Status code indicating the success or failure of the operation
  */
-void DPS_RemoteCompletion(DPS_Node* node, RemoteNode* remote, DPS_Status status);
+void DPS_RemoteCompletion(DPS_Node* node, OnOpCompletion* completion, DPS_Status status);
 
 /**
  * Mute a remote node. Remote nodes are muted we detect a

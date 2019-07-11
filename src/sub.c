@@ -963,7 +963,7 @@ DPS_Status DPS_DecodeSubscriptionAck(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
         remote->outbound.includeSub = DPS_FALSE;
         remote->outbound.ackCountdown = 0;
         if (remote->completion) {
-            DPS_RemoteCompletion(node, remote, DPS_OK);
+            DPS_RemoteCompletion(node, remote->completion, DPS_OK);
         }
         if (remote->outbound.muted && !remote->monitor) {
             remote->inbound.muted = DPS_TRUE;
