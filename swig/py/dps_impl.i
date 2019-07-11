@@ -266,13 +266,18 @@ static PyObject* GetPayloadObject(const DPS_Publication* pub, uint8_t* payload, 
         Py_buffer* view;
         payloadObj = PyMemoryView_FromObject((PyObject*)(buf->userData));
         view = PyMemoryView_GET_BUFFER(payloadObj);
-        /*
-         * Assert that [payload,len) is within the view and then slice the
-         * view to just the payload.
-         */
-        assert((view->buf <= payload) && ((payload + len) <= ((uint8_t*)(view->buf) + view->len)));
-        view->buf = payload;
-        view->len = len;
+        if (payload) {
+            /*
+             * Assert that [payload,len) is within the view and then slice the
+             * view to just the payload.
+             */
+            assert((view->buf <= payload) && ((payload + len) <= ((uint8_t*)(view->buf) + view->len)));
+            view->buf = payload;
+            view->len = len;
+        } else {
+            assert(len == 0);
+            view->len = len;
+        }
     } else {
 #if PY_VERSION_HEX >= 0x03030000
         payloadObj = PyMemoryView_FromMemory((char*)payload, len, PyBUF_READ);
