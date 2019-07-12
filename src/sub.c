@@ -205,6 +205,7 @@ DPS_Subscription* DPS_CreateSubscription(DPS_Node* node, const char** topics, si
         ++sub->numTopics;
     }
     sub->node = node;
+    sub->flags |= SUB_FLAG_SERIALIZE;
     return sub;
 }
 
@@ -1050,6 +1051,21 @@ DPS_Status DPS_SetSubscriptionData(DPS_Subscription* sub, void* data)
 void* DPS_GetSubscriptionData(DPS_Subscription* sub)
 {
     return sub ? sub->userData : NULL;
+}
+
+DPS_Status DPS_SubscriptionSetSerialize(DPS_Subscription* sub, int serialize)
+{
+    if (!sub || !sub->node) {
+        return DPS_ERR_NULL;
+    }
+    DPS_LockNode(sub->node);
+    if (serialize) {
+        sub->flags |= SUB_FLAG_SERIALIZE;
+    } else {
+        sub->flags &= ~SUB_FLAG_SERIALIZE;
+    }
+    DPS_UnlockNode(sub->node);
+    return DPS_OK;
 }
 
 void DPS_DumpSubscriptions(DPS_Node* node)

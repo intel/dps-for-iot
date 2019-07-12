@@ -1546,7 +1546,7 @@ static DPS_Status Link(DPS_Node* node, const DPS_NodeAddress* addr, OnOpCompleti
      * but if we already linked it we return an error.
      */
     if (remote->linked) {
-        DPS_ERRPRINT("Node at %s already linked\n", DPS_NodeAddrToString(addr));
+        DPS_WARNPRINT("Node at %s already linked\n", DPS_NodeAddrToString(addr));
         ret = DPS_ERR_EXISTS;
         goto Exit;
     }
@@ -1759,4 +1759,145 @@ void DPS_ClearKeyId(DPS_KeyId* keyId)
         free((uint8_t*)keyId->id);
         keyId->id = NULL;
     }
+}
+
+DPS_Status DPS_SerializeSubscriptions(DPS_Node* node, DPS_Buffer* buf)
+{
+    DPS_Status ret;
+    DPS_BitVector* needs = NULL;
+    DPS_BitVector* interests = NULL;
+    DPS_Subscription* sub;
+    DPS_TxBuffer txBuf;
+    size_t len;
+
+    DPS_LockNode(node);
+    DPS_TxBufferClear(&txBuf);
+    needs = DPS_BitVectorAllocFH();
+    interests = DPS_BitVectorAlloc();
+    if (!needs || !interests) {
+        ret = DPS_ERR_RESOURCES;
+        goto Exit;
+    }
+    DPS_BitVectorFill(needs);
+    for (sub = node->subscriptions; sub; sub = sub->next) {
+        if (sub->flags & SUB_FLAG_SERIALIZE) {
+            ret = DPS_BitVectorIntersection(needs, needs, sub->needs);
+            if (ret != DPS_OK) {
+                goto Exit;
+            }
+            ret = DPS_BitVectorUnion(interests, sub->bf);
+            if (ret != DPS_OK) {
+                goto Exit;
+            }
+        }
+    }
+    len = CBOR_SIZEOF_MAP(2) +
+        CBOR_SIZEOF(uint8_t) + DPS_BitVectorSerializeMaxSize(interests) +
+        CBOR_SIZEOF(uint8_t) + DPS_BitVectorSerializeFHSize();
+    ret = DPS_TxBufferInit(&txBuf, NULL, len);
+    if (ret != DPS_OK) {
+        goto Exit;
+    }
+    ret = CBOR_EncodeMap(&txBuf, 2);
+    if (ret != DPS_OK) {
+        goto Exit;
+    }
+    ret = CBOR_EncodeUint8(&txBuf, DPS_CBOR_KEY_NEEDS);
+    if (ret != DPS_OK) {
+        goto Exit;
+    }
+    ret = DPS_BitVectorSerializeFH(needs, &txBuf);
+    if (ret != DPS_OK) {
+        goto Exit;
+    }
+    ret = CBOR_EncodeUint8(&txBuf, DPS_CBOR_KEY_INTERESTS);
+    if (ret != DPS_OK) {
+        goto Exit;
+    }
+    ret = DPS_BitVectorSerialize(interests, &txBuf);
+    if (ret != DPS_OK) {
+        goto Exit;
+    }
+    buf->base = txBuf.base;
+    buf->len = DPS_TxBufferUsed(&txBuf);
+ Exit:
+    if (ret != DPS_OK) {
+        buf->base = NULL;
+        buf->len = 0;
+        DPS_TxBufferFree(&txBuf);
+    }
+    DPS_BitVectorFree(interests);
+    DPS_BitVectorFree(needs);
+    DPS_UnlockNode(node);
+    return ret;
+}
+
+int DPS_MatchPublications(DPS_Node* node, const DPS_Buffer* subs)
+{
+    static const int32_t Keys[] = { DPS_CBOR_KEY_NEEDS, DPS_CBOR_KEY_INTERESTS };
+    int match = DPS_FALSE;
+    DPS_BitVector* needs = NULL;
+    DPS_BitVector* interests = NULL;
+    DPS_Publication* pub;
+    DPS_RxBuffer rxBuf;
+    CBOR_MapState mapState;
+    DPS_Status ret;
+
+    DPS_RxBufferInit(&rxBuf, subs->base, subs->len);
+    ret = DPS_ParseMapInit(&mapState, &rxBuf, Keys, A_SIZEOF(Keys), NULL, 0);
+    if (ret != DPS_OK) {
+        goto Exit;
+    }
+    while (!DPS_ParseMapDone(&mapState)) {
+        int32_t key = 0;
+        ret = DPS_ParseMapNext(&mapState, &key);
+        if (ret != DPS_OK) {
+            break;
+        }
+        switch (key) {
+        case DPS_CBOR_KEY_NEEDS:
+            if (needs) {
+                ret = DPS_ERR_INVALID;
+                break;
+            }
+            needs = DPS_BitVectorAllocFH();
+            if (!needs) {
+                ret = DPS_ERR_RESOURCES;
+                break;
+            }
+            ret = DPS_BitVectorDeserializeFH(needs, &rxBuf);
+            break;
+        case DPS_CBOR_KEY_INTERESTS:
+            if (interests) {
+                ret = DPS_ERR_INVALID;
+                break;
+            }
+            interests = DPS_BitVectorAlloc();
+            if (!interests) {
+                ret = DPS_ERR_RESOURCES;
+                break;
+            }
+            ret = DPS_BitVectorDeserialize(interests, &rxBuf);
+            break;
+        }
+        if (ret != DPS_OK) {
+            break;
+        }
+    }
+    if (ret != DPS_OK) {
+        goto Exit;
+    }
+
+    DPS_LockNode(node);
+    for (pub = node->publications; pub && !match; pub = pub->next) {
+        DPS_BitVectorIntersection(node->scratch.interests, pub->bf, interests);
+        DPS_BitVectorFuzzyHash(node->scratch.needs, node->scratch.interests);
+        match = DPS_BitVectorIncludes(node->scratch.needs, needs);
+    }
+    DPS_UnlockNode(node);
+
+ Exit:
+    DPS_BitVectorFree(interests);
+    DPS_BitVectorFree(needs);
+    return match;
 }

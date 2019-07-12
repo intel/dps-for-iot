@@ -45,6 +45,7 @@ extern "C" {
 
 #define SUB_FLAG_WAS_FREED      (0x01) /**< The subscription has been freed but has a non-zero ref count */
 #define SUB_FLAG_EXPIRED        (0x02) /**< Issue the callback function when a matching publication expires */
+#define SUB_FLAG_SERIALIZE      (0x04) /**< Include the subscription in DPS_SerializeSubscriptions() */
 
 /**
  * Struct to hold the state of a local subscription. We hold the

@@ -44,6 +44,7 @@
 %ignore DPS_PublicationGetNumTopics;
 %ignore DPS_PublicationGetTopic;
 %ignore DPS_PublishBufs;
+%ignore DPS_SerializeSubscriptions;
 %ignore DPS_SetKeyStoreData;
 %ignore DPS_SetNodeData;
 %ignore DPS_SetPublicationData;
@@ -625,7 +626,7 @@ DPS_Status CBOR2JSON(const uint8_t* cbor, size_t len, int pretty, char** json);
     void *argp = NULL;
     int res = SWIG_ConvertPtr($input, &argp ,SWIGTYPE_p__DPS_UUID, 0 | 0);
     if (!SWIG_IsOK(res)) {
-        SWIG_exception_fail(SWIG_ArgError(res), "in method '" "$symname" "', argument " "$argnum"" of type '" "$1_type""'"); 
+        SWIG_exception_fail(SWIG_ArgError(res), "in method '" "$symname" "', argument " "$argnum"" of type '" "$1_type""'");
     }
     $1 = (DPS_UUID *)(argp);
 }
@@ -716,6 +717,49 @@ DPS_Status AckPublicationBufs(DPS_Publication* pub, Buffer* bufs, size_t numBufs
 %}
 DPS_Status PublishBufs(DPS_Publication* pub, Buffer* bufs, size_t numBufs, int16_t ttl);
 DPS_Status AckPublicationBufs(DPS_Publication* pub, Buffer* bufs, size_t numBufs);
+
+%typemap(in) const DPS_Buffer* remoteSubs (DPS_Buffer buf, int res = 0) {
+    $1 = &buf;
+    res = AsVal_bytes($input, &$1->base, &$1->len);
+    if (!SWIG_IsOK(res)) {
+        SWIG_exception_fail(SWIG_ArgError(res), "in method '" "$symname" "', argument " "$argnum"" of type '" "$1_type""'");
+    }
+}
+%typemap(freearg) const DPS_Buffer* remoteSubs {
+    if (SWIG_IsNewObj(res$argnum)) {
+        delete[] $1->base;
+    }
+}
+
+%typemap(in) (DPS_Node* node, DPS_Buffer* subs) (DPS_Buffer buf) {
+    memset(&buf, 0, sizeof(buf));
+    void *argp = NULL;
+    int res = SWIG_ConvertPtr($input, &argp ,SWIGTYPE_p__DPS_Node, 0 | 0);
+    if (!SWIG_IsOK(res)) {
+        SWIG_exception_fail(SWIG_ArgError(res), "in method '" "$symname" "', argument " "$argnum"" of type '" "$1_type""'");
+    }
+    $1 = (DPS_Node *)(argp);
+    $2 = &buf;
+}
+%typemap(out) DPS_Buffer* {
+    if ($1) {
+        $result = From_bytes($1->base, $1->len);
+    }
+}
+%typemap(freearg) (DPS_Node* node, DPS_Buffer* subs) {
+    if (buf$argnum.base) {
+        free(buf$argnum.base);
+    }
+}
+
+%{
+DPS_Buffer* SerializeSubscriptions(DPS_Node* node, DPS_Buffer* subs)
+{
+    DPS_Status ret = DPS_SerializeSubscriptions(node, subs);
+    return (ret == DPS_OK) ? subs : NULL;
+}
+%}
+DPS_Buffer* SerializeSubscriptions(DPS_Node* node, DPS_Buffer* subs);
 
 %include <dps/dbg.h>
 %include <dps/dps.h>

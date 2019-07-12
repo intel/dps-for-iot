@@ -823,11 +823,11 @@ void DPS_PublicationRemoveSubId(DPS_Publication* pub, const DPS_KeyId* keyId);
  * Enables multicast transmission on a per-publication basis.
  *
  * @param pub         The publication
- * @param mcastPub    Indicates if this publication shall be multicast
+ * @param mcast       Indicates if this publication shall be multicast
  *
  * @return DPS_OK if addition is successful, an error otherwise
  */
-DPS_Status DPS_PublicationSetMulticast(DPS_Publication* pub, int mcastPub);
+DPS_Status DPS_PublicationSetMulticast(DPS_Publication* pub, int mcast);
 
 /**
  * Publish a set of topics along with an optional payload. The topics will be published immediately
@@ -970,6 +970,18 @@ uint32_t DPS_AckGetSequenceNum(const DPS_Publication* pub);
  */
 const DPS_KeyId* DPS_AckGetSenderKeyId(const DPS_Publication* pub);
 
+/**
+ * Check if this node's publications match the provided subscriptions.
+ *
+ * @param node         The node
+ * @param remoteSubs   The serialized subscriptions to match
+ *
+ * @return DPS_TRUE if matched
+ *
+ * @see DPS_SerializeSubscriptions()
+ */
+int DPS_MatchPublications(DPS_Node* node, const DPS_Buffer* remoteSubs);
+
 /** @} */ /* end of publication group */
 
 /**
@@ -1094,6 +1106,32 @@ DPS_Status DPS_Subscribe(DPS_Subscription* sub, DPS_PublicationHandler handler);
  * @return DPS_OK if destroy is successful, an error otherwise
  */
 DPS_Status DPS_DestroySubscription(DPS_Subscription* sub);
+
+/**
+ * Enables serialization on a per-subscription basis.
+ *
+ * The default is to include the subscription in the output of DPS_SerializeSubscriptions().
+ *
+ * @param sub        The subscription
+ * @param serialize  Indicates if this subscription shall be serialized
+ *
+ * @return DPS_OK if successful, an error otherwise
+ *
+ * @see DPS_SerializeSubscriptions()
+ */
+DPS_Status DPS_SubscriptionSetSerialize(DPS_Subscription* sub, int serialize);
+
+/**
+ * Create a buffer containing this node's subscriptions.
+ *
+ * @param node   The node
+ * @param subs   The returned buffer, the base pointer must be freed by the caller
+ *
+ * @return DPS_OK if successful, an error otherwise
+ *
+ * @see DPS_MatchPublications()
+ */
+DPS_Status DPS_SerializeSubscriptions(DPS_Node* node, DPS_Buffer* subs);
 
 /** @} */ /* end of subscription group */
 
