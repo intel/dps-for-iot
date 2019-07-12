@@ -42,6 +42,22 @@ static int AsVal_bytes(Handle obj, uint8_t** bytes, size_t* len, int alloc)
             *bytes = reinterpret_cast<uint8_t*>(memcpy(new uint8_t[*len], PyBytes_AS_STRING(obj), *len));
             return SWIG_NEWOBJ;
         }
+    } else if (PyMemoryView_Check(obj)) {
+        Py_buffer *buf = PyMemoryView_GET_BUFFER(obj);
+        /*
+         * This conversion does not handle multi-dimensional arrays
+         */
+        if (buf->ndim != 1) {
+            return SWIG_TypeError;
+        }
+        *len = buf->len;
+        if (alloc == SWIG_OLDOBJ) {
+            *bytes = (uint8_t*)buf->buf;
+            return SWIG_OLDOBJ;
+        } else {
+            *bytes = reinterpret_cast<uint8_t*>(memcpy(new uint8_t[*len], buf->buf, *len));
+            return SWIG_NEWOBJ;
+        }
     } else if (PySequence_Check(obj)) {
         Py_ssize_t sz = PySequence_Length(obj);
         Py_ssize_t i;
