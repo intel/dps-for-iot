@@ -76,10 +76,11 @@ typedef struct _DPS_Publication {
     DPS_TxBuffer topicsBuf;         /**< Pre-serialized topic strings */
 
     COSE_Entity sender;             /**< Publication sender ID */
-    DPS_NodeAddress senderAddr;     /**< For retained messages - the sender address */
+    DPS_NodeAddress senderAddr;     /**< For retained messages - the next-hop sender address */
     struct {
         uint32_t sequenceNum;       /**< The ack'd sequence number */
         COSE_Entity sender;         /**< The ack sender ID */
+        DPS_NodeAddress senderAddr; /**< For linking - then next-hop sender address */
     } ack;                          /**< For ack messages */
     DPS_Queue sendQueue;            /**< Publication send requests */
     DPS_Queue retainedQueue;        /**< The retained publication send requests */

@@ -425,6 +425,7 @@ DPS_Status DPS_DecodeAcknowledgement(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
                 }
                 if (ret == DPS_OK) {
                     pub->ack.sequenceNum = sequenceNum;
+                    pub->ack.senderAddr = ep->addr;
                     pub->handler(pub, data, dataLen);
                 }
             }

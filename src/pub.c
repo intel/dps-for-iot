@@ -397,6 +397,15 @@ const DPS_KeyId* DPS_AckGetSenderKeyId(const DPS_Publication* pub)
     }
 }
 
+const DPS_NodeAddress* DPS_AckGetSenderAddress(const DPS_Publication* pub)
+{
+    if ((IsValidPub(pub) || (pub && (pub->flags & PUB_FLAG_IS_COPY)))) {
+        return &pub->ack.senderAddr;
+    } else {
+        return NULL;
+    }
+}
+
 int DPS_PublicationIsAckRequested(const DPS_Publication* pub)
 {
     if (IsValidPub(pub) || (pub && (pub->flags & PUB_FLAG_IS_COPY))) {

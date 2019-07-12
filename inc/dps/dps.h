@@ -971,6 +971,17 @@ uint32_t DPS_AckGetSequenceNum(const DPS_Publication* pub);
 const DPS_KeyId* DPS_AckGetSenderKeyId(const DPS_Publication* pub);
 
 /**
+ * Get the sending address of an acknowledgement.
+ *
+ * The address is suitable for use with DPS_Link().
+ *
+ * @param pub   The pub parameter of DPS_AcknowledgementHandler
+ *
+ * @return The sending address of the acknowledgement, may be NULL
+ */
+const DPS_NodeAddress* DPS_AckGetSenderAddress(const DPS_Publication* pub);
+
+/**
  * Check if this node's publications match the provided subscriptions.
  *
  * @param node         The node
