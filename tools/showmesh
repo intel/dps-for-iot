@@ -36,9 +36,14 @@ shift $((OPTIND-1))
 
 killall -q display
 
+tmpfile=$(mktemp /tmp/showmesh.XXXXXX)
 if [[ $outfile != '' ]]; then
-    build/test/bin/make_mesh $noMuted $debug -s $num_subs -k $num_kills -f $@ 2> $logfile | $engine -Tpng > $outfile
+    build/test/bin/make_mesh $noMuted $debug -s $num_subs -k $num_kills -f $@ -o $tmpfile
+    $engine -Tpng $tmpfile > $outfile
     display $outfile&
+    rm $tmpfile
 else
-    build/test/bin/make_mesh $noMuted $debug -s $num_subs -k $num_kills -f $@ 2> $logfile | $engine -Tpng | display &
+    build/test/bin/make_mesh $noMuted $debug -s $num_subs -k $num_kills -f $@ -o $tmpfile
+    $engine -Tpng $tmpfile | display
+    rm $tmpfile
 fi
