@@ -14,7 +14,7 @@ args = parser.parse_args()
 dps.cvar.debug = args.debug
 
 class DiscoveryService(threading.Thread):
-    _topics = ['$DPS/announce']
+    _topics = ['$DPS/node']
     def __init__(self, node):
         super(DiscoveryService, self).__init__()
         self._node = node

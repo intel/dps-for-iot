@@ -46,6 +46,7 @@ else:
     _subs_rate = ['-r', '100']
     _pub_wait = ['-w', '1']
 
+_ns = 0
 _ms = 0
 _n = 0
 _p = 0
@@ -188,7 +189,8 @@ def cleanup():
         log.close()
 
 def reset_logs():
-    global _ms, _n, _p, _r, _rp, _rs, _s, _t, _tm, _v
+    global _ns, _ms, _n, _p, _r, _rp, _rs, _s, _t, _tm, _v
+    _ns = 0
     _ms = 0
     _n = 0
     _p = 0
@@ -421,6 +423,12 @@ def mesh_stress(args=''):
     _ms = _ms + 1
     cmd = [os.path.join('build', 'test', 'bin', 'mesh_stress')] + _debug + args.split()
     return _spawn(_ms, cmd)
+
+def discover(args=''):
+    global _ns
+    _ns = _ns + 1
+    cmd = [os.path.join('build', 'test', 'bin', 'discover')] + _debug + args.split()
+    return _spawn(_ns, cmd)
 
 def link(child, ports):
     if isinstance(ports, basestring) or not isinstance(ports, collections.Sequence):

@@ -264,6 +264,7 @@ if extUV: testenv.Append(CPPPATH = ['#/ext/libuv/include'])
 testsrcs = ['test/cbortest.c',
             'test/cosetest.c',
             'test/countvec.c',
+            'test/discover.c',
             'test/hist_unit.c',
             'test/jsontest.c',
             'test/keystoretest.c',
