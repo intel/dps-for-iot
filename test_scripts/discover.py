@@ -21,6 +21,10 @@ for i in range(num_nodes):
 time.sleep(10)
 
 for n in ns:
+    n.kill(signal.SIGUSR1)
+
+time.sleep(1)
+for n in ns:
     n.kill(signal.SIGTERM)
     try:
         n.expect('ERROR')
