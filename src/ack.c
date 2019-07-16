@@ -118,7 +118,7 @@ static void OnNetSendComplete(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep,
     DPS_UnlockNode(node);
 }
 
-DPS_Status DPS_SendAcknowledgement(PublicationAck* ack, RemoteNode* ackNode)
+DPS_Status DPS_SendAcknowledgement(PublicationAck* ack, DPS_NetEndpoint* ep)
 {
     DPS_Node* node = ack->pub->node;
     uv_buf_t uvBufs[NUM_INTERNAL_ACK_BUFS + DPS_BUFS_MAX];
@@ -128,7 +128,7 @@ DPS_Status DPS_SendAcknowledgement(PublicationAck* ack, RemoteNode* ackNode)
     size_t i;
 
     DPS_DBGPRINT("SendAcknowledgement from %s to %s\n", node->addrStr,
-                 DPS_NodeAddrToString(&ackNode->ep.addr));
+                 DPS_NodeAddrToString(&ep->addr));
 
     for (i = 0; i < ack->numBufs; ++i) {
         uvBufs[i] = uv_buf_init((char*)ack->bufs[i].base, DPS_TxBufferUsed(&ack->bufs[i]));
@@ -148,7 +148,7 @@ DPS_Status DPS_SendAcknowledgement(PublicationAck* ack, RemoteNode* ackNode)
         ret = DPS_LoopbackSend(node, uvBufs, ack->numBufs);
         SendComplete(ack, uvBufs, ack->numBufs, ret);
     } else {
-        ret = DPS_NetSend(node, ack, &ackNode->ep, uvBufs, ack->numBufs, OnNetSendComplete);
+        ret = DPS_NetSend(node, ack, ep, uvBufs, ack->numBufs, OnNetSendComplete);
         if (ret != DPS_OK) {
             SendComplete(ack, uvBufs, ack->numBufs, ret);
         }

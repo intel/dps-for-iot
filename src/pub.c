@@ -711,7 +711,6 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxB
                                              DPS_CBOR_KEY_ACK_REQ, DPS_CBOR_KEY_BLOOM_FILTER };
     DPS_RxBuffer* rxBuf = (DPS_RxBuffer*)buf;
     DPS_Status ret;
-    RemoteNode* pubNode = NULL;
     uint16_t port = 0;
     DPS_Publication* pub = NULL;
     DPS_PublishRequest* req = NULL;
@@ -929,19 +928,6 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxB
      */
     FreeTopics(pub);
     /*
-     * We have no reason here to hold onto a node for multicast publishers
-     */
-    if (!multicast) {
-        ret = DPS_AddRemoteNode(node, &ep->addr, ep->cn, &pubNode);
-        if (ret == DPS_ERR_EXISTS) {
-            DPS_DBGPRINT("Updating existing node\n");
-            ret = DPS_OK;
-        }
-        if (ret != DPS_OK) {
-            goto Exit;
-        }
-    }
-    /*
      * Allocate the publish request for handling and forwarding
      *
      * The DPS_ERR_NO_ROUTE status will be reported in the completion
@@ -1005,13 +991,6 @@ Exit:
         assert(pub);
         req->status = ret;
         DPS_DestroyPublishRequest(req);
-    }
-    /*
-     * Delete the publisher node if it is sending bad data
-     */
-    if (ret == DPS_ERR_INVALID || ret == DPS_ERR_SECURITY) {
-        DPS_ERRPRINT("Deleting bad publisher\n");
-        DPS_DeleteRemoteNode(node, pubNode);
     }
     if (pub) {
         if (ret != DPS_OK) {

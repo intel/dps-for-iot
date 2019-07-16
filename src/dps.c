@@ -614,9 +614,17 @@ static void SendAcksTask(uv_async_t* handle)
         ack = (PublicationAck*)DPS_QueueFront(&node->ackQueue);
         DPS_QueueRemove(&ack->queue);
         if (node->state == DPS_NODE_RUNNING) {
-            ret = DPS_AddRemoteNode(node, &ack->destAddr, NULL, &ackNode);
-            if (ret == DPS_OK || ret == DPS_ERR_EXISTS) {
-                ret = DPS_SendAcknowledgement(ack, ackNode);
+            /*
+             * Send the acknowledgement through an existing connection
+             * when available, otherwise use the destination address
+             * directly.
+             */
+            ackNode = DPS_LookupRemoteNode(node, &ack->destAddr);
+            if (ackNode) {
+                ret = DPS_SendAcknowledgement(ack, &ackNode->ep);
+            } else {
+                DPS_NetEndpoint ep = { ack->destAddr, NULL };
+                ret = DPS_SendAcknowledgement(ack, &ep);
             }
         } else {
             ret = DPS_ERR_NOT_STARTED;
