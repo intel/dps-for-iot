@@ -1287,7 +1287,7 @@ DPS_Publication* DPS_CreatePublication(DPS_Node* node)
     }
     DPS_LockNode(node);
     pub->node = node;
-    if (node->mcastSender) {
+    if (node->mcastPub & DPS_MCAST_PUB_ENABLE_SEND) {
         pub->flags |= PUB_FLAG_MULTICAST;
     }
     DPS_UnlockNode(node);
@@ -1411,7 +1411,7 @@ DPS_Status DPS_InitPublication(DPS_Publication* pub,
         pub->handler = handler;
         pub->ackRequested = DPS_TRUE;
     }
-    pub->flags = PUB_FLAG_LOCAL;
+    pub->flags |= PUB_FLAG_LOCAL;
     /*
      * Copy key identifier
      */

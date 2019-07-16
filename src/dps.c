@@ -1481,10 +1481,11 @@ DPS_Status DPS_StartNode(DPS_Node* node, int mcast, DPS_NodeAddress* listenAddr)
         ret = DPS_ERR_RESOURCES;
         goto ErrExit;
     }
-    if (mcast & DPS_MCAST_PUB_ENABLE_RECV) {
+    node->mcastPub = mcast;
+    if (node->mcastPub & DPS_MCAST_PUB_ENABLE_RECV) {
         node->mcastReceiver = DPS_MulticastStartReceive(node, OnMulticastReceive);
     }
-    if (mcast & DPS_MCAST_PUB_ENABLE_SEND) {
+    if (node->mcastPub & DPS_MCAST_PUB_ENABLE_SEND) {
         node->mcastSender = DPS_MulticastStartSend(node);
     }
     node->netCtx = DPS_NetStart(node, listenAddr, OnNetReceive);
