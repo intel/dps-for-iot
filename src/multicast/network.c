@@ -329,7 +329,12 @@ static DPS_Status MulticastTxInit(DPS_MulticastSender* sender)
         DPS_DBGPRINT("Setting interface %s [%s]\n", ifn->name, ifaddr);
         ret = uv_udp_set_multicast_interface(&sock->udp, ifaddr);
         if (ret) {
-            DPS_ERRPRINT("Failed to set interface: %s\n", uv_err_name(ret));
+            DPS_ERRPRINT("Failed to set multicast interface: %s\n", uv_err_name(ret));
+            continue;
+        }
+        ret = uv_udp_set_multicast_loop(&sock->udp, 0);
+        if (ret) {
+            DPS_ERRPRINT("Failed to disable multicast loopback: %s\n", uv_err_name(ret));
             continue;
         }
         /*
