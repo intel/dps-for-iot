@@ -69,7 +69,7 @@ def _spawn_env():
 def _spawn_helper(n, cmd, interpreter=[]):
     global _children, _logs
     name = os.path.basename(cmd[0])
-    log_name = 'out/{}{}.log'.format(name, n)
+    log_name = 'out/{}{:03d}.log'.format(name, n)
     log = open(log_name, 'wb')
     log.write('=============================\n{}{} {}\n'.format(name, n, ' '.join(cmd[1:])).encode())
     log.write('=============================\n'.encode())
