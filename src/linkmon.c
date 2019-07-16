@@ -117,6 +117,10 @@ static DPS_Status LinkMonitorInit(DPS_Node* node, LinkMonitor* monitor)
         ret = DPS_ERR_RESOURCES;
         goto ErrorExit;
     }
+    ret = DPS_SubscriptionSetSerialize(monitor->sub, DPS_FALSE);
+    if (ret != DPS_OK) {
+        goto ErrorExit;
+    }
     ret = DPS_Subscribe(monitor->sub, ProbePubHandler);
     if (ret != DPS_OK) {
         goto ErrorExit;
