@@ -1384,8 +1384,9 @@ static void DumpNode(uv_signal_t* handle, int signum)
     }
     DPS_PRINT("remoteNodes\n");
     for (remote = node->remoteNodes; remote; remote = remote->next) {
-        DPS_PRINT("  %s %s\n", DPS_NodeAddrToString(&remote->ep.addr),
-                  remote->linked ? "LINKED" : "UNLINKED");
+        DPS_PRINT("  %s %s muted=%d/%d\n", DPS_NodeAddrToString(&remote->ep.addr),
+                  remote->linked ? "LINKED" : "UNLINKED",
+                  remote->outbound.muted, remote->inbound.muted);
     }
     DPS_UnlockNode(node);
 #endif
