@@ -144,6 +144,8 @@ typedef struct _DPS_Node {
     uv_async_t resolverAsync;             /**< Async handler for address resolver */
     ResolverInfo* resolverList;           /**< Linked list of address resolution requests */
 
+    uv_signal_t sigusr1;                  /**< Signal handler for dumping node info */
+
 } DPS_Node;
 
 /**

@@ -1903,24 +1903,42 @@ DPS_NetRxBuffer* DPS_PublicationGetNetRxBuffer(const DPS_Publication* pub)
 }
 
 #ifdef DPS_DEBUG
+void DPS_DumpPub(DPS_Publication* pub)
+{
+    size_t i;
+    int16_t ttl = 0;
+    if (!DPS_QueueEmpty(&pub->retainedQueue)) {
+        DPS_PublishRequest* req = (DPS_PublishRequest*)DPS_QueueBack(&pub->retainedQueue);
+        ttl = REQ_TTL(req);
+    }
+    DPS_PRINT("  %s(%d) %s%s%s%s%s%sttl=%d ", DPS_UUIDToString(&pub->pubId), pub->sequenceNum,
+              pub->flags & PUB_FLAG_LOCAL ? "LOCAL " : "",
+              pub->flags & PUB_FLAG_RETAINED ? "RETAINED " : "",
+              pub->flags & PUB_FLAG_EXPIRED ? "EXPIRED " : "",
+              pub->flags & PUB_FLAG_WAS_FREED ? "WAS_FREED " : "",
+              pub->flags & PUB_FLAG_MULTICAST ? "MULTICAST " : "",
+              pub->flags & PUB_FLAG_IS_COPY ? "IS_COPY " : "",
+              ttl);
+    /*
+     * Remote publication topics may be encrypted for another node, so
+     * only dump the local topics.
+     */
+    if (pub->flags & PUB_FLAG_LOCAL) {
+        DPS_PRINT("topics=[");
+        for (i = 0; i < pub->numTopics; ++i) {
+            DPS_PRINT("%s%s", i ? ",": "", pub->topics[i]);
+        }
+        DPS_PRINT("]\n");
+    }
+}
+
 void DPS_DumpPubs(DPS_Node* node)
 {
     if (DPS_Debug) {
         DPS_Publication* pub;
         DPS_PRINT("Node %s:\n", DPS_NodeAddrToString(&node->addr));
         for (pub = node->publications; pub; pub = pub->next) {
-            int16_t ttl = 0;
-            if (!DPS_QueueEmpty(&pub->retainedQueue)) {
-                DPS_PublishRequest* req = (DPS_PublishRequest*)DPS_QueueBack(&pub->retainedQueue);
-                ttl = REQ_TTL(req);
-            }
-            DPS_PRINT("  %s(%d) %s%s%s%s%sttl=%d\n", DPS_UUIDToString(&pub->pubId), pub->sequenceNum,
-                      pub->flags & PUB_FLAG_LOCAL ? "LOCAL " : "",
-                      pub->flags & PUB_FLAG_RETAINED ? "RETAINED " : "",
-                      pub->flags & PUB_FLAG_EXPIRED ? "EXPIRED " : "",
-                      pub->flags & PUB_FLAG_WAS_FREED ? "WAS_FREED " : "",
-                      pub->flags & PUB_FLAG_IS_COPY ? "IS_COPY " : "",
-                      ttl);
+            DPS_DumpPub(pub);
         }
     }
 }

@@ -1142,6 +1142,7 @@ static void StopNode(DPS_Node* node)
     uv_close((uv_handle_t*)&node->subsAsync, NULL);
     uv_close((uv_handle_t*)&node->acksAsync, NULL);
     uv_close((uv_handle_t*)&node->subsTimer, NULL);
+    uv_close((uv_handle_t*)&node->sigusr1, NULL);
     /*
      * Cleanup any unresolved resolvers before closing the handle
      */
@@ -1350,6 +1351,38 @@ void* DPS_GetNodeData(const DPS_Node* node)
     return node ? node->userData : NULL;
 }
 
+static void DumpNode(uv_signal_t* handle, int signum)
+{
+#ifdef DPS_DEBUG
+    DPS_Node* node = handle->data;
+    DPS_Publication* pub;
+    DPS_Subscription* sub;
+    RemoteNode* remote;
+    size_t i;
+
+    DPS_LockNode(node);
+    DPS_PRINT("node %s\n", DPS_NodeAddrToString(&node->addr));
+    DPS_PRINT("publications\n");
+    for (pub = node->publications; pub; pub = pub->next) {
+        DPS_DumpPub(pub);
+    }
+    DPS_PRINT("subscriptions\n");
+    for (sub = node->subscriptions; sub; sub = sub->next) {
+        DPS_PRINT("  topics=[");
+        for (i = 0; i < sub->numTopics; ++i) {
+            DPS_PRINT("%s%s", i ? ",": "", sub->topics[i]);
+        }
+        DPS_PRINT("]\n");
+    }
+    DPS_PRINT("remoteNodes\n");
+    for (remote = node->remoteNodes; remote; remote = remote->next) {
+        DPS_PRINT("  %s %s\n", DPS_NodeAddrToString(&remote->ep.addr),
+                  remote->linked ? "LINKED" : "UNLINKED");
+    }
+    DPS_UnlockNode(node);
+#endif
+}
+
 static void StopNodeTask(uv_async_t* handle)
 {
     DPS_DBGTRACE();
@@ -1410,6 +1443,12 @@ DPS_Status DPS_StartNode(DPS_Node* node, int mcast, DPS_NodeAddress* listenAddr)
 
     node->subsTimer.data = node;
     r = uv_timer_init(node->loop, &node->subsTimer);
+    assert(!r);
+
+    node->sigusr1.data = node;
+    r = uv_signal_init(node->loop, &node->sigusr1);
+    assert(!r);
+    r = uv_signal_start(&node->sigusr1, DumpNode, SIGUSR1);
     assert(!r);
 
     /*
