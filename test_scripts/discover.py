@@ -1,5 +1,11 @@
 #!/usr/bin/python
-
+#
+# Example:
+# $ ./test_scripts/discover.py
+# $ ./tools/graph_nodes.pl out/* | neato -Tpng | display
+#
+# neato and sfdp appear to provide the nicest results.
+#
 from common import *
 import atexit
 import glob
