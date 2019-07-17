@@ -1908,6 +1908,8 @@ void DPS_DumpPub(DPS_Publication* pub)
             DPS_PRINT("%s%s", i ? ",": "", pub->topics[i]);
         }
         DPS_PRINT("]\n");
+    } else {
+        DPS_PRINT("\n");
     }
 }
 
