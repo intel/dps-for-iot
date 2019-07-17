@@ -1359,6 +1359,25 @@ void* DPS_GetNodeData(const DPS_Node* node)
     return node ? node->userData : NULL;
 }
 
+#ifdef DPS_DEBUG
+static void DumpHistory(DPS_PubHistory* ph)
+{
+    DPS_NodeAddressList* addr;
+
+    if (!ph) {
+        return;
+    }
+    DumpHistory(ph->left);
+    DPS_PRINT("  %s(%d)%s %"PRIu64" [", DPS_UUIDToString(&ph->id), ph->sn, ph->ackRequested ? " ACK" : "",
+              ph->expiration);
+    for (addr = ph->addrs; addr; addr = addr->next) {
+        DPS_PRINT("%s%s(%d)", addr != ph->addrs ? "," : "", DPS_NodeAddrToString(&addr->addr), addr->sn);
+    }
+    DPS_PRINT("]\n");
+    DumpHistory(ph->right);
+}
+#endif
+
 static void DumpNode(uv_signal_t* handle, int signum)
 {
 #ifdef DPS_DEBUG
@@ -1388,6 +1407,8 @@ static void DumpNode(uv_signal_t* handle, int signum)
                   remote->linked ? "LINKED" : "UNLINKED",
                   remote->outbound.muted, remote->inbound.muted);
     }
+    DPS_PRINT("history\n");
+    DumpHistory(node->history.root);
     DPS_UnlockNode(node);
 #endif
 }
