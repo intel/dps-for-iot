@@ -38,6 +38,9 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 #define USE_IPV4       0x10
 #define USE_IPV6       0x01
 
+#define AddrGetPort(a)     (((struct sockaddr_in*)(a))->sin_port)
+#define AddrSetPort(a, p)  (((struct sockaddr_in*)(a))->sin_port = (p))
+
 struct _DPS_MulticastReceiver {
     uint8_t ipVersions;
     uv_udp_t udp6Rx;
@@ -49,6 +52,7 @@ struct _DPS_MulticastReceiver {
 typedef struct {
     uv_udp_t udp;
     int family;
+    DPS_NodeAddress addr;
 } TxSocket;
 
 struct _DPS_MulticastSender {
@@ -86,16 +90,32 @@ static void OnMcastRx(uv_udp_t* handle, ssize_t nread, const uv_buf_t* uvBuf, co
                       unsigned flags)
 {
     DPS_MulticastReceiver* receiver = (DPS_MulticastReceiver*)handle->data;
+    DPS_Node* node = receiver->node;
     DPS_NetRxBuffer* buf = NULL;
+    size_t i;
     DPS_NetEndpoint ep;
 
-    DPS_DBGTRACEA("handle=%p,nread=%d,buf={base=%p,len=%d},addr=%p,flags=0x%x\n", handle, nread,
-                  uvBuf->base, uvBuf->len, addr, flags);
-
+    if (!nread) {
+        goto Exit;
+    }
     if (!uvBuf) {
         DPS_ERRPRINT("No buffer\n");
         goto Exit;
     }
+    /*
+     * Discard looped back multicast packets
+     */
+    DPS_NetSetAddr(&ep.addr, DPS_UDP, addr);
+    for (i = 0; i < node->mcastSender->numTx; ++i) {
+        if (DPS_SameAddr(&ep.addr, &node->mcastSender->udpTx[i].addr)) {
+            DPS_DBGPRINT("Discarding loop-back multicast\n");
+            goto Exit;
+        }
+    }
+
+    DPS_DBGTRACEA("handle=%p,nread=%d,buf={base=%p,len=%d},addr=%s,flags=0x%x\n", handle, nread,
+                  uvBuf->base, uvBuf->len, DPS_NetAddrText(addr), flags);
+
     buf = DPS_UvToNetRxBuffer(uvBuf);
     if (nread < 0) {
         DPS_ERRPRINT("Read error %s\n", uv_err_name((int)nread));
@@ -103,18 +123,14 @@ static void OnMcastRx(uv_udp_t* handle, ssize_t nread, const uv_buf_t* uvBuf, co
         goto Exit;
     }
     buf->rx.eod = &buf->rx.base[nread];
-    if (!nread) {
-        goto Exit;
-    }
     if (flags & UV_UDP_PARTIAL) {
         DPS_ERRPRINT("Dropping partial message, read buffer too small\n");
         goto Exit;
     }
     if (addr) {
-        DPS_DBGPRINT("Received buffer of size %zd from %s\n", nread, DPS_NetAddrText(addr));
+        DPS_DBGPRINT("Received buffer of size %zd fromn", nread);
     }
     ep.cn = NULL;
-    DPS_NetSetAddr(&ep.addr, DPS_UDP, addr);
     receiver->cb(receiver->node, &ep, DPS_OK, buf);
 Exit:
     DPS_NetRxBufferDecRef(buf);
@@ -285,7 +301,9 @@ static DPS_Status MulticastTxInit(DPS_MulticastSender* sender)
      */
     for (i = 0; i < numIfs; ++i) {
         struct sockaddr_storage addr;
+        int sz = sizeof(addr);
         char ifaddr[INET6_ADDRSTRLEN + UV_IF_NAMESIZE + 2];
+        uint16_t port;
         uv_interface_address_t* ifn = &ifsAddrs[i];
         if (!UseInterface(sender->ipVersions, ifn)) {
             continue;
@@ -306,6 +324,16 @@ static DPS_Status MulticastTxInit(DPS_MulticastSender* sender)
         assert(ret == 0);
         ret = uv_udp_bind(&sock->udp, (const struct sockaddr *)&addr, 0);
         assert(ret == 0);
+        /*
+         * Get the bound port
+         */
+        ret = uv_udp_getsockname(&sock->udp, (struct sockaddr*)&addr, &sz);
+        if (ret) {
+            DPS_ERRPRINT("Failed to get own multicast address: %s\n", uv_err_name(ret));
+            continue;
+        }
+        port = AddrGetPort(&addr);
+
         if (sock->family == AF_INET6) {
             char name[INET6_ADDRSTRLEN + 1];
             /*
@@ -332,11 +360,12 @@ static DPS_Status MulticastTxInit(DPS_MulticastSender* sender)
             DPS_ERRPRINT("Failed to set multicast interface: %s\n", uv_err_name(ret));
             continue;
         }
-        ret = uv_udp_set_multicast_loop(&sock->udp, 0);
-        if (ret) {
-            DPS_ERRPRINT("Failed to disable multicast loopback: %s\n", uv_err_name(ret));
-            continue;
-        }
+        /*
+         * Set the source address so we can check for loopback in the receive callback
+         */
+        DPS_NetSetAddr(&sock->addr, DPS_UDP, (const struct sockaddr*)&ifn->address);
+        AddrSetPort(&sock->addr.u.inaddr, port);
+        DPS_DBGPRINT("Multicast send from %s\n", DPS_NetAddrText((struct sockaddr*)&sock->addr.u.inaddr));
         /*
          * Store pointer back to the sender struct
          */

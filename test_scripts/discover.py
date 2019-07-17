@@ -21,7 +21,11 @@ random.seed(seed)
 
 ns = []
 for i in range(num_nodes):
-    ns.append(discover())
+    pubs = random.choice(["A"])
+    subs = random.choice(["A"])
+#    pubs = random.choice(["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L"])
+#    subs = random.choice(["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L"])
+    ns.append(discover("-p " + pubs + " -s " + subs))
 
 # Wait a bit for discovery to settle
 time.sleep(10)
