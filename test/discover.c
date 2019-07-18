@@ -25,6 +25,14 @@
 #include <uv.h>
 #include "node.h"
 
+typedef struct _DiscoveryService DiscoveryService;
+
+typedef struct _AckRequest {
+    DiscoveryService* service;
+    DPS_Publication* pub;
+    uv_timer_t* timer;
+} AckRequest;
+
 typedef struct _DiscoveryService {
     DPS_Node* node;
     DPS_Publication* pub;
@@ -38,15 +46,6 @@ static void DiscoveryPublishCb(DPS_Publication* pub, const DPS_Buffer* bufs, siz
 {
     if (status != DPS_OK) {
         DPS_ERRPRINT("DPS_PublishBufs failed - %s\n", DPS_ErrTxt(status));
-    }
-    free(bufs[0].base);
-}
-
-static void DiscoveryAckCb(DPS_Publication* pub, const DPS_Buffer* bufs, size_t numBufs, DPS_Status status,
-                           void* data)
-{
-    if (status != DPS_OK) {
-        DPS_ERRPRINT("DPS_AckPublicationBufs failed - %s\n", DPS_ErrTxt(status));
     }
     free(bufs[0].base);
 }
@@ -87,7 +86,7 @@ Exit:
     }
 }
 
-static void DiscoveryTimerCloseCb(uv_handle_t* timer)
+static void TimerCloseCb(uv_handle_t* timer)
 {
     free(timer);
 }
@@ -118,12 +117,119 @@ static void DiscoveryOnAck(DPS_Publication* pub, uint8_t* payload, size_t len)
     }
 }
 
+static void AckCb(DPS_Publication* pub, const DPS_Buffer* bufs, size_t numBufs, DPS_Status status,
+                  void* data)
+{
+    if (status != DPS_OK) {
+        DPS_ERRPRINT("DPS_AckPublicationBufs failed - %s\n", DPS_ErrTxt(status));
+    }
+    free(bufs[0].base);
+}
+
+static void AckTimerOnTimeout(uv_timer_t* timer)
+{
+    AckRequest* req = timer->data;
+    DiscoveryService* service = req->service;
+    DPS_Node* node = service->node;
+    DPS_Publication* pub = req->pub;
+    DPS_Buffer subs;
+    DPS_Status ret;
+
+    memset(&subs, 0, sizeof(DPS_Buffer));
+    ret = DPS_SerializeSubscriptions(node, &subs);
+    if (ret != DPS_OK) {
+        DPS_ERRPRINT("DPS_SerializeSubscriptions failed - %s\n", DPS_ErrTxt(ret));
+        goto Exit;
+    }
+    ret = DPS_AckPublicationBufs(pub, &subs, 1, AckCb, service);
+    if (ret != DPS_OK) {
+        DPS_ERRPRINT("DPS_AckPublicationBufs failed - %s\n", DPS_ErrTxt(ret));
+        goto Exit;
+    }
+Exit:
+    if (ret != DPS_OK) {
+        if (subs.base) {
+            free(subs.base);
+        }
+    }
+    DPS_DestroyPublication(req->pub);
+    uv_close((uv_handle_t*)req->timer, TimerCloseCb);
+    free(req);
+}
+
+static void Ack(void* data)
+{
+    AckRequest* req = data;
+    DPS_Node* node = req->service->node;
+    uint64_t timeout;
+    int err;
+
+    req->timer = malloc(sizeof(uv_timer_t));
+    if (!req->timer) {
+        err = UV_ENOMEM;
+        DPS_ERRPRINT("alloc failed - %s\n", uv_strerror(err));
+        goto Exit;
+    }
+    req->timer->data = req;
+    err = uv_timer_init(node->loop, req->timer);
+    if (err) {
+        DPS_ERRPRINT("uv_timer_init failed - %s\n", uv_strerror(err));
+        goto Exit;
+    }
+    timeout = (DPS_Rand() % 100) + 20;
+    err = uv_timer_start(req->timer, AckTimerOnTimeout, timeout, 0);
+    if (err) {
+        DPS_ERRPRINT("uv_timer_start failed - %s\n", uv_strerror(err));
+        goto Exit;
+    }
+ Exit:
+    if (err) {
+        DPS_DestroyPublication(req->pub);
+        if (req->timer) {
+            uv_close((uv_handle_t*)req->timer, TimerCloseCb);
+        }
+        free(req);
+    }
+}
+
+static DPS_Status DiscoveryScheduleAck(DiscoveryService* service, const DPS_Publication* pub)
+{
+    DPS_Node* node = service->node;
+    AckRequest* req = NULL;
+    DPS_Status ret;
+
+    req = calloc(1, sizeof(AckRequest));
+    if (!req) {
+        ret = DPS_ERR_RESOURCES;
+        DPS_ERRPRINT("alloc failed - %s\n", DPS_ErrTxt(ret));
+        goto Exit;
+    }
+    req->service = service;
+    req->pub = DPS_CopyPublication(pub);
+    if (!req->pub) {
+        ret = DPS_ERR_RESOURCES;
+        DPS_ERRPRINT("DPS_CopyPublication failed - %s\n", DPS_ErrTxt(ret));
+        goto Exit;
+    }
+    ret = DPS_NodeScheduleRequest(node, Ack, req);
+    if (ret != DPS_OK) {
+        DPS_ERRPRINT("DPS_NodeScheduleRequest failed - %s\n", DPS_ErrTxt(ret));
+    }
+ Exit:
+    if (ret != DPS_OK) {
+        if (req) {
+            DPS_DestroyPublication(req->pub);
+            free(req);
+        }
+    }
+    return ret;
+}
+
 static void DiscoveryOnPub(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* payload, size_t len)
 {
     DiscoveryService* service = DPS_GetSubscriptionData(sub);
     DPS_Node* node = service->node;
     DPS_Buffer remoteSubs;
-    DPS_Buffer subs;
     DPS_Status ret;
 
     /* Ignore my own publication */
@@ -131,35 +237,16 @@ static void DiscoveryOnPub(DPS_Subscription* sub, const DPS_Publication* pub, ui
         return;
     }
 
-    memset(&subs, 0, sizeof(DPS_Buffer));
     remoteSubs.base = payload;
     remoteSubs.len = len;
     if (DPS_MatchPublications(node, &remoteSubs)) {
-        ret = DPS_Link(node, DPS_NodeAddrToString(DPS_PublicationGetSenderAddress(pub)), DiscoveryLinkCb,
-                       service);
+        ret = DPS_Link(node, DPS_NodeAddrToString(DPS_PublicationGetSenderAddress(pub)),
+                       DiscoveryLinkCb, service);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("DPS_Link failed - %s\n", DPS_ErrTxt(ret));
-            goto Exit;
         }
     } else if (DPS_PublicationIsAckRequested(pub)) {
-        ret = DPS_SerializeSubscriptions(node, &subs);
-        if (ret != DPS_OK) {
-            DPS_ERRPRINT("DPS_SerializeSubscriptions failed - %s\n", DPS_ErrTxt(ret));
-            goto Exit;
-        }
-        ret = DPS_AckPublicationBufs(pub, &subs, 1, DiscoveryAckCb, service);
-        if (ret != DPS_OK) {
-            DPS_ERRPRINT("DPS_AckPublicationBufs failed - %s\n", DPS_ErrTxt(ret));
-            goto Exit;
-        }
-    } else {
-        ret = DPS_OK;
-    }
-Exit:
-    if (ret != DPS_OK) {
-        if (subs.base) {
-            free(subs.base);
-        }
+        DiscoveryScheduleAck(service, pub);
     }
 }
 
@@ -173,7 +260,7 @@ static void DiscoveryStartTimer(void* data)
 
     service->timer = malloc(sizeof(uv_timer_t));
     if (!service->timer) {
-        DPS_ERRPRINT("malloc failed - %s\n", DPS_ErrTxt(DPS_ERR_RESOURCES));
+        DPS_ERRPRINT("alloc failed - %s\n", DPS_ErrTxt(DPS_ERR_RESOURCES));
         return;
     }
     service->timer->data = service;
@@ -182,18 +269,19 @@ static void DiscoveryStartTimer(void* data)
         DPS_ERRPRINT("uv_timer_init failed - %s\n", uv_strerror(err));
         return;
     }
-    err = uv_timer_start(service->timer, DiscoveryTimerOnTimeout, 0, 0);
+    service->nextTimeout = (DPS_Rand() % 100) + 20;
+    err = uv_timer_start(service->timer, DiscoveryTimerOnTimeout, service->nextTimeout, 0);
     if (err) {
         DPS_ERRPRINT("uv_timer_start failed - %s\n", uv_strerror(err));
         return;
     }
-    service->nextTimeout = 1000;
+    service->nextTimeout += 1000;
 }
 
 static void DiscoveryStopTimer(void* data)
 {
     uv_handle_t* timer = data;
-    uv_close(timer, DiscoveryTimerCloseCb);
+    uv_close(timer, TimerCloseCb);
 }
 
 int DiscoveryStart(DiscoveryService* service, DPS_Node* node)
