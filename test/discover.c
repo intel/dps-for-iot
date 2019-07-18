@@ -26,6 +26,7 @@
 #include "node.h"
 
 typedef struct _DiscoveryService {
+    DPS_Node* node;
     DPS_Publication* pub;
     DPS_Subscription* sub;
     uv_timer_t* timer;
@@ -53,7 +54,7 @@ static void DiscoveryAckCb(DPS_Publication* pub, const DPS_Buffer* bufs, size_t 
 static void DiscoveryTimerOnTimeout(uv_timer_t* timer)
 {
     DiscoveryService* service = timer->data;
-    DPS_Node* node = DPS_PublicationGetNode(service->pub);
+    DPS_Node* node = service->node;
     DPS_Buffer subs;
     DPS_Status ret;
     int err;
@@ -103,7 +104,7 @@ static void DiscoveryLinkCb(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status st
 static void DiscoveryOnAck(DPS_Publication* pub, uint8_t* payload, size_t len)
 {
     DiscoveryService* service = DPS_GetPublicationData(pub);
-    DPS_Node* node = DPS_PublicationGetNode(pub);
+    DPS_Node* node = service->node;
     DPS_Buffer remoteSubs;
     DPS_Status ret;
 
@@ -120,7 +121,7 @@ static void DiscoveryOnAck(DPS_Publication* pub, uint8_t* payload, size_t len)
 static void DiscoveryOnPub(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* payload, size_t len)
 {
     DiscoveryService* service = DPS_GetSubscriptionData(sub);
-    DPS_Node* node = DPS_SubscriptionGetNode(sub);
+    DPS_Node* node = service->node;
     DPS_Buffer remoteSubs;
     DPS_Buffer subs;
     DPS_Status ret;
@@ -164,13 +165,44 @@ Exit:
 
 void DiscoveryStop(DiscoveryService* service);
 
+static void DiscoveryStartTimer(void* data)
+{
+    DiscoveryService* service = data;
+    DPS_Node* node = service->node;
+    int err;
+
+    service->timer = malloc(sizeof(uv_timer_t));
+    if (!service->timer) {
+        DPS_ERRPRINT("malloc failed - %s\n", DPS_ErrTxt(DPS_ERR_RESOURCES));
+        return;
+    }
+    service->timer->data = service;
+    err = uv_timer_init(node->loop, service->timer);
+    if (err) {
+        DPS_ERRPRINT("uv_timer_init failed - %s\n", uv_strerror(err));
+        return;
+    }
+    err = uv_timer_start(service->timer, DiscoveryTimerOnTimeout, 0, 0);
+    if (err) {
+        DPS_ERRPRINT("uv_timer_start failed - %s\n", uv_strerror(err));
+        return;
+    }
+    service->nextTimeout = 1000;
+}
+
+static void DiscoveryStopTimer(void* data)
+{
+    uv_handle_t* timer = data;
+    uv_close(timer, DiscoveryTimerCloseCb);
+}
+
 int DiscoveryStart(DiscoveryService* service, DPS_Node* node)
 {
     static const char *topic = "$DPS/node";
     DPS_Status ret;
-    int err;
 
     memset(service, 0, sizeof(DiscoveryService));
+    service->node = node;
     service->pub = DPS_CreatePublication(node);
     if (!service->pub) {
         ret = DPS_ERR_RESOURCES;
@@ -205,26 +237,10 @@ int DiscoveryStart(DiscoveryService* service, DPS_Node* node)
     if (ret != DPS_OK) {
         goto Exit;
     }
-
-    service->timer = malloc(sizeof(uv_timer_t));
-    if (!service->timer) {
-        ret = DPS_ERR_RESOURCES;
+    ret = DPS_NodeScheduleRequest(node, DiscoveryStartTimer, service);
+    if (ret != DPS_OK) {
         goto Exit;
     }
-    service->timer->data = service;
-    err = uv_timer_init(node->loop, service->timer);
-    if (err) {
-        DPS_ERRPRINT("uv_timer_init failed - %s\n", uv_strerror(err));
-        ret = DPS_ERR_FAILURE;
-        goto Exit;
-    }
-    err = uv_timer_start(service->timer, DiscoveryTimerOnTimeout, 0, 0);
-    if (err) {
-        DPS_ERRPRINT("uv_timer_start failed - %s\n", uv_strerror(err));
-        ret = DPS_ERR_FAILURE;
-        goto Exit;
-    }
-    service->nextTimeout = 1000;
 
 Exit:
     if (ret != DPS_OK) {
@@ -236,7 +252,7 @@ Exit:
 void DiscoveryStop(DiscoveryService* service)
 {
     if (service->timer) {
-        uv_close((uv_handle_t*)service->timer, DiscoveryTimerCloseCb);
+        DPS_NodeScheduleRequest(service->node, DiscoveryStopTimer, service->timer);
         service->timer = NULL;
     }
     DPS_DestroySubscription(service->sub);
