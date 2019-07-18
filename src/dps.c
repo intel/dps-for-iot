@@ -1123,6 +1123,7 @@ DPS_Status DPS_LoopbackSend(DPS_Node* node, uv_buf_t* bufs, size_t numBufs)
 static void StopNode(DPS_Node* node)
 {
     PublicationAck* ack;
+    NodeRequest* request;
 
     /*
      * Indicates the node is no longer running
@@ -1151,6 +1152,7 @@ static void StopNode(DPS_Node* node)
     uv_close((uv_handle_t*)&node->acksAsync, NULL);
     uv_close((uv_handle_t*)&node->subsTimer, NULL);
     uv_close((uv_handle_t*)&node->sigusr1, NULL);
+    uv_close((uv_handle_t*)&node->requestAsync, NULL);
     /*
      * Cleanup any unresolved resolvers before closing the handle
      */
@@ -1170,6 +1172,15 @@ static void StopNode(DPS_Node* node)
         DPS_QueueRemove(&ack->queue);
         ack->status = DPS_ERR_WRITE;
         DPS_AckPublicationCompletion(ack);
+    }
+    /*
+     * Cleanup any unresolved requests
+     */
+    while (!DPS_QueueEmpty(&node->requestQueue)) {
+        request = (NodeRequest*)DPS_QueueFront(&node->requestQueue);
+        DPS_QueueRemove(&request->queue);
+        request->cb(request->data);
+        free(request);
     }
     /*
      * Run the event loop again to ensure that all cleanup is
@@ -1336,6 +1347,7 @@ DPS_Node* DPS_CreateNode(const char* separators, DPS_KeyStore* keyStore, const D
     strncpy_s(node->separators, sizeof(node->separators), separators, sizeof(node->separators) - 1);
     node->keyStore = keyStore;
     DPS_QueueInit(&node->ackQueue);
+    DPS_QueueInit(&node->requestQueue);
     /*
      * Set default probe configuration and subscription rate parameters
      */
@@ -1422,6 +1434,21 @@ static void StopNodeTask(uv_async_t* handle)
     uv_stop(handle->loop);
 }
 
+static void RunRequestsTask(uv_async_t* handle)
+{
+    DPS_Node* node = handle->data;
+    NodeRequest* request;
+
+    DPS_LockNode(node);
+    while (!DPS_QueueEmpty(&node->requestQueue)) {
+        request = (NodeRequest*)DPS_QueueFront(&node->requestQueue);
+        DPS_QueueRemove(&request->queue);
+        request->cb(request->data);
+        free(request);
+    }
+    DPS_UnlockNode(node);
+}
+
 DPS_Status DPS_StartNode(DPS_Node* node, int mcast, DPS_NodeAddress* listenAddr)
 {
     DPS_Status ret = DPS_OK;
@@ -1479,6 +1506,10 @@ DPS_Status DPS_StartNode(DPS_Node* node, int mcast, DPS_NodeAddress* listenAddr)
     r = uv_signal_init(node->loop, &node->sigusr1);
     assert(!r);
     r = uv_signal_start(&node->sigusr1, DumpNode, SIGUSR1);
+    assert(!r);
+
+    node->requestAsync.data = node;
+    r = uv_async_init(node->loop, &node->requestAsync, RunRequestsTask);
     assert(!r);
 
     /*
@@ -1970,4 +2001,28 @@ int DPS_MatchPublications(DPS_Node* node, const DPS_Buffer* subs)
     DPS_BitVectorFree(interests);
     DPS_BitVectorFree(needs);
     return match;
+}
+
+DPS_Status DPS_NodeScheduleRequest(DPS_Node* node, OnNodeRequest cb, void* data)
+{
+    NodeRequest* req = NULL;
+    DPS_Status ret = DPS_OK;
+    int err;
+
+    req = malloc(sizeof(NodeRequest));
+    if (!req) {
+        return DPS_ERR_RESOURCES;
+    }
+    req->cb = cb;
+    req->data = data;
+
+    DPS_LockNode(node);
+    DPS_QueuePushBack(&node->requestQueue, &req->queue);
+    err = uv_async_send(&node->requestAsync);
+    if (err) {
+        DPS_ERRPRINT("uv_async_send failed - %s\n", uv_strerror(err));
+        ret = DPS_ERR_FAILURE;
+    }
+    DPS_UnlockNode(node);
+    return ret;
 }

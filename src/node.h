@@ -85,6 +85,33 @@ typedef struct _LinkMonitorConfig {
 } LinkMonitorConfig;
 
 /**
+ * A request to run on the node thread.
+ *
+ * @param data Data passed to DPS_AddRequest()
+ */
+typedef void (*OnNodeRequest)(void* data);
+
+/**
+ * A queue of requests to run on the node thread.
+ */
+typedef struct _NodeRequest {
+    DPS_Queue queue;  /**< The queue item */
+    OnNodeRequest cb; /**< The request callback */
+    void* data;       /**< The request data */
+} NodeRequest;
+
+/**
+ * Schedule a request to run on the node thread.
+ *
+ * @param node the node
+ * @param cb the request callback, run on the node thread
+ * @param data the request data
+ *
+ * @return DPS_OK if successful, an error otherwise
+ */
+DPS_Status DPS_NodeScheduleRequest(DPS_Node* node, OnNodeRequest cb, void* data);
+
+/**
  * A local node
  */
 typedef struct _DPS_Node {
@@ -146,6 +173,9 @@ typedef struct _DPS_Node {
     ResolverInfo* resolverList;           /**< Linked list of address resolution requests */
 
     uv_signal_t sigusr1;                  /**< Signal handler for dumping node info */
+
+    uv_async_t requestAsync;              /**< Async for running requests on the node thread */
+    DPS_Queue requestQueue;               /**< Queue of requests */
 
 } DPS_Node;
 
