@@ -14,8 +14,8 @@ foreach my $filename (@ARGV) {
 	if ($line =~ /node .*:(\d+)$/) {
 	    $a = $1;
 	    push(@nodes, $a)
-	} elsif ($line =~ /  .*:(\d+) LINKED muted=(\d)\/(\d)/) {
-	    my ($b, $outbound_muted, $inbound_muted) = ($1, $2, $3);
+	} elsif ($line =~ /  .*:(\d+) (UNLINKED|LINKED) muted=(\d)\/(\d)/) {
+	    my ($b, $outbound_muted, $inbound_muted) = ($1, $3, $4);
 	    my $ab_muted = "$outbound_muted/$inbound_muted";
 	    my $ba_muted = "$inbound_muted/$outbound_muted";
 	    if (($arcs{"$a -- $b"} && $arcs{"$a -- $b"} eq $ab_muted) ||
@@ -56,7 +56,7 @@ foreach my $arc (keys(%arcs)) {
 	print "      $arc [len=1,dir=back,style=dotted];\n";
     } elsif ($arcs{$arc} eq "1/1") {
 	# TODO including muted links tends to overload graphviz
-	#print "      $arc [len=1,dir=none,color=red,style=dotted];\n";
+#   print "      $arc [len=1,dir=none,color=red,style=dotted];\n";
     }
 }
 print "    }\n";
