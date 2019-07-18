@@ -429,7 +429,7 @@ static DPS_Status UpdatePubHistory(DPS_PublishRequest* req)
     DPS_Publication* pub = req->pub;
     DPS_Node* node = pub->node;
     return DPS_UpdatePubHistory(&node->history, &pub->pubId, req->sequenceNum, pub->ackRequested,
-                                REQ_TTL(req), &pub->senderAddr);
+                                REQ_TTL(req), req->hopCount, &pub->senderAddr);
 }
 
 /*
@@ -705,7 +705,7 @@ static DPS_Publication* LookupPublication(DPS_Node* node, DPS_UUID* pubId)
 
 DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxBuffer* buf, int multicast)
 {
-    static const int32_t UnprotectedKeys[] = { DPS_CBOR_KEY_TTL };
+    static const int32_t UnprotectedKeys[] = { DPS_CBOR_KEY_TTL, DPS_CBOR_KEY_HOP_COUNT };
     static const int32_t UnprotectedOptKeys[] = { DPS_CBOR_KEY_PORT, DPS_CBOR_KEY_PATH };
     static const int32_t ProtectedKeys[] = { DPS_CBOR_KEY_TTL, DPS_CBOR_KEY_PUB_ID, DPS_CBOR_KEY_SEQ_NUM,
                                              DPS_CBOR_KEY_ACK_REQ, DPS_CBOR_KEY_BLOOM_FILTER };
@@ -721,6 +721,7 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxB
     uint32_t sequenceNum;
     int16_t ttl;
     int16_t baseTTL;
+    uint16_t hopCount;
     int ackRequested;
     size_t len;
     char* path = NULL;
@@ -759,6 +760,9 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxB
             if ((ret == DPS_OK) && (pathLen >= DPS_NODE_ADDRESS_PATH_MAX)) {
                 ret = DPS_ERR_INVALID;
             }
+            break;
+        case DPS_CBOR_KEY_HOP_COUNT:
+            ret = CBOR_DecodeUint16(rxBuf, &hopCount);
             break;
         }
         if (ret != DPS_OK) {
@@ -940,6 +944,7 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxB
     }
     req->status = DPS_ERR_NO_ROUTE;
     req->sequenceNum = sequenceNum;
+    req->hopCount = hopCount + 1;
     req->rxBuf = buf;
     DPS_NetRxBufferIncRef(buf);
     DPS_TxBufferInit(&req->bufs[0], protectedPtr, rxBuf->rxPos - protectedPtr);
@@ -998,7 +1003,7 @@ Exit:
              * TODO - should we be updating the pub history after an error?
              */
             DPS_UpdatePubHistory(&node->history, &pub->pubId, sequenceNum, pub->ackRequested, ttl,
-                                 &pub->senderAddr);
+                                 hopCount + 1, &pub->senderAddr);
             FreePublication(node, pub);
         }
         DPS_PublicationDecRef(pub);
@@ -1093,8 +1098,9 @@ DPS_Status DPS_SendPublication(DPS_PublishRequest* req, DPS_Publication* pub, Re
     len = CBOR_SIZEOF_ARRAY(5) +
         CBOR_SIZEOF(uint8_t) +
         CBOR_SIZEOF(uint8_t) +
-        CBOR_SIZEOF_MAP(2) + 2 * CBOR_SIZEOF(uint8_t) +
-        CBOR_SIZEOF(int16_t);   /* ttl */
+        CBOR_SIZEOF_MAP(3) + 3 * CBOR_SIZEOF(uint8_t) +
+        CBOR_SIZEOF(int16_t) +   /* ttl */
+        CBOR_SIZEOF(uint16_t);   /* hop-count */
     switch (node->addr.type) {
     case DPS_DTLS:
     case DPS_TCP:
@@ -1121,7 +1127,7 @@ DPS_Status DPS_SendPublication(DPS_PublishRequest* req, DPS_Publication* pub, Re
      * Encode the unprotected map
      */
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeMap(&buf, 2);
+        ret = CBOR_EncodeMap(&buf, 3);
     }
     switch (node->addr.type) {
     case DPS_DTLS:
@@ -1156,6 +1162,12 @@ DPS_Status DPS_SendPublication(DPS_PublishRequest* req, DPS_Publication* pub, Re
     default:
         break;
     }
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_HOP_COUNT);
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeUint16(&buf, req->hopCount);
+    }
     /*
      * Protected and encrypted maps are already serialized
      */
@@ -1177,10 +1189,21 @@ DPS_Status DPS_SendPublication(DPS_PublishRequest* req, DPS_Publication* pub, Re
                  */
                 DPS_PublicationIncRef(pub);
                 /*
+                 * TODO Disabling the below - it has two undesirable consequences:
+                 *   1. It screws up the hop count logic.
+                 *   2. It results in a large amount of history state when there are
+                 *      a lot of links present.
+                 * The original problem is now back - when a new link is created,
+                 * the entire network receives any retained publications, not only
+                 * the new link.
+                 */
+#if 0
+                /*
                  * Update history to prevent retained publications from being resent.
                  */
                 DPS_UpdatePubHistory(&node->history, &pub->pubId, req->sequenceNum,
-                                     pub->ackRequested, REQ_TTL(req), &remote->ep.addr);
+                                     pub->ackRequested, REQ_TTL(req), req->hopCount, &remote->ep.addr);
+#endif
             } else {
                 SendComplete(req, &remote->ep, bufs, 1 + req->numBufs, ret);
             }

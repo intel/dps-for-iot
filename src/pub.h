@@ -128,6 +128,7 @@ typedef struct _DPS_PublishRequest {
     void* data;                         /**< Context pointer */
     int16_t ttl;                        /**< Time to live in seconds - maximum TTL is about 9 hours */
     uint64_t expires;                   /**< Time (in milliseconds) that this publication expires */
+    uint16_t hopCount;                  /**< The current hop count of the publication */
     DPS_Status status;                  /**< Result of the publish */
     size_t refCount;                    /**< Prevent request from being freed while in use */
     uint32_t sequenceNum;               /**< Sequence number for this request */

@@ -1383,7 +1383,7 @@ static void DumpHistory(DPS_PubHistory* ph)
     DPS_PRINT("  %s(%d)%s %"PRIu64" [", DPS_UUIDToString(&ph->id), ph->sn, ph->ackRequested ? " ACK" : "",
               ph->expiration);
     for (addr = ph->addrs; addr; addr = addr->next) {
-        DPS_PRINT("%s%s(%d)", addr != ph->addrs ? "," : "", DPS_NodeAddrToString(&addr->addr), addr->sn);
+        DPS_PRINT("%s%s(%d,%d)", addr != ph->addrs ? "," : "", DPS_NodeAddrToString(&addr->addr), addr->sn, addr->hopCount);
     }
     DPS_PRINT("]\n");
     DumpHistory(ph->right);
