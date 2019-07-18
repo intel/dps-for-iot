@@ -24,6 +24,8 @@
 #include <stdio.h>
 #include <uv.h>
 #include "node.h"
+#include "compat.h"
+#include "topics.h"
 
 typedef struct _DiscoveryService DiscoveryService;
 
@@ -395,7 +397,7 @@ int main(int argc, char** argv)
                 ret = DPS_ERR_RESOURCES;
                 goto Exit;
             }
-            pub->topic = strdup(*arg);
+            pub->topic = strndup(*arg, DPS_MAX_TOPIC_STRLEN);
             if (!pub->topic) {
                 ret = DPS_ERR_RESOURCES;
                 goto Exit;
@@ -413,7 +415,7 @@ int main(int argc, char** argv)
                 ret = DPS_ERR_RESOURCES;
                 goto Exit;
             }
-            sub->topic = strdup(*arg);
+            sub->topic = strndup(*arg, DPS_MAX_TOPIC_STRLEN);
             if (!sub->topic) {
                 ret = DPS_ERR_RESOURCES;
                 goto Exit;

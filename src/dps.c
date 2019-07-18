@@ -1502,11 +1502,13 @@ DPS_Status DPS_StartNode(DPS_Node* node, int mcast, DPS_NodeAddress* listenAddr)
     r = uv_timer_init(node->loop, &node->subsTimer);
     assert(!r);
 
+#ifndef _WIN32
     node->sigusr1.data = node;
     r = uv_signal_init(node->loop, &node->sigusr1);
     assert(!r);
     r = uv_signal_start(&node->sigusr1, DumpNode, SIGUSR1);
     assert(!r);
+#endif
 
     node->requestAsync.data = node;
     r = uv_async_init(node->loop, &node->requestAsync, RunRequestsTask);
