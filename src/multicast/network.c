@@ -90,9 +90,7 @@ static void OnMcastRx(uv_udp_t* handle, ssize_t nread, const uv_buf_t* uvBuf, co
                       unsigned flags)
 {
     DPS_MulticastReceiver* receiver = (DPS_MulticastReceiver*)handle->data;
-    DPS_Node* node = receiver->node;
     DPS_NetRxBuffer* buf = NULL;
-    size_t i;
     DPS_NetEndpoint ep;
 
     if (!nread) {
@@ -102,14 +100,18 @@ static void OnMcastRx(uv_udp_t* handle, ssize_t nread, const uv_buf_t* uvBuf, co
         DPS_ERRPRINT("No buffer\n");
         goto Exit;
     }
-    /*
-     * Discard looped back multicast packets
-     */
     DPS_NetSetAddr(&ep.addr, DPS_UDP, addr);
-    for (i = 0; i < node->mcastSender->numTx; ++i) {
-        if (DPS_SameAddr(&ep.addr, &node->mcastSender->udpTx[i].addr)) {
-            DPS_DBGPRINT("Discarding loop-back multicast\n");
-            goto Exit;
+    /*
+     * If multicast sending is enabled discard looped back multicast packets
+     */
+    if (receiver->node->mcastSender) {
+        DPS_MulticastSender* sender = receiver->node->mcastSender;
+        size_t i;
+        for (i = 0; i < sender->numTx; ++i) {
+            if (DPS_SameAddr(&ep.addr, &sender->udpTx[i].addr)) {
+                DPS_DBGPRINT("Discarding loop-back multicast\n");
+                goto Exit;
+            }
         }
     }
 
@@ -400,6 +402,7 @@ DPS_MulticastSender* DPS_MulticastStartSend(DPS_Node* node)
 
 static void FreeSender(DPS_MulticastSender* sender)
 {
+    sender->node->mcastSender = NULL;
     free(sender->udpTx);
     free(sender);
 }

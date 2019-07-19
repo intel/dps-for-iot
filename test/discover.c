@@ -334,6 +334,7 @@ int DiscoveryStart(DiscoveryService* service, DPS_Node* node)
 
 Exit:
     if (ret != DPS_OK) {
+        DPS_ERRPRINT("Failed to start discovery: %s\n", DPS_ErrTxt(ret));
         DiscoveryStop(service);
     }
     return ret;
@@ -473,6 +474,11 @@ int main(int argc, char** argv)
     getc(stdin);
 
 Exit:
+
+    if (ret != DPS_OK) {
+        DPS_ERRPRINT("Exiting: %s\n", DPS_ErrTxt(ret));
+    }
+
     DiscoveryStop(&discovery);
     while (subs) {
         sub = subs;
