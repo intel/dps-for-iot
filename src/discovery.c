@@ -375,6 +375,7 @@ void DPS_DiscoveryStop(DPS_DiscoveryService* service)
 void DPS_DestroyDiscoveryService(DPS_DiscoveryService* service)
 {
     if (service) {
+        DPS_DiscoveryStop(service);
         if (service->topic) {
             free(service->topic);
         }
