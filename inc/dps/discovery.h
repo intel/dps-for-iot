@@ -23,6 +23,10 @@
 #ifndef _DPS_DISCOVERY_H
 #define _DPS_DISCOVERY_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdint.h>
 #include <dps/err.h>
 #include <dps/dps.h>
@@ -52,5 +56,8 @@ void DPS_DiscoveryStop(DPS_DiscoveryService* service);
   */
 void DPS_DestroyDiscoveryService(DPS_DiscoveryService* service);
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

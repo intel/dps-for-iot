@@ -277,7 +277,7 @@ void DPS_DumpPubs(DPS_Node* node);
 #ifdef DPS_DEBUG
 void DPS_DumpPub(DPS_Publication* pub);
 #else
-void DPS_DumpPub(pub)
+#define DPS_DumpPub(pub)
 #endif
 
 #ifdef __cplusplus
