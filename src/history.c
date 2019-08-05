@@ -395,7 +395,7 @@ DPS_Status DPS_LookupPublisherForAck(DPS_History* history, const DPS_UUID* pubId
         hopCount = ph->addrs->hopCount;
         for (na = ph->addrs->next; na; na = na->next) {
             if (na->hopCount < hopCount) {
-                *addr = &ph->addrs->addr;
+                *addr = &na->addr;
             }
         }
         ret = DPS_OK;
