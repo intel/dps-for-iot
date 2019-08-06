@@ -192,8 +192,8 @@ extern const DPS_UUID DPS_MaxMeshId;
  */
 typedef struct _RemoteNode {
     OnOpCompletion* completion;        /**< Completion context for link and unlink operations */
-    uint8_t linked;                    /**< TRUE if this is a node that was explicitly linked */
     uint8_t unlink;                    /**< TRUE if this node is about to be unlinked */
+    uint8_t weak;                      /**< TRUE if this is a weak link (affects muting behavior) */
     /** Inbound state */
     struct {
         uint8_t muted;                 /**< TRUE if the remote informed us the that link is muted */

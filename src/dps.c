@@ -171,25 +171,21 @@ void DPS_RxBufferToTx(const DPS_RxBuffer* rxBuffer, DPS_TxBuffer* txBuffer)
 void DPS_RemoteCompletion(DPS_Node* node, OnOpCompletion* completion, DPS_Status status)
 {
     RemoteNode* remote = completion->remote;
-    DPS_NodeAddress* addr = NULL;
 
-    /*
-     * See AllocCompletion() timer.data is only set if the timer handle
-     * was successfully initialized
-     */
     if (remote) {
+        DPS_NodeAddress* addr = &remote->ep.addr;
         remote->completion = NULL;
-        addr = &remote->ep.addr;
-    }
-    if (completion->op == LINK_OP) {
-        completion->on.link(node, addr, status, completion->data);
-    } else if (completion->op == UNLINK_OP) {
-        completion->on.unlink(node, addr, completion->data);
+        if (completion->op == LINK_OP) {
+            completion->on.link(node, addr, status, completion->data);
+        } else if (completion->op == UNLINK_OP) {
+            completion->on.unlink(node, addr, completion->data);
+            status = DPS_ERR_MISSING;
+        }
+        if ((status != DPS_OK) && (status != DPS_ERR_EXISTS)) {
+            DPS_DeleteRemoteNode(node, remote);
+        }
     }
     free(completion);
-    if ((status != DPS_OK) && (status != DPS_ERR_EXISTS)) {
-        DPS_DeleteRemoteNode(node, remote);
-    }
 }
 
 static int IsValidRemoteNode(DPS_Node* node, RemoteNode* remote)
@@ -259,6 +255,7 @@ void DPS_DeleteRemoteNode(DPS_Node* node, RemoteNode* remote)
     DPS_DBGTRACE();
 
     if (!IsValidRemoteNode(node, remote)) {
+        DPS_ERRPRINT("Attempt to delete invalid remote %p\n", remote);
         return;
     }
     if (remote->monitor) {
@@ -280,7 +277,8 @@ void DPS_DeleteRemoteNode(DPS_Node* node, RemoteNode* remote)
     DPS_BitVectorFree(remote->outbound.delta);
 
     if (remote->completion) {
-        DPS_RemoteCompletion(node, remote->completion, DPS_ERR_FAILURE);
+        remote->completion->remote = NULL;
+        DPS_RemoteCompletion(node, remote->completion, DPS_ERR_MISSING);
     }
     /*
      * This tells the network layer we no longer need to keep connection alive for this address
@@ -1422,8 +1420,7 @@ static void DumpNode(uv_signal_t* handle, int signum)
     }
     DPS_PRINT("remoteNodes\n");
     for (remote = node->remoteNodes; remote; remote = remote->next) {
-        DPS_PRINT("  %s %s muted=%d/%d\n", DPS_NodeAddrToString(&remote->ep.addr),
-                  remote->linked ? "LINKED" : "UNLINKED",
+        DPS_PRINT("  %s muted=%d/%d\n", DPS_NodeAddrToString(&remote->ep.addr),
                   remote->outbound.muted, remote->inbound.muted);
     }
     DPS_PRINT("history\n");
@@ -1666,7 +1663,7 @@ void DPS_SetNodeSubscriptionUpdateDelay(DPS_Node* node, uint32_t subsRateMsecs)
     node->subsRate = subsRateMsecs;
 }
 
-static DPS_Status Link(DPS_Node* node, const DPS_NodeAddress* addr, OnOpCompletion* completion)
+static DPS_Status Link(DPS_Node* node, const DPS_NodeAddress* addr, OnOpCompletion* completion, int weak)
 {
     RemoteNode* remote = NULL;
     DPS_Status ret;
@@ -1677,21 +1674,11 @@ static DPS_Status Link(DPS_Node* node, const DPS_NodeAddress* addr, OnOpCompleti
         goto Exit;
     }
     ret = DPS_AddRemoteNode(node, addr, NULL, &remote);
-    if (ret != DPS_OK && ret != DPS_ERR_EXISTS) {
+    if (ret != DPS_OK) {
         goto Exit;
     }
     completion->remote = remote;
-    /*
-     * Remote may already exist due to incoming data which is ok,
-     * but if we already linked it we return an error.
-     */
-    if (remote->linked) {
-        DPS_WARNPRINT("Node at %s already linked\n", DPS_NodeAddrToString(addr));
-        ret = DPS_ERR_EXISTS;
-        goto Exit;
-    }
-    assert(!remote->completion);
-    remote->linked = DPS_TRUE;
+    remote->weak = weak;
     remote->completion = completion;
     ret = DPS_OK;
 Exit:
@@ -1712,10 +1699,30 @@ static void OnResolve(DPS_Node* node, const DPS_NodeAddress* addr, void* data)
     OnOpCompletion* completion = (OnOpCompletion*)data;
     DPS_Status ret;
 
-    ret = Link(node, addr, completion);
+    ret = Link(node, addr, completion, DPS_FALSE);
     if (ret != DPS_OK) {
         DPS_RemoteCompletion(node, completion, ret);
     }
+}
+
+DPS_Status DPS_LinkRemoteAddr(DPS_Node* node, const DPS_NodeAddress* addr, DPS_OnLinkComplete cb, void* data, int weak)
+{
+    DPS_Status ret = DPS_OK;
+    OnOpCompletion* completion = NULL;
+
+    if (!addr || !node) {
+        return DPS_ERR_NULL;
+    }
+    completion = AllocCompletion(node, NULL, LINK_OP, data, cb);
+    if (completion) {
+        ret = Link(node, addr, completion, weak);
+    } else {
+        ret = DPS_ERR_RESOURCES;
+    }
+    if (ret != DPS_OK) {
+        free(completion);
+    }
+    return ret;
 }
 
 DPS_Status DPS_Link(DPS_Node* node, const char* addrText, DPS_OnLinkComplete cb, void* data)
@@ -1761,7 +1768,7 @@ DPS_Status DPS_Link(DPS_Node* node, const char* addrText, DPS_OnLinkComplete cb,
         ret = DPS_ERR_INVALID;
         goto Exit;
     }
-    ret = Link(node, addr, completion);
+    ret = Link(node, addr, completion, DPS_FALSE);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Link returned %s\n", DPS_ErrTxt(ret));
         goto Exit;
@@ -1788,7 +1795,7 @@ DPS_Status DPS_Unlink(DPS_Node* node, const DPS_NodeAddress* addr, DPS_OnUnlinkC
     }
     DPS_LockNode(node);
     remote = DPS_LookupRemoteNode(node, addr);
-    if (!remote || !remote->linked) {
+    if (!remote) {
         DPS_UnlockNode(node);
         return DPS_ERR_MISSING;
     }

@@ -58,6 +58,7 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
 #define DPS_SUB_FLAG_DELTA_IND  0x01      /* Indicate interests is a delta */
 #define DPS_SUB_FLAG_MUTE_IND   0x02      /* Mute has been indicated */
+#define DPS_SUB_FLAG_WEAK_IND   0x04      /* Link is marked as WEAK by the initiator */
 
 static int IsValidSub(const DPS_Subscription* sub)
 {
@@ -274,6 +275,9 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote)
     if (remote->outbound.muted) {
         flags |= DPS_SUB_FLAG_MUTE_IND;
     }
+    if (remote->weak) {
+        flags |= DPS_SUB_FLAG_WEAK_IND;
+    }
 
     len = CBOR_SIZEOF_ARRAY(5) +
         CBOR_SIZEOF(uint8_t) +
@@ -439,7 +443,6 @@ static DPS_Status SendSubscriptionAck(DPS_Node* node, RemoteNode* remote, uint32
     if (!node->netCtx) {
         return DPS_ERR_NETWORK;
     }
-
     /*
      * Set flags
      */
@@ -448,6 +451,9 @@ static DPS_Status SendSubscriptionAck(DPS_Node* node, RemoteNode* remote, uint32
     }
     if (remote->outbound.muted) {
         flags |= DPS_SUB_FLAG_MUTE_IND;
+    }
+    if (remote->weak) {
+        flags |= DPS_SUB_FLAG_WEAK_IND;
     }
 
     len = CBOR_SIZEOF_ARRAY(5) +
@@ -770,7 +776,7 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRx
         DPS_LockNode(node);
         remote = DPS_LookupRemoteNode(node, &ep->addr);
         if (remote) {
-            SendSubscriptionAck(node, remote, revision, DPS_FALSE);
+            DPS_PRINT("Received unlink for %s\n", DESCRIBE(remote));
             DPS_DeleteRemoteNode(node, remote);
             /*
              * Evaluate impact of losing the remote's interests
@@ -801,6 +807,7 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRx
     if (ret != DPS_OK) {
         goto DiscardAndExit;
     }
+    remote->weak |= ((flags & DPS_SUB_FLAG_WEAK_IND) != 0);
     /*
      * Discard stale subscriptions
      */
@@ -835,10 +842,10 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRx
         DPS_DBGPRINT("Remote %s has unumuted\n", DESCRIBE(remote));
         ret = DPS_UnmuteRemoteNode(node, remote);
     } else if (DPS_MeshHasLoop(node, remote, &meshId)) {
-        DPS_DBGPRINT("Loop detected by %s for %s\n", node->addrStr, DESCRIBE(remote));
         if (!remote->outbound.muted) {
             DPS_MuteRemoteNode(node, remote);
         }
+        DPS_DBGPRINT("Loop detected by %s for %s\n", node->addrStr, DESCRIBE(remote));
     }
 
     if (!remote->outbound.muted) {
@@ -854,6 +861,12 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRx
     } else {
         DPS_BitVectorFree(interests);
         DPS_BitVectorFree(needs);
+        /*
+         * If the remote is weakly connected and muted it should be unlinked
+         */
+        if (remote->weak) {
+            remote->unlink = DPS_TRUE;
+        }
     }
     /*
      * Track the minimum mesh id we have seen
@@ -862,7 +875,7 @@ DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRx
         memcpy_s(&node->minMeshId, sizeof(node->minMeshId), &meshId, sizeof(DPS_UUID));
     }
     /*
-     * All is good so send an ACK
+     * If all is good send an ACK
      */
     if (ret == DPS_OK) {
         if (remoteIsNew) {
@@ -913,7 +926,7 @@ DPS_Status DPS_DecodeSubscriptionAck(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
      * Parse keys from unprotected map
      */
     ret = DPS_ParseMapInit(&mapState, rxBuf, UnprotectedKeys, A_SIZEOF(UnprotectedKeys),
-                           UnprotectedOptKeys, A_SIZEOF(UnprotectedOptKeys));
+            UnprotectedOptKeys, A_SIZEOF(UnprotectedOptKeys));
     if (ret != DPS_OK) {
         return ret;
     }
@@ -967,7 +980,7 @@ DPS_Status DPS_DecodeSubscriptionAck(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
      */
     if (((DPS_Rand() % SIMULATE_PACKET_LOSS) == 1)) {
         DPS_PRINT("%s Simulating lost sub ack from %s\n", node->addrStr,
-                  DPS_NodeAddrToString(&ep->addr));
+                DPS_NodeAddrToString(&ep->addr));
         return DPS_OK;
     }
 #endif

@@ -572,7 +572,7 @@ const char* DPS_GetListenAddressString(DPS_Node* node);
 typedef void (*DPS_OnLinkComplete)(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, void* data);
 
 /**
- * Link the local node to a remote node
+ * Link the local node to a remote node.
  *
  * @param node     The local node to use
  * @param addrText The text string of the address to link to

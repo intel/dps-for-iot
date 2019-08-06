@@ -14,8 +14,8 @@ foreach my $filename (@ARGV) {
 	if ($line =~ /node .*:(\d+)$/) {
 	    $a = $1;
 	    push(@nodes, $a)
-	} elsif ($line =~ /  .*:(\d+) (UNLINKED|LINKED) muted=(\d)\/(\d)/) {
-	    my ($b, $outbound_muted, $inbound_muted) = ($1, $3, $4);
+	} elsif ($line =~ /  .*:(\d+) muted=(\d)\/(\d)/) {
+	    my ($b, $outbound_muted, $inbound_muted) = ($1, $2, $3);
 	    my $ab_muted = "$outbound_muted/$inbound_muted";
 	    my $ba_muted = "$inbound_muted/$outbound_muted";
 	    if (($arcs{"$a -- $b"} && $arcs{"$a -- $b"} eq $ab_muted) ||

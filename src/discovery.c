@@ -135,8 +135,8 @@ static void DiscoveryOnAck(DPS_Publication* pub, uint8_t* payload, size_t len)
     remoteSubs.base = payload;
     remoteSubs.len = len;
     if (DPS_MatchPublications(node, &remoteSubs)) {
-        ret = DPS_Link(node, DPS_NodeAddrToString(DPS_AckGetSenderAddress(pub)), DiscoveryLinkCb, service);
-        if (ret != DPS_OK) {
+        ret = DPS_LinkRemoteAddr(node, DPS_AckGetSenderAddress(pub), DiscoveryLinkCb, service, DPS_TRUE/*weak*/);
+        if (ret != DPS_OK && ret != DPS_ERR_EXISTS) {
             DPS_ERRPRINT("DPS_Link failed - %s\n", DPS_ErrTxt(ret));
         }
     }
@@ -264,8 +264,8 @@ static void DiscoveryOnPub(DPS_Subscription* sub, const DPS_Publication* pub, ui
     remoteSubs.base = payload;
     remoteSubs.len = len;
     if (DPS_MatchPublications(node, &remoteSubs)) {
-        ret = DPS_Link(node, DPS_NodeAddrToString(DPS_PublicationGetSenderAddress(pub)), DiscoveryLinkCb, service);
-        if (ret != DPS_OK) {
+        ret = DPS_LinkRemoteAddr(node, DPS_PublicationGetSenderAddress(pub), DiscoveryLinkCb, service, DPS_TRUE/*weak*/);
+        if (ret != DPS_OK && ret != DPS_ERR_EXISTS) {
             DPS_ERRPRINT("DPS_Link failed - %s\n", DPS_ErrTxt(ret));
         }
     } else if (DPS_PublicationIsAckRequested(pub)) {

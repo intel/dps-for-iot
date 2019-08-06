@@ -250,12 +250,10 @@ DPS_Status DPS_LinkMonitorStart(DPS_Node* node, RemoteNode* remote)
     assert(remote->outbound.muted && remote->inbound.muted);
 
     /*
-     * We only monitor a muted link from the passive side
-     *
-     * TODO - the linked flags may not be reliable - we
-     * need a different tie breaker if possible.
+     * We only monitor a muted link from one side. Use a lexical comparison
+     * of the local node and remote node addresses as the tie-breaker.
      */
-    if (remote->linked) {
+    if (DPS_CmpAddr(&remote->ep.addr, &node->addr) < 0) {
         return DPS_OK;
     }
     assert(!remote->monitor);
