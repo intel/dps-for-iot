@@ -21,11 +21,10 @@ random.seed(seed)
 
 ns = []
 for i in range(num_nodes):
-    pubs = random.choice(["A"])
-    subs = random.choice(["A"])
-#    pubs = random.choice(["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L"])
-#    subs = random.choice(["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L"])
-    ns.append(discover("-p " + pubs + " -s " + subs))
+    topics = list(range(1, 13))
+    choices = ['-p ' + str(topic) for topic in topics]
+    choices.extend(['-s ' + str(topic) for topic in topics])
+    ns.append(discover(random.choice(choices)))
 
 # Wait a bit for discovery to settle
 time.sleep(10)
