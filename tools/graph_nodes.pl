@@ -51,7 +51,7 @@ foreach my $topic (keys %subgraphs) {
     foreach my $p (@{$subgraphs{$topic}{"p"}}) {
 	foreach my $s (@{$subgraphs{$topic}{"s"}}) {
 	    my @path = $graph->SP_Dijkstra($p, $s);
-	    push(@path_lengths, scalar(@path));
+	    push(@path_lengths, scalar(@path) - 1);
 	}
     }
 }
