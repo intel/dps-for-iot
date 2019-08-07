@@ -310,7 +310,7 @@ DPS_Status DPS_UpdatePubHistory(DPS_History* history, DPS_UUID* pubId, uint32_t 
         FreePubHistory(phNew);
         UnlinkPub(history, ph);
     }
-    ph->sn = sequenceNum;
+    ph->sn = MAX(ph->sn, sequenceNum);
     ph->ackRequested = ackRequested;
     /*
      * The address is not set in publications being sent from the local node
@@ -326,13 +326,14 @@ DPS_Status DPS_UpdatePubHistory(DPS_History* history, DPS_UUID* pubId, uint32_t 
             (*phAddr) = calloc(1, sizeof(DPS_NodeAddressList));
             if ((*phAddr)) {
                 (*phAddr)->addr = *addr;
+                (*phAddr)->hopCount = hopCount;
                 DPS_DBGPRINT("Added %s to pub %s\n", DPS_NodeAddrToString(&(*phAddr)->addr),
                              DPS_UUIDToString(pubId));
             }
         }
         if ((*phAddr)) {
-            (*phAddr)->sn = sequenceNum;
-            (*phAddr)->hopCount = hopCount;
+            (*phAddr)->sn = MAX((*phAddr)->sn, sequenceNum);
+            (*phAddr)->hopCount = MIN((*phAddr)->hopCount, hopCount);
         }
     }
     ph->expiration = now + DPS_SECS_TO_MS(ttl) + PUB_HISTORY_LIFETIME;
