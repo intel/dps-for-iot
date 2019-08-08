@@ -1051,21 +1051,23 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxB
     ret = DPS_OK;
 
 Exit:
-    if (req && (ret != DPS_OK)) {
-        assert(pub);
-        req->status = ret;
-        DPS_DestroyPublishRequest(req);
-    }
-    if (pub) {
-        if (ret != DPS_OK) {
-            /*
-             * TODO - should we be updating the pub history after an error?
-             */
-            DPS_UpdatePubHistory(&node->history, &pub->pubId, sequenceNum, pub->ackRequested, ttl,
-                                 hopCount + 1, &pub->senderAddr);
+    if (ret == DPS_OK) {
+        DPS_PublicationDecRef(pub);
+    } else {
+        if (req) {
+            assert(pub);
+            req->status = ret;
+            DPS_DestroyPublishRequest(req);
+        }
+        if (pub) {
             FreePublication(node, pub);
         }
-        DPS_PublicationDecRef(pub);
+        /*
+         * Update the history since we may have received the shortest
+         * path out of order
+         */
+        DPS_UpdatePubHistory(&node->history, &pubId, sequenceNum, ackRequested, ttl < 0 ? 0 : ttl,
+                             hopCount + 1, &ep->addr);
     }
     DPS_UnlockNode(node);
     return ret;

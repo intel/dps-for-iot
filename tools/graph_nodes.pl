@@ -3,62 +3,92 @@
 use strict;
 use warnings;
 use Data::Dumper qw(Dumper);
+use Graph::Undirected;
+use List::Util qw(min max);
+use Statistics::Basic qw(:all);
 
-my (@nodes, %arcs) = ((), ());
+my $graph = Graph::Undirected->new();
+my $muted = Graph::Undirected->new();
+my %subgraphs;
+my @path_lengths = ();
+
+my (@roles, @topics, @nodes) = ((), (), ());
 
 foreach my $filename (@ARGV) {
-    my ($a);
+    my ($a, $role, $topic);
     open(my $fh, '<', $filename) or die "Could not open file '$filename' $!";
     while (my $line = <$fh>) {
 	chomp($line);
-	if ($line =~ /node .*:(\d+)$/) {
+	if ($line =~ /discover\d+ -(p|s) ([A-Z])$/) {
+	    ($role, $topic) = ($1, $2);
+	    push(@roles, $role);
+	    push(@topics, $topic);
+	} elsif ($line =~ /node .*:(\d+)$/) {
 	    $a = $1;
-	    push(@nodes, $a)
-	} elsif ($line =~ /  .*:(\d+) (UNLINKED|LINKED) muted=(\d)\/(\d)/) {
-	    my ($b, $outbound_muted, $inbound_muted) = ($1, $3, $4);
-	    my $ab_muted = "$outbound_muted/$inbound_muted";
-	    my $ba_muted = "$inbound_muted/$outbound_muted";
-	    if (($arcs{"$a -- $b"} && $arcs{"$a -- $b"} eq $ab_muted) ||
-		($arcs{"$b -- $a"} && $arcs{"$b -- $a"} eq $ba_muted)) {
-		# arc is entered or symmetrical with respect to
-		# muting, so only include one arc in the graph
+	    push(@nodes, $a);
+	    if (exists($subgraphs{$topic}{$role})) {
+		push(@{$subgraphs{$topic}{$role}}, $a);
 	    } else {
-		$arcs{"$a -- $b"} = $ab_muted;
+		$subgraphs{$topic}{$role} = [$a];
+	    }
+	} elsif ($line =~ /  .*:(\d+) (UNLINKED|LINKED) muted=(\d\/\d)/) {
+	    my ($b, $m) = ($1, $3);
+	    if ($m eq "0/0") {
+		if (!$graph->has_edge($a, $b) && !$graph->has_edge($b, $a)) {
+		    $graph->add_edge($a, $b);
+		}
+	    } else {
+		if (!$muted->has_edge($a, $b) && !$muted->has_edge($b, $a)) {
+		    $muted->add_edge($a, $b);
+		}
 	    }
 	}
     }
     close($fh);
 }
 
-my ($nnodes, $narcs, $nmuted) = (scalar(@nodes), scalar(%arcs), 0);
-foreach my $arc (keys(%arcs)) {
-    # when either direction is muted, PUBs will not be sent
-    if ($arcs{$arc} ne "0/0") {
-	++$nmuted;
+foreach my $topic (keys %subgraphs) {
+    foreach my $p (@{$subgraphs{$topic}{"p"}}) {
+	foreach my $s (@{$subgraphs{$topic}{"s"}}) {
+	    my @path = $graph->SP_Dijkstra($p, $s);
+	    push(@path_lengths, scalar(@path) - 1);
+	}
     }
 }
 
 print "graph {\n";
-print "  node[shape=circle, fontsize=10, margin=\"0.01,0.01\", fixedsize=true];\n";
 print "  overlap=false;\n";
 print "  splines=true;\n";
 print "  subgraph cluster_1 {\n";
 print "    style=invis;\n";
-print "    1000[shape=none, width=1, style=bold, height=1, fontsize=12, label=\"nodes=$nnodes\\narcs=$narcs\\nmuted=$nmuted\"];\n";
+
+my $label =
+    "\"Nodes=" . $graph->vertices() .
+    "\\lArcs=" . $graph->edges() .
+    "\\lMuted=" . $muted->vertices() .
+    "\\lMean=" . mean(@path_lengths) .
+    "\\lStd Dev=" . stddev(@path_lengths) .
+    "\\lMinimum=" . min(@path_lengths) . " [" . scalar(grep { $_ == min(@path_lengths) } @path_lengths) . "]" .
+    "\\lMaximum=" . max(@path_lengths) . " [" . scalar(grep { $_ == max(@path_lengths) } @path_lengths) . "]" .
+    "\\lMedian=" . median(@path_lengths) . " [" . scalar(grep { $_ == median(@path_lengths) } @path_lengths) . "]" .
+    "\\l\"";
 print "    subgraph cluster1 {\n";
-print "      node[style=filled, fillcolor=palegreen3];\n";
-foreach my $arc (keys(%arcs)) {
-    if ($arcs{$arc} eq "0/0") {
-	print "      $arc [len=1,dir=both];\n";
-    } elsif ($arcs{$arc} eq "0/1") {
-	print "      $arc [len=1,dir=forward,style=dotted];\n";
-    } elsif ($arcs{$arc} eq "1/0") {
-	print "      $arc [len=1,dir=back,style=dotted];\n";
-    } elsif ($arcs{$arc} eq "1/1") {
-	# TODO including muted links tends to overload graphviz
-#   print "      $arc [len=1,dir=none,color=red,style=dotted];\n";
-    }
+print "      node[fontsize=10, margin=\"0.01,0.01\", fixedsize=true, colorscheme=\"paired12\"];\n";
+print "      1000[shape=none, width=1, style=bold, height=1, fontsize=12, label=$label];\n";
+for (my $i = 0; $i < scalar(@nodes); ++$i) {
+    my $shape = $roles[$i] eq "p" ? "doublecircle" : "circle";
+    my $color = ord($topics[$i]) - ord("A") + 1;
+    print "      $nodes[$i]\[shape=$shape, style=filled, color=$color, label=\"$nodes[$i]\"];\n";
 }
+foreach my $e ($graph->edges()) {
+    my ($a, $b) = @{$e};
+    print "      $a -- $b [len=1, dir=both];\n";
+}
+# TODO including muted links tends to overload graphviz
+#foreach my $e ($muted->edges()) {
+#    my ($a, $b) = @{$e};
+#    print "      $a -- $b [len=1, dir=both, style=dotted];\n";
+#}
 print "    }\n";
 print "  }\n";
 print "}\n";
