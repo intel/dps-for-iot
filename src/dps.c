@@ -183,7 +183,9 @@ void DPS_RemoteCompletion(DPS_Node* node, OnOpCompletion* completion, DPS_Status
 
     if (remote) {
         DPS_NodeAddress* addr = &remote->ep.addr;
-        remote->completion = NULL;
+        if (remote->completion == completion) {
+            remote->completion = NULL;
+        }
         if (completion->op == LINK_OP) {
             /*
              * State should be either LINKING or MUTED
