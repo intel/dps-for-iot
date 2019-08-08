@@ -7,8 +7,8 @@ use Graph::Undirected;
 use List::Util qw(min max);
 use Statistics::Basic qw(:all);
 
-my $graph = Graph::Undirected->new;
-my $muted = Graph::Undirected->new;
+my $graph = Graph::Undirected->new();
+my $muted = Graph::Undirected->new();
 my %subgraphs;
 my @path_lengths = ();
 
@@ -19,7 +19,7 @@ foreach my $filename (@ARGV) {
     open(my $fh, '<', $filename) or die "Could not open file '$filename' $!";
     while (my $line = <$fh>) {
 	chomp($line);
-	if ($line =~ /discover\d+ -(p|s) (\d+)$/) {
+	if ($line =~ /discover\d+ -(p|s) ([A-Z])$/) {
 	    ($role, $topic) = ($1, $2);
 	    push(@roles, $role);
 	    push(@topics, $topic);
@@ -56,6 +56,12 @@ foreach my $topic (keys %subgraphs) {
     }
 }
 
+print "graph {\n";
+print "  overlap=false;\n";
+print "  splines=true;\n";
+print "  subgraph cluster_1 {\n";
+print "    style=invis;\n";
+
 my $label =
     "\"Nodes=" . $graph->vertices() .
     "\\lArcs=" . $graph->edges() .
@@ -66,18 +72,13 @@ my $label =
     "\\lMaximum=" . max(@path_lengths) . " [" . scalar(grep { $_ == max(@path_lengths) } @path_lengths) . "]" .
     "\\lMedian=" . median(@path_lengths) . " [" . scalar(grep { $_ == median(@path_lengths) } @path_lengths) . "]" .
     "\\l\"";
-
-print "graph {\n";
-print "  node[fontsize=10, margin=\"0.01,0.01\", fixedsize=true, colorscheme=\"paired12\"];\n";
-print "  overlap=false;\n";
-print "  splines=true;\n";
-print "  subgraph cluster_1 {\n";
-print "    style=invis;\n";
-print "    1000[shape=none, width=1, style=bold, height=1, fontsize=12, label=$label];\n";
 print "    subgraph cluster1 {\n";
+print "      node[fontsize=10, margin=\"0.01,0.01\", fixedsize=true, colorscheme=\"paired12\"];\n";
+print "      1000[shape=none, width=1, style=bold, height=1, fontsize=12, label=$label];\n";
 for (my $i = 0; $i < scalar(@nodes); ++$i) {
     my $shape = $roles[$i] eq "p" ? "doublecircle" : "circle";
-    print "      $nodes[$i]\[shape=$shape, style=filled, color=\"$topics[$i]\"];\n";
+    my $color = ord($topics[$i]) - ord("A") + 1;
+    print "      $nodes[$i]\[shape=$shape, style=filled, color=$color, label=\"$nodes[$i]\"];\n";
 }
 foreach my $e ($graph->edges()) {
     my ($a, $b) = @{$e};
