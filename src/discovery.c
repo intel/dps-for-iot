@@ -121,7 +121,7 @@ static void DiscoveryLinkCb(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status st
     if (status == DPS_OK) {
         DPS_PRINT("Node is linked to %s\n", DPS_NodeAddrToString(addr));
     } else if (status != DPS_ERR_EXISTS) {
-        DPS_ERRPRINT("Node is not linked to %s\n", DPS_NodeAddrToString(addr), DPS_ErrTxt(status));
+        DPS_ERRPRINT("DPS_Link failed - %s\n", DPS_ErrTxt(status));
     }
 }
 
