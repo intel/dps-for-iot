@@ -178,7 +178,9 @@ void DPS_RemoteCompletion(DPS_Node* node, OnOpCompletion* completion, DPS_Status
      * was successfully initialized
      */
     if (remote) {
-        remote->completion = NULL;
+        if (remote->completion == completion) {
+            remote->completion = NULL;
+        }
         addr = &remote->ep.addr;
     }
     if (completion->op == LINK_OP) {
