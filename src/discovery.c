@@ -34,6 +34,11 @@
 #include "node.h"
 #include "pub.h"
 
+/*
+ * Debug control for this module
+ */
+DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
+
 typedef struct _AckRequest {
     DPS_DiscoveryService* service;
     DPS_Publication* pub;
@@ -51,7 +56,11 @@ typedef struct _DPS_DiscoveryService {
 
 DPS_DiscoveryService* DPS_CreateDiscoveryService(DPS_Node* node, const char* serviceId)
 {
-    DPS_DiscoveryService* svc = calloc(1, sizeof(DPS_DiscoveryService));
+    DPS_DiscoveryService* svc = NULL;
+
+    DPS_DBGTRACEA("node=%p,serviceId=%s\n", node, serviceId);
+
+    svc = calloc(1, sizeof(DPS_DiscoveryService));
     if (svc) {
         svc->node = node;
         svc->topic = malloc(sizeof("$DPS_Discovery/") + strlen(serviceId) + 1);
@@ -119,7 +128,7 @@ static void TimerCloseCb(uv_handle_t* timer)
 static void LinkCb(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, void* data)
 {
     if (status == DPS_OK) {
-        DPS_PRINT("Node is linked to %s\n", DPS_NodeAddrToString(addr));
+        DPS_DBGPRINT("Node is linked to %s\n", DPS_NodeAddrToString(addr));
     } else if (status != DPS_ERR_EXISTS) {
         DPS_ERRPRINT("DPS_Link failed - %s\n", DPS_ErrTxt(status));
     }
@@ -304,6 +313,8 @@ DPS_Status DPS_DiscoveryStart(DPS_DiscoveryService* service)
     DPS_Status ret;
     static const int noWildcard = DPS_TRUE;
 
+    DPS_DBGTRACEA("service=%p\n", service);
+
     if (!service) {
         return DPS_ERR_NULL;
     }
@@ -401,6 +412,8 @@ static void DestroyService(void* data)
 
 void DPS_DestroyDiscoveryService(DPS_DiscoveryService* service)
 {
+    DPS_DBGTRACEA("service=%p\n", service);
+
     if (service) {
         DPS_NodeScheduleRequest(service->node, DestroyService, service);
     }
