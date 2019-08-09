@@ -32,6 +32,7 @@
 #include <dps/private/dps.h>
 
 #include "node.h"
+#include "pub.h"
 
 typedef struct _AckRequest {
     DPS_DiscoveryService* service;
@@ -47,7 +48,6 @@ typedef struct _DPS_DiscoveryService {
     uint64_t nextTimeout;
     char* topic;
 } DPS_DiscoveryService;
-
 
 DPS_DiscoveryService* DPS_CreateDiscoveryService(DPS_Node* node, const char* serviceId)
 {
@@ -384,4 +384,3 @@ void DPS_DestroyDiscoveryService(DPS_DiscoveryService* service)
         DPS_DestroySubscription(service->sub, OnSubscriptionDestroyed);
     }
 }
-

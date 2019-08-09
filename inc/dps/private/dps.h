@@ -307,6 +307,44 @@ typedef struct _DPS_NetRxBuffer DPS_NetRxBuffer;
  */
 DPS_NetRxBuffer* DPS_PublicationGetNetRxBuffer(const DPS_Publication* pub);
 
+/**
+ * Create a buffer containing this node's subscriptions.
+ *
+ * @param node   The node
+ * @param subs   The returned buffer, the base pointer must be freed by the caller
+ *
+ * @return DPS_OK if successful, an error otherwise
+ *
+ * @see DPS_MatchPublications()
+ */
+DPS_Status DPS_SerializeSubscriptions(DPS_Node* node, DPS_Buffer* subs);
+
+/**
+ * Check if this node's publications match the provided subscriptions.
+ *
+ * @param node         The node
+ * @param remoteSubs   The serialized subscriptions to match
+ *
+ * @return DPS_TRUE if matched
+ *
+ * @see DPS_SerializeSubscriptions()
+ */
+int DPS_MatchPublications(DPS_Node* node, const DPS_Buffer* remoteSubs);
+
+/**
+ * Enables serialization on a per-subscription basis.
+ *
+ * The default is to include the subscription in the output of DPS_SerializeSubscriptions().
+ *
+ * @param sub        The subscription
+ * @param serialize  Indicates if this subscription shall be serialized
+ *
+ * @return DPS_OK if successful, an error otherwise
+ *
+ * @see DPS_SerializeSubscriptions()
+ */
+DPS_Status DPS_SubscriptionSetSerialize(DPS_Subscription* sub, int serialize);
+
 #ifdef __cplusplus
 }
 #endif

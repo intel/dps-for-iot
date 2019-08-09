@@ -1,6 +1,5 @@
 {
   global:
-    DPS_AckGetSenderAddress;
     DPS_AckGetSenderKeyId;
     DPS_AckGetSequenceNum;
     DPS_AckPublication;
@@ -45,13 +44,11 @@
     DPS_LinkTo;
     DPS_Log;
     DPS_LogBytes;
-    DPS_MatchPublications;
     DPS_MemoryKeyStoreHandle;
     DPS_NodeAddrToString;
     DPS_PublicationAddSubId;
     DPS_PublicationGetNode;
     DPS_PublicationGetNumTopics;
-    DPS_PublicationGetSenderAddress;
     DPS_PublicationGetSenderKeyId;
     DPS_PublicationGetSequenceNum;
     DPS_PublicationGetTopic;
@@ -59,7 +56,6 @@
     DPS_PublicationGetUUID;
     DPS_PublicationIsAckRequested;
     DPS_PublicationRemoveSubId;
-    DPS_PublicationSetMulticast;
     DPS_Publish;
     DPS_PublishBufs;
     DPS_Registration_Get;
@@ -70,7 +66,6 @@
     DPS_Registration_PutSyn;
     DPS_RegistryTopicString;
     DPS_ResolveAddress;
-    DPS_SerializeSubscriptions;
     DPS_SetAddress;
     DPS_SetCA;
     DPS_SetCertificate;
@@ -92,7 +87,6 @@
     DPS_SubscriptionGetNode;
     DPS_SubscriptionGetNumTopics;
     DPS_SubscriptionGetTopic;
-    DPS_SubscriptionSetSerialize;
     DPS_TimedWaitForEvent;
     DPS_Unlink;
     DPS_UnlinkFrom;

@@ -259,6 +259,38 @@ void DPS_PublicationDecRef(DPS_Publication* pub);
 DPS_Status DPS_CallPubHandlers(DPS_PublishRequest* req);
 
 /**
+ * Enables multicast transmission on a per-publication basis.
+ *
+ * @param pub         The publication
+ * @param mcast       Indicates if this publication shall be multicast
+ *
+ * @return DPS_OK if addition is successful, an error otherwise
+ */
+DPS_Status DPS_PublicationSetMulticast(DPS_Publication* pub, int mcast);
+
+/**
+ * Get the sending address of a publication.
+ *
+ * The address is suitable for use with DPS_Link().
+ *
+ * @param pub   The publication
+ *
+ * @return The sending address of the publication, may be NULL
+ */
+const DPS_NodeAddress* DPS_PublicationGetSenderAddress(const DPS_Publication* pub);
+
+/**
+ * Get the sending address of an acknowledgement.
+ *
+ * The address is suitable for use with DPS_Link().
+ *
+ * @param pub   The pub parameter of DPS_AcknowledgementHandler
+ *
+ * @return The sending address of the acknowledgement, may be NULL
+ */
+const DPS_NodeAddress* DPS_AckGetSenderAddress(const DPS_Publication* pub);
+
+/**
  * Print publications of node
  *
  * @param node The node
