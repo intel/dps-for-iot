@@ -42,6 +42,13 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
  */
 #define PUB_HISTORY_LIFETIME   DPS_SECS_TO_MS(10)
 
+#ifndef MAX
+#define MAX(a,b) (((a)>(b))?(a):(b))
+#endif
+#ifndef MIN
+#define MIN(a,b) (((a)<(b))?(a):(b))
+#endif
+
 static DPS_PubHistory* Find(const DPS_History* history, const DPS_UUID* pubId)
 {
     DPS_PubHistory* curr = history->root;
