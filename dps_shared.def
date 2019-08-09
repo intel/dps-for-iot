@@ -28,7 +28,7 @@ DPS_DestroyNode
 DPS_DestroyPublication
 DPS_DestroyRegistrationList
 DPS_DestroySubscription
-DPS_DiscoveryStart
+DPS_DiscoveryPublish
 DPS_ErrTxt
 DPS_GenerateUUID
 DPS_GetEventData

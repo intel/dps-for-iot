@@ -1,24 +1,24 @@
 /*
-*******************************************************************
-*
-* Copyright 2019 Intel Corporation All rights reserved.
-*
-*-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-*      http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*
-*-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-*/
+ *******************************************************************
+ *
+ * Copyright 2019 Intel Corporation All rights reserved.
+ *
+ *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+ */
 
 #include <safe_lib.h>
 #include <stdio.h>
@@ -54,25 +54,71 @@ typedef struct _DPS_DiscoveryService {
     char* topic;
 } DPS_DiscoveryService;
 
+static void Destroy(DPS_DiscoveryService* service);
+static void OnAck(DPS_Publication* pub, uint8_t* payload, size_t len);
+static void OnPub(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* payload, size_t len);
+
 DPS_DiscoveryService* DPS_CreateDiscoveryService(DPS_Node* node, const char* serviceId)
 {
-    DPS_DiscoveryService* svc = NULL;
+    static const int noWildcard = DPS_TRUE;
+    DPS_DiscoveryService* service;
+    DPS_Status ret;
 
     DPS_DBGTRACEA("node=%p,serviceId=%s\n", node, serviceId);
 
-    svc = calloc(1, sizeof(DPS_DiscoveryService));
-    if (svc) {
-        svc->node = node;
-        svc->topic = malloc(sizeof("$DPS_Discovery/") + strlen(serviceId) + 1);
-        if (svc->topic) {
-            strcpy(svc->topic, "$DPS_Discovery/");
-            strcat(svc->topic, serviceId);
-        } else {
-            free(svc);
-            svc = NULL;
-        }
+    service = calloc(1, sizeof(DPS_DiscoveryService));
+    if (!service) {
+        ret = DPS_ERR_RESOURCES;
+        goto Exit;
     }
-    return svc;
+    service->node = node;
+    service->topic = malloc(sizeof("$DPS_Discovery/") + strlen(serviceId) + 1);
+    if (!service->topic) {
+        ret = DPS_ERR_RESOURCES;
+        goto Exit;
+    }
+    strcpy(service->topic, "$DPS_Discovery/");
+    strcat(service->topic, serviceId);
+    service->pub = DPS_CreatePublication(service->node);
+    if (!service->pub) {
+        ret = DPS_ERR_RESOURCES;
+        goto Exit;
+    }
+    ret = DPS_SetPublicationData(service->pub, service);
+    if (ret != DPS_OK) {
+        goto Exit;
+    }
+    ret = DPS_InitPublication(service->pub, (const char**)&service->topic, 1, noWildcard, NULL, OnAck);
+    if (ret != DPS_OK) {
+        goto Exit;
+    }
+    ret = DPS_PublicationSetMulticast(service->pub, DPS_TRUE);
+    if (ret != DPS_OK) {
+        goto Exit;
+    }
+    service->sub = DPS_CreateSubscription(service->node, (const char**)&service->topic, 1);
+    if (!service->sub) {
+        ret = DPS_ERR_RESOURCES;
+        goto Exit;
+    }
+    ret = DPS_SetSubscriptionData(service->sub, service);
+    if (ret != DPS_OK) {
+        goto Exit;
+    }
+    ret = DPS_SubscriptionSetSerialize(service->sub, DPS_FALSE);
+    if (ret != DPS_OK) {
+        goto Exit;
+    }
+    ret = DPS_Subscribe(service->sub, OnPub);
+    if (ret != DPS_OK) {
+        goto Exit;
+    }
+Exit:
+    if (ret != DPS_OK) {
+        Destroy(service);
+        service = NULL;
+    }
+    return service;
 }
 
 static void PublishCb(DPS_Publication* pub, const DPS_Buffer* bufs, size_t numBufs, DPS_Status status, void* data)
@@ -288,16 +334,20 @@ static void StartTimer(void* data)
     DPS_Node* node = service->node;
     int err;
 
-    service->timer = malloc(sizeof(uv_timer_t));
     if (!service->timer) {
-        DPS_ERRPRINT("alloc failed - %s\n", DPS_ErrTxt(DPS_ERR_RESOURCES));
-        return;
-    }
-    service->timer->data = service;
-    err = uv_timer_init(node->loop, service->timer);
-    if (err) {
-        DPS_ERRPRINT("uv_timer_init failed - %s\n", uv_strerror(err));
-        return;
+        service->timer = malloc(sizeof(uv_timer_t));
+        if (!service->timer) {
+            DPS_ERRPRINT("alloc failed - %s\n", DPS_ErrTxt(DPS_ERR_RESOURCES));
+            return;
+        }
+        service->timer->data = service;
+        err = uv_timer_init(node->loop, service->timer);
+        if (err) {
+            DPS_ERRPRINT("uv_timer_init failed - %s\n", uv_strerror(err));
+            return;
+        }
+    } else {
+        uv_timer_stop(service->timer);
     }
     service->nextTimeout = (DPS_Rand() % 100) + 20;
     err = uv_timer_start(service->timer, PublishTimerOnTimeout, service->nextTimeout, 0);
@@ -308,63 +358,21 @@ static void StartTimer(void* data)
     service->nextTimeout += 1000;
 }
 
-DPS_Status DPS_DiscoveryStart(DPS_DiscoveryService* service)
+DPS_Status DPS_DiscoveryPublish(DPS_DiscoveryService* service)
 {
     DPS_Status ret;
-    static const int noWildcard = DPS_TRUE;
 
     DPS_DBGTRACEA("service=%p\n", service);
 
     if (!service) {
         return DPS_ERR_NULL;
     }
-    service->pub = DPS_CreatePublication(service->node);
-    if (!service->pub) {
-        ret = DPS_ERR_RESOURCES;
-        goto Exit;
-    }
-    ret = DPS_SetPublicationData(service->pub, service);
-    if (ret != DPS_OK) {
-        goto Exit;
-    }
-    ret = DPS_InitPublication(service->pub, (const char**)&service->topic, 1, noWildcard, NULL, OnAck);
-    if (ret != DPS_OK) {
-        goto Exit;
-    }
-    ret = DPS_PublicationSetMulticast(service->pub, DPS_TRUE);
-    if (ret != DPS_OK) {
-        goto Exit;
-    }
-    service->sub = DPS_CreateSubscription(service->node, (const char**)&service->topic, 1);
-    if (!service->sub) {
-        ret = DPS_ERR_RESOURCES;
-        goto Exit;
-    }
-    ret = DPS_SetSubscriptionData(service->sub, service);
-    if (ret != DPS_OK) {
-        goto Exit;
-    }
-    ret = DPS_SubscriptionSetSerialize(service->sub, DPS_FALSE);
-    if (ret != DPS_OK) {
-        goto Exit;
-    }
-    ret = DPS_Subscribe(service->sub, OnPub);
-    if (ret != DPS_OK) {
-        goto Exit;
-    }
     ret = DPS_NodeScheduleRequest(service->node, StartTimer, service);
-    if (ret != DPS_OK) {
-        goto Exit;
-    }
-
-Exit:
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to start discovery: %s\n", DPS_ErrTxt(ret));
     }
     return ret;
 }
-
-static void Destroy(DPS_DiscoveryService* service);
 
 static void OnPubDestroyed(DPS_Publication* pub)
 {
@@ -390,6 +398,9 @@ static void ServiceTimerCloseCb(uv_handle_t* timer)
 
 static void Destroy(DPS_DiscoveryService* service)
 {
+    if (!service) {
+        return;
+    }
     if (service->timer) {
         uv_close((uv_handle_t*)service->timer, ServiceTimerCloseCb);
     } else if (service->sub) {

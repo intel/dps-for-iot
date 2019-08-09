@@ -35,18 +35,29 @@ extern "C" {
 typedef struct _DPS_DiscoveryService DPS_DiscoveryService;
 
 /**
-  * Allocate resources for a discovery service
-  */
+ * Allocate resources for a discovery service
+ *
+ * @param node the node
+ * @param serviceId an application-defined topic segment for discovery information
+ *
+ * @return the service, or NULL if creation failed
+ */
 DPS_DiscoveryService* DPS_CreateDiscoveryService(DPS_Node* node, const char* serviceId);
 
 /**
-  * Start a discovery service
-  */
-DPS_Status DPS_DiscoveryStart(DPS_DiscoveryService* service);
+ * Publish this node's discovery information
+ *
+ * @param service the service
+ *
+ * @return DPS_OK if successful, an error otherwise
+ */
+DPS_Status DPS_DiscoveryPublish(DPS_DiscoveryService* service);
 
 /**
-  * Free resources for a discovery service
-  */
+ * Free resources for a discovery service
+ *
+ * @param service the service
+ */
 void DPS_DestroyDiscoveryService(DPS_DiscoveryService* service);
 
 #ifdef __cplusplus

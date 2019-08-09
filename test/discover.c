@@ -142,7 +142,7 @@ int main(int argc, char** argv)
         }
     }
     discovery = DPS_CreateDiscoveryService(node, "test");
-    ret = DPS_DiscoveryStart(discovery);
+    ret = DPS_DiscoveryPublish(discovery);
     if (ret != DPS_OK) {
         goto Exit;
     }
