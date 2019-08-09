@@ -1907,18 +1907,7 @@ DPS_Status DPS_DestroyPublication(DPS_Publication* pub, DPS_OnPublicationDestroy
     node = pub->node;
     DPS_LockNode(node);
     pub->onDestroyed = cb;
-    /*
-     * Maybe destroying an uninitialized publication
-     */
-    if (!IsValidPub(pub) || (pub->flags & PUB_FLAG_IS_COPY)) {
-        DestroyCopy(pub);
-        ret = DPS_OK;
-        goto Exit;
-    }
-    /*
-     * Check publication is local
-     */
-    if (!(pub->flags & PUB_FLAG_LOCAL)) {
+    if (IsValidPub(pub) && !(pub->flags & PUB_FLAG_LOCAL)) {
         ret = DPS_ERR_MISSING;
         goto Exit;
     }
