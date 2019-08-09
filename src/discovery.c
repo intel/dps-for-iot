@@ -355,31 +355,33 @@ DPS_Status DPS_DiscoveryStart(DPS_DiscoveryService* service)
 Exit:
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to start discovery: %s\n", DPS_ErrTxt(ret));
-        DPS_DiscoveryStop(service);
     }
     return ret;
 }
 
-void DPS_DiscoveryStop(DPS_DiscoveryService* service)
+static void OnPublicationDestroyed(DPS_Publication* pub)
+{
+    DPS_DiscoveryService* service = DPS_GetPublicationData(pub);
+    if (service->topic) {
+        free(service->topic);
+    }
+    free(service);
+}
+
+static void OnSubscriptionDestroyed(DPS_Subscription* sub)
+{
+    DPS_DiscoveryService* service = DPS_GetSubscriptionData(sub);
+    DPS_DestroyPublication(service->pub, OnPublicationDestroyed);
+}
+
+void DPS_DestroyDiscoveryService(DPS_DiscoveryService* service)
 {
     if (service) {
         if (service->timer) {
             DPS_NodeScheduleRequest(service->node, DiscoveryStopTimer, service->timer);
             service->timer = NULL;
         }
-        DPS_DestroySubscription(service->sub, NULL);
-        DPS_DestroyPublication(service->pub, NULL);
-    }
-}
-
-void DPS_DestroyDiscoveryService(DPS_DiscoveryService* service)
-{
-    if (service) {
-        DPS_DiscoveryStop(service);
-        if (service->topic) {
-            free(service->topic);
-        }
-        free(service);
+        DPS_DestroySubscription(service->sub, OnSubscriptionDestroyed);
     }
 }
 

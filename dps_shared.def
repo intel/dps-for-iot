@@ -2,6 +2,7 @@ LIBRARY dps_shared
 
 EXPORTS
 
+DPS_AckGetSenderAddress
 DPS_AckGetSenderKeyId
 DPS_AckGetSequenceNum
 DPS_AckPublication
@@ -10,6 +11,7 @@ DPS_CBOR2JSON
 DPS_CopyAddress
 DPS_CopyPublication
 DPS_CreateAddress
+DPS_CreateDiscoveryService
 DPS_CreateEvent
 DPS_CreateKeyStore
 DPS_CreateMemoryKeyStore
@@ -19,6 +21,7 @@ DPS_CreateRegistrationList
 DPS_CreateSubscription
 DPS_Debug
 DPS_DestroyAddress
+DPS_DestroyDiscoveryService
 DPS_DestroyEvent
 DPS_DestroyKeyStore
 DPS_DestroyMemoryKeyStore
@@ -26,6 +29,7 @@ DPS_DestroyNode
 DPS_DestroyPublication
 DPS_DestroyRegistrationList
 DPS_DestroySubscription
+DPS_DiscoveryStart
 DPS_ErrTxt
 DPS_GenerateUUID
 DPS_GetEventData
@@ -43,11 +47,13 @@ DPS_Link
 DPS_LinkTo
 DPS_Log
 DPS_LogBytes
+DPS_MatchPublications
 DPS_MemoryKeyStoreHandle
 DPS_NodeAddrToString
 DPS_PublicationAddSubId
 DPS_PublicationGetNode
 DPS_PublicationGetNumTopics
+DPS_PublicationGetSenderAddress
 DPS_PublicationGetSenderKeyId
 DPS_PublicationGetSequenceNum
 DPS_PublicationGetTopic
@@ -55,6 +61,7 @@ DPS_PublicationGetTTL
 DPS_PublicationGetUUID
 DPS_PublicationIsAckRequested
 DPS_PublicationRemoveSubId
+DPS_PublicationSetMulticast
 DPS_Publish
 DPS_PublishBufs
 DPS_Registration_Get
@@ -65,6 +72,7 @@ DPS_Registration_Put
 DPS_Registration_PutSyn
 DPS_RegistryTopicString
 DPS_ResolveAddress
+DPS_SerializeSubscriptions
 DPS_SetAddress
 DPS_SetCA
 DPS_SetCertificate
@@ -86,6 +94,7 @@ DPS_SubscribeExpired
 DPS_SubscriptionGetNode
 DPS_SubscriptionGetNumTopics
 DPS_SubscriptionGetTopic
+DPS_SubscriptionSetSerialize
 DPS_TimedWaitForEvent
 DPS_Unlink
 DPS_UnlinkFrom

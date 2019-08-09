@@ -155,7 +155,6 @@ Exit:
         DPS_ERRPRINT("Exiting: %s\n", DPS_ErrTxt(ret));
     }
 
-    DPS_DiscoveryStop(discovery);
     DPS_DestroyDiscoveryService(discovery);
 
     while (subs) {
