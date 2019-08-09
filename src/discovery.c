@@ -66,7 +66,7 @@ DPS_DiscoveryService* DPS_CreateDiscoveryService(DPS_Node* node, const char* ser
     return svc;
 }
 
-static void DiscoveryPublishCb(DPS_Publication* pub, const DPS_Buffer* bufs, size_t numBufs, DPS_Status status, void* data)
+static void PublishCb(DPS_Publication* pub, const DPS_Buffer* bufs, size_t numBufs, DPS_Status status, void* data)
 {
     if (status != DPS_OK) {
         DPS_ERRPRINT("DPS_PublishBufs failed - %s\n", DPS_ErrTxt(status));
@@ -74,7 +74,7 @@ static void DiscoveryPublishCb(DPS_Publication* pub, const DPS_Buffer* bufs, siz
     free(bufs[0].base);
 }
 
-static void DiscoveryTimerOnTimeout(uv_timer_t* timer)
+static void PublishTimerOnTimeout(uv_timer_t* timer)
 {
     DPS_DiscoveryService* service = timer->data;
     DPS_Node* node = service->node;
@@ -88,12 +88,12 @@ static void DiscoveryTimerOnTimeout(uv_timer_t* timer)
         DPS_ERRPRINT("DPS_SerializeSubscriptions failed - %s\n", DPS_ErrTxt(ret));
         goto Exit;
     }
-    ret = DPS_PublishBufs(service->pub, &subs, 1, 0, DiscoveryPublishCb, service);
+    ret = DPS_PublishBufs(service->pub, &subs, 1, 0, PublishCb, service);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("DPS_PublishBufs failed - %s\n", DPS_ErrTxt(ret));
         goto Exit;
     }
-    err = uv_timer_start(service->timer, DiscoveryTimerOnTimeout, service->nextTimeout, 0);
+    err = uv_timer_start(service->timer, PublishTimerOnTimeout, service->nextTimeout, 0);
     if (err) {
         DPS_ERRPRINT("uv_timer_start failed - %s\n", uv_strerror(err));
         ret = DPS_ERR_FAILURE;
@@ -116,7 +116,7 @@ static void TimerCloseCb(uv_handle_t* timer)
     free(timer);
 }
 
-static void DiscoveryLinkCb(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, void* data)
+static void LinkCb(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, void* data)
 {
     if (status == DPS_OK) {
         DPS_PRINT("Node is linked to %s\n", DPS_NodeAddrToString(addr));
@@ -125,7 +125,7 @@ static void DiscoveryLinkCb(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status st
     }
 }
 
-static void DiscoveryOnAck(DPS_Publication* pub, uint8_t* payload, size_t len)
+static void OnAck(DPS_Publication* pub, uint8_t* payload, size_t len)
 {
     DPS_DiscoveryService* service = DPS_GetPublicationData(pub);
     DPS_Node* node = service->node;
@@ -135,7 +135,7 @@ static void DiscoveryOnAck(DPS_Publication* pub, uint8_t* payload, size_t len)
     remoteSubs.base = payload;
     remoteSubs.len = len;
     if (DPS_MatchPublications(node, &remoteSubs)) {
-        ret = DPS_Link(node, DPS_NodeAddrToString(DPS_AckGetSenderAddress(pub)), DiscoveryLinkCb, service);
+        ret = DPS_Link(node, DPS_NodeAddrToString(DPS_AckGetSenderAddress(pub)), LinkCb, service);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("DPS_Link failed - %s\n", DPS_ErrTxt(ret));
         }
@@ -217,7 +217,7 @@ static void Ack(void* data)
     }
 }
 
-static DPS_Status DiscoveryScheduleAck(DPS_DiscoveryService* service, const DPS_Publication* pub)
+static DPS_Status ScheduleAck(DPS_DiscoveryService* service, const DPS_Publication* pub)
 {
     DPS_Node* node = service->node;
     AckRequest* req = NULL;
@@ -250,7 +250,7 @@ static DPS_Status DiscoveryScheduleAck(DPS_DiscoveryService* service, const DPS_
     return ret;
 }
 
-static void DiscoveryOnPub(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* payload, size_t len)
+static void OnPub(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* payload, size_t len)
 {
     DPS_DiscoveryService* service = DPS_GetSubscriptionData(sub);
     DPS_Node* node = service->node;
@@ -264,16 +264,16 @@ static void DiscoveryOnPub(DPS_Subscription* sub, const DPS_Publication* pub, ui
     remoteSubs.base = payload;
     remoteSubs.len = len;
     if (DPS_MatchPublications(node, &remoteSubs)) {
-        ret = DPS_Link(node, DPS_NodeAddrToString(DPS_PublicationGetSenderAddress(pub)), DiscoveryLinkCb, service);
+        ret = DPS_Link(node, DPS_NodeAddrToString(DPS_PublicationGetSenderAddress(pub)), LinkCb, service);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("DPS_Link failed - %s\n", DPS_ErrTxt(ret));
         }
     } else if (DPS_PublicationIsAckRequested(pub)) {
-        DiscoveryScheduleAck(service, pub);
+        ScheduleAck(service, pub);
     }
 }
 
-static void DiscoveryStartTimer(void* data)
+static void StartTimer(void* data)
 {
     DPS_DiscoveryService* service = data;
     DPS_Node* node = service->node;
@@ -291,7 +291,7 @@ static void DiscoveryStartTimer(void* data)
         return;
     }
     service->nextTimeout = (DPS_Rand() % 100) + 20;
-    err = uv_timer_start(service->timer, DiscoveryTimerOnTimeout, service->nextTimeout, 0);
+    err = uv_timer_start(service->timer, PublishTimerOnTimeout, service->nextTimeout, 0);
     if (err) {
         DPS_ERRPRINT("uv_timer_start failed - %s\n", uv_strerror(err));
         return;
@@ -299,7 +299,7 @@ static void DiscoveryStartTimer(void* data)
     service->nextTimeout += 1000;
 }
 
-static void DiscoveryStopTimer(void* data)
+static void StopTimer(void* data)
 {
     uv_handle_t* timer = data;
     uv_close(timer, TimerCloseCb);
@@ -322,7 +322,7 @@ DPS_Status DPS_DiscoveryStart(DPS_DiscoveryService* service)
     if (ret != DPS_OK) {
         goto Exit;
     }
-    ret = DPS_InitPublication(service->pub, (const char**)&service->topic, 1, noWildcard, NULL, DiscoveryOnAck);
+    ret = DPS_InitPublication(service->pub, (const char**)&service->topic, 1, noWildcard, NULL, OnAck);
     if (ret != DPS_OK) {
         goto Exit;
     }
@@ -343,11 +343,11 @@ DPS_Status DPS_DiscoveryStart(DPS_DiscoveryService* service)
     if (ret != DPS_OK) {
         goto Exit;
     }
-    ret = DPS_Subscribe(service->sub, DiscoveryOnPub);
+    ret = DPS_Subscribe(service->sub, OnPub);
     if (ret != DPS_OK) {
         goto Exit;
     }
-    ret = DPS_NodeScheduleRequest(service->node, DiscoveryStartTimer, service);
+    ret = DPS_NodeScheduleRequest(service->node, StartTimer, service);
     if (ret != DPS_OK) {
         goto Exit;
     }
@@ -359,7 +359,7 @@ Exit:
     return ret;
 }
 
-static void OnPublicationDestroyed(DPS_Publication* pub)
+static void OnPubDestroyed(DPS_Publication* pub)
 {
     DPS_DiscoveryService* service = DPS_GetPublicationData(pub);
     if (service->topic) {
@@ -368,19 +368,19 @@ static void OnPublicationDestroyed(DPS_Publication* pub)
     free(service);
 }
 
-static void OnSubscriptionDestroyed(DPS_Subscription* sub)
+static void OnSubDestroyed(DPS_Subscription* sub)
 {
     DPS_DiscoveryService* service = DPS_GetSubscriptionData(sub);
-    DPS_DestroyPublication(service->pub, OnPublicationDestroyed);
+    DPS_DestroyPublication(service->pub, OnPubDestroyed);
 }
 
 void DPS_DestroyDiscoveryService(DPS_DiscoveryService* service)
 {
     if (service) {
         if (service->timer) {
-            DPS_NodeScheduleRequest(service->node, DiscoveryStopTimer, service->timer);
+            DPS_NodeScheduleRequest(service->node, StopTimer, service->timer);
             service->timer = NULL;
         }
-        DPS_DestroySubscription(service->sub, OnSubscriptionDestroyed);
+        DPS_DestroySubscription(service->sub, OnSubDestroyed);
     }
 }
