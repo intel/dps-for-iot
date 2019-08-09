@@ -299,12 +299,6 @@ static void StartTimer(void* data)
     service->nextTimeout += 1000;
 }
 
-static void StopTimer(void* data)
-{
-    uv_handle_t* timer = data;
-    uv_close(timer, TimerCloseCb);
-}
-
 DPS_Status DPS_DiscoveryStart(DPS_DiscoveryService* service)
 {
     DPS_Status ret;
@@ -359,28 +353,55 @@ Exit:
     return ret;
 }
 
+static void Destroy(DPS_DiscoveryService* service);
+
 static void OnPubDestroyed(DPS_Publication* pub)
 {
     DPS_DiscoveryService* service = DPS_GetPublicationData(pub);
-    if (service->topic) {
-        free(service->topic);
-    }
-    free(service);
+    service->pub = NULL;
+    Destroy(service);
 }
 
 static void OnSubDestroyed(DPS_Subscription* sub)
 {
     DPS_DiscoveryService* service = DPS_GetSubscriptionData(sub);
-    DPS_DestroyPublication(service->pub, OnPubDestroyed);
+    service->sub = NULL;
+    Destroy(service);
+}
+
+static void ServiceTimerCloseCb(uv_handle_t* timer)
+{
+    DPS_DiscoveryService* service = timer->data;
+    free(service->timer);
+    service->timer = NULL;
+    Destroy(service);
+}
+
+static void Destroy(DPS_DiscoveryService* service)
+{
+    if (service->timer) {
+        uv_close((uv_handle_t*)service->timer, ServiceTimerCloseCb);
+    } else if (service->sub) {
+        DPS_DestroySubscription(service->sub, OnSubDestroyed);
+    } else if (service->pub) {
+        DPS_DestroyPublication(service->pub, OnPubDestroyed);
+    } else {
+        if (service->topic) {
+            free(service->topic);
+        }
+        free(service);
+    }
+}
+
+static void DestroyService(void* data)
+{
+    DPS_DiscoveryService* service = data;
+    Destroy(service);
 }
 
 void DPS_DestroyDiscoveryService(DPS_DiscoveryService* service)
 {
     if (service) {
-        if (service->timer) {
-            DPS_NodeScheduleRequest(service->node, StopTimer, service->timer);
-            service->timer = NULL;
-        }
-        DPS_DestroySubscription(service->sub, OnSubDestroyed);
+        DPS_NodeScheduleRequest(service->node, DestroyService, service);
     }
 }
