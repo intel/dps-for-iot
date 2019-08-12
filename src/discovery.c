@@ -82,11 +82,13 @@ typedef struct _AckRequest {
 } AckRequest;
 
 typedef struct _DPS_DiscoveryService {
+    void* userData;
     DPS_Node* node;
     DPS_Publication* pub;
     SharedBuffer* payload;
     DPS_Subscription* sub;
     DPS_DiscoveryHandler handler;
+    int subscribed;
     uv_timer_t* timer;
     uint64_t nextTimeout;
     char* topic;
@@ -96,8 +98,7 @@ static void Destroy(DPS_DiscoveryService* service);
 static void OnAck(DPS_Publication* pub, uint8_t* payload, size_t len);
 static void OnPub(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* payload, size_t len);
 
-DPS_DiscoveryService* DPS_CreateDiscoveryService(DPS_Node* node, const char* serviceId,
-                                                 DPS_DiscoveryHandler handler)
+DPS_DiscoveryService* DPS_CreateDiscoveryService(DPS_Node* node, const char* serviceId)
 {
     static const int noWildcard = DPS_TRUE;
     DPS_DiscoveryService* service;
@@ -118,7 +119,6 @@ DPS_DiscoveryService* DPS_CreateDiscoveryService(DPS_Node* node, const char* ser
     }
     strcpy(service->topic, "$DPS_Discovery/");
     strcat(service->topic, serviceId);
-    service->handler = handler;
     service->pub = DPS_CreatePublication(service->node);
     if (!service->pub) {
         ret = DPS_ERR_RESOURCES;
@@ -149,16 +149,27 @@ DPS_DiscoveryService* DPS_CreateDiscoveryService(DPS_Node* node, const char* ser
     if (ret != DPS_OK) {
         goto Exit;
     }
-    ret = DPS_Subscribe(service->sub, OnPub);
-    if (ret != DPS_OK) {
-        goto Exit;
-    }
 Exit:
     if (ret != DPS_OK) {
         Destroy(service);
         service = NULL;
     }
     return service;
+}
+
+DPS_Status DPS_SetDiscoveryServiceData(DPS_DiscoveryService* service, void* data)
+{
+    if (service) {
+        service->userData = data;
+        return DPS_OK;
+    } else {
+        return DPS_ERR_NULL;
+    }
+}
+
+void* DPS_GetDiscoveryServiceData(DPS_DiscoveryService* service)
+{
+    return service ? service->userData : NULL;
 }
 
 static DPS_Status CreatePayload(DPS_DiscoveryService* service, DPS_Buffer* bufs, size_t* numBufs)
@@ -277,11 +288,8 @@ static void AckCb(DPS_Publication* pub, const DPS_Buffer* bufs, size_t numBufs, 
     DestroyPayload(service, bufs, numBufs);
 }
 
-static void AckTimerOnTimeout(uv_timer_t* timer)
+static void AckPublication(DPS_DiscoveryService* service, const DPS_Publication* pub)
 {
-    AckRequest* req = timer->data;
-    DPS_DiscoveryService* service = req->service;
-    DPS_Publication* pub = req->pub;
     DPS_Buffer bufs[2];
     size_t numBufs = 0;
     DPS_Status ret;
@@ -300,6 +308,12 @@ Exit:
     if (ret != DPS_OK) {
         DestroyPayload(service, bufs, numBufs);
     }
+}
+
+static void AckTimerOnTimeout(uv_timer_t* timer)
+{
+    AckRequest* req = timer->data;
+    AckPublication(req->service, req->pub);
     DPS_DestroyPublication(req->pub, NULL);
     uv_close((uv_handle_t*)req->timer, TimerCloseCb);
     free(req);
@@ -386,6 +400,9 @@ static void OnPub(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* pa
     }
     DPS_RxBufferInit(&rxBuf, payload, len);
     if (DPS_MatchPublications(node, &rxBuf)) {
+        if (DPS_PublicationIsAckRequested(pub)) {
+            AckPublication(service, pub);
+        }
         ret = DPS_Link(node, DPS_NodeAddrToString(DPS_PublicationGetSenderAddress(pub)), LinkCb, service);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("DPS_Link failed - %s\n", DPS_ErrTxt(ret));
@@ -428,7 +445,8 @@ static void StartTimer(void* data)
     service->nextTimeout += 1000;
 }
 
-DPS_Status DPS_DiscoveryPublish(DPS_DiscoveryService* service, const uint8_t* payload, size_t len)
+DPS_Status DPS_DiscoveryPublish(DPS_DiscoveryService* service, const uint8_t* payload, size_t len,
+                                DPS_DiscoveryHandler handler)
 {
     SharedBuffer* buffer = NULL;
     DPS_Status ret;
@@ -442,6 +460,14 @@ DPS_Status DPS_DiscoveryPublish(DPS_DiscoveryService* service, const uint8_t* pa
         return DPS_ERR_ARGS;
     }
 
+    service->handler = handler;
+    if (!service->subscribed) {
+        ret = DPS_Subscribe(service->sub, OnPub);
+        if (ret != DPS_OK) {
+            return ret;
+        }
+        service->subscribed = DPS_TRUE;
+    }
     if (len) {
         buffer = CreateSharedBuffer(len);
         if (!buffer) {

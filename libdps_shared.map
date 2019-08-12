@@ -29,6 +29,7 @@
     DPS_DiscoveryPublish;
     DPS_ErrTxt;
     DPS_GenerateUUID;
+    DPS_GetDiscoveryServiceData;
     DPS_GetEventData;
     DPS_GetKeyStoreData;
     DPS_GetListenAddress;
@@ -70,6 +71,7 @@
     DPS_SetCA;
     DPS_SetCertificate;
     DPS_SetContentKey;
+    DPS_SetDiscoveryServiceData;
     DPS_SetEventData;
     DPS_SetKey;
     DPS_SetKeyAndId;

@@ -35,6 +35,35 @@ extern "C" {
 typedef struct _DPS_DiscoveryService DPS_DiscoveryService;
 
 /**
+ * Allocate resources for a discovery service
+ *
+ * @param node the node
+ * @param serviceId an application-defined topic segment for discovery information
+ *
+ * @return the service, or NULL if creation failed
+ */
+DPS_DiscoveryService* DPS_CreateDiscoveryService(DPS_Node* node, const char* serviceId);
+
+/**
+ * Store a pointer to application data in a discovery service.
+ *
+ * @param service the service
+ * @param data the data pointer to store
+ *
+ * @return DPS_OK or an error
+ */
+DPS_Status DPS_SetDiscoveryServiceData(DPS_DiscoveryService* service, void* data);
+
+/**
+ * Get application data pointer previously set by DPS_SetDiscoveryServiceData()
+ *
+ * @param service the service
+ *
+ * @return A pointer to the data or NULL if the service is invalid
+ */
+void* DPS_GetDiscoveryServiceData(DPS_DiscoveryService* service);
+
+/**
  * Function prototype for a discovery handler called when a discovery message is received.
  *
  * @param service  the service
@@ -44,27 +73,17 @@ typedef struct _DPS_DiscoveryService DPS_DiscoveryService;
 typedef void (*DPS_DiscoveryHandler)(DPS_DiscoveryService* service, uint8_t* payload, size_t len);
 
 /**
- * Allocate resources for a discovery service
- *
- * @param node the node
- * @param serviceId an application-defined topic segment for discovery information
- * @param handler optional callback function to be called when discovery message is received
- *
- * @return the service, or NULL if creation failed
- */
-DPS_DiscoveryService* DPS_CreateDiscoveryService(DPS_Node* node, const char* serviceId,
-                                                 DPS_DiscoveryHandler handler);
-
-/**
- * Publish this node's discovery information
+ * Publish this node's discovery information and receive other node's discovery information.
  *
  * @param service the service
  * @param payload optional payload
  * @param len length of the payload
+ * @param handler optional callback function to be called when a discovery message is received
  *
  * @return DPS_OK if successful, an error otherwise
  */
-DPS_Status DPS_DiscoveryPublish(DPS_DiscoveryService* service, const uint8_t* payload, size_t len);
+DPS_Status DPS_DiscoveryPublish(DPS_DiscoveryService* service, const uint8_t* payload, size_t len,
+                                DPS_DiscoveryHandler handler);
 
 /**
  * Free resources for a discovery service

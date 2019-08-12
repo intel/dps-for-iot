@@ -146,8 +146,8 @@ int main(int argc, char** argv)
             goto Exit;
         }
     }
-    discovery = DPS_CreateDiscoveryService(node, "test", OnDiscovery);
-    ret = DPS_DiscoveryPublish(discovery, (const uint8_t*)"hello", 6);
+    discovery = DPS_CreateDiscoveryService(node, "test");
+    ret = DPS_DiscoveryPublish(discovery, (const uint8_t*)"hello", 6, OnDiscovery);
     if (ret != DPS_OK) {
         goto Exit;
     }
