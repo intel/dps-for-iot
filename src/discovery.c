@@ -39,6 +39,42 @@
  */
 DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
+typedef struct _SharedBuffer {
+    DPS_Buffer buf;
+    uint32_t refCount;
+    uint8_t data[1];
+} SharedBuffer;
+
+static SharedBuffer* CreateSharedBuffer(size_t len)
+{
+    SharedBuffer* buffer = malloc(sizeof(SharedBuffer) + len - 1);
+    if (buffer) {
+        buffer->buf.base = buffer->data;
+        buffer->buf.len = len;
+        buffer->refCount = 1;
+    }
+    return buffer;
+}
+
+static void SharedBufferIncRef(SharedBuffer* buffer)
+{
+    assert(buffer);
+    ++buffer->refCount;
+}
+
+static void SharedBufferDecRef(SharedBuffer* buffer)
+{
+    if (buffer) {
+        assert(buffer->refCount > 0);
+        if (--buffer->refCount == 0) {
+            free(buffer);
+        }
+    }
+}
+
+#define BufferToSharedBuffer(buf)                                       \
+    ((SharedBuffer*)(((buf)->base) - offsetof(SharedBuffer, data)))
+
 typedef struct _AckRequest {
     DPS_DiscoveryService* service;
     DPS_Publication* pub;
@@ -48,7 +84,9 @@ typedef struct _AckRequest {
 typedef struct _DPS_DiscoveryService {
     DPS_Node* node;
     DPS_Publication* pub;
+    SharedBuffer* payload;
     DPS_Subscription* sub;
+    DPS_DiscoveryHandler handler;
     uv_timer_t* timer;
     uint64_t nextTimeout;
     char* topic;
@@ -58,7 +96,8 @@ static void Destroy(DPS_DiscoveryService* service);
 static void OnAck(DPS_Publication* pub, uint8_t* payload, size_t len);
 static void OnPub(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* payload, size_t len);
 
-DPS_DiscoveryService* DPS_CreateDiscoveryService(DPS_Node* node, const char* serviceId)
+DPS_DiscoveryService* DPS_CreateDiscoveryService(DPS_Node* node, const char* serviceId,
+                                                 DPS_DiscoveryHandler handler)
 {
     static const int noWildcard = DPS_TRUE;
     DPS_DiscoveryService* service;
@@ -79,6 +118,7 @@ DPS_DiscoveryService* DPS_CreateDiscoveryService(DPS_Node* node, const char* ser
     }
     strcpy(service->topic, "$DPS_Discovery/");
     strcat(service->topic, serviceId);
+    service->handler = handler;
     service->pub = DPS_CreatePublication(service->node);
     if (!service->pub) {
         ret = DPS_ERR_RESOURCES;
@@ -121,29 +161,61 @@ Exit:
     return service;
 }
 
-static void PublishCb(DPS_Publication* pub, const DPS_Buffer* bufs, size_t numBufs, DPS_Status status, void* data)
+static DPS_Status CreatePayload(DPS_DiscoveryService* service, DPS_Buffer* bufs, size_t* numBufs)
 {
+    DPS_Status ret;
+
+    memset(bufs, 0, sizeof(DPS_Buffer) * 2);
+    *numBufs = 0;
+    ret = DPS_SerializeSubscriptions(service->node, &bufs[(*numBufs)++]);
+    if (ret != DPS_OK) {
+        DPS_ERRPRINT("DPS_SerializeSubscriptions failed - %s\n", DPS_ErrTxt(ret));
+        return ret;
+    }
+    DPS_LockNode(service->node);
+    if (service->payload) {
+        bufs[(*numBufs)++] = service->payload->buf;
+        SharedBufferIncRef(service->payload);
+    }
+    DPS_UnlockNode(service->node);
+    return DPS_OK;
+}
+
+static void DestroyPayload(DPS_DiscoveryService* service, const DPS_Buffer* bufs, size_t numBufs)
+{
+    if (bufs[0].base) {
+        free(bufs[0].base);
+    }
+    if (numBufs > 1) {
+        DPS_LockNode(service->node);
+        SharedBufferDecRef(BufferToSharedBuffer(&bufs[1]));
+        DPS_UnlockNode(service->node);
+    }
+}
+
+static void PublishCb(DPS_Publication* pub, const DPS_Buffer* bufs, size_t numBufs, DPS_Status status,
+                      void* data)
+{
+    DPS_DiscoveryService* service = DPS_GetPublicationData(pub);
     if (status != DPS_OK) {
         DPS_ERRPRINT("DPS_PublishBufs failed - %s\n", DPS_ErrTxt(status));
     }
-    free(bufs[0].base);
+    DestroyPayload(service, bufs, numBufs);
 }
 
 static void PublishTimerOnTimeout(uv_timer_t* timer)
 {
     DPS_DiscoveryService* service = timer->data;
-    DPS_Node* node = service->node;
-    DPS_Buffer subs;
+    DPS_Buffer bufs[2];
+    size_t numBufs;
     DPS_Status ret;
     int err;
 
-    memset(&subs, 0, sizeof(DPS_Buffer));
-    ret = DPS_SerializeSubscriptions(node, &subs);
+    ret = CreatePayload(service, bufs, &numBufs);
     if (ret != DPS_OK) {
-        DPS_ERRPRINT("DPS_SerializeSubscriptions failed - %s\n", DPS_ErrTxt(ret));
         goto Exit;
     }
-    ret = DPS_PublishBufs(service->pub, &subs, 1, 0, PublishCb, service);
+    ret = DPS_PublishBufs(service->pub, bufs, numBufs, 0, PublishCb, service);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("DPS_PublishBufs failed - %s\n", DPS_ErrTxt(ret));
         goto Exit;
@@ -151,8 +223,6 @@ static void PublishTimerOnTimeout(uv_timer_t* timer)
     err = uv_timer_start(service->timer, PublishTimerOnTimeout, service->nextTimeout, 0);
     if (err) {
         DPS_ERRPRINT("uv_timer_start failed - %s\n", uv_strerror(err));
-        ret = DPS_ERR_FAILURE;
-        goto Exit;
     }
     if (service->nextTimeout < 300000) {
         service->nextTimeout = service->nextTimeout * 2;
@@ -160,9 +230,7 @@ static void PublishTimerOnTimeout(uv_timer_t* timer)
 
 Exit:
     if (ret != DPS_OK) {
-        if (subs.base) {
-            free(subs.base);
-        }
+        DestroyPayload(service, bufs, numBufs);
     }
 }
 
@@ -184,43 +252,45 @@ static void OnAck(DPS_Publication* pub, uint8_t* payload, size_t len)
 {
     DPS_DiscoveryService* service = DPS_GetPublicationData(pub);
     DPS_Node* node = service->node;
-    DPS_Buffer remoteSubs;
+    DPS_RxBuffer rxBuf;
     DPS_Status ret;
 
-    remoteSubs.base = payload;
-    remoteSubs.len = len;
-    if (DPS_MatchPublications(node, &remoteSubs)) {
+    DPS_RxBufferInit(&rxBuf, payload, len);
+    if (DPS_MatchPublications(node, &rxBuf)) {
         ret = DPS_Link(node, DPS_NodeAddrToString(DPS_AckGetSenderAddress(pub)), LinkCb, service);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("DPS_Link failed - %s\n", DPS_ErrTxt(ret));
         }
     }
+    if (service->handler) {
+        service->handler(service, rxBuf.rxPos, DPS_RxBufferAvail(&rxBuf));
+    }
 }
 
-static void AckCb(DPS_Publication* pub, const DPS_Buffer* bufs, size_t numBufs, DPS_Status status, void* data)
+static void AckCb(DPS_Publication* pub, const DPS_Buffer* bufs, size_t numBufs, DPS_Status status,
+                  void* data)
 {
+    DPS_DiscoveryService* service = data;
     if (status != DPS_OK) {
         DPS_ERRPRINT("DPS_AckPublicationBufs failed - %s\n", DPS_ErrTxt(status));
     }
-    free(bufs[0].base);
+    DestroyPayload(service, bufs, numBufs);
 }
 
 static void AckTimerOnTimeout(uv_timer_t* timer)
 {
     AckRequest* req = timer->data;
     DPS_DiscoveryService* service = req->service;
-    DPS_Node* node = service->node;
     DPS_Publication* pub = req->pub;
-    DPS_Buffer subs;
+    DPS_Buffer bufs[2];
+    size_t numBufs = 0;
     DPS_Status ret;
 
-    memset(&subs, 0, sizeof(DPS_Buffer));
-    ret = DPS_SerializeSubscriptions(node, &subs);
+    ret = CreatePayload(service, bufs, &numBufs);
     if (ret != DPS_OK) {
-        DPS_ERRPRINT("DPS_SerializeSubscriptions failed - %s\n", DPS_ErrTxt(ret));
         goto Exit;
     }
-    ret = DPS_AckPublicationBufs(pub, &subs, 1, AckCb, service);
+    ret = DPS_AckPublicationBufs(pub, bufs, numBufs, AckCb, service);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("DPS_AckPublicationBufs failed - %s\n", DPS_ErrTxt(ret));
         goto Exit;
@@ -228,9 +298,7 @@ static void AckTimerOnTimeout(uv_timer_t* timer)
 
 Exit:
     if (ret != DPS_OK) {
-        if (subs.base) {
-            free(subs.base);
-        }
+        DestroyPayload(service, bufs, numBufs);
     }
     DPS_DestroyPublication(req->pub, NULL);
     uv_close((uv_handle_t*)req->timer, TimerCloseCb);
@@ -309,22 +377,24 @@ static void OnPub(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* pa
 {
     DPS_DiscoveryService* service = DPS_GetSubscriptionData(sub);
     DPS_Node* node = service->node;
-    DPS_Buffer remoteSubs;
+    DPS_RxBuffer rxBuf;
     DPS_Status ret;
 
     /* Ignore my own publication */
     if (DPS_UUIDCompare(DPS_PublicationGetUUID(service->pub), DPS_PublicationGetUUID(pub)) == 0) {
         return;
     }
-    remoteSubs.base = payload;
-    remoteSubs.len = len;
-    if (DPS_MatchPublications(node, &remoteSubs)) {
+    DPS_RxBufferInit(&rxBuf, payload, len);
+    if (DPS_MatchPublications(node, &rxBuf)) {
         ret = DPS_Link(node, DPS_NodeAddrToString(DPS_PublicationGetSenderAddress(pub)), LinkCb, service);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("DPS_Link failed - %s\n", DPS_ErrTxt(ret));
         }
     } else if (DPS_PublicationIsAckRequested(pub)) {
         ScheduleAck(service, pub);
+    }
+    if (service->handler) {
+        service->handler(service, rxBuf.rxPos, DPS_RxBufferAvail(&rxBuf));
     }
 }
 
@@ -358,8 +428,9 @@ static void StartTimer(void* data)
     service->nextTimeout += 1000;
 }
 
-DPS_Status DPS_DiscoveryPublish(DPS_DiscoveryService* service)
+DPS_Status DPS_DiscoveryPublish(DPS_DiscoveryService* service, const uint8_t* payload, size_t len)
 {
+    SharedBuffer* buffer = NULL;
     DPS_Status ret;
 
     DPS_DBGTRACEA("service=%p\n", service);
@@ -367,6 +438,21 @@ DPS_Status DPS_DiscoveryPublish(DPS_DiscoveryService* service)
     if (!service) {
         return DPS_ERR_NULL;
     }
+    if (len && !payload) {
+        return DPS_ERR_ARGS;
+    }
+
+    if (len) {
+        buffer = CreateSharedBuffer(len);
+        if (!buffer) {
+            return DPS_ERR_RESOURCES;
+        }
+        memcpy_s(buffer->buf.base, buffer->buf.len, payload, len);
+    }
+    DPS_LockNode(service->node);
+    SharedBufferDecRef(service->payload);
+    service->payload = buffer;
+    DPS_UnlockNode(service->node);
     ret = DPS_NodeScheduleRequest(service->node, StartTimer, service);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to start discovery: %s\n", DPS_ErrTxt(ret));
@@ -408,6 +494,7 @@ static void Destroy(DPS_DiscoveryService* service)
     } else if (service->pub) {
         DPS_DestroyPublication(service->pub, OnPubDestroyed);
     } else {
+        SharedBufferDecRef(service->payload);
         if (service->topic) {
             free(service->topic);
         }

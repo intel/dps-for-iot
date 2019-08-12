@@ -35,23 +35,36 @@ extern "C" {
 typedef struct _DPS_DiscoveryService DPS_DiscoveryService;
 
 /**
+ * Function prototype for a discovery handler called when a discovery message is received.
+ *
+ * @param service  the service
+ * @param payload  payload from the message if any
+ * @param len      length of the payload
+ */
+typedef void (*DPS_DiscoveryHandler)(DPS_DiscoveryService* service, uint8_t* payload, size_t len);
+
+/**
  * Allocate resources for a discovery service
  *
  * @param node the node
  * @param serviceId an application-defined topic segment for discovery information
+ * @param handler optional callback function to be called when discovery message is received
  *
  * @return the service, or NULL if creation failed
  */
-DPS_DiscoveryService* DPS_CreateDiscoveryService(DPS_Node* node, const char* serviceId);
+DPS_DiscoveryService* DPS_CreateDiscoveryService(DPS_Node* node, const char* serviceId,
+                                                 DPS_DiscoveryHandler handler);
 
 /**
  * Publish this node's discovery information
  *
  * @param service the service
+ * @param payload optional payload
+ * @param len length of the payload
  *
  * @return DPS_OK if successful, an error otherwise
  */
-DPS_Status DPS_DiscoveryPublish(DPS_DiscoveryService* service);
+DPS_Status DPS_DiscoveryPublish(DPS_DiscoveryService* service, const uint8_t* payload, size_t len);
 
 /**
  * Free resources for a discovery service

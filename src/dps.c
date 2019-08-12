@@ -1974,19 +1974,17 @@ DPS_Status DPS_SerializeSubscriptions(DPS_Node* node, DPS_Buffer* buf)
     return ret;
 }
 
-int DPS_MatchPublications(DPS_Node* node, const DPS_Buffer* subs)
+int DPS_MatchPublications(DPS_Node* node, DPS_RxBuffer* rxBuf)
 {
     static const int32_t Keys[] = { DPS_CBOR_KEY_NEEDS, DPS_CBOR_KEY_INTERESTS };
     int match = DPS_FALSE;
     DPS_BitVector* needs = NULL;
     DPS_BitVector* interests = NULL;
     DPS_Publication* pub;
-    DPS_RxBuffer rxBuf;
     CBOR_MapState mapState;
     DPS_Status ret;
 
-    DPS_RxBufferInit(&rxBuf, subs->base, subs->len);
-    ret = DPS_ParseMapInit(&mapState, &rxBuf, Keys, A_SIZEOF(Keys), NULL, 0);
+    ret = DPS_ParseMapInit(&mapState, rxBuf, Keys, A_SIZEOF(Keys), NULL, 0);
     if (ret != DPS_OK) {
         goto Exit;
     }
@@ -2007,7 +2005,7 @@ int DPS_MatchPublications(DPS_Node* node, const DPS_Buffer* subs)
                 ret = DPS_ERR_RESOURCES;
                 break;
             }
-            ret = DPS_BitVectorDeserializeFH(needs, &rxBuf);
+            ret = DPS_BitVectorDeserializeFH(needs, rxBuf);
             break;
         case DPS_CBOR_KEY_INTERESTS:
             if (interests) {
@@ -2019,7 +2017,7 @@ int DPS_MatchPublications(DPS_Node* node, const DPS_Buffer* subs)
                 ret = DPS_ERR_RESOURCES;
                 break;
             }
-            ret = DPS_BitVectorDeserialize(interests, &rxBuf);
+            ret = DPS_BitVectorDeserialize(interests, rxBuf);
             break;
         }
         if (ret != DPS_OK) {

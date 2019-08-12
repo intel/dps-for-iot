@@ -46,6 +46,11 @@ static void OnPub(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* pa
 {
 }
 
+static void OnDiscovery(DPS_DiscoveryService* service, uint8_t* payload, size_t len)
+{
+    DPS_PRINT("%s\n", payload);
+}
+
 int main(int argc, char** argv)
 {
     char** arg = argv + 1;
@@ -141,8 +146,8 @@ int main(int argc, char** argv)
             goto Exit;
         }
     }
-    discovery = DPS_CreateDiscoveryService(node, "test");
-    ret = DPS_DiscoveryPublish(discovery);
+    discovery = DPS_CreateDiscoveryService(node, "test", OnDiscovery);
+    ret = DPS_DiscoveryPublish(discovery, (const uint8_t*)"hello", 6);
     if (ret != DPS_OK) {
         goto Exit;
     }

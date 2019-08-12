@@ -323,13 +323,13 @@ DPS_Status DPS_SerializeSubscriptions(DPS_Node* node, DPS_Buffer* subs);
  * Check if this node's publications match the provided subscriptions.
  *
  * @param node         The node
- * @param remoteSubs   The serialized subscriptions to match
+ * @param rxBuf        The serialized subscriptions to match
  *
  * @return DPS_TRUE if matched
  *
  * @see DPS_SerializeSubscriptions()
  */
-int DPS_MatchPublications(DPS_Node* node, const DPS_Buffer* remoteSubs);
+int DPS_MatchPublications(DPS_Node* node, DPS_RxBuffer* rxBuf);
 
 /**
  * Enables serialization on a per-subscription basis.
