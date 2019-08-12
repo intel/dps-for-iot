@@ -401,18 +401,17 @@ static void OnPub(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* pa
     DPS_RxBuffer rxBuf;
     DPS_Status ret;
 
-    /* Ignore my own publication */
-    if (DPS_UUIDCompare(DPS_PublicationGetUUID(service->pub), DPS_PublicationGetUUID(pub)) == 0) {
-        return;
-    }
     DPS_RxBufferInit(&rxBuf, payload, len);
     if (DPS_MatchPublications(node, &rxBuf)) {
         if (DPS_PublicationIsAckRequested(pub)) {
             AckPublication(service, pub);
         }
-        ret = DPS_Link(node, DPS_NodeAddrToString(DPS_PublicationGetSenderAddress(pub)), LinkCb, service);
-        if (ret != DPS_OK) {
-            DPS_ERRPRINT("DPS_Link failed - %s\n", DPS_ErrTxt(ret));
+        /* Do not link to myself */
+        if (DPS_UUIDCompare(DPS_PublicationGetUUID(service->pub), DPS_PublicationGetUUID(pub)) != 0) {
+            ret = DPS_Link(node, DPS_NodeAddrToString(DPS_PublicationGetSenderAddress(pub)), LinkCb, service);
+            if (ret != DPS_OK) {
+                DPS_ERRPRINT("DPS_Link failed - %s\n", DPS_ErrTxt(ret));
+            }
         }
     } else if (DPS_PublicationIsAckRequested(pub)) {
         ScheduleAck(service, pub);
