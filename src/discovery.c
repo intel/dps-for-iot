@@ -76,6 +76,7 @@ static void SharedBufferDecRef(SharedBuffer* buffer)
     ((SharedBuffer*)(((buf)->base) - offsetof(SharedBuffer, data)))
 
 typedef struct _AckRequest {
+    DPS_Queue queue;
     DPS_DiscoveryService* service;
     DPS_Publication* pub;
     uv_timer_t* timer;
@@ -91,6 +92,7 @@ typedef struct _DPS_DiscoveryService {
     int subscribed;
     uv_timer_t* timer;
     uint64_t nextTimeout;
+    DPS_Queue ackQueue;
     char* topic;
 } DPS_DiscoveryService;
 
@@ -112,6 +114,7 @@ DPS_DiscoveryService* DPS_CreateDiscoveryService(DPS_Node* node, const char* ser
         goto Exit;
     }
     service->node = node;
+    DPS_QueueInit(&service->ackQueue);
     service->topic = malloc(sizeof("$DPS_Discovery/") + strlen(serviceId) + 1);
     if (!service->topic) {
         ret = DPS_ERR_RESOURCES;
@@ -310,13 +313,21 @@ Exit:
     }
 }
 
+static void DestroyAckRequest(AckRequest* req)
+{
+    DPS_DestroyPublication(req->pub, NULL);
+    if (req->timer) {
+        uv_close((uv_handle_t*)req->timer, TimerCloseCb);
+    }
+    DPS_QueueRemove(&req->queue);
+    free(req);
+}
+
 static void AckTimerOnTimeout(uv_timer_t* timer)
 {
     AckRequest* req = timer->data;
     AckPublication(req->service, req->pub);
-    DPS_DestroyPublication(req->pub, NULL);
-    uv_close((uv_handle_t*)req->timer, TimerCloseCb);
-    free(req);
+    DestroyAckRequest(req);
 }
 
 static void Ack(void* data)
@@ -346,11 +357,7 @@ static void Ack(void* data)
     }
  Exit:
     if (err) {
-        DPS_DestroyPublication(req->pub, NULL);
-        if (req->timer) {
-            uv_close((uv_handle_t*)req->timer, TimerCloseCb);
-        }
-        free(req);
+        DestroyAckRequest(req);
     }
 }
 
@@ -366,6 +373,7 @@ static DPS_Status ScheduleAck(DPS_DiscoveryService* service, const DPS_Publicati
         DPS_ERRPRINT("alloc failed - %s\n", DPS_ErrTxt(ret));
         goto Exit;
     }
+    DPS_QueuePushBack(&service->ackQueue, &req->queue);
     req->service = service;
     req->pub = DPS_CopyPublication(pub);
     if (!req->pub) {
@@ -380,8 +388,7 @@ static DPS_Status ScheduleAck(DPS_DiscoveryService* service, const DPS_Publicati
  Exit:
     if (ret != DPS_OK) {
         if (req) {
-            DPS_DestroyPublication(req->pub, NULL);
-            free(req);
+            DestroyAckRequest(req);
         }
     }
     return ret;
@@ -520,6 +527,9 @@ static void Destroy(DPS_DiscoveryService* service)
     } else if (service->pub) {
         DPS_DestroyPublication(service->pub, OnPubDestroyed);
     } else {
+        while (!DPS_QueueEmpty(&service->ackQueue)) {
+            DestroyAckRequest((AckRequest*)DPS_QueueFront(&service->ackQueue));
+        }
         SharedBufferDecRef(service->payload);
         if (service->topic) {
             free(service->topic);
