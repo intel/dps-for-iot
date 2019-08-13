@@ -66,11 +66,13 @@ void* DPS_GetDiscoveryServiceData(DPS_DiscoveryService* service);
 /**
  * Function prototype for a discovery handler called when a discovery message is received.
  *
- * @param service  the service
- * @param payload  payload from the message if any
- * @param len      length of the payload
+ * @param service the service
+ * @param pub opaque handle for the message that was received
+ * @param payload payload from the message if any
+ * @param len length of the payload
  */
-typedef void (*DPS_DiscoveryHandler)(DPS_DiscoveryService* service, uint8_t* payload, size_t len);
+typedef void (*DPS_DiscoveryHandler)(DPS_DiscoveryService* service, const DPS_Publication* pub,
+                                     uint8_t* payload, size_t len);
 
 /**
  * Publish this node's discovery information and receive other node's discovery information.

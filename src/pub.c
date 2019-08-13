@@ -1381,9 +1381,9 @@ DPS_Publication* DPS_CreatePublication(DPS_Node* node)
     return pub;
 }
 
-static void DestroyCopy(DPS_Publication* copy)
+void DPS_DestroyCopy(DPS_Publication* copy)
 {
-    if (copy && copy->refCount == 0) {
+    if (copy) {
         DPS_ClearKeyId(&copy->ack.sender.kid);
         FreeTopics(copy);
         FreeRecipients(copy);
@@ -1444,7 +1444,7 @@ DPS_Publication* DPS_CopyPublication(const DPS_Publication* pub)
 
 Exit:
     if (ret != DPS_OK) {
-        DestroyCopy(copy);
+        DPS_DestroyCopy(copy);
         copy = NULL;
     }
     return copy;

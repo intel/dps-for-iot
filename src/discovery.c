@@ -33,6 +33,7 @@
 
 #include "node.h"
 #include "pub.h"
+#include "topics.h"
 
 /*
  * Debug control for this module
@@ -262,11 +263,53 @@ static void LinkCb(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, voi
     }
 }
 
+static DPS_Publication* CopyPublicationFromAck(DPS_Publication* pub)
+{
+    DPS_Publication* copy;
+    DPS_Status ret = DPS_ERR_RESOURCES;
+
+    DPS_DBGTRACE();
+
+    copy = calloc(1, sizeof(DPS_Publication));
+    if (!copy) {
+        DPS_ERRPRINT("malloc failure: no memory\n");
+        goto Exit;
+    }
+    copy->flags = PUB_FLAG_IS_COPY;
+    copy->sequenceNum = pub->ack.sequenceNum;
+    copy->ttl = pub->ttl;
+    copy->pubId = pub->pubId;
+    copy->sender = pub->ack.sender;
+    memcpy(&copy->senderAddr, &pub->ack.senderAddr, sizeof(DPS_NodeAddress));
+    copy->node = pub->node;
+    copy->numTopics = pub->numTopics;
+    if (pub->numTopics > 0) {
+        size_t i;
+        copy->topics = calloc(pub->numTopics, sizeof(char*));
+        if (!copy->topics) {
+            DPS_ERRPRINT("malloc failure: no memory\n");
+            goto Exit;
+        }
+        for (i = 0; i < pub->numTopics; i++) {
+            copy->topics[i] = strndup(pub->topics[i], DPS_MAX_TOPIC_STRLEN);
+        }
+    }
+    ret = DPS_OK;
+
+Exit:
+    if (ret != DPS_OK) {
+        DPS_DestroyCopy(copy);
+        copy = NULL;
+    }
+    return copy;
+}
+
 static void OnAck(DPS_Publication* pub, uint8_t* payload, size_t len)
 {
     DPS_DiscoveryService* service = DPS_GetPublicationData(pub);
     DPS_Node* node = service->node;
     DPS_RxBuffer rxBuf;
+    DPS_Publication* copy;
     DPS_Status ret;
 
     DPS_RxBufferInit(&rxBuf, payload, len);
@@ -277,7 +320,9 @@ static void OnAck(DPS_Publication* pub, uint8_t* payload, size_t len)
         }
     }
     if (service->handler) {
-        service->handler(service, rxBuf.rxPos, DPS_RxBufferAvail(&rxBuf));
+        copy = CopyPublicationFromAck(pub);
+        service->handler(service, copy, rxBuf.rxPos, DPS_RxBufferAvail(&rxBuf));
+        DPS_DestroyCopy(copy);
     }
 }
 
@@ -417,7 +462,7 @@ static void OnPub(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* pa
         ScheduleAck(service, pub);
     }
     if (service->handler) {
-        service->handler(service, rxBuf.rxPos, DPS_RxBufferAvail(&rxBuf));
+        service->handler(service, pub, rxBuf.rxPos, DPS_RxBufferAvail(&rxBuf));
     }
 }
 

@@ -234,6 +234,17 @@ DPS_Publication* DPS_FreePublication(DPS_Publication* pub);
 void DPS_FreePublications(DPS_Node* node);
 
 /**
+ * Destroy a copied publication.
+ *
+ * Normally DPS_FreePublication() should be called which handles both
+ * copied and non-copied publications.  DPS_DestroyCopy() is only
+ * intended to be used in special cases.
+ *
+ * @param copy The publication
+ */
+void DPS_DestroyCopy(DPS_Publication* copy);
+
+/**
  * Increase a publication's refcount to prevent it from being freed
  * from inside a callback function
  *

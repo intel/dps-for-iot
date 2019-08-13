@@ -20,10 +20,10 @@
 *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 */
 
-#include "test.h"
 #include <stdio.h>
-#include "topics.h"
 #include <dps/discovery.h>
+#include "test.h"
+#include "topics.h"
 
 static void OnNodeDestroyed(DPS_Node* node, void* data)
 {
@@ -46,9 +46,13 @@ static void OnPub(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* pa
 {
 }
 
-static void OnDiscovery(DPS_DiscoveryService* service, uint8_t* payload, size_t len)
+static void OnDiscovery(DPS_DiscoveryService* service, const DPS_Publication* pub,
+                        uint8_t* payload, size_t len)
 {
-    DPS_PRINT("%s\n", payload);
+    const DPS_UUID* pubId = DPS_PublicationGetUUID(pub);
+    uint32_t sn = DPS_PublicationGetSequenceNum(pub);
+
+    DPS_PRINT("%s(%d) %s\n", DPS_UUIDToString(pubId), sn, payload);
 }
 
 int main(int argc, char** argv)
