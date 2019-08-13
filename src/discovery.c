@@ -447,13 +447,20 @@ static void OnPub(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* pa
     DPS_Status ret;
 
     DPS_RxBufferInit(&rxBuf, payload, len);
-    if (DPS_MatchPublications(node, &rxBuf)) {
-        if (DPS_PublicationIsAckRequested(pub)) {
-            AckPublication(service, pub);
-        }
-        /* Do not link to myself */
+    if (!len) {
+        /*
+         * A goodbye message, do nothing except notify the application
+         */
+    } else if (DPS_MatchPublications(node, &rxBuf)) {
+        /*
+         * Do not link to myself
+         */
         if (DPS_UUIDCompare(DPS_PublicationGetUUID(service->pub), DPS_PublicationGetUUID(pub)) != 0) {
-            ret = DPS_Link(node, DPS_NodeAddrToString(DPS_PublicationGetSenderAddress(pub)), LinkCb, service);
+            if (DPS_PublicationIsAckRequested(pub)) {
+                AckPublication(service, pub);
+            }
+            ret = DPS_Link(node, DPS_NodeAddrToString(DPS_PublicationGetSenderAddress(pub)),
+                           LinkCb, service);
             if (ret != DPS_OK) {
                 DPS_ERRPRINT("DPS_Link failed - %s\n", DPS_ErrTxt(ret));
             }
@@ -588,11 +595,30 @@ static void DestroyService(void* data)
     Destroy(service);
 }
 
+static void PublishDestroyCb(DPS_Publication* pub, const DPS_Buffer* bufs, size_t numBufs,
+                             DPS_Status status, void* data)
+{
+    DPS_DiscoveryService* service = DPS_GetPublicationData(pub);
+    if (status != DPS_OK) {
+        DPS_ERRPRINT("DPS_PublishBufs failed - %s\n", DPS_ErrTxt(status));
+    }
+    Destroy(service);
+}
+
 void DPS_DestroyDiscoveryService(DPS_DiscoveryService* service)
 {
+    DPS_Status ret;
+
     DPS_DBGTRACEA("service=%p\n", service);
 
     if (service) {
-        DPS_NodeScheduleRequest(service->node, DestroyService, service);
+        /*
+         * Publish a goodbye message, then destroy the service
+         */
+        ret = DPS_PublishBufs(service->pub, NULL, 0, 0, PublishDestroyCb, service);
+        if (ret != DPS_OK) {
+            DPS_ERRPRINT("DPS_PublishBufs failed - %s\n", DPS_ErrTxt(ret));
+            DPS_NodeScheduleRequest(service->node, DestroyService, service);
+        }
     }
 }
