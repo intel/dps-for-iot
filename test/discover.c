@@ -25,6 +25,8 @@
 #include "test.h"
 #include "topics.h"
 
+#define MAX_MSG_LEN 128
+
 static void OnNodeDestroyed(DPS_Node* node, void* data)
 {
     DPS_SignalEvent((DPS_Event*)data, DPS_OK);
@@ -65,6 +67,7 @@ int main(int argc, char** argv)
     PublicationList* pub;
     SubscriptionList* sub;
     DPS_DiscoveryService* discovery = NULL;
+    char* msg = NULL;
     DPS_Status ret;
 
     DPS_Debug = DPS_FALSE;
@@ -108,6 +111,13 @@ int main(int argc, char** argv)
             sub->next = subs;
             subs = sub;
             ++arg;
+        } else if (strcmp(*arg, "-m") == 0) {
+            ++arg;
+            if (!--argc) {
+                goto Usage;
+            }
+            msg = *arg++;
+            continue;
         } else {
             goto Usage;
         }
@@ -151,7 +161,8 @@ int main(int argc, char** argv)
         }
     }
     discovery = DPS_CreateDiscoveryService(node, "test");
-    ret = DPS_DiscoveryPublish(discovery, (const uint8_t*)"hello", 6, OnDiscovery);
+    ret = DPS_DiscoveryPublish(discovery, (uint8_t*)msg, msg ? strnlen(msg, MAX_MSG_LEN) + 1 : 0,
+                               OnDiscovery);
     if (ret != DPS_OK) {
         goto Exit;
     }
