@@ -29,6 +29,7 @@
 #include <uv.h>
 #include <dps/dbg.h>
 #include <dps/discovery.h>
+#include <dps/private/cbor.h>
 #include <dps/private/dps.h>
 
 #include "node.h"
@@ -87,6 +88,7 @@ typedef struct _DPS_DiscoveryService {
     void* userData;
     DPS_Node* node;
     DPS_Publication* pub;
+    uint8_t uuidBuf[CBOR_SIZEOF_BYTES(sizeof(DPS_UUID))];
     SharedBuffer* payload;
     DPS_Subscription* sub;
     DPS_DiscoveryHandler handler;
@@ -105,6 +107,7 @@ DPS_DiscoveryService* DPS_CreateDiscoveryService(DPS_Node* node, const char* ser
 {
     static const int noWildcard = DPS_TRUE;
     DPS_DiscoveryService* service;
+    DPS_TxBuffer txBuf;
     DPS_Status ret;
 
     DPS_DBGTRACEA("node=%p,serviceId=%s\n", node, serviceId);
@@ -137,6 +140,11 @@ DPS_DiscoveryService* DPS_CreateDiscoveryService(DPS_Node* node, const char* ser
         goto Exit;
     }
     ret = DPS_PublicationSetMulticast(service->pub, DPS_TRUE);
+    if (ret != DPS_OK) {
+        goto Exit;
+    }
+    DPS_TxBufferInit(&txBuf, service->uuidBuf, sizeof(service->uuidBuf));
+    ret = CBOR_EncodeUUID(&txBuf, DPS_PublicationGetUUID(service->pub));
     if (ret != DPS_OK) {
         goto Exit;
     }
@@ -263,7 +271,7 @@ static void LinkCb(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, voi
     }
 }
 
-static DPS_Publication* CopyPublicationFromAck(DPS_Publication* pub)
+static DPS_Publication* CopyPublicationFromAck(DPS_Publication* pub, const DPS_UUID* ackUuid)
 {
     DPS_Publication* copy;
     DPS_Status ret = DPS_ERR_RESOURCES;
@@ -278,7 +286,7 @@ static DPS_Publication* CopyPublicationFromAck(DPS_Publication* pub)
     copy->flags = PUB_FLAG_IS_COPY;
     copy->sequenceNum = pub->ack.sequenceNum;
     copy->ttl = pub->ttl;
-    copy->pubId = pub->pubId;
+    copy->pubId = *ackUuid;
     copy->sender = pub->ack.sender;
     memcpy(&copy->senderAddr, &pub->ack.senderAddr, sizeof(DPS_NodeAddress));
     copy->node = pub->node;
@@ -309,10 +317,16 @@ static void OnAck(DPS_Publication* pub, uint8_t* payload, size_t len)
     DPS_DiscoveryService* service = DPS_GetPublicationData(pub);
     DPS_Node* node = service->node;
     DPS_RxBuffer rxBuf;
+    DPS_UUID ackUuid;
     DPS_Publication* copy;
     DPS_Status ret;
 
     DPS_RxBufferInit(&rxBuf, payload, len);
+    ret = CBOR_DecodeUUID(&rxBuf, &ackUuid);
+    if (ret != DPS_OK) {
+        DPS_ERRPRINT("CBOR_DecodeUUID failed - %s\n", DPS_ErrTxt(ret));
+        return;
+    }
     if (DPS_MatchPublications(node, &rxBuf)) {
         ret = DPS_Link(node, DPS_NodeAddrToString(DPS_AckGetSenderAddress(pub)), LinkCb, service);
         if (ret != DPS_OK) {
@@ -320,7 +334,7 @@ static void OnAck(DPS_Publication* pub, uint8_t* payload, size_t len)
         }
     }
     if (service->handler) {
-        copy = CopyPublicationFromAck(pub);
+        copy = CopyPublicationFromAck(pub, &ackUuid);
         service->handler(service, copy, rxBuf.rxPos, DPS_RxBufferAvail(&rxBuf));
         DPS_DestroyCopy(copy);
     }
@@ -333,19 +347,22 @@ static void AckCb(DPS_Publication* pub, const DPS_Buffer* bufs, size_t numBufs, 
     if (status != DPS_OK) {
         DPS_ERRPRINT("DPS_AckPublicationBufs failed - %s\n", DPS_ErrTxt(status));
     }
-    DestroyPayload(service, bufs, numBufs);
+    DestroyPayload(service, &bufs[1], numBufs - 1);
 }
 
 static void AckPublication(DPS_DiscoveryService* service, const DPS_Publication* pub)
 {
-    DPS_Buffer bufs[2];
+    DPS_Buffer bufs[3];
     size_t numBufs = 0;
     DPS_Status ret;
 
-    ret = CreatePayload(service, bufs, &numBufs);
+    bufs[0].base = service->uuidBuf;
+    bufs[0].len = sizeof(service->uuidBuf);
+    ret = CreatePayload(service, &bufs[1], &numBufs);
     if (ret != DPS_OK) {
         goto Exit;
     }
+    ++numBufs;
     ret = DPS_AckPublicationBufs(pub, bufs, numBufs, AckCb, service);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("DPS_AckPublicationBufs failed - %s\n", DPS_ErrTxt(ret));
@@ -354,7 +371,7 @@ static void AckPublication(DPS_DiscoveryService* service, const DPS_Publication*
 
 Exit:
     if (ret != DPS_OK) {
-        DestroyPayload(service, bufs, numBufs);
+        DestroyPayload(service, &bufs[1], numBufs - 1);
     }
 }
 
