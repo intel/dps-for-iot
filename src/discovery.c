@@ -34,6 +34,7 @@
 
 #include "node.h"
 #include "pub.h"
+#include "sub.h"
 #include "topics.h"
 
 /*
@@ -88,7 +89,6 @@ typedef struct _DPS_DiscoveryService {
     void* userData;
     DPS_Node* node;
     DPS_Publication* pub;
-    uint8_t uuidBuf[CBOR_SIZEOF_BYTES(sizeof(DPS_UUID))];
     SharedBuffer* payload;
     DPS_Subscription* sub;
     DPS_DiscoveryHandler handler;
@@ -103,11 +103,210 @@ static void Destroy(DPS_DiscoveryService* service);
 static void OnAck(DPS_Publication* pub, uint8_t* payload, size_t len);
 static void OnPub(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* payload, size_t len);
 
+static DPS_Status EncodePayload(DPS_DiscoveryService* service, uint8_t msgType, DPS_Buffer bufs[2])
+{
+    DPS_Status ret;
+    DPS_TxBuffer txBuf;
+    DPS_BitVector* needs = NULL;
+    DPS_BitVector* interests = NULL;
+    DPS_Subscription* sub;
+    size_t len;
+    size_t n;
+
+    DPS_LockNode(service->node);
+    DPS_TxBufferClear(&txBuf);
+    needs = DPS_BitVectorAllocFH();
+    interests = DPS_BitVectorAlloc();
+    if (!needs || !interests) {
+        ret = DPS_ERR_RESOURCES;
+        goto Exit;
+    }
+    DPS_BitVectorFill(needs);
+    for (sub = service->node->subscriptions; sub; sub = sub->next) {
+        if (sub->flags & SUB_FLAG_SERIALIZE) {
+            ret = DPS_BitVectorIntersection(needs, needs, sub->needs);
+            if (ret != DPS_OK) {
+                goto Exit;
+            }
+            ret = DPS_BitVectorUnion(interests, sub->bf);
+            if (ret != DPS_OK) {
+                goto Exit;
+            }
+        }
+    }
+    n = 2;
+    len = 0;
+    if (msgType == DPS_MSG_TYPE_ACK) {
+        ++n;
+        len += CBOR_SIZEOF(uint8_t) + CBOR_SIZEOF_BYTES(sizeof(DPS_UUID));
+    }
+    len += CBOR_SIZEOF(uint8_t) + DPS_BitVectorSerializeMaxSize(interests) +
+        CBOR_SIZEOF(uint8_t) + DPS_BitVectorSerializeFHSize();
+    if (service->payload) {
+        ++n;
+        len += CBOR_SIZEOF(uint8_t);
+    }
+    len += CBOR_SIZEOF_MAP(n);
+    ret = DPS_TxBufferInit(&txBuf, NULL, len);
+    if (ret != DPS_OK) {
+        goto Exit;
+    }
+    ret = CBOR_EncodeMap(&txBuf, n);
+    if (ret != DPS_OK) {
+        goto Exit;
+    }
+    if (msgType == DPS_MSG_TYPE_ACK) {
+        ret = CBOR_EncodeUint8(&txBuf, DPS_CBOR_KEY_PUB_ID);
+        if (ret != DPS_OK) {
+            goto Exit;
+        }
+        ret = CBOR_EncodeUUID(&txBuf, DPS_PublicationGetUUID(service->pub));
+        if (ret != DPS_OK) {
+            goto Exit;
+        }
+    }
+    ret = CBOR_EncodeUint8(&txBuf, DPS_CBOR_KEY_NEEDS);
+    if (ret != DPS_OK) {
+        goto Exit;
+    }
+    ret = DPS_BitVectorSerializeFH(needs, &txBuf);
+    if (ret != DPS_OK) {
+        goto Exit;
+    }
+    ret = CBOR_EncodeUint8(&txBuf, DPS_CBOR_KEY_INTERESTS);
+    if (ret != DPS_OK) {
+        goto Exit;
+    }
+    ret = DPS_BitVectorSerialize(interests, &txBuf);
+    if (ret != DPS_OK) {
+        goto Exit;
+    }
+    if (service->payload) {
+        ret = CBOR_EncodeUint8(&txBuf, DPS_CBOR_KEY_DATA);
+        if (ret != DPS_OK) {
+            goto Exit;
+        }
+        ret = CBOR_EncodeLength(&txBuf, service->payload->buf.len, CBOR_BYTES);
+        if (ret != DPS_OK) {
+            goto Exit;
+        }
+    }
+ Exit:
+    DPS_BitVectorFree(interests);
+    DPS_BitVectorFree(needs);
+    if (ret == DPS_OK) {
+        bufs[0].base = txBuf.base;
+        bufs[0].len = DPS_TxBufferUsed(&txBuf);
+        if (service->payload) {
+            bufs[1] = service->payload->buf;
+            SharedBufferIncRef(service->payload);
+        }
+    } else {
+        DPS_TxBufferFree(&txBuf);
+    }
+    DPS_UnlockNode(service->node);
+    return ret;
+}
+
+static DPS_Status DecodePayload(DPS_DiscoveryService* service, uint8_t msgType, DPS_UUID* pubId, int* match,
+                                uint8_t** data, size_t* dataLen, uint8_t* payload, size_t len)
+{
+    static const int32_t Keys[] = { DPS_CBOR_KEY_PUB_ID, DPS_CBOR_KEY_NEEDS, DPS_CBOR_KEY_INTERESTS,
+                                    DPS_CBOR_KEY_DATA };
+    DPS_Node* node = service->node;
+    DPS_RxBuffer rxBuf;
+    uint16_t keysMask;
+    DPS_BitVector* needs = NULL;
+    DPS_BitVector* interests = NULL;
+    CBOR_MapState mapState;
+    DPS_Publication* pub;
+    DPS_Status ret;
+
+    DPS_RxBufferInit(&rxBuf, payload, len);
+    ret = DPS_ParseMapInit(&mapState, &rxBuf, NULL, 0, Keys, A_SIZEOF(Keys));
+    if (ret != DPS_OK) {
+        goto Exit;
+    }
+    keysMask = 0;
+    while (!DPS_ParseMapDone(&mapState)) {
+        int32_t key = 0;
+        ret = DPS_ParseMapNext(&mapState, &key);
+        if (ret != DPS_OK) {
+            break;
+        }
+        switch (key) {
+        case DPS_CBOR_KEY_PUB_ID:
+            keysMask |= (1 << key);
+            if (!pubId) {
+                ret = DPS_ERR_INVALID;
+                break;
+            }
+            ret = CBOR_DecodeUUID(&rxBuf, pubId);
+            break;
+        case DPS_CBOR_KEY_NEEDS:
+            keysMask |= (1 << key);
+            if (needs) {
+                ret = DPS_ERR_INVALID;
+                break;
+            }
+            needs = DPS_BitVectorAllocFH();
+            if (!needs) {
+                ret = DPS_ERR_RESOURCES;
+                break;
+            }
+            ret = DPS_BitVectorDeserializeFH(needs, &rxBuf);
+            break;
+        case DPS_CBOR_KEY_INTERESTS:
+            keysMask |= (1 << key);
+            if (interests) {
+                ret = DPS_ERR_INVALID;
+                break;
+            }
+            interests = DPS_BitVectorAlloc();
+            if (!interests) {
+                ret = DPS_ERR_RESOURCES;
+                break;
+            }
+            ret = DPS_BitVectorDeserialize(interests, &rxBuf);
+            break;
+        case DPS_CBOR_KEY_DATA:
+            keysMask |= (1 << key);
+            ret = CBOR_DecodeBytes(&rxBuf, data, dataLen);
+            break;
+        default:
+            break;
+        }
+        if (ret != DPS_OK) {
+            break;
+        }
+    }
+    if (ret != DPS_OK) {
+        goto Exit;
+    }
+    if ((msgType == DPS_MSG_TYPE_ACK) && ((keysMask & (1 << DPS_CBOR_KEY_PUB_ID)) == 0)) {
+        ret = DPS_ERR_INVALID;
+        goto Exit;
+    }
+
+    *match = DPS_FALSE;
+    DPS_LockNode(node);
+    for (pub = node->publications; pub && !(*match); pub = pub->next) {
+        DPS_BitVectorIntersection(node->scratch.interests, pub->bf, interests);
+        DPS_BitVectorFuzzyHash(node->scratch.needs, node->scratch.interests);
+        *match = DPS_BitVectorIncludes(node->scratch.needs, needs);
+    }
+    DPS_UnlockNode(node);
+
+ Exit:
+    DPS_BitVectorFree(interests);
+    DPS_BitVectorFree(needs);
+    return ret;
+}
+
 DPS_DiscoveryService* DPS_CreateDiscoveryService(DPS_Node* node, const char* serviceId)
 {
     static const int noWildcard = DPS_TRUE;
     DPS_DiscoveryService* service;
-    DPS_TxBuffer txBuf;
     DPS_Status ret;
 
     DPS_DBGTRACEA("node=%p,serviceId=%s\n", node, serviceId);
@@ -140,11 +339,6 @@ DPS_DiscoveryService* DPS_CreateDiscoveryService(DPS_Node* node, const char* ser
         goto Exit;
     }
     ret = DPS_PublicationSetMulticast(service->pub, DPS_TRUE);
-    if (ret != DPS_OK) {
-        goto Exit;
-    }
-    DPS_TxBufferInit(&txBuf, service->uuidBuf, sizeof(service->uuidBuf));
-    ret = CBOR_EncodeUUID(&txBuf, DPS_PublicationGetUUID(service->pub));
     if (ret != DPS_OK) {
         goto Exit;
     }
@@ -184,32 +378,12 @@ void* DPS_GetDiscoveryServiceData(DPS_DiscoveryService* service)
     return service ? service->userData : NULL;
 }
 
-static DPS_Status CreatePayload(DPS_DiscoveryService* service, DPS_Buffer* bufs, size_t* numBufs)
-{
-    DPS_Status ret;
-
-    memset(bufs, 0, sizeof(DPS_Buffer) * 2);
-    *numBufs = 0;
-    ret = DPS_SerializeSubscriptions(service->node, &bufs[(*numBufs)++]);
-    if (ret != DPS_OK) {
-        DPS_ERRPRINT("DPS_SerializeSubscriptions failed - %s\n", DPS_ErrTxt(ret));
-        return ret;
-    }
-    DPS_LockNode(service->node);
-    if (service->payload) {
-        bufs[(*numBufs)++] = service->payload->buf;
-        SharedBufferIncRef(service->payload);
-    }
-    DPS_UnlockNode(service->node);
-    return DPS_OK;
-}
-
 static void DestroyPayload(DPS_DiscoveryService* service, const DPS_Buffer* bufs, size_t numBufs)
 {
     if (bufs[0].base) {
         free(bufs[0].base);
     }
-    if (numBufs > 1) {
+    if ((numBufs > 1) && bufs[1].base) {
         DPS_LockNode(service->node);
         SharedBufferDecRef(BufferToSharedBuffer(&bufs[1]));
         DPS_UnlockNode(service->node);
@@ -230,15 +404,15 @@ static void PublishTimerOnTimeout(uv_timer_t* timer)
 {
     DPS_DiscoveryService* service = timer->data;
     DPS_Buffer bufs[2];
-    size_t numBufs;
     DPS_Status ret;
     int err;
 
-    ret = CreatePayload(service, bufs, &numBufs);
+    memset(bufs, 0, sizeof(bufs));
+    ret = EncodePayload(service, DPS_MSG_TYPE_PUB, bufs);
     if (ret != DPS_OK) {
         goto Exit;
     }
-    ret = DPS_PublishBufs(service->pub, bufs, numBufs, 0, PublishCb, service);
+    ret = DPS_PublishBufs(service->pub, bufs, 2, 0, PublishCb, service);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("DPS_PublishBufs failed - %s\n", DPS_ErrTxt(ret));
         goto Exit;
@@ -253,7 +427,7 @@ static void PublishTimerOnTimeout(uv_timer_t* timer)
 
 Exit:
     if (ret != DPS_OK) {
-        DestroyPayload(service, bufs, numBufs);
+        DestroyPayload(service, bufs, 2);
     }
 }
 
@@ -316,18 +490,20 @@ static void OnAck(DPS_Publication* pub, uint8_t* payload, size_t len)
 {
     DPS_DiscoveryService* service = DPS_GetPublicationData(pub);
     DPS_Node* node = service->node;
-    DPS_RxBuffer rxBuf;
     DPS_UUID ackUuid;
+    int match;
+    uint8_t* data = NULL;
+    size_t dataLen = 0;
     DPS_Publication* copy;
     DPS_Status ret;
 
-    DPS_RxBufferInit(&rxBuf, payload, len);
-    ret = CBOR_DecodeUUID(&rxBuf, &ackUuid);
+    ret = DecodePayload(service, DPS_MSG_TYPE_ACK, &ackUuid, &match, &data, &dataLen,
+                        payload, len);
     if (ret != DPS_OK) {
-        DPS_ERRPRINT("CBOR_DecodeUUID failed - %s\n", DPS_ErrTxt(ret));
+        DPS_ERRPRINT("Decode failed - %s\n", DPS_ErrTxt(ret));
         return;
     }
-    if (DPS_MatchPublications(node, &rxBuf)) {
+    if (match) {
         ret = DPS_Link(node, DPS_NodeAddrToString(DPS_AckGetSenderAddress(pub)), LinkCb, service);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("DPS_Link failed - %s\n", DPS_ErrTxt(ret));
@@ -335,7 +511,7 @@ static void OnAck(DPS_Publication* pub, uint8_t* payload, size_t len)
     }
     if (service->handler) {
         copy = CopyPublicationFromAck(pub, &ackUuid);
-        service->handler(service, copy, rxBuf.rxPos, DPS_RxBufferAvail(&rxBuf));
+        service->handler(service, copy, data, dataLen);
         DPS_DestroyCopy(copy);
     }
 }
@@ -347,23 +523,20 @@ static void AckCb(DPS_Publication* pub, const DPS_Buffer* bufs, size_t numBufs, 
     if (status != DPS_OK) {
         DPS_ERRPRINT("DPS_AckPublicationBufs failed - %s\n", DPS_ErrTxt(status));
     }
-    DestroyPayload(service, &bufs[1], numBufs - 1);
+    DestroyPayload(service, bufs, numBufs);
 }
 
 static void AckPublication(DPS_DiscoveryService* service, const DPS_Publication* pub)
 {
-    DPS_Buffer bufs[3];
-    size_t numBufs = 0;
+    DPS_Buffer bufs[2];
     DPS_Status ret;
 
-    bufs[0].base = service->uuidBuf;
-    bufs[0].len = sizeof(service->uuidBuf);
-    ret = CreatePayload(service, &bufs[1], &numBufs);
+    memset(bufs, 0, sizeof(bufs));
+    ret = EncodePayload(service, DPS_MSG_TYPE_ACK, bufs);
     if (ret != DPS_OK) {
         goto Exit;
     }
-    ++numBufs;
-    ret = DPS_AckPublicationBufs(pub, bufs, numBufs, AckCb, service);
+    ret = DPS_AckPublicationBufs(pub, bufs, 2, AckCb, service);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("DPS_AckPublicationBufs failed - %s\n", DPS_ErrTxt(ret));
         goto Exit;
@@ -371,7 +544,7 @@ static void AckPublication(DPS_DiscoveryService* service, const DPS_Publication*
 
 Exit:
     if (ret != DPS_OK) {
-        DestroyPayload(service, &bufs[1], numBufs - 1);
+        DestroyPayload(service, bufs, 2);
     }
 }
 
@@ -460,33 +633,42 @@ static void OnPub(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* pa
 {
     DPS_DiscoveryService* service = DPS_GetSubscriptionData(sub);
     DPS_Node* node = service->node;
-    DPS_RxBuffer rxBuf;
+    int match;
+    uint8_t* data = NULL;
+    size_t dataLen = 0;
     DPS_Status ret;
 
-    DPS_RxBufferInit(&rxBuf, payload, len);
-    if (!len) {
+    if (len) {
+        ret = DecodePayload(service, DPS_MSG_TYPE_PUB, NULL, &match, &data, &dataLen,
+                            payload, len);
+        if (ret != DPS_OK) {
+            DPS_ERRPRINT("Decode failed - %s\n", DPS_ErrTxt(ret));
+            return;
+        }
+        if (match) {
+            /*
+             * Do not link to myself
+             */
+            if (DPS_UUIDCompare(DPS_PublicationGetUUID(service->pub), DPS_PublicationGetUUID(pub)) != 0) {
+                if (DPS_PublicationIsAckRequested(pub)) {
+                    AckPublication(service, pub);
+                }
+                ret = DPS_Link(node, DPS_NodeAddrToString(DPS_PublicationGetSenderAddress(pub)),
+                               LinkCb, service);
+                if (ret != DPS_OK) {
+                    DPS_ERRPRINT("DPS_Link failed - %s\n", DPS_ErrTxt(ret));
+                }
+            }
+        } else if (DPS_PublicationIsAckRequested(pub)) {
+            ScheduleAck(service, pub);
+        }
+    } else {
         /*
          * A goodbye message, do nothing except notify the application
          */
-    } else if (DPS_MatchPublications(node, &rxBuf)) {
-        /*
-         * Do not link to myself
-         */
-        if (DPS_UUIDCompare(DPS_PublicationGetUUID(service->pub), DPS_PublicationGetUUID(pub)) != 0) {
-            if (DPS_PublicationIsAckRequested(pub)) {
-                AckPublication(service, pub);
-            }
-            ret = DPS_Link(node, DPS_NodeAddrToString(DPS_PublicationGetSenderAddress(pub)),
-                           LinkCb, service);
-            if (ret != DPS_OK) {
-                DPS_ERRPRINT("DPS_Link failed - %s\n", DPS_ErrTxt(ret));
-            }
-        }
-    } else if (DPS_PublicationIsAckRequested(pub)) {
-        ScheduleAck(service, pub);
     }
     if (service->handler) {
-        service->handler(service, pub, rxBuf.rxPos, DPS_RxBufferAvail(&rxBuf));
+        service->handler(service, pub, data, dataLen);
     }
 }
 
