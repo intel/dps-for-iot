@@ -233,12 +233,6 @@ static void OnNodeDestroyed(DPS_Node* node, void* data)
     }
 }
 
-const LinkMonitorConfig SlowLinkProbe = {
-    .retries = 0,        /* Maximum number of retries following a probe failure */
-    .probeTO = 1000000,  /* Repeat rate for probes */
-    .retryTO = 10        /* Repeat time for retries following a probe failure */
-};
-
 static volatile int LinksUp;
 static volatile int LinksFailed;
 
@@ -354,10 +348,10 @@ int main(int argc, char** argv)
             }
             NodeMap[NodeList[i]] = node;
             /*
-             * Set slow link monitor probes because we are
+             * Set long link loss timeout because we are
              * not detecting disconnects in this test program.
              */
-            node->linkMonitorConfig = SlowLinkProbe;
+            node->linkLossTimeout = 1000000;
         }
         /*
          * Wait for a short time while before trying to link

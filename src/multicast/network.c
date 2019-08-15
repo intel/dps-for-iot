@@ -33,7 +33,7 @@
 /*
  * Debug control for this module
  */
-DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
+DPS_DEBUG_CONTROL(DPS_DEBUG_OFF);
 
 #define USE_IPV4       0x10
 #define USE_IPV6       0x01

@@ -530,8 +530,17 @@ DPS_Status DPS_DestroyNode(DPS_Node* node, DPS_OnNodeDestroyed cb, void* data);
 
 /**
  * The default maximum rate (in msecs) to compute and send out subscription updates.
+ * This allows subscriptions updates coming in from multiple sources to be batched
+ * up for forwarding. This reduces network traffic during startup at the cost of a
+ * slight increase in latency for new subscriptions.
  */
 #define DPS_SUBSCRIPTION_UPDATE_RATE 1000
+
+/**
+  * This establishes the base rate at which keep-alive subscription messages are
+  * sent to remote nodes. This must be larger than DPS_SUBSCRIPTION_UPDATE_RATE.
+  */
+#define DPS_LINK_LOSS_TIMEOUT 10000
 
 /**
  * Specify the time delay (in msecs) between subscription updates.

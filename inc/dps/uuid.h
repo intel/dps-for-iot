@@ -48,6 +48,7 @@ typedef struct _DPS_UUID {
     /**< The UUID value */
     union {
         uint8_t val[16]; /**< The UUID as an array of 8-bit values */
+        uint32_t val32[4]; /**< The UUID as an array of 32-bit values */
         uint64_t val64[2]; /**< The UUID as an array of 64-bit values */
     };
 } DPS_UUID;

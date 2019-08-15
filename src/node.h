@@ -62,7 +62,6 @@ extern "C" {
 #if !defined(DOXYGEN_SKIP_FORWARD_DECLARATION)
 typedef struct _RemoteNode RemoteNode;
 typedef struct _PublicationAck PublicationAck;
-typedef struct _LinkMonitor LinkMonitor;
 #endif
 
 /**
@@ -74,15 +73,6 @@ typedef struct _OnOpCompletion OnOpCompletion;
  * Context for network address resolution
  */
 typedef struct _ResolverInfo ResolverInfo;
-
-/**
- * Link monitor configuration values. All times are in milliseconds.
- */
-typedef struct _LinkMonitorConfig {
-    uint16_t retries;  /**< Number of probe retries after a timeout */
-    uint16_t retryTO;  /**< Probe retry time */
-    uint32_t probeTO;  /**< Probe repeat time */
-} LinkMonitorConfig;
 
 /**
  * A request to run on the node thread.
@@ -117,7 +107,9 @@ DPS_Status DPS_NodeScheduleRequest(DPS_Node* node, OnNodeRequest cb, void* data)
 typedef struct _DPS_Node {
     void* userData;                       /**< Application provided user data */
 
-    uint8_t subsPending;                  /**< Used to rate-limit subscription messages */
+    uint8_t subsPending;                  /**< If non-zero subscriptions are evaluated to be sent */
+    uint32_t numRemoteNodes;              /**< Number of remote nodes */
+    uint32_t numMutedRemotes;             /**< Number of remote nodes that are muted */
     DPS_NodeAddress addr;                 /**< Listening address */
     char addrStr[DPS_NODE_ADDRESS_MAX_STRING_LEN]; /**< Text of listening address */
     DPS_UUID meshId;                      /**< Randomly allocated mesh id for this node */
@@ -138,6 +130,7 @@ typedef struct _DPS_Node {
     uv_async_t subsAsync;                 /**< Async for sending subscriptions */
 
     uint32_t subsRate;                    /**< Specifies time delay (in msecs) between subscription updates */
+    uint32_t linkLossTimeout;             /**< Specifies the keep alive timeout period */
     uv_timer_t subsTimer;                 /**< Timer for sending subscriptions */
 
     DPS_Queue ackQueue;                   /**< Queued acknowledgement packets */
@@ -166,8 +159,6 @@ typedef struct _DPS_Node {
     uint8_t state;                        /**< Indicates if the node is running, stopping, or stopped */
     DPS_OnNodeDestroyed onDestroyed;      /**< Function to call when the node is destroyed */
     void* onDestroyedData;                /**< Context to pass to onDestroyed callback */
-
-    LinkMonitorConfig linkMonitorConfig;  /**< Configuration parameters for mesh probe publications */
 
     uv_async_t resolverAsync;             /**< Async handler for address resolver */
     ResolverInfo* resolverList;           /**< Linked list of address resolution requests */
@@ -208,14 +199,13 @@ typedef struct _RemoteNode {
         uint8_t deltaInd;              /**< TRUE if the interests info is a delta */
         uint8_t ackCountdown;          /**< Number of remaining subscription send retries + 1 */
         uint8_t includeSub;            /**< TRUE to include subscription in SAK */
-        uint8_t subPending;            /**< TRUE if subscription send is pending */
+        uint8_t subAckPending;         /**< TRUE if subscription ACK is pending */
         uint32_t revision;             /**< Revision number of last subscription sent to this node */
         DPS_UUID meshId;               /**< The mesh id sent to this remote node */
         DPS_BitVector* needs;          /**< Needs bit vector sent outbound to this remote node */
         DPS_BitVector* interests;      /**< Full outbound interests bit vector to this remote node */
         DPS_BitVector* delta;          /**< Delta outbound bit vector sent to this remote node */
     } outbound;
-    LinkMonitor* monitor;              /**< For monitoring muted links */
     DPS_NetEndpoint ep;                /**< The endpoint of the remote */
     RemoteNode* next;                  /**< Remotes are a linked list attached to the local node */
 } RemoteNode;
@@ -432,11 +422,6 @@ DPS_Publication* DPS_LookupAckHandler(DPS_Node* node, const DPS_UUID* pubId, uin
  * @param uuid  The UUID to be updated.
  */
 void DPS_RandUUIDLess(DPS_UUID* uuid);
-
-/**
- * For debug output of mesh ids
- */
-#define UUID_32(n) (((unsigned)((uint8_t*)(n))[0] << 24) | (((uint8_t*)(n))[1] << 16) | (((uint8_t*)(n))[2] << 8) | (((uint8_t*)(n))[3] << 0))
 
 #ifdef __cplusplus
 }

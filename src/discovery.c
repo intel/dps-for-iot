@@ -33,6 +33,11 @@
 
 #include "node.h"
 
+/*
+ * Debug control for this module
+ */
+DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
+
 typedef struct _AckRequest {
     DPS_DiscoveryService* service;
     DPS_Publication* pub;
@@ -47,7 +52,6 @@ typedef struct _DPS_DiscoveryService {
     uint64_t nextTimeout;
     char* topic;
 } DPS_DiscoveryService;
-
 
 DPS_DiscoveryService* DPS_CreateDiscoveryService(DPS_Node* node, const char* serviceId)
 {

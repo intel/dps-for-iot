@@ -113,6 +113,8 @@ int DPS_CmpAddr(const DPS_NodeAddress* addr1, const DPS_NodeAddress* addr2)
     struct sockaddr_in6 tmp;
 
     if (addr1->type != addr2->type) {
+        DPS_ERRPRINT("Different address types %d != %d\n", addr1->type, addr2->type);
+        assert(addr1->type == addr2->type);
         return addr1->type < addr2->type ? -1 : 1;
     }
     switch (addr1->type) {
@@ -151,7 +153,11 @@ int DPS_CmpAddr(const DPS_NodeAddress* addr1, const DPS_NodeAddress* addr2)
             const struct sockaddr_in* ipa = (const struct sockaddr_in*)a;
             const struct sockaddr_in* ipb = (const struct sockaddr_in*)b;
             if (ipa->sin_port == ipb->sin_port) {
-                return ipa->sin_addr.s_addr < ipb->sin_addr.s_addr ? -1 : 1;
+                if (ipa->sin_addr.s_addr == ipb->sin_addr.s_addr) {
+                    return 0;
+                } else {
+                    return ipa->sin_addr.s_addr < ipb->sin_addr.s_addr ? -1 : 1;
+                }
             } else {
                 return ipa->sin_port < ipb->sin_port ? -1 : 1;
             }

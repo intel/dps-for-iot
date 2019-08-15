@@ -15,7 +15,7 @@ import time
 atexit.register(cleanup)
 
 seed=1
-num_nodes = 30
+num_nodes = 4
 
 random.seed(seed)
 
@@ -28,7 +28,7 @@ for i in range(num_nodes):
     ns.append(discover("-p " + pubs + " -s " + subs))
 
 # Wait a bit for discovery to settle
-time.sleep(num_nodes)
+time.sleep(10 + num_nodes / 4)
 
 for n in ns:
     n.kill(signal.SIGUSR1)
