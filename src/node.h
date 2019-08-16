@@ -113,7 +113,6 @@ typedef struct _DPS_Node {
     DPS_NodeAddress addr;                 /**< Listening address */
     char addrStr[DPS_NODE_ADDRESS_MAX_STRING_LEN]; /**< Text of listening address */
     DPS_UUID meshId;                      /**< Randomly allocated mesh id for this node */
-    DPS_UUID minMeshId;                   /**< Minimum mesh id seen by this node */
     char separators[13];                  /**< List of separator characters */
     DPS_KeyStore *keyStore;               /**< Functions for loading encryption keys */
     COSE_Entity signer;                   /**< Sign messages with this entity */

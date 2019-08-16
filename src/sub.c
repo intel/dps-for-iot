@@ -43,8 +43,6 @@
  */
 DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
-#define DEBUG_LOOP_DETECTION 1
-
 /*
  * Set to non-zero value to simulate lost subscriptions
  * and subscription acknowledgements
@@ -260,7 +258,7 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote)
     size_t len;
     uint8_t flags = 0;
 
-    DPS_DBGTRACEA(" to %s\n", DESCRIBE(remote));
+    DPS_DBGTRACEA("from %s to %s\n", node->addrStr, DESCRIBE(remote));
 
     if (!node->netCtx) {
         return DPS_ERR_NETWORK;
@@ -441,7 +439,7 @@ static DPS_Status SendSubscriptionAck(DPS_Node* node, RemoteNode* remote, uint32
     size_t len;
     uint8_t flags = 0;
 
-    DPS_DBGTRACE();
+    DPS_DBGTRACEA("from %s to %s\n", node->addrStr, DESCRIBE(remote));
 
     if (!node->netCtx) {
         return DPS_ERR_NETWORK;
@@ -884,28 +882,24 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
             DPS_BitVectorFree(needs);
         }
         /*
-         * Track the minimum mesh id we have seen
-         */
-        if (DPS_UUIDCompare(&meshId, &node->minMeshId) < 0) {
-            memcpy_s(&node->minMeshId, sizeof(node->minMeshId), &meshId, sizeof(DPS_UUID));
-        }
-        /*
          * If all is good send an ACK
          */
         if (ret == DPS_OK) {
             if (remoteIsNew) {
-                uint8_t unused;
-                DPS_UpdateOutboundInterests(node, remote, &unused);
                 /*
-                 * First sack to a new remote always carries subscription information.
+                 * We always need to send the ACK but don't need to include subscription
+                 * information if there are no interests to send.
                  */
-                remote->outbound.includeSub = DPS_TRUE;
+                ret = DPS_UpdateOutboundInterests(node, remote, &remote->outbound.includeSub);
+                if (ret != DPS_OK) {
+                    goto DiscardAndExit;
+                }
             }
             ret = SendSubscriptionAck(node, remote, revision, remote->outbound.includeSub);
         }
     } else {
         if (!ackSeqNum) {
-            DPS_ERRPRINT("Expect normal subscription to always request an ACK\n");
+            DPS_ERRPRINT("Expect subscription to always request an ACK\n");
             ret = DPS_ERR_INVALID;
             goto DiscardAndExit;
         }
@@ -938,6 +932,7 @@ DiscardAndExit:
 
 DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxBuffer* buf)
 {
+    DPS_DBGTRACEA("from %s to %s\n", node->addrStr, DPS_NodeAddrToString(&ep->addr));
     return DecodeSubscription(node, ep, buf, NULL);
 }
 
@@ -947,7 +942,7 @@ DPS_Status DPS_DecodeSubscriptionAck(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
     uint32_t revision = 0;
     RemoteNode* remote = NULL;
 
-    DPS_DBGTRACE();
+    DPS_DBGTRACEA("from %s to %s\n", node->addrStr, DPS_NodeAddrToString(&ep->addr));
 
     ret = DecodeSubscription(node, ep, buf, &revision);
     if (ret != DPS_OK) {
@@ -1029,18 +1024,6 @@ DPS_Status DPS_Subscribe(DPS_Subscription* sub, DPS_PublicationHandler handler)
      * Protect the node while we update it
      */
     DPS_LockNode(node);
-    /*
-     * We don't need a mesh id for this node until we have local subscriptions
-     */
-    if (!node->subscriptions) {
-        DPS_GenerateUUID(&node->meshId);
-#ifndef DEBUG_LOOP_DETECTION
-        node->meshId.val32[1] = 0;
-        node->meshId.val32[2] = 0;
-        node->meshId.val32[3] = 0;
-#endif
-        DPS_DBGPRINT("Node mesh id for %s: %08x\n", node->addrStr, node->meshId.val32[0]);
-    }
     sub->next = node->subscriptions;
     node->subscriptions = sub;
     ret = DPS_CountVectorAdd(node->interests, sub->bf);

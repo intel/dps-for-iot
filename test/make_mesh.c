@@ -232,15 +232,18 @@ static void PrintSubgraph(FILE* f, int showMuted, uint16_t* kills, size_t numKil
     int maxN = 0;
 
     numArcs = MakeLinks(&numNodes, &numMuted);
+#if 0
     if (numMuted & 1) {
         DPS_ERRPRINT("Odd number of muted links - something went wrong\n");
     }
-    DPS_PRINT("Nodes=%d, muted=%d\n", (int)numNodes, (int)(numMuted / 2));
+    numMuted /= 2;
+#endif
+    DPS_PRINT("Nodes=%d, muted=%d\n", numNodes, numMuted);
 
     if (*label == 0) {
         *label = base + 1000;
-        fprintf(f, "  %d[shape=none, width=1, style=bold, height=1, fontsize=12, label=\"nodes=%d\\narcs=%d\\nmuted=%d", *label, (int)numNodes, (int)numArcs, (int)(numMuted / 2));
-        if (expMuted != (numMuted / 2)) {
+        fprintf(f, "  %d[shape=none, width=1, style=bold, height=1, fontsize=12, label=\"nodes=%d\\narcs=%d\\nmuted=%d", *label, numNodes, numArcs, numMuted);
+        if (expMuted != numMuted) {
             fprintf(f, "/%d\"];\n", (int)expMuted);
         } else {
             fprintf(f, "\"];\n");
@@ -375,7 +378,6 @@ static void DumpMeshIds(size_t numIds)
         DPS_Node* node = NodeMap[id];
         if (node) {
             DPS_PRINT("Node[%d] meshId %s\n", id, DPS_UUIDToString(&node->meshId));
-            DPS_PRINT("Node[%d] minMeshId %s\n", id, DPS_UUIDToString(&node->minMeshId));
         }
     }
 }

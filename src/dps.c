@@ -48,6 +48,11 @@
  */
 DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
+/*
+ * Set this to make it easier to debug mesh loop detection
+ */
+#define DEBUG_LOOP_DETECTION  0
+
 #define DESCRIBE_REMOTE(n)  DPS_NodeAddrToString(&(n)->ep.addr)
 
 #define _MIN_(x, y)  (((x) < (y)) ? (x) : (y))
@@ -251,8 +256,6 @@ void DPS_ClearInboundInterests(DPS_Node* node, RemoteNode* remote)
 
 static void InsertRemoteNode(DPS_Node* node, RemoteNode* remote)
 {
-    assert(!IsValidRemoteNode(node, remote));
-    DPS_DBGTRACEA("%s\n", DESCRIBE_REMOTE(remote));
     remote->next = node->remoteNodes;
     node->remoteNodes = remote;
     ++node->numRemoteNodes;
@@ -261,8 +264,6 @@ static void InsertRemoteNode(DPS_Node* node, RemoteNode* remote)
 static void RemoveRemoteNode(DPS_Node* node, RemoteNode* remote)
 {
     RemoteNode* prev = node->remoteNodes;
-    assert(IsValidRemoteNode(node, remote));
-    DPS_DBGTRACEA("%s\n", DESCRIBE_REMOTE(remote));
     if (prev == remote) {
         node->remoteNodes = remote->next;
     } else {
@@ -322,15 +323,14 @@ DPS_Status DPS_UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, uin
     DPS_Status ret;
     DPS_BitVector* newInterests = NULL;
     DPS_BitVector* newNeeds = NULL;
+    const DPS_UUID* minMeshId;
 
     DPS_DBGTRACE();
 
     /*
-     * We don't update interests if we are muted but if we are
-     * half-muted we need to send a subscription.
+     * Don't update interests if we are muted.
      */
     if (destNode->outbound.muted) {
-        *send = !destNode->inbound.muted;
         return DPS_OK;
     }
     /*
@@ -397,20 +397,17 @@ DPS_Status DPS_UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, uin
     destNode->outbound.interests = newInterests;
     destNode->outbound.needs = newNeeds;
     /*
+     * Also send the subscription if the minimum meshId changed
+     */
+    minMeshId = MinMeshId(node, destNode);
+    if (DPS_UUIDCompare(minMeshId, &destNode->outbound.meshId) < 0) {
+        destNode->outbound.meshId = *minMeshId;
+        *send = DPS_TRUE;
+    }
+    /*
      * Increment the revision number if we are sending a subscription
      */
     if (*send) {
-        /*
-         * If there are interests we need to send our minimum
-         * mesh id to enable loop detection. A routing loop
-         * cannot exist without interests so we can just send
-         * the maximum mesh id.
-         */
-        if (DPS_BitVectorIsClear(newInterests)) {
-            destNode->outbound.meshId = DPS_MaxMeshId;
-        } else {
-            destNode->outbound.meshId = *(MinMeshId(node, destNode));
-        }
         ++destNode->outbound.revision;
     }
     if (DPS_DEBUG_ENABLED() && *send) {
@@ -438,8 +435,8 @@ DPS_Status DPS_MuteRemoteNode(DPS_Node* node, RemoteNode* remote)
     DPS_DBGPRINT("%s muting %s\n", node->addrStr, DESCRIBE(remote));
 
     remote->outbound.muted = DPS_TRUE;
-    remote->outbound.meshId = DPS_MaxMeshId;
-    remote->inbound.meshId = DPS_MaxMeshId;
+    //remote->outbound.meshId = DPS_MaxMeshId;
+    //remote->inbound.meshId = DPS_MaxMeshId;
     /*
      * Clear the inbound and outbound interests
      */
@@ -486,6 +483,28 @@ DPS_Status DPS_UnmuteRemoteNode(DPS_Node* node, RemoteNode* remote)
     return DPS_OK;
 }
 
+/*
+ * Each node has a randomly allocated mesh id that is used to detect loops in the mesh.
+ *
+ * Mesh id's are included in the header of subscription, subscription acknowledgments
+ * (SACKS) that include subscription information. SACKs only include subscription information
+ * during link establishment, thereafter SACKs contain the minimal information needed for
+ * reliable subscription delivery.
+ *
+ * When a subscription (or SACK) is sent to a remote node the mesh id is the minimum
+ * of the mesh id of the local node and the mesh id's received from all other nodes excluding
+ * the remote node itself. The mesh id that was sent is recorded in the outbound.meshId field
+ * of the remote node.
+ *
+ * Loop detection proceeds as follows: when an subscription (or SACK) is received the mesh id
+ * is compared against the mesh id's previously sent to all other nodes as recorded in the
+ * outbound.meshId fields. If the received mesh id received from the remote is the same as the
+ * last mesh id sent to the remote there is no loop. If the received mesh id is the same as the
+ * mesh id received from any other remote node there must be a loop in the mesh. The reason this
+ * indicates a loop is that the only way the same minimal mesh id can be computed byt two
+ * different remote nodes is if there is another path between those two nodes, i.e., there
+ * is a loop in the mesh.
+ */
 int DPS_MeshHasLoop(DPS_Node* node, RemoteNode* src, DPS_UUID* meshId)
 {
     if (DPS_UUIDCompare(meshId, &src->inbound.meshId) == 0) {
@@ -1023,21 +1042,18 @@ static DPS_Status DecodeRequest(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxBu
         }
         break;
     case DPS_MSG_TYPE_PUB:
-        DPS_DBGPRINT("Received publication via %s\n", DPS_NodeAddrToString(&ep->addr));
         ret = DPS_DecodePublication(node, ep, buf, multicast);
         if (ret != DPS_OK) {
             DPS_DBGPRINT("DecodePublication returned %s\n", DPS_ErrTxt(ret));
         }
         break;
     case DPS_MSG_TYPE_ACK:
-        DPS_DBGPRINT("Received acknowledgement via %s\n", DPS_NodeAddrToString(&ep->addr));
         ret = DPS_DecodeAcknowledgement(node, ep, buf);
         if (ret != DPS_OK) {
             DPS_DBGPRINT("DPS_DecodeAcknowledgement returned %s\n", DPS_ErrTxt(ret));
         }
         break;
     case DPS_MSG_TYPE_SAK:
-        DPS_DBGPRINT("Received sub ack from %s\n", DPS_NodeAddrToString(&ep->addr));
         ret = DPS_DecodeSubscriptionAck(node, ep, buf);
         if (ret != DPS_OK) {
             DPS_DBGPRINT("DPS_DecodeSubscriptionAck returned %s\n", DPS_ErrTxt(ret));
@@ -1612,9 +1628,13 @@ DPS_Status DPS_StartNode(DPS_Node* node, int mcast, DPS_NodeAddress* listenAddr)
     r = uv_mutex_init(&node->history.lock);
     assert(!r);
 
-    node->meshId = DPS_MaxMeshId;
-    node->minMeshId = DPS_MaxMeshId;
-
+    DPS_GenerateUUID(&node->meshId);
+#if DEBUG_LOOP_DETECTION
+        node->meshId.val32[1] = 0;
+        node->meshId.val32[2] = 0;
+        node->meshId.val32[3] = 0;
+#endif
+    DPS_DBGPRINT("Node mesh id for %s: %08x\n", node->addrStr, node->meshId.val32[0]);
     node->interests = DPS_CountVectorAlloc();
     node->needs = DPS_CountVectorAllocFH();
     node->scratch.interests = DPS_BitVectorAlloc();
@@ -1722,7 +1742,7 @@ static DPS_Status Link(DPS_Node* node, const DPS_NodeAddress* addr, OnOpCompleti
     RemoteNode* remote = NULL;
     DPS_Status ret;
 
-    DPS_DBGTRACE();
+    DPS_DBGTRACEA(" %s to %s\n", node->addrStr, DPS_NodeAddrToString(addr));
 
     DPS_LockNode(node);
     if (!addr) {
