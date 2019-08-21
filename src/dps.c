@@ -308,7 +308,7 @@ static const DPS_UUID* MinMeshId(DPS_Node* node, RemoteNode* excluded)
     DPS_UUID* minMeshId = &node->meshId;
 
     for (remote = node->remoteNodes; remote != NULL; remote = remote->next) {
-        if (remote->outbound.muted || remote->inbound.muted || remote == excluded) {
+        if (remote->muted || remote == excluded) {
             continue;
         }
         if (DPS_UUIDCompare(&remote->inbound.meshId, minMeshId) < 0) {
@@ -318,7 +318,7 @@ static const DPS_UUID* MinMeshId(DPS_Node* node, RemoteNode* excluded)
     return minMeshId;
 }
 
-DPS_Status DPS_UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, uint8_t* send)
+DPS_Status DPS_UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, uint8_t* changes)
 {
     DPS_Status ret;
     DPS_BitVector* newInterests = NULL;
@@ -327,10 +327,11 @@ DPS_Status DPS_UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, uin
 
     DPS_DBGTRACE();
 
+    *changes = DPS_FALSE;
     /*
      * Don't update interests if we are muted.
      */
-    if (destNode->outbound.muted) {
+    if (destNode->muted) {
         return DPS_OK;
     }
     /*
@@ -381,9 +382,8 @@ DPS_Status DPS_UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, uin
         DPS_BitVectorXor(destNode->outbound.delta, destNode->outbound.interests, newInterests, &same);
         if (same) {
             assert(DPS_BitVectorEquals(destNode->outbound.needs, newNeeds));
-            *send = DPS_FALSE;
         } else {
-            *send = DPS_TRUE;
+            *changes = DPS_TRUE;
         }
         destNode->outbound.deltaInd = DPS_TRUE;
     } else {
@@ -391,7 +391,7 @@ DPS_Status DPS_UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, uin
          * This is not a delta
          */
         destNode->outbound.deltaInd = DPS_FALSE;
-        *send = DPS_TRUE;
+        *changes = DPS_TRUE;
     }
     FreeOutboundInterests(destNode);
     destNode->outbound.interests = newInterests;
@@ -402,15 +402,15 @@ DPS_Status DPS_UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, uin
     minMeshId = MinMeshId(node, destNode);
     if (DPS_UUIDCompare(minMeshId, &destNode->outbound.meshId) < 0) {
         destNode->outbound.meshId = *minMeshId;
-        *send = DPS_TRUE;
+        *changes = DPS_TRUE;
     }
     /*
-     * Increment the revision number if we are sending a subscription
+     * Increment the revision number if there were changes
      */
-    if (*send) {
+    if (*changes) {
         ++destNode->outbound.revision;
     }
-    if (DPS_DEBUG_ENABLED() && *send) {
+    if (DPS_DEBUG_ENABLED() && *changes) {
         DPS_DBGPRINT("New outbound interests for %s: ", DESCRIBE(destNode));
         DPS_DumpMatchingTopics(destNode->outbound.interests);
     }
@@ -428,15 +428,13 @@ DPS_Status DPS_MuteRemoteNode(DPS_Node* node, RemoteNode* remote)
 {
     DPS_Status ret;
 
-    if (remote->outbound.muted) {
+    if (remote->muted) {
         return DPS_OK;
     }
 
     DPS_DBGPRINT("%s muting %s\n", node->addrStr, DESCRIBE(remote));
 
-    remote->outbound.muted = DPS_TRUE;
-    //remote->outbound.meshId = DPS_MaxMeshId;
-    //remote->inbound.meshId = DPS_MaxMeshId;
+    remote->muted = DPS_TRUE;
     /*
      * Clear the inbound and outbound interests
      */
@@ -447,7 +445,7 @@ DPS_Status DPS_MuteRemoteNode(DPS_Node* node, RemoteNode* remote)
          * We are explicitly sending zero interests so not a delta
          */
         remote->outbound.deltaInd = DPS_FALSE;
-        remote->outbound.ackCountdown = 0;
+        remote->outbound.sakPending = DPS_FALSE;
         ++remote->outbound.revision;
     }
     /*
@@ -467,11 +465,10 @@ DPS_Status DPS_UnmuteRemoteNode(DPS_Node* node, RemoteNode* remote)
 {
     DPS_DBGTRACE();
 
-    if (remote->outbound.muted) {
+    if (remote->muted) {
         DPS_DBGPRINT("%s unmuting %s\n", node->addrStr, DESCRIBE(remote));
 
-        remote->outbound.muted = DPS_FALSE;
-        remote->inbound.muted = DPS_FALSE;
+        remote->muted = DPS_FALSE;
         /*
          * Free stale outbound interests. This also ensures
          * that the first subscription sent after unmuting
@@ -554,6 +551,7 @@ DPS_Status DPS_AddRemoteNode(DPS_Node* node, const DPS_NodeAddress* addr, DPS_Ne
     RemoteNode* remote = DPS_LookupRemoteNode(node, addr);
     if (remote) {
         *remoteOut = remote;
+#if 0
         /*
          * IncRef a newly established connection
          */
@@ -561,6 +559,7 @@ DPS_Status DPS_AddRemoteNode(DPS_Node* node, const DPS_NodeAddress* addr, DPS_Ne
             DPS_NetConnectionIncRef(cn);
             remote->ep.cn = cn;
         }
+#endif
         return DPS_ERR_EXISTS;
     }
     assert(addr->type);
@@ -619,7 +618,7 @@ void DPS_OnSendSubscriptionComplete(DPS_Node* node, void* appCtx, DPS_NetEndpoin
         remote = DPS_LookupRemoteNode(node, &ep->addr);
         if (remote) {
             if (status == DPS_OK) {
-                remote->outbound.subAckPending = DPS_FALSE;
+                remote->outbound.sakPending = DPS_FALSE;
                 if ((node->state == DPS_NODE_RUNNING) && !node->subsPending) {
                     node->subsPending = DPS_TRUE;
                     uv_timer_start(&node->subsTimer, SendSubsTimer, 0, node->linkLossTimeout);
@@ -735,9 +734,8 @@ static void SendPubs(DPS_Node* node)
             }
             for (remote = node->remoteNodes; remote != NULL; remote = nextRemote) {
                 nextRemote = remote->next;
-                DPS_DBGPRINT("%s muted=%d/%d,interests=%p\n", DESCRIBE(remote), remote->outbound.muted,
-                             remote->inbound.muted, remote->inbound.interests);
-                if (remote->outbound.muted || remote->inbound.muted || !remote->inbound.interests) {
+                DPS_DBGPRINT("%s %sinterests=%p\n", DESCRIBE(remote), remote->muted ? "muted, ": "", remote->inbound.interests);
+                if (remote->muted || !remote->inbound.interests) {
                     continue;
                 }
                 if (!(pub->flags & PUB_FLAG_LOCAL)) {
@@ -833,9 +831,12 @@ static void SendSubsTimer(uv_timer_t* handle)
      * or as a periodic check that active remote nodes are still responsive.
      */
     for (remote = node->remoteNodes; remote != NULL; remote = remoteNext) {
-        uint8_t send = DPS_FALSE;
+        uint8_t changes = DPS_FALSE;
         remoteNext = remote->next; /* remote may get deleted or moved */
 
+        if (remote->muted) {
+            continue;
+        }
         if (remote->unlink) {
             reschedule = DPS_TRUE;
             DPS_SendSubscription(node, remote);
@@ -846,8 +847,8 @@ static void SendSubsTimer(uv_timer_t* handle)
         /*
          * Resend the previous subscription if it has not been ACK'd
          */
-        if (remote->outbound.ackCountdown) {
-            if (remote->outbound.ackCountdown == 1) {
+        if (remote->outbound.sakPending) {
+            if (++remote->outbound.sakCounter == (DPS_SAK_RETRY_THRESHOLD + DPS_SAK_RETRY_LIMIT)) {
                 DPS_WARNPRINT("At retry limit - %s remote %s\n", remote->completion ? "deleting" : "muting", DESCRIBE(remote));
                 if (remote->completion) {
                     /*
@@ -864,42 +865,46 @@ static void SendSubsTimer(uv_timer_t* handle)
                 continue;
             }
             /*
-             * We don't start resending until we hit the retry threshold
+             * We don't resend until we hit the retry threshold
              */
-            if (remote->outbound.ackCountdown > DPS_MAX_SUBSCRIPTION_RETRIES) {
+            if (remote->outbound.sakCounter < DPS_SAK_RETRY_THRESHOLD) {
                 reschedule = DPS_TRUE;
-                --remote->outbound.ackCountdown;
                 continue;
-            }
-            send = !remote->outbound.subAckPending;
-        } else {
-            ret = DPS_UpdateOutboundInterests(node, remote, &send);
-            if (ret != DPS_OK) {
-                break;
             }
             /*
-             * See comment at end of DPS_Link for an explanation of this
+             * Resend the same SUB or SAK
              */
-            if (!send && remote->completion) {
-                DPS_RemoteCompletion(node, remote->completion, DPS_OK);
+            DPS_ERRPRINT("Resending %s\n", remote->outbound.lastSubMsgType == DPS_MSG_TYPE_SAK ? "SAK" : "SUB");
+            if (remote->outbound.lastSubMsgType == DPS_MSG_TYPE_SUB) {
+                ret = DPS_SendSubscription(node, remote);
+            } else {
+                ret = DPS_SendSubscriptionAck(node, remote);
+            }
+            reschedule |= (ret == DPS_OK);
+        } else {
+            ret = DPS_UpdateOutboundInterests(node, remote, &changes);
+            if (ret == DPS_OK) {
+                /*
+                 * See comment at end of DPS_Link for an explanation of this
+                 */
+                if (!changes && remote->completion) {
+                    DPS_RemoteCompletion(node, remote->completion, DPS_OK);
+                    continue;
+                }
+                /*
+                 * If subsPending == 0 it means the keep alive timer triggered so we send
+                 * subscription message to active remotes even when there are no changes.
+                 */
+                if (changes || !node->subsPending) {
+                    ret = DPS_SendSubscription(node, remote);
+                    reschedule |= (ret == DPS_OK);
+                }
             }
         }
-        /*
-         * If node->subsPending == 0 we are running a keep-alive check so send a
-         * subscription message to active remotes even though there are no changes.
-         */
-        if (send || (!node->subsPending && !remote->outbound.muted)) {
-            reschedule = DPS_TRUE;
-            ret = DPS_SendSubscription(node, remote);
-            if (ret != DPS_OK) {
-                DPS_DeleteRemoteNode(node, remote);
-                DPS_ERRPRINT("Failed to send subscription request %s\n", DPS_ErrTxt(ret));
-                /*
-                 * Eat the error and continue
-                 */
-                ret = DPS_OK;
-                continue;
-            }
+        if (ret != DPS_OK) {
+            DPS_ERRPRINT("Failed to send subscription request %s\n", DPS_ErrTxt(ret));
+            ret = DPS_OK;
+            DPS_DeleteRemoteNode(node, remote);
         }
     }
     if (ret != DPS_OK) {
@@ -918,7 +923,7 @@ static void SendSubsTimer(uv_timer_t* handle)
     if (node->numMutedRemotes == node->numRemoteNodes) {
         RemoteNode* oldest = NULL;
         for (remote = node->remoteNodes; remote != NULL; remote = remote->next) {
-            if (remote->outbound.muted) {
+            if (remote->muted) {
                 oldest = remote;
             }
         }
@@ -1489,8 +1494,7 @@ static void DumpNode(uv_signal_t* handle, int signum)
     }
     DPS_PRINT("remoteNodes\n");
     for (remote = node->remoteNodes; remote; remote = remote->next) {
-        DPS_PRINT("  %s muted=%d/%d\n", DPS_NodeAddrToString(&remote->ep.addr),
-                  remote->outbound.muted, remote->inbound.muted);
+        DPS_PRINT("  %s muted=%d\n", DPS_NodeAddrToString(&remote->ep.addr), remote->muted);
     }
     DPS_PRINT("history\n");
     DumpHistory(node->history.root);
@@ -1737,7 +1741,7 @@ void DPS_SetNodeSubscriptionUpdateDelay(DPS_Node* node, uint32_t subsRateMsecs)
     node->subsRate = subsRateMsecs;
 }
 
-static DPS_Status Link(DPS_Node* node, const DPS_NodeAddress* addr, OnOpCompletion* completion, int weak)
+static DPS_Status Link(DPS_Node* node, const DPS_NodeAddress* addr, OnOpCompletion* completion)
 {
     RemoteNode* remote = NULL;
     DPS_Status ret;
@@ -1754,7 +1758,6 @@ static DPS_Status Link(DPS_Node* node, const DPS_NodeAddress* addr, OnOpCompleti
         goto Exit;
     }
     completion->remote = remote;
-    remote->weak = weak;
     remote->completion = completion;
     ret = DPS_OK;
 Exit:
@@ -1775,13 +1778,13 @@ static void OnResolve(DPS_Node* node, const DPS_NodeAddress* addr, void* data)
     OnOpCompletion* completion = (OnOpCompletion*)data;
     DPS_Status ret;
 
-    ret = Link(node, addr, completion, DPS_FALSE);
+    ret = Link(node, addr, completion);
     if (ret != DPS_OK) {
         DPS_RemoteCompletion(node, completion, ret);
     }
 }
 
-DPS_Status DPS_LinkRemoteAddr(DPS_Node* node, const DPS_NodeAddress* addr, DPS_OnLinkComplete cb, void* data, int weak)
+DPS_Status DPS_LinkRemoteAddr(DPS_Node* node, const DPS_NodeAddress* addr, DPS_OnLinkComplete cb, void* data)
 {
     DPS_Status ret = DPS_OK;
     OnOpCompletion* completion = NULL;
@@ -1791,7 +1794,7 @@ DPS_Status DPS_LinkRemoteAddr(DPS_Node* node, const DPS_NodeAddress* addr, DPS_O
     }
     completion = AllocCompletion(node, NULL, LINK_OP, data, cb);
     if (completion) {
-        ret = Link(node, addr, completion, weak);
+        ret = Link(node, addr, completion);
     } else {
         ret = DPS_ERR_RESOURCES;
     }
@@ -1844,7 +1847,7 @@ DPS_Status DPS_Link(DPS_Node* node, const char* addrText, DPS_OnLinkComplete cb,
         ret = DPS_ERR_INVALID;
         goto Exit;
     }
-    ret = Link(node, addr, completion, DPS_FALSE);
+    ret = Link(node, addr, completion);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Link returned %s\n", DPS_ErrTxt(ret));
         goto Exit;
@@ -1885,8 +1888,7 @@ DPS_Status DPS_Unlink(DPS_Node* node, const DPS_NodeAddress* addr, DPS_OnUnlinkC
     /*
      * We need to unmute the remote to send the unlink subscription
      */
-    remote->outbound.muted = DPS_FALSE;
-    remote->inbound.muted = DPS_FALSE;
+    remote->muted = DPS_FALSE;
     /*
      * Unlinking the remote node will cause it to be deleted after the
      * subscriptions are updated. When the remote node is removed

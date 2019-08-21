@@ -183,10 +183,9 @@ extern const DPS_UUID DPS_MaxMeshId;
 typedef struct _RemoteNode {
     OnOpCompletion* completion;        /**< Completion context for link and unlink operations */
     uint8_t unlink;                    /**< TRUE if this node is about to be unlinked */
-    uint8_t weak;                      /**< TRUE if this is a weak link (affects muting behavior) */
+    uint8_t muted;                     /**< TRUE if the the link to this remote is muted */
     /** Inbound state */
     struct {
-        uint8_t muted;                 /**< TRUE if the remote informed us the that link is muted */
         uint32_t revision;             /**< Revision number of last subscription received from this node */
         DPS_UUID meshId;               /**< The mesh id received from this remote node */
         DPS_BitVector* needs;          /**< Bit vector of needs received from  this remote node */
@@ -194,11 +193,11 @@ typedef struct _RemoteNode {
     } inbound;
     /** Outbound state */
     struct {
-        uint8_t muted;                 /**< TRUE if we have informed the remote that the link is muted */
         uint8_t deltaInd;              /**< TRUE if the interests info is a delta */
-        uint8_t ackCountdown;          /**< Number of remaining subscription send retries + 1 */
-        uint8_t includeSub;            /**< TRUE to include subscription in SAK */
-        uint8_t subAckPending;         /**< TRUE if subscription ACK is pending */
+        uint8_t sakCounter;            /**< Counter for determing when to start and end resending SUBs and SAKSs */
+        uint8_t sendInterests;         /**< TRUE to include interests etc in a SAK */
+        uint8_t sakPending;            /**< TRUE if SAK is pending */
+        uint8_t lastSubMsgType;        /**< Indicates if last subscription message was a SUB or a SAK */
         uint32_t revision;             /**< Revision number of last subscription sent to this node */
         DPS_UUID meshId;               /**< The mesh id sent to this remote node */
         DPS_BitVector* needs;          /**< Needs bit vector sent outbound to this remote node */

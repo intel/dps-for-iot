@@ -530,20 +530,24 @@ DPS_Status DPS_DestroyNode(DPS_Node* node, DPS_OnNodeDestroyed cb, void* data);
 
 /**
  * The default maximum rate (in msecs) to compute and send out subscription updates.
- * This allows subscriptions updates coming in from multiple sources to be batched
- * up for forwarding. This reduces network traffic during startup at the cost of a
- * slight increase in latency for new subscriptions.
+ * This causes subscription updates coming in from multiple remote nodes to be batched
+ * up for forwarding. This reduces network traffic when new nodes join the mesh, particularly
+ * at startup time, at the cost of increased latency for the propagation of subscriptions
+ * across the mesh. New subscriptions local to a node are not subject to this timeout value
+ * and are set immediately to adjacent nodes.
  */
-#define DPS_SUBSCRIPTION_UPDATE_RATE 1000
+#define DPS_SUBSCRIPTION_UPDATE_RATE 2000
 
 /**
   * This establishes the base rate at which keep-alive subscription messages are
-  * sent to remote nodes. This must be larger than DPS_SUBSCRIPTION_UPDATE_RATE.
+  * sent to remote nodes. This timeout governs how long it takes to detect a mesh
+  * disconnect and start a recovery process. This timeout value should be much
+  * larger than DPS_SUBSCRIPTION_UPDATE_RATE.
   */
-#define DPS_LINK_LOSS_TIMEOUT 10000
+#define DPS_LINK_LOSS_TIMEOUT 30000
 
 /**
- * Specify the time delay (in msecs) between subscription updates.
+ * Override the defauly time delay (in msecs) between subscription updates.
  *
  * @param node           The node
  * @param subsRateMsecs  The time delay (in msecs) between updates

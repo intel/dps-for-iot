@@ -180,7 +180,7 @@ static int AddLinksForNode(DPS_Node* node)
          */
         if (NodeMap[id]) {
             LINK* link = AddLink(nodeId, id);
-            if (remote->inbound.muted) {
+            if (remote->muted) {
                 link->muted = 1;
                 ++numMuted;
             }
@@ -210,6 +210,7 @@ static int MakeLinks(int* numNodes, int* numMuted)
             *numNodes += 1;
         }
     }
+    *numMuted /= 2;
     for (l = links; l != NULL; l = l->next) {
         ++numArcs;
     }
@@ -232,12 +233,6 @@ static void PrintSubgraph(FILE* f, int showMuted, uint16_t* kills, size_t numKil
     int maxN = 0;
 
     numArcs = MakeLinks(&numNodes, &numMuted);
-#if 0
-    if (numMuted & 1) {
-        DPS_ERRPRINT("Odd number of muted links - something went wrong\n");
-    }
-    numMuted /= 2;
-#endif
     DPS_PRINT("Nodes=%d, muted=%d\n", numNodes, numMuted);
 
     if (*label == 0) {
@@ -284,7 +279,7 @@ static int CountMuted(DPS_Node* node)
         /*
          * Ignore dead nodes
          */
-        if (NodeMap[id] && remote->inbound.muted) {
+        if (NodeMap[id] && remote->muted) {
             ++numMuted;
         }
     }
@@ -303,7 +298,7 @@ static int CountMutedLinks(void)
             numMuted += CountMuted(node);
         }
     }
-    return numMuted / 2;
+    return numMuted;
 }
 
 static void DumpLinks(void)
@@ -426,6 +421,11 @@ static void WaitUntilSettled(DPS_Event* sleeper, size_t expMuted)
             repeats = 0;
         }
     }
+    if (numMuted & 1) {
+        DPS_PRINT("ERROR: expected even number of muted remotes\n");
+    }
+    /* Both ends of a link will be marked as muted, so divide the count by 2 */
+    numMuted /= 2;
     if (numMuted != expMuted) {
         DPS_PRINT("ERROR: expected %d muted but got %d\n", expMuted, numMuted);
     }
@@ -646,6 +646,7 @@ int main(int argc, char** argv)
                     DPS_ERRPRINT("CreateSubscribe failed\n");
                     break;
                 }
+                DPS_PRINT("Calling DPS_Subscribe for node %d\n", i);
                 ret = DPS_Subscribe(sub, OnPubMatch);
                 if (ret == DPS_OK) {
                     DPS_PRINT("Node %d is subscribing to \"%s\"\n", NodeList[i], topic);
