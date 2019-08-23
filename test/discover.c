@@ -23,6 +23,7 @@
 #include "test.h"
 #include <stdio.h>
 #include "topics.h"
+#include "node.h"
 #include <dps/discovery.h>
 
 static void OnNodeDestroyed(DPS_Node* node, void* data)
@@ -141,6 +142,11 @@ int main(int argc, char** argv)
             goto Exit;
         }
     }
+    /*
+     * Speed up the subscription rate so the test case runs faster
+     * when used with a large node population.
+     */
+    node->subsRate = 100;
     discovery = DPS_CreateDiscoveryService(node, "test");
     ret = DPS_DiscoveryStart(discovery);
     if (ret != DPS_OK) {

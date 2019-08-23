@@ -120,12 +120,14 @@ void DPS_DumpTopics(const char** topics, size_t numTopics);
  * Print out all topics 'A' to 'Z' that match the given bit vector.
  * This is useful for debugging DPS routing issues.
  *
+ * This function uses a static buffer so is not thread-safe
+ *
  * @param bv The bit vector
  */
-void DPS_DumpMatchingTopics(DPS_BitVector* bv);
+const char* DPS_DumpMatchingTopics(DPS_BitVector* bv);
 #else
 #define DPS_DumpTopics(t, n)
-#define DPS_DumpMatchingTopics(b)
+#define DPS_DumpMatchingTopics(b) ""
 #endif
 
 

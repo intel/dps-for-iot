@@ -565,8 +565,7 @@ const DPS_NodeAddress* DPS_GetListenAddress(DPS_Node* node);
 
 /**
  * Get text representation of the address this node is listening for
- * connections on. This function uses a static string buffer so is not
- * thread safe.
+ * connections on.
  *
  * @param node     The node
  *

@@ -563,7 +563,7 @@ int main(int argc, char** argv)
          * Set link-loss timer to multiple of subscription delay so
          * disconnects are detected quickly.
          */
-        node->linkLossTimeout = 5 * node->subsRate;
+        node->linkLossTimeout = 10 * node->subsRate;
 
         listenAddr = DPS_CreateAddress();
         if (!listenAddr) {

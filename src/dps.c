@@ -43,6 +43,9 @@
 #include "topics.h"
 #include "uv_extra.h"
 
+#undef DPS_DBG_TAG
+#define DPS_DBG_TAG ((node)->addrStr)
+
 /*
  * Debug control for this module
  */
@@ -53,7 +56,8 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
  */
 #define DEBUG_LOOP_DETECTION  0
 
-#define DESCRIBE_REMOTE(n)  DPS_NodeAddrToString(&(n)->ep.addr)
+#define DESCRIBE(n)  DPS_NodeAddrToString(&(n)->ep.addr)
+
 
 #define _MIN_(x, y)  (((x) < (y)) ? (x) : (y))
 
@@ -81,6 +85,7 @@ const DPS_UUID DPS_MaxMeshId = { .val64 = { UINT64_MAX, UINT64_MAX } };
  */
 RemoteNode* DPS_LoopbackNode = (RemoteNode*)&DPS_LoopbackNode;
 
+static void DumpNode(uv_signal_t* handle, int signum);
 static void SendSubsTimer(uv_timer_t* handle);
 static void SendPubsTimer(uv_timer_t* handle);
 
@@ -93,8 +98,6 @@ void DPS_UnlockNode(DPS_Node* node)
 {
     uv_mutex_unlock(&node->nodeMutex);
 }
-
-#define DESCRIBE(n)  DPS_NodeAddrToString(&(n)->ep.addr)
 
 void DPS_RxBufferFree(DPS_RxBuffer* buffer)
 {
@@ -396,11 +399,17 @@ DPS_Status DPS_UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, uin
     FreeOutboundInterests(destNode);
     destNode->outbound.interests = newInterests;
     destNode->outbound.needs = newNeeds;
+
+    if (*changes) {
+        DPS_DBGPRINT("New outbound interests[%d] for %s: %s\n", destNode->outbound.revision,
+                DESCRIBE(destNode), DPS_DumpMatchingTopics(destNode->outbound.interests));
+    }
     /*
      * Also send the subscription if the minimum meshId changed
      */
     minMeshId = MinMeshId(node, destNode);
     if (DPS_UUIDCompare(minMeshId, &destNode->outbound.meshId) < 0) {
+        DPS_DBGPRINT("New minimum mesh id\n");
         destNode->outbound.meshId = *minMeshId;
         *changes = DPS_TRUE;
     }
@@ -409,10 +418,6 @@ DPS_Status DPS_UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, uin
      */
     if (*changes) {
         ++destNode->outbound.revision;
-    }
-    if (DPS_DEBUG_ENABLED() && *changes) {
-        DPS_DBGPRINT("New outbound interests for %s: ", DESCRIBE(destNode));
-        DPS_DumpMatchingTopics(destNode->outbound.interests);
     }
     return DPS_OK;
 
@@ -432,7 +437,7 @@ DPS_Status DPS_MuteRemoteNode(DPS_Node* node, RemoteNode* remote)
         return DPS_OK;
     }
 
-    DPS_DBGPRINT("%s muting %s\n", node->addrStr, DESCRIBE(remote));
+    DPS_DBGPRINT("Muting %s\n", DESCRIBE(remote));
 
     remote->muted = DPS_TRUE;
     /*
@@ -445,8 +450,10 @@ DPS_Status DPS_MuteRemoteNode(DPS_Node* node, RemoteNode* remote)
          * We are explicitly sending zero interests so not a delta
          */
         remote->outbound.deltaInd = DPS_FALSE;
-        remote->outbound.sakPending = DPS_FALSE;
-        ++remote->outbound.revision;
+        /*
+         * No interests to send in a SAK
+         */
+        remote->outbound.sendInterests = DPS_FALSE;
     }
     /*
      * Move the muted node to the head of the remote node list so remotes
@@ -466,7 +473,7 @@ DPS_Status DPS_UnmuteRemoteNode(DPS_Node* node, RemoteNode* remote)
     DPS_DBGTRACE();
 
     if (remote->muted) {
-        DPS_DBGPRINT("%s unmuting %s\n", node->addrStr, DESCRIBE(remote));
+        DPS_DBGPRINT("Unmuting %s\n", DESCRIBE(remote));
 
         remote->muted = DPS_FALSE;
         /*
@@ -551,15 +558,6 @@ DPS_Status DPS_AddRemoteNode(DPS_Node* node, const DPS_NodeAddress* addr, DPS_Ne
     RemoteNode* remote = DPS_LookupRemoteNode(node, addr);
     if (remote) {
         *remoteOut = remote;
-#if 0
-        /*
-         * IncRef a newly established connection
-         */
-        if (cn && !remote->ep.cn) {
-            DPS_NetConnectionIncRef(cn);
-            remote->ep.cn = cn;
-        }
-#endif
         return DPS_ERR_EXISTS;
     }
     assert(addr->type);
@@ -612,13 +610,12 @@ void DPS_OnSendSubscriptionComplete(DPS_Node* node, void* appCtx, DPS_NetEndpoin
 {
     RemoteNode* remote;
 
-    DPS_DBGPRINT("Send complete %s\n", DPS_ErrTxt(status));
+    DPS_DBGPRINT("Send SUB complete %s\n", DPS_ErrTxt(status));
     if (ep) {
         DPS_LockNode(node);
         remote = DPS_LookupRemoteNode(node, &ep->addr);
         if (remote) {
             if (status == DPS_OK) {
-                remote->outbound.sakPending = DPS_FALSE;
                 if ((node->state == DPS_NODE_RUNNING) && !node->subsPending) {
                     node->subsPending = DPS_TRUE;
                     uv_timer_start(&node->subsTimer, SendSubsTimer, 0, node->linkLossTimeout);
@@ -743,7 +740,7 @@ static void SendPubs(DPS_Node* node)
                      * We don't send publications to remote nodes we have received them from.
                      */
                     if (DPS_PublicationReceivedFrom(&node->history, &pub->pubId, req->sequenceNum,
-                                                    &pub->senderAddr, &remote->ep.addr)) {
+                                &pub->senderAddr, &remote->ep.addr)) {
                         continue;
                     }
                 }
@@ -804,13 +801,11 @@ static void SendPubs(DPS_Node* node)
 
 static void SendPubsTask(uv_async_t* handle)
 {
-    DPS_DBGTRACE();
     SendPubs(handle->data);
 }
 
 static void SendPubsTimer(uv_timer_t* handle)
 {
-    DPS_DBGTRACE();
     SendPubs(handle->data);
 }
 
@@ -872,25 +867,21 @@ static void SendSubsTimer(uv_timer_t* handle)
                 continue;
             }
             /*
-             * Resend the same SUB or SAK
+             * Resend a SUB or SAK
              */
-            DPS_ERRPRINT("Resending %s\n", remote->outbound.lastSubMsgType == DPS_MSG_TYPE_SAK ? "SAK" : "SUB");
-            if (remote->outbound.lastSubMsgType == DPS_MSG_TYPE_SUB) {
-                ret = DPS_SendSubscription(node, remote);
-            } else {
-                ret = DPS_SendSubscriptionAck(node, remote);
+            DPS_ERRPRINT("Resend %s to %s\n", remote->outbound.lastSubMsgType == DPS_MSG_TYPE_SAK ? "SAK" : "SUB", DESCRIBE(remote));
+            ret = DPS_UpdateOutboundInterests(node, remote, &changes);
+            if (ret == DPS_OK) {
+                if (remote->outbound.lastSubMsgType == DPS_MSG_TYPE_SUB) {
+                    ret = DPS_SendSubscription(node, remote);
+                } else {
+                    ret = DPS_SendSubscriptionAck(node, remote);
+                }
             }
             reschedule |= (ret == DPS_OK);
         } else {
             ret = DPS_UpdateOutboundInterests(node, remote, &changes);
             if (ret == DPS_OK) {
-                /*
-                 * See comment at end of DPS_Link for an explanation of this
-                 */
-                if (!changes && remote->completion) {
-                    DPS_RemoteCompletion(node, remote->completion, DPS_OK);
-                    continue;
-                }
                 /*
                  * If subsPending == 0 it means the keep alive timer triggered so we send
                  * subscription message to active remotes even when there are no changes.
@@ -1016,7 +1007,7 @@ static DPS_Status DecodeRequest(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxBu
     size_t len;
 
     DPS_DBGTRACEA("node=%p,ep={addr=%s,cn=%p},buf=%p,multicast=%d\n",
-                  node, DPS_NodeAddrToString(&ep->addr), ep->cn, buf, multicast);
+            node, DPS_NodeAddrToString(&ep->addr), ep->cn, buf, multicast);
 
     CBOR_Dump("Request in", rxBuf->rxPos, DPS_RxBufferAvail(rxBuf));
     ret = CBOR_DecodeArray(rxBuf, &len);
@@ -1082,7 +1073,7 @@ static DPS_Status DecodeRequest(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxBu
  * Using CoAP packetization for receiving multicast subscription requests
  */
 static DPS_Status OnMulticastReceive(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Status status,
-                                     DPS_NetRxBuffer* buf)
+        DPS_NetRxBuffer* buf)
 {
     DPS_Status ret;
     CoAP_Parsed coap;
@@ -1122,7 +1113,7 @@ Exit:
 static DPS_Status OnNetReceive(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Status status, DPS_NetRxBuffer* buf)
 {
     DPS_DBGTRACEA("node=%p,ep={addr=%s,cn=%p},status=%s,buf=%p\n", node, DPS_NodeAddrToString(&ep->addr),
-                  ep->cn, DPS_ErrTxt(status), buf);
+            ep->cn, DPS_ErrTxt(status), buf);
 
     /*
      * Fail input that comes in when the node is no longer running
@@ -1187,7 +1178,7 @@ DPS_Status DPS_LoopbackSend(DPS_Node* node, uv_buf_t* bufs, size_t numBufs)
     buf->rx.rxPos = buf->rx.base;
     ret = DecodeRequest(node, &ep, buf, DPS_FALSE);
 
- Exit:
+Exit:
     DPS_NetRxBufferDecRef(buf);
     return ret;
 }
@@ -1343,7 +1334,7 @@ static DPS_Status SetCurve(DPS_KeyStoreRequest* request, const DPS_Key* key)
     case DPS_KEY_EC_CERT:
         if (key->cert.privateKey) {
             return ParsePrivateKey_ECDSA(key->cert.privateKey, key->cert.password,
-                                         curve, d);
+                    curve, d);
         }
         /* FALLTHROUGH */
     default:
@@ -1450,61 +1441,8 @@ void* DPS_GetNodeData(const DPS_Node* node)
     return node ? node->userData : NULL;
 }
 
-#ifdef DPS_DEBUG
-static void DumpHistory(DPS_PubHistory* ph)
-{
-    DPS_NodeAddressList* addr;
-
-    if (!ph) {
-        return;
-    }
-    DumpHistory(ph->left);
-    DPS_PRINT("  %s(%d)%s %"PRIu64" [", DPS_UUIDToString(&ph->id), ph->sn, ph->ackRequested ? " ACK" : "",
-              ph->expiration);
-    for (addr = ph->addrs; addr; addr = addr->next) {
-        DPS_PRINT("%s%s(%d,%d)", addr != ph->addrs ? "," : "", DPS_NodeAddrToString(&addr->addr), addr->sn, addr->hopCount);
-    }
-    DPS_PRINT("]\n");
-    DumpHistory(ph->right);
-}
-#endif
-
-static void DumpNode(uv_signal_t* handle, int signum)
-{
-#ifdef DPS_DEBUG
-    DPS_Node* node = handle->data;
-    DPS_Publication* pub;
-    DPS_Subscription* sub;
-    RemoteNode* remote;
-    size_t i;
-
-    DPS_LockNode(node);
-    DPS_PRINT("node %s\n", DPS_NodeAddrToString(&node->addr));
-    DPS_PRINT("publications\n");
-    for (pub = node->publications; pub; pub = pub->next) {
-        DPS_DumpPub(pub);
-    }
-    DPS_PRINT("subscriptions\n");
-    for (sub = node->subscriptions; sub; sub = sub->next) {
-        DPS_PRINT("  topics=[");
-        for (i = 0; i < sub->numTopics; ++i) {
-            DPS_PRINT("%s%s", i ? ",": "", sub->topics[i]);
-        }
-        DPS_PRINT("]\n");
-    }
-    DPS_PRINT("remoteNodes\n");
-    for (remote = node->remoteNodes; remote; remote = remote->next) {
-        DPS_PRINT("  %s muted=%d\n", DPS_NodeAddrToString(&remote->ep.addr), remote->muted);
-    }
-    DPS_PRINT("history\n");
-    DumpHistory(node->history.root);
-    DPS_UnlockNode(node);
-#endif
-}
-
 static void StopNodeTask(uv_async_t* handle)
 {
-    DPS_DBGTRACE();
     /*
      * Stopping the loop will cleanly stop the node
      */
@@ -1634,11 +1572,11 @@ DPS_Status DPS_StartNode(DPS_Node* node, int mcast, DPS_NodeAddress* listenAddr)
 
     DPS_GenerateUUID(&node->meshId);
 #if DEBUG_LOOP_DETECTION
-        node->meshId.val32[1] = 0;
-        node->meshId.val32[2] = 0;
-        node->meshId.val32[3] = 0;
+    node->meshId.val32[1] = 0;
+    node->meshId.val32[2] = 0;
+    node->meshId.val32[3] = 0;
 #endif
-    DPS_DBGPRINT("Node mesh id for %s: %08x\n", node->addrStr, node->meshId.val32[0]);
+    DPS_DBGPRINT("Node mesh id is: %08x\n", node->meshId.val32[0]);
     node->interests = DPS_CountVectorAlloc();
     node->needs = DPS_CountVectorAllocFH();
     node->scratch.interests = DPS_BitVectorAlloc();
@@ -1666,7 +1604,7 @@ DPS_Status DPS_StartNode(DPS_Node* node, int mcast, DPS_NodeAddress* listenAddr)
      */
     DPS_NetGetListenAddress(&node->addr, node->netCtx);
     strncpy_s(node->addrStr, sizeof(node->addrStr),
-              DPS_NodeAddrToString(&node->addr), DPS_NODE_ADDRESS_MAX_STRING_LEN);
+            DPS_NodeAddrToString(&node->addr), DPS_NODE_ADDRESS_MAX_STRING_LEN);
     /*
      *  The node loop gets its own thread to run on
      */
@@ -1700,7 +1638,7 @@ const DPS_NodeAddress* DPS_GetListenAddress(DPS_Node* node)
 
 const char* DPS_GetListenAddressString(DPS_Node* node)
 {
-    return DPS_NodeAddrToString(&node->addr);
+    return node->addrStr;
 }
 
 DPS_Status DPS_DestroyNode(DPS_Node* node, DPS_OnNodeDestroyed cb, void* data)
@@ -1746,7 +1684,7 @@ static DPS_Status Link(DPS_Node* node, const DPS_NodeAddress* addr, OnOpCompleti
     RemoteNode* remote = NULL;
     DPS_Status ret;
 
-    DPS_DBGTRACEA(" %s to %s\n", node->addrStr, DPS_NodeAddrToString(addr));
+    DPS_DBGTRACEA("Link to %s\n", DPS_NodeAddrToString(addr));
 
     DPS_LockNode(node);
     if (!addr) {
@@ -2045,7 +1983,7 @@ DPS_Status DPS_SerializeSubscriptions(DPS_Node* node, DPS_Buffer* buf)
     }
     buf->base = txBuf.base;
     buf->len = DPS_TxBufferUsed(&txBuf);
- Exit:
+Exit:
     if (ret != DPS_OK) {
         buf->base = NULL;
         buf->len = 0;
@@ -2121,7 +2059,7 @@ int DPS_MatchPublications(DPS_Node* node, const DPS_Buffer* subs)
     }
     DPS_UnlockNode(node);
 
- Exit:
+Exit:
     DPS_BitVectorFree(interests);
     DPS_BitVectorFree(needs);
     return match;
@@ -2149,4 +2087,59 @@ DPS_Status DPS_NodeScheduleRequest(DPS_Node* node, OnNodeRequest cb, void* data)
     }
     DPS_UnlockNode(node);
     return ret;
+}
+
+#undef DPS_DBG_TAG
+#define DPS_DBG_TAG NULL
+
+#ifdef DPS_DEBUG
+static void DumpHistory(DPS_PubHistory* ph)
+{
+    DPS_NodeAddressList* addr;
+
+    if (!ph) {
+        return;
+    }
+    DumpHistory(ph->left);
+    DPS_PRINT("  %s(%d)%s %"PRIu64" [", DPS_UUIDToString(&ph->id), ph->sn, ph->ackRequested ? " ACK" : "",
+            ph->expiration);
+    for (addr = ph->addrs; addr; addr = addr->next) {
+        DPS_PRINT("%s%s(%d,%d)", addr != ph->addrs ? "," : "", DPS_NodeAddrToString(&addr->addr), addr->sn, addr->hopCount);
+    }
+    DPS_PRINT("]\n");
+    DumpHistory(ph->right);
+}
+#endif
+
+static void DumpNode(uv_signal_t* handle, int signum)
+{
+#ifdef DPS_DEBUG
+    DPS_Node* node = handle->data;
+    DPS_Publication* pub;
+    DPS_Subscription* sub;
+    RemoteNode* remote;
+    size_t i;
+
+    DPS_LockNode(node);
+    DPS_PRINT("node %s\n", DPS_NodeAddrToString(&node->addr));
+    DPS_PRINT("publications\n");
+    for (pub = node->publications; pub; pub = pub->next) {
+        DPS_DumpPub(pub);
+    }
+    DPS_PRINT("subscriptions\n");
+    for (sub = node->subscriptions; sub; sub = sub->next) {
+        DPS_PRINT("  topics=[");
+        for (i = 0; i < sub->numTopics; ++i) {
+            DPS_PRINT("%s%s", i ? ",": "", sub->topics[i]);
+        }
+        DPS_PRINT("]\n");
+    }
+    DPS_PRINT("remoteNodes\n");
+    for (remote = node->remoteNodes; remote; remote = remote->next) {
+        DPS_PRINT("  %s muted=%d\n", DPS_NodeAddrToString(&remote->ep.addr), remote->muted);
+    }
+    DPS_PRINT("history\n");
+    DumpHistory(node->history.root);
+    DPS_UnlockNode(node);
+#endif
 }

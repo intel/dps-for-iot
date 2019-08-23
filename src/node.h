@@ -194,9 +194,9 @@ typedef struct _RemoteNode {
     /** Outbound state */
     struct {
         uint8_t deltaInd;              /**< TRUE if the interests info is a delta */
-        uint8_t sakCounter;            /**< Counter for determing when to start and end resending SUBs and SAKSs */
+        uint8_t sakCounter;            /**< Counter for deciding when to start and stop resending SUBs and SAKSs */
         uint8_t sendInterests;         /**< TRUE to include interests etc in a SAK */
-        uint8_t sakPending;            /**< TRUE if SAK is pending */
+        uint8_t sakPending;            /**< TRUE when waiting to receive a SAK from this remote node */
         uint8_t lastSubMsgType;        /**< Indicates if last subscription message was a SUB or a SAK */
         uint32_t revision;             /**< Revision number of last subscription sent to this node */
         DPS_UUID meshId;               /**< The mesh id sent to this remote node */

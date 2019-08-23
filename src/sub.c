@@ -38,6 +38,9 @@
 #include "sub.h"
 #include "topics.h"
 
+#undef DPS_DBG_TAG
+#define DPS_DBG_TAG ((node)->addrStr)
+
 /*
  * Debug control for this module
  */
@@ -226,12 +229,13 @@ DPS_Status DPS_DestroySubscription(DPS_Subscription* sub, DPS_OnSubscriptionDest
 {
     DPS_Node* node;
 
-    DPS_DBGTRACE();
-
     if (!IsValidSub(sub)) {
         return DPS_ERR_MISSING;
     }
     node = sub->node;
+
+    DPS_DBGTRACE();
+
     /*
      * Protect the node while we update it
      */
@@ -258,7 +262,7 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote)
     size_t len;
     uint8_t flags = 0;
 
-    DPS_DBGTRACEA("from %s to %s\n", node->addrStr, DESCRIBE(remote));
+    DPS_DBGTRACEA("To %s rev# %d%s\n", DESCRIBE(remote), remote->outbound.revision, remote->muted ? "muted" : "");
 
     if (!node->netCtx) {
         return DPS_ERR_NETWORK;
@@ -314,8 +318,7 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote)
     /*
      * The protected and encrypted maps
      */
-    len += CBOR_SIZEOF_MAP(0) +
-        CBOR_SIZEOF_MAP(0);
+    len += CBOR_SIZEOF_MAP(0) + CBOR_SIZEOF_MAP(0);
 
     ret = DPS_TxBufferInit(&buf, NULL, len);
     if (ret == DPS_OK) {
@@ -341,8 +344,7 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote)
             ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_PORT);
         }
         if (ret == DPS_OK) {
-            ret = CBOR_EncodeUint16(&buf,
-                                    DPS_NetAddrPort((const struct sockaddr*)&node->addr.u.inaddr));
+            ret = CBOR_EncodeUint16(&buf, DPS_NetAddrPort((const struct sockaddr*)&node->addr.u.inaddr));
         }
         break;
     default:
@@ -437,7 +439,9 @@ DPS_Status DPS_SendSubscriptionAck(DPS_Node* node, RemoteNode* remote)
     size_t len;
     uint8_t flags = 0;
 
-    DPS_DBGTRACEA("from %s to %s\n", node->addrStr, DESCRIBE(remote));
+    DPS_DBGTRACEA("To %s rev# %d ack-rev# %d%s%s\n", DESCRIBE(remote),
+            remote->outbound.revision, remote->inbound.revision, remote->outbound.sendInterests ? " +interests" : "",
+            remote->muted ? " muted" : "");
 
     if (!node->netCtx) {
         return DPS_ERR_NETWORK;
@@ -598,11 +602,15 @@ DPS_Status DPS_SendSubscriptionAck(DPS_Node* node, RemoteNode* remote)
         CBOR_Dump("Sub ack out", (uint8_t*)uvBuf.base, uvBuf.len);
         ret = DPS_NetSend(node, NULL, &remote->ep, &uvBuf, 1, DPS_OnSendComplete);
         if (ret == DPS_OK) {
-            if (!remote->outbound.sakPending && (flags & DPS_SUB_FLAG_SAK_REQ)) {
-                remote->outbound.sakPending = DPS_TRUE;
-                remote->outbound.sakCounter = 0;
+            if (flags & DPS_SUB_FLAG_SAK_REQ) {
+                if (!remote->outbound.sakPending) {
+                    remote->outbound.sakPending = DPS_TRUE;
+                    remote->outbound.sakCounter = 0;
+                }
+                remote->outbound.lastSubMsgType = DPS_MSG_TYPE_SAK;
+            } else {
+                remote->outbound.sakPending = DPS_FALSE;
             }
-            remote->outbound.lastSubMsgType = DPS_MSG_TYPE_SAK;
         } else {
             DPS_ERRPRINT("Failed to send subscription ack %s\n", DPS_ErrTxt(ret));
             DPS_SendComplete(node, &remote->ep.addr, &uvBuf, 1, ret);
@@ -637,10 +645,7 @@ static DPS_Status UpdateInboundInterests(DPS_Node* node, RemoteNode* remote, DPS
         remote->inbound.needs = needs;
     }
 
-    if (DPS_DEBUG_ENABLED()) {
-        DPS_DBGPRINT("New inbound interests from %s: ", DESCRIBE(remote));
-        DPS_DumpMatchingTopics(remote->inbound.interests);
-    }
+    DPS_DBGPRINT("New inbound interests from %s: %s\n", DESCRIBE(remote), DPS_DumpMatchingTopics(remote->inbound.interests));
 
     return DPS_OK;
 }
@@ -672,8 +677,6 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
     int remoteIsNew = DPS_FALSE;
     char* path = NULL;
     size_t pathLen = 0;
-
-    DPS_DBGTRACE();
 
     CBOR_Dump("Sub in", rxBuf->rxPos, DPS_RxBufferAvail(rxBuf));
     /*
@@ -775,8 +778,7 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
      * out the resynchronization code.
      */
     if (((DPS_Rand() % SIMULATE_PACKET_LOSS) == 1)) {
-        DPS_PRINT("%s Simulating lost subscription from %s\n", node->addrStr,
-                DPS_NodeAddrToString(&ep->addr));
+        DPS_PRINT("Simulating lost subscription from %s\n", DPS_NodeAddrToString(&ep->addr));
         return DPS_OK;
     }
 #endif
@@ -807,14 +809,16 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
          */
         remote = DPS_LookupRemoteNode(node, &ep->addr);
         if (remote) {
+#if 1
             /*
              * If the remote is muted the muted flag should be set in the SAK
              */
             if (remote->muted && !(flags & DPS_SUB_FLAG_MUTE_IND)) {
-                DPS_ERRPRINT("Expected muted flag in sub ack\n");
-                DPS_DeleteRemoteNode(node, remote);
+                DPS_ERRPRINT("Expected muted flag in SAK from %s\n", DESCRIBE(remote));
                 ret = DPS_ERR_INVALID;
+                goto DiscardAndExit;
             }
+#endif
         } else {
             ret = DPS_ERR_MISSING;
         }
@@ -834,8 +838,7 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
      * Discard stale subscription messages
      */
     if (revision < remote->inbound.revision) {
-        DPS_DBGPRINT("%s Stale subscription %d from %s (expected %d)\n", node->addrStr, revision,
-                DESCRIBE(remote), remote->inbound.revision + 1);
+        DPS_DBGPRINT("Stale subscription %d from %s (expected %d)\n", revision, DESCRIBE(remote), remote->inbound.revision + 1);
         goto DiscardAndExit;
     }
     remote->inbound.revision = revision;
@@ -845,7 +848,7 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
             ret = DPS_ERR_INVALID;
             goto DiscardAndExit;
         }
-        DPS_DBGPRINT("Node %s received mesh id %08x from %s\n", node->addrStr, meshId.val32[0], DESCRIBE(remote));
+        DPS_DBGPRINT("Received mesh id %08x from %s\n", meshId.val32[0], DESCRIBE(remote));
         /*
          * Loops can be detected by either end of a link and corrective action is required
          * to prevent interests from propagating around the loop. The corrective action is
@@ -855,16 +858,15 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
             DPS_DBGPRINT("Muting reported by %s\n", DESCRIBE(remote));
             DPS_MuteRemoteNode(node, remote);
         } else if (remote->muted) {
-            DPS_ERRPRINT("Looks like unmute request %p\n", sakSeqNum);
             /*
-             * An ACK can not unmute a link
+             * An SAK can not unmute a link
              */
             if (!sakSeqNum) {
                 DPS_DBGPRINT("Remote %s has unumuted\n", DESCRIBE(remote));
                 ret = DPS_UnmuteRemoteNode(node, remote);
             }
         } else if (DPS_MeshHasLoop(node, remote, &meshId)) {
-            DPS_DBGPRINT("Loop detected by %s for %s\n", node->addrStr, DESCRIBE(remote));
+            DPS_DBGPRINT("Loop detected for %s\n", DESCRIBE(remote));
             DPS_MuteRemoteNode(node, remote);
         }
         if (!remote->muted) {
@@ -922,7 +924,7 @@ DiscardAndExit:
     }
     DPS_UnlockNode(node);
     if (ret != DPS_OK) {
-        DPS_ERRPRINT("Subscription was discarded - %s\n", DPS_ErrTxt(ret));
+        DPS_ERRPRINT("%s was discarded - %s\n", sakSeqNum ? "SAK" : "SUB", DPS_ErrTxt(ret));
     }
     DPS_BitVectorFree(interests);
     DPS_BitVectorFree(needs);
@@ -931,7 +933,7 @@ DiscardAndExit:
 
 DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxBuffer* buf)
 {
-    DPS_DBGTRACEA("from %s to %s\n", node->addrStr, DPS_NodeAddrToString(&ep->addr));
+    DPS_DBGTRACEA("From %s\n", DPS_NodeAddrToString(&ep->addr));
     return DecodeSubscription(node, ep, buf, NULL);
 }
 
@@ -941,7 +943,7 @@ DPS_Status DPS_DecodeSubscriptionAck(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
     uint32_t revision = 0;
     RemoteNode* remote = NULL;
 
-    DPS_DBGTRACEA("from %s to %s\n", node->addrStr, DPS_NodeAddrToString(&ep->addr));
+    DPS_DBGTRACEA("From %s\n", DPS_NodeAddrToString(&ep->addr));
 
     ret = DecodeSubscription(node, ep, buf, &revision);
     if (ret != DPS_OK) {
@@ -954,7 +956,7 @@ DPS_Status DPS_DecodeSubscriptionAck(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
      * out the resynchronization code.
      */
     if (((DPS_Rand() % SIMULATE_PACKET_LOSS) == 1)) {
-        DPS_PRINT("%s Simulating lost sub ack from %s\n", node->addrStr, DPS_NodeAddrToString(&ep->addr));
+        DPS_PRINT("Simulating lost sub ack from %s\n", DPS_NodeAddrToString(&ep->addr));
         return DPS_OK;
     }
 #endif
@@ -969,7 +971,7 @@ DPS_Status DPS_DecodeSubscriptionAck(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
                 DPS_RemoteCompletion(node, remote->completion, DPS_OK);
             }
         } else {
-            DPS_ERRPRINT("Unexpected revision in SAK, expected %d got %d\n", remote->outbound.revision, revision);
+            DPS_ERRPRINT("Unexpected revision in SAK from %s, expected %d got %d\n", DESCRIBE(remote), remote->outbound.revision, revision);
             ret = DPS_ERR_INVALID;
         }
     } else {

@@ -15,7 +15,7 @@ import time
 atexit.register(cleanup)
 
 seed=1
-num_nodes = 4
+num_nodes = 100
 
 random.seed(seed)
 
