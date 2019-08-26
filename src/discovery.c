@@ -436,16 +436,7 @@ static void TimerCloseCb(uv_handle_t* timer)
     free(timer);
 }
 
-static void LinkCb(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, void* data)
-{
-    if (status == DPS_OK) {
-        DPS_DBGPRINT("Node is linked to %s\n", DPS_NodeAddrToString(addr));
-    } else if (status != DPS_ERR_EXISTS) {
-        DPS_ERRPRINT("DPS_Link failed - %s\n", DPS_ErrTxt(status));
-    }
-}
-
-static DPS_Publication* CopyPublicationFromAck(DPS_Publication* pub, const DPS_UUID* ackUuid)
+static DPS_Publication* CopyPublication(const DPS_Publication* pub, const DPS_UUID* ackUuid)
 {
     DPS_Publication* copy;
     DPS_Status ret = DPS_ERR_RESOURCES;
@@ -454,7 +445,7 @@ static DPS_Publication* CopyPublicationFromAck(DPS_Publication* pub, const DPS_U
 
     copy = calloc(1, sizeof(DPS_Publication));
     if (!copy) {
-        DPS_ERRPRINT("malloc failure: no memory\n");
+        DPS_ERRPRINT("alloc failure: no memory\n");
         goto Exit;
     }
     copy->flags = PUB_FLAG_IS_COPY;
@@ -469,7 +460,7 @@ static DPS_Publication* CopyPublicationFromAck(DPS_Publication* pub, const DPS_U
         size_t i;
         copy->topics = calloc(pub->numTopics, sizeof(char*));
         if (!copy->topics) {
-            DPS_ERRPRINT("malloc failure: no memory\n");
+            DPS_ERRPRINT("alloc failure: no memory\n");
             goto Exit;
         }
         for (i = 0; i < pub->numTopics; i++) {
@@ -486,6 +477,83 @@ Exit:
     return copy;
 }
 
+typedef struct _HandlerData {
+    DPS_DiscoveryService* service;
+    DPS_Publication* pub;
+    uint8_t* data;
+    size_t dataLen;
+} HandlerData;
+
+static void DestroyHandlerData(HandlerData* handlerData)
+{
+    if (handlerData) {
+        DPS_DestroyCopy(handlerData->pub);
+        if (handlerData->data) {
+            free(handlerData->data);
+        }
+        free(handlerData);
+    }
+}
+
+static HandlerData* CreateHandlerData(DPS_DiscoveryService* service, const DPS_Publication* pub,
+                                      const DPS_UUID* uuid, uint8_t* payload, size_t len)
+{
+    HandlerData* handlerData = NULL;
+    DPS_Status ret = DPS_OK;
+
+    if (service->handler) {
+        handlerData = calloc(1, sizeof(HandlerData));
+        if (!handlerData) {
+            DPS_ERRPRINT("alloc failure: no memory\n");
+            ret = DPS_ERR_RESOURCES;
+            goto Exit;
+        }
+        handlerData->service = service;
+        handlerData->pub = CopyPublication(pub, uuid);
+        if (!handlerData->pub) {
+            ret = DPS_ERR_RESOURCES;
+            goto Exit;
+        }
+        if (len) {
+            handlerData->data = malloc(len);
+            if (!handlerData->data) {
+                DPS_ERRPRINT("alloc failure: no memory\n");
+                ret = DPS_ERR_RESOURCES;
+                goto Exit;
+            }
+            memcpy(handlerData->data, payload, len);
+            handlerData->dataLen = len;
+        }
+    }
+Exit:
+    if (ret != DPS_OK) {
+        DestroyHandlerData(handlerData);
+        handlerData = NULL;
+    }
+    return handlerData;
+}
+
+static void CallHandler(HandlerData* handlerData)
+{
+    if (handlerData) {
+        if (handlerData->service->handler) {
+            handlerData->service->handler(handlerData->service, handlerData->pub,
+                                          handlerData->data, handlerData->dataLen);
+        }
+    }
+}
+
+static void LinkCb(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, void* data)
+{
+    if (status == DPS_OK) {
+        DPS_DBGPRINT("Node is linked to %s\n", DPS_NodeAddrToString(addr));
+    } else if (status != DPS_ERR_EXISTS) {
+        DPS_ERRPRINT("DPS_Link failed - %s\n", DPS_ErrTxt(status));
+    }
+    CallHandler(data);
+    DestroyHandlerData(data);
+}
+
 static void OnAck(DPS_Publication* pub, uint8_t* payload, size_t len)
 {
     DPS_DiscoveryService* service = DPS_GetPublicationData(pub);
@@ -494,7 +562,7 @@ static void OnAck(DPS_Publication* pub, uint8_t* payload, size_t len)
     int match;
     uint8_t* data = NULL;
     size_t dataLen = 0;
-    DPS_Publication* copy;
+    HandlerData* handlerData = NULL;
     DPS_Status ret;
 
     ret = DecodePayload(service, DPS_MSG_TYPE_ACK, &ackUuid, &match, &data, &dataLen,
@@ -503,16 +571,16 @@ static void OnAck(DPS_Publication* pub, uint8_t* payload, size_t len)
         DPS_ERRPRINT("Decode failed - %s\n", DPS_ErrTxt(ret));
         return;
     }
+    handlerData = CreateHandlerData(service, pub, &ackUuid, data, dataLen);
     if (match) {
-        ret = DPS_Link(node, DPS_NodeAddrToString(DPS_AckGetSenderAddress(pub)), LinkCb, service);
+        ret = DPS_Link(node, DPS_NodeAddrToString(DPS_AckGetSenderAddress(pub)), LinkCb, handlerData);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("DPS_Link failed - %s\n", DPS_ErrTxt(ret));
+            DestroyHandlerData(handlerData);
         }
-    }
-    if (service->handler) {
-        copy = CopyPublicationFromAck(pub, &ackUuid);
-        service->handler(service, copy, data, dataLen);
-        DPS_DestroyCopy(copy);
+    } else {
+        CallHandler(handlerData);
+        DestroyHandlerData(handlerData);
     }
 }
 
@@ -636,6 +704,7 @@ static void OnPub(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* pa
     int match;
     uint8_t* data = NULL;
     size_t dataLen = 0;
+    HandlerData* handlerData = NULL;
     DPS_Status ret;
 
     if (len) {
@@ -653,10 +722,12 @@ static void OnPub(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* pa
                 if (DPS_PublicationIsAckRequested(pub)) {
                     AckPublication(service, pub);
                 }
+                handlerData = CreateHandlerData(service, pub, DPS_PublicationGetUUID(pub), data, dataLen);
                 ret = DPS_Link(node, DPS_NodeAddrToString(DPS_PublicationGetSenderAddress(pub)),
-                               LinkCb, service);
+                               LinkCb, handlerData);
                 if (ret != DPS_OK) {
                     DPS_ERRPRINT("DPS_Link failed - %s\n", DPS_ErrTxt(ret));
+                    DestroyHandlerData(handlerData);
                 }
             }
         } else if (DPS_PublicationIsAckRequested(pub)) {
@@ -667,7 +738,7 @@ static void OnPub(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* pa
          * A goodbye message, do nothing except notify the application
          */
     }
-    if (service->handler) {
+    if (!handlerData && service->handler) {
         service->handler(service, pub, data, dataLen);
     }
 }
