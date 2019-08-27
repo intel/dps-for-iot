@@ -32,6 +32,11 @@ static void OnNodeDestroyed(DPS_Node* node, void* data)
     DPS_SignalEvent((DPS_Event*)data, DPS_OK);
 }
 
+static void OnDiscoveryServiceDestroyed(DPS_DiscoveryService* service, void* data)
+{
+    DPS_SignalEvent((DPS_Event*)data, DPS_OK);
+}
+
 typedef struct _PublicationList {
     char* topic;
     DPS_Publication* pub;
@@ -175,7 +180,8 @@ Exit:
         DPS_ERRPRINT("Exiting: %s\n", DPS_ErrTxt(ret));
     }
 
-    DPS_DestroyDiscoveryService(discovery);
+    DPS_DestroyDiscoveryService(discovery, OnDiscoveryServiceDestroyed, event);
+    DPS_WaitForEvent(event);
 
     while (subs) {
         sub = subs;

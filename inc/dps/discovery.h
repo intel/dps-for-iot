@@ -88,11 +88,28 @@ DPS_Status DPS_DiscoveryPublish(DPS_DiscoveryService* service, const uint8_t* pa
                                 DPS_DiscoveryHandler handler);
 
 /**
+ * Function prototype for callback function called when a service is destroyed.
+ *
+ * @param service the service that was destroyed
+ * @param data data passed to DPS_DestroyDiscoveryService()
+ *
+ */
+typedef void (*DPS_OnDiscoveryServiceDestroyed)(DPS_DiscoveryService* service, void* data);
+
+/**
  * Free resources for a discovery service
  *
  * @param service the service
+ * @param cb callback function to be called when the service is destroyed
+ * @param data data to be passed to the callback function
+ *
+ * @return
+ * - DPS_OK if the service will be destroyed and the callback called
+ * - DPS_ERR_NULL service or cb was null
+ * - Or an error status code in which case the callback will not be called.
  */
-void DPS_DestroyDiscoveryService(DPS_DiscoveryService* service);
+DPS_Status DPS_DestroyDiscoveryService(DPS_DiscoveryService* service,
+                                       DPS_OnDiscoveryServiceDestroyed cb, void* data);
 
 #ifdef __cplusplus
 }

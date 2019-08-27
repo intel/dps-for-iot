@@ -97,6 +97,8 @@ typedef struct _DPS_DiscoveryService {
     uint64_t nextTimeout;
     DPS_Queue ackQueue;
     char* topic;
+    DPS_OnDiscoveryServiceDestroyed destroyCb;
+    void* destroyData;
 } DPS_DiscoveryService;
 
 static void Destroy(DPS_DiscoveryService* service);
@@ -855,6 +857,7 @@ static void Destroy(DPS_DiscoveryService* service)
         if (service->topic) {
             free(service->topic);
         }
+        service->destroyCb(service, service->destroyData);
         free(service);
     }
 }
@@ -875,20 +878,25 @@ static void PublishDestroyCb(DPS_Publication* pub, const DPS_Buffer* bufs, size_
     Destroy(service);
 }
 
-void DPS_DestroyDiscoveryService(DPS_DiscoveryService* service)
+DPS_Status DPS_DestroyDiscoveryService(DPS_DiscoveryService* service,
+                                       DPS_OnDiscoveryServiceDestroyed cb, void* data)
 {
     DPS_Status ret;
 
-    DPS_DBGTRACEA("service=%p\n", service);
+    DPS_DBGTRACEA("service=%p,cb=%p,data=%p\n", service, cb, data);
 
-    if (service) {
-        /*
-         * Publish a goodbye message, then destroy the service
-         */
-        ret = DPS_PublishBufs(service->pub, NULL, 0, 0, PublishDestroyCb, service);
-        if (ret != DPS_OK) {
-            DPS_ERRPRINT("DPS_PublishBufs failed - %s\n", DPS_ErrTxt(ret));
-            DPS_NodeScheduleRequest(service->node, DestroyService, service);
-        }
+    if (!service || !cb) {
+        return DPS_ERR_NULL;
     }
+    service->destroyCb = cb;
+    service->destroyData = data;
+    /*
+     * Publish a goodbye message, then destroy the service
+     */
+    ret = DPS_PublishBufs(service->pub, NULL, 0, 0, PublishDestroyCb, service);
+    if (ret != DPS_OK) {
+        DPS_ERRPRINT("DPS_PublishBufs failed - %s\n", DPS_ErrTxt(ret));
+        ret = DPS_NodeScheduleRequest(service->node, DestroyService, service);
+    }
+    return ret;
 }
