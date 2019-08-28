@@ -146,7 +146,7 @@ int main(int argc, char** argv)
      * Speed up the subscription rate so the test case runs faster
      * when used with a large node population.
      */
-    node->subsRate = 100;
+    node->subsRate = 250;
     discovery = DPS_CreateDiscoveryService(node, "test");
     ret = DPS_DiscoveryStart(discovery);
     if (ret != DPS_OK) {

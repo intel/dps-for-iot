@@ -180,7 +180,7 @@ static int AddLinksForNode(DPS_Node* node)
          */
         if (NodeMap[id]) {
             LINK* link = AddLink(nodeId, id);
-            if (remote->muted) {
+            if (remote->state == REMOTE_MUTED) {
                 link->muted = 1;
                 ++numMuted;
             }
@@ -279,7 +279,7 @@ static int CountMuted(DPS_Node* node)
         /*
          * Ignore dead nodes
          */
-        if (NodeMap[id] && remote->muted) {
+        if (NodeMap[id] && remote->state == REMOTE_MUTED) {
             ++numMuted;
         }
     }
