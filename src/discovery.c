@@ -85,6 +85,14 @@ typedef struct _AckRequest {
     uv_timer_t* timer;
 } AckRequest;
 
+typedef struct _HandlerData {
+    DPS_Queue queue;
+    DPS_DiscoveryService* service;
+    DPS_Publication* pub;
+    uint8_t* data;
+    size_t dataLen;
+} HandlerData;
+
 typedef struct _DPS_DiscoveryService {
     void* userData;
     DPS_Node* node;
@@ -99,6 +107,7 @@ typedef struct _DPS_DiscoveryService {
     char* topic;
     DPS_OnDiscoveryServiceDestroyed destroyCb;
     void* destroyData;
+    DPS_Queue handlerQueue;
 } DPS_DiscoveryService;
 
 static void Destroy(DPS_DiscoveryService* service);
@@ -320,6 +329,7 @@ DPS_DiscoveryService* DPS_CreateDiscoveryService(DPS_Node* node, const char* ser
     }
     service->node = node;
     DPS_QueueInit(&service->ackQueue);
+    DPS_QueueInit(&service->handlerQueue);
     service->topic = malloc(sizeof("$DPS_Discovery/") + strlen(serviceId) + 1);
     if (!service->topic) {
         ret = DPS_ERR_RESOURCES;
@@ -479,16 +489,10 @@ Exit:
     return copy;
 }
 
-typedef struct _HandlerData {
-    DPS_DiscoveryService* service;
-    DPS_Publication* pub;
-    uint8_t* data;
-    size_t dataLen;
-} HandlerData;
-
 static void DestroyHandlerData(HandlerData* handlerData)
 {
     if (handlerData) {
+        DPS_QueueRemove(&handlerData->queue);
         DPS_DestroyCopy(handlerData->pub);
         if (handlerData->data) {
             free(handlerData->data);
@@ -510,6 +514,7 @@ static HandlerData* CreateHandlerData(DPS_DiscoveryService* service, const DPS_P
             ret = DPS_ERR_RESOURCES;
             goto Exit;
         }
+        DPS_QueuePushBack(&service->handlerQueue, &handlerData->queue);
         handlerData->service = service;
         handlerData->pub = CopyPublication(pub, uuid);
         if (!handlerData->pub) {
@@ -537,7 +542,7 @@ Exit:
 
 static void CallHandler(HandlerData* handlerData)
 {
-    if (handlerData) {
+    if (handlerData && handlerData->service) {
         if (handlerData->service->handler) {
             handlerData->service->handler(handlerData->service, handlerData->pub,
                                           handlerData->data, handlerData->dataLen);
@@ -850,6 +855,15 @@ static void Destroy(DPS_DiscoveryService* service)
     } else if (service->pub) {
         DPS_DestroyPublication(service->pub, OnPubDestroyed);
     } else {
+        /*
+         * handlerData will be freed via already pending callbacks,
+         * but LinkCb may run after service is destroyed.
+         */
+        DPS_Queue* queue;
+        for (queue = &service->handlerQueue; queue->next != &service->handlerQueue; queue = queue->next) {
+            HandlerData* handlerData = (HandlerData*)queue->next;
+            handlerData->service = NULL;
+        }
         while (!DPS_QueueEmpty(&service->ackQueue)) {
             DestroyAckRequest((AckRequest*)DPS_QueueFront(&service->ackQueue));
         }
