@@ -199,11 +199,6 @@ const char* RemoteStateTxt(RemoteNode* remote);
  */
 typedef struct _RemoteNode {
     OnOpCompletion* completion;        /**< Completion context for link and unlink operations */
-#if 0
-    uint8_t unlink;                    /**< TRUE if this node is about to be unlinked */
-    uint8_t muted;                     /**< TRUE if the the link to this remote is muted */
-    uint8_t unmuting;                  /**< TRUE if the the link to this remote is being unmuted */
-#endif
     DPS_REMOTE_NODE_STATE state;
     /** Inbound state */
     struct {
