@@ -112,6 +112,18 @@ typedef struct _DPS_NodeAddress {
 DPS_Status DPS_GetLoopbackAddress(DPS_NodeAddress* addr, DPS_Node* node);
 
 /**
+ * Link the local node to a remote node.
+ *
+ * @param node      The local node to use
+ * @param addr      The address for the remote node
+ * @param cb        The callback function to call on completion, can be NULL which case the function is synchronous
+ * @param data      Application data to be passed to the callback
+ *
+ * @return DPS_OK or an error status. If an error status is returned the callback function will not be called.
+ */
+DPS_Status DPS_LinkRemoteAddr(DPS_Node* node, const DPS_NodeAddress* addr, DPS_OnLinkComplete cb, void* data);
+
+/**
  * For managing data that has been received
  */
 typedef struct _DPS_RxBuffer {

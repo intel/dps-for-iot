@@ -66,7 +66,7 @@ def pub_or_sub():
 ns = pub_or_sub()
 
 # Wait a bit for discovery to settle
-time.sleep(10)
+time.sleep(10 + num_nodes / 4)
 
 for n in ns:
     n.kill(signal.SIGUSR1)

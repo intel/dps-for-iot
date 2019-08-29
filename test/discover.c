@@ -22,6 +22,7 @@
 
 #include <stdio.h>
 #include <dps/discovery.h>
+#include "node.h"
 #include "test.h"
 #include "topics.h"
 
@@ -165,6 +166,11 @@ int main(int argc, char** argv)
             goto Exit;
         }
     }
+    /*
+     * Speed up the subscription rate so the test case runs faster
+     * when used with a large node population.
+     */
+    node->subsRate = 250;
     discovery = DPS_CreateDiscoveryService(node, "test");
     ret = DPS_DiscoveryPublish(discovery, (uint8_t*)msg, msg ? strnlen(msg, MAX_MSG_LEN) + 1 : 0,
                                OnDiscovery);

@@ -34,7 +34,7 @@
 #include "crypto.h"
 #include "ec.h"
 
-DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
+DPS_DEBUG_CONTROL(DPS_DEBUG_OFF);
 
 const char *TLSErrTxt(int ret)
 {

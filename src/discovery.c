@@ -202,7 +202,7 @@ static DPS_Status EncodePayload(DPS_DiscoveryService* service, uint8_t msgType, 
             goto Exit;
         }
     }
- Exit:
+Exit:
     DPS_BitVectorFree(interests);
     DPS_BitVectorFree(needs);
     if (ret == DPS_OK) {
@@ -308,7 +308,7 @@ static DPS_Status DecodePayload(DPS_DiscoveryService* service, uint8_t msgType, 
     }
     DPS_UnlockNode(node);
 
- Exit:
+Exit:
     DPS_BitVectorFree(interests);
     DPS_BitVectorFree(needs);
     return ret;
@@ -580,8 +580,8 @@ static void OnAck(DPS_Publication* pub, uint8_t* payload, size_t len)
     }
     handlerData = CreateHandlerData(service, pub, &ackUuid, data, dataLen);
     if (match) {
-        ret = DPS_Link(node, DPS_NodeAddrToString(DPS_AckGetSenderAddress(pub)), LinkCb, handlerData);
-        if (ret != DPS_OK) {
+        ret = DPS_LinkRemoteAddr(node, DPS_AckGetSenderAddress(pub), LinkCb, handlerData);
+        if (ret != DPS_OK && ret != DPS_ERR_EXISTS) {
             DPS_ERRPRINT("DPS_Link failed - %s\n", DPS_ErrTxt(ret));
             DestroyHandlerData(handlerData);
         }
@@ -665,7 +665,7 @@ static void Ack(void* data)
         DPS_ERRPRINT("uv_timer_start failed - %s\n", uv_strerror(err));
         goto Exit;
     }
- Exit:
+Exit:
     if (err) {
         DestroyAckRequest(req);
     }
@@ -695,7 +695,7 @@ static DPS_Status ScheduleAck(DPS_DiscoveryService* service, const DPS_Publicati
     if (ret != DPS_OK) {
         DPS_ERRPRINT("DPS_NodeScheduleRequest failed - %s\n", DPS_ErrTxt(ret));
     }
- Exit:
+Exit:
     if (ret != DPS_OK) {
         if (req) {
             DestroyAckRequest(req);
@@ -730,9 +730,8 @@ static void OnPub(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* pa
                     AckPublication(service, pub);
                 }
                 handlerData = CreateHandlerData(service, pub, DPS_PublicationGetUUID(pub), data, dataLen);
-                ret = DPS_Link(node, DPS_NodeAddrToString(DPS_PublicationGetSenderAddress(pub)),
-                               LinkCb, handlerData);
-                if (ret != DPS_OK) {
+                ret = DPS_LinkRemoteAddr(node, DPS_PublicationGetSenderAddress(pub), LinkCb, handlerData);
+                if (ret != DPS_OK && ret != DPS_ERR_EXISTS) {
                     DPS_ERRPRINT("DPS_Link failed - %s\n", DPS_ErrTxt(ret));
                     DestroyHandlerData(handlerData);
                 }

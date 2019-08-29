@@ -180,7 +180,7 @@ static int AddLinksForNode(DPS_Node* node)
          */
         if (NodeMap[id]) {
             LINK* link = AddLink(nodeId, id);
-            if (remote->inbound.muted) {
+            if (remote->state == REMOTE_MUTED) {
                 link->muted = 1;
                 ++numMuted;
             }
@@ -210,6 +210,7 @@ static int MakeLinks(int* numNodes, int* numMuted)
             *numNodes += 1;
         }
     }
+    *numMuted /= 2;
     for (l = links; l != NULL; l = l->next) {
         ++numArcs;
     }
@@ -232,15 +233,12 @@ static void PrintSubgraph(FILE* f, int showMuted, uint16_t* kills, size_t numKil
     int maxN = 0;
 
     numArcs = MakeLinks(&numNodes, &numMuted);
-    if (numMuted & 1) {
-        DPS_ERRPRINT("Odd number of muted links - something went wrong\n");
-    }
-    DPS_PRINT("Nodes=%d, muted=%d\n", (int)numNodes, (int)(numMuted / 2));
+    DPS_PRINT("Nodes=%d, muted=%d\n", numNodes, numMuted);
 
     if (*label == 0) {
         *label = base + 1000;
-        fprintf(f, "  %d[shape=none, width=1, style=bold, height=1, fontsize=12, label=\"nodes=%d\\narcs=%d\\nmuted=%d", *label, (int)numNodes, (int)numArcs, (int)(numMuted / 2));
-        if (expMuted != (numMuted / 2)) {
+        fprintf(f, "  %d[shape=none, width=1, style=bold, height=1, fontsize=12, label=\"nodes=%d\\narcs=%d\\nmuted=%d", *label, numNodes, numArcs, numMuted);
+        if (expMuted != numMuted) {
             fprintf(f, "/%d\"];\n", (int)expMuted);
         } else {
             fprintf(f, "\"];\n");
@@ -281,7 +279,7 @@ static int CountMuted(DPS_Node* node)
         /*
          * Ignore dead nodes
          */
-        if (NodeMap[id] && remote->inbound.muted) {
+        if (NodeMap[id] && remote->state == REMOTE_MUTED) {
             ++numMuted;
         }
     }
@@ -300,7 +298,7 @@ static int CountMutedLinks(void)
             numMuted += CountMuted(node);
         }
     }
-    return numMuted / 2;
+    return numMuted;
 }
 
 static void DumpLinks(void)
@@ -375,7 +373,6 @@ static void DumpMeshIds(size_t numIds)
         DPS_Node* node = NodeMap[id];
         if (node) {
             DPS_PRINT("Node[%d] meshId %s\n", id, DPS_UUIDToString(&node->meshId));
-            DPS_PRINT("Node[%d] minMeshId %s\n", id, DPS_UUIDToString(&node->minMeshId));
         }
     }
 }
@@ -397,6 +394,9 @@ static void OnNodeDestroyed(DPS_Node* node, void* data)
     }
 }
 
+static int subsRate = 100;
+static int maxSettleTime;
+
 /*
  * This is a little tricky because during link recovery the number
  * of muted links can go down and then go up again so we check that
@@ -405,13 +405,13 @@ static void OnNodeDestroyed(DPS_Node* node, void* data)
  */
 static void WaitUntilSettled(DPS_Event* sleeper, size_t expMuted)
 {
-    size_t i;
-    size_t numMuted;
+    int i;
+    size_t numMuted = 0;
     int repeats = 0;
 
     DPS_PRINT("Expect %d links muted\n", expMuted);
-    for (i = 0; i < 500; ++i) {
-        DPS_TimedWaitForEvent(sleeper, 100);
+    for (i = 0; i < maxSettleTime; i += subsRate) {
+        DPS_TimedWaitForEvent(sleeper, subsRate);
         numMuted = CountMutedLinks();
         if (numMuted == expMuted) {
             if (++repeats == 5) {
@@ -421,6 +421,11 @@ static void WaitUntilSettled(DPS_Event* sleeper, size_t expMuted)
             repeats = 0;
         }
     }
+    if (numMuted & 1) {
+        DPS_PRINT("ERROR: expected even number of muted remotes\n");
+    }
+    /* Both ends of a link will be marked as muted, so divide the count by 2 */
+    numMuted /= 2;
     if (numMuted != expMuted) {
         DPS_PRINT("ERROR: expected %d muted but got %d\n", expMuted, numMuted);
     }
@@ -457,12 +462,6 @@ static DPS_Status LinkNodes(DPS_Node* src, DPS_Node* dst)
     return ret;
 }
 
-const LinkMonitorConfig FastLinkProbe = {
-    .retries = 0,     /* Maximum number of retries following a probe failure */
-    .probeTO = 500,   /* Repeat rate for probes */
-    .retryTO = 10     /* Repeat time for retries following a probe failure */
-};
-
 #define MAX_KILLS  16
 
 int main(int argc, char** argv)
@@ -479,6 +478,7 @@ int main(int argc, char** argv)
     int numKills = 0;
     int showMuted = 1;
     int expMuted;
+    int allSubs = 0;
     int l1 = 0;
     int l2 = 0;
     const char* inFn = NULL;
@@ -507,6 +507,11 @@ int main(int argc, char** argv)
             showMuted = 0;
             continue;
         }
+        if (strcmp(*arg, "-a") == 0) {
+            ++arg;
+            allSubs = 1;
+            continue;
+        }
         if (strcmp(*arg, "-d") == 0) {
             ++arg;
             DPS_Debug = 1;
@@ -514,6 +519,15 @@ int main(int argc, char** argv)
         }
         if (*arg[0] == '-') {
             DPS_PRINT("Unknown option %s\n", arg[0]);
+            DPS_PRINT("%s [-f <mesh file>] [-o <file>] [-m] [-d] [-s <max subs>] [-k <max kills>] [-a]\n"); 
+            DPS_PRINT("options\n");
+            DPS_PRINT("    -a  all nodes subscribe to the same topic\n");
+            DPS_PRINT("    -d  enable debug output\n");
+            DPS_PRINT("    -f  specifies the input file describing the mesh\n");
+            DPS_PRINT("    -k  maximum number of randomly terminated links\n");
+            DPS_PRINT("    -m  hide muted arcs in the graph\n");
+            DPS_PRINT("    -o  specifies the output file for the graph (graphviz format)\n");
+            DPS_PRINT("    -s  maximum number of subscriptions\n");
             return 1;
         }
         inFn = *arg++;
@@ -529,6 +543,10 @@ int main(int argc, char** argv)
         return 1;
     }
     /*
+     * Time to wait for the mesh to stabilize
+     */
+    maxSettleTime = 4 * numIds * subsRate;
+    /*
      * Mutex for protecting the link succes/fail counters
      */
     uv_mutex_init(&lock);
@@ -538,16 +556,14 @@ int main(int argc, char** argv)
     for (i = 0; i < numIds; ++i) {
         DPS_Node* node = DPS_CreateNode("/.", NULL, NULL);
         /*
-         * Set fast link monitor probes so we don't
-         * need to wait so long to detect disconnects.
+         * Set short subscription delay to speed up the test case
          */
-        node->linkMonitorConfig = FastLinkProbe;
+        node->subsRate = subsRate;
         /*
-         * Since we set a fast link probe we need to set
-         * a short subscription delay or link monitoring
-         * will thrash.
+         * Set link-loss timer to multiple of subscription delay so
+         * disconnects are detected quickly.
          */
-        node->subsRate = (FastLinkProbe.probeTO) / 4;
+        node->linkLossTimeout = 10 * node->subsRate;
 
         listenAddr = DPS_CreateAddress();
         if (!listenAddr) {
@@ -611,20 +627,26 @@ int main(int argc, char** argv)
     /*
      * Add some subscriptions
      */
+    if (allSubs) {
+        maxSubs = numIds;
+    }
     while (maxSubs > 0) {
         for (i = 0; i < numIds && numSubs < maxSubs; ++i) {
             DPS_Node* node = NodeMap[NodeList[i]];
-            if ((DPS_Rand() % 4) == 0) {
+            if (allSubs || ((DPS_Rand() % 4) == 0)) {
                 DPS_Subscription* sub;
                 char topic[] = "A";
                 const char* topicList[] = { topic };
 
-                topic[0] += DPS_Rand() % 26;
+                if (!allSubs) {
+                    topic[0] += DPS_Rand() % 26;
+                }
                 sub = DPS_CreateSubscription(node, topicList, 1);
                 if (!sub) {
                     DPS_ERRPRINT("CreateSubscribe failed\n");
                     break;
                 }
+                DPS_PRINT("Calling DPS_Subscribe for node %d\n", i);
                 ret = DPS_Subscribe(sub, OnPubMatch);
                 if (ret == DPS_OK) {
                     DPS_PRINT("Node %d is subscribing to \"%s\"\n", NodeList[i], topic);

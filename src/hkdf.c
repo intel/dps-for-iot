@@ -29,7 +29,7 @@
 /*
  * Debug control for this module
  */
-DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
+DPS_DEBUG_CONTROL(DPS_DEBUG_OFF);
 
 DPS_Status HKDF_SHA256(const uint8_t* secret, size_t secretLen,
                        const uint8_t* context, size_t contextLen,

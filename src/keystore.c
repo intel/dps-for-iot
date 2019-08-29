@@ -32,7 +32,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
+DPS_DEBUG_CONTROL(DPS_DEBUG_OFF);
 
 DPS_KeyStore* DPS_CreateKeyStore(DPS_KeyAndIdHandler keyAndIdHandler, DPS_KeyHandler keyHandler,
                                  DPS_EphemeralKeyHandler ephemeralKeyHandler, DPS_CAHandler caHandler)

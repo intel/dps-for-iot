@@ -530,11 +530,24 @@ DPS_Status DPS_DestroyNode(DPS_Node* node, DPS_OnNodeDestroyed cb, void* data);
 
 /**
  * The default maximum rate (in msecs) to compute and send out subscription updates.
+ * This causes subscription updates coming in from multiple remote nodes to be batched
+ * up for forwarding. This reduces network traffic when new nodes join the mesh, particularly
+ * at startup time, at the cost of increased latency for the propagation of subscriptions
+ * across the mesh. New subscriptions local to a node are not subject to this timeout value
+ * and are set immediately to adjacent nodes.
  */
-#define DPS_SUBSCRIPTION_UPDATE_RATE 1000
+#define DPS_SUBSCRIPTION_UPDATE_RATE 2000
 
 /**
- * Specify the time delay (in msecs) between subscription updates.
+  * This establishes the base rate at which keep-alive subscription messages are
+  * sent to remote nodes. This timeout governs how long it takes to detect a mesh
+  * disconnect and start a recovery process. This timeout value should be much
+  * larger than DPS_SUBSCRIPTION_UPDATE_RATE.
+  */
+#define DPS_LINK_LOSS_TIMEOUT 30000
+
+/**
+ * Override the defauly time delay (in msecs) between subscription updates.
  *
  * @param node           The node
  * @param subsRateMsecs  The time delay (in msecs) between updates
@@ -552,8 +565,7 @@ const DPS_NodeAddress* DPS_GetListenAddress(DPS_Node* node);
 
 /**
  * Get text representation of the address this node is listening for
- * connections on. This function uses a static string buffer so is not
- * thread safe.
+ * connections on.
  *
  * @param node     The node
  *
@@ -572,7 +584,7 @@ const char* DPS_GetListenAddressString(DPS_Node* node);
 typedef void (*DPS_OnLinkComplete)(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, void* data);
 
 /**
- * Link the local node to a remote node
+ * Link the local node to a remote node.
  *
  * @param node     The local node to use
  * @param addrText The text string of the address to link to

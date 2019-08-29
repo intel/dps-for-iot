@@ -55,7 +55,7 @@
  * actions are also implemented with callbacks.
  */
 
-DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
+DPS_DEBUG_CONTROL(DPS_DEBUG_OFF);
 
 /*
  * Controls debug output from the mbedtls library, ranges from 0 (no

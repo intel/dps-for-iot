@@ -38,10 +38,16 @@ extern "C" {
 #endif
 
 /**
- * Retry limit of sending subscriptions before deleting an
- * unresponsive remote node
+ * Number of times the subscription timer can to trigger before
+ * an unacknowledged subscription message (SUB or SAK) is resent.
  */
-#define DPS_MAX_SUBSCRIPTION_RETRIES  8
+#define DPS_SAK_RETRY_THRESHOLD   4
+
+/**
+ * Number of times an unacknowledged subscription message (SUB or SAK)
+ * is resent before the remote is considered to be unresponsive.
+ */
+#define DPS_SAK_RETRY_LIMIT       4
 
 #define SUB_FLAG_WAS_FREED      (0x01) /**< The subscription has been freed but has a non-zero ref count */
 #define SUB_FLAG_EXPIRED        (0x02) /**< Issue the callback function when a matching publication expires */
@@ -100,14 +106,24 @@ void DPS_SubscriptionIncRef(DPS_Subscription* sub);
 void DPS_SubscriptionDecRef(DPS_Subscription* sub);
 
 /**
- * Send a subscription to a remote node
+ * Send a subscription (SUB) to a remote node
  *
  * @param node    The local node
- * @param remote  The remote node to send the subscription to
+ * @param remote  The remote node to send the SUB to
  *
  * @return DPS_OK if sending is successful, an error otherwise
  */
 DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote);
+
+/**
+ * Send a subscription acknowledgement (SAK) to a remote node
+ *
+ * @param node    The local node
+ * @param remote  The remote node to send the SAK to
+ *
+ * @return DPS_OK if sending is successful, an error otherwise
+ */
+DPS_Status DPS_SendSubscriptionAck(DPS_Node* node, RemoteNode* remote);
 
 /**
  * Decode and process a received subscription

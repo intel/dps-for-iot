@@ -46,6 +46,9 @@ extern "C" {
 /** Debug control value */
 extern int DPS_Debug;
 
+/** This can be redefined to include a custom tag in the log message */
+#define DPS_DBG_TAG NULL
+
 /**
  * Debug logging levels
  */
@@ -65,10 +68,11 @@ typedef enum {
  * @param file the file name of the message
  * @param line the file line of the message
  * @param function the function name of the message
+ * @param tag a custom tag in the log message
  * @param fmt the printf style format of the message
  * @param ... the format parameters
  */
-void DPS_Log(DPS_LogLevel level, const char* file, int line, const char *function, const char *fmt, ...);
+void DPS_Log(DPS_LogLevel level, const char* file, int line, const char *function, const char* tag, const char *fmt, ...);
 
 /**
  * Log an array of bytes
@@ -85,17 +89,17 @@ void DPS_LogBytes(DPS_LogLevel level, const char* file, int line, const char *fu
 /**
  * Log a message at ERROR level
  */
-#define DPS_ERRPRINT(fmt, ...) DPS_Log(DPS_LOG_ERROR, __FILE__, __LINE__, __FUNCTION__, fmt, ##__VA_ARGS__)
+#define DPS_ERRPRINT(fmt, ...) DPS_Log(DPS_LOG_ERROR, __FILE__, __LINE__, __FUNCTION__, DPS_DBG_TAG, fmt, ##__VA_ARGS__)
 
 /**
  * Log a message at PRINT level
  */
-#define DPS_PRINT(fmt, ...) DPS_Log(DPS_LOG_PRINT, __FILE__, __LINE__, __FUNCTION__, fmt, ##__VA_ARGS__)
+#define DPS_PRINT(fmt, ...) DPS_Log(DPS_LOG_PRINT, __FILE__, __LINE__, __FUNCTION__, DPS_DBG_TAG, fmt, ##__VA_ARGS__)
 
 /**
  * Same as DPS_PRINT but prepends a system timestamp
  */
-#define DPS_PRINTT(fmt, ...) DPS_Log(DPS_LOG_PRINTT, __FILE__, __LINE__, __FUNCTION__, fmt, ##__VA_ARGS__)
+#define DPS_PRINTT(fmt, ...) DPS_Log(DPS_LOG_PRINTT, __FILE__, __LINE__, __FUNCTION__, DPS_DBG_TAG, fmt, ##__VA_ARGS__)
 
 #define DPS_DEBUG_OFF   0 /**< Disable debug logging */
 #define DPS_DEBUG_ON    1 /**< Enable debug logging */
@@ -110,19 +114,19 @@ void DPS_LogBytes(DPS_LogLevel level, const char* file, int line, const char *fu
 /**
  * Log a function name at DBGTRACE level
  */
-#define DPS_DBGTRACE() (DPS_DEBUG_ENABLED() ? DPS_Log(DPS_LOG_DBGTRACE, __FILE__, __LINE__, __FUNCTION__, "\n") : (void)0)
+#define DPS_DBGTRACE() (DPS_DEBUG_ENABLED() ? DPS_Log(DPS_LOG_DBGTRACE, __FILE__, __LINE__, __FUNCTION__, DPS_DBG_TAG, "\n") : (void)0)
 /**
  * Log a function name and message at DBGTRACE level
  */
-#define DPS_DBGTRACEA(fmt, ...) (DPS_DEBUG_ENABLED() ? DPS_Log(DPS_LOG_DBGTRACE, __FILE__, __LINE__, __FUNCTION__, fmt, ##__VA_ARGS__) : (void)0)
+#define DPS_DBGTRACEA(fmt, ...) (DPS_DEBUG_ENABLED() ? DPS_Log(DPS_LOG_DBGTRACE, __FILE__, __LINE__, __FUNCTION__, DPS_DBG_TAG, fmt, ##__VA_ARGS__) : (void)0)
 /**
  * Log a message at DBGPRINT level
  */
-#define DPS_DBGPRINT(fmt, ...) (DPS_DEBUG_ENABLED() ? DPS_Log(DPS_LOG_DBGPRINT, __FILE__, __LINE__, __FUNCTION__, fmt, ##__VA_ARGS__) : (void)0)
+#define DPS_DBGPRINT(fmt, ...) (DPS_DEBUG_ENABLED() ? DPS_Log(DPS_LOG_DBGPRINT, __FILE__, __LINE__, __FUNCTION__, DPS_DBG_TAG, fmt, ##__VA_ARGS__) : (void)0)
 /**
  * Log a message at WARNING level
  */
-#define DPS_WARNPRINT(fmt, ...) (DPS_DEBUG_ENABLED() ? DPS_Log(DPS_LOG_WARNING, __FILE__, __LINE__, __FUNCTION__, fmt, ##__VA_ARGS__) : (void)0)
+#define DPS_WARNPRINT(fmt, ...) (DPS_DEBUG_ENABLED() ? DPS_Log(DPS_LOG_WARNING, __FILE__, __LINE__, __FUNCTION__, DPS_DBG_TAG, fmt, ##__VA_ARGS__) : (void)0)
 /**
  * Log an array of bytes at DBGPRINT level
  */

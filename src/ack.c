@@ -41,7 +41,7 @@
 /*
  * Debug control for this module
  */
-DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
+DPS_DEBUG_CONTROL(DPS_DEBUG_OFF);
 
 static PublicationAck* CreateAck(const DPS_Publication* pub, size_t numBufs,
                                  DPS_AckPublicationBufsComplete cb, void* data)
