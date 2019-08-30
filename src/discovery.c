@@ -584,10 +584,8 @@ static void OnAck(DPS_Publication* pub, uint8_t* payload, size_t len)
         if (ret != DPS_OK && ret != DPS_ERR_EXISTS) {
             DPS_ERRPRINT("DPS_Link failed - %s\n", DPS_ErrTxt(ret));
         }
-        if (ret != DPS_OK) {
-            DestroyHandlerData(handlerData);
-        }
-    } else {
+    }
+    if (!match || ret != DPS_OK) {
         CallHandler(handlerData);
         DestroyHandlerData(handlerData);
     }
@@ -738,6 +736,7 @@ static void OnPub(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* pa
                 }
                 if (ret != DPS_OK) {
                     DestroyHandlerData(handlerData);
+                    handlerData = NULL;
                 }
             }
         } else if (DPS_PublicationIsAckRequested(pub)) {
