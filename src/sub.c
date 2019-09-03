@@ -998,6 +998,7 @@ DPS_Status DPS_DecodeSubscriptionAck(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
             remote->outbound.sakPending = DPS_FALSE;
             switch (remote->state) {
             case REMOTE_LINKING:
+            case REMOTE_MUTED:
             case REMOTE_UNLINKING:
                 if (remote->completion) {
                     DPS_RemoteCompletion(node, remote->completion, DPS_OK);
