@@ -722,7 +722,10 @@ int main(int argc, char** argv)
         }
         numLinks = MakeLinks(&numIds, &m);
         expMuted = numLinks + 1 - numIds;
-
+        /*
+         * Increase the max settle time for the recovery
+         */
+        maxSettleTime *= 8;
         /*
          * This will wait while links are being unmuted
          */

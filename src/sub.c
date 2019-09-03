@@ -826,9 +826,9 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
             if (remote->state == REMOTE_MUTED && !(flags & DPS_SUB_FLAG_MUTE_IND)) {
                 DPS_ERRPRINT("Expected muted flag in SAK from %s\n", DESCRIBE(remote));
                 ret = DPS_ERR_INVALID;
-                goto DiscardAndExit;
             }
         } else {
+            DPS_ERRPRINT("Got SAK from unknown remote %s\n", DPS_NodeAddrToString(&ep->addr));
             ret = DPS_ERR_MISSING;
         }
     } else {
@@ -858,14 +858,14 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
             ret = DPS_ClearOutboundInterests(remote);
         }
     }
+    if (ret != DPS_OK) {
+        goto DiscardAndExit;
+    }
     /*
      * Discard stale subscription messages
      */
     if (revision < remote->inbound.revision) {
         DPS_DBGPRINT("Stale subscription %d from %s (expected %d)\n", revision, DESCRIBE(remote), remote->inbound.revision + 1);
-        goto DiscardAndExit;
-    }
-    if (ret != DPS_OK) {
         goto DiscardAndExit;
     }
     remote->inbound.revision = revision;
@@ -882,18 +882,19 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
          * to mute the link which prevents publications from being forwarded to that remote.
          */
         if (flags & DPS_SUB_FLAG_MUTE_IND) {
-            DPS_DBGPRINT("Muting reported by %s\n", DESCRIBE(remote));
-            DPS_MuteRemoteNode(node, remote);
+            DPS_DBGPRINT("MUTE_IND from %s\n", DESCRIBE(remote));
+            DPS_MuteRemoteNode(node, remote, REMOTE_MUTED);
         } else if (flags & DPS_SUB_FLAG_UNMUTE_REQ) {
             /*
              * Only a SUB can unmute a link
              */
             if (!sakSeqNum) {
+                DPS_DBGPRINT("UNMUTE_REQ from %s\n", DESCRIBE(remote));
                 ret = DPS_UnmuteRemoteNode(node, remote);
             }
         } else if (DPS_MeshHasLoop(node, remote, &meshId)) {
             DPS_DBGPRINT("Loop detected for %s\n", DESCRIBE(remote));
-            DPS_MuteRemoteNode(node, remote);
+            DPS_MuteRemoteNode(node, remote, REMOTE_MUTED);
         }
         /*
          * Check remote is in a state where we need to update interests
@@ -936,7 +937,7 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
         }
         if (flags & DPS_SUB_FLAG_MUTE_IND) {
             DPS_DBGPRINT("Loop reported in SAK by %s\n", DESCRIBE(remote));
-            DPS_MuteRemoteNode(node, remote);
+            DPS_MuteRemoteNode(node, remote, REMOTE_MUTED);
         }
         /* These should be NULL but call free just in case */
         DPS_BitVectorFree(interests);
@@ -995,11 +996,19 @@ DPS_Status DPS_DecodeSubscriptionAck(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
         if (remote->outbound.revision == revision) {
             remote->outbound.sendInterests = DPS_FALSE;
             remote->outbound.sakPending = DPS_FALSE;
-            if (remote->completion) {
-                DPS_RemoteCompletion(node, remote->completion, DPS_OK);
-            }
-            if (remote->state == REMOTE_UNMUTING) {
+            switch (remote->state) {
+            case REMOTE_LINKING:
+            case REMOTE_UNLINKING:
+                if (remote->completion) {
+                    DPS_RemoteCompletion(node, remote->completion, DPS_OK);
+                }
+                break;
+            case REMOTE_UNMUTING:
+                DPS_DBGPRINT("Successfully unmuted %s\n", DESCRIBE(remote));
                 remote->state = REMOTE_ACTIVE;
+                break;
+            default:
+                break;
             }
         } else {
             DPS_ERRPRINT("Unexpected revision in SAK from %s, expected %d got %d\n", DESCRIBE(remote), remote->outbound.revision, revision);

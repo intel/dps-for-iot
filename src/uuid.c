@@ -148,29 +148,16 @@ void DPS_GenerateUUID(DPS_UUID* uuid)
 
 int DPS_UUIDCompare(const DPS_UUID* a, const DPS_UUID* b)
 {
-    return memcmp(&a->val, &b->val, sizeof(a->val));
+    uint64_t al = a->val64[0];
+    uint64_t ah = a->val64[1];
+    uint64_t bl = b->val64[0];
+    uint64_t bh = b->val64[1];
+    return (ah < bh) ? -1 : ((ah > bh) ? 1 : ((al < bl) ? -1 : (al > bl) ? 1 : 0));
 }
 
-void DPS_RandUUIDLess(DPS_UUID* uuid)
+uint64_t DPS_Rand64(void)
 {
-    DPS_UUID tmp;
-    int i;
-
-    DPS_GenerateUUID(&tmp);
-    /*
-     * All this does is subtract a random 64 bit uint from an 128 bit uint
-     */
-    for (i = 15; i >= 8; --i) {
-        if (tmp.val[i] > uuid->val[i]) {
-            --uuid->val[i - 1];
-        }
-        uuid->val[i] -= tmp.val[i];
-    }
-}
-
-uint32_t DPS_Rand(void)
-{
-    uint32_t s0;
+    uint64_t s0;
 
     uv_mutex_lock(&context.mutex);
     s0 = entropy.seeds[0];
@@ -181,4 +168,26 @@ uint32_t DPS_Rand(void)
     s0 = entropy.seeds[0];
     uv_mutex_unlock(&context.mutex);
     return s0;
+}
+/*
+ * Note that uuidIn and uuiId out may be aliased.
+ */
+void DPS_RandUUIDLess(const DPS_UUID* uuidIn, DPS_UUID* uuidOut)
+{
+    /*
+     * Effectively all this just subtracts a random 64 bit uint from a 128 bit uint
+     */
+    uint64_t l = uuidIn->val64[0] - DPS_Rand64();
+    uint64_t h = uuidIn->val64[1];
+
+    if (l >= uuidIn->val64[0]) {
+        --h;
+    }
+    uuidOut->val64[0] = l;
+    uuidOut->val64[1] = h;
+}
+
+uint32_t DPS_Rand(void)
+{
+    return (uint32_t)DPS_Rand64();
 }
