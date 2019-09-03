@@ -438,20 +438,21 @@ ErrExit:
     return ret;
 }
 
-DPS_Status DPS_MuteRemoteNode(DPS_Node* node, RemoteNode* remote)
+DPS_Status DPS_MuteRemoteNode(DPS_Node* node, RemoteNode* remote, RemoteNodeState newState)
 {
     DPS_Status ret;
 
-    if (remote->state == REMOTE_MUTED || remote->state == REMOTE_UNLINKING) {
+    if (remote->state == REMOTE_MUTED || remote->state == REMOTE_DEAD || remote->state == REMOTE_UNLINKING) {
         return DPS_OK;
     }
-
     if ((node->numRemoteNodes - node->numMutedRemotes) == 1) {
-        DPS_ERRPRINT("Muting last remote #%d: %s\n", node->numRemoteNodes, DESCRIBE(remote));
+        DPS_WARNPRINT("Muting last remote #%d: %s\n", node->numRemoteNodes, DESCRIBE(remote));
+    } else {
+        DPS_DBGPRINT("Muting %s\n", DESCRIBE(remote));
     }
-    DPS_DBGPRINT("Muting %s\n", DESCRIBE(remote));
-
-    remote->state = REMOTE_MUTED;
+    remote->inbound.meshId = DPS_MaxMeshId;
+    remote->outbound.meshId = DPS_MaxMeshId;
+    remote->state = newState;
     /*
      * Clear the inbound and outbound interests
      */
@@ -467,15 +468,15 @@ DPS_Status DPS_MuteRemoteNode(DPS_Node* node, RemoteNode* remote)
          */
         remote->outbound.sendInterests = DPS_FALSE;
     }
+    if (remote->state == REMOTE_DEAD) {
+        remote->outbound.sakPending = DPS_FALSE;
+    }
     /*
      * Move the muted node to the head of the remote node list so remotes
      * can be unmuted in FILO order.
      */
     RemoveRemoteNode(node, remote);
     InsertRemoteNode(node, remote);
-    /*
-     * TODO - put a cap on the number of muted nodes that are allowed
-     */
     ++node->numMutedRemotes;
     return ret;
 }
@@ -484,11 +485,17 @@ DPS_Status DPS_UnmuteRemoteNode(DPS_Node* node, RemoteNode* remote)
 {
     DPS_DBGTRACE();
 
-    if (remote->state == REMOTE_MUTED) {
-        DPS_DBGPRINT("Unmuting %s\n", DESCRIBE(remote));
+    if (remote->state == REMOTE_MUTED || remote->state == REMOTE_DEAD) {
+        DPS_DBGPRINT("Unmuting %s remote %s\n", RemoteStateTxt(remote), DESCRIBE(remote));
 
         remote->state = REMOTE_UNMUTING;
-        remote->outbound.meshId = DPS_MaxMeshId;
+        /*
+         * We need a fresh mesh id that is less than any of the mesh id's
+         * we have already seen. If we were to send the same mesh id that
+         * was used to detected the loop it will look to the remaining
+         * nodes that there is still a loop.
+         */
+        DPS_RandUUIDLess(MinMeshId(node, NULL), &node->meshId);
         /*
          * Free stale outbound interests. This also ensures
          * that the first subscription sent after unmuting
@@ -847,7 +854,7 @@ static void SendSubsTimer(uv_timer_t* handle)
          */
         if (remote->outbound.sakPending) {
             if (++remote->outbound.sakCounter == (DPS_SAK_RETRY_THRESHOLD + DPS_SAK_RETRY_LIMIT)) {
-                DPS_ERRPRINT("At retry limit - %s remote %s\n", remote->completion ? "deleting" : "muting", DESCRIBE(remote));
+                DPS_WARNPRINT("At retry limit - %s remote %s\n", remote->completion ? "deleting" : "muting", DESCRIBE(remote));
                 if (remote->state == REMOTE_LINKING || remote->state == REMOTE_UNLINKING) {
                     /*
                      * Communication with the remote link was not estabished so delete the remote node
@@ -858,7 +865,7 @@ static void SendSubsTimer(uv_timer_t* handle)
                      * Remote node exists but has gone unresponsive. Don't delete it because
                      * we might be able to re-establish a link to it later if we need to.
                      */
-                    DPS_MuteRemoteNode(node, remote);
+                    DPS_MuteRemoteNode(node, remote, REMOTE_DEAD);
                 }
                 continue;
             }
@@ -872,7 +879,7 @@ static void SendSubsTimer(uv_timer_t* handle)
             /*
              * Resend a SUB or SAK
              */
-            DPS_ERRPRINT("Resend %s to %s\n", remote->outbound.lastSubMsgType == DPS_MSG_TYPE_SAK ? "SAK" : "SUB", DESCRIBE(remote));
+            DPS_DBGPRINT("Resend %s to %s\n", remote->outbound.lastSubMsgType == DPS_MSG_TYPE_SAK ? "SAK" : "SUB", DESCRIBE(remote));
             ret = DPS_UpdateOutboundInterests(node, remote, &changes);
             if (ret == DPS_OK) {
                 if (remote->outbound.lastSubMsgType == DPS_MSG_TYPE_SUB) {
@@ -883,7 +890,7 @@ static void SendSubsTimer(uv_timer_t* handle)
             }
             reschedule |= (ret == DPS_OK);
         } else {
-            if (remote->state == REMOTE_MUTED) {
+            if (remote->state == REMOTE_MUTED || remote->state == REMOTE_DEAD) {
                 continue;
             }
             ret = DPS_UpdateOutboundInterests(node, remote, &changes);
@@ -916,11 +923,14 @@ static void SendSubsTimer(uv_timer_t* handle)
     /*
      * If all the remote nodes are muted attempt to repair connectivity to
      * the mesh by unmuting the oldest muted remote in the remote nodes list.
+     * If there are no muted nodes try to revive dead nodes.
      */
     if (node->numMutedRemotes == node->numRemoteNodes) {
         RemoteNode* oldest = NULL;
         for (remote = node->remoteNodes; remote != NULL; remote = remote->next) {
             if (remote->state == REMOTE_MUTED) {
+                oldest = remote;
+            } else if (oldest == NULL && remote->state == REMOTE_DEAD) {
                 oldest = remote;
             }
         }
@@ -2139,6 +2149,9 @@ static void DumpNode(uv_signal_t* handle, int signum)
     }
     DPS_PRINT("remoteNodes\n");
     for (remote = node->remoteNodes; remote; remote = remote->next) {
+        if (remote->state == REMOTE_DEAD) {
+            continue;
+        }
         DPS_PRINT("  %s muted=%d\n", DPS_NodeAddrToString(&remote->ep.addr), remote->state == REMOTE_MUTED);
     }
     DPS_PRINT("history\n");
@@ -2158,10 +2171,12 @@ const char* RemoteStateTxt(RemoteNode* remote)
             return "LINKING";
         case REMOTE_UNLINKING:
             return "UNLINKING";
-        case REMOTE_MUTED:
-            return "MUTED";
         case REMOTE_UNMUTING:
             return "UNMUTING";
+        case REMOTE_MUTED:
+            return "MUTED";
+        case REMOTE_DEAD:
+            return "DEAD";
         default:
             return "UNKNOWN";
         }

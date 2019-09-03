@@ -178,12 +178,13 @@ typedef struct _DPS_Node {
 extern const DPS_UUID DPS_MaxMeshId;
 
 typedef enum {
-    REMOTE_ACTIVE,
-    REMOTE_LINKING,
-    REMOTE_UNLINKING,
-    REMOTE_MUTED,
-    REMOTE_UNMUTING
-} DPS_REMOTE_NODE_STATE;
+    REMOTE_ACTIVE,        /**< Remote node is linked */
+    REMOTE_LINKING,       /**< Remote node is in the process of being linked */
+    REMOTE_UNLINKING,     /**< Remote node is in the process of being unlinked */
+    REMOTE_UNMUTING,      /**< Remote node is being unmuted */
+    REMOTE_MUTED,         /**< Remote node was linked but is muted to avoid mesh loops */
+    REMOTE_DEAD           /**< Remote was linked but went unresponsive */
+} RemoteNodeState;
 
 /**
   * Return the remote node state as a text string
@@ -199,7 +200,7 @@ const char* RemoteStateTxt(RemoteNode* remote);
  */
 typedef struct _RemoteNode {
     OnOpCompletion* completion;        /**< Completion context for link and unlink operations */
-    DPS_REMOTE_NODE_STATE state;
+    RemoteNodeState state;
     /** Inbound state */
     struct {
         uint32_t revision;             /**< Revision number of last subscription received from this node */
@@ -358,12 +359,13 @@ void DPS_RemoteCompletion(DPS_Node* node, OnOpCompletion* completion, DPS_Status
  * Mute a remote node. Remote nodes are muted we detect a
  * loop in the mesh.
  *
- * @param node    The local node
- * @param remote  The remote node to mute
+ * @param node      The local node
+ * @param remote    The remote node to mute
+ * @param newState  Indicates if the remote is muted or dead
  *
  * @return DPS_OK if mute is successful, an error otherwise
  */
-DPS_Status DPS_MuteRemoteNode(DPS_Node* node, RemoteNode* remote);
+DPS_Status DPS_MuteRemoteNode(DPS_Node* node, RemoteNode* remote, RemoteNodeState newState);
 
 /**
  * Unmute a remote node
@@ -433,9 +435,10 @@ DPS_Publication* DPS_LookupAckHandler(DPS_Node* node, const DPS_UUID* pubId, uin
  * Generates a random UUID that is less than the UUID passed in.
  * Less in this context means DPS_UUIDCompare(&new, old) < 0
  *
- * @param uuid  The UUID to be updated.
+ * @param uuidIn  The input UUID
+ * @param uuidOut Returns a UUID that is less than uuidIn
  */
-void DPS_RandUUIDLess(DPS_UUID* uuid);
+void DPS_RandUUIDLess(const DPS_UUID* uuidIn, DPS_UUID* uuidOut);
 
 #ifdef __cplusplus
 }
