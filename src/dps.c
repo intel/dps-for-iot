@@ -347,6 +347,13 @@ DPS_Status DPS_UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, uin
         return DPS_OK;
     }
     /*
+     * Unlinking is always considered to be a change
+     */
+    if (destNode->state == REMOTE_UNLINKING) {
+        *changes = DPS_TRUE;
+        return DPS_OK;
+    }
+    /*
      * Inbound interests from the node we are updating are excluded from the
      * recalculation of outbound interests
      */
