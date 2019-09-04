@@ -1726,9 +1726,7 @@ Exit:
     DPS_UnlockNode(node);
     if (ret == DPS_OK) {
         /*
-         * This will cause an initial subscription to be sent to the remote node
-         * or trigger the completion if we have no new outbound interests for the
-         * remote node (i.e. the remote node is already linked to us).
+         * This will cause an initial subscription to be sent to the remote node.
          */
         DPS_UpdateSubs(node);
     }
