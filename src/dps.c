@@ -70,6 +70,7 @@ typedef struct _OnOpCompletion {
     void* data;
     DPS_Node* node;
     struct _RemoteNode* remote;
+    DPS_NodeAddress addr;
     union {
         DPS_OnLinkComplete link;
         DPS_OnUnlinkComplete unlink;
@@ -180,9 +181,9 @@ void DPS_RxBufferToTx(const DPS_RxBuffer* rxBuffer, DPS_TxBuffer* txBuffer)
 void DPS_RemoteCompletion(DPS_Node* node, OnOpCompletion* completion, DPS_Status status)
 {
     RemoteNode* remote = completion->remote;
+    const DPS_NodeAddress* addr = &completion->addr;
 
     if (remote) {
-        DPS_NodeAddress* addr = &remote->ep.addr;
         if (remote->completion == completion) {
             remote->completion = NULL;
         }
@@ -195,15 +196,18 @@ void DPS_RemoteCompletion(DPS_Node* node, OnOpCompletion* completion, DPS_Status
             } else {
                 assert(remote->state == REMOTE_MUTED);
             }
-            completion->on.link(node, addr, status, completion->data);
         } else if (completion->op == UNLINK_OP) {
             assert(remote->state == REMOTE_UNLINKING);
-            completion->on.unlink(node, addr, completion->data);
             status = DPS_ERR_MISSING;
         }
         if ((status != DPS_OK) && (status != DPS_ERR_EXISTS)) {
             DPS_DeleteRemoteNode(node, remote);
         }
+    }
+    if (completion->op == LINK_OP) {
+        completion->on.link(node, addr, status, completion->data);
+    } else if (completion->op == UNLINK_OP) {
+        completion->on.unlink(node, addr, completion->data);
     }
     free(completion);
 }
@@ -1709,20 +1713,15 @@ static DPS_Status Link(DPS_Node* node, const DPS_NodeAddress* addr, OnOpCompleti
 
     DPS_DBGTRACEA("Link to %s\n", DPS_NodeAddrToString(addr));
 
+    assert(addr);
+    memcpy(&completion->addr, addr, sizeof(DPS_NodeAddress));
     DPS_LockNode(node);
-    if (!addr) {
-        ret = DPS_ERR_UNRESOLVED;
-        goto Exit;
-    }
     ret = DPS_AddRemoteNode(node, addr, NULL, &remote);
-    if (ret != DPS_OK) {
-        goto Exit;
+    if (ret == DPS_OK) {
+        completion->remote = remote;
+        remote->completion = completion;
+        remote->state = REMOTE_LINKING;
     }
-    completion->remote = remote;
-    remote->completion = completion;
-    remote->state = REMOTE_LINKING;
-    ret = DPS_OK;
-Exit:
     DPS_UnlockNode(node);
     if (ret == DPS_OK) {
         /*
@@ -1738,7 +1737,11 @@ static void OnResolve(DPS_Node* node, const DPS_NodeAddress* addr, void* data)
     OnOpCompletion* completion = (OnOpCompletion*)data;
     DPS_Status ret;
 
-    ret = Link(node, addr, completion);
+    if (addr) {
+        ret = Link(node, addr, completion);
+    } else {
+        ret = DPS_ERR_UNRESOLVED;
+    }
     if (ret != DPS_OK) {
         DPS_RemoteCompletion(node, completion, ret);
     }

@@ -75,7 +75,7 @@ static void TestRemoteLinkedAlready(void)
 
     addr = DPS_CreateAddress();
     ret = DPS_LinkTo(b, DPS_GetListenAddressString(a), addr);
-    ASSERT(ret == DPS_OK);
+    ASSERT(ret == DPS_ERR_EXISTS);
     DPS_DestroyAddress(addr);
 
     DestroyNode(b);
