@@ -260,7 +260,7 @@ static int Subscribe(Subscriber* subscriber, Args* args)
     return DPS_TRUE;
 }
 
-static void OnLinkComplete(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, void* data)
+static void OnLinkComplete(DPS_Node* node, const DPS_NodeAddress* addr, DPS_Status status, void* data)
 {
     DPS_NodeAddress* outAddr = (DPS_NodeAddress*)data;
 

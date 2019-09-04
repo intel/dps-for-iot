@@ -294,7 +294,7 @@ public:
     DPS_NodeAddress* m_addr;
     DPS_Status m_status;
     Handler* m_handler;
-    LinkCompleteCallback(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, void* data)
+    LinkCompleteCallback(DPS_Node* node, const DPS_NodeAddress* addr, DPS_Status status, void* data)
         : m_node(node), m_addr(DPS_CreateAddress()), m_status(status), m_handler((Handler*)data) {
         DPS_CopyAddress(m_addr, addr);
     }
@@ -312,7 +312,7 @@ public:
     }
 };
 
-static void OnLinkComplete(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, void* data)
+static void OnLinkComplete(DPS_Node* node, const DPS_NodeAddress* addr, DPS_Status status, void* data)
 {
     sync_send(new LinkCompleteCallback(node, addr, status, data));
 }

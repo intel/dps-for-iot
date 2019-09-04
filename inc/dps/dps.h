@@ -582,7 +582,7 @@ const char* DPS_GetListenAddressString(DPS_Node* node);
  * @param status Indicates if the link completed or failed
  * @param data   Application data passed in the call to DPS_Link()
  */
-typedef void (*DPS_OnLinkComplete)(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, void* data);
+typedef void (*DPS_OnLinkComplete)(DPS_Node* node, const DPS_NodeAddress* addr, DPS_Status status, void* data);
 
 /**
  * Link the local node to a remote node.

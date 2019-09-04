@@ -112,8 +112,8 @@ import (
  }
 
  extern void goOnLinkComplete(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, uintptr_t data);
- static void onLinkComplete(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, void* data) {
-         goOnLinkComplete(node, addr, status, (uintptr_t)data);
+ static void onLinkComplete(DPS_Node* node, const DPS_NodeAddress* addr, DPS_Status status, void* data) {
+         goOnLinkComplete(node, (DPS_NodeAddress*)addr, status, (uintptr_t)data);
  }
 
  static DPS_Status link(DPS_Node* node, const char* addrText, uintptr_t data) {

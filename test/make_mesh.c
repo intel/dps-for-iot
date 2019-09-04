@@ -436,7 +436,7 @@ static volatile int LinksFailed;
 
 static uv_mutex_t lock;
 
-static void OnLinked(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, void* data)
+static void OnLinked(DPS_Node* node, const DPS_NodeAddress* addr, DPS_Status status, void* data)
 {
     uv_mutex_lock(&lock);
     if (status == DPS_OK) {
