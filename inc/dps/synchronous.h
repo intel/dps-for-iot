@@ -46,7 +46,10 @@ extern "C" {
  * @param addrText The text string of the address to link to
  * @param addr     Returns the resolved address for the remote node
  *
- * @return DPS_OK if the link is successful, an error otherwise
+ * @return
+ * - DPS_OK if the link is successful,
+ * - DPS_ERR_EXISTS if the address is already linked to,
+ * - an error otherwise
  */
 DPS_Status DPS_LinkTo(DPS_Node* node, const char* addrText, DPS_NodeAddress* addr);
 
