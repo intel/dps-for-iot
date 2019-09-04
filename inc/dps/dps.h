@@ -57,8 +57,9 @@ extern "C" {
 typedef struct _DPS_NodeAddress DPS_NodeAddress;
 
 /**
- * Get text representation of an address. This function uses a static
- * string buffer so is not thread safe.
+ * Get text representation of an address.
+ *
+ * @note This function uses a thread-local string buffer.
  *
  * @param addr to get the text for
  *
@@ -588,7 +589,7 @@ typedef void (*DPS_OnLinkComplete)(DPS_Node* node, DPS_NodeAddress* addr, DPS_St
  *
  * @param node     The local node to use
  * @param addrText The text string of the address to link to
- * @param cb       The callback function to call on completion, can be NULL which case the function is synchronous
+ * @param cb       The callback function to call on completion
  * @param data     Application data to be passed to the callback
  *
  * @return DPS_OK or an error status. If an error status is returned the callback function will not be called.
