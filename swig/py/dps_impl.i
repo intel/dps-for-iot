@@ -234,7 +234,7 @@ static void OnNodeDestroyed(DPS_Node* node, void* data)
     PyGILState_Release(gilState);
 }
 
-static void OnLinkComplete(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, void* data)
+static void OnLinkComplete(DPS_Node* node, const DPS_NodeAddress* addr, DPS_Status status, void* data)
 {
     Handler* handler = (Handler*)data;
     PyObject* nodeObj;

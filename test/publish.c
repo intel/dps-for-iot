@@ -288,7 +288,7 @@ static void TestBackToBackPublish(DPS_Node* node, DPS_KeyStore* keyStore)
 }
 
 #if defined(DPS_USE_TCP)
-static void OnLinkComplete(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, void* data)
+static void OnLinkComplete(DPS_Node* node, const DPS_NodeAddress* addr, DPS_Status status, void* data)
 {
     if (data) {
         DPS_SignalEvent((DPS_Event*)data, status);

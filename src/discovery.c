@@ -120,7 +120,7 @@ static void TimerCloseCb(uv_handle_t* timer)
     free(timer);
 }
 
-static void DiscoveryLinkCb(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, void* data)
+static void DiscoveryLinkCb(DPS_Node* node, const DPS_NodeAddress* addr, DPS_Status status, void* data)
 {
     if (status == DPS_OK) {
         DPS_PRINT("Node is linked to %s\n", DPS_NodeAddrToString(addr));

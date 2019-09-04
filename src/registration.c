@@ -244,7 +244,7 @@ static void OnPutAck(DPS_Publication* pub, uint8_t* data, size_t len)
     uv_close((uv_handle_t*)&regPut->timer, OnPutTimerClosedOK);
 }
 
-static void OnLinkedPut(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status ret, void* data)
+static void OnLinkedPut(DPS_Node* node, const DPS_NodeAddress* addr, DPS_Status ret, void* data)
 {
     RegPut* regPut = (RegPut*)data;
 
@@ -583,7 +583,7 @@ static void OnPub(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* da
     }
 }
 
-static void OnLinkedGet(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status ret, void* data)
+static void OnLinkedGet(DPS_Node* node, const DPS_NodeAddress* addr, DPS_Status ret, void* data)
 {
     RegGet* regGet = (RegGet*)data;
 
@@ -729,7 +729,7 @@ typedef struct {
     DPS_RegistrationList* regs;
 } LinkTo;
 
-static void OnLinked(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, void* data)
+static void OnLinked(DPS_Node* node, const DPS_NodeAddress* addr, DPS_Status status, void* data)
 {
     LinkTo* linkTo = (LinkTo*)data;
 

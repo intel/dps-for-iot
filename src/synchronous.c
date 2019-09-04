@@ -32,7 +32,7 @@
  */
 DPS_DEBUG_CONTROL(DPS_DEBUG_OFF);
 
-static void OnLinked(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, void* data)
+static void OnLinked(DPS_Node* node, const DPS_NodeAddress* addr, DPS_Status status, void* data)
 {
     DPS_Event* event = (DPS_Event*)data;
 

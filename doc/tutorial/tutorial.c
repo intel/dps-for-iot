@@ -79,7 +79,7 @@ static DPS_Node* CreateNodeWithAuthenticatedSender(const DPS_KeyId* nodeId);
 static DPS_Status StartMulticastNode(DPS_Node* node);
 static DPS_Status StartUnicastNode(DPS_Node* node, uint16_t listenPort);
 static DPS_Status StartNode(DPS_Node* node, int mcastPub, const char* listenText);
-static void LinkComplete(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, void* data);
+static void LinkComplete(DPS_Node* node, const DPS_NodeAddress* addr, DPS_Status status, void* data);
 static DPS_Status Publish(DPS_Node* node, const char* security, DPS_Publication** createdPub);
 static DPS_Status PublishAck(DPS_Node* node, const char* security, DPS_Publication** createdPub);
 static DPS_Status PublishAuthAck(DPS_Node* node, const char* security, DPS_Publication** createdPub);
@@ -427,7 +427,7 @@ static DPS_Status StartUnicastNode(DPS_Node* node, uint16_t port)
 }
 
 /** [Linking complete] */
-static void LinkComplete(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, void* data)
+static void LinkComplete(DPS_Node* node, const DPS_NodeAddress* addr, DPS_Status status, void* data)
 {
     DPS_PRINT("Node is linked to %s\n", DPS_NodeAddrToString(addr));
 }
