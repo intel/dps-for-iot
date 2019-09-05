@@ -666,7 +666,7 @@ static DPS_Status UnlinkRemote(DPS_Node* node, DPS_NodeAddress* addr)
 {
     RemoteNode* remote;
 
-    DPS_PRINT("Received unlink for %s\n", DPS_NodeAddrToString(addr));
+    DPS_DBGPRINT("Received unlink for %s\n", DPS_NodeAddrToString(addr));
     remote = DPS_LookupRemoteNode(node, addr);
     if (remote) {
         remote->outbound.sendInterests = DPS_FALSE;
