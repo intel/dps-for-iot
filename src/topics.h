@@ -123,6 +123,8 @@ void DPS_DumpTopics(const char** topics, size_t numTopics);
  * This function uses a static buffer so is not thread-safe
  *
  * @param bv The bit vector
+ *
+ * @return The topics
  */
 const char* DPS_DumpMatchingTopics(DPS_BitVector* bv);
 #else

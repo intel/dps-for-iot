@@ -177,6 +177,9 @@ typedef struct _DPS_Node {
  */
 extern const DPS_UUID DPS_MaxMeshId;
 
+/**
+ * The remote node state
+ */
 typedef enum {
     REMOTE_ACTIVE,        /**< Remote node is linked */
     REMOTE_LINKING,       /**< Remote node is in the process of being linked */
@@ -190,6 +193,13 @@ typedef enum {
   * Return the remote node state as a text string
   */
 #ifdef DPS_DEBUG
+/**
+ * Return the remote node state as a text string
+ *
+ * @param remote the remote node
+ *
+ * @return the text string
+ */
 const char* RemoteStateTxt(RemoteNode* remote);
 #else
 #define RemoteStateTxt(r) ""
@@ -200,7 +210,7 @@ const char* RemoteStateTxt(RemoteNode* remote);
  */
 typedef struct _RemoteNode {
     OnOpCompletion* completion;        /**< Completion context for link and unlink operations */
-    RemoteNodeState state;
+    RemoteNodeState state;             /**< The remote node state */
     /** Inbound state */
     struct {
         uint32_t revision;             /**< Revision number of last subscription received from this node */
