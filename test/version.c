@@ -191,6 +191,8 @@ int main(int argc, char** argv)
     if (addr) {
         mcast = DPS_MCAST_PUB_DISABLED;
         DPS_CopyAddress(&ep.addr, addr);
+    } else {
+        ep.addr.type = DPS_UDP;
     }
     if (encrypt) {
         size_t i;
