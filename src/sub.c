@@ -244,9 +244,8 @@ DPS_Status DPS_DestroySubscription(DPS_Subscription* sub, DPS_OnSubscriptionDest
     DPS_DBGPRINT("Unsubscribing from %zu topics\n", sub->numTopics);
     sub->onDestroyed = cb;
     FreeSubscription(sub);
+    DPS_UpdateSubs(node, SubsSendNow);
     DPS_UnlockNode(node);
-
-    DPS_UpdateSubs(node);
 
     return DPS_OK;
 }
@@ -418,7 +417,7 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote)
 
     if (ret == DPS_OK) {
         uv_buf_t uvBuf = uv_buf_init((char*)buf.base, DPS_TxBufferUsed(&buf));
-        CBOR_Dump("Sub out", (uint8_t*)uvBuf.base, uvBuf.len);
+        CBOR_Dump("SUB out", (uint8_t*)uvBuf.base, uvBuf.len);
         ret = DPS_NetSend(node, NULL, &remote->ep, &uvBuf, 1, DPS_OnSendSubscriptionComplete);
         if (ret == DPS_OK) {
             if (!remote->outbound.sakPending) {
@@ -428,6 +427,7 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote)
             remote->outbound.lastSubMsgType = DPS_MSG_TYPE_SUB;
         } else {
             DPS_ERRPRINT("Failed to send subscription request %s\n", DPS_ErrTxt(ret));
+            remote->outbound.sakPending = DPS_FALSE;
             DPS_SendComplete(node, &remote->ep.addr, &uvBuf, 1, ret);
         }
     } else {
@@ -610,7 +610,7 @@ DPS_Status DPS_SendSubscriptionAck(DPS_Node* node, RemoteNode* remote)
 
     if (ret == DPS_OK) {
         uv_buf_t uvBuf = uv_buf_init((char*)buf.base, DPS_TxBufferUsed(&buf));
-        CBOR_Dump("Sub ack out", (uint8_t*)uvBuf.base, uvBuf.len);
+        CBOR_Dump("SAK out", (uint8_t*)uvBuf.base, uvBuf.len);
         ret = DPS_NetSend(node, NULL, &remote->ep, &uvBuf, 1, DPS_OnSendComplete);
         if (ret == DPS_OK) {
             if (flags & DPS_SUB_FLAG_SAK_REQ) {
@@ -618,12 +618,13 @@ DPS_Status DPS_SendSubscriptionAck(DPS_Node* node, RemoteNode* remote)
                     remote->outbound.sakPending = DPS_TRUE;
                     remote->outbound.sakCounter = 0;
                 }
-                remote->outbound.lastSubMsgType = DPS_MSG_TYPE_SAK;
             } else {
                 remote->outbound.sakPending = DPS_FALSE;
             }
+            remote->outbound.lastSubMsgType = DPS_MSG_TYPE_SAK;
         } else {
             DPS_ERRPRINT("Failed to send subscription ack %s\n", DPS_ErrTxt(ret));
+            remote->outbound.sakPending = DPS_FALSE;
             DPS_SendComplete(node, &remote->ep.addr, &uvBuf, 1, ret);
         }
     } else {
@@ -674,7 +675,7 @@ static DPS_Status UnlinkRemote(DPS_Node* node, DPS_NodeAddress* addr)
         /*
          * Evaluate impact of losing the remote's interests
          */
-        DPS_UpdateSubs(node);
+        DPS_UpdateSubs(node, SubsSendNow);
         return DPS_OK;
     } else {
         return DPS_ERR_MISSING;
@@ -709,7 +710,7 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
     char* path = NULL;
     size_t pathLen = 0;
 
-    CBOR_Dump("Sub in", rxBuf->rxPos, DPS_RxBufferAvail(rxBuf));
+    CBOR_Dump("SUB in", rxBuf->rxPos, DPS_RxBufferAvail(rxBuf));
     /*
      * Parse keys from unprotected map
      */
@@ -943,8 +944,8 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
         DPS_BitVectorFree(interests);
         DPS_BitVectorFree(needs);
     }
+    DPS_UpdateSubs(node, SubsThrottled);
     DPS_UnlockNode(node);
-    DPS_UpdateSubs(node);
     return ret;
 
 DiscardAndExit:
@@ -1071,10 +1072,10 @@ DPS_Status DPS_Subscribe(DPS_Subscription* sub, DPS_PublicationHandler handler)
     if (ret == DPS_OK) {
         ret = DPS_CountVectorAdd(node->needs, sub->needs);
     }
-    DPS_UnlockNode(node);
     if (ret == DPS_OK) {
-        DPS_UpdateSubs(node);
+        DPS_UpdateSubs(node, SubsSendNow);
     }
+    DPS_UnlockNode(node);
     return ret;
 }
 

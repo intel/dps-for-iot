@@ -394,7 +394,7 @@ static void OnNodeDestroyed(DPS_Node* node, void* data)
     }
 }
 
-static int subsRate = 100;
+static int subsRate = 250;
 static int maxSettleTime;
 
 /*
@@ -485,6 +485,7 @@ int main(int argc, char** argv)
     const char* outFn = NULL;
     uint16_t killList[MAX_KILLS];
     int i;
+    int debugKills = 0;
     DPS_NodeAddress* listenAddr = NULL;
 
     DPS_Debug = 0;
@@ -517,6 +518,11 @@ int main(int argc, char** argv)
             DPS_Debug = 1;
             continue;
         }
+        if (strcmp(*arg, "-dk") == 0) {
+            ++arg;
+            debugKills = 1;
+            continue;
+        }
         if (*arg[0] == '-') {
             DPS_PRINT("Unknown option %s\n", arg[0]);
             DPS_PRINT("%s [-f <mesh file>] [-o <file>] [-m] [-d] [-s <max subs>] [-k <max kills>] [-a]\n"); 
@@ -545,7 +551,7 @@ int main(int argc, char** argv)
     /*
      * Time to wait for the mesh to stabilize
      */
-    maxSettleTime = 4 * numIds * subsRate;
+    maxSettleTime = 1000 + numIds * subsRate / 5;
     /*
      * Mutex for protecting the link succes/fail counters
      */
@@ -708,6 +714,10 @@ int main(int argc, char** argv)
 
     if (numKills > 0) {
         int m;
+
+        if (debugKills) {
+            DPS_Debug = 1;
+        }
         /*
          * Kill the nodes on the list
          */
