@@ -393,7 +393,7 @@ def reg(args=''):
 def reg_subs(args=''):
     global _rs
     _rs = _rs + 1
-    cmd = [os.path.join('build', 'dist', 'bin', 'reg_subs')] + _debug + args.split()
+    cmd = [os.path.join('build', 'dist', 'bin', 'reg_subs')] + _debug + _subs_rate + args.split()
     child = _spawn(_rs, cmd)
     _expect_listening(child)
     return child
