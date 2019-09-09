@@ -101,7 +101,9 @@ typedef struct _NodeRequest {
  */
 DPS_Status DPS_NodeScheduleRequest(DPS_Node* node, OnNodeRequest cb, void* data);
 
-
+/**
+ * Specifies when subscriptions are to be sent
+ */
 typedef enum {
     SubsNonePending,   /**< No subscriptions are pending */
     SubsSendNow,       /**< Pending subscriptions should be sent immediately */
@@ -115,7 +117,7 @@ typedef struct _DPS_Node {
     void* userData;                       /**< Application provided user data */
 
 #ifdef DPS_DEBUG
-    uint8_t isLocked;
+    uint8_t isLocked;                     /**< Count of node locks */
 #endif
     SubsPendingState subsPending;         /**< Specifies when subscriptions are to be sent */
     uint32_t numRemoteNodes;              /**< Number of remote nodes */

@@ -911,7 +911,7 @@ static void SendSubsTimer(uv_timer_t* handle)
             /*
              * Resend a SUB or SAK
              */
-            DPS_ERRPRINT("Resend %s to %s\n", remote->outbound.lastSubMsgType == DPS_MSG_TYPE_SAK ? "SAK" : "SUB", DESCRIBE(remote));
+            DPS_DBGPRINT("Resend %s to %s\n", remote->outbound.lastSubMsgType == DPS_MSG_TYPE_SAK ? "SAK" : "SUB", DESCRIBE(remote));
             ret = DPS_UpdateOutboundInterests(node, remote, &changes);
             if (ret == DPS_OK) {
                 if (remote->outbound.lastSubMsgType == DPS_MSG_TYPE_SUB) {
