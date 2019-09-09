@@ -828,7 +828,7 @@ static void OnRegLinkTo(DPS_Node* node, DPS_RegistrationList* regs, const DPS_No
     LinkResult* linkResult = (LinkResult*)data;
 
     DPS_DBGTRACE();
-    if (status == DPS_OK) {
+    if (addr) {
         *linkResult->addr = *addr;
     }
     DPS_SignalEvent(linkResult->event, status);
