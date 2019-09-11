@@ -276,7 +276,11 @@ static int HasUnstableLinks(void)
             RemoteNode* remote;
             DPS_LockNode(node);
             for (remote = node->remoteNodes; remote != NULL; remote = remote->next) {
-                if (remote->state == REMOTE_LINKING || remote->state == REMOTE_UNLINKING || remote->state == REMOTE_UNMUTING) {
+                /*
+                 * These are the only stable states, the others are transitory.
+                 */
+                if (remote->state != REMOTE_ACTIVE && remote->state != REMOTE_MUTED && remote->state != REMOTE_DEAD) {
+                    DPS_UnlockNode(node);
                     return DPS_TRUE;
                 }
             }

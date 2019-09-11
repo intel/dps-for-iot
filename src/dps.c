@@ -466,10 +466,16 @@ DPS_Status DPS_MuteRemoteNode(DPS_Node* node, RemoteNode* remote, RemoteNodeStat
     if (remote->state == REMOTE_MUTED || remote->state == REMOTE_DEAD || remote->state == REMOTE_UNLINKING) {
         return DPS_OK;
     }
-    DPS_DBGPRINT("Muting %s\n", DESCRIBE(remote));
-
-    remote->outbound.meshId = DPS_MaxMeshId;
+    /*
+     * If we were muting we are now muted
+     */
+    if (remote->state == REMOTE_MUTING) {
+        assert(newState == REMOTE_MUTED);
+        remote->state = REMOTE_MUTED;
+        return DPS_OK;
+    }
     remote->state = newState;
+    DPS_DBGPRINT("%s %s\n", RemoteStateTxt(remote), DESCRIBE(remote));
     /*
      * Clear the inbound and outbound interests
      */
@@ -511,10 +517,8 @@ DPS_Status DPS_UnmuteRemoteNode(DPS_Node* node, RemoteNode* remote)
         uint8_t unused;
 
         DPS_DBGPRINT("Unmuting %s remote %s\n", RemoteStateTxt(remote), DESCRIBE(remote));
-        DPS_ERRPRINT("Unmuting %s remote %s\n", RemoteStateTxt(remote), DESCRIBE(remote));
 
         remote->state = REMOTE_UNMUTING;
-        remote->inbound.meshId = DPS_MaxMeshId;
         /*
          * We need a fresh mesh id that is less than any of the mesh id's
          * we have already seen. If we were to send the same mesh id that
@@ -874,23 +878,37 @@ static void FindAlternativeRoute(DPS_Node* node, RemoteNode* oldRoute)
     RemoteNode* remote;
     RemoteNode* newRoute = NULL;
 
-    DPS_ERRPRINT("Find alternative route to %s\n", DESCRIBE(oldRoute));
+    DPS_DBGPRINT("Find alternative route to %s\n", DESCRIBE(oldRoute));
 
     for (remote = node->remoteNodes; remote != NULL; remote = remote->next) {
         if (remote == oldRoute) {
             continue;
         }
-        if (remote->state == REMOTE_MUTED || remote->state == REMOTE_UNMUTING || (newRoute == NULL && remote->state == REMOTE_DEAD)) {
-            if (DPS_UUIDCompare(&remote->inbound.meshId, &oldRoute->inbound.meshId) == 0) {
+        if (DPS_UUIDCompare(&remote->inbound.meshId, &oldRoute->inbound.meshId) == 0) {
+            if (remote->state == REMOTE_ACTIVE || remote->state == REMOTE_UNMUTING) {
+                /*
+                 * Route already exists or is already being restored
+                 */
+                return;
+            }
+            if (remote->state == REMOTE_MUTED) {
                 newRoute = remote;
+                break;
+            }
+            if (remote->state == REMOTE_DEAD) {
+                /*
+                 * Only consider dead remotes as a last resort
+                 */
+                newRoute = remote;
+                continue;
             }
         }
     }
-    if (newRoute && newRoute->state != REMOTE_UNMUTING) {
-        DPS_ERRPRINT("Try unmuting link to %s mesh id %s\n", DESCRIBE(newRoute), DPS_UUIDToString(&newRoute->inbound.meshId));
+    if (newRoute) {
+        DPS_DBGPRINT("Try unmuting link to %s mesh id %s\n", DESCRIBE(newRoute), DPS_UUIDToString(&newRoute->inbound.meshId));
         DPS_UnmuteRemoteNode(node, newRoute);
     } else {
-        DPS_ERRPRINT("No alternative route to %s mesh id %s\n", DESCRIBE(oldRoute), DPS_UUIDToString(&oldRoute->inbound.meshId));
+        DPS_DBGPRINT("No alternative route to %s mesh id %s\n", DESCRIBE(oldRoute), DPS_UUIDToString(&oldRoute->inbound.meshId));
     }
 }
 

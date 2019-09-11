@@ -834,7 +834,7 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
                 ret = DPS_ERR_INVALID;
             }
         } else {
-            DPS_ERRPRINT("Got SAK from unknown remote %s\n", DPS_NodeAddrToString(&ep->addr));
+            DPS_WARNPRINT("Got SAK from unknown remote %s\n", DPS_NodeAddrToString(&ep->addr));
             ret = DPS_ERR_MISSING;
         }
     } else {
@@ -876,7 +876,7 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
     }
     remote->inbound.revision = revision;
     if (flags & DPS_SUB_FLAG_SAK_REQ) {
-        //DPS_ERRPRINT("Received mesh id %08x from %s\n", meshId.val32[0], DESCRIBE(remote));
+        DPS_DBGPRINT("Received mesh id %08x from %s\n", meshId.val32[0], DESCRIBE(remote));
         if ((keysMask & OptKeysMask) != OptKeysMask) {
             DPS_WARNPRINT("Missing mandatory subscription key\n");
             ret = DPS_ERR_INVALID;
@@ -888,7 +888,16 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
          * to mute the link which prevents publications from being forwarded to that remote.
          */
         if (flags & DPS_SUB_FLAG_MUTE_IND) {
-            DPS_DBGPRINT("MUTE_IND from %s\n", DESCRIBE(remote));
+            /*
+             * Only a SAK can mute a link
+             */
+            if (sakSeqNum) {
+                DPS_DBGPRINT("MUTE_IND %s in SAK by %s\n", remote->state == REMOTE_MUTING ? "ackowledged" : "reported", DESCRIBE(remote));
+            } else {
+                DPS_ERRPRINT("Unexpected MUTE_IND in SUB from %s\n", DESCRIBE(remote));
+                ret = DPS_ERR_INVALID;
+                goto DiscardAndExit;
+            }
             ret = DPS_MuteRemoteNode(node, remote, REMOTE_MUTED);
         } else if (flags & DPS_SUB_FLAG_UNMUTE_REQ) {
             /*
@@ -914,7 +923,6 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
             if (ret != DPS_OK) {
                 goto DiscardAndExit;
             }
-            remote->inbound.meshId = meshId;
             /*
              * Evaluate impact of the change in interests
              */
@@ -943,13 +951,14 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
             goto DiscardAndExit;
         }
         if (flags & DPS_SUB_FLAG_MUTE_IND) {
-            DPS_DBGPRINT("Loop reported in SAK by %s\n", DESCRIBE(remote));
+            DPS_DBGPRINT("MUTE_IND %s in SAK by %s\n", remote->state == REMOTE_MUTING ? "ackowledged" : "reported", DESCRIBE(remote));
             DPS_MuteRemoteNode(node, remote, REMOTE_MUTED);
         }
         /* These should be NULL but call free just in case */
         DPS_BitVectorFree(interests);
         DPS_BitVectorFree(needs);
     }
+    remote->inbound.meshId = meshId;
     DPS_UpdateSubs(node, SubsThrottled);
     DPS_UnlockNode(node);
     return ret;
@@ -1022,7 +1031,7 @@ DPS_Status DPS_DecodeSubscriptionAck(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
                 break;
             }
         } else {
-            DPS_ERRPRINT("Unexpected revision in SAK from %s, expected %d got %d\n", DESCRIBE(remote), remote->outbound.revision, revision);
+            DPS_WARNPRINT("Unexpected revision in SAK from %s, expected %d got %d\n", DESCRIBE(remote), remote->outbound.revision, revision);
             ret = DPS_ERR_INVALID;
         }
     } else {
