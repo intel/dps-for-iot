@@ -267,6 +267,25 @@ static void PrintSubgraph(FILE* f, int showMuted, uint16_t* kills, size_t numKil
     base += maxN + 1;
 }
 
+static int HasUnstableLinks(void)
+{
+    size_t i;
+    for (i = 0; i < A_SIZEOF(NodeMap); ++i) {
+        DPS_Node* node = NodeMap[i];
+        if (node) {
+            RemoteNode* remote;
+            DPS_LockNode(node);
+            for (remote = node->remoteNodes; remote != NULL; remote = remote->next) {
+                if (remote->state == REMOTE_LINKING || remote->state == REMOTE_UNLINKING || remote->state == REMOTE_UNMUTING) {
+                    return DPS_TRUE;
+                }
+            }
+            DPS_UnlockNode(node);
+        }
+    }
+    return DPS_FALSE;
+}
+
 static int CountMuted(DPS_Node* node)
 {
     int numMuted = 0;
@@ -365,6 +384,36 @@ ErrExit:
     return 0;
 }
 
+static const char* MeshIdStr(DPS_UUID* meshId)
+{
+
+    if (memcmp(meshId, &DPS_MaxMeshId, sizeof(DPS_UUID)) == 0) {
+        return "[]";
+    }
+    if (meshId->val32[1] == 0 && meshId->val32[2] == 0 && meshId->val32[3] == 0) {
+        static char id[9];
+        sprintf(id, "%08x", meshId->val32[0]);
+        return id;
+    } else {
+        return DPS_UUIDToString(meshId);
+    }
+}
+
+static void DumpRemoteMeshIds(DPS_Node* node)
+{
+    RemoteNode* remote;
+
+    DPS_LockNode(node);
+    for (remote = node->remoteNodes; remote != NULL; remote = remote->next) {
+        uint16_t port = GetPort(&remote->ep.addr);
+        uint16_t id = PortMap[port];
+        if (NodeMap[id]) {
+            DPS_PRINT("     Remote %d meshId %s %s\n", id, MeshIdStr(&remote->inbound.meshId), RemoteStateTxt(remote));
+        }
+    }
+    DPS_UnlockNode(node);
+}
+
 static void DumpMeshIds(size_t numIds)
 {
     size_t i;
@@ -372,7 +421,10 @@ static void DumpMeshIds(size_t numIds)
         uint16_t id = NodeList[i];
         DPS_Node* node = NodeMap[id];
         if (node) {
-            DPS_PRINT("Node[%d] meshId %s\n", id, DPS_UUIDToString(&node->meshId));
+            DPS_LockNode(node);
+            DPS_PRINT("Node[%d] meshId %s\n", id, MeshIdStr(&node->meshId));
+            DumpRemoteMeshIds(node);
+            DPS_UnlockNode(node);
         }
     }
 }
@@ -410,8 +462,14 @@ static void WaitUntilSettled(DPS_Event* sleeper, size_t expMuted)
     int repeats = 0;
 
     DPS_PRINT("Expect %d links muted\n", expMuted);
-    for (i = 0; i < maxSettleTime; i += subsRate) {
+
+    /*
+     * Wait until no nodes have links coming up or down or being unmuted
+     */
+    while (HasUnstableLinks()) {
         DPS_TimedWaitForEvent(sleeper, subsRate);
+    }
+    for (i = 0; i < maxSettleTime; i += subsRate) {
         numMuted = CountMutedLinks();
         if (numMuted == expMuted) {
             if (++repeats == 5) {
@@ -420,6 +478,7 @@ static void WaitUntilSettled(DPS_Event* sleeper, size_t expMuted)
         } else {
             repeats = 0;
         }
+        DPS_TimedWaitForEvent(sleeper, subsRate);
     }
     if (numMuted & 1) {
         DPS_PRINT("ERROR: expected even number of muted remotes\n");
@@ -525,7 +584,7 @@ int main(int argc, char** argv)
         }
         if (*arg[0] == '-') {
             DPS_PRINT("Unknown option %s\n", arg[0]);
-            DPS_PRINT("%s [-f <mesh file>] [-o <file>] [-m] [-d] [-s <max subs>] [-k <max kills>] [-a]\n"); 
+            DPS_PRINT("%s [-f <mesh file>] [-o <file>] [-m] [-d] [-s <max subs>] [-k <max kills>] [-a]\n");
             DPS_PRINT("options\n");
             DPS_PRINT("    -a  all nodes subscribe to the same topic\n");
             DPS_PRINT("    -d  enable debug output\n");
@@ -551,7 +610,7 @@ int main(int argc, char** argv)
     /*
      * Time to wait for the mesh to stabilize
      */
-    maxSettleTime = 1000 + numIds * subsRate / 5;
+    maxSettleTime = 1000 + numIds * subsRate / 4;
     /*
      * Mutex for protecting the link succes/fail counters
      */
@@ -695,9 +754,7 @@ int main(int argc, char** argv)
     expMuted = numLinks + 1 - numIds;
     WaitUntilSettled(sleeper, expMuted);
 
-    if (DPS_Debug) {
-        DumpMeshIds(numIds);
-    }
+    DumpMeshIds(numIds);
 
     fprintf(dotFile, "graph {\n");
     fprintf(dotFile, "  node[shape=circle, width=0.3, fontsize=10, margin=\"0.01,0.01\", fixedsize=true];\n");
@@ -740,6 +797,9 @@ int main(int argc, char** argv)
          * This will wait while links are being unmuted
          */
         WaitUntilSettled(sleeper, expMuted);
+
+        DumpMeshIds(numIds);
+
         fprintf(dotFile, "subgraph cluster_2 {\n");
         fprintf(dotFile, "style=invis;\n");
         if (showMuted) {

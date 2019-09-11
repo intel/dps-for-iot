@@ -41,13 +41,13 @@ extern "C" {
  * Number of times the subscription timer can to trigger before
  * an unacknowledged subscription message (SUB or SAK) is resent.
  */
-#define DPS_SAK_RETRY_THRESHOLD   4
+#define DPS_SAK_RETRY_THRESHOLD   2
 
 /**
  * Number of times an unacknowledged subscription message (SUB or SAK)
  * is resent before the remote is considered to be unresponsive.
  */
-#define DPS_SAK_RETRY_LIMIT       4
+#define DPS_SAK_RETRY_LIMIT       3
 
 #define SUB_FLAG_WAS_FREED      (0x01) /**< The subscription has been freed but has a non-zero ref count */
 #define SUB_FLAG_EXPIRED        (0x02) /**< Issue the callback function when a matching publication expires */
