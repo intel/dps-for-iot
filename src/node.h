@@ -102,12 +102,24 @@ typedef struct _NodeRequest {
 DPS_Status DPS_NodeScheduleRequest(DPS_Node* node, OnNodeRequest cb, void* data);
 
 /**
+ * Specifies when subscriptions are to be sent
+ */
+typedef enum {
+    SubsNonePending,   /**< No subscriptions are pending */
+    SubsSendNow,       /**< Pending subscriptions should be sent immediately */
+    SubsThrottled      /**< Pending subscriptions will be sent after a delay */
+} SubsPendingState;
+
+/**
  * A local node
  */
 typedef struct _DPS_Node {
     void* userData;                       /**< Application provided user data */
 
-    uint8_t subsPending;                  /**< If non-zero subscriptions are evaluated to be sent */
+#ifdef DPS_DEBUG
+    uint8_t isLocked;                     /**< Count of node locks */
+#endif
+    SubsPendingState subsPending;         /**< Specifies when subscriptions are to be sent */
     uint32_t numRemoteNodes;              /**< Number of remote nodes */
     uint32_t numMutedRemotes;             /**< Number of remote nodes that are muted */
     DPS_NodeAddress addr;                 /**< Listening address */
@@ -214,6 +226,7 @@ typedef struct _RemoteNode {
         DPS_UUID meshId;               /**< The mesh id received from this remote node */
         DPS_BitVector* needs;          /**< Bit vector of needs received from  this remote node */
         DPS_BitVector* interests;      /**< Bit vector of interests received from  this remote node */
+        uint32_t interestsRevision;    /**< Revision number of interests */
     } inbound;
     /** Outbound state */
     struct {
@@ -239,11 +252,14 @@ typedef struct _RemoteNode {
 extern RemoteNode* DPS_LoopbackNode;
 
 /**
- * Request to asynchronously updates subscriptions
+ * Request to asynchronously update subscriptions either
+ * immediately or after a timeout expires.
  *
- * @param node    The node
+ * @param node       The node
+ * @param pending    If FALSE update immediately otherwise wait for the
+ *                   subscription update timer to expire.
  */
-void DPS_UpdateSubs(DPS_Node* node);
+void DPS_UpdateSubs(DPS_Node* node, SubsPendingState pending);
 
 /**
  * Queue an acknowledgement to be sent asynchronously

@@ -68,7 +68,7 @@ typedef enum {
  * @param file the file name of the message
  * @param line the file line of the message
  * @param function the function name of the message
- * @param tag a custom tag in the log message
+ * @param tag the custom tag of the message
  * @param fmt the printf style format of the message
  * @param ... the format parameters
  */

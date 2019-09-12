@@ -244,9 +244,8 @@ DPS_Status DPS_DestroySubscription(DPS_Subscription* sub, DPS_OnSubscriptionDest
     DPS_DBGPRINT("Unsubscribing from %zu topics\n", sub->numTopics);
     sub->onDestroyed = cb;
     FreeSubscription(sub);
+    DPS_UpdateSubs(node, SubsSendNow);
     DPS_UnlockNode(node);
-
-    DPS_UpdateSubs(node);
 
     return DPS_OK;
 }
@@ -416,9 +415,15 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote)
         ret = CBOR_EncodeMap(&buf, 0);
     }
 
+    if (remote->state != REMOTE_UNLINKING) {
+        DPS_DBGPRINT("SUB outbound interests[%d] for %s: %s%s\n", remote->outbound.revision, DESCRIBE(remote),
+                     remote->outbound.deltaInd ? "(<delta>)" : "",
+                     DPS_DumpMatchingTopics(remote->outbound.interests));
+    }
+
     if (ret == DPS_OK) {
         uv_buf_t uvBuf = uv_buf_init((char*)buf.base, DPS_TxBufferUsed(&buf));
-        CBOR_Dump("Sub out", (uint8_t*)uvBuf.base, uvBuf.len);
+        CBOR_Dump("SUB out", (uint8_t*)uvBuf.base, uvBuf.len);
         ret = DPS_NetSend(node, NULL, &remote->ep, &uvBuf, 1, DPS_OnSendSubscriptionComplete);
         if (ret == DPS_OK) {
             if (!remote->outbound.sakPending) {
@@ -428,6 +433,7 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote)
             remote->outbound.lastSubMsgType = DPS_MSG_TYPE_SUB;
         } else {
             DPS_ERRPRINT("Failed to send subscription request %s\n", DPS_ErrTxt(ret));
+            remote->outbound.sakPending = DPS_FALSE;
             DPS_SendComplete(node, &remote->ep.addr, &uvBuf, 1, ret);
         }
     } else {
@@ -608,9 +614,15 @@ DPS_Status DPS_SendSubscriptionAck(DPS_Node* node, RemoteNode* remote)
         ret = CBOR_EncodeMap(&buf, 0);
     }
 
+    if (remote->outbound.sendInterests) {
+        DPS_DBGPRINT("SAK outbound interests[%d/%d] for %s: %s%s\n", remote->outbound.revision,
+                     remote->inbound.revision, DESCRIBE(remote), remote->outbound.deltaInd ? "(<delta>)" : "",
+                     DPS_DumpMatchingTopics(remote->outbound.interests));
+    }
+
     if (ret == DPS_OK) {
         uv_buf_t uvBuf = uv_buf_init((char*)buf.base, DPS_TxBufferUsed(&buf));
-        CBOR_Dump("Sub ack out", (uint8_t*)uvBuf.base, uvBuf.len);
+        CBOR_Dump("SAK out", (uint8_t*)uvBuf.base, uvBuf.len);
         ret = DPS_NetSend(node, NULL, &remote->ep, &uvBuf, 1, DPS_OnSendComplete);
         if (ret == DPS_OK) {
             if (flags & DPS_SUB_FLAG_SAK_REQ) {
@@ -618,12 +630,13 @@ DPS_Status DPS_SendSubscriptionAck(DPS_Node* node, RemoteNode* remote)
                     remote->outbound.sakPending = DPS_TRUE;
                     remote->outbound.sakCounter = 0;
                 }
-                remote->outbound.lastSubMsgType = DPS_MSG_TYPE_SAK;
             } else {
                 remote->outbound.sakPending = DPS_FALSE;
             }
+            remote->outbound.lastSubMsgType = DPS_MSG_TYPE_SAK;
         } else {
             DPS_ERRPRINT("Failed to send subscription ack %s\n", DPS_ErrTxt(ret));
+            remote->outbound.sakPending = DPS_FALSE;
             DPS_SendComplete(node, &remote->ep.addr, &uvBuf, 1, ret);
         }
     } else {
@@ -635,10 +648,17 @@ DPS_Status DPS_SendSubscriptionAck(DPS_Node* node, RemoteNode* remote)
 /*
  * Update the interests for a remote node
  */
-static DPS_Status UpdateInboundInterests(DPS_Node* node, RemoteNode* remote, DPS_BitVector* interests, DPS_BitVector* needs, int isDelta)
+static DPS_Status UpdateInboundInterests(DPS_Node* node, RemoteNode* remote, uint32_t revision,
+                                         DPS_BitVector* interests, DPS_BitVector* needs, int isDelta)
 {
     DPS_DBGTRACE();
 
+    if (remote->inbound.interestsRevision == revision) {
+        /*
+         * We've already updated with this revision
+         */
+        return DPS_OK;
+    }
     if (remote->inbound.interests) {
         if (isDelta) {
             DPS_DBGPRINT("Received interests delta\n");
@@ -655,9 +675,7 @@ static DPS_Status UpdateInboundInterests(DPS_Node* node, RemoteNode* remote, DPS
         remote->inbound.interests = interests;
         remote->inbound.needs = needs;
     }
-
-    DPS_DBGPRINT("New inbound interests from %s: %s\n", DESCRIBE(remote), DPS_DumpMatchingTopics(remote->inbound.interests));
-
+    remote->inbound.interestsRevision = revision;
     return DPS_OK;
 }
 
@@ -665,7 +683,7 @@ static DPS_Status UnlinkRemote(DPS_Node* node, DPS_NodeAddress* addr)
 {
     RemoteNode* remote;
 
-    DPS_PRINT("Received unlink for %s\n", DPS_NodeAddrToString(addr));
+    DPS_DBGPRINT("Received unlink for %s\n", DPS_NodeAddrToString(addr));
     remote = DPS_LookupRemoteNode(node, addr);
     if (remote) {
         remote->outbound.sendInterests = DPS_FALSE;
@@ -674,7 +692,7 @@ static DPS_Status UnlinkRemote(DPS_Node* node, DPS_NodeAddress* addr)
         /*
          * Evaluate impact of losing the remote's interests
          */
-        DPS_UpdateSubs(node);
+        DPS_UpdateSubs(node, SubsSendNow);
         return DPS_OK;
     } else {
         return DPS_ERR_MISSING;
@@ -709,7 +727,7 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
     char* path = NULL;
     size_t pathLen = 0;
 
-    CBOR_Dump("Sub in", rxBuf->rxPos, DPS_RxBufferAvail(rxBuf));
+    CBOR_Dump("SUB in", rxBuf->rxPos, DPS_RxBufferAvail(rxBuf));
     /*
      * Parse keys from unprotected map
      */
@@ -815,6 +833,9 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
 #endif
     DPS_LockNode(node);
     if (sakSeqNum) {
+        DPS_DBGPRINT("SAK inbound interests[%d/%d] from %s: %s%s\n", revision, *sakSeqNum,
+                     DPS_NodeAddrToString(&ep->addr), (flags & DPS_SUB_FLAG_DELTA_IND) ? "(<delta>)" : "",
+                     (keysMask & (1 << DPS_CBOR_KEY_INTERESTS)) ? DPS_DumpMatchingTopics(interests) : "<null>");
         /*
          * If we are processing a SAK we expect the remote to exist
          */
@@ -832,6 +853,9 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
             ret = DPS_ERR_MISSING;
         }
     } else {
+        DPS_DBGPRINT("SUB inbound interests[%d] from %s: %s%s\n", revision,
+                     DPS_NodeAddrToString(&ep->addr), (flags & DPS_SUB_FLAG_DELTA_IND) ? "(<delta>)" : "",
+                     (keysMask & (1 << DPS_CBOR_KEY_INTERESTS)) ? DPS_DumpMatchingTopics(interests) : "<null>");
         if (flags & DPS_SUB_FLAG_UNLINK_REQ) {
             ret = UnlinkRemote(node, &ep->addr);
             goto DiscardAndExit;
@@ -852,6 +876,8 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
                  * Other remote will have discarded SUB so SAK is no longer pending.
                  */
                 remote->outbound.sakPending = DPS_FALSE;
+                remote->outbound.sendInterests = DPS_TRUE;
+
             }
         } else {
             remoteIsNew = DPS_TRUE;
@@ -865,7 +891,8 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
      * Discard stale subscription messages
      */
     if (revision < remote->inbound.revision) {
-        DPS_DBGPRINT("Stale subscription %d from %s (expected %d)\n", revision, DESCRIBE(remote), remote->inbound.revision + 1);
+        DPS_DBGPRINT("Stale subscription %d from %s (expected %d)\n", revision, DESCRIBE(remote),
+                     remote->inbound.revision + 1);
         goto DiscardAndExit;
     }
     remote->inbound.revision = revision;
@@ -902,11 +929,13 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
         if (remote->state != REMOTE_MUTED && remote->state != REMOTE_UNLINKING) {
             int isDelta = (flags & DPS_SUB_FLAG_DELTA_IND) != 0;
             memcpy_s(&remote->inbound.meshId, sizeof(remote->inbound.meshId), &meshId, sizeof(DPS_UUID));
-            ret = UpdateInboundInterests(node, remote, interests, needs, isDelta);
+            ret = UpdateInboundInterests(node, remote, revision, interests, needs, isDelta);
             /*
              * Evaluate impact of the change in interests
              */
             if (ret == DPS_OK) {
+                DPS_DBGPRINT("New inbound interests[%d] from %s: %s\n", revision, DESCRIBE(remote),
+                             DPS_DumpMatchingTopics(remote->inbound.interests));
                 DPS_UpdatePubs(node);
             }
         } else {
@@ -916,7 +945,15 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
         if (ret != DPS_OK) {
             goto DiscardAndExit;
         }
-        if (remoteIsNew) {
+        /*
+         * remoteIsNew is insufficient: DPS_Link may have been called
+         * already in which case we have a remote but the 3-way
+         * handshake has not been done yet. i.e. both sides call
+         * DPS_Link at the same time.
+         *
+         * This also applies in the case of a tie.
+         */
+        if (remoteIsNew || (remote->state == REMOTE_LINKING)) {
             /*
              * Only need a 3-way handshake if there are interests to send
              */
@@ -943,8 +980,8 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
         DPS_BitVectorFree(interests);
         DPS_BitVectorFree(needs);
     }
+    DPS_UpdateSubs(node, SubsThrottled);
     DPS_UnlockNode(node);
-    DPS_UpdateSubs(node);
     return ret;
 
 DiscardAndExit:
@@ -1012,7 +1049,8 @@ DPS_Status DPS_DecodeSubscriptionAck(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
                 break;
             }
         } else {
-            DPS_ERRPRINT("Unexpected revision in SAK from %s, expected %d got %d\n", DESCRIBE(remote), remote->outbound.revision, revision);
+            DPS_DBGPRINT("Unexpected revision in SAK from %s, expected %d got %d\n", DESCRIBE(remote),
+                         remote->outbound.revision, revision);
             ret = DPS_ERR_INVALID;
         }
     } else {
@@ -1071,10 +1109,10 @@ DPS_Status DPS_Subscribe(DPS_Subscription* sub, DPS_PublicationHandler handler)
     if (ret == DPS_OK) {
         ret = DPS_CountVectorAdd(node->needs, sub->needs);
     }
-    DPS_UnlockNode(node);
     if (ret == DPS_OK) {
-        DPS_UpdateSubs(node);
+        DPS_UpdateSubs(node, SubsSendNow);
     }
+    DPS_UnlockNode(node);
     return ret;
 }
 
