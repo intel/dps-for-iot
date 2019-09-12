@@ -229,6 +229,7 @@ typedef struct _RemoteNode {
         DPS_UUID meshId;               /**< The mesh id received from this remote node */
         DPS_BitVector* needs;          /**< Bit vector of needs received from  this remote node */
         DPS_BitVector* interests;      /**< Bit vector of interests received from  this remote node */
+        uint32_t interestsRevision;    /**< Revision number of interests */
     } inbound;
     /** Outbound state */
     struct {

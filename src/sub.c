@@ -648,10 +648,17 @@ DPS_Status DPS_SendSubscriptionAck(DPS_Node* node, RemoteNode* remote)
 /*
  * Update the interests for a remote node
  */
-static DPS_Status UpdateInboundInterests(DPS_Node* node, RemoteNode* remote, DPS_BitVector* interests, DPS_BitVector* needs, int isDelta)
+static DPS_Status UpdateInboundInterests(DPS_Node* node, RemoteNode* remote, uint32_t revision,
+                                         DPS_BitVector* interests, DPS_BitVector* needs, int isDelta)
 {
     DPS_DBGTRACE();
 
+    if (remote->inbound.interestsRevision == revision) {
+        /*
+         * We've already updated with this revision
+         */
+        return DPS_OK;
+    }
     if (remote->inbound.interests) {
         if (isDelta) {
             DPS_DBGPRINT("Received interests delta\n");
@@ -668,6 +675,7 @@ static DPS_Status UpdateInboundInterests(DPS_Node* node, RemoteNode* remote, DPS
         remote->inbound.interests = interests;
         remote->inbound.needs = needs;
     }
+    remote->inbound.interestsRevision = revision;
     return DPS_OK;
 }
 
@@ -919,7 +927,7 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
         if (remote->state != REMOTE_MUTED && remote->state != REMOTE_UNLINKING) {
             int isDelta = (flags & DPS_SUB_FLAG_DELTA_IND) != 0;
             memcpy_s(&remote->inbound.meshId, sizeof(remote->inbound.meshId), &meshId, sizeof(DPS_UUID));
-            ret = UpdateInboundInterests(node, remote, interests, needs, isDelta);
+            ret = UpdateInboundInterests(node, remote, revision, interests, needs, isDelta);
             /*
              * Evaluate impact of the change in interests
              */
