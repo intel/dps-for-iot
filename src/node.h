@@ -201,6 +201,14 @@ typedef enum {
     REMOTE_DEAD           /**< Remote was linked but went unresponsive */
 } RemoteNodeState;
 
+/**
+ * The link state
+ */
+typedef enum {
+    LINK_PASSIVE,         /**< This node accepted the link */
+    LINK_ACTIVE           /**< This node initiated the link */
+} LinkState;
+
 #ifdef DPS_DEBUG
 /**
  * Return the remote node state as a text string
@@ -220,6 +228,7 @@ const char* RemoteStateTxt(RemoteNode* remote);
 typedef struct _RemoteNode {
     OnOpCompletion* completion;        /**< Completion context for link and unlink operations */
     RemoteNodeState state;             /**< The remote node state */
+    LinkState linkState;               /**< The link state */
     /** Inbound state */
     struct {
         uint32_t revision;             /**< Revision number of last subscription received from this node */
@@ -372,11 +381,10 @@ void DPS_DeleteRemoteNode(DPS_Node* node, RemoteNode* remote);
 /**
  * Complete an asynchronous operation on a remote node
  *
- * @param node        The local node
  * @param completion  The operation completion
  * @param status      Status code indicating the success or failure of the operation
  */
-void DPS_RemoteCompletion(DPS_Node* node, OnOpCompletion* completion, DPS_Status status);
+void DPS_RemoteCompletion(OnOpCompletion* completion, DPS_Status status);
 
 /**
  * Mute a remote node. Remote nodes are muted we detect a

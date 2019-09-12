@@ -71,6 +71,7 @@ typedef struct _OnOpCompletion {
     DPS_Node* node;
     struct _RemoteNode* remote;
     DPS_NodeAddress addr;
+    DPS_Status status;
     union {
         DPS_OnLinkComplete link;
         DPS_OnUnlinkComplete unlink;
@@ -185,10 +186,13 @@ void DPS_RxBufferToTx(const DPS_RxBuffer* rxBuffer, DPS_TxBuffer* txBuffer)
     txBuffer->txPos = rxBuffer->eod;
 }
 
-void DPS_RemoteCompletion(DPS_Node* node, OnOpCompletion* completion, DPS_Status status)
+static void RemoteCompletion(void* data)
 {
+    OnOpCompletion* completion = data;
+    DPS_Node* node = completion->node;
     RemoteNode* remote = completion->remote;
     const DPS_NodeAddress* addr = &completion->addr;
+    DPS_Status status = completion->status;
 
     if (remote) {
         if (remote->completion == completion) {
@@ -196,9 +200,11 @@ void DPS_RemoteCompletion(DPS_Node* node, OnOpCompletion* completion, DPS_Status
         }
         if (completion->op == LINK_OP) {
             /*
-             * State should be either LINKING or MUTED
+             * State should be either ACTIVE, LINKING or MUTED
              */
-            if (remote->state == REMOTE_LINKING) {
+            if (remote->state == REMOTE_ACTIVE) {
+                /* Nothing to do */
+            } else if (remote->state == REMOTE_LINKING) {
                 remote->state = REMOTE_ACTIVE;
             } else {
                 assert(remote->state == REMOTE_MUTED);
@@ -217,6 +223,12 @@ void DPS_RemoteCompletion(DPS_Node* node, OnOpCompletion* completion, DPS_Status
         completion->on.unlink(node, addr, completion->data);
     }
     free(completion);
+}
+
+void DPS_RemoteCompletion(OnOpCompletion* completion, DPS_Status status)
+{
+    completion->status = status;
+    RemoteCompletion(completion);
 }
 
 static int IsValidRemoteNode(DPS_Node* node, RemoteNode* remote)
@@ -318,7 +330,7 @@ void DPS_DeleteRemoteNode(DPS_Node* node, RemoteNode* remote)
 
     if (remote->completion) {
         remote->completion->remote = NULL;
-        DPS_RemoteCompletion(node, remote->completion, DPS_ERR_MISSING);
+        DPS_RemoteCompletion(remote->completion, DPS_ERR_MISSING);
     }
     /*
      * This tells the network layer we no longer need to keep connection alive for this address
@@ -1742,13 +1754,24 @@ static DPS_Status Link(DPS_Node* node, const DPS_NodeAddress* addr, OnOpCompleti
     DPS_LockNode(node);
     ret = DPS_AddRemoteNode(node, addr, NULL, &remote);
     if (ret == DPS_OK) {
-        completion->remote = remote;
-        remote->completion = completion;
         remote->state = REMOTE_LINKING;
+        remote->linkState = LINK_ACTIVE;
         /*
          * Send the initial subscription to the remote node.
          */
         DPS_UpdateSubs(node, SubsSendNow);
+    } else if ((ret == DPS_ERR_EXISTS) && (remote->linkState == LINK_PASSIVE)) {
+        /*
+         * Linking to an existing (linked) node succeeds.  This occurs
+         * when we link to a node that is already linked to us.
+         */
+        remote->linkState = LINK_ACTIVE;
+        completion->status = DPS_OK;
+        ret = DPS_NodeScheduleRequest(node, RemoteCompletion, completion);
+    }
+    if (ret == DPS_OK) {
+        completion->remote = remote;
+        remote->completion = completion;
     }
     DPS_UnlockNode(node);
     return ret;
@@ -1765,7 +1788,7 @@ static void OnResolve(DPS_Node* node, const DPS_NodeAddress* addr, void* data)
         ret = DPS_ERR_UNRESOLVED;
     }
     if (ret != DPS_OK) {
-        DPS_RemoteCompletion(node, completion, ret);
+        DPS_RemoteCompletion(completion, ret);
     }
 }
 

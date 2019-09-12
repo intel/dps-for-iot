@@ -1038,7 +1038,7 @@ DPS_Status DPS_DecodeSubscriptionAck(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
             case REMOTE_MUTED:
             case REMOTE_UNLINKING:
                 if (remote->completion) {
-                    DPS_RemoteCompletion(node, remote->completion, DPS_OK);
+                    DPS_RemoteCompletion(remote->completion, DPS_OK);
                 }
                 break;
             case REMOTE_UNMUTING:
