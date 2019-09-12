@@ -415,6 +415,12 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote)
         ret = CBOR_EncodeMap(&buf, 0);
     }
 
+    if (remote->state != REMOTE_UNLINKING) {
+        DPS_DBGPRINT("SUB outbound interests[%d] for %s: %s%s\n", remote->outbound.revision, DESCRIBE(remote),
+                     remote->outbound.deltaInd ? "(<delta>)" : "",
+                     DPS_DumpMatchingTopics(remote->outbound.interests));
+    }
+
     if (ret == DPS_OK) {
         uv_buf_t uvBuf = uv_buf_init((char*)buf.base, DPS_TxBufferUsed(&buf));
         CBOR_Dump("SUB out", (uint8_t*)uvBuf.base, uvBuf.len);
@@ -608,6 +614,12 @@ DPS_Status DPS_SendSubscriptionAck(DPS_Node* node, RemoteNode* remote)
         ret = CBOR_EncodeMap(&buf, 0);
     }
 
+    if (remote->outbound.sendInterests) {
+        DPS_DBGPRINT("SAK outbound interests[%d/%d] for %s: %s%s\n", remote->outbound.revision,
+                     remote->inbound.revision, DESCRIBE(remote), remote->outbound.deltaInd ? "(<delta>)" : "",
+                     DPS_DumpMatchingTopics(remote->outbound.interests));
+    }
+
     if (ret == DPS_OK) {
         uv_buf_t uvBuf = uv_buf_init((char*)buf.base, DPS_TxBufferUsed(&buf));
         CBOR_Dump("SAK out", (uint8_t*)uvBuf.base, uvBuf.len);
@@ -656,9 +668,6 @@ static DPS_Status UpdateInboundInterests(DPS_Node* node, RemoteNode* remote, DPS
         remote->inbound.interests = interests;
         remote->inbound.needs = needs;
     }
-
-    DPS_DBGPRINT("New inbound interests from %s: %s\n", DESCRIBE(remote), DPS_DumpMatchingTopics(remote->inbound.interests));
-
     return DPS_OK;
 }
 
@@ -816,6 +825,9 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
 #endif
     DPS_LockNode(node);
     if (sakSeqNum) {
+        DPS_DBGPRINT("SAK inbound interests[%d/%d] from %s: %s%s\n", revision, *sakSeqNum,
+                     DPS_NodeAddrToString(&ep->addr), (flags & DPS_SUB_FLAG_DELTA_IND) ? "(<delta>)" : "",
+                     (keysMask & (1 << DPS_CBOR_KEY_INTERESTS)) ? DPS_DumpMatchingTopics(interests) : "<null>");
         /*
          * If we are processing a SAK we expect the remote to exist
          */
@@ -833,6 +845,9 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
             ret = DPS_ERR_MISSING;
         }
     } else {
+        DPS_DBGPRINT("SUB inbound interests[%d] from %s: %s%s\n", revision,
+                     DPS_NodeAddrToString(&ep->addr), (flags & DPS_SUB_FLAG_DELTA_IND) ? "(<delta>)" : "",
+                     (keysMask & (1 << DPS_CBOR_KEY_INTERESTS)) ? DPS_DumpMatchingTopics(interests) : "<null>");
         if (flags & DPS_SUB_FLAG_UNLINK_REQ) {
             ret = UnlinkRemote(node, &ep->addr);
             goto DiscardAndExit;
@@ -866,7 +881,8 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
      * Discard stale subscription messages
      */
     if (revision < remote->inbound.revision) {
-        DPS_DBGPRINT("Stale subscription %d from %s (expected %d)\n", revision, DESCRIBE(remote), remote->inbound.revision + 1);
+        DPS_DBGPRINT("Stale subscription %d from %s (expected %d)\n", revision, DESCRIBE(remote),
+                     remote->inbound.revision + 1);
         goto DiscardAndExit;
     }
     remote->inbound.revision = revision;
@@ -908,6 +924,8 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
              * Evaluate impact of the change in interests
              */
             if (ret == DPS_OK) {
+                DPS_DBGPRINT("New inbound interests[%d] from %s: %s\n", revision, DESCRIBE(remote),
+                             DPS_DumpMatchingTopics(remote->inbound.interests));
                 DPS_UpdatePubs(node);
             }
         } else {
@@ -1013,7 +1031,8 @@ DPS_Status DPS_DecodeSubscriptionAck(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
                 break;
             }
         } else {
-            DPS_DBGPRINT("Unexpected revision in SAK from %s, expected %d got %d\n", DESCRIBE(remote), remote->outbound.revision, revision);
+            DPS_DBGPRINT("Unexpected revision in SAK from %s, expected %d got %d\n", DESCRIBE(remote),
+                         remote->outbound.revision, revision);
             ret = DPS_ERR_INVALID;
         }
     } else {

@@ -429,10 +429,6 @@ DPS_Status DPS_UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, uin
     destNode->outbound.interests = newInterests;
     destNode->outbound.needs = newNeeds;
 
-    if (*changes) {
-        DPS_DBGPRINT("New outbound interests[%d] for %s: %s\n", destNode->outbound.revision,
-                DESCRIBE(destNode), DPS_DumpMatchingTopics(destNode->outbound.interests));
-    }
     /*
      * Also send the subscription if the minimum meshId changed
      */
@@ -447,6 +443,8 @@ DPS_Status DPS_UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, uin
      */
     if (*changes) {
         ++destNode->outbound.revision;
+        DPS_DBGPRINT("New outbound interests[%d] for %s: %s\n", destNode->outbound.revision,
+                DESCRIBE(destNode), DPS_DumpMatchingTopics(destNode->outbound.interests));
     }
     return DPS_OK;
 
@@ -797,8 +795,9 @@ static void SendPubs(DPS_Node* node)
                 DPS_BitVectorIntersection(node->scratch.interests, pub->bf, remote->inbound.interests);
                 DPS_BitVectorFuzzyHash(node->scratch.needs, node->scratch.interests);
                 if (!DPS_BitVectorIncludes(node->scratch.needs, remote->inbound.needs)) {
-                    DPS_DBGPRINT("Rejected pub %s(%d) for %s\n", DPS_UUIDToString(&pub->pubId),
-                                 req->sequenceNum, DESCRIBE(remote));
+                    DPS_DBGPRINT("Rejected pub %s(%d) for %s: %s\n", DPS_UUIDToString(&pub->pubId),
+                                 req->sequenceNum, DESCRIBE(remote),
+                                 DPS_DumpMatchingTopics(remote->inbound.interests));
                     continue;
                 }
                 DPS_DBGPRINT("Sending pub %s(%d) to %s\n", DPS_UUIDToString(&pub->pubId),
@@ -2186,7 +2185,8 @@ static void DumpNode(uv_signal_t* handle, int signum)
         if (remote->state == REMOTE_DEAD) {
             continue;
         }
-        DPS_PRINT("  %s muted=%d\n", DPS_NodeAddrToString(&remote->ep.addr), remote->state == REMOTE_MUTED);
+        DPS_PRINT("  %s muted=%d,interests=%s\n", DPS_NodeAddrToString(&remote->ep.addr),
+                  remote->state == REMOTE_MUTED, DPS_DumpMatchingTopics(remote->inbound.interests));
     }
     DPS_PRINT("history\n");
     DumpHistory(node->history.root);
