@@ -876,6 +876,8 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
                  * Other remote will have discarded SUB so SAK is no longer pending.
                  */
                 remote->outbound.sakPending = DPS_FALSE;
+                remote->outbound.sendInterests = DPS_TRUE;
+
             }
         } else {
             remoteIsNew = DPS_TRUE;
@@ -943,7 +945,15 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
         if (ret != DPS_OK) {
             goto DiscardAndExit;
         }
-        if (remoteIsNew) {
+        /*
+         * remoteIsNew is insufficient: DPS_Link may have been called
+         * already in which case we have a remote but the 3-way
+         * handshake has not been done yet. i.e. both sides call
+         * DPS_Link at the same time.
+         *
+         * This also applies in the case of a tie.
+         */
+        if (remoteIsNew || (remote->state == REMOTE_LINKING)) {
             /*
              * Only need a 3-way handshake if there are interests to send
              */
