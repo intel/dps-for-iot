@@ -194,6 +194,9 @@ static void RemoteCompletion(void* data)
     const DPS_NodeAddress* addr = &completion->addr;
     DPS_Status status = completion->status;
 
+#ifdef DPS_DEBUG
+    assert(node->isLocked);
+#endif
     if (remote) {
         if (remote->completion == completion) {
             remote->completion = NULL;
@@ -1788,7 +1791,9 @@ static void OnResolve(DPS_Node* node, const DPS_NodeAddress* addr, void* data)
         ret = DPS_ERR_UNRESOLVED;
     }
     if (ret != DPS_OK) {
+        DPS_LockNode(node);
         DPS_RemoteCompletion(completion, ret);
+        DPS_UnlockNode(node);
     }
 }
 
