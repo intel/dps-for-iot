@@ -32,6 +32,20 @@ static void OnNodeDestroyed(DPS_Node* node, void* data)
     }
 }
 
+static DPS_MemoryKeyStore* CreateKeyStore(void)
+{
+    DPS_MemoryKeyStore* keyStore = NULL;
+
+    keyStore = DPS_CreateMemoryKeyStore();
+    DPS_SetNetworkKey(keyStore, &NetworkKeyId, &NetworkKey);
+    return keyStore;
+}
+
+static void DestroyKeyStore(DPS_MemoryKeyStore* keyStore)
+{
+    DPS_DestroyMemoryKeyStore(keyStore);
+}
+
 static void DestroyNode(DPS_Node* node)
 {
     DPS_Event* event = NULL;
@@ -43,12 +57,12 @@ static void DestroyNode(DPS_Node* node)
     DPS_DestroyEvent(event);
 }
 
-static DPS_Node* CreateNode(DPS_KeyStore* keyStore)
+static DPS_Node* CreateNode(DPS_MemoryKeyStore* keyStore)
 {
     DPS_Node *node = NULL;
     DPS_Status ret;
 
-    node = DPS_CreateNode("/.", keyStore, NULL);
+    node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(keyStore), NULL);
     ret = DPS_StartNode(node, DPS_MCAST_PUB_DISABLED, NULL);
     ASSERT(ret == DPS_OK);
     return node;
@@ -56,17 +70,15 @@ static DPS_Node* CreateNode(DPS_KeyStore* keyStore)
 
 static void TestRemoteLinkedAlready(void)
 {
-    DPS_MemoryKeyStore* memoryKeyStore = NULL;
+    DPS_MemoryKeyStore* keyStore = NULL;
     DPS_Node* a = NULL;
     DPS_Node* b = NULL;
     DPS_NodeAddress* addr = NULL;
     DPS_Status ret;
 
-    memoryKeyStore = DPS_CreateMemoryKeyStore();
-    DPS_SetNetworkKey(memoryKeyStore, &NetworkKeyId, &NetworkKey);
-
-    a = CreateNode(DPS_MemoryKeyStoreHandle(memoryKeyStore));
-    b = CreateNode(DPS_MemoryKeyStoreHandle(memoryKeyStore));
+    keyStore = CreateKeyStore();
+    a = CreateNode(keyStore);
+    b = CreateNode(keyStore);
 
     addr = DPS_CreateAddress();
     ret = DPS_LinkTo(a, DPS_GetListenAddressString(b), addr);
@@ -85,7 +97,69 @@ static void TestRemoteLinkedAlready(void)
 
     DestroyNode(b);
     DestroyNode(a);
-    DPS_DestroyMemoryKeyStore(memoryKeyStore);
+    DestroyKeyStore(keyStore);
+}
+
+static void TestLinkUnlink(void)
+{
+    DPS_MemoryKeyStore* keyStore = NULL;
+    DPS_Node* a = NULL;
+    DPS_Node* b = NULL;
+    DPS_NodeAddress* addr = NULL;
+    DPS_Status ret;
+
+    keyStore = CreateKeyStore();
+    a = CreateNode(keyStore);
+    b = CreateNode(keyStore);
+
+    addr = DPS_CreateAddress();
+    ret = DPS_LinkTo(a, DPS_GetListenAddressString(b), addr);
+    ASSERT(ret == DPS_OK);
+
+    ret = DPS_UnlinkFrom(a, addr);
+    ASSERT(ret == DPS_OK);
+    DPS_DestroyAddress(addr);
+
+    DestroyNode(b);
+    DestroyNode(a);
+    DestroyKeyStore(keyStore);
+}
+
+static void OnLink(DPS_Node* node, const DPS_NodeAddress* addr, DPS_Status status, void* data)
+{
+}
+
+static void OnUnlink(DPS_Node* node, const DPS_NodeAddress* addr, void* data)
+{
+}
+
+static void TestUnlinkWhileLinkInProgress(void)
+{
+    DPS_MemoryKeyStore* keyStore = NULL;
+    DPS_Node* a = NULL;
+    DPS_Node* b = NULL;
+    DPS_NodeAddress* addr = NULL;
+    DPS_Status ret;
+
+    keyStore = CreateKeyStore();
+    a = CreateNode(keyStore);
+    b = CreateNode(keyStore);
+
+    addr = DPS_CreateAddress();
+    addr = DPS_SetAddress(addr, DPS_GetListenAddressString(b));
+    ASSERT(addr);
+
+    /* Skip the resolution step of DPS_Link in order to test unlink while link in progress */
+    ret = DPS_LinkRemoteAddr(a, addr, OnLink, NULL);
+    ASSERT(ret == DPS_OK);
+
+    ret = DPS_Unlink(a, addr, OnUnlink, NULL);
+    ASSERT(ret == DPS_ERR_BUSY);
+
+    DPS_DestroyAddress(addr);
+    DestroyNode(b);
+    DestroyNode(a);
+    DestroyKeyStore(keyStore);
 }
 
 int main(int argc, char** argv)
@@ -101,6 +175,8 @@ int main(int argc, char** argv)
     }
 
     TestRemoteLinkedAlready();
+    TestLinkUnlink();
+    TestUnlinkWhileLinkInProgress();
 
     /*
      * For clean valgrind results, wait for node thread to exit
