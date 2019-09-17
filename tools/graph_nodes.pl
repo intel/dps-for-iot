@@ -14,7 +14,7 @@ foreach my $filename (@ARGV) {
         if ($line =~ /node .*:(\d+)$/) {
             $n = $1;
             push(@nodes, $n)
-        } elsif ($line =~ /.* [DEBUG|TRACE|ERROR]/) {
+        } elsif ($line =~ /.* [DEBUG|TRACE|ERROR|INFO]/) {
             # Ignore debug output
         } elsif ($line =~ /  .*:(\d+) muted=(\d)/) {
             my ($a, $b, $muted) = ($n, $1, $2);

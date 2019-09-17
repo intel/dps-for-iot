@@ -44,7 +44,11 @@
 /*
  * Debug control for this module
  */
+#if defined(DEBUG_LOOP_DETECTION)
+DPS_DEBUG_CONTROL(DPS_DEBUG_INFO);
+#else
 DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
+#endif
 
 /*
  * Set to non-zero value to simulate lost subscriptions
@@ -268,18 +272,17 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote)
     if (!node->netCtx) {
         return DPS_ERR_NETWORK;
     }
-#ifdef DPS_DEBUG
-    ++_DPS_NumSubs;
-#endif
     /*
      * Set flags
      */
-    if (remote->outbound.deltaInd) {
-        flags |= DPS_SUB_FLAG_DELTA_IND;
-    }
     switch (remote->state) {
     case REMOTE_MUTED:
+    case REMOTE_DEAD:
+        /* We should never be sending subscriptions to muted or dead remotes */
+        DPS_ERRPRINT("Attempting to send subscription to %s remote %s\n", RemoteStateTxt(remote), DESCRIBE(remote));
+        return DPS_ERR_INVALID;
     case REMOTE_MUTING:
+        DPS_DBGINFO("MUTE_IND(%s) to SUB to %s\n", RemoteStateTxt(remote), DESCRIBE(remote));
         flags |= DPS_SUB_FLAG_MUTE_IND;
         break;
     case REMOTE_UNMUTING:
@@ -291,7 +294,12 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote)
     default:
         break;
     }
-
+    if (remote->outbound.deltaInd) {
+        flags |= DPS_SUB_FLAG_DELTA_IND;
+    }
+#ifdef DPS_DEBUG
+    ++_DPS_NumSubs;
+#endif
     len = CBOR_SIZEOF_ARRAY(5) + CBOR_SIZEOF(uint8_t) + CBOR_SIZEOF(uint8_t);
     /*
      * The unprotected map
@@ -374,7 +382,7 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote)
         ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_MESH_ID);
     }
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeUUID(&buf, &remote->outbound.meshId);
+        ret = CBOR_EncodeUUID(&buf, DPS_MinMeshId(node, remote));
     }
     if (remote->state != REMOTE_UNLINKING) {
         if (ret == DPS_OK) {
@@ -464,9 +472,11 @@ DPS_Status DPS_SendSubscriptionAck(DPS_Node* node, RemoteNode* remote)
          * If we are muting we need the remote to send a SAK
          */
         remote->outbound.sendInterests = DPS_TRUE;
+        DPS_DBGINFO("MUTE_IND(MUTING) in SAK to %s\n", DESCRIBE(remote));
         break;
     case REMOTE_MUTED:
         flags |= DPS_SUB_FLAG_MUTE_IND;
+        DPS_DBGINFO("MUTE_IND(MUTED) in SAK to %s\n", DESCRIBE(remote));
         break;
     case REMOTE_UNMUTING:
         flags |= DPS_SUB_FLAG_UNMUTE_REQ;
@@ -567,7 +577,7 @@ DPS_Status DPS_SendSubscriptionAck(DPS_Node* node, RemoteNode* remote)
         ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_MESH_ID);
     }
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeUUID(&buf, &remote->outbound.meshId);
+        ret = CBOR_EncodeUUID(&buf, DPS_MinMeshId(node, remote));
     }
     if (remote->outbound.sendInterests) {
         if (ret == DPS_OK) {
@@ -686,6 +696,31 @@ static DPS_Status UnlinkRemote(DPS_Node* node, DPS_NodeAddress* addr)
     } else {
         return DPS_ERR_MISSING;
     }
+}
+
+/*
+ * Each node has a randomly allocated mesh id that is used to detect loops in the mesh.
+ *
+ * Mesh id's are included in the header of subscription, subscription acknowledgments
+ * (SAKS) that include subscription information. SAKs only include subscription information
+ * during link establishment, thereafter SAKs contain the minimal information needed for
+ * reliable subscription delivery.
+ *
+ * When a SUB or SAK is sent to a remote node the mesh id is the minimum of the mesh id
+ * of the local node and the mesh id's received from all other nodes excluding the remote
+ * node itself. The mesh id that was sent is recorded in the outbound.meshId field of the
+ * remote node.
+ *
+ * Loop detection proceeds as follows: when an SUB or SAK is received the mesh id is
+ * compared against the mesh id's previously received from all other nodes as recorded in the
+ * inbound.meshId fields. If the received mesh id is the same as the mesh id received from
+ * any other remote node there must be a loop in the mesh.  This indicates a loop because the
+ * only way the same minimal mesh id can be computed by two different remote nodes is if
+ * there is another path between those two nodes, i.e., there must be a loop in the mesh.
+ */
+int MeshHasLoop(DPS_Node* node, RemoteNode* src, DPS_UUID* meshId)
+{
+    return DPS_UUIDCompare(meshId, DPS_MinMeshId(node, src)) == 0;
 }
 
 /*
@@ -811,15 +846,13 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
     }
 #if SIMULATE_PACKET_LOSS
     /*
-     * Enable this code to simulate lost subscriptions to test
-     * out the resynchronization code.
+     * Enable this code to simulate lost SUBs and SAKs to test reliable delivery
      */
     if (((DPS_Rand() % SIMULATE_PACKET_LOSS) == 1)) {
         DPS_PRINT("Simulating lost subscription from %s\n", DPS_NodeAddrToString(&ep->addr));
         return DPS_OK;
     }
 #endif
-    DPS_LockNode(node);
     if (sakSeqNum) {
         /*
          * If we are processing a SAK we expect the remote to exist
@@ -827,7 +860,7 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
         remote = DPS_LookupRemoteNode(node, &ep->addr);
         if (remote) {
             /*
-             * If the remote is muted the muted flag should have been set in the SAK
+             * If the remote is muting the muted flag should have been set in the SAK
              */
             if (remote->state == REMOTE_MUTING && !(flags & DPS_SUB_FLAG_MUTE_IND)) {
                 DPS_ERRPRINT("Expected muted flag in SAK from %s\n", DESCRIBE(remote));
@@ -875,49 +908,44 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
         goto DiscardAndExit;
     }
     remote->inbound.revision = revision;
+    DPS_DBGINFO("Received mesh id %08x in %s from %s\n", meshId.val32[0], sakSeqNum ? "SAK" : "SUB", DESCRIBE(remote));
+    /*
+     * Loops can be detected by either end of a link and corrective action is required
+     * to prevent interests from propagating around the loop. The corrective action is
+     * to mute the link which prevents publications from being forwarded to that remote.
+     */
+    if (flags & DPS_SUB_FLAG_MUTE_IND) {
+        if (sakSeqNum) {
+            DPS_DBGINFO("MUTE_IND %s in SAK by %s\n", remote->state == REMOTE_MUTING ? "ackowledged" : "reported", DESCRIBE(remote));
+        } else {
+            DPS_DBGINFO("MUTE_IND %s in SUB by %s\n", remote->state == REMOTE_MUTING ? "ackowledged" : "reported", DESCRIBE(remote));
+        }
+        ret = DPS_MuteRemoteNode(node, remote, REMOTE_MUTED);
+    } else if (flags & DPS_SUB_FLAG_UNMUTE_REQ) {
+        /*
+         * Only a SUB can unmute a link
+         */
+        if (!sakSeqNum) {
+            DPS_DBGINFO("UNMUTE_REQ from %s\n", DESCRIBE(remote));
+            ret = DPS_UnmuteRemoteNode(node, remote);
+        }
+    } else if (MeshHasLoop(node, remote, &meshId)) {
+        DPS_DBGINFO("Loop detected for %s\n", DESCRIBE(remote));
+        ret = DPS_MuteRemoteNode(node, remote, REMOTE_MUTING);
+    }
+    if (ret != DPS_OK) {
+        goto DiscardAndExit;
+    }
     if (flags & DPS_SUB_FLAG_SAK_REQ) {
-        DPS_DBGPRINT("Received mesh id %08x from %s\n", meshId.val32[0], DESCRIBE(remote));
         if ((keysMask & OptKeysMask) != OptKeysMask) {
             DPS_WARNPRINT("Missing mandatory subscription key\n");
             ret = DPS_ERR_INVALID;
             goto DiscardAndExit;
         }
         /*
-         * Loops can be detected by either end of a link and corrective action is required
-         * to prevent interests from propagating around the loop. The corrective action is
-         * to mute the link which prevents publications from being forwarded to that remote.
-         */
-        if (flags & DPS_SUB_FLAG_MUTE_IND) {
-            /*
-             * Only a SAK can mute a link
-             */
-            if (sakSeqNum) {
-                DPS_DBGPRINT("MUTE_IND %s in SAK by %s\n", remote->state == REMOTE_MUTING ? "ackowledged" : "reported", DESCRIBE(remote));
-            } else {
-                DPS_ERRPRINT("Unexpected MUTE_IND in SUB from %s\n", DESCRIBE(remote));
-                ret = DPS_ERR_INVALID;
-                goto DiscardAndExit;
-            }
-            ret = DPS_MuteRemoteNode(node, remote, REMOTE_MUTED);
-        } else if (flags & DPS_SUB_FLAG_UNMUTE_REQ) {
-            /*
-             * Only a SUB can unmute a link
-             */
-            if (!sakSeqNum) {
-                DPS_DBGPRINT("UNMUTE_REQ from %s\n", DESCRIBE(remote));
-                ret = DPS_UnmuteRemoteNode(node, remote);
-            }
-        } else if (DPS_MeshHasLoop(node, remote, &meshId)) {
-            DPS_DBGPRINT("Loop detected for %s\n", DESCRIBE(remote));
-            ret = DPS_MuteRemoteNode(node, remote, REMOTE_MUTING);
-        }
-        if (ret != DPS_OK) {
-            goto DiscardAndExit;
-        }
-        /*
          * Check remote is in a state where we need to update interests
          */
-        if (remote->state == REMOTE_ACTIVE || remote->state == REMOTE_LINKING) {
+        if (remote->state == REMOTE_ACTIVE || remote->state == REMOTE_LINKING || remote->state == REMOTE_UNMUTING) {
             int isDelta = (flags & DPS_SUB_FLAG_DELTA_IND) != 0;
             ret = UpdateInboundInterests(node, remote, interests, needs, isDelta);
             if (ret != DPS_OK) {
@@ -950,17 +978,12 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
             ret = DPS_ERR_INVALID;
             goto DiscardAndExit;
         }
-        if (flags & DPS_SUB_FLAG_MUTE_IND) {
-            DPS_DBGPRINT("MUTE_IND %s in SAK by %s\n", remote->state == REMOTE_MUTING ? "ackowledged" : "reported", DESCRIBE(remote));
-            DPS_MuteRemoteNode(node, remote, REMOTE_MUTED);
-        }
+        remote->outbound.lastSubMsgType = 0;
         /* These should be NULL but call free just in case */
         DPS_BitVectorFree(interests);
         DPS_BitVectorFree(needs);
     }
     remote->inbound.meshId = meshId;
-    DPS_UpdateSubs(node, SubsThrottled);
-    DPS_UnlockNode(node);
     return ret;
 
 DiscardAndExit:
@@ -968,7 +991,6 @@ DiscardAndExit:
     if (remoteIsNew) {
         DPS_DeleteRemoteNode(node, remote);
     }
-    DPS_UnlockNode(node);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("%s was discarded - %s\n", sakSeqNum ? "SAK" : "SUB", DPS_ErrTxt(ret));
     }
@@ -979,8 +1001,17 @@ DiscardAndExit:
 
 DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxBuffer* buf)
 {
+    DPS_Status ret;
     DPS_DBGTRACEA("From %s\n", DPS_NodeAddrToString(&ep->addr));
-    return DecodeSubscription(node, ep, buf, NULL);
+
+    DPS_LockNode(node);
+    ret = DecodeSubscription(node, ep, buf, NULL);
+    if (ret == DPS_OK) {
+        DPS_UpdateSubs(node, SubsThrottled);
+    }
+    DPS_UnlockNode(node);
+
+    return ret;
 }
 
 DPS_Status DPS_DecodeSubscriptionAck(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxBuffer* buf)
@@ -991,10 +1022,6 @@ DPS_Status DPS_DecodeSubscriptionAck(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
 
     DPS_DBGTRACEA("From %s\n", DPS_NodeAddrToString(&ep->addr));
 
-    ret = DecodeSubscription(node, ep, buf, &revision);
-    if (ret != DPS_OK) {
-        return ret;
-    }
 #if SIMULATE_PACKET_LOSS
     /*
      * Enable this code to simulate lost subscriptions to test
@@ -1005,7 +1032,12 @@ DPS_Status DPS_DecodeSubscriptionAck(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
         return DPS_OK;
     }
 #endif
+
     DPS_LockNode(node);
+    ret = DecodeSubscription(node, ep, buf, &revision);
+    if (ret != DPS_OK) {
+        goto Exit;
+    }
     remote = DPS_LookupRemoteNode(node, &ep->addr);
     if (remote) {
         if (remote->outbound.revision == revision) {
@@ -1013,8 +1045,15 @@ DPS_Status DPS_DecodeSubscriptionAck(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
             remote->outbound.sakPending = DPS_FALSE;
             switch (remote->state) {
             case REMOTE_MUTING:
-                DPS_DBGPRINT("Successfully muted %s\n", DESCRIBE(remote));
-                remote->state = REMOTE_MUTED;
+                /*
+                 * If lastSubMsgType is zero it means this SUB/SAK transaction is complete.
+                 * If the state is REMOTE_MUTING we need to start a new SUB/SAK transaction to
+                 * ensure the remote knows that the link needs to be muted. This happens below.
+                 */
+                if (remote->outbound.lastSubMsgType != 0) {
+                    DPS_DBGINFO("Successfully muted %s\n", DESCRIBE(remote));
+                    remote->state = REMOTE_MUTED;
+                }
                 /* fall through */
             case REMOTE_LINKING:
             case REMOTE_MUTED:
@@ -1030,6 +1069,12 @@ DPS_Status DPS_DecodeSubscriptionAck(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
             default:
                 break;
             }
+            /*
+             * See comment above, if we are still muting we need to send a SUB.
+             */
+            if (remote->state == REMOTE_MUTING) {
+                ret = DPS_SendSubscription(node, remote);
+            }
         } else {
             DPS_WARNPRINT("Unexpected revision in SAK from %s, expected %d got %d\n", DESCRIBE(remote), remote->outbound.revision, revision);
             ret = DPS_ERR_INVALID;
@@ -1037,6 +1082,8 @@ DPS_Status DPS_DecodeSubscriptionAck(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
     } else {
         ret = DPS_ERR_MISSING;
     }
+
+Exit:
     DPS_UnlockNode(node);
     return ret;
 }

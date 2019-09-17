@@ -277,9 +277,9 @@ static int HasUnstableLinks(void)
             DPS_LockNode(node);
             for (remote = node->remoteNodes; remote != NULL; remote = remote->next) {
                 /*
-                 * These are the only stable states, the others are transitory.
+                 * These unstable states
                  */
-                if (remote->state != REMOTE_ACTIVE && remote->state != REMOTE_MUTED && remote->state != REMOTE_DEAD) {
+                if (remote->state == REMOTE_LINKING || remote->state == REMOTE_MUTING || remote->state == REMOTE_UNLINKING) {
                     DPS_UnlockNode(node);
                     return DPS_TRUE;
                 }
@@ -412,7 +412,7 @@ static void DumpRemoteMeshIds(DPS_Node* node)
         uint16_t port = GetPort(&remote->ep.addr);
         uint16_t id = PortMap[port];
         if (NodeMap[id]) {
-            DPS_PRINT("     Remote %d meshId %s %s\n", id, MeshIdStr(&remote->inbound.meshId), RemoteStateTxt(remote));
+            DPS_PRINT("    Node[%d] inbound.meshId=%s %s\n", id, MeshIdStr(&remote->inbound.meshId), RemoteStateTxt(remote));
         }
     }
     DPS_UnlockNode(node);
@@ -453,12 +453,6 @@ static void OnNodeDestroyed(DPS_Node* node, void* data)
 static int subsRate = 250;
 static int maxSettleTime;
 
-/*
- * This is a little tricky because during link recovery the number
- * of muted links can go down and then go up again so we check that
- * we get the same count mutiple times before we conclude that things
- * have settled.
- */
 static void WaitUntilSettled(DPS_Event* sleeper, size_t expMuted)
 {
     int i;
@@ -475,7 +469,12 @@ static void WaitUntilSettled(DPS_Event* sleeper, size_t expMuted)
     }
     for (i = 0; i < maxSettleTime; i += subsRate) {
         numMuted = CountMutedLinks();
-        if (numMuted == expMuted) {
+        if (numMuted == expMuted * 2) {
+            /*
+             * During link recovery the number of muted links can go down and then
+             * go up again so we check that we get the same count mutiple times
+             * before we concluding that things have settled.
+             */
             if (++repeats == 5) {
                 break;
             }
@@ -518,7 +517,7 @@ static DPS_Status LinkNodes(DPS_Node* src, DPS_Node* dst)
     if (ret != DPS_OK) {
         uv_mutex_lock(&lock);
         DPS_ERRPRINT("DPS_Link for %s returned %s\n", DPS_GetListenAddressString(dst),
-                     DPS_ErrTxt(ret));
+                DPS_ErrTxt(ret));
         ++LinksFailed;
         uv_mutex_unlock(&lock);
     }
@@ -614,7 +613,7 @@ int main(int argc, char** argv)
     /*
      * Time to wait for the mesh to stabilize
      */
-    maxSettleTime = 1000 + numIds * subsRate / 4;
+    maxSettleTime = 1000 + numIds * subsRate * 10;
     /*
      * Mutex for protecting the link succes/fail counters
      */
@@ -655,6 +654,7 @@ int main(int argc, char** argv)
     /*
      * Wait for a short time while before trying to link
      */
+    DumpMeshIds(numIds);
     DPS_TimedWaitForEvent(sleeper, 1000);
     /*
      * Link the nodes asynchronously
@@ -685,6 +685,7 @@ int main(int argc, char** argv)
      * Brief delay to let things settle down
      */
     DPS_TimedWaitForEvent(sleeper, 1000);
+    DumpMeshIds(numIds);
 #ifdef DPS_DEBUG
     {
         extern int _DPS_NumSubs;

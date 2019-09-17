@@ -319,6 +319,16 @@ typedef struct _DPS_NetRxBuffer DPS_NetRxBuffer;
  */
 DPS_NetRxBuffer* DPS_PublicationGetNetRxBuffer(const DPS_Publication* pub);
 
+/**
+  * Hold lock to prevent debug output from getting interleaved
+  */
+void DPS_DbgLock(void);
+
+/**
+  * Release debug lock
+  */
+void DPS_DbgUnlock(void);
+
 #ifdef __cplusplus
 }
 #endif
