@@ -49,7 +49,7 @@
 /*
  * Debug control for this module
  */
-#if defined(DEBUG_LOOP_DETECTION)
+#if defined(DEBUG_LINK_LOSS)
 DPS_DEBUG_CONTROL(DPS_DEBUG_INFO);
 #else
 DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
@@ -328,10 +328,12 @@ void DPS_DeleteRemoteNode(DPS_Node* node, RemoteNode* remote)
         remote->completion->remote = NULL;
         DPS_RemoteCompletion(node, remote->completion, DPS_ERR_MISSING);
     }
-    /*
-     * This tells the network layer we no longer need to keep connection alive for this address
-     */
-    DPS_NetConnectionDecRef(remote->ep.cn);
+    if (remote->state != REMOTE_DEAD) {
+        /*
+         * This tells the network layer we no longer need to keep connection alive for this address
+         */
+        DPS_NetConnectionDecRef(remote->ep.cn);
+    }
     free(remote);
 }
 
@@ -415,7 +417,7 @@ DPS_Status DPS_UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, uin
     }
     /*
      * Send a delta if we have previously sent interests. The needs vector
-     * is small so it is not worth computing a delta.
+     * is small and typically dense so it is not worth computing a delta.
      */
     if (destNode->outbound.interests) {
         int same = DPS_FALSE;
@@ -428,7 +430,10 @@ DPS_Status DPS_UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, uin
         }
         DPS_BitVectorXor(destNode->outbound.delta, destNode->outbound.interests, newInterests, &same);
         if (same) {
-            assert(DPS_BitVectorEquals(destNode->outbound.needs, newNeeds));
+            if (!DPS_BitVectorEquals(destNode->outbound.needs, newNeeds)) {
+                DPS_ERRPRINT("Inconsistency between interests and needs for %s\n", DESCRIBE(destNode));
+                assert(DPS_BitVectorEquals(destNode->outbound.needs, newNeeds));
+            }
         } else {
             *changes = DPS_TRUE;
         }
@@ -485,6 +490,10 @@ DPS_Status DPS_MuteRemoteNode(DPS_Node* node, RemoteNode* remote, RemoteNodeStat
         remote->outbound.sendInterests = DPS_FALSE;
     }
     if (newState == REMOTE_DEAD) {
+        /*
+         * Obviously not keeping connection alive for this remote
+         */
+        DPS_NetConnectionDecRef(remote->ep.cn);
         remote->outbound.sakPending = DPS_FALSE;
     }
     if (newState != REMOTE_MUTING) {
@@ -576,31 +585,39 @@ static OnOpCompletion* AllocCompletion(DPS_Node* node, RemoteNode* remote, OpTyp
  */
 DPS_Status DPS_AddRemoteNode(DPS_Node* node, const DPS_NodeAddress* addr, DPS_NetConnection* cn, RemoteNode** remoteOut)
 {
+    DPS_Status ret = DPS_OK;
     RemoteNode* remote = DPS_LookupRemoteNode(node, addr);
+
     if (remote) {
-        *remoteOut = remote;
-        return DPS_ERR_EXISTS;
+        if (remote->state == REMOTE_DEAD) {
+            DPS_DBGPRINT("Reactivating dead remote %s\n", DPS_NodeAddrToString(addr));
+            remote->state = REMOTE_ACTIVE;
+            remote->inbound.meshId = DPS_MaxMeshId;
+        } else {
+            ret = DPS_ERR_EXISTS;
+        }
+    } else {
+        assert(addr->type);
+        remote = calloc(1, sizeof(RemoteNode));
+        if (!remote) {
+            *remoteOut = NULL;
+            return DPS_ERR_RESOURCES;
+        }
+        DPS_DBGPRINT("Adding new remote %s\n", DPS_NodeAddrToString(addr));
+        remote->ep.addr = *addr;
+        remote->ep.cn = cn;
+        remote->inbound.meshId = DPS_MaxMeshId;
+        /*
+         * Add remote node to the remote node list
+         */
+        InsertRemoteNode(node, remote);
     }
-    assert(addr->type);
-    remote = calloc(1, sizeof(RemoteNode));
-    if (!remote) {
-        *remoteOut = NULL;
-        return DPS_ERR_RESOURCES;
-    }
-    DPS_DBGPRINT("Adding new remote node %s\n", DPS_NodeAddrToString(addr));
-    remote->ep.addr = *addr;
-    remote->ep.cn = cn;
-    remote->inbound.meshId = DPS_MaxMeshId;
-    /*
-     * Add remote node to the remote node list
-     */
-    InsertRemoteNode(node, remote);
     /*
      * This tells the network layer to keep connection alive for this address
      */
     DPS_NetConnectionIncRef(cn);
     *remoteOut = remote;
-    return DPS_OK;
+    return ret;
 }
 
 void DPS_SendComplete(DPS_Node* node, DPS_NodeAddress* addr, uv_buf_t* bufs, size_t numBufs, DPS_Status status)
@@ -921,7 +938,7 @@ static void SendSubsTimer(uv_timer_t* handle)
                 DPS_WARNPRINT("At retry limit - %s remote %s\n", remote->completion ? "deleting" : "muting", DESCRIBE(remote));
                 if (remote->state == REMOTE_LINKING || remote->state == REMOTE_UNLINKING) {
                     /*
-                     * Link to remote link was either never estabished or failed to respond to
+                     * Link to remote was either never estabished or failed to respond to
                      * an unlink request, in either case we just delete the remote node.
                      */
                     DPS_DeleteRemoteNode(node, remote);

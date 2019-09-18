@@ -428,6 +428,11 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote)
         CBOR_Dump("SUB out", (uint8_t*)uvBuf.base, uvBuf.len);
         ret = DPS_NetSend(node, NULL, &remote->ep, &uvBuf, 1, DPS_OnSendSubscriptionComplete);
         if (ret == DPS_OK) {
+            /*
+             * The SAK counter is zeroed the first time this SUB is sent, is
+             * incremented while we are waiting for the matching SAK and used
+             * to trigger resends in the event of a SAK timeout.
+             */
             if (!remote->outbound.sakPending) {
                 remote->outbound.sakPending = DPS_TRUE;
                 remote->outbound.sakCounter = 0;
@@ -436,6 +441,7 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote)
         } else {
             DPS_ERRPRINT("Failed to send subscription request %s\n", DPS_ErrTxt(ret));
             remote->outbound.sakPending = DPS_FALSE;
+            remote->outbound.lastSubMsgType = 0;
             DPS_SendComplete(node, &remote->ep.addr, &uvBuf, 1, ret);
         }
     } else {
@@ -563,7 +569,7 @@ DPS_Status DPS_SendSubscriptionAck(DPS_Node* node, RemoteNode* remote)
     if (ret == DPS_OK) {
         /*
          * See DPS_UpdateOutboundInterests() the outbound sequence number
-         * only changes if the subscription changes.
+         * only changes if the interests change.
          */
         ret = CBOR_EncodeUint32(&buf, remote->outbound.revision);
     }
@@ -629,17 +635,23 @@ DPS_Status DPS_SendSubscriptionAck(DPS_Node* node, RemoteNode* remote)
         CBOR_Dump("SAK out", (uint8_t*)uvBuf.base, uvBuf.len);
         ret = DPS_NetSend(node, NULL, &remote->ep, &uvBuf, 1, DPS_OnSendComplete);
         if (ret == DPS_OK) {
+            remote->outbound.lastSubMsgType = 0;
             if (flags & DPS_SUB_FLAG_SAK_REQ) {
+                /*
+                 * The SAK counter is zeroed the first time this SAK is sent, is
+                 * incremented while we are waiting for the matching SAK and used
+                 * to trigger resends in the event of a SAK timeout.
+                 */
                 if (!remote->outbound.sakPending) {
                     remote->outbound.sakPending = DPS_TRUE;
                     remote->outbound.sakCounter = 0;
                 }
+                remote->outbound.lastSubMsgType = DPS_MSG_TYPE_SAK;
             } else {
                 remote->outbound.sakPending = DPS_FALSE;
             }
-            remote->outbound.lastSubMsgType = DPS_MSG_TYPE_SAK;
         } else {
-            DPS_ERRPRINT("Failed to send subscription ack %s\n", DPS_ErrTxt(ret));
+            DPS_ERRPRINT("Failed to send SAK %s\n", DPS_ErrTxt(ret));
             remote->outbound.sakPending = DPS_FALSE;
             DPS_SendComplete(node, &remote->ep.addr, &uvBuf, 1, ret);
         }
@@ -747,6 +759,7 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
     uint8_t flags = 0;
     uint16_t keysMask;
     int remoteIsNew = DPS_FALSE;
+    int isDuplicate;
     char* path = NULL;
     size_t pathLen = 0;
 
@@ -855,10 +868,18 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
 #endif
     if (sakSeqNum) {
         /*
-         * If we are processing a SAK we expect the remote to exist
+         * Processing a SAK so we expect the remote to exist
          */
         remote = DPS_LookupRemoteNode(node, &ep->addr);
         if (remote) {
+            /*
+             * We don't expect a SAK for a DEAD remote
+             */
+            if (remote->state == REMOTE_DEAD) {
+                DPS_ERRPRINT("Received SAK for DEAD remote %s\n", DESCRIBE(remote));
+                ret = DPS_ERR_INVALID;
+                goto DiscardAndExit;
+            }
             /*
              * If the remote is muting the muted flag should have been set in the SAK
              */
@@ -877,21 +898,16 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
         }
         ret = DPS_AddRemoteNode(node, &ep->addr, ep->cn, &remote);
         if (ret == DPS_ERR_EXISTS) {
-            ret = DPS_OK;
             /*
-             * Check for a collision with an outgoing subscription.
-             * Use the address to break the tie allowing only one
-             * subscription to proceed.
+             * If both sides simultaneously send a SUB they will exchange
+             * interests in the SUB messages and must not send interests
+             * in their corresponding SAKs.
              */
             if (remote->outbound.sakPending) {
-                if (DPS_CmpAddr(&ep->addr, &node->addr) < 0) {
-                    goto DiscardAndExit;
-                }
-                /*
-                 * Other remote will have discarded SUB so SAK is no longer pending.
-                 */
-                remote->outbound.sakPending = DPS_FALSE;
+                DPS_DBGPRINT("Collision with %s\n", DESCRIBE(remote));
+                remote->outbound.sendInterests = DPS_FALSE;
             }
+            ret = DPS_OK;
         } else {
             remoteIsNew = DPS_TRUE;
             ret = DPS_ClearOutboundInterests(remote);
@@ -907,8 +923,15 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
         DPS_DBGPRINT("Stale subscription %d from %s (expected %d)\n", revision, DESCRIBE(remote), remote->inbound.revision + 1);
         goto DiscardAndExit;
     }
+    /*
+     * If the revision didn't change we make still need to process the
+     * message and send a SAK if required but we don't update interests.
+     */
+    isDuplicate = remote->inbound.revision == revision;
     remote->inbound.revision = revision;
-    DPS_DBGINFO("Received mesh id %08x in %s from %s\n", meshId.val32[0], sakSeqNum ? "SAK" : "SUB", DESCRIBE(remote));
+
+    DPS_DBGINFO("Received mesh id %08x in %s from %s #%d\n", meshId.val32[0], sakSeqNum ? "SAK" : "SUB", DESCRIBE(remote), revision);
+
     /*
      * Loops can be detected by either end of a link and corrective action is required
      * to prevent interests from propagating around the loop. The corrective action is
@@ -945,7 +968,7 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
         /*
          * Check remote is in a state where we need to update interests
          */
-        if (remote->state == REMOTE_ACTIVE || remote->state == REMOTE_LINKING || remote->state == REMOTE_UNMUTING) {
+        if (!isDuplicate && remote->state != REMOTE_MUTED) {
             int isDelta = (flags & DPS_SUB_FLAG_DELTA_IND) != 0;
             ret = UpdateInboundInterests(node, remote, interests, needs, isDelta);
             if (ret != DPS_OK) {
@@ -960,6 +983,7 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
             DPS_BitVectorFree(needs);
         }
         if (remoteIsNew) {
+            assert(!isDuplicate);
             /*
              * Always send the interests in the first SAK
              */
@@ -968,18 +992,20 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
                 goto DiscardAndExit;
             }
         }
-        /*
-         * All is good send an ACK
-         */
         ret = DPS_SendSubscriptionAck(node, remote);
     } else {
         if (!sakSeqNum) {
-            DPS_ERRPRINT("SUB expected to request a SAK\n");
+            DPS_ERRPRINT("SUB expected to always request a SAK\n");
             ret = DPS_ERR_INVALID;
             goto DiscardAndExit;
         }
+        /*
+         * This indicates the end of the SUB/SAK transation
+         */
         remote->outbound.lastSubMsgType = 0;
-        /* These should be NULL but call free just in case */
+        /*
+         * These should be NULL but call free just in case
+         */
         DPS_BitVectorFree(interests);
         DPS_BitVectorFree(needs);
     }
@@ -1018,7 +1044,7 @@ DPS_Status DPS_DecodeSubscriptionAck(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
 {
     DPS_Status ret;
     uint32_t revision = 0;
-    RemoteNode* remote = NULL;
+    RemoteNode* remote;
 
     DPS_DBGTRACEA("From %s\n", DPS_NodeAddrToString(&ep->addr));
 
@@ -1046,9 +1072,9 @@ DPS_Status DPS_DecodeSubscriptionAck(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
             switch (remote->state) {
             case REMOTE_MUTING:
                 /*
-                 * If lastSubMsgType is zero it means this SUB/SAK transaction is complete.
-                 * If the state is REMOTE_MUTING we need to start a new SUB/SAK transaction to
-                 * ensure the remote knows that the link needs to be muted. This happens below.
+                 * If lastSubMsgType == 0 this SUB/SAK transaction is complete but the
+                 * state is REMOTE_MUTING so start a new SUB/SAK transaction to inform
+                 * the remote that the link is being muted; this happens below.
                  */
                 if (remote->outbound.lastSubMsgType != 0) {
                     DPS_DBGINFO("Successfully muted %s\n", DESCRIBE(remote));
@@ -1065,18 +1091,14 @@ DPS_Status DPS_DecodeSubscriptionAck(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
             case REMOTE_UNMUTING:
                 DPS_DBGPRINT("Successfully unmuted %s\n", DESCRIBE(remote));
                 remote->state = REMOTE_ACTIVE;
+                remote->outbound.sakPending = DPS_FALSE;
                 break;
-            default:
+            case REMOTE_ACTIVE:
+            case REMOTE_DEAD:
                 break;
-            }
-            /*
-             * See comment above, if we are still muting we need to send a SUB.
-             */
-            if (remote->state == REMOTE_MUTING) {
-                ret = DPS_SendSubscription(node, remote);
             }
         } else {
-            DPS_WARNPRINT("Unexpected revision in SAK from %s, expected %d got %d\n", DESCRIBE(remote), remote->outbound.revision, revision);
+            DPS_ERRPRINT("Unexpected revision in SAK from %s, expected %d got %d\n", DESCRIBE(remote), remote->outbound.revision, revision);
             ret = DPS_ERR_INVALID;
         }
     } else {
