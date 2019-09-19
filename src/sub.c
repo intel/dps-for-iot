@@ -1035,7 +1035,7 @@ DiscardAndExit:
         DPS_DeleteRemoteNode(node, remote);
     }
     if (ret != DPS_OK) {
-        DPS_ERRPRINT("%s was discarded - %s\n", sakSeqNum ? "SAK" : "SUB", DPS_ErrTxt(ret));
+        DPS_DBGPRINT("%s was discarded - %s\n", sakSeqNum ? "SAK" : "SUB", DPS_ErrTxt(ret));
     }
     DPS_BitVectorFree(interests);
     DPS_BitVectorFree(needs);

@@ -515,7 +515,7 @@ DPS_Status DPS_MuteRemoteNode(DPS_Node* node, RemoteNode* remote, RemoteNodeStat
         InsertRemoteNode(node, remote);
         ++node->numMutedRemotes;
         if (node->numMutedRemotes == node->numRemoteNodes) {
-            DPS_ERRPRINT("All remotes are muted\n");
+            DPS_DBGPRINT("All remotes are muted\n");
         }
     }
     return ret;
