@@ -53,6 +53,7 @@ extern int DPS_Debug;
  * Debug logging levels
  */
 typedef enum {
+    DPS_LOG_INFO,
     DPS_LOG_ERROR,
     DPS_LOG_WARNING,
     DPS_LOG_PRINT,
@@ -104,13 +105,23 @@ void DPS_LogBytes(DPS_LogLevel level, const char* file, int line, const char *fu
 #define DPS_DEBUG_OFF   0 /**< Disable debug logging */
 #define DPS_DEBUG_ON    1 /**< Enable debug logging */
 #define DPS_DEBUG_FORCE 2 /**< Force debug logging */
+#define DPS_DEBUG_INFO  3 /**< Enable only INFO messages */
 
 /**
  * True if DPS debug logging is enabled
  */
 #define DPS_DEBUG_ENABLED()  ((DPS_Debug && (__DPS_DebugControl == DPS_DEBUG_ON)) || (__DPS_DebugControl == DPS_DEBUG_FORCE))
 
+/**
+ * True if DPS info logging is enabled
+ */
+#define DPS_INFO_ENABLED()  ((__DPS_DebugControl == DPS_DEBUG_INFO) || DPS_DEBUG_ENABLED())
+
 #ifdef DPS_DEBUG
+/**
+ * Log a message at DBGINFO level - Like DPS_DBGPRINT but can be turned on in isolation with DPS_DEBUG_CONTROL(DPS_DEBUG_INFO)
+ */
+#define DPS_DBGINFO(fmt, ...) (DPS_INFO_ENABLED() ? DPS_Log(DPS_LOG_INFO, __FILE__, __LINE__, __FUNCTION__, DPS_DBG_TAG, fmt, ##__VA_ARGS__) : (void)0)
 /**
  * Log a function name at DBGTRACE level
  */
@@ -132,6 +143,7 @@ void DPS_LogBytes(DPS_LogLevel level, const char* file, int line, const char *fu
  */
 #define DPS_DBGBYTES(bytes, n) (DPS_DEBUG_ENABLED() ? DPS_LogBytes(DPS_LOG_DBGPRINT, __FILE__, __LINE__, __FUNCTION__, bytes, n) : (void)0)
 #else
+#define DPS_DBGINFO(...)
 #define DPS_DBGTRACE()
 #define DPS_DBGTRACEA(...)
 #define DPS_DBGPRINT(...)

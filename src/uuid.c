@@ -169,13 +169,14 @@ uint64_t DPS_Rand64(void)
     uv_mutex_unlock(&context.mutex);
     return s0;
 }
+
 /*
  * Note that uuidIn and uuiId out may be aliased.
  */
 void DPS_RandUUIDLess(const DPS_UUID* uuidIn, DPS_UUID* uuidOut)
 {
     /*
-     * Effectively all this just subtracts a random 64 bit uint from a 128 bit uint
+     * Effectively this just subtracts a random 64 bit uint from a 128 bit uint
      */
     uint64_t l = uuidIn->val64[0] - DPS_Rand64();
     uint64_t h = uuidIn->val64[1];

@@ -49,12 +49,16 @@
 /*
  * Debug control for this module
  */
+#if defined(DEBUG_LINK_LOSS)
+DPS_DEBUG_CONTROL(DPS_DEBUG_INFO);
+#else
 DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
+#endif
 
 /*
- * Set this to make it easier to debug mesh loop detection
+ * Define DEBUG_LOOP_DETECTION to keep the mesh id's in a 32 bit
+ * range to make it easier to parse them by eye when debugging.
  */
-#define DEBUG_LOOP_DETECTION  0
 
 #define DESCRIBE(n)  DPS_NodeAddrToString(&(n)->ep.addr)
 
@@ -203,14 +207,14 @@ static void RemoteCompletion(void* data)
         }
         if (completion->op == LINK_OP) {
             /*
-             * State should be either ACTIVE, LINKING or MUTED
+             * State should be either ACTIVE, LINKING, MUTING or MUTED
              */
             if (remote->state == REMOTE_ACTIVE) {
                 /* Nothing to do */
             } else if (remote->state == REMOTE_LINKING) {
                 remote->state = REMOTE_ACTIVE;
             } else {
-                assert(remote->state == REMOTE_MUTED);
+                assert(remote->state == REMOTE_MUTED || remote->state == REMOTE_MUTING);
             }
         } else if (completion->op == UNLINK_OP) {
             assert(remote->state == REMOTE_UNLINKING);
@@ -268,6 +272,10 @@ DPS_Status DPS_ClearOutboundInterests(RemoteNode* remote)
     } else {
         remote->outbound.needs = DPS_BitVectorAllocFH();
     }
+    /*
+     * We are clearing the interests this is not a delta
+     */
+    remote->outbound.deltaInd = DPS_FALSE;
     if (!remote->outbound.interests || !remote->outbound.needs) {
         FreeOutboundInterests(remote);
         return DPS_ERR_RESOURCES;
@@ -335,20 +343,22 @@ void DPS_DeleteRemoteNode(DPS_Node* node, RemoteNode* remote)
         remote->completion->remote = NULL;
         DPS_RemoteCompletion(remote->completion, DPS_ERR_MISSING);
     }
-    /*
-     * This tells the network layer we no longer need to keep connection alive for this address
-     */
-    DPS_NetConnectionDecRef(remote->ep.cn);
+    if (remote->state != REMOTE_DEAD) {
+        /*
+         * This tells the network layer we no longer need to keep connection alive for this address
+         */
+        DPS_NetConnectionDecRef(remote->ep.cn);
+    }
     free(remote);
 }
 
-static const DPS_UUID* MinMeshId(DPS_Node* node, RemoteNode* excluded)
+const DPS_UUID* DPS_MinMeshId(DPS_Node* node, RemoteNode* excluded)
 {
     RemoteNode* remote;
     DPS_UUID* minMeshId = &node->meshId;
 
     for (remote = node->remoteNodes; remote != NULL; remote = remote->next) {
-        if (remote->state == REMOTE_MUTED || remote == excluded) {
+        if (remote == excluded || (remote->state != REMOTE_ACTIVE && remote->state != REMOTE_LINKING)) {
             continue;
         }
         if (DPS_UUIDCompare(&remote->inbound.meshId, minMeshId) < 0) {
@@ -363,23 +373,27 @@ DPS_Status DPS_UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, uin
     DPS_Status ret;
     DPS_BitVector* newInterests = NULL;
     DPS_BitVector* newNeeds = NULL;
-    const DPS_UUID* minMeshId;
 
     DPS_DBGTRACE();
 
-    *changes = DPS_FALSE;
     /*
-     * Don't update interests if we are muted.
+     * Don't update interests for inactive remotes
      */
-    if (destNode->state == REMOTE_MUTED) {
+    if (destNode->state == REMOTE_MUTED || destNode->state == REMOTE_DEAD) {
+        *changes = DPS_FALSE;
         return DPS_OK;
     }
-    /*
-     * Unlinking is always considered to be a change
-     */
-    if (destNode->state == REMOTE_UNLINKING) {
+    if (destNode->state == REMOTE_ACTIVE) {
+        *changes = DPS_FALSE;
+    } else {
+        /*
+         * Transition states are always a change
+         */
+        ret = DPS_ClearOutboundInterests(destNode);
+        if (ret != DPS_OK) {
+            goto ErrExit;
+        }
         *changes = DPS_TRUE;
-        return DPS_OK;
     }
     /*
      * Inbound interests from the node we are updating are excluded from the
@@ -415,7 +429,7 @@ DPS_Status DPS_UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, uin
     }
     /*
      * Send a delta if we have previously sent interests. The needs vector
-     * is small so it is not worth computing a delta.
+     * is small and typically dense so it is not worth computing a delta.
      */
     if (destNode->outbound.interests) {
         int same = DPS_FALSE;
@@ -428,7 +442,10 @@ DPS_Status DPS_UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, uin
         }
         DPS_BitVectorXor(destNode->outbound.delta, destNode->outbound.interests, newInterests, &same);
         if (same) {
-            assert(DPS_BitVectorEquals(destNode->outbound.needs, newNeeds));
+            if (!DPS_BitVectorEquals(destNode->outbound.needs, newNeeds)) {
+                DPS_ERRPRINT("Inconsistency between interests and needs for %s\n", DESCRIBE(destNode));
+                assert(DPS_BitVectorEquals(destNode->outbound.needs, newNeeds));
+            }
         } else {
             *changes = DPS_TRUE;
         }
@@ -444,15 +461,6 @@ DPS_Status DPS_UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, uin
     destNode->outbound.interests = newInterests;
     destNode->outbound.needs = newNeeds;
 
-    /*
-     * Also send the subscription if the minimum meshId changed
-     */
-    minMeshId = MinMeshId(node, destNode);
-    if (DPS_UUIDCompare(minMeshId, &destNode->outbound.meshId) < 0) {
-        DPS_DBGPRINT("New minimum mesh id\n");
-        destNode->outbound.meshId = *minMeshId;
-        *changes = DPS_TRUE;
-    }
     /*
      * Increment the revision number if there were changes
      */
@@ -478,14 +486,8 @@ DPS_Status DPS_MuteRemoteNode(DPS_Node* node, RemoteNode* remote, RemoteNodeStat
     if (remote->state == REMOTE_MUTED || remote->state == REMOTE_DEAD || remote->state == REMOTE_UNLINKING) {
         return DPS_OK;
     }
-    if ((node->numRemoteNodes - node->numMutedRemotes) == 1) {
-        DPS_WARNPRINT("Muting last remote #%d: %s\n", node->numRemoteNodes, DESCRIBE(remote));
-    } else {
-        DPS_DBGPRINT("Muting %s\n", DESCRIBE(remote));
-    }
-    remote->inbound.meshId = DPS_MaxMeshId;
-    remote->outbound.meshId = DPS_MaxMeshId;
     remote->state = newState;
+    DPS_DBGPRINT("%s %s\n", RemoteStateTxt(remote), DESCRIBE(remote));
     /*
      * Clear the inbound and outbound interests
      */
@@ -493,24 +495,29 @@ DPS_Status DPS_MuteRemoteNode(DPS_Node* node, RemoteNode* remote, RemoteNodeStat
     ret = DPS_ClearOutboundInterests(remote);
     if (ret == DPS_OK) {
         /*
-         * We are explicitly sending zero interests so not a delta
-         */
-        remote->outbound.deltaInd = DPS_FALSE;
-        /*
          * No interests to be sent
          */
         remote->outbound.sendInterests = DPS_FALSE;
     }
-    if (remote->state == REMOTE_DEAD) {
+    if (newState == REMOTE_DEAD) {
+        /*
+         * Obviously not keeping connection alive for this remote
+         */
+        DPS_NetConnectionDecRef(remote->ep.cn);
         remote->outbound.sakPending = DPS_FALSE;
     }
-    /*
-     * Move the muted node to the head of the remote node list so remotes
-     * can be unmuted in FILO order.
-     */
-    RemoveRemoteNode(node, remote);
-    InsertRemoteNode(node, remote);
-    ++node->numMutedRemotes;
+    if (newState != REMOTE_MUTING) {
+        /*
+         * Move the muted node to the head of the remote node list so remotes
+         * can be unmuted in FILO order.
+         */
+        RemoveRemoteNode(node, remote);
+        InsertRemoteNode(node, remote);
+        ++node->numMutedRemotes;
+        if (node->numMutedRemotes == node->numRemoteNodes) {
+            DPS_ERRPRINT("All remotes are muted\n");
+        }
+    }
     return ret;
 }
 
@@ -529,15 +536,18 @@ DPS_Status DPS_UnmuteRemoteNode(DPS_Node* node, RemoteNode* remote)
         /*
          * We need a fresh mesh id that is less than any of the mesh id's
          * we have already seen. If we were to send the same mesh id that
-         * was used to detected the loop it will look to the remaining
-         * nodes that there is still a loop.
+         * was used to detect the loop it will look to the remaining
+         * nodes like there is still a loop.
          */
-        DPS_RandUUIDLess(MinMeshId(node, NULL), &node->meshId);
-        /*
-         * Free stale outbound interests. This also ensures that
-         * the subscription that is sent below is not a delta.
-         */
-        FreeOutboundInterests(remote);
+#if defined(DEBUG_LOOP_DETECTION)
+        {
+            DPS_UUID min = *DPS_MinMeshId(node, NULL);
+            min.val32[0] -= DPS_Rand() & 0xFFFF;
+            node->meshId = min;
+        }
+#else
+        DPS_RandUUIDLess(DPS_MinMeshId(node, NULL), &node->meshId);
+#endif
         --node->numMutedRemotes;
         /*
          * Send the unmute subscription message
@@ -548,37 +558,6 @@ DPS_Status DPS_UnmuteRemoteNode(DPS_Node* node, RemoteNode* remote)
         }
     }
     return ret;
-}
-
-/*
- * Each node has a randomly allocated mesh id that is used to detect loops in the mesh.
- *
- * Mesh id's are included in the header of subscription, subscription acknowledgments
- * (SAKS) that include subscription information. SAKs only include subscription information
- * during link establishment, thereafter SAKs contain the minimal information needed for
- * reliable subscription delivery.
- *
- * When a SUB or SAK is sent to a remote node the mesh id is the minimum of the mesh id
- * of the local node and the mesh id's received from all other nodes excluding the remote
- * node itself. The mesh id that was sent is recorded in the outbound.meshId field of the
- * remote node.
- *
- * Loop detection proceeds as follows: when an SUB or SAK is received the mesh id is
- * compared against the mesh id's previously sent to all other nodes as recorded in the
- * outbound.meshId fields. If the received mesh id received from the remote is the same as the
- * last mesh id sent to the remote there is no loop. If the received mesh id is the same as the
- * mesh id received from any other remote node there must be a loop in the mesh. The reason this
- * indicates a loop is that the only way the same minimal mesh id can be computed by two
- * different remote nodes is if there is another path between those two nodes, i.e., there
- * is a loop in the mesh.
- */
-int DPS_MeshHasLoop(DPS_Node* node, RemoteNode* src, DPS_UUID* meshId)
-{
-    if (DPS_UUIDCompare(meshId, &src->inbound.meshId) == 0) {
-        return DPS_FALSE;
-    } else {
-        return DPS_UUIDCompare(meshId, MinMeshId(node, src)) == 0;
-    }
 }
 
 RemoteNode* DPS_LookupRemoteNode(DPS_Node* node, const DPS_NodeAddress* addr)
@@ -616,32 +595,39 @@ static OnOpCompletion* AllocCompletion(DPS_Node* node, RemoteNode* remote, OpTyp
  */
 DPS_Status DPS_AddRemoteNode(DPS_Node* node, const DPS_NodeAddress* addr, DPS_NetConnection* cn, RemoteNode** remoteOut)
 {
+    DPS_Status ret = DPS_OK;
     RemoteNode* remote = DPS_LookupRemoteNode(node, addr);
+
     if (remote) {
-        *remoteOut = remote;
-        return DPS_ERR_EXISTS;
+        if (remote->state == REMOTE_DEAD) {
+            DPS_DBGPRINT("Reactivating dead remote %s\n", DPS_NodeAddrToString(addr));
+            remote->state = REMOTE_ACTIVE;
+            remote->inbound.meshId = DPS_MaxMeshId;
+        } else {
+            ret = DPS_ERR_EXISTS;
+        }
+    } else {
+        assert(addr->type);
+        remote = calloc(1, sizeof(RemoteNode));
+        if (!remote) {
+            *remoteOut = NULL;
+            return DPS_ERR_RESOURCES;
+        }
+        DPS_DBGPRINT("Adding new remote %s\n", DPS_NodeAddrToString(addr));
+        remote->ep.addr = *addr;
+        remote->ep.cn = cn;
+        remote->inbound.meshId = DPS_MaxMeshId;
+        /*
+         * Add remote node to the remote node list
+         */
+        InsertRemoteNode(node, remote);
     }
-    assert(addr->type);
-    remote = calloc(1, sizeof(RemoteNode));
-    if (!remote) {
-        *remoteOut = NULL;
-        return DPS_ERR_RESOURCES;
-    }
-    DPS_DBGPRINT("Adding new remote node %s\n", DPS_NodeAddrToString(addr));
-    remote->ep.addr = *addr;
-    remote->ep.cn = cn;
-    remote->inbound.meshId = DPS_MaxMeshId;
-    remote->outbound.meshId = DPS_MaxMeshId;
-    /*
-     * Add remote node to the remote node list
-     */
-    InsertRemoteNode(node, remote);
     /*
      * This tells the network layer to keep connection alive for this address
      */
     DPS_NetConnectionIncRef(cn);
     *remoteOut = remote;
-    return DPS_OK;
+    return ret;
 }
 
 void DPS_SendComplete(DPS_Node* node, DPS_NodeAddress* addr, uv_buf_t* bufs, size_t numBufs, DPS_Status status)
@@ -871,6 +857,59 @@ static void SendPubsTimer(uv_timer_t* handle)
     SendPubs(handle->data);
 }
 
+/*
+ * See if there is a muted (or dead) remote with a given same mesh id
+ * that can restore connectivity after a node has gone unresponsive.
+ */
+static void FindAlternativeRoute(DPS_Node* node, RemoteNode* oldRoute)
+{
+    RemoteNode* remote;
+    RemoteNode* newRoute = NULL;
+
+    DPS_DBGPRINT("Find alternative route to %s\n", DESCRIBE(oldRoute));
+
+    for (remote = node->remoteNodes; remote != NULL; remote = remote->next) {
+        if (remote == oldRoute) {
+            continue;
+        }
+        if (DPS_UUIDCompare(&remote->inbound.meshId, &oldRoute->inbound.meshId) == 0) {
+            if (remote->state == REMOTE_ACTIVE || remote->state == REMOTE_UNMUTING) {
+                /*
+                 * Route already exists or is already being restored
+                 */
+                return;
+            }
+            if (remote->state == REMOTE_MUTED) {
+                newRoute = remote;
+                break;
+            }
+            if (remote->state == REMOTE_DEAD) {
+                /*
+                 * Only consider dead remotes as a last resort
+                 */
+                newRoute = remote;
+                continue;
+            }
+        }
+    }
+    if (newRoute) {
+        DPS_DBGPRINT("Try unmuting link to %s mesh id %s\n", DESCRIBE(newRoute), DPS_UUIDToString(&newRoute->inbound.meshId));
+        DPS_UnmuteRemoteNode(node, newRoute);
+    } else {
+#ifdef DPS_DEBUG
+        DPS_DbgLock();
+        DPS_DBGINFO("No alternative route to %s\n", DESCRIBE(oldRoute));
+#if defined(DEBUG_LOOP_DETECTION)
+        DPS_PRINT("Node %s meshId=%08x\n", node->addrStr, node->meshId.val32[0]);
+        for (remote = node->remoteNodes; remote != NULL; remote = remote->next) {
+            DPS_PRINT("  %s inbound.meshId=%08x %s\n", DESCRIBE(remote), remote->inbound.meshId.val32[0], RemoteStateTxt(remote));
+        }
+#endif
+        DPS_DbgUnlock();
+#endif
+    }
+}
+
 static void SendSubsTimer(uv_timer_t* handle)
 {
     DPS_Node* node = (DPS_Node*)handle->data;
@@ -912,7 +951,8 @@ static void SendSubsTimer(uv_timer_t* handle)
                 DPS_WARNPRINT("At retry limit - %s remote %s\n", remote->completion ? "deleting" : "muting", DESCRIBE(remote));
                 if (remote->state == REMOTE_LINKING || remote->state == REMOTE_UNLINKING) {
                     /*
-                     * Communication with the remote link was not estabished so delete the remote node
+                     * Link to remote was either never estabished or failed to respond to
+                     * an unlink request, in either case we just delete the remote node.
                      */
                     DPS_DeleteRemoteNode(node, remote);
                 } else {
@@ -921,24 +961,29 @@ static void SendSubsTimer(uv_timer_t* handle)
                      * we might be able to re-establish a link to it later if we need to.
                      */
                     DPS_MuteRemoteNode(node, remote, REMOTE_DEAD);
+                    /*
+                     * Check is there is a muted remote that can restore the route that went dead.
+                     */
+                    FindAlternativeRoute(node, remote);
                 }
                 continue;
             }
             /*
              * Resend a SUB or SAK
              */
-            DPS_DBGPRINT("Resend %s to %s\n", remote->outbound.lastSubMsgType == DPS_MSG_TYPE_SAK ? "SAK" : "SUB", DESCRIBE(remote));
-            ret = DPS_UpdateOutboundInterests(node, remote, &changes);
-            if (ret == DPS_OK) {
-                if (remote->outbound.lastSubMsgType == DPS_MSG_TYPE_SUB) {
-                    ret = DPS_SendSubscription(node, remote);
-                } else {
-                    ret = DPS_SendSubscriptionAck(node, remote);
-                }
+            DPS_DBGINFO("Resend(%d) %s to %s\n", remote->outbound.sakCounter - DPS_SAK_RETRY_THRESHOLD,
+                    remote->outbound.lastSubMsgType == DPS_MSG_TYPE_SAK ? "SAK" : "SUB", DESCRIBE(remote));
+
+            if (remote->outbound.lastSubMsgType == DPS_MSG_TYPE_SUB) {
+                ret = DPS_SendSubscription(node, remote);
+            } else {
+                ret = DPS_SendSubscriptionAck(node, remote);
             }
-            reschedule |= (ret == DPS_OK);
+            if (ret == DPS_OK) {
+                reschedule = DPS_TRUE;
+            }
         } else {
-            if (remote->state == REMOTE_MUTED || remote->state == REMOTE_DEAD) {
+            if (remote->state != REMOTE_ACTIVE && remote->state != REMOTE_LINKING && remote->state != REMOTE_UNLINKING) {
                 continue;
             }
             ret = DPS_UpdateOutboundInterests(node, remote, &changes);
@@ -949,7 +994,9 @@ static void SendSubsTimer(uv_timer_t* handle)
                  */
                 if (changes || node->subsPending == SubsNonePending) {
                     ret = DPS_SendSubscription(node, remote);
-                    reschedule |= (ret == DPS_OK);
+                    if (ret == DPS_OK) {
+                        reschedule = DPS_TRUE;
+                    }
                 }
             }
         }
@@ -967,24 +1014,6 @@ static void SendSubsTimer(uv_timer_t* handle)
         uv_timer_start(&node->subsTimer, SendSubsTimer, node->subsRate, node->linkLossTimeout);
     } else {
         node->subsPending = SubsNonePending;
-    }
-    /*
-     * If all the remote nodes are muted attempt to repair connectivity to
-     * the mesh by unmuting the oldest muted remote in the remote nodes list.
-     * If there are no muted nodes try to revive dead nodes.
-     */
-    if (node->numMutedRemotes == node->numRemoteNodes) {
-        RemoteNode* oldest = NULL;
-        for (remote = node->remoteNodes; remote != NULL; remote = remote->next) {
-            if (remote->state == REMOTE_MUTED) {
-                oldest = remote;
-            } else if (oldest == NULL && remote->state == REMOTE_DEAD) {
-                oldest = remote;
-            }
-        }
-        if (oldest) {
-            DPS_UnmuteRemoteNode(node, oldest);
-        }
     }
     DPS_UnlockNode(node);
 }
@@ -1637,12 +1666,12 @@ DPS_Status DPS_StartNode(DPS_Node* node, int mcast, DPS_NodeAddress* listenAddr)
     assert(!r);
 
     DPS_GenerateUUID(&node->meshId);
-#if DEBUG_LOOP_DETECTION
+#if defined(DEBUG_LOOP_DETECTION)
     node->meshId.val32[1] = 0;
     node->meshId.val32[2] = 0;
     node->meshId.val32[3] = 0;
-#endif
     DPS_DBGPRINT("Node mesh id is: %08x\n", node->meshId.val32[0]);
+#endif
     node->interests = DPS_CountVectorAlloc();
     node->needs = DPS_CountVectorAllocFH();
     node->scratch.interests = DPS_BitVectorAlloc();
@@ -2089,6 +2118,8 @@ const char* RemoteStateTxt(RemoteNode* remote)
             return "LINKING";
         case REMOTE_UNLINKING:
             return "UNLINKING";
+        case REMOTE_MUTING:
+            return "MUTING";
         case REMOTE_UNMUTING:
             return "UNMUTING";
         case REMOTE_MUTED:

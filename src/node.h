@@ -197,6 +197,7 @@ typedef enum {
     REMOTE_LINKING,       /**< Remote node is in the process of being linked */
     REMOTE_UNLINKING,     /**< Remote node is in the process of being unlinked */
     REMOTE_UNMUTING,      /**< Remote node is being unmuted */
+    REMOTE_MUTING,        /**< Remote node is being muted */
     REMOTE_MUTED,         /**< Remote node was linked but is muted to avoid mesh loops */
     REMOTE_DEAD           /**< Remote was linked but went unresponsive */
 } RemoteNodeState;
@@ -235,7 +236,6 @@ typedef struct _RemoteNode {
         DPS_UUID meshId;               /**< The mesh id received from this remote node */
         DPS_BitVector* needs;          /**< Bit vector of needs received from  this remote node */
         DPS_BitVector* interests;      /**< Bit vector of interests received from  this remote node */
-        uint32_t interestsRevision;    /**< Revision number of interests */
     } inbound;
     /** Outbound state */
     struct {
@@ -245,7 +245,6 @@ typedef struct _RemoteNode {
         uint8_t sakPending;            /**< TRUE when waiting to receive a SAK from this remote node */
         uint8_t lastSubMsgType;        /**< Indicates if last subscription message was a SUB or a SAK */
         uint32_t revision;             /**< Revision number of last subscription sent to this node */
-        DPS_UUID meshId;               /**< The mesh id sent to this remote node */
         DPS_BitVector* needs;          /**< Needs bit vector sent outbound to this remote node */
         DPS_BitVector* interests;      /**< Full outbound interests bit vector to this remote node */
         DPS_BitVector* delta;          /**< Delta outbound bit vector sent to this remote node */
@@ -360,15 +359,15 @@ DPS_Status DPS_AddRemoteNode(DPS_Node* node, const DPS_NodeAddress* addr, DPS_Ne
 RemoteNode* DPS_LookupRemoteNode(DPS_Node* node, const DPS_NodeAddress* addr);
 
 /**
- * Must be called with the node lock held.
+ * Computes the minimum mesh id of the local and all active remote nodes
+ * excluding an optional remote node.
  *
- * @param node    The local node
- * @param src     The remote that just sent a subscription
- * @param meshId  The mesh id in the subscription
+ * @param node       The local node
+ * @param excluded   A remote node to exclude from the computation
  *
- * @return non-zero if mesh has loop, 0 otherwise
+ * @return  The minimum mesh id.
  */
-int DPS_MeshHasLoop(DPS_Node* node, RemoteNode* src, DPS_UUID* meshId);
+const DPS_UUID* DPS_MinMeshId(DPS_Node* node, RemoteNode* excluded);
 
 /**
  * Deletes a remote node and related state information.

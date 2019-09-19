@@ -333,6 +333,16 @@ DPS_NetRxBuffer* DPS_PublicationGetNetRxBuffer(const DPS_Publication* pub);
  */
 DPS_Status DPS_SubscriptionSetSerialize(DPS_Subscription* sub, int serialize);
 
+/**
+ * Hold lock to prevent debug output from getting interleaved
+ */
+void DPS_DbgLock(void);
+
+/**
+ * Release debug lock
+ */
+void DPS_DbgUnlock(void);
+
 #ifdef __cplusplus
 }
 #endif
