@@ -602,7 +602,9 @@ DPS_Status DPS_AddRemoteNode(DPS_Node* node, const DPS_NodeAddress* addr, DPS_Ne
         if (remote->state == REMOTE_DEAD) {
             DPS_DBGPRINT("Reactivating dead remote %s\n", DPS_NodeAddrToString(addr));
             remote->state = REMOTE_ACTIVE;
+            remote->linkState = LINK_PASSIVE;
             remote->inbound.meshId = DPS_MaxMeshId;
+            remote->inbound.revision = 0;
         } else {
             ret = DPS_ERR_EXISTS;
         }
