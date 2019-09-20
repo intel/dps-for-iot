@@ -71,12 +71,12 @@ static void OnData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* uvBuf, const
                   uvBuf->base, uvBuf->len, addr, flags);
 
     if (!uvBuf) {
-        DPS_ERRPRINT("OnData no buffer\n");
+        DPS_WARNPRINT("OnData no buffer\n");
         goto Exit;
     }
     buf = DPS_UvToNetRxBuffer(uvBuf);
     if (nread < 0) {
-        DPS_ERRPRINT("OnData error %s\n", uv_err_name((int)nread));
+        DPS_WARNPRINT("OnData error %s\n", uv_err_name((int)nread));
         goto Exit;
     }
     buf->rx.eod = &buf->rx.base[nread];
@@ -84,11 +84,11 @@ static void OnData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* uvBuf, const
         goto Exit;
     }
     if (flags & UV_UDP_PARTIAL) {
-        DPS_ERRPRINT("Dropping partial message, read buffer too small\n");
+        DPS_WARNPRINT("Dropping partial message, read buffer too small\n");
         goto Exit;
     }
     if (!addr) {
-        DPS_ERRPRINT("OnData no address\n");
+        DPS_WARNPRINT("OnData no address\n");
         goto Exit;
     }
     ep.cn = NULL;
@@ -188,7 +188,7 @@ static void OnSendComplete(uv_udp_send_t* req, int status)
     DPS_Status dpsRet = DPS_OK;
 
     if (status) {
-        DPS_ERRPRINT("OnSendComplete status=%s\n", uv_err_name(status));
+        DPS_WARNPRINT("OnSendComplete status=%s\n", uv_err_name(status));
         dpsRet = DPS_ERR_NETWORK;
     }
     send->onSendComplete(send->node, send->appCtx, &send->peerEp, send->bufs, send->numBufs, dpsRet);

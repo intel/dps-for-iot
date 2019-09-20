@@ -602,7 +602,7 @@ static void OnSendComplete(uv_udp_send_t *req, int status)
     DPS_DBGTRACEA("sendReq=%p{cn=%p},status=%d\n", sendReq, sendReq->cn, status);
 
     if (status != 0) {
-        DPS_ERRPRINT("Send failed: %s\n", uv_err_name(status));
+        DPS_WARNPRINT("Send failed: %s\n", uv_err_name(status));
     }
     DPS_NetConnectionDecRef(sendReq->cn);
     DestroySendReq(sendReq);
@@ -1369,14 +1369,14 @@ static void OnUdpData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, cons
     }
 
     if (nread < 0) {
-        DPS_ERRPRINT("OnData error- %s\n", uv_err_name((int)nread));
+        DPS_WARNPRINT("OnData error- %s\n", uv_err_name((int)nread));
         goto Exit;
     }
     if (!nread) {
         goto Exit;
     }
     if (!addr) {
-        DPS_ERRPRINT("OnData no address\n");
+        DPS_WARNPRINT("OnData no address\n");
         goto Exit;
     }
 #ifdef _WIN32
@@ -1386,7 +1386,7 @@ static void OnUdpData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, cons
     }
 #endif
     if (flags & UV_UDP_PARTIAL) {
-        DPS_ERRPRINT("Dropping partial message, read buffer too small\n");
+        DPS_WARNPRINT("Dropping partial message, read buffer too small\n");
         goto Exit;
     }
 

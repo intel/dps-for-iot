@@ -94,7 +94,7 @@ static void OnMcastRx(uv_udp_t* handle, ssize_t nread, const uv_buf_t* uvBuf, co
     DPS_NetEndpoint ep;
 
     if (!uvBuf) {
-        DPS_ERRPRINT("No buffer\n");
+        DPS_WARNPRINT("No buffer\n");
         goto Exit;
     }
 
@@ -106,13 +106,13 @@ static void OnMcastRx(uv_udp_t* handle, ssize_t nread, const uv_buf_t* uvBuf, co
         goto Exit;
     }
     if (nread < 0) {
-        DPS_ERRPRINT("Read error %s\n", uv_err_name((int)nread));
+        DPS_WARNPRINT("Read error %s\n", uv_err_name((int)nread));
         uv_close((uv_handle_t*)handle, NULL);
         goto Exit;
     }
     buf->rx.eod = &buf->rx.base[nread];
     if (flags & UV_UDP_PARTIAL) {
-        DPS_ERRPRINT("Dropping partial message, read buffer too small\n");
+        DPS_WARNPRINT("Dropping partial message, read buffer too small\n");
         goto Exit;
     }
     DPS_NetSetAddr(&ep.addr, DPS_UDP, addr);
