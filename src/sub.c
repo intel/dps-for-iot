@@ -700,7 +700,7 @@ static DPS_Status UpdateInboundInterests(DPS_Node* node, RemoteNode* remote, DPS
     return DPS_OK;
 }
 
-static DPS_Status UnlinkRemote(DPS_Node* node, DPS_NodeAddress* addr)
+static DPS_Status UnlinkRemote(DPS_Node* node, DPS_NodeAddress* addr, uint32_t revision)
 {
     RemoteNode* remote;
 
@@ -708,6 +708,7 @@ static DPS_Status UnlinkRemote(DPS_Node* node, DPS_NodeAddress* addr)
     remote = DPS_LookupRemoteNode(node, addr);
     if (remote) {
         remote->outbound.sendInterests = DPS_FALSE;
+        remote->inbound.revision = revision;
         DPS_SendSubscriptionAck(node, remote);
         DPS_DeleteRemoteNode(node, remote);
         /*
@@ -909,7 +910,7 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
                      DPS_NodeAddrToString(&ep->addr), (flags & DPS_SUB_FLAG_DELTA_IND) ? "(<delta>)" : "",
                      (keysMask & (1 << DPS_CBOR_KEY_INTERESTS)) ? DPS_DumpMatchingTopics(interests) : "<null>");
         if (flags & DPS_SUB_FLAG_UNLINK_REQ) {
-            ret = UnlinkRemote(node, &ep->addr);
+            ret = UnlinkRemote(node, &ep->addr, revision);
             goto DiscardAndExit;
         }
         ret = DPS_AddRemoteNode(node, &ep->addr, ep->cn, &remote);
