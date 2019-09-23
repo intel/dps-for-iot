@@ -592,6 +592,7 @@ static void OnLinkedGet(DPS_Node* node, const DPS_NodeAddress* addr, DPS_Status 
     if (regGet->status == DPS_OK) {
         const char* topics[2];
         DPS_CopyAddress(&regGet->addr, addr);
+        regGet->linked = DPS_TRUE;
         /*
          * Subscribe to our tenant topic string
          */
