@@ -39,6 +39,11 @@ else:
 
 _children = []
 _logs = []
+#
+# The _subs_rate and _pub_wait are related.  The value of _pub_wait
+# should be such that _subs_rate times the number of expected hops
+# between subscriber and publisher is less than the _pub_wait.
+#
 if os.environ['USE_DTLS'] == '1':
     _subs_rate = ['-r', '800']
     _pub_wait = ['-w', '4']
@@ -401,7 +406,7 @@ def reg_subs(args=''):
 def reg_pubs(args=''):
     global _rp
     _rp = _rp + 1
-    cmd = [os.path.join('build', 'dist', 'bin', 'reg_pubs')] + _debug + _pub_wait + args.split()
+    cmd = [os.path.join('build', 'dist', 'bin', 'reg_pubs')] + _debug + _subs_rate + _pub_wait + args.split()
     child = _spawn(_rp, cmd)
     _expect_listening(child)
     return child
