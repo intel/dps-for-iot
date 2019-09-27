@@ -915,14 +915,8 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
         }
         ret = DPS_AddRemoteNode(node, &ep->addr, ep->cn, &remote);
         if (ret == DPS_ERR_EXISTS) {
-            /*
-             * If both sides simultaneously send a SUB they will exchange
-             * interests in the SUB messages and must not send interests
-             * in their corresponding SAKs.
-             */
             if (remote->outbound.sakPending) {
                 DPS_DBGPRINT("Collision with %s\n", DESCRIBE(remote));
-                remote->outbound.sendInterests = DPS_FALSE;
             }
             ret = DPS_OK;
         } else {
