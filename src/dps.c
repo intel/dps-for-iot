@@ -352,10 +352,10 @@ void DPS_DeleteRemoteNode(DPS_Node* node, RemoteNode* remote)
     free(remote);
 }
 
-const DPS_UUID* DPS_MinMeshId(DPS_Node* node, RemoteNode* excluded)
+const DPS_UUID* DPS_MinMeshId(const DPS_Node* node, const RemoteNode* excluded)
 {
     RemoteNode* remote;
-    DPS_UUID* minMeshId = &node->meshId;
+    const DPS_UUID* minMeshId = &node->meshId;
 
     for (remote = node->remoteNodes; remote != NULL; remote = remote->next) {
         if (remote == excluded || (remote->state != REMOTE_ACTIVE && remote->state != REMOTE_LINKING)) {
@@ -2110,7 +2110,7 @@ static void DumpNode(uv_signal_t* handle, int signum)
 }
 
 #ifdef DPS_DEBUG
-const char* RemoteStateTxt(RemoteNode* remote)
+const char* RemoteStateTxt(const RemoteNode* remote)
 {
     if (remote) {
         switch (remote->state) {

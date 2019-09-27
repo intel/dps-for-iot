@@ -218,7 +218,7 @@ typedef enum {
  *
  * @return the text string
  */
-const char* RemoteStateTxt(RemoteNode* remote);
+const char* RemoteStateTxt(const RemoteNode* remote);
 #else
 #define RemoteStateTxt(r) ""
 #endif
@@ -367,7 +367,7 @@ RemoteNode* DPS_LookupRemoteNode(DPS_Node* node, const DPS_NodeAddress* addr);
  *
  * @return  The minimum mesh id.
  */
-const DPS_UUID* DPS_MinMeshId(DPS_Node* node, RemoteNode* excluded);
+const DPS_UUID* DPS_MinMeshId(const DPS_Node* node, const RemoteNode* excluded);
 
 /**
  * Deletes a remote node and related state information.
