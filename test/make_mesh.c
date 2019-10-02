@@ -181,7 +181,7 @@ static int AddLinksForNode(DPS_Node* node)
         if (NodeMap[id]) {
             LINK* link = AddLink(nodeId, id);
             if (remote->state == REMOTE_MUTED) {
-                link->muted = 1;
+                ++link->muted;
                 ++numMuted;
             }
         }
@@ -222,7 +222,8 @@ static void PrintSubgraph(FILE* f, int showMuted, uint16_t* kills, size_t numKil
     static int cluster = 0;
     static int base = 0;
     static const char* style[] = {
-        " [len=1]",
+        " [color=black, len=1]",
+        " [color=green, len=1]",
         " [color=red, style=dotted, len=2, weight=2]"
     };
     LINK* l;
@@ -253,7 +254,7 @@ static void PrintSubgraph(FILE* f, int showMuted, uint16_t* kills, size_t numKil
     for (l = links; l != NULL; l = l->next) {
         int src = l->src + base;
         int dst = l->dst + base;
-        if (showMuted || (l->muted == 0)) {
+        if (showMuted || (l->muted < 2)) {
             fprintf(f, "  %d -- %d%s;\n", src, dst, style[l->muted]);
             fprintf(f, "  %d[label=%d%s];\n", src, l->src, SubsList[l->src] ? ",shape=Mcircle" : "");
             fprintf(f, "  %d[label=%d%s];\n", dst, l->dst, SubsList[l->dst] ? ",shape=Mcircle" : "");
@@ -279,7 +280,7 @@ static int HasUnstableLinks(void)
                 /*
                  * These unstable states
                  */
-                if (remote->state == REMOTE_LINKING || remote->state == REMOTE_MUTING || remote->state == REMOTE_UNLINKING) {
+                if (remote->state == REMOTE_LINKING || remote->state == REMOTE_UNLINKING) {
                     DPS_UnlockNode(node);
                     return DPS_TRUE;
                 }

@@ -196,8 +196,6 @@ typedef enum {
     REMOTE_ACTIVE,        /**< Remote node is linked */
     REMOTE_LINKING,       /**< Remote node is in the process of being linked */
     REMOTE_UNLINKING,     /**< Remote node is in the process of being unlinked */
-    REMOTE_UNMUTING,      /**< Remote node is being unmuted */
-    REMOTE_MUTING,        /**< Remote node is being muted */
     REMOTE_MUTED,         /**< Remote node was linked but is muted to avoid mesh loops */
     REMOTE_DEAD           /**< Remote was linked but went unresponsive */
 } RemoteNodeState;
