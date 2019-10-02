@@ -56,7 +56,7 @@ typedef int DPS_Status; /**< The status code type */
 #define DPS_ERR_BUSY              12 /**< Operation cannot be performed right now */
 #define DPS_ERR_EXISTS            13 /**< Something not expected was present */
 #define DPS_ERR_MISSING           14 /**< Something expected was missing */
-#define DPS_ERR_STALE             15 /**< A publication was stale */
+#define DPS_ERR_STALE             15 /**< A publication or subscription was stale */
 #define DPS_ERR_NO_ROUTE          16 /**< There is no route to the requested destination */
 #define DPS_ERR_NOT_STARTED       17 /**< Node has not yet been started */
 #define DPS_ERR_NOT_INITIALIZED   18 /**< Object has not yet been initialized */

@@ -118,12 +118,13 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote);
 /**
  * Send a subscription acknowledgement (SAK) to a remote node
  *
- * @param node    The local node
- * @param remote  The remote node to send the SAK to
+ * @param node      The local node
+ * @param remote    The remote node to send the SAK to
+ * @param collision SAK sent during collision with an incoming SUB
  *
  * @return DPS_OK if sending is successful, an error otherwise
  */
-DPS_Status DPS_SendSubscriptionAck(DPS_Node* node, RemoteNode* remote);
+DPS_Status DPS_SendSubscriptionAck(DPS_Node* node, RemoteNode* remote, int collision);
 
 /**
  * Decode and process a received subscription

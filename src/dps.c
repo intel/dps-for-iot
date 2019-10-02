@@ -194,23 +194,35 @@ void DPS_RemoteCompletion(DPS_Node* node, OnOpCompletion* completion, DPS_Status
     RemoteNode* remote = completion->remote;
     const DPS_NodeAddress* addr = &completion->addr;
 
+    DPS_DBGTRACEA("For %s\n", DPS_NodeAddrToString(addr));
+
     if (remote) {
-        if (remote->completion == completion) {
-            remote->completion = NULL;
-        }
         if (completion->op == LINK_OP) {
             /*
-             * State should be either LINKING, MUTING or MUTED
+             * State should be either LINKING or MUTED
              */
             if (remote->state == REMOTE_LINKING) {
                 remote->state = REMOTE_ACTIVE;
             } else {
-                assert(remote->state == REMOTE_MUTED || remote->state == REMOTE_MUTING);
+                assert(remote->state == REMOTE_MUTED);
             }
         } else if (completion->op == UNLINK_OP) {
-            assert(remote->state == REMOTE_UNLINKING);
+            /*
+             * We cannot UNLINK while there a SAK is pending so
+             * if we get here and the state is not UNLINKING it
+             * means we got the SAK and can now do the unlink.
+             */
+            if (remote->state != REMOTE_UNLINKING) {
+                uint8_t unused;
+                DPS_DBGPRINT("Deferred unlink for %s\n", DESCRIBE(remote));
+                remote->state = REMOTE_UNLINKING;
+                DPS_UpdateOutboundInterests(node, remote, &unused);
+                DPS_SendSubscription(node, remote);
+                return;
+            }
             status = DPS_ERR_MISSING;
         }
+        remote->completion = NULL;
         if ((status != DPS_OK) && (status != DPS_ERR_EXISTS)) {
             DPS_DeleteRemoteNode(node, remote);
         }
@@ -313,7 +325,7 @@ static void RemoveRemoteNode(DPS_Node* node, RemoteNode* remote)
 
 void DPS_DeleteRemoteNode(DPS_Node* node, RemoteNode* remote)
 {
-    DPS_DBGTRACE();
+    DPS_DBGTRACEA("%s\n", DESCRIBE(remote));
 
     if (!IsValidRemoteNode(node, remote)) {
         DPS_ERRPRINT("Attempt to delete invalid remote %p\n", remote);
@@ -358,31 +370,26 @@ DPS_Status DPS_UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, uin
     DPS_Status ret;
     DPS_BitVector* newInterests = NULL;
     DPS_BitVector* newNeeds = NULL;
-#if 0
-    const DPS_UUID* minMeshId;
-#endif
 
     DPS_DBGTRACE();
 
     /*
      * Don't update interests for inactive remotes
      */
-    if (destNode->state == REMOTE_MUTED || destNode->state == REMOTE_DEAD) {
+    if (destNode->state == REMOTE_DEAD) {
         *changes = DPS_FALSE;
         return DPS_OK;
     }
-    if (destNode->state == REMOTE_ACTIVE) {
-        *changes = DPS_FALSE;
-    } else {
-        /*
-         * Transition states are always a change
-         */
-        ret = DPS_ClearOutboundInterests(destNode);
-        if (ret != DPS_OK) {
-            goto ErrExit;
-        }
+    /*
+     * Unlinking is always a change
+     */
+    if (destNode->state == REMOTE_UNLINKING) {
+        FreeOutboundInterests(destNode);
+        ++destNode->outbound.revision;
         *changes = DPS_TRUE;
+        return DPS_OK;
     }
+    *changes = DPS_FALSE;
     /*
      * Inbound interests from the node we are updating are excluded from the
      * recalculation of outbound interests
@@ -479,34 +486,26 @@ DPS_Status DPS_MuteRemoteNode(DPS_Node* node, RemoteNode* remote, RemoteNodeStat
     remote->state = newState;
     DPS_DBGPRINT("%s %s\n", RemoteStateTxt(remote), DESCRIBE(remote));
     /*
-     * Clear the inbound and outbound interests
+     * Free the outbound interests, they are not needed while the remote is muted
      */
-    DPS_ClearInboundInterests(node, remote);
-    ret = DPS_ClearOutboundInterests(remote);
-    if (ret == DPS_OK) {
-        /*
-         * No interests to be sent
-         */
-        remote->outbound.sendInterests = DPS_FALSE;
-    }
+    FreeOutboundInterests(remote);
     if (newState == REMOTE_DEAD) {
+        DPS_DBGINFO("Marking remote %s as DEAD\n", DESCRIBE(remote));
         /*
-         * Obviously not keeping connection alive for this remote
+         * Obviously not keeping connection alive for a dead remote
          */
         DPS_NetConnectionDecRef(remote->ep.cn);
         remote->outbound.sakPending = DPS_FALSE;
     }
-    if (newState != REMOTE_MUTING) {
-        /*
-         * Move the muted node to the head of the remote node list so remotes
-         * can be unmuted in FILO order.
-         */
-        RemoveRemoteNode(node, remote);
-        InsertRemoteNode(node, remote);
-        ++node->numMutedRemotes;
-        if (node->numMutedRemotes == node->numRemoteNodes) {
-            DPS_ERRPRINT("All remotes are muted\n");
-        }
+    /*
+     * Move the muted node to the head of the remote node list so remotes
+     * can be unmuted in FILO order.
+     */
+    RemoveRemoteNode(node, remote);
+    InsertRemoteNode(node, remote);
+    ++node->numMutedRemotes;
+    if (node->numMutedRemotes == node->numRemoteNodes) {
+        DPS_ERRPRINT("All remotes are muted\n");
     }
     return ret;
 }
@@ -522,7 +521,7 @@ DPS_Status DPS_UnmuteRemoteNode(DPS_Node* node, RemoteNode* remote)
 
         DPS_DBGPRINT("Unmuting %s remote %s\n", RemoteStateTxt(remote), DESCRIBE(remote));
 
-        remote->state = REMOTE_UNMUTING;
+        remote->state = REMOTE_ACTIVE;
         /*
          * We need a fresh mesh id that is less than any of the mesh id's
          * we have already seen. If we were to send the same mesh id that
@@ -540,8 +539,11 @@ DPS_Status DPS_UnmuteRemoteNode(DPS_Node* node, RemoteNode* remote)
 #endif
         --node->numMutedRemotes;
         /*
-         * Send the unmute subscription message
+         * We didn't send any interests out on this link while is was
+         * muted so we need to bring the remote up to date. First clear
+         * the interests because we don't want to send a delta.
          */
+        DPS_ClearOutboundInterests(remote);
         ret = DPS_UpdateOutboundInterests(node, remote, &unused);
         if (ret == DPS_OK) {
             ret = DPS_SendSubscription(node, remote);
@@ -593,6 +595,8 @@ DPS_Status DPS_AddRemoteNode(DPS_Node* node, const DPS_NodeAddress* addr, DPS_Ne
             DPS_DBGPRINT("Reactivating dead remote %s\n", DPS_NodeAddrToString(addr));
             remote->state = REMOTE_ACTIVE;
             remote->inbound.meshId = DPS_MaxMeshId;
+            remote->inbound.revision += 1;
+            remote->inbound.revision = remote->outbound.revision;
         } else {
             ret = DPS_ERR_EXISTS;
         }
@@ -853,14 +857,14 @@ static void FindAlternativeRoute(DPS_Node* node, RemoteNode* oldRoute)
     RemoteNode* remote;
     RemoteNode* newRoute = NULL;
 
-    DPS_DBGPRINT("Find alternative route to %s\n", DESCRIBE(oldRoute));
+    DPS_DBGINFO("Find alternative route to %s\n", DESCRIBE(oldRoute));
 
     for (remote = node->remoteNodes; remote != NULL; remote = remote->next) {
         if (remote == oldRoute) {
             continue;
         }
         if (DPS_UUIDCompare(&remote->inbound.meshId, &oldRoute->inbound.meshId) == 0) {
-            if (remote->state == REMOTE_ACTIVE || remote->state == REMOTE_UNMUTING) {
+            if (remote->state == REMOTE_ACTIVE) {
                 /*
                  * Route already exists or is already being restored
                  */
@@ -880,7 +884,7 @@ static void FindAlternativeRoute(DPS_Node* node, RemoteNode* oldRoute)
         }
     }
     if (newRoute) {
-        DPS_DBGPRINT("Try unmuting link to %s mesh id %s\n", DESCRIBE(newRoute), DPS_UUIDToString(&newRoute->inbound.meshId));
+        DPS_DBGINFO("Try unmuting link to %s mesh id %s\n", DESCRIBE(newRoute), DPS_UUIDToString(&newRoute->inbound.meshId));
         DPS_UnmuteRemoteNode(node, newRoute);
     } else {
 #ifdef DPS_DEBUG
@@ -916,6 +920,10 @@ static void SendSubsTimer(uv_timer_t* handle)
     for (remote = node->remoteNodes; remote != NULL; remote = remoteNext) {
         uint8_t changes = DPS_FALSE;
         remoteNext = remote->next; /* remote may get deleted or moved */
+
+        if (remote->state == REMOTE_DEAD) {
+            continue;
+        }
         /*
          * Resend the previous SUB or SAK if it has not been ACK'd
          */
@@ -964,20 +972,23 @@ static void SendSubsTimer(uv_timer_t* handle)
             if (remote->outbound.lastSubMsgType == DPS_MSG_TYPE_SUB) {
                 ret = DPS_SendSubscription(node, remote);
             } else {
-                ret = DPS_SendSubscriptionAck(node, remote);
+                ret = DPS_SendSubscriptionAck(node, remote, DPS_FALSE);
             }
             if (ret == DPS_OK) {
                 reschedule = DPS_TRUE;
             }
         } else {
-            if (remote->state != REMOTE_ACTIVE && remote->state != REMOTE_LINKING && remote->state != REMOTE_UNLINKING) {
+            /*
+             * Ignore muted links
+             */
+            if (remote->state == REMOTE_MUTED) {
                 continue;
             }
             ret = DPS_UpdateOutboundInterests(node, remote, &changes);
             if (ret == DPS_OK) {
                 /*
-                 * If subsPending == SubsNothingPending it means the keep alive timer triggered so
-                 * send subscription message to all active remotes even when there are no changes.
+                 * If subsPending == SubsNothingPending it means the keep alive timer
+                 * triggered so send subscription message even when there are no changes.
                  */
                 if (changes || node->subsPending == SubsNonePending) {
                     ret = DPS_SendSubscription(node, remote);
@@ -1763,6 +1774,12 @@ void DPS_SetNodeSubscriptionUpdateDelay(DPS_Node* node, uint32_t subsRateMsecs)
     node->subsRate = subsRateMsecs;
 }
 
+static void LinkCompletion(void* data)
+{
+    OnOpCompletion* completion = (OnOpCompletion*)data;
+    DPS_RemoteCompletion(completion->node, completion, DPS_OK);
+}
+
 static DPS_Status Link(DPS_Node* node, const DPS_NodeAddress* addr, OnOpCompletion* completion)
 {
     RemoteNode* remote = NULL;
@@ -1775,14 +1792,23 @@ static DPS_Status Link(DPS_Node* node, const DPS_NodeAddress* addr, OnOpCompleti
 
     DPS_LockNode(node);
     ret = DPS_AddRemoteNode(node, addr, NULL, &remote);
-    if (ret == DPS_OK) {
+    if (ret == DPS_OK || ret == DPS_ERR_EXISTS) {
         completion->remote = remote;
         remote->completion = completion;
         remote->state = REMOTE_LINKING;
-        /*
-         * Send the initial subscription to the remote node.
-         */
-        DPS_UpdateSubs(node, SubsSendNow);
+        if (ret == DPS_ERR_EXISTS) {
+            /*
+             * Nothing to do so just call the completion callback
+             */
+            ret = DPS_NodeScheduleRequest(node, LinkCompletion, completion);
+        } else {
+            /*
+             * Send the initial subscription to the remote node.
+             */
+            DPS_UpdateSubs(node, SubsSendNow);
+        }
+    } else {
+        DPS_ERRPRINT("Link failed %s\n", DPS_ErrTxt(ret));
     }
     DPS_UnlockNode(node);
     return ret;
@@ -1904,7 +1930,6 @@ DPS_Status DPS_Unlink(DPS_Node* node, const DPS_NodeAddress* addr, DPS_OnUnlinkC
         DPS_UnlockNode(node);
         return DPS_ERR_BUSY;
     }
-    remote->state = REMOTE_UNLINKING;
     /*
      * Unlinking the remote node will cause it to be deleted after the
      * subscriptions are updated. When the remote node is removed
@@ -1916,7 +1941,17 @@ DPS_Status DPS_Unlink(DPS_Node* node, const DPS_NodeAddress* addr, DPS_OnUnlinkC
         DPS_UnlockNode(node);
         return DPS_ERR_RESOURCES;
     }
-    DPS_UpdateSubs(node, SubsSendNow);
+    memcpy(&remote->completion->addr, addr, sizeof(DPS_NodeAddress));
+    /*
+     * If there is a SAK pending we will set the state to UNLINKING
+     * after the SAK has been received. See DPS_RemoteCompletion()
+     */
+    if (remote->outbound.sakPending) {
+        DPS_DBGPRINT("Deferring unlink while SAK pending\n");
+    } else {
+        remote->state = REMOTE_UNLINKING;
+        DPS_UpdateSubs(node, SubsSendNow);
+    }
     DPS_UnlockNode(node);
     return DPS_OK;
 }
@@ -2235,10 +2270,6 @@ const char* RemoteStateTxt(RemoteNode* remote)
             return "LINKING";
         case REMOTE_UNLINKING:
             return "UNLINKING";
-        case REMOTE_MUTING:
-            return "MUTING";
-        case REMOTE_UNMUTING:
-            return "UNMUTING";
         case REMOTE_MUTED:
             return "MUTED";
         case REMOTE_DEAD:
