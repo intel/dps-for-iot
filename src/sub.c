@@ -1027,7 +1027,7 @@ DPS_Status DPS_DecodeSubscriptionAck(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
             remote->outbound.sendInterests = DPS_FALSE;
             remote->outbound.sakPending = DPS_FALSE;
             if (remote->completion) {
-                DPS_RemoteCompletion(node, remote->completion, DPS_OK);
+                DPS_RemoteCompletion(remote->completion, DPS_OK);
             }
         } else {
             DPS_WARNPRINT("Unexpected revision in SAK from %s, expected %d got %d\n", DESCRIBE(remote), remote->outbound.revision, revision);

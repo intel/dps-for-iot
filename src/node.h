@@ -200,14 +200,6 @@ typedef enum {
     REMOTE_DEAD           /**< Remote was linked but went unresponsive */
 } RemoteNodeState;
 
-/**
- * The link state
- */
-typedef enum {
-    LINK_PASSIVE,         /**< This node accepted the link */
-    LINK_ACTIVE           /**< This node initiated the link */
-} LinkState;
-
 #ifdef DPS_DEBUG
 /**
  * Return the remote node state as a text string
@@ -227,7 +219,6 @@ const char* RemoteStateTxt(const RemoteNode* remote);
 typedef struct _RemoteNode {
     OnOpCompletion* completion;        /**< Completion context for link and unlink operations */
     RemoteNodeState state;             /**< The remote node state */
-    LinkState linkState;               /**< The link state */
     /** Inbound state */
     struct {
         uint32_t revision;             /**< Revision number of last subscription received from this node */

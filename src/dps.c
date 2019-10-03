@@ -201,6 +201,9 @@ static void RemoteCompletion(void* data)
     DPS_DBGTRACEA("For %s\n", DPS_NodeAddrToString(addr));
 
     if (remote) {
+        if (remote->completion == completion) {
+            remote->completion = NULL;
+        }
         if (completion->op == LINK_OP) {
             /*
              * State should be either ACTIVE, LINKING, or MUTED
@@ -228,7 +231,6 @@ static void RemoteCompletion(void* data)
             }
             status = DPS_ERR_MISSING;
         }
-        remote->completion = NULL;
         if ((status != DPS_OK) && (status != DPS_ERR_EXISTS)) {
             DPS_DeleteRemoteNode(node, remote);
         }
@@ -604,7 +606,6 @@ DPS_Status DPS_AddRemoteNode(DPS_Node* node, const DPS_NodeAddress* addr, DPS_Ne
         if (remote->state == REMOTE_DEAD) {
             DPS_DBGPRINT("Reactivating dead remote %s\n", DPS_NodeAddrToString(addr));
             remote->state = REMOTE_ACTIVE;
-            remote->linkState = LINK_PASSIVE;
             remote->inbound.meshId = DPS_MaxMeshId;
             remote->inbound.revision += 1;
             remote->inbound.revision = remote->outbound.revision;
@@ -1786,12 +1787,6 @@ void DPS_SetNodeSubscriptionUpdateDelay(DPS_Node* node, uint32_t subsRateMsecs)
     node->subsRate = subsRateMsecs;
 }
 
-static void LinkCompletion(void* data)
-{
-    OnOpCompletion* completion = (OnOpCompletion*)data;
-    DPS_RemoteCompletion(completion->node, completion, DPS_OK);
-}
-
 static DPS_Status Link(DPS_Node* node, const DPS_NodeAddress* addr, OnOpCompletion* completion)
 {
     RemoteNode* remote = NULL;
@@ -1811,7 +1806,7 @@ static DPS_Status Link(DPS_Node* node, const DPS_NodeAddress* addr, OnOpCompleti
             /*
              * Nothing to do so just call the completion callback
              */
-            ret = DPS_NodeScheduleRequest(node, LinkCompletion, completion);
+            ret = DPS_NodeScheduleRequest(node, RemoteCompletion, completion);
         } else {
             /*
              * Send the initial subscription to the remote node.
