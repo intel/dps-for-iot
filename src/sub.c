@@ -882,7 +882,6 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
             ret = DPS_OK;
         } else {
             remoteIsNew = DPS_TRUE;
-            ret = DPS_ClearOutboundInterests(remote);
         }
     }
     if (ret != DPS_OK) {
