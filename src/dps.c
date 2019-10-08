@@ -497,6 +497,7 @@ DPS_Status DPS_MuteRemoteNode(DPS_Node* node, RemoteNode* remote, RemoteNodeStat
         DPS_NetConnectionDecRef(remote->ep.cn);
         remote->outbound.sakPending = DPS_FALSE;
     }
+    remote->outbound.sendInterests = DPS_FALSE;
     /*
      * Move the muted node to the head of the remote node list so remotes
      * can be unmuted in FILO order.

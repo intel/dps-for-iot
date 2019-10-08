@@ -444,6 +444,59 @@ static void DumpPortMap(size_t numIds)
     }
 }
 
+inline static void Swap(DPS_UUID** a, DPS_UUID** b)
+{
+    DPS_UUID* tmp = *a;
+    *a = *b;
+    *b = tmp;
+}
+
+static void UUIDSort(DPS_UUID** ids, int first, int last)
+{
+   if (first < last) {
+      int pivot = first;
+      int i = first;
+      int j = last;
+
+      while (i < j) {
+         while (i < last && DPS_UUIDCompare(ids[i], ids[pivot]) < 0) {
+            ++i;
+         }
+         while (DPS_UUIDCompare(ids[j], ids[pivot]) > 0) {
+            --j;
+         }
+         if (i < j) {
+            Swap(&ids[i], &ids[j]);
+         }
+      }
+      Swap(&ids[pivot], &ids[j]);
+      UUIDSort(ids, first, j - 1);
+      UUIDSort(ids, j + 1, last);
+   }
+}
+
+/* Generate a SED script to make debug output easier to read */
+static void GenSedScript(FILE* sedFile, size_t numIds)
+{
+    DPS_UUID** meshIds = malloc(numIds * sizeof(DPS_UUID*));
+    size_t numMeshIds = 0;
+    size_t i;
+
+    for (i = 0; i < numIds; ++i) {
+        uint16_t id = NodeList[i];
+        DPS_Node* node = NodeMap[id];
+        if (node) {
+            meshIds[numMeshIds++] = &node->meshId;
+            fprintf(sedFile, "s/\\[::1]:%d/Node[%d]/g\n", GetPortNumber(node), id);
+        }
+    }
+    UUIDSort(meshIds, 0, numMeshIds - 1);
+    for (i = 0; i < numMeshIds; ++i) {
+        fprintf(sedFile, "s/%s/%d/g\n", MeshIdStr(meshIds[i]), (int)i);
+    }
+    free(meshIds);
+}
+
 static void OnNodeDestroyed(DPS_Node* node, void* data)
 {
     if (data) {
@@ -454,8 +507,9 @@ static void OnNodeDestroyed(DPS_Node* node, void* data)
 static int subsRate = 250;
 static int maxSettleTime;
 
-static void WaitUntilSettled(DPS_Event* sleeper, size_t expMuted)
+static int WaitUntilSettled(DPS_Event* sleeper, size_t expMuted)
 {
+    int ret = 0;
     int i;
     size_t numMuted = 0;
     int repeats = 0;
@@ -486,12 +540,15 @@ static void WaitUntilSettled(DPS_Event* sleeper, size_t expMuted)
     }
     if (numMuted & 1) {
         DPS_PRINT("ERROR: expected even number of muted remotes\n");
+        ret = 1;
     }
     /* Both ends of a link will be marked as muted, so divide the count by 2 */
     numMuted /= 2;
     if (numMuted != expMuted) {
         DPS_PRINT("ERROR: expected %d muted but got %d\n", expMuted, numMuted);
+        ret = 1;
     }
+    return ret;
 }
 
 static volatile int LinksUp;
@@ -529,6 +586,7 @@ static DPS_Status LinkNodes(DPS_Node* src, DPS_Node* dst)
 
 int main(int argc, char** argv)
 {
+    int err = 0;
     FILE* dotFile = NULL;
     DPS_Status ret;
     char** arg = argv + 1;
@@ -546,6 +604,7 @@ int main(int argc, char** argv)
     int l2 = 0;
     const char* inFn = NULL;
     const char* outFn = NULL;
+    const char* sedFn = NULL;
     uint16_t killList[MAX_KILLS];
     int i;
     int debugKills = 0;
@@ -558,6 +617,9 @@ int main(int argc, char** argv)
             continue;
         }
         if (StrArg("-o", &arg, &argc, &outFn)) {
+            continue;
+        }
+        if (StrArg("-e", &arg, &argc, &sedFn)) {
             continue;
         }
         if (IntArg("-s", &arg, &argc, &maxSubs, 0, 10000)) {
@@ -596,6 +658,7 @@ int main(int argc, char** argv)
             DPS_PRINT("    -k  maximum number of randomly terminated links\n");
             DPS_PRINT("    -m  hide muted arcs in the graph\n");
             DPS_PRINT("    -o  specifies the output file for the graph (graphviz format)\n");
+            DPS_PRINT("    -e  generate a sed script to process debug output\n");
             DPS_PRINT("    -s  maximum number of subscriptions\n");
             return 1;
         }
@@ -650,12 +713,12 @@ int main(int argc, char** argv)
         NodeMap[NodeList[i]] = node;
     }
     DumpPortMap(numIds);
+    DumpMeshIds(numIds);
 
     sleeper = DPS_CreateEvent();
     /*
      * Wait for a short time while before trying to link
      */
-    DumpMeshIds(numIds);
     DPS_TimedWaitForEvent(sleeper, 1000);
     /*
      * Link the nodes asynchronously
@@ -754,11 +817,20 @@ int main(int argc, char** argv)
     if (!dotFile) {
         dotFile = stdout;
     }
+    if (sedFn) {
+        FILE* sedFile = fopen(sedFn, "w");
+        if (!sedFile) {
+            DPS_PRINT("Could not open %s for writing\n");
+        } else {
+            GenSedScript(sedFile, numIds);
+            fclose(sedFile);
+        }
+    }
     /*
      * This will wait while links are being muted
      */
     expMuted = numLinks + 1 - numIds;
-    WaitUntilSettled(sleeper, expMuted);
+    err = WaitUntilSettled(sleeper, expMuted);
 
     DumpMeshIds(numIds);
 
@@ -802,7 +874,7 @@ int main(int argc, char** argv)
         /*
          * This will wait while links are being unmuted
          */
-        WaitUntilSettled(sleeper, expMuted);
+        err = WaitUntilSettled(sleeper, expMuted);
 
         DumpMeshIds(numIds);
 
@@ -830,5 +902,5 @@ int main(int argc, char** argv)
         }
     }
 
-    return 0;
+    return err;
 }

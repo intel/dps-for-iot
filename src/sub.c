@@ -65,6 +65,7 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 #define DPS_SUB_FLAG_DELTA_IND   0x01      /* Indicate interests is a delta */
 #define DPS_SUB_FLAG_UNLINK_REQ  0x02      /* Subscription message is requesting to unlink */
 #define DPS_SUB_FLAG_SAK_REQ     0x04      /* An acknowledgement is requested for the subscription */
+#define DPS_SUB_FLAG_MUTED       0x08      /* Indicates link has been muted */
 
 static int IsValidSub(const DPS_Subscription* sub)
 {
@@ -273,15 +274,6 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote)
     if (!node->netCtx) {
         return DPS_ERR_NETWORK;
     }
-    /*
-     * Set flags
-     */
-    if (remote->state == REMOTE_UNLINKING) {
-        flags |= DPS_SUB_FLAG_UNLINK_REQ;
-    }
-    if (remote->outbound.deltaInd) {
-        flags |= DPS_SUB_FLAG_DELTA_IND;
-    }
 #ifdef DPS_DEBUG
     ++_DPS_NumSubs;
 #endif
@@ -306,10 +298,19 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote)
     default:
         return DPS_ERR_INVALID;
     }
+    /*
+     * Set flags and interests
+     */
     if (remote->state != REMOTE_UNLINKING) {
-        interests = remote->outbound.deltaInd ? remote->outbound.delta : remote->outbound.interests;
+        if (remote->outbound.deltaInd) {
+            interests = remote->outbound.delta;
+            flags |= DPS_SUB_FLAG_DELTA_IND;
+        } else {
+            interests = remote->outbound.interests;
+        }
         len += DPS_BitVectorSerializeMaxSize(interests) + DPS_BitVectorSerializeFHSize();
     } else {
+        flags |= DPS_SUB_FLAG_UNLINK_REQ;
         interests = NULL;
     }
     /*
@@ -458,6 +459,9 @@ DPS_Status DPS_SendSubscriptionAck(DPS_Node* node, RemoteNode* remote, int colli
     }
     if (remote->state == REMOTE_UNLINKING) {
         flags |= DPS_SUB_FLAG_UNLINK_REQ;
+    }
+    if (remote->state == REMOTE_MUTED) {
+        flags |= DPS_SUB_FLAG_MUTED;
     }
     /*
      * Whenever interests are sent a SAK is required
@@ -681,7 +685,7 @@ static DPS_Status UnlinkRemote(DPS_Node* node, DPS_NodeAddress* addr, uint32_t r
  * Each node has a randomly allocated mesh id that is used to detect loops in the mesh.
  *
  * Mesh id's are included in the header of subscription, subscription acknowledgments
- * (SAKS) that include subscription information. SAKs only include subscription information
+ * (SAKs) that include subscription information. SAKs only include subscription information
  * during link establishment, thereafter SAKs contain the minimal information needed for
  * reliable subscription delivery.
  *
@@ -699,7 +703,11 @@ static DPS_Status UnlinkRemote(DPS_Node* node, DPS_NodeAddress* addr, uint32_t r
  */
 int MeshHasLoop(DPS_Node* node, RemoteNode* src, DPS_UUID* meshId)
 {
-    return DPS_UUIDCompare(meshId, DPS_MinMeshId(node, src)) == 0;
+    if (DPS_UUIDCompare(&src->inbound.meshId, meshId) == 0) {
+        return DPS_FALSE;
+    } else {
+        return DPS_UUIDCompare(meshId, DPS_MinMeshId(node, src)) == 0;
+    }
 }
 
 /*
@@ -894,12 +902,15 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
 
     DPS_DBGINFO("Received mesh id %08x in %s from %s #%d\n", meshId.val32[0], sakSeqNum ? "SAK" : "SUB", DESCRIBE(remote), revision);
 
-    if (remote->state != REMOTE_MUTED && MeshHasLoop(node, remote, &meshId)) {
+    if (!sakSeqNum && (remote->state == REMOTE_MUTED)) {
+        DPS_DBGINFO("Received SUB from muted remote\n", DESCRIBE(remote));
+    }
+    if (remote->state != REMOTE_MUTED && ((flags & DPS_SUB_FLAG_MUTED) || MeshHasLoop(node, remote, &meshId))) {
         DPS_DBGINFO("Loop detected for %s\n", DESCRIBE(remote));
         ret = DPS_MuteRemoteNode(node, remote, REMOTE_MUTED);
-    }
-    if (ret != DPS_OK) {
-        goto DiscardAndExit;
+        if (ret != DPS_OK) {
+            goto DiscardAndExit;
+        }
     }
     if (flags & DPS_SUB_FLAG_SAK_REQ) {
         if ((keysMask & OptKeysMask) != OptKeysMask) {
