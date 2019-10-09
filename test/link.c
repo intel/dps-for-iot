@@ -75,6 +75,16 @@ static void TestRemoteLinkedAlready(void)
 
     addr = DPS_CreateAddress();
     ret = DPS_LinkTo(b, DPS_GetListenAddressString(a), addr);
+    ASSERT(ret == DPS_OK);
+    DPS_DestroyAddress(addr);
+
+    addr = DPS_CreateAddress();
+    ret = DPS_LinkTo(a, DPS_GetListenAddressString(b), addr);
+    ASSERT(ret == DPS_ERR_EXISTS);
+    DPS_DestroyAddress(addr);
+
+    addr = DPS_CreateAddress();
+    ret = DPS_LinkTo(b, DPS_GetListenAddressString(a), addr);
     ASSERT(ret == DPS_ERR_EXISTS);
     DPS_DestroyAddress(addr);
 

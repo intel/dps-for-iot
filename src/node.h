@@ -191,6 +191,7 @@ extern const DPS_UUID DPS_MaxMeshId;
  * The remote node state
  */
 typedef enum {
+    REMOTE_NEW,           /**< Remote node has been created */
     REMOTE_ACTIVE,        /**< Remote node is linked */
     REMOTE_LINKING,       /**< Remote node is in the process of being linked */
     REMOTE_UNLINKING,     /**< Remote node is in the process of being unlinked */
@@ -229,6 +230,7 @@ typedef struct _RemoteNode {
     } inbound;
     /** Outbound state */
     struct {
+        uint8_t linkRequested;         /**< TRUE if the local node requested to link to this remote */
         uint8_t deltaInd;              /**< TRUE if the interests info is a delta */
         uint8_t sakCounter;            /**< Counter for deciding when to start and stop resending SUBs and SAKSs */
         uint8_t sendInterests;         /**< TRUE to include interests etc in a SAK */

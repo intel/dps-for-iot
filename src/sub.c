@@ -733,7 +733,6 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
     DPS_UUID meshId;
     uint8_t flags = 0;
     uint16_t keysMask;
-    int remoteIsNew = DPS_FALSE;
     int isDuplicate;
     int collision = DPS_FALSE;
     char* path = NULL;
@@ -829,9 +828,7 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
         }
     }
     if (ret != DPS_OK) {
-        DPS_BitVectorFree(interests);
-        DPS_BitVectorFree(needs);
-        return ret;
+        goto DiscardAndExit;
     }
 #if SIMULATE_PACKET_LOSS
     /*
@@ -878,7 +875,6 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
             }
             ret = DPS_OK;
         } else {
-            remoteIsNew = DPS_TRUE;
             ret = DPS_ClearOutboundInterests(remote);
         }
     }
@@ -935,7 +931,7 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
             DPS_BitVectorFree(interests);
             DPS_BitVectorFree(needs);
         }
-        if (remoteIsNew) {
+        if (remote->state == REMOTE_NEW) {
             assert(!isDuplicate);
             /*
              * Always send the interests in the first SAK
@@ -963,11 +959,14 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
         DPS_BitVectorFree(needs);
     }
     remote->inbound.meshId = meshId;
+    if (remote->state == REMOTE_NEW) {
+        remote->state = REMOTE_ACTIVE;
+    }
     return ret;
 
 DiscardAndExit:
 
-    if (remoteIsNew) {
+    if (remote && remote->state == REMOTE_NEW) {
         DPS_DeleteRemoteNode(node, remote);
     }
     if (ret != DPS_OK) {

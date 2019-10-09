@@ -199,12 +199,10 @@ void DPS_RemoteCompletion(DPS_Node* node, OnOpCompletion* completion, DPS_Status
     if (remote) {
         if (completion->op == LINK_OP) {
             /*
-             * State should be either LINKING or MUTED
+             * Expected states are LINKING, ACTIVE or MUTED
              */
             if (remote->state == REMOTE_LINKING) {
                 remote->state = REMOTE_ACTIVE;
-            } else {
-                assert(remote->state == REMOTE_MUTED);
             }
         } else if (completion->op == UNLINK_OP) {
             /*
@@ -337,6 +335,9 @@ void DPS_DeleteRemoteNode(DPS_Node* node, RemoteNode* remote)
     DPS_BitVectorFree(remote->outbound.delta);
 
     if (remote->completion) {
+        /*
+         * Clear the remote so DPS_RemoteCompletion() won't try to delete it.
+         */
         remote->completion->remote = NULL;
         DPS_RemoteCompletion(node, remote->completion, DPS_ERR_MISSING);
     }
@@ -495,6 +496,7 @@ DPS_Status DPS_MuteRemoteNode(DPS_Node* node, RemoteNode* remote, RemoteNodeStat
          * Obviously not keeping connection alive for a dead remote
          */
         DPS_NetConnectionDecRef(remote->ep.cn);
+        remote->outbound.linkRequested = DPS_FALSE;
         remote->outbound.sakPending = DPS_FALSE;
     }
     remote->outbound.sendInterests = DPS_FALSE;
@@ -594,10 +596,11 @@ DPS_Status DPS_AddRemoteNode(DPS_Node* node, const DPS_NodeAddress* addr, DPS_Ne
     if (remote) {
         if (remote->state == REMOTE_DEAD) {
             DPS_DBGPRINT("Reactivating dead remote %s\n", DPS_NodeAddrToString(addr));
-            remote->state = REMOTE_ACTIVE;
+            remote->state = REMOTE_NEW;
             remote->inbound.meshId = DPS_MaxMeshId;
             remote->inbound.revision += 1;
             remote->inbound.revision = remote->outbound.revision;
+            remote->outbound.linkRequested = DPS_FALSE;
         } else {
             ret = DPS_ERR_EXISTS;
         }
@@ -1775,10 +1778,24 @@ void DPS_SetNodeSubscriptionUpdateDelay(DPS_Node* node, uint32_t subsRateMsecs)
     node->subsRate = subsRateMsecs;
 }
 
-static void LinkCompletion(void* data)
+static void LinkExists(void* data)
 {
+    DPS_Status status = DPS_OK;
     OnOpCompletion* completion = (OnOpCompletion*)data;
-    DPS_RemoteCompletion(completion->node, completion, DPS_OK);
+    DPS_Node* node = completion->node;
+
+    DPS_LockNode(node);
+    /*
+     * If the local node didn't make the link request complete with an
+     * OK status status, otherwise report an EXISTS error.
+     */
+    if (completion->remote->outbound.linkRequested) {
+        status = DPS_ERR_EXISTS;
+    } else {
+        completion->remote->outbound.linkRequested = DPS_TRUE;
+    }
+    DPS_RemoteCompletion(node, completion, status);
+    DPS_UnlockNode(node);
 }
 
 static DPS_Status Link(DPS_Node* node, const DPS_NodeAddress* addr, OnOpCompletion* completion)
@@ -1796,17 +1813,19 @@ static DPS_Status Link(DPS_Node* node, const DPS_NodeAddress* addr, OnOpCompleti
     if (ret == DPS_OK || ret == DPS_ERR_EXISTS) {
         completion->remote = remote;
         remote->completion = completion;
-        remote->state = REMOTE_LINKING;
         if (ret == DPS_ERR_EXISTS) {
             /*
-             * Nothing to do so just call the completion callback
+             * Schedule a call to the completion callback
              */
-            ret = DPS_NodeScheduleRequest(node, LinkCompletion, completion);
+            ret = DPS_NodeScheduleRequest(node, LinkExists, completion);
         } else {
+            remote->outbound.linkRequested = DPS_TRUE;
+            remote->state = REMOTE_LINKING;
             /*
              * Send the initial subscription to the remote node.
              */
             DPS_UpdateSubs(node, SubsSendNow);
+            ret = DPS_OK;
         }
     } else {
         DPS_ERRPRINT("Link failed %s\n", DPS_ErrTxt(ret));
@@ -2265,6 +2284,8 @@ const char* RemoteStateTxt(RemoteNode* remote)
 {
     if (remote) {
         switch (remote->state) {
+        case REMOTE_NEW:
+            return "NEW";
         case REMOTE_ACTIVE:
             return "ACTIVE";
         case REMOTE_LINKING:
