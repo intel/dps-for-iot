@@ -213,6 +213,14 @@ int main(int argc, char** argv)
         goto Exit;
     }
 
+    /* Subscribe before link to ensure interests are included in link creation */
+    if (subscribe) {
+        ret = Subscribe(node, ack, auth, &sub);
+    }
+    if (ret != DPS_OK) {
+        goto Exit;
+    }
+
     if (linkText) {
         ret = DPS_Link(node, linkText, LinkComplete, NULL);
         if (ret != DPS_OK) {
@@ -241,8 +249,6 @@ int main(int argc, char** argv)
         }
     } else if (publish) {
         ret = Publish(node, security, &pub);
-    } else if (subscribe) {
-        ret = Subscribe(node, ack, auth, &sub);
     }
     if (ret != DPS_OK) {
         goto Exit;
