@@ -165,7 +165,8 @@ uint64_t DPS_Rand64(void)
     entropy.seeds[1] = LEPRNG(entropy.seeds[2]);
     entropy.seeds[2] = LEPRNG(entropy.seeds[3]);
     entropy.seeds[3] = LEPRNG(s0);
-    s0 = *((uint64_t*)entropy.seeds);
+    s0 = entropy.seeds[1];
+    s0 = (s0 << 32) | entropy.seeds[0];
     uv_mutex_unlock(&context.mutex);
     return s0;
 }
