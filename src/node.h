@@ -168,6 +168,8 @@ typedef struct _DPS_Node {
     DPS_NetContext* netCtx;               /**< Network context */
 
     uint8_t state;                        /**< Indicates if the node is running, stopping, or stopped */
+    DPS_OnNodeShutdown onShutdown;        /**< Function to call when the node is shutdown */
+    void* onShutdownData;                 /**< Context to pass to onShutdown callback */
     DPS_OnNodeDestroyed onDestroyed;      /**< Function to call when the node is destroyed */
     void* onDestroyedData;                /**< Context to pass to onDestroyed callback */
 

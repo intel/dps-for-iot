@@ -981,7 +981,10 @@ DiscardAndExit:
         DPS_DeleteRemoteNode(node, remote);
     }
     if (ret != DPS_OK) {
-        if (ret == DPS_ERR_STALE) {
+        if ((ret == DPS_ERR_STALE) || (ret == DPS_ERR_MISSING)) {
+            /*
+             * MISSING may occur when both sides unlink simultaneously
+             */
             DPS_WARNPRINT("%s was discarded - %s\n", sakSeqNum ? "SAK" : "SUB", DPS_ErrTxt(ret));
         } else {
             DPS_ERRPRINT("%s was discarded - %s\n", sakSeqNum ? "SAK" : "SUB", DPS_ErrTxt(ret));

@@ -506,6 +506,33 @@ void* DPS_GetNodeData(const DPS_Node* node);
 DPS_Status DPS_StartNode(DPS_Node* node, int mcastPub, DPS_NodeAddress* listenAddr);
 
 /**
+ * Function prototype for callback function called when a node is shutdown.
+ *
+ * Shutdown cleanly unlinks any nodes from this node. DPS_DestroyNode() does
+ * not.
+ *
+ * @param node   The node that was shutdown. This node is valid during
+ *               the callback.
+ * @param data   Data passed to DPS_ShutdownNode()
+ *
+ */
+typedef void (*DPS_OnNodeShutdown)(DPS_Node* node, void* data);
+
+/**
+ * Shutdowns a node.
+ *
+ * @param node   The node to shutdown
+ * @param cb     Callback function to be called when the node is shutdown
+ * @param data   Data to be passed to the callback function
+ *
+ * @return
+ * - DPS_OK if the node will be shutdown and the callback called
+ * - DPS_ERR_NULL node or cb was null
+ * - Or an error status code in which case the callback will not be called.
+ */
+DPS_Status DPS_ShutdownNode(DPS_Node* node, DPS_OnNodeShutdown cb, void* data);
+
+/**
  * Function prototype for callback function called when a node is destroyed.
  *
  * @param node   The node that was destroyed. This node is valid during

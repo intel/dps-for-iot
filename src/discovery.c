@@ -647,6 +647,7 @@ static void Ack(void* data)
     uint64_t timeout;
     int err;
 
+    DPS_LockNode(node);
     req->timer = malloc(sizeof(uv_timer_t));
     if (!req->timer) {
         err = UV_ENOMEM;
@@ -669,6 +670,7 @@ Exit:
     if (err) {
         DestroyAckRequest(req);
     }
+    DPS_UnlockNode(node);
 }
 
 static DPS_Status ScheduleAck(DPS_DiscoveryService* service, const DPS_Publication* pub)
@@ -758,17 +760,18 @@ static void StartTimer(void* data)
     DPS_Node* node = service->node;
     int err;
 
+    DPS_LockNode(node);
     if (!service->timer) {
         service->timer = malloc(sizeof(uv_timer_t));
         if (!service->timer) {
             DPS_ERRPRINT("alloc failed - %s\n", DPS_ErrTxt(DPS_ERR_RESOURCES));
-            return;
+            goto Exit;
         }
         service->timer->data = service;
         err = uv_timer_init(node->loop, service->timer);
         if (err) {
             DPS_ERRPRINT("uv_timer_init failed - %s\n", uv_strerror(err));
-            return;
+            goto Exit;
         }
     } else {
         uv_timer_stop(service->timer);
@@ -777,9 +780,11 @@ static void StartTimer(void* data)
     err = uv_timer_start(service->timer, PublishTimerOnTimeout, service->nextTimeout, 0);
     if (err) {
         DPS_ERRPRINT("uv_timer_start failed - %s\n", uv_strerror(err));
-        return;
+        goto Exit;
     }
     service->nextTimeout += 1000;
+Exit:
+    DPS_UnlockNode(node);
 }
 
 DPS_Status DPS_DiscoveryPublish(DPS_DiscoveryService* service, const uint8_t* payload, size_t len,
@@ -881,7 +886,10 @@ static void Destroy(DPS_DiscoveryService* service)
 static void DestroyService(void* data)
 {
     DPS_DiscoveryService* service = data;
+    DPS_Node* node = service->node;
+    DPS_LockNode(node);
     Destroy(service);
+    DPS_UnlockNode(node);
 }
 
 static void PublishDestroyCb(DPS_Publication* pub, const DPS_Buffer* bufs, size_t numBufs,

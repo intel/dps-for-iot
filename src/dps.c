@@ -94,6 +94,7 @@ RemoteNode* DPS_LoopbackNode = (RemoteNode*)&DPS_LoopbackNode;
 static void DumpNode(uv_signal_t* handle, int signum);
 static void SendSubsTimer(uv_timer_t* handle);
 static void SendPubsTimer(uv_timer_t* handle);
+static DPS_Status Unlink(DPS_Node* node, RemoteNode* remote, DPS_OnUnlinkComplete cb, void* data);
 
 void DPS_LockNode(DPS_Node* node)
 {
@@ -190,25 +191,45 @@ void DPS_RxBufferToTx(const DPS_RxBuffer* rxBuffer, DPS_TxBuffer* txBuffer)
     txBuffer->txPos = rxBuffer->eod;
 }
 
-static void RemoteCompletion(void* data)
+static void OnShutdown(void* data)
 {
-    OnOpCompletion* completion = data;
+    DPS_Node* node = (DPS_Node*)data;
+    int doCb;
+
+    DPS_LockNode(node);
+    doCb = node->onShutdown && !node->remoteNodes;
+    DPS_UnlockNode(node);
+    if (doCb) {
+        DPS_DBGPRINT("OnShutdown\n");
+        node->onShutdown(node, node->onShutdownData);
+        node->onShutdown = node->onShutdownData = NULL;
+    }
+}
+
+static void OnShutdownUnlinkComplete(DPS_Node* node, const DPS_NodeAddress* addr, void* data)
+{
+    OnShutdown(node);
+}
+
+static void RemoteCompletion(OnOpCompletion* completion)
+{
     DPS_Node* node = completion->node;
     RemoteNode* remote = completion->remote;
     const DPS_NodeAddress* addr = &completion->addr;
     DPS_Status status = completion->status;
+    OpType op = completion->op;
 
     DPS_DBGTRACEA("For %s\n", DPS_NodeAddrToString(addr));
 
     if (remote) {
-        if (completion->op == LINK_OP) {
+        if (op == LINK_OP) {
             /*
              * Expected states are LINKING, ACTIVE or MUTED
              */
             if (remote->state == REMOTE_LINKING) {
                 remote->state = REMOTE_ACTIVE;
             }
-        } else if (completion->op == UNLINK_OP) {
+        } else if (op == UNLINK_OP) {
             /*
              * We cannot UNLINK while there a SAK is pending so
              * if we get here and the state is not UNLINKING it
@@ -230,12 +251,29 @@ static void RemoteCompletion(void* data)
             DPS_DeleteRemoteNode(node, remote);
         }
     }
-    if (completion->op == LINK_OP) {
+    if (op == LINK_OP) {
         completion->on.link(node, addr, status, completion->data);
-    } else if (completion->op == UNLINK_OP) {
+    } else if (op == UNLINK_OP) {
         completion->on.unlink(node, addr, completion->data);
     }
     free(completion);
+
+    if (node->onShutdown) {
+        /*
+         * We are shutting down.  Check if this is the last remote and
+         * issue the shutdown callback.
+         */
+        if (op == LINK_OP) {
+            status = Unlink(node, remote, OnShutdownUnlinkComplete, NULL);
+            assert(status != DPS_ERR_BUSY);
+            if (status != DPS_OK) {
+                DPS_ERRPRINT("Unlink failed - %s\n", DPS_ErrTxt(status));
+                DPS_DeleteRemoteNode(node, remote);
+            }
+        } else if (op == UNLINK_OP) {
+            OnShutdown(node);
+        }
+    }
 }
 
 void DPS_RemoteCompletion(OnOpCompletion* completion, DPS_Status status)
@@ -1567,8 +1605,10 @@ static void RunRequestsTask(uv_async_t* handle)
     while (!DPS_QueueEmpty(&node->requestQueue)) {
         request = (NodeRequest*)DPS_QueueFront(&node->requestQueue);
         DPS_QueueRemove(&request->queue);
+        DPS_UnlockNode(node);
         request->cb(request->data);
         free(request);
+        DPS_LockNode(node);
     }
     DPS_UnlockNode(node);
 }
@@ -1939,9 +1979,46 @@ Exit:
     return ret;
 }
 
+static DPS_Status Unlink(DPS_Node* node, RemoteNode* remote, DPS_OnUnlinkComplete cb, void* data)
+{
+    assert(node);
+    assert(remote);
+#ifdef DPS_DEBUG
+    assert(node->isLocked);
+#endif
+    /*
+     * Operations must be serialized
+     */
+    if (remote->completion) {
+        return DPS_ERR_BUSY;
+    }
+    /*
+     * Unlinking the remote node will cause it to be deleted after the
+     * subscriptions are updated. When the remote node is removed
+     * the completion callback will be called.
+     */
+    remote->completion = AllocCompletion(node, remote, UNLINK_OP, data, cb);
+    if (!remote->completion) {
+        return DPS_ERR_RESOURCES;
+    }
+    memcpy(&remote->completion->addr, &remote->ep.addr, sizeof(DPS_NodeAddress));
+    /*
+     * If there is a SAK pending we will set the state to UNLINKING
+     * after the SAK has been received. See DPS_RemoteCompletion()
+     */
+    if (remote->outbound.sakPending) {
+        DPS_DBGPRINT("Deferring unlink while SAK pending\n");
+    } else {
+        remote->state = REMOTE_UNLINKING;
+        DPS_UpdateSubs(node, SubsSendNow);
+    }
+    return DPS_OK;
+}
+
 DPS_Status DPS_Unlink(DPS_Node* node, const DPS_NodeAddress* addr, DPS_OnUnlinkComplete cb, void* data)
 {
     RemoteNode* remote;
+    DPS_Status ret;
 
     DPS_DBGTRACE();
 
@@ -1954,37 +2031,51 @@ DPS_Status DPS_Unlink(DPS_Node* node, const DPS_NodeAddress* addr, DPS_OnUnlinkC
         DPS_UnlockNode(node);
         return DPS_ERR_MISSING;
     }
-    /*
-     * Operations must be serialized
-     */
-    if (remote->completion) {
-        DPS_UnlockNode(node);
-        return DPS_ERR_BUSY;
-    }
-    /*
-     * Unlinking the remote node will cause it to be deleted after the
-     * subscriptions are updated. When the remote node is removed
-     * the completion callback will be called.
-     */
-    remote->completion = AllocCompletion(node, remote, UNLINK_OP, data, cb);
-    if (!remote->completion) {
+    ret = Unlink(node, remote, cb, data);
+    if ((ret != DPS_OK) && (ret != DPS_ERR_BUSY)) {
         DPS_DeleteRemoteNode(node, remote);
-        DPS_UnlockNode(node);
-        return DPS_ERR_RESOURCES;
-    }
-    memcpy(&remote->completion->addr, addr, sizeof(DPS_NodeAddress));
-    /*
-     * If there is a SAK pending we will set the state to UNLINKING
-     * after the SAK has been received. See DPS_RemoteCompletion()
-     */
-    if (remote->outbound.sakPending) {
-        DPS_DBGPRINT("Deferring unlink while SAK pending\n");
-    } else {
-        remote->state = REMOTE_UNLINKING;
-        DPS_UpdateSubs(node, SubsSendNow);
     }
     DPS_UnlockNode(node);
-    return DPS_OK;
+    return ret;
+}
+
+DPS_Status DPS_ShutdownNode(DPS_Node* node, DPS_OnNodeShutdown cb, void* data)
+{
+    DPS_Status ret = DPS_OK;
+
+    DPS_DBGTRACEA("node=%p,cb=%p,data=%p\n", node, cb, data);
+
+    if (!node || !cb) {
+        return DPS_ERR_NULL;
+    }
+    if (node->state != DPS_NODE_RUNNING || node->onShutdown) {
+        return DPS_ERR_INVALID;
+    }
+    DPS_LockNode(node);
+    node->onShutdown = cb;
+    node->onShutdownData = data;
+    if (!node->remoteNodes) {
+        ret = DPS_NodeScheduleRequest(node, OnShutdown, node);
+    } else {
+        RemoteNode* remote;
+        RemoteNode* next;
+        for (remote = node->remoteNodes; remote; remote = next) {
+            next = remote->next;
+            ret = Unlink(node, remote, OnShutdownUnlinkComplete, NULL);
+            if (ret == DPS_ERR_BUSY) {
+                /*
+                 * RemoteCompletion will finish the shutdown
+                 */
+                ret = DPS_OK;
+            }
+            if (ret != DPS_OK) {
+                DPS_ERRPRINT("Unlink failed - %s\n", DPS_ErrTxt(ret));
+                DPS_DeleteRemoteNode(node, remote);
+            }
+        }
+    }
+    DPS_UnlockNode(node);
+    return ret;
 }
 
 const char* DPS_NodeAddrToString(const DPS_NodeAddress* addr)
