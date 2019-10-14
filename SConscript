@@ -275,6 +275,7 @@ testsrcs = ['test/cbortest.c',
             'test/pubsub.c',
             'test/rle_compression.c',
             'test/topic_match.c',
+            'test/uuid.c',
             'test/version.c']
 
 Depends(testsrcs, ext_objs)

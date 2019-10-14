@@ -44,15 +44,15 @@ const char* DPS_UUIDToString(const DPS_UUID* uuid)
     static const char* hex = "0123456789abcdef";
     static THREAD char str[38];
     char* dst = str;
-    const uint8_t *src = uuid->val;
+    const uint8_t *src = uuid->val + sizeof(uuid->val);
     size_t i;
 
-    for (i = 0; i < sizeof(uuid->val); ++i) {
-        if (i == 4 || i == 6 || i == 8 || i == 10) {
+    for (i = sizeof(uuid->val); i > 0; --i) {
+        if (i == 6 || i == 8 || i == 10 || i == 12) {
             *dst++ = '-';
         }
-        *dst++ = hex[*src >> 4];
-        *dst++ = hex[*src++ & 0xF];
+        *dst++ = hex[*--src >> 4];
+        *dst++ = hex[*src & 0xF];
     }
     *dst = 0;
     return str;
@@ -165,13 +165,14 @@ uint64_t DPS_Rand64(void)
     entropy.seeds[1] = LEPRNG(entropy.seeds[2]);
     entropy.seeds[2] = LEPRNG(entropy.seeds[3]);
     entropy.seeds[3] = LEPRNG(s0);
-    s0 = entropy.seeds[0];
+    s0 = entropy.seeds[1];
+    s0 = (s0 << 32) | entropy.seeds[0];
     uv_mutex_unlock(&context.mutex);
     return s0;
 }
 
 /*
- * Note that uuidIn and uuiId out may be aliased.
+ * Note that uuidIn and uuidIn out may be aliased.
  */
 void DPS_RandUUIDLess(const DPS_UUID* uuidIn, DPS_UUID* uuidOut)
 {

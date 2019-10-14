@@ -150,7 +150,7 @@ def _expect_pub(children, topics, allow_error=False, timeout=-1, signers=None):
         while len(patterns):
             if not allow_error:
                 if signers != None:
-                    i = child.expect(['ERROR'] + ['Pub [0-9a-f-]+\([0-9]+\) \[(.*)\] matches:'], timeout=timeout)
+                    i = child.expect(['ERROR'] + ['Pub [0-9a-f-]+\([0-9]+\) \[([^\]]*)\] matches:'], timeout=timeout)
                     if i == 0:
                         raise RuntimeError('ERROR')
                     signers.append(child.match.group(1).decode())
@@ -159,7 +159,7 @@ def _expect_pub(children, topics, allow_error=False, timeout=-1, signers=None):
                     raise RuntimeError('ERROR')
             else:
                 if signers != None:
-                    child.expect(['Pub [0-9a-f-]+\([0-9]+\) \[(.*)\] matches:'], timeout=timeout)
+                    child.expect(['Pub [0-9a-f-]+\([0-9]+\) \[([^\]]*\] matches:'], timeout=timeout)
                     signers.append(child.match.group(1).decode())
                 child.expect(patterns, timeout=timeout)
             patterns.remove(child.match.re.pattern.decode())
@@ -167,7 +167,7 @@ def _expect_pub(children, topics, allow_error=False, timeout=-1, signers=None):
 def _expect_ack(children, allow_error=False, timeout=-1, signers=None):
     linesep = (children[0] if children else None).linesep
     if signers != None:
-        pattern = ['Ack for pub UUID [0-9a-f-]+\([0-9]+\) \[(.*)\]{}'.format(linesep)]
+        pattern = ['Ack for pub UUID [0-9a-f-]+\([0-9]+\) \[([^\]]*)\]{}'.format(linesep)]
     else:
         pattern = ['Ack for pub']
     if not allow_error:

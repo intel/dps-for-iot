@@ -94,29 +94,34 @@ static void OnMcastRx(uv_udp_t* handle, ssize_t nread, const uv_buf_t* uvBuf, co
     DPS_NetEndpoint ep;
 
     if (!uvBuf) {
-        DPS_WARNPRINT("No buffer\n");
+        DPS_ERRPRINT("No buffer\n");
         goto Exit;
     }
+    buf = DPS_UvToNetRxBuffer(uvBuf);
 
     DPS_DBGTRACEA("handle=%p,nread=%d,buf={base=%p,len=%d},addr=%s,flags=0x%x\n", handle, nread,
                   uvBuf->base, uvBuf->len, DPS_NetAddrText(addr), flags);
 
-    buf = DPS_UvToNetRxBuffer(uvBuf);
-    if (!nread) {
-        goto Exit;
-    }
     if (nread < 0) {
-        DPS_WARNPRINT("Read error %s\n", uv_err_name((int)nread));
+        DPS_ERRPRINT("Read error %s\n", uv_err_name((int)nread));
         uv_close((uv_handle_t*)handle, NULL);
         goto Exit;
     }
-    buf->rx.eod = &buf->rx.base[nread];
-    if (flags & UV_UDP_PARTIAL) {
-        DPS_WARNPRINT("Dropping partial message, read buffer too small\n");
+    if (!nread && !addr) {
+        DPS_DBGPRINT("No more data to read\n");
         goto Exit;
     }
+    buf->rx.eod = &buf->rx.base[nread];
+
+    if (flags & UV_UDP_PARTIAL) {
+        DPS_ERRPRINT("Dropping partial message, read buffer too small\n");
+        goto Exit;
+    }
+
+    DPS_DBGPRINT("Received buffer of size %zd from %s\n", nread, DPS_NetAddrText(addr));
     DPS_NetSetAddr(&ep.addr, DPS_UDP, addr);
     ep.cn = NULL;
+
     /*
      * If multicast sending is enabled discard looped back multicast packets
      */
@@ -130,10 +135,9 @@ static void OnMcastRx(uv_udp_t* handle, ssize_t nread, const uv_buf_t* uvBuf, co
             }
         }
     }
-    if (addr) {
-        DPS_DBGPRINT("Received buffer of size %zd fromn", nread);
-    }
+
     receiver->cb(receiver->node, &ep, DPS_OK, buf);
+
 Exit:
     DPS_NetRxBufferDecRef(buf);
 }
