@@ -82,6 +82,7 @@
     DPS_SetPublicationData;
     DPS_SetSubscriptionData;
     DPS_SetTrustedCA;
+    DPS_ShutdownNode;
     DPS_SignalEvent;
     DPS_StartNode;
     DPS_Subscribe;
