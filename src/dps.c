@@ -1872,19 +1872,22 @@ static DPS_Status Link(DPS_Node* node, const DPS_NodeAddress* addr, OnOpCompleti
     if (ret == DPS_OK || ret == DPS_ERR_EXISTS) {
         completion->remote = remote;
         remote->completion = completion;
-        if (ret == DPS_ERR_EXISTS) {
-            /*
-             * Schedule a call to the completion callback
-             */
-            ret = DPS_NodeScheduleRequest(node, LinkExists, completion);
-        } else {
+        if (ret == DPS_OK) {
             remote->outbound.linkRequested = DPS_TRUE;
             remote->state = REMOTE_LINKING;
             /*
              * Send the initial subscription to the remote node.
              */
             DPS_UpdateSubs(node, SubsSendNow);
-            ret = DPS_OK;
+        } else if (!remote->outbound.sakPending) {
+            /*
+             * Schedule a call to the completion callback.
+             *
+             * When a SAK is pending, then eventually
+             * DPS_DecodeSubscriptionAck will be called which will
+             * call the completion callback.
+             */
+            ret = DPS_NodeScheduleRequest(node, LinkExists, completion);
         }
     } else {
         DPS_ERRPRINT("Link failed %s\n", DPS_ErrTxt(ret));
