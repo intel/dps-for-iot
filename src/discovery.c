@@ -390,15 +390,15 @@ void* DPS_GetDiscoveryServiceData(DPS_DiscoveryService* service)
     return service ? service->userData : NULL;
 }
 
-static void DestroyPayload(DPS_DiscoveryService* service, const DPS_Buffer* bufs, size_t numBufs)
+static void DestroyPayload(DPS_Node* node, const DPS_Buffer* bufs, size_t numBufs)
 {
     if (bufs[0].base) {
         free(bufs[0].base);
     }
     if ((numBufs > 1) && bufs[1].base) {
-        DPS_LockNode(service->node);
+        DPS_LockNode(node);
         SharedBufferDecRef(BufferToSharedBuffer(&bufs[1]));
-        DPS_UnlockNode(service->node);
+        DPS_UnlockNode(node);
     }
 }
 
@@ -409,7 +409,7 @@ static void PublishCb(DPS_Publication* pub, const DPS_Buffer* bufs, size_t numBu
     if (status != DPS_OK) {
         DPS_ERRPRINT("DPS_PublishBufs failed - %s\n", DPS_ErrTxt(status));
     }
-    DestroyPayload(service, bufs, numBufs);
+    DestroyPayload(service->node, bufs, numBufs);
 }
 
 static void PublishTimerOnTimeout(uv_timer_t* timer)
@@ -439,7 +439,7 @@ static void PublishTimerOnTimeout(uv_timer_t* timer)
 
 Exit:
     if (ret != DPS_OK) {
-        DestroyPayload(service, bufs, 2);
+        DestroyPayload(service->node, bufs, 2);
     }
 }
 
@@ -594,11 +594,11 @@ static void OnAck(DPS_Publication* pub, uint8_t* payload, size_t len)
 static void AckCb(DPS_Publication* pub, const DPS_Buffer* bufs, size_t numBufs, DPS_Status status,
                   void* data)
 {
-    DPS_DiscoveryService* service = data;
+    DPS_Node* node = data;
     if (status != DPS_OK) {
         DPS_ERRPRINT("DPS_AckPublicationBufs failed - %s\n", DPS_ErrTxt(status));
     }
-    DestroyPayload(service, bufs, numBufs);
+    DestroyPayload(node, bufs, numBufs);
 }
 
 static void AckPublication(DPS_DiscoveryService* service, const DPS_Publication* pub)
@@ -606,12 +606,16 @@ static void AckPublication(DPS_DiscoveryService* service, const DPS_Publication*
     DPS_Buffer bufs[2];
     DPS_Status ret;
 
+    if (!service) {
+        return;
+    }
+
     memset(bufs, 0, sizeof(bufs));
     ret = EncodePayload(service, DPS_MSG_TYPE_ACK, bufs);
     if (ret != DPS_OK) {
         goto Exit;
     }
-    ret = DPS_AckPublicationBufs(pub, bufs, 2, AckCb, service);
+    ret = DPS_AckPublicationBufs(pub, bufs, 2, AckCb, service->node);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("DPS_AckPublicationBufs failed - %s\n", DPS_ErrTxt(ret));
         goto Exit;
@@ -619,17 +623,24 @@ static void AckPublication(DPS_DiscoveryService* service, const DPS_Publication*
 
 Exit:
     if (ret != DPS_OK) {
-        DestroyPayload(service, bufs, 2);
+        DestroyPayload(service->node, bufs, 2);
     }
 }
 
 static void DestroyAckRequest(AckRequest* req)
 {
-    DPS_DestroyPublication(req->pub, NULL);
+    DPS_Status ret;
+
+    ret = DPS_DestroyPublication(req->pub, NULL);
+    if (ret != DPS_OK) {
+        DPS_ERRPRINT("DPS_DestroyPublication failed - %s\n", DPS_ErrTxt(ret));
+    }
     if (req->timer) {
         uv_close((uv_handle_t*)req->timer, TimerCloseCb);
     }
-    DPS_QueueRemove(&req->queue);
+    if (req->service) {
+        DPS_QueueRemove(&req->queue);
+    }
     free(req);
 }
 
@@ -643,10 +654,16 @@ static void AckTimerOnTimeout(uv_timer_t* timer)
 static void Ack(void* data)
 {
     AckRequest* req = data;
-    DPS_Node* node = req->service->node;
+    DPS_Node* node;
     uint64_t timeout;
     int err;
 
+    if (!req->service) {
+        DestroyAckRequest(req);
+        return;
+    }
+
+    node = req->service->node;
     DPS_LockNode(node);
     req->timer = malloc(sizeof(uv_timer_t));
     if (!req->timer) {
@@ -871,8 +888,9 @@ static void Destroy(DPS_DiscoveryService* service)
             HandlerData* handlerData = (HandlerData*)queue->next;
             handlerData->service = NULL;
         }
-        while (!DPS_QueueEmpty(&service->ackQueue)) {
-            DestroyAckRequest((AckRequest*)DPS_QueueFront(&service->ackQueue));
+        for (queue = &service->ackQueue; queue->next != &service->ackQueue; queue = queue->next) {
+            AckRequest* req = (AckRequest*)queue->next;
+            req->service = NULL;
         }
         SharedBufferDecRef(service->payload);
         if (service->topic) {
