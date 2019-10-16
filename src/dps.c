@@ -237,10 +237,14 @@ static void RemoteCompletion(OnOpCompletion* completion)
              */
             if (remote->state != REMOTE_UNLINKING) {
                 uint8_t unused;
+                DPS_Status ret;
                 DPS_DBGPRINT("Deferred unlink for %s\n", DESCRIBE(remote));
                 remote->state = REMOTE_UNLINKING;
                 DPS_UpdateOutboundInterests(node, remote, &unused);
-                DPS_SendSubscription(node, remote);
+                ret = DPS_SendSubscription(node, remote);
+                if (ret != DPS_OK) {
+                    DPS_ERRPRINT("DPS_SendSubscription failed - %s\n", DPS_ErrTxt(ret));
+                }
                 return;
             }
             status = DPS_ERR_MISSING;
@@ -251,6 +255,7 @@ static void RemoteCompletion(OnOpCompletion* completion)
             DPS_DeleteRemoteNode(node, remote);
         }
     }
+    /* TODO callbacks are issued with the lock here */
     if (op == LINK_OP) {
         completion->on.link(node, addr, status, completion->data);
     } else if (op == UNLINK_OP) {
@@ -263,7 +268,7 @@ static void RemoteCompletion(OnOpCompletion* completion)
          * We are shutting down.  Check if this is the last remote and
          * issue the shutdown callback.
          */
-        if (op == LINK_OP) {
+        if (remote && (op == LINK_OP)) {
             status = Unlink(node, remote, OnShutdownUnlinkComplete, NULL);
             assert(status != DPS_ERR_BUSY);
             if (status != DPS_OK) {
@@ -1920,7 +1925,9 @@ DPS_Status DPS_LinkRemoteAddr(DPS_Node* node, const DPS_NodeAddress* addr, DPS_O
         ret = DPS_ERR_RESOURCES;
     }
     if (ret != DPS_OK) {
-        free(completion);
+        if (completion) {
+            free(completion);
+        }
     }
     return ret;
 }
