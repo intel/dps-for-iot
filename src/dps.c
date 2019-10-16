@@ -1330,6 +1330,32 @@ Exit:
     return ret;
 }
 
+static void FreeTask(uv_async_t* handle)
+{
+    DPS_Node* node = (DPS_Node*)handle->data;
+    DPS_Subscription** sub;
+    DPS_Publication** pub;
+
+    DPS_LockNode(node);
+    sub = &node->freeSubs;
+    while (*sub) {
+        if ((*sub)->refCount == 0) {
+            *sub = DPS_FreeSubscription(*sub);
+        } else {
+            sub = &(*sub)->next;
+        }
+    }
+    pub = &node->freePubs;
+    while (*pub) {
+        if ((*pub)->refCount == 0) {
+            *pub = DPS_FreePublication(*pub);
+        } else {
+            pub = &(*pub)->next;
+        }
+    }
+    DPS_UnlockNode(node);
+}
+
 static void StopNode(DPS_Node* node)
 {
     PublicationAck* ack;
@@ -1400,12 +1426,17 @@ static void StopNode(DPS_Node* node)
     DPS_FreePublications(node);
     /*
      * Run the event loop to ensure all cleanup is completed
+     *
+     * This is broken into multiple steps as freeAsync must be closed
+     * before UV_RUN_DEFAULT will return, and UV_RUN_DEFAULT may
+     * schedule more work for FreeTask
      */
     while (node->publications || node->freePubs || node->subscriptions || node->freeSubs) {
         uv_run(node->loop, UV_RUN_ONCE);
     }
     uv_close((uv_handle_t*)&node->freeAsync, NULL);
     uv_run(node->loop, UV_RUN_DEFAULT);
+    FreeTask(&node->freeAsync);
     /*
      * Free data structures
      */
@@ -1609,32 +1640,6 @@ static void RunRequestsTask(uv_async_t* handle)
         request->cb(request->data);
         free(request);
         DPS_LockNode(node);
-    }
-    DPS_UnlockNode(node);
-}
-
-static void FreeTask(uv_async_t* handle)
-{
-    DPS_Node* node = (DPS_Node*)handle->data;
-    DPS_Subscription** sub;
-    DPS_Publication** pub;
-
-    DPS_LockNode(node);
-    sub = &node->freeSubs;
-    while (*sub) {
-        if ((*sub)->refCount == 0) {
-            *sub = DPS_FreeSubscription(*sub);
-        } else {
-            sub = &(*sub)->next;
-        }
-    }
-    pub = &node->freePubs;
-    while (*pub) {
-        if ((*pub)->refCount == 0) {
-            *pub = DPS_FreePublication(*pub);
-        } else {
-            pub = &(*pub)->next;
-        }
     }
     DPS_UnlockNode(node);
 }
