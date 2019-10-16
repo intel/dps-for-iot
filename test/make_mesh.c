@@ -291,24 +291,26 @@ static int HasUnstableLinks(void)
     return DPS_FALSE;
 }
 
-static int CountMuted(DPS_Node* node)
+static int CountRemotes(DPS_Node* node, RemoteNodeState filter)
 {
-    int numMuted = 0;
-    RemoteNode* remote;
+    int num = 0;
 
-    DPS_LockNode(node);
-    for (remote = node->remoteNodes; remote != NULL; remote = remote->next) {
-        uint16_t port = GetPort(&remote->ep.addr);
-        uint16_t id = PortMap[port];
-        /*
-         * Ignore dead nodes
-         */
-        if (NodeMap[id] && remote->state == REMOTE_MUTED) {
-            ++numMuted;
+    if (node) {
+        RemoteNode* remote;
+        DPS_LockNode(node);
+        for (remote = node->remoteNodes; remote != NULL; remote = remote->next) {
+            uint16_t port = GetPort(&remote->ep.addr);
+            uint16_t id = PortMap[port];
+            /*
+             * Ignore dead nodes
+             */
+            if (NodeMap[id] && remote->state == filter) {
+                ++num;
+            }
         }
+        DPS_UnlockNode(node);
     }
-    DPS_UnlockNode(node);
-    return numMuted;
+    return num;
 }
 
 static int CountMutedLinks(void)
@@ -317,10 +319,7 @@ static int CountMutedLinks(void)
     size_t i;
 
     for (i = 0; i < A_SIZEOF(NodeMap); ++i) {
-        DPS_Node* node = NodeMap[i];
-        if (node) {
-            numMuted += CountMuted(node);
-        }
+        numMuted += CountRemotes(NodeMap[i], REMOTE_MUTED);
     }
     return numMuted;
 }
@@ -389,21 +388,6 @@ ErrExit:
     return 0;
 }
 
-static const char* MeshIdStr(DPS_UUID* meshId)
-{
-
-    if (memcmp(meshId, &DPS_MaxMeshId, sizeof(DPS_UUID)) == 0) {
-        return "[]";
-    }
-    if (meshId->val32[1] == 0 && meshId->val32[2] == 0 && meshId->val32[3] == 0) {
-        static char id[9];
-        sprintf(id, "%08x", meshId->val32[0]);
-        return id;
-    } else {
-        return DPS_UUIDToString(meshId);
-    }
-}
-
 static void DumpRemoteMeshIds(DPS_Node* node)
 {
     RemoteNode* remote;
@@ -413,7 +397,7 @@ static void DumpRemoteMeshIds(DPS_Node* node)
         uint16_t port = GetPort(&remote->ep.addr);
         uint16_t id = PortMap[port];
         if (NodeMap[id]) {
-            DPS_PRINT("    Node[%d] inbound.meshId=%s %s\n", id, MeshIdStr(&remote->inbound.meshId), RemoteStateTxt(remote));
+            DPS_PRINT("    Node[%d] inbound.meshId=%s %s\n", id, DPS_UUIDToString(&remote->inbound.meshId), RemoteStateTxt(remote));
         }
     }
     DPS_UnlockNode(node);
@@ -427,7 +411,7 @@ static void DumpMeshIds(size_t numIds)
         DPS_Node* node = NodeMap[id];
         if (node) {
             DPS_LockNode(node);
-            DPS_PRINT("Node[%d] meshId %s\n", id, MeshIdStr(&node->meshId));
+            DPS_PRINT("Node[%d] meshId %s\n", id, DPS_UUIDToString(&node->meshId));
             DumpRemoteMeshIds(node);
             DPS_UnlockNode(node);
         }
@@ -492,7 +476,7 @@ static void GenSedScript(FILE* sedFile, size_t numIds)
     }
     UUIDSort(meshIds, 0, numMeshIds - 1);
     for (i = 0; i < numMeshIds; ++i) {
-        fprintf(sedFile, "s/%s/%d/g\n", MeshIdStr(meshIds[i]), (int)i);
+        fprintf(sedFile, "s/%s/%d/g\n", DPS_UUIDToString(meshIds[i]), (int)i);
     }
     free(meshIds);
 }
@@ -583,6 +567,16 @@ static DPS_Status LinkNodes(DPS_Node* src, DPS_Node* dst)
 }
 
 #define MAX_KILLS  16
+
+static int IsListed(uint16_t* list, int len, int item)
+{
+    while (len--) {
+        if (*list++ == item) {
+            return DPS_TRUE;
+        }
+    }
+    return DPS_FALSE;
+}
 
 int main(int argc, char** argv)
 {
@@ -798,15 +792,6 @@ int main(int argc, char** argv)
             maxSubs = 0;
         }
     }
-    /*
-     * Decide which nodes we are going to kill
-     */
-    for (i = 0; i < numKills; ++i) {
-        uint16_t goner = NodeList[DPS_Rand() % numIds];
-        if (NodeMap[goner]) {
-            killList[i] = goner;
-        }
-    }
     if (outFn) {
         dotFile = fopen(outFn, "w");
         if (!dotFile) {
@@ -833,6 +818,32 @@ int main(int argc, char** argv)
     err = WaitUntilSettled(sleeper, expMuted);
 
     DumpMeshIds(numIds);
+
+    if (numKills > 0) {
+        int maxKills = 0;
+        /*
+         * Only consider nodes with more than one active link
+         */
+        for (i = 0; i < numIds; ++i) {
+            DPS_Node* node = NodeMap[NodeList[i]];
+            if (CountRemotes(node, REMOTE_ACTIVE) > 1) {
+                DPS_PRINT("Kill candidate %d\n", NodeList[i]);
+                ++maxKills;
+            }
+        }
+        if (maxKills < numKills) {
+            numKills = maxKills;
+        }
+        DPS_PRINT("Killing %d nodes\n", numKills);
+        memset(killList, 0xFF, sizeof(killList));
+        for (i = 0; i < numKills; ++i) {
+            uint16_t goner;
+            do {
+                goner = NodeList[DPS_Rand() % numIds];
+            } while (IsListed(killList, numKills, goner) || CountRemotes(NodeMap[goner], REMOTE_ACTIVE) < 2);
+            killList[i] = goner;
+        }
+    }
 
     fprintf(dotFile, "graph {\n");
     fprintf(dotFile, "  node[shape=circle, width=0.3, fontsize=10, margin=\"0.01,0.01\", fixedsize=true];\n");
