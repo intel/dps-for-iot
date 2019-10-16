@@ -242,10 +242,11 @@ static void RemoteCompletion(OnOpCompletion* completion)
                 remote->state = REMOTE_UNLINKING;
                 DPS_UpdateOutboundInterests(node, remote, &unused);
                 ret = DPS_SendSubscription(node, remote);
-                if (ret != DPS_OK) {
+                if (ret == DPS_OK) {
+                    return;
+                } else {
                     DPS_ERRPRINT("DPS_SendSubscription failed - %s\n", DPS_ErrTxt(ret));
                 }
-                return;
             }
             status = DPS_ERR_MISSING;
         }
@@ -268,15 +269,20 @@ static void RemoteCompletion(OnOpCompletion* completion)
          * We are shutting down.  Check if this is the last remote and
          * issue the shutdown callback.
          */
-        if (remote && (op == LINK_OP)) {
+        if (!remote || (op == UNLINK_OP)) {
+            OnShutdown(node);
+        } else {
+            /*
+             * A LINK_OP was in progress when DPS_ShutdownNode was
+             * called so unlink here to continue the shutdown process.
+             */
             status = Unlink(node, remote, OnShutdownUnlinkComplete, NULL);
             assert(status != DPS_ERR_BUSY);
             if (status != DPS_OK) {
                 DPS_ERRPRINT("Unlink failed - %s\n", DPS_ErrTxt(status));
                 DPS_DeleteRemoteNode(node, remote);
+                OnShutdown(node);
             }
-        } else if (op == UNLINK_OP) {
-            OnShutdown(node);
         }
     }
 }
@@ -2057,6 +2063,8 @@ DPS_Status DPS_Unlink(DPS_Node* node, const DPS_NodeAddress* addr, DPS_OnUnlinkC
 DPS_Status DPS_ShutdownNode(DPS_Node* node, DPS_OnNodeShutdown cb, void* data)
 {
     DPS_Status ret = DPS_OK;
+    RemoteNode* remote;
+    RemoteNode* next;
 
     DPS_DBGTRACEA("node=%p,cb=%p,data=%p\n", node, cb, data);
 
@@ -2069,25 +2077,26 @@ DPS_Status DPS_ShutdownNode(DPS_Node* node, DPS_OnNodeShutdown cb, void* data)
     DPS_LockNode(node);
     node->onShutdown = cb;
     node->onShutdownData = data;
-    if (!node->remoteNodes) {
-        ret = DPS_NodeScheduleRequest(node, OnShutdown, node);
-    } else {
-        RemoteNode* remote;
-        RemoteNode* next;
-        for (remote = node->remoteNodes; remote; remote = next) {
-            next = remote->next;
-            ret = Unlink(node, remote, OnShutdownUnlinkComplete, NULL);
-            if (ret == DPS_ERR_BUSY) {
-                /*
-                 * RemoteCompletion will finish the shutdown
-                 */
-                ret = DPS_OK;
-            }
-            if (ret != DPS_OK) {
-                DPS_ERRPRINT("Unlink failed - %s\n", DPS_ErrTxt(ret));
-                DPS_DeleteRemoteNode(node, remote);
-            }
+    for (remote = node->remoteNodes; remote; remote = next) {
+        next = remote->next;
+        ret = Unlink(node, remote, OnShutdownUnlinkComplete, NULL);
+        if (ret == DPS_ERR_BUSY) {
+            /*
+             * RemoteCompletion will finish the shutdown
+             */
+            ret = DPS_OK;
         }
+        if (ret != DPS_OK) {
+            DPS_ERRPRINT("Unlink failed - %s\n", DPS_ErrTxt(ret));
+            DPS_DeleteRemoteNode(node, remote);
+        }
+    }
+    if (!node->remoteNodes) {
+        /*
+         * Either no remote nodes exist or the Unlink calls above
+         * failed, so schedule the callback.
+         */
+        ret = DPS_NodeScheduleRequest(node, OnShutdown, node);
     }
     DPS_UnlockNode(node);
     return ret;
