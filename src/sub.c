@@ -998,12 +998,18 @@ DiscardAndExit:
 DPS_Status DPS_DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxBuffer* buf)
 {
     DPS_Status ret;
+    RemoteNode* remote;
+
     DPS_DBGTRACEA("From %s\n", DPS_NodeAddrToString(&ep->addr));
 
     DPS_LockNode(node);
     ret = DecodeSubscription(node, ep, buf, NULL);
     if (ret == DPS_OK) {
         DPS_UpdateSubs(node, SubsThrottled);
+    }
+    remote = DPS_LookupRemoteNode(node, &ep->addr);
+    if (remote && !remote->outbound.sakPending && remote->completion) {
+        DPS_RemoteCompletion(remote->completion, DPS_OK);
     }
     DPS_UnlockNode(node);
 
