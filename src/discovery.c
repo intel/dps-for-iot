@@ -83,6 +83,7 @@ typedef struct _AckRequest {
     DPS_DiscoveryService* service;
     DPS_Publication* pub;
     uv_timer_t* timer;
+    NodeRequest delayReq;
 } AckRequest;
 
 typedef struct _HandlerData {
@@ -651,9 +652,9 @@ static void AckTimerOnTimeout(uv_timer_t* timer)
     DestroyAckRequest(req);
 }
 
-static void Ack(void* data)
+static void Ack(NodeRequest* nodeReq)
 {
-    AckRequest* req = data;
+    AckRequest* req = nodeReq->data;
     DPS_Node* node;
     uint64_t timeout;
     int err;
@@ -710,7 +711,9 @@ static DPS_Status ScheduleAck(DPS_DiscoveryService* service, const DPS_Publicati
         DPS_ERRPRINT("DPS_CopyPublication failed - %s\n", DPS_ErrTxt(ret));
         goto Exit;
     }
-    ret = DPS_NodeScheduleRequest(node, Ack, req);
+    DPS_NodeRequestInit(node, &req->delayReq, Ack);
+    req->delayReq.data = req;
+    ret = DPS_NodeRequestSchedule(&req->delayReq);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("DPS_NodeScheduleRequest failed - %s\n", DPS_ErrTxt(ret));
     }
@@ -771,9 +774,9 @@ static void OnPub(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* pa
     }
 }
 
-static void StartTimer(void* data)
+static void StartTimer(NodeRequest* req)
 {
-    DPS_DiscoveryService* service = data;
+    DPS_DiscoveryService* service = req->data;
     DPS_Node* node = service->node;
     int err;
 
@@ -802,12 +805,14 @@ static void StartTimer(void* data)
     service->nextTimeout += 1000;
 Exit:
     DPS_UnlockNode(node);
+    free(req);
 }
 
 DPS_Status DPS_DiscoveryPublish(DPS_DiscoveryService* service, const uint8_t* payload, size_t len,
                                 DPS_DiscoveryHandler handler)
 {
     SharedBuffer* buffer = NULL;
+    NodeRequest* req = NULL;
     DPS_Status ret;
 
     DPS_DBGTRACEA("service=%p\n", service);
@@ -838,9 +843,17 @@ DPS_Status DPS_DiscoveryPublish(DPS_DiscoveryService* service, const uint8_t* pa
     SharedBufferDecRef(service->payload);
     service->payload = buffer;
     DPS_UnlockNode(service->node);
-    ret = DPS_NodeScheduleRequest(service->node, StartTimer, service);
+    req = (NodeRequest*)malloc(sizeof(NodeRequest));
+    if (!req) {
+        DPS_ERRPRINT("Failed to allocate request - %s\n", DPS_ErrTxt(ret));
+        return DPS_ERR_RESOURCES;
+    }
+    DPS_NodeRequestInit(service->node, req, StartTimer);
+    req->data = service;
+    ret = DPS_NodeRequestSchedule(req);
     if (ret != DPS_OK) {
-        DPS_ERRPRINT("Failed to start discovery: %s\n", DPS_ErrTxt(ret));
+        DPS_ERRPRINT("Failed to start discovery - %s\n", DPS_ErrTxt(ret));
+        free(req);
     }
     return ret;
 }
@@ -901,13 +914,14 @@ static void Destroy(DPS_DiscoveryService* service)
     }
 }
 
-static void DestroyService(void* data)
+static void DestroyService(NodeRequest* req)
 {
-    DPS_DiscoveryService* service = data;
+    DPS_DiscoveryService* service = req->data;
     DPS_Node* node = service->node;
     DPS_LockNode(node);
     Destroy(service);
     DPS_UnlockNode(node);
+    free(req);
 }
 
 static void PublishDestroyCb(DPS_Publication* pub, const DPS_Buffer* bufs, size_t numBufs,
@@ -923,6 +937,7 @@ static void PublishDestroyCb(DPS_Publication* pub, const DPS_Buffer* bufs, size_
 DPS_Status DPS_DestroyDiscoveryService(DPS_DiscoveryService* service,
                                        DPS_OnDiscoveryServiceDestroyed cb, void* data)
 {
+    NodeRequest* req = NULL;
     DPS_Status ret;
 
     DPS_DBGTRACEA("service=%p,cb=%p,data=%p\n", service, cb, data);
@@ -938,7 +953,17 @@ DPS_Status DPS_DestroyDiscoveryService(DPS_DiscoveryService* service,
     ret = DPS_PublishBufs(service->pub, NULL, 0, 0, PublishDestroyCb, service);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("DPS_PublishBufs failed - %s\n", DPS_ErrTxt(ret));
-        ret = DPS_NodeScheduleRequest(service->node, DestroyService, service);
+        req = (NodeRequest*)malloc(sizeof(NodeRequest));
+        if (!req) {
+            DPS_ERRPRINT("Failed to allocate request - %s\n", DPS_ErrTxt(ret));
+            return DPS_ERR_RESOURCES;
+        }
+        DPS_NodeRequestInit(service->node, req, DestroyService);
+        req->data = service;
+        ret = DPS_NodeRequestSchedule(req);
+        if (ret != DPS_OK) {
+            free(req);
+        }
     }
     return ret;
 }

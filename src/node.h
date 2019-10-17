@@ -74,32 +74,49 @@ typedef struct _OnOpCompletion OnOpCompletion;
  */
 typedef struct _ResolverInfo ResolverInfo;
 
+typedef struct _NodeRequest NodeRequest;
+
 /**
  * A request to run on the node thread.
  *
- * @param data Data passed to DPS_AddRequest()
+ * @param req the request
  */
-typedef void (*OnNodeRequest)(void* data);
+typedef void (*OnNodeRequest)(NodeRequest* req);
 
 /**
  * A queue of requests to run on the node thread.
  */
 typedef struct _NodeRequest {
     DPS_Queue queue;  /**< The queue item */
+    DPS_Node* node;   /**< The node */
     OnNodeRequest cb; /**< The request callback */
     void* data;       /**< The request data */
 } NodeRequest;
 
 /**
- * Schedule a request to run on the node thread.
+ * Initialize a request to run on the node thread.
  *
  * @param node the node
+ * @param req the request
  * @param cb the request callback, run on the node thread
- * @param data the request data
+ */
+void DPS_NodeRequestInit(DPS_Node* node, NodeRequest* req, OnNodeRequest cb);
+
+/**
+ * Schedule a request to run on the node thread.
+ *
+ * @param req the request
  *
  * @return DPS_OK if successful, an error otherwise
  */
-DPS_Status DPS_NodeScheduleRequest(DPS_Node* node, OnNodeRequest cb, void* data);
+DPS_Status DPS_NodeRequestSchedule(NodeRequest* req);
+
+/**
+ * Cancel a request scheduled to run on the node thread.
+ *
+ * @param req a previously scheduled request
+ */
+void DPS_NodeRequestCancel(NodeRequest* req);
 
 /**
  * Specifies when subscriptions are to be sent
@@ -170,6 +187,7 @@ typedef struct _DPS_Node {
     uint8_t state;                        /**< Indicates if the node is running, stopping, or stopped */
     DPS_OnNodeShutdown onShutdown;        /**< Function to call when the node is shutdown */
     void* onShutdownData;                 /**< Context to pass to onShutdown callback */
+    NodeRequest onShutdownReq;            /**< onShutdown callback request */
     DPS_OnNodeDestroyed onDestroyed;      /**< Function to call when the node is destroyed */
     void* onDestroyedData;                /**< Context to pass to onDestroyed callback */
 

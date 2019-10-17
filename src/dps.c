@@ -72,7 +72,6 @@ typedef enum { LINK_OP, UNLINK_OP } OpType;
 typedef struct _OnOpCompletion {
     OpType op;
     void* data;
-    DPS_Node* node;
     struct _RemoteNode* remote;
     DPS_NodeAddress addr;
     DPS_Status status;
@@ -81,6 +80,7 @@ typedef struct _OnOpCompletion {
         DPS_OnUnlinkComplete unlink;
         void* cb;
     } on;
+    NodeRequest req;
 } OnOpCompletion;
 
 const DPS_UUID DPS_MaxMeshId = { .val64 = { UINT64_MAX, UINT64_MAX } };
@@ -94,6 +94,7 @@ RemoteNode* DPS_LoopbackNode = (RemoteNode*)&DPS_LoopbackNode;
 static void DumpNode(uv_signal_t* handle, int signum);
 static void SendSubsTimer(uv_timer_t* handle);
 static void SendPubsTimer(uv_timer_t* handle);
+static void LinkExists(NodeRequest* req);
 static DPS_Status Unlink(DPS_Node* node, RemoteNode* remote, DPS_OnUnlinkComplete cb, void* data);
 
 void DPS_LockNode(DPS_Node* node)
@@ -191,9 +192,8 @@ void DPS_RxBufferToTx(const DPS_RxBuffer* rxBuffer, DPS_TxBuffer* txBuffer)
     txBuffer->txPos = rxBuffer->eod;
 }
 
-static void OnShutdown(void* data)
+static void OnShutdown(DPS_Node* node)
 {
-    DPS_Node* node = (DPS_Node*)data;
     int doCb;
 
     DPS_LockNode(node);
@@ -206,6 +206,11 @@ static void OnShutdown(void* data)
     }
 }
 
+static void OnShutdownRequest(NodeRequest* req)
+{
+    OnShutdown(req->node);
+}
+
 static void OnShutdownUnlinkComplete(DPS_Node* node, const DPS_NodeAddress* addr, void* data)
 {
     OnShutdown(node);
@@ -213,7 +218,7 @@ static void OnShutdownUnlinkComplete(DPS_Node* node, const DPS_NodeAddress* addr
 
 static void RemoteCompletion(OnOpCompletion* completion)
 {
-    DPS_Node* node = completion->node;
+    DPS_Node* node = completion->req.node;
     RemoteNode* remote = completion->remote;
     const DPS_NodeAddress* addr = &completion->addr;
     DPS_Status status = completion->status;
@@ -256,6 +261,7 @@ static void RemoteCompletion(OnOpCompletion* completion)
             DPS_DeleteRemoteNode(node, remote);
         }
     }
+    DPS_NodeRequestCancel(&completion->req);
     /* TODO callbacks are issued with the lock here */
     if (op == LINK_OP) {
         completion->on.link(node, addr, status, completion->data);
@@ -636,9 +642,10 @@ static OnOpCompletion* AllocCompletion(DPS_Node* node, RemoteNode* remote, OpTyp
     if (cpn) {
         cpn->op = op;
         cpn->data = data;
-        cpn->node = node;
         cpn->remote = remote;
         cpn->on.cb = cb;
+        DPS_NodeRequestInit(node, &cpn->req, LinkExists);
+        cpn->req.data = cpn;
     }
     return cpn;
 }
@@ -1426,8 +1433,7 @@ static void StopNode(DPS_Node* node)
     while (!DPS_QueueEmpty(&node->requestQueue)) {
         request = (NodeRequest*)DPS_QueueFront(&node->requestQueue);
         DPS_QueueRemove(&request->queue);
-        request->cb(request->data);
-        free(request);
+        request->cb(request);
     }
     /*
      * Cleanup any subscriptions or publications that may have a
@@ -1648,8 +1654,7 @@ static void RunRequestsTask(uv_async_t* handle)
         request = (NodeRequest*)DPS_QueueFront(&node->requestQueue);
         DPS_QueueRemove(&request->queue);
         DPS_UnlockNode(node);
-        request->cb(request->data);
-        free(request);
+        request->cb(request);
         DPS_LockNode(node);
     }
     DPS_UnlockNode(node);
@@ -1742,15 +1747,19 @@ DPS_Status DPS_StartNode(DPS_Node* node, int mcast, DPS_NodeAddress* listenAddr)
     node->meshId.val32[3] = 0;
     DPS_DBGPRINT("Node mesh id is: %08x\n", node->meshId.val32[0]);
 #endif
+
     node->interests = DPS_CountVectorAlloc();
     node->needs = DPS_CountVectorAllocFH();
     node->scratch.interests = DPS_BitVectorAlloc();
     node->scratch.needs = DPS_BitVectorAllocFH();
-
     if (!node->interests || !node->needs || !node->scratch.interests || !node->scratch.needs) {
         ret = DPS_ERR_RESOURCES;
         goto ErrExit;
     }
+
+    DPS_NodeRequestInit(node, &node->onShutdownReq, OnShutdownRequest);
+    node->onShutdownReq.data = node;
+
     node->mcastPub = mcast;
     if (node->mcastPub & DPS_MCAST_PUB_ENABLE_SEND) {
         node->mcastSender = DPS_MulticastStartSend(node);
@@ -1844,11 +1853,11 @@ void DPS_SetNodeSubscriptionUpdateDelay(DPS_Node* node, uint32_t subsRateMsecs)
     node->subsRate = subsRateMsecs;
 }
 
-static void LinkExists(void* data)
+static void LinkExists(NodeRequest* req)
 {
     DPS_Status status = DPS_OK;
-    OnOpCompletion* completion = (OnOpCompletion*)data;
-    DPS_Node* node = completion->node;
+    OnOpCompletion* completion = (OnOpCompletion*)req->data;
+    DPS_Node* node = req->node;
 
     DPS_LockNode(node);
     /*
@@ -1875,28 +1884,24 @@ static DPS_Status Link(DPS_Node* node, const DPS_NodeAddress* addr, OnOpCompleti
     memcpy(&completion->addr, addr, sizeof(DPS_NodeAddress));
     DPS_LockNode(node);
     ret = DPS_AddRemoteNode(node, addr, NULL, &remote);
-    if (ret == DPS_OK || ret == DPS_ERR_EXISTS) {
+    if (ret == DPS_OK) {
+        remote->outbound.linkRequested = DPS_TRUE;
+        remote->state = REMOTE_LINKING;
+        /*
+         * Send the initial subscription to the remote node.
+         */
+        DPS_UpdateSubs(node, SubsSendNow);
+    } else if (ret == DPS_ERR_EXISTS) {
+        /*
+         * Schedule a call to the completion callback.
+         */
+        ret = DPS_NodeRequestSchedule(&completion->req);
+    } else {
+        DPS_ERRPRINT("Link failed - %s\n", DPS_ErrTxt(ret));
+    }
+    if (ret == DPS_OK) {
         completion->remote = remote;
         remote->completion = completion;
-        if (ret == DPS_OK) {
-            remote->outbound.linkRequested = DPS_TRUE;
-            remote->state = REMOTE_LINKING;
-            /*
-             * Send the initial subscription to the remote node.
-             */
-            DPS_UpdateSubs(node, SubsSendNow);
-        } else if (!remote->outbound.sakPending) {
-            /*
-             * Schedule a call to the completion callback.
-             *
-             * When a SAK is pending, then eventually
-             * DPS_DecodeSubscriptionAck will be called which will
-             * call the completion callback.
-             */
-            ret = DPS_NodeScheduleRequest(node, LinkExists, completion);
-        }
-    } else {
-        DPS_ERRPRINT("Link failed %s\n", DPS_ErrTxt(ret));
     }
     DPS_UnlockNode(node);
     return ret;
@@ -2096,7 +2101,7 @@ DPS_Status DPS_ShutdownNode(DPS_Node* node, DPS_OnNodeShutdown cb, void* data)
          * Either no remote nodes exist or the Unlink calls above
          * failed, so schedule the callback.
          */
-        ret = DPS_NodeScheduleRequest(node, OnShutdown, node);
+        ret = DPS_NodeRequestSchedule(&node->onShutdownReq);
     }
     DPS_UnlockNode(node);
     return ret;
@@ -2182,18 +2187,24 @@ void DPS_ClearKeyId(DPS_KeyId* keyId)
     }
 }
 
-DPS_Status DPS_NodeScheduleRequest(DPS_Node* node, OnNodeRequest cb, void* data)
+void DPS_NodeRequestInit(DPS_Node* node, NodeRequest* req, OnNodeRequest cb)
 {
-    NodeRequest* req = NULL;
+    assert(req);
+    DPS_QueueInit(&req->queue);
+    req->node = node;
+    req->cb = cb;
+}
+
+DPS_Status DPS_NodeRequestSchedule(NodeRequest* req)
+{
+    DPS_Node* node;
     DPS_Status ret = DPS_OK;
     int err;
 
-    req = malloc(sizeof(NodeRequest));
     if (!req) {
-        return DPS_ERR_RESOURCES;
+        return DPS_ERR_ARGS;
     }
-    req->cb = cb;
-    req->data = data;
+    node = req->node;
 
     DPS_LockNode(node);
     DPS_QueuePushBack(&node->requestQueue, &req->queue);
@@ -2201,9 +2212,20 @@ DPS_Status DPS_NodeScheduleRequest(DPS_Node* node, OnNodeRequest cb, void* data)
     if (err) {
         DPS_ERRPRINT("uv_async_send failed - %s\n", uv_strerror(err));
         ret = DPS_ERR_FAILURE;
+        DPS_QueueRemove(&req->queue);
+        free(req);
     }
     DPS_UnlockNode(node);
     return ret;
+}
+
+void DPS_NodeRequestCancel(NodeRequest* req)
+{
+    if (req) {
+        DPS_LockNode(req->node);
+        DPS_QueueRemove(&req->queue);
+        DPS_UnlockNode(req->node);
+    }
 }
 
 #undef DPS_DBG_TAG
