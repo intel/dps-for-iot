@@ -493,7 +493,9 @@ Exit:
 static void DestroyHandlerData(HandlerData* handlerData)
 {
     if (handlerData) {
-        DPS_QueueRemove(&handlerData->queue);
+        if (handlerData->service) {
+            DPS_QueueRemove(&handlerData->queue);
+        }
         DPS_DestroyCopy(handlerData->pub);
         if (handlerData->data) {
             free(handlerData->data);
