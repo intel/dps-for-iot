@@ -1892,14 +1892,22 @@ static DPS_Status Link(DPS_Node* node, const DPS_NodeAddress* addr, OnOpCompleti
          */
         DPS_UpdateSubs(node, SubsSendNow);
     } else if (ret == DPS_ERR_EXISTS) {
-        /*
-         * Schedule a call to the completion callback.
-         */
-        ret = DPS_NodeRequestSchedule(&completion->req);
+        if (remote->completion) {
+            /*
+             * Operations must be serialized
+             */
+            ret = DPS_ERR_BUSY;
+        } else {
+            /*
+             * Schedule a call to the completion callback.
+             */
+            ret = DPS_NodeRequestSchedule(&completion->req);
+        }
     } else {
         DPS_ERRPRINT("Link failed - %s\n", DPS_ErrTxt(ret));
     }
     if (ret == DPS_OK) {
+        assert(!remote->completion);
         completion->remote = remote;
         remote->completion = completion;
     }
