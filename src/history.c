@@ -28,6 +28,7 @@
 #include <dps/dps.h>
 #include <dps/private/network.h>
 #include <dps/uuid.h>
+#include "compat.h"
 #include "history.h"
 
 /*

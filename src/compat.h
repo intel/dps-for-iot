@@ -67,6 +67,9 @@ static inline char* strndup(const char* str, size_t maxLen)
     return c;
 }
 
+#define MAX(x, y)  ((x) > (y) ? (x) : (y))
+#define MIN(x, y)  ((x) < (y) ? (x) : (y))
+
 #else /* posix */
 
 #include <endian.h>
