@@ -118,8 +118,6 @@ typedef struct _DPS_Node {
     uint8_t isLocked;
 #endif
     SubsPendingState subsPending;         /**< Specifies when subscriptions are to be sent */
-    uint32_t numRemoteNodes;              /**< Number of remote nodes */
-    uint32_t numMutedRemotes;             /**< Number of remote nodes that are muted */
     DPS_NodeAddress addr;                 /**< Listening address */
     char addrStr[DPS_NODE_ADDRESS_MAX_STRING_LEN]; /**< Text of listening address */
     DPS_UUID meshId;                      /**< Randomly allocated mesh id for this node */

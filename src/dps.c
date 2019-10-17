@@ -295,7 +295,6 @@ static void InsertRemoteNode(DPS_Node* node, RemoteNode* remote)
 {
     remote->next = node->remoteNodes;
     node->remoteNodes = remote;
-    ++node->numRemoteNodes;
 }
 
 static void RemoveRemoteNode(DPS_Node* node, RemoteNode* remote)
@@ -311,8 +310,6 @@ static void RemoveRemoteNode(DPS_Node* node, RemoteNode* remote)
         prev->next = remote->next;
     }
     remote->next = NULL;
-    assert(node->numRemoteNodes);
-    --node->numRemoteNodes;
 }
 
 void DPS_DeleteRemoteNode(DPS_Node* node, RemoteNode* remote)
@@ -500,10 +497,6 @@ DPS_Status DPS_MuteRemoteNode(DPS_Node* node, RemoteNode* remote, RemoteNodeStat
      */
     RemoveRemoteNode(node, remote);
     InsertRemoteNode(node, remote);
-    ++node->numMutedRemotes;
-    if (node->numMutedRemotes == node->numRemoteNodes) {
-        DPS_ERRPRINT("All remotes are muted\n");
-    }
     return ret;
 }
 
@@ -526,8 +519,6 @@ DPS_Status DPS_UnmuteRemoteNode(DPS_Node* node, RemoteNode* remote)
          * nodes like there is still a loop.
          */
         DPS_RandUUIDLess(DPS_MinMeshId(node, NULL), &node->meshId);
-        
-        --node->numMutedRemotes;
         /*
          * We didn't send any interests out on this link while is was
          * muted so we need to bring the remote up to date. First clear
