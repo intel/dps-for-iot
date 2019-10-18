@@ -463,7 +463,7 @@ static void UUIDSort(DPS_UUID** ids, int first, int last)
 static void GenSedScript(FILE* sedFile, size_t numIds)
 {
     DPS_UUID** meshIds = malloc(numIds * sizeof(DPS_UUID*));
-    int numMeshIds = 0;
+    size_t numMeshIds = 0;
     size_t i;
 
     for (i = 0; i < numIds; ++i) {
@@ -474,7 +474,7 @@ static void GenSedScript(FILE* sedFile, size_t numIds)
             fprintf(sedFile, "s/\\[::1]:%d/Node[%d]/g\n", GetPortNumber(node), id);
         }
     }
-    UUIDSort(meshIds, 0, numMeshIds - 1);
+    UUIDSort(meshIds, 0, (int)(numMeshIds - 1));
     for (i = 0; i < numMeshIds; ++i) {
         fprintf(sedFile, "s/%s/%d/g\n", DPS_UUIDToString(meshIds[i]), (int)i);
     }
