@@ -22,6 +22,7 @@
 
 #include "test.h"
 #include <stdio.h>
+#include "compat.h"
 #include "topics.h"
 #include "node.h"
 #include <dps/discovery.h>

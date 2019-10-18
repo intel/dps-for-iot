@@ -463,7 +463,7 @@ static void UUIDSort(DPS_UUID** ids, int first, int last)
 static void GenSedScript(FILE* sedFile, size_t numIds)
 {
     DPS_UUID** meshIds = malloc(numIds * sizeof(DPS_UUID*));
-    size_t numMeshIds = 0;
+    int numMeshIds = 0;
     size_t i;
 
     for (i = 0; i < numIds; ++i) {

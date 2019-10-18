@@ -470,8 +470,6 @@ ErrExit:
 
 DPS_Status DPS_MuteRemoteNode(DPS_Node* node, RemoteNode* remote, RemoteNodeState newState)
 {
-    DPS_Status ret;
-
     if (remote->state == REMOTE_MUTED || remote->state == REMOTE_DEAD || remote->state == REMOTE_UNLINKING) {
         return DPS_OK;
     }
@@ -497,7 +495,7 @@ DPS_Status DPS_MuteRemoteNode(DPS_Node* node, RemoteNode* remote, RemoteNodeStat
      */
     RemoveRemoteNode(node, remote);
     InsertRemoteNode(node, remote);
-    return ret;
+    return DPS_OK;
 }
 
 DPS_Status DPS_UnmuteRemoteNode(DPS_Node* node, RemoteNode* remote)
