@@ -55,13 +55,7 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_INFO);
 DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 #endif
 
-/*
- * Define DEBUG_LOOP_DETECTION to keep the mesh id's in a 32 bit
- * range to make it easier to parse them by eye when debugging.
- */
-
 #define DESCRIBE(n)  DPS_NodeAddrToString(&(n)->ep.addr)
-
 
 #define _MIN_(x, y)  (((x) < (y)) ? (x) : (y))
 
@@ -367,7 +361,6 @@ static void InsertRemoteNode(DPS_Node* node, RemoteNode* remote)
 {
     remote->next = node->remoteNodes;
     node->remoteNodes = remote;
-    ++node->numRemoteNodes;
 }
 
 static void RemoveRemoteNode(DPS_Node* node, RemoteNode* remote)
@@ -383,8 +376,6 @@ static void RemoveRemoteNode(DPS_Node* node, RemoteNode* remote)
         prev->next = remote->next;
     }
     remote->next = NULL;
-    assert(node->numRemoteNodes);
-    --node->numRemoteNodes;
 }
 
 void DPS_DeleteRemoteNode(DPS_Node* node, RemoteNode* remote)
@@ -543,8 +534,6 @@ ErrExit:
 
 DPS_Status DPS_MuteRemoteNode(DPS_Node* node, RemoteNode* remote, RemoteNodeState newState)
 {
-    DPS_Status ret;
-
     if (remote->state == REMOTE_MUTED || remote->state == REMOTE_DEAD || remote->state == REMOTE_UNLINKING) {
         return DPS_OK;
     }
@@ -570,11 +559,7 @@ DPS_Status DPS_MuteRemoteNode(DPS_Node* node, RemoteNode* remote, RemoteNodeStat
      */
     RemoveRemoteNode(node, remote);
     InsertRemoteNode(node, remote);
-    ++node->numMutedRemotes;
-    if (node->numMutedRemotes == node->numRemoteNodes) {
-        DPS_ERRPRINT("All remotes are muted\n");
-    }
-    return ret;
+    return DPS_OK;
 }
 
 DPS_Status DPS_UnmuteRemoteNode(DPS_Node* node, RemoteNode* remote)
@@ -583,28 +568,19 @@ DPS_Status DPS_UnmuteRemoteNode(DPS_Node* node, RemoteNode* remote)
 
     DPS_DBGTRACE();
 
-    if (remote->state == REMOTE_MUTED || remote->state == REMOTE_DEAD) {
+    if (remote->state == REMOTE_MUTED || remote->state == REMOTE_DEAD || remote->state == REMOTE_UNMUTING) {
         uint8_t unused;
 
         DPS_DBGPRINT("Unmuting %s remote %s\n", RemoteStateTxt(remote), DESCRIBE(remote));
 
-        remote->state = REMOTE_ACTIVE;
+        remote->state = REMOTE_UNMUTING;
         /*
          * We need a fresh mesh id that is less than any of the mesh id's
          * we have already seen. If we were to send the same mesh id that
          * was used to detect the loop it will look to the remaining
          * nodes like there is still a loop.
          */
-#if defined(DEBUG_LOOP_DETECTION)
-        {
-            DPS_UUID min = *DPS_MinMeshId(node, NULL);
-            min.val32[0] -= DPS_Rand() & 0xFFFF;
-            node->meshId = min;
-        }
-#else
         DPS_RandUUIDLess(DPS_MinMeshId(node, NULL), &node->meshId);
-#endif
-        --node->numMutedRemotes;
         /*
          * We didn't send any interests out on this link while is was
          * muted so we need to bring the remote up to date. First clear
@@ -927,32 +903,51 @@ static void SendPubsTimer(uv_timer_t* handle)
 static void FindAlternativeRoute(DPS_Node* node, RemoteNode* oldRoute)
 {
     RemoteNode* remote;
+    RemoteNode* altRoute[4] = { NULL, NULL, NULL, NULL };
     RemoteNode* newRoute = NULL;
+    int i;
 
-    DPS_DBGINFO("Find alternative route to %s\n", DESCRIBE(oldRoute));
+    DPS_DBGINFO("Find alternative route to replace %s\n", DESCRIBE(oldRoute));
 
+    /*
+     * The alternatives are ordered in terms of preference
+     */
     for (remote = node->remoteNodes; remote != NULL; remote = remote->next) {
         if (remote == oldRoute) {
             continue;
         }
         if (DPS_UUIDCompare(&remote->inbound.meshId, &oldRoute->inbound.meshId) == 0) {
-            if (remote->state == REMOTE_ACTIVE) {
+            if (remote->state == REMOTE_ACTIVE || remote->state == REMOTE_UNMUTING) {
                 /*
                  * Route already exists or is already being restored
                  */
                 return;
             }
-            if (remote->state == REMOTE_MUTED) {
-                newRoute = remote;
+            if (remote->state == REMOTE_MUTED && !altRoute[0]) {
+                altRoute[0] = remote;
                 break;
             }
             if (remote->state == REMOTE_DEAD) {
-                /*
-                 * Only consider dead remotes as a last resort
-                 */
-                newRoute = remote;
+                altRoute[1] = remote;
                 continue;
             }
+        }
+        if (!altRoute[2] && remote->state == REMOTE_MUTED)  {
+            altRoute[2] = remote;
+            continue;
+        }
+        if (!altRoute[3] && remote->state == REMOTE_DEAD) {
+            altRoute[3] = remote;
+            continue;
+        }
+    }
+    /*
+     * Choose the preferred alternative
+     */
+    for (i = 0; i < 4; ++i) {
+        if (altRoute[i]) {
+            newRoute = altRoute[i];
+            break;
         }
     }
     if (newRoute) {
@@ -962,12 +957,6 @@ static void FindAlternativeRoute(DPS_Node* node, RemoteNode* oldRoute)
 #ifdef DPS_DEBUG
         DPS_DbgLock();
         DPS_DBGINFO("No alternative route to %s\n", DESCRIBE(oldRoute));
-#if defined(DEBUG_LOOP_DETECTION)
-        DPS_PRINT("Node %s meshId=%08x\n", node->addrStr, node->meshId.val32[0]);
-        for (remote = node->remoteNodes; remote != NULL; remote = remote->next) {
-            DPS_PRINT("  %s inbound.meshId=%08x %s\n", DESCRIBE(remote), remote->inbound.meshId.val32[0], RemoteStateTxt(remote));
-        }
-#endif
         DPS_DbgUnlock();
 #endif
     }
@@ -1018,8 +1007,8 @@ static void SendSubsTimer(uv_timer_t* handle)
                 DPS_WARNPRINT("At retry limit - %s remote %s\n", remote->completion ? "deleting" : "muting", DESCRIBE(remote));
                 if (remote->state == REMOTE_LINKING || remote->state == REMOTE_UNLINKING) {
                     /*
-                     * Link to remote was either never estabished or failed to respond to
-                     * an unlink request, in either case we just delete the remote node.
+                     * Link to remote was either never estabished or remote failed to respond
+                     * to an unlink request, in either case we just delete the remote node.
                      */
                     DPS_DeleteRemoteNode(node, remote);
                 } else {
@@ -1741,13 +1730,7 @@ DPS_Status DPS_StartNode(DPS_Node* node, int mcast, DPS_NodeAddress* listenAddr)
     assert(!r);
 
     DPS_GenerateUUID(&node->meshId);
-#if defined(DEBUG_LOOP_DETECTION)
-    node->meshId.val32[1] = 0;
-    node->meshId.val32[2] = 0;
-    node->meshId.val32[3] = 0;
-    DPS_DBGPRINT("Node mesh id is: %08x\n", node->meshId.val32[0]);
-#endif
-
+    DPS_DBGPRINT("Node mesh id is: %08x\n", DPS_UUIDToString(&node->meshId));
     node->interests = DPS_CountVectorAlloc();
     node->needs = DPS_CountVectorAllocFH();
     node->scratch.interests = DPS_BitVectorAlloc();
@@ -2310,6 +2293,8 @@ const char* RemoteStateTxt(const RemoteNode* remote)
             return "UNLINKING";
         case REMOTE_MUTED:
             return "MUTED";
+        case REMOTE_UNMUTING:
+            return "UNMUTING";
         case REMOTE_DEAD:
             return "DEAD";
         default:

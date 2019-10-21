@@ -137,8 +137,6 @@ typedef struct _DPS_Node {
     uint8_t isLocked;                     /**< Count of node locks */
 #endif
     SubsPendingState subsPending;         /**< Specifies when subscriptions are to be sent */
-    uint32_t numRemoteNodes;              /**< Number of remote nodes */
-    uint32_t numMutedRemotes;             /**< Number of remote nodes that are muted */
     DPS_NodeAddress addr;                 /**< Listening address */
     char addrStr[DPS_NODE_ADDRESS_MAX_STRING_LEN]; /**< Text of listening address */
     DPS_UUID meshId;                      /**< Randomly allocated mesh id for this node */
@@ -218,6 +216,7 @@ typedef enum {
     REMOTE_LINKING,       /**< Remote node is in the process of being linked */
     REMOTE_UNLINKING,     /**< Remote node is in the process of being unlinked */
     REMOTE_MUTED,         /**< Remote node was linked but is muted to avoid mesh loops */
+    REMOTE_UNMUTING,      /**< Remote node is in the process of being unmuted */
     REMOTE_DEAD           /**< Remote was linked but went unresponsive */
 } RemoteNodeState;
 

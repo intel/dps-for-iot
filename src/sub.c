@@ -44,7 +44,7 @@
 /*
  * Debug control for this module
  */
-#if defined(DEBUG_LOOP_DETECTION)
+#if defined(DEBUG_LINK_LOSS)
 DPS_DEBUG_CONTROL(DPS_DEBUG_INFO);
 #else
 DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
@@ -63,9 +63,10 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 #define DESCRIBE(n)  DPS_NodeAddrToString(&(n)->ep.addr)
 
 #define DPS_SUB_FLAG_DELTA_IND   0x01      /* Indicate interests is a delta */
-#define DPS_SUB_FLAG_UNLINK_REQ  0x02      /* Subscription message is requesting to unlink */
-#define DPS_SUB_FLAG_SAK_REQ     0x04      /* An acknowledgement is requested for the subscription */
-#define DPS_SUB_FLAG_MUTED       0x08      /* Indicates link has been muted */
+#define DPS_SUB_FLAG_SAK_REQ     0x02      /* An acknowledgement is requested for the subscription */
+#define DPS_SUB_FLAG_UNLINK_IND  0x04      /* Indicates remote is unlinking */
+#define DPS_SUB_FLAG_MUTE_IND    0x08      /* Indicates link has been muted */
+#define DPS_SUB_FLAG_UNMUTE_REQ  0x10      /* Remote is requesting to unmute */
 
 static int IsValidSub(const DPS_Subscription* sub)
 {
@@ -309,8 +310,11 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote)
             interests = remote->outbound.interests;
         }
         len += DPS_BitVectorSerializeMaxSize(interests) + DPS_BitVectorSerializeFHSize();
+        if (remote->state == REMOTE_UNMUTING) {
+            flags |= DPS_SUB_FLAG_UNMUTE_REQ;
+        }
     } else {
-        flags |= DPS_SUB_FLAG_UNLINK_REQ;
+        flags |= DPS_SUB_FLAG_UNLINK_IND;
         interests = NULL;
     }
     /*
@@ -464,10 +468,17 @@ DPS_Status DPS_SendSubscriptionAck(DPS_Node* node, RemoteNode* remote, int colli
         flags |= DPS_SUB_FLAG_DELTA_IND;
     }
     if (remote->state == REMOTE_UNLINKING) {
-        flags |= DPS_SUB_FLAG_UNLINK_REQ;
+        flags |= DPS_SUB_FLAG_UNLINK_IND;
     }
     if (remote->state == REMOTE_MUTED) {
-        flags |= DPS_SUB_FLAG_MUTED;
+        flags |= DPS_SUB_FLAG_MUTE_IND;
+    }
+    /*
+     * As soon as we send the SAK we are unmuted
+     */
+    if (remote->state == REMOTE_UNMUTING) {
+        remote->state = REMOTE_ACTIVE;
+        remote->outbound.sendInterests = REMOTE_ACTIVE;
     }
     /*
      * Whenever interests are sent a SAK is required
@@ -874,7 +885,7 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
         DPS_DBGPRINT("SUB inbound interests[%d] from %s: %s%s\n", revision,
                      DPS_NodeAddrToString(&ep->addr), (flags & DPS_SUB_FLAG_DELTA_IND) ? "(<delta>)" : "",
                      (keysMask & (1 << DPS_CBOR_KEY_INTERESTS)) ? DPS_DumpMatchingTopics(interests) : "<null>");
-        if (flags & DPS_SUB_FLAG_UNLINK_REQ) {
+        if (flags & DPS_SUB_FLAG_UNLINK_IND) {
             ret = UnlinkRemote(node, &ep->addr, revision);
             goto DiscardAndExit;
         }
@@ -909,15 +920,20 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
 
     DPS_DBGINFO("Received mesh id %08x in %s from %s #%d\n", meshId.val32[0], sakSeqNum ? "SAK" : "SUB", DESCRIBE(remote), revision);
 
-    if (!sakSeqNum && (remote->state == REMOTE_MUTED)) {
-        DPS_DBGINFO("Received SUB from muted remote\n", DESCRIBE(remote));
-    }
-    if (remote->state != REMOTE_MUTED && ((flags & DPS_SUB_FLAG_MUTED) || MeshHasLoop(node, remote, &meshId))) {
+    if (flags & DPS_SUB_FLAG_UNMUTE_REQ) {
+        if (sakSeqNum) {
+            DPS_ERRPRINT("Invalid UNMUTE in SAK from remote %s\n", DESCRIBE(remote));
+            ret = DPS_ERR_INVALID;
+        } else {
+            DPS_DBGINFO("Remote %s is unumuting\n", DESCRIBE(remote));
+            ret = DPS_UnmuteRemoteNode(node, remote);
+        }
+    } else if ((remote->state != REMOTE_MUTED) && (remote->state != REMOTE_UNMUTING) && ((flags & DPS_SUB_FLAG_MUTE_IND) || MeshHasLoop(node, remote, &meshId))) {
         DPS_DBGINFO("Loop detected for %s\n", DESCRIBE(remote));
         ret = DPS_MuteRemoteNode(node, remote, REMOTE_MUTED);
-        if (ret != DPS_OK) {
-            goto DiscardAndExit;
-        }
+    }
+    if (ret != DPS_OK) {
+        goto DiscardAndExit;
     }
     if (flags & DPS_SUB_FLAG_SAK_REQ) {
         if ((keysMask & OptKeysMask) != OptKeysMask) {
@@ -1047,6 +1063,9 @@ DPS_Status DPS_DecodeSubscriptionAck(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
             remote->outbound.sakPending = DPS_FALSE;
             if (remote->completion) {
                 DPS_RemoteCompletion(remote->completion, DPS_OK);
+            }
+            if (remote->state == REMOTE_UNMUTING) {
+                remote->state = REMOTE_ACTIVE;
             }
         } else {
             DPS_WARNPRINT("Unexpected revision in SAK from %s, expected %d got %d\n", DESCRIBE(remote), remote->outbound.revision, revision);
