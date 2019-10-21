@@ -1730,7 +1730,7 @@ DPS_Status DPS_StartNode(DPS_Node* node, int mcast, DPS_NodeAddress* listenAddr)
     assert(!r);
 
     DPS_GenerateUUID(&node->meshId);
-    DPS_DBGPRINT("Node mesh id is: %08x\n", DPS_UUIDToString(&node->meshId));
+    DPS_DBGPRINT("Node mesh id is: %s\n", DPS_UUIDToString(&node->meshId));
     node->interests = DPS_CountVectorAlloc();
     node->needs = DPS_CountVectorAllocFH();
     node->scratch.interests = DPS_BitVectorAlloc();
