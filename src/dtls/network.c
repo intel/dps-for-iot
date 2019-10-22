@@ -367,13 +367,13 @@ static void OnTLSDebug(void *ctx, int level, const char *file, int line, const c
     };
     switch (level) {
     case 1:
-        DPS_Log(DPS_LOG_WARNING, file, line, NULL, "%s", str);
+        DPS_Log(DPS_LOG_WARNING, file, line, NULL, DPS_DBG_TAG, "%s", str);
         break;
     case 2:
     case 3:
     case 4:
         if (DPS_DEBUG_ENABLED()) {
-            DPS_Log(levels[level], file, line, NULL, "%s", str);
+            DPS_Log(levels[level], file, line, NULL, DPS_DBG_TAG, "%s", str);
         }
         break;
     }
