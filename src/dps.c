@@ -549,6 +549,7 @@ DPS_Status DPS_MuteRemoteNode(DPS_Node* node, RemoteNode* remote, RemoteNodeStat
          * Obviously not keeping connection alive for a dead remote
          */
         DPS_NetConnectionDecRef(remote->ep.cn);
+        remote->ep.cn = NULL;
         remote->outbound.linkRequested = DPS_FALSE;
         remote->outbound.sakPending = DPS_FALSE;
     }
@@ -642,7 +643,14 @@ DPS_Status DPS_AddRemoteNode(DPS_Node* node, const DPS_NodeAddress* addr, DPS_Ne
             remote->inbound.revision += 1;
             remote->inbound.revision = remote->outbound.revision;
             remote->outbound.linkRequested = DPS_FALSE;
+            assert(remote->ep.cn == NULL);
+            DPS_NetConnectionIncRef(cn);
+            remote->ep.cn = cn;
         } else {
+            if (!remote->ep.cn) {
+                DPS_NetConnectionIncRef(cn);
+                remote->ep.cn = cn;
+            }
             ret = DPS_ERR_EXISTS;
         }
     } else {
@@ -655,16 +663,13 @@ DPS_Status DPS_AddRemoteNode(DPS_Node* node, const DPS_NodeAddress* addr, DPS_Ne
         DPS_DBGPRINT("Adding new remote %s\n", DPS_NodeAddrToString(addr));
         remote->ep.addr = *addr;
         remote->ep.cn = cn;
+        DPS_NetConnectionIncRef(cn);
         remote->inbound.meshId = DPS_MaxMeshId;
         /*
          * Add remote node to the remote node list
          */
         InsertRemoteNode(node, remote);
     }
-    /*
-     * This tells the network layer to keep connection alive for this address
-     */
-    DPS_NetConnectionIncRef(cn);
     *remoteOut = remote;
     return ret;
 }
