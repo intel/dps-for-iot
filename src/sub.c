@@ -1061,14 +1061,15 @@ DPS_Status DPS_DecodeSubscriptionAck(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
         if (remote->outbound.revision == revision) {
             remote->outbound.sendInterests = DPS_FALSE;
             remote->outbound.sakPending = DPS_FALSE;
-            if (remote->completion) {
-                DPS_RemoteCompletion(remote->completion, DPS_OK);
-            }
             if (remote->state == REMOTE_UNMUTING) {
                 remote->state = REMOTE_ACTIVE;
             }
+            if (remote->completion) {
+                DPS_RemoteCompletion(remote->completion, DPS_OK);
+            }
         } else {
-            DPS_WARNPRINT("Unexpected revision in SAK from %s, expected %d got %d\n", DESCRIBE(remote), remote->outbound.revision, revision);
+            DPS_WARNPRINT("Unexpected revision in SAK from %s, expected %d got %d\n", DESCRIBE(remote),
+                          remote->outbound.revision, revision);
             ret = DPS_ERR_STALE;
         }
     } else {
