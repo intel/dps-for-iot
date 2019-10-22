@@ -41,10 +41,12 @@ static void OnResolveAddress(DPS_Node* node, const DPS_NodeAddress* addr, void* 
 static DPS_NodeAddress* GetListenAddress(DPS_Node* node)
 {
     DPS_NodeAddress* addr = NULL;
+    DPS_Event* event = NULL;
+#if defined(DPS_USE_DTLS) || defined(DPS_USE_TCP) || defined(DPS_USE_UDP)
     char host[DPS_MAX_HOST_LEN + 1];
     char service[DPS_MAX_SERVICE_LEN + 1];
-    DPS_Event* event = NULL;
     ResolveRequest req;
+#endif
     DPS_Status ret;
 
     addr = DPS_CreateAddress();
@@ -52,6 +54,7 @@ static DPS_NodeAddress* GetListenAddress(DPS_Node* node)
         ret = DPS_ERR_RESOURCES;
         goto Exit;
     }
+#if defined(DPS_USE_DTLS) || defined(DPS_USE_TCP) || defined(DPS_USE_UDP)
     ret = DPS_SplitAddress(DPS_GetListenAddressString(node),
                            host, sizeof(host), service, sizeof(service));
     if (ret != DPS_OK) {
@@ -69,6 +72,10 @@ static DPS_NodeAddress* GetListenAddress(DPS_Node* node)
         goto Exit;
     }
     ret = DPS_WaitForEvent(event);
+#elif defined(DPS_USE_PIPE)
+    DPS_CopyAddress(addr, DPS_GetListenAddress(node));
+    ret = DPS_OK;
+#endif
  Exit:
     DPS_DestroyEvent(event);
     if (ret != DPS_OK) {
