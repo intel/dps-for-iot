@@ -388,9 +388,21 @@ DPS_Status DPS_GetLoopbackAddress(DPS_NodeAddress* addr, DPS_Node* node)
 void DPS_EndpointSetPort(DPS_NetEndpoint* ep, uint16_t port)
 {
     switch (ep->addr.type) {
+    case DPS_UDP:
+        /*
+         * Special handling of UDP addresses: when the endpoint
+         * address is UDP and the configured transport is not, the
+         * port argument is a DTLS or TCP listening port.  Update the
+         * type here to reflect that.
+         */
+#if defined(DPS_USE_DTLS)
+        ep->addr.type = DPS_DTLS;
+#elif defined(DPS_USE_TCP)
+        ep->addr.type = DPS_TCP;
+#endif
+        /* FALLTHROUGH */
     case DPS_DTLS:
     case DPS_TCP:
-    case DPS_UDP:
         if (!ep->cn) {
             port = htons(port);
             if (ep->addr.u.inaddr.ss_family == AF_INET6) {
