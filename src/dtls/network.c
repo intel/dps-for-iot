@@ -1275,7 +1275,18 @@ static int TLSHandshake(DPS_NetConnection* cn)
         break;
     }
 
-    ret = mbedtls_ssl_handshake(&cn->ssl);
+    if (cn->netCtx->state == NET_RUNNING) {
+        ret = mbedtls_ssl_handshake(&cn->ssl);
+    } else {
+        /*
+         * Abort the handshake when we're stopping so that we don't
+         * wait around for timeouts.
+         *
+         * MBEDTLS_ERR_SSL_TIMEOUT is chosen here to ensure all
+         * cleanup occurs correctly.
+         */
+        ret = MBEDTLS_ERR_SSL_TIMEOUT;
+    }
     cn->handshake = ret;
 
     if (ret == MBEDTLS_ERR_SSL_HELLO_VERIFY_REQUIRED) {
@@ -1309,7 +1320,7 @@ static int TLSHandshake(DPS_NetConnection* cn)
      * there is no need for us to do the verification as well.
      */
     if (ret != 0) {
-        DPS_WARNPRINT("TLSHandshake failed- %s\n", TLSErrTxt(ret));
+        DPS_WARNPRINT("TLSHandshake failed - %s\n", TLSErrTxt(ret));
         goto Exit;
     }
 
