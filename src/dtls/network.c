@@ -338,6 +338,13 @@ static void CancelPending(DPS_NetConnection* cn)
      */
     DPS_NetConnectionIncRef(cn);
 
+    while (!DPS_QueueEmpty(&cn->recvQueue)) {
+        RecvData* data = (RecvData*)DPS_QueueFront(&cn->recvQueue);
+        DPS_QueueRemove(&data->queue);
+        DPS_DBGPRINT("Discarding queued data with %zu bytes\n", data->buf.len);
+        DPS_NetConnectionDecRef(cn);
+        DestroyRecvData(data);
+    }
     while (!DPS_QueueEmpty(&cn->sendQueue)) {
         SendRequest* req = (SendRequest*)DPS_QueueFront(&cn->sendQueue);
         DPS_QueueRemove(&req->queue);
