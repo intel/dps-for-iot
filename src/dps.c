@@ -188,15 +188,19 @@ void DPS_RxBufferToTx(const DPS_RxBuffer* rxBuffer, DPS_TxBuffer* txBuffer)
 
 static void OnShutdown(DPS_Node* node)
 {
-    int doCb;
+    DPS_OnNodeShutdown onShutdown = NULL;
+    void* onShutdownData = NULL;
 
     DPS_LockNode(node);
-    doCb = node->onShutdown && !node->remoteNodes;
-    DPS_UnlockNode(node);
-    if (doCb) {
-        DPS_DBGPRINT("OnShutdown\n");
-        node->onShutdown(node, node->onShutdownData);
+    if (node->onShutdown && !node->remoteNodes) {
+        onShutdown = node->onShutdown;
+        onShutdownData = node->onShutdownData;
         node->onShutdown = node->onShutdownData = NULL;
+    }
+    DPS_UnlockNode(node);
+    if (onShutdown) {
+        DPS_DBGPRINT("OnShutdown\n");
+        onShutdown(node, onShutdownData);
     }
 }
 
