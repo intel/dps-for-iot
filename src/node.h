@@ -58,6 +58,7 @@ extern "C" {
 #define DPS_NODE_RUNNING      1 /**< Node is running */
 #define DPS_NODE_STOPPING     2 /**< Node is stopping */
 #define DPS_NODE_STOPPED      3 /**< Node is stopped */
+#define DPS_NODE_PAUSED       4 /**< Node is paused (not receiving input) */
 
 #if !defined(DOXYGEN_SKIP_FORWARD_DECLARATION)
 typedef struct _RemoteNode RemoteNode;

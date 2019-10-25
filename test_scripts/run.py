@@ -27,6 +27,7 @@ if 'FSAN' not in os.environ or os.environ['FSAN'] == 'no':
              os.path.join('test_scripts', 'e2esec.py'),
              os.path.join('test_scripts', 'fanout.py'),
              os.path.join('test_scripts', 'hot_mesh.py'),
+             os.path.join('test_scripts', 'link_drop.py'),
              os.path.join('test_scripts', 'loop25.py'),
              os.path.join('test_scripts', 'loop3.py'),
              os.path.join('test_scripts', 'pub100.py'),

@@ -103,6 +103,12 @@ def _expect(children, pattern, allow_error=False, timeout=-1):
         if i != 0:
             raise RuntimeError(pattern[i])
 
+def _expect_dropped(child, port, reps):
+    _expect([child], ['Linked to remote {}'.format(port)])
+    for i in range(0, reps):
+        _expect([child], ['Deleting remote node {}'.format(port + child.linesep)])
+        _expect([child], ['Linked to remote {}'.format(port + child.linesep)])
+
 def _expect_listening(child):
     _expect([child], ['is listening on ([0-9A-Za-z.:%_\-/\\[\]]+){}'.format(child.linesep)])
     child.port = child.match.group(1).decode()
@@ -140,6 +146,11 @@ def expect_linked(child, ports):
     if isinstance(ports, basestring) or not isinstance(ports, collections.Sequence):
         ports = [ports]
     _expect_linked(child, ('-p {} ' * len(ports)).format(*ports))
+
+def expect_dropped(child, port, reps):
+    port = port.replace(']', '\\]').replace('[', '\\[')
+    _expect_dropped(child, port, reps)
+    _expect([child], ['Clean unlink from remote node {}'.format(port + child.linesep)])
 
 def _expect_pub(children, topics, allow_error=False, timeout=-1, signers=None):
     for child in children:
@@ -247,6 +258,14 @@ def sub(args=''):
     child = _spawn(_s, cmd)
     _expect_listening(child)
     _expect_linked(child, args)
+    return child
+
+def drop(args=''):
+    global _s
+    _s = _s + 1
+    cmd = [os.path.join('build', 'test', 'bin', 'link_drop')] + _debug + args.split()
+    child = _spawn(_s, cmd)
+    _expect_listening(child)
     return child
 
 def pub(args):

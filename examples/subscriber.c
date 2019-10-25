@@ -377,6 +377,7 @@ int main(int argc, char** argv)
     }
     subscriber.node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore), nodeKeyId);
     DPS_SetNodeSubscriptionUpdateDelay(subscriber.node, args.subsRate);
+    DPS_SetNodeLinkLossTimeout(subscriber.node, args.subsRate * 10);
 
     nodeDestroyed = DPS_CreateEvent();
 
