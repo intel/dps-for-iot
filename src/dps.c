@@ -29,7 +29,6 @@
 #include <dps/dps.h>
 #include <dps/private/cbor.h>
 #include <dps/private/dps.h>
-#include <dps/private/network.h>
 #include <dps/uuid.h>
 #include "ack.h"
 #include "bitvec.h"
@@ -510,6 +509,7 @@ DPS_Status DPS_UnmuteRemoteNode(DPS_Node* node, RemoteNode* remote)
         DPS_DBGPRINT("Unmuting %s remote %s\n", RemoteStateTxt(remote), DESCRIBE(remote));
 
         remote->state = REMOTE_UNMUTING;
+        remote->outbound.sakCounter = 0;
         /*
          * We need a fresh mesh id that is less than any of the mesh id's
          * we have already seen. If we were to send the same mesh id that
@@ -571,7 +571,7 @@ DPS_Status DPS_AddRemoteNode(DPS_Node* node, const DPS_NodeAddress* addr, DPS_Ne
 
     if (remote) {
         if (remote->state == REMOTE_DEAD) {
-            DPS_DBGPRINT("Reactivating dead remote %s\n", DPS_NodeAddrToString(addr));
+            DPS_DBGINFO("Reactivating dead remote %s\n", DPS_NodeAddrToString(addr));
             remote->state = REMOTE_NEW;
             remote->inbound.meshId = DPS_MaxMeshId;
             remote->inbound.revision += 1;
@@ -882,16 +882,11 @@ static void FindAlternativeRoute(DPS_Node* node, RemoteNode* oldRoute)
             break;
         }
     }
-    if (newRoute) {
-        DPS_DBGINFO("Try unmuting link to %s mesh id %s\n", DESCRIBE(newRoute), DPS_UUIDToString(&newRoute->inbound.meshId));
-        DPS_UnmuteRemoteNode(node, newRoute);
-    } else {
-#ifdef DPS_DEBUG
-        DPS_DbgLock();
-        DPS_DBGINFO("No alternative route to %s\n", DESCRIBE(oldRoute));
-        DPS_DbgUnlock();
-#endif
+    if (!newRoute) {
+        newRoute = oldRoute;
     }
+    DPS_DBGINFO("Try unmuting link to %s mesh id %s\n", DESCRIBE(newRoute), DPS_UUIDToString(&newRoute->inbound.meshId));
+    DPS_UnmuteRemoteNode(node, newRoute);
 }
 
 static void SendSubsTimer(uv_timer_t* handle)
@@ -936,7 +931,7 @@ static void SendSubsTimer(uv_timer_t* handle)
                 continue;
             }
             if (remote->outbound.sakCounter >= (DPS_SAK_RETRY_THRESHOLD + DPS_SAK_RETRY_LIMIT)) {
-                DPS_WARNPRINT("At retry limit - %s remote %s\n", remote->completion ? "deleting" : "muting", DESCRIBE(remote));
+                DPS_DBGINFO("At retry limit - %s remote %s\n", remote->completion ? "deleting" : "muting", DESCRIBE(remote));
                 if (remote->state == REMOTE_LINKING || remote->state == REMOTE_UNLINKING) {
                     /*
                      * Link to remote was either never estabished or remote failed to respond
@@ -1094,6 +1089,9 @@ static DPS_Status DecodeRequest(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxBu
     uint8_t msgType;
     size_t len;
 
+    if (node->state == DPS_NODE_PAUSED) {
+        return DPS_OK;
+    }
     DPS_DBGTRACEA("node=%p,ep={addr=%s,cn=%p},buf=%p,multicast=%d\n",
             node, DPS_NodeAddrToString(&ep->addr), ep->cn, buf, multicast);
 
@@ -1659,7 +1657,7 @@ DPS_Status DPS_StartNode(DPS_Node* node, int mcast, DPS_NodeAddress* listenAddr)
     assert(!r);
 
     DPS_GenerateUUID(&node->meshId);
-    DPS_DBGPRINT("Node mesh id is: %08x\n", DPS_UUIDToString(&node->meshId));
+    DPS_DBGPRINT("Node mesh id is: %s\n", DPS_UUIDToString(&node->meshId));
     node->interests = DPS_CountVectorAlloc();
     node->needs = DPS_CountVectorAllocFH();
     node->scratch.interests = DPS_BitVectorAlloc();
@@ -1760,6 +1758,13 @@ void DPS_SetNodeSubscriptionUpdateDelay(DPS_Node* node, uint32_t subsRateMsecs)
     DPS_DBGTRACE();
 
     node->subsRate = subsRateMsecs;
+}
+
+void DPS_SetNodeLinkLossTimeout(DPS_Node* node, uint32_t linkLossMsecs)
+{
+    DPS_DBGTRACE();
+
+    node->linkLossTimeout = linkLossMsecs;
 }
 
 static void LinkExists(void* data)

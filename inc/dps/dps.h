@@ -548,12 +548,20 @@ DPS_Status DPS_DestroyNode(DPS_Node* node, DPS_OnNodeDestroyed cb, void* data);
 #define DPS_LINK_LOSS_TIMEOUT 30000
 
 /**
- * Override the defauly time delay (in msecs) between subscription updates.
+ * Override the default time delay (in msecs) between subscription updates.
  *
  * @param node           The node
  * @param subsRateMsecs  The time delay (in msecs) between updates
  */
 void DPS_SetNodeSubscriptionUpdateDelay(DPS_Node* node, uint32_t subsRateMsecs);
+
+/**
+ * Override the default link-loss detection timeout (in msecs)
+ *
+ * @param node           The node
+ * @param linkLossMsecs  The time for the link to an unresponsive remote node to be considered lost
+ */
+void DPS_SetNodeLinkLossTimeout(DPS_Node* node, uint32_t linkLossMsecs);
 
 /**
  * Get the address this node is listening for connections on
