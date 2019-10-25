@@ -2,6 +2,7 @@
 
 from common import *
 import atexit
+import time
 
 atexit.register(cleanup)
 
@@ -114,6 +115,9 @@ for i in range(len(subs)):
 
 for i in range(len(subs)):
     expect_linked(subs[i], links[i])
+
+# Give time for the subscriptions to propogate
+time.sleep(30)
 
 # Routing check
 
