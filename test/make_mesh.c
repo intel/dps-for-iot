@@ -280,7 +280,7 @@ static int HasUnstableLinks(void)
                 /*
                  * These unstable states
                  */
-                if (remote->state == REMOTE_LINKING || remote->state == REMOTE_UNLINKING) {
+                if (remote->state == REMOTE_LINKING || remote->state == REMOTE_UNLINKING || remote->state == REMOTE_UNMUTING) {
                     DPS_UnlockNode(node);
                     return DPS_TRUE;
                 }
