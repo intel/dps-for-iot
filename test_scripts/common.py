@@ -11,6 +11,7 @@ import signal
 import shutil
 from subprocess import check_output
 import sys
+import time
 
 try:
     basestring
@@ -189,6 +190,50 @@ def _expect_ack(children, allow_error=False, timeout=-1, signers=None):
             raise RuntimeError(pattern[i])
         if signers != None:
             signers.append(child.match.group(1).decode())
+
+def has_unstable_links(children, timeout=-1):
+    for child in children:
+        child.kill(signal.SIGUSR1)
+        has_unstable = False
+        while True:
+            i = child.expect(['ERROR', 'history{}'.format(child.linesep),
+                              ':[0-9]+ state=(LINKING|UNLINKING)'], timeout=timeout)
+            if i == 0:
+                raise RuntimeError('ERROR')
+            elif i == 1:
+                # Must consume all remote node output to avoid cross
+                # talk with any other expects (i.e. count_muted_links)
+                # for remote node output
+                break;
+            elif i == 2:
+                has_unstable = True
+        if has_unstable:
+            return True
+    return False
+
+def count_muted_links(children, timeout=-1):
+    muted = 0
+    for child in children:
+        child.kill(signal.SIGUSR1)
+        while True:
+            i = child.expect(['ERROR', 'history{}'.format(child.linesep), ':[0-9]+ state=MUTED'],
+                             timeout=timeout)
+            if i == 0:
+                raise RuntimeError('ERROR')
+            if i == 1:
+                break
+            elif i == 2:
+                muted = muted + 1
+    return muted
+
+def wait_until_settled(children, exp_muted, timeout):
+    end = time.time() + timeout
+    while time.time() <= end:
+        if not has_unstable_links(children, 1) and count_muted_links(children, 1) == (exp_muted * 2):
+            break
+        time.sleep(1)
+    if time.time() > end:
+        raise RuntimeError('Timeout')
 
 def cleanup():
     global _children

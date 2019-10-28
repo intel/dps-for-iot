@@ -110,14 +110,21 @@ links = [
     [subs[3].port, subs[4].port]
 ]
 
+begin = time.time()
 for i in range(len(subs)):
     link(subs[i], links[i])
 
 for i in range(len(subs)):
     expect_linked(subs[i], links[i])
 
-# Give time for the subscriptions to propogate
-time.sleep(30)
+num_links = 0
+for i in range(len(subs)):
+    num_links = num_links + len(links[i])
+exp_muted = (num_links + 1 - len(subs))
+
+wait_until_settled(subs, exp_muted, 60)
+end = time.time()
+print('Link settling time = {} seconds'.format(end - begin))
 
 # Routing check
 

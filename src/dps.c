@@ -2283,8 +2283,8 @@ static void DumpNode(uv_signal_t* handle, int signum)
         if (remote->state == REMOTE_DEAD) {
             continue;
         }
-        DPS_PRINT("  %s muted=%d,interests=%s\n", DPS_NodeAddrToString(&remote->ep.addr),
-                  remote->state == REMOTE_MUTED, DPS_DumpMatchingTopics(remote->inbound.interests));
+        DPS_PRINT("  %s state=%s,interests=%s\n", DPS_NodeAddrToString(&remote->ep.addr),
+                  RemoteStateTxt(remote), DPS_DumpMatchingTopics(remote->inbound.interests));
     }
     DPS_PRINT("history\n");
     DumpHistory(node->history.root);
