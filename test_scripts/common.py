@@ -197,7 +197,7 @@ def has_unstable_links(children, timeout=-1):
         has_unstable = False
         while True:
             i = child.expect(['ERROR', 'history{}'.format(child.linesep),
-                              ':[0-9]+ state=(LINKING|UNLINKING)'], timeout=timeout)
+                              ':[0-9]+ state=(LINKING|UNLINKING|UNMUTING)'], timeout=timeout)
             if i == 0:
                 raise RuntimeError('ERROR')
             elif i == 1:
