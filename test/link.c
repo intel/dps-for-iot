@@ -368,6 +368,7 @@ static void TestShutdownWhileIncomingLinkInProgress(void)
     DPS_NodeAddress* addr = NULL;
     DPS_Event* event = NULL;
     DPS_Status ret;
+    int count;
 
     /*
      * Use a SUB node so that we have a transaction in progress while
@@ -395,6 +396,13 @@ static void TestShutdownWhileIncomingLinkInProgress(void)
     ASSERT(ret == DPS_OK);
     ret = DPS_WaitForEvent(event);
     ASSERT(ret == DPS_OK);
+    /*
+     * Give a short amount of time for b to run and delete the remote
+     * for a.
+     */
+    for (count = 0; b->remoteNodes && (count < 10); ++count) {
+        SLEEP(10);
+    }
     ASSERT(!b->remoteNodes);
 
     DPS_DestroyEvent(event);
