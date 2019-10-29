@@ -197,7 +197,7 @@ def has_unstable_links(children, timeout=-1):
         has_unstable = False
         while True:
             i = child.expect(['ERROR', 'history{}'.format(child.linesep),
-                              ':[0-9]+ state=(LINKING|UNLINKING|UNMUTING)'], timeout=timeout)
+                              ' state=(LINKING|UNLINKING|UNMUTING),interests='], timeout=timeout)
             if i == 0:
                 raise RuntimeError('ERROR')
             elif i == 1:
@@ -216,7 +216,7 @@ def count_muted_links(children, timeout=-1):
     for child in children:
         child.kill(signal.SIGUSR1)
         while True:
-            i = child.expect(['ERROR', 'history{}'.format(child.linesep), ':[0-9]+ state=MUTED'],
+            i = child.expect(['ERROR', 'history{}'.format(child.linesep), ' state=MUTED,interests='],
                              timeout=timeout)
             if i == 0:
                 raise RuntimeError('ERROR')
