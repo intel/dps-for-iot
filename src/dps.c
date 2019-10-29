@@ -2236,7 +2236,6 @@ void DPS_NodeRequestCancel(NodeRequest* req)
 #undef DPS_DBG_TAG
 #define DPS_DBG_TAG NULL
 
-#ifdef DPS_DEBUG
 static void DumpHistory(DPS_PubHistory* ph)
 {
     DPS_NodeAddressList* addr;
@@ -2253,11 +2252,9 @@ static void DumpHistory(DPS_PubHistory* ph)
     DPS_PRINT("]\n");
     DumpHistory(ph->right);
 }
-#endif
 
 static void DumpNode(uv_signal_t* handle, int signum)
 {
-#ifdef DPS_DEBUG
     DPS_Node* node = handle->data;
     DPS_Publication* pub;
     DPS_Subscription* sub;
@@ -2289,10 +2286,8 @@ static void DumpNode(uv_signal_t* handle, int signum)
     DPS_PRINT("history\n");
     DumpHistory(node->history.root);
     DPS_UnlockNode(node);
-#endif
 }
 
-#ifdef DPS_DEBUG
 const char* RemoteStateTxt(const RemoteNode* remote)
 {
     if (remote) {
@@ -2318,4 +2313,3 @@ const char* RemoteStateTxt(const RemoteNode* remote)
         return "NULL";
     }
 }
-#endif

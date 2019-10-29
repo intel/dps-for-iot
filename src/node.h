@@ -221,7 +221,6 @@ typedef enum {
     REMOTE_DEAD           /**< Remote was linked but went unresponsive */
 } RemoteNodeState;
 
-#ifdef DPS_DEBUG
 /**
  * Return the remote node state as a text string
  *
@@ -230,9 +229,6 @@ typedef enum {
  * @return the text string
  */
 const char* RemoteStateTxt(const RemoteNode* remote);
-#else
-#define RemoteStateTxt(r) ""
-#endif
 
 /**
  * A remote node

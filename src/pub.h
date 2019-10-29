@@ -317,11 +317,7 @@ void DPS_DumpPubs(DPS_Node* node);
  *
  * @param pub The publication
  */
-#ifdef DPS_DEBUG
-void DPS_DumpPub(DPS_Publication* pub);
-#else
-#define DPS_DumpPub(pub)
-#endif
+void DPS_DumpPub(const DPS_Publication* pub);
 
 #ifdef __cplusplus
 }

@@ -301,6 +301,7 @@ void DPS_DumpTopics(const char** topics, size_t numTopics)
         }
     }
 }
+#endif
 
 const char* DPS_DumpMatchingTopics(DPS_BitVector* bv)
 {
@@ -336,4 +337,3 @@ const char* DPS_DumpMatchingTopics(DPS_BitVector* bv)
     strcat_s(str, sizeof(str), "]");
     return str;
 }
-#endif

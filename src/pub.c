@@ -1955,8 +1955,7 @@ DPS_NetRxBuffer* DPS_PublicationGetNetRxBuffer(const DPS_Publication* pub)
     return NULL;
 }
 
-#ifdef DPS_DEBUG
-void DPS_DumpPub(DPS_Publication* pub)
+void DPS_DumpPub(const DPS_Publication* pub)
 {
     size_t i;
     int16_t ttl = 0;
@@ -1987,6 +1986,7 @@ void DPS_DumpPub(DPS_Publication* pub)
     }
 }
 
+#ifdef DPS_DEBUG
 void DPS_DumpPubs(DPS_Node* node)
 {
     if (DPS_Debug) {
