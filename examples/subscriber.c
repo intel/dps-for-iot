@@ -294,7 +294,7 @@ static int LinkTo(Subscriber* subscriber, Args* args)
         }
     }
     if (ret == DPS_OK) {
-        subscriber->numAddrs += j;
+        subscriber->numAddrs = j;
         return DPS_TRUE;
     } else {
         DPS_ERRPRINT("DPS_Link %s returned %s\n", args->linkText[i], DPS_ErrTxt(ret));
@@ -335,6 +335,7 @@ static void ReadStdin(Subscriber* subscriber)
         }
         Subscribe(subscriber, &args);
         LinkTo(subscriber, &args);
+        DestroyLinkArg(args.linkText, NULL, args.numLinks);
     }
 }
 
