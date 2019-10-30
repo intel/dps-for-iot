@@ -46,8 +46,8 @@ _logs = []
 # between subscriber and publisher is less than the _pub_wait.
 #
 if os.environ['USE_DTLS'] == '1':
-    _subs_rate = ['-r', '800']
-    _pub_wait = ['-w', '8']
+    _subs_rate = ['-r', '2000']
+    _pub_wait = ['-w', '20']
 else:
     _subs_rate = ['-r', '100']
     _pub_wait = ['-w', '1']
