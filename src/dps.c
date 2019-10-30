@@ -1498,18 +1498,25 @@ static void NodeRun(void* arg)
         node->onDestroyed(node, node->onDestroyedData);
         uv_mutex_destroy(&node->nodeMutex);
         FreeNode(node);
+        node = NULL;
     } else {
         DPS_UnlockNode(node);
     }
 
-    DPS_DBGPRINT("Exiting node thread\n");
+#ifdef DPS_DEBUG
+    if (DPS_DEBUG_ENABLED()) {
+        DPS_Log(DPS_LOG_DBGPRINT, __FILE__, __LINE__, __FUNCTION__,
+                node ? node->addrStr : NULL, "Exiting node thread\n");
+    }
+#endif
 
     /*
      * Note: this is not currently a libuv API and is implemented locally
      */
     r = uv_thread_detach(&thisThread);
     if (r) {
-        DPS_ERRPRINT("Failed to detatch thread: %s\n", uv_err_name(r));
+        DPS_Log(DPS_LOG_ERROR, __FILE__, __LINE__, __FUNCTION__,
+                node ? node->addrStr : NULL, "Failed to detatch thread: %s\n", uv_err_name(r));
     }
 }
 
