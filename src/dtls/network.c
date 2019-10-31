@@ -136,9 +136,9 @@ typedef struct _DPS_NetConnection {
     int handshake;
 
     enum {
-          CN_OPEN = 0,
-          CN_CLOSE_NOTIFIED = 1,
-          CN_CLOSING = 2
+        CN_RECV_CLOSED = (1<<0),
+        CN_SEND_CLOSED = (1<<1),
+        CN_CLOSING     = (1<<2)
     } state;
 
     /*
@@ -685,6 +685,8 @@ static void RxHandleClosed(uv_handle_t* handle)
 
 static void FreeConnection(DPS_NetConnection* cn)
 {
+    DPS_DBGTRACEA("cn=%p\n", cn);
+
     mbedtls_ssl_free(&cn->ssl);
     mbedtls_ssl_config_free(&cn->conf);
     mbedtls_pk_free(&cn->pkey);
@@ -763,8 +765,8 @@ static void DestroyTimeout(uv_timer_t* timer)
 
     for (cn = netCtx->cns; cn != NULL; cn = next) {
         next = cn->next;
-        if ((cn->state == CN_CLOSING) && (cn->destroyTime < uv_now(cn->node->loop))) {
-            cn->state = CN_CLOSE_NOTIFIED;
+        if ((cn->state & CN_SEND_CLOSED) && (cn->destroyTime <= uv_now(cn->node->loop))) {
+            cn->state |= CN_RECV_CLOSED;
             if (cn->refCount == 0) {
                 DestroyConnection(cn);
             }
@@ -779,7 +781,7 @@ static int ScheduleNextDestroyTimeout(DPS_NetContext* netCtx)
     int err;
 
     for (cn = netCtx->cns; cn != NULL; cn = cn->next) {
-        if ((cn->state == CN_CLOSING) && (cn->destroyTime < nextTime)) {
+        if ((cn->state & CN_SEND_CLOSED) && (cn->destroyTime < nextTime)) {
             nextTime = cn->destroyTime;
         }
     }
@@ -811,22 +813,17 @@ static void DestroyConnection(DPS_NetConnection* cn)
            cn->handshake != MBEDTLS_ERR_SSL_WANT_READ &&
            cn->handshake != MBEDTLS_ERR_SSL_WANT_WRITE);
 
-    switch (cn->state) {
-    case CN_OPEN:
-        cn->state = CN_CLOSING;
+    if ((cn->state & CN_SEND_CLOSED) == 0) {
         int ret = mbedtls_ssl_close_notify(&cn->ssl);
         if (ret != 0) {
             DPS_ERRPRINT("Close notify failed: %s\n", TLSErrTxt(ret));
         }
+        cn->state |= CN_SEND_CLOSED;
         /*
-         * The ref count may be non-0 now if mbedtls has work to do
-         * for the close notify above.
+         * Start a timer to ensure that connection is destroyed
+         * when other side is unresponsive.
          */
-        if (cn->refCount > 0) {
-            /*
-             * Start a timer to ensure that connection is destroyed
-             * when other side is unresponsive.
-             */
+        if ((cn->state & CN_RECV_CLOSED) == 0) {
             cn->destroyTime = uv_now(cn->node->loop) + CLOSE_NOTIFIED_TIMEOUT;
             ret = ScheduleNextDestroyTimeout(cn->netCtx);
             if (ret != 0) {
@@ -834,13 +831,19 @@ static void DestroyConnection(DPS_NetConnection* cn)
                  * Timer is not scheduled to run, so forcibly destroy
                  * the connection when the ref count goes to 0.
                  */
-                cn->state = CN_CLOSE_NOTIFIED;
+                cn->state |= CN_RECV_CLOSED;
             }
+        }
+        /*
+         * The ref count may be non-0 now if mbedtls has work to do
+         * for the close notify above.
+         */
+        if (cn->refCount > 0) {
             return;
         }
-        /* FALLTHROUGH */
-    case CN_CLOSE_NOTIFIED:
-        cn->state = CN_CLOSING;
+    }
+    if ((cn->state & (CN_RECV_CLOSED | CN_SEND_CLOSED | CN_CLOSING)) == (CN_RECV_CLOSED | CN_SEND_CLOSED)) {
+        cn->state |= CN_CLOSING;
         assert(!uv_is_active((uv_handle_t*)&cn->timer));
         if (uv_is_active((uv_handle_t*)&cn->idleForSendCallbacks)) {
             uv_idle_stop(&cn->idleForSendCallbacks);
@@ -858,15 +861,6 @@ static void DestroyConnection(DPS_NetConnection* cn)
         } else {
             FreeConnection(cn);
         }
-        break;
-    case CN_CLOSING:
-        /*
-         * A close callback is pending and will drive the rest of the
-         * destroy steps, or we are waiting to receive close_notify
-         * from the remote.  In the latter case, the destroy timer
-         * will ensure eventual destruction.
-         */
-        return;
     }
 }
 
@@ -1297,16 +1291,7 @@ static void TLSRecv(DPS_NetConnection* cn)
     if (ret < 0) {
         if (ret == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY) {
             DPS_DBGPRINT("Connection was closed gracefully\n");
-            switch (cn->state) {
-            case CN_OPEN:
-                cn->state = CN_CLOSE_NOTIFIED;
-                break;
-            case CN_CLOSE_NOTIFIED:
-                break;
-            case CN_CLOSING:
-                cn->state = CN_CLOSE_NOTIFIED;
-                break;
-            }
+            cn->state |= CN_RECV_CLOSED;
             status = DPS_ERR_EOF;
         } else if (ret == MBEDTLS_ERR_SSL_WANT_READ) {
             DPS_DBGPRINT("Want read cn=%p\n", cn);
