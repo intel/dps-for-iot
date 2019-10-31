@@ -273,19 +273,25 @@ def reset_logs():
 def bin(cmd):
     global _children
     child = _spawn(1, cmd)
-    buf = child.read(8192)
-    while buf:
+    try:
         buf = child.read(8192)
-    status = child.wait()
+        while buf:
+            buf = child.read(8192)
+        status = child.wait()
+    except pexpect.TIMEOUT:
+        status = 1
     _children.remove(child)
     return status
 
 def py(cmd):
     global _children
     child = _py_spawn(1, cmd)
-    child.expect(pexpect.EOF, timeout=300)
-    status = child.wait()
-    _children.remove(child)
+    i = child.expect([pexpect.EOF, pexpect.TIMEOUT], timeout=300)
+    if i == 0:
+        status = child.wait()
+        _children.remove(child)
+    else:
+        status = 1
     return status
 
 def node(args):
