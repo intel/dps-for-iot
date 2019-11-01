@@ -330,13 +330,10 @@ void DPS_DeleteRemoteNode(DPS_Node* node, RemoteNode* remote)
          */
         remote->completion->remote = NULL;
         DPS_RemoteCompletion(node, remote->completion, DPS_ERR_MISSING);
+    } else if (remote->outbound.linkRequested && node->linkLossCB) {
+        node->linkLossCB(node, &remote->ep.addr, node->linkLossData);
     }
-    if (remote->state != REMOTE_DEAD) {
-        /*
-         * This tells the network layer we no longer need to keep connection alive for this address
-         */
-        DPS_NetConnectionDecRef(remote->ep.cn);
-    }
+    DPS_NetConnectionDecRef(remote->ep.cn);
     free(remote);
 }
 
@@ -364,13 +361,6 @@ DPS_Status DPS_UpdateOutboundInterests(DPS_Node* node, RemoteNode* destNode, uin
 
     DPS_DBGTRACE();
 
-    /*
-     * Don't update interests for inactive remotes
-     */
-    if (destNode->state == REMOTE_DEAD) {
-        *changes = DPS_FALSE;
-        return DPS_OK;
-    }
     /*
      * Unlinking is always a change
      */
@@ -469,7 +459,7 @@ ErrExit:
 
 DPS_Status DPS_MuteRemoteNode(DPS_Node* node, RemoteNode* remote, RemoteNodeState newState)
 {
-    if (remote->state == REMOTE_MUTED || remote->state == REMOTE_DEAD || remote->state == REMOTE_UNLINKING) {
+    if (remote->state == REMOTE_MUTED || remote->state == REMOTE_UNLINKING) {
         return DPS_OK;
     }
     remote->state = newState;
@@ -478,15 +468,6 @@ DPS_Status DPS_MuteRemoteNode(DPS_Node* node, RemoteNode* remote, RemoteNodeStat
      * Free the outbound interests, they are not needed while the remote is muted
      */
     FreeOutboundInterests(remote);
-    if (newState == REMOTE_DEAD) {
-        DPS_DBGINFO("Marking remote %s as DEAD\n", DESCRIBE(remote));
-        /*
-         * Obviously not keeping connection alive for a dead remote
-         */
-        DPS_NetConnectionDecRef(remote->ep.cn);
-        remote->outbound.linkRequested = DPS_FALSE;
-        remote->outbound.sakPending = DPS_FALSE;
-    }
     remote->outbound.sendInterests = DPS_FALSE;
     /*
      * Move the muted node to the head of the remote node list so remotes
@@ -503,7 +484,7 @@ DPS_Status DPS_UnmuteRemoteNode(DPS_Node* node, RemoteNode* remote)
 
     DPS_DBGTRACE();
 
-    if (remote->state == REMOTE_MUTED || remote->state == REMOTE_DEAD || remote->state == REMOTE_UNMUTING) {
+    if (remote->state == REMOTE_MUTED || remote->state == REMOTE_UNMUTING) {
         uint8_t unused;
 
         DPS_DBGPRINT("Unmuting %s remote %s\n", RemoteStateTxt(remote), DESCRIBE(remote));
@@ -570,16 +551,7 @@ DPS_Status DPS_AddRemoteNode(DPS_Node* node, const DPS_NodeAddress* addr, DPS_Ne
     RemoteNode* remote = DPS_LookupRemoteNode(node, addr);
 
     if (remote) {
-        if (remote->state == REMOTE_DEAD) {
-            DPS_DBGINFO("Reactivating dead remote %s\n", DPS_NodeAddrToString(addr));
-            remote->state = REMOTE_NEW;
-            remote->inbound.meshId = DPS_MaxMeshId;
-            remote->inbound.revision += 1;
-            remote->inbound.revision = remote->outbound.revision;
-            remote->outbound.linkRequested = DPS_FALSE;
-        } else {
-            ret = DPS_ERR_EXISTS;
-        }
+        ret = DPS_ERR_EXISTS;
     } else {
         assert(addr->type);
         remote = calloc(1, sizeof(RemoteNode));
@@ -829,20 +801,18 @@ static void SendPubsTimer(uv_timer_t* handle)
 }
 
 /*
- * See if there is a muted (or dead) remote with a given same mesh id
+ * See if there is a muted remote with a given same mesh id
  * that can restore connectivity after a node has gone unresponsive.
  */
 static void FindAlternativeRoute(DPS_Node* node, RemoteNode* oldRoute)
 {
     RemoteNode* remote;
-    RemoteNode* altRoute[4] = { NULL, NULL, NULL, NULL };
-    RemoteNode* newRoute = NULL;
-    int i;
+    RemoteNode* altRoute = NULL;
 
     DPS_DBGINFO("Find alternative route to replace %s\n", DESCRIBE(oldRoute));
 
     /*
-     * The alternatives are ordered in terms of preference
+     * Prefer a mesh id match if there is one otherwise use the first one
      */
     for (remote = node->remoteNodes; remote != NULL; remote = remote->next) {
         if (remote == oldRoute) {
@@ -855,38 +825,21 @@ static void FindAlternativeRoute(DPS_Node* node, RemoteNode* oldRoute)
                  */
                 return;
             }
-            if (remote->state == REMOTE_MUTED && !altRoute[0]) {
-                altRoute[0] = remote;
+            if (remote->state == REMOTE_MUTED) {
+                altRoute = remote;
                 break;
             }
-            if (remote->state == REMOTE_DEAD) {
-                altRoute[1] = remote;
-                continue;
-            }
         }
-        if (!altRoute[2] && remote->state == REMOTE_MUTED)  {
-            altRoute[2] = remote;
-            continue;
-        }
-        if (!altRoute[3] && remote->state == REMOTE_DEAD) {
-            altRoute[3] = remote;
-            continue;
+        if (!altRoute && remote->state == REMOTE_MUTED)  {
+            altRoute = remote;
         }
     }
-    /*
-     * Choose the preferred alternative
-     */
-    for (i = 0; i < 4; ++i) {
-        if (altRoute[i]) {
-            newRoute = altRoute[i];
-            break;
-        }
+    if (altRoute) {
+        DPS_DBGINFO("Try unmuting link to %s mesh id %s\n", DESCRIBE(altRoute), DPS_UUIDToString(&altRoute->inbound.meshId));
+        DPS_UnmuteRemoteNode(node, altRoute);
+    } else {
+        DPS_WARNPRINT("No alternative route to replace %s\n", DESCRIBE(oldRoute));
     }
-    if (!newRoute) {
-        newRoute = oldRoute;
-    }
-    DPS_DBGINFO("Try unmuting link to %s mesh id %s\n", DESCRIBE(newRoute), DPS_UUIDToString(&newRoute->inbound.meshId));
-    DPS_UnmuteRemoteNode(node, newRoute);
 }
 
 static void SendSubsTimer(uv_timer_t* handle)
@@ -908,10 +861,6 @@ static void SendSubsTimer(uv_timer_t* handle)
     for (remote = node->remoteNodes; remote != NULL; remote = remoteNext) {
         uint8_t changes = DPS_FALSE;
         remoteNext = remote->next; /* remote may get deleted or moved */
-
-        if (remote->state == REMOTE_DEAD) {
-            continue;
-        }
         /*
          * Resend the previous SUB or SAK if it has not been ACK'd
          */
@@ -931,24 +880,14 @@ static void SendSubsTimer(uv_timer_t* handle)
                 continue;
             }
             if (remote->outbound.sakCounter >= (DPS_SAK_RETRY_THRESHOLD + DPS_SAK_RETRY_LIMIT)) {
-                DPS_DBGINFO("At retry limit - %s remote %s\n", remote->completion ? "deleting" : "muting", DESCRIBE(remote));
-                if (remote->state == REMOTE_LINKING || remote->state == REMOTE_UNLINKING) {
+                DPS_DBGINFO("At retry limit - deleting remote %s\n", DESCRIBE(remote));
+                if (remote->state == REMOTE_ACTIVE) {
                     /*
-                     * Link to remote was either never estabished or remote failed to respond
-                     * to an unlink request, in either case we just delete the remote node.
-                     */
-                    DPS_DeleteRemoteNode(node, remote);
-                } else {
-                    /*
-                     * Remote node exists but has gone unresponsive. Don't delete it because
-                     * we might be able to re-establish a link to it later if we need to.
-                     */
-                    DPS_MuteRemoteNode(node, remote, REMOTE_DEAD);
-                    /*
-                     * Check is there is a muted remote that can restore the route that went dead.
+                     * Check is there is a muted remote that can replace the one that was lost
                      */
                     FindAlternativeRoute(node, remote);
                 }
+                DPS_DeleteRemoteNode(node, remote);
                 continue;
             }
             /*
@@ -1311,6 +1250,10 @@ static void StopNode(DPS_Node* node)
      * Delete remote nodes and shutdown any connections.
      */
     while (node->remoteNodes) {
+        /*
+         * Clear so delete doesn't report a surprise link loss.
+         */
+        node->remoteNodes->outbound.linkRequested = DPS_FALSE;
         DPS_DeleteRemoteNode(node, node->remoteNodes);
     }
     /*
@@ -1940,6 +1883,10 @@ DPS_Status DPS_Unlink(DPS_Node* node, const DPS_NodeAddress* addr, DPS_OnUnlinkC
         return DPS_ERR_BUSY;
     }
     /*
+     * Clear so delete doesn't report a surprise link loss.
+     */
+    remote->outbound.linkRequested = DPS_FALSE;
+    /*
      * Unlinking the remote node will cause it to be deleted after the
      * subscriptions are updated. When the remote node is removed
      * the completion callback will be called.
@@ -2210,6 +2157,19 @@ DPS_Status DPS_NodeScheduleRequest(DPS_Node* node, OnNodeRequest cb, void* data)
     return ret;
 }
 
+DPS_Status DPS_SetLinkLossCallback(DPS_Node* node, DPS_OnLinkLoss callback, void* data)
+{
+    if (!node) {
+        return DPS_ERR_NULL;
+    } else {
+        DPS_LockNode(node);
+        node->linkLossCB = callback;
+        node->linkLossData = data;
+        DPS_UnlockNode(node);
+        return DPS_OK;
+    }
+}
+
 #undef DPS_DBG_TAG
 #define DPS_DBG_TAG NULL
 
@@ -2257,9 +2217,6 @@ static void DumpNode(uv_signal_t* handle, int signum)
     }
     DPS_PRINT("remoteNodes\n");
     for (remote = node->remoteNodes; remote; remote = remote->next) {
-        if (remote->state == REMOTE_DEAD) {
-            continue;
-        }
         DPS_PRINT("  %s muted=%d\n", DPS_NodeAddrToString(&remote->ep.addr), remote->state == REMOTE_MUTED);
     }
     DPS_PRINT("history\n");
@@ -2285,8 +2242,6 @@ const char* RemoteStateTxt(RemoteNode* remote)
             return "MUTED";
         case REMOTE_UNMUTING:
             return "UNMUTING";
-        case REMOTE_DEAD:
-            return "DEAD";
         default:
             return "UNKNOWN";
         }
