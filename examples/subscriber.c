@@ -324,15 +324,13 @@ static void DelayedLink(DPS_Node* node, void* data)
     free(data);
 }
 
-#define MAX_ADDR_STRLEN 256
-
 static void OnLinkLoss(DPS_Node* node, const DPS_NodeAddress* remoteAddr, void* data)
 {
     int fixDelay = *((int*)(data));
 
     DPS_PRINT("Link to remote %s was lost\n", DPS_NodeAddrToString(remoteAddr));
     if (fixDelay >= 0) {
-        char* address = strndup(DPS_NodeAddrToString(remoteAddr), MAX_ADDR_STRLEN);
+        char* address = strdup(DPS_NodeAddrToString(remoteAddr));
         DPS_Status ret;
         DPS_PRINT("Attempting to recover link in %d seconds\n", fixDelay);
         ret = DPS_ScheduleCall(node, DelayedLink, address, 1000 * fixDelay);
