@@ -636,14 +636,14 @@ DPS_Status DPS_Link(DPS_Node* node, const char* addrText, DPS_OnLinkComplete cb,
 /**
  * Function prototype for function called when a DPS_Unlink() completes.
  *
- * @param node   The local node to use
+ * @param node   The local node that was unlinked from a remote node
  * @param addr   The address of the remote node that was unlinked
  * @param data   Application data passed in the call to DPS_Unlink()
  */
 typedef void (*DPS_OnUnlinkComplete)(DPS_Node* node, const DPS_NodeAddress* addr, void* data);
 
 /**
- * Unlink the local node from a remote node
+ * Unlink a local node from a remote node
  *
  * @param node   The local node to use
  * @param addr   The address of the remote node to unlink from
@@ -653,6 +653,27 @@ typedef void (*DPS_OnUnlinkComplete)(DPS_Node* node, const DPS_NodeAddress* addr
  * @return DPS_OK or an error status. If an error status is returned the callback function will not be called.
  */
 DPS_Status DPS_Unlink(DPS_Node* node, const DPS_NodeAddress* addr, DPS_OnUnlinkComplete cb, void* data);
+
+/**
+ * Function prototype for function called when a link is lossed.
+ *
+ * @param node   The local node that lost a link
+ * @param addr   The address of the remote node that was unlinked
+ * @param data   Application data passed in the call to DPS_SetLinkLossCallback()
+ */
+typedef void (*DPS_OnLinkLoss)(DPS_Node* node, const DPS_NodeAddress* addr, void* data);
+
+/**
+ * Set a callback function to called when a link explicily established by this node was lost.
+ * This function is only called in the case of a surprise link-loss, not when DPS_Unlink() was
+ * called.
+ *
+ * @param node   The local node
+ * @param addr   The address of the remote node that was lost
+ * @param cb     The callback function to call on loss of a link
+ * @param data   Application data to be passed to the callback
+ */
+DPS_Status DPS_SetLinkLossCallback(DPS_Node* node, DPS_OnLinkLoss callback, void* data);
 
 /**
  * Function prototype for function called when a DPS_ResolveAddress() completes.

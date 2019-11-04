@@ -6,8 +6,8 @@ import atexit
 atexit.register(cleanup)
 
 reps = 4
-dropper = drop('-w 1 -t 2 -r {}'.format(reps))
-subscriber = sub('--')
+dropper = drop('-w 5 -t 1 -r {}'.format(reps))
+subscriber = sub('-f 1 --')
 
 link(subscriber, dropper.port)
 

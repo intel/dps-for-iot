@@ -269,8 +269,8 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote)
 
     DPS_DBGTRACEA("To %s rev# %d %s\n", DESCRIBE(remote), remote->outbound.revision, RemoteStateTxt(remote));
 
-    /* We should never be sending subscriptions to muted or dead remotes */
-    assert(remote->state != REMOTE_MUTED && remote->state != REMOTE_DEAD);
+    /* We should never be sending subscriptions to muted remotes */
+    assert(remote->state != REMOTE_MUTED);
 
     if (!node->netCtx) {
         return DPS_ERR_NETWORK;
@@ -691,6 +691,10 @@ static DPS_Status UnlinkRemote(DPS_Node* node, DPS_NodeAddress* addr, uint32_t r
         remote->outbound.sendInterests = DPS_FALSE;
         remote->inbound.revision = revision;
         DPS_SendSubscriptionAck(node, remote, DPS_FALSE);
+        /*
+         * Clear so delete doesn't report a surprise link loss.
+         */
+        remote->outbound.linkRequested = DPS_FALSE;
         DPS_DeleteRemoteNode(node, remote);
         /*
          * Evaluate impact of losing the remote's interests
@@ -868,16 +872,7 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
          * Processing a SAK so we expect the remote to exist
          */
         remote = DPS_LookupRemoteNode(node, &ep->addr);
-        if (remote) {
-            /*
-             * We don't expect a SAK for a DEAD remote
-             */
-            if (remote->state == REMOTE_DEAD) {
-                DPS_ERRPRINT("Received SAK for DEAD remote %s\n", DESCRIBE(remote));
-                ret = DPS_ERR_STALE;
-                goto DiscardAndExit;
-            }
-        } else {
+        if (!remote) {
             DPS_WARNPRINT("Got SAK from unknown remote %s\n", DPS_NodeAddrToString(&ep->addr));
             ret = DPS_ERR_MISSING;
         }
