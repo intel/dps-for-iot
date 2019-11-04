@@ -52,6 +52,7 @@ else:
     _subs_rate = ['-r', '100']
     _pub_wait = ['-w', '1']
 
+_d = 0
 _ns = 0
 _ms = 0
 _n = 0
@@ -104,11 +105,14 @@ def _expect(children, pattern, allow_error=False, timeout=-1):
         if i != 0:
             raise RuntimeError(pattern[i])
 
-def _expect_dropped(child, port, reps):
-    _expect([child], ['Linked to remote {}'.format(port)])
+def _expect_dropped(child, reps):
+    _expect([child], ['Linked to remote ([0-9A-Za-z.:%_\-/\\[\]]+){}'.format(child.linesep)])
+    _expect([child], ['Deleting remote node {}'.format(re.escape(child.match.group(1).decode()) + child.linesep)])
     for i in range(0, reps):
-        _expect([child], ['Deleting remote node {}'.format(port + child.linesep)])
-        _expect([child], ['Linked to remote {}'.format(port + child.linesep)])
+        _expect([child], ['Linked to remote ([0-9A-Za-z.:%_\-/\\[\]]+){}'.format(child.linesep)])
+        _expect([child], ['Deleting remote node {}'.format(re.escape(child.match.group(1).decode()) + child.linesep)])
+    _expect([child], ['Linked to remote ([0-9A-Za-z.:%_\-/\\[\]]+){}'.format(child.linesep)])
+    _expect([child], ['Clean unlink from remote node {}'.format(re.escape(child.match.group(1).decode()) + child.linesep)])
 
 def _expect_listening(child):
     _expect([child], ['is listening on ([0-9A-Za-z.:%_\-/\\[\]]+){}'.format(child.linesep)])
@@ -148,10 +152,8 @@ def expect_linked(child, ports):
         ports = [ports]
     _expect_linked(child, ('-p {} ' * len(ports)).format(*ports))
 
-def expect_dropped(child, port, reps):
-    port = port.replace(']', '\\]').replace('[', '\\[')
-    _expect_dropped(child, port, reps)
-    _expect([child], ['Clean unlink from remote node {}'.format(port + child.linesep)])
+def expect_dropped(child, reps):
+    _expect_dropped(child, reps)
 
 def _expect_pub(children, topics, allow_error=False, timeout=-1, signers=None):
     for child in children:
@@ -312,10 +314,10 @@ def sub(args=''):
     return child
 
 def drop(args=''):
-    global _s
-    _s = _s + 1
+    global _d
+    _d = _d + 1
     cmd = [os.path.join('build', 'test', 'bin', 'link_drop')] + _debug + args.split()
-    child = _spawn(_s, cmd)
+    child = _spawn(_d, cmd)
     _expect_listening(child)
     return child
 
