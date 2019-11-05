@@ -57,8 +57,9 @@ extern "C" {
 typedef struct _DPS_NodeAddress DPS_NodeAddress;
 
 /**
- * Get text representation of an address. This function uses a static
- * string buffer so is not thread safe.
+ * Get text representation of an address.
+ *
+ * @note This function uses a thread-local string buffer.
  *
  * @param addr to get the text for
  *
@@ -505,6 +506,33 @@ void* DPS_GetNodeData(const DPS_Node* node);
 DPS_Status DPS_StartNode(DPS_Node* node, int mcastPub, DPS_NodeAddress* listenAddr);
 
 /**
+ * Function prototype for callback function called when a node is shutdown.
+ *
+ * Shutdown cleanly unlinks any nodes from this node. DPS_DestroyNode() does
+ * not.
+ *
+ * @param node   The node that was shutdown. This node is valid during
+ *               the callback.
+ * @param data   Data passed to DPS_ShutdownNode()
+ *
+ */
+typedef void (*DPS_OnNodeShutdown)(DPS_Node* node, void* data);
+
+/**
+ * Shutdowns a node.
+ *
+ * @param node   The node to shutdown
+ * @param cb     Callback function to be called when the node is shutdown
+ * @param data   Data to be passed to the callback function
+ *
+ * @return
+ * - DPS_OK if the node will be shutdown and the callback called
+ * - DPS_ERR_NULL node or cb was null
+ * - Or an error status code in which case the callback will not be called.
+ */
+DPS_Status DPS_ShutdownNode(DPS_Node* node, DPS_OnNodeShutdown cb, void* data);
+
+/**
  * Function prototype for callback function called when a node is destroyed.
  *
  * @param node   The node that was destroyed. This node is valid during
@@ -530,16 +558,37 @@ DPS_Status DPS_DestroyNode(DPS_Node* node, DPS_OnNodeDestroyed cb, void* data);
 
 /**
  * The default maximum rate (in msecs) to compute and send out subscription updates.
+ * This causes subscription updates coming in from multiple remote nodes to be batched
+ * up for forwarding. This reduces network traffic when new nodes join the mesh, particularly
+ * at startup time, at the cost of increased latency for the propagation of subscriptions
+ * across the mesh. New subscriptions local to a node are not subject to this timeout value
+ * and are set immediately to adjacent nodes.
  */
-#define DPS_SUBSCRIPTION_UPDATE_RATE 1000
+#define DPS_SUBSCRIPTION_UPDATE_RATE 2000
 
 /**
- * Specify the time delay (in msecs) between subscription updates.
+  * This establishes the base rate at which keep-alive subscription messages are
+  * sent to remote nodes. This timeout governs how long it takes to detect a mesh
+  * disconnect and start a recovery process. This timeout value should be much
+  * larger than DPS_SUBSCRIPTION_UPDATE_RATE.
+  */
+#define DPS_LINK_LOSS_TIMEOUT 30000
+
+/**
+ * Override the default time delay (in msecs) between subscription updates.
  *
  * @param node           The node
  * @param subsRateMsecs  The time delay (in msecs) between updates
  */
 void DPS_SetNodeSubscriptionUpdateDelay(DPS_Node* node, uint32_t subsRateMsecs);
+
+/**
+ * Override the default link-loss detection timeout (in msecs)
+ *
+ * @param node           The node
+ * @param linkLossMsecs  The time for the link to an unresponsive remote node to be considered lost
+ */
+void DPS_SetNodeLinkLossTimeout(DPS_Node* node, uint32_t linkLossMsecs);
 
 /**
  * Get the address this node is listening for connections on
@@ -552,8 +601,7 @@ const DPS_NodeAddress* DPS_GetListenAddress(DPS_Node* node);
 
 /**
  * Get text representation of the address this node is listening for
- * connections on. This function uses a static string buffer so is not
- * thread safe.
+ * connections on.
  *
  * @param node     The node
  *
@@ -566,17 +614,19 @@ const char* DPS_GetListenAddressString(DPS_Node* node);
  *
  * @param node   The local node to use
  * @param addr   The address of the remote node that was linked
- * @param status Indicates if the link completed or failed
+ * @param status Indicates if the link completed or failed.  A status
+ *               of DPS_ERR_EXISTS indicates the remote node is already
+ *               linked.
  * @param data   Application data passed in the call to DPS_Link()
  */
-typedef void (*DPS_OnLinkComplete)(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, void* data);
+typedef void (*DPS_OnLinkComplete)(DPS_Node* node, const DPS_NodeAddress* addr, DPS_Status status, void* data);
 
 /**
- * Link the local node to a remote node
+ * Link the local node to a remote node.
  *
  * @param node     The local node to use
  * @param addrText The text string of the address to link to
- * @param cb       The callback function to call on completion, can be NULL which case the function is synchronous
+ * @param cb       The callback function to call on completion
  * @param data     Application data to be passed to the callback
  *
  * @return DPS_OK or an error status. If an error status is returned the callback function will not be called.
@@ -586,14 +636,14 @@ DPS_Status DPS_Link(DPS_Node* node, const char* addrText, DPS_OnLinkComplete cb,
 /**
  * Function prototype for function called when a DPS_Unlink() completes.
  *
- * @param node   The local node to use
+ * @param node   The local node that was unlinked from a remote node
  * @param addr   The address of the remote node that was unlinked
  * @param data   Application data passed in the call to DPS_Unlink()
  */
 typedef void (*DPS_OnUnlinkComplete)(DPS_Node* node, const DPS_NodeAddress* addr, void* data);
 
 /**
- * Unlink the local node from a remote node
+ * Unlink a local node from a remote node
  *
  * @param node   The local node to use
  * @param addr   The address of the remote node to unlink from
@@ -603,6 +653,27 @@ typedef void (*DPS_OnUnlinkComplete)(DPS_Node* node, const DPS_NodeAddress* addr
  * @return DPS_OK or an error status. If an error status is returned the callback function will not be called.
  */
 DPS_Status DPS_Unlink(DPS_Node* node, const DPS_NodeAddress* addr, DPS_OnUnlinkComplete cb, void* data);
+
+/**
+ * Function prototype for function called when a link is lossed.
+ *
+ * @param node   The local node that lost a link
+ * @param addr   The address of the remote node that was unlinked
+ * @param data   Application data passed in the call to DPS_SetLinkLossCallback()
+ */
+typedef void (*DPS_OnLinkLoss)(DPS_Node* node, const DPS_NodeAddress* addr, void* data);
+
+/**
+ * Set a callback function to called when a link explicily established by this node was lost.
+ * This function is only called in the case of a surprise link-loss, not when DPS_Unlink() was
+ * called.
+ *
+ * @param node   The local node
+ * @param addr   The address of the remote node that was lost
+ * @param cb     The callback function to call on loss of a link
+ * @param data   Application data to be passed to the callback
+ */
+DPS_Status DPS_SetLinkLossCallback(DPS_Node* node, DPS_OnLinkLoss callback, void* data);
 
 /**
  * Function prototype for function called when a DPS_ResolveAddress() completes.
@@ -774,7 +845,7 @@ typedef void (*DPS_AcknowledgementHandler)(DPS_Publication* pub, uint8_t* payloa
  *
  * Call the accessor function DPS_PublicationGetUUID() to get the UUID for this publication.
  *
- * @param pub         The the publication to initialize
+ * @param pub         The publication to initialize
  * @param topics      The topic strings to publish
  * @param numTopics   The number of topic strings to publish - must be >= 1
  * @param noWildCard  If TRUE the publication will not match wildcard subscriptions
@@ -793,7 +864,7 @@ DPS_Status DPS_InitPublication(DPS_Publication* pub,
 /**
  * Adds a key identifier to use for encrypted publications.
  *
- * @param pub         The the publication to initialize
+ * @param pub         The publication to initialize
  * @param keyId       Key identifier to use for encrypted publications
  *
  * @return DPS_OK if addition is successful, an error otherwise
@@ -803,7 +874,7 @@ DPS_Status DPS_PublicationAddSubId(DPS_Publication* pub, const DPS_KeyId* keyId)
 /**
  * Removes a key identifier to use for encrypted publications.
  *
- * @param pub         The the publication to initialize
+ * @param pub         The publication to initialize
  * @param keyId       Key identifier to remove
  */
 void DPS_PublicationRemoveSubId(DPS_Publication* pub, const DPS_KeyId* keyId);
@@ -873,17 +944,26 @@ DPS_Status DPS_PublishBufs(DPS_Publication* pub, const DPS_Buffer* bufs, size_t 
                            DPS_PublishBufsComplete cb, void* data);
 
 /**
+ * Function prototype for callback function called when a publication is destroyed.
+ *
+ * @param pub    The publication that was destroyed. This is valid during
+ *               the callback.
+ */
+typedef void (*DPS_OnPublicationDestroyed)(DPS_Publication* pub);
+
+/**
  * Delete a publication and frees any resources allocated. This does not cancel retained publications
  * that have an unexpired TTL. To expire a retained publication call DPS_Publish() with a negative TTL.
  *
  * This function should only be called for publications created by DPS_CreatePublication() or
  * DPS_CopyPublication().
  *
- * @param pub         The publication to destroy
+ * @param pub   The publication to destroy
+ * @param cb    Callback function to be called when the publication is destroyed
  *
  * @return DPS_OK if destroy is successful, an error otherwise
  */
-DPS_Status DPS_DestroyPublication(DPS_Publication* pub);
+DPS_Status DPS_DestroyPublication(DPS_Publication* pub, DPS_OnPublicationDestroyed cb);
 
 /**
  * Acknowledge a publication. A publication should be acknowledged as soon as possible after receipt,
@@ -1066,13 +1146,22 @@ typedef void (*DPS_PublicationHandler)(DPS_Subscription* sub, const DPS_Publicat
 DPS_Status DPS_Subscribe(DPS_Subscription* sub, DPS_PublicationHandler handler);
 
 /**
+ * Function prototype for callback function called when a subscription is destroyed.
+ *
+ * @param sub    The subscription that was destroyed. This is valid during
+ *               the callback.
+ */
+typedef void (*DPS_OnSubscriptionDestroyed)(DPS_Subscription* sub);
+
+/**
  * Stop subscribing to the subscription topic and free resources allocated for the subscription
  *
- * @param sub   The subscription to cancel
+ * @param sub   The subscription to destroy
+ * @param cb    Callback function to be called when the subscription is destroyed
  *
  * @return DPS_OK if destroy is successful, an error otherwise
  */
-DPS_Status DPS_DestroySubscription(DPS_Subscription* sub);
+DPS_Status DPS_DestroySubscription(DPS_Subscription* sub, DPS_OnSubscriptionDestroyed cb);
 
 /** @} */ /* end of subscription group */
 

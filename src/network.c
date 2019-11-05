@@ -106,14 +106,16 @@ DPS_NodeAddress* DPS_NetSetAddr(DPS_NodeAddress* addr, DPS_NodeAddressType type,
 
 static const uint8_t IP4as6[16] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 0, 0, 0, 0 };
 
-int DPS_SameAddr(const DPS_NodeAddress* addr1, const DPS_NodeAddress* addr2)
+int DPS_CmpAddr(const DPS_NodeAddress* addr1, const DPS_NodeAddress* addr2)
 {
     const struct sockaddr* a = (const struct sockaddr*)&addr1->u.inaddr;
     const struct sockaddr* b = (const struct sockaddr*)&addr2->u.inaddr;
     struct sockaddr_in6 tmp;
 
     if (addr1->type != addr2->type) {
-        return DPS_FALSE;
+        DPS_ERRPRINT("Different address types %d != %d\n", addr1->type, addr2->type);
+        assert(addr1->type == addr2->type);
+        return addr1->type < addr2->type ? -1 : 1;
     }
     switch (addr1->type) {
     case DPS_DTLS:
@@ -142,19 +144,37 @@ int DPS_SameAddr(const DPS_NodeAddress* addr1, const DPS_NodeAddress* addr2)
         if (a->sa_family == AF_INET6 && b->sa_family == AF_INET6) {
             const struct sockaddr_in6* ip6a = (const struct sockaddr_in6*)a;
             const struct sockaddr_in6* ip6b = (const struct sockaddr_in6*)b;
-            return (ip6a->sin6_port == ip6b->sin6_port) &&
-                (memcmp(&ip6a->sin6_addr, &ip6b->sin6_addr, 16) == 0);
+            if (ip6a->sin6_port == ip6b->sin6_port) {
+                return memcmp(&ip6a->sin6_addr, &ip6b->sin6_addr, 16);
+            } else {
+                return ip6a->sin6_port < ip6b->sin6_port ? -1 : 1;
+            }
         } else if (a->sa_family == AF_INET && b->sa_family == AF_INET) {
             const struct sockaddr_in* ipa = (const struct sockaddr_in*)a;
             const struct sockaddr_in* ipb = (const struct sockaddr_in*)b;
-            return (ipa->sin_port == ipb->sin_port) && (ipa->sin_addr.s_addr == ipb->sin_addr.s_addr);
+            if (ipa->sin_port == ipb->sin_port) {
+                if (ipa->sin_addr.s_addr == ipb->sin_addr.s_addr) {
+                    return 0;
+                } else {
+                    return ipa->sin_addr.s_addr < ipb->sin_addr.s_addr ? -1 : 1;
+                }
+            } else {
+                return ipa->sin_port < ipb->sin_port ? -1 : 1;
+            }
         }
-        return DPS_FALSE;
+        break;
     case DPS_PIPE:
-        return !strcmp(addr1->u.path, addr2->u.path);
+        return strcmp(addr1->u.path, addr2->u.path);
     default:
-        return DPS_FALSE;
+        break;
     }
+    DPS_ERRPRINT("DPS_CmpAddr - Invalid parameters\n");
+    return -1;
+}
+
+int DPS_SameAddr(const DPS_NodeAddress* addr1, const DPS_NodeAddress* addr2)
+{
+    return DPS_CmpAddr(addr1, addr2) == 0;
 }
 
 DPS_Status DPS_SplitAddress(const char* addrText, char* host, size_t hostLen,
@@ -368,9 +388,21 @@ DPS_Status DPS_GetLoopbackAddress(DPS_NodeAddress* addr, DPS_Node* node)
 void DPS_EndpointSetPort(DPS_NetEndpoint* ep, uint16_t port)
 {
     switch (ep->addr.type) {
+    case DPS_UDP:
+        /*
+         * Special handling of UDP addresses: when the endpoint
+         * address is UDP and the configured transport is not, the
+         * port argument is a DTLS or TCP listening port.  Update the
+         * type here to reflect that.
+         */
+#if defined(DPS_USE_DTLS)
+        ep->addr.type = DPS_DTLS;
+#elif defined(DPS_USE_TCP)
+        ep->addr.type = DPS_TCP;
+#endif
+        /* FALLTHROUGH */
     case DPS_DTLS:
     case DPS_TCP:
-    case DPS_UDP:
         if (!ep->cn) {
             port = htons(port);
             if (ep->addr.u.inaddr.ss_family == AF_INET6) {

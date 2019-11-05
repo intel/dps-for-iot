@@ -2,6 +2,7 @@
 
 from common import *
 import atexit
+import time
 
 atexit.register(cleanup)
 
@@ -44,6 +45,9 @@ sub16 = reg_subs('-p {} -c 15 1/2/3'.format(reg1.port))
 expect_reg_linked(sub16)
 sub17 = reg_subs('-p {} -c 16 +/+/#'.format(reg1.port))
 expect_reg_linked(sub17)
+
+# Give time for the subscriptions to propogate
+time.sleep(15)
 
 # Start some publishers
 reg_pubs('-p {} a/b/c -m hello'.format(reg1.port))

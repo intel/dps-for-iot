@@ -30,8 +30,6 @@
 %ignore DPS_AckPublicationBufs;
 %ignore DPS_CBOR2JSON;
 %ignore DPS_DestroyKeyStore;
-%ignore DPS_DestroyPublication;
-%ignore DPS_DestroySubscription;
 %ignore DPS_GetKeyStoreData;
 %ignore DPS_GetLoop;
 %ignore DPS_GetNodeData;
@@ -129,8 +127,10 @@ static DPS_Status EphemeralKeyHandler(DPS_KeyStoreRequest* request, const DPS_Ke
 static DPS_Status CAHandler(DPS_KeyStoreRequest* request);
 
 static void OnNodeDestroyed(DPS_Node* node, void* data);
-static void OnLinkComplete(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, void* data);
+static void OnLinkComplete(DPS_Node* node, const DPS_NodeAddress* addr, DPS_Status status, void* data);
 static void OnNodeAddressComplete(DPS_Node* node, const DPS_NodeAddress* addr, void* data);
+static void OnPublicationDestroyed(DPS_Publication* pub);
+static void OnSubscriptionDestroyed(DPS_Subscription* sub);
 
 static void AcknowledgementHandler(DPS_Publication* pub, uint8_t* payload, size_t len);
 
@@ -395,6 +395,26 @@ DPS_Node* CreateNode(const char* separators, DPS_MemoryKeyStore* keyStore, const
     $2 = new Handler($input);
 }
 
+%typemap(in) (DPS_OnPublicationDestroyed cb) {
+    $1 = OnPublicationDestroyed;
+    PublicationData* data = (PublicationData*)DPS_GetPublicationData(arg1);
+    if (!data) {
+        data = new PublicationData();
+        DPS_SetPublicationData(arg1, data);
+    }
+    data->m_destroyedHandler = new Handler($input);
+}
+
+%typemap(in) (DPS_OnSubscriptionDestroyed cb) {
+    $1 = OnSubscriptionDestroyed;
+    SubscriptionData* data = (SubscriptionData*)DPS_GetSubscriptionData(arg1);
+    if (!data) {
+        data = new SubscriptionData();
+        DPS_SetSubscriptionData(arg1, data);
+    }
+    data->m_destroyedHandler = new Handler($input);
+}
+
 /*
  * Matching on multiple arguments requires the name unfortunately.
  */
@@ -453,24 +473,48 @@ const char** PublicationGetTopics(const DPS_Publication* pub, size_t* n)
 %}
 const char** PublicationGetTopics(const DPS_Publication* pub, size_t* n);
 
+%{
+class PublicationData {
+public:
+    Handler* m_ackHandler;
+    Handler* m_destroyedHandler;
+    PublicationData() : m_ackHandler(nullptr), m_destroyedHandler(nullptr) { }
+    ~PublicationData() {
+        delete m_destroyedHandler;
+        delete m_ackHandler;
+    }
+};
+
+class SubscriptionData {
+public:
+    Handler* m_pubHandler;
+    Handler* m_destroyedHandler;
+    SubscriptionData() : m_pubHandler(nullptr), m_destroyedHandler(nullptr) { }
+    ~SubscriptionData() {
+        delete m_destroyedHandler;
+        delete m_pubHandler;
+    }
+};
+%}
+
 %typemap(in) DPS_AcknowledgementHandler {
     $1 = AcknowledgementHandler;
-    DPS_SetPublicationData(arg1, new Handler($input));
+    PublicationData* data = (PublicationData*)DPS_GetPublicationData(arg1);
+    if (!data) {
+        data = new PublicationData();
+        DPS_SetPublicationData(arg1, data);
+    }
+    data->m_ackHandler = new Handler($input);
 }
-
-%{
-void DestroyPublication(DPS_Publication* pub)
-{
-    Handler* handler = (Handler*)DPS_GetPublicationData(pub);
-    delete handler;
-    DPS_DestroyPublication(pub);
-}
-%}
-void DestroyPublication(DPS_Publication* pub);
 
 %typemap(in) DPS_PublicationHandler {
     $1 = PublicationHandler;
-    DPS_SetSubscriptionData(arg1, new Handler($input));
+    SubscriptionData* data = (SubscriptionData*)DPS_GetSubscriptionData(arg1);
+    if (!data) {
+        data = new SubscriptionData();
+        DPS_SetSubscriptionData(arg1, data);
+    }
+    data->m_pubHandler = new Handler($input);
 }
 
 %typemap(out) const char** SubscriptionGetTopics {
@@ -490,16 +534,6 @@ const char** SubscriptionGetTopics(const DPS_Subscription* sub, size_t* n)
 }
 %}
 const char** SubscriptionGetTopics(const DPS_Subscription* sub, size_t* n);
-
-%{
-void DestroySubscription(DPS_Subscription* sub)
-{
-    Handler* handler = (Handler*)DPS_GetSubscriptionData(sub);
-    delete handler;
-    DPS_DestroySubscription(sub);
-}
-%}
-void DestroySubscription(DPS_Subscription* sub);
 
 %typemap(in,numinputs=0,noblock=1) uint8_t** cbor {
     uint8_t* cbor;
@@ -625,7 +659,7 @@ DPS_Status CBOR2JSON(const uint8_t* cbor, size_t len, int pretty, char** json);
     void *argp = NULL;
     int res = SWIG_ConvertPtr($input, &argp ,SWIGTYPE_p__DPS_UUID, 0 | 0);
     if (!SWIG_IsOK(res)) {
-        SWIG_exception_fail(SWIG_ArgError(res), "in method '" "$symname" "', argument " "$argnum"" of type '" "$1_type""'"); 
+        SWIG_exception_fail(SWIG_ArgError(res), "in method '" "$symname" "', argument " "$argnum"" of type '" "$1_type""'");
     }
     $1 = (DPS_UUID *)(argp);
 }
@@ -716,6 +750,40 @@ DPS_Status AckPublicationBufs(DPS_Publication* pub, Buffer* bufs, size_t numBufs
 %}
 DPS_Status PublishBufs(DPS_Publication* pub, Buffer* bufs, size_t numBufs, int16_t ttl);
 DPS_Status AckPublicationBufs(DPS_Publication* pub, Buffer* bufs, size_t numBufs);
+
+%typemap(in) const DPS_Buffer* remoteSubs (DPS_Buffer buf, int res = 0) {
+    $1 = &buf;
+    res = AsVal_bytes($input, &$1->base, &$1->len);
+    if (!SWIG_IsOK(res)) {
+        SWIG_exception_fail(SWIG_ArgError(res), "in method '" "$symname" "', argument " "$argnum"" of type '" "$1_type""'");
+    }
+}
+%typemap(freearg) const DPS_Buffer* remoteSubs {
+    if (SWIG_IsNewObj(res$argnum)) {
+        delete[] $1->base;
+    }
+}
+
+%typemap(in) (DPS_Node* node, DPS_Buffer* subs) (DPS_Buffer buf) {
+    memset(&buf, 0, sizeof(buf));
+    void *argp = NULL;
+    int res = SWIG_ConvertPtr($input, &argp ,SWIGTYPE_p__DPS_Node, 0 | 0);
+    if (!SWIG_IsOK(res)) {
+        SWIG_exception_fail(SWIG_ArgError(res), "in method '" "$symname" "', argument " "$argnum"" of type '" "$1_type""'");
+    }
+    $1 = (DPS_Node *)(argp);
+    $2 = &buf;
+}
+%typemap(out) DPS_Buffer* {
+    if ($1) {
+        $result = From_bytes($1->base, $1->len);
+    }
+}
+%typemap(freearg) (DPS_Node* node, DPS_Buffer* subs) {
+    if (buf$argnum.base) {
+        free(buf$argnum.base);
+    }
+}
 
 %include <dps/dbg.h>
 %include <dps/dps.h>

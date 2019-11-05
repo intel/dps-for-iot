@@ -107,6 +107,18 @@ DPS_Status DPS_MatchTopicString(const char* pubTopic, const char* subTopic, cons
  */
 DPS_Status DPS_MatchTopicList(char* const* pubs, size_t numPubs, char* const* subs, size_t numSubs, const char* separators, int noWild, int* match);
 
+/**
+ * Print out all topics 'A' to 'Z' that match the given bit vector.
+ * This is useful for debugging DPS routing issues.
+ *
+ * This function uses a static buffer so is not thread-safe
+ *
+ * @param bv The bit vector
+ *
+ * @return The topics
+ */
+const char* DPS_DumpMatchingTopics(DPS_BitVector* bv);
+
 #ifdef DPS_DEBUG
 /**
  * Print out topic strings
@@ -115,17 +127,8 @@ DPS_Status DPS_MatchTopicList(char* const* pubs, size_t numPubs, char* const* su
  * @param numTopics The number of topic strings
  */
 void DPS_DumpTopics(const char** topics, size_t numTopics);
-
-/**
- * Print out all topics 'A' to 'Z' that match the given bit vector.
- * This is useful for debugging DPS routing issues.
- *
- * @param bv The bit vector
- */
-void DPS_DumpMatchingTopics(DPS_BitVector* bv);
 #else
 #define DPS_DumpTopics(t, n)
-#define DPS_DumpMatchingTopics(b)
 #endif
 
 

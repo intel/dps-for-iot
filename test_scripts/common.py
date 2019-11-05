@@ -11,6 +11,7 @@ import signal
 import shutil
 from subprocess import check_output
 import sys
+import time
 
 try:
     basestring
@@ -39,13 +40,20 @@ else:
 
 _children = []
 _logs = []
+#
+# The _subs_rate and _pub_wait are related.  The value of _pub_wait
+# should be such that _subs_rate times the number of expected hops
+# between subscriber and publisher is less than the _pub_wait.
+#
 if os.environ['USE_DTLS'] == '1':
-    _subs_rate = ['-r', '800']
-    _pub_wait = ['-w', '4']
+    _subs_rate = ['-r', '2000']
+    _pub_wait = ['-w', '20']
 else:
     _subs_rate = ['-r', '100']
     _pub_wait = ['-w', '1']
 
+_d = 0
+_ns = 0
 _ms = 0
 _n = 0
 _p = 0
@@ -68,7 +76,7 @@ def _spawn_env():
 def _spawn_helper(n, cmd, interpreter=[]):
     global _children, _logs
     name = os.path.basename(cmd[0])
-    log_name = 'out/{}{}.log'.format(name, n)
+    log_name = 'out/{}{:03d}.log'.format(name, n)
     log = open(log_name, 'wb')
     log.write('=============================\n{}{} {}\n'.format(name, n, ' '.join(cmd[1:])).encode())
     log.write('=============================\n'.encode())
@@ -96,6 +104,15 @@ def _expect(children, pattern, allow_error=False, timeout=-1):
         i = child.expect(pattern, timeout)
         if i != 0:
             raise RuntimeError(pattern[i])
+
+def _expect_dropped(child, reps):
+    _expect([child], ['Linked to remote ([0-9A-Za-z.:%_\-/\\[\]]+){}'.format(child.linesep)])
+    _expect([child], ['Deleting remote node {}'.format(re.escape(child.match.group(1).decode()) + child.linesep)])
+    for i in range(0, reps):
+        _expect([child], ['Linked to remote ([0-9A-Za-z.:%_\-/\\[\]]+){}'.format(child.linesep)])
+        _expect([child], ['Deleting remote node {}'.format(re.escape(child.match.group(1).decode()) + child.linesep)])
+    _expect([child], ['Linked to remote ([0-9A-Za-z.:%_\-/\\[\]]+){}'.format(child.linesep)])
+    _expect([child], ['Clean unlink from remote node {}'.format(re.escape(child.match.group(1).decode()) + child.linesep)])
 
 def _expect_listening(child):
     _expect([child], ['is listening on ([0-9A-Za-z.:%_\-/\\[\]]+){}'.format(child.linesep)])
@@ -135,6 +152,9 @@ def expect_linked(child, ports):
         ports = [ports]
     _expect_linked(child, ('-p {} ' * len(ports)).format(*ports))
 
+def expect_dropped(child, reps):
+    _expect_dropped(child, reps)
+
 def _expect_pub(children, topics, allow_error=False, timeout=-1, signers=None):
     for child in children:
         patterns = []
@@ -144,7 +164,7 @@ def _expect_pub(children, topics, allow_error=False, timeout=-1, signers=None):
         while len(patterns):
             if not allow_error:
                 if signers != None:
-                    i = child.expect(['ERROR'] + ['Pub [0-9a-f-]+\([0-9]+\) \[(.*)\] matches:'], timeout=timeout)
+                    i = child.expect(['ERROR'] + ['Pub [0-9a-f-]+\([0-9]+\) \[([^\]]*)\] matches:'], timeout=timeout)
                     if i == 0:
                         raise RuntimeError('ERROR')
                     signers.append(child.match.group(1).decode())
@@ -153,7 +173,7 @@ def _expect_pub(children, topics, allow_error=False, timeout=-1, signers=None):
                     raise RuntimeError('ERROR')
             else:
                 if signers != None:
-                    child.expect(['Pub [0-9a-f-]+\([0-9]+\) \[(.*)\] matches:'], timeout=timeout)
+                    child.expect(['Pub [0-9a-f-]+\([0-9]+\) \[([^\]]*\] matches:'], timeout=timeout)
                     signers.append(child.match.group(1).decode())
                 child.expect(patterns, timeout=timeout)
             patterns.remove(child.match.re.pattern.decode())
@@ -161,7 +181,7 @@ def _expect_pub(children, topics, allow_error=False, timeout=-1, signers=None):
 def _expect_ack(children, allow_error=False, timeout=-1, signers=None):
     linesep = (children[0] if children else None).linesep
     if signers != None:
-        pattern = ['Ack for pub UUID [0-9a-f-]+\([0-9]+\) \[(.*)\]{}'.format(linesep)]
+        pattern = ['Ack for pub UUID [0-9a-f-]+\([0-9]+\) \[([^\]]*)\]{}'.format(linesep)]
     else:
         pattern = ['Ack for pub']
     if not allow_error:
@@ -172,6 +192,50 @@ def _expect_ack(children, allow_error=False, timeout=-1, signers=None):
             raise RuntimeError(pattern[i])
         if signers != None:
             signers.append(child.match.group(1).decode())
+
+def has_unstable_links(children, timeout=-1):
+    for child in children:
+        child.kill(signal.SIGUSR1)
+        has_unstable = False
+        while True:
+            i = child.expect(['ERROR', 'history{}'.format(child.linesep),
+                              ' state=(LINKING|UNLINKING|UNMUTING),interests='], timeout=timeout)
+            if i == 0:
+                raise RuntimeError('ERROR')
+            elif i == 1:
+                # Must consume all remote node output to avoid cross
+                # talk with any other expects (i.e. count_muted_links)
+                # for remote node output
+                break;
+            elif i == 2:
+                has_unstable = True
+        if has_unstable:
+            return True
+    return False
+
+def count_muted_links(children, timeout=-1):
+    muted = 0
+    for child in children:
+        child.kill(signal.SIGUSR1)
+        while True:
+            i = child.expect(['ERROR', 'history{}'.format(child.linesep), ' state=MUTED,interests='],
+                             timeout=timeout)
+            if i == 0:
+                raise RuntimeError('ERROR')
+            if i == 1:
+                break
+            elif i == 2:
+                muted = muted + 1
+    return muted
+
+def wait_until_settled(children, exp_muted, timeout):
+    end = time.time() + timeout
+    while time.time() <= end:
+        if not has_unstable_links(children, 1) and count_muted_links(children, 1) == (exp_muted * 2):
+            break
+        time.sleep(1)
+    if time.time() > end:
+        raise RuntimeError('Timeout')
 
 def cleanup():
     global _children
@@ -188,7 +252,8 @@ def cleanup():
         log.close()
 
 def reset_logs():
-    global _ms, _n, _p, _r, _rp, _rs, _s, _t, _tm, _v
+    global _ns, _ms, _n, _p, _r, _rp, _rs, _s, _t, _tm, _v
+    _ns = 0
     _ms = 0
     _n = 0
     _p = 0
@@ -210,19 +275,25 @@ def reset_logs():
 def bin(cmd):
     global _children
     child = _spawn(1, cmd)
-    buf = child.read(8192)
-    while buf:
+    try:
         buf = child.read(8192)
-    status = child.wait()
+        while buf:
+            buf = child.read(8192)
+        status = child.wait()
+    except pexpect.TIMEOUT:
+        status = 1
     _children.remove(child)
     return status
 
 def py(cmd):
     global _children
     child = _py_spawn(1, cmd)
-    child.expect(pexpect.EOF, timeout=300)
-    status = child.wait()
-    _children.remove(child)
+    i = child.expect([pexpect.EOF, pexpect.TIMEOUT], timeout=300)
+    if i == 0:
+        status = child.wait()
+        _children.remove(child)
+    else:
+        status = 1
     return status
 
 def node(args):
@@ -240,6 +311,14 @@ def sub(args=''):
     child = _spawn(_s, cmd)
     _expect_listening(child)
     _expect_linked(child, args)
+    return child
+
+def drop(args=''):
+    global _d
+    _d = _d + 1
+    cmd = [os.path.join('build', 'test', 'bin', 'link_drop')] + _debug + args.split()
+    child = _spawn(_d, cmd)
+    _expect_listening(child)
     return child
 
 def pub(args):
@@ -391,7 +470,7 @@ def reg(args=''):
 def reg_subs(args=''):
     global _rs
     _rs = _rs + 1
-    cmd = [os.path.join('build', 'dist', 'bin', 'reg_subs')] + _debug + args.split()
+    cmd = [os.path.join('build', 'dist', 'bin', 'reg_subs')] + _debug + _subs_rate + args.split()
     child = _spawn(_rs, cmd)
     _expect_listening(child)
     return child
@@ -399,7 +478,7 @@ def reg_subs(args=''):
 def reg_pubs(args=''):
     global _rp
     _rp = _rp + 1
-    cmd = [os.path.join('build', 'dist', 'bin', 'reg_pubs')] + _debug + _pub_wait + args.split()
+    cmd = [os.path.join('build', 'dist', 'bin', 'reg_pubs')] + _debug + _subs_rate + _pub_wait + args.split()
     child = _spawn(_rp, cmd)
     _expect_listening(child)
     return child
@@ -421,6 +500,12 @@ def mesh_stress(args=''):
     _ms = _ms + 1
     cmd = [os.path.join('build', 'test', 'bin', 'mesh_stress')] + _debug + args.split()
     return _spawn(_ms, cmd)
+
+def discover(args=''):
+    global _ns
+    _ns = _ns + 1
+    cmd = [os.path.join('build', 'test', 'bin', 'discover')] + _debug + args.split()
+    return _spawn(_ns, cmd)
 
 def link(child, ports):
     if isinstance(ports, basestring) or not isinstance(ports, collections.Sequence):

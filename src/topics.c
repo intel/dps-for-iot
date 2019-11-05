@@ -28,6 +28,7 @@
 #include <dps/dps.h>
 #include "topics.h"
 #include "bitvec.h"
+#include "compat.h"
 
 /*
  * Debug control for this module
@@ -300,23 +301,39 @@ void DPS_DumpTopics(const char** topics, size_t numTopics)
         }
     }
 }
+#endif
 
-void DPS_DumpMatchingTopics(DPS_BitVector* bv)
+const char* DPS_DumpMatchingTopics(DPS_BitVector* bv)
 {
-    char i;
+    static const char* topics[] = {
+        "1.1", "2.1", "3.1", "4.1", "3/2", "2/3",
+        "a/b/c", "d/e/f", "g/h/i", "1/2/3", "4/5/6", "7/8/9",
+        "1/1/1", "1/1/2", "1/1/3", "1/1/4", "2/1/1", "3/1/1",
+        "A/A", "B/B", "C/C", "X/X", "Y/Y", "Z/Z"
+    };
+    static THREAD char str[256] = { 0 };
+    char c;
+    size_t i;
     int match = 0;
 
-    DPS_PRINT("[");
-    for (i = 'A'; i <= 'Z'; ++i) {
-        char topic[2] = { i, 0 };
-        if (DPS_MatchTopic(bv, topic, ".")) {
+    strcpy(str, "[");
+    for (c = 'A'; c <= 'Z'; ++c) {
+        char topic[2] = { c, 0 };
+        if (DPS_MatchTopic(bv, topic, "./")) {
             if (match++) {
-                DPS_PRINT("|%c", i);
-            } else {
-                DPS_PRINT("%c", i);
+                strcat_s(str, sizeof(str), "|");
             }
+            strcat_s(str, sizeof(str), topic);
         }
     }
-    DPS_PRINT("]\n");
+    for (i = 0; i < A_SIZEOF(topics); ++i) {
+        if (DPS_MatchTopic(bv, topics[i], "./")) {
+            if (match++) {
+                strcat_s(str, sizeof(str), "|");
+            }
+            strcat_s(str, sizeof(str), topics[i]);
+        }
+    }
+    strcat_s(str, sizeof(str), "]");
+    return str;
 }
-#endif

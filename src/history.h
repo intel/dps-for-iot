@@ -43,6 +43,7 @@ extern "C" {
  */
 typedef struct _DPS_NodeAddressList {
     uint32_t sn;                /**< A sequence number */
+    uint16_t hopCount;          /**< A hop count */
     DPS_NodeAddress addr;       /**< A node address */
     struct _DPS_NodeAddressList* next; /**< The next address in the list */
 } DPS_NodeAddressList;
@@ -100,12 +101,13 @@ void DPS_HistoryFree(DPS_History* history);
  * @param sequenceNum   The sequence number for the publication
  * @param ackRequested  TRUE if an ack was requested by the publisher
  * @param ttl           The ttl for the publication
+ * @param hopCount      The hop count for the publication
  * @param addr          Optional address of the node that sent or forwarded this publication. This should
  *                      only be set for publications that are requesting an acknowledgement.
  *
  * @return DPS_OK if update is successful, an error otherwise
  */
-DPS_Status DPS_UpdatePubHistory(DPS_History* history, DPS_UUID* pubId, uint32_t sequenceNum, uint8_t ackRequested, uint16_t ttl, DPS_NodeAddress* addr);
+DPS_Status DPS_UpdatePubHistory(DPS_History* history, DPS_UUID* pubId, uint32_t sequenceNum, uint8_t ackRequested, uint16_t ttl, uint16_t hopCount, DPS_NodeAddress* addr);
 
 /**
  * Check if a publication has been seen before

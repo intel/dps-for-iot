@@ -112,8 +112,8 @@ import (
  }
 
  extern void goOnLinkComplete(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, uintptr_t data);
- static void onLinkComplete(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, void* data) {
-         goOnLinkComplete(node, addr, status, (uintptr_t)data);
+ static void onLinkComplete(DPS_Node* node, const DPS_NodeAddress* addr, DPS_Status status, void* data) {
+         goOnLinkComplete(node, (DPS_NodeAddress*)addr, status, (uintptr_t)data);
  }
 
  static DPS_Status link(DPS_Node* node, const char* addrText, uintptr_t data) {
@@ -169,8 +169,26 @@ import (
          goPublicationHandler(sub, (DPS_Publication*)pub, payload, len);
  }
 
+ extern void goOnPublicationDestroyed(DPS_Publication* pub);
+ static void onPublicationDestroyed(DPS_Publication* pub) {
+         goOnPublicationDestroyed(pub);
+ }
+
+ static DPS_Status destroyPublication(DPS_Publication* pub) {
+         return DPS_DestroyPublication(pub, onPublicationDestroyed);
+ }
+
  static DPS_Status subscribe(DPS_Subscription* sub) {
          return DPS_Subscribe(sub, publicationHandler);
+ }
+
+ extern void goOnSubscriptionDestroyed(DPS_Subscription* sub);
+ static void onSubscriptionDestroyed(DPS_Subscription* sub) {
+         goOnSubscriptionDestroyed(sub);
+ }
+
+ static DPS_Status destroySubscription(DPS_Subscription* sub) {
+         return DPS_DestroySubscription(sub, onSubscriptionDestroyed);
  }
 
  static DPS_Buffer* makeBuffers(size_t n) {
@@ -726,9 +744,10 @@ func goOnResolveAddressComplete(cnode *C.DPS_Node, caddr *C.DPS_NodeAddress, han
 }
 
 type Publication struct {
-	handle  uintptr
-	cpub    *C.DPS_Publication
-	handler AcknowledgementHandler
+	handle            uintptr
+	cpub              *C.DPS_Publication
+	handler           AcknowledgementHandler
+	onDestroyedHandle uintptr
 }
 
 func PublicationGetUUID(pub *Publication) string {
@@ -874,12 +893,28 @@ func PublishBufs(pub *Publication, bufs [][]byte, ttl int16) int {
 	return int(C.publishBufs(pub.cpub, cbufs, cnumBufs, cttl, C.uintptr_t(handle)))
 }
 
-func DestroyPublication(pub *Publication) (ret int) {
-	ret = int(C.DPS_DestroyPublication(pub.cpub))
-	if ret == OK {
-		reg.unregister(pub.handle)
+type OnPublicationDestroyed func(*Publication)
+
+func DestroyPublication(pub *Publication, cb OnPublicationDestroyed) (ret int) {
+	cpub := pub.cpub
+	pub.onDestroyedHandle = reg.register(cb)
+	return int(C.destroyPublication(cpub))
+}
+
+//export goOnPublicationDestroyed
+func goOnPublicationDestroyed(cpub *C.DPS_Publication) {
+	pub, ok := reg.lookup(uintptr(C.DPS_GetPublicationData(cpub))).(*Publication)
+	if !ok {
+		return
 	}
-	return
+	onDestroyed, ok := reg.lookup(pub.onDestroyedHandle).(OnPublicationDestroyed)
+	if !ok {
+		reg.unregister(pub.handle)
+		return
+	}
+	onDestroyed(pub)
+	reg.unregister(pub.onDestroyedHandle)
+	reg.unregister(pub.handle)
 }
 
 func AckPublication(pub *Publication, payload []byte) int {
@@ -922,9 +957,10 @@ func AckGetSenderKeyId(pub *Publication) (keyId KeyId) {
 }
 
 type Subscription struct {
-	handle  uintptr
-	csub    *C.DPS_Subscription
-	handler PublicationHandler
+	handle            uintptr
+	csub              *C.DPS_Subscription
+	handler           PublicationHandler
+	onDestroyedHandle uintptr
 }
 
 func SubscriptionGetTopics(sub *Subscription) (topics []string) {
@@ -968,7 +1004,7 @@ func SubscribeExpired(sub *Subscription, enable int) int {
 
 //export goPublicationHandler
 func goPublicationHandler(csub *C.DPS_Subscription, cpub *C.DPS_Publication, cpayload *C.uint8_t, clen C.size_t) {
-	pub := Publication{0, cpub, nil}
+	pub := Publication{0, cpub, nil, 0}
 	var payload []byte
 	if cpayload != nil {
 		payload = (*[1 << 30]byte)(unsafe.Pointer(cpayload))[:clen:clen]
@@ -979,12 +1015,28 @@ func goPublicationHandler(csub *C.DPS_Subscription, cpub *C.DPS_Publication, cpa
 	}
 }
 
-func DestroySubscription(sub *Subscription) (ret int) {
-	ret = int(C.DPS_DestroySubscription(sub.csub))
-	if ret == OK {
-		reg.unregister(sub.handle)
+type OnSubscriptionDestroyed func(*Subscription)
+
+func DestroySubscription(sub *Subscription, cb OnSubscriptionDestroyed) (ret int) {
+	csub := sub.csub
+	sub.onDestroyedHandle = reg.register(cb)
+	return int(C.destroySubscription(csub))
+}
+
+//export goOnSubscriptionDestroyed
+func goOnSubscriptionDestroyed(csub *C.DPS_Subscription) {
+	sub, ok := reg.lookup(uintptr(C.DPS_GetSubscriptionData(csub))).(*Subscription)
+	if !ok {
+		return
 	}
-	return
+	onDestroyed, ok := reg.lookup(sub.onDestroyedHandle).(OnSubscriptionDestroyed)
+	if !ok {
+		reg.unregister(sub.handle)
+		return
+	}
+	onDestroyed(sub)
+	reg.unregister(sub.onDestroyedHandle)
+	reg.unregister(sub.handle)
 }
 
 const (

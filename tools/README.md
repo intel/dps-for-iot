@@ -42,7 +42,7 @@ instances of the reg_subs example program.
 Run `test_scripts/reg1.py` or similar to create a network of connected
 nodes.
 
-`dps_graph | dot -Tpng -o graph.png`
+`dps_graph.pl | dot -Tpng -o graph.png`
 
 Generates a .png file for the connections.
 

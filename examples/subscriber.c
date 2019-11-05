@@ -35,6 +35,7 @@
 #include <dps/event.h>
 #include <dps/json.h>
 #include <dps/synchronous.h>
+#include <dps/dispatcher.h>
 #include "common.h"
 #include "keys.h"
 
@@ -131,6 +132,7 @@ typedef struct _Args {
     int wait;
     int encrypt;
     int subsRate;
+    int fixLinkDelay;
     int mcastPub;
     int interactive;
 } Args;
@@ -158,6 +160,7 @@ static int ParseArgs(int argc, char** argv, Args* args)
     args->encrypt = 1;
     args->subsRate = DPS_SUBSCRIPTION_UPDATE_RATE;
     args->mcastPub = DPS_MCAST_PUB_DISABLED;
+    args->fixLinkDelay = -1;
 
     for (; argc; --argc) {
         /*
@@ -182,6 +185,9 @@ static int ParseArgs(int argc, char** argv, Args* args)
                 continue;
             }
             if (IntArg("-r", &argv, &argc, &args->subsRate, 0, INT32_MAX)) {
+                continue;
+            }
+            if (IntArg("-f", &argv, &argc, &args->fixLinkDelay, 0, 60)) {
                 continue;
             }
             if (strcmp(*argv, "-m") == 0) {
@@ -260,12 +266,14 @@ static int Subscribe(Subscriber* subscriber, Args* args)
     return DPS_TRUE;
 }
 
-static void OnLinkComplete(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, void* data)
+static void OnLinkComplete(DPS_Node* node, const DPS_NodeAddress* addr, DPS_Status status, void* data)
 {
     DPS_NodeAddress* outAddr = (DPS_NodeAddress*)data;
 
     if (status == DPS_OK) {
-        DPS_CopyAddress(outAddr, addr);
+        if (outAddr) {
+            DPS_CopyAddress(outAddr, addr);
+        }
         DPS_PRINT("Subscriber is linked to %s\n", DPS_NodeAddrToString(addr));
     } else {
         DPS_ERRPRINT("DPS_Link %s returned %s\n", DPS_NodeAddrToString(addr), DPS_ErrTxt(status));
@@ -290,14 +298,14 @@ static int LinkTo(Subscriber* subscriber, Args* args)
             ret = DPS_ERR_RESOURCES;
         }
         if (ret == DPS_OK) {
-            ret = DPS_Link(subscriber->node, args->linkText[j], OnLinkComplete, subscriber->addrs[j]);
+            ret = DPS_Link(subscriber->node, args->linkText[i], OnLinkComplete, subscriber->addrs[j]);
         }
     }
     if (ret == DPS_OK) {
-        subscriber->numAddrs += j;
+        subscriber->numAddrs = j;
         return DPS_TRUE;
     } else {
-        DPS_ERRPRINT("DPS_Link %s returned %s\n", args->linkText[j], DPS_ErrTxt(ret));
+        DPS_ERRPRINT("DPS_Link %s returned %s\n", args->linkText[i], DPS_ErrTxt(ret));
         return DPS_FALSE;
     }
 }
@@ -305,6 +313,31 @@ static int LinkTo(Subscriber* subscriber, Args* args)
 static void UnlinkFrom(Subscriber* subscriber)
 {
     Unlink(subscriber->node, subscriber->addrs, subscriber->numAddrs);
+}
+
+static void DelayedLink(DPS_Node* node, void* data)
+{
+    DPS_Status ret = DPS_Link(node, (const char*)data, OnLinkComplete, NULL);
+    if (ret != DPS_OK) {
+        DPS_ERRPRINT("Delayed DPS_Link() to %s failed - %s\n", data, DPS_ErrTxt(ret));
+    }
+    free(data);
+}
+
+static void OnLinkLoss(DPS_Node* node, const DPS_NodeAddress* remoteAddr, void* data)
+{
+    int fixDelay = *((int*)(data));
+
+    DPS_PRINT("Link to remote %s was lost\n", DPS_NodeAddrToString(remoteAddr));
+    if (fixDelay >= 0) {
+        char* address = strdup(DPS_NodeAddrToString(remoteAddr));
+        DPS_Status ret;
+        DPS_PRINT("Attempting to recover link in %d seconds\n", fixDelay);
+        ret = DPS_ScheduleCall(node, DelayedLink, address, 1000 * fixDelay);
+        if (ret != DPS_OK) {
+            DPS_ERRPRINT("failed - %s\n", DPS_ErrTxt(ret));
+        }
+    }
 }
 
 #define MAX_LINE_LEN 256
@@ -335,6 +368,7 @@ static void ReadStdin(Subscriber* subscriber)
         }
         Subscribe(subscriber, &args);
         LinkTo(subscriber, &args);
+        DestroyLinkArg(args.linkText, NULL, args.numLinks);
     }
 }
 
@@ -377,9 +411,15 @@ int main(int argc, char** argv)
     }
     subscriber.node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore), nodeKeyId);
     DPS_SetNodeSubscriptionUpdateDelay(subscriber.node, args.subsRate);
+    DPS_SetNodeLinkLossTimeout(subscriber.node, args.subsRate * 10);
 
     nodeDestroyed = DPS_CreateEvent();
 
+    ret = DPS_SetLinkLossCallback(subscriber.node, OnLinkLoss, &args.fixLinkDelay);
+    if (ret != DPS_OK) {
+        DPS_ERRPRINT("Failed to set link-loss call back: %s\n", DPS_ErrTxt(ret));
+        goto Exit;
+    }
     ret = DPS_StartNode(subscriber.node, args.mcastPub, args.listenAddr);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
@@ -423,8 +463,9 @@ Exit:
     return (ret == DPS_OK) ? EXIT_SUCCESS : EXIT_FAILURE;
 
 Usage:
-    DPS_PRINT("Usage %s [-d] [-q] [-m] [-w <seconds>] [-x 0|1|2|3] [-p <address>] [-l <address] [-j] [-r <milliseconds>] [[-s] topic1 ... topicN]\n", argv[0]);
+    DPS_PRINT("Usage %s [-d] [-f <seconds>] [-q] [-m] [-w <seconds>] [-x 0|1|2|3] [-p <address>] [-l <address] [-j] [-r <milliseconds>] [[-s] topic1 ... topicN]\n", argv[0]);
     DPS_PRINT("       -d: Enable debug ouput if built for debug.\n");
+    DPS_PRINT("       -f: Attempt to fix broken link N seconds after detecting link loss.\n");
     DPS_PRINT("       -q: Quiet - suppresses output about received publications.\n");
     DPS_PRINT("       -x: Disable (0) or enable symmetric encryption (1), asymmetric encryption (2), or authentication (3). Default is symmetric encryption enabled.\n");
     DPS_PRINT("       -w: Time to wait before establishing links\n");

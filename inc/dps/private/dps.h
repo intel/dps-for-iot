@@ -59,6 +59,7 @@ extern "C" {
 #define DPS_CBOR_KEY_DATA          12   /**< bstr */
 #define DPS_CBOR_KEY_ACK_SEQ_NUM   13   /**< uint */
 #define DPS_CBOR_KEY_PATH          14   /**< tstr */
+#define DPS_CBOR_KEY_HOP_COUNT     15   /**< uint */
 
 /**
  * Convert seconds to milliseconds
@@ -109,6 +110,18 @@ typedef struct _DPS_NodeAddress {
  * @return DPS_OK if successful, an error otherwise
  */
 DPS_Status DPS_GetLoopbackAddress(DPS_NodeAddress* addr, DPS_Node* node);
+
+/**
+ * Link the local node to a remote node.
+ *
+ * @param node      The local node to use
+ * @param addr      The address for the remote node
+ * @param cb        The callback function to call on completion, can be NULL which case the function is synchronous
+ * @param data      Application data to be passed to the callback
+ *
+ * @return DPS_OK or an error status. If an error status is returned the callback function will not be called.
+ */
+DPS_Status DPS_LinkRemoteAddr(DPS_Node* node, const DPS_NodeAddress* addr, DPS_OnLinkComplete cb, void* data);
 
 /**
  * For managing data that has been received
@@ -305,6 +318,30 @@ typedef struct _DPS_NetRxBuffer DPS_NetRxBuffer;
  * @return the DPS_NetRxBuffer
  */
 DPS_NetRxBuffer* DPS_PublicationGetNetRxBuffer(const DPS_Publication* pub);
+
+/**
+ * Enables serialization on a per-subscription basis.
+ *
+ * The default is to include the subscription in the output of DPS_SerializeSubscriptions().
+ *
+ * @param sub        The subscription
+ * @param serialize  Indicates if this subscription shall be serialized
+ *
+ * @return DPS_OK if successful, an error otherwise
+ *
+ * @see SerializeSubscriptions()
+ */
+DPS_Status DPS_SubscriptionSetSerialize(DPS_Subscription* sub, int serialize);
+
+/**
+ * Hold lock to prevent debug output from getting interleaved
+ */
+void DPS_DbgLock(void);
+
+/**
+ * Release debug lock
+ */
+void DPS_DbgUnlock(void);
 
 #ifdef __cplusplus
 }

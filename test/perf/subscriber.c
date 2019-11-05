@@ -120,7 +120,7 @@ Exit:
         DPS_DestroyNode(node, OnNodeDestroyed, nodeDestroyed);
     }
     DPS_WaitForEvent(nodeDestroyed);
-    DPS_DestroySubscription(subscription);
+    DPS_DestroySubscription(subscription, NULL);
     DPS_DestroyEvent(nodeDestroyed);
     DPS_DestroyAddress(listenAddr);
     return (ret == DPS_OK) ? EXIT_SUCCESS : EXIT_FAILURE;

@@ -44,6 +44,7 @@ extern "C" {
 #define PUB_FLAG_RETAINED  (0x04) /**< The publication had a non-zero TTL */
 #define PUB_FLAG_EXPIRED   (0x10) /**< The publication had a negative TTL */
 #define PUB_FLAG_WAS_FREED (0x20) /**< The publication has been freed but has a non-zero ref count */
+#define PUB_FLAG_MULTICAST (0x40) /**< The publication should be multicast */
 #define PUB_FLAG_IS_COPY   (0x80) /**< This publication is a copy and can only be used for acknowledgements */
 
 typedef struct _DPS_PublishRequest DPS_PublishRequest;
@@ -75,10 +76,11 @@ typedef struct _DPS_Publication {
     DPS_TxBuffer topicsBuf;         /**< Pre-serialized topic strings */
 
     COSE_Entity sender;             /**< Publication sender ID */
-    DPS_NodeAddress senderAddr;     /**< For retained messages - the sender address */
+    DPS_NodeAddress senderAddr;     /**< For retained messages - the next-hop sender address */
     struct {
         uint32_t sequenceNum;       /**< The ack'd sequence number */
         COSE_Entity sender;         /**< The ack sender ID */
+        DPS_NodeAddress senderAddr; /**< For linking - then next-hop sender address */
     } ack;                          /**< For ack messages */
     DPS_Queue sendQueue;            /**< Publication send requests */
     DPS_Queue retainedQueue;        /**< The retained publication send requests */
@@ -88,6 +90,8 @@ typedef struct _DPS_Publication {
     uint32_t refCount;              /**< Ref count to prevent publication from being free while a send is in progress */
     uint32_t sequenceNum;           /**< Sequence number for this publication */
     int16_t ttl;                    /**< Copy of publish request time to live */
+
+    DPS_OnPublicationDestroyed onDestroyed; /**< Optional on destroyed callback */
 
     DPS_Publication* next;          /**< Next publication in list */
 } DPS_Publication;
@@ -126,6 +130,7 @@ typedef struct _DPS_PublishRequest {
     void* data;                         /**< Context pointer */
     int16_t ttl;                        /**< Time to live in seconds - maximum TTL is about 9 hours */
     uint64_t expires;                   /**< Time (in milliseconds) that this publication expires */
+    uint16_t hopCount;                  /**< The current hop count of the publication */
     DPS_Status status;                  /**< Result of the publish */
     size_t refCount;                    /**< Prevent request from being freed while in use */
     uint32_t sequenceNum;               /**< Sequence number for this request */
@@ -213,11 +218,31 @@ void DPS_PublishCompletion(DPS_PublishRequest* req);
 void DPS_ExpirePub(DPS_Node* node, DPS_Publication* pub);
 
 /**
+ * Free a publication
+ *
+ * @param pub The publication
+ *
+ * @return The next publication
+ */
+DPS_Publication* DPS_FreePublication(DPS_Publication* pub);
+
+/**
  * Free publications of node
  *
  * @param node The node
  */
 void DPS_FreePublications(DPS_Node* node);
+
+/**
+ * Destroy a copied publication.
+ *
+ * Normally DPS_FreePublication() should be called which handles both
+ * copied and non-copied publications.  DPS_DestroyCopy() is only
+ * intended to be used in special cases.
+ *
+ * @param copy The publication
+ */
+void DPS_DestroyCopy(DPS_Publication* copy);
 
 /**
  * Increase a publication's refcount to prevent it from being freed
@@ -245,6 +270,38 @@ void DPS_PublicationDecRef(DPS_Publication* pub);
 DPS_Status DPS_CallPubHandlers(DPS_PublishRequest* req);
 
 /**
+ * Enables multicast transmission on a per-publication basis.
+ *
+ * @param pub         The publication
+ * @param mcast       Indicates if this publication shall be multicast
+ *
+ * @return DPS_OK if addition is successful, an error otherwise
+ */
+DPS_Status DPS_PublicationSetMulticast(DPS_Publication* pub, int mcast);
+
+/**
+ * Get the sending address of a publication.
+ *
+ * The address is suitable for use with DPS_Link().
+ *
+ * @param pub   The publication
+ *
+ * @return The sending address of the publication, may be NULL
+ */
+const DPS_NodeAddress* DPS_PublicationGetSenderAddress(const DPS_Publication* pub);
+
+/**
+ * Get the sending address of an acknowledgement.
+ *
+ * The address is suitable for use with DPS_Link().
+ *
+ * @param pub   The pub parameter of DPS_AcknowledgementHandler
+ *
+ * @return The sending address of the acknowledgement, may be NULL
+ */
+const DPS_NodeAddress* DPS_AckGetSenderAddress(const DPS_Publication* pub);
+
+/**
  * Print publications of node
  *
  * @param node The node
@@ -254,6 +311,13 @@ void DPS_DumpPubs(DPS_Node* node);
 #else
 #define DPS_DumpPubs(node)
 #endif
+
+/**
+ * Print a publication
+ *
+ * @param pub The publication
+ */
+void DPS_DumpPub(const DPS_Publication* pub);
 
 #ifdef __cplusplus
 }

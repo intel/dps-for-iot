@@ -67,7 +67,7 @@ func main() {
 	cond.Wait()
 	lock.Unlock()
 
-	dps.DestroySubscription(sub)
+	dps.DestroySubscription(sub, func(pub *dps.Subscription) {})
 	dps.DestroyNode(node, func(node *dps.Node) {})
 	dps.DestroyAddress(listenAddr)
 }

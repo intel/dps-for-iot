@@ -381,6 +381,17 @@ DPS_NodeAddress* DPS_NetSetAddr(DPS_NodeAddress* addr, DPS_NodeAddressType type,
                                 const struct sockaddr* sa);
 
 /**
+  * Peform a lexical comparison of two addresses. For IP the addresses are mapped
+  * if needed to IpV6 form before being compared. The primary use is for tie-breaking.
+  *
+  * @param  addr1  The first address for the comparison
+  * @param  addr2  The second address for the comparison
+  *
+  * @return  -1, 0, +1 indicating the lexical order.
+  */
+int DPS_CmpAddr(const DPS_NodeAddress* addr1, const DPS_NodeAddress* addr2);
+
+/**
  * Maps the supplied address to a v6 address if needed.
  *
  * This is necessary when using dual-stack sockets.

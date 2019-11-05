@@ -42,7 +42,7 @@
 /*
  * Debug control for this module
  */
-DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
+DPS_DEBUG_CONTROL(DPS_DEBUG_OFF);
 
 #define RemoteNodeAddressText(n)  DPS_NodeAddrToString(&(n)->ep.addr)
 
@@ -220,10 +220,53 @@ void DPS_DestroyPublishRequest(DPS_PublishRequest* req)
     }
 }
 
+DPS_Publication* DPS_FreePublication(DPS_Publication* pub)
+{
+    DPS_Publication* next = pub->next;
+    assert((pub->flags & PUB_FLAG_WAS_FREED) && (pub->refCount == 0));
+    if (pub->onDestroyed) {
+        pub->onDestroyed(pub);
+    }
+    if (pub->flags & PUB_FLAG_IS_COPY) {
+        DPS_ClearKeyId(&pub->ack.sender.kid);
+    } else {
+        DPS_BitVectorFree(pub->bf);
+        DPS_TxBufferFree(&pub->bfBuf);
+        DPS_TxBufferFree(&pub->topicsBuf);
+    }
+    FreeRecipients(pub);
+    FreeTopics(pub);
+    free(pub);
+    return next;
+}
+
+static void FreeCopy(DPS_Publication* copy)
+{
+    DPS_Node* node;
+
+    if (!copy) {
+        return;
+    }
+    node = copy->node;
+    if (!(copy->flags & PUB_FLAG_WAS_FREED)) {
+        copy->next = node->freePubs;
+        node->freePubs = copy;
+        copy->flags |= PUB_FLAG_WAS_FREED;
+    }
+    if (copy->refCount == 0) {
+        uv_async_send(&node->freeAsync);
+    }
+}
+
 static DPS_Publication* FreePublication(DPS_Node* node, DPS_Publication* pub)
 {
     DPS_Publication* next = pub->next;
     DPS_PublishRequest* req;
+
+    if (pub->flags & PUB_FLAG_IS_COPY) {
+        FreeCopy(pub);
+        return NULL;
+    }
 
     if (!(pub->flags & PUB_FLAG_WAS_FREED)) {
         if (node->publications == pub) {
@@ -237,7 +280,8 @@ static DPS_Publication* FreePublication(DPS_Node* node, DPS_Publication* pub)
                 prev->next = next;
             }
         }
-        pub->next = NULL;
+        pub->next = node->freePubs;
+        node->freePubs = pub;
         pub->flags = PUB_FLAG_WAS_FREED;
     }
     /*
@@ -263,14 +307,7 @@ static DPS_Publication* FreePublication(DPS_Node* node, DPS_Publication* pub)
             req->status = DPS_ERR_WRITE;
             DPS_PublishCompletion(req);
         }
-        FreeRecipients(pub);
-        if (pub->bf) {
-            DPS_BitVectorFree(pub->bf);
-        }
-        DPS_TxBufferFree(&pub->bfBuf);
-        DPS_TxBufferFree(&pub->topicsBuf);
-        FreeTopics(pub);
-        free(pub);
+        uv_async_send(&node->freeAsync);
     }
     return next;
 }
@@ -369,6 +406,15 @@ const DPS_KeyId* DPS_PublicationGetSenderKeyId(const DPS_Publication* pub)
     }
 }
 
+const DPS_NodeAddress* DPS_PublicationGetSenderAddress(const DPS_Publication* pub)
+{
+    if ((IsValidPub(pub) || (pub && (pub->flags & PUB_FLAG_IS_COPY)))) {
+        return &pub->senderAddr;
+    } else {
+        return NULL;
+    }
+}
+
 uint32_t DPS_AckGetSequenceNum(const DPS_Publication* pub)
 {
     if ((IsValidPub(pub) || (pub && (pub->flags & PUB_FLAG_IS_COPY)))) {
@@ -383,6 +429,15 @@ const DPS_KeyId* DPS_AckGetSenderKeyId(const DPS_Publication* pub)
     if ((IsValidPub(pub) || (pub && (pub->flags & PUB_FLAG_IS_COPY))) &&
         (pub->ack.sender.alg != COSE_ALG_RESERVED)) {
         return &pub->ack.sender.kid;
+    } else {
+        return NULL;
+    }
+}
+
+const DPS_NodeAddress* DPS_AckGetSenderAddress(const DPS_Publication* pub)
+{
+    if ((IsValidPub(pub) || (pub && (pub->flags & PUB_FLAG_IS_COPY)))) {
+        return &pub->ack.senderAddr;
     } else {
         return NULL;
     }
@@ -411,7 +466,7 @@ static DPS_Status UpdatePubHistory(DPS_PublishRequest* req)
     DPS_Publication* pub = req->pub;
     DPS_Node* node = pub->node;
     return DPS_UpdatePubHistory(&node->history, &pub->pubId, req->sequenceNum, pub->ackRequested,
-                                REQ_TTL(req), &pub->senderAddr);
+                                REQ_TTL(req), req->hopCount, &pub->senderAddr);
 }
 
 /*
@@ -593,6 +648,7 @@ DPS_Status DPS_CallPubHandlers(DPS_PublishRequest* req)
     uint8_t* data = NULL;
     size_t dataLen = 0;
     int needsDecrypt = DPS_TRUE;
+    DPS_Publication* copy = NULL;
 
     DPS_DBGTRACE();
 
@@ -648,12 +704,33 @@ DPS_Status DPS_CallPubHandlers(DPS_PublishRequest* req)
             DPS_DBGPRINT("Matched subscription\n");
             UpdatePubHistory(req);
             DPS_UnlockNode(node);
-            sub->handler(sub, pub, data, dataLen);
+            if ((pub->flags & PUB_FLAG_LOCAL) == 0) {
+                sub->handler(sub, pub, data, dataLen);
+            } else {
+                /*
+                 * When the pub is local, I need to create a shallow
+                 * copy of the pub so that DPS_PublicationGetSequenceNum()
+                 * returns the sequence number of this request, not the
+                 * sequence number of the next publication in the series.
+                 */
+                if (!copy) {
+                    copy = DPS_CopyPublication(pub);
+                    if (!copy) {
+                        DPS_ERRPRINT("Failed to allocate copy of local publication: %s\n",
+                                     DPS_ErrTxt(DPS_ERR_RESOURCES));
+                    }
+                }
+                if (copy) {
+                    copy->sequenceNum = req->sequenceNum;
+                    sub->handler(sub, copy, data, dataLen);
+                }
+            }
             DPS_LockNode(node);
         }
     Next:
         DPS_SubscriptionDecRef(sub);
     }
+    DPS_DestroyPublication(copy, NULL);
     pub->rxBuf = NULL;
     DPS_TxBufferFree(&plainTextBuf);
     /* Publication topics will be invalid now if the publication was encrypted */
@@ -687,13 +764,12 @@ static DPS_Publication* LookupPublication(DPS_Node* node, DPS_UUID* pubId)
 
 DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxBuffer* buf, int multicast)
 {
-    static const int32_t UnprotectedKeys[] = { DPS_CBOR_KEY_TTL };
+    static const int32_t UnprotectedKeys[] = { DPS_CBOR_KEY_TTL, DPS_CBOR_KEY_HOP_COUNT };
     static const int32_t UnprotectedOptKeys[] = { DPS_CBOR_KEY_PORT, DPS_CBOR_KEY_PATH };
     static const int32_t ProtectedKeys[] = { DPS_CBOR_KEY_TTL, DPS_CBOR_KEY_PUB_ID, DPS_CBOR_KEY_SEQ_NUM,
                                              DPS_CBOR_KEY_ACK_REQ, DPS_CBOR_KEY_BLOOM_FILTER };
     DPS_RxBuffer* rxBuf = (DPS_RxBuffer*)buf;
     DPS_Status ret;
-    RemoteNode* pubNode = NULL;
     uint16_t port = 0;
     DPS_Publication* pub = NULL;
     DPS_PublishRequest* req = NULL;
@@ -704,6 +780,7 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxB
     uint32_t sequenceNum;
     int16_t ttl;
     int16_t baseTTL;
+    uint16_t hopCount;
     int ackRequested;
     size_t len;
     char* path = NULL;
@@ -742,6 +819,9 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxB
             if ((ret == DPS_OK) && (pathLen >= DPS_NODE_ADDRESS_PATH_MAX)) {
                 ret = DPS_ERR_INVALID;
             }
+            break;
+        case DPS_CBOR_KEY_HOP_COUNT:
+            ret = CBOR_DecodeUint16(rxBuf, &hopCount);
             break;
         }
         if (ret != DPS_OK) {
@@ -911,19 +991,6 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxB
      */
     FreeTopics(pub);
     /*
-     * We have no reason here to hold onto a node for multicast publishers
-     */
-    if (!multicast) {
-        ret = DPS_AddRemoteNode(node, &ep->addr, ep->cn, &pubNode);
-        if (ret == DPS_ERR_EXISTS) {
-            DPS_DBGPRINT("Updating existing node\n");
-            ret = DPS_OK;
-        }
-        if (ret != DPS_OK) {
-            goto Exit;
-        }
-    }
-    /*
      * Allocate the publish request for handling and forwarding
      *
      * The DPS_ERR_NO_ROUTE status will be reported in the completion
@@ -936,6 +1003,7 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxB
     }
     req->status = DPS_ERR_NO_ROUTE;
     req->sequenceNum = sequenceNum;
+    req->hopCount = hopCount + 1;
     req->rxBuf = buf;
     DPS_NetRxBufferIncRef(buf);
     DPS_TxBufferInit(&req->bufs[0], protectedPtr, rxBuf->rxPos - protectedPtr);
@@ -983,28 +1051,23 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxB
     ret = DPS_OK;
 
 Exit:
-    if (req && (ret != DPS_OK)) {
-        assert(pub);
-        req->status = ret;
-        DPS_DestroyPublishRequest(req);
-    }
-    /*
-     * Delete the publisher node if it is sending bad data
-     */
-    if (ret == DPS_ERR_INVALID || ret == DPS_ERR_SECURITY) {
-        DPS_ERRPRINT("Deleting bad publisher\n");
-        DPS_DeleteRemoteNode(node, pubNode);
-    }
-    if (pub) {
-        if (ret != DPS_OK) {
-            /*
-             * TODO - should we be updating the pub history after an error?
-             */
-            DPS_UpdatePubHistory(&node->history, &pub->pubId, sequenceNum, pub->ackRequested, ttl,
-                                 &pub->senderAddr);
+    if (ret == DPS_OK) {
+        DPS_PublicationDecRef(pub);
+    } else {
+        if (req) {
+            assert(pub);
+            req->status = ret;
+            DPS_DestroyPublishRequest(req);
+        }
+        if (pub) {
             FreePublication(node, pub);
         }
-        DPS_PublicationDecRef(pub);
+        /*
+         * Update the history since we may have received the shortest
+         * path out of order
+         */
+        DPS_UpdatePubHistory(&node->history, &pubId, sequenceNum, ackRequested, ttl < 0 ? 0 : ttl,
+                             hopCount + 1, &ep->addr);
     }
     DPS_UnlockNode(node);
     return ret;
@@ -1096,8 +1159,9 @@ DPS_Status DPS_SendPublication(DPS_PublishRequest* req, DPS_Publication* pub, Re
     len = CBOR_SIZEOF_ARRAY(5) +
         CBOR_SIZEOF(uint8_t) +
         CBOR_SIZEOF(uint8_t) +
-        CBOR_SIZEOF_MAP(2) + 2 * CBOR_SIZEOF(uint8_t) +
-        CBOR_SIZEOF(int16_t);   /* ttl */
+        CBOR_SIZEOF_MAP(3) + 3 * CBOR_SIZEOF(uint8_t) +
+        CBOR_SIZEOF(int16_t) +   /* ttl */
+        CBOR_SIZEOF(uint16_t);   /* hop-count */
     switch (node->addr.type) {
     case DPS_DTLS:
     case DPS_TCP:
@@ -1124,7 +1188,7 @@ DPS_Status DPS_SendPublication(DPS_PublishRequest* req, DPS_Publication* pub, Re
      * Encode the unprotected map
      */
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeMap(&buf, 2);
+        ret = CBOR_EncodeMap(&buf, 3);
     }
     switch (node->addr.type) {
     case DPS_DTLS:
@@ -1159,6 +1223,12 @@ DPS_Status DPS_SendPublication(DPS_PublishRequest* req, DPS_Publication* pub, Re
     default:
         break;
     }
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_HOP_COUNT);
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeUint16(&buf, req->hopCount);
+    }
     /*
      * Protected and encrypted maps are already serialized
      */
@@ -1180,10 +1250,21 @@ DPS_Status DPS_SendPublication(DPS_PublishRequest* req, DPS_Publication* pub, Re
                  */
                 DPS_PublicationIncRef(pub);
                 /*
+                 * TODO Disabling the below - it has two undesirable consequences:
+                 *   1. It screws up the hop count logic.
+                 *   2. It results in a large amount of history state when there are
+                 *      a lot of links present.
+                 * The original problem is now back - when a new link is created,
+                 * the entire network receives any retained publications, not only
+                 * the new link.
+                 */
+#if 0
+                /*
                  * Update history to prevent retained publications from being resent.
                  */
                 DPS_UpdatePubHistory(&node->history, &pub->pubId, req->sequenceNum,
-                                     pub->ackRequested, REQ_TTL(req), &remote->ep.addr);
+                                     pub->ackRequested, REQ_TTL(req), req->hopCount, &remote->ep.addr);
+#endif
             } else {
                 SendComplete(req, &remote->ep, bufs, 1 + req->numBufs, ret);
             }
@@ -1288,16 +1369,21 @@ DPS_Publication* DPS_CreatePublication(DPS_Node* node)
     if (!pub) {
         return NULL;
     }
-    DPS_GenerateUUID(&pub->pubId);
+    DPS_LockNode(node);
     pub->node = node;
+    if (node->mcastPub & DPS_MCAST_PUB_ENABLE_SEND) {
+        pub->flags |= PUB_FLAG_MULTICAST;
+    }
+    DPS_UnlockNode(node);
+    DPS_GenerateUUID(&pub->pubId);
     DPS_QueueInit(&pub->sendQueue);
     DPS_QueueInit(&pub->retainedQueue);
     return pub;
 }
 
-static void DestroyCopy(DPS_Publication* copy)
+void DPS_DestroyCopy(DPS_Publication* copy)
 {
-    if (copy && copy->refCount == 0) {
+    if (copy) {
         DPS_ClearKeyId(&copy->ack.sender.kid);
         FreeTopics(copy);
         FreeRecipients(copy);
@@ -1327,6 +1413,7 @@ DPS_Publication* DPS_CopyPublication(const DPS_Publication* pub)
     copy->handler = pub->handler;
     copy->pubId = pub->pubId;
     copy->sender = pub->sender;
+    memcpy(&copy->senderAddr, &pub->senderAddr, sizeof(DPS_NodeAddress));
     if (pub->ackRequested) {
         ret = CopyRecipients(copy, pub);
         if (ret != DPS_OK) {
@@ -1357,7 +1444,7 @@ DPS_Publication* DPS_CopyPublication(const DPS_Publication* pub)
 
 Exit:
     if (ret != DPS_OK) {
-        DestroyCopy(copy);
+        DPS_DestroyCopy(copy);
         copy = NULL;
     }
     return copy;
@@ -1408,7 +1495,7 @@ DPS_Status DPS_InitPublication(DPS_Publication* pub,
         pub->handler = handler;
         pub->ackRequested = DPS_TRUE;
     }
-    pub->flags = PUB_FLAG_LOCAL;
+    pub->flags |= PUB_FLAG_LOCAL;
     /*
      * Copy key identifier
      */
@@ -1521,6 +1608,32 @@ void DPS_PublicationRemoveSubId(DPS_Publication* pub, const DPS_KeyId* keyId)
     if (IsValidPub(pub)) {
         RemoveRecipient(pub, keyId);
     }
+}
+
+DPS_Status DPS_PublicationSetMulticast(DPS_Publication* pub, int mcastPub)
+{
+    DPS_Node* node = pub->node;
+
+    DPS_DBGTRACE();
+
+    if (!IsValidPub(pub) || !(pub->flags & PUB_FLAG_LOCAL)) {
+        return DPS_ERR_MISSING;
+    }
+
+    DPS_LockNode(node);
+    if (!node->mcastSender) {
+        node->mcastSender = DPS_MulticastStartSend(node);
+        if (!node->mcastSender) {
+            return DPS_ERR_NETWORK;
+        }
+    }
+    if (mcastPub) {
+        pub->flags |= PUB_FLAG_MULTICAST;
+    } else {
+        pub->flags &= ~PUB_FLAG_MULTICAST;
+    }
+    DPS_UnlockNode(node);
+    return DPS_OK;
 }
 
 int DPS_PublicationIsEncrypted(const DPS_Publication* pub)
@@ -1781,7 +1894,7 @@ DPS_Status DPS_Publish(DPS_Publication* pub, const uint8_t* payload, size_t len,
     return ret;
 }
 
-DPS_Status DPS_DestroyPublication(DPS_Publication* pub)
+DPS_Status DPS_DestroyPublication(DPS_Publication* pub, DPS_OnPublicationDestroyed cb)
 {
     DPS_Node* node;
     DPS_Status ret;
@@ -1793,18 +1906,8 @@ DPS_Status DPS_DestroyPublication(DPS_Publication* pub)
     }
     node = pub->node;
     DPS_LockNode(node);
-    /*
-     * Maybe destroying an uninitialized publication
-     */
-    if (!IsValidPub(pub) || (pub->flags & PUB_FLAG_IS_COPY)) {
-        DestroyCopy(pub);
-        ret = DPS_OK;
-        goto Exit;
-    }
-    /*
-     * Check publication is local
-     */
-    if (!(pub->flags & PUB_FLAG_LOCAL)) {
+    pub->onDestroyed = cb;
+    if (IsValidPub(pub) && !(pub->flags & PUB_FLAG_LOCAL)) {
         ret = DPS_ERR_MISSING;
         goto Exit;
     }
@@ -1852,6 +1955,37 @@ DPS_NetRxBuffer* DPS_PublicationGetNetRxBuffer(const DPS_Publication* pub)
     return NULL;
 }
 
+void DPS_DumpPub(const DPS_Publication* pub)
+{
+    size_t i;
+    int16_t ttl = 0;
+    if (!DPS_QueueEmpty(&pub->retainedQueue)) {
+        DPS_PublishRequest* req = (DPS_PublishRequest*)DPS_QueueBack(&pub->retainedQueue);
+        ttl = REQ_TTL(req);
+    }
+    DPS_PRINT("  %s(%d) %s%s%s%s%s%sttl=%d ", DPS_UUIDToString(&pub->pubId), pub->sequenceNum,
+              pub->flags & PUB_FLAG_LOCAL ? "LOCAL " : "",
+              pub->flags & PUB_FLAG_RETAINED ? "RETAINED " : "",
+              pub->flags & PUB_FLAG_EXPIRED ? "EXPIRED " : "",
+              pub->flags & PUB_FLAG_WAS_FREED ? "WAS_FREED " : "",
+              pub->flags & PUB_FLAG_MULTICAST ? "MULTICAST " : "",
+              pub->flags & PUB_FLAG_IS_COPY ? "IS_COPY " : "",
+              ttl);
+    /*
+     * Remote publication topics may be encrypted for another node, so
+     * only dump the local topics.
+     */
+    if (pub->flags & PUB_FLAG_LOCAL) {
+        DPS_PRINT("topics=[");
+        for (i = 0; i < pub->numTopics; ++i) {
+            DPS_PRINT("%s%s", i ? ",": "", pub->topics[i]);
+        }
+        DPS_PRINT("]\n");
+    } else {
+        DPS_PRINT("\n");
+    }
+}
+
 #ifdef DPS_DEBUG
 void DPS_DumpPubs(DPS_Node* node)
 {
@@ -1859,18 +1993,7 @@ void DPS_DumpPubs(DPS_Node* node)
         DPS_Publication* pub;
         DPS_PRINT("Node %s:\n", DPS_NodeAddrToString(&node->addr));
         for (pub = node->publications; pub; pub = pub->next) {
-            int16_t ttl = 0;
-            if (!DPS_QueueEmpty(&pub->retainedQueue)) {
-                DPS_PublishRequest* req = (DPS_PublishRequest*)DPS_QueueBack(&pub->retainedQueue);
-                ttl = REQ_TTL(req);
-            }
-            DPS_PRINT("  %s(%d) %s%s%s%s%sttl=%d\n", DPS_UUIDToString(&pub->pubId), pub->sequenceNum,
-                      pub->flags & PUB_FLAG_LOCAL ? "LOCAL " : "",
-                      pub->flags & PUB_FLAG_RETAINED ? "RETAINED " : "",
-                      pub->flags & PUB_FLAG_EXPIRED ? "EXPIRED " : "",
-                      pub->flags & PUB_FLAG_WAS_FREED ? "WAS_FREED " : "",
-                      pub->flags & PUB_FLAG_IS_COPY ? "IS_COPY " : "",
-                      ttl);
+            DPS_DumpPub(pub);
         }
     }
 }

@@ -33,7 +33,7 @@
 /*
  * Debug control for this module
  */
-DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
+DPS_DEBUG_CONTROL(DPS_DEBUG_OFF);
 
 #define HISTORY_THRESHOLD   10
 
@@ -41,6 +41,13 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
  * How long to keep publication history (in nanoseconds)
  */
 #define PUB_HISTORY_LIFETIME   DPS_SECS_TO_MS(10)
+
+#ifndef MAX
+#define MAX(a,b) (((a)>(b))?(a):(b))
+#endif
+#ifndef MIN
+#define MIN(a,b) (((a)<(b))?(a):(b))
+#endif
 
 static DPS_PubHistory* Find(const DPS_History* history, const DPS_UUID* pubId)
 {
@@ -288,7 +295,7 @@ void DPS_FreshenHistory(DPS_History* history)
 }
 
 DPS_Status DPS_UpdatePubHistory(DPS_History* history, DPS_UUID* pubId, uint32_t sequenceNum,
-                                uint8_t ackRequested, uint16_t ttl, DPS_NodeAddress* addr)
+                                uint8_t ackRequested, uint16_t ttl, uint16_t hopCount, DPS_NodeAddress* addr)
 {
     uint64_t now = uv_now(history->loop);
     DPS_PubHistory* phNew = calloc(1, sizeof(DPS_PubHistory));
@@ -310,7 +317,7 @@ DPS_Status DPS_UpdatePubHistory(DPS_History* history, DPS_UUID* pubId, uint32_t 
         FreePubHistory(phNew);
         UnlinkPub(history, ph);
     }
-    ph->sn = sequenceNum;
+    ph->sn = MAX(ph->sn, sequenceNum);
     ph->ackRequested = ackRequested;
     /*
      * The address is not set in publications being sent from the local node
@@ -325,11 +332,15 @@ DPS_Status DPS_UpdatePubHistory(DPS_History* history, DPS_UUID* pubId, uint32_t 
         if (!(*phAddr)) {
             (*phAddr) = calloc(1, sizeof(DPS_NodeAddressList));
             if ((*phAddr)) {
-                (*phAddr)->sn = sequenceNum;
                 (*phAddr)->addr = *addr;
+                (*phAddr)->hopCount = hopCount;
                 DPS_DBGPRINT("Added %s to pub %s\n", DPS_NodeAddrToString(&(*phAddr)->addr),
                              DPS_UUIDToString(pubId));
             }
+        }
+        if ((*phAddr)) {
+            (*phAddr)->sn = MAX((*phAddr)->sn, sequenceNum);
+            (*phAddr)->hopCount = MIN((*phAddr)->hopCount, hopCount);
         }
     }
     ph->expiration = now + DPS_SECS_TO_MS(ttl) + PUB_HISTORY_LIFETIME;
@@ -375,6 +386,8 @@ DPS_Status DPS_LookupPublisherForAck(DPS_History* history, const DPS_UUID* pubId
 {
     DPS_Status ret;
     DPS_PubHistory* ph;
+    DPS_NodeAddressList* na;
+    uint16_t hopCount;
 
     DPS_DBGTRACE();
 
@@ -383,6 +396,16 @@ DPS_Status DPS_LookupPublisherForAck(DPS_History* history, const DPS_UUID* pubId
     if (ph && ph->ackRequested && ph->addrs) {
         *sequenceNum = ph->sn;
         *addr = &ph->addrs->addr;
+        /*
+         * See if there is another, shorter, path to the publisher
+         * before returning
+         */
+        hopCount = ph->addrs->hopCount;
+        for (na = ph->addrs->next; na; na = na->next) {
+            if (na->hopCount < hopCount) {
+                *addr = &na->addr;
+            }
+        }
         ret = DPS_OK;
     } else {
         *sequenceNum = 0;

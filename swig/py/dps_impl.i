@@ -42,6 +42,22 @@ static int AsVal_bytes(Handle obj, uint8_t** bytes, size_t* len, int alloc)
             *bytes = reinterpret_cast<uint8_t*>(memcpy(new uint8_t[*len], PyBytes_AS_STRING(obj), *len));
             return SWIG_NEWOBJ;
         }
+    } else if (PyMemoryView_Check(obj)) {
+        Py_buffer *buf = PyMemoryView_GET_BUFFER(obj);
+        /*
+         * This conversion does not handle multi-dimensional arrays
+         */
+        if (buf->ndim != 1) {
+            return SWIG_TypeError;
+        }
+        *len = buf->len;
+        if (alloc == SWIG_OLDOBJ) {
+            *bytes = (uint8_t*)buf->buf;
+            return SWIG_OLDOBJ;
+        } else {
+            *bytes = reinterpret_cast<uint8_t*>(memcpy(new uint8_t[*len], buf->buf, *len));
+            return SWIG_NEWOBJ;
+        }
     } else if (PySequence_Check(obj)) {
         Py_ssize_t sz = PySequence_Length(obj);
         Py_ssize_t i;
@@ -218,7 +234,7 @@ static void OnNodeDestroyed(DPS_Node* node, void* data)
     PyGILState_Release(gilState);
 }
 
-static void OnLinkComplete(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, void* data)
+static void OnLinkComplete(DPS_Node* node, const DPS_NodeAddress* addr, DPS_Status status, void* data)
 {
     Handler* handler = (Handler*)data;
     PyObject* nodeObj;
@@ -266,13 +282,18 @@ static PyObject* GetPayloadObject(const DPS_Publication* pub, uint8_t* payload, 
         Py_buffer* view;
         payloadObj = PyMemoryView_FromObject((PyObject*)(buf->userData));
         view = PyMemoryView_GET_BUFFER(payloadObj);
-        /*
-         * Assert that [payload,len) is within the view and then slice the
-         * view to just the payload.
-         */
-        assert((view->buf <= payload) && ((payload + len) <= ((uint8_t*)(view->buf) + view->len)));
-        view->buf = payload;
-        view->len = len;
+        if (payload) {
+            /*
+             * Assert that [payload,len) is within the view and then slice the
+             * view to just the payload.
+             */
+            assert((view->buf <= payload) && ((payload + len) <= ((uint8_t*)(view->buf) + view->len)));
+            view->buf = payload;
+            view->len = len;
+        } else {
+            assert(len == 0);
+            view->len = len;
+        }
     } else {
 #if PY_VERSION_HEX >= 0x03030000
         payloadObj = PyMemoryView_FromMemory((char*)payload, len, PyBUF_READ);
@@ -292,7 +313,7 @@ static PyObject* GetPayloadObject(const DPS_Publication* pub, uint8_t* payload, 
 
 static void AcknowledgementHandler(DPS_Publication* pub, uint8_t* payload, size_t len)
 {
-    Handler* handler = (Handler*)DPS_GetPublicationData(pub);
+    PublicationData* data = (PublicationData*)DPS_GetPublicationData(pub);
     PyObject* pubObj;
     PyObject* payloadObj;
     PyObject* ret;
@@ -301,7 +322,7 @@ static void AcknowledgementHandler(DPS_Publication* pub, uint8_t* payload, size_
     gilState = PyGILState_Ensure();
     pubObj = SWIG_NewPointerObj(SWIG_as_voidptr(pub), SWIGTYPE_p__DPS_Publication, 0);
     payloadObj = GetPayloadObject(pub, payload, len);
-    ret = PyObject_CallFunctionObjArgs(handler->m_obj, pubObj, payloadObj, NULL);
+    ret = PyObject_CallFunctionObjArgs(data->m_ackHandler->m_obj, pubObj, payloadObj, NULL);
     Py_XDECREF(ret);
     Py_XDECREF(payloadObj);
     Py_XDECREF(pubObj);
@@ -310,7 +331,7 @@ static void AcknowledgementHandler(DPS_Publication* pub, uint8_t* payload, size_
 
 static void PublicationHandler(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* payload, size_t len)
 {
-    Handler* handler = (Handler*)DPS_GetSubscriptionData(sub);
+    SubscriptionData* data = (SubscriptionData*)DPS_GetSubscriptionData(sub);
     PyObject* subObj;
     PyObject* pubObj;
     PyObject* payloadObj;
@@ -321,11 +342,43 @@ static void PublicationHandler(DPS_Subscription* sub, const DPS_Publication* pub
     subObj = SWIG_NewPointerObj(SWIG_as_voidptr(sub), SWIGTYPE_p__DPS_Subscription, 0);
     pubObj = SWIG_NewPointerObj(SWIG_as_voidptr(pub), SWIGTYPE_p__DPS_Publication, 0);
     payloadObj = GetPayloadObject(pub, payload, len);
-    ret = PyObject_CallFunctionObjArgs(handler->m_obj, subObj, pubObj, payloadObj, NULL);
+    ret = PyObject_CallFunctionObjArgs(data->m_pubHandler->m_obj, subObj, pubObj, payloadObj, NULL);
     Py_XDECREF(ret);
     Py_XDECREF(payloadObj);
     Py_XDECREF(pubObj);
     Py_XDECREF(subObj);
+    PyGILState_Release(gilState);
+}
+
+static void OnPublicationDestroyed(DPS_Publication* pub)
+{
+    PublicationData* data = (PublicationData*)DPS_GetPublicationData(pub);
+    PyObject* pubObj;
+    PyObject* ret;
+    PyGILState_STATE gilState;
+
+    gilState = PyGILState_Ensure();
+    pubObj = SWIG_NewPointerObj(SWIG_as_voidptr(pub), SWIGTYPE_p__DPS_Publication, 0);
+    ret = PyObject_CallFunctionObjArgs(data->m_destroyedHandler->m_obj, pubObj, NULL);
+    Py_XDECREF(ret);
+    Py_XDECREF(pubObj);
+    delete data;
+    PyGILState_Release(gilState);
+}
+
+static void OnSubscriptionDestroyed(DPS_Subscription* sub)
+{
+    SubscriptionData* data = (SubscriptionData*)DPS_GetSubscriptionData(sub);
+    PyObject* subObj;
+    PyObject* ret;
+    PyGILState_STATE gilState;
+
+    gilState = PyGILState_Ensure();
+    subObj = SWIG_NewPointerObj(SWIG_as_voidptr(sub), SWIGTYPE_p__DPS_Subscription, 0);
+    ret = PyObject_CallFunctionObjArgs(data->m_destroyedHandler->m_obj, subObj, NULL);
+    Py_XDECREF(ret);
+    Py_XDECREF(subObj);
+    delete data;
     PyGILState_Release(gilState);
 }
 

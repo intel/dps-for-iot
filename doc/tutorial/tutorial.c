@@ -79,7 +79,7 @@ static DPS_Node* CreateNodeWithAuthenticatedSender(const DPS_KeyId* nodeId);
 static DPS_Status StartMulticastNode(DPS_Node* node);
 static DPS_Status StartUnicastNode(DPS_Node* node, uint16_t listenPort);
 static DPS_Status StartNode(DPS_Node* node, int mcastPub, const char* listenText);
-static void LinkComplete(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, void* data);
+static void LinkComplete(DPS_Node* node, const DPS_NodeAddress* addr, DPS_Status status, void* data);
 static DPS_Status Publish(DPS_Node* node, const char* security, DPS_Publication** createdPub);
 static DPS_Status PublishAck(DPS_Node* node, const char* security, DPS_Publication** createdPub);
 static DPS_Status PublishAuthAck(DPS_Node* node, const char* security, DPS_Publication** createdPub);
@@ -213,6 +213,14 @@ int main(int argc, char** argv)
         goto Exit;
     }
 
+    /* Subscribe before link to ensure interests are included in link creation */
+    if (subscribe) {
+        ret = Subscribe(node, ack, auth, &sub);
+    }
+    if (ret != DPS_OK) {
+        goto Exit;
+    }
+
     if (linkText) {
         ret = DPS_Link(node, linkText, LinkComplete, NULL);
         if (ret != DPS_OK) {
@@ -241,8 +249,6 @@ int main(int argc, char** argv)
         }
     } else if (publish) {
         ret = Publish(node, security, &pub);
-    } else if (subscribe) {
-        ret = Subscribe(node, ack, auth, &sub);
     }
     if (ret != DPS_OK) {
         goto Exit;
@@ -254,8 +260,8 @@ int main(int argc, char** argv)
     }
 
 Exit:
-    DPS_DestroyPublication(pub);
-    DPS_DestroySubscription(sub);
+    DPS_DestroyPublication(pub, NULL);
+    DPS_DestroySubscription(sub, NULL);
     DPS_KeyStore* keyStore = (DPS_KeyStore*)DPS_GetNodeData(node);
     DPS_DestroyKeyStore(keyStore);
     DestroyNode(node);
@@ -427,7 +433,7 @@ static DPS_Status StartUnicastNode(DPS_Node* node, uint16_t port)
 }
 
 /** [Linking complete] */
-static void LinkComplete(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, void* data)
+static void LinkComplete(DPS_Node* node, const DPS_NodeAddress* addr, DPS_Status status, void* data)
 {
     DPS_PRINT("Node is linked to %s\n", DPS_NodeAddrToString(addr));
 }

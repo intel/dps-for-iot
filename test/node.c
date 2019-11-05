@@ -277,8 +277,8 @@ int main(int argc, char** argv)
     Wait();
 
 Exit:
-    DPS_DestroyPublication(publication);
-    DPS_DestroySubscription(subscription);
+    DPS_DestroyPublication(publication, NULL);
+    DPS_DestroySubscription(subscription, NULL);
     ret = DPS_DestroyNode(node, OnNodeDestroyed, event);
     if (ret == DPS_OK) {
         DPS_WaitForEvent(event);

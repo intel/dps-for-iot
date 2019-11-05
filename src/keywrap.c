@@ -29,7 +29,7 @@
 /*
  * Debug control for this module
  */
-DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
+DPS_DEBUG_CONTROL(DPS_DEBUG_OFF);
 
 DPS_Status KeyWrap(const uint8_t cek[AES_256_KEY_LEN], const uint8_t kek[AES_256_KEY_LEN],
                    uint8_t cipherText[AES_256_KEY_WRAP_LEN])

@@ -30,9 +30,9 @@
 /*
  * Debug control for this module
  */
-DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
+DPS_DEBUG_CONTROL(DPS_DEBUG_OFF);
 
-static void OnLinked(DPS_Node* node, DPS_NodeAddress* addr, DPS_Status status, void* data)
+static void OnLinked(DPS_Node* node, const DPS_NodeAddress* addr, DPS_Status status, void* data)
 {
     DPS_Event* event = (DPS_Event*)data;
 
@@ -56,19 +56,9 @@ DPS_Status DPS_LinkTo(DPS_Node* node, const char* addrText, DPS_NodeAddress* add
     }
     DPS_SetEventData(event, addr);
     ret = DPS_Link(node, addrText, OnLinked, event);
-    if (ret != DPS_OK) {
-        DPS_ERRPRINT("DPS_Link returned: %s\n", DPS_ErrTxt(ret));
-        goto Exit;
+    if (ret == DPS_OK) {
+        ret = DPS_WaitForEvent(event);
     }
-    ret = DPS_WaitForEvent(event);
-    if (ret != DPS_OK) {
-        DPS_ERRPRINT("Failed to link to %s\n", DPS_NodeAddrToString(addr));
-        goto Exit;
-    }
-
-    DPS_DBGPRINT("Linked to %s\n", DPS_NodeAddrToString(addr));
-
-Exit:
     DPS_DestroyEvent(event);
     return ret;
 }

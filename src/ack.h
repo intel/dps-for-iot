@@ -82,11 +82,11 @@ DPS_Status DPS_DecodeAcknowledgement(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
  * Must be called with the node lock held.
  *
  * @param ack     The acknowledgement to send
- * @param ackNode The remote node to send the acknowledgement to
+ * @param ep      The endpoint to send the acknowledgement to
  *
  * @return DPS_OK if sending is successful, an error otherwise
  */
-DPS_Status DPS_SendAcknowledgement(PublicationAck* ack, RemoteNode* ackNode);
+DPS_Status DPS_SendAcknowledgement(PublicationAck* ack, DPS_NetEndpoint* ep);
 
 /**
  * Complete the ack when finished.

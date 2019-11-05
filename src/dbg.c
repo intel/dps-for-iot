@@ -29,7 +29,7 @@ int DPS_Debug = 1;
 
 #define DPS_DBG_TIME   ((uint32_t)((uv_hrtime() / 1000000) & 0xFFFFFFF))
 
-static const char* LevelTxt[] = { "ERROR", "WARNING", "" /* PRINT */, "" /* PRINTT */, "TRACE", "DEBUG" };
+static const char* LevelTxt[] = { "INFO", "ERROR", "WARNING", "" /* PRINT */, "" /* PRINTT */, "TRACE", "DEBUG" };
 
 #define stream stdout
 
@@ -38,20 +38,35 @@ static uv_mutex_t mutex;
 
 static void InitMutex(void)
 {
-    uv_mutex_init(&mutex);
+    uv_mutex_init_recursive(&mutex);
 }
 
-void DPS_Log(DPS_LogLevel level, const char* file, int line, const char *function, const char *fmt, ...)
+void DPS_DbgLock(void)
+{
+    uv_once(&once, InitMutex);
+    uv_mutex_lock(&mutex);
+}
+
+void DPS_DbgUnlock(void)
+{
+    uv_mutex_unlock(&mutex);
+}
+
+void DPS_Log(DPS_LogLevel level, const char* file, int line, const char *function, const char* tag, const char *fmt, ...)
 {
     va_list ap;
     va_start(ap, fmt);
-    uv_once(&once, InitMutex);
-    uv_mutex_lock(&mutex);
+    DPS_DbgLock();
     switch (level) {
     case DPS_LOG_ERROR:
+    case DPS_LOG_INFO:
     case DPS_LOG_WARNING:
     case DPS_LOG_DBGPRINT:
-        fprintf(stream, "%09u %-7s %s@%d: ", DPS_DBG_TIME, LevelTxt[level], file, line);
+        if (tag) {
+            fprintf(stream, "%09u %-7s %s@%d: %s ", DPS_DBG_TIME, LevelTxt[level], file, line, tag);
+        } else {
+            fprintf(stream, "%09u %-7s %s@%d: ", DPS_DBG_TIME, LevelTxt[level], file, line);
+        }
         vfprintf(stream, fmt, ap);
         break;
     case DPS_LOG_PRINTT:
@@ -61,20 +76,23 @@ void DPS_Log(DPS_LogLevel level, const char* file, int line, const char *functio
         vfprintf(stream, fmt, ap);
         break;
     case DPS_LOG_DBGTRACE:
-        fprintf(stream, "%09u %-7s %s@%d: %s() ", DPS_DBG_TIME, LevelTxt[level], file, line, function);
+        if (tag) {
+            fprintf(stream, "%09u %-7s %s@%d: %s %s() ", DPS_DBG_TIME, LevelTxt[level], file, line, tag, function);
+        } else {
+            fprintf(stream, "%09u %-7s %s@%d: %s() ", DPS_DBG_TIME, LevelTxt[level], file, line, function);
+        }
         vfprintf(stream, fmt, ap);
         break;
     }
     fflush(stream);
-    uv_mutex_unlock(&mutex);
+    DPS_DbgUnlock();
     va_end(ap);
 }
 
 void DPS_LogBytes(DPS_LogLevel level, const char* file, int line, const char *function, const uint8_t *bytes, size_t n)
 {
     size_t i;
-    uv_once(&once, InitMutex);
-    uv_mutex_lock(&mutex);
+    DPS_DbgLock();
     for (i = 0; i < n; ++i) {
         if ((i % 16) == 0) {
             fprintf(stream, "%s%09u %-7s %s@%d: ", i ? "\n" : "", DPS_DBG_TIME, LevelTxt[level], file, line);
@@ -83,5 +101,5 @@ void DPS_LogBytes(DPS_LogLevel level, const char* file, int line, const char *fu
     }
     fprintf(stream, "\n");
     fflush(stream);
-    uv_mutex_unlock(&mutex);
+    DPS_DbgUnlock();
 }
