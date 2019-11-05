@@ -30,8 +30,8 @@ extern "C" {
 #include <dps/dps.h>
 
 /**
-  * Opaque type for the discovery service
-  */
+ * Opaque type for the discovery service
+ */
 typedef struct _DPS_DiscoveryService DPS_DiscoveryService;
 
 /**
