@@ -445,22 +445,31 @@ DPS_Status DPS_DecodeAcknowledgement(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
      */
     ret = DPS_LookupPublisherForAck(&node->history, &pubId, &sn, &addr);
     if ((ret == DPS_OK) && (sequenceNum <= sn) && addr && !DPS_SameAddr(&ep->addr, addr)) {
+        uv_buf_t uvBuf;
+        DPS_NetEndpoint ep = { *addr, NULL };
+        DPS_NetEndpoint* ackEp = &ep;
         RemoteNode* ackNode;
+        DPS_DBGPRINT("Forwarding acknowledgement for %s/%d to %s\n", DPS_UUIDToString(&pubId),
+                     sequenceNum, DPS_NodeAddrToString(addr));
+        /*
+         * The ACK is forwarded exactly as received
+         */
+        uvBuf = uv_buf_init((char*)rxBuf->base, (uint32_t)(rxBuf->eod - rxBuf->base));
+        /*
+         * Forward the acknowledgement through an existing connection
+         * when available, otherwise use the destination address
+         * directly
+         */
         DPS_LockNode(node);
         ackNode = DPS_LookupRemoteNode(node, addr);
         if (ackNode) {
-            uv_buf_t uvBuf;
-            DPS_DBGPRINT("Forwarding acknowledgement for %s/%d to %s\n", DPS_UUIDToString(&pubId), sequenceNum, DPS_NodeAddrToString(addr));
-            /*
-             * The ACK is forwarded exactly as received
-             */
-            uvBuf = uv_buf_init((char*)rxBuf->base, (uint32_t)(rxBuf->eod - rxBuf->base));
-            ret = DPS_NetSend(node, NULL, &ackNode->ep, &uvBuf, 1, OnSendComplete);
-            if (ret == DPS_OK) {
-                DPS_NetRxBufferIncRef(buf);
-            } else {
-                DPS_SendComplete(node, &ackNode->ep.addr, NULL, 0, ret);
-            }
+            ackEp = &ackNode->ep;
+        }
+        ret = DPS_NetSend(node, NULL, ackEp, &uvBuf, 1, OnSendComplete);
+        if (ret == DPS_OK) {
+            DPS_NetRxBufferIncRef(buf);
+        } else {
+            DPS_SendComplete(node, &ackEp->addr, NULL, 0, ret);
         }
         DPS_UnlockNode(node);
     }

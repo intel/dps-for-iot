@@ -29,6 +29,7 @@
 #define DESCRIBE(n)  DPS_NodeAddrToString(&(n)->ep.addr)
 
 typedef struct _Args {
+    DPS_NodeAddress* listenAddr;
     int wait;     /* how long to wait for a link to come up */
     int delay;    /* how long to go unresponsive after breaking a link */
     int repeats;  /* how many times to run the test */
@@ -72,7 +73,10 @@ static RemoteNode* WaitForActiveRemote(DPS_Node* node, int timeout)
 static DPS_Status BreakLink(DPS_Node* node, int timeout, int delay)
 {
     DPS_Status ret = DPS_OK;
-    RemoteNode* remote = WaitForActiveRemote(node, timeout);
+    RemoteNode* remote = NULL;
+
+    DPS_PRINT("Waiting for remote node\n");
+    remote = WaitForActiveRemote(node, timeout);
     if (!remote) {
         return DPS_ERR_TIMEOUT;
     }
@@ -107,6 +111,9 @@ static int ParseArgs(int argc, char** argv, Args* args)
     args->repeats = 4;
 
     for (; argc; --argc) {
+        if (AddressArg("-l", &argv, &argc, &args->listenAddr)) {
+            continue;
+        }
         if (IntArg("-t", &argv, &argc, &args->delay, 0, 500)) {
             continue;
         }
@@ -168,9 +175,9 @@ int main(int argc, char** argv)
 
     nodeDestroyed = DPS_CreateEvent();
 
-    ret = DPS_StartNode(node, 0, NULL);
+    ret = DPS_StartNode(node, 0, args.listenAddr);
     if (ret != DPS_OK) {
-        DPS_ERRPRINT("Failed to start node: %s\n", DPS_ErrTxt(ret));
+        DPS_ERRPRINT("Failed to start node - %s\n", DPS_ErrTxt(ret));
         goto Exit;
     }
     DPS_PRINT("Link Dropper is listening on %s\n", DPS_GetListenAddressString(node));
@@ -183,13 +190,13 @@ int main(int argc, char** argv)
         while (args.repeats) {
             ret = BreakLink(node, args.wait, args.delay);
             if (ret != DPS_OK) {
-                DPS_ERRPRINT("Failed to get recovered link %s\n", DPS_ErrTxt(ret));
+                DPS_ERRPRINT("Failed to get recovered link - %s\n", DPS_ErrTxt(ret));
                 goto Exit;
             }
             --args.repeats;
         }
     } else {
-        DPS_ERRPRINT("Timed out waiting for initial link\n", DPS_ErrTxt(ret));
+        DPS_ERRPRINT("Timed out waiting for initial link - %s\n", DPS_ErrTxt(ret));
         goto Exit;
     }
     /*
@@ -198,7 +205,7 @@ int main(int argc, char** argv)
     remote = WaitForActiveRemote(node, args.wait);
     if (!remote) {
         ret = DPS_ERR_TIMEOUT;
-        DPS_ERRPRINT("Failed to get recovered link %s\n", DPS_ErrTxt(ret));
+        DPS_ERRPRINT("Failed to get recovered link - %s\n", DPS_ErrTxt(ret));
         goto Exit;
     }
     DPS_LockNode(node);
@@ -216,10 +223,11 @@ Exit:
     return (ret == DPS_OK) ? EXIT_SUCCESS : EXIT_FAILURE;
 
 Usage:
-    DPS_PRINT("Usage %s [-d] [-w <seconds>] [-r <count>]\n", argv[0]);
+    DPS_PRINT("Usage %s [-d] [-w <seconds>] [-r <count>]  [-l <address]\n", argv[0]);
     DPS_PRINT("       -d: Enable debug ouput if built for debug.\n");
-    DPS_PRINT("       -w: Time to wait in seconds for a link to be restored\n");
-    DPS_PRINT("       -t: Time to go unresponsive after dropping a link\n");
+    DPS_PRINT("       -w: Time to wait in seconds for a link to be restored.\n");
+    DPS_PRINT("       -t: Time to go unresponsive after dropping a link.\n");
     DPS_PRINT("       -r: Number of times to repeat test case.\n");
+    DPS_PRINT("       -l: Address listen on.\n");
     return EXIT_FAILURE;
 }

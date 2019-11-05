@@ -234,6 +234,17 @@ DPS_Publication* DPS_FreePublication(DPS_Publication* pub);
 void DPS_FreePublications(DPS_Node* node);
 
 /**
+ * Destroy a copied publication.
+ *
+ * Normally DPS_FreePublication() should be called which handles both
+ * copied and non-copied publications.  DPS_DestroyCopy() is only
+ * intended to be used in special cases.
+ *
+ * @param copy The publication
+ */
+void DPS_DestroyCopy(DPS_Publication* copy);
+
+/**
  * Increase a publication's refcount to prevent it from being freed
  * from inside a callback function
  *
@@ -259,6 +270,38 @@ void DPS_PublicationDecRef(DPS_Publication* pub);
 DPS_Status DPS_CallPubHandlers(DPS_PublishRequest* req);
 
 /**
+ * Enables multicast transmission on a per-publication basis.
+ *
+ * @param pub         The publication
+ * @param mcast       Indicates if this publication shall be multicast
+ *
+ * @return DPS_OK if addition is successful, an error otherwise
+ */
+DPS_Status DPS_PublicationSetMulticast(DPS_Publication* pub, int mcast);
+
+/**
+ * Get the sending address of a publication.
+ *
+ * The address is suitable for use with DPS_Link().
+ *
+ * @param pub   The publication
+ *
+ * @return The sending address of the publication, may be NULL
+ */
+const DPS_NodeAddress* DPS_PublicationGetSenderAddress(const DPS_Publication* pub);
+
+/**
+ * Get the sending address of an acknowledgement.
+ *
+ * The address is suitable for use with DPS_Link().
+ *
+ * @param pub   The pub parameter of DPS_AcknowledgementHandler
+ *
+ * @return The sending address of the acknowledgement, may be NULL
+ */
+const DPS_NodeAddress* DPS_AckGetSenderAddress(const DPS_Publication* pub);
+
+/**
  * Print publications of node
  *
  * @param node The node
@@ -274,11 +317,7 @@ void DPS_DumpPubs(DPS_Node* node);
  *
  * @param pub The publication
  */
-#ifdef DPS_DEBUG
-void DPS_DumpPub(DPS_Publication* pub);
-#else
-#define DPS_DumpPub(pub)
-#endif
+void DPS_DumpPub(const DPS_Publication* pub);
 
 #ifdef __cplusplus
 }

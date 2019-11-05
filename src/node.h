@@ -75,34 +75,53 @@ typedef struct _OnOpCompletion OnOpCompletion;
  */
 typedef struct _ResolverInfo ResolverInfo;
 
+typedef struct _NodeRequest NodeRequest;
+
 /**
  * A request to run on the node thread.
  *
- * @param data Data passed to DPS_AddRequest()
+ * @param req the request
  */
-typedef void (*OnNodeRequest)(void* data);
+typedef void (*OnNodeRequest)(NodeRequest* req);
 
 /**
  * A queue of requests to run on the node thread.
  */
 typedef struct _NodeRequest {
     DPS_Queue queue;  /**< The queue item */
+    DPS_Node* node;   /**< The node */
     OnNodeRequest cb; /**< The request callback */
     void* data;       /**< The request data */
 } NodeRequest;
 
 /**
- * Schedule a request to run on the node thread.
+ * Initialize a request to run on the node thread.
  *
  * @param node the node
+ * @param req the request
  * @param cb the request callback, run on the node thread
- * @param data the request data
+ */
+void DPS_NodeRequestInit(DPS_Node* node, NodeRequest* req, OnNodeRequest cb);
+
+/**
+ * Schedule a request to run on the node thread.
+ *
+ * @param req the request
  *
  * @return DPS_OK if successful, an error otherwise
  */
-DPS_Status DPS_NodeScheduleRequest(DPS_Node* node, OnNodeRequest cb, void* data);
+DPS_Status DPS_NodeRequestSchedule(NodeRequest* req);
 
+/**
+ * Cancel a request scheduled to run on the node thread.
+ *
+ * @param req a previously scheduled request
+ */
+void DPS_NodeRequestCancel(NodeRequest* req);
 
+/**
+ * Specifies when subscriptions are to be sent
+ */
 typedef enum {
     SubsNonePending,   /**< No subscriptions are pending */
     SubsSendNow,       /**< Pending subscriptions should be sent immediately */
@@ -116,7 +135,7 @@ typedef struct _DPS_Node {
     void* userData;                       /**< Application provided user data */
 
 #ifdef DPS_DEBUG
-    uint8_t isLocked;
+    uint8_t isLocked;                     /**< Count of node locks */
 #endif
     SubsPendingState subsPending;         /**< Specifies when subscriptions are to be sent */
     DPS_NodeAddress addr;                 /**< Listening address */
@@ -165,6 +184,9 @@ typedef struct _DPS_Node {
     DPS_NetContext* netCtx;               /**< Network context */
 
     uint8_t state;                        /**< Indicates if the node is running, stopping, or stopped */
+    DPS_OnNodeShutdown onShutdown;        /**< Function to call when the node is shutdown */
+    void* onShutdownData;                 /**< Context to pass to onShutdown callback */
+    NodeRequest onShutdownReq;            /**< onShutdown callback request */
     DPS_OnNodeDestroyed onDestroyed;      /**< Function to call when the node is destroyed */
     void* onDestroyedData;                /**< Context to pass to onDestroyed callback */
 
@@ -202,20 +224,13 @@ typedef enum {
 } RemoteNodeState;
 
 /**
-  * Return the remote node state as a text string
-  */
-#ifdef DPS_DEBUG
-/**
  * Return the remote node state as a text string
  *
  * @param remote the remote node
  *
  * @return the text string
  */
-const char* RemoteStateTxt(RemoteNode* remote);
-#else
-#define RemoteStateTxt(r) ""
-#endif
+const char* RemoteStateTxt(const RemoteNode* remote);
 
 /**
  * A remote node
@@ -361,7 +376,7 @@ RemoteNode* DPS_LookupRemoteNode(DPS_Node* node, const DPS_NodeAddress* addr);
  *
  * @return  The minimum mesh id.
  */
-const DPS_UUID* DPS_MinMeshId(DPS_Node* node, RemoteNode* excluded);
+const DPS_UUID* DPS_MinMeshId(const DPS_Node* node, const RemoteNode* excluded);
 
 /**
  * Deletes a remote node and related state information.
@@ -374,11 +389,10 @@ void DPS_DeleteRemoteNode(DPS_Node* node, RemoteNode* remote);
 /**
  * Complete an asynchronous operation on a remote node
  *
- * @param node        The local node
  * @param completion  The operation completion
  * @param status      Status code indicating the success or failure of the operation
  */
-void DPS_RemoteCompletion(DPS_Node* node, OnOpCompletion* completion, DPS_Status status);
+void DPS_RemoteCompletion(OnOpCompletion* completion, DPS_Status status);
 
 /**
  * Mute a remote node. Remote nodes are muted we detect a

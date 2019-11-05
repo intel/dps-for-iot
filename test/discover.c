@@ -20,14 +20,21 @@
 *-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 */
 
-#include "test.h"
 #include <stdio.h>
-#include "compat.h"
-#include "topics.h"
-#include "node.h"
 #include <dps/discovery.h>
+#include "compat.h"
+#include "node.h"
+#include "test.h"
+#include "topics.h"
+
+#define MAX_MSG_LEN 128
 
 static void OnNodeDestroyed(DPS_Node* node, void* data)
+{
+    DPS_SignalEvent((DPS_Event*)data, DPS_OK);
+}
+
+static void OnDiscoveryServiceDestroyed(DPS_DiscoveryService* service, void* data)
 {
     DPS_SignalEvent((DPS_Event*)data, DPS_OK);
 }
@@ -48,6 +55,15 @@ static void OnPub(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* pa
 {
 }
 
+static void OnDiscovery(DPS_DiscoveryService* service, const DPS_Publication* pub,
+                        uint8_t* payload, size_t len)
+{
+    const DPS_UUID* pubId = DPS_PublicationGetUUID(pub);
+    uint32_t sn = DPS_PublicationGetSequenceNum(pub);
+
+    DPS_PRINT("%s(%d) %s\n", DPS_UUIDToString(pubId), sn, payload);
+}
+
 int main(int argc, char** argv)
 {
     char** arg = argv + 1;
@@ -58,6 +74,7 @@ int main(int argc, char** argv)
     PublicationList* pub;
     SubscriptionList* sub;
     DPS_DiscoveryService* discovery = NULL;
+    char* msg = NULL;
     DPS_Status ret;
 
     DPS_Debug = DPS_FALSE;
@@ -101,6 +118,13 @@ int main(int argc, char** argv)
             sub->next = subs;
             subs = sub;
             ++arg;
+        } else if (strcmp(*arg, "-m") == 0) {
+            ++arg;
+            if (!--argc) {
+                goto Usage;
+            }
+            msg = *arg++;
+            continue;
         } else {
             goto Usage;
         }
@@ -149,7 +173,8 @@ int main(int argc, char** argv)
      */
     node->subsRate = 250;
     discovery = DPS_CreateDiscoveryService(node, "test");
-    ret = DPS_DiscoveryStart(discovery);
+    ret = DPS_DiscoveryPublish(discovery, (uint8_t*)msg, msg ? strnlen(msg, MAX_MSG_LEN) + 1 : 0,
+                               OnDiscovery);
     if (ret != DPS_OK) {
         goto Exit;
     }
@@ -162,8 +187,8 @@ Exit:
         DPS_ERRPRINT("Exiting: %s\n", DPS_ErrTxt(ret));
     }
 
-    DPS_DiscoveryStop(discovery);
-    DPS_DestroyDiscoveryService(discovery);
+    DPS_DestroyDiscoveryService(discovery, OnDiscoveryServiceDestroyed, event);
+    DPS_WaitForEvent(event);
 
     while (subs) {
         sub = subs;

@@ -1,0 +1,12 @@
+#!/bin/bash
+#
+# Usage: ./tools/exports_gcc > libdps_shared.map
+#
+
+echo '{'
+echo '  global:'
+grep -hv '^$' inc/dps/*.h | grep -v '^ ?*' | grep -v '^/' | grep -v '^#' | grep -v '^typedef'  | grep -v '^}' | grep -v '^struct' | grep -v 'extern "C"'  | cut -d'(' -f1 | sed 's/^.* DPS_/DPS_/' | sed -e 's/;//' | awk '{print "    " $1 ";"}' | sort
+echo ''
+echo '  local:'
+echo '    *;'
+echo '};'

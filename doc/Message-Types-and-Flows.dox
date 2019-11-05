@@ -118,7 +118,8 @@ bit-vector-flags = &(
 @verbatim
 sub-flags = &(
   delta: 1,        ; # indicate interests is a delta
-  mute: 2          ; # mute has been indicated
+  mute: 2,         ; # mute has been indicated
+  sak-req: 4       ; # an acknowledgement is requested
 )
 @endverbatim
 

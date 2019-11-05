@@ -1051,21 +1051,23 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NetEndpoint* ep, DPS_NetRxB
     ret = DPS_OK;
 
 Exit:
-    if (req && (ret != DPS_OK)) {
-        assert(pub);
-        req->status = ret;
-        DPS_DestroyPublishRequest(req);
-    }
-    if (pub) {
-        if (ret != DPS_OK) {
-            /*
-             * TODO - should we be updating the pub history after an error?
-             */
-            DPS_UpdatePubHistory(&node->history, &pub->pubId, sequenceNum, pub->ackRequested, ttl,
-                                 hopCount + 1, &pub->senderAddr);
+    if (ret == DPS_OK) {
+        DPS_PublicationDecRef(pub);
+    } else {
+        if (req) {
+            assert(pub);
+            req->status = ret;
+            DPS_DestroyPublishRequest(req);
+        }
+        if (pub) {
             FreePublication(node, pub);
         }
-        DPS_PublicationDecRef(pub);
+        /*
+         * Update the history since we may have received the shortest
+         * path out of order
+         */
+        DPS_UpdatePubHistory(&node->history, &pubId, sequenceNum, ackRequested, ttl < 0 ? 0 : ttl,
+                             hopCount + 1, &ep->addr);
     }
     DPS_UnlockNode(node);
     return ret;
@@ -1379,9 +1381,9 @@ DPS_Publication* DPS_CreatePublication(DPS_Node* node)
     return pub;
 }
 
-static void DestroyCopy(DPS_Publication* copy)
+void DPS_DestroyCopy(DPS_Publication* copy)
 {
-    if (copy && copy->refCount == 0) {
+    if (copy) {
         DPS_ClearKeyId(&copy->ack.sender.kid);
         FreeTopics(copy);
         FreeRecipients(copy);
@@ -1442,7 +1444,7 @@ DPS_Publication* DPS_CopyPublication(const DPS_Publication* pub)
 
 Exit:
     if (ret != DPS_OK) {
-        DestroyCopy(copy);
+        DPS_DestroyCopy(copy);
         copy = NULL;
     }
     return copy;
@@ -1905,18 +1907,7 @@ DPS_Status DPS_DestroyPublication(DPS_Publication* pub, DPS_OnPublicationDestroy
     node = pub->node;
     DPS_LockNode(node);
     pub->onDestroyed = cb;
-    /*
-     * Maybe destroying an uninitialized publication
-     */
-    if (!IsValidPub(pub) || (pub->flags & PUB_FLAG_IS_COPY)) {
-        DestroyCopy(pub);
-        ret = DPS_OK;
-        goto Exit;
-    }
-    /*
-     * Check publication is local
-     */
-    if (!(pub->flags & PUB_FLAG_LOCAL)) {
+    if (IsValidPub(pub) && !(pub->flags & PUB_FLAG_LOCAL)) {
         ret = DPS_ERR_MISSING;
         goto Exit;
     }
@@ -1964,8 +1955,7 @@ DPS_NetRxBuffer* DPS_PublicationGetNetRxBuffer(const DPS_Publication* pub)
     return NULL;
 }
 
-#ifdef DPS_DEBUG
-void DPS_DumpPub(DPS_Publication* pub)
+void DPS_DumpPub(const DPS_Publication* pub)
 {
     size_t i;
     int16_t ttl = 0;
@@ -1996,6 +1986,7 @@ void DPS_DumpPub(DPS_Publication* pub)
     }
 }
 
+#ifdef DPS_DEBUG
 void DPS_DumpPubs(DPS_Node* node)
 {
     if (DPS_Debug) {

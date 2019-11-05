@@ -11,4 +11,4 @@ subscriber = sub('-f 1 --')
 
 link(subscriber, dropper.port)
 
-expect_dropped(dropper, subscriber.port, reps)
+expect_dropped(dropper, reps)

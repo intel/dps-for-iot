@@ -42,6 +42,13 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_OFF);
  */
 #define PUB_HISTORY_LIFETIME   DPS_SECS_TO_MS(10)
 
+#ifndef MAX
+#define MAX(a,b) (((a)>(b))?(a):(b))
+#endif
+#ifndef MIN
+#define MIN(a,b) (((a)<(b))?(a):(b))
+#endif
+
 static DPS_PubHistory* Find(const DPS_History* history, const DPS_UUID* pubId)
 {
     DPS_PubHistory* curr = history->root;
@@ -310,7 +317,7 @@ DPS_Status DPS_UpdatePubHistory(DPS_History* history, DPS_UUID* pubId, uint32_t 
         FreePubHistory(phNew);
         UnlinkPub(history, ph);
     }
-    ph->sn = sequenceNum;
+    ph->sn = MAX(ph->sn, sequenceNum);
     ph->ackRequested = ackRequested;
     /*
      * The address is not set in publications being sent from the local node
@@ -326,13 +333,14 @@ DPS_Status DPS_UpdatePubHistory(DPS_History* history, DPS_UUID* pubId, uint32_t 
             (*phAddr) = calloc(1, sizeof(DPS_NodeAddressList));
             if ((*phAddr)) {
                 (*phAddr)->addr = *addr;
+                (*phAddr)->hopCount = hopCount;
                 DPS_DBGPRINT("Added %s to pub %s\n", DPS_NodeAddrToString(&(*phAddr)->addr),
                              DPS_UUIDToString(pubId));
             }
         }
         if ((*phAddr)) {
-            (*phAddr)->sn = sequenceNum;
-            (*phAddr)->hopCount = hopCount;
+            (*phAddr)->sn = MAX((*phAddr)->sn, sequenceNum);
+            (*phAddr)->hopCount = MIN((*phAddr)->hopCount, hopCount);
         }
     }
     ph->expiration = now + DPS_SECS_TO_MS(ttl) + PUB_HISTORY_LIFETIME;
@@ -395,7 +403,7 @@ DPS_Status DPS_LookupPublisherForAck(DPS_History* history, const DPS_UUID* pubId
         hopCount = ph->addrs->hopCount;
         for (na = ph->addrs->next; na; na = na->next) {
             if (na->hopCount < hopCount) {
-                *addr = &ph->addrs->addr;
+                *addr = &na->addr;
             }
         }
         ret = DPS_OK;

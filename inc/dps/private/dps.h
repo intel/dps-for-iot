@@ -320,13 +320,27 @@ typedef struct _DPS_NetRxBuffer DPS_NetRxBuffer;
 DPS_NetRxBuffer* DPS_PublicationGetNetRxBuffer(const DPS_Publication* pub);
 
 /**
-  * Hold lock to prevent debug output from getting interleaved
-  */
+ * Enables serialization on a per-subscription basis.
+ *
+ * The default is to include the subscription in the output of DPS_SerializeSubscriptions().
+ *
+ * @param sub        The subscription
+ * @param serialize  Indicates if this subscription shall be serialized
+ *
+ * @return DPS_OK if successful, an error otherwise
+ *
+ * @see SerializeSubscriptions()
+ */
+DPS_Status DPS_SubscriptionSetSerialize(DPS_Subscription* sub, int serialize);
+
+/**
+ * Hold lock to prevent debug output from getting interleaved
+ */
 void DPS_DbgLock(void);
 
 /**
-  * Release debug lock
-  */
+ * Release debug lock
+ */
 void DPS_DbgUnlock(void);
 
 #ifdef __cplusplus

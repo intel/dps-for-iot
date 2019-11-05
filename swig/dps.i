@@ -42,7 +42,6 @@
 %ignore DPS_PublicationGetNumTopics;
 %ignore DPS_PublicationGetTopic;
 %ignore DPS_PublishBufs;
-%ignore DPS_SerializeSubscriptions;
 %ignore DPS_SetKeyStoreData;
 %ignore DPS_SetNodeData;
 %ignore DPS_SetPublicationData;
@@ -785,15 +784,6 @@ DPS_Status AckPublicationBufs(DPS_Publication* pub, Buffer* bufs, size_t numBufs
         free(buf$argnum.base);
     }
 }
-
-%{
-DPS_Buffer* SerializeSubscriptions(DPS_Node* node, DPS_Buffer* subs)
-{
-    DPS_Status ret = DPS_SerializeSubscriptions(node, subs);
-    return (ret == DPS_OK) ? subs : NULL;
-}
-%}
-DPS_Buffer* SerializeSubscriptions(DPS_Node* node, DPS_Buffer* subs);
 
 %include <dps/dbg.h>
 %include <dps/dps.h>

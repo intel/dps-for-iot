@@ -16,13 +16,13 @@ foreach my $filename (@ARGV) {
             push(@nodes, $n)
         } elsif ($line =~ /.* [DEBUG|TRACE|ERROR|INFO]/) {
             # Ignore debug output
-        } elsif ($line =~ /  .*:(\d+) muted=(\d)/) {
-            my ($a, $b, $muted) = ($n, $1, $2);
+        } elsif ($line =~ /  .*:(\d+) state=([^,]+)/) {
+            my ($a, $b, $state) = ($n, $1, $2);
             # Keep all arcs going the same way
             if (exists($live{"$b -- $a"}) or exists($mute{"$b -- $a"})) {
                 ($a, $b) = ($b, $a);
             }
-            if ($muted eq "0") {
+            if ($state ne "MUTED") {
                 if (exists($live{"$a -- $b"})) {
                     $live{"$a -- $b"} += 1;
                 } else {
