@@ -36,7 +36,7 @@ extern "C" {
 #endif
 
 /**
- * @defgroup event Dispatcher
+ * @defgroup dispatcher Dispatcher
  * Register functions to be called after a timeout period expires
  * @{
  */
@@ -47,13 +47,13 @@ extern "C" {
 typedef struct _DPS_Dispatcher DPS_Dispatcher;
 
 /**
-  * Prototype for function to be called by a dispatcher. This function will be called on
-  * the main (internal) node thread and must not block.
-  *
-  * @param node        The node used for this dispatcher
-  * @param dispatcher  The dispatcher for this call
-  * @param data        The data passed to the DPS_Dispatch() call
-  */
+ * Prototype for function to be called by a dispatcher. This function will be called on
+ * the main (internal) node thread and must not block.
+ *
+ * @param node        The node used for this dispatcher
+ * @param dispatcher  The dispatcher for this call
+ * @param data        The data passed to the DPS_Dispatch() call
+ */
 typedef void (*DPS_DispatchFunc)(DPS_Node* node, DPS_Dispatcher* dispatcher, void* data);
 
 /**
@@ -71,6 +71,11 @@ DPS_Dispatcher* DPS_CreateDispatcher(DPS_Node* node, DPS_DispatchFunc func);
  * @param dispatcher  The dispatcher to call
  * @param data        Data to be passed to the function
  * @param delay       Time delay in millseconds before the function will be called
+ *
+ * @return
+ * - DPS_OK if the function call is scheduled
+ * - DPS_ERR_BUSY if the dispatcher cannot schedule the function
+ * - Or an error status code in which case the callback will not be called.
  */
 DPS_Status DPS_Dispatch(DPS_Dispatcher* dispatcher, void* data, int delay);
 
@@ -82,24 +87,29 @@ DPS_Status DPS_Dispatch(DPS_Dispatcher* dispatcher, void* data, int delay);
 void DPS_DestroyDispatcher(DPS_Dispatcher* dispatcher);
 
 /**
-  * Prototype for a delayed dispatched function call. This function will be called on
-  * the main (internal) node thread and must not block. The dispatcher is internal
-  * and not exposed in this usage.
-  *
-  * @param node        The node used for this dispatcher
-  * @param data        The data passed to the DPS_CallDelayedFunc() call
-  */
+ * Prototype for a delayed dispatched function call. This function will be called on
+ * the main (internal) node thread and must not block. The dispatcher is internal
+ * and not exposed in this usage.
+ *
+ * @param node        The node used for this dispatcher
+ * @param data        The data passed to the DPS_CallDelayedFunc() call
+ */
 typedef void (*DPS_DelayedFunc)(DPS_Node* node, void* data);
 
 /**
-  * Wrapper function that creates a dispatcher and schedules a function to be called
-  * after a delay. The dispatcher is destroyed after the function has been called.
-  *
-  * @param node   The node to be used for the internal dispatcher
-  * @param func   The function to be called
-  * @param data   Data to be passed to the function
-  * @param delay  Time delay in millseconds before the function will be called
-  */
+ * Wrapper function that creates a dispatcher and schedules a function to be called
+ * after a delay. The dispatcher is destroyed after the function has been called.
+ *
+ * @param node   The node to be used for the internal dispatcher
+ * @param func   The function to be called
+ * @param data   Data to be passed to the function
+ * @param delay  Time delay in millseconds before the function will be called
+ *
+ * @return
+ * - DPS_OK if the function call is scheduled
+ * - DPS_ERR_BUSY if the dispatcher cannot schedule the function
+ * - Or an error status code in which case the callback will not be called.
+ */
 DPS_Status DPS_ScheduleCall(DPS_Node* node, DPS_DelayedFunc func, void* data, int delay);
 
 /** @} */

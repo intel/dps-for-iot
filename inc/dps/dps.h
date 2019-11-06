@@ -669,11 +669,12 @@ typedef void (*DPS_OnLinkLoss)(DPS_Node* node, const DPS_NodeAddress* addr, void
  * called.
  *
  * @param node   The local node
- * @param addr   The address of the remote node that was lost
  * @param cb     The callback function to call on loss of a link
  * @param data   Application data to be passed to the callback
+ *
+ * @return DPS_OK if successful, an error otherwise
  */
-DPS_Status DPS_SetLinkLossCallback(DPS_Node* node, DPS_OnLinkLoss callback, void* data);
+DPS_Status DPS_SetLinkLossCallback(DPS_Node* node, DPS_OnLinkLoss cb, void* data);
 
 /**
  * Function prototype for function called when a DPS_ResolveAddress() completes.
