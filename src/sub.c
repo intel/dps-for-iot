@@ -617,7 +617,7 @@ DPS_Status DPS_SendSubscriptionAck(DPS_Node* node, RemoteNode* remote, int colli
         ret = CBOR_EncodeMap(&buf, 0);
     }
 
-    if (remote->outbound.sendInterests) {
+    if (flags & DPS_SUB_FLAG_SAK_REQ) {
         DPS_DBGPRINT("SAK outbound interests[%d/%d] for %s: %s%s\n", remote->outbound.revision,
                      remote->inbound.revision, DESCRIBE(remote), remote->outbound.deltaInd ? "(<delta>)" : "",
                      DPS_DumpMatchingTopics(remote->outbound.interests));
