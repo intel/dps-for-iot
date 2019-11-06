@@ -572,7 +572,7 @@ DPS_Status DPS_SendSubscriptionAck(DPS_Node* node, RemoteNode* remote, int colli
     if (ret == DPS_OK) {
         ret = CBOR_EncodeUUID(&buf, DPS_MinMeshId(node, remote));
     }
-    if (remote->outbound.sendInterests) {
+    if (flags & DPS_SUB_FLAG_SAK_REQ) {
         if (ret == DPS_OK) {
             ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_NEEDS);
         }
