@@ -478,7 +478,7 @@ DPS_Status DPS_SendSubscriptionAck(DPS_Node* node, RemoteNode* remote, int colli
      */
     if (remote->state == REMOTE_UNMUTING) {
         remote->state = REMOTE_ACTIVE;
-        remote->outbound.sendInterests = REMOTE_ACTIVE;
+        remote->outbound.sendInterests = DPS_TRUE;
     }
     /*
      * Whenever interests are sent a SAK is required
@@ -509,7 +509,7 @@ DPS_Status DPS_SendSubscriptionAck(DPS_Node* node, RemoteNode* remote, int colli
     default:
         return DPS_ERR_INVALID;
     }
-    if (remote->outbound.sendInterests) {
+    if (flags & DPS_SUB_FLAG_SAK_REQ) {
         interests = remote->outbound.deltaInd ? remote->outbound.delta : remote->outbound.interests;
         len += DPS_BitVectorSerializeMaxSize(interests) + DPS_BitVectorSerializeFHSize();
     } else {
@@ -572,7 +572,7 @@ DPS_Status DPS_SendSubscriptionAck(DPS_Node* node, RemoteNode* remote, int colli
     if (ret == DPS_OK) {
         ret = CBOR_EncodeUUID(&buf, DPS_MinMeshId(node, remote));
     }
-    if (remote->outbound.sendInterests) {
+    if (flags & DPS_SUB_FLAG_SAK_REQ) {
         if (ret == DPS_OK) {
             ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_NEEDS);
         }
@@ -617,7 +617,7 @@ DPS_Status DPS_SendSubscriptionAck(DPS_Node* node, RemoteNode* remote, int colli
         ret = CBOR_EncodeMap(&buf, 0);
     }
 
-    if (remote->outbound.sendInterests) {
+    if (flags & DPS_SUB_FLAG_SAK_REQ) {
         DPS_DBGPRINT("SAK outbound interests[%d/%d] for %s: %s%s\n", remote->outbound.revision,
                      remote->inbound.revision, DESCRIBE(remote), remote->outbound.deltaInd ? "(<delta>)" : "",
                      DPS_DumpMatchingTopics(remote->outbound.interests));
