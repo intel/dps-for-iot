@@ -509,7 +509,7 @@ DPS_Status DPS_SendSubscriptionAck(DPS_Node* node, RemoteNode* remote, int colli
     default:
         return DPS_ERR_INVALID;
     }
-    if (remote->outbound.sendInterests) {
+    if (flags & DPS_SUB_FLAG_SAK_REQ) {
         interests = remote->outbound.deltaInd ? remote->outbound.delta : remote->outbound.interests;
         len += DPS_BitVectorSerializeMaxSize(interests) + DPS_BitVectorSerializeFHSize();
     } else {
