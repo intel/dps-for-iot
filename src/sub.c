@@ -478,7 +478,7 @@ DPS_Status DPS_SendSubscriptionAck(DPS_Node* node, RemoteNode* remote, int colli
      */
     if (remote->state == REMOTE_UNMUTING) {
         remote->state = REMOTE_ACTIVE;
-        remote->outbound.sendInterests = REMOTE_ACTIVE;
+        remote->outbound.sendInterests = DPS_TRUE;
     }
     /*
      * Whenever interests are sent a SAK is required
