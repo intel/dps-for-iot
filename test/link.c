@@ -443,11 +443,18 @@ static void TestShutdownShutdownAlready(void)
 {
     DPS_MemoryKeyStore* keyStore = NULL;
     DPS_Node* a = NULL;
+    DPS_Node* b = NULL;
+    DPS_NodeAddress* addr = NULL;
     DPS_Event* event = NULL;
     DPS_Status ret;
 
     keyStore = CreateKeyStore();
     a = CreateNode(keyStore);
+    b = CreateNode(keyStore);
+
+    addr = DPS_CreateAddress();
+    ret = DPS_LinkTo(a, DPS_GetListenAddressString(b), addr);
+    ASSERT(ret == DPS_OK);
 
     event = DPS_CreateEvent();
     ASSERT(event);
@@ -469,6 +476,8 @@ static void TestShutdownShutdownAlready(void)
     ASSERT(ret == DPS_OK);
 
     DPS_DestroyEvent(event);
+    DPS_DestroyAddress(addr);
+    DestroyNode(b);
     DestroyNode(a);
     DestroyKeyStore(keyStore);
 }
