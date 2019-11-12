@@ -52,6 +52,11 @@ typedef struct _DPS_Subscription DPS_Subscription;
 typedef struct _DPS_Publication DPS_Publication;
 
 /**
+ * Opaque type for a remote node address.
+ */
+typedef struct _DPS_NodeAddress DPS_NodeAddress;
+
+/**
  * Function prototype for a publication handler called when a publication is received that
  * matches a subscription. Note that there is a possibility of false-positive matches.
  *
@@ -101,6 +106,17 @@ uint16_t DPS_GetPortNumber(DPS_Node* node);
   * Disable DTLS - this should be called before any DTLS connections are established
   */
 DPS_Status DPS_DisableDTLS(DPS_Node* node);
+
+/**
+ * Get text representation of an address.
+ *
+ * @note This function uses a static string buffer so it not thread safe.
+ *
+ * @param addr to get the text for
+ *
+ * @return A text string for the address
+ */
+const char* DPS_NodeAddrToString(const DPS_NodeAddress* addr);
 
 #ifdef __cplusplus
 }

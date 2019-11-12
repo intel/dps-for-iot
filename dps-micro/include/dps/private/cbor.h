@@ -30,8 +30,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "dps.h"
-#include "io_buf.h"
+#include <dps/private/dps.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -487,6 +486,16 @@ DPS_Status CBOR_EncodeFloat(DPS_TxBuffer* buffer, float f);
 DPS_Status CBOR_EncodeDouble(DPS_TxBuffer* buffer, double d);
 
 /**
+ * Encode a UUID byte string
+ *
+ * @param buffer   Buffer to append to
+ * @param uuid     The UUID
+ *
+ * @return DPS_OK if successful, an error otherwise
+ */
+DPS_Status CBOR_EncodeUUID(DPS_TxBuffer* buffer, const DPS_UUID* uuid);
+
+/**
  * Decode a byte string
  *
  * @param buffer  Buffer to decode from
@@ -532,7 +541,7 @@ DPS_Status CBOR_DecodeArray(DPS_RxBuffer* buffer, size_t* size);
 /**
  * Decode a float
  *
- * @param buffer   Buffer to append to
+ * @param buffer   Buffer to decode from
  * @param f        The float
  *
  * @return DPS_OK if successful, an error otherwise
@@ -542,12 +551,22 @@ DPS_Status CBOR_DecodeFloat(DPS_RxBuffer* buffer, float* f);
 /**
  * Decode a double
  *
- * @param buffer   Buffer to append to
+ * @param buffer   Buffer to decode from
  * @param d        The double
  *
  * @return DPS_OK if successful, an error otherwise
  */
 DPS_Status CBOR_DecodeDouble(DPS_RxBuffer* buffer, double* d);
+
+/**
+ * Decode a UUID byte string
+ *
+ * @param buffer   Buffer to decode from
+ * @param uuid     The UUID
+ *
+ * @return DPS_OK if successful, an error otherwise
+ */
+DPS_Status CBOR_DecodeUUID(DPS_RxBuffer* buffer, DPS_UUID* uuid);
 
 /**
  * Skip a CBOR value
@@ -602,8 +621,8 @@ typedef struct {
  *
  * @return DPS_OK if parsing the map is successful, an error otherwise
  */
-DPS_Status DPS_ParseMapInit(CBOR_MapState* mapState, DPS_RxBuffer* buffer, const int32_t* keys, size_t numKeys,
-                            const int32_t* optKeys, size_t numOptKeys);
+DPS_Status DPS_ParseMapInit(CBOR_MapState* mapState, DPS_RxBuffer* buffer, const int32_t* keys,
+                            size_t numKeys, const int32_t* optKeys, size_t numOptKeys);
 
 /**
  * Find the next matching key and return it. The value for the key can be

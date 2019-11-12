@@ -61,6 +61,13 @@ typedef struct _DPS_Publication DPS_Publication;
 #define DPS_TX_BUFFER_SIZE     2048
 #define DPS_TMP_BUFFER_SIZE    2048
 
+typedef enum {
+    REMOTE_UNLINKED,
+    REMOTE_LINKING,
+    REMOTE_LINKED,
+    REMOTE_UNLINKING
+} DPS_NodeState;
+
 /**
  * Type for a DPS node
  */
@@ -76,8 +83,9 @@ typedef struct _DPS_Node {
     DPS_UUID meshId;                  /* GUID */
     const char* separators;
     uint16_t port;
-    uint8_t linked;                   /* TRUE is linked to a remote node */
-    DPS_NodeAddress* remoteNode;      /* Address of remote node if there is one */
+    uint8_t sakPending;               /* A subscription acknowledgement is expected */
+    DPS_NodeState state;
+    DPS_NodeAddress* remoteNode;      /* Address of remote node */
     uint32_t remoteRevision;          /* Subscription revision number for remote node */
     DPS_BitVector remoteInterests;    /* Interests from remote node */
     DPS_FHBitVector remoteNeeds;      /* Needs from remote node */
