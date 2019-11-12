@@ -30,6 +30,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <dps/uuid.h>
 #include <dps/dps.h>
 #include <dps/private/io_buf.h>
 
@@ -55,6 +56,8 @@ extern "C" {
 #define DPS_CBOR_KEY_TOPICS        11   /**< array (tstr) */
 #define DPS_CBOR_KEY_DATA          12   /**< bstr */
 #define DPS_CBOR_KEY_ACK_SEQ_NUM   13   /**< uint */
+#define DPS_CBOR_KEY_PATH          14   /**< tstr */
+#define DPS_CBOR_KEY_HOP_COUNT     15   /**< uint */
 
 #ifdef __cplusplus
 }

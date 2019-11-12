@@ -117,8 +117,8 @@ static DPS_Status OnReceive(DPS_Node* node, DPS_NodeAddress* from, int mcast, DP
     DPS_DBGTRACEA("Received %d bytes\n", DPS_RxBufferAvail(rxBuf));
 
     if (status != DPS_OK) {
-        if (node->linked && from && DPS_SameNodeAddress(from, node->remoteNode)) {
-            node->linked = DPS_FALSE;
+        if (node->state == REMOTE_LINKED && from && DPS_SameNodeAddress(from, node->remoteNode)) {
+            node->state = REMOTE_UNLINKED;
         }
         return DPS_OK;
     }
@@ -137,6 +137,7 @@ DPS_Node* DPS_CreateNode(const char* separators)
     memset(&node, 0, sizeof(node));
     node.separators = separators;
     node.keyStore = DPS_CreateKeyStore();
+    DPS_GenerateUUID(&node.meshId);
     return &node;
 }
 
@@ -197,3 +198,9 @@ uint16_t DPS_GetPortNumber(DPS_Node* node)
 {
     return node->port;
 }
+
+const char* DPS_NodeAddrToString(const DPS_NodeAddress* addr)
+{
+    return DPS_AddrToText(addr);
+}
+

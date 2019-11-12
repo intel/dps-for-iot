@@ -94,10 +94,11 @@ typedef void (*DPS_PublicationHandler)(DPS_Subscription* sub, const DPS_Publicat
 DPS_Status DPS_InitSubscription(DPS_Node* node, DPS_Subscription* sub, const char* const* topics, size_t numTopics);
 
 /**
- * Active a subscription
+ * Activate a subscription
  *
- * @param node    The local node
- * @param remote  The remote node to send the subscription to
+ * @param sub      The subscription to activate
+ * @param handler  Callback function to call when a matching publication is received
+ * @param data     Data to be passed to the callback function
  *
  * @return DPS_OK if sending is successful, an error otherwise
  */
@@ -107,11 +108,11 @@ DPS_Status DPS_Subscribe(DPS_Subscription* sub, DPS_PublicationHandler handler, 
  * Send a subscription to a remote node
  *
  * @param node    The local node
- * @param remote  The remote node to send the subscription to
+ * @param dest    The address of the remote node to send the subscriptions to
  *
  * @return DPS_OK if sending is successful, an error otherwise
  */
-DPS_Status DPS_SendSubscription(DPS_Subscription* sub);
+DPS_Status DPS_SendSubscription(DPS_Node* node, DPS_NodeAddress* dest);
 
 /**
  * Decode and process a received subscription
