@@ -52,24 +52,27 @@ DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 static DPS_Status SendSubscriptionAck(DPS_Node* node, DPS_NodeAddress* dest, int includeSub, int collision);
 
 
-DPS_Status DPS_InitSubscription(DPS_Node* node, DPS_Subscription* sub, const char* const* topics, size_t numTopics)
+DPS_Subscription* DPS_InitSubscription(DPS_Node* node, const char* const* topics, size_t numTopics)
 {
     DPS_Status ret = DPS_OK;
+    DPS_Subscription* sub;
     size_t i;
 
     DPS_DBGTRACE();
 
-    if (!node || !sub || !topics) {
-        return DPS_ERR_NULL;
+    if (!node || !topics) {
+        return NULL;
     }
     if (numTopics == 0) {
-        return DPS_ERR_ARGS;
+        return NULL;
     }
     if (numTopics > DPS_MAX_SUB_TOPICS) {
-        return DPS_ERR_RESOURCES;
+        return NULL;
     }
-    memset(sub, 0, sizeof(DPS_Subscription));
-
+    sub = DPS_Calloc(sizeof(DPS_Subscription), DPS_ALLOC_LONG_TERM);
+    if (!sub) {
+        return NULL;
+    }
     sub->node = node;
     /*
      * Add the topics to the subscription
@@ -83,7 +86,7 @@ DPS_Status DPS_InitSubscription(DPS_Node* node, DPS_Subscription* sub, const cha
         ++sub->numTopics;
     }
     //DPS_BitVectorDump(&sub->bf, DPS_TRUE);
-    return ret;
+    return sub;
 }
 
 /*
@@ -122,9 +125,12 @@ DPS_Status DPS_UpdateSubs(DPS_Node* node)
             }
         }
     }
-    //DPS_BitVectorDump(&node->interests, DPS_TRUE);
-    //DPS_BitVectorFuzzyHash(&node->needs, &node->interests);
-    ++node->revision;
+    if (ret == DPS_OK && node->state != REMOTE_UNLINKED) {
+        //DPS_BitVectorDump(&node->interests, DPS_TRUE);
+        //DPS_BitVectorFuzzyHash(&node->needs, &node->interests);
+        ++node->revision;
+        ret = DPS_SendSubscription(node, node->remoteNode);
+    }
     return ret;
 }
 
@@ -144,19 +150,17 @@ DPS_Status DPS_Subscribe(DPS_Subscription* sub, DPS_PublicationHandler handler, 
     return DPS_OK;
 }
 
-DPS_Status DPS_DestroySubscription(DPS_Subscription* sub)
+void DPS_DestroySubscription(DPS_Subscription* sub)
 {
     DPS_DBGTRACE();
 
-    if (!sub) {
-        return DPS_ERR_NULL;
+    if (sub) {
+        if (UnlinkSub(sub)) {
+            /* This tell the upstream node that subscriptions have changed */
+            DPS_UpdateSubs(sub->node);
+        }
+        DPS_Free(sub, DPS_ALLOC_LONG_TERM);
     }
-    if (UnlinkSub(sub)) {
-        /* This tell the upstream node that subscriptions have changed */
-        DPS_UpdateSubs(sub->node);
-    }
-    memset(sub, 0, sizeof(DPS_Subscription));
-    return DPS_OK;
 }
 
 static DPS_Status UnlinkRemote(DPS_Node* node, uint32_t revision)

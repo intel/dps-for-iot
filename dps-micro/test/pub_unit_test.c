@@ -24,11 +24,6 @@
 #include <ctype.h>
 #include <dps/dps.h>
 #include <dps/targets.h>
-#include <dps/private/dps.h>
-#include <dps/private/pub.h>
-#include <dps/private/sub.h>
-
-
 
 static char testString[] = "This is a test string from " DPS_TARGET_NAME;
 
@@ -60,8 +55,8 @@ int main(int argc, char** argv)
 {
     DPS_Node* node;
     DPS_KeyStore* keyStore = NULL;
-    DPS_Publication pub;
-    DPS_Subscription sub;
+    DPS_Publication* pub;
+    DPS_Subscription* sub;
     DPS_Status status;
     int dtls = DPS_TRUE;
     int i;
@@ -110,11 +105,11 @@ int main(int argc, char** argv)
 #endif
 
     if (port) {
-        destAddr = DPS_TextToAddr(host, (uint16_t)port);
+        destAddr = DPS_InitNodeAddress(host, (uint16_t)port);
         if (!destAddr) {
             goto Usage;
         }
-        DPS_PRINT("Will publish to destination node %s:%d\n", DPS_AddrToText(destAddr), (uint16_t)port);
+        DPS_PRINT("Will publish to destination node %s:%d\n", DPS_NodeAddrToString(destAddr), (uint16_t)port);
     }
 
     DPS_PRINT("Starting pub unit test\n");
@@ -147,22 +142,25 @@ int main(int argc, char** argv)
     }
 
     /* Initialize publication with a pre-shared key */
-    status = DPS_InitPublication(node, &pub, topics, NUM_TOPICS, DPS_FALSE, &PskId[1], NULL);
-    CHECK(status == DPS_OK);
+    pub = DPS_InitPublication(node, topics, NUM_TOPICS, DPS_FALSE, &PskId[1], NULL);
+    CHECK(pub != NULL);
 
-    status = DPS_InitSubscription(node, &sub, topics, 1);
-    CHECK(status == DPS_OK);
+    sub = DPS_InitSubscription(node, topics, 1);
+    CHECK(sub != NULL);
 
-    status = DPS_Subscribe(&sub, OnPub, NULL);
+    status = DPS_Subscribe(sub, OnPub, NULL);
     CHECK(status == DPS_OK);
 
     for (i = 0; i < numPubs; ++i) {
-        status = DPS_Publish(&pub, destAddr, (const uint8_t*)testString, strlen(testString) + 1, 0, PubSendComplete);
+        status = DPS_Publish(pub, destAddr, (const uint8_t*)testString, strlen(testString) + 1, 0, PubSendComplete);
         CHECK(status == DPS_OK);
         SLEEP(5000);
     }
 
     return 0;
+
+    DPS_DestroySubscription(sub);
+    DPS_DestroyPublication(pub);
 
 failed:
     DPS_PRINT("FAILED: status=%s (%s) near line %d\r\n", DPS_ErrTxt(status), __FILE__, atLine - 1);

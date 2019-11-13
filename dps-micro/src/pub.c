@@ -580,41 +580,42 @@ DPS_Publication* DPS_LookupAckHandler(DPS_Node* node, const DPS_UUID* pubId, uin
     return pub;
 }
 
-DPS_Status DPS_RemovePublication(DPS_Publication* pub)
+void DPS_DestroyPublication(DPS_Publication* pub)
 {
     DPS_Status ret;
 
-    if (!pub->node) {
-        return DPS_ERR_NULL;
+    if (pub) {
+        ret = UnlinkPublication(pub->node, pub);
+        if (ret == DPS_OK) {
+            DPS_Free(pub, DPS_ALLOC_LONG_TERM);
+        }
     }
-    ret = UnlinkPublication(pub->node, pub);
-    if (ret == DPS_OK) {
-        memset(pub, 0, sizeof(DPS_Publication));
-    }
-    return ret;
 }
 
-DPS_Status DPS_InitPublication(DPS_Node* node, DPS_Publication* pub, const char** topics, size_t numTopics, int noWildCard, const DPS_KeyId* keyId, DPS_AcknowledgementHandler handler)
+DPS_Publication* DPS_InitPublication(DPS_Node* node, const char** topics, size_t numTopics, int noWildCard, const DPS_KeyId* keyId, DPS_AcknowledgementHandler handler)
 {
     DPS_Status ret = DPS_OK;
+    DPS_Publication* pub;
     int8_t alg;
 
     DPS_DBGTRACE();
 
-    if (!node || !pub || !topics) {
-        return DPS_ERR_NULL;
+    if (!node || !topics) {
+        return NULL;
     }
     /*
      * Must have at least one topic
      */
     if (numTopics == 0) {
-        return DPS_ERR_ARGS;
+        return NULL;
     }
     if (numTopics > MAX_PUB_TOPICS) {
-        return DPS_ERR_RESOURCES;
+        return NULL;
     }
-    memset(pub, 0, sizeof(DPS_Publication));
-
+    pub = DPS_Calloc(sizeof(DPS_Publication), DPS_ALLOC_LONG_TERM);
+    if (!pub) {
+        return NULL;
+    }
     DPS_GenerateUUID(&pub->pubId);
 
     DPS_DBGPRINT("Creating publication with %zu topics %s\n", numTopics, handler ? "and ACK handler" : "");
@@ -647,7 +648,12 @@ DPS_Status DPS_InitPublication(DPS_Node* node, DPS_Publication* pub, const char*
             ++pub->numTopics;
         }
     }
-    return ret;
+    if (ret == DPS_OK) {
+        return pub;
+    } else {
+        DPS_Free(pub, DPS_ALLOC_LONG_TERM);
+        return NULL;
+    }
 }
 
 DPS_Status DPS_PublicationAddSubId(DPS_Publication* pub, const DPS_KeyId* keyId)

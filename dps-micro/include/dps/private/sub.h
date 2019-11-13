@@ -60,51 +60,6 @@ typedef struct _DPS_Subscription {
 } DPS_Subscription;
 
 /**
- * Function prototype for a publication handler called when a publication is received that
- * matches a subscription. Note that there is a possibility of false-positive matches.
- *
- * The publication handle is only valid within the body of this callback function.
- * DPS_CopyPublication() will make a partial copy of the publication that can be used later for
- * example to call DPS_AckPublication().
- *
- * The accessor functions DPS_PublicationGetUUID() and DPS_PublicationGetSequenceNum()
- * return information about the received publication.
- *
- * The accessor functions DPS_SubscriptionGetNumTopics() and DPS_SubscriptionGetTopic()
- * return information about the subscription that was matched.
- *
- * @param sub      Opaque handle for the subscription that was matched
- * @param pub      Opaque handle for the publication that was received
- * @param payload  Payload from the publication if any
- * @param len      Length of the payload
- */
-typedef void (*DPS_PublicationHandler)(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* payload, size_t len);
-
-/**
- * Allocate memory for a subscription and initialize topics
- *
- * @param node         The DPS node
- * @param sub          The subscription
- * @param topics       The topics to subscribe to  - pointers to topic strings must remain valid
- *                     for the lifetime of the subscription
- * @param numTopics    The number of topic strings - must be >= 1
- *
- * @return DPS_OK or and error status if the subscription could not be initialized
- */
-DPS_Status DPS_InitSubscription(DPS_Node* node, DPS_Subscription* sub, const char* const* topics, size_t numTopics);
-
-/**
- * Activate a subscription
- *
- * @param sub      The subscription to activate
- * @param handler  Callback function to call when a matching publication is received
- * @param data     Data to be passed to the callback function
- *
- * @return DPS_OK if sending is successful, an error otherwise
- */
-DPS_Status DPS_Subscribe(DPS_Subscription* sub, DPS_PublicationHandler handler, void* data);
-
-/**
  * Send a subscription to a remote node
  *
  * @param node    The local node

@@ -204,3 +204,19 @@ const char* DPS_NodeAddrToString(const DPS_NodeAddress* addr)
     return DPS_AddrToText(addr);
 }
 
+DPS_NodeAddress* DPS_InitNodeAddress(const char* host, uint16_t port)
+{
+    DPS_NodeAddress* addr = DPS_AllocNodeAddress(DPS_ALLOC_LONG_TERM);
+    if (addr) {
+        DPS_CopyNodeAddress(addr, DPS_TextToAddr(host, port));
+    }
+    return addr;
+}
+
+void DPS_DestroyNodeAddress(DPS_NodeAddress* addr)
+{
+    if (addr) {
+        DPS_Free(addr, DPS_ALLOC_LONG_TERM);
+    }
+}
+
