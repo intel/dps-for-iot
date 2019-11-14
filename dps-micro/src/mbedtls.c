@@ -33,7 +33,7 @@
 #include <dps/private/crypto.h>
 #include <dps/private/ec.h>
 
-DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
+DPS_DEBUG_CONTROL(DPS_DEBUG_OFF);
 
 #define MAX_CERT_LEN 16000
 

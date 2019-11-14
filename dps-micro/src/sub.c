@@ -85,7 +85,6 @@ DPS_Subscription* DPS_InitSubscription(DPS_Node* node, const char* const* topics
         sub->topics[i] = topics[i];
         ++sub->numTopics;
     }
-    //DPS_BitVectorDump(&sub->bf, DPS_TRUE);
     return sub;
 }
 
@@ -107,6 +106,7 @@ static int UnlinkSub(DPS_Subscription* sub)
             return DPS_TRUE;
         }
     }
+    ++sub->node->revision;
     return DPS_FALSE;
 }
 
@@ -126,9 +126,6 @@ DPS_Status DPS_UpdateSubs(DPS_Node* node)
         }
     }
     if (ret == DPS_OK && node->state != REMOTE_UNLINKED) {
-        //DPS_BitVectorDump(&node->interests, DPS_TRUE);
-        //DPS_BitVectorFuzzyHash(&node->needs, &node->interests);
-        ++node->revision;
         ret = DPS_SendSubscription(node, node->remoteNode);
     }
     return ret;
@@ -144,6 +141,7 @@ DPS_Status DPS_Subscribe(DPS_Subscription* sub, DPS_PublicationHandler handler, 
         sub->node->subscriptions = sub;
         /* This tells the upstream node that subscriptions have changed */
         DPS_UpdateSubs(sub->node);
+        ++sub->node->revision;
     }
     sub->handler = handler;
     sub->userData = data;
