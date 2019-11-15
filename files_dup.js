@@ -1,7 +1,7 @@
 var files_dup =
 [
     [ "dbg.h", "dbg_8h.html", "dbg_8h" ],
-    [ "discovery.h", "discovery_8h_source.html", null ],
+    [ "discovery.h", "discovery_8h.html", "discovery_8h" ],
     [ "dispatcher.h", "dispatcher_8h.html", "dispatcher_8h" ],
     [ "dps.h", "dps_8h.html", "dps_8h" ],
     [ "err.h", "err_8h.html", "err_8h" ],

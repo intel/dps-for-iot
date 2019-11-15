@@ -33,7 +33,7 @@
       </node>
       <node id="101">
         <label>discovery.h</label>
-        <link refid="discovery_8h_source"/>
+        <link refid="discovery_8h"/>
       </node>
       <node id="104">
         <label>registration.h</label>

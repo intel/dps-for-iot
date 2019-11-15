@@ -3,6 +3,7 @@
   <compounddef id="group__services" kind="group">
     <compoundname>services</compoundname>
     <title>Services</title>
+    <innergroup refid="group__discovery">Discovery</innergroup>
     <innergroup refid="group__registration">Registration</innergroup>
     <briefdescription>
 <para>Services built upon DPS. </para>    </briefdescription>

@@ -79,14 +79,14 @@
     <member refid="group__debug_1ga7cc66c1e82ef557238c122b067f5337a" kind="function"><name>DPS_LogBytes</name></member>
   </compound>
   <compound refid="discovery_8h" kind="file"><name>discovery.h</name>
-    <member refid="discovery_8h_1a3f2abf506eb45447bbaa238bd3488d5a" kind="typedef"><name>DPS_DiscoveryHandler</name></member>
-    <member refid="discovery_8h_1a4a4ddabf7fbcb691450170bbfdc5f117" kind="typedef"><name>DPS_DiscoveryService</name></member>
-    <member refid="discovery_8h_1a1444be5b61355f17773e30a34671feec" kind="typedef"><name>DPS_OnDiscoveryServiceDestroyed</name></member>
-    <member refid="discovery_8h_1a017720f3315915e1e3f10506cb198ac8" kind="function"><name>DPS_CreateDiscoveryService</name></member>
-    <member refid="discovery_8h_1a01fdc728b2be4873802669f558151c25" kind="function"><name>DPS_DestroyDiscoveryService</name></member>
-    <member refid="discovery_8h_1a8719df7666aeacf84ffdb812190d28fa" kind="function"><name>DPS_DiscoveryPublish</name></member>
-    <member refid="discovery_8h_1a9328a07fefe871f52485a4ab43c175e7" kind="function"><name>DPS_GetDiscoveryServiceData</name></member>
-    <member refid="discovery_8h_1a2ee07d7ca7e77f9dea196bbfeb20ce09" kind="function"><name>DPS_SetDiscoveryServiceData</name></member>
+    <member refid="group__discovery_1ga3f2abf506eb45447bbaa238bd3488d5a" kind="typedef"><name>DPS_DiscoveryHandler</name></member>
+    <member refid="group__discovery_1ga4a4ddabf7fbcb691450170bbfdc5f117" kind="typedef"><name>DPS_DiscoveryService</name></member>
+    <member refid="group__discovery_1ga1444be5b61355f17773e30a34671feec" kind="typedef"><name>DPS_OnDiscoveryServiceDestroyed</name></member>
+    <member refid="group__discovery_1ga017720f3315915e1e3f10506cb198ac8" kind="function"><name>DPS_CreateDiscoveryService</name></member>
+    <member refid="group__discovery_1ga01fdc728b2be4873802669f558151c25" kind="function"><name>DPS_DestroyDiscoveryService</name></member>
+    <member refid="group__discovery_1ga8719df7666aeacf84ffdb812190d28fa" kind="function"><name>DPS_DiscoveryPublish</name></member>
+    <member refid="group__discovery_1ga9328a07fefe871f52485a4ab43c175e7" kind="function"><name>DPS_GetDiscoveryServiceData</name></member>
+    <member refid="group__discovery_1ga2ee07d7ca7e77f9dea196bbfeb20ce09" kind="function"><name>DPS_SetDiscoveryServiceData</name></member>
   </compound>
   <compound refid="dispatcher_8h" kind="file"><name>dispatcher.h</name>
     <member refid="group__dispatcher_1gaa2f5404cdd3f68106cdbde1d3dc48750" kind="typedef"><name>DPS_DelayedFunc</name></member>
@@ -340,6 +340,16 @@
     <member refid="group__debug_1gaf1d25cc7f1d2d92f96ba620217af28fd" kind="define"><name>DPS_PRINT</name></member>
     <member refid="group__debug_1gad9a3f4ae1ed318b313434a82132c4044" kind="define"><name>DPS_PRINTT</name></member>
     <member refid="group__debug_1ga37ab9dbe492fd9f7b78349f6e789e5f2" kind="define"><name>DPS_WARNPRINT</name></member>
+  </compound>
+  <compound refid="group__discovery" kind="group"><name>discovery</name>
+    <member refid="group__discovery_1ga3f2abf506eb45447bbaa238bd3488d5a" kind="typedef"><name>DPS_DiscoveryHandler</name></member>
+    <member refid="group__discovery_1ga4a4ddabf7fbcb691450170bbfdc5f117" kind="typedef"><name>DPS_DiscoveryService</name></member>
+    <member refid="group__discovery_1ga1444be5b61355f17773e30a34671feec" kind="typedef"><name>DPS_OnDiscoveryServiceDestroyed</name></member>
+    <member refid="group__discovery_1ga017720f3315915e1e3f10506cb198ac8" kind="function"><name>DPS_CreateDiscoveryService</name></member>
+    <member refid="group__discovery_1ga01fdc728b2be4873802669f558151c25" kind="function"><name>DPS_DestroyDiscoveryService</name></member>
+    <member refid="group__discovery_1ga8719df7666aeacf84ffdb812190d28fa" kind="function"><name>DPS_DiscoveryPublish</name></member>
+    <member refid="group__discovery_1ga9328a07fefe871f52485a4ab43c175e7" kind="function"><name>DPS_GetDiscoveryServiceData</name></member>
+    <member refid="group__discovery_1ga2ee07d7ca7e77f9dea196bbfeb20ce09" kind="function"><name>DPS_SetDiscoveryServiceData</name></member>
   </compound>
   <compound refid="group__dispatcher" kind="group"><name>dispatcher</name>
     <member refid="group__dispatcher_1gaa2f5404cdd3f68106cdbde1d3dc48750" kind="typedef"><name>DPS_DelayedFunc</name></member>
