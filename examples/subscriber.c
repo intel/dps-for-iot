@@ -494,7 +494,7 @@ Exit:
     return (ret == DPS_OK) ? EXIT_SUCCESS : EXIT_FAILURE;
 
 Usage:
-    DPS_PRINT("Usage %s [-d] [-f <seconds>] [-q] [-m] [-w <seconds>] [-x 0|1|2|3] [-p <address>] [-l <address] [-j] [-r <milliseconds>] [[-s] topic1 ... topicN]\n", argv[0]);
+    DPS_PRINT("Usage %s [-d] [-f <seconds>] [-q] [-m] [-w <seconds>] [-x 0|1|2|3] [-p <address>] [-u <address>] [-l <address] [-j] [-r <milliseconds>] [[-s] topic1 ... topicN]\n", argv[0]);
     DPS_PRINT("       -d: Enable debug ouput if built for debug.\n");
     DPS_PRINT("       -f: Attempt to fix broken link N seconds after detecting link loss.\n");
     DPS_PRINT("       -q: Quiet - suppresses output about received publications.\n");
@@ -505,6 +505,7 @@ Usage:
     DPS_PRINT("       -l: Address listen on.\n");
     DPS_PRINT("       -r: Time to delay between subscription updates.\n");
     DPS_PRINT("       -s: list of subscription topic strings. Multiple -s options are permitted\n");
+    DPS_PRINT("       -u: An address to unlink (only meaningful in interactive mode)\n");
     DPS_PRINT("       -j: Treat payload as CBOR and attempt to decode an display as JSON\n");
     return EXIT_FAILURE;
 }
