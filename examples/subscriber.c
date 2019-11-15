@@ -135,6 +135,7 @@ typedef struct _Args {
     int fixLinkDelay;
     int mcastPub;
     int interactive;
+    char* unlinkText;
 } Args;
 
 typedef struct _Subscriber {
@@ -171,6 +172,9 @@ static int ParseArgs(int argc, char** argv, Args* args)
                 continue;
             }
             if (LinkArg(&argv, &argc, args->linkText, &args->numLinks)) {
+                continue;
+            }
+            if (UnlinkArg(&argv, &argc, &args->unlinkText)) {
                 continue;
             }
             if (strcmp(*argv, "-q") == 0) {
@@ -310,7 +314,30 @@ static int LinkTo(Subscriber* subscriber, Args* args)
     }
 }
 
-static void UnlinkFrom(Subscriber* subscriber)
+static void UnlinkFrom(Subscriber* subscriber, Args* args)
+{
+    int i;
+    DPS_NodeAddress* addr = NULL;
+
+    for (i = 0; i < subscriber->numAddrs; ++i) {
+        if (strcmp(DPS_NodeAddrToString(subscriber->addrs[i]), args->unlinkText) == 0) {
+            addr = subscriber->addrs[i];
+            break;
+        }
+    }
+    if (addr) {
+        /* Compact the address list */
+        --subscriber->numAddrs;
+        for (; i < subscriber->numAddrs; ++i) {
+            subscriber->addrs[i] = subscriber->addrs[i + 1];
+        }
+        Unlink(subscriber->node, &addr, 1);
+    }
+    free(args->unlinkText);
+    args->unlinkText = NULL;
+}
+
+static void UnlinkAll(Subscriber* subscriber)
 {
     Unlink(subscriber->node, subscriber->addrs, subscriber->numAddrs);
 }
@@ -366,8 +393,12 @@ static void ReadStdin(Subscriber* subscriber)
         if (!ParseArgs(argc, argv, &args)) {
             continue;
         }
-        Subscribe(subscriber, &args);
-        LinkTo(subscriber, &args);
+        if (args.unlinkText) {
+            UnlinkFrom(subscriber, &args);
+        } else {
+            Subscribe(subscriber, &args);
+            LinkTo(subscriber, &args);
+        }
         DestroyLinkArg(args.linkText, NULL, args.numLinks);
     }
 }
@@ -446,7 +477,7 @@ int main(int argc, char** argv)
     if (IsInteractive(&args)) {
         DPS_PRINT("Running in interactive mode\n");
         ReadStdin(&subscriber);
-        UnlinkFrom(&subscriber);
+        UnlinkAll(&subscriber);
         DPS_DestroyNode(subscriber.node, OnNodeDestroyed, nodeDestroyed);
     }
 

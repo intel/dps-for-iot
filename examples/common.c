@@ -85,12 +85,36 @@ int ListenArg(char*** argp, int* argcp, DPS_NodeAddress** addr)
     return DPS_TRUE;
 }
 
+int UnlinkArg(char*** argp, int* argcp, char** addrText)
+{
+    char** arg = *argp;
+    int argc = *argcp;
+    int port = 0;
+    char str[16];
+
+    if (IntArg("-u", &arg, &argc, &port, 1000, UINT16_MAX)) {
+        snprintf(str, sizeof(str), "[::1]:%d", port);
+        *addrText = strdup(str);
+    } else if (strcmp(*arg, "-u") == 0) {
+        ++arg;
+        if (!--argc) {
+            return DPS_FALSE;
+        }
+        *addrText = strdup(*arg++);
+    } else {
+        return DPS_FALSE;
+    }
+    *argp = arg;
+    *argcp = argc;
+    return DPS_TRUE;
+}
+
 int LinkArg(char*** argp, int* argcp, char** addrText, int* numAddrText)
 {
     char** arg = *argp;
     int argc = *argcp;
     int port = 0;
-    char str[256];
+    char str[16];
 
     if (IntArg("-p", &arg, &argc, &port, 1000, UINT16_MAX)) {
         if ((*numAddrText) == (MAX_LINKS - 1)) {
@@ -123,6 +147,9 @@ DPS_Status Link(DPS_Node* node, char** addrText, DPS_NodeAddress** addr, int num
     int i;
 
     for (i = 0; i < numAddr; ++i) {
+        if (!addrText[i]) {
+            continue;
+        }
         addr[i] = DPS_CreateAddress();
         if (!addr[i]) {
             ret = DPS_ERR_RESOURCES;
@@ -133,6 +160,10 @@ DPS_Status Link(DPS_Node* node, char** addrText, DPS_NodeAddress** addr, int num
             DPS_PRINT("Node is linked to %s\n", DPS_NodeAddrToString(addr[i]));
         } else {
             DPS_ERRPRINT("DPS_LinkTo %s returned %s\n", addrText[i], DPS_ErrTxt(ret));
+            free(addr[i]);
+            addr[i] = NULL;
+            free(addrText[i]);
+            addrText[i] = NULL;
         }
     }
     ret = DPS_OK;
@@ -145,7 +176,15 @@ void Unlink(DPS_Node* node, DPS_NodeAddress** addr, int numAddr)
 {
     int i;
     for (i = 0; i < numAddr; ++i) {
-        DPS_UnlinkFrom(node, addr[i]);
+        if (!addr[i]) {
+            continue;
+        }
+        DPS_Status ret = DPS_UnlinkFrom(node, addr[i]);
+        if (ret == DPS_OK) {
+            DPS_PRINT("Node is unlinked from %s\n", DPS_NodeAddrToString(addr[i]));
+        } else {
+            DPS_ERRPRINT("DPS_UnlinkFrom %s returned %s\n", DPS_NodeAddrToString(addr[i]), DPS_ErrTxt(ret));
+        }
     }
 }
 
