@@ -2,6 +2,7 @@ var group__uuid =
 [
     [ "_DPS_UUID", "struct___d_p_s___u_u_i_d.html", [
       [ "val", "struct___d_p_s___u_u_i_d.html#a5f642859395d3916ea96804c6bf16880", null ],
+      [ "val32", "struct___d_p_s___u_u_i_d.html#ab0304117e9c02dcbd5a99550f43665b4", null ],
       [ "val64", "struct___d_p_s___u_u_i_d.html#aee3748c444033b543f494e8bf6d64645", null ]
     ] ],
     [ "DPS_UUID", "group__uuid.html#gaef1d03afcc6410602ade1d48f24c3997", null ],

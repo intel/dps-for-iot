@@ -16,7 +16,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/uuid.h" line="53" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/uuid.h" line="54" column="1"/>
       </memberdef>
       </sectiondef>
       <sectiondef kind="func">
@@ -43,7 +43,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/uuid.h" line="67" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/uuid.h" line="68" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__uuid_1gabbd0e97da8135a54879faea59cf74865" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
@@ -60,7 +60,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/uuid.h" line="60" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/uuid.h" line="61" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__uuid_1ga7819e63fac9457f892236b1b3f183713" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>int</type>
@@ -99,7 +99,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/uuid.h" line="91" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/uuid.h" line="92" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__uuid_1ga9c51faa57ecb228ce7eda077a90b20ff" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>const char *</type>
@@ -126,7 +126,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/uuid.h" line="78" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/uuid.h" line="79" column="1"/>
       </memberdef>
       </sectiondef>
     <briefdescription>

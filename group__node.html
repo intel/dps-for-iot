@@ -99,6 +99,9 @@ $(document).ready(function(){initNavTree('group__node.html','');});
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="define-members"></a>
 Macros</h2></td></tr>
+<tr class="memitem:gafd432f0081728dbac4634bf395b73219"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#gafd432f0081728dbac4634bf395b73219">DPS_LINK_LOSS_TIMEOUT</a>&#160;&#160;&#160;30000</td></tr>
+<tr class="memdesc:gafd432f0081728dbac4634bf395b73219"><td class="mdescLeft">&#160;</td><td class="mdescRight">This establishes the base rate at which keep-alive subscription messages are sent to remote nodes.  <a href="#gafd432f0081728dbac4634bf395b73219">More...</a><br /></td></tr>
+<tr class="separator:gafd432f0081728dbac4634bf395b73219"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gac939c83361ed89086f37c78d9c9009dd"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#gac939c83361ed89086f37c78d9c9009dd">DPS_MCAST_PUB_DISABLED</a>&#160;&#160;&#160;0</td></tr>
 <tr class="memdesc:gac939c83361ed89086f37c78d9c9009dd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Disable multicast send and receive on the node.  <a href="#gac939c83361ed89086f37c78d9c9009dd">More...</a><br /></td></tr>
 <tr class="separator:gac939c83361ed89086f37c78d9c9009dd"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -108,9 +111,8 @@ Macros</h2></td></tr>
 <tr class="memitem:ga178a3a6450eeff450820fa34fd82049c"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#ga178a3a6450eeff450820fa34fd82049c">DPS_MCAST_PUB_ENABLE_SEND</a>&#160;&#160;&#160;1</td></tr>
 <tr class="memdesc:ga178a3a6450eeff450820fa34fd82049c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Enable multicast send on the node.  <a href="#ga178a3a6450eeff450820fa34fd82049c">More...</a><br /></td></tr>
 <tr class="separator:ga178a3a6450eeff450820fa34fd82049c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga89df880f9650da5730fa152642c0be9f"><td class="memItemLeft" align="right" valign="top"><a id="ga89df880f9650da5730fa152642c0be9f"></a>
-#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#ga89df880f9650da5730fa152642c0be9f">DPS_SUBSCRIPTION_UPDATE_RATE</a>&#160;&#160;&#160;1000</td></tr>
-<tr class="memdesc:ga89df880f9650da5730fa152642c0be9f"><td class="mdescLeft">&#160;</td><td class="mdescRight">The default maximum rate (in msecs) to compute and send out subscription updates. <br /></td></tr>
+<tr class="memitem:ga89df880f9650da5730fa152642c0be9f"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#ga89df880f9650da5730fa152642c0be9f">DPS_SUBSCRIPTION_UPDATE_RATE</a>&#160;&#160;&#160;2000</td></tr>
+<tr class="memdesc:ga89df880f9650da5730fa152642c0be9f"><td class="mdescLeft">&#160;</td><td class="mdescRight">The default maximum rate (in msecs) to compute and send out subscription updates.  <a href="#ga89df880f9650da5730fa152642c0be9f">More...</a><br /></td></tr>
 <tr class="separator:ga89df880f9650da5730fa152642c0be9f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="typedef-members"></a>
@@ -119,17 +121,23 @@ Typedefs</h2></td></tr>
 typedef struct _DPS_Node&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a></td></tr>
 <tr class="memdesc:ga4dd612ab965134321bb57fdb065f121c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Opaque type for a node. <br /></td></tr>
 <tr class="separator:ga4dd612ab965134321bb57fdb065f121c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gaaf70ac42acab8a67693947871e97600f"><td class="memItemLeft" align="right" valign="top">typedef void(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#gaaf70ac42acab8a67693947871e97600f">DPS_OnLinkComplete</a>) (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, <a class="el" href="group__nodeaddress.html#ga9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *addr, <a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a> status, void *data)</td></tr>
-<tr class="memdesc:gaaf70ac42acab8a67693947871e97600f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function prototype for function called when a <a class="el" href="group__node.html#gab7616642a79f637aa146b3b1a4ed0af8" title="Link the local node to a remote node. ">DPS_Link()</a> completes.  <a href="#gaaf70ac42acab8a67693947871e97600f">More...</a><br /></td></tr>
-<tr class="separator:gaaf70ac42acab8a67693947871e97600f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga1518af805c7ace335841784178bd8aec"><td class="memItemLeft" align="right" valign="top">typedef void(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#ga1518af805c7ace335841784178bd8aec">DPS_OnLinkComplete</a>) (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, const <a class="el" href="group__nodeaddress.html#ga9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *addr, <a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a> status, void *data)</td></tr>
+<tr class="memdesc:ga1518af805c7ace335841784178bd8aec"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function prototype for function called when a <a class="el" href="group__node.html#gab7616642a79f637aa146b3b1a4ed0af8" title="Link the local node to a remote node. ">DPS_Link()</a> completes.  <a href="#ga1518af805c7ace335841784178bd8aec">More...</a><br /></td></tr>
+<tr class="separator:ga1518af805c7ace335841784178bd8aec"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga50d9c5fa2ac1cfbecc7647ce885e2e16"><td class="memItemLeft" align="right" valign="top">typedef void(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#ga50d9c5fa2ac1cfbecc7647ce885e2e16">DPS_OnLinkLoss</a>) (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, const <a class="el" href="group__nodeaddress.html#ga9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *addr, void *data)</td></tr>
+<tr class="memdesc:ga50d9c5fa2ac1cfbecc7647ce885e2e16"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function prototype for function called when a link is lossed.  <a href="#ga50d9c5fa2ac1cfbecc7647ce885e2e16">More...</a><br /></td></tr>
+<tr class="separator:ga50d9c5fa2ac1cfbecc7647ce885e2e16"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga1e88cc9ca744782e36d58a022fe026c5"><td class="memItemLeft" align="right" valign="top">typedef void(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#ga1e88cc9ca744782e36d58a022fe026c5">DPS_OnNodeDestroyed</a>) (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, void *data)</td></tr>
 <tr class="memdesc:ga1e88cc9ca744782e36d58a022fe026c5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function prototype for callback function called when a node is destroyed.  <a href="#ga1e88cc9ca744782e36d58a022fe026c5">More...</a><br /></td></tr>
 <tr class="separator:ga1e88cc9ca744782e36d58a022fe026c5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gac902cf51bb5a028549869056d0579233"><td class="memItemLeft" align="right" valign="top">typedef void(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#gac902cf51bb5a028549869056d0579233">DPS_OnNodeShutdown</a>) (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, void *data)</td></tr>
+<tr class="memdesc:gac902cf51bb5a028549869056d0579233"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function prototype for callback function called when a node is shutdown.  <a href="#gac902cf51bb5a028549869056d0579233">More...</a><br /></td></tr>
+<tr class="separator:gac902cf51bb5a028549869056d0579233"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga8777fdab3d67ab171bd1ed1322564367"><td class="memItemLeft" align="right" valign="top">typedef void(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#ga8777fdab3d67ab171bd1ed1322564367">DPS_OnResolveAddressComplete</a>) (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, const <a class="el" href="group__nodeaddress.html#ga9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *addr, void *data)</td></tr>
 <tr class="memdesc:ga8777fdab3d67ab171bd1ed1322564367"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function prototype for function called when a <a class="el" href="group__node.html#gab78df7f4498b847ddb32fdd33d39ef0f" title="Resolve a host name or IP address and service name or port number. ">DPS_ResolveAddress()</a> completes.  <a href="#ga8777fdab3d67ab171bd1ed1322564367">More...</a><br /></td></tr>
 <tr class="separator:ga8777fdab3d67ab171bd1ed1322564367"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga119b8d5d6d6ab2390b69d272c36f1414"><td class="memItemLeft" align="right" valign="top">typedef void(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#ga119b8d5d6d6ab2390b69d272c36f1414">DPS_OnUnlinkComplete</a>) (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, const <a class="el" href="group__nodeaddress.html#ga9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *addr, void *data)</td></tr>
-<tr class="memdesc:ga119b8d5d6d6ab2390b69d272c36f1414"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function prototype for function called when a <a class="el" href="group__node.html#ga18398ef1e81c5dba98a95da6d18b937e" title="Unlink the local node from a remote node. ">DPS_Unlink()</a> completes.  <a href="#ga119b8d5d6d6ab2390b69d272c36f1414">More...</a><br /></td></tr>
+<tr class="memdesc:ga119b8d5d6d6ab2390b69d272c36f1414"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function prototype for function called when a <a class="el" href="group__node.html#ga18398ef1e81c5dba98a95da6d18b937e" title="Unlink a local node from a remote node. ">DPS_Unlink()</a> completes.  <a href="#ga119b8d5d6d6ab2390b69d272c36f1414">More...</a><br /></td></tr>
 <tr class="separator:ga119b8d5d6d6ab2390b69d272c36f1414"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
@@ -149,7 +157,7 @@ Functions</h2></td></tr>
 <tr class="memitem:ga65bba7bcfe5e940b153fcced4e2e8880"><td class="memItemLeft" align="right" valign="top">void *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#ga65bba7bcfe5e940b153fcced4e2e8880">DPS_GetNodeData</a> (const <a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node)</td></tr>
 <tr class="memdesc:ga65bba7bcfe5e940b153fcced4e2e8880"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get application data pointer previously set by <a class="el" href="group__node.html#gad19cf4272ba11e935654175c83db2ce1" title="Store a pointer to application data in a node. ">DPS_SetNodeData()</a>  <a href="#ga65bba7bcfe5e940b153fcced4e2e8880">More...</a><br /></td></tr>
 <tr class="separator:ga65bba7bcfe5e940b153fcced4e2e8880"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gab7616642a79f637aa146b3b1a4ed0af8"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#gab7616642a79f637aa146b3b1a4ed0af8">DPS_Link</a> (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, const char *addrText, <a class="el" href="group__node.html#gaaf70ac42acab8a67693947871e97600f">DPS_OnLinkComplete</a> cb, void *data)</td></tr>
+<tr class="memitem:gab7616642a79f637aa146b3b1a4ed0af8"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#gab7616642a79f637aa146b3b1a4ed0af8">DPS_Link</a> (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, const char *addrText, <a class="el" href="group__node.html#ga1518af805c7ace335841784178bd8aec">DPS_OnLinkComplete</a> cb, void *data)</td></tr>
 <tr class="memdesc:gab7616642a79f637aa146b3b1a4ed0af8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Link the local node to a remote node.  <a href="#gab7616642a79f637aa146b3b1a4ed0af8">More...</a><br /></td></tr>
 <tr class="separator:gab7616642a79f637aa146b3b1a4ed0af8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga69325fd8127687c469e503763a29f6d8"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#ga69325fd8127687c469e503763a29f6d8">DPS_LinkTo</a> (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, const char *addrText, <a class="el" href="group__nodeaddress.html#ga9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *addr)</td></tr>
@@ -158,25 +166,51 @@ Functions</h2></td></tr>
 <tr class="memitem:gab78df7f4498b847ddb32fdd33d39ef0f"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#gab78df7f4498b847ddb32fdd33d39ef0f">DPS_ResolveAddress</a> (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, const char *host, const char *service, <a class="el" href="group__node.html#ga8777fdab3d67ab171bd1ed1322564367">DPS_OnResolveAddressComplete</a> cb, void *data)</td></tr>
 <tr class="memdesc:gab78df7f4498b847ddb32fdd33d39ef0f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Resolve a host name or IP address and service name or port number.  <a href="#gab78df7f4498b847ddb32fdd33d39ef0f">More...</a><br /></td></tr>
 <tr class="separator:gab78df7f4498b847ddb32fdd33d39ef0f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga28d9d432839aad5ca777259bd17dae67"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#ga28d9d432839aad5ca777259bd17dae67">DPS_SetLinkLossCallback</a> (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, <a class="el" href="group__node.html#ga50d9c5fa2ac1cfbecc7647ce885e2e16">DPS_OnLinkLoss</a> cb, void *data)</td></tr>
+<tr class="memdesc:ga28d9d432839aad5ca777259bd17dae67"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set a callback function to called when a link explicily established by this node was lost.  <a href="#ga28d9d432839aad5ca777259bd17dae67">More...</a><br /></td></tr>
+<tr class="separator:ga28d9d432839aad5ca777259bd17dae67"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gad19cf4272ba11e935654175c83db2ce1"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#gad19cf4272ba11e935654175c83db2ce1">DPS_SetNodeData</a> (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, void *data)</td></tr>
 <tr class="memdesc:gad19cf4272ba11e935654175c83db2ce1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Store a pointer to application data in a node.  <a href="#gad19cf4272ba11e935654175c83db2ce1">More...</a><br /></td></tr>
 <tr class="separator:gad19cf4272ba11e935654175c83db2ce1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga96fbb20dc7d5a30a8fc5eefd181f69c9"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#ga96fbb20dc7d5a30a8fc5eefd181f69c9">DPS_SetNodeLinkLossTimeout</a> (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, uint32_t linkLossMsecs)</td></tr>
+<tr class="memdesc:ga96fbb20dc7d5a30a8fc5eefd181f69c9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Override the default link-loss detection timeout (in msecs)  <a href="#ga96fbb20dc7d5a30a8fc5eefd181f69c9">More...</a><br /></td></tr>
+<tr class="separator:ga96fbb20dc7d5a30a8fc5eefd181f69c9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gac7e33476c06009ed42a6ea6f3c53380a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#gac7e33476c06009ed42a6ea6f3c53380a">DPS_SetNodeSubscriptionUpdateDelay</a> (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, uint32_t subsRateMsecs)</td></tr>
-<tr class="memdesc:gac7e33476c06009ed42a6ea6f3c53380a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Specify the time delay (in msecs) between subscription updates.  <a href="#gac7e33476c06009ed42a6ea6f3c53380a">More...</a><br /></td></tr>
+<tr class="memdesc:gac7e33476c06009ed42a6ea6f3c53380a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Override the default time delay (in msecs) between subscription updates.  <a href="#gac7e33476c06009ed42a6ea6f3c53380a">More...</a><br /></td></tr>
 <tr class="separator:gac7e33476c06009ed42a6ea6f3c53380a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga71d0a1ec941a5ac5f4e994e4cc5cb54e"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#ga71d0a1ec941a5ac5f4e994e4cc5cb54e">DPS_ShutdownNode</a> (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, <a class="el" href="group__node.html#gac902cf51bb5a028549869056d0579233">DPS_OnNodeShutdown</a> cb, void *data)</td></tr>
+<tr class="memdesc:ga71d0a1ec941a5ac5f4e994e4cc5cb54e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Shutdowns a node.  <a href="#ga71d0a1ec941a5ac5f4e994e4cc5cb54e">More...</a><br /></td></tr>
+<tr class="separator:ga71d0a1ec941a5ac5f4e994e4cc5cb54e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga538588a1e2ea805377a90ac22ee6bc82"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#ga538588a1e2ea805377a90ac22ee6bc82">DPS_StartNode</a> (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, int mcastPub, <a class="el" href="group__nodeaddress.html#ga9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *listenAddr)</td></tr>
 <tr class="memdesc:ga538588a1e2ea805377a90ac22ee6bc82"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initialized and starts running a local node.  <a href="#ga538588a1e2ea805377a90ac22ee6bc82">More...</a><br /></td></tr>
 <tr class="separator:ga538588a1e2ea805377a90ac22ee6bc82"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga18398ef1e81c5dba98a95da6d18b937e"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#ga18398ef1e81c5dba98a95da6d18b937e">DPS_Unlink</a> (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, const <a class="el" href="group__nodeaddress.html#ga9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *addr, <a class="el" href="group__node.html#ga119b8d5d6d6ab2390b69d272c36f1414">DPS_OnUnlinkComplete</a> cb, void *data)</td></tr>
-<tr class="memdesc:ga18398ef1e81c5dba98a95da6d18b937e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Unlink the local node from a remote node.  <a href="#ga18398ef1e81c5dba98a95da6d18b937e">More...</a><br /></td></tr>
+<tr class="memdesc:ga18398ef1e81c5dba98a95da6d18b937e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Unlink a local node from a remote node.  <a href="#ga18398ef1e81c5dba98a95da6d18b937e">More...</a><br /></td></tr>
 <tr class="separator:ga18398ef1e81c5dba98a95da6d18b937e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gae16f5ff85ac57a6f5567db73343c8af1"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__node.html#gae16f5ff85ac57a6f5567db73343c8af1">DPS_UnlinkFrom</a> (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, const <a class="el" href="group__nodeaddress.html#ga9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *addr)</td></tr>
-<tr class="memdesc:gae16f5ff85ac57a6f5567db73343c8af1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Synchronous helper that wraps <a class="el" href="group__node.html#ga18398ef1e81c5dba98a95da6d18b937e" title="Unlink the local node from a remote node. ">DPS_Unlink()</a>.  <a href="#gae16f5ff85ac57a6f5567db73343c8af1">More...</a><br /></td></tr>
+<tr class="memdesc:gae16f5ff85ac57a6f5567db73343c8af1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Synchronous helper that wraps <a class="el" href="group__node.html#ga18398ef1e81c5dba98a95da6d18b937e" title="Unlink a local node from a remote node. ">DPS_Unlink()</a>.  <a href="#gae16f5ff85ac57a6f5567db73343c8af1">More...</a><br /></td></tr>
 <tr class="separator:gae16f5ff85ac57a6f5567db73343c8af1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <p>Entities in the DPS network. </p>
 <h2 class="groupheader">Macro Definition Documentation</h2>
+<a id="gafd432f0081728dbac4634bf395b73219"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#gafd432f0081728dbac4634bf395b73219">&#9670;&nbsp;</a></span>DPS_LINK_LOSS_TIMEOUT</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define DPS_LINK_LOSS_TIMEOUT&#160;&#160;&#160;30000</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>This establishes the base rate at which keep-alive subscription messages are sent to remote nodes. </p>
+<p>This timeout governs how long it takes to detect a mesh disconnect and start a recovery process. This timeout value should be much larger than DPS_SUBSCRIPTION_UPDATE_RATE. </p>
+
+</div>
+</div>
 <a id="gac939c83361ed89086f37c78d9c9009dd"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#gac939c83361ed89086f37c78d9c9009dd">&#9670;&nbsp;</a></span>DPS_MCAST_PUB_DISABLED</h2>
 
@@ -228,15 +262,32 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<h2 class="groupheader">Typedef Documentation</h2>
-<a id="gaaf70ac42acab8a67693947871e97600f"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#gaaf70ac42acab8a67693947871e97600f">&#9670;&nbsp;</a></span>DPS_OnLinkComplete</h2>
+<a id="ga89df880f9650da5730fa152642c0be9f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga89df880f9650da5730fa152642c0be9f">&#9670;&nbsp;</a></span>DPS_SUBSCRIPTION_UPDATE_RATE</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">typedef void(* DPS_OnLinkComplete) (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, <a class="el" href="group__nodeaddress.html#ga9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *addr, <a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a> status, void *data)</td>
+          <td class="memname">#define DPS_SUBSCRIPTION_UPDATE_RATE&#160;&#160;&#160;2000</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>The default maximum rate (in msecs) to compute and send out subscription updates. </p>
+<p>This causes subscription updates coming in from multiple remote nodes to be batched up for forwarding. This reduces network traffic when new nodes join the mesh, particularly at startup time, at the cost of increased latency for the propagation of subscriptions across the mesh. New subscriptions local to a node are not subject to this timeout value and are set immediately to adjacent nodes. </p>
+
+</div>
+</div>
+<h2 class="groupheader">Typedef Documentation</h2>
+<a id="ga1518af805c7ace335841784178bd8aec"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga1518af805c7ace335841784178bd8aec">&#9670;&nbsp;</a></span>DPS_OnLinkComplete</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">typedef void(* DPS_OnLinkComplete) (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, const <a class="el" href="group__nodeaddress.html#ga9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *addr, <a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a> status, void *data)</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -246,8 +297,32 @@ Functions</h2></td></tr>
   <table class="params">
     <tr><td class="paramname">node</td><td>The local node to use </td></tr>
     <tr><td class="paramname">addr</td><td>The address of the remote node that was linked </td></tr>
-    <tr><td class="paramname">status</td><td>Indicates if the link completed or failed </td></tr>
+    <tr><td class="paramname">status</td><td>Indicates if the link completed or failed. A status of DPS_ERR_EXISTS indicates the remote node is already linked. </td></tr>
     <tr><td class="paramname">data</td><td>Application data passed in the call to <a class="el" href="group__node.html#gab7616642a79f637aa146b3b1a4ed0af8" title="Link the local node to a remote node. ">DPS_Link()</a> </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="ga50d9c5fa2ac1cfbecc7647ce885e2e16"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga50d9c5fa2ac1cfbecc7647ce885e2e16">&#9670;&nbsp;</a></span>DPS_OnLinkLoss</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">typedef void(* DPS_OnLinkLoss) (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, const <a class="el" href="group__nodeaddress.html#ga9e9f56aa38e82b4edcef7eb81e9f5bd2">DPS_NodeAddress</a> *addr, void *data)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Function prototype for function called when a link is lossed. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">node</td><td>The local node that lost a link </td></tr>
+    <tr><td class="paramname">addr</td><td>The address of the remote node that was unlinked </td></tr>
+    <tr><td class="paramname">data</td><td>Application data passed in the call to <a class="el" href="group__node.html#ga28d9d432839aad5ca777259bd17dae67" title="Set a callback function to called when a link explicily established by this node was lost...">DPS_SetLinkLossCallback()</a> </td></tr>
   </table>
   </dd>
 </dl>
@@ -271,6 +346,30 @@ Functions</h2></td></tr>
   <table class="params">
     <tr><td class="paramname">node</td><td>The node that was destroyed. This node is valid during the callback. </td></tr>
     <tr><td class="paramname">data</td><td>Data passed to <a class="el" href="group__node.html#ga85f5121f80411f5ab82449efe20b68dd" title="Destroys a node and free any resources. ">DPS_DestroyNode()</a> </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="gac902cf51bb5a028549869056d0579233"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#gac902cf51bb5a028549869056d0579233">&#9670;&nbsp;</a></span>DPS_OnNodeShutdown</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">typedef void(* DPS_OnNodeShutdown) (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, void *data)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Function prototype for callback function called when a node is shutdown. </p>
+<p>Shutdown cleanly unlinks any nodes from this node. <a class="el" href="group__node.html#ga85f5121f80411f5ab82449efe20b68dd" title="Destroys a node and free any resources. ">DPS_DestroyNode()</a> does not.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">node</td><td>The node that was shutdown. This node is valid during the callback. </td></tr>
+    <tr><td class="paramname">data</td><td>Data passed to <a class="el" href="group__node.html#ga71d0a1ec941a5ac5f4e994e4cc5cb54e" title="Shutdowns a node. ">DPS_ShutdownNode()</a> </td></tr>
   </table>
   </dd>
 </dl>
@@ -313,12 +412,12 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Function prototype for function called when a <a class="el" href="group__node.html#ga18398ef1e81c5dba98a95da6d18b937e" title="Unlink the local node from a remote node. ">DPS_Unlink()</a> completes. </p>
+<p>Function prototype for function called when a <a class="el" href="group__node.html#ga18398ef1e81c5dba98a95da6d18b937e" title="Unlink a local node from a remote node. ">DPS_Unlink()</a> completes. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">node</td><td>The local node to use </td></tr>
+    <tr><td class="paramname">node</td><td>The local node that was unlinked from a remote node </td></tr>
     <tr><td class="paramname">addr</td><td>The address of the remote node that was unlinked </td></tr>
-    <tr><td class="paramname">data</td><td>Application data passed in the call to <a class="el" href="group__node.html#ga18398ef1e81c5dba98a95da6d18b937e" title="Unlink the local node from a remote node. ">DPS_Unlink()</a> </td></tr>
+    <tr><td class="paramname">data</td><td>Application data passed in the call to <a class="el" href="group__node.html#ga18398ef1e81c5dba98a95da6d18b937e" title="Unlink a local node from a remote node. ">DPS_Unlink()</a> </td></tr>
   </table>
   </dd>
 </dl>
@@ -465,7 +564,6 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Get text representation of the address this node is listening for connections on. </p>
-<p>This function uses a static string buffer so is not thread safe.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">node</td><td>The node</td></tr>
@@ -524,7 +622,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="group__node.html#gaaf70ac42acab8a67693947871e97600f">DPS_OnLinkComplete</a>&#160;</td>
+          <td class="paramtype"><a class="el" href="group__node.html#ga1518af805c7ace335841784178bd8aec">DPS_OnLinkComplete</a>&#160;</td>
           <td class="paramname"><em>cb</em>, </td>
         </tr>
         <tr>
@@ -546,7 +644,7 @@ Functions</h2></td></tr>
   <table class="params">
     <tr><td class="paramname">node</td><td>The local node to use </td></tr>
     <tr><td class="paramname">addrText</td><td>The text string of the address to link to </td></tr>
-    <tr><td class="paramname">cb</td><td>The callback function to call on completion, can be NULL which case the function is synchronous </td></tr>
+    <tr><td class="paramname">cb</td><td>The callback function to call on completion </td></tr>
     <tr><td class="paramname">data</td><td>Application data to be passed to the callback</td></tr>
   </table>
   </dd>
@@ -596,7 +694,12 @@ Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>DPS_OK if the link is successful, an error otherwise </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd><ul>
+<li>DPS_OK if the link is successful,</li>
+<li>DPS_ERR_EXISTS if the address is already linked to,</li>
+<li>an error otherwise </li>
+</ul>
+</dd></dl>
 
 </div>
 </div>
@@ -659,6 +762,52 @@ Functions</h2></td></tr>
 
 </div>
 </div>
+<a id="ga28d9d432839aad5ca777259bd17dae67"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga28d9d432839aad5ca777259bd17dae67">&#9670;&nbsp;</a></span>DPS_SetLinkLossCallback()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a> DPS_SetLinkLossCallback </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *&#160;</td>
+          <td class="paramname"><em>node</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="group__node.html#ga50d9c5fa2ac1cfbecc7647ce885e2e16">DPS_OnLinkLoss</a>&#160;</td>
+          <td class="paramname"><em>cb</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">void *&#160;</td>
+          <td class="paramname"><em>data</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Set a callback function to called when a link explicily established by this node was lost. </p>
+<p>This function is only called in the case of a surprise link-loss, not when <a class="el" href="group__node.html#ga18398ef1e81c5dba98a95da6d18b937e" title="Unlink a local node from a remote node. ">DPS_Unlink()</a> was called.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">node</td><td>The local node </td></tr>
+    <tr><td class="paramname">cb</td><td>The callback function to call on loss of a link </td></tr>
+    <tr><td class="paramname">data</td><td>Application data to be passed to the callback</td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>DPS_OK if successful, an error otherwise </dd></dl>
+
+</div>
+</div>
 <a id="gad19cf4272ba11e935654175c83db2ce1"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#gad19cf4272ba11e935654175c83db2ce1">&#9670;&nbsp;</a></span>DPS_SetNodeData()</h2>
 
@@ -697,6 +846,43 @@ Functions</h2></td></tr>
 
 </div>
 </div>
+<a id="ga96fbb20dc7d5a30a8fc5eefd181f69c9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga96fbb20dc7d5a30a8fc5eefd181f69c9">&#9670;&nbsp;</a></span>DPS_SetNodeLinkLossTimeout()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void DPS_SetNodeLinkLossTimeout </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *&#160;</td>
+          <td class="paramname"><em>node</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint32_t&#160;</td>
+          <td class="paramname"><em>linkLossMsecs</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Override the default link-loss detection timeout (in msecs) </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">node</td><td>The node </td></tr>
+    <tr><td class="paramname">linkLossMsecs</td><td>The time for the link to an unresponsive remote node to be considered lost </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
 <a id="gac7e33476c06009ed42a6ea6f3c53380a"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#gac7e33476c06009ed42a6ea6f3c53380a">&#9670;&nbsp;</a></span>DPS_SetNodeSubscriptionUpdateDelay()</h2>
 
@@ -723,7 +909,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Specify the time delay (in msecs) between subscription updates. </p>
+<p>Override the default time delay (in msecs) between subscription updates. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">node</td><td>The node </td></tr>
@@ -731,6 +917,56 @@ Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
+
+</div>
+</div>
+<a id="ga71d0a1ec941a5ac5f4e994e4cc5cb54e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga71d0a1ec941a5ac5f4e994e4cc5cb54e">&#9670;&nbsp;</a></span>DPS_ShutdownNode()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a> DPS_ShutdownNode </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *&#160;</td>
+          <td class="paramname"><em>node</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="group__node.html#gac902cf51bb5a028549869056d0579233">DPS_OnNodeShutdown</a>&#160;</td>
+          <td class="paramname"><em>cb</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">void *&#160;</td>
+          <td class="paramname"><em>data</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Shutdowns a node. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">node</td><td>The node to shutdown </td></tr>
+    <tr><td class="paramname">cb</td><td>Callback function to be called when the node is shutdown </td></tr>
+    <tr><td class="paramname">data</td><td>Data to be passed to the callback function</td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd><ul>
+<li>DPS_OK if the node will be shutdown and the callback called</li>
+<li>DPS_ERR_NULL node or cb was null</li>
+<li>Or an error status code in which case the callback will not be called. </li>
+</ul>
+</dd></dl>
 
 </div>
 </div>
@@ -818,7 +1054,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Unlink the local node from a remote node. </p>
+<p>Unlink a local node from a remote node. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">node</td><td>The local node to use </td></tr>
@@ -858,7 +1094,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Synchronous helper that wraps <a class="el" href="group__node.html#ga18398ef1e81c5dba98a95da6d18b937e" title="Unlink the local node from a remote node. ">DPS_Unlink()</a>. </p>
+<p>Synchronous helper that wraps <a class="el" href="group__node.html#ga18398ef1e81c5dba98a95da6d18b937e" title="Unlink a local node from a remote node. ">DPS_Unlink()</a>. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">node</td><td>The local node to unlink from </td></tr>
@@ -874,7 +1110,7 @@ Functions</h2></td></tr>
 </div><!-- doc-content -->
 <div class="navpath" id="nav-path">
   <ul>
-    <li class="footer" style="float:left"><b>Distributed Publish & Subscribe for IoT</b></li> <li class="footer">Generated Wed May 15 2019 12:06:23</li>
+    <li class="footer" style="float:left"><b>Distributed Publish & Subscribe for IoT</b></li> <li class="footer">Generated Fri Nov 15 2019 09:37:47</li>
   </ul>
 </div>
 </body>

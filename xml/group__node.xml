@@ -15,12 +15,12 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="434" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="449" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" line="435" column="1" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" bodystart="450" bodyend="-1"/>
       </memberdef>
-      <memberdef kind="typedef" id="group__node_1gaaf70ac42acab8a67693947871e97600f" prot="public" static="no">
+      <memberdef kind="typedef" id="group__node_1ga1518af805c7ace335841784178bd8aec" prot="public" static="no">
         <type>void(*</type>
-        <definition>typedef void(* DPS_OnLinkComplete) (DPS_Node *node, DPS_NodeAddress *addr, DPS_Status status, void *data)</definition>
-        <argsstring>)(DPS_Node *node, DPS_NodeAddress *addr, DPS_Status status, void *data)</argsstring>
+        <definition>typedef void(* DPS_OnLinkComplete) (DPS_Node *node, const DPS_NodeAddress *addr, DPS_Status status, void *data)</definition>
+        <argsstring>)(DPS_Node *node, const DPS_NodeAddress *addr, DPS_Status status, void *data)</argsstring>
         <name>DPS_OnLinkComplete</name>
         <briefdescription>
 <para>Function prototype for function called when a <ref refid="group__node_1gab7616642a79f637aa146b3b1a4ed0af8" kindref="member">DPS_Link()</ref> completes. </para>        </briefdescription>
@@ -44,7 +44,7 @@
 <parametername>status</parametername>
 </parameternamelist>
 <parameterdescription>
-<para>Indicates if the link completed or failed </para></parameterdescription>
+<para>Indicates if the link completed or failed. A status of DPS_ERR_EXISTS indicates the remote node is already linked. </para></parameterdescription>
 </parameteritem>
 <parameteritem>
 <parameternamelist>
@@ -57,7 +57,42 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="572" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="572" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" line="622" column="1" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" bodystart="622" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="group__node_1ga50d9c5fa2ac1cfbecc7647ce885e2e16" prot="public" static="no">
+        <type>void(*</type>
+        <definition>typedef void(* DPS_OnLinkLoss) (DPS_Node *node, const DPS_NodeAddress *addr, void *data)</definition>
+        <argsstring>)(DPS_Node *node, const DPS_NodeAddress *addr, void *data)</argsstring>
+        <name>DPS_OnLinkLoss</name>
+        <briefdescription>
+<para>Function prototype for function called when a link is lossed. </para>        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>node</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The local node that lost a link </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>addr</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The address of the remote node that was unlinked </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>data</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Application data passed in the call to <ref refid="group__node_1ga28d9d432839aad5ca777259bd17dae67" kindref="member">DPS_SetLinkLossCallback()</ref> </para></parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" line="664" column="1" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" bodystart="664" bodyend="-1"/>
       </memberdef>
       <memberdef kind="typedef" id="group__node_1ga1e88cc9ca744782e36d58a022fe026c5" prot="public" static="no">
         <type>void(*</type>
@@ -85,7 +120,35 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="515" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="515" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" line="543" column="1" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" bodystart="543" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="group__node_1gac902cf51bb5a028549869056d0579233" prot="public" static="no">
+        <type>void(*</type>
+        <definition>typedef void(* DPS_OnNodeShutdown) (DPS_Node *node, void *data)</definition>
+        <argsstring>)(DPS_Node *node, void *data)</argsstring>
+        <name>DPS_OnNodeShutdown</name>
+        <briefdescription>
+<para>Function prototype for callback function called when a node is shutdown. </para>        </briefdescription>
+        <detaileddescription>
+<para>Shutdown cleanly unlinks any nodes from this node. <ref refid="group__node_1ga85f5121f80411f5ab82449efe20b68dd" kindref="member">DPS_DestroyNode()</ref> does not.</para><para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>node</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The node that was shutdown. This node is valid during the callback. </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>data</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Data passed to <ref refid="group__node_1ga71d0a1ec941a5ac5f4e994e4cc5cb54e" kindref="member">DPS_ShutdownNode()</ref> </para></parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" line="519" column="1" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" bodystart="519" bodyend="-1"/>
       </memberdef>
       <memberdef kind="typedef" id="group__node_1ga8777fdab3d67ab171bd1ed1322564367" prot="public" static="no">
         <type>void(*</type>
@@ -120,7 +183,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="614" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="614" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" line="686" column="1" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" bodystart="686" bodyend="-1"/>
       </memberdef>
       <memberdef kind="typedef" id="group__node_1ga119b8d5d6d6ab2390b69d272c36f1414" prot="public" static="no">
         <type>void(*</type>
@@ -135,7 +198,7 @@
 <parametername>node</parametername>
 </parameternamelist>
 <parameterdescription>
-<para>The local node to use </para></parameterdescription>
+<para>The local node that was unlinked from a remote node </para></parameterdescription>
 </parameteritem>
 <parameteritem>
 <parameternamelist>
@@ -155,7 +218,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="593" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="593" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" line="643" column="1" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" bodystart="643" bodyend="-1"/>
       </memberdef>
       </sectiondef>
       <sectiondef kind="func">
@@ -205,7 +268,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="460" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" line="461" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__node_1ga85f5121f80411f5ab82449efe20b68dd" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
@@ -255,7 +318,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="529" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" line="557" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__node_1ga32b12f0e54f0cd66b46f2a47378c6aeb" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>const <ref refid="group__nodeaddress_1ga9e9f56aa38e82b4edcef7eb81e9f5bd2" kindref="member">DPS_NodeAddress</ref> *</type>
@@ -281,7 +344,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="551" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" line="600" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__node_1gac1caa8f004d43a5d0f4ef69715a53145" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>const char *</type>
@@ -295,7 +358,7 @@
         <briefdescription>
 <para>Get text representation of the address this node is listening for connections on. </para>        </briefdescription>
         <detaileddescription>
-<para>This function uses a static string buffer so is not thread safe.</para><para><parameterlist kind="param"><parameteritem>
+<para><parameterlist kind="param"><parameteritem>
 <parameternamelist>
 <parametername>node</parametername>
 </parameternamelist>
@@ -307,7 +370,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="562" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" line="610" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__node_1ga65bba7bcfe5e940b153fcced4e2e8880" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>void *</type>
@@ -333,7 +396,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="479" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" line="480" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__node_1gab7616642a79f637aa146b3b1a4ed0af8" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
@@ -349,7 +412,7 @@
           <declname>addrText</declname>
         </param>
         <param>
-          <type><ref refid="group__node_1gaaf70ac42acab8a67693947871e97600f" kindref="member">DPS_OnLinkComplete</ref></type>
+          <type><ref refid="group__node_1ga1518af805c7ace335841784178bd8aec" kindref="member">DPS_OnLinkComplete</ref></type>
           <declname>cb</declname>
         </param>
         <param>
@@ -378,7 +441,7 @@
 <parametername>cb</parametername>
 </parameternamelist>
 <parameterdescription>
-<para>The callback function to call on completion, can be NULL which case the function is synchronous </para></parameterdescription>
+<para>The callback function to call on completion </para></parameterdescription>
 </parameteritem>
 <parameteritem>
 <parameternamelist>
@@ -392,7 +455,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="584" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" line="634" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__node_1ga69325fd8127687c469e503763a29f6d8" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
@@ -436,11 +499,13 @@
 <para>Returns the resolved address for the remote node</para></parameterdescription>
 </parameteritem>
 </parameterlist>
-<simplesect kind="return"><para>DPS_OK if the link is successful, an error otherwise </para></simplesect>
+<simplesect kind="return"><para><itemizedlist>
+<listitem><para>DPS_OK if the link is successful,</para></listitem><listitem><para>DPS_ERR_EXISTS if the address is already linked to,</para></listitem><listitem><para>an error otherwise </para></listitem></itemizedlist>
+</para></simplesect>
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/synchronous.h" line="51" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/synchronous.h" line="54" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__node_1gab78df7f4498b847ddb32fdd33d39ef0f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
@@ -510,7 +575,55 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="627" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" line="699" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="group__node_1ga28d9d432839aad5ca777259bd17dae67" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
+        <definition>DPS_Status DPS_SetLinkLossCallback</definition>
+        <argsstring>(DPS_Node *node, DPS_OnLinkLoss cb, void *data)</argsstring>
+        <name>DPS_SetLinkLossCallback</name>
+        <param>
+          <type><ref refid="group__node_1ga4dd612ab965134321bb57fdb065f121c" kindref="member">DPS_Node</ref> *</type>
+          <declname>node</declname>
+        </param>
+        <param>
+          <type><ref refid="group__node_1ga50d9c5fa2ac1cfbecc7647ce885e2e16" kindref="member">DPS_OnLinkLoss</ref></type>
+          <declname>cb</declname>
+        </param>
+        <param>
+          <type>void *</type>
+          <declname>data</declname>
+        </param>
+        <briefdescription>
+<para>Set a callback function to called when a link explicily established by this node was lost. </para>        </briefdescription>
+        <detaileddescription>
+<para>This function is only called in the case of a surprise link-loss, not when <ref refid="group__node_1ga18398ef1e81c5dba98a95da6d18b937e" kindref="member">DPS_Unlink()</ref> was called.</para><para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>node</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The local node </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>cb</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The callback function to call on loss of a link </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>data</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Application data to be passed to the callback</para></parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>DPS_OK if successful, an error otherwise </para></simplesect>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" line="677" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__node_1gad19cf4272ba11e935654175c83db2ce1" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
@@ -547,7 +660,43 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="470" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" line="471" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="group__node_1ga96fbb20dc7d5a30a8fc5eefd181f69c9" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void DPS_SetNodeLinkLossTimeout</definition>
+        <argsstring>(DPS_Node *node, uint32_t linkLossMsecs)</argsstring>
+        <name>DPS_SetNodeLinkLossTimeout</name>
+        <param>
+          <type><ref refid="group__node_1ga4dd612ab965134321bb57fdb065f121c" kindref="member">DPS_Node</ref> *</type>
+          <declname>node</declname>
+        </param>
+        <param>
+          <type>uint32_t</type>
+          <declname>linkLossMsecs</declname>
+        </param>
+        <briefdescription>
+<para>Override the default link-loss detection timeout (in msecs) </para>        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>node</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The node </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>linkLossMsecs</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The time for the link to an unresponsive remote node to be considered lost </para></parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" line="591" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__node_1gac7e33476c06009ed42a6ea6f3c53380a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>void</type>
@@ -563,7 +712,7 @@
           <declname>subsRateMsecs</declname>
         </param>
         <briefdescription>
-<para>Specify the time delay (in msecs) between subscription updates. </para>        </briefdescription>
+<para>Override the default time delay (in msecs) between subscription updates. </para>        </briefdescription>
         <detaileddescription>
 <para><parameterlist kind="param"><parameteritem>
 <parameternamelist>
@@ -583,7 +732,57 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="542" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" line="583" column="1"/>
+      </memberdef>
+      <memberdef kind="function" id="group__node_1ga71d0a1ec941a5ac5f4e994e4cc5cb54e" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
+        <definition>DPS_Status DPS_ShutdownNode</definition>
+        <argsstring>(DPS_Node *node, DPS_OnNodeShutdown cb, void *data)</argsstring>
+        <name>DPS_ShutdownNode</name>
+        <param>
+          <type><ref refid="group__node_1ga4dd612ab965134321bb57fdb065f121c" kindref="member">DPS_Node</ref> *</type>
+          <declname>node</declname>
+        </param>
+        <param>
+          <type><ref refid="group__node_1gac902cf51bb5a028549869056d0579233" kindref="member">DPS_OnNodeShutdown</ref></type>
+          <declname>cb</declname>
+        </param>
+        <param>
+          <type>void *</type>
+          <declname>data</declname>
+        </param>
+        <briefdescription>
+<para>Shutdowns a node. </para>        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>node</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The node to shutdown </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>cb</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Callback function to be called when the node is shutdown </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>data</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Data to be passed to the callback function</para></parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para><itemizedlist>
+<listitem><para>DPS_OK if the node will be shutdown and the callback called</para></listitem><listitem><para>DPS_ERR_NULL node or cb was null</para></listitem><listitem><para>Or an error status code in which case the callback will not be called. </para></listitem></itemizedlist>
+</para></simplesect>
+</para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" line="533" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__node_1ga538588a1e2ea805377a90ac22ee6bc82" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
@@ -631,7 +830,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="505" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" line="506" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__node_1ga18398ef1e81c5dba98a95da6d18b937e" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
@@ -655,7 +854,7 @@
           <declname>data</declname>
         </param>
         <briefdescription>
-<para>Unlink the local node from a remote node. </para>        </briefdescription>
+<para>Unlink a local node from a remote node. </para>        </briefdescription>
         <detaileddescription>
 <para><parameterlist kind="param"><parameteritem>
 <parameternamelist>
@@ -690,7 +889,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="605" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" line="655" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__node_1gae16f5ff85ac57a6f5567db73343c8af1" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
@@ -727,10 +926,21 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/synchronous.h" line="61" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/synchronous.h" line="64" column="1"/>
       </memberdef>
       </sectiondef>
       <sectiondef kind="define">
+      <memberdef kind="define" id="group__node_1gafd432f0081728dbac4634bf395b73219" prot="public" static="no">
+        <name>DPS_LINK_LOSS_TIMEOUT</name>
+        <initializer>30000</initializer>
+        <briefdescription>
+<para>This establishes the base rate at which keep-alive subscription messages are sent to remote nodes. </para>        </briefdescription>
+        <detaileddescription>
+<para>This timeout governs how long it takes to detect a mesh disconnect and start a recovery process. This timeout value should be much larger than DPS_SUBSCRIPTION_UPDATE_RATE. </para>        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" line="575" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" bodystart="575" bodyend="-1"/>
+      </memberdef>
       <memberdef kind="define" id="group__node_1gac939c83361ed89086f37c78d9c9009dd" prot="public" static="no">
         <name>DPS_MCAST_PUB_DISABLED</name>
         <initializer>0</initializer>
@@ -740,7 +950,7 @@
 <para>See <computeroutput>mcastPub</computeroutput> of <ref refid="group__node_1ga538588a1e2ea805377a90ac22ee6bc82" kindref="member">DPS_StartNode()</ref>. </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="484" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="484" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" line="485" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" bodystart="485" bodyend="-1"/>
       </memberdef>
       <memberdef kind="define" id="group__node_1gae493573fb2e02b87258952223eb4fcd7" prot="public" static="no">
         <name>DPS_MCAST_PUB_ENABLE_RECV</name>
@@ -751,7 +961,7 @@
 <para>See <computeroutput>mcastPub</computeroutput> of <ref refid="group__node_1ga538588a1e2ea805377a90ac22ee6bc82" kindref="member">DPS_StartNode()</ref>. </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="494" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="494" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" line="495" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" bodystart="495" bodyend="-1"/>
       </memberdef>
       <memberdef kind="define" id="group__node_1ga178a3a6450eeff450820fa34fd82049c" prot="public" static="no">
         <name>DPS_MCAST_PUB_ENABLE_SEND</name>
@@ -762,18 +972,18 @@
 <para>See <computeroutput>mcastPub</computeroutput> of <ref refid="group__node_1ga538588a1e2ea805377a90ac22ee6bc82" kindref="member">DPS_StartNode()</ref>. </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="489" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="489" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" line="490" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" bodystart="490" bodyend="-1"/>
       </memberdef>
       <memberdef kind="define" id="group__node_1ga89df880f9650da5730fa152642c0be9f" prot="public" static="no">
         <name>DPS_SUBSCRIPTION_UPDATE_RATE</name>
-        <initializer>1000</initializer>
+        <initializer>2000</initializer>
         <briefdescription>
 <para>The default maximum rate (in msecs) to compute and send out subscription updates. </para>        </briefdescription>
         <detaileddescription>
-        </detaileddescription>
+<para>This causes subscription updates coming in from multiple remote nodes to be batched up for forwarding. This reduces network traffic when new nodes join the mesh, particularly at startup time, at the cost of increased latency for the propagation of subscriptions across the mesh. New subscriptions local to a node are not subject to this timeout value and are set immediately to adjacent nodes. </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="534" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="534" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" line="567" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" bodystart="567" bodyend="-1"/>
       </memberdef>
       </sectiondef>
     <briefdescription>

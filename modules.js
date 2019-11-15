@@ -1,6 +1,7 @@
 var modules =
 [
     [ "Debug", "group__debug.html", "group__debug" ],
+    [ "Dispatcher", "group__dispatcher.html", "group__dispatcher" ],
     [ "Event", "group__event.html", "group__event" ],
     [ "JSON", "group__json.html", "group__json" ],
     [ "Key Store", "group__keystore.html", "group__keystore" ],

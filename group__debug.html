@@ -100,20 +100,28 @@ $(document).ready(function(){initNavTree('group__debug.html','');});
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="define-members"></a>
 Macros</h2></td></tr>
+<tr class="memitem:ga4fb0e0ca1220e5d53edd5f25c1676863"><td class="memItemLeft" align="right" valign="top"><a id="ga4fb0e0ca1220e5d53edd5f25c1676863"></a>
+#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__debug.html#ga4fb0e0ca1220e5d53edd5f25c1676863">DPS_DBG_TAG</a>&#160;&#160;&#160;NULL</td></tr>
+<tr class="memdesc:ga4fb0e0ca1220e5d53edd5f25c1676863"><td class="mdescLeft">&#160;</td><td class="mdescRight">This can be redefined to include a custom tag in the log message. <br /></td></tr>
+<tr class="separator:ga4fb0e0ca1220e5d53edd5f25c1676863"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga170843b022fc7bc00bf871eb5189fe52"><td class="memItemLeft" align="right" valign="top"><a id="ga170843b022fc7bc00bf871eb5189fe52"></a>
 #define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__debug.html#ga170843b022fc7bc00bf871eb5189fe52">DPS_DBGBYTES</a>(bytes,  n)&#160;&#160;&#160;(<a class="el" href="group__debug.html#gaeca5ec86966717c8dd2d1ffda4be2b3b">DPS_DEBUG_ENABLED</a>() ? <a class="el" href="group__debug.html#ga7cc66c1e82ef557238c122b067f5337a">DPS_LogBytes</a>(DPS_LOG_DBGPRINT, __FILE__, __LINE__, __FUNCTION__, bytes, n) : (void)0)</td></tr>
 <tr class="memdesc:ga170843b022fc7bc00bf871eb5189fe52"><td class="mdescLeft">&#160;</td><td class="mdescRight">Log an array of bytes at DBGPRINT level. <br /></td></tr>
 <tr class="separator:ga170843b022fc7bc00bf871eb5189fe52"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gae8034947b19e6f6b066ac4fe0a2b3d8e"><td class="memItemLeft" align="right" valign="top"><a id="gae8034947b19e6f6b066ac4fe0a2b3d8e"></a>
+#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__debug.html#gae8034947b19e6f6b066ac4fe0a2b3d8e">DPS_DBGINFO</a>(fmt, ...)&#160;&#160;&#160;(<a class="el" href="group__debug.html#gac797e456c4202b5fc0df4d31817b6661">DPS_INFO_ENABLED</a>() ? <a class="el" href="group__debug.html#ga153af12b5ff1180f081afb49ac30112f">DPS_Log</a>(DPS_LOG_INFO, __FILE__, __LINE__, __FUNCTION__, <a class="el" href="group__debug.html#ga4fb0e0ca1220e5d53edd5f25c1676863">DPS_DBG_TAG</a>, fmt, ##__VA_ARGS__) : (void)0)</td></tr>
+<tr class="memdesc:gae8034947b19e6f6b066ac4fe0a2b3d8e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Log a message at DBGINFO level - Like DPS_DBGPRINT but can be turned on in isolation with DPS_DEBUG_CONTROL(DPS_DEBUG_INFO) <br /></td></tr>
+<tr class="separator:gae8034947b19e6f6b066ac4fe0a2b3d8e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga7ac5236c2ba157ffcf56cd073dcf0c3f"><td class="memItemLeft" align="right" valign="top"><a id="ga7ac5236c2ba157ffcf56cd073dcf0c3f"></a>
-#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__debug.html#ga7ac5236c2ba157ffcf56cd073dcf0c3f">DPS_DBGPRINT</a>(fmt, ...)&#160;&#160;&#160;(<a class="el" href="group__debug.html#gaeca5ec86966717c8dd2d1ffda4be2b3b">DPS_DEBUG_ENABLED</a>() ? <a class="el" href="group__debug.html#ga174fef61dca16376546e570c9b831502">DPS_Log</a>(DPS_LOG_DBGPRINT, __FILE__, __LINE__, __FUNCTION__, fmt, ##__VA_ARGS__) : (void)0)</td></tr>
+#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__debug.html#ga7ac5236c2ba157ffcf56cd073dcf0c3f">DPS_DBGPRINT</a>(fmt, ...)&#160;&#160;&#160;(<a class="el" href="group__debug.html#gaeca5ec86966717c8dd2d1ffda4be2b3b">DPS_DEBUG_ENABLED</a>() ? <a class="el" href="group__debug.html#ga153af12b5ff1180f081afb49ac30112f">DPS_Log</a>(DPS_LOG_DBGPRINT, __FILE__, __LINE__, __FUNCTION__, <a class="el" href="group__debug.html#ga4fb0e0ca1220e5d53edd5f25c1676863">DPS_DBG_TAG</a>, fmt, ##__VA_ARGS__) : (void)0)</td></tr>
 <tr class="memdesc:ga7ac5236c2ba157ffcf56cd073dcf0c3f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Log a message at DBGPRINT level. <br /></td></tr>
 <tr class="separator:ga7ac5236c2ba157ffcf56cd073dcf0c3f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga0a4156dc81e39b0cf2fb251e37bda307"><td class="memItemLeft" align="right" valign="top"><a id="ga0a4156dc81e39b0cf2fb251e37bda307"></a>
-#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__debug.html#ga0a4156dc81e39b0cf2fb251e37bda307">DPS_DBGTRACE</a>()&#160;&#160;&#160;(<a class="el" href="group__debug.html#gaeca5ec86966717c8dd2d1ffda4be2b3b">DPS_DEBUG_ENABLED</a>() ? <a class="el" href="group__debug.html#ga174fef61dca16376546e570c9b831502">DPS_Log</a>(DPS_LOG_DBGTRACE, __FILE__, __LINE__, __FUNCTION__, &quot;\n&quot;) : (void)0)</td></tr>
+#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__debug.html#ga0a4156dc81e39b0cf2fb251e37bda307">DPS_DBGTRACE</a>()&#160;&#160;&#160;(<a class="el" href="group__debug.html#gaeca5ec86966717c8dd2d1ffda4be2b3b">DPS_DEBUG_ENABLED</a>() ? <a class="el" href="group__debug.html#ga153af12b5ff1180f081afb49ac30112f">DPS_Log</a>(DPS_LOG_DBGTRACE, __FILE__, __LINE__, __FUNCTION__, <a class="el" href="group__debug.html#ga4fb0e0ca1220e5d53edd5f25c1676863">DPS_DBG_TAG</a>, &quot;\n&quot;) : (void)0)</td></tr>
 <tr class="memdesc:ga0a4156dc81e39b0cf2fb251e37bda307"><td class="mdescLeft">&#160;</td><td class="mdescRight">Log a function name at DBGTRACE level. <br /></td></tr>
 <tr class="separator:ga0a4156dc81e39b0cf2fb251e37bda307"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga62bb2ddb60beb7390755a19cd7874b5c"><td class="memItemLeft" align="right" valign="top"><a id="ga62bb2ddb60beb7390755a19cd7874b5c"></a>
-#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__debug.html#ga62bb2ddb60beb7390755a19cd7874b5c">DPS_DBGTRACEA</a>(fmt, ...)&#160;&#160;&#160;(<a class="el" href="group__debug.html#gaeca5ec86966717c8dd2d1ffda4be2b3b">DPS_DEBUG_ENABLED</a>() ? <a class="el" href="group__debug.html#ga174fef61dca16376546e570c9b831502">DPS_Log</a>(DPS_LOG_DBGTRACE, __FILE__, __LINE__, __FUNCTION__, fmt, ##__VA_ARGS__) : (void)0)</td></tr>
+#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__debug.html#ga62bb2ddb60beb7390755a19cd7874b5c">DPS_DBGTRACEA</a>(fmt, ...)&#160;&#160;&#160;(<a class="el" href="group__debug.html#gaeca5ec86966717c8dd2d1ffda4be2b3b">DPS_DEBUG_ENABLED</a>() ? <a class="el" href="group__debug.html#ga153af12b5ff1180f081afb49ac30112f">DPS_Log</a>(DPS_LOG_DBGTRACE, __FILE__, __LINE__, __FUNCTION__, <a class="el" href="group__debug.html#ga4fb0e0ca1220e5d53edd5f25c1676863">DPS_DBG_TAG</a>, fmt, ##__VA_ARGS__) : (void)0)</td></tr>
 <tr class="memdesc:ga62bb2ddb60beb7390755a19cd7874b5c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Log a function name and message at DBGTRACE level. <br /></td></tr>
 <tr class="separator:ga62bb2ddb60beb7390755a19cd7874b5c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gaeca5ec86966717c8dd2d1ffda4be2b3b"><td class="memItemLeft" align="right" valign="top"><a id="gaeca5ec86966717c8dd2d1ffda4be2b3b"></a>
@@ -124,6 +132,10 @@ Macros</h2></td></tr>
 #define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__debug.html#ga6eb8eb8c3804ebd6f51fe2d7a7625ed8">DPS_DEBUG_FORCE</a>&#160;&#160;&#160;2</td></tr>
 <tr class="memdesc:ga6eb8eb8c3804ebd6f51fe2d7a7625ed8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Force debug logging. <br /></td></tr>
 <tr class="separator:ga6eb8eb8c3804ebd6f51fe2d7a7625ed8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gad0e20f99471bee46c3f0d4a3672fa9c1"><td class="memItemLeft" align="right" valign="top"><a id="gad0e20f99471bee46c3f0d4a3672fa9c1"></a>
+#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__debug.html#gad0e20f99471bee46c3f0d4a3672fa9c1">DPS_DEBUG_INFO</a>&#160;&#160;&#160;3</td></tr>
+<tr class="memdesc:gad0e20f99471bee46c3f0d4a3672fa9c1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Enable only INFO messages. <br /></td></tr>
+<tr class="separator:gad0e20f99471bee46c3f0d4a3672fa9c1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga39adc166f2ce05fb751212c1db9a6ce9"><td class="memItemLeft" align="right" valign="top"><a id="ga39adc166f2ce05fb751212c1db9a6ce9"></a>
 #define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__debug.html#ga39adc166f2ce05fb751212c1db9a6ce9">DPS_DEBUG_OFF</a>&#160;&#160;&#160;0</td></tr>
 <tr class="memdesc:ga39adc166f2ce05fb751212c1db9a6ce9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Disable debug logging. <br /></td></tr>
@@ -133,31 +145,36 @@ Macros</h2></td></tr>
 <tr class="memdesc:ga777427dcd2750d5006024ce1a54daaac"><td class="mdescLeft">&#160;</td><td class="mdescRight">Enable debug logging. <br /></td></tr>
 <tr class="separator:ga777427dcd2750d5006024ce1a54daaac"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gac69225c4b8e73b27204a2963d4ca0633"><td class="memItemLeft" align="right" valign="top"><a id="gac69225c4b8e73b27204a2963d4ca0633"></a>
-#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__debug.html#gac69225c4b8e73b27204a2963d4ca0633">DPS_ERRPRINT</a>(fmt, ...)&#160;&#160;&#160;<a class="el" href="group__debug.html#ga174fef61dca16376546e570c9b831502">DPS_Log</a>(DPS_LOG_ERROR, __FILE__, __LINE__, __FUNCTION__, fmt, ##__VA_ARGS__)</td></tr>
+#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__debug.html#gac69225c4b8e73b27204a2963d4ca0633">DPS_ERRPRINT</a>(fmt, ...)&#160;&#160;&#160;<a class="el" href="group__debug.html#ga153af12b5ff1180f081afb49ac30112f">DPS_Log</a>(DPS_LOG_ERROR, __FILE__, __LINE__, __FUNCTION__, <a class="el" href="group__debug.html#ga4fb0e0ca1220e5d53edd5f25c1676863">DPS_DBG_TAG</a>, fmt, ##__VA_ARGS__)</td></tr>
 <tr class="memdesc:gac69225c4b8e73b27204a2963d4ca0633"><td class="mdescLeft">&#160;</td><td class="mdescRight">Log a message at ERROR level. <br /></td></tr>
 <tr class="separator:gac69225c4b8e73b27204a2963d4ca0633"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gac797e456c4202b5fc0df4d31817b6661"><td class="memItemLeft" align="right" valign="top"><a id="gac797e456c4202b5fc0df4d31817b6661"></a>
+#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__debug.html#gac797e456c4202b5fc0df4d31817b6661">DPS_INFO_ENABLED</a>()&#160;&#160;&#160;((__DPS_DebugControl == <a class="el" href="group__debug.html#gad0e20f99471bee46c3f0d4a3672fa9c1">DPS_DEBUG_INFO</a>) || <a class="el" href="group__debug.html#gaeca5ec86966717c8dd2d1ffda4be2b3b">DPS_DEBUG_ENABLED</a>())</td></tr>
+<tr class="memdesc:gac797e456c4202b5fc0df4d31817b6661"><td class="mdescLeft">&#160;</td><td class="mdescRight">True if DPS info logging is enabled. <br /></td></tr>
+<tr class="separator:gac797e456c4202b5fc0df4d31817b6661"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gaf1d25cc7f1d2d92f96ba620217af28fd"><td class="memItemLeft" align="right" valign="top"><a id="gaf1d25cc7f1d2d92f96ba620217af28fd"></a>
-#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__debug.html#gaf1d25cc7f1d2d92f96ba620217af28fd">DPS_PRINT</a>(fmt, ...)&#160;&#160;&#160;<a class="el" href="group__debug.html#ga174fef61dca16376546e570c9b831502">DPS_Log</a>(DPS_LOG_PRINT, __FILE__, __LINE__, __FUNCTION__, fmt, ##__VA_ARGS__)</td></tr>
+#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__debug.html#gaf1d25cc7f1d2d92f96ba620217af28fd">DPS_PRINT</a>(fmt, ...)&#160;&#160;&#160;<a class="el" href="group__debug.html#ga153af12b5ff1180f081afb49ac30112f">DPS_Log</a>(DPS_LOG_PRINT, __FILE__, __LINE__, __FUNCTION__, <a class="el" href="group__debug.html#ga4fb0e0ca1220e5d53edd5f25c1676863">DPS_DBG_TAG</a>, fmt, ##__VA_ARGS__)</td></tr>
 <tr class="memdesc:gaf1d25cc7f1d2d92f96ba620217af28fd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Log a message at PRINT level. <br /></td></tr>
 <tr class="separator:gaf1d25cc7f1d2d92f96ba620217af28fd"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gad9a3f4ae1ed318b313434a82132c4044"><td class="memItemLeft" align="right" valign="top"><a id="gad9a3f4ae1ed318b313434a82132c4044"></a>
-#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__debug.html#gad9a3f4ae1ed318b313434a82132c4044">DPS_PRINTT</a>(fmt, ...)&#160;&#160;&#160;<a class="el" href="group__debug.html#ga174fef61dca16376546e570c9b831502">DPS_Log</a>(DPS_LOG_PRINTT, __FILE__, __LINE__, __FUNCTION__, fmt, ##__VA_ARGS__)</td></tr>
+#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__debug.html#gad9a3f4ae1ed318b313434a82132c4044">DPS_PRINTT</a>(fmt, ...)&#160;&#160;&#160;<a class="el" href="group__debug.html#ga153af12b5ff1180f081afb49ac30112f">DPS_Log</a>(DPS_LOG_PRINTT, __FILE__, __LINE__, __FUNCTION__, <a class="el" href="group__debug.html#ga4fb0e0ca1220e5d53edd5f25c1676863">DPS_DBG_TAG</a>, fmt, ##__VA_ARGS__)</td></tr>
 <tr class="memdesc:gad9a3f4ae1ed318b313434a82132c4044"><td class="mdescLeft">&#160;</td><td class="mdescRight">Same as DPS_PRINT but prepends a system timestamp. <br /></td></tr>
 <tr class="separator:gad9a3f4ae1ed318b313434a82132c4044"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga37ab9dbe492fd9f7b78349f6e789e5f2"><td class="memItemLeft" align="right" valign="top"><a id="ga37ab9dbe492fd9f7b78349f6e789e5f2"></a>
-#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__debug.html#ga37ab9dbe492fd9f7b78349f6e789e5f2">DPS_WARNPRINT</a>(fmt, ...)&#160;&#160;&#160;(<a class="el" href="group__debug.html#gaeca5ec86966717c8dd2d1ffda4be2b3b">DPS_DEBUG_ENABLED</a>() ? <a class="el" href="group__debug.html#ga174fef61dca16376546e570c9b831502">DPS_Log</a>(DPS_LOG_WARNING, __FILE__, __LINE__, __FUNCTION__, fmt, ##__VA_ARGS__) : (void)0)</td></tr>
+#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__debug.html#ga37ab9dbe492fd9f7b78349f6e789e5f2">DPS_WARNPRINT</a>(fmt, ...)&#160;&#160;&#160;(<a class="el" href="group__debug.html#gaeca5ec86966717c8dd2d1ffda4be2b3b">DPS_DEBUG_ENABLED</a>() ? <a class="el" href="group__debug.html#ga153af12b5ff1180f081afb49ac30112f">DPS_Log</a>(DPS_LOG_WARNING, __FILE__, __LINE__, __FUNCTION__, <a class="el" href="group__debug.html#ga4fb0e0ca1220e5d53edd5f25c1676863">DPS_DBG_TAG</a>, fmt, ##__VA_ARGS__) : (void)0)</td></tr>
 <tr class="memdesc:ga37ab9dbe492fd9f7b78349f6e789e5f2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Log a message at WARNING level. <br /></td></tr>
 <tr class="separator:ga37ab9dbe492fd9f7b78349f6e789e5f2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="enum-members"></a>
 Enumerations</h2></td></tr>
 <tr class="memitem:gad06c0421a8226b0a95be1d722ca05612"><td class="memItemLeft" align="right" valign="top"><a id="gad06c0421a8226b0a95be1d722ca05612"></a>enum &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__debug.html#gad06c0421a8226b0a95be1d722ca05612">DPS_LogLevel</a> { <br />
-&#160;&#160;<b>DPS_LOG_ERROR</b>, 
+&#160;&#160;<b>DPS_LOG_INFO</b>, 
+<b>DPS_LOG_ERROR</b>, 
 <b>DPS_LOG_WARNING</b>, 
 <b>DPS_LOG_PRINT</b>, 
-<b>DPS_LOG_PRINTT</b>, 
 <br />
-&#160;&#160;<b>DPS_LOG_DBGTRACE</b>, 
+&#160;&#160;<b>DPS_LOG_PRINTT</b>, 
+<b>DPS_LOG_DBGTRACE</b>, 
 <b>DPS_LOG_DBGPRINT</b>
 <br />
  }</td></tr>
@@ -166,9 +183,9 @@ Enumerations</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:ga174fef61dca16376546e570c9b831502"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__debug.html#ga174fef61dca16376546e570c9b831502">DPS_Log</a> (<a class="el" href="group__debug.html#gad06c0421a8226b0a95be1d722ca05612">DPS_LogLevel</a> level, const char *file, int line, const char *function, const char *fmt,...)</td></tr>
-<tr class="memdesc:ga174fef61dca16376546e570c9b831502"><td class="mdescLeft">&#160;</td><td class="mdescRight">Log a message.  <a href="#ga174fef61dca16376546e570c9b831502">More...</a><br /></td></tr>
-<tr class="separator:ga174fef61dca16376546e570c9b831502"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga153af12b5ff1180f081afb49ac30112f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__debug.html#ga153af12b5ff1180f081afb49ac30112f">DPS_Log</a> (<a class="el" href="group__debug.html#gad06c0421a8226b0a95be1d722ca05612">DPS_LogLevel</a> level, const char *file, int line, const char *function, const char *tag, const char *fmt,...)</td></tr>
+<tr class="memdesc:ga153af12b5ff1180f081afb49ac30112f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Log a message.  <a href="#ga153af12b5ff1180f081afb49ac30112f">More...</a><br /></td></tr>
+<tr class="separator:ga153af12b5ff1180f081afb49ac30112f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga7cc66c1e82ef557238c122b067f5337a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__debug.html#ga7cc66c1e82ef557238c122b067f5337a">DPS_LogBytes</a> (<a class="el" href="group__debug.html#gad06c0421a8226b0a95be1d722ca05612">DPS_LogLevel</a> level, const char *file, int line, const char *function, const uint8_t *bytes, size_t n)</td></tr>
 <tr class="memdesc:ga7cc66c1e82ef557238c122b067f5337a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Log an array of bytes.  <a href="#ga7cc66c1e82ef557238c122b067f5337a">More...</a><br /></td></tr>
 <tr class="separator:ga7cc66c1e82ef557238c122b067f5337a"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -183,8 +200,8 @@ int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <p>Debug and logging macros and functions. </p>
 <h2 class="groupheader">Function Documentation</h2>
-<a id="ga174fef61dca16376546e570c9b831502"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga174fef61dca16376546e570c9b831502">&#9670;&nbsp;</a></span>DPS_Log()</h2>
+<a id="ga153af12b5ff1180f081afb49ac30112f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga153af12b5ff1180f081afb49ac30112f">&#9670;&nbsp;</a></span>DPS_Log()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -217,6 +234,12 @@ int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>tag</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *&#160;</td>
           <td class="paramname"><em>fmt</em>, </td>
         </tr>
         <tr>
@@ -240,6 +263,7 @@ int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group
     <tr><td class="paramname">file</td><td>the file name of the message </td></tr>
     <tr><td class="paramname">line</td><td>the file line of the message </td></tr>
     <tr><td class="paramname">function</td><td>the function name of the message </td></tr>
+    <tr><td class="paramname">tag</td><td>the custom tag of the message </td></tr>
     <tr><td class="paramname">fmt</td><td>the printf style format of the message </td></tr>
     <tr><td class="paramname">...</td><td>the format parameters </td></tr>
   </table>
@@ -317,7 +341,7 @@ int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group
 </div><!-- doc-content -->
 <div class="navpath" id="nav-path">
   <ul>
-    <li class="footer" style="float:left"><b>Distributed Publish & Subscribe for IoT</b></li> <li class="footer">Generated Wed May 15 2019 12:06:23</li>
+    <li class="footer" style="float:left"><b>Distributed Publish & Subscribe for IoT</b></li> <li class="footer">Generated Fri Nov 15 2019 09:37:47</li>
   </ul>
 </div>
 </body>

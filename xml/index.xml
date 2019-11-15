@@ -42,6 +42,7 @@
   <compound refid="struct___d_p_s___u_u_i_d" kind="struct"><name>_DPS_UUID</name>
     <member refid="struct___d_p_s___u_u_i_d_1ac01a70f40b7080c7d6e42bd538456f35" kind="variable"><name>@3</name></member>
     <member refid="struct___d_p_s___u_u_i_d_1a5f642859395d3916ea96804c6bf16880" kind="variable"><name>val</name></member>
+    <member refid="struct___d_p_s___u_u_i_d_1ab0304117e9c02dcbd5a99550f43665b4" kind="variable"><name>val32</name></member>
     <member refid="struct___d_p_s___u_u_i_d_1aee3748c444033b543f494e8bf6d64645" kind="variable"><name>val64</name></member>
   </compound>
   <compound refid="_building-and-_running_8dox" kind="file"><name>Building-and-Running.dox</name>
@@ -49,19 +50,24 @@
   <compound refid="_data-_series_8dox" kind="file"><name>Data-Series.dox</name>
   </compound>
   <compound refid="dbg_8h" kind="file"><name>dbg.h</name>
+    <member refid="group__debug_1ga4fb0e0ca1220e5d53edd5f25c1676863" kind="define"><name>DPS_DBG_TAG</name></member>
     <member refid="group__debug_1ga170843b022fc7bc00bf871eb5189fe52" kind="define"><name>DPS_DBGBYTES</name></member>
+    <member refid="group__debug_1gae8034947b19e6f6b066ac4fe0a2b3d8e" kind="define"><name>DPS_DBGINFO</name></member>
     <member refid="group__debug_1ga7ac5236c2ba157ffcf56cd073dcf0c3f" kind="define"><name>DPS_DBGPRINT</name></member>
     <member refid="group__debug_1ga0a4156dc81e39b0cf2fb251e37bda307" kind="define"><name>DPS_DBGTRACE</name></member>
     <member refid="group__debug_1ga62bb2ddb60beb7390755a19cd7874b5c" kind="define"><name>DPS_DBGTRACEA</name></member>
     <member refid="group__debug_1gaeca5ec86966717c8dd2d1ffda4be2b3b" kind="define"><name>DPS_DEBUG_ENABLED</name></member>
     <member refid="group__debug_1ga6eb8eb8c3804ebd6f51fe2d7a7625ed8" kind="define"><name>DPS_DEBUG_FORCE</name></member>
+    <member refid="group__debug_1gad0e20f99471bee46c3f0d4a3672fa9c1" kind="define"><name>DPS_DEBUG_INFO</name></member>
     <member refid="group__debug_1ga39adc166f2ce05fb751212c1db9a6ce9" kind="define"><name>DPS_DEBUG_OFF</name></member>
     <member refid="group__debug_1ga777427dcd2750d5006024ce1a54daaac" kind="define"><name>DPS_DEBUG_ON</name></member>
     <member refid="group__debug_1gac69225c4b8e73b27204a2963d4ca0633" kind="define"><name>DPS_ERRPRINT</name></member>
+    <member refid="group__debug_1gac797e456c4202b5fc0df4d31817b6661" kind="define"><name>DPS_INFO_ENABLED</name></member>
     <member refid="group__debug_1gaf1d25cc7f1d2d92f96ba620217af28fd" kind="define"><name>DPS_PRINT</name></member>
     <member refid="group__debug_1gad9a3f4ae1ed318b313434a82132c4044" kind="define"><name>DPS_PRINTT</name></member>
     <member refid="group__debug_1ga37ab9dbe492fd9f7b78349f6e789e5f2" kind="define"><name>DPS_WARNPRINT</name></member>
     <member refid="group__debug_1gad06c0421a8226b0a95be1d722ca05612" kind="enum"><name>DPS_LogLevel</name></member>
+    <member refid="group__debug_1ggad06c0421a8226b0a95be1d722ca05612a00d9f87a32bdd3700e21ebe17706fad5" kind="enumvalue"><name>DPS_LOG_INFO</name></member>
     <member refid="group__debug_1ggad06c0421a8226b0a95be1d722ca05612ad8adeef2745368cf04dbb19b224df53c" kind="enumvalue"><name>DPS_LOG_ERROR</name></member>
     <member refid="group__debug_1ggad06c0421a8226b0a95be1d722ca05612a2f7bd5c9db9df8d4f413767c289ee393" kind="enumvalue"><name>DPS_LOG_WARNING</name></member>
     <member refid="group__debug_1ggad06c0421a8226b0a95be1d722ca05612a2811f744e315eb851568f7707f226b42" kind="enumvalue"><name>DPS_LOG_PRINT</name></member>
@@ -69,8 +75,27 @@
     <member refid="group__debug_1ggad06c0421a8226b0a95be1d722ca05612a0f174e3b850ad53207c2ca8f1fbd9692" kind="enumvalue"><name>DPS_LOG_DBGTRACE</name></member>
     <member refid="group__debug_1ggad06c0421a8226b0a95be1d722ca05612aa2db99dadba3b9117142682254168366" kind="enumvalue"><name>DPS_LOG_DBGPRINT</name></member>
     <member refid="group__debug_1ga6f4bedbcc8b3bd12cea20b5ce3a8abba" kind="variable"><name>DPS_Debug</name></member>
-    <member refid="group__debug_1ga174fef61dca16376546e570c9b831502" kind="function"><name>DPS_Log</name></member>
+    <member refid="group__debug_1ga153af12b5ff1180f081afb49ac30112f" kind="function"><name>DPS_Log</name></member>
     <member refid="group__debug_1ga7cc66c1e82ef557238c122b067f5337a" kind="function"><name>DPS_LogBytes</name></member>
+  </compound>
+  <compound refid="discovery_8h" kind="file"><name>discovery.h</name>
+    <member refid="discovery_8h_1a3f2abf506eb45447bbaa238bd3488d5a" kind="typedef"><name>DPS_DiscoveryHandler</name></member>
+    <member refid="discovery_8h_1a4a4ddabf7fbcb691450170bbfdc5f117" kind="typedef"><name>DPS_DiscoveryService</name></member>
+    <member refid="discovery_8h_1a1444be5b61355f17773e30a34671feec" kind="typedef"><name>DPS_OnDiscoveryServiceDestroyed</name></member>
+    <member refid="discovery_8h_1a017720f3315915e1e3f10506cb198ac8" kind="function"><name>DPS_CreateDiscoveryService</name></member>
+    <member refid="discovery_8h_1a01fdc728b2be4873802669f558151c25" kind="function"><name>DPS_DestroyDiscoveryService</name></member>
+    <member refid="discovery_8h_1a8719df7666aeacf84ffdb812190d28fa" kind="function"><name>DPS_DiscoveryPublish</name></member>
+    <member refid="discovery_8h_1a9328a07fefe871f52485a4ab43c175e7" kind="function"><name>DPS_GetDiscoveryServiceData</name></member>
+    <member refid="discovery_8h_1a2ee07d7ca7e77f9dea196bbfeb20ce09" kind="function"><name>DPS_SetDiscoveryServiceData</name></member>
+  </compound>
+  <compound refid="dispatcher_8h" kind="file"><name>dispatcher.h</name>
+    <member refid="group__dispatcher_1gaa2f5404cdd3f68106cdbde1d3dc48750" kind="typedef"><name>DPS_DelayedFunc</name></member>
+    <member refid="group__dispatcher_1ga1bfb58a5543b2d500f30c0f55118f8cb" kind="typedef"><name>DPS_Dispatcher</name></member>
+    <member refid="group__dispatcher_1ga005155f87fc9d2d2489adf27c92241e2" kind="typedef"><name>DPS_DispatchFunc</name></member>
+    <member refid="group__dispatcher_1ga8e3c5b78450f0d1a044c3a0c861c6ba5" kind="function"><name>DPS_CreateDispatcher</name></member>
+    <member refid="group__dispatcher_1ga53ce24929216914fadc8afe9b643a3fc" kind="function"><name>DPS_DestroyDispatcher</name></member>
+    <member refid="group__dispatcher_1gad64d2a6a83b80400cacb82f257d26cd1" kind="function"><name>DPS_Dispatch</name></member>
+    <member refid="group__dispatcher_1ga36b2069111a875c1e76944ddb024fbd5" kind="function"><name>DPS_ScheduleCall</name></member>
   </compound>
   <compound refid="dps_8h" kind="file"><name>dps.h</name>
     <member refid="group__keystore_1ga02d2171bf3c24345e5f562cb3e181a57" kind="define"><name>DPS_AES_256_KEY_LEN</name></member>
@@ -110,6 +135,7 @@
     <member refid="group__keystore_1ga7a8c6874dd5bff0a6391a5515b545e17" kind="function"><name>DPS_SetCertificate</name></member>
     <member refid="group__keystore_1ga2811c4ffff51bd75a72dd0a9c8796616" kind="function"><name>DPS_MemoryKeyStoreHandle</name></member>
     <member refid="dps_8h_1ad8b397975a479b996ef223367d8835a9" kind="define"><name>DPS_FALSE</name></member>
+    <member refid="group__node_1gafd432f0081728dbac4634bf395b73219" kind="define"><name>DPS_LINK_LOSS_TIMEOUT</name></member>
     <member refid="group__node_1gac939c83361ed89086f37c78d9c9009dd" kind="define"><name>DPS_MCAST_PUB_DISABLED</name></member>
     <member refid="group__node_1gae493573fb2e02b87258952223eb4fcd7" kind="define"><name>DPS_MCAST_PUB_ENABLE_RECV</name></member>
     <member refid="group__node_1ga178a3a6450eeff450820fa34fd82049c" kind="define"><name>DPS_MCAST_PUB_ENABLE_SEND</name></member>
@@ -120,9 +146,13 @@
     <member refid="group__publication_1gaf93282d11ef2e1fbbfc66c57851f43a6" kind="typedef"><name>DPS_Buffer</name></member>
     <member refid="group__node_1ga4dd612ab965134321bb57fdb065f121c" kind="typedef"><name>DPS_Node</name></member>
     <member refid="group__nodeaddress_1ga9e9f56aa38e82b4edcef7eb81e9f5bd2" kind="typedef"><name>DPS_NodeAddress</name></member>
-    <member refid="group__node_1gaaf70ac42acab8a67693947871e97600f" kind="typedef"><name>DPS_OnLinkComplete</name></member>
+    <member refid="group__node_1ga1518af805c7ace335841784178bd8aec" kind="typedef"><name>DPS_OnLinkComplete</name></member>
+    <member refid="group__node_1ga50d9c5fa2ac1cfbecc7647ce885e2e16" kind="typedef"><name>DPS_OnLinkLoss</name></member>
     <member refid="group__node_1ga1e88cc9ca744782e36d58a022fe026c5" kind="typedef"><name>DPS_OnNodeDestroyed</name></member>
+    <member refid="group__node_1gac902cf51bb5a028549869056d0579233" kind="typedef"><name>DPS_OnNodeShutdown</name></member>
+    <member refid="group__publication_1ga06fbbcec4c0b2fa56da4264030271f4e" kind="typedef"><name>DPS_OnPublicationDestroyed</name></member>
     <member refid="group__node_1ga8777fdab3d67ab171bd1ed1322564367" kind="typedef"><name>DPS_OnResolveAddressComplete</name></member>
+    <member refid="group__subscription_1ga79f97355d297343c1f772a2214daa73d" kind="typedef"><name>DPS_OnSubscriptionDestroyed</name></member>
     <member refid="group__node_1ga119b8d5d6d6ab2390b69d272c36f1414" kind="typedef"><name>DPS_OnUnlinkComplete</name></member>
     <member refid="group__publication_1ga0d439693474aa54e27f3d45a054696ac" kind="typedef"><name>DPS_Publication</name></member>
     <member refid="group__subscription_1gab95ef1762636ad505c940744b8dce83f" kind="typedef"><name>DPS_PublicationHandler</name></member>
@@ -140,8 +170,8 @@
     <member refid="group__subscription_1ga4095bb00bd0ca7fa9614ebbc2c28199f" kind="function"><name>DPS_CreateSubscription</name></member>
     <member refid="group__nodeaddress_1ga1f373831e8009ff5959ccb02b8c3fb14" kind="function"><name>DPS_DestroyAddress</name></member>
     <member refid="group__node_1ga85f5121f80411f5ab82449efe20b68dd" kind="function"><name>DPS_DestroyNode</name></member>
-    <member refid="group__publication_1ga17bb01c949aaaf3bafd53323c9effd5f" kind="function"><name>DPS_DestroyPublication</name></member>
-    <member refid="group__subscription_1gaac78b5690aa31eec642b2a706faac510" kind="function"><name>DPS_DestroySubscription</name></member>
+    <member refid="group__publication_1gaa14bbb3000222c9b168bca327a338ee7" kind="function"><name>DPS_DestroyPublication</name></member>
+    <member refid="group__subscription_1ga1b43ab9f71e6ebcd6e7981a5d8fbc000" kind="function"><name>DPS_DestroySubscription</name></member>
     <member refid="group__node_1ga32b12f0e54f0cd66b46f2a47378c6aeb" kind="function"><name>DPS_GetListenAddress</name></member>
     <member refid="group__node_1gac1caa8f004d43a5d0f4ef69715a53145" kind="function"><name>DPS_GetListenAddressString</name></member>
     <member refid="group__node_1ga65bba7bcfe5e940b153fcced4e2e8880" kind="function"><name>DPS_GetNodeData</name></member>
@@ -156,6 +186,7 @@
     <member refid="group__publication_1ga1d7e81c2f0b19736a4f7a7195e5bd98d" kind="function"><name>DPS_PublicationGetSenderKeyId</name></member>
     <member refid="group__publication_1ga875b48217d861d4a9fa5471419d354e9" kind="function"><name>DPS_PublicationGetSequenceNum</name></member>
     <member refid="group__publication_1ga143a5c6fbe0bdf1725e841f122582432" kind="function"><name>DPS_PublicationGetTopic</name></member>
+    <member refid="group__publication_1ga6d8eee29e0c15db182598c7439232e1c" kind="function"><name>DPS_PublicationGetTTL</name></member>
     <member refid="group__publication_1gaba1ad3ee807b75a1281d334be06a12f7" kind="function"><name>DPS_PublicationGetUUID</name></member>
     <member refid="group__publication_1ga516f7f314c7b95210751d00285758b9b" kind="function"><name>DPS_PublicationIsAckRequested</name></member>
     <member refid="group__publication_1gaa5225be2733d6ebfd01f9475e3fc06f5" kind="function"><name>DPS_PublicationRemoveSubId</name></member>
@@ -163,12 +194,16 @@
     <member refid="group__publication_1gad0efefd35f178638f0fd4decdc28e6a6" kind="function"><name>DPS_PublishBufs</name></member>
     <member refid="group__node_1gab78df7f4498b847ddb32fdd33d39ef0f" kind="function"><name>DPS_ResolveAddress</name></member>
     <member refid="group__nodeaddress_1ga1492aff0a8789c4b8a7cc47c84ca1b1f" kind="function"><name>DPS_SetAddress</name></member>
+    <member refid="group__node_1ga28d9d432839aad5ca777259bd17dae67" kind="function"><name>DPS_SetLinkLossCallback</name></member>
     <member refid="group__node_1gad19cf4272ba11e935654175c83db2ce1" kind="function"><name>DPS_SetNodeData</name></member>
+    <member refid="group__node_1ga96fbb20dc7d5a30a8fc5eefd181f69c9" kind="function"><name>DPS_SetNodeLinkLossTimeout</name></member>
     <member refid="group__node_1gac7e33476c06009ed42a6ea6f3c53380a" kind="function"><name>DPS_SetNodeSubscriptionUpdateDelay</name></member>
     <member refid="group__publication_1ga91c46ccb6df7f4bb99ca5d9d35cc5a4a" kind="function"><name>DPS_SetPublicationData</name></member>
     <member refid="group__subscription_1gad581d341003e20c714061e44b57c2009" kind="function"><name>DPS_SetSubscriptionData</name></member>
+    <member refid="group__node_1ga71d0a1ec941a5ac5f4e994e4cc5cb54e" kind="function"><name>DPS_ShutdownNode</name></member>
     <member refid="group__node_1ga538588a1e2ea805377a90ac22ee6bc82" kind="function"><name>DPS_StartNode</name></member>
     <member refid="group__subscription_1ga83234ea82a91e07e3f5894a4dcf5267e" kind="function"><name>DPS_Subscribe</name></member>
+    <member refid="group__subscription_1ga218210cd3bece2cf8e6e4ce4d81c773a" kind="function"><name>DPS_SubscribeExpired</name></member>
     <member refid="group__subscription_1gafea65751c811555736c8c65fcb3a9480" kind="function"><name>DPS_SubscriptionGetNode</name></member>
     <member refid="group__subscription_1gab0ad2c6806f8f44f27c70fff915b7e9a" kind="function"><name>DPS_SubscriptionGetNumTopics</name></member>
     <member refid="group__subscription_1gaacc63deda2f2d97cf3f44ca84784b2f6" kind="function"><name>DPS_SubscriptionGetTopic</name></member>
@@ -279,6 +314,7 @@
   </compound>
   <compound refid="group__debug" kind="group"><name>debug</name>
     <member refid="group__debug_1gad06c0421a8226b0a95be1d722ca05612" kind="enum"><name>DPS_LogLevel</name></member>
+    <member refid="group__debug_1ggad06c0421a8226b0a95be1d722ca05612a00d9f87a32bdd3700e21ebe17706fad5" kind="enumvalue"><name>DPS_LOG_INFO</name></member>
     <member refid="group__debug_1ggad06c0421a8226b0a95be1d722ca05612ad8adeef2745368cf04dbb19b224df53c" kind="enumvalue"><name>DPS_LOG_ERROR</name></member>
     <member refid="group__debug_1ggad06c0421a8226b0a95be1d722ca05612a2f7bd5c9db9df8d4f413767c289ee393" kind="enumvalue"><name>DPS_LOG_WARNING</name></member>
     <member refid="group__debug_1ggad06c0421a8226b0a95be1d722ca05612a2811f744e315eb851568f7707f226b42" kind="enumvalue"><name>DPS_LOG_PRINT</name></member>
@@ -286,20 +322,33 @@
     <member refid="group__debug_1ggad06c0421a8226b0a95be1d722ca05612a0f174e3b850ad53207c2ca8f1fbd9692" kind="enumvalue"><name>DPS_LOG_DBGTRACE</name></member>
     <member refid="group__debug_1ggad06c0421a8226b0a95be1d722ca05612aa2db99dadba3b9117142682254168366" kind="enumvalue"><name>DPS_LOG_DBGPRINT</name></member>
     <member refid="group__debug_1ga6f4bedbcc8b3bd12cea20b5ce3a8abba" kind="variable"><name>DPS_Debug</name></member>
-    <member refid="group__debug_1ga174fef61dca16376546e570c9b831502" kind="function"><name>DPS_Log</name></member>
+    <member refid="group__debug_1ga153af12b5ff1180f081afb49ac30112f" kind="function"><name>DPS_Log</name></member>
     <member refid="group__debug_1ga7cc66c1e82ef557238c122b067f5337a" kind="function"><name>DPS_LogBytes</name></member>
+    <member refid="group__debug_1ga4fb0e0ca1220e5d53edd5f25c1676863" kind="define"><name>DPS_DBG_TAG</name></member>
     <member refid="group__debug_1ga170843b022fc7bc00bf871eb5189fe52" kind="define"><name>DPS_DBGBYTES</name></member>
+    <member refid="group__debug_1gae8034947b19e6f6b066ac4fe0a2b3d8e" kind="define"><name>DPS_DBGINFO</name></member>
     <member refid="group__debug_1ga7ac5236c2ba157ffcf56cd073dcf0c3f" kind="define"><name>DPS_DBGPRINT</name></member>
     <member refid="group__debug_1ga0a4156dc81e39b0cf2fb251e37bda307" kind="define"><name>DPS_DBGTRACE</name></member>
     <member refid="group__debug_1ga62bb2ddb60beb7390755a19cd7874b5c" kind="define"><name>DPS_DBGTRACEA</name></member>
     <member refid="group__debug_1gaeca5ec86966717c8dd2d1ffda4be2b3b" kind="define"><name>DPS_DEBUG_ENABLED</name></member>
     <member refid="group__debug_1ga6eb8eb8c3804ebd6f51fe2d7a7625ed8" kind="define"><name>DPS_DEBUG_FORCE</name></member>
+    <member refid="group__debug_1gad0e20f99471bee46c3f0d4a3672fa9c1" kind="define"><name>DPS_DEBUG_INFO</name></member>
     <member refid="group__debug_1ga39adc166f2ce05fb751212c1db9a6ce9" kind="define"><name>DPS_DEBUG_OFF</name></member>
     <member refid="group__debug_1ga777427dcd2750d5006024ce1a54daaac" kind="define"><name>DPS_DEBUG_ON</name></member>
     <member refid="group__debug_1gac69225c4b8e73b27204a2963d4ca0633" kind="define"><name>DPS_ERRPRINT</name></member>
+    <member refid="group__debug_1gac797e456c4202b5fc0df4d31817b6661" kind="define"><name>DPS_INFO_ENABLED</name></member>
     <member refid="group__debug_1gaf1d25cc7f1d2d92f96ba620217af28fd" kind="define"><name>DPS_PRINT</name></member>
     <member refid="group__debug_1gad9a3f4ae1ed318b313434a82132c4044" kind="define"><name>DPS_PRINTT</name></member>
     <member refid="group__debug_1ga37ab9dbe492fd9f7b78349f6e789e5f2" kind="define"><name>DPS_WARNPRINT</name></member>
+  </compound>
+  <compound refid="group__dispatcher" kind="group"><name>dispatcher</name>
+    <member refid="group__dispatcher_1gaa2f5404cdd3f68106cdbde1d3dc48750" kind="typedef"><name>DPS_DelayedFunc</name></member>
+    <member refid="group__dispatcher_1ga1bfb58a5543b2d500f30c0f55118f8cb" kind="typedef"><name>DPS_Dispatcher</name></member>
+    <member refid="group__dispatcher_1ga005155f87fc9d2d2489adf27c92241e2" kind="typedef"><name>DPS_DispatchFunc</name></member>
+    <member refid="group__dispatcher_1ga8e3c5b78450f0d1a044c3a0c861c6ba5" kind="function"><name>DPS_CreateDispatcher</name></member>
+    <member refid="group__dispatcher_1ga53ce24929216914fadc8afe9b643a3fc" kind="function"><name>DPS_DestroyDispatcher</name></member>
+    <member refid="group__dispatcher_1gad64d2a6a83b80400cacb82f257d26cd1" kind="function"><name>DPS_Dispatch</name></member>
+    <member refid="group__dispatcher_1ga36b2069111a875c1e76944ddb024fbd5" kind="function"><name>DPS_ScheduleCall</name></member>
   </compound>
   <compound refid="group__event" kind="group"><name>event</name>
     <member refid="group__event_1ga97617da1bac0e76646713b8665dfdd85" kind="typedef"><name>DPS_Event</name></member>
@@ -355,8 +404,10 @@
   </compound>
   <compound refid="group__node" kind="group"><name>node</name>
     <member refid="group__node_1ga4dd612ab965134321bb57fdb065f121c" kind="typedef"><name>DPS_Node</name></member>
-    <member refid="group__node_1gaaf70ac42acab8a67693947871e97600f" kind="typedef"><name>DPS_OnLinkComplete</name></member>
+    <member refid="group__node_1ga1518af805c7ace335841784178bd8aec" kind="typedef"><name>DPS_OnLinkComplete</name></member>
+    <member refid="group__node_1ga50d9c5fa2ac1cfbecc7647ce885e2e16" kind="typedef"><name>DPS_OnLinkLoss</name></member>
     <member refid="group__node_1ga1e88cc9ca744782e36d58a022fe026c5" kind="typedef"><name>DPS_OnNodeDestroyed</name></member>
+    <member refid="group__node_1gac902cf51bb5a028549869056d0579233" kind="typedef"><name>DPS_OnNodeShutdown</name></member>
     <member refid="group__node_1ga8777fdab3d67ab171bd1ed1322564367" kind="typedef"><name>DPS_OnResolveAddressComplete</name></member>
     <member refid="group__node_1ga119b8d5d6d6ab2390b69d272c36f1414" kind="typedef"><name>DPS_OnUnlinkComplete</name></member>
     <member refid="group__node_1gaf6641b5bbf27b2c45ac7f926b0ce4efe" kind="function"><name>DPS_CreateNode</name></member>
@@ -367,11 +418,15 @@
     <member refid="group__node_1gab7616642a79f637aa146b3b1a4ed0af8" kind="function"><name>DPS_Link</name></member>
     <member refid="group__node_1ga69325fd8127687c469e503763a29f6d8" kind="function"><name>DPS_LinkTo</name></member>
     <member refid="group__node_1gab78df7f4498b847ddb32fdd33d39ef0f" kind="function"><name>DPS_ResolveAddress</name></member>
+    <member refid="group__node_1ga28d9d432839aad5ca777259bd17dae67" kind="function"><name>DPS_SetLinkLossCallback</name></member>
     <member refid="group__node_1gad19cf4272ba11e935654175c83db2ce1" kind="function"><name>DPS_SetNodeData</name></member>
+    <member refid="group__node_1ga96fbb20dc7d5a30a8fc5eefd181f69c9" kind="function"><name>DPS_SetNodeLinkLossTimeout</name></member>
     <member refid="group__node_1gac7e33476c06009ed42a6ea6f3c53380a" kind="function"><name>DPS_SetNodeSubscriptionUpdateDelay</name></member>
+    <member refid="group__node_1ga71d0a1ec941a5ac5f4e994e4cc5cb54e" kind="function"><name>DPS_ShutdownNode</name></member>
     <member refid="group__node_1ga538588a1e2ea805377a90ac22ee6bc82" kind="function"><name>DPS_StartNode</name></member>
     <member refid="group__node_1ga18398ef1e81c5dba98a95da6d18b937e" kind="function"><name>DPS_Unlink</name></member>
     <member refid="group__node_1gae16f5ff85ac57a6f5567db73343c8af1" kind="function"><name>DPS_UnlinkFrom</name></member>
+    <member refid="group__node_1gafd432f0081728dbac4634bf395b73219" kind="define"><name>DPS_LINK_LOSS_TIMEOUT</name></member>
     <member refid="group__node_1gac939c83361ed89086f37c78d9c9009dd" kind="define"><name>DPS_MCAST_PUB_DISABLED</name></member>
     <member refid="group__node_1gae493573fb2e02b87258952223eb4fcd7" kind="define"><name>DPS_MCAST_PUB_ENABLE_RECV</name></member>
     <member refid="group__node_1ga178a3a6450eeff450820fa34fd82049c" kind="define"><name>DPS_MCAST_PUB_ENABLE_SEND</name></member>
@@ -389,6 +444,7 @@
     <member refid="group__publication_1gaf8615f0bcd3d95859cd7f2cdbf772e23" kind="typedef"><name>DPS_AcknowledgementHandler</name></member>
     <member refid="group__publication_1ga5d62f70df03e7faf06494e89d74e346c" kind="typedef"><name>DPS_AckPublicationBufsComplete</name></member>
     <member refid="group__publication_1gaf93282d11ef2e1fbbfc66c57851f43a6" kind="typedef"><name>DPS_Buffer</name></member>
+    <member refid="group__publication_1ga06fbbcec4c0b2fa56da4264030271f4e" kind="typedef"><name>DPS_OnPublicationDestroyed</name></member>
     <member refid="group__publication_1ga0d439693474aa54e27f3d45a054696ac" kind="typedef"><name>DPS_Publication</name></member>
     <member refid="group__publication_1gaf1b7a008b10280f94a673e1b8e938e72" kind="typedef"><name>DPS_PublishBufsComplete</name></member>
     <member refid="group__publication_1ga9190b8fa3bad848fb428acd6c0c2b210" kind="function"><name>DPS_AckGetSenderKeyId</name></member>
@@ -397,7 +453,7 @@
     <member refid="group__publication_1gad1de82b1bebeb8f47cd755d5f7b6fadb" kind="function"><name>DPS_AckPublicationBufs</name></member>
     <member refid="group__publication_1ga41f31a8b63558e13d73d96de6086e5c4" kind="function"><name>DPS_CopyPublication</name></member>
     <member refid="group__publication_1gaca070a96a6374e99a05d647c10737962" kind="function"><name>DPS_CreatePublication</name></member>
-    <member refid="group__publication_1ga17bb01c949aaaf3bafd53323c9effd5f" kind="function"><name>DPS_DestroyPublication</name></member>
+    <member refid="group__publication_1gaa14bbb3000222c9b168bca327a338ee7" kind="function"><name>DPS_DestroyPublication</name></member>
     <member refid="group__publication_1gaa8bee35089ac62289c9ba0e6a0568ca0" kind="function"><name>DPS_GetPublicationData</name></member>
     <member refid="group__publication_1ga7b0709e28cb34d5a30b90e4142cd6c19" kind="function"><name>DPS_InitPublication</name></member>
     <member refid="group__publication_1ga91471ddf6f66798e255b28b3e913144b" kind="function"><name>DPS_PublicationAddSubId</name></member>
@@ -406,6 +462,7 @@
     <member refid="group__publication_1ga1d7e81c2f0b19736a4f7a7195e5bd98d" kind="function"><name>DPS_PublicationGetSenderKeyId</name></member>
     <member refid="group__publication_1ga875b48217d861d4a9fa5471419d354e9" kind="function"><name>DPS_PublicationGetSequenceNum</name></member>
     <member refid="group__publication_1ga143a5c6fbe0bdf1725e841f122582432" kind="function"><name>DPS_PublicationGetTopic</name></member>
+    <member refid="group__publication_1ga6d8eee29e0c15db182598c7439232e1c" kind="function"><name>DPS_PublicationGetTTL</name></member>
     <member refid="group__publication_1gaba1ad3ee807b75a1281d334be06a12f7" kind="function"><name>DPS_PublicationGetUUID</name></member>
     <member refid="group__publication_1ga516f7f314c7b95210751d00285758b9b" kind="function"><name>DPS_PublicationIsAckRequested</name></member>
     <member refid="group__publication_1gaa5225be2733d6ebfd01f9475e3fc06f5" kind="function"><name>DPS_PublicationRemoveSubId</name></member>
@@ -474,13 +531,15 @@
     <member refid="group__status_1ga0ea3dd37bc558859ae0cb5a4f79a4bdd" kind="define"><name>DPS_OK</name></member>
   </compound>
   <compound refid="group__subscription" kind="group"><name>subscription</name>
+    <member refid="group__subscription_1ga79f97355d297343c1f772a2214daa73d" kind="typedef"><name>DPS_OnSubscriptionDestroyed</name></member>
     <member refid="group__subscription_1gab95ef1762636ad505c940744b8dce83f" kind="typedef"><name>DPS_PublicationHandler</name></member>
     <member refid="group__subscription_1gadb927c4c1b7306867a75fc4288b54af7" kind="typedef"><name>DPS_Subscription</name></member>
     <member refid="group__subscription_1ga4095bb00bd0ca7fa9614ebbc2c28199f" kind="function"><name>DPS_CreateSubscription</name></member>
-    <member refid="group__subscription_1gaac78b5690aa31eec642b2a706faac510" kind="function"><name>DPS_DestroySubscription</name></member>
+    <member refid="group__subscription_1ga1b43ab9f71e6ebcd6e7981a5d8fbc000" kind="function"><name>DPS_DestroySubscription</name></member>
     <member refid="group__subscription_1ga88ab2284734f099ef67bcc60997142b3" kind="function"><name>DPS_GetSubscriptionData</name></member>
     <member refid="group__subscription_1gad581d341003e20c714061e44b57c2009" kind="function"><name>DPS_SetSubscriptionData</name></member>
     <member refid="group__subscription_1ga83234ea82a91e07e3f5894a4dcf5267e" kind="function"><name>DPS_Subscribe</name></member>
+    <member refid="group__subscription_1ga218210cd3bece2cf8e6e4ce4d81c773a" kind="function"><name>DPS_SubscribeExpired</name></member>
     <member refid="group__subscription_1gafea65751c811555736c8c65fcb3a9480" kind="function"><name>DPS_SubscriptionGetNode</name></member>
     <member refid="group__subscription_1gab0ad2c6806f8f44f27c70fff915b7e9a" kind="function"><name>DPS_SubscriptionGetNumTopics</name></member>
     <member refid="group__subscription_1gaacc63deda2f2d97cf3f44ca84784b2f6" kind="function"><name>DPS_SubscriptionGetTopic</name></member>

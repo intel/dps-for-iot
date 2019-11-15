@@ -115,6 +115,9 @@ Typedefs</h2></td></tr>
 typedef struct <a class="el" href="struct___d_p_s___buffer.html">_DPS_Buffer</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#gaf93282d11ef2e1fbbfc66c57851f43a6">DPS_Buffer</a></td></tr>
 <tr class="memdesc:gaf93282d11ef2e1fbbfc66c57851f43a6"><td class="mdescLeft">&#160;</td><td class="mdescRight">A buffer. <br /></td></tr>
 <tr class="separator:gaf93282d11ef2e1fbbfc66c57851f43a6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga06fbbcec4c0b2fa56da4264030271f4e"><td class="memItemLeft" align="right" valign="top">typedef void(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#ga06fbbcec4c0b2fa56da4264030271f4e">DPS_OnPublicationDestroyed</a>) (<a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub)</td></tr>
+<tr class="memdesc:ga06fbbcec4c0b2fa56da4264030271f4e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function prototype for callback function called when a publication is destroyed.  <a href="#ga06fbbcec4c0b2fa56da4264030271f4e">More...</a><br /></td></tr>
+<tr class="separator:ga06fbbcec4c0b2fa56da4264030271f4e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga0d439693474aa54e27f3d45a054696ac"><td class="memItemLeft" align="right" valign="top"><a id="ga0d439693474aa54e27f3d45a054696ac"></a>
 typedef struct _DPS_Publication&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a></td></tr>
 <tr class="memdesc:ga0d439693474aa54e27f3d45a054696ac"><td class="mdescLeft">&#160;</td><td class="mdescRight">Opaque type for a publication. <br /></td></tr>
@@ -143,9 +146,9 @@ Functions</h2></td></tr>
 <tr class="memitem:gaca070a96a6374e99a05d647c10737962"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#gaca070a96a6374e99a05d647c10737962">DPS_CreatePublication</a> (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node)</td></tr>
 <tr class="memdesc:gaca070a96a6374e99a05d647c10737962"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allocates storage for a publication.  <a href="#gaca070a96a6374e99a05d647c10737962">More...</a><br /></td></tr>
 <tr class="separator:gaca070a96a6374e99a05d647c10737962"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga17bb01c949aaaf3bafd53323c9effd5f"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#ga17bb01c949aaaf3bafd53323c9effd5f">DPS_DestroyPublication</a> (<a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub)</td></tr>
-<tr class="memdesc:ga17bb01c949aaaf3bafd53323c9effd5f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Delete a publication and frees any resources allocated.  <a href="#ga17bb01c949aaaf3bafd53323c9effd5f">More...</a><br /></td></tr>
-<tr class="separator:ga17bb01c949aaaf3bafd53323c9effd5f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gaa14bbb3000222c9b168bca327a338ee7"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#gaa14bbb3000222c9b168bca327a338ee7">DPS_DestroyPublication</a> (<a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub, <a class="el" href="group__publication.html#ga06fbbcec4c0b2fa56da4264030271f4e">DPS_OnPublicationDestroyed</a> cb)</td></tr>
+<tr class="memdesc:gaa14bbb3000222c9b168bca327a338ee7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Delete a publication and frees any resources allocated.  <a href="#gaa14bbb3000222c9b168bca327a338ee7">More...</a><br /></td></tr>
+<tr class="separator:gaa14bbb3000222c9b168bca327a338ee7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gaa8bee35089ac62289c9ba0e6a0568ca0"><td class="memItemLeft" align="right" valign="top">void *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#gaa8bee35089ac62289c9ba0e6a0568ca0">DPS_GetPublicationData</a> (const <a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub)</td></tr>
 <tr class="memdesc:gaa8bee35089ac62289c9ba0e6a0568ca0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get application data pointer previously set by <a class="el" href="group__publication.html#ga91c46ccb6df7f4bb99ca5d9d35cc5a4a" title="Store a pointer to application data in a publication. ">DPS_SetPublicationData()</a>  <a href="#gaa8bee35089ac62289c9ba0e6a0568ca0">More...</a><br /></td></tr>
 <tr class="separator:gaa8bee35089ac62289c9ba0e6a0568ca0"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -170,6 +173,9 @@ Functions</h2></td></tr>
 <tr class="memitem:ga143a5c6fbe0bdf1725e841f122582432"><td class="memItemLeft" align="right" valign="top">const char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#ga143a5c6fbe0bdf1725e841f122582432">DPS_PublicationGetTopic</a> (const <a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub, size_t index)</td></tr>
 <tr class="memdesc:ga143a5c6fbe0bdf1725e841f122582432"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get a topic for a publication.  <a href="#ga143a5c6fbe0bdf1725e841f122582432">More...</a><br /></td></tr>
 <tr class="separator:ga143a5c6fbe0bdf1725e841f122582432"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga6d8eee29e0c15db182598c7439232e1c"><td class="memItemLeft" align="right" valign="top">int16_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#ga6d8eee29e0c15db182598c7439232e1c">DPS_PublicationGetTTL</a> (const <a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub)</td></tr>
+<tr class="memdesc:ga6d8eee29e0c15db182598c7439232e1c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the TTL for a publication.  <a href="#ga6d8eee29e0c15db182598c7439232e1c">More...</a><br /></td></tr>
+<tr class="separator:ga6d8eee29e0c15db182598c7439232e1c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gaba1ad3ee807b75a1281d334be06a12f7"><td class="memItemLeft" align="right" valign="top">const <a class="el" href="group__uuid.html#gaef1d03afcc6410602ade1d48f24c3997">DPS_UUID</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__publication.html#gaba1ad3ee807b75a1281d334be06a12f7">DPS_PublicationGetUUID</a> (const <a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub)</td></tr>
 <tr class="memdesc:gaba1ad3ee807b75a1281d334be06a12f7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the UUID for a publication.  <a href="#gaba1ad3ee807b75a1281d334be06a12f7">More...</a><br /></td></tr>
 <tr class="separator:gaba1ad3ee807b75a1281d334be06a12f7"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -237,6 +243,28 @@ Functions</h2></td></tr>
     <tr><td class="paramname">numBufs</td><td>The number of payload buffers passed to <a class="el" href="group__publication.html#gad1de82b1bebeb8f47cd755d5f7b6fadb" title="Acknowledge a publication. ">DPS_AckPublicationBufs()</a> </td></tr>
     <tr><td class="paramname">status</td><td>The status of the publish </td></tr>
     <tr><td class="paramname">data</td><td>Application data passed to <a class="el" href="group__publication.html#gad1de82b1bebeb8f47cd755d5f7b6fadb" title="Acknowledge a publication. ">DPS_AckPublicationBufs()</a> </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="ga06fbbcec4c0b2fa56da4264030271f4e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga06fbbcec4c0b2fa56da4264030271f4e">&#9670;&nbsp;</a></span>DPS_OnPublicationDestroyed</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">typedef void(* DPS_OnPublicationDestroyed) (<a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Function prototype for callback function called when a publication is destroyed. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">pub</td><td>The publication that was destroyed. This is valid during the callback. </td></tr>
   </table>
   </dd>
 </dl>
@@ -447,7 +475,7 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Creates a partial copy of a publication that can be used to acknowledge the publication. </p>
-<p>The copy is not useful for anything other than in a call to <a class="el" href="group__publication.html#ga308074429a566ffb8d04d55bae520b04" title="Acknowledge a publication. ">DPS_AckPublication()</a> and should be freed by calling <a class="el" href="group__publication.html#ga17bb01c949aaaf3bafd53323c9effd5f" title="Delete a publication and frees any resources allocated. ">DPS_DestroyPublication()</a> when no longer needed.</p>
+<p>The copy is not useful for anything other than in a call to <a class="el" href="group__publication.html#ga308074429a566ffb8d04d55bae520b04" title="Acknowledge a publication. ">DPS_AckPublication()</a> and should be freed by calling <a class="el" href="group__publication.html#gaa14bbb3000222c9b168bca327a338ee7" title="Delete a publication and frees any resources allocated. ">DPS_DestroyPublication()</a> when no longer needed.</p>
 <p>The partial copy can be used with <a class="el" href="group__publication.html#gaba1ad3ee807b75a1281d334be06a12f7" title="Get the UUID for a publication. ">DPS_PublicationGetUUID()</a> and <a class="el" href="group__publication.html#ga875b48217d861d4a9fa5471419d354e9" title="Get the sequence number for a publication. ">DPS_PublicationGetSequenceNum()</a></p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
@@ -486,8 +514,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="ga17bb01c949aaaf3bafd53323c9effd5f"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga17bb01c949aaaf3bafd53323c9effd5f">&#9670;&nbsp;</a></span>DPS_DestroyPublication()</h2>
+<a id="gaa14bbb3000222c9b168bca327a338ee7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#gaa14bbb3000222c9b168bca327a338ee7">&#9670;&nbsp;</a></span>DPS_DestroyPublication()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -496,18 +524,29 @@ Functions</h2></td></tr>
           <td class="memname"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a> DPS_DestroyPublication </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *&#160;</td>
-          <td class="paramname"><em>pub</em></td><td>)</td>
+          <td class="paramname"><em>pub</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
           <td></td>
+          <td class="paramtype"><a class="el" href="group__publication.html#ga06fbbcec4c0b2fa56da4264030271f4e">DPS_OnPublicationDestroyed</a>&#160;</td>
+          <td class="paramname"><em>cb</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
         </tr>
       </table>
 </div><div class="memdoc">
 
 <p>Delete a publication and frees any resources allocated. </p>
-<p>This does not cancel retained publications that have an unexpired TTL. To expire a retained publication call <a class="el" href="group__publication.html#ga828a4efc5c235c48a81f6460cc3fe416" title="Publish a set of topics along with an optional payload. ">DPS_Publish()</a> with a zero TTL.</p>
+<p>This does not cancel retained publications that have an unexpired TTL. To expire a retained publication call <a class="el" href="group__publication.html#ga828a4efc5c235c48a81f6460cc3fe416" title="Publish a set of topics along with an optional payload. ">DPS_Publish()</a> with a negative TTL.</p>
 <p>This function should only be called for publications created by <a class="el" href="group__publication.html#gaca070a96a6374e99a05d647c10737962" title="Allocates storage for a publication. ">DPS_CreatePublication()</a> or <a class="el" href="group__publication.html#ga41f31a8b63558e13d73d96de6086e5c4" title="Creates a partial copy of a publication that can be used to acknowledge the publication. ">DPS_CopyPublication()</a>.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">pub</td><td>The publication to destroy</td></tr>
+    <tr><td class="paramname">pub</td><td>The publication to destroy </td></tr>
+    <tr><td class="paramname">cb</td><td>Callback function to be called when the publication is destroyed</td></tr>
   </table>
   </dd>
 </dl>
@@ -597,7 +636,7 @@ Functions</h2></td></tr>
 <p>Call the accessor function <a class="el" href="group__publication.html#gaba1ad3ee807b75a1281d334be06a12f7" title="Get the UUID for a publication. ">DPS_PublicationGetUUID()</a> to get the UUID for this publication.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">pub</td><td>The the publication to initialize </td></tr>
+    <tr><td class="paramname">pub</td><td>The publication to initialize </td></tr>
     <tr><td class="paramname">topics</td><td>The topic strings to publish </td></tr>
     <tr><td class="paramname">numTopics</td><td>The number of topic strings to publish - must be &gt;= 1 </td></tr>
     <tr><td class="paramname">noWildCard</td><td>If TRUE the publication will not match wildcard subscriptions </td></tr>
@@ -639,7 +678,7 @@ Functions</h2></td></tr>
 <p>Adds a key identifier to use for encrypted publications. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">pub</td><td>The the publication to initialize </td></tr>
+    <tr><td class="paramname">pub</td><td>The publication to initialize </td></tr>
     <tr><td class="paramname">keyId</td><td>Key identifier to use for encrypted publications</td></tr>
   </table>
   </dd>
@@ -795,6 +834,33 @@ Functions</h2></td></tr>
 
 </div>
 </div>
+<a id="ga6d8eee29e0c15db182598c7439232e1c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga6d8eee29e0c15db182598c7439232e1c">&#9670;&nbsp;</a></span>DPS_PublicationGetTTL()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int16_t DPS_PublicationGetTTL </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *&#160;</td>
+          <td class="paramname"><em>pub</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Get the TTL for a publication. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">pub</td><td>The publication</td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Time to live in seconds - maximum TTL is about 9 hours </dd></dl>
+
+</div>
+</div>
 <a id="gaba1ad3ee807b75a1281d334be06a12f7"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#gaba1ad3ee807b75a1281d334be06a12f7">&#9670;&nbsp;</a></span>DPS_PublicationGetUUID()</h2>
 
@@ -878,7 +944,7 @@ Functions</h2></td></tr>
 <p>Removes a key identifier to use for encrypted publications. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">pub</td><td>The the publication to initialize </td></tr>
+    <tr><td class="paramname">pub</td><td>The publication to initialize </td></tr>
     <tr><td class="paramname">keyId</td><td>Key identifier to remove </td></tr>
   </table>
   </dd>
@@ -1051,7 +1117,7 @@ Functions</h2></td></tr>
 </div><!-- doc-content -->
 <div class="navpath" id="nav-path">
   <ul>
-    <li class="footer" style="float:left"><b>Distributed Publish & Subscribe for IoT</b></li> <li class="footer">Generated Wed May 15 2019 12:06:23</li>
+    <li class="footer" style="float:left"><b>Distributed Publish & Subscribe for IoT</b></li> <li class="footer">Generated Fri Nov 15 2019 09:37:47</li>
   </ul>
 </div>
 </body>

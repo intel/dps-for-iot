@@ -15,7 +15,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="824" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="824" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" line="905" column="1" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" bodystart="905" bodyend="-1"/>
       </memberdef>
       <memberdef kind="variable" id="struct___d_p_s___buffer_1a233bcefdc7505305c57785736d0e55fd" prot="public" static="no" mutable="no">
         <type>size_t</type>
@@ -28,14 +28,14 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="825" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="825" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" line="906" column="1" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" bodystart="906" bodyend="-1"/>
       </memberdef>
       </sectiondef>
     <briefdescription>
 <para>A buffer. </para>    </briefdescription>
     <detaileddescription>
     </detaileddescription>
-    <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="823" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="823" bodyend="826"/>
+    <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" line="904" column="1" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" bodystart="904" bodyend="907"/>
     <listofallmembers>
       <member refid="struct___d_p_s___buffer_1a63bb38c141cdd79b1a3956ff136aafd6" prot="public" virt="non-virtual"><scope>_DPS_Buffer</scope><name>base</name></member>
       <member refid="struct___d_p_s___buffer_1a233bcefdc7505305c57785736d0e55fd" prot="public" virt="non-virtual"><scope>_DPS_Buffer</scope><name>len</name></member>

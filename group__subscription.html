@@ -98,6 +98,9 @@ $(document).ready(function(){initNavTree('group__subscription.html','');});
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="typedef-members"></a>
 Typedefs</h2></td></tr>
+<tr class="memitem:ga79f97355d297343c1f772a2214daa73d"><td class="memItemLeft" align="right" valign="top">typedef void(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__subscription.html#ga79f97355d297343c1f772a2214daa73d">DPS_OnSubscriptionDestroyed</a>) (<a class="el" href="group__subscription.html#gadb927c4c1b7306867a75fc4288b54af7">DPS_Subscription</a> *sub)</td></tr>
+<tr class="memdesc:ga79f97355d297343c1f772a2214daa73d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function prototype for callback function called when a subscription is destroyed.  <a href="#ga79f97355d297343c1f772a2214daa73d">More...</a><br /></td></tr>
+<tr class="separator:ga79f97355d297343c1f772a2214daa73d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gab95ef1762636ad505c940744b8dce83f"><td class="memItemLeft" align="right" valign="top">typedef void(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__subscription.html#gab95ef1762636ad505c940744b8dce83f">DPS_PublicationHandler</a>) (<a class="el" href="group__subscription.html#gadb927c4c1b7306867a75fc4288b54af7">DPS_Subscription</a> *sub, const <a class="el" href="group__publication.html#ga0d439693474aa54e27f3d45a054696ac">DPS_Publication</a> *pub, uint8_t *payload, size_t len)</td></tr>
 <tr class="memdesc:gab95ef1762636ad505c940744b8dce83f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function prototype for a publication handler called when a publication is received that matches a subscription.  <a href="#gab95ef1762636ad505c940744b8dce83f">More...</a><br /></td></tr>
 <tr class="separator:gab95ef1762636ad505c940744b8dce83f"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -111,9 +114,9 @@ Functions</h2></td></tr>
 <tr class="memitem:ga4095bb00bd0ca7fa9614ebbc2c28199f"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__subscription.html#gadb927c4c1b7306867a75fc4288b54af7">DPS_Subscription</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__subscription.html#ga4095bb00bd0ca7fa9614ebbc2c28199f">DPS_CreateSubscription</a> (<a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *node, const char **topics, size_t numTopics)</td></tr>
 <tr class="memdesc:ga4095bb00bd0ca7fa9614ebbc2c28199f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allocate memory for a subscription and initialize topics.  <a href="#ga4095bb00bd0ca7fa9614ebbc2c28199f">More...</a><br /></td></tr>
 <tr class="separator:ga4095bb00bd0ca7fa9614ebbc2c28199f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gaac78b5690aa31eec642b2a706faac510"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__subscription.html#gaac78b5690aa31eec642b2a706faac510">DPS_DestroySubscription</a> (<a class="el" href="group__subscription.html#gadb927c4c1b7306867a75fc4288b54af7">DPS_Subscription</a> *sub)</td></tr>
-<tr class="memdesc:gaac78b5690aa31eec642b2a706faac510"><td class="mdescLeft">&#160;</td><td class="mdescRight">Stop subscribing to the subscription topic and free resources allocated for the subscription.  <a href="#gaac78b5690aa31eec642b2a706faac510">More...</a><br /></td></tr>
-<tr class="separator:gaac78b5690aa31eec642b2a706faac510"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga1b43ab9f71e6ebcd6e7981a5d8fbc000"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__subscription.html#ga1b43ab9f71e6ebcd6e7981a5d8fbc000">DPS_DestroySubscription</a> (<a class="el" href="group__subscription.html#gadb927c4c1b7306867a75fc4288b54af7">DPS_Subscription</a> *sub, <a class="el" href="group__subscription.html#ga79f97355d297343c1f772a2214daa73d">DPS_OnSubscriptionDestroyed</a> cb)</td></tr>
+<tr class="memdesc:ga1b43ab9f71e6ebcd6e7981a5d8fbc000"><td class="mdescLeft">&#160;</td><td class="mdescRight">Stop subscribing to the subscription topic and free resources allocated for the subscription.  <a href="#ga1b43ab9f71e6ebcd6e7981a5d8fbc000">More...</a><br /></td></tr>
+<tr class="separator:ga1b43ab9f71e6ebcd6e7981a5d8fbc000"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga88ab2284734f099ef67bcc60997142b3"><td class="memItemLeft" align="right" valign="top">void *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__subscription.html#ga88ab2284734f099ef67bcc60997142b3">DPS_GetSubscriptionData</a> (<a class="el" href="group__subscription.html#gadb927c4c1b7306867a75fc4288b54af7">DPS_Subscription</a> *sub)</td></tr>
 <tr class="memdesc:ga88ab2284734f099ef67bcc60997142b3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get application data pointer previously set by <a class="el" href="group__subscription.html#gad581d341003e20c714061e44b57c2009" title="Store a pointer to application data in a subscription. ">DPS_SetSubscriptionData()</a>  <a href="#ga88ab2284734f099ef67bcc60997142b3">More...</a><br /></td></tr>
 <tr class="separator:ga88ab2284734f099ef67bcc60997142b3"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -123,6 +126,9 @@ Functions</h2></td></tr>
 <tr class="memitem:ga83234ea82a91e07e3f5894a4dcf5267e"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__subscription.html#ga83234ea82a91e07e3f5894a4dcf5267e">DPS_Subscribe</a> (<a class="el" href="group__subscription.html#gadb927c4c1b7306867a75fc4288b54af7">DPS_Subscription</a> *sub, <a class="el" href="group__subscription.html#gab95ef1762636ad505c940744b8dce83f">DPS_PublicationHandler</a> handler)</td></tr>
 <tr class="memdesc:ga83234ea82a91e07e3f5894a4dcf5267e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Start subscribing to a set of topics.  <a href="#ga83234ea82a91e07e3f5894a4dcf5267e">More...</a><br /></td></tr>
 <tr class="separator:ga83234ea82a91e07e3f5894a4dcf5267e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga218210cd3bece2cf8e6e4ce4d81c773a"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__subscription.html#ga218210cd3bece2cf8e6e4ce4d81c773a">DPS_SubscribeExpired</a> (<a class="el" href="group__subscription.html#gadb927c4c1b7306867a75fc4288b54af7">DPS_Subscription</a> *sub, int enable)</td></tr>
+<tr class="memdesc:ga218210cd3bece2cf8e6e4ce4d81c773a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Call the publication handler when a matching retained publication expires.  <a href="#ga218210cd3bece2cf8e6e4ce4d81c773a">More...</a><br /></td></tr>
+<tr class="separator:ga218210cd3bece2cf8e6e4ce4d81c773a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gafea65751c811555736c8c65fcb3a9480"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__node.html#ga4dd612ab965134321bb57fdb065f121c">DPS_Node</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__subscription.html#gafea65751c811555736c8c65fcb3a9480">DPS_SubscriptionGetNode</a> (const <a class="el" href="group__subscription.html#gadb927c4c1b7306867a75fc4288b54af7">DPS_Subscription</a> *sub)</td></tr>
 <tr class="memdesc:gafea65751c811555736c8c65fcb3a9480"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the local node associated with a subscription.  <a href="#gafea65751c811555736c8c65fcb3a9480">More...</a><br /></td></tr>
 <tr class="separator:gafea65751c811555736c8c65fcb3a9480"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -136,6 +142,28 @@ Functions</h2></td></tr>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <p>Subscriptions. </p>
 <h2 class="groupheader">Typedef Documentation</h2>
+<a id="ga79f97355d297343c1f772a2214daa73d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga79f97355d297343c1f772a2214daa73d">&#9670;&nbsp;</a></span>DPS_OnSubscriptionDestroyed</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">typedef void(* DPS_OnSubscriptionDestroyed) (<a class="el" href="group__subscription.html#gadb927c4c1b7306867a75fc4288b54af7">DPS_Subscription</a> *sub)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Function prototype for callback function called when a subscription is destroyed. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">sub</td><td>The subscription that was destroyed. This is valid during the callback. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
 <a id="gab95ef1762636ad505c940744b8dce83f"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#gab95ef1762636ad505c940744b8dce83f">&#9670;&nbsp;</a></span>DPS_PublicationHandler</h2>
 
@@ -211,8 +239,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="gaac78b5690aa31eec642b2a706faac510"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#gaac78b5690aa31eec642b2a706faac510">&#9670;&nbsp;</a></span>DPS_DestroySubscription()</h2>
+<a id="ga1b43ab9f71e6ebcd6e7981a5d8fbc000"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga1b43ab9f71e6ebcd6e7981a5d8fbc000">&#9670;&nbsp;</a></span>DPS_DestroySubscription()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -221,8 +249,18 @@ Functions</h2></td></tr>
           <td class="memname"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a> DPS_DestroySubscription </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="group__subscription.html#gadb927c4c1b7306867a75fc4288b54af7">DPS_Subscription</a> *&#160;</td>
-          <td class="paramname"><em>sub</em></td><td>)</td>
+          <td class="paramname"><em>sub</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
           <td></td>
+          <td class="paramtype"><a class="el" href="group__subscription.html#ga79f97355d297343c1f772a2214daa73d">DPS_OnSubscriptionDestroyed</a>&#160;</td>
+          <td class="paramname"><em>cb</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -230,7 +268,8 @@ Functions</h2></td></tr>
 <p>Stop subscribing to the subscription topic and free resources allocated for the subscription. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">sub</td><td>The subscription to cancel</td></tr>
+    <tr><td class="paramname">sub</td><td>The subscription to destroy </td></tr>
+    <tr><td class="paramname">cb</td><td>Callback function to be called when the subscription is destroyed</td></tr>
   </table>
   </dd>
 </dl>
@@ -341,6 +380,45 @@ Functions</h2></td></tr>
 
 </div>
 </div>
+<a id="ga218210cd3bece2cf8e6e4ce4d81c773a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga218210cd3bece2cf8e6e4ce4d81c773a">&#9670;&nbsp;</a></span>DPS_SubscribeExpired()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="group__status.html#ga30395a84d3cad9d4ec29848106415038">DPS_Status</a> DPS_SubscribeExpired </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="group__subscription.html#gadb927c4c1b7306867a75fc4288b54af7">DPS_Subscription</a> *&#160;</td>
+          <td class="paramname"><em>sub</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>enable</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Call the publication handler when a matching retained publication expires. </p>
+<p><a class="el" href="group__publication.html#ga6d8eee29e0c15db182598c7439232e1c" title="Get the TTL for a publication. ">DPS_PublicationGetTTL()</a> will return a negative value when the publication is expired.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">sub</td><td>The subscription </td></tr>
+    <tr><td class="paramname">enable</td><td>DPS_TRUE to call handler, DPS_FALSE to not call handler</td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>DPS_OK or an error </dd></dl>
+
+</div>
+</div>
 <a id="gafea65751c811555736c8c65fcb3a9480"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#gafea65751c811555736c8c65fcb3a9480">&#9670;&nbsp;</a></span>DPS_SubscriptionGetNode()</h2>
 
@@ -437,7 +515,7 @@ Functions</h2></td></tr>
 </div><!-- doc-content -->
 <div class="navpath" id="nav-path">
   <ul>
-    <li class="footer" style="float:left"><b>Distributed Publish & Subscribe for IoT</b></li> <li class="footer">Generated Wed May 15 2019 12:06:23</li>
+    <li class="footer" style="float:left"><b>Distributed Publish & Subscribe for IoT</b></li> <li class="footer">Generated Fri Nov 15 2019 09:37:47</li>
   </ul>
 </div>
 </body>

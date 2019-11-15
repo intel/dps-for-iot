@@ -1,12 +1,15 @@
 var group__node =
 [
+    [ "DPS_LINK_LOSS_TIMEOUT", "group__node.html#gafd432f0081728dbac4634bf395b73219", null ],
     [ "DPS_MCAST_PUB_DISABLED", "group__node.html#gac939c83361ed89086f37c78d9c9009dd", null ],
     [ "DPS_MCAST_PUB_ENABLE_RECV", "group__node.html#gae493573fb2e02b87258952223eb4fcd7", null ],
     [ "DPS_MCAST_PUB_ENABLE_SEND", "group__node.html#ga178a3a6450eeff450820fa34fd82049c", null ],
     [ "DPS_SUBSCRIPTION_UPDATE_RATE", "group__node.html#ga89df880f9650da5730fa152642c0be9f", null ],
     [ "DPS_Node", "group__node.html#ga4dd612ab965134321bb57fdb065f121c", null ],
-    [ "DPS_OnLinkComplete", "group__node.html#gaaf70ac42acab8a67693947871e97600f", null ],
+    [ "DPS_OnLinkComplete", "group__node.html#ga1518af805c7ace335841784178bd8aec", null ],
+    [ "DPS_OnLinkLoss", "group__node.html#ga50d9c5fa2ac1cfbecc7647ce885e2e16", null ],
     [ "DPS_OnNodeDestroyed", "group__node.html#ga1e88cc9ca744782e36d58a022fe026c5", null ],
+    [ "DPS_OnNodeShutdown", "group__node.html#gac902cf51bb5a028549869056d0579233", null ],
     [ "DPS_OnResolveAddressComplete", "group__node.html#ga8777fdab3d67ab171bd1ed1322564367", null ],
     [ "DPS_OnUnlinkComplete", "group__node.html#ga119b8d5d6d6ab2390b69d272c36f1414", null ],
     [ "DPS_CreateNode", "group__node.html#gaf6641b5bbf27b2c45ac7f926b0ce4efe", null ],
@@ -17,8 +20,11 @@ var group__node =
     [ "DPS_Link", "group__node.html#gab7616642a79f637aa146b3b1a4ed0af8", null ],
     [ "DPS_LinkTo", "group__node.html#ga69325fd8127687c469e503763a29f6d8", null ],
     [ "DPS_ResolveAddress", "group__node.html#gab78df7f4498b847ddb32fdd33d39ef0f", null ],
+    [ "DPS_SetLinkLossCallback", "group__node.html#ga28d9d432839aad5ca777259bd17dae67", null ],
     [ "DPS_SetNodeData", "group__node.html#gad19cf4272ba11e935654175c83db2ce1", null ],
+    [ "DPS_SetNodeLinkLossTimeout", "group__node.html#ga96fbb20dc7d5a30a8fc5eefd181f69c9", null ],
     [ "DPS_SetNodeSubscriptionUpdateDelay", "group__node.html#gac7e33476c06009ed42a6ea6f3c53380a", null ],
+    [ "DPS_ShutdownNode", "group__node.html#ga71d0a1ec941a5ac5f4e994e4cc5cb54e", null ],
     [ "DPS_StartNode", "group__node.html#ga538588a1e2ea805377a90ac22ee6bc82", null ],
     [ "DPS_Unlink", "group__node.html#ga18398ef1e81c5dba98a95da6d18b937e", null ],
     [ "DPS_UnlinkFrom", "group__node.html#gae16f5ff85ac57a6f5567db73343c8af1", null ]

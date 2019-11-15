@@ -3,6 +3,8 @@
   <compounddef id="dir_143d9111106c2ba2452f83cceb80c482" kind="dir">
     <compoundname>dps</compoundname>
     <innerfile refid="dbg_8h">dbg.h</innerfile>
+    <innerfile refid="discovery_8h">discovery.h</innerfile>
+    <innerfile refid="dispatcher_8h">dispatcher.h</innerfile>
     <innerfile refid="dps_8h">dps.h</innerfile>
     <innerfile refid="err_8h">err.h</innerfile>
     <innerfile refid="event_8h">event.h</innerfile>
@@ -14,6 +16,6 @@
     </briefdescription>
     <detaileddescription>
     </detaileddescription>
-    <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/"/>
+    <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/"/>
   </compounddef>
 </doxygen>

@@ -15,7 +15,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="69" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" bodystart="69" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/registration.h" line="69" column="1" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/registration.h" bodystart="69" bodyend="-1"/>
       </memberdef>
       <memberdef kind="variable" id="struct___d_p_s___registration_1a0201a3f33b4b0ad0ed7134607ccc7ecb" prot="public" static="no" mutable="no">
         <type>uint8_t</type>
@@ -28,14 +28,14 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="68" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" bodystart="68" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/registration.h" line="68" column="1" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/registration.h" bodystart="68" bodyend="-1"/>
       </memberdef>
       </sectiondef>
     <briefdescription>
 <para>Registration entry. </para>    </briefdescription>
     <detaileddescription>
     </detaileddescription>
-    <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="67" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" bodystart="67" bodyend="70"/>
+    <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/registration.h" line="67" column="1" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/registration.h" bodystart="67" bodyend="70"/>
     <listofallmembers>
       <member refid="struct___d_p_s___registration_1a89f5b9832f379bcb2954cbe9563a49d5" prot="public" virt="non-virtual"><scope>_DPS_Registration</scope><name>addrText</name></member>
       <member refid="struct___d_p_s___registration_1a0201a3f33b4b0ad0ed7134607ccc7ecb" prot="public" virt="non-virtual"><scope>_DPS_Registration</scope><name>flags</name></member>

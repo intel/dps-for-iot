@@ -15,7 +15,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="155" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="155" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" line="156" column="1" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" bodystart="156" bodyend="-1"/>
       </memberdef>
       <memberdef kind="variable" id="struct___d_p_s___key_e_c_1aa008a9db4f8bc93e6572b91cfb0a51dd" prot="public" static="no" mutable="no">
         <type>const uint8_t *</type>
@@ -28,7 +28,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="158" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="158" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" line="159" column="1" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" bodystart="159" bodyend="-1"/>
       </memberdef>
       <memberdef kind="variable" id="struct___d_p_s___key_e_c_1a341a17a83bec9eb91bc2ce93c3832d81" prot="public" static="no" mutable="no">
         <type>const uint8_t *</type>
@@ -41,7 +41,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="156" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="156" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" line="157" column="1" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" bodystart="157" bodyend="-1"/>
       </memberdef>
       <memberdef kind="variable" id="struct___d_p_s___key_e_c_1adab7230a279ab8e4a30483cc71608abd" prot="public" static="no" mutable="no">
         <type>const uint8_t *</type>
@@ -54,7 +54,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="157" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="157" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" line="158" column="1" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" bodystart="158" bodyend="-1"/>
       </memberdef>
       </sectiondef>
     <briefdescription>
@@ -62,7 +62,7 @@
     <detaileddescription>
 <para>Only <computeroutput>x</computeroutput> and <computeroutput>y</computeroutput> are needed for a public key. Similarly, only <computeroutput>d</computeroutput> is needed for a private key.</para><para><simplesect kind="note"><para>Need to define this outside of DPS_Key to satisfy SWIG. </para></simplesect>
 </para>    </detaileddescription>
-    <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="154" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="154" bodyend="159"/>
+    <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" line="155" column="1" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" bodystart="155" bodyend="160"/>
     <listofallmembers>
       <member refid="struct___d_p_s___key_e_c_1a9896c40cd0b6dd0bd05ac5831fc421d9" prot="public" virt="non-virtual"><scope>_DPS_KeyEC</scope><name>curve</name></member>
       <member refid="struct___d_p_s___key_e_c_1aa008a9db4f8bc93e6572b91cfb0a51dd" prot="public" virt="non-virtual"><scope>_DPS_KeyEC</scope><name>d</name></member>

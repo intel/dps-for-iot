@@ -15,7 +15,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="83" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" bodystart="57" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" line="113" column="1" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" bodystart="57" bodyend="-1"/>
       </memberdef>
       </sectiondef>
       <sectiondef kind="func">
@@ -53,7 +53,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="92" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" line="93" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__nodeaddress_1ga8c6228133cac7601597f3c6160de5aab" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__nodeaddress_1ga9e9f56aa38e82b4edcef7eb81e9f5bd2" kindref="member">DPS_NodeAddress</ref> *</type>
@@ -70,7 +70,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="74" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" line="75" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__nodeaddress_1ga1f373831e8009ff5959ccb02b8c3fb14" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>void</type>
@@ -95,7 +95,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="99" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" line="100" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__nodeaddress_1gafc7b21048f92370ca29325d6245b576d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>const char *</type>
@@ -109,7 +109,8 @@
         <briefdescription>
 <para>Get text representation of an address. </para>        </briefdescription>
         <detaileddescription>
-<para>This function uses a static string buffer so is not thread safe.</para><para><parameterlist kind="param"><parameteritem>
+<para><simplesect kind="note"><para>This function uses a thread-local string buffer.</para></simplesect>
+<parameterlist kind="param"><parameteritem>
 <parameternamelist>
 <parametername>addr</parametername>
 </parameternamelist>
@@ -121,7 +122,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="67" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" line="68" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__nodeaddress_1ga1492aff0a8789c4b8a7cc47c84ca1b1f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__nodeaddress_1ga9e9f56aa38e82b4edcef7eb81e9f5bd2" kindref="member">DPS_NodeAddress</ref> *</type>
@@ -158,7 +159,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dps.h" line="84" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dps.h" line="85" column="1"/>
       </memberdef>
       </sectiondef>
     <briefdescription>

@@ -15,7 +15,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="41" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="41" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" line="41" column="1" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" bodystart="41" bodyend="-1"/>
       </memberdef>
       </sectiondef>
       <sectiondef kind="func">
@@ -43,7 +43,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="82" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" line="82" column="1"/>
       </memberdef>
       </sectiondef>
       <sectiondef kind="define">
@@ -56,7 +56,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="47" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="47" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" line="47" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" bodystart="47" bodyend="-1"/>
       </memberdef>
       <memberdef kind="define" id="group__status_1ga6170fba8d741b70a1f4c7e8662beceea" prot="public" static="no">
         <name>DPS_ERR_BUSY</name>
@@ -67,7 +67,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="56" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="56" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" line="56" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" bodystart="56" bodyend="-1"/>
       </memberdef>
       <memberdef kind="define" id="group__status_1gabace0ae959b833d5df1d81ad45cb43b9" prot="public" static="no">
         <name>DPS_ERR_EOD</name>
@@ -78,7 +78,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="52" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="52" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" line="52" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" bodystart="52" bodyend="-1"/>
       </memberdef>
       <memberdef kind="define" id="group__status_1ga40b286792608c99ed5dffd1caca9f569" prot="public" static="no">
         <name>DPS_ERR_EOF</name>
@@ -89,7 +89,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="66" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="66" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" line="66" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" bodystart="66" bodyend="-1"/>
       </memberdef>
       <memberdef kind="define" id="group__status_1ga7fb0645b6d1cac68a2ce723c1932b0bf" prot="public" static="no">
         <name>DPS_ERR_EXISTS</name>
@@ -100,7 +100,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="57" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="57" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" line="57" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" bodystart="57" bodyend="-1"/>
       </memberdef>
       <memberdef kind="define" id="group__status_1ga45240d9b5760ba1a30ad0bee0a6d2b7c" prot="public" static="no">
         <name>DPS_ERR_EXPIRED</name>
@@ -111,7 +111,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="63" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="63" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" line="63" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" bodystart="63" bodyend="-1"/>
       </memberdef>
       <memberdef kind="define" id="group__status_1gaa6d56ac86cbf831fe49fa74e46043a1d" prot="public" static="no">
         <name>DPS_ERR_FAILURE</name>
@@ -122,7 +122,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="45" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="45" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" line="45" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" bodystart="45" bodyend="-1"/>
       </memberdef>
       <memberdef kind="define" id="group__status_1ga6cac7d217edd07c3d7f1babf54cac1d7" prot="public" static="no">
         <name>DPS_ERR_INVALID</name>
@@ -133,7 +133,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="55" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="55" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" line="55" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" bodystart="55" bodyend="-1"/>
       </memberdef>
       <memberdef kind="define" id="group__status_1ga74601dfd79a287ab4f1431136036e525" prot="public" static="no">
         <name>DPS_ERR_LOST_PRECISION</name>
@@ -144,7 +144,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="72" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="72" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" line="72" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" bodystart="72" bodyend="-1"/>
       </memberdef>
       <memberdef kind="define" id="group__status_1ga5c46980c33492a8b76bffce081dbcba4" prot="public" static="no">
         <name>DPS_ERR_MISSING</name>
@@ -155,7 +155,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="58" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="58" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" line="58" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" bodystart="58" bodyend="-1"/>
       </memberdef>
       <memberdef kind="define" id="group__status_1ga80a0ccafe770ca4149e65300d870c0d9" prot="public" static="no">
         <name>DPS_ERR_NETWORK</name>
@@ -166,7 +166,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="54" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="54" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" line="54" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" bodystart="54" bodyend="-1"/>
       </memberdef>
       <memberdef kind="define" id="group__status_1ga934517e91f6e214fb6cab5089d5acc92" prot="public" static="no">
         <name>DPS_ERR_NO_ROUTE</name>
@@ -177,7 +177,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="60" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="60" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" line="60" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" bodystart="60" bodyend="-1"/>
       </memberdef>
       <memberdef kind="define" id="group__status_1ga9047d1e219f2a62a948845d922582ec5" prot="public" static="no">
         <name>DPS_ERR_NODE_DESTROYED</name>
@@ -188,7 +188,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="65" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="65" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" line="65" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" bodystart="65" bodyend="-1"/>
       </memberdef>
       <memberdef kind="define" id="group__status_1gac8f7574a1036052de3e6cd6d6447f226" prot="public" static="no">
         <name>DPS_ERR_NOT_COSE</name>
@@ -199,7 +199,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="73" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="73" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" line="73" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" bodystart="73" bodyend="-1"/>
       </memberdef>
       <memberdef kind="define" id="group__status_1gac13dac4973f6700ff95461171148c1c8" prot="public" static="no">
         <name>DPS_ERR_NOT_ENCRYPTED</name>
@@ -210,7 +210,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="69" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="69" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" line="69" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" bodystart="69" bodyend="-1"/>
       </memberdef>
       <memberdef kind="define" id="group__status_1gad175cd9050dec5f3a214bc62c3c7473c" prot="public" static="no">
         <name>DPS_ERR_NOT_IMPLEMENTED</name>
@@ -221,7 +221,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="67" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="67" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" line="67" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" bodystart="67" bodyend="-1"/>
       </memberdef>
       <memberdef kind="define" id="group__status_1ga92b1c68aa4f1526347ccb76aa9382d76" prot="public" static="no">
         <name>DPS_ERR_NOT_INITIALIZED</name>
@@ -232,7 +232,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="62" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="62" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" line="62" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" bodystart="62" bodyend="-1"/>
       </memberdef>
       <memberdef kind="define" id="group__status_1ga40f77c0ef70f691e6e158c8756ad8895" prot="public" static="no">
         <name>DPS_ERR_NOT_STARTED</name>
@@ -243,7 +243,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="61" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="61" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" line="61" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" bodystart="61" bodyend="-1"/>
       </memberdef>
       <memberdef kind="define" id="group__status_1ga36c4d95c785c30cd74bb4498703ae231" prot="public" static="no">
         <name>DPS_ERR_NULL</name>
@@ -254,7 +254,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="46" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="46" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" line="46" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" bodystart="46" bodyend="-1"/>
       </memberdef>
       <memberdef kind="define" id="group__status_1ga9127c1d49f4ca6a51c5585efc76ce362" prot="public" static="no">
         <name>DPS_ERR_OK</name>
@@ -265,7 +265,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="44" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="44" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" line="44" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" bodystart="44" bodyend="-1"/>
       </memberdef>
       <memberdef kind="define" id="group__status_1ga54ee1a62589bee7cd9e82acfd4fa1cad" prot="public" static="no">
         <name>DPS_ERR_OVERFLOW</name>
@@ -276,7 +276,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="53" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="53" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" line="53" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" bodystart="53" bodyend="-1"/>
       </memberdef>
       <memberdef kind="define" id="group__status_1ga2b08e90081ec2019e3e0d304d3693f6f" prot="public" static="no">
         <name>DPS_ERR_RANGE</name>
@@ -287,7 +287,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="71" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="71" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" line="71" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" bodystart="71" bodyend="-1"/>
       </memberdef>
       <memberdef kind="define" id="group__status_1ga6030b4923c05c4ad75e89b3b7b923c5f" prot="public" static="no">
         <name>DPS_ERR_READ</name>
@@ -298,7 +298,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="49" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="49" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" line="49" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" bodystart="49" bodyend="-1"/>
       </memberdef>
       <memberdef kind="define" id="group__status_1ga09dd06b53fdfdc87406d380de331b75b" prot="public" static="no">
         <name>DPS_ERR_RESOURCES</name>
@@ -309,7 +309,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="48" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="48" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" line="48" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" bodystart="48" bodyend="-1"/>
       </memberdef>
       <memberdef kind="define" id="group__status_1gaa3bb7fee9a4a926de2df54a272446b5c" prot="public" static="no">
         <name>DPS_ERR_SECURITY</name>
@@ -320,18 +320,18 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="68" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="68" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" line="68" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" bodystart="68" bodyend="-1"/>
       </memberdef>
       <memberdef kind="define" id="group__status_1ga01852545b0caefe96ff155d540bb3a68" prot="public" static="no">
         <name>DPS_ERR_STALE</name>
         <initializer>15</initializer>
         <briefdescription>
-<para>A publication was stale. </para>        </briefdescription>
+<para>A publication or subscription was stale. </para>        </briefdescription>
         <detaileddescription>
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="59" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="59" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" line="59" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" bodystart="59" bodyend="-1"/>
       </memberdef>
       <memberdef kind="define" id="group__status_1ga87337c85a55fcaf2dbaaf128362f6c8c" prot="public" static="no">
         <name>DPS_ERR_STOPPING</name>
@@ -342,7 +342,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="70" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="70" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" line="70" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" bodystart="70" bodyend="-1"/>
       </memberdef>
       <memberdef kind="define" id="group__status_1gadac4ab9da07e3886e1e93a408e6963c4" prot="public" static="no">
         <name>DPS_ERR_TIMEOUT</name>
@@ -353,7 +353,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="51" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="51" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" line="51" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" bodystart="51" bodyend="-1"/>
       </memberdef>
       <memberdef kind="define" id="group__status_1gab1a09e3fc51905cc823298f964ad60e6" prot="public" static="no">
         <name>DPS_ERR_UNRESOLVED</name>
@@ -364,7 +364,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="64" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="64" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" line="64" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" bodystart="64" bodyend="-1"/>
       </memberdef>
       <memberdef kind="define" id="group__status_1ga1d0f98f61006267befea4de4378a18d8" prot="public" static="no">
         <name>DPS_ERR_WRITE</name>
@@ -375,7 +375,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="50" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="50" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" line="50" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" bodystart="50" bodyend="-1"/>
       </memberdef>
       <memberdef kind="define" id="group__status_1ga0ea3dd37bc558859ae0cb5a4f79a4bdd" prot="public" static="no">
         <name>DPS_OK</name>
@@ -386,7 +386,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" line="43" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/err.h" bodystart="43" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" line="43" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/err.h" bodystart="43" bodyend="-1"/>
       </memberdef>
       </sectiondef>
     <briefdescription>

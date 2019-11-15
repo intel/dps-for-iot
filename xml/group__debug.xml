@@ -7,6 +7,13 @@
       <memberdef kind="enum" id="group__debug_1gad06c0421a8226b0a95be1d722ca05612" prot="public" static="no" strong="no">
         <type></type>
         <name>DPS_LogLevel</name>
+        <enumvalue id="group__debug_1ggad06c0421a8226b0a95be1d722ca05612a00d9f87a32bdd3700e21ebe17706fad5" prot="public">
+          <name>DPS_LOG_INFO</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
         <enumvalue id="group__debug_1ggad06c0421a8226b0a95be1d722ca05612ad8adeef2745368cf04dbb19b224df53c" prot="public">
           <name>DPS_LOG_ERROR</name>
           <briefdescription>
@@ -55,7 +62,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dbg.h" line="52" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dbg.h" bodystart="52" bodyend="59"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dbg.h" line="55" column="1" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dbg.h" bodystart="55" bodyend="63"/>
       </memberdef>
       </sectiondef>
       <sectiondef kind="var">
@@ -70,14 +77,14 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dbg.h" line="47" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dbg.h" line="47" column="1"/>
       </memberdef>
       </sectiondef>
       <sectiondef kind="func">
-      <memberdef kind="function" id="group__debug_1ga174fef61dca16376546e570c9b831502" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+      <memberdef kind="function" id="group__debug_1ga153af12b5ff1180f081afb49ac30112f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>void</type>
         <definition>void DPS_Log</definition>
-        <argsstring>(DPS_LogLevel level, const char *file, int line, const char *function, const char *fmt,...)</argsstring>
+        <argsstring>(DPS_LogLevel level, const char *file, int line, const char *function, const char *tag, const char *fmt,...)</argsstring>
         <name>DPS_Log</name>
         <param>
           <type><ref refid="group__debug_1gad06c0421a8226b0a95be1d722ca05612" kindref="member">DPS_LogLevel</ref></type>
@@ -94,6 +101,10 @@
         <param>
           <type>const char *</type>
           <declname>function</declname>
+        </param>
+        <param>
+          <type>const char *</type>
+          <declname>tag</declname>
         </param>
         <param>
           <type>const char *</type>
@@ -135,6 +146,13 @@
 </parameteritem>
 <parameteritem>
 <parameternamelist>
+<parametername>tag</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>the custom tag of the message </para></parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
 <parametername>fmt</parametername>
 </parameternamelist>
 <parameterdescription>
@@ -151,7 +169,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dbg.h" line="71" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dbg.h" line="76" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__debug_1ga7cc66c1e82ef557238c122b067f5337a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>void</type>
@@ -231,10 +249,21 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dbg.h" line="83" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dbg.h" line="88" column="1"/>
       </memberdef>
       </sectiondef>
       <sectiondef kind="define">
+      <memberdef kind="define" id="group__debug_1ga4fb0e0ca1220e5d53edd5f25c1676863" prot="public" static="no">
+        <name>DPS_DBG_TAG</name>
+        <initializer>NULL</initializer>
+        <briefdescription>
+<para>This can be redefined to include a custom tag in the log message. </para>        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dbg.h" line="50" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dbg.h" bodystart="50" bodyend="-1"/>
+      </memberdef>
       <memberdef kind="define" id="group__debug_1ga170843b022fc7bc00bf871eb5189fe52" prot="public" static="no">
         <name>DPS_DBGBYTES</name>
         <param><defname>bytes</defname></param>
@@ -246,45 +275,58 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dbg.h" line="129" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dbg.h" bodystart="129" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dbg.h" line="144" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dbg.h" bodystart="144" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="group__debug_1gae8034947b19e6f6b066ac4fe0a2b3d8e" prot="public" static="no">
+        <name>DPS_DBGINFO</name>
+        <param><defname>fmt</defname></param>
+        <param><defname>...</defname></param>
+        <initializer>(<ref refid="group__debug_1gac797e456c4202b5fc0df4d31817b6661" kindref="member">DPS_INFO_ENABLED</ref>() ? <ref refid="group__debug_1ga153af12b5ff1180f081afb49ac30112f" kindref="member">DPS_Log</ref>(DPS_LOG_INFO, __FILE__, __LINE__, __FUNCTION__, <ref refid="group__debug_1ga4fb0e0ca1220e5d53edd5f25c1676863" kindref="member">DPS_DBG_TAG</ref>, fmt, ##__VA_ARGS__) : (void)0)</initializer>
+        <briefdescription>
+<para>Log a message at DBGINFO level - Like DPS_DBGPRINT but can be turned on in isolation with DPS_DEBUG_CONTROL(DPS_DEBUG_INFO) </para>        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dbg.h" line="124" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dbg.h" bodystart="124" bodyend="-1"/>
       </memberdef>
       <memberdef kind="define" id="group__debug_1ga7ac5236c2ba157ffcf56cd073dcf0c3f" prot="public" static="no">
         <name>DPS_DBGPRINT</name>
         <param><defname>fmt</defname></param>
         <param><defname>...</defname></param>
-        <initializer>(<ref refid="group__debug_1gaeca5ec86966717c8dd2d1ffda4be2b3b" kindref="member">DPS_DEBUG_ENABLED</ref>() ? <ref refid="group__debug_1ga174fef61dca16376546e570c9b831502" kindref="member">DPS_Log</ref>(DPS_LOG_DBGPRINT, __FILE__, __LINE__, __FUNCTION__, fmt, ##__VA_ARGS__) : (void)0)</initializer>
+        <initializer>(<ref refid="group__debug_1gaeca5ec86966717c8dd2d1ffda4be2b3b" kindref="member">DPS_DEBUG_ENABLED</ref>() ? <ref refid="group__debug_1ga153af12b5ff1180f081afb49ac30112f" kindref="member">DPS_Log</ref>(DPS_LOG_DBGPRINT, __FILE__, __LINE__, __FUNCTION__, <ref refid="group__debug_1ga4fb0e0ca1220e5d53edd5f25c1676863" kindref="member">DPS_DBG_TAG</ref>, fmt, ##__VA_ARGS__) : (void)0)</initializer>
         <briefdescription>
 <para>Log a message at DBGPRINT level. </para>        </briefdescription>
         <detaileddescription>
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dbg.h" line="121" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dbg.h" bodystart="121" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dbg.h" line="136" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dbg.h" bodystart="136" bodyend="-1"/>
       </memberdef>
       <memberdef kind="define" id="group__debug_1ga0a4156dc81e39b0cf2fb251e37bda307" prot="public" static="no">
         <name>DPS_DBGTRACE</name>
         <param></param>
-        <initializer>(<ref refid="group__debug_1gaeca5ec86966717c8dd2d1ffda4be2b3b" kindref="member">DPS_DEBUG_ENABLED</ref>() ? <ref refid="group__debug_1ga174fef61dca16376546e570c9b831502" kindref="member">DPS_Log</ref>(DPS_LOG_DBGTRACE, __FILE__, __LINE__, __FUNCTION__, &quot;\n&quot;) : (void)0)</initializer>
+        <initializer>(<ref refid="group__debug_1gaeca5ec86966717c8dd2d1ffda4be2b3b" kindref="member">DPS_DEBUG_ENABLED</ref>() ? <ref refid="group__debug_1ga153af12b5ff1180f081afb49ac30112f" kindref="member">DPS_Log</ref>(DPS_LOG_DBGTRACE, __FILE__, __LINE__, __FUNCTION__, <ref refid="group__debug_1ga4fb0e0ca1220e5d53edd5f25c1676863" kindref="member">DPS_DBG_TAG</ref>, &quot;\n&quot;) : (void)0)</initializer>
         <briefdescription>
 <para>Log a function name at DBGTRACE level. </para>        </briefdescription>
         <detaileddescription>
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dbg.h" line="113" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dbg.h" bodystart="113" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dbg.h" line="128" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dbg.h" bodystart="128" bodyend="-1"/>
       </memberdef>
       <memberdef kind="define" id="group__debug_1ga62bb2ddb60beb7390755a19cd7874b5c" prot="public" static="no">
         <name>DPS_DBGTRACEA</name>
         <param><defname>fmt</defname></param>
         <param><defname>...</defname></param>
-        <initializer>(<ref refid="group__debug_1gaeca5ec86966717c8dd2d1ffda4be2b3b" kindref="member">DPS_DEBUG_ENABLED</ref>() ? <ref refid="group__debug_1ga174fef61dca16376546e570c9b831502" kindref="member">DPS_Log</ref>(DPS_LOG_DBGTRACE, __FILE__, __LINE__, __FUNCTION__, fmt, ##__VA_ARGS__) : (void)0)</initializer>
+        <initializer>(<ref refid="group__debug_1gaeca5ec86966717c8dd2d1ffda4be2b3b" kindref="member">DPS_DEBUG_ENABLED</ref>() ? <ref refid="group__debug_1ga153af12b5ff1180f081afb49ac30112f" kindref="member">DPS_Log</ref>(DPS_LOG_DBGTRACE, __FILE__, __LINE__, __FUNCTION__, <ref refid="group__debug_1ga4fb0e0ca1220e5d53edd5f25c1676863" kindref="member">DPS_DBG_TAG</ref>, fmt, ##__VA_ARGS__) : (void)0)</initializer>
         <briefdescription>
 <para>Log a function name and message at DBGTRACE level. </para>        </briefdescription>
         <detaileddescription>
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dbg.h" line="117" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dbg.h" bodystart="117" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dbg.h" line="132" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dbg.h" bodystart="132" bodyend="-1"/>
       </memberdef>
       <memberdef kind="define" id="group__debug_1gaeca5ec86966717c8dd2d1ffda4be2b3b" prot="public" static="no">
         <name>DPS_DEBUG_ENABLED</name>
@@ -296,7 +338,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dbg.h" line="107" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dbg.h" bodystart="107" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dbg.h" line="113" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dbg.h" bodystart="113" bodyend="-1"/>
       </memberdef>
       <memberdef kind="define" id="group__debug_1ga6eb8eb8c3804ebd6f51fe2d7a7625ed8" prot="public" static="no">
         <name>DPS_DEBUG_FORCE</name>
@@ -307,7 +349,18 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dbg.h" line="102" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dbg.h" bodystart="102" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dbg.h" line="107" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dbg.h" bodystart="107" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="group__debug_1gad0e20f99471bee46c3f0d4a3672fa9c1" prot="public" static="no">
+        <name>DPS_DEBUG_INFO</name>
+        <initializer>3</initializer>
+        <briefdescription>
+<para>Enable only INFO messages. </para>        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dbg.h" line="108" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dbg.h" bodystart="108" bodyend="-1"/>
       </memberdef>
       <memberdef kind="define" id="group__debug_1ga39adc166f2ce05fb751212c1db9a6ce9" prot="public" static="no">
         <name>DPS_DEBUG_OFF</name>
@@ -318,7 +371,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dbg.h" line="100" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dbg.h" bodystart="100" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dbg.h" line="105" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dbg.h" bodystart="105" bodyend="-1"/>
       </memberdef>
       <memberdef kind="define" id="group__debug_1ga777427dcd2750d5006024ce1a54daaac" prot="public" static="no">
         <name>DPS_DEBUG_ON</name>
@@ -329,59 +382,71 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dbg.h" line="101" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dbg.h" bodystart="101" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dbg.h" line="106" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dbg.h" bodystart="106" bodyend="-1"/>
       </memberdef>
       <memberdef kind="define" id="group__debug_1gac69225c4b8e73b27204a2963d4ca0633" prot="public" static="no">
         <name>DPS_ERRPRINT</name>
         <param><defname>fmt</defname></param>
         <param><defname>...</defname></param>
-        <initializer><ref refid="group__debug_1ga174fef61dca16376546e570c9b831502" kindref="member">DPS_Log</ref>(DPS_LOG_ERROR, __FILE__, __LINE__, __FUNCTION__, fmt, ##__VA_ARGS__)</initializer>
+        <initializer><ref refid="group__debug_1ga153af12b5ff1180f081afb49ac30112f" kindref="member">DPS_Log</ref>(DPS_LOG_ERROR, __FILE__, __LINE__, __FUNCTION__, <ref refid="group__debug_1ga4fb0e0ca1220e5d53edd5f25c1676863" kindref="member">DPS_DBG_TAG</ref>, fmt, ##__VA_ARGS__)</initializer>
         <briefdescription>
 <para>Log a message at ERROR level. </para>        </briefdescription>
         <detaileddescription>
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dbg.h" line="88" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dbg.h" bodystart="88" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dbg.h" line="93" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dbg.h" bodystart="93" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="group__debug_1gac797e456c4202b5fc0df4d31817b6661" prot="public" static="no">
+        <name>DPS_INFO_ENABLED</name>
+        <param></param>
+        <initializer>((__DPS_DebugControl == <ref refid="group__debug_1gad0e20f99471bee46c3f0d4a3672fa9c1" kindref="member">DPS_DEBUG_INFO</ref>) || <ref refid="group__debug_1gaeca5ec86966717c8dd2d1ffda4be2b3b" kindref="member">DPS_DEBUG_ENABLED</ref>())</initializer>
+        <briefdescription>
+<para>True if DPS info logging is enabled. </para>        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dbg.h" line="118" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dbg.h" bodystart="118" bodyend="-1"/>
       </memberdef>
       <memberdef kind="define" id="group__debug_1gaf1d25cc7f1d2d92f96ba620217af28fd" prot="public" static="no">
         <name>DPS_PRINT</name>
         <param><defname>fmt</defname></param>
         <param><defname>...</defname></param>
-        <initializer><ref refid="group__debug_1ga174fef61dca16376546e570c9b831502" kindref="member">DPS_Log</ref>(DPS_LOG_PRINT, __FILE__, __LINE__, __FUNCTION__, fmt, ##__VA_ARGS__)</initializer>
+        <initializer><ref refid="group__debug_1ga153af12b5ff1180f081afb49ac30112f" kindref="member">DPS_Log</ref>(DPS_LOG_PRINT, __FILE__, __LINE__, __FUNCTION__, <ref refid="group__debug_1ga4fb0e0ca1220e5d53edd5f25c1676863" kindref="member">DPS_DBG_TAG</ref>, fmt, ##__VA_ARGS__)</initializer>
         <briefdescription>
 <para>Log a message at PRINT level. </para>        </briefdescription>
         <detaileddescription>
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dbg.h" line="93" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dbg.h" bodystart="93" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dbg.h" line="98" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dbg.h" bodystart="98" bodyend="-1"/>
       </memberdef>
       <memberdef kind="define" id="group__debug_1gad9a3f4ae1ed318b313434a82132c4044" prot="public" static="no">
         <name>DPS_PRINTT</name>
         <param><defname>fmt</defname></param>
         <param><defname>...</defname></param>
-        <initializer><ref refid="group__debug_1ga174fef61dca16376546e570c9b831502" kindref="member">DPS_Log</ref>(DPS_LOG_PRINTT, __FILE__, __LINE__, __FUNCTION__, fmt, ##__VA_ARGS__)</initializer>
+        <initializer><ref refid="group__debug_1ga153af12b5ff1180f081afb49ac30112f" kindref="member">DPS_Log</ref>(DPS_LOG_PRINTT, __FILE__, __LINE__, __FUNCTION__, <ref refid="group__debug_1ga4fb0e0ca1220e5d53edd5f25c1676863" kindref="member">DPS_DBG_TAG</ref>, fmt, ##__VA_ARGS__)</initializer>
         <briefdescription>
 <para>Same as DPS_PRINT but prepends a system timestamp. </para>        </briefdescription>
         <detaileddescription>
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dbg.h" line="98" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dbg.h" bodystart="98" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dbg.h" line="103" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dbg.h" bodystart="103" bodyend="-1"/>
       </memberdef>
       <memberdef kind="define" id="group__debug_1ga37ab9dbe492fd9f7b78349f6e789e5f2" prot="public" static="no">
         <name>DPS_WARNPRINT</name>
         <param><defname>fmt</defname></param>
         <param><defname>...</defname></param>
-        <initializer>(<ref refid="group__debug_1gaeca5ec86966717c8dd2d1ffda4be2b3b" kindref="member">DPS_DEBUG_ENABLED</ref>() ? <ref refid="group__debug_1ga174fef61dca16376546e570c9b831502" kindref="member">DPS_Log</ref>(DPS_LOG_WARNING, __FILE__, __LINE__, __FUNCTION__, fmt, ##__VA_ARGS__) : (void)0)</initializer>
+        <initializer>(<ref refid="group__debug_1gaeca5ec86966717c8dd2d1ffda4be2b3b" kindref="member">DPS_DEBUG_ENABLED</ref>() ? <ref refid="group__debug_1ga153af12b5ff1180f081afb49ac30112f" kindref="member">DPS_Log</ref>(DPS_LOG_WARNING, __FILE__, __LINE__, __FUNCTION__, <ref refid="group__debug_1ga4fb0e0ca1220e5d53edd5f25c1676863" kindref="member">DPS_DBG_TAG</ref>, fmt, ##__VA_ARGS__) : (void)0)</initializer>
         <briefdescription>
 <para>Log a message at WARNING level. </para>        </briefdescription>
         <detaileddescription>
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dbg.h" line="125" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/dbg.h" bodystart="125" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dbg.h" line="140" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/dbg.h" bodystart="140" bodyend="-1"/>
       </memberdef>
       </sectiondef>
     <briefdescription>

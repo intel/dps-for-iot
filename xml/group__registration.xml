@@ -39,7 +39,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="145" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" bodystart="145" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/registration.h" line="145" column="1" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/registration.h" bodystart="145" bodyend="-1"/>
       </memberdef>
       <memberdef kind="typedef" id="group__registration_1ga05d1d7333298410786f19f9aa1d3e5bc" prot="public" static="no">
         <type>void(*</type>
@@ -83,7 +83,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="194" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" bodystart="194" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/registration.h" line="194" column="1" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/registration.h" bodystart="194" bodyend="-1"/>
       </memberdef>
       <memberdef kind="typedef" id="group__registration_1ga8f1d316de08b7dea7dfe55ae814e0219" prot="public" static="no">
         <type>void(*</type>
@@ -113,7 +113,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="106" column="1" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" bodystart="106" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/registration.h" line="106" column="1" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/registration.h" bodystart="106" bodyend="-1"/>
       </memberdef>
       <memberdef kind="typedef" id="group__registration_1gac06db7e10b2626b06bacd09414e7d740" prot="public" static="no">
         <type>struct <ref refid="struct___d_p_s___registration" kindref="compound">_DPS_Registration</ref></type>
@@ -126,7 +126,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="70" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/registration.h" line="70" column="1"/>
       </memberdef>
       <memberdef kind="typedef" id="group__registration_1ga2b9489ff306ad253d24b03c418a6eda0" prot="public" static="no">
         <type>struct <ref refid="struct___d_p_s___registration_list" kindref="compound">_DPS_RegistrationList</ref></type>
@@ -139,7 +139,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="79" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/registration.h" line="79" column="1"/>
       </memberdef>
       </sectiondef>
       <sectiondef kind="var">
@@ -154,7 +154,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="53" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/registration.h" line="53" column="1"/>
       </memberdef>
       </sectiondef>
       <sectiondef kind="func">
@@ -182,7 +182,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="88" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/registration.h" line="88" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__registration_1ga0dbaa5dbea47290035a11dc22fc45f2d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type>void</type>
@@ -207,7 +207,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="95" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/registration.h" line="95" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__registration_1gabf1584c9da76f2cb82ca3c635bcd6b4b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
@@ -299,7 +299,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="163" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/registration.h" line="163" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__registration_1ga3d70931a0e92d8ed633ed8dc86921413" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
@@ -369,7 +369,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="179" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/registration.h" line="179" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__registration_1ga73550318aa9625aff612e549e9854e0c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
@@ -430,7 +430,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="209" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/registration.h" line="209" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__registration_1gab50e1fb04be97888ec759b1f0b3df1e6" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
@@ -480,7 +480,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="223" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/registration.h" line="223" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__registration_1ga5c9662a8a91edb074cd458482b4ee53b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
@@ -561,7 +561,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="121" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/registration.h" line="121" column="1"/>
       </memberdef>
       <memberdef kind="function" id="group__registration_1ga6322e280f49b13dd8d99e942a903ea04" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
         <type><ref refid="group__status_1ga30395a84d3cad9d4ec29848106415038" kindref="member">DPS_Status</ref></type>
@@ -620,7 +620,7 @@
 </para>        </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="135" column="1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/registration.h" line="135" column="1"/>
       </memberdef>
       </sectiondef>
       <sectiondef kind="define">
@@ -633,7 +633,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="59" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" bodystart="59" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/registration.h" line="59" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/registration.h" bodystart="59" bodyend="-1"/>
       </memberdef>
       <memberdef kind="define" id="group__registration_1gae27a3dfd1f2e746220e99921f2c33a6c" prot="public" static="no">
         <name>DPS_CANDIDATE_INVALID</name>
@@ -644,7 +644,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="62" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" bodystart="62" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/registration.h" line="62" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/registration.h" bodystart="62" bodyend="-1"/>
       </memberdef>
       <memberdef kind="define" id="group__registration_1ga243eb1f49d56c2ae1f542a0c95a5a52d" prot="public" static="no">
         <name>DPS_CANDIDATE_LINKED</name>
@@ -655,7 +655,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="60" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" bodystart="60" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/registration.h" line="60" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/registration.h" bodystart="60" bodyend="-1"/>
       </memberdef>
       <memberdef kind="define" id="group__registration_1ga06a44e56022098c9464bd881cf5efe20" prot="public" static="no">
         <name>DPS_CANDIDATE_TRYING</name>
@@ -666,7 +666,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="58" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" bodystart="58" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/registration.h" line="58" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/registration.h" bodystart="58" bodyend="-1"/>
       </memberdef>
       <memberdef kind="define" id="group__registration_1ga0564134dd21bdecf8e8e25cf832e2a38" prot="public" static="no">
         <name>DPS_CANDIDATE_UNLINKED</name>
@@ -677,7 +677,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="61" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" bodystart="61" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/registration.h" line="61" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/registration.h" bodystart="61" bodyend="-1"/>
       </memberdef>
       <memberdef kind="define" id="group__registration_1ga232cb7b41dc02a9c515acd1b4561e102" prot="public" static="no">
         <name>DPS_REGISTRATION_GET_TIMEOUT</name>
@@ -688,7 +688,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="50" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" bodystart="50" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/registration.h" line="50" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/registration.h" bodystart="50" bodyend="-1"/>
       </memberdef>
       <memberdef kind="define" id="group__registration_1ga3347dfe9e98b18d6b9c64eedbfebb7ae" prot="public" static="no">
         <name>DPS_REGISTRATION_PUT_TIMEOUT</name>
@@ -699,7 +699,7 @@
         </detaileddescription>
         <inbodydescription>
         </inbodydescription>
-        <location file="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" line="49" column="9" bodyfile="/home/tmalsbar/src/github.com/01org/dps-for-iot/inc/dps/registration.h" bodystart="49" bodyend="-1"/>
+        <location file="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/registration.h" line="49" column="9" bodyfile="/home/tmalsbar/src/github.com/intel/dps-for-iot/inc/dps/registration.h" bodystart="49" bodyend="-1"/>
       </memberdef>
       </sectiondef>
     <briefdescription>
