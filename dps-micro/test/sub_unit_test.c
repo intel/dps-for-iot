@@ -24,10 +24,6 @@
 #include <ctype.h>
 #include <dps/dps.h>
 #include <dps/targets.h>
-#include <dps/private/dps.h>
-#include <dps/private/pub.h>
-#include <dps/private/sub.h>
-
 
 static char testString[] = "This is a test string from " DPS_TARGET_NAME;
 static char ackString[] = "This is an ack string from " DPS_TARGET_NAME;
@@ -65,7 +61,7 @@ int main(int argc, char** argv)
 {
     DPS_Node* node;
     DPS_KeyStore* keyStore = NULL;
-    DPS_Subscription sub;
+    DPS_Subscription* sub;
     DPS_Status status;
     int dtls = DPS_TRUE;
     int i;
@@ -122,14 +118,15 @@ int main(int argc, char** argv)
         DPS_PRINT("DTLS is disabled\n");
     }
 
-    status = DPS_InitSubscription(node, &sub, topics, 1);
-    CHECK(status == DPS_OK);
+    sub = DPS_InitSubscription(node, topics, 1);
+    CHECK(sub != NULL);
 
-    status = DPS_Subscribe(&sub, OnPub, NULL);
+    status = DPS_Subscribe(sub, OnPub, NULL);
     CHECK(status == DPS_OK);
 
     SLEEP(500000);
 
+    DPS_DestroySubscription(sub);
     return 0;
 
 failed:

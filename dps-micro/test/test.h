@@ -48,6 +48,6 @@
 #define ASSERT(cond) do { assert(cond); if (!(cond)) exit(EXIT_FAILURE); } while (0)
 
 static int atLine;
-#define CHECK(cond)   if (!cond) { atLine = __LINE__; goto failed; }
+#define CHECK(cond)   if (!(cond)) { atLine = __LINE__; goto failed; }
 
 #endif
