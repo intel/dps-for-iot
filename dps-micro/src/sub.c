@@ -161,12 +161,11 @@ void DPS_DestroySubscription(DPS_Subscription* sub)
     }
 }
 
-static DPS_Status UnlinkRemote(DPS_Node* node, uint32_t revision)
+static DPS_Status UnlinkRemote(DPS_Node* node, DPS_NodeAddress* from)
 {
-    /*
-     * TODO - implement this
-     */
-    return DPS_OK;
+    DPS_DBGTRACE();
+    node->state = REMOTE_UNLINKED;
+    return SendSubscriptionAck(node, from, DPS_FALSE, DPS_FALSE);
 }
 
 static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NodeAddress* from, DPS_RxBuffer* buf, uint32_t* sakSeqNum)
@@ -276,10 +275,14 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NodeAddress* from, DPS_
     } else {
         if (flags & DPS_SUB_FLAG_UNLINK_IND) {
             if (node->state == REMOTE_LINKED && DPS_SameNodeAddress(from, node->remoteNode)) {
-                ret = UnlinkRemote(node, revision);
-            } else {
-                ret = DPS_ERR_INVALID;
+                /*
+                 * No check on the revision just unlink
+                 */
+                node->remoteRevision = revision;
+                ret = UnlinkRemote(node, from);
+                goto DecodeSubExit;
             }
+            ret = DPS_ERR_INVALID;
         } else {
             DPS_DBGPRINT("SUB inbound interests[%d] from %s\n", revision, DPS_NodeAddrToString(from));
             if (node->state == REMOTE_UNLINKED) {
