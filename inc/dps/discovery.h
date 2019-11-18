@@ -1,3 +1,8 @@
+/**
+ * @file
+ * Discovery service
+ */
+
 /*
  *******************************************************************
  *
@@ -26,6 +31,18 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**
+ * @defgroup services Services
+ * Services built upon DPS.
+ * @{
+ */
+
+/**
+ * @defgroup discovery Discovery
+ * A discovery service.
+ * @{
+ */
 
 #include <dps/dps.h>
 
@@ -110,6 +127,10 @@ typedef void (*DPS_OnDiscoveryServiceDestroyed)(DPS_DiscoveryService* service, v
  */
 DPS_Status DPS_DestroyDiscoveryService(DPS_DiscoveryService* service,
                                        DPS_OnDiscoveryServiceDestroyed cb, void* data);
+
+/** @} */ // end of discovery group
+
+/** @} */ // end of services group
 
 #ifdef __cplusplus
 }

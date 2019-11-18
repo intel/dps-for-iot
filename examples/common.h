@@ -38,6 +38,7 @@ extern "C" {
 int IntArg(char* opt, char*** argp, int* argcp, int* val, int min, int max);
 int ListenArg(char*** argp, int* argcp, DPS_NodeAddress** addr);
 int LinkArg(char*** argp, int* argcp, char** addrText, int* numAddrText);
+int UnlinkArg(char*** argp, int* argcp, char** addrText);
 DPS_Status Link(DPS_Node* node, char** addrText, DPS_NodeAddress** addr, int numAddr);
 void Unlink(DPS_Node* node, DPS_NodeAddress** addr, int numAddr);
 void DestroyLinkArg(char **addrText, DPS_NodeAddress** addr, int numAddr);
