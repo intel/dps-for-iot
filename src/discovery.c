@@ -413,6 +413,12 @@ static void PublishCb(DPS_Publication* pub, const DPS_Buffer* bufs, size_t numBu
     DestroyPayload(service->node, bufs, numBufs);
 }
 
+static uint64_t RandomizeTimeout(uint64_t timeout)
+{
+    uint64_t delta = timeout / 10;
+    return timeout - (delta / 2) + (DPS_Rand() % delta);
+}
+
 static void PublishTimerOnTimeout(uv_timer_t* timer)
 {
     DPS_DiscoveryService* service = timer->data;
@@ -430,7 +436,7 @@ static void PublishTimerOnTimeout(uv_timer_t* timer)
         DPS_ERRPRINT("DPS_PublishBufs failed - %s\n", DPS_ErrTxt(ret));
         goto Exit;
     }
-    err = uv_timer_start(service->timer, PublishTimerOnTimeout, service->nextTimeout, 0);
+    err = uv_timer_start(service->timer, PublishTimerOnTimeout, RandomizeTimeout(service->nextTimeout), 0);
     if (err) {
         DPS_ERRPRINT("uv_timer_start failed - %s\n", uv_strerror(err));
     }
