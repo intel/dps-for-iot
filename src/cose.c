@@ -31,7 +31,6 @@
 #include "cose.h"
 #include "ec.h"
 #include "gcm.h"
-#include "gcm.h"
 #include "hkdf.h"
 #include "keywrap.h"
 
