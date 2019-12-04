@@ -584,7 +584,7 @@ static void OnAck(DPS_Publication* pub, uint8_t* payload, size_t len)
     handlerData = CreateHandlerData(service, pub, &ackUuid, data, dataLen);
     if (match) {
         ret = DPS_LinkRemoteAddr(node, DPS_AckGetSenderAddress(pub), LinkCb, handlerData);
-        if (ret != DPS_OK && ret != DPS_ERR_EXISTS) {
+        if (ret != DPS_OK && ret != DPS_ERR_EXISTS && ret != DPS_ERR_BUSY) {
             DPS_ERRPRINT("DPS_Link failed - %s\n", DPS_ErrTxt(ret));
         }
     }
@@ -755,7 +755,7 @@ static void OnPub(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* pa
                 }
                 handlerData = CreateHandlerData(service, pub, DPS_PublicationGetUUID(pub), data, dataLen);
                 ret = DPS_LinkRemoteAddr(node, DPS_PublicationGetSenderAddress(pub), LinkCb, handlerData);
-                if (ret != DPS_OK && ret != DPS_ERR_EXISTS) {
+                if (ret != DPS_OK && ret != DPS_ERR_EXISTS && ret != DPS_ERR_BUSY) {
                     DPS_ERRPRINT("DPS_Link failed - %s\n", DPS_ErrTxt(ret));
                 }
                 if (ret != DPS_OK) {
