@@ -283,6 +283,39 @@ DPS_NodeAddress* DPS_InitNodeAddress(const char* host, uint16_t port);
  */
 void DPS_DestroyNodeAddress(DPS_NodeAddress* addr);
 
+/**
+  * Get the node pointer from a publication
+  *
+  * @param pub   Pointer to a publication
+  * @return   A pointer to a node or NULL if pub is not a valid publication pointer
+  */
+DPS_Node* DPS_PubGetNode(DPS_Publication* pub);
+
+/**
+  * Get the node pointer from a subscription
+  *
+  * @param sub   Pointer to a subscription
+  * @return   A pointer to a node or NULL if sub is not a valid subscription pointer
+  */
+DPS_Node* DPS_SubGetNode(DPS_Subscription* sub);
+
+/**
+  * Make the local node discoverable to other nodes. Does nothing if the node
+  * is already discoverable.
+  *
+  * @param  node       Pointer to a node
+  * @param  serviceId  Pointer to the service identifier. If NULL a default
+  *                    service id is used.
+
+  * @return DPS_OK if the node was made discoverable, otherwise an error status
+  */
+DPS_Status DPS_MakeDiscoverable(DPS_Node* node, const char* serviceId);
+
+/**
+  * Make the the local node no longer discoverable. Has no effect if the node is
+  * not currently discoverable.
+  */
+void DPS_MakeNondiscoverable(DPS_Node* node);
 
 #ifdef __cplusplus
 }

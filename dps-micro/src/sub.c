@@ -54,7 +54,6 @@ static DPS_Status SendSubscriptionAck(DPS_Node* node, DPS_NodeAddress* dest, int
 
 DPS_Subscription* DPS_InitSubscription(DPS_Node* node, const char* const* topics, size_t numTopics)
 {
-    DPS_Status ret = DPS_OK;
     DPS_Subscription* sub;
     size_t i;
 
@@ -75,13 +74,9 @@ DPS_Subscription* DPS_InitSubscription(DPS_Node* node, const char* const* topics
     }
     sub->node = node;
     /*
-     * Add the topics to the subscription
+     * Add the topic strings to the subscription
      */
     for (i = 0; i < numTopics; ++i) {
-        ret = DPS_AddTopic(&sub->bf, topics[i], node->separators, DPS_SubTopic);
-        if (ret != DPS_OK) {
-            break;
-        }
         sub->topics[i] = topics[i];
         ++sub->numTopics;
     }
@@ -114,17 +109,38 @@ DPS_Status DPS_UpdateSubs(DPS_Node* node)
 {
     DPS_Status ret = DPS_OK;
     DPS_Subscription* sub = node->subscriptions;
+    DPS_BitVector* interests = NULL;
+    DPS_FuzzyHash* needs = NULL;
 
+    DPS_DBGTRACE();
+
+    interests = DPS_Malloc(sizeof(DPS_BitVector), DPS_ALLOC_BRIEF);
+    if (!interests) {
+        return DPS_ERR_RESOURCES;
+    }
+    needs = DPS_Malloc(sizeof(DPS_FuzzyHash), DPS_ALLOC_BRIEF);
+    if (!needs) {
+        DPS_Free(interests, DPS_ALLOC_BRIEF);
+        return DPS_ERR_RESOURCES;
+    }
     DPS_BitVectorClear(&node->interests);
+    DPS_FuzzyHashFill(&node->needs);
     for (sub = node->subscriptions; sub; sub = sub->next) {
         size_t i;
+        DPS_BitVectorClear(interests);
         for (i = 0; i < sub->numTopics; ++i) {
-            ret = DPS_AddTopic(&node->interests, sub->topics[i], node->separators, DPS_SubTopic);
+            ret = DPS_AddTopic(interests, sub->topics[i], node->separators, DPS_SubTopic);
             if (ret != DPS_OK) {
                 break;
             }
         }
+        DPS_BitVectorUnion(&node->interests, interests);
+        DPS_BitVectorFuzzyHash(needs, interests);
+        DPS_FuzzyHashIntersection(&node->needs, &node->needs, needs);
     }
+    DPS_Free(needs, DPS_ALLOC_BRIEF);
+    DPS_Free(interests, DPS_ALLOC_BRIEF);
+
     if (ret == DPS_OK && node->state != REMOTE_UNLINKED) {
         ret = DPS_SendSubscription(node, node->remoteNode);
     }
@@ -133,6 +149,7 @@ DPS_Status DPS_UpdateSubs(DPS_Node* node)
 
 DPS_Status DPS_Subscribe(DPS_Subscription* sub, DPS_PublicationHandler handler, void* data)
 {
+    DPS_DBGTRACE();
     if (!sub || !handler) {
         return DPS_ERR_NULL;
     }
@@ -187,6 +204,8 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NodeAddress* from, DPS_
     int collision = DPS_FALSE;
     int isDuplicate = DPS_FALSE;
     int newRemote = DPS_FALSE;
+    DPS_BitVector* interests = NULL;
+    DPS_FuzzyHash* needs = NULL;
 
     DPS_DBGTRACE();
 
@@ -201,6 +220,14 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NodeAddress* from, DPS_
     sub = DPS_Malloc(sizeof(DPS_Subscription), DPS_ALLOC_BRIEF);
     if (!sub) {
         return DPS_ERR_RESOURCES;
+    }
+    interests = DPS_Malloc(sizeof(DPS_BitVector), DPS_ALLOC_BRIEF);
+    if (!interests) {
+        ret = DPS_ERR_RESOURCES;
+    }
+    needs = DPS_Malloc(sizeof(DPS_FuzzyHash), DPS_ALLOC_BRIEF);
+    if (!needs) {
+        ret = DPS_ERR_RESOURCES;
     }
 
     keysMask = 0;
@@ -230,7 +257,7 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NodeAddress* from, DPS_
             break;
         case DPS_CBOR_KEY_INTERESTS:
             keysMask |= (1 << key);
-            ret = DPS_BitVectorDeserialize(&sub->bf, buf);
+            ret = DPS_BitVectorDeserialize(interests, buf);
             break;
         case DPS_CBOR_KEY_ACK_SEQ_NUM:
             if (sakSeqNum) {
@@ -241,7 +268,7 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NodeAddress* from, DPS_
             break;
         case DPS_CBOR_KEY_NEEDS:
             keysMask |= (1 << key);
-            ret = DPS_FHBitVectorDeserialize(&sub->needs, buf);
+            ret = DPS_FuzzyHashDeserialize(needs, buf);
             break;
         case DPS_CBOR_KEY_PATH:
             /* This implementation only supports IP transports */
@@ -331,11 +358,11 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NodeAddress* from, DPS_
         }
         if (!isDuplicate) {
             if (flags & DPS_SUB_FLAG_DELTA_IND) {
-                DPS_BitVectorXor(&node->remoteInterests, &node->remoteInterests, &sub->bf, NULL);
+                DPS_BitVectorXor(&node->remoteInterests, &node->remoteInterests, interests, NULL);
             } else {
-                DPS_BitVectorDup(&node->remoteInterests, &sub->bf);
+                DPS_BitVectorDup(&node->remoteInterests, interests);
             }
-            DPS_FHBitVectorDup(&node->remoteNeeds, &sub->needs);
+            DPS_FuzzyHashDup(&node->remoteNeeds, needs);
         }
         ret = SendSubscriptionAck(node, from, newRemote, collision);
     } else {
@@ -347,6 +374,8 @@ static DPS_Status DecodeSubscription(DPS_Node* node, DPS_NodeAddress* from, DPS_
 
 DecodeSubExit:
     DPS_Free(sub, DPS_ALLOC_BRIEF);
+    DPS_Free(interests, DPS_ALLOC_BRIEF);
+    DPS_Free(needs, DPS_ALLOC_BRIEF);
     return ret;
 }
 
@@ -392,7 +421,7 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, DPS_NodeAddress* dest)
          * Not currently supporting delta interests in this implementation
          */
         len += DPS_BitVectorSerializedSize(&node->interests);
-        len += DPS_FHBitVectorSerializedSize(&node->needs);
+        len += DPS_FuzzyHashSerializedSize(&node->needs);
     }
     /*
      * The protected and encrypted maps are both empty for SUBs
@@ -445,7 +474,7 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, DPS_NodeAddress* dest)
             ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_NEEDS);
         }
         if (ret == DPS_OK) {
-            ret = DPS_FHBitVectorSerialize(&node->needs, &buf);
+            ret = DPS_FuzzyHashSerialize(&node->needs, &buf);
         }
         if (ret == DPS_OK) {
             ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_INTERESTS);
@@ -518,7 +547,7 @@ DPS_Status SendSubscriptionAck(DPS_Node* node, DPS_NodeAddress* dest, int sendIn
    
     if (flags & DPS_SUB_FLAG_SAK_REQ) {
         len += DPS_BitVectorSerializedSize(&node->interests);
-        len += DPS_FHBitVectorSerializedSize(&node->needs);
+        len += DPS_FuzzyHashSerializedSize(&node->needs);
     }
     /*
      * The protected and encrypted maps are both empty for SAKs
@@ -571,7 +600,7 @@ DPS_Status SendSubscriptionAck(DPS_Node* node, DPS_NodeAddress* dest, int sendIn
             ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_NEEDS);
         }
         if (ret == DPS_OK) {
-            ret = DPS_FHBitVectorSerialize(&node->needs, &buf);
+            ret = DPS_FuzzyHashSerialize(&node->needs, &buf);
         }
         if (ret == DPS_OK) {
             ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_INTERESTS);

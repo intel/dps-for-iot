@@ -78,7 +78,7 @@ typedef struct _DPS_Node {
     size_t txHdrLen;
     size_t txLen;
     DPS_BitVector interests;          /* Interests for this node */
-    DPS_FHBitVector needs;            /* Needs for this node */
+    DPS_FuzzyHash needs;              /* Needs for this node */
     uint32_t revision;                /* Interests revision for this node */
     DPS_UUID meshId;                  /* GUID */
     const char* separators;
@@ -88,13 +88,15 @@ typedef struct _DPS_Node {
     DPS_NodeAddress* remoteNode;      /* Address of remote node */
     uint32_t remoteRevision;          /* Subscription revision number for remote node */
     DPS_BitVector remoteInterests;    /* Interests from remote node */
-    DPS_FHBitVector remoteNeeds;      /* Needs from remote node */
+    DPS_FuzzyHash remoteNeeds;        /* Needs from remote node */
     COSE_Entity signer;
     DPS_Network* network;
     DPS_KeyStore* keyStore;
     DPS_Subscription* subscriptions;  /* Linked list of this node's subscriptions */
     DPS_Publication* publications;    /* Linked list of this node's publications */
     DPS_RxBuffer* rxBuf;              /* Current receive buffer */
+    DPS_Subscription* discoverySub;   /* Subscription for discovery */
+    DPS_Publication* discoveryPub;    /* Publication for discovery */
 } DPS_Node;
 
 /**

@@ -318,9 +318,6 @@ static DPS_Status CallPubHandlers(DPS_Publication* pub, DPS_RxBuffer* protectedB
      */
     for (sub = pub->node->subscriptions; sub != NULL; sub = nextSub) {
         nextSub = sub->next;
-        if (!DPS_BitVectorIncludes(&pub->bf, &sub->bf)) {
-            continue;
-        }
         if (needsDecrypt) {
             ret = DecryptAndParsePub(pub, protectedBuf, encryptedBuf, &data, &dataLen);
             if (ret == DPS_ERR_SECURITY) {
@@ -516,8 +513,6 @@ DPS_Status DPS_DecodePublication(DPS_Node* node, DPS_NodeAddress* from, DPS_RxBu
         if (ret != DPS_OK) {
             goto Exit;
         }
-        DPS_PRINT("Deserialize\n");
-        //DPS_BitVectorDump(&pub->bf, DPS_TRUE);
         /*
          * Initialize the protected and encrypted buffers
          */
@@ -704,15 +699,12 @@ static DPS_Status SerializePub(DPS_Node* node, DPS_Publication* pub, const uint8
 
     ++pub->sequenceNum;
 
-    /*
-     * Encode the unprotected map
-     */
     len = CBOR_SIZEOF_ARRAY(5) +
         CBOR_SIZEOF(uint8_t) +
         CBOR_SIZEOF(uint8_t) +
-        CBOR_SIZEOF_MAP(2) + 2 * CBOR_SIZEOF(uint8_t) +
-        CBOR_SIZEOF(uint16_t) +
-        CBOR_SIZEOF(int16_t);
+        CBOR_SIZEOF_MAP(3) + 3 * CBOR_SIZEOF(uint8_t) +
+        CBOR_SIZEOF(int16_t) +   /* ttl */
+        CBOR_SIZEOF(uint16_t);   /* hop-count */
 
     ret = DPS_TxBufferReserve(node, &buf, len, DPS_TX_POOL);
     if (ret != DPS_OK) {
@@ -725,8 +717,11 @@ static DPS_Status SerializePub(DPS_Node* node, DPS_Publication* pub, const uint8
     if (ret == DPS_OK) {
         ret = CBOR_EncodeUint8(&buf, DPS_MSG_TYPE_PUB);
     }
+   /*
+    * Encode the unprotected map
+    */
     if (ret == DPS_OK) {
-        ret = CBOR_EncodeMap(&buf, 2);
+        ret = CBOR_EncodeMap(&buf, 3);
     }
     if (ret == DPS_OK) {
         ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_PORT);
@@ -739,6 +734,12 @@ static DPS_Status SerializePub(DPS_Node* node, DPS_Publication* pub, const uint8
     }
     if (ret == DPS_OK) {
         ret = CBOR_EncodeInt16(&buf, ttl);
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeUint8(&buf, DPS_CBOR_KEY_HOP_COUNT);
+    }
+    if (ret == DPS_OK) {
+        ret = CBOR_EncodeUint16(&buf, 0);
     }
     if (ret != DPS_OK) {
         return ret;
@@ -793,8 +794,6 @@ static DPS_Status SerializePub(DPS_Node* node, DPS_Publication* pub, const uint8
     if (ret != DPS_OK) {
         return ret;
     }
-    DPS_PRINT("Serialize\n");
-    //DPS_BitVectorDump(&pub->bf, DPS_TRUE);
     DPS_TxBufferCommit(&protectedBuf);
     /*
      * If the data is not encrypted can be serialized directly into the TX pool

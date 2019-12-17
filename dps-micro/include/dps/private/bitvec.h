@@ -55,9 +55,9 @@ typedef struct _DPS_BitVector {
 /**
  * The fuzzy-hash is a fixed size bit vector
  */
-typedef struct _DPS_FHBitVector {
+typedef struct _DPS_FuzzyHash {
     uint64_t bits[4];
-} DPS_FHBitVector;
+} DPS_FuzzyHash;
 
 /**
  * Bloom Filter insertion operation.
@@ -103,7 +103,11 @@ uint32_t DPS_BitVectorPopCount(DPS_BitVector* bv);
  * Generate a "fuzzy hash" (also called a "similarity preserving
  * hash") of a bit vector. The hash has the additional strong property
  * that given two bit vectors A and B where A is a superset of B,
- * FH(A) will be a superset of FH(B).
+ * FuzzyHash(A) will be a superset of FuzzyHash(B). The purpose of the fuzzy hash
+ * is to encode some of information that is lost when a union is
+ * formed from bit vectors from multiple subscriptions. For example the
+ * fuzzy hash encodes the minimum number of bits that are needed to 
+ * match any of the bit vectors that were combined by the union.
  *
  * To have the correct size the hash bit vector must has been
  * allocated by calling DPS_BitVectorAllocFH().
@@ -111,48 +115,47 @@ uint32_t DPS_BitVectorPopCount(DPS_BitVector* bv);
  * @param hash  Returns the fuzzy hash of the input bit vector
  * @param bv    An initialized bit vector
  */
-void DPS_BitVectorFuzzyHash(DPS_FHBitVector* hash, DPS_BitVector* bv);
+void DPS_BitVectorFuzzyHash(DPS_FuzzyHash* hash, DPS_BitVector* bv);
 
 /**
- * Duplicate a FH bit vector
+ * Duplicate a FuzzyHash bit vector
  *
  * @param dst Destination bit vector
  * @param src Source bit vector
  */
-static inline void DPS_FHBitVectorDup(DPS_FHBitVector* dst, DPS_FHBitVector* src)
+static inline void DPS_FuzzyHashDup(DPS_FuzzyHash* dst, DPS_FuzzyHash* src)
 {
-    memcpy(dst, src, sizeof(DPS_FHBitVector));
+    memcpy(dst, src, sizeof(DPS_FuzzyHash));
 }
 
-
 /**
- * Buffer space needed to serialize a FH bit vector.
+ * Buffer space needed to serialize a FuzzyHash bit vector.
  *
- * @param bv  The FH bit vector to serialize
+ * @param bv  The FuzzyHash bit vector to serialize
  *
  * @return  The buffer space needed to serialize the bit vector.
  */
-size_t DPS_FHBitVectorSerializedSize(DPS_FHBitVector* bv);
+size_t DPS_FuzzyHashSerializedSize(DPS_FuzzyHash* bv);
 
 /**
- * Serialize a FH bit vector into a buffer
+ * Serialize a FuzzyHash bit vector into a buffer
  *
- * @param bv      The FH bit vector to serialize
+ * @param bv      The FuzzyHash bit vector to serialize
  * @param buffer  The buffer to serialize the bit vector into
  *
  * @return  The success or failure of the operation
  */
-DPS_Status DPS_FHBitVectorSerialize(DPS_FHBitVector* bv, DPS_TxBuffer* buffer);
+DPS_Status DPS_FuzzyHashSerialize(DPS_FuzzyHash* bv, DPS_TxBuffer* buffer);
 
 /**
- * Deserialize a FH bit vector from a buffer
+ * Deserialize a FuzzyHash bit vector from a buffer
  *
- * @param bv      The FH bit vector to deserialize
+ * @param bv      The FuzzyHash bit vector to deserialize
  * @param buffer  The buffer to deserialize the bit vector from
  *
  * @return  The success or failure of the operation
  */
-DPS_Status DPS_FHBitVectorDeserialize(DPS_FHBitVector* bv, DPS_RxBuffer* buffer);
+DPS_Status DPS_FuzzyHashDeserialize(DPS_FuzzyHash* bv, DPS_RxBuffer* buffer);
 
 /**
  * Check if one bit vector includes all bits of another. The two bit
@@ -183,17 +186,23 @@ int DPS_BitVectorIncludes(const DPS_BitVector* bv1, const DPS_BitVector* bv2);
 int DPS_BitVectorEquals(const DPS_BitVector* bv1, const DPS_BitVector* bv2);
 
 /**
- * Returns the intersection of two bit vectors. The bit vectors must
- * be the same size.
+ * Returns the intersection of two fuzzy hash bit vectors.
  *
- * @param bvOut   The result of the intersection (can be same as bv1 or bv2)
- * @param bv1     A bit vector
- * @param bv2     A bit vector
+ * @param fhOut   The result of the intersection (can be same as fh1 or fh2)
+ * @param fh1     A fuzzy hash bit vector
+ * @param fh2     A fuzzy hash bit vector
  *
  * @return DPS_OK if computing the intersection is successful, an error
  *         otherwise
  */
-DPS_Status DPS_BitVectorIntersection(DPS_BitVector* bvOut, DPS_BitVector* bv1, DPS_BitVector* bv2);
+DPS_Status DPS_FuzzyHashIntersection(DPS_FuzzyHash* fhOut, DPS_FuzzyHash* fh1, DPS_FuzzyHash* fh2);
+
+/**
+  * Set all the bits in a fuzzy hash bit vector
+  *
+  * @param fh  The bit vector to fill
+  */
+void DPS_FuzzyHashFill(DPS_FuzzyHash* fh);
 
 /**
  * Forms the union of two bit vectors.

@@ -47,14 +47,15 @@ static DPS_Status SerializeAck(const DPS_Publication* pub, const uint8_t* data, 
     size_t len;
     DPS_TxBuffer buf;
     DPS_TxBuffer protectedBuf;
-    DPS_TxBuffer encryptedBuf;
 
     DPS_DBGTRACE();
 
     len = CBOR_SIZEOF_ARRAY(5) +
           CBOR_SIZEOF(uint8_t) +
           CBOR_SIZEOF(uint8_t) +
-          CBOR_SIZEOF_MAP(0);
+          CBOR_SIZEOF_MAP(2) + 2 * CBOR_SIZEOF(uint8_t) +
+          CBOR_SIZEOF_BYTES(sizeof(DPS_UUID)) +
+          CBOR_SIZEOF(uint32_t);
 
     ret = DPS_TxBufferReserve(node, &buf, len, DPS_TX_POOL);
     if (ret != DPS_OK) {
@@ -74,10 +75,6 @@ static DPS_Status SerializeAck(const DPS_Publication* pub, const uint8_t* data, 
         ret = CBOR_EncodeMap(&buf, 0);
     }
     DPS_TxBufferCommit(&buf);
-
-    len = CBOR_SIZEOF_MAP(2) + 2 * CBOR_SIZEOF(uint8_t) +
-          CBOR_SIZEOF_BYTES(sizeof(DPS_UUID)) +
-          CBOR_SIZEOF(uint32_t);
     /*
      * Encode the protected map
      */
@@ -129,9 +126,10 @@ static DPS_Status SerializeAck(const DPS_Publication* pub, const uint8_t* data, 
     /*
      * If the publication was encrypted the ack must be too
      */
-    if (pub->recipients) {
+    if (pub->numRecipients > 0) {
         DPS_RxBuffer aadBuf;
         DPS_RxBuffer plainTextBuf;
+        DPS_TxBuffer encryptedBuf;
         uint8_t nonce[COSE_NONCE_LEN];
 
         DPS_DBGPRINT("Encrypting Ack\n");

@@ -32,7 +32,7 @@
 /*
  * Debug control for this module
  */
-DPS_DEBUG_CONTROL(DPS_DEBUG_OFF);
+DPS_DEBUG_CONTROL(DPS_DEBUG_ON);
 
 #if __BYTE_ORDER != __LITTLE_ENDIAN
    #define ENDIAN_SWAP
@@ -75,7 +75,8 @@ static inline uint32_t COUNT_TZ(uint64_t n)
 #define COUNT_TZ(n)    __builtin_ctzll((chunk_t)n)
 #endif
 
-#define NUM_CHUNKS  (BITVEC_CONFIG_BIT_LEN / CHUNK_SIZE)
+#define NUM_FH_CHUNKS  (4)
+#define NUM_BV_CHUNKS  (BITVEC_CONFIG_BIT_LEN / CHUNK_SIZE)
 
 #define FH_BITVECTOR_LEN  (4 * sizeof(uint64_t))
 
@@ -107,7 +108,7 @@ static void CompressedBitDump(const chunk_t* data, size_t bits)
 int DPS_BitVectorIsClear(DPS_BitVector* bv)
 {
     size_t i;
-    for (i = 0; i < NUM_CHUNKS; ++i) {
+    for (i = 0; i < NUM_BV_CHUNKS; ++i) {
         if (bv->bits[i]) {
             return DPS_FALSE;
         }
@@ -119,7 +120,7 @@ uint32_t DPS_BitVectorPopCount(DPS_BitVector* bv)
 {
     uint32_t popCount = 0;
     size_t i;
-    for (i = 0; i < NUM_CHUNKS; ++i) {
+    for (i = 0; i < NUM_BV_CHUNKS; ++i) {
         popCount += POPCOUNT(bv->bits[i]);
     }
     return popCount;
@@ -186,7 +187,7 @@ int DPS_BitVectorEquals(const DPS_BitVector* bv1, const DPS_BitVector* bv2)
     }
     b1 = bv1->bits;
     b2 = bv2->bits;
-    for (i = 0; i < NUM_CHUNKS; ++i, ++b1, ++b2) {
+    for (i = 0; i < NUM_BV_CHUNKS; ++i, ++b1, ++b2) {
         if (*b1 != *b2) {
             return DPS_FALSE;
         }
@@ -206,7 +207,7 @@ int DPS_BitVectorIncludes(const DPS_BitVector* bv1, const DPS_BitVector* bv2)
     }
     b1 = bv1->bits;
     b2 = bv2->bits;
-    for (i = 0; i < NUM_CHUNKS; ++i, ++b1, ++b2) {
+    for (i = 0; i < NUM_BV_CHUNKS; ++i, ++b1, ++b2) {
         if ((*b1 & *b2) != *b2) {
             return DPS_FALSE;
         }
@@ -215,7 +216,7 @@ int DPS_BitVectorIncludes(const DPS_BitVector* bv1, const DPS_BitVector* bv2)
     return b1un != 0;
 }
 
-void DPS_BitVectorFuzzyHash(DPS_FHBitVector* hash, DPS_BitVector* bv)
+void DPS_BitVectorFuzzyHash(DPS_FuzzyHash* hash, DPS_BitVector* bv)
 {
     size_t i;
     chunk_t s = 0;
@@ -225,13 +226,13 @@ void DPS_BitVectorFuzzyHash(DPS_FHBitVector* hash, DPS_BitVector* bv)
     /*
      * Squash the bit vector into 64 bits
      */
-    for (i = 0; i < NUM_CHUNKS; ++i) {
+    for (i = 0; i < NUM_BV_CHUNKS; ++i) {
         chunk_t n = bv->bits[i];
         popCount += POPCOUNT(n);
         s |= n;
     }
     if (popCount == 0) {
-        memset(hash, 0, sizeof(DPS_FHBitVector));
+        memset(hash, 0, sizeof(DPS_FuzzyHash));
         return;
     }
     p = s;
@@ -254,7 +255,6 @@ void DPS_BitVectorFuzzyHash(DPS_FHBitVector* hash, DPS_BitVector* bv)
     } else {
         hash->bits[3] = (1ull << popCount) - 1;
     }
-    CompressedBitDump(hash->bits, FH_BITVECTOR_LEN * 8);
 }
 
 DPS_Status DPS_BitVectorUnion(DPS_BitVector* bvOut, DPS_BitVector* bv)
@@ -263,21 +263,20 @@ DPS_Status DPS_BitVectorUnion(DPS_BitVector* bvOut, DPS_BitVector* bv)
     if (!bvOut || !bv) {
         return DPS_ERR_NULL;
     }
-    for (i = 0; i < NUM_CHUNKS; ++i) {
+    for (i = 0; i < NUM_BV_CHUNKS; ++i) {
         bvOut->bits[i] |= bv->bits[i];
     }
     return DPS_OK;
 }
 
-DPS_Status DPS_BitVectorIntersection(DPS_BitVector* bvOut, DPS_BitVector* bv1, DPS_BitVector* bv2)
+DPS_Status DPS_FuzzyHashIntersection(DPS_FuzzyHash* fhOut, DPS_FuzzyHash* fh1, DPS_FuzzyHash* fh2)
 {
     size_t i;
-    int nz = 0;
-    if (!bvOut || !bv1 || !bv2) {
+    if (!fhOut || !fh1 || !fh2) {
         return DPS_ERR_NULL;
     }
-    for (i = 0; i < NUM_CHUNKS; ++i) {
-        nz |= ((bvOut->bits[i] = bv1->bits[i] & bv2->bits[i]) != 0);
+    for (i = 0; i < NUM_FH_CHUNKS; ++i) {
+        fhOut->bits[i] = fh1->bits[i] & fh2->bits[i];
     }
     return DPS_OK;
 }
@@ -290,7 +289,7 @@ DPS_Status DPS_BitVectorXor(DPS_BitVector* bvOut, DPS_BitVector* bv1, DPS_BitVec
         return DPS_ERR_NULL;
     }
 
-    for (i = 0; i < NUM_CHUNKS; ++i) {
+    for (i = 0; i < NUM_BV_CHUNKS; ++i) {
         diff |= ((bvOut->bits[i] = bv1->bits[i] ^ bv2->bits[i]) != 0ull);
     }
     if (equal) {
@@ -393,7 +392,7 @@ static DPS_Status RunLengthEncode(DPS_BitVector* bv, DPS_TxBuffer* buffer)
      */
     memset(packed, 0, bv->rleSize);
 
-    for (i = 0; i < NUM_CHUNKS; ++i) {
+    for (i = 0; i < NUM_BV_CHUNKS; ++i) {
         uint32_t rem0;
         chunk_t chunk = bv->bits[i] ^ complement;
         if (!chunk) {
@@ -505,7 +504,7 @@ static DPS_Status RunLengthDecode(uint8_t* packed, size_t packedSize, chunk_t* b
     return DPS_OK;
 }
 
-DPS_Status DPS_FHBitVectorSerialize(DPS_FHBitVector* bv, DPS_TxBuffer* buffer)
+DPS_Status DPS_FuzzyHashSerialize(DPS_FuzzyHash* bv, DPS_TxBuffer* buffer)
 {
 #ifdef ENDIAN_SWAP
 #error(TODO bit vector endian swapping not implemented)
@@ -529,7 +528,7 @@ static uint32_t RLESize(DPS_BitVector* bv)
      */
     while (1) {
         uint32_t rleSize = 0;
-        for (i = 0; i < NUM_CHUNKS; ++i) {
+        for (i = 0; i < NUM_BV_CHUNKS; ++i) {
             uint32_t rem0;
             chunk_t chunk = bv->bits[i] ^ complement;
             if (!chunk) {
@@ -607,12 +606,12 @@ DPS_Status DPS_BitVectorSerialize(DPS_BitVector* bv, DPS_TxBuffer* buffer)
     return ret;
 }
 
-size_t DPS_FHBitVectorSerializedSize(DPS_FHBitVector* bv)
+size_t DPS_FuzzyHashSerializedSize(DPS_FuzzyHash* bv)
 {
     return CBOR_SIZEOF_BYTES(FH_BITVECTOR_LEN);
 }
 
-DPS_Status DPS_FHBitVectorDeserialize(DPS_FHBitVector* bv, DPS_RxBuffer* buffer)
+DPS_Status DPS_FuzzyHashDeserialize(DPS_FuzzyHash* bv, DPS_RxBuffer* buffer)
 {
     uint8_t* data;
     size_t size;
@@ -633,7 +632,7 @@ DPS_Status DPS_FHBitVectorDeserialize(DPS_FHBitVector* bv, DPS_RxBuffer* buffer)
 static void BitVectorComplement(DPS_BitVector* bv)
 {
     size_t i;
-    for (i = 0; i < NUM_CHUNKS; ++i) {
+    for (i = 0; i < NUM_BV_CHUNKS; ++i) {
         bv->bits[i] = ~bv->bits[i];
     }
 }
@@ -685,11 +684,10 @@ DPS_Status DPS_BitVectorDeserialize(DPS_BitVector* bv, DPS_RxBuffer* buffer)
     return ret;
 }
 
-void DPS_BitVectorFill(DPS_BitVector* bv)
+void DPS_FuzzyHashFill(DPS_FuzzyHash* bv)
 {
     if (bv) {
-        memset(bv->bits, 0xFF, BITVEC_CONFIG_BYTE_LEN);
-        bv->rleSize = BITVEC_CONFIG_BYTE_LEN;
+        memset(bv->bits, 0xff, sizeof(bv->bits));
     }
 }
 

@@ -220,3 +220,20 @@ void DPS_DestroyNodeAddress(DPS_NodeAddress* addr)
     }
 }
 
+DPS_Node* DPS_PubGetNode(DPS_Publication* pub)
+{
+    if (pub) {
+        return pub->node;
+    } else {
+        return NULL;
+    }
+}
+
+DPS_Node* DPS_SubGetNode(DPS_Subscription* sub)
+{
+    if (sub) {
+        return sub->node;
+    } else {
+        return NULL;
+    }
+}

@@ -51,8 +51,6 @@ extern "C" {
 typedef struct _DPS_Subscription {
     DPS_Node* node;                   /**< Node for this subscription */
     void* userData;                   /**< Application provided user data */
-    DPS_FHBitVector needs;            /**< Subscription needs */
-    DPS_BitVector bf;                 /**< The Bloom filter bit vector for the topics for this subscription */
     DPS_PublicationHandler handler;   /**< Callback function to be called for a matching publication */
     const char* topics[DPS_MAX_SUB_TOPICS]; /**< Subscription topics */
     size_t numTopics;                 /**< Number of subscription topics */

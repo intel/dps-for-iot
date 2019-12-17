@@ -84,25 +84,6 @@ int main()
     ok = DPS_BitVectorBloomTest(&bv3, str3, strlen(str3));
     CHECK(ok);
 
-    /* Empty Intersection */
-    DPS_BitVectorIntersection(&bv3, &bv1, &bv2);
-    ok = !DPS_BitVectorBloomTest(&bv3, str1, strlen(str1));
-    CHECK(ok);
-    ok = !DPS_BitVectorBloomTest(&bv3, str2, strlen(str2));
-    CHECK(ok);
-    ok = !DPS_BitVectorBloomTest(&bv3, str3, strlen(str3));
-    CHECK(ok);
-
-    /* Partial Intersection */
-    DPS_BitVectorBloomInsert(&bv2, str1, strlen(str1));
-    DPS_BitVectorIntersection(&bv3, &bv1, &bv2);
-    ok = DPS_BitVectorBloomTest(&bv3, str1, strlen(str1));
-    CHECK(ok);
-    ok = !DPS_BitVectorBloomTest(&bv3, str2, strlen(str2));
-    CHECK(ok);
-    ok = !DPS_BitVectorBloomTest(&bv3, str3, strlen(str3));
-    CHECK(ok);
-
     /* Inclusion */
     ok = DPS_BitVectorIncludes(&bv1, &bv3);
     CHECK(ok);
