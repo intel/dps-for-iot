@@ -1,0 +1,6 @@
+LIBRARY dps_shared
+
+EXPORTS
+
+DPS_Debug
+DPS_ErrTxt
