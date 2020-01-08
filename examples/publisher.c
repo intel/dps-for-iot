@@ -324,7 +324,6 @@ int main(int argc, char** argv)
         nodeKeyId = &PublisherId;
         DPS_SetCertificate(memoryKeyStore, PublisherCert, PublisherPrivateKey, PublisherPassword);
         DPS_SetCertificate(memoryKeyStore, SubscriberCert, NULL, NULL);
-        nodeKeyId = &PublisherId;
     }
 
     node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore), nodeKeyId);
