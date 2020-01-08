@@ -262,7 +262,7 @@ static void OnLinkedPut(DPS_Node* node, const DPS_NodeAddress* addr, DPS_Status 
         topics[1] = regPut->tenant;
 
         DPS_SetPublicationData(regPut->pub, regPut);
-        regPut->status = DPS_InitPublication(regPut->pub, topics, 2, DPS_TRUE, NULL, OnPutAck);
+        regPut->status = DPS_InitPublication(regPut->pub, topics, 2, DPS_TRUE, OnPutAck);
         if (regPut->status != DPS_OK) {
             goto Exit;
         }

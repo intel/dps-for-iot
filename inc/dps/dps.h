@@ -850,7 +850,6 @@ typedef void (*DPS_AcknowledgementHandler)(DPS_Publication* pub, uint8_t* payloa
  * @param topics      The topic strings to publish
  * @param numTopics   The number of topic strings to publish - must be >= 1
  * @param noWildCard  If TRUE the publication will not match wildcard subscriptions
- * @param keyId       Optional key identifier to use for encrypted publications
  * @param handler     Optional handler for receiving acknowledgements
  *
  * @return DPS_OK if initialization is successful, an error otherwise
@@ -859,7 +858,6 @@ DPS_Status DPS_InitPublication(DPS_Publication* pub,
                                const char** topics,
                                size_t numTopics,
                                int noWildCard,
-                               const DPS_KeyId* keyId,
                                DPS_AcknowledgementHandler handler);
 
 /**

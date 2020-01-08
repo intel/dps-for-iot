@@ -1452,12 +1452,10 @@ DPS_Status DPS_InitPublication(DPS_Publication* pub,
                                const char** topics,
                                size_t numTopics,
                                int noWildCard,
-                               const DPS_KeyId* keyId,
                                DPS_AcknowledgementHandler handler)
 {
     DPS_Node* node = pub ? pub->node : NULL;
     DPS_Status ret = DPS_OK;
-    int8_t alg;
     size_t i;
 
     DPS_DBGTRACE();
@@ -1494,25 +1492,11 @@ DPS_Status DPS_InitPublication(DPS_Publication* pub,
         pub->ackRequested = DPS_TRUE;
     }
     pub->flags |= PUB_FLAG_LOCAL;
-    /*
-     * Copy key identifier
-     */
-    if (keyId) {
-        DPS_DBGPRINT("Publication has a keyId\n");
-        ret = GetRecipientAlgorithm(node->keyStore, keyId, &alg);
-        if (ret == DPS_OK) {
-            if (!AddRecipient(pub, alg, keyId)) {
-                ret = DPS_ERR_RESOURCES;
-            }
-        }
-    }
-    if (ret == DPS_OK) {
-        for (i = 0; i < numTopics; ++i) {
-            ret = DPS_AddTopic(pub->bf, topics[i], node->separators,
-                               noWildCard ? DPS_PubNoWild : DPS_PubTopic);
-            if (ret != DPS_OK) {
-                break;
-            }
+    for (i = 0; i < numTopics; ++i) {
+        ret = DPS_AddTopic(pub->bf, topics[i], node->separators,
+                           noWildCard ? DPS_PubNoWild : DPS_PubTopic);
+        if (ret != DPS_OK) {
+            break;
         }
     }
     if (ret == DPS_OK) {

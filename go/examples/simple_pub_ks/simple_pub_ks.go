@@ -104,7 +104,7 @@ func main() {
 
 	pub := dps.CreatePublication(node)
 
-	dps.InitPublication(pub, []string{"a/b/c"}, false, nil, func(pub *dps.Publication, payload []byte) {
+	dps.InitPublication(pub, []string{"a/b/c"}, false, func(pub *dps.Publication, payload []byte) {
 		fmt.Printf("Ack for pub UUID %v(%v)\n", dps.PublicationGetUUID(pub), dps.PublicationGetSequenceNum(pub))
 		fmt.Printf("    %v\n", string(payload))
 	})

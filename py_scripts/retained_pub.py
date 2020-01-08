@@ -29,7 +29,7 @@ dps.start_node(node, dps.MCAST_PUB_ENABLE_SEND + dps.MCAST_PUB_ENABLE_RECV, None
 print("Publisher is listening on %s" % (dps.get_listen_address(node)))
 
 pub = dps.create_publication(node)
-dps.init_publication(pub, ['a/b/c'], False, None)
+dps.init_publication(pub, ['a/b/c'], False)
 dps.publish(pub, "hello", 200)
 
 # Subscription for responding to alerts from new subscribers

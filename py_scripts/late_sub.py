@@ -31,7 +31,7 @@ time.sleep(1)
 
 # Let publishers know we are here
 pub = dps.create_publication(node)
-dps.init_publication(pub, ['new_subscriber'], False, None)
+dps.init_publication(pub, ['new_subscriber'], False)
 dps.publish(pub, "Hi")
 
 if not sys.flags.interactive:

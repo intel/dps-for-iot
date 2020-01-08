@@ -142,7 +142,7 @@ int main(int argc, char** argv)
     }
 
     pub = DPS_CreatePublication(node);
-    ret = DPS_InitPublication(pub, topics, numTopics, DPS_FALSE, NULL, OnAck);
+    ret = DPS_InitPublication(pub, topics, numTopics, DPS_FALSE, OnAck);
     if (ret != DPS_OK) {
         DPS_ERRPRINT("Failed to create publication - error=%d\n", ret);
         return 1;

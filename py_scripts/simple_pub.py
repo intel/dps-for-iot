@@ -173,7 +173,7 @@ if args.port != None:
         print("link %s returned %s" % (addr_text, dps.err_txt(ret)))
 
 pub = dps.create_publication(node)
-dps.init_publication(pub, ['a/b/c'], False, None, on_ack)
+dps.init_publication(pub, ['a/b/c'], False, on_ack)
 dps.publication_add_sub_id(pub, pub_key_id)
 dps.publish(pub, "hello")
 print("Pub UUID %s(%d)" % (dps.publication_get_uuid(pub), dps.publication_get_sequence_num(pub)))

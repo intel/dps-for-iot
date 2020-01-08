@@ -40,7 +40,7 @@ static DPS_Publication* CreatePublication(DPS_Node* node, const char** topics, s
 
     pub = DPS_CreatePublication(node);
     ASSERT(pub);
-    ret = DPS_InitPublication(pub, topics, numTopics, DPS_FALSE, NULL, handler);
+    ret = DPS_InitPublication(pub, topics, numTopics, DPS_FALSE, handler);
     ASSERT(ret == DPS_OK);
     return pub;
 }
@@ -61,7 +61,7 @@ static void TestCreateDestroy(DPS_Node* node, DPS_KeyStore* keyStore)
 
     pub = DPS_CreatePublication(node);
     ASSERT(pub);
-    ret = DPS_InitPublication(pub, topics, numTopics, DPS_FALSE, NULL, NULL);
+    ret = DPS_InitPublication(pub, topics, numTopics, DPS_FALSE, NULL);
     ASSERT(ret == DPS_OK);
     ret = DPS_DestroyPublication(pub, NULL);
     ASSERT(ret == DPS_OK);
