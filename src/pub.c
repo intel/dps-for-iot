@@ -489,7 +489,6 @@ static DPS_Status DecryptAndParsePub(DPS_PublishRequest* req, DPS_TxBuffer* plai
     static const int32_t EncryptedKeys[] = { DPS_CBOR_KEY_TOPICS, DPS_CBOR_KEY_DATA };
     DPS_Publication* pub = req->pub;
     DPS_KeyStore* keyStore = pub->node->keyStore;
-    uint8_t nonce[COSE_NONCE_LEN];
     DPS_RxBuffer aadBuf;
     DPS_RxBuffer cipherTextBuf;
     COSE_Entity recipient;
@@ -503,7 +502,6 @@ static DPS_Status DecryptAndParsePub(DPS_PublishRequest* req, DPS_TxBuffer* plai
     /*
      * Try to decrypt the publication
      */
-    DPS_MakeNonce(&pub->pubId, req->sequenceNum, DPS_MSG_TYPE_PUB, nonce);
     DPS_TxBufferToRx(&req->bufs[0], &aadBuf);
     DPS_TxBufferToRx(&req->bufs[1], &cipherTextBuf);
     DPS_TxBufferClear(plainTextBuf);
@@ -511,7 +509,7 @@ static DPS_Status DecryptAndParsePub(DPS_PublishRequest* req, DPS_TxBuffer* plai
     if (ret == DPS_OK) {
         if (type == CBOR_TAG) {
             if ((tag == COSE_TAG_ENCRYPT0) || (tag == COSE_TAG_ENCRYPT)) {
-                ret = COSE_Decrypt(nonce, &recipient, &aadBuf, &cipherTextBuf, keyStore, &pub->sender,
+                ret = COSE_Decrypt(&recipient, &aadBuf, &cipherTextBuf, keyStore, &pub->sender,
                                    plainTextBuf);
                 if (ret == DPS_OK) {
                     DPS_DBGPRINT("Publication was decrypted\n");

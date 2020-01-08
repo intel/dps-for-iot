@@ -352,7 +352,6 @@ DPS_Status DPS_DecodeAcknowledgement(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
      */
     pub = DPS_LookupAckHandler(node, &pubId, sequenceNum);
     if (pub) {
-        uint8_t nonce[COSE_NONCE_LEN];
         COSE_Entity unused;
         DPS_RxBuffer encryptedBuf;
         DPS_RxBuffer aadBuf;
@@ -369,14 +368,13 @@ DPS_Status DPS_DecodeAcknowledgement(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
         /*
          * Try to decrypt the acknowledgement
          */
-        DPS_MakeNonce(&pubId, sequenceNum, DPS_MSG_TYPE_ACK, nonce);
         DPS_RxBufferInit(&aadBuf, aadPos, rxBuf->rxPos - aadPos);
         DPS_RxBufferInit(&cipherTextBuf, rxBuf->rxPos, DPS_RxBufferAvail(rxBuf));
         DPS_TxBufferClear(&plainTextBuf);
         ret = CBOR_Peek(&cipherTextBuf, &type, &tag);
         if ((ret == DPS_OK) && (type == CBOR_TAG)) {
             if ((tag == COSE_TAG_ENCRYPT0) || (tag == COSE_TAG_ENCRYPT)) {
-                ret = COSE_Decrypt(nonce, &unused, &aadBuf, &cipherTextBuf, node->keyStore, &pub->ack.sender,
+                ret = COSE_Decrypt(&unused, &aadBuf, &cipherTextBuf, node->keyStore, &pub->ack.sender,
                                    &plainTextBuf);
                 if (ret == DPS_OK) {
                     DPS_DBGPRINT("Ack was COSE decrypted\n");

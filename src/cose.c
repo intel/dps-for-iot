@@ -1371,9 +1371,8 @@ Exit:
     return ret;
 }
 
-DPS_Status COSE_Decrypt(const uint8_t* nonce, COSE_Entity* recipient, DPS_RxBuffer* aad,
-                        DPS_RxBuffer* cipherText, DPS_KeyStore* keyStore, COSE_Entity* signer,
-                        DPS_TxBuffer* plainText)
+DPS_Status COSE_Decrypt(COSE_Entity* recipient, DPS_RxBuffer* aad, DPS_RxBuffer* cipherText,
+                        DPS_KeyStore* keyStore, COSE_Entity* signer, DPS_TxBuffer* plainText)
 {
     DPS_Status ret;
     DPS_TxBuffer AAD;
@@ -1582,8 +1581,7 @@ DPS_Status COSE_Decrypt(const uint8_t* nonce, COSE_Entity* recipient, DPS_RxBuff
         if (ret != DPS_OK) {
             goto Exit;
         }
-        ret = Decrypt_GCM(cek.symmetric.key, nonce ? nonce : iv, content, contentLen,
-                          AAD.base, aadLen, plainText);
+        ret = Decrypt_GCM(cek.symmetric.key, iv, content, contentLen, AAD.base, aadLen, plainText);
         if (ret == DPS_OK) {
             break;
         }
