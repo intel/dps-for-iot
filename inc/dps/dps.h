@@ -404,17 +404,17 @@ DPS_Status DPS_SetNetworkKey(DPS_MemoryKeyStore* keyStore, const DPS_KeyId* keyI
 /**
  * Create or replace the trusted CA(s) in the key store.
  *
- * @param mks An in-memory key store
+ * @param keyStore An in-memory key store
  * @param ca The CA chain in PEM format
  *
  * @return DPS_OK or an error
  */
-DPS_Status DPS_SetTrustedCA(DPS_MemoryKeyStore* mks, const char* ca);
+DPS_Status DPS_SetTrustedCA(DPS_MemoryKeyStore* keyStore, const char* ca);
 
 /**
  * Create or replace a certificate in the key store.
  *
- * @param mks An in-memory key store
+ * @param keyStore An in-memory key store
  * @param cert The certificate in PEM format
  * @param key The optional private key in PEM format
  * @param password The optional password protecting the key, may be
@@ -422,7 +422,7 @@ DPS_Status DPS_SetTrustedCA(DPS_MemoryKeyStore* mks, const char* ca);
  *
  * @return DPS_OK or an error
  */
-DPS_Status DPS_SetCertificate(DPS_MemoryKeyStore* mks, const char* cert, const char* key,
+DPS_Status DPS_SetCertificate(DPS_MemoryKeyStore* keyStore, const char* cert, const char* key,
                               const char* password);
 
 /**
