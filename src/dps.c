@@ -386,7 +386,7 @@ void DPS_DeleteRemoteNode(DPS_Node* node, RemoteNode* remote)
     DPS_DBGTRACEA("%s\n", DESCRIBE(remote));
 
     if (!IsValidRemoteNode(node, remote)) {
-        DPS_ERRPRINT("Attempt to delete invalid remote %p\n", remote);
+        DPS_WARNPRINT("Attempt to delete invalid remote %p\n", remote);
         return;
     }
     RemoveRemoteNode(node, remote);
@@ -999,7 +999,7 @@ static void SendSubsTimer(uv_timer_t* handle)
             }
         }
         if (ret != DPS_OK) {
-            DPS_ERRPRINT("Failed to send subscription request %s\n", DPS_ErrTxt(ret));
+            DPS_WARNPRINT("Failed to send subscription request %s\n", DPS_ErrTxt(ret));
             ret = DPS_OK;
             DPS_DeleteRemoteNode(node, remote);
         }

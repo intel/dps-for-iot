@@ -371,7 +371,6 @@ static void CancelPending(DPS_NetConnection* cn)
         DPS_NetConnectionDecRef(cn);
         DestroySendRequest(req);
     }
-
     DPS_NetConnectionDecRef(cn);
 }
 
@@ -517,6 +516,11 @@ static int OnTLSTimerGet(void* data)
     DPS_DBGTRACEA("cn=%p timerStatus=%d\n", cn, cn->timerStatus);
 
     return cn->timerStatus;
+}
+
+static void CancelTLSTimer(DPS_NetConnection* cn)
+{
+    OnTLSTimerSet(cn, 0, 0);
 }
 
 /*
@@ -709,11 +713,12 @@ static void FreeConnection(DPS_NetConnection* cn)
             cn->netCtx->cns = next;
         } else if (cn->netCtx->cns) {
             DPS_NetConnection* prev = cn->netCtx->cns;
-            while (prev->next != cn) {
+            while (prev && (prev->next != cn)) {
                 prev = prev->next;
-                assert(prev);
             }
-            prev->next = next;
+            if (prev) {
+                prev->next = next;
+            }
         }
     }
     /*
@@ -757,22 +762,7 @@ static void SocketClosed(uv_handle_t* handle)
     }
 }
 
-static void DestroyTimeout(uv_timer_t* timer)
-{
-    DPS_NetContext* netCtx = timer->data;
-    DPS_NetConnection* cn;
-    DPS_NetConnection* next;
-
-    for (cn = netCtx->cns; cn != NULL; cn = next) {
-        next = cn->next;
-        if ((cn->state & CN_SEND_CLOSED) && (cn->destroyTime <= uv_now(cn->node->loop))) {
-            cn->state |= CN_RECV_CLOSED;
-            if (cn->refCount == 0) {
-                DestroyConnection(cn);
-            }
-        }
-    }
-}
+static void DestroyTimeout(uv_timer_t* timer);
 
 static int ScheduleNextDestroyTimeout(DPS_NetContext* netCtx)
 {
@@ -781,7 +771,8 @@ static int ScheduleNextDestroyTimeout(DPS_NetContext* netCtx)
     int err;
 
     for (cn = netCtx->cns; cn != NULL; cn = cn->next) {
-        if ((cn->state & CN_SEND_CLOSED) && (cn->destroyTime < nextTime)) {
+        if (((cn->state & (CN_SEND_CLOSED | CN_RECV_CLOSED)) == CN_SEND_CLOSED) &&
+            (cn->destroyTime < nextTime)) {
             nextTime = cn->destroyTime;
         }
     }
@@ -799,6 +790,26 @@ static int ScheduleNextDestroyTimeout(DPS_NetContext* netCtx)
         DPS_ERRPRINT("uv_timer_start failed - %s\n", uv_err_name(err));
     }
     return err;
+}
+
+static void DestroyTimeout(uv_timer_t* timer)
+{
+    DPS_NetContext* netCtx = timer->data;
+    DPS_NetConnection* cn;
+    DPS_NetConnection* next;
+    uint64_t now;
+
+    now = uv_now(netCtx->node->loop);
+    for (cn = netCtx->cns; cn != NULL; cn = next) {
+        next = cn->next;
+        if ((cn->state & CN_SEND_CLOSED) && (cn->destroyTime <= now)) {
+            cn->state |= CN_RECV_CLOSED;
+            if (cn->refCount == 0) {
+                DestroyConnection(cn);
+            }
+        }
+    }
+    ScheduleNextDestroyTimeout(netCtx);
 }
 
 static void DestroyConnection(DPS_NetConnection* cn)
@@ -1115,6 +1126,21 @@ static DPS_NetConnection* CreateConnection(DPS_Node* node, const struct sockaddr
         ret = keyStore->keyAndIdHandler(&request);
         if (ret != DPS_OK) {
             DPS_WARNPRINT("Get PSK failed: %s\n", DPS_ErrTxt(ret));
+            /*
+             * Getting the PSK is not a problem if we have
+             * certificates, but if we don't have certificates or a
+             * PSK then the connection will never succeed.
+             */
+            if (ciphersuites == PskCipherSuites) {
+                DPS_WARNPRINT("Get PSK failed and only PSK ciphersuites supported: %s\n", DPS_ErrTxt(ret));
+                /*
+                 * Since we never started the connection, set both
+                 * sides as closed so that cleanup logic functions
+                 * correctly.
+                 */
+                cn->state = (CN_SEND_CLOSED | CN_RECV_CLOSED);
+                goto ErrorExit;
+            }
         }
         request.setKeyAndId = NULL;
     }
@@ -1525,6 +1551,11 @@ static void OnUdpData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, cons
             ConsumePending(cn);
         } else if (ret == DPS_FALSE) {
             CancelPending(cn);
+            /*
+             * The handshake timer must also be cancelled: mbedTLS
+             * will not do it for us on handshake failure.
+             */
+            CancelTLSTimer(cn);
         }
     } else {
         TLSRecv(cn);

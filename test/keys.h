@@ -52,6 +52,9 @@ typedef struct _Id {
 
 extern const Id Ids[];
 
+extern const char AltCA[];
+extern const Id AltId;
+
 #ifdef __cplusplus
 }
 #endif

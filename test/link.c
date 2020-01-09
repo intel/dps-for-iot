@@ -128,6 +128,17 @@ static DPS_Node* CreateNode(DPS_MemoryKeyStore* keyStore)
     return node;
 }
 
+static DPS_Node* CreateNodeWithId(DPS_MemoryKeyStore* keyStore, const DPS_KeyId* keyId)
+{
+    DPS_Node *node = NULL;
+    DPS_Status ret;
+
+    node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(keyStore), keyId);
+    ret = DPS_StartNode(node, DPS_MCAST_PUB_DISABLED, NULL);
+    ASSERT(ret == DPS_OK);
+    return node;
+}
+
 static void OnPublication(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* payload, size_t len)
 {
 }
@@ -525,6 +536,124 @@ static void TestMutualShutdown(void)
     DestroyKeyStore(keyStore);
 }
 
+#if defined(DPS_USE_DTLS)
+static void TestPSKFailure(void)
+{
+    DPS_MemoryKeyStore* aKeyStore = NULL;
+    DPS_MemoryKeyStore* bKeyStore = NULL;
+    DPS_Node* a = NULL;
+    DPS_Node* b = NULL;
+    DPS_NodeAddress* addr = NULL;
+    DPS_Status ret;
+
+    /*
+     * aKeyStore contains the PSK, bKeyStore does not
+     */
+    aKeyStore = CreateKeyStore();
+    bKeyStore = DPS_CreateMemoryKeyStore();
+    a = CreateNode(aKeyStore);
+    b = CreateNode(bKeyStore);
+
+    addr = DPS_CreateAddress();
+    ret = DPS_LinkTo(a, DPS_GetListenAddressString(b), addr);
+    ASSERT(ret != DPS_OK);
+    DPS_DestroyAddress(addr);
+
+    addr = DPS_CreateAddress();
+    ret = DPS_LinkTo(b, DPS_GetListenAddressString(a), addr);
+    ASSERT(ret != DPS_OK);
+    DPS_DestroyAddress(addr);
+
+    DestroyNode(b);
+    DestroyNode(a);
+    DestroyKeyStore(bKeyStore);
+    DestroyKeyStore(aKeyStore);
+}
+
+static void TestCertificateMissing(void)
+{
+    DPS_MemoryKeyStore* aKeyStore = NULL;
+    DPS_MemoryKeyStore* bKeyStore = NULL;
+    DPS_Node* a = NULL;
+    DPS_Node* b = NULL;
+    DPS_NodeAddress* addr = NULL;
+    DPS_Status ret;
+
+    /*
+     * aKeyStore contains a certificate, bKeyStore does not
+     */
+    aKeyStore = DPS_CreateMemoryKeyStore();
+    ret = DPS_SetTrustedCA(aKeyStore, TrustedCAs);
+    ASSERT(ret == DPS_OK);
+    ret = DPS_SetCertificate(aKeyStore, Ids[0].cert, Ids[0].privateKey, Ids[0].password);
+    ASSERT(ret == DPS_OK);
+    a = CreateNodeWithId(aKeyStore, &Ids[0].keyId);
+
+    bKeyStore = DPS_CreateMemoryKeyStore();
+    ret = DPS_SetTrustedCA(bKeyStore, TrustedCAs);
+    ASSERT(ret == DPS_OK);
+    b = CreateNode(bKeyStore);
+
+    addr = DPS_CreateAddress();
+    ret = DPS_LinkTo(a, DPS_GetListenAddressString(b), addr);
+    ASSERT(ret != DPS_OK);
+    DPS_DestroyAddress(addr);
+
+    addr = DPS_CreateAddress();
+    ret = DPS_LinkTo(b, DPS_GetListenAddressString(a), addr);
+    ASSERT(ret != DPS_OK);
+    DPS_DestroyAddress(addr);
+
+    DestroyNode(b);
+    DestroyNode(a);
+    DestroyKeyStore(bKeyStore);
+    DestroyKeyStore(aKeyStore);
+}
+
+static void TestCertificateInvalid(void)
+{
+    DPS_MemoryKeyStore* aKeyStore = NULL;
+    DPS_MemoryKeyStore* bKeyStore = NULL;
+    DPS_Node* a = NULL;
+    DPS_Node* b = NULL;
+    DPS_NodeAddress* addr = NULL;
+    DPS_Status ret;
+
+    /*
+     * aKeyStore and bKeyStore contain certificates signed by separate
+     * CAs so the identity of the remote side cannot be verified
+     */
+    aKeyStore = DPS_CreateMemoryKeyStore();
+    ret = DPS_SetTrustedCA(aKeyStore, TrustedCAs);
+    ASSERT(ret == DPS_OK);
+    ret = DPS_SetCertificate(aKeyStore, Ids[0].cert, Ids[0].privateKey, Ids[0].password);
+    ASSERT(ret == DPS_OK);
+    a = CreateNodeWithId(aKeyStore, &Ids[0].keyId);
+
+    bKeyStore = DPS_CreateMemoryKeyStore();
+    ret = DPS_SetTrustedCA(bKeyStore, AltCA);
+    ASSERT(ret == DPS_OK);
+    ret = DPS_SetCertificate(bKeyStore, AltId.cert, AltId.privateKey, AltId.password);
+    ASSERT(ret == DPS_OK);
+    b = CreateNodeWithId(bKeyStore, &AltId.keyId);
+
+    addr = DPS_CreateAddress();
+    ret = DPS_LinkTo(a, DPS_GetListenAddressString(b), addr);
+    ASSERT(ret != DPS_OK);
+    DPS_DestroyAddress(addr);
+
+    addr = DPS_CreateAddress();
+    ret = DPS_LinkTo(b, DPS_GetListenAddressString(a), addr);
+    ASSERT(ret != DPS_OK);
+    DPS_DestroyAddress(addr);
+
+    DestroyNode(b);
+    DestroyNode(a);
+    DestroyKeyStore(bKeyStore);
+    DestroyKeyStore(aKeyStore);
+}
+#endif /* DPS_USE_DTLS */
+
 int main(int argc, char** argv)
 {
     char** arg = argv + 1;
@@ -547,6 +676,11 @@ int main(int argc, char** argv)
     TestDestroyShutdown();
     TestShutdownShutdownAlready();
     TestMutualShutdown();
+#if defined(DPS_USE_DTLS)
+    TestPSKFailure();
+    TestCertificateMissing();
+    TestCertificateInvalid();
+#endif
 
     /*
      * For clean valgrind results, wait for node thread to exit
