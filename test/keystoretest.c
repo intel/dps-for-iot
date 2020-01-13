@@ -42,29 +42,27 @@ static DPS_Status GetCA(DPS_KeyStoreRequest* request)
     return DPS_ERR_MISSING;
 }
 
-int main(int argc, char** argv)
+static void TestCreateDestroy(void)
 {
-    DPS_KeyStore* keyStore;
-    DPS_Status ret;
-    void* userData;
-    int i;
+    DPS_KeyStore* keyStore = NULL;
 
-    DPS_Debug = DPS_FALSE;
-    for (i = 1; i < argc; ++i) {
-        if (!strcmp(argv[i], "-d")) {
-            DPS_Debug = DPS_TRUE;
-        }
-    }
-
-    /* Create and destroy */
     keyStore = DPS_CreateKeyStore(GetKeyAndId, GetKey, GetEphemeralKey, GetCA);
     ASSERT(keyStore);
     DPS_DestroyKeyStore(keyStore);
-    keyStore = NULL;
+}
 
-    /* Destroy NULL key store */
+static void TestDestroyNull(void)
+{
+    DPS_KeyStore* keyStore = NULL;
+
     DPS_DestroyKeyStore(keyStore);
-    keyStore = NULL;
+}
+
+static void TestGetSetUserData(void)
+{
+    DPS_KeyStore* keyStore = NULL;
+    void* userData;
+    DPS_Status ret;
 
     /* Set and get user data */
     keyStore = DPS_CreateKeyStore(GetKeyAndId, GetKey, GetEphemeralKey, GetCA);
@@ -74,11 +72,33 @@ int main(int argc, char** argv)
     userData = DPS_GetKeyStoreData(keyStore);
     ASSERT(userData == (void*)1);
     DPS_DestroyKeyStore(keyStore);
-    keyStore = NULL;
+}
+
+static void TestSetUserDataNull(void)
+{
+    DPS_KeyStore* keyStore = NULL;
+    DPS_Status ret;
 
     /* Set user data on NULL key store */
     ret = DPS_SetKeyStoreData(keyStore, (void*)1);
     ASSERT(ret != DPS_OK);
+}
+
+int main(int argc, char** argv)
+{
+    int i;
+
+    DPS_Debug = DPS_FALSE;
+    for (i = 1; i < argc; ++i) {
+        if (!strcmp(argv[i], "-d")) {
+            DPS_Debug = DPS_TRUE;
+        }
+    }
+
+    TestCreateDestroy();
+    TestDestroyNull();
+    TestGetSetUserData();
+    TestSetUserDataNull();
 
     return EXIT_SUCCESS;
 }
