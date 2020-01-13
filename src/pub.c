@@ -1716,14 +1716,14 @@ DPS_Status DPS_SerializePub(DPS_PublishRequest* req, const DPS_Buffer* bufs, siz
     }
     DPS_TxBufferClear(&req->bufs[req->numBufs - 1]);
     if (ret == DPS_OK) {
-        if (pub->recipients || node->signer.alg) {
+        if (pub->recipientsCount || node->signer.alg) {
             DPS_RxBuffer aadBuf;
             uint8_t nonce[COSE_NONCE_LEN];
 
             DPS_TxBufferToRx(&req->bufs[0], &aadBuf);
             DPS_MakeNonce(&pub->pubId, req->sequenceNum, DPS_MSG_TYPE_PUB, nonce);
             DPS_UnlockNode(node);
-            if (pub->recipients) {
+            if (pub->recipientsCount) {
                 ret = COSE_Encrypt(COSE_ALG_A256GCM, nonce, node->signer.alg ? &node->signer : NULL,
                                    pub->recipients, pub->recipientsCount, &aadBuf, &req->bufs[1],
                                    &req->bufs[2], req->numBufs - 3, &req->bufs[req->numBufs - 1],

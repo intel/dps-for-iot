@@ -255,13 +255,13 @@ static DPS_Status SerializeAck(const DPS_Publication* pub, PublicationAck* ack, 
     /*
      * If the publication was encrypted the ack must be too
      */
-    if (pub->recipients || node->signer.alg) {
+    if (pub->recipientsCount || node->signer.alg) {
         DPS_RxBuffer aadBuf;
         uint8_t nonce[COSE_NONCE_LEN];
 
         DPS_RxBufferInit(&aadBuf, aadPos, ack->bufs[0].txPos - aadPos);
         DPS_MakeNonce(&ack->pub->pubId, ack->sequenceNum, DPS_MSG_TYPE_ACK, nonce);
-        if (pub->recipients) {
+        if (pub->recipientsCount) {
             ret = COSE_Encrypt(COSE_ALG_A256GCM, nonce, node->signer.alg ? &node->signer : NULL,
                                pub->recipients, pub->recipientsCount, &aadBuf, &ack->bufs[1],
                                &ack->bufs[2], ack->numBufs - 3, &ack->bufs[ack->numBufs - 1],
