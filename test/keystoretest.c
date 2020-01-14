@@ -262,6 +262,79 @@ static void TestPublishWhenMissingEphemeralKey(void)
     PublishWhenMissingKey(AsymmetricKeyHandler, GetMissingEphemeralKey, NULL);
 }
 
+static void TestInvalidParameters(void)
+{
+    static const char* topics[] = { __FUNCTION__ };
+    static const size_t numTopics = 1;
+    DPS_Node* node = NULL;
+    DPS_MemoryKeyStore* mks = NULL;
+    DPS_Publication* pub = NULL;
+    DPS_Event* event = NULL;
+    DPS_KeyStore* ks = NULL;
+    DPS_Status ret;
+
+    /*
+     * Validate keyId parameter to DPS_CreateNode
+     */
+    node = DPS_CreateNode(NULL, NULL, &Ids[0].keyId);
+    ASSERT(!node);
+    mks = DPS_CreateMemoryKeyStore();
+    ASSERT(mks);
+    DPS_KeyId nullId = { NULL, 1 };
+    node = DPS_CreateNode(NULL, DPS_MemoryKeyStoreHandle(mks), &nullId);
+    ASSERT(!node);
+    DPS_KeyId zeroLengthId = { (const uint8_t*)"Id", 0 };
+    node = DPS_CreateNode(NULL, DPS_MemoryKeyStoreHandle(mks), &zeroLengthId);
+    ASSERT(!node);
+    DPS_DestroyMemoryKeyStore(mks);
+
+    /*
+     * Validate keyId parameter to DPS_PublicationAddSubId
+     */
+    mks = DPS_CreateMemoryKeyStore();
+    ASSERT(mks);
+    node = DPS_CreateNode(NULL, DPS_MemoryKeyStoreHandle(mks), NULL);
+    ASSERT(node);
+    ret = DPS_StartNode(node, DPS_MCAST_PUB_ENABLE_SEND, NULL);
+    ASSERT(ret == DPS_OK);
+    pub = DPS_CreatePublication(node);
+    ASSERT(pub);
+    ret = DPS_InitPublication(pub, topics, numTopics, DPS_FALSE, NULL);
+    ASSERT(ret == DPS_OK);
+
+    ret = DPS_PublicationAddSubId(pub, NULL);
+    ASSERT(ret == DPS_ERR_ARGS);
+    ret = DPS_PublicationAddSubId(pub, &nullId);
+    ASSERT(ret == DPS_ERR_ARGS);
+    ret = DPS_PublicationAddSubId(pub, &zeroLengthId);
+    ASSERT(ret == DPS_ERR_ARGS);
+
+    DPS_DestroyPublication(pub, NULL);
+    event = DPS_CreateEvent();
+    ASSERT(event);
+    DPS_DestroyNode(node, OnNodeDestroyed, event);
+    DPS_WaitForEvent(event);
+    DPS_DestroyMemoryKeyStore(mks);
+
+    /*
+     * These are the valid combinations to DPS_CreateKeyStore:
+     *
+    ks = DPS_CreateKeyStore(keyAndIdHandler, keyHandler, NULL,                NULL);
+    ks = DPS_CreateKeyStore(NULL,            keyHandler, ephemeralKeyHandler, NULL);
+    ks = DPS_CreateKeyStore(NULL,            keyHandler, NULL,                caHandler);
+     *
+     * Invalid combinations are below:
+     */
+    ks = DPS_CreateKeyStore(GetKeyAndId, NULL, NULL, NULL);
+    ASSERT(!ks);
+    ks = DPS_CreateKeyStore(NULL, GetKey, NULL, NULL);
+    ASSERT(!ks);
+    ks = DPS_CreateKeyStore(NULL, NULL, GetEphemeralKey, NULL);
+    ASSERT(!ks);
+    ks = DPS_CreateKeyStore(NULL, NULL, NULL, GetCA);
+    ASSERT(!ks);
+}
+
 int main(int argc, char** argv)
 {
     int i;
@@ -280,6 +353,7 @@ int main(int argc, char** argv)
     TestPublishWhenMissingSubKey();
     TestPublishWhenMissingSignerKey();
     TestPublishWhenMissingEphemeralKey();
+    TestInvalidParameters();
 
     return EXIT_SUCCESS;
 }

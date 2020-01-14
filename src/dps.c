@@ -1535,7 +1535,12 @@ DPS_Node* DPS_CreateNode(const char* separators, DPS_KeyStore* keyStore, const D
      * Sanity check
      */
     if (keyId && (!keyStore || !keyStore->keyHandler)) {
-        DPS_ERRPRINT("A key request callback is required\n");
+        DPS_WARNPRINT("A key request callback is required\n");
+        FreeNode(node);
+        return NULL;
+    }
+    if (keyId && (!keyId->id || !keyId->len)) {
+        DPS_WARNPRINT("A valid key ID is required\n");
         FreeNode(node);
         return NULL;
     }

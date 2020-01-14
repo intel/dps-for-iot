@@ -39,6 +39,14 @@ DPS_KeyStore* DPS_CreateKeyStore(DPS_KeyAndIdHandler keyAndIdHandler, DPS_KeyHan
 {
     DPS_DBGTRACE();
 
+    if ((keyAndIdHandler && !keyHandler) ||
+        (keyHandler && !(keyAndIdHandler || ephemeralKeyHandler || caHandler)) ||
+        (ephemeralKeyHandler && !keyHandler) ||
+        (caHandler && !keyHandler)) {
+        DPS_WARNPRINT("Missing required handlers\n");
+        return NULL;
+    }
+
     DPS_KeyStore* keyStore = calloc(1, sizeof(DPS_KeyStore));
     if (keyStore) {
         keyStore->keyAndIdHandler = keyAndIdHandler;

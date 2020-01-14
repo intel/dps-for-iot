@@ -1568,19 +1568,18 @@ DPS_Status DPS_PublicationAddSubId(DPS_Publication* pub, const DPS_KeyId* keyId)
 
     DPS_DBGTRACE();
 
-    if (IsValidPub(pub)) {
-        DPS_DBGPRINT("Publication has a keyId\n");
-        ret = GetRecipientAlgorithm(pub->node->keyStore, keyId, &alg);
-        if (ret != DPS_OK) {
-            return ret;
-        }
-        if (!AddRecipient(pub, alg, keyId)) {
-            return DPS_ERR_RESOURCES;
-        }
-        return DPS_OK;
-    } else {
+    if (!IsValidPub(pub) || !keyId || !keyId->id || !keyId->len) {
         return DPS_ERR_ARGS;
     }
+    DPS_DBGPRINT("Publication has a keyId\n");
+    ret = GetRecipientAlgorithm(pub->node->keyStore, keyId, &alg);
+    if (ret != DPS_OK) {
+        return ret;
+    }
+    if (!AddRecipient(pub, alg, keyId)) {
+        return DPS_ERR_RESOURCES;
+    }
+    return DPS_OK;
 }
 
 void DPS_PublicationRemoveSubId(DPS_Publication* pub, const DPS_KeyId* keyId)
