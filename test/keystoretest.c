@@ -98,6 +98,22 @@ typedef struct {
     int call;
 } KeyStoreData;
 
+static DPS_Status SymmetricKeyHandler(DPS_KeyStoreRequest* request, const DPS_KeyId* id)
+{
+    return DPS_SetKey(request, &Psk[0]);
+}
+
+static DPS_Status AsymmetricKeyHandler(DPS_KeyStoreRequest* request, const DPS_KeyId* id)
+{
+    DPS_Key k;
+
+    k.type = DPS_KEY_EC_CERT;
+    k.cert.cert = Ids[0].cert;
+    k.cert.privateKey = Ids[0].privateKey;
+    k.cert.password = Ids[0].password;
+    return DPS_SetKey(request, &k);
+}
+
 static DPS_Status EphemeralKeyHandler(DPS_KeyStoreRequest* request, const DPS_Key* key)
 {
     KeyStoreData* data = (KeyStoreData*)DPS_GetKeyStoreData(DPS_KeyStoreHandle(request));
@@ -161,7 +177,7 @@ static DPS_Status GetMissingSymmetricKey(DPS_KeyStoreRequest* request, const DPS
 
     switch (data->call++) {
     case 0:
-        return DPS_SetKey(request, &Psk[0]);
+        return SymmetricKeyHandler(request, id);
     default:
         return DPS_ERR_MISSING;
     }
@@ -170,21 +186,17 @@ static DPS_Status GetMissingSymmetricKey(DPS_KeyStoreRequest* request, const DPS
 static DPS_Status GetMissingAsymmetricKey(DPS_KeyStoreRequest* request, const DPS_KeyId* id)
 {
     KeyStoreData* data = (KeyStoreData*)DPS_GetKeyStoreData(DPS_KeyStoreHandle(request));
-    DPS_Key k;
 
     switch (data->call++) {
     case 0:
-        k.type = DPS_KEY_EC_CERT;
-        k.cert.cert = Ids[0].cert;
-        k.cert.privateKey = Ids[0].privateKey;
-        k.cert.password = Ids[0].password;
-        return DPS_SetKey(request, &k);
+        return AsymmetricKeyHandler(request, id);
     default:
         return DPS_ERR_MISSING;
     }
 }
 
-static void PublishWhenMissingKey(DPS_KeyHandler keyHandler, const DPS_KeyId* keyId)
+static void PublishWhenMissingKey(DPS_KeyHandler keyHandler, DPS_EphemeralKeyHandler ephemeralKeyHandler,
+                                  const DPS_KeyId* keyId)
 {
     static const char* topics[] = { __FUNCTION__ };
     static const size_t numTopics = 1;
@@ -198,7 +210,7 @@ static void PublishWhenMissingKey(DPS_KeyHandler keyHandler, const DPS_KeyId* ke
     keyStoreData.call = 0;
     keyStoreData.rbg = DPS_CreateRBG();
     ASSERT(keyStoreData.rbg);
-    keyStore = DPS_CreateKeyStore(GetKeyAndId, keyHandler, EphemeralKeyHandler, GetCA);
+    keyStore = DPS_CreateKeyStore(GetKeyAndId, keyHandler, ephemeralKeyHandler, GetCA);
     ASSERT(keyStore);
     DPS_SetKeyStoreData(keyStore, &keyStoreData);
     node = DPS_CreateNode("/.", keyStore, keyId);
@@ -229,14 +241,25 @@ static void PublishWhenMissingKey(DPS_KeyHandler keyHandler, const DPS_KeyId* ke
 
 static void TestPublishWhenMissingSubKey(void)
 {
-    PublishWhenMissingKey(GetMissingReservedKey, NULL);
-    PublishWhenMissingKey(GetMissingSymmetricKey, NULL);
-    PublishWhenMissingKey(GetMissingAsymmetricKey, NULL);
+    PublishWhenMissingKey(GetMissingReservedKey, EphemeralKeyHandler, NULL);
+    PublishWhenMissingKey(GetMissingSymmetricKey, EphemeralKeyHandler, NULL);
+    PublishWhenMissingKey(GetMissingAsymmetricKey, EphemeralKeyHandler, NULL);
 }
 
 static void TestPublishWhenMissingSignerKey(void)
 {
-    PublishWhenMissingKey(GetMissingAsymmetricKey, &Ids[0].keyId);
+    PublishWhenMissingKey(GetMissingAsymmetricKey, EphemeralKeyHandler, &Ids[0].keyId);
+}
+
+static DPS_Status GetMissingEphemeralKey(DPS_KeyStoreRequest* request, const DPS_Key* key)
+{
+    return DPS_ERR_MISSING;
+}
+
+static void TestPublishWhenMissingEphemeralKey(void)
+{
+    PublishWhenMissingKey(SymmetricKeyHandler, GetMissingEphemeralKey, NULL);
+    PublishWhenMissingKey(AsymmetricKeyHandler, GetMissingEphemeralKey, NULL);
 }
 
 int main(int argc, char** argv)
@@ -256,6 +279,7 @@ int main(int argc, char** argv)
     TestSetUserDataNull();
     TestPublishWhenMissingSubKey();
     TestPublishWhenMissingSignerKey();
+    TestPublishWhenMissingEphemeralKey();
 
     return EXIT_SUCCESS;
 }
