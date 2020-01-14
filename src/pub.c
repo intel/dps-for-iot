@@ -565,7 +565,7 @@ static DPS_Status DecryptAndParsePub(DPS_PublishRequest* req, DPS_TxBuffer* plai
                 ret = DPS_ERR_INVALID;
             }
         } else {
-            DPS_DBGPRINT("Publication was not a COSE object\n");
+            DPS_DBGPRINT("Publication was not encrypted\n");
             /*
              * The payload was not encrypted
              */

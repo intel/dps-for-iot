@@ -1,0 +1,6 @@
+.*
+!.gitignore
+build
+ext/lib
+ext/mbedtls
+*.pdb

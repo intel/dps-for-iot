@@ -55,7 +55,8 @@ typedef struct _DPS_DiscoveryService DPS_DiscoveryService;
  * Allocate resources for a discovery service
  *
  * @param node the node
- * @param serviceId an application-defined topic segment for discovery information
+ * @param serviceId an application-defined topic segment for discovery information. If
+ *                  NULL a default service identifier is used
  *
  * @return the service, or NULL if creation failed
  */

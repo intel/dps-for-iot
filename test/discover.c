@@ -55,23 +55,33 @@ static void OnPub(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* pa
 {
 }
 
+static PublicationList* pubList = NULL;
+static int ttl = 0;
+
 static void OnDiscovery(DPS_DiscoveryService* service, const DPS_Publication* pub,
                         uint8_t* payload, size_t len)
 {
+    static const char msg[] = "Hello from discovery service";
+    PublicationList* pubs;
+    DPS_Status ret;
     const DPS_UUID* pubId = DPS_PublicationGetUUID(pub);
     uint32_t sn = DPS_PublicationGetSequenceNum(pub);
 
-    DPS_PRINT("%s(%d) %s\n", DPS_UUIDToString(pubId), sn, payload);
+    DPS_PRINT("Discovered %s(%d) %s\n", DPS_UUIDToString(pubId), sn, payload);
+
+    for (pubs = pubList; pubs; pubs = pubs->next) {
+        ret = DPS_Publish(pubs->pub, (uint8_t*)msg, sizeof(msg), ttl); 
+        ASSERT(ret == DPS_OK);
+    }
 }
 
 int main(int argc, char** argv)
 {
     char** arg = argv + 1;
-    PublicationList* pubs = NULL;
     SubscriptionList* subs = NULL;
     DPS_Event* event = NULL;
     DPS_Node* node = NULL;
-    PublicationList* pub;
+    PublicationList* pubs;
     SubscriptionList* sub;
     DPS_DiscoveryService* discovery = NULL;
     char* msg = NULL;
@@ -87,19 +97,21 @@ int main(int argc, char** argv)
             if (!--argc) {
                 goto Usage;
             }
-            pub = calloc(1, sizeof(PublicationList));
-            if (!pub) {
+            pubs = calloc(1, sizeof(PublicationList));
+            if (!pubs) {
                 ret = DPS_ERR_RESOURCES;
                 goto Exit;
             }
-            pub->topic = strndup(*arg, DPS_MAX_TOPIC_STRLEN);
-            if (!pub->topic) {
+            pubs->topic = strndup(*arg, DPS_MAX_TOPIC_STRLEN);
+            if (!pubs->topic) {
                 ret = DPS_ERR_RESOURCES;
                 goto Exit;
             }
-            pub->next = pubs;
-            pubs = pub;
+            pubs->next = pubList;
+            pubList = pubs;
             ++arg;
+        } else if (IntArg("-t", &arg, &argc, &ttl, 0, 1000)) {
+            continue;
         } else if (strcmp(*arg, "-s") == 0) {
             ++arg;
             if (!--argc) {
@@ -145,13 +157,13 @@ int main(int argc, char** argv)
         goto Exit;
     }
     DPS_PRINT("Node is listening on %s\n", DPS_GetListenAddressString(node));
-    for (pub = pubs; pub; pub = pub->next) {
-        pub->pub = DPS_CreatePublication(node);
-        if (!pub->pub) {
+    for (pubs = pubList; pubs; pubs = pubs->next) {
+        pubs->pub = DPS_CreatePublication(node);
+        if (!pubs->pub) {
             ret = DPS_ERR_RESOURCES;
             goto Exit;
         }
-        ret = DPS_InitPublication(pub->pub, (const char**)&pub->topic, 1, DPS_FALSE, NULL);
+        ret = DPS_InitPublication(pubs->pub, (const char**)&pubs->topic, 1, DPS_FALSE, NULL);
         if (ret != DPS_OK) {
             goto Exit;
         }
@@ -199,14 +211,14 @@ Exit:
         DPS_DestroySubscription(sub->sub, NULL);
         free(sub);
     }
-    while (pubs) {
-        pub = pubs;
-        pubs = pubs->next;
-        if (pub->topic) {
-            free(pub->topic);
+    while (pubList) {
+        pubs = pubList;
+        pubList = pubList->next;
+        if (pubs->topic) {
+            free(pubs->topic);
         }
-        DPS_DestroyPublication(pub->pub, NULL);
-        free(pub);
+        DPS_DestroyPublication(pubs->pub, NULL);
+        free(pubs);
     }
     if (node) {
         DPS_DestroyNode(node, OnNodeDestroyed, event);
