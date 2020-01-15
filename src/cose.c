@@ -565,25 +565,25 @@ static DPS_Status SetKey(DPS_KeyStoreRequest* request, const DPS_Key* key)
     switch (key->type) {
     case DPS_KEY_SYMMETRIC:
         if (ckey->type != COSE_KEY_SYMMETRIC) {
-            DPS_ERRPRINT("Provided key has invalid type %d\n", key->type);
+            DPS_WARNPRINT("Provided key has invalid type %d\n", key->type);
             return DPS_ERR_MISSING;
         }
-        if (key->symmetric.len != AES_256_KEY_LEN) {
-            DPS_ERRPRINT("Provided key has invalid size %d\n", key->symmetric.len);
+        if (!key->symmetric.key || (key->symmetric.len != AES_256_KEY_LEN)) {
+            DPS_WARNPRINT("Provided key is invalid\n");
             return DPS_ERR_MISSING;
         }
         memcpy_s(ckey->symmetric.key, sizeof(ckey->symmetric.key), key->symmetric.key, key->symmetric.len);
         break;
     case DPS_KEY_EC:
         if (ckey->type != COSE_KEY_EC) {
-            DPS_ERRPRINT("Provided key has invalid type %d\n", key->type);
+            DPS_WARNPRINT("Provided key has invalid type %d\n", key->type);
             return DPS_ERR_MISSING;
         }
         switch (key->ec.curve) {
         case DPS_EC_CURVE_P384: len = 48; break;
         case DPS_EC_CURVE_P521: len = 66; break;
         default:
-            DPS_ERRPRINT("Provided key has unsupported curve %d\n", key->ec.curve);
+            DPS_WARNPRINT("Provided key has unsupported curve %d\n", key->ec.curve);
             return DPS_ERR_MISSING;
         }
         memset(&ckey->ec, 0, sizeof(ckey->ec));
@@ -600,7 +600,11 @@ static DPS_Status SetKey(DPS_KeyStoreRequest* request, const DPS_Key* key)
         break;
     case DPS_KEY_EC_CERT:
         if (ckey->type != COSE_KEY_EC) {
-            DPS_ERRPRINT("Provided key has invalid type %d\n", key->type);
+            DPS_WARNPRINT("Provided key has invalid type %d\n", key->type);
+            return DPS_ERR_MISSING;
+        }
+        if (key->cert.password && !key->cert.privateKey) {
+            DPS_WARNPRINT("Provided key has password but no private key\n");
             return DPS_ERR_MISSING;
         }
         if (key->cert.privateKey) {

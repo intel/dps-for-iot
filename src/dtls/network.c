@@ -408,7 +408,12 @@ static void ConsumePending(DPS_NetConnection* cn);
 static DPS_Status TLSPSKSet(DPS_KeyStoreRequest* request, const DPS_Key* key)
 {
     DPS_NetConnection* cn = request->data;
-    int ret = mbedtls_ssl_set_hs_psk(&cn->ssl, key->symmetric.key, key->symmetric.len);
+    int ret;
+
+    if (!key || (key->type != DPS_KEY_SYMMETRIC) || !key->symmetric.key || !key->symmetric.len) {
+        return DPS_ERR_MISSING;
+    }
+    ret = mbedtls_ssl_set_hs_psk(&cn->ssl, key->symmetric.key, key->symmetric.len);
     if (ret != 0) {
         DPS_ERRPRINT("Set PSK failed: %s\n", TLSErrTxt(ret));
         return DPS_ERR_MISSING;
@@ -952,8 +957,8 @@ static DPS_Status SetCert(DPS_KeyStoreRequest* request, const DPS_Key* key)
     if (pwLen == RSIZE_MAX_STR) {
         return DPS_ERR_MISSING;
     }
-    ret =  mbedtls_pk_parse_key(&cn->pkey, (const unsigned char*)key->cert.privateKey, len,
-                                (const unsigned char*)key->cert.password, pwLen);
+    ret = mbedtls_pk_parse_key(&cn->pkey, (const unsigned char*)key->cert.privateKey, len,
+                               (const unsigned char*)key->cert.password, pwLen);
     if (ret != 0) {
         DPS_WARNPRINT("Parse private key failed: %s\n", TLSErrTxt(ret));
         return DPS_ERR_MISSING;
@@ -965,7 +970,15 @@ static DPS_Status SetKeyAndId(DPS_KeyStoreRequest* request, const DPS_Key* key,
                               const DPS_KeyId* keyId)
 {
     DPS_NetConnection* cn = request->data;
-    int ret = mbedtls_ssl_conf_psk(&cn->conf, key->symmetric.key, key->symmetric.len, keyId->id, keyId->len);
+    int ret;
+
+    if (!key || (key->type != DPS_KEY_SYMMETRIC) || !key->symmetric.key || !key->symmetric.len) {
+        return DPS_ERR_MISSING;
+    }
+    if (!keyId || !keyId->id || !keyId->len) {
+        return DPS_ERR_MISSING;
+    }
+    ret = mbedtls_ssl_conf_psk(&cn->conf, key->symmetric.key, key->symmetric.len, keyId->id, keyId->len);
     if (ret != 0) {
         DPS_WARNPRINT("Set PSK failed: %s\n", TLSErrTxt(ret));
         return DPS_ERR_MISSING;

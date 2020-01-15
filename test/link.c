@@ -741,6 +741,246 @@ static void TestCAMissingFallbackToPSK(void)
     DestroyKeyStore(bKeyStore);
     DestroyKeyStore(aKeyStore);
 }
+
+static DPS_Status GetCertificateKeyAndId(DPS_KeyStoreRequest* request)
+{
+    DPS_Key k;
+    k.type = DPS_KEY_EC_CERT;
+    k.cert.cert = Ids[0].cert;
+    k.cert.privateKey = Ids[0].privateKey;
+    k.cert.password = Ids[0].password;
+    return DPS_SetKeyAndId(request, &k, &Ids[0].keyId);
+}
+
+static DPS_Status GetNullKeyAndId(DPS_KeyStoreRequest* request)
+{
+    DPS_Key k;
+    k.type = DPS_KEY_SYMMETRIC;
+    k.symmetric.key = NULL;
+    k.symmetric.len = NetworkKey.symmetric.len;
+    return DPS_SetKeyAndId(request, &k, &NetworkKeyId);
+}
+
+static DPS_Status GetZeroLengthKeyAndId(DPS_KeyStoreRequest* request)
+{
+    DPS_Key k;
+    k.type = DPS_KEY_SYMMETRIC;
+    k.symmetric.key = NetworkKey.symmetric.key;
+    k.symmetric.len = 1;
+    return DPS_SetKeyAndId(request, &k, &NetworkKeyId);
+}
+
+static DPS_Status GetKeyAndNullId(DPS_KeyStoreRequest* request)
+{
+    DPS_KeyId kid;
+    kid.id = NULL;
+    kid.len = NetworkKeyId.len;
+    return DPS_SetKeyAndId(request, &NetworkKey, &kid);
+}
+
+static DPS_Status GetKeyAndZeroLengthId(DPS_KeyStoreRequest* request)
+{
+    DPS_KeyId kid;
+    kid.id = NetworkKeyId.id;
+    kid.len = 0;
+    return DPS_SetKeyAndId(request, &NetworkKey, &kid);
+}
+
+static DPS_Status GetKey(DPS_KeyStoreRequest* request, const DPS_KeyId* id)
+{
+    return DPS_ERR_MISSING;
+}
+
+static void InvalidKeyAndId(DPS_KeyAndIdHandler keyAndIdHandler)
+{
+    DPS_KeyStore* aKeyStore = NULL;
+    DPS_MemoryKeyStore* bKeyStore = NULL;
+    DPS_Node* a = NULL;
+    DPS_Node* b = NULL;
+    DPS_NodeAddress* addr = NULL;
+    DPS_Status ret;
+
+    aKeyStore = DPS_CreateKeyStore(keyAndIdHandler, GetKey, NULL, NULL);
+    ASSERT(aKeyStore);
+    bKeyStore = CreateKeyStore();
+    a = DPS_CreateNode("/.", aKeyStore, NULL);
+    ret = DPS_StartNode(a, DPS_MCAST_PUB_DISABLED, NULL);
+    ASSERT(ret == DPS_OK);
+    b = CreateNode(bKeyStore);
+
+    addr = DPS_CreateAddress();
+    ret = DPS_LinkTo(a, DPS_GetListenAddressString(b), addr);
+    ASSERT(ret != DPS_OK);
+    DPS_DestroyAddress(addr);
+
+    DestroyNode(b);
+    DestroyNode(a);
+    DestroyKeyStore(bKeyStore);
+    DPS_DestroyKeyStore(aKeyStore);
+}
+
+static void TestInvalidKeyAndId(void)
+{
+    InvalidKeyAndId(GetCertificateKeyAndId);
+    InvalidKeyAndId(GetNullKeyAndId);
+    InvalidKeyAndId(GetZeroLengthKeyAndId);
+    InvalidKeyAndId(GetKeyAndNullId);
+    InvalidKeyAndId(GetKeyAndZeroLengthId);
+}
+
+static DPS_Status GetKeyAndId(DPS_KeyStoreRequest* request)
+{
+    return DPS_SetKeyAndId(request, &NetworkKey, &NetworkKeyId);
+}
+
+static DPS_Status GetCertificateKey(DPS_KeyStoreRequest* request, const DPS_KeyId* keyId)
+{
+    DPS_Key k;
+    k.type = DPS_KEY_EC_CERT;
+    k.cert.cert = Ids[0].cert;
+    k.cert.privateKey = Ids[0].privateKey;
+    k.cert.password = Ids[0].password;
+    return DPS_SetKey(request, &k);
+}
+
+static DPS_Status GetNullKey(DPS_KeyStoreRequest* request, const DPS_KeyId* keyId)
+{
+    DPS_Key k;
+    k.type = DPS_KEY_SYMMETRIC;
+    k.symmetric.key = NULL;
+    k.symmetric.len = NetworkKey.symmetric.len;
+    return DPS_SetKey(request, &k);
+}
+
+static DPS_Status GetZeroLengthKey(DPS_KeyStoreRequest* request, const DPS_KeyId* keyId)
+{
+    DPS_Key k;
+    k.type = DPS_KEY_SYMMETRIC;
+    k.symmetric.key = NetworkKey.symmetric.key;
+    k.symmetric.len = 1;
+    return DPS_SetKey(request, &k);
+}
+
+static void InvalidKey(DPS_KeyHandler keyHandler)
+{
+    DPS_KeyStore* aKeyStore = NULL;
+    DPS_MemoryKeyStore* bKeyStore = NULL;
+    DPS_Node* a = NULL;
+    DPS_Node* b = NULL;
+    DPS_NodeAddress* addr = NULL;
+    DPS_Status ret;
+
+    aKeyStore = DPS_CreateKeyStore(GetKeyAndId, keyHandler, NULL, NULL);
+    ASSERT(aKeyStore);
+    bKeyStore = CreateKeyStore();
+    a = DPS_CreateNode("/.", aKeyStore, NULL);
+    ret = DPS_StartNode(a, DPS_MCAST_PUB_DISABLED, NULL);
+    ASSERT(ret == DPS_OK);
+    b = CreateNode(bKeyStore);
+
+    addr = DPS_CreateAddress();
+    ret = DPS_LinkTo(b, DPS_GetListenAddressString(a), addr);
+    ASSERT(ret != DPS_OK);
+    DPS_DestroyAddress(addr);
+
+    DestroyNode(b);
+    DestroyNode(a);
+    DestroyKeyStore(bKeyStore);
+    DPS_DestroyKeyStore(aKeyStore);
+}
+
+static void TestInvalidKey(void)
+{
+    InvalidKey(GetCertificateKey);
+    InvalidKey(GetNullKey);
+    InvalidKey(GetZeroLengthKey);
+}
+
+static DPS_Status GetMissingPrivateKey(DPS_KeyStoreRequest* request, const DPS_KeyId* id)
+{
+    static int call = 0;
+    DPS_Key k;
+
+    k.type = DPS_KEY_EC_CERT;
+    k.cert.cert = Ids[0].cert;
+    /*
+     * First call is to get signature algorithm in DPS_CreateNode,
+     * second call is from DTLS.
+     */
+    if (call++ == 0) {
+        k.cert.privateKey = Ids[0].privateKey;
+    } else {
+        k.cert.privateKey = NULL;
+    }
+    k.cert.password = Ids[0].password;
+    return DPS_SetKey(request, &k);
+}
+
+static DPS_Status GetCA(DPS_KeyStoreRequest* request)
+{
+    return DPS_SetCA(request, TrustedCAs);
+}
+
+static void TestMissingPrivateKey(void)
+{
+    DPS_KeyStore* aKeyStore = NULL;
+    DPS_MemoryKeyStore* bKeyStore = NULL;
+    DPS_Node* a = NULL;
+    DPS_Node* b = NULL;
+    DPS_NodeAddress* addr = NULL;
+    DPS_Status ret;
+
+    aKeyStore = DPS_CreateKeyStore(NULL, GetMissingPrivateKey, NULL, GetCA);
+    ASSERT(aKeyStore);
+    bKeyStore = CreateKeyStore();
+    a = DPS_CreateNode("/.", aKeyStore, &Ids[0].keyId);
+    ret = DPS_StartNode(a, DPS_MCAST_PUB_DISABLED, NULL);
+    ASSERT(ret == DPS_OK);
+    b = CreateNode(bKeyStore);
+
+    addr = DPS_CreateAddress();
+    ret = DPS_LinkTo(a, DPS_GetListenAddressString(b), addr);
+    ASSERT(ret != DPS_OK);
+    DPS_DestroyAddress(addr);
+
+    DestroyNode(b);
+    DestroyNode(a);
+    DestroyKeyStore(bKeyStore);
+    DPS_DestroyKeyStore(aKeyStore);
+}
+
+static DPS_Status GetNullCA(DPS_KeyStoreRequest* request)
+{
+    return DPS_SetCA(request, NULL);
+}
+
+static void TestInvalidCA(void)
+{
+    DPS_KeyStore* aKeyStore = NULL;
+    DPS_MemoryKeyStore* bKeyStore = NULL;
+    DPS_Node* a = NULL;
+    DPS_Node* b = NULL;
+    DPS_NodeAddress* addr = NULL;
+    DPS_Status ret;
+
+    aKeyStore = DPS_CreateKeyStore(NULL, GetKey, NULL, GetNullCA);
+    ASSERT(aKeyStore);
+    bKeyStore = DPS_CreateMemoryKeyStore();
+    a = DPS_CreateNode("/.", aKeyStore, NULL);
+    ret = DPS_StartNode(a, DPS_MCAST_PUB_DISABLED, NULL);
+    ASSERT(ret == DPS_OK);
+    b = CreateNode(bKeyStore);
+
+    addr = DPS_CreateAddress();
+    ret = DPS_LinkTo(a, DPS_GetListenAddressString(b), addr);
+    ASSERT(ret != DPS_OK);
+    DPS_DestroyAddress(addr);
+
+    DestroyNode(b);
+    DestroyNode(a);
+    DestroyKeyStore(bKeyStore);
+    DPS_DestroyKeyStore(aKeyStore);
+}
 #endif /* DPS_USE_DTLS */
 
 int main(int argc, char** argv)
@@ -771,8 +1011,11 @@ int main(int argc, char** argv)
     TestCertificateInvalid();
     TestCAMissing();
     TestCAMissingFallbackToPSK();
+    TestInvalidKeyAndId();
+    TestInvalidKey();
+    TestMissingPrivateKey();
+    TestInvalidCA();
 #endif
-
     /*
      * For clean valgrind results, wait for node thread to exit
      * completely.
