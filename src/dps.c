@@ -383,12 +383,13 @@ static void RemoveRemoteNode(DPS_Node* node, RemoteNode* remote)
 
 void DPS_DeleteRemoteNode(DPS_Node* node, RemoteNode* remote)
 {
-    DPS_DBGTRACEA("%s\n", DESCRIBE(remote));
-
     if (!IsValidRemoteNode(node, remote)) {
         DPS_WARNPRINT("Attempt to delete invalid remote %p\n", remote);
         return;
     }
+
+    DPS_DBGTRACEA("%s\n", DESCRIBE(remote));
+
     RemoveRemoteNode(node, remote);
     DPS_ClearInboundInterests(node, remote);
     FreeOutboundInterests(remote);
