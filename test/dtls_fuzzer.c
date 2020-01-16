@@ -223,7 +223,7 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t len)
     if (!pub) {
         goto Exit;
     }
-    ret = DPS_InitPublication(pub, &topic, 1, DPS_FALSE, NULL, NULL);
+    ret = DPS_InitPublication(pub, &topic, 1, DPS_FALSE, NULL);
     if (ret != DPS_OK) {
         goto Exit;
     }
@@ -236,9 +236,9 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t len)
 
 Exit:
     DPS_DestroyAddress(addr);
-    DPS_DestroyPublication(pub);
+    DPS_DestroyPublication(pub, NULL);
     DestroyNode(client);
-    DPS_DestroySubscription(sub);
+    DPS_DestroySubscription(sub, NULL);
     DestroyNode(server);
     return 0;
 }

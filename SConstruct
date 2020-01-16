@@ -209,6 +209,7 @@ else:
     if env['fsan'] == True:
         if 'clang' in env['CC']:
             env.Append(CCFLAGS = ['-fsanitize=fuzzer-no-link'])
+            env.Append(LINKFLAGS = ['-fsanitize=fuzzer-no-link'])
         else:
             print('Unsupported compiler')
             exit();

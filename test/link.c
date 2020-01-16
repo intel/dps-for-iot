@@ -75,6 +75,9 @@ static DPS_NodeAddress* GetListenAddress(DPS_Node* node)
 #elif defined(DPS_USE_PIPE)
     DPS_CopyAddress(addr, DPS_GetListenAddress(node));
     ret = DPS_OK;
+#elif defined(DPS_USE_FUZZ)
+    DPS_CopyAddress(addr, DPS_GetListenAddress(node));
+    ret = DPS_OK;
 #endif
  Exit:
     DPS_DestroyEvent(event);
