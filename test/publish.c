@@ -315,7 +315,7 @@ static void TestBackToBackPublishSeparateNodes(DPS_Node* node, DPS_MemoryKeyStor
     event = DPS_CreateEvent();
     ASSERT(event);
 
-    subNode = DPS_CreateNode("/.", keyStore, NULL);
+    subNode = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(keyStore), NULL);
     ASSERT(subNode);
     ret = DPS_StartNode(subNode, DPS_MCAST_PUB_DISABLED, NULL);
     ASSERT(ret == DPS_OK);
