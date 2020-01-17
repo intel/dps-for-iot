@@ -200,6 +200,7 @@ struct _DPS_NetContext {
     uv_udp_recv_cb dataCB;
     uint32_t handshakeTimeoutMin;
     uint32_t handshakeTimeoutMax;
+    uint32_t closeNotifiedTimeout;
     DPS_Node* node;
     DPS_OnReceive receiveCB;
     DPS_NetConnection* cns;
@@ -840,7 +841,7 @@ static void DestroyConnection(DPS_NetConnection* cn)
          * when other side is unresponsive.
          */
         if ((cn->state & CN_RECV_CLOSED) == 0) {
-            cn->destroyTime = uv_now(cn->node->loop) + CLOSE_NOTIFIED_TIMEOUT;
+            cn->destroyTime = uv_now(cn->node->loop) + cn->netCtx->closeNotifiedTimeout;
             ret = ScheduleNextDestroyTimeout(cn->netCtx);
             if (ret != 0) {
                 /*
@@ -1607,6 +1608,7 @@ DPS_NetContext* DPS_NetStart(DPS_Node* node, const DPS_NodeAddress* addr, DPS_On
     netCtx->dataCB = OnUdpData;
     netCtx->handshakeTimeoutMin = MBEDTLS_SSL_DTLS_TIMEOUT_DFL_MIN;
     netCtx->handshakeTimeoutMax = MBEDTLS_SSL_DTLS_TIMEOUT_DFL_MAX;
+    netCtx->closeNotifiedTimeout = CLOSE_NOTIFIED_TIMEOUT;
     netCtx->node = node;
     netCtx->receiveCB = cb;
     if (addr) {
@@ -1791,11 +1793,11 @@ uv_udp_recv_cb Fuzz_OnData(DPS_Node* node, uv_udp_recv_cb cb)
     uv_udp_recv_cb ret;
 
     /*
-     * Shorten the handshake timeouts so that fuzzing can proceed
-     * rapidly
+     * Shorten the timeouts so that fuzzing can proceed rapidly
      */
     netCtx->handshakeTimeoutMin = 10;
     netCtx->handshakeTimeoutMax = 100;
+    netCtx->closeNotifiedTimeout = 400;
 
     ret = netCtx->dataCB;
     netCtx->dataCB = cb;
