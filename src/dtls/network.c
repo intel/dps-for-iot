@@ -475,13 +475,20 @@ static void OnTimeout(uv_timer_t* timer)
          * Timeout is only used for retransmissions during handshake,
          * so when we reach the final timeout, trigger mbedtls to
          * perform a handshake step.
+         *
+         * Protect cn with a ref since we may need to CancelPending on
+         * error.
          */
+        DPS_NetConnectionIncRef(cn);
         ret = TLSHandshake(cn);
         if (ret == DPS_TRUE && cn->handshakeDone) {
             ConsumePending(cn);
         } else if (ret == DPS_FALSE) {
             CancelPending(cn);
         }
+        DPS_NetConnectionDecRef(cn);
+
+        /* Timer ref */
         DPS_NetConnectionDecRef(cn);
     }
 }
@@ -1560,7 +1567,9 @@ static void OnUdpData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, cons
     DPS_NetConnectionIncRef(cn);
 
     if (!cn->handshakeDone) {
-        int ret = TLSHandshake(cn);
+        int ret;
+        DPS_NetConnectionIncRef(cn);
+        ret = TLSHandshake(cn);
         if (ret == DPS_TRUE && cn->handshakeDone) {
             ConsumePending(cn);
         } else if (ret == DPS_FALSE) {
@@ -1571,6 +1580,7 @@ static void OnUdpData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, cons
              */
             CancelTLSTimer(cn);
         }
+        DPS_NetConnectionDecRef(cn);
     } else {
         TLSRecv(cn);
     }
@@ -1703,6 +1713,7 @@ DPS_Status DPS_NetSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf
                        DPS_NetSendComplete sendCompleteCB)
 {
     SendRequest* req;
+    int ret;
 
     DPS_DBGTRACEA("node=%p,appCtx=%p,ep={addr=%s,cn=%p},bufs=%p,numBufs=%p,sendCompleteCB=%p\n",
                   node, appCtx, DPS_NodeAddrToString(&ep->addr), ep->cn, bufs, numBufs, sendCompleteCB);
@@ -1739,7 +1750,10 @@ DPS_Status DPS_NetSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf
         goto ErrorExit;
     }
     ep->cn->peer = *ep;
-    if (!TLSHandshake(ep->cn)) {
+    /* The caller gets a ref count to own. */
+    DPS_NetConnectionIncRef(ep->cn);
+    ret = TLSHandshake(ep->cn);
+    if (!ret) {
         goto ErrorExit;
     }
     /*
@@ -1754,14 +1768,12 @@ DPS_Status DPS_NetSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf
     if (ep->cn->handshakeDone) {
         ConsumePending(ep->cn);
     }
-    /* The caller gets a ref count to own. */
-    DPS_NetConnectionIncRef(ep->cn);
     return DPS_OK;
 
  ErrorExit:
     DestroySendRequest(req);
-    if (ep->cn && ep->cn->refCount == 0) {
-        DestroyConnection(ep->cn);
+    if (ep->cn) {
+        DPS_NetConnectionDecRef(ep->cn);
     }
     ep->cn = NULL;
     return DPS_ERR_NETWORK;
