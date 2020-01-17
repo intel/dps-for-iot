@@ -313,7 +313,7 @@ static void DestroyRecvData(RecvData* data)
 }
 
 static SendRequest* CreateSendRequest(void* appCtx, uv_buf_t* bufs, size_t numBufs,
-                                        DPS_NetSendComplete sendCompleteCB)
+                                      DPS_NetSendComplete sendCompleteCB)
 {
     SendRequest* req;
 
@@ -1013,6 +1013,11 @@ static DPS_NetConnection* CreateConnection(DPS_Node* node, const struct sockaddr
     cn->type = type;
     cn->peerAddr = DPS_CreateAddress();
     DPS_NetSetAddr(cn->peerAddr, DPS_DTLS, addr);
+    /*
+     * The state is used to perform a graceful shutdown and until the
+     * handshake completes, the state is not connected.
+     */
+    cn->state = (CN_SEND_CLOSED | CN_RECV_CLOSED);
 
     uv_timer_init(node->loop, &cn->timer);
     cn->timerStatus = -1;
@@ -1146,12 +1151,6 @@ static DPS_NetConnection* CreateConnection(DPS_Node* node, const struct sockaddr
              */
             if (ciphersuites == PskCipherSuites) {
                 DPS_WARNPRINT("Get PSK failed and only PSK ciphersuites supported: %s\n", DPS_ErrTxt(ret));
-                /*
-                 * Since we never started the connection, set both
-                 * sides as closed so that cleanup logic functions
-                 * correctly.
-                 */
-                cn->state = (CN_SEND_CLOSED | CN_RECV_CLOSED);
                 goto ErrorExit;
             }
         }
@@ -1352,6 +1351,7 @@ static void TLSRecv(DPS_NetConnection* cn)
 
     ret = netCtx->receiveCB(netCtx->node, &cn->peer, status, buf);
 
+Exit:
     /*
      * See comment in TLSHandshake about holding onto a reference
      * until the incoming data is received after the handshake is
@@ -1363,7 +1363,6 @@ static void TLSRecv(DPS_NetConnection* cn)
         cn->handshake = 0;
     }
 
-Exit:
     DPS_NetRxBufferDecRef(buf);
     DPS_NetConnectionDecRef(cn);
 }
@@ -1445,6 +1444,7 @@ static int TLSHandshake(DPS_NetConnection* cn)
 
     /* Handshake is done, consume anything pending. */
     cn->handshakeDone = DPS_TRUE;
+    cn->state &= ~(CN_SEND_CLOSED | CN_RECV_CLOSED);
     DPS_DBGPRINT("Handshake is done cn=%p\n", cn);
 
     /*
