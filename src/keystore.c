@@ -278,7 +278,7 @@ static DPS_Status MemoryKeyStoreEphemeralKeyHandler(DPS_KeyStoreRequest* request
     switch (key->type) {
     case DPS_KEY_SYMMETRIC: {
         uint8_t key[AES_256_KEY_LEN];
-        ret = DPS_RandomKey(mks->rbg, key);
+        ret = DPS_RandomBytes(mks->rbg, key, AES_256_KEY_LEN);
         if (ret != DPS_OK) {
             return ret;
         }

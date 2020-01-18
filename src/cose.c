@@ -779,7 +779,7 @@ DPS_Status COSE_Encrypt(int8_t alg, const uint8_t nonce[COSE_NONCE_LEN], const C
         CBOR_SIZEOF_ARRAY(4) +
         SIZEOF_PROTECTED_MAP +
         CBOR_SIZEOF_MAP(2) +
-        /* iv */ CBOR_SIZEOF(int8_t) + CBOR_SIZEOF_BYTES(COSE_NONCE_LEN) +
+        /* iv */ CBOR_SIZEOF(int8_t) + CBOR_SIZEOF_BYTES(nonceLen) +
         CBOR_SIZEOF_LEN(contentLen);
     if (signer) {
         ctLen += /* counter signature */ CBOR_SIZEOF(int8_t) + SIZEOF_COUNTER_SIGNATURE(signer->kid.len);

@@ -260,12 +260,15 @@ static DPS_Status SerializeAck(const DPS_Publication* pub, PublicationAck* ack, 
         uint8_t nonce[COSE_NONCE_LEN];
 
         DPS_RxBufferInit(&aadBuf, aadPos, ack->bufs[0].txPos - aadPos);
-        DPS_MakeNonce(&ack->pub->pubId, ack->sequenceNum, DPS_MSG_TYPE_ACK, nonce);
         if (pub->recipientsCount) {
-            ret = COSE_Encrypt(COSE_ALG_A256GCM, nonce, node->signer.alg ? &node->signer : NULL,
-                               pub->recipients, pub->recipientsCount, &aadBuf, &ack->bufs[1],
-                               &ack->bufs[2], ack->numBufs - 3, &ack->bufs[ack->numBufs - 1],
-                               node->keyStore);
+            ret = DPS_MakeNonce(&ack->pub->pubId, ack->sequenceNum, DPS_MSG_TYPE_ACK,
+                                pub->recipients[0].alg, node->rbg, nonce);
+            if (ret == DPS_OK) {
+                ret = COSE_Encrypt(COSE_ALG_A256GCM, nonce, node->signer.alg ? &node->signer : NULL,
+                                   pub->recipients, pub->recipientsCount, &aadBuf, &ack->bufs[1],
+                                   &ack->bufs[2], ack->numBufs - 3, &ack->bufs[ack->numBufs - 1],
+                                   node->keyStore);
+            }
         } else {
             ret = COSE_Sign(&node->signer, &aadBuf, &ack->bufs[1], &ack->bufs[2], ack->numBufs - 3,
                             &ack->bufs[ack->numBufs - 1], node->keyStore);

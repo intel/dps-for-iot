@@ -123,7 +123,7 @@ static DPS_Status EphemeralKeyHandler(DPS_KeyStoreRequest* request, const DPS_Ke
     switch (key->type) {
     case DPS_KEY_SYMMETRIC: {
         uint8_t bytes[AES_256_KEY_LEN];
-        ret = DPS_RandomKey(data->rbg, bytes);
+        ret = DPS_RandomBytes(data->rbg, bytes, AES_256_KEY_LEN);
         if (ret != DPS_OK) {
             return ret;
         }
@@ -307,7 +307,7 @@ static DPS_Status SetWrongEphemeralKeyType(DPS_KeyStoreRequest* request, const D
     switch (key->type) {
     case DPS_KEY_EC: {
         uint8_t bytes[AES_256_KEY_LEN];
-        ret = DPS_RandomKey(data->rbg, bytes);
+        ret = DPS_RandomBytes(data->rbg, bytes, AES_256_KEY_LEN);
         if (ret != DPS_OK) {
             return ret;
         }

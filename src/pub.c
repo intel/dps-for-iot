@@ -1719,14 +1719,17 @@ DPS_Status DPS_SerializePub(DPS_PublishRequest* req, const DPS_Buffer* bufs, siz
             DPS_RxBuffer aadBuf;
             uint8_t nonce[COSE_NONCE_LEN];
 
-            DPS_TxBufferToRx(&req->bufs[0], &aadBuf);
-            DPS_MakeNonce(&pub->pubId, req->sequenceNum, DPS_MSG_TYPE_PUB, nonce);
             DPS_UnlockNode(node);
+            DPS_TxBufferToRx(&req->bufs[0], &aadBuf);
             if (pub->recipientsCount) {
-                ret = COSE_Encrypt(COSE_ALG_A256GCM, nonce, node->signer.alg ? &node->signer : NULL,
-                                   pub->recipients, pub->recipientsCount, &aadBuf, &req->bufs[1],
-                                   &req->bufs[2], req->numBufs - 3, &req->bufs[req->numBufs - 1],
-                                   node->keyStore);
+                ret = DPS_MakeNonce(&pub->pubId, req->sequenceNum, DPS_MSG_TYPE_PUB,
+                                    pub->recipients[0].alg, node->rbg, nonce);
+                if (ret == DPS_OK) {
+                    ret = COSE_Encrypt(COSE_ALG_A256GCM, nonce, node->signer.alg ? &node->signer : NULL,
+                                       pub->recipients, pub->recipientsCount, &aadBuf, &req->bufs[1],
+                                       &req->bufs[2], req->numBufs - 3, &req->bufs[req->numBufs - 1],
+                                       node->keyStore);
+                }
             } else {
                 ret = COSE_Sign(&node->signer, &aadBuf, &req->bufs[1], &req->bufs[2], req->numBufs - 3,
                                 &req->bufs[req->numBufs - 1], node->keyStore);

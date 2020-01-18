@@ -204,6 +204,8 @@ typedef struct _DPS_Node {
     DPS_OnLinkLoss linkLossCB;            /**< Function called in the case of link-loss */
     void* linkLossData;                   /**< Pointer to be passed when calling linkLossCB() */
 
+    DPS_RBG* rbg;                         /**< Secure random byte generator */
+
 } DPS_Node;
 
 /**
@@ -305,9 +307,14 @@ void DPS_OnSendSubscriptionComplete(DPS_Node* node, void* appCtx, DPS_NetEndpoin
  * @param uuid The publication UUID
  * @param seqNum The publication sequence number
  * @param msgType The message type (DPS_MSG_TYPE_PUB or DPS_MSG_TYPE_ACK)
+ * @param alg The recipient algorithm
+ * @param rbg a random byte generator
  * @param nonce The computed nonce
+ *
+ * @return DPS_OK if successful, an error otherwise
  */
-void DPS_MakeNonce(const DPS_UUID* uuid, uint32_t seqNum, uint8_t msgType, uint8_t nonce[COSE_NONCE_LEN]);
+DPS_Status DPS_MakeNonce(const DPS_UUID* uuid, uint32_t seqNum, uint8_t msgType,
+                         int8_t alg, DPS_RBG* rbg, uint8_t nonce[COSE_NONCE_LEN]);
 
 /**
  * Function to call when a send operation completes.

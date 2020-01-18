@@ -121,7 +121,7 @@ static DPS_Status EphemeralKeyHandler(DPS_KeyStoreRequest* request, const DPS_Ke
         uint8_t aes[AES_256_KEY_LEN];
         DPS_Status ret;
 
-        ret = DPS_RandomKey(rbg, aes);
+        ret = DPS_RandomBytes(rbg, aes, AES_256_KEY_LEN);
         if (ret != DPS_OK) {
             return ret;
         }

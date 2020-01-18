@@ -33,6 +33,7 @@
 #include "ack.h"
 #include "bitvec.h"
 #include "coap.h"
+#include "crypto.h"
 #include "ec.h"
 #include "history.h"
 #include "node.h"
@@ -1414,6 +1415,7 @@ static void StopNode(DPS_Node* node)
 static void FreeNode(DPS_Node* node)
 {
     DPS_ClearKeyId(&node->signer.kid);
+    DPS_DestroyRBG(node->rbg);
     free(node);
 }
 
@@ -1526,6 +1528,11 @@ DPS_Node* DPS_CreateNode(const char* separators, DPS_KeyStore* keyStore, const D
      * One time initilization required
      */
     if (DPS_InitUUID() != DPS_OK) {
+        FreeNode(node);
+        return NULL;
+    }
+    node->rbg = DPS_CreateRBG();
+    if (!node->rbg) {
         FreeNode(node);
         return NULL;
     }
@@ -2104,22 +2111,33 @@ void DPS_DestroyAddress(DPS_NodeAddress* addr)
     }
 }
 
-void DPS_MakeNonce(const DPS_UUID* uuid, uint32_t seqNum, uint8_t msgType, uint8_t nonce[COSE_NONCE_LEN])
+DPS_Status DPS_MakeNonce(const DPS_UUID* uuid, uint32_t seqNum, uint8_t msgType,
+                         int8_t alg, DPS_RBG* rbg, uint8_t nonce[COSE_NONCE_LEN])
 {
     uint8_t* p = nonce;
 
-    *p++ = (uint8_t)(seqNum >> 0);
-    *p++ = (uint8_t)(seqNum >> 8);
-    *p++ = (uint8_t)(seqNum >> 16);
-    *p++ = (uint8_t)(seqNum >> 24);
-    memcpy_s(p, COSE_NONCE_LEN - sizeof(uint32_t), uuid, COSE_NONCE_LEN - sizeof(uint32_t));
-    /*
-     * Adjust one bit so nonce for PUB's and ACK's for same pub id and sequence number are different
-     */
-    if (msgType == DPS_MSG_TYPE_PUB) {
-        p[0] &= 0x7F;
-    } else {
-        p[0] |= 0x80;
+    switch (alg) {
+    case COSE_ALG_RESERVED:
+    case COSE_ALG_DIRECT:
+        *p++ = (uint8_t)(seqNum >> 0);
+        *p++ = (uint8_t)(seqNum >> 8);
+        *p++ = (uint8_t)(seqNum >> 16);
+        *p++ = (uint8_t)(seqNum >> 24);
+        memcpy_s(p, COSE_NONCE_LEN - sizeof(uint32_t), uuid, COSE_NONCE_LEN - sizeof(uint32_t));
+        /*
+         * Adjust one bit so nonce for PUB's and ACK's for same pub id and sequence number are different
+         */
+        if (msgType == DPS_MSG_TYPE_PUB) {
+            p[0] &= 0x7F;
+        } else {
+            p[0] |= 0x80;
+        }
+        return DPS_OK;
+    case COSE_ALG_A256KW:
+    case COSE_ALG_ECDH_ES_A256KW:
+        return DPS_RandomBytes(rbg, nonce, COSE_NONCE_LEN);
+    default:
+        return DPS_ERR_NOT_IMPLEMENTED;
     }
 }
 
