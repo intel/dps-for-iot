@@ -139,6 +139,10 @@ Acknowledgement payloads will be protected using the same key
 encryption key identifier the recipient used to decrypt the
 publication.
 
+@note @ref DPS_ERR_NONCE_OVERFLOW is returned when the encryption
+would reuse the same nonce and key.  The key or the publication must
+be replaced with a new one.
+
 @see DPS_SetContentKey()
 
 @subsection encrypting-with-an-asymmetric-key Encrypting with an asymmetric key

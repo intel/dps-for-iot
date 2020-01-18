@@ -71,6 +71,7 @@ typedef int DPS_Status; /**< The status code type */
 #define DPS_ERR_RANGE             27 /**< A value is out of range */
 #define DPS_ERR_LOST_PRECISION    28 /**< Precision was lost when converting a value */
 #define DPS_ERR_NOT_COSE          29 /**< Payload is not a COSE payload (no COSE tag) */
+#define DPS_ERR_NONCE_OVERFLOW    30 /**< The nonce used in payload encryption has overflowed */
 
 /**
  * The text string representation of the status code.

@@ -2119,13 +2119,21 @@ DPS_Status DPS_MakeNonce(const DPS_UUID* uuid, uint32_t seqNum, uint8_t msgType,
     switch (alg) {
     case COSE_ALG_RESERVED:
     case COSE_ALG_DIRECT:
+        if (seqNum == 0) {
+            /*
+             * This means the seqNum has wrapped and we are at risk of
+             * reusing the same nonce with a key
+             */
+            return DPS_ERR_NONCE_OVERFLOW;
+        }
         *p++ = (uint8_t)(seqNum >> 0);
         *p++ = (uint8_t)(seqNum >> 8);
         *p++ = (uint8_t)(seqNum >> 16);
         *p++ = (uint8_t)(seqNum >> 24);
         memcpy_s(p, COSE_NONCE_LEN - sizeof(uint32_t), uuid, COSE_NONCE_LEN - sizeof(uint32_t));
         /*
-         * Adjust one bit so nonce for PUB's and ACK's for same pub id and sequence number are different
+         * Adjust one bit so nonce for PUB's and ACK's for same pub id
+         * and sequence number are different
          */
         if (msgType == DPS_MSG_TYPE_PUB) {
             p[0] &= 0x7F;
