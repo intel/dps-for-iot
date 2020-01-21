@@ -739,7 +739,8 @@ static void FreeConnection(DPS_NetConnection* cn)
      * still active.  Finish the work of DPS_NetStop here when the
      * last connection is removed from the list.
      */
-    if ((cn->netCtx->state == NET_STOPPING) && !cn->netCtx->cns) {
+    if ((cn->netCtx->state == NET_STOPPING) && !cn->netCtx->cns &&
+        !uv_is_closing((uv_handle_t*)&cn->netCtx->rxSocket)) {
         uv_udp_recv_stop(&cn->netCtx->rxSocket);
         uv_close((uv_handle_t*)&cn->netCtx->rxSocket, RxHandleClosed);
     }
@@ -1702,7 +1703,7 @@ void DPS_NetStop(DPS_NetContext* netCtx)
          * immediately.  Otherwise we must wait for FreeConnection to
          * be called to ensure no one is using the rxSocket.
          */
-        if (!netCtx->cns) {
+        if (!netCtx->cns && !uv_is_closing((uv_handle_t*)&netCtx->rxSocket)) {
             uv_udp_recv_stop(&netCtx->rxSocket);
             uv_close((uv_handle_t*)&netCtx->rxSocket, RxHandleClosed);
         }
