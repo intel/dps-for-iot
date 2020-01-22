@@ -1360,7 +1360,6 @@ static void TLSRecv(DPS_NetConnection* cn)
 
     ret = netCtx->receiveCB(netCtx->node, &cn->peer, status, buf);
 
-Exit:
     /*
      * See comment in TLSHandshake about holding onto a reference
      * until the incoming data is received after the handshake is
@@ -1372,6 +1371,7 @@ Exit:
         cn->handshake = 0;
     }
 
+Exit:
     DPS_NetRxBufferDecRef(buf);
     DPS_NetConnectionDecRef(cn);
 }
