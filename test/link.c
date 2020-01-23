@@ -453,49 +453,6 @@ static void TestDestroyShutdown(void)
     DestroyKeyStore(keyStore);
 }
 
-static void TestShutdownShutdownAlready(void)
-{
-    DPS_MemoryKeyStore* keyStore = NULL;
-    DPS_Node* a = NULL;
-    DPS_Node* b = NULL;
-    DPS_NodeAddress* addr = NULL;
-    DPS_Event* event = NULL;
-    DPS_Status ret;
-
-    keyStore = CreateKeyStore();
-    a = CreateNode(keyStore);
-    b = CreateNode(keyStore);
-
-    addr = DPS_CreateAddress();
-    ret = DPS_LinkTo(a, DPS_GetListenAddressString(b), addr);
-    ASSERT(ret == DPS_OK);
-
-    event = DPS_CreateEvent();
-    ASSERT(event);
-
-    /*
-     * It's safe to reuse the event here since the second call is
-     * expected to fail
-     */
-    ret = DPS_ShutdownNode(a, OnShutdown, event);
-    ASSERT(ret == DPS_OK);
-    ret = DPS_ShutdownNode(a, OnShutdown, event);
-    ASSERT(ret != DPS_OK);
-    ret = DPS_WaitForEvent(event);
-    ASSERT(ret == DPS_OK);
-
-    ret = DPS_ShutdownNode(a, OnShutdown, event);
-    ASSERT(ret == DPS_OK);
-    ret = DPS_WaitForEvent(event);
-    ASSERT(ret == DPS_OK);
-
-    DPS_DestroyEvent(event);
-    DPS_DestroyAddress(addr);
-    DestroyNode(b);
-    DestroyNode(a);
-    DestroyKeyStore(keyStore);
-}
-
 static void TestMutualShutdown(void)
 {
     DPS_MemoryKeyStore* keyStore = NULL;
@@ -1006,7 +963,6 @@ int main(int argc, char** argv)
     TestShutdownWhileLinkInProgress();
     TestShutdownWhileIncomingLinkInProgress();
     TestDestroyShutdown();
-    TestShutdownShutdownAlready();
     TestMutualShutdown();
 #if defined(DPS_USE_DTLS)
     TestPSKFailure();
