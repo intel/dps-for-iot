@@ -145,7 +145,7 @@ static void ReadStdin(DPS_Node* node)
         if (!keep) {
             DPS_DestroyPublication(currentPub, NULL);
             currentPub = DPS_CreatePublication(node);
-            ret = DPS_InitPublication(currentPub, (const char**)topics, numTopics, DPS_FALSE, NULL,
+            ret = DPS_InitPublication(currentPub, (const char**)topics, numTopics, DPS_FALSE,
                                       requestAck ? OnAck : NULL);
             if (ret != DPS_OK) {
                 DPS_ERRPRINT("Failed to create publication - error=%d\n", ret);
@@ -307,7 +307,7 @@ int main(int argc, char** argv)
 
     if (numTopics) {
         currentPub = DPS_CreatePublication(node);
-        ret = DPS_InitPublication(currentPub, (const char**)topics, numTopics, DPS_FALSE, NULL,
+        ret = DPS_InitPublication(currentPub, (const char**)topics, numTopics, DPS_FALSE,
                                   requestAck ? OnAck : NULL);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("Failed to create publication - error=%d\n", ret);

@@ -200,6 +200,7 @@ struct _DPS_NetContext {
     uv_udp_recv_cb dataCB;
     uint32_t handshakeTimeoutMin;
     uint32_t handshakeTimeoutMax;
+    uint32_t closeNotifiedTimeout;
     DPS_Node* node;
     DPS_OnReceive receiveCB;
     DPS_NetConnection* cns;
@@ -313,7 +314,7 @@ static void DestroyRecvData(RecvData* data)
 }
 
 static SendRequest* CreateSendRequest(void* appCtx, uv_buf_t* bufs, size_t numBufs,
-                                        DPS_NetSendComplete sendCompleteCB)
+                                      DPS_NetSendComplete sendCompleteCB)
 {
     SendRequest* req;
 
@@ -371,7 +372,6 @@ static void CancelPending(DPS_NetConnection* cn)
         DPS_NetConnectionDecRef(cn);
         DestroySendRequest(req);
     }
-
     DPS_NetConnectionDecRef(cn);
 }
 
@@ -409,7 +409,12 @@ static void ConsumePending(DPS_NetConnection* cn);
 static DPS_Status TLSPSKSet(DPS_KeyStoreRequest* request, const DPS_Key* key)
 {
     DPS_NetConnection* cn = request->data;
-    int ret = mbedtls_ssl_set_hs_psk(&cn->ssl, key->symmetric.key, key->symmetric.len);
+    int ret;
+
+    if (!key || (key->type != DPS_KEY_SYMMETRIC) || !key->symmetric.key || !key->symmetric.len) {
+        return DPS_ERR_MISSING;
+    }
+    ret = mbedtls_ssl_set_hs_psk(&cn->ssl, key->symmetric.key, key->symmetric.len);
     if (ret != 0) {
         DPS_ERRPRINT("Set PSK failed: %s\n", TLSErrTxt(ret));
         return DPS_ERR_MISSING;
@@ -470,13 +475,20 @@ static void OnTimeout(uv_timer_t* timer)
          * Timeout is only used for retransmissions during handshake,
          * so when we reach the final timeout, trigger mbedtls to
          * perform a handshake step.
+         *
+         * Protect cn with a ref since we may need to CancelPending on
+         * error.
          */
+        DPS_NetConnectionIncRef(cn);
         ret = TLSHandshake(cn);
         if (ret == DPS_TRUE && cn->handshakeDone) {
             ConsumePending(cn);
         } else if (ret == DPS_FALSE) {
             CancelPending(cn);
         }
+        DPS_NetConnectionDecRef(cn);
+
+        /* Timer ref */
         DPS_NetConnectionDecRef(cn);
     }
 }
@@ -517,6 +529,11 @@ static int OnTLSTimerGet(void* data)
     DPS_DBGTRACEA("cn=%p timerStatus=%d\n", cn, cn->timerStatus);
 
     return cn->timerStatus;
+}
+
+static void CancelTLSTimer(DPS_NetConnection* cn)
+{
+    OnTLSTimerSet(cn, 0, 0);
 }
 
 /*
@@ -709,11 +726,12 @@ static void FreeConnection(DPS_NetConnection* cn)
             cn->netCtx->cns = next;
         } else if (cn->netCtx->cns) {
             DPS_NetConnection* prev = cn->netCtx->cns;
-            while (prev->next != cn) {
+            while (prev && (prev->next != cn)) {
                 prev = prev->next;
-                assert(prev);
             }
-            prev->next = next;
+            if (prev) {
+                prev->next = next;
+            }
         }
     }
     /*
@@ -721,7 +739,8 @@ static void FreeConnection(DPS_NetConnection* cn)
      * still active.  Finish the work of DPS_NetStop here when the
      * last connection is removed from the list.
      */
-    if ((cn->netCtx->state == NET_STOPPING) && !cn->netCtx->cns) {
+    if ((cn->netCtx->state == NET_STOPPING) && !cn->netCtx->cns &&
+        !uv_is_closing((uv_handle_t*)&cn->netCtx->rxSocket)) {
         uv_udp_recv_stop(&cn->netCtx->rxSocket);
         uv_close((uv_handle_t*)&cn->netCtx->rxSocket, RxHandleClosed);
     }
@@ -757,22 +776,7 @@ static void SocketClosed(uv_handle_t* handle)
     }
 }
 
-static void DestroyTimeout(uv_timer_t* timer)
-{
-    DPS_NetContext* netCtx = timer->data;
-    DPS_NetConnection* cn;
-    DPS_NetConnection* next;
-
-    for (cn = netCtx->cns; cn != NULL; cn = next) {
-        next = cn->next;
-        if ((cn->state & CN_SEND_CLOSED) && (cn->destroyTime <= uv_now(cn->node->loop))) {
-            cn->state |= CN_RECV_CLOSED;
-            if (cn->refCount == 0) {
-                DestroyConnection(cn);
-            }
-        }
-    }
-}
+static void DestroyTimeout(uv_timer_t* timer);
 
 static int ScheduleNextDestroyTimeout(DPS_NetContext* netCtx)
 {
@@ -781,7 +785,8 @@ static int ScheduleNextDestroyTimeout(DPS_NetContext* netCtx)
     int err;
 
     for (cn = netCtx->cns; cn != NULL; cn = cn->next) {
-        if ((cn->state & CN_SEND_CLOSED) && (cn->destroyTime < nextTime)) {
+        if (((cn->state & (CN_SEND_CLOSED | CN_RECV_CLOSED)) == CN_SEND_CLOSED) &&
+            (cn->destroyTime < nextTime)) {
             nextTime = cn->destroyTime;
         }
     }
@@ -799,6 +804,26 @@ static int ScheduleNextDestroyTimeout(DPS_NetContext* netCtx)
         DPS_ERRPRINT("uv_timer_start failed - %s\n", uv_err_name(err));
     }
     return err;
+}
+
+static void DestroyTimeout(uv_timer_t* timer)
+{
+    DPS_NetContext* netCtx = timer->data;
+    DPS_NetConnection* cn;
+    DPS_NetConnection* next;
+    uint64_t now;
+
+    now = uv_now(netCtx->node->loop);
+    for (cn = netCtx->cns; cn != NULL; cn = next) {
+        next = cn->next;
+        if ((cn->state & CN_SEND_CLOSED) && (cn->destroyTime <= now)) {
+            cn->state |= CN_RECV_CLOSED;
+            if (cn->refCount == 0) {
+                DestroyConnection(cn);
+            }
+        }
+    }
+    ScheduleNextDestroyTimeout(netCtx);
 }
 
 static void DestroyConnection(DPS_NetConnection* cn)
@@ -824,7 +849,7 @@ static void DestroyConnection(DPS_NetConnection* cn)
          * when other side is unresponsive.
          */
         if ((cn->state & CN_RECV_CLOSED) == 0) {
-            cn->destroyTime = uv_now(cn->node->loop) + CLOSE_NOTIFIED_TIMEOUT;
+            cn->destroyTime = uv_now(cn->node->loop) + cn->netCtx->closeNotifiedTimeout;
             ret = ScheduleNextDestroyTimeout(cn->netCtx);
             if (ret != 0) {
                 /*
@@ -941,8 +966,8 @@ static DPS_Status SetCert(DPS_KeyStoreRequest* request, const DPS_Key* key)
     if (pwLen == RSIZE_MAX_STR) {
         return DPS_ERR_MISSING;
     }
-    ret =  mbedtls_pk_parse_key(&cn->pkey, (const unsigned char*)key->cert.privateKey, len,
-                                (const unsigned char*)key->cert.password, pwLen);
+    ret = mbedtls_pk_parse_key(&cn->pkey, (const unsigned char*)key->cert.privateKey, len,
+                               (const unsigned char*)key->cert.password, pwLen);
     if (ret != 0) {
         DPS_WARNPRINT("Parse private key failed: %s\n", TLSErrTxt(ret));
         return DPS_ERR_MISSING;
@@ -954,7 +979,15 @@ static DPS_Status SetKeyAndId(DPS_KeyStoreRequest* request, const DPS_Key* key,
                               const DPS_KeyId* keyId)
 {
     DPS_NetConnection* cn = request->data;
-    int ret = mbedtls_ssl_conf_psk(&cn->conf, key->symmetric.key, key->symmetric.len, keyId->id, keyId->len);
+    int ret;
+
+    if (!key || (key->type != DPS_KEY_SYMMETRIC) || !key->symmetric.key || !key->symmetric.len) {
+        return DPS_ERR_MISSING;
+    }
+    if (!keyId || !keyId->id || !keyId->len) {
+        return DPS_ERR_MISSING;
+    }
+    ret = mbedtls_ssl_conf_psk(&cn->conf, key->symmetric.key, key->symmetric.len, keyId->id, keyId->len);
     if (ret != 0) {
         DPS_WARNPRINT("Set PSK failed: %s\n", TLSErrTxt(ret));
         return DPS_ERR_MISSING;
@@ -989,6 +1022,11 @@ static DPS_NetConnection* CreateConnection(DPS_Node* node, const struct sockaddr
     cn->type = type;
     cn->peerAddr = DPS_CreateAddress();
     DPS_NetSetAddr(cn->peerAddr, DPS_DTLS, addr);
+    /*
+     * The state is used to perform a graceful shutdown and until the
+     * handshake completes, the state is not connected.
+     */
+    cn->state = (CN_SEND_CLOSED | CN_RECV_CLOSED);
 
     uv_timer_init(node->loop, &cn->timer);
     cn->timerStatus = -1;
@@ -1115,6 +1153,15 @@ static DPS_NetConnection* CreateConnection(DPS_Node* node, const struct sockaddr
         ret = keyStore->keyAndIdHandler(&request);
         if (ret != DPS_OK) {
             DPS_WARNPRINT("Get PSK failed: %s\n", DPS_ErrTxt(ret));
+            /*
+             * Getting the PSK is not a problem if we have
+             * certificates, but if we don't have certificates or a
+             * PSK then the connection will never succeed.
+             */
+            if (ciphersuites == PskCipherSuites) {
+                DPS_WARNPRINT("Get PSK failed and only PSK ciphersuites supported: %s\n", DPS_ErrTxt(ret));
+                goto ErrorExit;
+            }
         }
         request.setKeyAndId = NULL;
     }
@@ -1406,6 +1453,7 @@ static int TLSHandshake(DPS_NetConnection* cn)
 
     /* Handshake is done, consume anything pending. */
     cn->handshakeDone = DPS_TRUE;
+    cn->state &= ~(CN_SEND_CLOSED | CN_RECV_CLOSED);
     DPS_DBGPRINT("Handshake is done cn=%p\n", cn);
 
     /*
@@ -1520,12 +1568,20 @@ static void OnUdpData(uv_udp_t* socket, ssize_t nread, const uv_buf_t* buf, cons
     DPS_NetConnectionIncRef(cn);
 
     if (!cn->handshakeDone) {
-        int ret = TLSHandshake(cn);
+        int ret;
+        DPS_NetConnectionIncRef(cn);
+        ret = TLSHandshake(cn);
         if (ret == DPS_TRUE && cn->handshakeDone) {
             ConsumePending(cn);
         } else if (ret == DPS_FALSE) {
             CancelPending(cn);
+            /*
+             * The handshake timer must also be cancelled: mbedTLS
+             * will not do it for us on handshake failure.
+             */
+            CancelTLSTimer(cn);
         }
+        DPS_NetConnectionDecRef(cn);
     } else {
         TLSRecv(cn);
     }
@@ -1563,6 +1619,7 @@ DPS_NetContext* DPS_NetStart(DPS_Node* node, const DPS_NodeAddress* addr, DPS_On
     netCtx->dataCB = OnUdpData;
     netCtx->handshakeTimeoutMin = MBEDTLS_SSL_DTLS_TIMEOUT_DFL_MIN;
     netCtx->handshakeTimeoutMax = MBEDTLS_SSL_DTLS_TIMEOUT_DFL_MAX;
+    netCtx->closeNotifiedTimeout = CLOSE_NOTIFIED_TIMEOUT;
     netCtx->node = node;
     netCtx->receiveCB = cb;
     if (addr) {
@@ -1646,7 +1703,7 @@ void DPS_NetStop(DPS_NetContext* netCtx)
          * immediately.  Otherwise we must wait for FreeConnection to
          * be called to ensure no one is using the rxSocket.
          */
-        if (!netCtx->cns) {
+        if (!netCtx->cns && !uv_is_closing((uv_handle_t*)&netCtx->rxSocket)) {
             uv_udp_recv_stop(&netCtx->rxSocket);
             uv_close((uv_handle_t*)&netCtx->rxSocket, RxHandleClosed);
         }
@@ -1657,6 +1714,7 @@ DPS_Status DPS_NetSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf
                        DPS_NetSendComplete sendCompleteCB)
 {
     SendRequest* req;
+    int ret;
 
     DPS_DBGTRACEA("node=%p,appCtx=%p,ep={addr=%s,cn=%p},bufs=%p,numBufs=%p,sendCompleteCB=%p\n",
                   node, appCtx, DPS_NodeAddrToString(&ep->addr), ep->cn, bufs, numBufs, sendCompleteCB);
@@ -1693,7 +1751,10 @@ DPS_Status DPS_NetSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf
         goto ErrorExit;
     }
     ep->cn->peer = *ep;
-    if (!TLSHandshake(ep->cn)) {
+    /* The caller gets a ref count to own. */
+    DPS_NetConnectionIncRef(ep->cn);
+    ret = TLSHandshake(ep->cn);
+    if (!ret) {
         goto ErrorExit;
     }
     /*
@@ -1708,14 +1769,12 @@ DPS_Status DPS_NetSend(DPS_Node* node, void* appCtx, DPS_NetEndpoint* ep, uv_buf
     if (ep->cn->handshakeDone) {
         ConsumePending(ep->cn);
     }
-    /* The caller gets a ref count to own. */
-    DPS_NetConnectionIncRef(ep->cn);
     return DPS_OK;
 
  ErrorExit:
     DestroySendRequest(req);
-    if (ep->cn && ep->cn->refCount == 0) {
-        DestroyConnection(ep->cn);
+    if (ep->cn) {
+        DPS_NetConnectionDecRef(ep->cn);
     }
     ep->cn = NULL;
     return DPS_ERR_NETWORK;
@@ -1747,11 +1806,11 @@ uv_udp_recv_cb Fuzz_OnData(DPS_Node* node, uv_udp_recv_cb cb)
     uv_udp_recv_cb ret;
 
     /*
-     * Shorten the handshake timeouts so that fuzzing can proceed
-     * rapidly
+     * Shorten the timeouts so that fuzzing can proceed rapidly
      */
     netCtx->handshakeTimeoutMin = 10;
     netCtx->handshakeTimeoutMax = 100;
+    netCtx->closeNotifiedTimeout = 400;
 
     ret = netCtx->dataCB;
     netCtx->dataCB = cb;

@@ -34,6 +34,33 @@
 #include "crypto.h"
 #include "ec.h"
 
+/*
+ * mbedtls_entropy_init() will set platform or other entropy sources
+ * as available sources for the mbedtls rng if they are defined by the
+ * appropriate #DEFINEs in the project (in order of preference):
+ *
+ * - MBEDTLS_ENTROPY_HARDWARE_ALT: define if there is a custom HW
+ *   entropy source; you must also add code to mbedtls to ready this
+ *   source
+ * - <no defines>: will use /dev/urandom or Windows CNG sources
+ * - MBEDTLS_TIMING_C: will use a custom timing loop to generate
+ *   entropy
+ * - MBEDTLS_HAVEGE_C: will use HAVEG sources
+ * - MBEDTLS_NO_PLATFORM_ENTROPY define if there are NO platform
+ *   entropy sources
+ * - MBEDTLS_NO_DEFAULT_ENTROPY_SOURCES: define if THERE ARE NO
+ *   default entropy sources
+ */
+#if defined(MBEDTLS_TEST_NULL_ENTROPY)
+#error "Insecure NULL entropy source defined in MBEDTLS"
+#endif
+#if defined(MBEDTLS_NO_PLATFORM_ENTROPY)
+#warning "Platform entropy source not defined or not being used by MBEDTLS"
+#endif
+#if defined(MBEDTLS_NO_DEFAULT_ENTROPY_SOURCES)
+#error "No default entropy source defined for MBEDTLS"
+#endif
+
 DPS_DEBUG_CONTROL(DPS_DEBUG_OFF);
 
 const char *TLSErrTxt(int ret)
@@ -99,14 +126,14 @@ void DPS_DestroyRBG(DPS_RBG* rbg)
     }
 }
 
-DPS_Status DPS_RandomKey(DPS_RBG* rbg, uint8_t key[AES_256_KEY_LEN])
+DPS_Status DPS_RandomBytes(DPS_RBG* rbg, uint8_t* bytes, size_t len)
 {
     int ret;
 
     if (!rbg) {
         return DPS_ERR_ARGS;
     }
-    ret = mbedtls_ctr_drbg_random(&rbg->drbg, key, AES_256_KEY_LEN);
+    ret = mbedtls_ctr_drbg_random(&rbg->drbg, bytes, len);
     if (ret != 0) {
         DPS_ERRPRINT("Generate random bytes failed: %s\n", TLSErrTxt(ret));
         return DPS_ERR_FAILURE;

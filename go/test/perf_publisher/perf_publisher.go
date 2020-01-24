@@ -76,7 +76,7 @@ func main() {
 	var rtMax, rtSum time.Duration
 
 	pub := dps.CreatePublication(node)
-	dps.InitPublication(pub, []string{"dps/roundtrip"}, false, nil, onAck)
+	dps.InitPublication(pub, []string{"dps/roundtrip"}, false, onAck)
 	var payload []byte
 	if *payloadSize != 0 {
 		payload = make([]byte, *payloadSize)

@@ -141,7 +141,7 @@ var dps = require("dps");
 
     pub = dps.createPublication(node);
 
-    dps.initPublication(pub, ["a/b/c"], false, null, onAck);
+    dps.initPublication(pub, ["a/b/c"], false, onAck);
     dps.publicationAddSubId(pub, pubKeyId);
     dps.publish(pub, "hello", 0);
     console.log("Pub UUID " + dps.publicationGetUUID(pub) + "(" + dps.publicationGetSequenceNum(pub) + ")");

@@ -252,7 +252,7 @@ int main(int argc, char** argv)
             ret = DPS_ERR_RESOURCES;
             goto Exit;
         }
-        ret = DPS_InitPublication(publication, (const char**)pubs, numPubs, DPS_FALSE, NULL, ackHandler);
+        ret = DPS_InitPublication(publication, (const char**)pubs, numPubs, DPS_FALSE, ackHandler);
         if (ret != DPS_OK) {
             goto Exit;
         }

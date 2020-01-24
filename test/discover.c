@@ -163,7 +163,7 @@ int main(int argc, char** argv)
             ret = DPS_ERR_RESOURCES;
             goto Exit;
         }
-        ret = DPS_InitPublication(pubs->pub, (const char**)&pubs->topic, 1, DPS_FALSE, NULL, NULL);
+        ret = DPS_InitPublication(pubs->pub, (const char**)&pubs->topic, 1, DPS_FALSE, NULL);
         if (ret != DPS_OK) {
             goto Exit;
         }

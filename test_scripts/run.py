@@ -9,6 +9,8 @@ from pexpect import popen_spawn
 import platform
 import sys
 
+timeout=300
+
 if 'FSAN' not in os.environ or os.environ['FSAN'] == 'no':
     tests = [os.path.join('build', 'test', 'bin', 'cbortest'),
              os.path.join('build', 'test', 'bin', 'cosetest'),
@@ -59,6 +61,13 @@ if 'FSAN' not in os.environ or os.environ['FSAN'] == 'no':
         ])
 else:
     tests = [os.path.join('test_scripts', 'fuzzer_check.py')]
+    #
+    # DTLS fuzzer checks take a significant amount of time to complete
+    # due to the number of steps and the timeouts during the handshake
+    # errors
+    #
+    if os.environ['USE_DTLS'] == '1':
+        timeout = 600
 
 ok = 0
 failed = 0
@@ -78,7 +87,7 @@ for test in tests:
     print('[ RUN      ] ' + test)
     if test.startswith('test_scripts'):
         child = popen_spawn.PopenSpawn(['python', test] + sys.argv[1:], logfile=sys.stdout)
-        child.expect(pexpect.EOF, timeout=300)
+        child.expect(pexpect.EOF, timeout=timeout)
         status = child.wait()
     elif test.startswith('py_scripts'):
         status = py([test] + sys.argv[1:])

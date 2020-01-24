@@ -108,7 +108,6 @@ DPS_Status COSE_Encrypt(int8_t alg,
 /**
  * COSE Decryption
  *
- * @param nonce      The nonce.  May be NULL if the nonce is contained in the payload.
  * @param recipient  Returns the recipient information used to successfully lookup the decryption key.
  *                   Note that this points into cipherText so care must be taken to avoid
  *                   referencing freed memory.
@@ -128,8 +127,7 @@ DPS_Status COSE_Encrypt(int8_t alg,
  * - DPS_ERR_SECURITY if the payload failed to decrypt
  * - Other error codes
  */
-DPS_Status COSE_Decrypt(const uint8_t* nonce,
-                        COSE_Entity* recipient,
+DPS_Status COSE_Decrypt(COSE_Entity* recipient,
                         DPS_RxBuffer* aad,
                         DPS_RxBuffer* cipherText,
                         DPS_KeyStore* keyStore,

@@ -276,9 +276,9 @@ def bin(cmd):
     global _children
     child = _spawn(1, cmd)
     try:
-        buf = child.read(8192)
+        buf = child.read(1)
         while buf:
-            buf = child.read(8192)
+            buf = child.read(1)
         status = child.wait()
     except pexpect.TIMEOUT:
         status = 1

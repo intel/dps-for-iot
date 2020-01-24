@@ -39,6 +39,14 @@ DPS_KeyStore* DPS_CreateKeyStore(DPS_KeyAndIdHandler keyAndIdHandler, DPS_KeyHan
 {
     DPS_DBGTRACE();
 
+    if ((keyAndIdHandler && !keyHandler) ||
+        (keyHandler && !(keyAndIdHandler || ephemeralKeyHandler || caHandler)) ||
+        (ephemeralKeyHandler && !keyHandler) ||
+        (caHandler && !keyHandler)) {
+        DPS_WARNPRINT("Missing required handlers\n");
+        return NULL;
+    }
+
     DPS_KeyStore* keyStore = calloc(1, sizeof(DPS_KeyStore));
     if (keyStore) {
         keyStore->keyAndIdHandler = keyAndIdHandler;
@@ -270,7 +278,7 @@ static DPS_Status MemoryKeyStoreEphemeralKeyHandler(DPS_KeyStoreRequest* request
     switch (key->type) {
     case DPS_KEY_SYMMETRIC: {
         uint8_t key[AES_256_KEY_LEN];
-        ret = DPS_RandomKey(mks->rbg, key);
+        ret = DPS_RandomBytes(mks->rbg, key, AES_256_KEY_LEN);
         if (ret != DPS_OK) {
             return ret;
         }

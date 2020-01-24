@@ -255,17 +255,20 @@ static DPS_Status SerializeAck(const DPS_Publication* pub, PublicationAck* ack, 
     /*
      * If the publication was encrypted the ack must be too
      */
-    if (pub->recipients || node->signer.alg) {
+    if (pub->recipientsCount || node->signer.alg) {
         DPS_RxBuffer aadBuf;
         uint8_t nonce[COSE_NONCE_LEN];
 
         DPS_RxBufferInit(&aadBuf, aadPos, ack->bufs[0].txPos - aadPos);
-        DPS_MakeNonce(&ack->pub->pubId, ack->sequenceNum, DPS_MSG_TYPE_ACK, nonce);
-        if (pub->recipients) {
-            ret = COSE_Encrypt(COSE_ALG_A256GCM, nonce, node->signer.alg ? &node->signer : NULL,
-                               pub->recipients, pub->recipientsCount, &aadBuf, &ack->bufs[1],
-                               &ack->bufs[2], ack->numBufs - 3, &ack->bufs[ack->numBufs - 1],
-                               node->keyStore);
+        if (pub->recipientsCount) {
+            ret = DPS_MakeNonce(&ack->pub->pubId, ack->sequenceNum, DPS_MSG_TYPE_ACK,
+                                pub->recipients[0].alg, node->rbg, nonce);
+            if (ret == DPS_OK) {
+                ret = COSE_Encrypt(COSE_ALG_A256GCM, nonce, node->signer.alg ? &node->signer : NULL,
+                                   pub->recipients, pub->recipientsCount, &aadBuf, &ack->bufs[1],
+                                   &ack->bufs[2], ack->numBufs - 3, &ack->bufs[ack->numBufs - 1],
+                                   node->keyStore);
+            }
         } else {
             ret = COSE_Sign(&node->signer, &aadBuf, &ack->bufs[1], &ack->bufs[2], ack->numBufs - 3,
                             &ack->bufs[ack->numBufs - 1], node->keyStore);
@@ -352,7 +355,6 @@ DPS_Status DPS_DecodeAcknowledgement(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
      */
     pub = DPS_LookupAckHandler(node, &pubId, sequenceNum);
     if (pub) {
-        uint8_t nonce[COSE_NONCE_LEN];
         COSE_Entity unused;
         DPS_RxBuffer encryptedBuf;
         DPS_RxBuffer aadBuf;
@@ -369,14 +371,13 @@ DPS_Status DPS_DecodeAcknowledgement(DPS_Node* node, DPS_NetEndpoint* ep, DPS_Ne
         /*
          * Try to decrypt the acknowledgement
          */
-        DPS_MakeNonce(&pubId, sequenceNum, DPS_MSG_TYPE_ACK, nonce);
         DPS_RxBufferInit(&aadBuf, aadPos, rxBuf->rxPos - aadPos);
         DPS_RxBufferInit(&cipherTextBuf, rxBuf->rxPos, DPS_RxBufferAvail(rxBuf));
         DPS_TxBufferClear(&plainTextBuf);
         ret = CBOR_Peek(&cipherTextBuf, &type, &tag);
         if ((ret == DPS_OK) && (type == CBOR_TAG)) {
             if ((tag == COSE_TAG_ENCRYPT0) || (tag == COSE_TAG_ENCRYPT)) {
-                ret = COSE_Decrypt(nonce, &unused, &aadBuf, &cipherTextBuf, node->keyStore, &pub->ack.sender,
+                ret = COSE_Decrypt(&unused, &aadBuf, &cipherTextBuf, node->keyStore, &pub->ack.sender,
                                    &plainTextBuf);
                 if (ret == DPS_OK) {
                     DPS_DBGPRINT("Ack was COSE decrypted\n");

@@ -159,9 +159,8 @@ import (
          goAcknowledgementHandler(pub, payload, len);
  }
 
- static DPS_Status initPublication(DPS_Publication* pub, const char** topics, size_t numTopics, int noWildCard,
-         const DPS_KeyId* keyId) {
-         return DPS_InitPublication(pub, topics, numTopics, noWildCard, keyId, acknowledgementHandler);
+ static DPS_Status initPublication(DPS_Publication* pub, const char** topics, size_t numTopics, int noWildCard) {
+         return DPS_InitPublication(pub, topics, numTopics, noWildCard, acknowledgementHandler);
  }
 
  extern void goPublicationHandler(DPS_Subscription* sub, DPS_Publication* pub, uint8_t* payload, size_t len);
@@ -810,7 +809,7 @@ func CopyPublication(pub *Publication) (copy *Publication) {
 
 type AcknowledgementHandler func(pub *Publication, payload []byte)
 
-func InitPublication(pub *Publication, topics []string, noWildCard bool, keyId KeyId, handler AcknowledgementHandler) int {
+func InitPublication(pub *Publication, topics []string, noWildCard bool, handler AcknowledgementHandler) int {
 	cnumTopics := C.size_t(len(topics))
 	ctopics := C.makeTopics(cnumTopics)
 	defer C.freeTopics(ctopics, cnumTopics)
@@ -821,12 +820,8 @@ func InitPublication(pub *Publication, topics []string, noWildCard bool, keyId K
 	if noWildCard {
 		cnoWildCard = C.int(1)
 	}
-	var ckeyId *C.DPS_KeyId = nil
-	if keyId != nil {
-		ckeyId = &C.DPS_KeyId{(*C.uint8_t)(&keyId[0]), C.size_t(len(keyId))}
-	}
 	pub.handler = handler
-	return int(C.initPublication(pub.cpub, ctopics, cnumTopics, cnoWildCard, ckeyId))
+	return int(C.initPublication(pub.cpub, ctopics, cnumTopics, cnoWildCard))
 }
 
 //export goAcknowledgementHandler

@@ -495,7 +495,7 @@ static DPS_Status Publish(DPS_Node* node, const char* security, DPS_Publication*
     };
     size_t numTopics = A_SIZEOF(topics);
     int noWildCard = DPS_FALSE;
-    ret = DPS_InitPublication(pub, topics, numTopics, noWildCard, NULL, NULL);
+    ret = DPS_InitPublication(pub, topics, numTopics, noWildCard, NULL);
     if (ret != DPS_OK) {
         goto Exit;
     }
@@ -530,8 +530,7 @@ static DPS_Status PublishAck(DPS_Node* node, const char* security, DPS_Publicati
     };
     size_t numTopics = A_SIZEOF(topics);
     int noWildCard = DPS_FALSE;
-    ret = DPS_InitPublication(pub, topics, numTopics, noWildCard, NULL,
-                              AcknowledgementHandler);
+    ret = DPS_InitPublication(pub, topics, numTopics, noWildCard, AcknowledgementHandler);
     if (ret != DPS_OK) {
         goto Exit;
     }
@@ -565,8 +564,7 @@ static DPS_Status PublishAuthAck(DPS_Node* node, const char* security, DPS_Publi
     };
     size_t numTopics = A_SIZEOF(topics);
     int noWildCard = DPS_FALSE;
-    ret = DPS_InitPublication(pub, topics, numTopics, noWildCard, NULL,
-                              AuthAcknowledgementHandler);
+    ret = DPS_InitPublication(pub, topics, numTopics, noWildCard, AuthAcknowledgementHandler);
     if (ret != DPS_OK) {
         goto Exit;
     }
@@ -970,7 +968,7 @@ static DPS_Status PublishWithAccessControl(DPS_Node* node)
     size_t numTopics = A_SIZEOF(topics);
     int noWildCard = DPS_FALSE;
     /** [Implementing subscription control] */
-    ret = DPS_InitPublication(pub, topics, numTopics, noWildCard, NULL, AcknowledgementHandler);
+    ret = DPS_InitPublication(pub, topics, numTopics, noWildCard, AcknowledgementHandler);
     if (ret != DPS_OK) {
         goto Exit;
     }

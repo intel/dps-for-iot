@@ -189,7 +189,7 @@ static void ReadStdin(DPS_Node* node)
             DPS_DestroyPublication(currentPub, NULL);
             currentPub = DPS_CreatePublication(node);
             ret = DPS_InitPublication(currentPub, (const char**)topics, numTopics, DPS_FALSE,
-                                      NULL, requestAck ? OnAck : NULL);
+                                      requestAck ? OnAck : NULL);
             if (ret != DPS_OK) {
                 DPS_ERRPRINT("Failed to create publication - error=%s\n", DPS_ErrTxt(ret));
                 break;
@@ -324,7 +324,6 @@ int main(int argc, char** argv)
         nodeKeyId = &PublisherId;
         DPS_SetCertificate(memoryKeyStore, PublisherCert, PublisherPrivateKey, PublisherPassword);
         DPS_SetCertificate(memoryKeyStore, SubscriberCert, NULL, NULL);
-        nodeKeyId = &PublisherId;
     }
 
     node = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(memoryKeyStore), nodeKeyId);
@@ -349,7 +348,7 @@ int main(int argc, char** argv)
         currentPub = DPS_CreatePublication(node);
 
         ret = DPS_InitPublication(currentPub, (const char**)topics, numTopics, DPS_FALSE,
-                                  NULL, requestAck ? OnAck : NULL);
+                                  requestAck ? OnAck : NULL);
         if (ret != DPS_OK) {
             DPS_ERRPRINT("Failed to create publication - error=%s\n", DPS_ErrTxt(ret));
             return 1;

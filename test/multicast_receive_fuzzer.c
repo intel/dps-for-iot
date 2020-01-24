@@ -98,7 +98,7 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t len)
 Exit:
     for (i = 0; i < A_SIZEOF(subs); ++i) {
         if (subs[i]) {
-            DPS_DestroySubscription(subs[i]);
+            DPS_DestroySubscription(subs[i], NULL);
         }
     }
     if (node) {

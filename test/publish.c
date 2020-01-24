@@ -40,12 +40,12 @@ static DPS_Publication* CreatePublication(DPS_Node* node, const char** topics, s
 
     pub = DPS_CreatePublication(node);
     ASSERT(pub);
-    ret = DPS_InitPublication(pub, topics, numTopics, DPS_FALSE, NULL, handler);
+    ret = DPS_InitPublication(pub, topics, numTopics, DPS_FALSE, handler);
     ASSERT(ret == DPS_OK);
     return pub;
 }
 
-static void TestCreateDestroy(DPS_Node* node, DPS_KeyStore* keyStore)
+static void TestCreateDestroy(DPS_Node* node, DPS_MemoryKeyStore* keyStore)
 {
     static const char* topics[] = { __FUNCTION__ };
     static const size_t numTopics = 1;
@@ -61,7 +61,7 @@ static void TestCreateDestroy(DPS_Node* node, DPS_KeyStore* keyStore)
 
     pub = DPS_CreatePublication(node);
     ASSERT(pub);
-    ret = DPS_InitPublication(pub, topics, numTopics, DPS_FALSE, NULL, NULL);
+    ret = DPS_InitPublication(pub, topics, numTopics, DPS_FALSE, NULL);
     ASSERT(ret == DPS_OK);
     ret = DPS_DestroyPublication(pub, NULL);
     ASSERT(ret == DPS_OK);
@@ -73,7 +73,7 @@ static void LoopbackLargeMessageHandler(DPS_Subscription* sub, const DPS_Publica
     DPS_SignalEvent(event, DPS_OK);
 }
 
-static void TestLoopbackLargeMessage(DPS_Node* node, DPS_KeyStore* keyStore)
+static void TestLoopbackLargeMessage(DPS_Node* node, DPS_MemoryKeyStore* keyStore)
 {
     static const char* topics[] = { __FUNCTION__ };
     static const size_t numTopics = 1;
@@ -128,7 +128,7 @@ static void LoopbackAckLargeMessageHandler(DPS_Subscription* sub, const DPS_Publ
     ASSERT(ret == DPS_OK);
 }
 
-static void TestLoopbackAckLargeMessage(DPS_Node* node, DPS_KeyStore* keyStore)
+static void TestLoopbackAckLargeMessage(DPS_Node* node, DPS_MemoryKeyStore* keyStore)
 {
     static const char* topics[] = { __FUNCTION__ };
     static const size_t numTopics = 1;
@@ -188,7 +188,7 @@ static void HistoryAckHandler(DPS_Publication* pub, uint8_t* payload, size_t len
     DPS_SignalEvent(event, DPS_OK);
 }
 
-static void TestDelayedAck(DPS_Node* node, DPS_KeyStore* keyStore)
+static void TestDelayedAck(DPS_Node* node, DPS_MemoryKeyStore* keyStore)
 {
     static const char* topics[] = { __FUNCTION__ };
     static const size_t numTopics = 1;
@@ -249,7 +249,7 @@ static void BackToBackPublishHandler(DPS_Subscription* sub, const DPS_Publicatio
     ++(*expectedSequenceNum);
 }
 
-static void TestBackToBackPublish(DPS_Node* node, DPS_KeyStore* keyStore)
+static void TestBackToBackPublish(DPS_Node* node, DPS_MemoryKeyStore* keyStore)
 {
     static const char* topics[] = { __FUNCTION__ };
     static const size_t numTopics = 1;
@@ -294,7 +294,7 @@ static void OnLinkComplete(DPS_Node* node, const DPS_NodeAddress* addr, DPS_Stat
         DPS_SignalEvent((DPS_Event*)data, status);
     }
 }
-static void TestBackToBackPublishSeparateNodes(DPS_Node* node, DPS_KeyStore* keyStore)
+static void TestBackToBackPublishSeparateNodes(DPS_Node* node, DPS_MemoryKeyStore* keyStore)
 {
     static const char* topics[] = { __FUNCTION__ };
     static const size_t numTopics = 1;
@@ -315,7 +315,7 @@ static void TestBackToBackPublishSeparateNodes(DPS_Node* node, DPS_KeyStore* key
     event = DPS_CreateEvent();
     ASSERT(event);
 
-    subNode = DPS_CreateNode("/.", keyStore, NULL);
+    subNode = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(keyStore), NULL);
     ASSERT(subNode);
     ret = DPS_StartNode(subNode, DPS_MCAST_PUB_DISABLED, NULL);
     ASSERT(ret == DPS_OK);
@@ -353,7 +353,7 @@ static void TestBackToBackPublishSeparateNodes(DPS_Node* node, DPS_KeyStore* key
 }
 #endif
 
-static void TestRetainedMessage(DPS_Node* node, DPS_KeyStore* keyStore)
+static void TestRetainedMessage(DPS_Node* node, DPS_MemoryKeyStore* keyStore)
 {
     static const char* topics[] = { __FUNCTION__ };
     static const size_t numTopics = 1;
@@ -394,7 +394,7 @@ static void RetainedExpiredMessageHandler(DPS_Subscription* sub, const DPS_Publi
     }
 }
 
-static void RetainedExpired(DPS_Node* node, DPS_KeyStore* keyStore, DPS_Node* subNode)
+static void RetainedExpired(DPS_Node* node, DPS_MemoryKeyStore* keyStore, DPS_Node* subNode)
 {
     static const char* topics[] = { __FUNCTION__ };
     static const size_t numTopics = 1;
@@ -445,7 +445,7 @@ static void RetainedExpired(DPS_Node* node, DPS_KeyStore* keyStore, DPS_Node* su
     DPS_DestroyEvent(event);
 }
 
-static void TestRetainedExpired(DPS_Node* node, DPS_KeyStore* keyStore)
+static void TestRetainedExpired(DPS_Node* node, DPS_MemoryKeyStore* keyStore)
 {
     DPS_Event* event = NULL;
     DPS_Node* subNode = NULL;
@@ -456,7 +456,7 @@ static void TestRetainedExpired(DPS_Node* node, DPS_KeyStore* keyStore)
     event = DPS_CreateEvent();
     ASSERT(event);
 
-    subNode = DPS_CreateNode("/.", keyStore, NULL);
+    subNode = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(keyStore), NULL);
     ASSERT(subNode);
     ret = DPS_StartNode(subNode, DPS_MCAST_PUB_ENABLE_RECV, NULL);
     ASSERT(ret == DPS_OK);
@@ -473,7 +473,7 @@ static void RetainedLoopbackMessageHandler(DPS_Subscription* sub, const DPS_Publ
     DPS_SignalEvent(event, DPS_OK);
 }
 
-static void TestRetainedLoopback(DPS_Node* node, DPS_KeyStore* keyStore)
+static void TestRetainedLoopback(DPS_Node* node, DPS_MemoryKeyStore* keyStore)
 {
     static const char* topics[] = { __FUNCTION__ };
     static const size_t numTopics = 1;
@@ -529,7 +529,7 @@ static void TestRetainedLoopback(DPS_Node* node, DPS_KeyStore* keyStore)
     RetainedExpired(node, keyStore, node);
 }
 
-static void TestSequenceNumbers(DPS_Node* node, DPS_KeyStore* keyStore)
+static void TestSequenceNumbers(DPS_Node* node, DPS_MemoryKeyStore* keyStore)
 {
     static const char* topics[] = { __FUNCTION__ };
     static const size_t numTopics = 1;
@@ -559,7 +559,7 @@ static void PublishBufsComplete(DPS_Publication* pub, const DPS_Buffer* bufs, si
     DPS_SignalEvent((DPS_Event*)data, status);
 }
 
-static void TestPublishNoRoutes(DPS_Node* node, DPS_KeyStore* keyStore)
+static void TestPublishNoRoutes(DPS_Node* node, DPS_MemoryKeyStore* keyStore)
 {
     static const char* topics[] = { __FUNCTION__ };
     static const size_t numTopics = 1;
@@ -578,7 +578,7 @@ static void TestPublishNoRoutes(DPS_Node* node, DPS_KeyStore* keyStore)
      * will result in no routes for the publication to be delivered
      * to.
      */
-    pubNode = DPS_CreateNode("/.", keyStore, NULL);
+    pubNode = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(keyStore), NULL);
     ASSERT(pubNode);
     ret = DPS_StartNode(pubNode, DPS_MCAST_PUB_DISABLED, NULL);
     ASSERT(ret == DPS_OK);
@@ -595,7 +595,89 @@ static void TestPublishNoRoutes(DPS_Node* node, DPS_KeyStore* keyStore)
     DPS_DestroyEvent(event);
 }
 
-typedef void (*TEST)(DPS_Node*, DPS_KeyStore*);
+static void PublishHandler(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* payload, size_t len)
+{
+    DPS_Event* event = (DPS_Event*)DPS_GetSubscriptionData(sub);
+    DPS_SignalEvent(event, DPS_OK);
+}
+
+static void TestRemoveSubId(DPS_Node* node, DPS_MemoryKeyStore* keyStore)
+{
+    static const char* topics[] = { __FUNCTION__ };
+    static const size_t numTopics = 1;
+    DPS_Publication* pub = NULL;
+    DPS_Event* event = NULL;
+    DPS_MemoryKeyStore* subKeyStore = NULL;
+    DPS_Node* subNode = NULL;
+    DPS_Subscription* sub = NULL;
+    DPS_Status ret;
+
+    DPS_PRINT("%s\n", __FUNCTION__);
+
+    ret = DPS_SetContentKey(keyStore, &PskId[0], &Psk[0]);
+    ASSERT(ret == DPS_OK);
+    ret = DPS_SetContentKey(keyStore, &PskId[1], &Psk[1]);
+    ASSERT(ret == DPS_OK);
+
+    pub = CreatePublication(node, topics, numTopics, NULL);
+
+    event = DPS_CreateEvent();
+    ASSERT(event);
+
+    subKeyStore = DPS_CreateMemoryKeyStore();
+    DPS_SetNetworkKey(subKeyStore, &NetworkKeyId, &NetworkKey);
+    ret = DPS_SetContentKey(subKeyStore, &PskId[0], &Psk[0]);
+    ASSERT(ret == DPS_OK);
+    subNode = DPS_CreateNode("/.", DPS_MemoryKeyStoreHandle(subKeyStore), &PskId[0]);
+    ASSERT(subNode);
+    ret = DPS_StartNode(subNode, DPS_MCAST_PUB_ENABLE_RECV, NULL);
+    ASSERT(ret == DPS_OK);
+
+    sub = DPS_CreateSubscription(subNode, topics, numTopics);
+    ASSERT(sub);
+    ret = DPS_SetSubscriptionData(sub, event);
+    ASSERT(ret == DPS_OK);
+    ret = DPS_Subscribe(sub, PublishHandler);
+    ASSERT(ret == DPS_OK);
+
+    /*
+     * Encrypt for two keys, then remove one of them.  If we only
+     * encrypted for one key, then removing it would result in an
+     * unencrypted message which the sub will receive and decrypt: we
+     * want to verify that a removed sub will not receive and decrypt
+     * an encrypted message.
+     */
+    ret = DPS_PublicationAddSubId(pub, &PskId[0]);
+    ASSERT(ret == DPS_OK);
+    ret = DPS_PublicationAddSubId(pub, &PskId[1]);
+    ASSERT(ret == DPS_OK);
+    ret = DPS_Publish(pub, NULL, 0, 0);
+    ASSERT(ret == DPS_OK);
+    ret = DPS_WaitForEvent(event);
+    ASSERT(ret == DPS_OK);
+
+    DPS_PublicationRemoveSubId(pub, &PskId[0]);
+    ret = DPS_Publish(pub, NULL, 0, 0);
+    ASSERT(ret == DPS_OK);
+    ret = DPS_TimedWaitForEvent(event, 1000);
+    ASSERT(ret != DPS_OK);
+
+    ret = DPS_PublicationAddSubId(pub, &PskId[0]);
+    ASSERT(ret == DPS_OK);
+    ret = DPS_Publish(pub, NULL, 0, 0);
+    ASSERT(ret == DPS_OK);
+    ret = DPS_WaitForEvent(event);
+    ASSERT(ret == DPS_OK);
+
+    DPS_DestroySubscription(sub, NULL);
+    DPS_DestroyNode(subNode, OnNodeDestroyed, event);
+    DPS_WaitForEvent(event);
+    DPS_DestroyMemoryKeyStore(subKeyStore);
+    DPS_DestroyEvent(event);
+    DPS_DestroyPublication(pub, NULL);
+}
+
+typedef void (*TEST)(DPS_Node*, DPS_MemoryKeyStore*);
 
 int main(int argc, char** argv)
 {
@@ -616,6 +698,7 @@ int main(int argc, char** argv)
         TestRetainedExpired,
         TestSequenceNumbers,
         TestPublishNoRoutes,
+        TestRemoveSubId,
         NULL
     };
     TEST* test;
@@ -643,7 +726,7 @@ int main(int argc, char** argv)
         ASSERT(node);
         ret = DPS_StartNode(node, DPS_MCAST_PUB_ENABLE_SEND | DPS_MCAST_PUB_ENABLE_RECV, NULL);
         ASSERT(ret == DPS_OK);
-        (*test)(node, DPS_MemoryKeyStoreHandle(memoryKeyStore));
+        (*test)(node, memoryKeyStore);
         DPS_DestroyNode(node, OnNodeDestroyed, event);
         DPS_WaitForEvent(event);
         DPS_DestroyMemoryKeyStore(memoryKeyStore);

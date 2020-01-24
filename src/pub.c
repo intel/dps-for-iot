@@ -489,7 +489,6 @@ static DPS_Status DecryptAndParsePub(DPS_PublishRequest* req, DPS_TxBuffer* plai
     static const int32_t EncryptedKeys[] = { DPS_CBOR_KEY_TOPICS, DPS_CBOR_KEY_DATA };
     DPS_Publication* pub = req->pub;
     DPS_KeyStore* keyStore = pub->node->keyStore;
-    uint8_t nonce[COSE_NONCE_LEN];
     DPS_RxBuffer aadBuf;
     DPS_RxBuffer cipherTextBuf;
     COSE_Entity recipient;
@@ -503,7 +502,6 @@ static DPS_Status DecryptAndParsePub(DPS_PublishRequest* req, DPS_TxBuffer* plai
     /*
      * Try to decrypt the publication
      */
-    DPS_MakeNonce(&pub->pubId, req->sequenceNum, DPS_MSG_TYPE_PUB, nonce);
     DPS_TxBufferToRx(&req->bufs[0], &aadBuf);
     DPS_TxBufferToRx(&req->bufs[1], &cipherTextBuf);
     DPS_TxBufferClear(plainTextBuf);
@@ -511,7 +509,7 @@ static DPS_Status DecryptAndParsePub(DPS_PublishRequest* req, DPS_TxBuffer* plai
     if (ret == DPS_OK) {
         if (type == CBOR_TAG) {
             if ((tag == COSE_TAG_ENCRYPT0) || (tag == COSE_TAG_ENCRYPT)) {
-                ret = COSE_Decrypt(nonce, &recipient, &aadBuf, &cipherTextBuf, keyStore, &pub->sender,
+                ret = COSE_Decrypt(&recipient, &aadBuf, &cipherTextBuf, keyStore, &pub->sender,
                                    plainTextBuf);
                 if (ret == DPS_OK) {
                     DPS_DBGPRINT("Publication was decrypted\n");
@@ -1454,12 +1452,10 @@ DPS_Status DPS_InitPublication(DPS_Publication* pub,
                                const char** topics,
                                size_t numTopics,
                                int noWildCard,
-                               const DPS_KeyId* keyId,
                                DPS_AcknowledgementHandler handler)
 {
     DPS_Node* node = pub ? pub->node : NULL;
     DPS_Status ret = DPS_OK;
-    int8_t alg;
     size_t i;
 
     DPS_DBGTRACE();
@@ -1496,25 +1492,11 @@ DPS_Status DPS_InitPublication(DPS_Publication* pub,
         pub->ackRequested = DPS_TRUE;
     }
     pub->flags |= PUB_FLAG_LOCAL;
-    /*
-     * Copy key identifier
-     */
-    if (keyId) {
-        DPS_DBGPRINT("Publication has a keyId\n");
-        ret = GetRecipientAlgorithm(node->keyStore, keyId, &alg);
-        if (ret == DPS_OK) {
-            if (!AddRecipient(pub, alg, keyId)) {
-                ret = DPS_ERR_RESOURCES;
-            }
-        }
-    }
-    if (ret == DPS_OK) {
-        for (i = 0; i < numTopics; ++i) {
-            ret = DPS_AddTopic(pub->bf, topics[i], node->separators,
-                               noWildCard ? DPS_PubNoWild : DPS_PubTopic);
-            if (ret != DPS_OK) {
-                break;
-            }
+    for (i = 0; i < numTopics; ++i) {
+        ret = DPS_AddTopic(pub->bf, topics[i], node->separators,
+                           noWildCard ? DPS_PubNoWild : DPS_PubTopic);
+        if (ret != DPS_OK) {
+            break;
         }
     }
     if (ret == DPS_OK) {
@@ -1586,19 +1568,18 @@ DPS_Status DPS_PublicationAddSubId(DPS_Publication* pub, const DPS_KeyId* keyId)
 
     DPS_DBGTRACE();
 
-    if (IsValidPub(pub)) {
-        DPS_DBGPRINT("Publication has a keyId\n");
-        ret = GetRecipientAlgorithm(pub->node->keyStore, keyId, &alg);
-        if (ret != DPS_OK) {
-            return ret;
-        }
-        if (!AddRecipient(pub, alg, keyId)) {
-            return DPS_ERR_RESOURCES;
-        }
-        return DPS_OK;
-    } else {
+    if (!IsValidPub(pub) || !keyId || !keyId->id || !keyId->len) {
         return DPS_ERR_ARGS;
     }
+    DPS_DBGPRINT("Publication has a keyId\n");
+    ret = GetRecipientAlgorithm(pub->node->keyStore, keyId, &alg);
+    if (ret != DPS_OK) {
+        return ret;
+    }
+    if (!AddRecipient(pub, alg, keyId)) {
+        return DPS_ERR_RESOURCES;
+    }
+    return DPS_OK;
 }
 
 void DPS_PublicationRemoveSubId(DPS_Publication* pub, const DPS_KeyId* keyId)
@@ -1734,18 +1715,21 @@ DPS_Status DPS_SerializePub(DPS_PublishRequest* req, const DPS_Buffer* bufs, siz
     }
     DPS_TxBufferClear(&req->bufs[req->numBufs - 1]);
     if (ret == DPS_OK) {
-        if (pub->recipients || node->signer.alg) {
+        if (pub->recipientsCount || node->signer.alg) {
             DPS_RxBuffer aadBuf;
             uint8_t nonce[COSE_NONCE_LEN];
 
-            DPS_TxBufferToRx(&req->bufs[0], &aadBuf);
-            DPS_MakeNonce(&pub->pubId, req->sequenceNum, DPS_MSG_TYPE_PUB, nonce);
             DPS_UnlockNode(node);
-            if (pub->recipients) {
-                ret = COSE_Encrypt(COSE_ALG_A256GCM, nonce, node->signer.alg ? &node->signer : NULL,
-                                   pub->recipients, pub->recipientsCount, &aadBuf, &req->bufs[1],
-                                   &req->bufs[2], req->numBufs - 3, &req->bufs[req->numBufs - 1],
-                                   node->keyStore);
+            DPS_TxBufferToRx(&req->bufs[0], &aadBuf);
+            if (pub->recipientsCount) {
+                ret = DPS_MakeNonce(&pub->pubId, req->sequenceNum, DPS_MSG_TYPE_PUB,
+                                    pub->recipients[0].alg, node->rbg, nonce);
+                if (ret == DPS_OK) {
+                    ret = COSE_Encrypt(COSE_ALG_A256GCM, nonce, node->signer.alg ? &node->signer : NULL,
+                                       pub->recipients, pub->recipientsCount, &aadBuf, &req->bufs[1],
+                                       &req->bufs[2], req->numBufs - 3, &req->bufs[req->numBufs - 1],
+                                       node->keyStore);
+                }
             } else {
                 ret = COSE_Sign(&node->signer, &aadBuf, &req->bufs[1], &req->bufs[2], req->numBufs - 3,
                                 &req->bufs[req->numBufs - 1], node->keyStore);

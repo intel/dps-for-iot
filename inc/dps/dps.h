@@ -404,17 +404,17 @@ DPS_Status DPS_SetNetworkKey(DPS_MemoryKeyStore* keyStore, const DPS_KeyId* keyI
 /**
  * Create or replace the trusted CA(s) in the key store.
  *
- * @param mks An in-memory key store
+ * @param keyStore An in-memory key store
  * @param ca The CA chain in PEM format
  *
  * @return DPS_OK or an error
  */
-DPS_Status DPS_SetTrustedCA(DPS_MemoryKeyStore* mks, const char* ca);
+DPS_Status DPS_SetTrustedCA(DPS_MemoryKeyStore* keyStore, const char* ca);
 
 /**
  * Create or replace a certificate in the key store.
  *
- * @param mks An in-memory key store
+ * @param keyStore An in-memory key store
  * @param cert The certificate in PEM format
  * @param key The optional private key in PEM format
  * @param password The optional password protecting the key, may be
@@ -422,7 +422,7 @@ DPS_Status DPS_SetTrustedCA(DPS_MemoryKeyStore* mks, const char* ca);
  *
  * @return DPS_OK or an error
  */
-DPS_Status DPS_SetCertificate(DPS_MemoryKeyStore* mks, const char* cert, const char* key,
+DPS_Status DPS_SetCertificate(DPS_MemoryKeyStore* keyStore, const char* cert, const char* key,
                               const char* password);
 
 /**
@@ -850,7 +850,6 @@ typedef void (*DPS_AcknowledgementHandler)(DPS_Publication* pub, uint8_t* payloa
  * @param topics      The topic strings to publish
  * @param numTopics   The number of topic strings to publish - must be >= 1
  * @param noWildCard  If TRUE the publication will not match wildcard subscriptions
- * @param keyId       Optional key identifier to use for encrypted publications
  * @param handler     Optional handler for receiving acknowledgements
  *
  * @return DPS_OK if initialization is successful, an error otherwise
@@ -859,7 +858,6 @@ DPS_Status DPS_InitPublication(DPS_Publication* pub,
                                const char** topics,
                                size_t numTopics,
                                int noWildCard,
-                               const DPS_KeyId* keyId,
                                DPS_AcknowledgementHandler handler);
 
 /**

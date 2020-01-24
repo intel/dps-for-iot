@@ -33,6 +33,7 @@
 #include "ack.h"
 #include "bitvec.h"
 #include "coap.h"
+#include "crypto.h"
 #include "ec.h"
 #include "history.h"
 #include "node.h"
@@ -383,12 +384,13 @@ static void RemoveRemoteNode(DPS_Node* node, RemoteNode* remote)
 
 void DPS_DeleteRemoteNode(DPS_Node* node, RemoteNode* remote)
 {
-    DPS_DBGTRACEA("%s\n", DESCRIBE(remote));
-
     if (!IsValidRemoteNode(node, remote)) {
-        DPS_ERRPRINT("Attempt to delete invalid remote %p\n", remote);
+        DPS_WARNPRINT("Attempt to delete invalid remote %p\n", remote);
         return;
     }
+
+    DPS_DBGTRACEA("%s\n", DESCRIBE(remote));
+
     RemoveRemoteNode(node, remote);
     DPS_ClearInboundInterests(node, remote);
     FreeOutboundInterests(remote);
@@ -999,7 +1001,7 @@ static void SendSubsTimer(uv_timer_t* handle)
             }
         }
         if (ret != DPS_OK) {
-            DPS_ERRPRINT("Failed to send subscription request %s\n", DPS_ErrTxt(ret));
+            DPS_WARNPRINT("Failed to send subscription request %s\n", DPS_ErrTxt(ret));
             ret = DPS_OK;
             DPS_DeleteRemoteNode(node, remote);
         }
@@ -1413,6 +1415,7 @@ static void StopNode(DPS_Node* node)
 static void FreeNode(DPS_Node* node)
 {
     DPS_ClearKeyId(&node->signer.kid);
+    DPS_DestroyRBG(node->rbg);
     free(node);
 }
 
@@ -1528,6 +1531,11 @@ DPS_Node* DPS_CreateNode(const char* separators, DPS_KeyStore* keyStore, const D
         FreeNode(node);
         return NULL;
     }
+    node->rbg = DPS_CreateRBG();
+    if (!node->rbg) {
+        FreeNode(node);
+        return NULL;
+    }
     if (!separators) {
         separators = "/";
     }
@@ -1535,7 +1543,12 @@ DPS_Node* DPS_CreateNode(const char* separators, DPS_KeyStore* keyStore, const D
      * Sanity check
      */
     if (keyId && (!keyStore || !keyStore->keyHandler)) {
-        DPS_ERRPRINT("A key request callback is required\n");
+        DPS_WARNPRINT("A key request callback is required\n");
+        FreeNode(node);
+        return NULL;
+    }
+    if (keyId && (!keyId->id || !keyId->len)) {
+        DPS_WARNPRINT("A valid key ID is required\n");
         FreeNode(node);
         return NULL;
     }
@@ -2098,22 +2111,41 @@ void DPS_DestroyAddress(DPS_NodeAddress* addr)
     }
 }
 
-void DPS_MakeNonce(const DPS_UUID* uuid, uint32_t seqNum, uint8_t msgType, uint8_t nonce[COSE_NONCE_LEN])
+DPS_Status DPS_MakeNonce(const DPS_UUID* uuid, uint32_t seqNum, uint8_t msgType,
+                         int8_t alg, DPS_RBG* rbg, uint8_t nonce[COSE_NONCE_LEN])
 {
     uint8_t* p = nonce;
 
-    *p++ = (uint8_t)(seqNum >> 0);
-    *p++ = (uint8_t)(seqNum >> 8);
-    *p++ = (uint8_t)(seqNum >> 16);
-    *p++ = (uint8_t)(seqNum >> 24);
-    memcpy_s(p, COSE_NONCE_LEN - sizeof(uint32_t), uuid, COSE_NONCE_LEN - sizeof(uint32_t));
-    /*
-     * Adjust one bit so nonce for PUB's and ACK's for same pub id and sequence number are different
-     */
-    if (msgType == DPS_MSG_TYPE_PUB) {
-        p[0] &= 0x7F;
-    } else {
-        p[0] |= 0x80;
+    switch (alg) {
+    case COSE_ALG_RESERVED:
+    case COSE_ALG_DIRECT:
+        if (seqNum == 0) {
+            /*
+             * This means the seqNum has wrapped and we are at risk of
+             * reusing the same nonce with a key
+             */
+            return DPS_ERR_NONCE_OVERFLOW;
+        }
+        *p++ = (uint8_t)(seqNum >> 0);
+        *p++ = (uint8_t)(seqNum >> 8);
+        *p++ = (uint8_t)(seqNum >> 16);
+        *p++ = (uint8_t)(seqNum >> 24);
+        memcpy_s(p, COSE_NONCE_LEN - sizeof(uint32_t), uuid, COSE_NONCE_LEN - sizeof(uint32_t));
+        /*
+         * Adjust one bit so nonce for PUB's and ACK's for same pub id
+         * and sequence number are different
+         */
+        if (msgType == DPS_MSG_TYPE_PUB) {
+            p[0] &= 0x7F;
+        } else {
+            p[0] |= 0x80;
+        }
+        return DPS_OK;
+    case COSE_ALG_A256KW:
+    case COSE_ALG_ECDH_ES_A256KW:
+        return DPS_RandomBytes(rbg, nonce, COSE_NONCE_LEN);
+    default:
+        return DPS_ERR_NOT_IMPLEMENTED;
     }
 }
 

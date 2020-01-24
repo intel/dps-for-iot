@@ -258,6 +258,8 @@ if env['go']:
 
 # Unit tests
 testenv = commonenv.Clone()
+if env['PLATFORM'] == 'posix' and env['fsan'] == True:
+    testenv.Append(CPPDEFINES = ['DPS_USE_FUZZ'])
 testenv.Append(CPPPATH = ['#/ext/safestring/include', 'src'])
 testenv.Append(LIBS = [lib, env['DPS_LIBS']])
 if extUV: testenv.Append(CPPPATH = ['#/ext/libuv/include'])

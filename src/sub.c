@@ -435,7 +435,7 @@ DPS_Status DPS_SendSubscription(DPS_Node* node, RemoteNode* remote)
             }
             remote->outbound.lastSubMsgType = DPS_MSG_TYPE_SUB;
         } else {
-            DPS_ERRPRINT("Failed to send subscription request %s\n", DPS_ErrTxt(ret));
+            DPS_WARNPRINT("Failed to send subscription request %s\n", DPS_ErrTxt(ret));
             remote->outbound.sakPending = DPS_FALSE;
             remote->outbound.lastSubMsgType = 0;
             DPS_SendComplete(node, &remote->ep.addr, &uvBuf, 1, ret);

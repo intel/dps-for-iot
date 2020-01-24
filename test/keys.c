@@ -229,3 +229,46 @@ const Id Ids[] = {
         { NULL, 0 }, NULL, NULL, NULL
     }
 };
+
+const char AltCA[] =
+    "-----BEGIN CERTIFICATE-----\r\n"
+    "MIICJjCCAYegAwIBAgIJAPdLMitQagfGMAoGCCqGSM49BAMCMCoxCzAJBgNVBAYT\r\n"
+    "AlVTMQwwCgYDVQQKDANEUFMxDTALBgNVBAMMBHJvb3QwHhcNMjAwMTA4MjI1ODAy\r\n"
+    "WhcNMzAwMTA1MjI1ODAyWjAqMQswCQYDVQQGEwJVUzEMMAoGA1UECgwDRFBTMQ0w\r\n"
+    "CwYDVQQDDARyb290MIGbMBAGByqGSM49AgEGBSuBBAAjA4GGAAQBd62249VHkqhf\r\n"
+    "P6k8lc1OkUGYTB/xS09USsv5tgwq6AitmQZiqok4gx4q08vqZbkB7+HDg59xKu+M\r\n"
+    "YxKsy+KCr/sAeqB4QS61Olli+ZDsKc9iSmo2Vnr2r0X1cjzwN4x5Hcg9VWWYkcaq\r\n"
+    "Bced9qErdO5lAmGMdzq2MEl1F4woYeSmwc2jUzBRMB0GA1UdDgQWBBTkNuQzR31h\r\n"
+    "7usV6ttCyCNTj3wr2jAfBgNVHSMEGDAWgBTkNuQzR31h7usV6ttCyCNTj3wr2jAP\r\n"
+    "BgNVHRMBAf8EBTADAQH/MAoGCCqGSM49BAMCA4GMADCBiAJCAVXWnUxPYwK0qoMJ\r\n"
+    "CB2Yk9cWqQIjogxQB6+RJ4ReTW2rKN/3NlOGPwYzNaUZaojkHV+qR5G7arVZpXmE\r\n"
+    "8tBAFTYtAkIBgg4KIAelDVgYJLX8Ey2Q8WUGf9pQ/sANGk/+8EQvbtYs1xIHX0R3\r\n"
+    "c6Tz3IKhjIt3t80WO+MvNe5nmrcTUkSJRpo=\r\n"
+    "-----END CERTIFICATE-----\r\n";
+
+const Id AltId = {
+    { (const uint8_t*)"DPS Node", sizeof("DPS Node") - 1 },
+    "-----BEGIN CERTIFICATE-----\r\n"
+    "MIIBzzCCATECCQCs6MnUfTvbhzAKBggqhkjOPQQDBDAqMQswCQYDVQQGEwJVUzEM\r\n"
+    "MAoGA1UECgwDRFBTMQ0wCwYDVQQDDARyb290MB4XDTIwMDEwODIyNTgwMloXDTMw\r\n"
+    "MDEwNTIyNTgwMlowLjELMAkGA1UEBhMCVVMxDDAKBgNVBAoMA0RQUzERMA8GA1UE\r\n"
+    "AwwIRFBTIE5vZGUwgZswEAYHKoZIzj0CAQYFK4EEACMDgYYABAHpiRkY/t6GEvj9\r\n"
+    "MMJOAYAcb5inSGITKa82uVAGKtogzlYyZUIuD4jfqOdh/yAE+7jKqykGu9lSA4XC\r\n"
+    "twJZrYXNvAAk2Piuew0y8vIzaQSsvsLYEI+4xriBqwpwTr1sWwVZSYLmlCTEzf/9\r\n"
+    "O0nJvzTzlRflkXY257ZR/a2GuDI7AD/0ZDAKBggqhkjOPQQDBAOBiwAwgYcCQWww\r\n"
+    "mW5D3x8snU2LvkS7R13gWI8gBf4ocWKAJJYozzJbjhKnSUe9lcpj3OOTztkij2SR\r\n"
+    "YMCigvE0JgRptjM8hdqzAkIBswQKwiuSIVMucq2HYZE5pIix4ALL4EM0OBZnhWPG\r\n"
+    "HyiQ4+aX+7+szGNfQxWqKu2WuwjeFymFYbhCP+wnx2JoEjQ=\r\n"
+    "-----END CERTIFICATE-----\r\n",
+    "-----BEGIN EC PRIVATE KEY-----\r\n"
+    "Proc-Type: 4,ENCRYPTED\r\n"
+    "DEK-Info: AES-256-CBC,D2E0E23C9119A498F30CA5EA64F38BA8\r\n"
+    "\r\n"
+    "FdEqVYGBuN3RR0Yin11SQgcYTHbXu4+Rdt8TJKEy0M6ZgDEXdQG7aJlSbN42M+NL\r\n"
+    "FuMB0GbnI555W58J9H8xpxs497FrKECTQ+StqFGDAUoW2BUgWWLuo7G+kz9Kexy+\r\n"
+    "mm8X0jZbrTcjfvU5WeqHRsjeseekwHHyy2ym2A1MAz35nihDFxGGA7UCBOQTXhWh\r\n"
+    "LtNa/nd8AaRXu5IRyqjKth+KvXJ5ATLzjHaxUZbsGYbLYaMElRS+/8fYyBXZW/fc\r\n"
+    "QhlHEFtfWThhzWCq7HidqoGoHkYXBpVPI0MfZiNNwkc=\r\n"
+    "-----END EC PRIVATE KEY-----\r\n",
+    "DPS Node"
+};
