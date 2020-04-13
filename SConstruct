@@ -6,6 +6,8 @@ AddOption('--tool', action='append', dest='tools', help='Add tool to the environ
 vars = Variables()
 
 bindings = Split('python nodejs go')
+# Remove nodejs: SWIG support for recent nodejs versions is incomplete
+default_bindings = [b for b in bindings if b != 'nodejs']
 
 # Generic build variables
 vars.AddVariables(
@@ -18,7 +20,7 @@ vars.AddVariables(
     EnumVariable('variant', 'Build variant', default='release', allowed_values=('debug', 'release', 'min-size-release'), ignorecase=2),
     EnumVariable('transport', 'Transport protocol', default='udp', allowed_values=('udp', 'tcp', 'dtls', 'pipe', 'fuzzer'), ignorecase=2),
     EnumVariable('target', 'Build target', default='local', allowed_values=('local', 'yocto'), ignorecase=2),
-    ListVariable('bindings', 'Bindings to build', bindings, bindings),
+    ListVariable('bindings', 'Bindings to build', default_bindings, bindings),
     PathVariable('application', 'Application to build', '', PathVariable.PathAccept),
     ('CC', 'C compiler to use'),
     ('CXX', 'C++ compiler to use'),
