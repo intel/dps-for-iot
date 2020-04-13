@@ -86,7 +86,7 @@ for test in tests:
     reset_logs()
     print('[ RUN      ] ' + test)
     if test.startswith('test_scripts'):
-        child = popen_spawn.PopenSpawn(['python', test] + sys.argv[1:], logfile=sys.stdout.buffer)
+        child = popen_spawn.PopenSpawn(['python', test] + sys.argv[1:], logfile=getattr(sys.stdout, 'buffer', sys.stdout))
         child.expect(pexpect.EOF, timeout=timeout)
         status = child.wait()
     elif test.startswith('py_scripts'):
