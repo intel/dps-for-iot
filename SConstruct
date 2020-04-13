@@ -122,7 +122,7 @@ elif env['PLATFORM'] == 'posix':
             env['PY_CPPPATH'] = [os.getenv('SYSROOT') + '/usr/include/python2.7']
         else:
             py_cpppath = os.popen('python-config --includes').read().split()
-            env['PY_CPPPATH'] = map(lambda inc: inc[2:], py_cpppath)
+            env['PY_CPPPATH'] = [inc[2:] for inc in py_cpppath]
             env['PY_LIBPATH'] = []
 
     env['DPS_LIBS'] = ['pthread', 'dl']
