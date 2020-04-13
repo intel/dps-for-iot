@@ -49,7 +49,7 @@ if 'FSAN' not in os.environ or os.environ['FSAN'] == 'no':
             os.path.join('test_scripts', 'simple_py_test.py'),
             os.path.join('test_scripts', 'simple_py_ks_test.py')
         ])
-    if 'BINDINGS' not in os.environ or 'all' in os.environ['BINDINGS'] or 'nodejs' in os.environ['BINDINGS']:
+    if 'BINDINGS' in os.environ and ('all' in os.environ['BINDINGS'] or 'nodejs' in os.environ['BINDINGS']):
         tests.extend([
             os.path.join('test_scripts', 'simple_js_ks_test.py'),
             os.path.join('test_scripts', 'simple_js_test.py')
@@ -86,7 +86,7 @@ for test in tests:
     reset_logs()
     print('[ RUN      ] ' + test)
     if test.startswith('test_scripts'):
-        child = popen_spawn.PopenSpawn(['python', test] + sys.argv[1:], logfile=sys.stdout)
+        child = popen_spawn.PopenSpawn(['python', test] + sys.argv[1:], logfile=getattr(sys.stdout, 'buffer', sys.stdout))
         child.expect(pexpect.EOF, timeout=timeout)
         status = child.wait()
     elif test.startswith('py_scripts'):

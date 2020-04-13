@@ -63,7 +63,7 @@ int AddressArg(char* opt, char*** argp, int* argcp, DPS_NodeAddress** addr)
         if (!--argc) {
             return DPS_FALSE;
         }
-        strncpy(str, *arg++, sizeof(str));
+        strncpy(str, *arg++, sizeof(str) - 1);
     } else {
         return DPS_FALSE;
     }
