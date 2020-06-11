@@ -30,6 +30,7 @@
 %ignore DPS_AckPublicationBufs;
 %ignore DPS_CBOR2JSON;
 %ignore DPS_DestroyKeyStore;
+%ignore DPS_DestroyPublication;
 %ignore DPS_GetKeyStoreData;
 %ignore DPS_GetLoop;
 %ignore DPS_GetNodeData;
@@ -521,6 +522,19 @@ public:
     $result = From_topics((const char**)$1, sz);
     free($1);
 }
+
+%{
+DPS_Status DestroyPublication(DPS_Publication* pub)
+{
+    return DPS_DestroyPublication(pub, NULL);
+}
+DPS_Status DestroyPublication(DPS_Publication* pub, DPS_OnPublicationDestroyed cb)
+{
+    return DPS_DestroyPublication(pub, cb);
+}
+%}
+DPS_Status DestroyPublication(DPS_Publication* pub);
+DPS_Status DestroyPublication(DPS_Publication* pub, DPS_OnPublicationDestroyed cb);
 
 %{
 const char** SubscriptionGetTopics(const DPS_Subscription* sub, size_t* n)
