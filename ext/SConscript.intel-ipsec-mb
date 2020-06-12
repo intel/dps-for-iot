@@ -15,8 +15,8 @@ if env['TARGET_ARCH'] != 'x86' and env.Detect('nasm') != None:
                         chdir = 'ext/intel-ipsec-mb')
 
     sources = [
-        './intel-ipsec-mb/sse/sha512_one_block_sse.asm',
-        './intel-ipsec-mb/avx/sha512_one_block_avx.asm'
+        './intel-ipsec-mb/lib/sse/sha512_one_block_sse.asm',
+        './intel-ipsec-mb/lib/avx/sha512_one_block_avx.asm'
     ]
 
     if mbenv['PLATFORM'] == 'win32':
@@ -24,7 +24,7 @@ if env['TARGET_ARCH'] != 'x86' and env.Detect('nasm') != None:
             '-fwin64',
             '-Xvc',
             '-DWIN_ABI',
-            '-I./ext/intel-ipsec-mb/'
+            '-I./ext/intel-ipsec-mb/lib/'
         ]
     else:
         mbenv['ASFLAGS'] = [
@@ -33,7 +33,7 @@ if env['TARGET_ARCH'] != 'x86' and env.Detect('nasm') != None:
             '-gdwarf',
             '-DLINUX',
             '-D__linux__',
-            '-I./ext/intel-ipsec-mb/'
+            '-I./ext/intel-ipsec-mb/lib/'
         ]
 
     objs = mbenv.Object(sources)
