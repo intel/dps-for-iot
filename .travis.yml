@@ -1,10 +1,10 @@
-sudo: required
-
 language: c
 
 compiler:
   - clang
   - gcc
+
+os: linux
 
 env:
   - VARIANT=debug TRANSPORT=udp BINDINGS=all ASAN=yes FSAN=no
@@ -17,7 +17,7 @@ env:
   - VARIANT=release TRANSPORT=dtls BINDINGS=python,nodejs ASAN=yes FSAN=yes
   - VARIANT=release TRANSPORT=pipe BINDINGS=all ASAN=yes FSAN=no
   - VARIANT=release TRANSPORT=fuzzer BINDINGS=python,nodejs ASAN=yes FSAN=yes
-matrix:
+jobs:
   exclude:
     - compiler: clang
     - compiler: gcc
