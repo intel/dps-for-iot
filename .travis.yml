@@ -42,6 +42,8 @@ addons:
 before_install:
   - "[ $CC = gcc ] && export CC=gcc CXX=g++ || true"
   - "[ $CC = clang ] && export CC=clang CXX=clang++ || true"
+  - pyenv versions
+  - pyenv global 3.6
 
 install:
   - ./.travis/install-swig.sh

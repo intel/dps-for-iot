@@ -1,8 +1,5 @@
 import os
 import platform
-import sys
-
-print(sys.version)
 
 AddOption('--tool', action='append', dest='tools', help='Add tool to the environment')
 
