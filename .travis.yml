@@ -7,28 +7,28 @@ compiler:
 os: linux
 
 env:
-  - VARIANT=debug TRANSPORT=udp BINDINGS=all ASAN=yes FSAN=no
-  - VARIANT=debug TRANSPORT=tcp BINDINGS=all ASAN=yes FSAN=no
-  - VARIANT=debug TRANSPORT=dtls BINDINGS=all ASAN=yes FSAN=no
-  - VARIANT=debug TRANSPORT=pipe BINDINGS=all ASAN=yes FSAN=no
-  - VARIANT=release TRANSPORT=udp BINDINGS=all ASAN=yes FSAN=no
-  - VARIANT=release TRANSPORT=tcp BINDINGS=all ASAN=yes FSAN=no
-  - VARIANT=release TRANSPORT=dtls BINDINGS=all ASAN=yes FSAN=no
-  - VARIANT=release TRANSPORT=dtls BINDINGS=python,nodejs ASAN=yes FSAN=yes
-  - VARIANT=release TRANSPORT=pipe BINDINGS=all ASAN=yes FSAN=no
-  - VARIANT=release TRANSPORT=fuzzer BINDINGS=python,nodejs ASAN=yes FSAN=yes
+  - VARIANT=debug TRANSPORT=udp BINDINGS=python,go ASAN=yes FSAN=no
+  - VARIANT=debug TRANSPORT=tcp BINDINGS=python,go ASAN=yes FSAN=no
+  - VARIANT=debug TRANSPORT=dtls BINDINGS=python,go ASAN=yes FSAN=no
+  - VARIANT=debug TRANSPORT=pipe BINDINGS=python,go ASAN=yes FSAN=no
+  - VARIANT=release TRANSPORT=udp BINDINGS=python,go ASAN=yes FSAN=no
+  - VARIANT=release TRANSPORT=tcp BINDINGS=python,go ASAN=yes FSAN=no
+  - VARIANT=release TRANSPORT=dtls BINDINGS=python,go ASAN=yes FSAN=no
+  - VARIANT=release TRANSPORT=dtls BINDINGS=python ASAN=yes FSAN=yes
+  - VARIANT=release TRANSPORT=pipe BINDINGS=python,go ASAN=yes FSAN=no
+  - VARIANT=release TRANSPORT=fuzzer BINDINGS=python ASAN=yes FSAN=yes
 jobs:
   exclude:
     - compiler: clang
     - compiler: gcc
-      env: VARIANT=release TRANSPORT=dtls BINDINGS=python,nodejs ASAN=yes FSAN=yes
+      env: VARIANT=release TRANSPORT=dtls BINDINGS=python ASAN=yes FSAN=yes
     - compiler: gcc
-      env: VARIANT=release TRANSPORT=fuzzer BINDINGS=python,nodejs ASAN=yes FSAN=yes
+      env: VARIANT=release TRANSPORT=fuzzer BINDINGS=python ASAN=yes FSAN=yes
   include:
     - compiler: clang
-      env: VARIANT=release TRANSPORT=dtls BINDINGS=python,nodejs ASAN=yes FSAN=yes
+      env: VARIANT=release TRANSPORT=dtls BINDINGS=python ASAN=yes FSAN=yes
     - compiler: clang
-      env: VARIANT=release TRANSPORT=fuzzer BINDINGS=python,nodejs ASAN=yes FSAN=yes
+      env: VARIANT=release TRANSPORT=fuzzer BINDINGS=python ASAN=yes FSAN=yes
 
 dist: bionic
 addons:
@@ -45,7 +45,6 @@ before_install:
 
 install:
   - ./.travis/install-swig.sh
-  - ./.travis/install-nodejs.sh
   - pip install --user cryptography
   - pip install --user pexpect
 
