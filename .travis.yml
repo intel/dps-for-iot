@@ -42,7 +42,7 @@ addons:
 before_install:
   - "[ $CC = gcc ] && export CC=gcc CXX=g++ || true"
   - "[ $CC = clang ] && export CC=clang CXX=clang++ || true"
-  - pyenv versions
+  - . ./.travis/before_install-pyenv.sh
   - pyenv global 3.6
 
 install:
