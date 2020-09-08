@@ -177,13 +177,13 @@ DPS_Status DPS_AddTopic(DPS_BitVector* bf, const char* topic, const char* separa
         tp += len;
     }
     if (ret == DPS_OK) {
-            segment[prefix] = INFIX_WILDC;
+        segment[prefix] = INFIX_WILDC;
+        DPS_BitVectorBloomInsert(bf, (uint8_t*)segment, prefix + 1);
+        while (prefix >= 0) {
+            segment[prefix] = FINAL_WILDC;
             DPS_BitVectorBloomInsert(bf, (uint8_t*)segment, prefix + 1);
-            while (prefix >= 0) {
-                segment[prefix] = FINAL_WILDC;
-                DPS_BitVectorBloomInsert(bf, (uint8_t*)segment, prefix + 1);
-                --prefix;
-            }
+            --prefix;
+        }
     }
     free(segment);
     return ret;
