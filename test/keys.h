@@ -55,6 +55,8 @@ extern const Id Ids[];
 extern const char AltCA[];
 extern const Id AltId;
 
+const char* KeyIdToString(const DPS_KeyId* keyId);
+
 #ifdef __cplusplus
 }
 #endif

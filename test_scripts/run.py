@@ -34,6 +34,7 @@ if 'FSAN' not in os.environ or os.environ['FSAN'] == 'no':
              os.path.join('test_scripts', 'loop3.py'),
              os.path.join('test_scripts', 'pub100.py'),
              os.path.join('test_scripts', 'reg1.py'),
+             os.path.join('test_scripts', 'simple_discover.py'),
              os.path.join('test_scripts', 'simple_test.py'),
              os.path.join('test_scripts', 'topic_match.py'),
              os.path.join('test_scripts', 'tree0.py'),

@@ -277,7 +277,7 @@ static DPS_Status DecodeDiscoveryPayload(DPS_DiscoveryService* service, uint8_t 
     *match = DPS_FALSE;
     DPS_LockNode(node);
     for (pub = node->publications; pub && !(*match); pub = pub->next) {
-        *match = DPS_BitVectorIncludes(interests, pub->bf);
+        *match = DPS_BitVectorIncludes(pub->bf, interests);
     }
     DPS_UnlockNode(node);
 

@@ -22,6 +22,8 @@
 
 #include <safe_lib.h>
 #include "keys.h"
+#include <ctype.h>
+#include <string.h>
 
 static const DPS_UUID _NetworkKeyId = {
     0x4c,0xfc,0x6b,0x75,0x0f,0x80,0x95,0xb3,0x6c,0xb7,0xc1,0x2f,0x65,0x2d,0x38,0x26
@@ -272,3 +274,29 @@ const Id AltId = {
     "-----END EC PRIVATE KEY-----\r\n",
     "DPS Node"
 };
+
+const char* KeyIdToString(const DPS_KeyId* keyId)
+{
+    static char str[128];
+    int isStr;
+    size_t i;
+
+    if (!keyId) {
+        str[0] = 0;
+    } else {
+        isStr = DPS_TRUE;
+        for (i = 0; isStr && (i < keyId->len); ++i) {
+            isStr = isprint(keyId->id[i]);
+        }
+        if (isStr) {
+            memcpy(str, keyId->id, keyId->len);
+            str[keyId->len] = 0;
+        } else {
+            char* dst = str;
+            for (i = 0; i < keyId->len; ++i) {
+                snprintf(dst, &str[sizeof(str)] - dst, "%s%02x", i ? "," : "", keyId->id[i]);
+            }
+        }
+    }
+    return str;
+}

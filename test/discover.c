@@ -23,6 +23,7 @@
 #include <stdio.h>
 #include <dps/discovery.h>
 #include "compat.h"
+#include "keys.h"
 #include "node.h"
 #include "test.h"
 #include "topics.h"
@@ -53,6 +54,34 @@ typedef struct _SubscriptionList {
 
 static void OnPub(DPS_Subscription* sub, const DPS_Publication* pub, uint8_t* payload, size_t len)
 {
+    const DPS_UUID* pubId = DPS_PublicationGetUUID(pub);
+    uint32_t sn = DPS_PublicationGetSequenceNum(pub);
+    const DPS_KeyId* senderId = DPS_PublicationGetSenderKeyId(pub);
+    size_t i;
+    size_t numTopics;
+
+    DPS_PRINT("Pub %s(%d) [%s] matches:\n", DPS_UUIDToString(pubId), sn, KeyIdToString(senderId));
+    DPS_PRINT("  pub ");
+    numTopics = DPS_PublicationGetNumTopics(pub);
+    for (i = 0; i < numTopics; ++i) {
+        if (i) {
+            DPS_PRINT(" | ");
+        }
+        DPS_PRINT("%s", DPS_PublicationGetTopic(pub, i));
+    }
+    DPS_PRINT("\n");
+    DPS_PRINT("  sub ");
+    numTopics = DPS_SubscriptionGetNumTopics(sub);
+    for (i = 0; i < numTopics; ++i) {
+        if (i) {
+            DPS_PRINT(" & ");
+        }
+        DPS_PRINT("%s", DPS_SubscriptionGetTopic(sub, i));
+    }
+    DPS_PRINT("\n");
+    if (payload) {
+        DPS_PRINT("%.*s\n", (int)len, payload);
+    }
 }
 
 static PublicationList* pubList = NULL;
@@ -86,12 +115,16 @@ int main(int argc, char** argv)
     DPS_DiscoveryService* discovery = NULL;
     char* msg = NULL;
     DPS_Status ret;
+    int noWildCard = DPS_FALSE;
 
     DPS_Debug = DPS_FALSE;
     while (--argc) {
         if (strcmp(*arg, "-d") == 0) {
             ++arg;
             DPS_Debug = DPS_TRUE;
+        } else if (strcmp(*arg, "-w") == 0) {
+            ++arg;
+            noWildCard = DPS_TRUE;
         } else if (strcmp(*arg, "-p") == 0) {
             ++arg;
             if (!--argc) {
@@ -163,7 +196,7 @@ int main(int argc, char** argv)
             ret = DPS_ERR_RESOURCES;
             goto Exit;
         }
-        ret = DPS_InitPublication(pubs->pub, (const char**)&pubs->topic, 1, DPS_FALSE, NULL);
+        ret = DPS_InitPublication(pubs->pub, (const char**)&pubs->topic, 1, noWildCard, NULL);
         if (ret != DPS_OK) {
             goto Exit;
         }
@@ -228,8 +261,9 @@ Exit:
     return ret;
 
 Usage:
-    DPS_PRINT("Usage %s [-d] [-p topic] [-s topic]\n", argv[0]);
+    DPS_PRINT("Usage %s [-d] [-w] [-p topic] [-s topic]\n", argv[0]);
     DPS_PRINT("       -d: Enable debug ouput if built for debug.\n");
+    DPS_PRINT("       -w: Do not match wildcard subscriptions.\n");
     DPS_PRINT("       -p: Publish to topic. Multiple -p options are permitted.\n");
     DPS_PRINT("       -s: Subscribe to topic. Multiple -s options are permitted.\n");
     return DPS_ERR_FAILURE;
