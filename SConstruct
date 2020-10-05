@@ -130,6 +130,8 @@ elif env['PLATFORM'] == 'posix':
     # Check if we need to build libuv
     conf = env.Configure()
     extUV = not conf.CheckLib('uv', symbol='uv_mutex_init_recursive')
+    if not extUV:
+         env.Append(DPS_LIBS=['uv'])
     env = conf.Finish()
 
 else:
