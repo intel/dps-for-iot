@@ -288,7 +288,6 @@ Exit:
 
 DPS_DiscoveryService* DPS_CreateDiscoveryService(DPS_Node* node, const char* serviceId)
 {
-    static const int noWildcard = DPS_TRUE;
     DPS_DiscoveryService* service;
     DPS_Status ret;
 
@@ -325,7 +324,7 @@ DPS_DiscoveryService* DPS_CreateDiscoveryService(DPS_Node* node, const char* ser
     if (ret != DPS_OK) {
         goto Exit;
     }
-    ret = DPS_InitPublication(service->pub, (const char**)&service->topic, 1, noWildcard, OnAck);
+    ret = DPS_InitPublication(service->pub, (const char**)&service->topic, 1, DPS_FALSE, OnAck);
     if (ret != DPS_OK) {
         goto Exit;
     }

@@ -144,12 +144,13 @@ DPS_Status DPS_AddTopic(DPS_BitVector* bf, const char* topic, const char* separa
     tp = topic + strcspn(topic, separators);
     if (!wc) {
         DPS_BitVectorBloomInsert(bf, (const uint8_t*)topic, tlen);
-        if (topicType != DPS_PubTopic) {
-            return DPS_OK;
-        }
     } else if (wc != topic) {
         DPS_BitVectorBloomInsert(bf, (const uint8_t*)topic, wc - topic);
     }
+    if (topicType == DPS_PubNoWild) {
+        return DPS_OK;
+    }
+
     segment = malloc(tlen + 1);
     if (!segment) {
         return DPS_ERR_RESOURCES;
@@ -157,7 +158,7 @@ DPS_Status DPS_AddTopic(DPS_BitVector* bf, const char* topic, const char* separa
     while (*tp) {
         size_t len;
         segment[prefix++] = *tp++;
-        if (topicType == DPS_PubTopic) {
+        if (wc != topic) {
             DPS_BitVectorBloomInsert(bf, (const uint8_t*)topic, tp - topic);
         }
         len = strcspn(tp, separators);
@@ -176,14 +177,12 @@ DPS_Status DPS_AddTopic(DPS_BitVector* bf, const char* topic, const char* separa
         tp += len;
     }
     if (ret == DPS_OK) {
-        if (topicType == DPS_PubTopic) {
-            segment[prefix] = INFIX_WILDC;
+        segment[prefix] = INFIX_WILDC;
+        DPS_BitVectorBloomInsert(bf, (uint8_t*)segment, prefix + 1);
+        while (prefix >= 0) {
+            segment[prefix] = FINAL_WILDC;
             DPS_BitVectorBloomInsert(bf, (uint8_t*)segment, prefix + 1);
-            while (prefix >= 0) {
-                segment[prefix] = FINAL_WILDC;
-                DPS_BitVectorBloomInsert(bf, (uint8_t*)segment, prefix + 1);
-                --prefix;
-            }
+            --prefix;
         }
     }
     free(segment);
